@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Env / secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Local Claude Code session state (permissions granted interactively, MCP auth tokens)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+*.swp
