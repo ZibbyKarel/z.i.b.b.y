@@ -86,7 +86,7 @@ export const contextVars = {
 
 export type ContextName = keyof typeof contextVars
 
-export const fontFamily = {
+export const fontFamily: Record<string, string[]> = {
   sans: [
     "var(--font-sans)",
     "Geist",
@@ -103,10 +103,10 @@ export const fontFamily = {
     "Menlo",
     "monospace",
   ],
-} as const
+}
 
 /** Compact, HUD-friendly type scale (rounded from the prototype's px values). */
-export const fontSize = {
+export const fontSize: Record<string, [string, { lineHeight: string }]> = {
   "2xs": ["0.5rem", { lineHeight: "1.25" }], // 8
   xs: ["0.5625rem", { lineHeight: "1.3" }], // 9
   sm: ["0.625rem", { lineHeight: "1.4" }], // 10
@@ -119,7 +119,7 @@ export const fontSize = {
   "3xl": ["1.25rem", { lineHeight: "1.25" }], // 20
   "4xl": ["1.375rem", { lineHeight: "1.2" }], // 22
   "5xl": ["1.6875rem", { lineHeight: "1.2" }], // 27
-} as const
+}
 
 export const fontWeight = {
   normal: "400",
