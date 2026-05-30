@@ -9,8 +9,9 @@
 @layer base {
   :root {
     color-scheme: dark;
-    /* Default context accent (home / amber) until a context wrapper overrides it. */
-    --zb-accent: #f0b429;
+    /* Default context accent (home / amber) until a context wrapper overrides it.
+       --zb-accent is RGB channels so `text-accent/30` etc. resolve correctly. */
+    --zb-accent: 240 180 41;
     --zb-accent-dim: rgba(240, 180, 41, 0.16);
     --zb-accent-contrast: #0a0c10;
     --zb-accent-glow: rgba(240, 180, 41, 0.4);

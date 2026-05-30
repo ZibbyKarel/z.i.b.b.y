@@ -13,7 +13,7 @@ export interface SparklineProps extends Omit<SVGProps<SVGSVGElement>, "points"> 
 /** A tiny filled trend line — used by the Agent SDK 14-day spend widget. */
 export function Sparkline({
   data,
-  color = "var(--zb-accent)",
+  color = "rgb(var(--zb-accent))",
   width = 260,
   height = 40,
   ref,

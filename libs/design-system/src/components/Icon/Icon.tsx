@@ -47,7 +47,7 @@ export const iconNames = [
 
 export type IconName = (typeof iconNames)[number]
 
-export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
+export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name" | "stroke"> {
   /** Which glyph to render. */
   name: IconName
   /** Square size in px. */

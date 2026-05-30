@@ -40,8 +40,12 @@ export const colors = {
   work: "#5b8def",
   "work-dim": "rgba(91,141,239,0.16)",
 
-  /** Active context accent, switched at runtime (see contextVars). */
-  accent: "var(--zb-accent)",
+  /**
+   * Active context accent, switched at runtime (see contextVars).
+   * `--zb-accent` holds space-separated RGB channels so Tailwind's `/<alpha>`
+   * opacity modifiers (e.g. `border-accent/30`) resolve to valid CSS.
+   */
+  accent: "rgb(var(--zb-accent) / <alpha-value>)",
   "accent-dim": "var(--zb-accent-dim)",
   "accent-contrast": "var(--zb-accent-contrast)",
 
@@ -60,17 +64,23 @@ export const colors = {
   "think-low": "#5d6b7a",
 } as const
 
-/** Per-context CSS variable sets consumed by the `accent` color tokens. */
+/**
+ * Per-context CSS variable sets consumed by the `accent` color tokens.
+ * `--zb-accent` is RGB channels (for alpha modifiers); the dim / glow vars are
+ * full color values used by `bg-accent-dim` and accent glow shadows.
+ */
 export const contextVars = {
   home: {
-    "--zb-accent": colors.home,
+    "--zb-accent": "240 180 41",
     "--zb-accent-dim": colors["home-dim"],
     "--zb-accent-contrast": colors["surface-0"],
+    "--zb-accent-glow": "rgba(240,180,41,0.4)",
   },
   work: {
-    "--zb-accent": colors.work,
+    "--zb-accent": "91 141 239",
     "--zb-accent-dim": colors["work-dim"],
     "--zb-accent-contrast": colors["surface-0"],
+    "--zb-accent-glow": "rgba(91,141,239,0.4)",
   },
 } as const
 
