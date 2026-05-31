@@ -1,14 +1,14 @@
-import type { CSSProperties, ReactNode } from "react"
-import { cn } from "../../lib/cn"
-import { contextStyle } from "../../theme/context"
+import type { CSSProperties, ReactNode } from "react";
+import { cn } from "../../lib/cn";
+import { contextStyle } from "../../theme/context";
 import type {
   AgentSdkCredit,
   ClaudeLimits,
   ContextName,
   NavItem,
-} from "../../domain"
-import { Sidebar } from "../Sidebar/Sidebar"
-import { TopBar } from "../TopBar/TopBar"
+} from "../../domain";
+import { Sidebar } from "../Sidebar/Sidebar";
+import { TopBar } from "../TopBar/TopBar";
 
 const gridOverlay: CSSProperties = {
   backgroundImage:
@@ -18,34 +18,34 @@ const gridOverlay: CSSProperties = {
     "radial-gradient(ellipse 100% 90% at 60% 0%, #000 20%, transparent 85%)",
   maskImage:
     "radial-gradient(ellipse 100% 90% at 60% 0%, #000 20%, transparent 85%)",
-}
+};
 
 const scanOverlay: CSSProperties = {
   mixBlendMode: "overlay",
   backgroundImage:
     "repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 4px)",
-}
+};
 
-export interface VelinShellProps {
-  context: ContextName
-  onContextChange: (context: ContextName) => void
-  navItems: NavItem[]
-  activeNav: string
-  onNavigate: (id: string) => void
-  footerItem?: NavItem
-  breadcrumb: string
-  limits: ClaudeLimits
-  credit: AgentSdkCredit
-  onCommand?: () => void
-  children: ReactNode
+export interface DashboardShellProps {
+  context: ContextName;
+  onContextChange: (context: ContextName) => void;
+  navItems: NavItem[];
+  activeNav: string;
+  onNavigate: (id: string) => void;
+  footerItem?: NavItem;
+  breadcrumb: string;
+  limits: ClaudeLimits;
+  credit: AgentSdkCredit;
+  onCommand?: () => void;
+  children: ReactNode;
 }
 
 /**
- * The full velín chrome: angular HUD background (grid + scanlines), left
+ * The full dashboard chrome: angular HUD background (grid + scanlines), left
  * Sidebar, always-visible TopBar and a scrollable content area. The active
  * context (home / work) drives the `accent` token via CSS variables on the root.
  */
-export function VelinShell({
+export function DashboardShell({
   context,
   onContextChange,
   navItems,
@@ -57,7 +57,7 @@ export function VelinShell({
   credit,
   onCommand,
   children,
-}: VelinShellProps) {
+}: DashboardShellProps) {
   return (
     <div
       style={contextStyle(context)}
@@ -90,9 +90,11 @@ export function VelinShell({
             credit={credit}
             onCommand={onCommand}
           />
-          <div className="relative flex-1 overflow-auto px-7 py-6">{children}</div>
+          <div className="relative flex-1 overflow-auto px-7 py-6">
+            {children}
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

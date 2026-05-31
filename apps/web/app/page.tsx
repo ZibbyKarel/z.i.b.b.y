@@ -1,9 +1,9 @@
-import { VelinApp } from "../features/velin/VelinApp"
+import { DashboardApp } from "../features/dashboard/DashboardApp";
 
 export default function HomePage() {
   return (
     <main className="h-screen">
-      <VelinApp />
+      <DashboardApp />
     </main>
-  )
+  );
 }

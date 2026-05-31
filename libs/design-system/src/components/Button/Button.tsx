@@ -1,10 +1,10 @@
-import { type ButtonHTMLAttributes } from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "../../lib/cn"
-import { Icon, type IconName } from "../Icon/Icon"
+import { type ButtonHTMLAttributes } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "../../lib/cn";
+import { Icon, type IconName } from "../Icon/Icon";
 
 /**
- * The velín button. A single CVA owns every flavour the dashboard needs:
+ * The dashboard button. A single CVA owns every flavour the dashboard needs:
  *   run     — outline accent that fills on hover (the recurring "čudlík")
  *   solid   — filled accent
  *   ghost   — quiet, hairline-bordered mono action
@@ -30,8 +30,7 @@ const button = cva(
         approve:
           "border-none bg-ok text-surface-0 shadow-[0_0_14px_rgba(57,217,138,0.27)] " +
           "hover:brightness-110",
-        reject:
-          "border border-bad/40 text-bad bg-transparent hover:bg-bad/10",
+        reject: "border border-bad/40 text-bad bg-transparent hover:bg-bad/10",
       },
       size: {
         sm: "px-3 py-1.5 text-base",
@@ -42,14 +41,13 @@ const button = cva(
     },
     defaultVariants: { intent: "run", size: "md", block: false },
   },
-)
+);
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof button> {
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof button> {
   /** Optional leading icon glyph. */
-  icon?: IconName
-  ref?: React.Ref<HTMLButtonElement>
+  icon?: IconName;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 export function Button({
@@ -63,7 +61,7 @@ export function Button({
   ref,
   ...props
 }: ButtonProps) {
-  const iconSize = size === "lg" ? 14 : 12
+  const iconSize = size === "lg" ? 14 : 12;
   return (
     <button
       ref={ref}
@@ -74,5 +72,5 @@ export function Button({
       {icon ? <Icon name={icon} size={iconSize} stroke={2} /> : null}
       {children}
     </button>
-  )
+  );
 }

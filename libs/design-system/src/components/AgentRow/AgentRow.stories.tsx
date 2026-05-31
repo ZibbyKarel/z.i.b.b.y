@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import type { RunningAgent } from "../../domain"
-import { AgentRow } from "./AgentRow"
+import type { Meta, StoryObj } from "@storybook/react";
+import type { RunningAgent } from "../../domain";
+import { AgentRow } from "./AgentRow";
 
 const agent: RunningAgent = {
   id: "a1",
@@ -11,17 +11,23 @@ const agent: RunningAgent = {
   pct: 72,
   started: "3m",
   project: "media-vault",
-}
+};
 
 const meta: Meta<typeof AgentRow> = {
-  title: "Velín/AgentRow",
+  title: "Dashboard/AgentRow",
   component: AgentRow,
   parameters: { backgrounds: { default: "velin" } },
-  decorators: [(Story) => <div className="w-[360px]"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="w-[360px]">
+        <Story />
+      </div>
+    ),
+  ],
   args: { agent },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof AgentRow>
+type Story = StoryObj<typeof AgentRow>;
 
-export const Default: Story = {}
+export const Default: Story = {};

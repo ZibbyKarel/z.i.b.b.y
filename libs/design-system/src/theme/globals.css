@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /*
- * z.i.b.b.y base layer — the velín shell defaults.
+ * z.i.b.b.y base layer — the dashboard shell defaults.
  * Fonts are wired by the app via next/font (--font-sans, --font-mono).
  */
 @layer base {

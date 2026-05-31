@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import type { Skill } from "../../domain"
-import { SkillTile } from "./SkillTile"
+import type { Meta, StoryObj } from "@storybook/react";
+import type { Skill } from "../../domain";
+import { SkillTile } from "./SkillTile";
 
 const skill: Skill = {
   id: "rohlik",
@@ -9,17 +9,23 @@ const skill: Skill = {
   desc: "Naplní košík podle seznamu",
   ctx: "home",
   file: "~/zibby/skills/rohlik/SKILL.md",
-}
+};
 
 const meta: Meta<typeof SkillTile> = {
-  title: "Velín/SkillTile",
+  title: "Dashboard/SkillTile",
   component: SkillTile,
   parameters: { backgrounds: { default: "velin" } },
-  decorators: [(Story) => <div className="w-72"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="w-72">
+        <Story />
+      </div>
+    ),
+  ],
   args: { skill, onRun: () => {} },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof SkillTile>
+type Story = StoryObj<typeof SkillTile>;
 
-export const Default: Story = {}
+export const Default: Story = {};

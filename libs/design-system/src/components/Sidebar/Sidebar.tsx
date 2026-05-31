@@ -1,12 +1,12 @@
-import { cn } from "../../lib/cn"
-import type { NavItem } from "../../domain"
-import { Icon } from "../Icon/Icon"
-import { ZibbyMark } from "../Icon/Icon"
+import { cn } from "../../lib/cn";
+import type { NavItem } from "../../domain";
+import { Icon } from "../Icon/Icon";
+import { ZibbyMark } from "../Icon/Icon";
 
 interface NavRowProps {
-  item: NavItem
-  active: boolean
-  onSelect: (id: string) => void
+  item: NavItem;
+  active: boolean;
+  onSelect: (id: string) => void;
 }
 
 function NavRow({ item, active, onSelect }: NavRowProps) {
@@ -26,7 +26,9 @@ function NavRow({ item, active, onSelect }: NavRowProps) {
       {active && (
         <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded bg-accent shadow-glow-accent" />
       )}
-      <span className={cn("flex", active ? "text-accent" : "text-foreground-faint")}>
+      <span
+        className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
+      >
         <Icon name={item.glyph} size={17} />
       </span>
       <span className="flex-1">{item.label}</span>
@@ -36,20 +38,20 @@ function NavRow({ item, active, onSelect }: NavRowProps) {
         </span>
       ) : null}
     </button>
-  )
+  );
 }
 
 export interface SidebarProps {
-  items: NavItem[]
-  active: string
-  onNavigate: (id: string) => void
+  items: NavItem[];
+  active: string;
+  onNavigate: (id: string) => void;
   /** Optional pinned footer entry (e.g. system settings). */
-  footerItem?: NavItem
-  className?: string
+  footerItem?: NavItem;
+  className?: string;
 }
 
 /**
- * The velín left rail: ZIBBY brand block + full navigation, with an optional
+ * The dashboard left rail: ZIBBY brand block + full navigation, with an optional
  * pinned footer item. Files are the source of truth, so each entry maps to a
  * real area of the system.
  */
@@ -105,5 +107,5 @@ export function Sidebar({
         </div>
       )}
     </nav>
-  )
+  );
 }

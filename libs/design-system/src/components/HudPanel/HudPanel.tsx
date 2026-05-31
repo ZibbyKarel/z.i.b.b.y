@@ -1,37 +1,49 @@
-import type { HTMLAttributes, ReactNode } from "react"
-import { cn } from "../../lib/cn"
+import type { HTMLAttributes, ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export interface CornersProps {
   /** Inset of the brackets from the panel edge, in px. */
-  inset?: number
-  className?: string
+  inset?: number;
+  className?: string;
 }
 
 /** Decorative HUD corner brackets ("chevrons") drawn in the accent color. */
 export function Corners({ inset = 5, className }: CornersProps) {
-  const base = "pointer-events-none absolute h-3 w-3 border-accent opacity-60"
+  const base = "pointer-events-none absolute h-3 w-3 border-accent opacity-60";
   return (
     <>
-      <span className={cn(base, "border-t-[1.5px] border-l-[1.5px]", className)} style={{ top: inset, left: inset }} />
-      <span className={cn(base, "border-t-[1.5px] border-r-[1.5px]", className)} style={{ top: inset, right: inset }} />
-      <span className={cn(base, "border-b-[1.5px] border-l-[1.5px]", className)} style={{ bottom: inset, left: inset }} />
-      <span className={cn(base, "border-b-[1.5px] border-r-[1.5px]", className)} style={{ bottom: inset, right: inset }} />
+      <span
+        className={cn(base, "border-t-[1.5px] border-l-[1.5px]", className)}
+        style={{ top: inset, left: inset }}
+      />
+      <span
+        className={cn(base, "border-t-[1.5px] border-r-[1.5px]", className)}
+        style={{ top: inset, right: inset }}
+      />
+      <span
+        className={cn(base, "border-b-[1.5px] border-l-[1.5px]", className)}
+        style={{ bottom: inset, left: inset }}
+      />
+      <span
+        className={cn(base, "border-b-[1.5px] border-r-[1.5px]", className)}
+        style={{ bottom: inset, right: inset }}
+      />
     </>
-  )
+  );
 }
 
 export interface HudPanelProps extends HTMLAttributes<HTMLDivElement> {
   /** Optional `// TITLE` mono caption row. */
-  title?: string
+  title?: string;
   /** Slot rendered at the right edge of the title row. */
-  action?: ReactNode
+  action?: ReactNode;
   /** Show accent corner brackets. */
-  corners?: boolean
-  ref?: React.Ref<HTMLDivElement>
+  corners?: boolean;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
 /**
- * The signature angular velín surface: squared panel, accent corner brackets
+ * The signature angular dashboard surface: squared panel, accent corner brackets
  * and a `// title` mono caption — variant B reskinned with variant C's HUD chrome.
  */
 export function HudPanel({
@@ -65,5 +77,5 @@ export function HudPanel({
       )}
       {children}
     </div>
-  )
+  );
 }

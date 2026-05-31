@@ -5,7 +5,7 @@
  * `extend`-ed onto Tailwind defaults: the preset replaces the default scale so
  * only project tokens exist in the generated CSS.
  *
- * Visual DNA: a calm, dark "velín" (control room) for the ZIBBY agentic OS —
+ * Visual DNA: a calm, dark "dashboard" (control room) for the ZIBBY agentic OS —
  * JARVIS-grade HUD with angular panels, monospace accents and two context
  * accents (home = amber, work = blue).
  */
@@ -62,7 +62,7 @@ export const colors = {
   "think-high": "#f0883e",
   "think-medium": "#5b8def",
   "think-low": "#5d6b7a",
-} as const
+} as const;
 
 /**
  * Per-context CSS variable sets consumed by the `accent` color tokens.
@@ -82,9 +82,9 @@ export const contextVars = {
     "--zb-accent-contrast": colors["surface-0"],
     "--zb-accent-glow": "rgba(91,141,239,0.4)",
   },
-} as const
+} as const;
 
-export type ContextName = keyof typeof contextVars
+export type ContextName = keyof typeof contextVars;
 
 export const fontFamily: Record<string, string[]> = {
   sans: [
@@ -103,7 +103,7 @@ export const fontFamily: Record<string, string[]> = {
     "Menlo",
     "monospace",
   ],
-}
+};
 
 /** Compact, HUD-friendly type scale (rounded from the prototype's px values). */
 export const fontSize: Record<string, [string, { lineHeight: string }]> = {
@@ -119,14 +119,14 @@ export const fontSize: Record<string, [string, { lineHeight: string }]> = {
   "3xl": ["1.25rem", { lineHeight: "1.25" }], // 20
   "4xl": ["1.375rem", { lineHeight: "1.2" }], // 22
   "5xl": ["1.6875rem", { lineHeight: "1.2" }], // 27
-}
+};
 
 export const fontWeight = {
   normal: "400",
   medium: "500",
   semibold: "600",
   bold: "700",
-} as const
+} as const;
 
 export const letterSpacing = {
   tighter: "-0.01em",
@@ -135,7 +135,7 @@ export const letterSpacing = {
   wider: "0.1em",
   widest: "0.18em",
   mono: "0.3em",
-} as const
+} as const;
 
 /** Angular HUD: small radii dominate. */
 export const borderRadius = {
@@ -147,7 +147,7 @@ export const borderRadius = {
   xl: "11px",
   "2xl": "12px",
   full: "9999px",
-} as const
+} as const;
 
 export const boxShadow = {
   none: "none",
@@ -157,4 +157,4 @@ export const boxShadow = {
   dropdown: "0 18px 50px rgba(0,0,0,0.5)",
   modal: "0 30px 80px rgba(0,0,0,0.6)",
   "glow-accent": "0 0 16px var(--zb-accent-glow, rgba(91,141,239,0.4))",
-} as const
+} as const;

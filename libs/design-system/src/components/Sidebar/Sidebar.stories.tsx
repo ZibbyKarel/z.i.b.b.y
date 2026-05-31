@@ -1,7 +1,7 @@
-import { useState } from "react"
-import type { Meta, StoryObj } from "@storybook/react"
-import type { NavItem } from "../../domain"
-import { Sidebar } from "./Sidebar"
+import { useState } from "react";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { NavItem } from "../../domain";
+import { Sidebar } from "./Sidebar";
 
 const items: NavItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },
@@ -12,28 +12,38 @@ const items: NavItem[] = [
   { id: "automations", label: "Automatizace", glyph: "clock" },
   { id: "memory", label: "Paměť", glyph: "brain" },
   { id: "runs", label: "Běžící agenti", glyph: "pulse", badge: 2 },
-]
+];
 
 const meta: Meta<typeof Sidebar> = {
-  title: "Velín/Sidebar",
+  title: "Dashboard/Sidebar",
   component: Sidebar,
   parameters: { backgrounds: { default: "velin" }, layout: "fullscreen" },
-  decorators: [(Story) => <div className="h-screen"><Story /></div>],
-}
-export default meta
+  decorators: [
+    (Story) => (
+      <div className="h-screen">
+        <Story />
+      </div>
+    ),
+  ],
+};
+export default meta;
 
-type Story = StoryObj<typeof Sidebar>
+type Story = StoryObj<typeof Sidebar>;
 
 export const Default: Story = {
   render: () => {
-    const [active, setActive] = useState("overview")
+    const [active, setActive] = useState("overview");
     return (
       <Sidebar
         items={items}
         active={active}
         onNavigate={setActive}
-        footerItem={{ id: "settings", label: "Nastavení systému", glyph: "gear" }}
+        footerItem={{
+          id: "settings",
+          label: "Nastavení systému",
+          glyph: "gear",
+        }}
       />
-    )
+    );
   },
-}
+};

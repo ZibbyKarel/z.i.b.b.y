@@ -1,8 +1,10 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Button,
+  EmptyState,
+  EntityFormModal,
   HudPanel,
   Icon,
   PhaseChain,
@@ -12,21 +14,70 @@ import {
   SectionLabel,
   type ContextName,
   type Pipeline,
-} from "@zibby/design-system"
-import { AGENTS, PROJECTS } from "./fixtures"
-import { usePipelinesQuery } from "./queries"
+} from "@zibby/design-system";
+import { PROJECTS } from "./config";
+import { PIPELINE_FORM } from "./forms";
+import { useDashboardStore } from "./store";
 
 export interface PipelinesScreenProps {
-  context: ContextName
+  context: ContextName;
 }
 
 /** Orchestrace: master list of pipelines + detail with the visual phase chain. */
 export function PipelinesScreen({ context }: PipelinesScreenProps) {
-  const { data: list = [] } = usePipelinesQuery(context)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null)
+  const { pipelines, agents, addPipeline } = useDashboardStore();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
+  const [adding, setAdding] = useState(false);
 
-  const selected = list.find((p) => p.id === selectedId) ?? list[0]
+  const list = pipelines.filter((p) => p.ctx === context);
+  const selected = list.find((p) => p.id === selectedId) ?? list[0];
+
+  const addModal = adding && (
+    <EntityFormModal
+      title={PIPELINE_FORM.title}
+      subtitle={PIPELINE_FORM.subtitle}
+      glyph={PIPELINE_FORM.glyph}
+      fields={PIPELINE_FORM.fields}
+      submitLabel={PIPELINE_FORM.submitLabel}
+      filePreview={PIPELINE_FORM.filePreview}
+      onClose={() => setAdding(false)}
+      onSubmit={(values) => {
+        addPipeline(values);
+        setAdding(false);
+      }}
+    />
+  );
+
+  if (list.length === 0) {
+    return (
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel
+          action={
+            <Button
+              intent="run"
+              icon="plus"
+              size="sm"
+              onClick={() => setAdding(true)}
+            >
+              Přidat pipeline
+            </Button>
+          }
+        >
+          Pipeline · {context}
+        </SectionLabel>
+        <EmptyState
+          glyph="flow"
+          title="Zatím žádné pipeline"
+          description="Pipeline řetězí agenty (Architekt → Kodér → Tester → Dokumentátor) přes soubory. Přidej první a fáze pak poskládáš v editoru."
+          actionLabel="Přidat pipeline"
+          onAction={() => setAdding(true)}
+          hint="// vytvoří ~/zibby/pipelines/<název>.pipeline.md"
+        />
+        {addModal}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -34,7 +85,12 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
       <div className="flex flex-col gap-3">
         <SectionLabel
           action={
-            <Button intent="ghost" icon="plus" size="sm">
+            <Button
+              intent="run"
+              icon="plus"
+              size="sm"
+              onClick={() => setAdding(true)}
+            >
               Přidat pipeline
             </Button>
           }
@@ -45,16 +101,11 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
           <PipelineCard
             key={p.id}
             pipeline={p}
-            agents={AGENTS}
+            agents={agents}
             selected={p.id === (selected?.id ?? "")}
             onSelect={setSelectedId}
           />
         ))}
-        {list.length === 0 && (
-          <span className="p-4 font-mono text-base text-foreground-faint">
-            Žádné pipeline v kontextu {context}.
-          </span>
-        )}
       </div>
 
       {/* right: detail */}
@@ -64,15 +115,23 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2.5">
-                  <span className="text-3xl font-semibold">{selected.name}</span>
+                  <span className="text-3xl font-semibold">
+                    {selected.name}
+                  </span>
                   <Pill tone="accent">{context}</Pill>
                 </div>
                 <span className="mt-1.5 block font-mono text-caption text-foreground-dim">
                   {selected.desc}
                 </span>
                 <div className="mt-2.5 flex items-center gap-1.5">
-                  <Icon name="file" size={12} className="text-foreground-faint" />
-                  <span className="font-mono text-sm text-foreground-faint">{selected.file}</span>
+                  <Icon
+                    name="file"
+                    size={12}
+                    className="text-foreground-faint"
+                  />
+                  <span className="font-mono text-sm text-foreground-faint">
+                    {selected.file}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -82,7 +141,11 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
                 <Button intent="ghost" icon="link" size="sm">
                   Duplikovat
                 </Button>
-                <Button intent="run" icon="play" onClick={() => setRunPipeline(selected)}>
+                <Button
+                  intent="run"
+                  icon="play"
+                  onClick={() => setRunPipeline(selected)}
+                >
                   Spustit pipeline
                 </Button>
               </div>
@@ -109,7 +172,11 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="flex items-center gap-2">
-                <Icon name="checkpoint" size={16} className="text-foreground-dim" />
+                <Icon
+                  name="checkpoint"
+                  size={16}
+                  className="text-foreground-dim"
+                />
                 <span className="font-mono text-caption text-foreground-dim">
                   checkpoint po každé fázi
                 </span>
@@ -118,7 +185,7 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
           </HudPanel>
 
           <HudPanel title="zřetězení fází · soubory = předání" className="p-5">
-            <PhaseChain pipeline={selected} agents={AGENTS} />
+            <PhaseChain pipeline={selected} agents={agents} />
           </HudPanel>
         </div>
       )}
@@ -127,11 +194,12 @@ export function PipelinesScreen({ context }: PipelinesScreenProps) {
         <PipelineRunModal
           key={runPipeline.id}
           pipeline={runPipeline}
-          agents={AGENTS}
+          agents={agents}
           projects={[...PROJECTS]}
           onClose={() => setRunPipeline(null)}
         />
       )}
+      {addModal}
     </div>
-  )
+  );
 }

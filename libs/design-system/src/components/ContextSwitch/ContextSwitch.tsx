@@ -1,14 +1,14 @@
-import { cn } from "../../lib/cn"
-import type { ContextName } from "../../domain"
-import { Icon } from "../Icon/Icon"
+import { cn } from "../../lib/cn";
+import type { ContextName } from "../../domain";
+import { Icon } from "../Icon/Icon";
 
 interface ContextOption {
-  id: ContextName
-  label: string
+  id: ContextName;
+  label: string;
   /** Solid swatch color for the active state. */
-  swatch: string
-  active: string
-  glow: string
+  swatch: string;
+  active: string;
+  glow: string;
 }
 
 const OPTIONS: ContextOption[] = [
@@ -26,19 +26,19 @@ const OPTIONS: ContextOption[] = [
     active: "bg-work text-surface-0 shadow-[0_0_14px_rgba(91,141,239,0.33)]",
     glow: "",
   },
-]
+];
 
 export interface ContextSwitchProps {
-  context: ContextName
-  onContextChange: (context: ContextName) => void
+  context: ContextName;
+  onContextChange: (context: ContextName) => void;
   /** Invoked when the "+" (add context) affordance is pressed. */
-  onAddContext?: () => void
-  className?: string
+  onAddContext?: () => void;
+  className?: string;
 }
 
 /**
  * Segmented control between `home` (amber) and `work` (blue) contexts —
- * the velín's top-bar context switch.
+ * the dashboard's top-bar context switch.
  */
 export function ContextSwitch({
   context,
@@ -56,7 +56,7 @@ export function ContextSwitch({
       )}
     >
       {OPTIONS.map((o) => {
-        const on = context === o.id
+        const on = context === o.id;
         return (
           <button
             key={o.id}
@@ -66,7 +66,9 @@ export function ContextSwitch({
             className={cn(
               "inline-flex items-center gap-2 rounded-sm border-none px-3 py-1.5 font-mono text-base font-semibold transition-all",
               "outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              on ? o.active : "bg-transparent text-foreground-dim hover:text-foreground",
+              on
+                ? o.active
+                : "bg-transparent text-foreground-dim hover:text-foreground",
             )}
           >
             <span
@@ -77,7 +79,7 @@ export function ContextSwitch({
             />
             {o.label}
           </button>
-        )
+        );
       })}
       <button
         type="button"
@@ -88,5 +90,5 @@ export function ContextSwitch({
         <Icon name="plus" size={13} />
       </button>
     </div>
-  )
+  );
 }

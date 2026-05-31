@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import type { Skill } from "../../domain"
-import { RunModal } from "./RunModal"
+import type { Meta, StoryObj } from "@storybook/react";
+import type { Skill } from "../../domain";
+import { RunModal } from "./RunModal";
 
 const skill: Skill = {
   id: "rohlik",
@@ -9,21 +9,27 @@ const skill: Skill = {
   desc: "Naplní košík podle seznamu",
   ctx: "home",
   file: "~/zibby/skills/rohlik/SKILL.md",
-}
+};
 
 const meta: Meta<typeof RunModal> = {
-  title: "Velín/RunModal",
+  title: "Dashboard/RunModal",
   component: RunModal,
   parameters: { backgrounds: { default: "velin" }, layout: "fullscreen" },
-  decorators: [(Story) => <div className="relative h-screen"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="relative h-screen">
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     skill,
     projects: ["media-vault", "home-ops", "zibby-core", "rohlik-list"],
     onClose: () => {},
   },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof RunModal>
+type Story = StoryObj<typeof RunModal>;
 
-export const Default: Story = {}
+export const Default: Story = {};

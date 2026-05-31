@@ -1,32 +1,37 @@
-import { useState } from "react"
-import { cn } from "../../lib/cn"
-import type { Skill } from "../../domain"
-import { Button } from "../Button/Button"
-import { Icon } from "../Icon/Icon"
+import { useState } from "react";
+import { cn } from "../../lib/cn";
+import type { Skill } from "../../domain";
+import { Button } from "../Button/Button";
+import { Icon } from "../Icon/Icon";
 
 export interface RunModalProps {
   /** Skill to run; the modal renders only when set. */
-  skill: Skill
+  skill: Skill;
   /** Selectable target projects (from projects.json). */
-  projects: string[]
-  onClose: () => void
+  projects: string[];
+  onClose: () => void;
   /** Called with the composed run request when the user launches. */
-  onLaunch?: (req: { skill: Skill; prompt: string; project: string }) => void
+  onLaunch?: (req: { skill: Skill; prompt: string; project: string }) => void;
 }
 
 /**
- * The recurring velín interaction: write a prompt, pick a target project, see
+ * The recurring dashboard interaction: write a prompt, pick a target project, see
  * the backing SKILL.md path, then launch a background agent. Mounted only when
  * a skill is selected (mount with a `key` to reset state per skill).
  */
-export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) {
-  const [prompt, setPrompt] = useState("")
-  const [project, setProject] = useState(projects[0] ?? "")
-  const [launched, setLaunched] = useState(false)
+export function RunModal({
+  skill,
+  projects,
+  onClose,
+  onLaunch,
+}: RunModalProps) {
+  const [prompt, setPrompt] = useState("");
+  const [project, setProject] = useState(projects[0] ?? "");
+  const [launched, setLaunched] = useState(false);
 
   function launch() {
-    onLaunch?.({ skill, prompt, project })
-    setLaunched(true)
+    onLaunch?.({ skill, prompt, project });
+    setLaunched(true);
   }
 
   return (
@@ -47,7 +52,9 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
             <Icon name={skill.glyph} size={19} />
           </div>
           <div className="flex-1">
-            <div className="font-mono text-xl font-bold text-foreground">{skill.name}</div>
+            <div className="font-mono text-xl font-bold text-foreground">
+              {skill.name}
+            </div>
             <div className="text-base text-foreground-dim">{skill.desc}</div>
           </div>
           <button
@@ -101,7 +108,9 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
 
             <div className="mt-4 flex items-center gap-2 rounded border border-border bg-surface-0 px-3 py-2.5">
               <Icon name="file" size={13} className="text-foreground-faint" />
-              <span className="font-mono text-caption text-foreground-faint">{skill.file}</span>
+              <span className="font-mono text-caption text-foreground-faint">
+                {skill.file}
+              </span>
             </div>
 
             <div className="mt-5 flex items-center justify-between">
@@ -125,7 +134,8 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
               {skill.name} → {project}
             </span>
             <div className="mt-2 text-md text-foreground-dim">
-              Sleduj ho v sekci <span className="text-accent">Běžící agenti</span>.
+              Sleduj ho v sekci{" "}
+              <span className="text-accent">Běžící agenti</span>.
             </div>
             <div className="mt-5 inline-flex">
               <Button intent="ghost" icon="pulse" onClick={onClose}>
@@ -136,5 +146,5 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
         )}
       </div>
     </div>
-  )
+  );
 }

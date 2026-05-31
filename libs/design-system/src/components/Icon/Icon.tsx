@@ -1,6 +1,6 @@
-import type { ReactNode, SVGProps } from "react"
+import type { ReactNode, SVGProps } from "react";
 
-/** Every glyph available in the velín icon set. */
+/** Every glyph available in the dashboard icon set. */
 export const iconNames = [
   "grid",
   "spark",
@@ -43,18 +43,21 @@ export const iconNames = [
   "link",
   "warn",
   "arrow",
-] as const
+] as const;
 
-export type IconName = (typeof iconNames)[number]
+export type IconName = (typeof iconNames)[number];
 
-export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name" | "stroke"> {
+export interface IconProps extends Omit<
+  SVGProps<SVGSVGElement>,
+  "name" | "stroke"
+> {
   /** Which glyph to render. */
-  name: IconName
+  name: IconName;
   /** Square size in px. */
-  size?: number
+  size?: number;
   /** Stroke width. */
-  stroke?: number
-  ref?: React.Ref<SVGSVGElement>
+  stroke?: number;
+  ref?: React.Ref<SVGSVGElement>;
 }
 
 const paths: Record<IconName, ReactNode> = {
@@ -234,7 +237,7 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
-}
+};
 
 /** Inline stroke icon, 1.6 default stroke, inherits `currentColor`. */
 export function Icon({
@@ -261,12 +264,12 @@ export function Icon({
     >
       {paths[name]}
     </svg>
-  )
+  );
 }
 
 export interface ZibbyMarkProps extends SVGProps<SVGSVGElement> {
-  size?: number
-  ref?: React.Ref<SVGSVGElement>
+  size?: number;
+  ref?: React.Ref<SVGSVGElement>;
 }
 
 /** The ZIBBY top-hat (cylindr) butler mark. */
@@ -281,8 +284,20 @@ export function ZibbyMark({ size = 22, ref, ...props }: ZibbyMarkProps) {
       aria-hidden="true"
       {...props}
     >
-      <ellipse cx="16" cy="25" rx="12" ry="2.4" fill="currentColor" opacity="0.18" />
-      <path d="M9 24h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <ellipse
+        cx="16"
+        cy="25"
+        rx="12"
+        ry="2.4"
+        fill="currentColor"
+        opacity="0.18"
+      />
+      <path
+        d="M9 24h14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       <path
         d="M11 24V11a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v13"
         stroke="currentColor"
@@ -292,5 +307,5 @@ export function ZibbyMark({ size = 22, ref, ...props }: ZibbyMarkProps) {
       />
       <path d="M11 19h10" stroke="currentColor" strokeWidth="2" />
     </svg>
-  )
+  );
 }
