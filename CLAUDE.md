@@ -173,3 +173,12 @@ Storybook zatím jen pro `libs/design-system`. Každá DS komponenta má story.
 - Psát `forwardRef` (jsme na React 19)
 - Commitovat `.claude/settings.local.json` (je v `.gitignore`)
 - Přidávat query hooky do `libs/` bez jasného důvodu ke sdílení
+
+## graphify
+
+This project has a graphify knowledge graph at graphify-out/.
+
+Rules:
+- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
+- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)

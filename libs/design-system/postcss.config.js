@@ -1,6 +1,11 @@
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const here = dirname(fileURLToPath(import.meta.url))
+
 export default {
   plugins: {
-    tailwindcss: {},
+    tailwindcss: { config: join(here, "tailwind.config.ts") },
     autoprefixer: {},
   },
 }
