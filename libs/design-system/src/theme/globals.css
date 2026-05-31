@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * z.i.b.b.y base layer — the dashboard shell defaults.
+ * Fonts are wired by the app via next/font (--font-sans, --font-mono).
+ */
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Default context accent (home / amber) until a context wrapper overrides it.
+       --zb-accent is RGB channels so `text-accent/30` etc. resolve correctly. */
+    --zb-accent: 240 180 41;
+    --zb-accent-dim: rgba(240, 180, 41, 0.16);
+    --zb-accent-contrast: #0a0c10;
+    --zb-accent-glow: rgba(240, 180, 41, 0.4);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    background: theme("colors.surface-1");
+    color: theme("colors.foreground");
+    font-family: theme("fontFamily.sans");
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgba(91, 141, 239, 0.35);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
