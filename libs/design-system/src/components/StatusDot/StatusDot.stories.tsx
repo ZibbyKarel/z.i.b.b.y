@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { StatusDot } from "./StatusDot";
 
 const meta: Meta<typeof StatusDot> = {
-  title: "Components/StatusDot",
+  title: "DesignSystem/StatusDot",
   component: StatusDot,
   parameters: { backgrounds: { default: "velin" } },
   args: { tone: "ok", size: "100", pulse: false },

@@ -4,7 +4,7 @@ import { Card, CardActions, CardContent, CardFooter, CardHeader } from "./Card";
 import { Button } from "../Button/Button";
 
 const meta: Meta<typeof Card> = {
-  title: "Components/Card",
+  title: "DesignSystem/Card",
   component: Card,
   parameters: { backgrounds: { default: "velin" } },
   args: { children: "Obsah karty" },
@@ -27,7 +27,7 @@ export const Overview: Story = {
           header + content
         </Typography>
         <Card>
-          <CardHeader>{'// Statistiky'}</CardHeader>
+          <CardHeader>{"// Statistiky"}</CardHeader>
           <CardContent>Obsah sekce s hlavičkou</CardContent>
         </Card>
       </div>
@@ -36,7 +36,7 @@ export const Overview: Story = {
           header + content + footer
         </Typography>
         <Card>
-          <CardHeader>{'// Nastavení'}</CardHeader>
+          <CardHeader>{"// Nastavení"}</CardHeader>
           <CardContent>Hlavní obsah karty.</CardContent>
           <CardFooter>Zápatí s doplňkovými informacemi</CardFooter>
         </Card>

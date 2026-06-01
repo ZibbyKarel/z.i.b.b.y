@@ -3,7 +3,7 @@ import { Dialog, DialogBody } from "./Dialog";
 import { Button } from "../Button/Button";
 
 const meta: Meta<typeof Dialog> = {
-  title: "Components/Dialog",
+  title: "DesignSystem/Dialog",
   component: Dialog,
   parameters: { backgrounds: { default: "velin" } },
   args: {
@@ -24,7 +24,9 @@ export const Overview: Story = {
       actions={
         <>
           <Button intent="ghost">Zrušit</Button>
-          <Button icon="x" intent="reject">Smazat</Button>
+          <Button icon="x" intent="reject">
+            Smazat
+          </Button>
         </>
       }
       description="Pipeline a veškerá jeho data budou trvale odstraněna."

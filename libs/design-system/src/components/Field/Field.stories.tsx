@@ -4,7 +4,7 @@ import { Typography } from "../Typography/Typography";
 import { SegmentedField, SelectField, TextAreaField, TextField } from "./Field";
 
 const meta: Meta = {
-  title: "Components/Field",
+  title: "DesignSystem/Field",
   parameters: { backgrounds: { default: "velin" } },
   decorators: [
     (Story) => (

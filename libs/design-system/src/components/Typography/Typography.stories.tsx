@@ -6,7 +6,7 @@ import {
 } from "./Typography";
 
 const meta: Meta<typeof Typography> = {
-  title: "Components/Typography",
+  title: "DesignSystem/Typography",
   component: Typography,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {

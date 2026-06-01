@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -12,10 +13,16 @@ import {
 } from "@zibby/design-system";
 import type { Integration, IntegrationStatus } from "../../../domain";
 
-const statusMeta: Record<IntegrationStatus, { tone: DotTone; label: string }> = {
-  connected:    { tone: "ok",    label: "připojeno" },
-  disconnected: { tone: "faint", label: "odpojeno" },
-  error:        { tone: "bad",   label: "chyba" },
+const statusTone: Record<IntegrationStatus, DotTone> = {
+  connected:    "ok",
+  disconnected: "faint",
+  error:        "bad",
+};
+
+const statusLabelKey: Record<IntegrationStatus, string> = {
+  connected:    "statusConnected",
+  disconnected: "statusDisconnected",
+  error:        "statusError",
 };
 
 const pillTone: Record<IntegrationStatus, "ok" | "neutral" | "bad"> = {
@@ -31,7 +38,7 @@ export interface IntegrationCardProps {
 }
 
 export function IntegrationCard({ integration, onConfigure, onTest }: IntegrationCardProps) {
-  const sm = statusMeta[integration.status];
+  const t = useTranslations();
   return (
     <Card corners interactive radius="sm">
       <Container padding="150">
@@ -54,8 +61,8 @@ export function IntegrationCard({ integration, onConfigure, onTest }: Integratio
               </Stack>
             </Container>
             <Chip tone={pillTone[integration.status]}>
-              <StatusDot size="75" tone={sm.tone} />
-              {sm.label}
+              <StatusDot size="75" tone={statusTone[integration.status]} />
+              {t(`integrations.${statusLabelKey[integration.status]}`)}
             </Chip>
           </Stack>
 
@@ -68,10 +75,10 @@ export function IntegrationCard({ integration, onConfigure, onTest }: Integratio
             </Container>
             <Stack align="center" direction="row" gap="75">
               <Button icon="link" intent="ghost" onClick={() => onTest?.(integration)} size="sm">
-                Test
+                {t("common.test")}
               </Button>
               <Button icon="gear" intent="ghost" onClick={() => onConfigure?.(integration)} size="sm">
-                Konfigurovat
+                {t("common.configure")}
               </Button>
             </Stack>
           </Stack>

@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Divider } from "./Divider";
 
 const meta: Meta<typeof Divider> = {
-  title: "Components/Divider",
+  title: "DesignSystem/Divider",
   component: Divider,
   parameters: { backgrounds: { default: "velin" } },
   args: { orientation: "horizontal" },

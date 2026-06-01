@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Chip } from "./Chip";
 
 const meta: Meta<typeof Chip> = {
-  title: "Components/Chip",
+  title: "DesignSystem/Chip",
   component: Chip,
   parameters: { backgrounds: { default: "velin" } },
   args: { children: "hotovo", tone: "ok" },

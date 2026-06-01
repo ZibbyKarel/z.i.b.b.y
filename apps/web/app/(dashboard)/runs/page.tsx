@@ -1,5 +1,7 @@
-import { PlaceholderScreen } from "../../../features/dashboard/PlaceholderScreen";
+import { useTranslations } from "next-intl";
+import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen";
 
 export default function RunsPage() {
-  return <PlaceholderScreen glyph="pulse" label="Běžící agenti" />;
+  const t = useTranslations("nav");
+  return <PlaceholderScreen glyph="pulse" label={t("runs")} />;
 }

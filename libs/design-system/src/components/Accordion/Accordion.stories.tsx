@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Accordion, AccordionItem } from "./Accordion";
 
 const meta: Meta<typeof Accordion> = {
-  title: "Components/Accordion",
+  title: "DesignSystem/Accordion",
   component: Accordion,
   parameters: { backgrounds: { default: "velin" } },
 };

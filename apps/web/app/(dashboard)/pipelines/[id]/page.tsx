@@ -1,6 +1,6 @@
-import { PipelinesScreen } from "../../../../features/dashboard/PipelinesScreen";
+import { Screen } from "../../../../features/pipelines/Screen";
 
 export default async function PipelineDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <PipelinesScreen selectedId={id} />;
+  return <Screen selectedId={id} />;
 }

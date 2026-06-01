@@ -4,7 +4,7 @@ import { Spacer } from "./Spacer";
 import { type Spacing } from "../../tokens";
 
 const meta: Meta<typeof Spacer> = {
-  title: "Components/Spacer",
+  title: "DesignSystem/Spacer",
   component: Spacer,
   parameters: { backgrounds: { default: "velin" } },
   args: { size: "200" },

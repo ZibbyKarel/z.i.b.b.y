@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Alert } from "./Alert";
 
 const meta: Meta<typeof Alert> = {
-  title: "Components/Alert",
+  title: "DesignSystem/Alert",
   component: Alert,
   parameters: { backgrounds: { default: "velin" } },
   args: { children: "Toto je informační zpráva.", severity: "info" },

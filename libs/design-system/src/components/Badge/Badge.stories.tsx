@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Badge, type BadgeTone } from "./Badge";
 
 const meta: Meta<typeof Badge> = {
-  title: "Components/Badge",
+  title: "DesignSystem/Badge",
   component: Badge,
   parameters: { backgrounds: { default: "velin" } },
   args: { children: "neutral", tone: "neutral" },

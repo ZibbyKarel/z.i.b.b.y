@@ -1,5 +1,5 @@
-import { OverviewScreen } from "../../../features/dashboard/OverviewScreen";
+import { Screen } from "../../../features/overview/Screen";
 
 export default function OverviewPage() {
-  return <OverviewScreen />;
+  return <Screen />;
 }

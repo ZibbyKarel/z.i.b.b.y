@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Kbd } from "./Kbd";
 
 const meta: Meta<typeof Kbd> = {
-  title: "Components/Kbd",
+  title: "DesignSystem/Kbd",
   component: Kbd,
   parameters: { backgrounds: { default: "velin" } },
   args: { children: "⌘K" },

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -15,6 +16,7 @@ export interface SkillTileProps {
 }
 
 export function SkillTile({ skill, onRun }: SkillTileProps) {
+  const t = useTranslations("skills");
   return (
     <Card corners interactive radius="sm">
       <Container padding="150">
@@ -46,7 +48,7 @@ export function SkillTile({ skill, onRun }: SkillTileProps) {
               </Typography>
             </Container>
             <Button icon="play" intent="run" onClick={() => onRun(skill)} size="sm">
-              Spustit
+              {t("runButton")}
             </Button>
           </Stack>
         </Stack>

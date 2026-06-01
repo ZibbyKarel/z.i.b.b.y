@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Progress } from "./Progress";
 
 const meta: Meta<typeof Progress> = {
-  title: "Components/Progress",
+  title: "DesignSystem/Progress",
   component: Progress,
   parameters: { backgrounds: { default: "velin" } },
   args: { value: 64, tone: "warn", glow: true, height: "75" },

@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { useTranslations } from "next-intl";
 import {
   Card,
   Chip,
@@ -25,8 +26,9 @@ const thinkTone = {
 
 /** Per-run model badge (opus / sonnet / haiku). */
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
+  const t = useTranslations("phase");
   return (
-    <Chip title="model (override per-run)" tone={modelTone[model]}>
+    <Chip title={t("modelTitle")} tone={modelTone[model]}>
       {model}
     </Chip>
   );
@@ -34,8 +36,9 @@ export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
 
 /** Thinking-level badge (high / medium / low). */
 export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
+  const t = useTranslations("phase");
   return (
-    <Chip title="thinking level" tone={thinkTone[level]}>
+    <Chip title={t("thinkTitle")} tone={thinkTone[level]}>
       ◇ {level}
     </Chip>
   );
@@ -66,6 +69,7 @@ function IoRow({ label, value, accent }: { label: string; value: string; accent?
 }
 
 function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: AgentDef[]; idx: number; active: boolean }) {
+  const t = useTranslations("phase");
   return (
     <Card radius="default" selected={active} style={{ flex: "1 1 0%", minWidth: 0 }}>
       <Container padding="150">
@@ -74,7 +78,7 @@ function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agent
             <IconTile glyph={glyphForAgent(phase.agent, agents)} size="sm" />
             <Container minW0>
               <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-                FÁZE {idx + 1}
+                {t("phaseLabel", { n: idx + 1 })}
               </Typography>
               <Typography mono nowrap size="base" type="note" weight="semibold">
                 {phase.agent}
@@ -87,8 +91,8 @@ function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agent
           </Stack>
           <Divider />
           <Stack gap="75">
-            <IoRow label="vstup" value={phase.consumes} />
-            <IoRow accent label="výstup" value={phase.produces} />
+            <IoRow label={t("input")} value={phase.consumes} />
+            <IoRow accent label={t("output")} value={phase.produces} />
           </Stack>
         </Stack>
       </Container>
@@ -102,6 +106,7 @@ export interface PhaseChainProps {
 }
 
 export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
+  const t = useTranslations("phase");
   const { phases } = pipeline;
   const loopPhase = phases.find((p) => p.loop);
 
@@ -129,7 +134,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
             <Stack align="center" direction="row" gap="75">
               <Icon name="retry" size="xs" tone="bad" />
               <Typography mono size="xs" tone="bad" type="note">
-                retry · max {loopPhase.loop.maxRetries}
+                {t("retry", { n: loopPhase.loop.maxRetries })}
               </Typography>
             </Stack>
           </Container>

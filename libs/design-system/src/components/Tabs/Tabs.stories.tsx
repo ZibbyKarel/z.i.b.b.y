@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Tab, TabList, TabPanel, Tabs } from "./Tabs";
 
 const meta: Meta<typeof Tabs> = {
-  title: "Components/Tabs",
+  title: "DesignSystem/Tabs",
   component: Tabs,
   parameters: { backgrounds: { default: "velin" } },
   args: { defaultValue: "overview" },
@@ -40,9 +40,15 @@ export const Playground: Story = {
         <Tab value="b">Tab B</Tab>
         <Tab value="c">Tab C</Tab>
       </TabList>
-      <TabPanel value="a"><div className="p-4">Panel A</div></TabPanel>
-      <TabPanel value="b"><div className="p-4">Panel B</div></TabPanel>
-      <TabPanel value="c"><div className="p-4">Panel C</div></TabPanel>
+      <TabPanel value="a">
+        <div className="p-4">Panel A</div>
+      </TabPanel>
+      <TabPanel value="b">
+        <div className="p-4">Panel B</div>
+      </TabPanel>
+      <TabPanel value="c">
+        <div className="p-4">Panel C</div>
+      </TabPanel>
     </Tabs>
   ),
 };

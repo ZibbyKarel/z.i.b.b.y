@@ -1,5 +1,5 @@
-import { AgentsScreen } from "../../../features/dashboard/AgentsScreen";
+import { Screen } from "../../../features/agents/Screen";
 
 export default function AgentsPage() {
-  return <AgentsScreen />;
+  return <Screen />;
 }

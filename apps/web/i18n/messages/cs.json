@@ -10,72 +10,9 @@
     "runs": "Běžící agenti",
     "settings": "Nastavení systému"
   },
-  "topbar": {
-    "commandHint": "Příkaz nebo skill (⌘K)",
-    "commandAriaLabel": "Příkaz nebo skill"
-  },
-  "sidebar": {
-    "navLabel": "Hlavní navigace",
-    "tagline": "Zestful Intuitive Brainy Butler for You"
-  },
   "context": {
     "home": "home",
     "work": "work"
-  },
-  "overview": {
-    "title": "Dobré ráno.",
-    "systemNominal": "Systém · NOMINAL",
-    "allRunning": "Vše běží hladce.",
-    "emptyTitle": "Dashboard je prázdný — postav si ho.",
-    "noSkills": "Žádné skilly k spuštění",
-    "daemonReady": "démon připraven · žádné běhy",
-    "runningAgents": "běžící agenti",
-    "approvals": "schválení",
-    "skills": "skilly"
-  },
-  "skills": {
-    "addSkill": "Přidat skill",
-    "runButton": "Spustit",
-    "emptyTitle": "Zatím žádné skilly",
-    "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit.",
-    "emptyHint": "// vytvoří ~/zibby/skills/<název>/SKILL.md"
-  },
-  "agents": {
-    "addAgent": "Přidat agenta",
-    "emptyTitle": "Zatím žádní agenti",
-    "emptyDescription": "Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci.",
-    "emptyHint": "// vytvoří ~/zibby/agents/<název>.agent.md"
-  },
-  "integrations": {
-    "addIntegration": "Přidat integraci",
-    "statusConnected": "připojeno",
-    "statusDisconnected": "odpojeno",
-    "statusError": "chyba",
-    "emptyTitle": "Zatím žádné integrace",
-    "emptyDescription": "Integrace jsou drivery, kterými systém osahá okolní svět. Secrets žijí v .env — tady je jen konfigurace.",
-    "emptyHint": "// vytvoří ~/zibby/integrations/<název>.json"
-  },
-  "pipelines": {
-    "addPipeline": "Přidat pipeline",
-    "runPipeline": "Spustit pipeline",
-    "emptyTitle": "Zatím žádné pipeline",
-    "emptyDescription": "Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
-    "emptyHint": "// vytvoří ~/zibby/pipelines/<název>.pipeline.md",
-    "phaseCap": "STROP PIPELINE"
-  },
-  "limits": {
-    "ariaLabel": "Limity Claude Code a Agent SDK kredit",
-    "interactive": "inter-\naktivní",
-    "agentSdk": "agent\nsdk",
-    "interactiveLimits": "Interaktivní limity · Claude Code",
-    "independentNote": "čerpá tvůj chat · nezávislé na agentech",
-    "agentSdkCredit": "Agent SDK kredit",
-    "remaining": "zbývá z",
-    "consumed": "spotřebováno",
-    "agentNote": "běhy agentů čerpají odsud",
-    "trend14": "TREND 14 DNÍ ($/den)",
-    "byAgent": "PODLE AGENTA",
-    "byPipeline": "PODLE PIPELINE"
   },
   "common": {
     "stop": "Zastavit",
@@ -84,7 +21,215 @@
     "configure": "Konfigurovat",
     "test": "Test",
     "close": "Zavřít",
+    "cancel": "Zrušit",
     "loading": "Načítání…",
-    "placeholder": "V přípravě"
+    "targetProject": "Cílový projekt"
+  },
+  "topbar": {
+    "commandHint": "Příkaz nebo skill (⌘K)",
+    "commandAriaLabel": "Příkaz nebo skill",
+    "contextSwitcher": "Přepínač kontextu"
+  },
+  "sidebar": {
+    "navLabel": "Hlavní navigace",
+    "tagline": "Zestful Intuitive Brainy Butler for You"
+  },
+  "placeholder": {
+    "body": "Tahle obrazovka je další na řadě. Drží stejný vzor — karty (= soubory na disku) → čudlík → modal s promptem → běh na pozadí.",
+    "hint": "// v přípravě"
+  },
+  "limits": {
+    "ariaLabel": "Limity Claude Code a Agent SDK kredit",
+    "interactive": "inter-\naktivní",
+    "agentSdk": "agent\nsdk",
+    "interactiveLimits": "Interaktivní limity · Claude Code",
+    "independentNote": "čerpá tvůj chat · nezávislé na agentech",
+    "agentSdkCredit": "Agent SDK kredit",
+    "renew": "obnova {date}",
+    "renewDate": "1. čer",
+    "remaining": "zbývá z ${total}",
+    "consumed": "spotřebováno ${used} · běhy agentů čerpají odsud",
+    "agentNote": "běhy agentů čerpají odsud",
+    "trend14": "TREND 14 DNÍ ($/den)",
+    "reset": "reset {resetIn} · {tokens}",
+    "rollingLabel": "5h rolling",
+    "rollingShort": "5h",
+    "rollingReset": "—",
+    "weeklyLabel": "Týdenní",
+    "weeklyShort": "týden",
+    "weeklyReset": "Po 09:00"
+  },
+  "overview": {
+    "systemNominal": "Systém · NOMINAL",
+    "daemonReady": "· démon připraven · žádné běhy",
+    "title": "Dobré ráno.",
+    "emptyTitle": "Dashboard je prázdný — postav si ho.",
+    "allRunning": "Vše běží hladce.",
+    "ctxChip": "ctx · {ctx}",
+    "statRunningAgents": "běžící agenti",
+    "statApprovals": "schválení",
+    "statSdkCredit": "agent sdk kredit",
+    "statPipelines": "pipeline",
+    "statSkills": "skilly",
+    "starterTitle": "začni tady · postav dashboard",
+    "quickRun": "rychlé spuštění · {ctx}",
+    "quickRunEmptyDesc": "Přidej skill a objeví se tu jako dlaždice s čudlíkem Spustit.",
+    "quickRunEmptyHint": "// ~/zibby/skills/'<název>'/SKILL.md",
+    "noSkills": "Žádné skilly k spuštění",
+    "approvalsQueue": "fronta schválení",
+    "noApprovals": "žádná akce nečeká · ZIBBY sám neobjedná",
+    "runningAgents": "běžící agenti",
+    "noAgentsRunning": "žádný agent neběží",
+    "budgets": "rozpočty",
+    "sdkCreditCaps": "AGENT SDK KREDIT",
+    "renew": "obnova {date}",
+    "sdkCreditProgress": "Agent SDK kredit",
+    "agentNote": "běhy agentů čerpají odsud",
+    "interactiveCaps": "INTERAKTIVNÍ · CLAUDE CODE",
+    "starters": {
+      "skills": { "label": "Přidej skill", "sub": "SKILL.md — jednotka práce" },
+      "integrations": { "label": "Přidej integraci", "sub": "driver do okolního světa" },
+      "agents": { "label": "Přidej agenta", "sub": ".agent.md — model + nástroje" },
+      "pipelines": { "label": "Přidej pipeline", "sub": "zřetězení agentů" }
+    }
+  },
+  "skills": {
+    "addSkill": "Přidat skill",
+    "runButton": "Spustit",
+    "sectionLabel": "Skilly · {ctx}",
+    "emptyTitle": "Zatím žádné skilly",
+    "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit.",
+    "emptyHint": "// vytvoří ~/zibby/skills/'<název>'/SKILL.md"
+  },
+  "agents": {
+    "addAgent": "Přidat agenta",
+    "sectionLabel": "Agenti · {ctx}",
+    "editRaw": "Edit raw .agent.md",
+    "stopAria": "Zastavit {skill}",
+    "progressAria": "postup {skill}",
+    "emptyTitle": "Zatím žádní agenti",
+    "emptyDescription": "Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci.",
+    "emptyHint": "// vytvoří ~/zibby/agents/'<název>'.agent.md"
+  },
+  "integrations": {
+    "addIntegration": "Přidat integraci",
+    "sectionLabel": "Integrace · {ctx}",
+    "statusConnected": "připojeno",
+    "statusDisconnected": "odpojeno",
+    "statusError": "chyba",
+    "emptyTitle": "Zatím žádné integrace",
+    "emptyDescription": "Integrace jsou drivery, kterými systém osahá okolní svět. Secrets žijí v .env — tady je jen konfigurace.",
+    "emptyHint": "// vytvoří ~/zibby/integrations/'<název>'.json"
+  },
+  "pipelines": {
+    "addPipeline": "Přidat pipeline",
+    "runPipeline": "Spustit pipeline",
+    "sectionLabel": "Pipeline · {ctx}",
+    "emptyTitle": "Zatím žádné pipeline",
+    "emptyDescription": "Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
+    "emptyHint": "// vytvoří ~/zibby/pipelines/'<název>'.pipeline.md",
+    "phaseCap": "STROP PIPELINE",
+    "branchNote": "výstup → izolovaná branch · PR k ranní review",
+    "chainTitle": "zřetězení fází · soubory = předání",
+    "cardBudget": "strop ${budget}",
+    "cardLastRun": "poslední {lastRun}",
+    "stateDone": "hotovo",
+    "stateParked": "zaparkováno",
+    "stateFailed": "selhalo",
+    "stateRunning": "běží"
+  },
+  "phase": {
+    "modelTitle": "model (override per-run)",
+    "thinkTitle": "thinking level",
+    "phaseLabel": "FÁZE {n}",
+    "input": "vstup",
+    "output": "výstup",
+    "retry": "retry · max {n}"
+  },
+  "approval": {
+    "waiting": "Čeká na tvé schválení",
+    "wants": "chce",
+    "approved": "✓ Schváleno — agent pokračuje",
+    "rejected": "✕ Zamítnuto — akce zrušena",
+    "approve": "Schválit",
+    "reject": "Zamítnout"
+  },
+  "runModal": {
+    "editRaw": "Edit raw SKILL.md",
+    "launch": "Spustit agenta",
+    "runAria": "Spustit {name}",
+    "launchedTitle": "Agent spuštěn na pozadí",
+    "launchedTarget": "{name} → {project}",
+    "watch": "Sleduj ho v sekci <agents>Běžící agenti</agents>.",
+    "promptLabel": "Zadání / prompt",
+    "promptPlaceholder": "Řekni {name}, co má udělat…"
+  },
+  "pipelineRun": {
+    "editRaw": "Edit raw .pipeline.md",
+    "launch": "Spustit · max ${budget}",
+    "runAria": "Spustit pipeline {name}",
+    "title": "Spustit · {name}",
+    "subtitle": "{count} fází · víceagentní běh na pozadí",
+    "launchedTitle": "Pipeline spuštěna na pozadí",
+    "launchedTarget": "{name} → {project} · strop ${budget}",
+    "watch": "Sleduj fáze v sekci <agents>Běžící agenti</agents> · pracuje v izolované branchi.",
+    "promptLabel": "Zadání",
+    "promptPlaceholder": "Co má pipeline „{name}\" udělat…",
+    "budgetLabel": "Rozpočet (strop)",
+    "overrideTitle": "Override modelu / thinking pro tenhle běh",
+    "overrideHint": "klikni na badge pro override · defaulty z agent.md, push do branche čeká na tvé schválení",
+    "changeModelAria": "Změnit model pro {agent}",
+    "changeThinkAria": "Změnit thinking pro {agent}"
+  },
+  "forms": {
+    "namePlaceholder": "'<název>'",
+    "context": "Kontext",
+    "skill": {
+      "title": "Nový skill",
+      "subtitle": "vytvoří SKILL.md na disku",
+      "submitLabel": "Vytvořit skill",
+      "nameLabel": "Název skillu",
+      "namePlaceholder": "např. rohlik",
+      "descLabel": "Popis",
+      "descHint": "uloží se jako description v SKILL.md",
+      "descPlaceholder": "Co skill dělá…"
+    },
+    "integration": {
+      "title": "Nová integrace",
+      "subtitle": "vytvoří config soubor · secrets žijí v .env, ne tady",
+      "submitLabel": "Vytvořit integraci",
+      "nameLabel": "Název integrace",
+      "namePlaceholder": "např. GitHub",
+      "descLabel": "Popis",
+      "descPlaceholder": "Co systém touhle integrací osahá…"
+    },
+    "agent": {
+      "title": "Nový agent",
+      "subtitle": "vytvoří .agent.md s definicí (model, thinking, nástroje)",
+      "submitLabel": "Vytvořit agenta",
+      "nameLabel": "Název agenta",
+      "namePlaceholder": "např. Reviewer",
+      "roleLabel": "Role",
+      "roleHint": "co agent dělá",
+      "rolePlaceholder": "Pre-review diffu před push…",
+      "modelLabel": "Model",
+      "thinkingLabel": "Thinking"
+    },
+    "pipeline": {
+      "title": "Nová pipeline",
+      "subtitle": "vytvoří .pipeline.md · fáze doplníš v editoru",
+      "submitLabel": "Vytvořit pipeline",
+      "nameLabel": "Název pipeline",
+      "namePlaceholder": "např. Build Feature",
+      "descLabel": "Popis",
+      "descPlaceholder": "Co pipeline dělá…",
+      "budgetLabel": "Rozpočet (strop $)"
+    }
+  },
+  "defaults": {
+    "skill": "Nový skill",
+    "integration": "Nová integrace",
+    "agent": "Nový agent",
+    "pipeline": "Nová pipeline"
   }
 }

@@ -1,0 +1,79 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Button, Container, Grid } from "@zibby/design-system";
+import type { Skill } from "../../domain";
+import { SectionLabel } from "../../components/SectionLabel";
+import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
+import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { SkillTile } from "./components/SkillTile";
+import { RunModal } from "./components/RunModal/RunModal";
+import { PROJECTS } from "../../state/config";
+import { useEntityForm } from "../../state/forms";
+import { useDashboardStore } from "../../state/store";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
+
+export function Screen() {
+  const t = useTranslations();
+  const { context } = useGlobalStateContext();
+  const { skills, addSkill } = useDashboardStore();
+  const [adding, setAdding] = useState(false);
+  const [runSkill, setRunSkill] = useState<Skill | null>(null);
+  const form = useEntityForm("skill");
+
+  const list = skills.filter((s) => s.ctx === context);
+
+  return (
+    <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
+      <SectionLabel
+        action={
+          <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
+            {t("skills.addSkill")}
+          </Button>
+        }
+      >
+        {t("skills.sectionLabel", { ctx: context })}
+      </SectionLabel>
+
+      {list.length === 0 ? (
+        <EmptyState
+          actionLabel={t("skills.addSkill")}
+          description={t("skills.emptyDescription")}
+          glyph="spark"
+          hint={t("skills.emptyHint")}
+          onAction={() => setAdding(true)}
+          title={t("skills.emptyTitle")}
+        />
+      ) : (
+        <Grid cols={1} gap="150" lg={3} sm={2}>
+          {list.map((s) => (
+            <SkillTile key={s.id} onRun={setRunSkill} skill={s} />
+          ))}
+        </Grid>
+      )}
+
+      {adding && (
+        <EntityFormModal
+          fields={form.fields}
+          filePreview={form.filePreview}
+          glyph={form.glyph}
+          onClose={() => setAdding(false)}
+          onSubmit={(values) => { addSkill(values, t("defaults.skill")); setAdding(false); }}
+          submitLabel={form.submitLabel}
+          subtitle={form.subtitle}
+          title={form.title}
+        />
+      )}
+
+      {runSkill && (
+        <RunModal
+          key={runSkill.id}
+          onClose={() => setRunSkill(null)}
+          projects={[...PROJECTS]}
+          skill={runSkill}
+        />
+      )}
+    </Container>
+  );
+}

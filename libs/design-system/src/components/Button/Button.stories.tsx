@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Button } from "./Button";
 
 const meta: Meta<typeof Button> = {
-  title: "Components/Button",
+  title: "DesignSystem/Button",
   component: Button,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {

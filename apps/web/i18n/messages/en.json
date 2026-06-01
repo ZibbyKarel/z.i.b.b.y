@@ -10,72 +10,9 @@
     "runs": "Running agents",
     "settings": "System settings"
   },
-  "topbar": {
-    "commandHint": "Command or skill (⌘K)",
-    "commandAriaLabel": "Command or skill"
-  },
-  "sidebar": {
-    "navLabel": "Main navigation",
-    "tagline": "Zestful Intuitive Brainy Butler for You"
-  },
   "context": {
     "home": "home",
     "work": "work"
-  },
-  "overview": {
-    "title": "Good morning.",
-    "systemNominal": "System · NOMINAL",
-    "allRunning": "All systems running.",
-    "emptyTitle": "Dashboard is empty — build it up.",
-    "noSkills": "No skills to run",
-    "daemonReady": "daemon ready · no runs",
-    "runningAgents": "running agents",
-    "approvals": "approvals",
-    "skills": "skills"
-  },
-  "skills": {
-    "addSkill": "Add skill",
-    "runButton": "Run",
-    "emptyTitle": "No skills yet",
-    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card with a Run button.",
-    "emptyHint": "// creates ~/zibby/skills/<name>/SKILL.md"
-  },
-  "agents": {
-    "addAgent": "Add agent",
-    "emptyTitle": "No agents yet",
-    "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
-    "emptyHint": "// creates ~/zibby/agents/<name>.agent.md"
-  },
-  "integrations": {
-    "addIntegration": "Add integration",
-    "statusConnected": "connected",
-    "statusDisconnected": "disconnected",
-    "statusError": "error",
-    "emptyTitle": "No integrations yet",
-    "emptyDescription": "Integrations are drivers that connect the system to the outside world. Secrets live in .env — only configuration lives here.",
-    "emptyHint": "// creates ~/zibby/integrations/<name>.json"
-  },
-  "pipelines": {
-    "addPipeline": "Add pipeline",
-    "runPipeline": "Run pipeline",
-    "emptyTitle": "No pipelines yet",
-    "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
-    "emptyHint": "// creates ~/zibby/pipelines/<name>.pipeline.md",
-    "phaseCap": "PIPELINE BUDGET"
-  },
-  "limits": {
-    "ariaLabel": "Claude Code limits and Agent SDK credit",
-    "interactive": "inter-\nactive",
-    "agentSdk": "agent\nsdk",
-    "interactiveLimits": "Interactive limits · Claude Code",
-    "independentNote": "from your chat · independent of agents",
-    "agentSdkCredit": "Agent SDK credit",
-    "remaining": "remaining of",
-    "consumed": "consumed",
-    "agentNote": "agent runs draw from this",
-    "trend14": "14-DAY TREND ($/day)",
-    "byAgent": "BY AGENT",
-    "byPipeline": "BY PIPELINE"
   },
   "common": {
     "stop": "Stop",
@@ -84,7 +21,215 @@
     "configure": "Configure",
     "test": "Test",
     "close": "Close",
+    "cancel": "Cancel",
     "loading": "Loading…",
-    "placeholder": "Coming soon"
+    "targetProject": "Target project"
+  },
+  "topbar": {
+    "commandHint": "Command or skill (⌘K)",
+    "commandAriaLabel": "Command or skill",
+    "contextSwitcher": "Context switch"
+  },
+  "sidebar": {
+    "navLabel": "Main navigation",
+    "tagline": "Zestful Intuitive Brainy Butler for You"
+  },
+  "placeholder": {
+    "body": "This screen is next in line. It follows the same pattern — cards (= files on disk) → button → prompt modal → background run.",
+    "hint": "// coming soon"
+  },
+  "limits": {
+    "ariaLabel": "Claude Code limits and Agent SDK credit",
+    "interactive": "inter-\nactive",
+    "agentSdk": "agent\nsdk",
+    "interactiveLimits": "Interactive limits · Claude Code",
+    "independentNote": "from your chat · independent of agents",
+    "agentSdkCredit": "Agent SDK credit",
+    "renew": "renews {date}",
+    "renewDate": "Jun 1",
+    "remaining": "remaining of ${total}",
+    "consumed": "consumed ${used} · agent runs draw from this",
+    "agentNote": "agent runs draw from this",
+    "trend14": "14-DAY TREND ($/day)",
+    "reset": "reset {resetIn} · {tokens}",
+    "rollingLabel": "5h rolling",
+    "rollingShort": "5h",
+    "rollingReset": "—",
+    "weeklyLabel": "Weekly",
+    "weeklyShort": "week",
+    "weeklyReset": "Mon 09:00"
+  },
+  "overview": {
+    "systemNominal": "System · NOMINAL",
+    "daemonReady": "· daemon ready · no runs",
+    "title": "Good morning.",
+    "emptyTitle": "Dashboard is empty — build it up.",
+    "allRunning": "All systems running.",
+    "ctxChip": "ctx · {ctx}",
+    "statRunningAgents": "running agents",
+    "statApprovals": "approvals",
+    "statSdkCredit": "agent sdk credit",
+    "statPipelines": "pipelines",
+    "statSkills": "skills",
+    "starterTitle": "start here · build the dashboard",
+    "quickRun": "quick run · {ctx}",
+    "quickRunEmptyDesc": "Add a skill and it will appear here as a tile with a Run button.",
+    "quickRunEmptyHint": "// ~/zibby/skills/'<name>'/SKILL.md",
+    "noSkills": "No skills to run",
+    "approvalsQueue": "approvals queue",
+    "noApprovals": "nothing is waiting · ZIBBY never orders on its own",
+    "runningAgents": "running agents",
+    "noAgentsRunning": "no agent is running",
+    "budgets": "budgets",
+    "sdkCreditCaps": "AGENT SDK CREDIT",
+    "renew": "renews {date}",
+    "sdkCreditProgress": "Agent SDK credit",
+    "agentNote": "agent runs draw from this",
+    "interactiveCaps": "INTERACTIVE · CLAUDE CODE",
+    "starters": {
+      "skills": { "label": "Add skill", "sub": "SKILL.md — unit of work" },
+      "integrations": { "label": "Add integration", "sub": "driver to the outside world" },
+      "agents": { "label": "Add agent", "sub": ".agent.md — model + tools" },
+      "pipelines": { "label": "Add pipeline", "sub": "chaining of agents" }
+    }
+  },
+  "skills": {
+    "addSkill": "Add skill",
+    "runButton": "Run",
+    "sectionLabel": "Skills · {ctx}",
+    "emptyTitle": "No skills yet",
+    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card with a Run button.",
+    "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md"
+  },
+  "agents": {
+    "addAgent": "Add agent",
+    "sectionLabel": "Agents · {ctx}",
+    "editRaw": "Edit raw .agent.md",
+    "stopAria": "Stop {skill}",
+    "progressAria": "progress {skill}",
+    "emptyTitle": "No agents yet",
+    "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
+    "emptyHint": "// creates ~/zibby/agents/'<name>'.agent.md"
+  },
+  "integrations": {
+    "addIntegration": "Add integration",
+    "sectionLabel": "Integrations · {ctx}",
+    "statusConnected": "connected",
+    "statusDisconnected": "disconnected",
+    "statusError": "error",
+    "emptyTitle": "No integrations yet",
+    "emptyDescription": "Integrations are drivers that connect the system to the outside world. Secrets live in .env — only configuration lives here.",
+    "emptyHint": "// creates ~/zibby/integrations/'<name>'.json"
+  },
+  "pipelines": {
+    "addPipeline": "Add pipeline",
+    "runPipeline": "Run pipeline",
+    "sectionLabel": "Pipelines · {ctx}",
+    "emptyTitle": "No pipelines yet",
+    "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
+    "emptyHint": "// creates ~/zibby/pipelines/'<name>'.pipeline.md",
+    "phaseCap": "PIPELINE BUDGET",
+    "branchNote": "output → isolated branch · PR for morning review",
+    "chainTitle": "phase chain · files = handoff",
+    "cardBudget": "cap ${budget}",
+    "cardLastRun": "last {lastRun}",
+    "stateDone": "done",
+    "stateParked": "parked",
+    "stateFailed": "failed",
+    "stateRunning": "running"
+  },
+  "phase": {
+    "modelTitle": "model (override per-run)",
+    "thinkTitle": "thinking level",
+    "phaseLabel": "PHASE {n}",
+    "input": "input",
+    "output": "output",
+    "retry": "retry · max {n}"
+  },
+  "approval": {
+    "waiting": "Waiting for your approval",
+    "wants": "wants to",
+    "approved": "✓ Approved — agent continues",
+    "rejected": "✕ Rejected — action cancelled",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "runModal": {
+    "editRaw": "Edit raw SKILL.md",
+    "launch": "Run agent",
+    "runAria": "Run {name}",
+    "launchedTitle": "Agent launched in the background",
+    "launchedTarget": "{name} → {project}",
+    "watch": "Watch it in the <agents>Running agents</agents> section.",
+    "promptLabel": "Prompt",
+    "promptPlaceholder": "Tell {name} what to do…"
+  },
+  "pipelineRun": {
+    "editRaw": "Edit raw .pipeline.md",
+    "launch": "Run · max ${budget}",
+    "runAria": "Run pipeline {name}",
+    "title": "Run · {name}",
+    "subtitle": "{count} phases · multi-agent background run",
+    "launchedTitle": "Pipeline launched in the background",
+    "launchedTarget": "{name} → {project} · cap ${budget}",
+    "watch": "Watch the phases in the <agents>Running agents</agents> section · it works in an isolated branch.",
+    "promptLabel": "Prompt",
+    "promptPlaceholder": "What should the „{name}\" pipeline do…",
+    "budgetLabel": "Budget (cap)",
+    "overrideTitle": "Override model / thinking for this run",
+    "overrideHint": "click a badge to override · defaults from agent.md, push to branch awaits your approval",
+    "changeModelAria": "Change model for {agent}",
+    "changeThinkAria": "Change thinking for {agent}"
+  },
+  "forms": {
+    "namePlaceholder": "'<name>'",
+    "context": "Context",
+    "skill": {
+      "title": "New skill",
+      "subtitle": "creates SKILL.md on disk",
+      "submitLabel": "Create skill",
+      "nameLabel": "Skill name",
+      "namePlaceholder": "e.g. rohlik",
+      "descLabel": "Description",
+      "descHint": "saved as the description in SKILL.md",
+      "descPlaceholder": "What the skill does…"
+    },
+    "integration": {
+      "title": "New integration",
+      "subtitle": "creates a config file · secrets live in .env, not here",
+      "submitLabel": "Create integration",
+      "nameLabel": "Integration name",
+      "namePlaceholder": "e.g. GitHub",
+      "descLabel": "Description",
+      "descPlaceholder": "What the system reaches through this integration…"
+    },
+    "agent": {
+      "title": "New agent",
+      "subtitle": "creates .agent.md with a definition (model, thinking, tools)",
+      "submitLabel": "Create agent",
+      "nameLabel": "Agent name",
+      "namePlaceholder": "e.g. Reviewer",
+      "roleLabel": "Role",
+      "roleHint": "what the agent does",
+      "rolePlaceholder": "Pre-review the diff before push…",
+      "modelLabel": "Model",
+      "thinkingLabel": "Thinking"
+    },
+    "pipeline": {
+      "title": "New pipeline",
+      "subtitle": "creates .pipeline.md · add phases in the editor",
+      "submitLabel": "Create pipeline",
+      "nameLabel": "Pipeline name",
+      "namePlaceholder": "e.g. Build Feature",
+      "descLabel": "Description",
+      "descPlaceholder": "What the pipeline does…",
+      "budgetLabel": "Budget (cap $)"
+    }
+  },
+  "defaults": {
+    "skill": "New skill",
+    "integration": "New integration",
+    "agent": "New agent",
+    "pipeline": "New pipeline"
   }
 }

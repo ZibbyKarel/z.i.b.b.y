@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Stat } from "./Stat";
 
 const meta: Meta<typeof Stat> = {
-  title: "Components/Stat",
+  title: "DesignSystem/Stat",
   component: Stat,
   parameters: { backgrounds: { default: "velin" } },
   args: { value: "02", label: "běžící agenti", icon: "pulse", tone: "accent" },

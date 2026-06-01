@@ -4,7 +4,7 @@ import { Typography } from "../Typography/Typography";
 import { Surface } from "./Surface";
 
 const meta: Meta<typeof Surface> = {
-  title: "Components/Surface",
+  title: "DesignSystem/Surface",
   component: Surface,
   parameters: { layout: "fullscreen", backgrounds: { default: "velin" } },
 };

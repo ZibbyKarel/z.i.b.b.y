@@ -1,5 +1,7 @@
-import { PlaceholderScreen } from "../../../features/dashboard/PlaceholderScreen";
+import { useTranslations } from "next-intl";
+import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen";
 
 export default function SettingsPage() {
-  return <PlaceholderScreen glyph="gear" label="Nastavení systému" />;
+  const t = useTranslations("nav");
+  return <PlaceholderScreen glyph="gear" label={t("settings")} />;
 }

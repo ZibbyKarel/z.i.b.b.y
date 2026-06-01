@@ -3,7 +3,7 @@ import { Badge } from "../Badge/Badge";
 import { Pressable } from "./Pressable";
 
 const meta: Meta<typeof Pressable> = {
-  title: "Components/Pressable",
+  title: "DesignSystem/Pressable",
   component: Pressable,
   parameters: { backgrounds: { default: "velin" } },
 };

@@ -20,10 +20,14 @@ const navItems: NavItem[] = [
   { id: "runs", label: "Běžící agenti", glyph: "pulse", badge: 2 },
 ];
 
-const settingsItem: NavItem = { id: "settings", label: "Nastavení systému", glyph: "gear" };
+const settingsItem: NavItem = {
+  id: "settings",
+  label: "Nastavení systému",
+  glyph: "gear",
+};
 
 const meta: Meta<typeof List> = {
-  title: "Dashboard/List",
+  title: "DesignSystem/List",
   component: List,
   parameters: { backgrounds: { default: "velin" }, layout: "fullscreen" },
   decorators: [
@@ -52,9 +56,7 @@ export const Overview: Story = {
             >
               <ListItemIcon glyph={item.glyph} />
               <ListItemText>{item.label}</ListItemText>
-              {item.badge ? (
-                <ListItemBadge>{item.badge}</ListItemBadge>
-              ) : null}
+              {item.badge ? <ListItemBadge>{item.badge}</ListItemBadge> : null}
             </ListItem>
           ))}
         </List>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   Container,
   Divider,
@@ -18,6 +19,7 @@ export interface AgentRowProps {
 }
 
 export function AgentRow({ agent, onStop, divider = true }: AgentRowProps) {
+  const t = useTranslations("agents");
   const tone = agent.ctx === "work" ? "work" : "home";
   return (
     <>
@@ -44,7 +46,7 @@ export function AgentRow({ agent, onStop, divider = true }: AgentRowProps) {
                   <Progress
                     glow
                     height="50"
-                    label={`postup ${agent.skill}`}
+                    label={t("progressAria", { skill: agent.skill })}
                     tone="accent"
                     value={agent.pct}
                   />
@@ -57,7 +59,7 @@ export function AgentRow({ agent, onStop, divider = true }: AgentRowProps) {
           </Container>
           <IconTile
             interactive
-            aria-label={`Zastavit ${agent.skill}`}
+            aria-label={t("stopAria", { skill: agent.skill })}
             as="button"
             onClick={() => onStop?.(agent)}
             radius="default"

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Icon, iconNames } from "./Icon";
 
 const meta: Meta<typeof Icon> = {
-  title: "Foundations/Icon",
+  title: "DesignSystem/Icon",
   component: Icon,
   parameters: { backgrounds: { default: "velin" } },
   args: { name: "spark", size: "xl", stroke: "default" },
@@ -20,7 +20,9 @@ export const Overview: Story = {
           key={name}
         >
           <Icon name={name} size="lg" />
-          <span className="font-mono text-2xs text-foreground-faint">{name}</span>
+          <span className="font-mono text-2xs text-foreground-faint">
+            {name}
+          </span>
         </div>
       ))}
     </div>

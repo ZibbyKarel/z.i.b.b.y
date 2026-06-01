@@ -23,21 +23,27 @@ NX monorepo — Next.js 15 App Router · React 19 · TanStack Query · Tailwind 
 npm install
 ```
 
-| Command              | What it does                                            |
-| -------------------- | ------------------------------------------------------- |
-| `npm run dev`        | Start the web app at http://localhost:3000              |
-| `npm run storybook`  | Launch design system Storybook at http://localhost:6006 |
-| `npm run test`       | Run the test suite once                                 |
-| `npm run test:watch` | Run tests in watch mode                                 |
-| `npm run typecheck`  | Type-check the whole monorepo                           |
-| `npm run build`      | Production build of the web app                         |
+| Command                  | What it does                                            |
+| ------------------------ | ------------------------------------------------------- |
+| `npm run web:dev`        | Start the web app at http://localhost:3000              |
+| `npm run web:build`      | Production build of the web app                         |
+| `npm run web:start`      | Serve the production web build                          |
+| `npm run web:test`       | Run web tests once                                      |
+| `npm run api:dev`        | Start API in watch mode at http://localhost:3333        |
+| `npm run api:start`      | Serve the API once (no reload)                          |
+| `npm run api:test`       | Run API tests once                                      |
+| `npm run test`           | Run all tests once                                      |
+| `npm run test:watch`     | Run all tests in watch mode                             |
+| `npm run storybook`      | Launch design system Storybook at http://localhost:6006 |
+| `npm run typecheck`      | Type-check the whole monorepo                           |
 
 ### Start developing
 
 ```bash
-npm install        # install dependencies
-npm run dev        # web app → http://localhost:3000
-npm run storybook  # design system → http://localhost:6006
+npm install           # install dependencies
+npm run web:dev       # web app → http://localhost:3000
+npm run api:dev       # API → http://localhost:3333
+npm run storybook     # design system → http://localhost:6006
 ```
 
 ---
@@ -57,15 +63,5 @@ apps/
 ## API (`apps/api`)
 
 NestJS backend running on port **3333** by default. OpenAPI docs served at `/docs`.
-
-```bash
-pnpm install               # install all monorepo deps (run from root)
-```
-
-| Command                              | What it does                                   |
-| ------------------------------------ | ---------------------------------------------- |
-| `pnpm --filter @zibby/api dev`       | Start API in watch mode at http://localhost:3333 |
-| `pnpm --filter @zibby/api serve`     | Start API once (no reload)                     |
-| `pnpm --filter @zibby/api test`      | Run API tests                                  |
 
 Override the port with `PORT=<n>`.

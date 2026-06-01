@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Sparkline } from "./Sparkline";
 
 const meta: Meta<typeof Sparkline> = {
-  title: "Components/Sparkline",
+  title: "DesignSystem/Sparkline",
   component: Sparkline,
   parameters: { backgrounds: { default: "velin" } },
   decorators: [

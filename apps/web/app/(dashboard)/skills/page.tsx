@@ -1,5 +1,5 @@
-import { SkillsScreen } from "../../../features/dashboard/SkillsScreen";
+import { Screen } from "../../../features/skills/Screen";
 
 export default function SkillsPage() {
-  return <SkillsScreen />;
+  return <Screen />;
 }

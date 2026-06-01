@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -17,6 +18,7 @@ export interface AgentCardProps {
 }
 
 export function AgentCard({ agent, onEdit }: AgentCardProps) {
+  const t = useTranslations("agents");
   return (
     <Card corners interactive radius="sm">
       <Container padding="150">
@@ -58,7 +60,7 @@ export function AgentCard({ agent, onEdit }: AgentCardProps) {
               </Typography>
             </Container>
             <Button icon="edit" intent="ghost" onClick={() => onEdit?.(agent)} size="sm">
-              Edit raw .agent.md
+              {t("editRaw")}
             </Button>
           </Stack>
         </Stack>

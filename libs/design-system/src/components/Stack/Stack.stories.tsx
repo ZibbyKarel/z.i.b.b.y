@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Stack } from "./Stack";
 
 const meta: Meta<typeof Stack> = {
-  title: "Components/Stack",
+  title: "DesignSystem/Stack",
   component: Stack,
   parameters: { backgrounds: { default: "velin" } },
   args: { direction: "col", gap: "200" },

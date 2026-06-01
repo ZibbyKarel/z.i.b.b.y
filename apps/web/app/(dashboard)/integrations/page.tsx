@@ -1,5 +1,5 @@
-import { IntegrationsScreen } from "../../../features/dashboard/IntegrationsScreen";
+import { Screen } from "../../../features/integrations/Screen";
 
 export default function IntegrationsPage() {
-  return <IntegrationsScreen />;
+  return <Screen />;
 }

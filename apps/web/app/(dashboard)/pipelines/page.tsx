@@ -1,5 +1,5 @@
-import { PipelinesScreen } from "../../../features/dashboard/PipelinesScreen";
+import { Screen } from "../../../features/pipelines/Screen";
 
 export default function PipelinesPage() {
-  return <PipelinesScreen />;
+  return <Screen />;
 }

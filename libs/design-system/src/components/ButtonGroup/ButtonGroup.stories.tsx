@@ -9,7 +9,7 @@ const contextOptions: ButtonGroupOption[] = [
 ];
 
 const meta: Meta<typeof ButtonGroup> = {
-  title: "Components/ButtonGroup",
+  title: "DesignSystem/ButtonGroup",
   component: ButtonGroup,
   parameters: { backgrounds: { default: "velin" } },
 };

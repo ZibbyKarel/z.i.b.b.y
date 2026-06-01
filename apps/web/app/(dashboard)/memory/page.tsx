@@ -1,5 +1,7 @@
-import { PlaceholderScreen } from "../../../features/dashboard/PlaceholderScreen";
+import { useTranslations } from "next-intl";
+import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen";
 
 export default function MemoryPage() {
-  return <PlaceholderScreen glyph="brain" label="Paměť" />;
+  const t = useTranslations("nav");
+  return <PlaceholderScreen glyph="brain" label={t("memory")} />;
 }

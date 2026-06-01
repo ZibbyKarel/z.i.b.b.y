@@ -4,7 +4,7 @@ import { Container } from "../Container/Container";
 import { Grid } from "./Grid";
 
 const meta: Meta<typeof Grid> = {
-  title: "Components/Grid",
+  title: "DesignSystem/Grid",
   component: Grid,
   parameters: { backgrounds: { default: "velin" } },
 };

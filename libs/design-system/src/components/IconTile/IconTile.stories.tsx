@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { IconTile } from "./IconTile";
 
 const meta: Meta<typeof IconTile> = {
-  title: "Components/IconTile",
+  title: "DesignSystem/IconTile",
   component: IconTile,
   parameters: { backgrounds: { default: "velin" } },
   args: { glyph: "bot", size: "md", tone: "accent", radius: "sm" },

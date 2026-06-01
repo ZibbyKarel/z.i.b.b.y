@@ -1,4 +1,7 @@
+import { useTranslations } from "next-intl";
+
 export default function DashboardLoading() {
+  const t = useTranslations("common");
   return (
     <div
       style={{
@@ -13,7 +16,7 @@ export default function DashboardLoading() {
         textTransform: "uppercase",
       }}
     >
-      Loading…
+      {t("loading")}
     </div>
   );
 }
