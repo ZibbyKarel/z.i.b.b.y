@@ -1,14 +1,19 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "../../lib/cn";
-import { spacingToPx, resolvePadding, type Spacing, type Padding } from "../../tokens";
+import {
+  spacingToPx,
+  resolvePadding,
+  type Spacing,
+  type Padding,
+} from "../../tokens";
 
 export type CornersTone = "accent" | "bad" | "ok" | "warn";
 
 const cornersToneClass: Record<CornersTone, string> = {
   accent: "border-accent",
-  bad:    "border-bad",
-  ok:     "border-ok",
-  warn:   "border-warn",
+  bad: "border-bad",
+  ok: "border-ok",
+  warn: "border-warn",
 };
 
 export interface CornersProps {
@@ -18,18 +23,36 @@ export interface CornersProps {
 
 export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
   const px = spacingToPx(inset);
-  const base = cn("pointer-events-none absolute h-3 w-3 opacity-60", cornersToneClass[tone]);
+  const base = cn(
+    "pointer-events-none absolute h-3 w-3 opacity-60",
+    cornersToneClass[tone],
+  );
   return (
     <>
-      <span className={cn(base, "border-t-[1.5px] border-l-[1.5px]")} style={{ top: px, left: px }} />
-      <span className={cn(base, "border-t-[1.5px] border-r-[1.5px]")} style={{ top: px, right: px }} />
-      <span className={cn(base, "border-b-[1.5px] border-l-[1.5px]")} style={{ bottom: px, left: px }} />
-      <span className={cn(base, "border-b-[1.5px] border-r-[1.5px]")} style={{ bottom: px, right: px }} />
+      <span
+        className={cn(base, "border-t-[1.5px] border-l-[1.5px]")}
+        style={{ top: px, left: px }}
+      />
+      <span
+        className={cn(base, "border-t-[1.5px] border-r-[1.5px]")}
+        style={{ top: px, right: px }}
+      />
+      <span
+        className={cn(base, "border-b-[1.5px] border-l-[1.5px]")}
+        style={{ bottom: px, left: px }}
+      />
+      <span
+        className={cn(base, "border-b-[1.5px] border-r-[1.5px]")}
+        style={{ bottom: px, right: px }}
+      />
     </>
   );
 }
 
-export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
+export interface CardProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "className"
+> {
   background?: "elevated" | "raised" | "surface";
   bordered?: boolean;
   interactive?: boolean;
@@ -42,13 +65,13 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
 
 const bgClasses: Record<NonNullable<CardProps["background"]>, string> = {
   elevated: "bg-elevated",
-  raised:   "bg-raised",
-  surface:  "bg-surface",
+  raised: "bg-raised",
+  surface: "bg-surface",
 };
 
 const radiusClasses: Record<NonNullable<CardProps["radius"]>, string> = {
-  none:    "rounded-none",
-  sm:      "rounded-sm",
+  none: "rounded-none",
+  sm: "rounded-sm",
   default: "rounded",
 };
 
@@ -73,7 +96,8 @@ export function Card({
         bgClasses[background],
         radiusClasses[radius],
         bordered && "border border-border",
-        interactive && "transition-colors hover:border-accent/40 hover:bg-raised",
+        interactive &&
+          "transition-colors hover:border-accent/40 hover:bg-raised",
       )}
     >
       {corners && <Corners inset="75" />}
@@ -100,11 +124,7 @@ export function CardContent({
   padding?: Padding;
 }) {
   const [t, r, b, l] = resolvePadding(padding).map(spacingToPx);
-  return (
-    <div style={{ padding: `${t} ${r} ${b} ${l}` }}>
-      {children}
-    </div>
-  );
+  return <div style={{ padding: `${t} ${r} ${b} ${l}` }}>{children}</div>;
 }
 
 export function CardFooter({ children }: { children: ReactNode }) {

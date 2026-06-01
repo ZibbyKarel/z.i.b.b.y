@@ -11,9 +11,7 @@ export default meta;
 
 type Story = StoryObj<typeof Icon>;
 
-export const Single: Story = {};
-
-export const AllGlyphs: Story = {
+export const Overview: Story = {
   render: () => (
     <div className="grid grid-cols-8 gap-4 text-foreground">
       {iconNames.map((name) => (
@@ -22,22 +20,11 @@ export const AllGlyphs: Story = {
           className="flex flex-col items-center gap-2 rounded border border-border p-3"
         >
           <Icon name={name} size="lg" />
-          <span className="font-mono text-2xs text-foreground-faint">
-            {name}
-          </span>
+          <span className="font-mono text-2xs text-foreground-faint">{name}</span>
         </div>
       ))}
     </div>
   ),
 };
 
-export const Brand: Story = {
-  render: () => (
-    <div className="flex items-center gap-3 text-foreground">
-      <Icon name="butlerSign" size="xl" />
-      <span className="font-mono text-2xl font-bold tracking-mono">
-        Z·I·B·B·Y
-      </span>
-    </div>
-  ),
-};
+export const Playground: Story = {};

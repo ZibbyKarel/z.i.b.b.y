@@ -342,7 +342,7 @@ Vitest + `@testing-library/react`. Co-located files:
 ```
 Button.tsx
 Button.test.tsx    ← basic render, ref-as-prop, className merge, states, userEvent
-Button.stories.tsx ← Overview (all variants) + Playground (all controls)
+Button.stories.tsx ← exactly two exports: Overview + Playground
 ```
 
 **Every DS component must have a test.** Exception: no per-icon tests.
@@ -354,17 +354,35 @@ Domain composites moved to app: use `apps/web/test/renderWithIntl.tsx` as test w
 
 ## Storybook
 
-Storybook is for `libs/design-system` only. Story convention:
+Storybook is for `libs/design-system` only. Every story file has **exactly two named exports** in this order:
+
+1. **`Overview`** — static `render:` function showing all variants/states stacked vertically. No args wiring.
+2. **`Playground`** — args-based story with full controls. Use `argTypes` in meta for selects/radios. For stateful components (ButtonGroup, List) use a `render:` with `useState`.
 
 ```tsx
-// 1. Overview — static render of all variants
-// 2. Playground — all props as controls, event props { action: 'name' }
-export default { tags: ["autodocs"] } satisfies Meta<typeof Component>;
+// Button.stories.tsx
+export const Overview: Story = {
+  render: () => (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-3">
+        <Button intent="run" icon="play">Spustit</Button>
+        <Button intent="solid">Solid</Button>
+        {/* …all variants… */}
+      </div>
+    </div>
+  ),
+};
+
+export const Playground: Story = {};  // picks up meta args + argTypes
 ```
+
+No other story exports. Remove `Default`, `Tones`, `Sizes`, `WithHeader`, etc. — everything goes into `Overview`.
 
 Toolbar: `theme` (dark/light) and `context` (home/work) switchers via `DesignSystemProvider` decorator.
 
-**Every DS component must have a story** (Overview + Playground). Exception: icons get one shared story showing the full set.
+**Every DS component must have a story file** with exactly the `Overview` + `Playground` pair.
+
+**Icon exception:** `Icon.stories.tsx` also has exactly two stories — `Overview` renders the full `iconNames` glyph grid, `Playground` renders a single configurable icon with controls. No per-icon stories.
 
 ---
 
@@ -404,6 +422,7 @@ Always export the Props type too — consumers in `apps/` need it for typing.
 - Import domain types into DS components
 - Use `asChild` — use `as?: NarrowUnion` instead
 - Add per-icon tests or per-icon stories
+- Add a third story to a story file — exactly `Overview` + `Playground`, nothing else
 - Add query hooks to `libs/` without a clear sharing reason
 - Create UI primitives in the app when they can be added to DS (decide explicitly first)
 - **Accept `className` in DS component Props** — DS is sealed; all styling is via typed variants/props. Every Props type must `Omit<..., "className">` (or exclude it from a custom interface). App code may never pass `className` to a DS component.

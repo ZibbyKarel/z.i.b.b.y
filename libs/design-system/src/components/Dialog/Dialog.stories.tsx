@@ -17,25 +17,19 @@ export default meta;
 
 type Story = StoryObj<typeof Dialog>;
 
-export const Default: Story = {};
-
-export const WithActions: Story = {
-  args: {
-    title: "Smazat pipeline",
-    description: "Pipeline a veškerá jeho data budou trvale odstraněna.",
-    actions: (
-      <>
-        <Button intent="ghost">Zrušit</Button>
-        <Button intent="reject" icon="x">Smazat</Button>
-      </>
-    ),
-    children: undefined,
-  },
-};
-
-export const WithBody: Story = {
+export const Overview: Story = {
   render: () => (
-    <Dialog open title="Detail agenta">
+    <Dialog
+      open
+      title="Smazat pipeline"
+      description="Pipeline a veškerá jeho data budou trvale odstraněna."
+      actions={
+        <>
+          <Button intent="ghost">Zrušit</Button>
+          <Button intent="reject" icon="x">Smazat</Button>
+        </>
+      }
+    >
       <DialogBody>
         <p>Agent zpracovává 3 fronty a čeká na schválení.</p>
       </DialogBody>

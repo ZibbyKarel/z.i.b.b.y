@@ -4,5 +4,10 @@
     "jsx": "react-jsx",
     "rootDir": "src"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vitest.setup.ts",
+    ".storybook/contextTokens.ts"
+  ]
 }

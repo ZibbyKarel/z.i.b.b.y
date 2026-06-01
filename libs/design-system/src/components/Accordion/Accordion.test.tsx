@@ -10,19 +10,31 @@ function wrap(ui: React.ReactNode) {
 
 describe("Accordion", () => {
   it("hides content by default", () => {
-    wrap(<Accordion sections={[{ title: "Kapitola 1", content: "Obsah kapitoly" }]} />);
+    wrap(
+      <Accordion
+        sections={[{ title: "Kapitola 1", content: "Obsah kapitoly" }]}
+      />,
+    );
     expect(screen.getByText("Kapitola 1")).toBeInTheDocument();
     expect(screen.queryByText("Obsah kapitoly")).toBeNull();
   });
 
   it("expands on click", async () => {
-    wrap(<Accordion sections={[{ title: "Kapitola 1", content: "Obsah kapitoly" }]} />);
+    wrap(
+      <Accordion
+        sections={[{ title: "Kapitola 1", content: "Obsah kapitoly" }]}
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /Kapitola 1/ }));
     expect(screen.getByText("Obsah kapitoly")).toBeInTheDocument();
   });
 
   it("collapses on second click", async () => {
-    wrap(<Accordion sections={[{ title: "Kapitola 1", content: "Obsah kapitoly" }]} />);
+    wrap(
+      <Accordion
+        sections={[{ title: "Kapitola 1", content: "Obsah kapitoly" }]}
+      />,
+    );
     const btn = screen.getByRole("button", { name: /Kapitola 1/ });
     await userEvent.click(btn);
     await userEvent.click(btn);
@@ -31,14 +43,21 @@ describe("Accordion", () => {
 
   it("renders expanded when defaultExpanded=true", () => {
     wrap(
-      <Accordion sections={[{ title: "Info", content: "Viditelný obsah", defaultExpanded: true }]} />,
+      <Accordion
+        sections={[
+          { title: "Info", content: "Viditelný obsah", defaultExpanded: true },
+        ]}
+      />,
     );
     expect(screen.getByText("Viditelný obsah")).toBeInTheDocument();
   });
 
   it("sets aria-expanded correctly", () => {
     wrap(<Accordion sections={[{ title: "Test", content: "Obsah" }]} />);
-    expect(screen.getByRole("button", { name: /Test/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Test/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 
   it("multi mode allows multiple sections open simultaneously", async () => {

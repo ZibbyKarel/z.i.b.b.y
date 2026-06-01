@@ -67,6 +67,20 @@ Hooks live per-domain in `apps/web/features/<domain>/queries.ts`, not in `libs/`
 
 ---
 
+## After each code generation
+
+Run these three commands in order after generating or modifying any code files:
+
+```bash
+npm run lint       # ESLint auto-fix (acts as project formatter)
+npm run typecheck  # tsc --noEmit
+npm run test       # vitest run
+```
+
+Fix all errors before reporting the task as done. Do not skip steps.
+
+---
+
 ## Never do
 
 - Write `forwardRef` (React 19 — ref-as-prop)

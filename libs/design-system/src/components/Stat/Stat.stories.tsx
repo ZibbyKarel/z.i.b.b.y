@@ -1,19 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Stat } from "./Stat"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Stat } from "./Stat";
 
 const meta: Meta<typeof Stat> = {
   title: "Components/Stat",
   component: Stat,
   parameters: { backgrounds: { default: "velin" } },
   args: { value: "02", label: "běžící agenti", icon: "pulse", tone: "accent" },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof Stat>
+type Story = StoryObj<typeof Stat>;
 
-export const Default: Story = {}
-
-export const Row: Story = {
+export const Overview: Story = {
   render: () => (
     <div className="flex flex-wrap gap-9">
       <Stat value="02" label="běžící agenti" icon="pulse" tone="accent" />
@@ -22,4 +20,6 @@ export const Row: Story = {
       <Stat value="04" label="pipeline" icon="flow" tone="neutral" />
     </div>
   ),
-}
+};
+
+export const Playground: Story = {};

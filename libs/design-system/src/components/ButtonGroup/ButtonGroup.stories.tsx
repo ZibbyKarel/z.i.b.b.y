@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ButtonGroup } from "./ButtonGroup";
-import type { ButtonGroupOption } from "./ButtonGroup";
+import { Typography } from "../Typography/Typography";
+import { ButtonGroup, type ButtonGroupOption } from "./ButtonGroup";
 
 const contextOptions: ButtonGroupOption[] = [
   {
@@ -29,21 +29,42 @@ export default meta;
 
 type Story = StoryObj<typeof ButtonGroup>;
 
-export const Interactive: Story = {
+export const Overview: Story = {
   render: () => {
     const [value, setValue] = useState("home");
+    const [valueAdd, setValueAdd] = useState("home");
     return (
-      <ButtonGroup
-        options={contextOptions}
-        value={value}
-        onChange={setValue}
-        ariaLabel="Přepínač kontextu"
-      />
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <Typography type="subtitle" variant="tertiary" mono>
+            default
+          </Typography>
+          <ButtonGroup
+            options={contextOptions}
+            value={value}
+            onChange={setValue}
+            ariaLabel="Přepínač kontextu"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Typography type="subtitle" variant="tertiary" mono>
+            with add button
+          </Typography>
+          <ButtonGroup
+            options={contextOptions}
+            value={valueAdd}
+            onChange={setValueAdd}
+            onAdd={() => {}}
+            addLabel="Přidat kontext"
+            ariaLabel="Přepínač s tlačítkem přidat"
+          />
+        </div>
+      </div>
     );
   },
 };
 
-export const WithAddButton: Story = {
+export const Playground: Story = {
   render: () => {
     const [value, setValue] = useState("home");
     return (
@@ -51,8 +72,6 @@ export const WithAddButton: Story = {
         options={contextOptions}
         value={value}
         onChange={setValue}
-        onAdd={() => {}}
-        addLabel="Přidat kontext"
         ariaLabel="Přepínač kontextu"
       />
     );

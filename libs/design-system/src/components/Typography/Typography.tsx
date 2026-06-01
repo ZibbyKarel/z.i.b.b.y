@@ -19,6 +19,7 @@ type As = "h1" | "h2" | "h3" | "div" | "p" | "span";
 export interface TypographyProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   type: TypographyType;
   variant?: TypographyVariant;
+  mono?: boolean;
   ref?: Ref<HTMLElement>;
 }
 
@@ -47,6 +48,7 @@ const variantClasses: Record<TypographyVariant, string> = {
 export function Typography({
   type,
   variant = "primary",
+  mono,
   ref,
   ...rest
 }: TypographyProps) {
@@ -62,7 +64,7 @@ export function Typography({
             HTMLSpanElement
         >
       }
-      className={cn(typeClasses[type], variantClasses[variant])}
+      className={cn(typeClasses[type], variantClasses[variant], mono && "font-mono")}
       {...rest}
     />
   );

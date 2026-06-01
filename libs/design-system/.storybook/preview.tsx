@@ -1,6 +1,6 @@
 import type { Preview } from "@storybook/react";
 import { DesignSystemProvider } from "../src/DesignSystemContext/DesignSystemProvider";
-import { contextTokens } from "../src/DesignSystemContext/contextTokens";
+import { contextTokens } from "./contextTokens";
 import "../src/theme/globals.css";
 
 const preview: Preview = {
@@ -12,7 +12,7 @@ const preview: Preview = {
         title: "Theme",
         icon: "moon",
         items: [
-          { value: "dark",  title: "Dark"  },
+          { value: "dark", title: "Dark" },
           { value: "light", title: "Light" },
         ],
         dynamicTitle: true,
@@ -26,7 +26,7 @@ const preview: Preview = {
         icon: "lightning",
         items: [
           { value: "home", title: "Home (amber)" },
-          { value: "work", title: "Work (blue)"  },
+          { value: "work", title: "Work (blue)" },
         ],
         dynamicTitle: true,
       },
@@ -36,7 +36,9 @@ const preview: Preview = {
     (Story, ctx) => (
       <DesignSystemProvider
         theme={(ctx.globals["theme"] as "dark" | "light") ?? "dark"}
-        tokens={contextTokens((ctx.globals["context"] as "home" | "work") ?? "home")}
+        tokens={contextTokens(
+          (ctx.globals["context"] as "home" | "work") ?? "home",
+        )}
         style={{
           minHeight: "200px",
           display: "flex",

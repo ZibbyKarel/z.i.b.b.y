@@ -16,13 +16,7 @@ export {
   mergeTheme,
   tokensToCssVars,
 } from "./tokens";
-export type {
-  Spacing,
-  Padding,
-  Size,
-  Theme,
-  PartialTheme,
-} from "./tokens";
+export type { Spacing, Padding, Size, Theme, PartialTheme } from "./tokens";
 
 // ---------------------------------------------------------------------------
 // Theme registry
@@ -39,8 +33,6 @@ export {
 export { DesignSystemProvider } from "./DesignSystemContext/DesignSystemProvider";
 export type { DesignSystemProviderProps } from "./DesignSystemContext/DesignSystemProvider";
 export { useTokens, useSpacing } from "./DesignSystemContext/hooks";
-export { contextTokens } from "./DesignSystemContext/contextTokens";
-export type { ContextName } from "./DesignSystemContext/contextTokens";
 
 // ---------------------------------------------------------------------------
 // Domain types  (shared contract — stays in DS)
@@ -91,7 +83,10 @@ export type { IconName, IconProps, IconStroke } from "./components/Icon/Icon";
 // ---------------------------------------------------------------------------
 // Generic components
 // ---------------------------------------------------------------------------
-export { Typography, TypographyTestId } from "./components/Typography/Typography";
+export {
+  Typography,
+  TypographyTestId,
+} from "./components/Typography/Typography";
 export type {
   TypographyProps,
   TypographyType,
@@ -129,13 +124,19 @@ export { Tabs, TabList, Tab, TabPanel } from "./components/Tabs/Tabs";
 export type { TabsProps, TabProps } from "./components/Tabs/Tabs";
 
 export { Accordion } from "./components/Accordion/Accordion";
-export type { AccordionProps, AccordionSection } from "./components/Accordion/Accordion";
+export type {
+  AccordionProps,
+  AccordionSection,
+} from "./components/Accordion/Accordion";
 
 export { Button } from "./components/Button/Button";
 export type { ButtonProps } from "./components/Button/Button";
 
 export { Progress, usageTone } from "./components/Progress/Progress";
-export type { ProgressProps, ProgressTone } from "./components/Progress/Progress";
+export type {
+  ProgressProps,
+  ProgressTone,
+} from "./components/Progress/Progress";
 
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { StatusDotProps, DotTone } from "./components/StatusDot/StatusDot";
@@ -143,13 +144,11 @@ export type { StatusDotProps, DotTone } from "./components/StatusDot/StatusDot";
 export { Corners } from "./components/Card/Card";
 export type { CornersProps, CornersTone } from "./components/Card/Card";
 
-
 export { Stat } from "./components/Stat/Stat";
 export type { StatProps, StatTone } from "./components/Stat/Stat";
 
 export { Sparkline } from "./components/Sparkline/Sparkline";
 export type { SparklineProps } from "./components/Sparkline/Sparkline";
-
 
 export {
   TextField,
@@ -165,13 +164,18 @@ export type {
   SelectOption,
 } from "./components/Field/Field";
 
-
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
 // ---------------------------------------------------------------------------
 export { ButtonGroup } from "./components/ButtonGroup/ButtonGroup";
-export type { ButtonGroupProps, ButtonGroupOption } from "./components/ButtonGroup/ButtonGroup";
+export type {
+  ButtonGroupProps,
+  ButtonGroupOption,
+} from "./components/ButtonGroup/ButtonGroup";
 
 export { List } from "./components/List/List";
-export type { ListProps, ListItem, LinkComponentType } from "./components/List/List";
-
+export type {
+  ListProps,
+  ListItem,
+  LinkComponentType,
+} from "./components/List/List";

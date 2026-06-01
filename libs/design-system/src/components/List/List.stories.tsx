@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { List } from "./List";
-import type { ListItem } from "./List";
+import { List, type ListItem } from "./List";
 
 const items: ListItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },
@@ -30,7 +29,7 @@ export default meta;
 
 type Story = StoryObj<typeof List>;
 
-export const Default: Story = {
+export const Overview: Story = {
   render: () => {
     const [active, setActive] = useState("overview");
     return (
@@ -39,6 +38,19 @@ export const Default: Story = {
         active={active}
         onNavigate={setActive}
         footerItem={{ id: "settings", label: "Nastavení systému", glyph: "gear" }}
+      />
+    );
+  },
+};
+
+export const Playground: Story = {
+  render: () => {
+    const [active, setActive] = useState("skills");
+    return (
+      <List
+        items={items.slice(0, 4)}
+        active={active}
+        onNavigate={setActive}
       />
     );
   },
