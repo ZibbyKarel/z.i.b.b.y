@@ -1,12 +1,11 @@
 import type { ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import {
-  Button,
   ButtonGroup,
   Container,
   Divider,
   Icon,
-  Kbd,
+  SearchBar,
   Spacer,
   Stack,
   Typography,
@@ -37,7 +36,7 @@ export function TopBar({
   ]
   return (
     <Container as="header" position="relative" zIndex={20}>
-      <Container height="64px" padding={["0", "300"]}>
+      <Container height="64px" padding={["0", "300"]} position="relative">
         <Stack align="center" direction="row" gap="100" style={{ height: "100%" }}>
           <ButtonGroup
             ariaLabel={t("topbar.contextSwitcher")}
@@ -52,18 +51,25 @@ export function TopBar({
             </Typography>
           </Stack>
           <Spacer />
-          <Button
-            aria-label={t("topbar.commandAriaLabel")}
-            icon="search"
-            intent="ghost"
-            onClick={onCommand}
-            size="sm"
-            title={t("topbar.commandHint")}
-          >
-            <Kbd>⌘K</Kbd>
-          </Button>
           {walletSlot}
         </Stack>
+
+        {/* Centered command / search bar — the primary action in the top bar. */}
+        <Container
+          left="50%"
+          maxWidth="40vw"
+          position="absolute"
+          style={{ top: "50%", transform: "translate(-50%, -50%)" }}
+          width="360px"
+        >
+          <SearchBar
+            ariaLabel={t("topbar.commandAriaLabel")}
+            onClick={onCommand}
+            placeholder={t("topbar.commandPlaceholder")}
+            shortcut="⌘K"
+            title={t("topbar.commandHint")}
+          />
+        </Container>
       </Container>
       <Divider />
     </Container>

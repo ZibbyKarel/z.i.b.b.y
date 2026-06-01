@@ -2,63 +2,168 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Container, Grid } from "@zibby/design-system";
+import { Button, Chip, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { SectionLabel } from "../../components/SectionLabel";
-import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { AgentCard } from "./components/AgentCard";
-import { useEntityForm } from "../../state/forms";
+import { AgentDetailModal } from "./components/AgentDetailModal";
+import { RunModal } from "../skills/components/RunModal/RunModal";
+import { AGENT_CATEGORIES, AGENT_CATEGORY_GLYPH, PROJECTS } from "../../state/config";
+import { agentFile, mkAgentBody, newAgentDraft, slugifyAgent } from "./agentDraft";
 import { useDashboardStore } from "../../state/store";
 import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
+import type { AgentDef, Skill } from "../../domain";
 
 export function Screen() {
-  const t = useTranslations();
+  const ta = useTranslations("agents");
   const { context } = useGlobalStateContext();
-  const { agents, addAgent } = useDashboardStore();
-  const [adding, setAdding] = useState(false);
-  const form = useEntityForm("agent");
+  const { agents, pipelines, upsertAgent, removeAgent, setAgentEnabled } = useDashboardStore();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<AgentDef | null>(null);
+  const [runAgent, setRunAgent] = useState<AgentDef | null>(null);
 
   const list = agents.filter((a) => a.ctx === context);
+  const activeCount = list.filter((a) => a.enabled !== false).length;
+  const categories = AGENT_CATEGORIES[context];
+
+  const pipelineCount = (a: AgentDef) =>
+    pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
+
+  const openAgent = openId ? (agents.find((a) => a.id === openId) ?? null) : null;
+
+  const save = (d: AgentDef, isNew: boolean) => {
+    if (isNew) {
+      const id = slugifyAgent(d.name) || `agent-${Date.now()}`;
+      const withId: AgentDef = { ...d, id };
+      upsertAgent({ ...withId, file: agentFile(id), body: d.body || mkAgentBody(withId) });
+      setDraft(null);
+      setOpenId(id);
+    } else {
+      upsertAgent(d);
+    }
+  };
+
+  const toSkill = (a: AgentDef): Skill => ({
+    id: a.id,
+    name: a.name,
+    glyph: a.glyph,
+    desc: a.role,
+    ctx: a.ctx,
+    file: a.file,
+  });
 
   return (
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
-      <SectionLabel
-        action={
-          <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
-            {t("agents.addAgent")}
-          </Button>
-        }
-      >
-        {t("agents.sectionLabel", { ctx: context })}
-      </SectionLabel>
+      <Stack gap="250">
+        <HudPanel padding="300">
+          <Stack wrap align="start" direction="row" gap="200" justify="between">
+            <Container minW0>
+              <Stack gap="75">
+                <Stack align="center" direction="row" gap="100">
+                  <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
+                    {ta("title")}
+                  </Typography>
+                  <Chip size="md" tone="accent">
+                    {context}
+                  </Chip>
+                </Stack>
+                <Typography mono size="sm" type="note" variant="tertiary">
+                  {ta("countSummary", { count: list.length, active: activeCount })}
+                </Typography>
+              </Stack>
+            </Container>
+            <Button icon="plus" intent="run" onClick={() => setDraft(newAgentDraft(context))}>
+              {ta("addAgent")}
+            </Button>
+          </Stack>
+        </HudPanel>
 
-      {list.length === 0 ? (
-        <EmptyState
-          actionLabel={t("agents.addAgent")}
-          description={t("agents.emptyDescription")}
-          glyph="bot"
-          hint={t("agents.emptyHint")}
-          onAction={() => setAdding(true)}
-          title={t("agents.emptyTitle")}
+        {list.length === 0 ? (
+          <EmptyState
+            actionLabel={ta("addAgent")}
+            description={ta("emptyDescription")}
+            glyph="bot"
+            hint={ta("emptyHint")}
+            onAction={() => setDraft(newAgentDraft(context))}
+            title={ta("emptyTitle")}
+          />
+        ) : (
+          categories.map((cat) => {
+            const items = list.filter((a) => (a.category ?? categories[0]) === cat);
+            if (items.length === 0) return null;
+            return (
+              <Container key={cat}>
+                <SectionLabel
+                  action={
+                    <Typography mono size="xs" type="note" variant="tertiary">
+                      {items.length}
+                    </Typography>
+                  }
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                    <Icon name={AGENT_CATEGORY_GLYPH[cat] ?? "bot"} size="sm" tone="accent" />{" "}
+                    {ta(`categories.${cat}`)}
+                  </span>
+                </SectionLabel>
+                <Grid cols={1} gap="150" lg={3} sm={2}>
+                  {items.map((a) => (
+                    <AgentCard
+                      agent={a}
+                      key={a.id}
+                      onOpen={(x) => setOpenId(x.id)}
+                      onRun={(x) => setRunAgent(x)}
+                      onToggleEnabled={(x) => setAgentEnabled(x.id, x.enabled === false)}
+                      pipelineCount={pipelineCount(a)}
+                    />
+                  ))}
+                </Grid>
+              </Container>
+            );
+          })
+        )}
+      </Stack>
+
+      {openAgent && (
+        <AgentDetailModal
+          agent={openAgent}
+          key={openAgent.id}
+          mode="view"
+          onClose={() => setOpenId(null)}
+          onDelete={(id) => {
+            removeAgent(id);
+            setOpenId(null);
+          }}
+          onRun={(a) => {
+            setRunAgent(a);
+            setOpenId(null);
+          }}
+          onSave={save}
+          onToggleEnabled={(a) => setAgentEnabled(a.id, a.enabled === false)}
+          pipelines={pipelines}
         />
-      ) : (
-        <Grid cols={1} gap="150" lg={3} sm={2}>
-          {list.map((a) => (
-            <AgentCard agent={a} key={a.id} />
-          ))}
-        </Grid>
       )}
 
-      {adding && (
-        <EntityFormModal
-          fields={form.fields}
-          filePreview={form.filePreview}
-          glyph={form.glyph}
-          onClose={() => setAdding(false)}
-          onSubmit={(values) => { addAgent(values, t("defaults.agent")); setAdding(false); }}
-          submitLabel={form.submitLabel}
-          subtitle={form.subtitle}
-          title={form.title}
+      {draft && (
+        <AgentDetailModal
+          agent={draft}
+          key="new-agent"
+          mode="new"
+          onClose={() => setDraft(null)}
+          onDelete={() => setDraft(null)}
+          onRun={() => {}}
+          onSave={save}
+          onToggleEnabled={() => {}}
+          pipelines={pipelines}
+        />
+      )}
+
+      {runAgent && (
+        <RunModal
+          key={runAgent.id}
+          onClose={() => setRunAgent(null)}
+          projects={[...PROJECTS]}
+          skill={toSkill(runAgent)}
         />
       )}
     </Container>

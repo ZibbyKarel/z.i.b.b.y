@@ -30,6 +30,12 @@ interface DashboardStore extends DashboardState {
   addIntegration: (values: EntityFormValues, fallbackDesc: string) => void;
   addAgent: (values: EntityFormValues, fallbackRole: string) => void;
   addPipeline: (values: EntityFormValues, fallbackDesc: string) => void;
+  /** Create a new agent or replace an existing one by id (full-control editor). */
+  upsertAgent: (agent: AgentDef) => void;
+  /** Delete an agent (and conceptually its backing file) by id. */
+  removeAgent: (id: string) => void;
+  /** Pause or re-activate an agent. */
+  setAgentEnabled: (id: string, enabled: boolean) => void;
 }
 
 const DashboardContext = createContext<DashboardStore | null>(null);
@@ -147,9 +153,50 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const upsertAgent = useCallback((agent: AgentDef) => {
+    setState((s) => {
+      const exists = s.agents.some((a) => a.id === agent.id);
+      return {
+        ...s,
+        agents: exists
+          ? s.agents.map((a) => (a.id === agent.id ? agent : a))
+          : [...s.agents, agent],
+      };
+    });
+  }, []);
+
+  const removeAgent = useCallback((id: string) => {
+    setState((s) => ({ ...s, agents: s.agents.filter((a) => a.id !== id) }));
+  }, []);
+
+  const setAgentEnabled = useCallback((id: string, enabled: boolean) => {
+    setState((s) => ({
+      ...s,
+      agents: s.agents.map((a) => (a.id === id ? { ...a, enabled } : a)),
+    }));
+  }, []);
+
   const value = useMemo<DashboardStore>(
-    () => ({ ...state, addSkill, addIntegration, addAgent, addPipeline }),
-    [state, addSkill, addIntegration, addAgent, addPipeline],
+    () => ({
+      ...state,
+      addSkill,
+      addIntegration,
+      addAgent,
+      addPipeline,
+      upsertAgent,
+      removeAgent,
+      setAgentEnabled,
+    }),
+    [
+      state,
+      addSkill,
+      addIntegration,
+      addAgent,
+      addPipeline,
+      upsertAgent,
+      removeAgent,
+      setAgentEnabled,
+    ],
   );
 
   return (

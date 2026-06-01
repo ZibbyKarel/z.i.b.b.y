@@ -100,6 +100,9 @@ export type { ChipProps } from "./components/Chip/Chip";
 export { Kbd } from "./components/Kbd/Kbd";
 export type { KbdProps } from "./components/Kbd/Kbd";
 
+export { SearchBar, SearchBarTestId } from "./components/SearchBar/SearchBar";
+export type { SearchBarProps } from "./components/SearchBar/SearchBar";
+
 export { Alert } from "./components/Alert/Alert";
 export type { AlertProps, AlertSeverity } from "./components/Alert/Alert";
 

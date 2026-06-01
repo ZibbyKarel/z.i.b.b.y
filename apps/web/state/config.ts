@@ -5,7 +5,7 @@
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
-import type { AgentSdkCredit, ClaudeLimits } from "../domain";
+import type { AgentSdkCredit, ClaudeLimits, ContextName } from "../domain";
 
 export const PROJECTS = [
   "zibby-core",
@@ -84,6 +84,49 @@ export const CLAUDE_LIMITS: ClaudeLimits = {
     tokens: "0 / 5M",
   },
 };
+
+/**
+ * Agent catalog taxonomy. Category ids are stable keys; their display labels are
+ * resolved from the `agents.categories.<id>` message catalog at render time, so
+ * no UI text lives here. Each context exposes its own set of categories.
+ */
+export const AGENT_CATEGORIES: Record<ContextName, string[]> = {
+  home: ["media", "household", "writing"],
+  work: ["dev", "quality", "research", "docs"],
+};
+
+/** Glyph shown next to each category section header. */
+export const AGENT_CATEGORY_GLYPH: Record<string, IconName> = {
+  media: "film",
+  household: "cart",
+  writing: "doc",
+  dev: "code",
+  quality: "shield",
+  research: "search",
+  docs: "spark",
+};
+
+/** Glyphs offered in the agent editor's icon picker. */
+export const AGENT_GLYPHS: IconName[] = [
+  "compass",
+  "code",
+  "flask",
+  "doc",
+  "check",
+  "search",
+  "bot",
+  "brain",
+  "shield",
+  "spark",
+  "film",
+  "cart",
+  "server",
+  "flow",
+  "gear",
+];
+
+/** Tools an agent can be granted in the editor. */
+export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
 
 export const AGENT_SDK: AgentSdkCredit = {
   label: "limits.agentSdkCredit",
