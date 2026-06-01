@@ -19,6 +19,13 @@ interface AccordionContextValue {
 
 const AccordionContext = createContext<AccordionContextValue | null>(null);
 
+export enum AccordionTestId {
+  Root = "accordion-root",
+  Summary = "accordion-summary",
+  Chevron = "accordion-chevron",
+  Details = "accordion-details",
+}
+
 export interface AccordionProps {
   children: ReactNode;
   single?: boolean;
@@ -46,6 +53,7 @@ export function Accordion({
   return (
     <AccordionContext.Provider value={{ single, openId, toggle, claimDefault }}>
       <div
+        data-testid={AccordionTestId.Root}
         className={cn("border border-border rounded overflow-hidden", className)}
       >
         {children}
@@ -70,6 +78,7 @@ export function AccordionSummary({
   return (
     <button
       ref={ref}
+      data-testid={AccordionTestId.Summary}
       aria-expanded={expanded}
       onClick={onToggle}
       className={cn(
@@ -81,6 +90,7 @@ export function AccordionSummary({
     >
       <span>{children}</span>
       <span
+        data-testid={AccordionTestId.Chevron}
         className="text-sm transition-transform duration-200"
         style={{ transform: expanded ? "rotate(180deg)" : "none" }}
       >
@@ -102,7 +112,7 @@ export function AccordionDetails({
   className,
 }: AccordionDetailsProps) {
   if (!expanded) return null;
-  return <div className={cn("px-3.5 py-3", className)}>{children}</div>;
+  return <div data-testid={AccordionTestId.Details} className={cn("px-3.5 py-3", className)}>{children}</div>;
 }
 
 export interface AccordionItemProps {

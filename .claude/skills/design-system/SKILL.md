@@ -286,11 +286,47 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => { ... 
 
 ## Testid enum
 
+**Mandatory for every component.** Each component declares its own `<Component>TestId` enum
+naming each important part it renders, and wires `data-testid` onto those parts. Tests then
+select elements with `getByTestId` — never `querySelector`, `container.firstChild`, or role/text
+queries used purely to *grab* a node (see Tests below).
+
 ```ts
-// Each component has its own enum — no loose strings
+// Each component has its own enum — no loose strings. Values are kebab "<component>-<part>".
 export enum ButtonTestId {
   Root = "button-root",
   Icon = "button-icon",
+}
+```
+
+Rules:
+
+- **One member per meaningful part**, not per DOM node. A single-element component gets just `Root`.
+- **Polymorphic / spread components** (e.g. `Stack`, `Container`, `Card`): put `data-testid` **before**
+  `{...rest}`/`{...props}` so a consumer can still override it.
+- **Repeated/keyed parts** (lists, tabs, options): when a stable key exists, suffix the enum value
+  with it and key tests off the same prefix — keeps the prefix in the enum, no loose strings:
+
+  ```ts
+  export enum TabsTestId { Root = "tabs-root", Tab = "tabs-tab", Panel = "tabs-panel" }
+  // component: <button data-testid={`${TabsTestId.Tab}-${value}`} … />
+  // test:      screen.getByTestId(`${TabsTestId.Tab}-${value}`)
+  ```
+
+  When there's no external key (e.g. `Accordion` items keyed by internal `useId`), use a static
+  member and select with `getAllByTestId(...)` + index.
+
+Multi-part example:
+
+```ts
+export enum DialogTestId {
+  Overlay = "dialog-overlay",
+  Root = "dialog-root",
+  Header = "dialog-header",
+  Title = "dialog-title",
+  CloseButton = "dialog-close-button",
+  Body = "dialog-body",
+  Footer = "dialog-footer",
 }
 ```
 
@@ -346,6 +382,34 @@ Button.stories.tsx ← exactly two exports: Overview + Playground
 ```
 
 **Every DS component must have a test.** Exception: no per-icon tests.
+
+### `getByTestId` is the primary selector
+
+Grab elements through the component's `<Component>TestId` enum (see Testid enum above) with
+`getByTestId` / `queryByTestId` / `getAllByTestId`. Do **not** use `container.querySelector`,
+`container.firstChild`, or `getByRole`/`getByText` *as a way to find a node*.
+
+**Roles and ARIA stay — but as assertions, not selectors.** The selector changes; the assertion
+set never shrinks. Whatever a test verified before (a role, an accessible name, an `aria-*`), it
+must still verify after. Use jest-dom matchers on the node you got by test-id:
+
+```ts
+const el = screen.getByTestId(ProgressTestId.Root);
+expect(el).toHaveRole("progressbar");            // was getByRole("progressbar")
+expect(el).toHaveAccessibleName("5h rolling");   // was the { name } option
+expect(el).toHaveAttribute("aria-valuenow", "64");
+```
+
+`toHaveRole`, `toHaveAccessibleName`, `toHaveAccessibleDescription`, and `toHaveAttribute` are all
+available (jest-dom ≥ 6). For label↔control association, assert `toHaveAccessibleName(label)` on the
+control selected by test-id — it only passes when the `htmlFor`/`id` wiring is intact.
+
+**Consumer-passed content** (children, slots like `actions`) carries no test-id of ours. Scope into
+the owning part and query within it:
+
+```ts
+within(screen.getByTestId(DialogTestId.Footer)).getByRole("button", { name: "OK" })
+```
 
 Domain composites moved to app: use `apps/web/test/renderWithIntl.tsx` as test wrapper.
 **Stories only for DS** — moved domain composites have no stories.

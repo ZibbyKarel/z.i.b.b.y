@@ -38,6 +38,12 @@ libs/design-system/src/components/<Name>/<Name>.tsx
 ```tsx
 import { cva, type VariantProps } from "class-variance-authority"
 
+// Povinné: enum testid pro každý důležitý part komponenty (viz design-system SKILL.md → Testid enum)
+export enum <Name>TestId {
+  Root = "<name>-root",
+  // přidej další party podle struktury, např. Icon = "<name>-icon"
+}
+
 const <name> = cva(
   // base třídy — vždy přítomné
   "...",
@@ -62,6 +68,7 @@ export function <Name>({ intent, size, ref, ...props }: <Name>Props & {
   return (
     <<element>
       ref={ref}
+      data-testid={<Name>TestId.Root}
       className={<name>({ intent, size })}
       {...props}
     />
@@ -73,6 +80,7 @@ Pravidla:
 - Žádný `forwardRef` (React 19)
 - Žádný `className` prop — DS je sealed
 - Žádné `any`
+- Každý důležitý part má `data-testid` z `<Name>TestId` enumu (u polymorfních/spread komponent dej `data-testid` **před** `{...props}`)
 - Focus ring pro interaktivní prvky: `focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`
 
 ---
@@ -85,16 +93,20 @@ libs/design-system/src/components/<Name>/<Name>.test.tsx
 
 Šablona:
 
+Elementy získávej přes `getByTestId` a `<Name>TestId` enum — nikdy `querySelector` /
+`container.firstChild` / role/text query jako *selektor*. Role a ARIA zůstávají jako *asserce*
+(`toHaveRole`, `toHaveAccessibleName`, `toHaveAttribute`). Viz design-system SKILL.md → Tests.
+
 ```tsx
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi } from "vitest"
-import { <Name> } from "./<Name>"
+import { <Name>, <Name>TestId } from "./<Name>"
 
 describe("<Name>", () => {
   it("renders children", () => {
     render(<<Name>>obsah</<Name>>)
-    expect(screen.getByText("obsah")).toBeInTheDocument()
+    expect(screen.getByTestId(<Name>TestId.Root)).toHaveTextContent("obsah")
   })
 
   // Pro interaktivní komponenty:
@@ -102,7 +114,7 @@ describe("<Name>", () => {
     const user = userEvent.setup()
     const handleClick = vi.fn()
     render(<<Name> onClick={handleClick}>klik</<Name>>)
-    await user.click(screen.getByRole("button"))
+    await user.click(screen.getByTestId(<Name>TestId.Root))
     expect(handleClick).toHaveBeenCalledOnce()
   })
 
@@ -110,22 +122,22 @@ describe("<Name>", () => {
     const user = userEvent.setup()
     render(<<Name>>focus</<Name>>)
     await user.tab()
-    expect(screen.getByRole("button")).toHaveFocus()
+    expect(screen.getByTestId(<Name>TestId.Root)).toHaveFocus()
   })
 
-  // Snapshot pro regresní test variant
-  it("applies intent variant", () => {
-    const { container } = render(<<Name> intent="danger">smazat</<Name>>)
-    expect(container.firstChild).toMatchSnapshot()
+  // A11y asserce na node získaný přes testid (selektor se mění, asserce zůstává)
+  it("exposes the right role", () => {
+    render(<<Name>>x</<Name>>)
+    expect(screen.getByTestId(<Name>TestId.Root)).toHaveRole("button")
   })
 })
 ```
 
 Vždy testuj:
-- Renderuje správný obsah
+- Renderuje správný obsah (přes `getByTestId` + `toHaveTextContent`)
 - Callback props fungují (`onClick`, `onChange`, …)
 - Klávesová dostupnost (Tab, Enter/Space)
-- Alespoň jeden snapshot pro variant regression
+- A11y asserce (role, accessible name, `aria-*`) na node získaném přes testid
 
 ---
 

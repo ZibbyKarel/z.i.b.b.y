@@ -1,6 +1,10 @@
 import type { CSSProperties } from "react";
 import { spacingToPx, type Spacing } from "../../tokens";
 
+export enum SpacerTestId {
+  Root = "spacer-root",
+}
+
 export interface SpacerProps {
   size?: Spacing;
   axis?: "x" | "y" | "both";
@@ -21,5 +25,5 @@ export function Spacer({ size, axis = "both", grow }: SpacerProps) {
     pointerEvents: "none",
   };
 
-  return <span aria-hidden style={style} />;
+  return <span data-testid={SpacerTestId.Root} aria-hidden style={style} />;
 }

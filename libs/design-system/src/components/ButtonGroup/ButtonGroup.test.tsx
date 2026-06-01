@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ButtonGroup } from "./ButtonGroup";
+import { ButtonGroup, ButtonGroupTestId } from "./ButtonGroup";
 import type { ButtonGroupOption } from "./ButtonGroup";
 
 const options: ButtonGroupOption[] = [
@@ -14,11 +14,11 @@ describe("ButtonGroup", () => {
     render(
       <ButtonGroup options={options} value="home" onChange={() => {}} ariaLabel="Context" />,
     );
-    expect(screen.getByRole("button", { name: /home/ })).toHaveAttribute(
+    expect(screen.getByTestId(`${ButtonGroupTestId.Option}-home`)).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: /work/ })).toHaveAttribute(
+    expect(screen.getByTestId(`${ButtonGroupTestId.Option}-work`)).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -29,7 +29,7 @@ describe("ButtonGroup", () => {
     render(
       <ButtonGroup options={options} value="home" onChange={onChange} ariaLabel="Context" />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /work/ }));
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-work`));
     expect(onChange).toHaveBeenCalledWith("work");
   });
 
@@ -45,7 +45,9 @@ describe("ButtonGroup", () => {
         ariaLabel="Context"
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Přidat kontext" }));
+    const add = screen.getByTestId(ButtonGroupTestId.Add);
+    expect(add).toHaveAccessibleName("Přidat kontext");
+    await userEvent.click(add);
     expect(onAdd).toHaveBeenCalledOnce();
   });
 });

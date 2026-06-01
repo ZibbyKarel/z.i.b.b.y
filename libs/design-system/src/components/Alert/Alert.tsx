@@ -3,6 +3,12 @@ import { cn } from "../../utils/cn";
 
 export type AlertSeverity = "info" | "ok" | "warn" | "error";
 
+export enum AlertTestId {
+  Root = "alert-root",
+  Title = "alert-title",
+  CloseButton = "alert-close-button",
+}
+
 export interface AlertProps extends Omit<
   HTMLAttributes<HTMLDivElement>,
   "title" | "className"
@@ -29,6 +35,7 @@ export function Alert({
 }: AlertProps) {
   return (
     <div
+      data-testid={AlertTestId.Root}
       {...rest}
       role="alert"
       className={cn(
@@ -37,11 +44,12 @@ export function Alert({
       )}
     >
       <div className="flex-1 text-base leading-relaxed">
-        {title && <div className="font-semibold mb-0.5">{title}</div>}
+        {title && <div data-testid={AlertTestId.Title} className="font-semibold mb-0.5">{title}</div>}
         {children}
       </div>
       {onClose && (
         <button
+          data-testid={AlertTestId.CloseButton}
           aria-label="Dismiss"
           onClick={onClose}
           className="bg-transparent border-none cursor-pointer text-current p-0 leading-none"

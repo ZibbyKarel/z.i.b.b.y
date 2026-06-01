@@ -1,5 +1,11 @@
 import type { SVGProps } from "react"
 
+export enum SparklineTestId {
+  Root = "sparkline-root",
+  Area = "sparkline-area",
+  Line = "sparkline-line",
+}
+
 export interface SparklineProps extends Omit<SVGProps<SVGSVGElement>, "points" | "className" | "width" | "height"> {
   /** Series values. */
   data: number[]
@@ -33,6 +39,7 @@ export function Sparkline({
   return (
     <svg
       ref={ref}
+      data-testid={SparklineTestId.Root}
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
@@ -42,12 +49,14 @@ export function Sparkline({
       {...props}
     >
       <polyline
+        data-testid={SparklineTestId.Area}
         points={`0,${height} ${line} ${width},${height}`}
         fill={color}
         opacity="0.08"
         stroke="none"
       />
       <polyline
+        data-testid={SparklineTestId.Line}
         points={line}
         fill="none"
         stroke={color}

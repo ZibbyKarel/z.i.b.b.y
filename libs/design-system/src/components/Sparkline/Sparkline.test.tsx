@@ -1,15 +1,16 @@
-import { render } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { Sparkline } from "./Sparkline"
+import { Sparkline, SparklineTestId } from "./Sparkline"
 
 describe("Sparkline", () => {
-  it("renders polylines for data", () => {
-    const { container } = render(<Sparkline data={[4, 6, 9, 7, 12]} />)
-    expect(container.querySelectorAll("polyline").length).toBe(2)
+  it("renders area and line polylines for data", () => {
+    render(<Sparkline data={[4, 6, 9, 7, 12]} />)
+    expect(screen.getByTestId(SparklineTestId.Area)).toBeInTheDocument()
+    expect(screen.getByTestId(SparklineTestId.Line)).toBeInTheDocument()
   })
 
   it("renders nothing for empty data", () => {
-    const { container } = render(<Sparkline data={[]} />)
-    expect(container.querySelector("svg")).toBeNull()
+    render(<Sparkline data={[]} />)
+    expect(screen.queryByTestId(SparklineTestId.Root)).toBeNull()
   })
 })

@@ -1,5 +1,9 @@
 import { cn } from "../../utils/cn";
 
+export enum DividerTestId {
+  Root = "divider-root",
+}
+
 export interface DividerProps {
   orientation?: "horizontal" | "vertical";
 }
@@ -7,6 +11,7 @@ export interface DividerProps {
 export function Divider({ orientation = "horizontal" }: DividerProps) {
   return (
     <span
+      data-testid={DividerTestId.Root}
       aria-hidden
       role="separator"
       className={cn(

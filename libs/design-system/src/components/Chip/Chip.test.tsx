@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Chip } from "./Chip";
+import { Chip, ChipTestId } from "./Chip";
 
 describe("Chip", () => {
   it("renders its content", () => {
     render(<Chip tone="ok">hotovo</Chip>);
-    expect(screen.getByText("hotovo")).toBeInTheDocument();
+    expect(screen.getByTestId(ChipTestId.Root)).toHaveTextContent("hotovo");
   });
 
   it("applies a solid tone variant", () => {
@@ -14,6 +14,6 @@ describe("Chip", () => {
         work
       </Chip>,
     );
-    expect(screen.getByText("work").className).toContain("text-accent-contrast");
+    expect(screen.getByTestId(ChipTestId.Root)).toHaveClass("text-accent-contrast");
   });
 });

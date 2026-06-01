@@ -39,6 +39,10 @@ const chip = cva(
   },
 );
 
+export enum ChipTestId {
+  Root = "chip-root",
+}
+
 export interface ChipProps
   extends Omit<HTMLAttributes<HTMLSpanElement>, "className">,
     VariantProps<typeof chip> {
@@ -47,7 +51,7 @@ export interface ChipProps
 
 export function Chip({ tone, solid, size, children, ref, ...props }: ChipProps) {
   return (
-    <span ref={ref} className={chip({ tone, solid, size })} {...props}>
+    <span ref={ref} data-testid={ChipTestId.Root} className={chip({ tone, solid, size })} {...props}>
       {children}
     </span>
   );

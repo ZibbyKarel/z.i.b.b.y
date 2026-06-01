@@ -4,6 +4,17 @@ import { useEffect, useRef } from "react";
 
 export type DialogWidth = "sm" | "md" | "lg" | "xl";
 
+export enum DialogTestId {
+  Overlay = "dialog-overlay",
+  Root = "dialog-root",
+  Header = "dialog-header",
+  Title = "dialog-title",
+  Description = "dialog-description",
+  CloseButton = "dialog-close-button",
+  Body = "dialog-body",
+  Footer = "dialog-footer",
+}
+
 const dialogWidthPx: Record<DialogWidth, string> = {
   sm: "360px",
   md: "460px",
@@ -57,12 +68,14 @@ export function Dialog({
 
   return (
     <div
+      data-testid={DialogTestId.Overlay}
       className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.55)] backdrop-blur-sm"
       role="presentation"
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div
         ref={dialogRef}
+        data-testid={DialogTestId.Root}
         role="dialog"
         aria-modal
         aria-label={typeof title === "string" ? title : undefined}
@@ -88,11 +101,12 @@ function DialogHeader({
   onClose?: () => void;
 }) {
   return (
-    <div className="px-5 pt-4 pb-[14px] border-b border-border shrink-0">
+    <div data-testid={DialogTestId.Header} className="px-5 pt-4 pb-[14px] border-b border-border shrink-0">
       <div className="flex items-center justify-between gap-3">
-        <div className="font-mono font-semibold text-md text-foreground">{title}</div>
+        <div data-testid={DialogTestId.Title} className="font-mono font-semibold text-md text-foreground">{title}</div>
         {onClose && (
           <button
+            data-testid={DialogTestId.CloseButton}
             aria-label="Close dialog"
             onClick={onClose}
             className="bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
@@ -102,7 +116,7 @@ function DialogHeader({
         )}
       </div>
       {description && (
-        <p className="mt-1.5 text-base text-foreground-dim leading-relaxed">{description}</p>
+        <p data-testid={DialogTestId.Description} className="mt-1.5 text-base text-foreground-dim leading-relaxed">{description}</p>
       )}
     </div>
   );
@@ -110,7 +124,7 @@ function DialogHeader({
 
 export function DialogBody({ children }: { children: ReactNode }) {
   return (
-    <div className="px-5 py-4 overflow-y-auto flex-1">
+    <div data-testid={DialogTestId.Body} className="px-5 py-4 overflow-y-auto flex-1">
       {children}
     </div>
   );
@@ -118,7 +132,7 @@ export function DialogBody({ children }: { children: ReactNode }) {
 
 function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="px-5 pt-3 pb-4 border-t border-border flex justify-end gap-2 shrink-0">
+    <div data-testid={DialogTestId.Footer} className="px-5 pt-3 pb-4 border-t border-border flex justify-end gap-2 shrink-0">
       {children}
     </div>
   );

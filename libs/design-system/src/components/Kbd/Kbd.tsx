@@ -1,6 +1,10 @@
 import type { HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
 
+export enum KbdTestId {
+  Root = "kbd-root",
+}
+
 export interface KbdProps extends Omit<
   HTMLAttributes<HTMLElement>,
   "className"
@@ -11,6 +15,7 @@ export interface KbdProps extends Omit<
 export function Kbd({ ref, children, ...rest }: KbdProps) {
   return (
     <kbd
+      data-testid={KbdTestId.Root}
       {...rest}
       ref={ref as Ref<HTMLElement>}
       className={cn(

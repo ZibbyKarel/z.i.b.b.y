@@ -1,14 +1,21 @@
-import type { HTMLAttributes, ReactNode } from "react"
-import { Row } from "@zibby/design-system"
+import type { HTMLAttributes, ReactNode } from "react";
+import { Stack } from "@zibby/design-system";
 
 export interface SectionLabelProps extends HTMLAttributes<HTMLDivElement> {
-  action?: ReactNode
-  ref?: React.Ref<HTMLElement>
+  action?: ReactNode;
+  ref?: React.Ref<HTMLElement>;
 }
 
-export function SectionLabel({ action, children, ref, style, ...props }: SectionLabelProps) {
+export function SectionLabel({
+  action,
+  children,
+  ref,
+  style,
+  ...props
+}: SectionLabelProps) {
   return (
-    <Row
+    <Stack
+      direction="row"
       ref={ref}
       align="baseline"
       justify="between"
@@ -27,6 +34,6 @@ export function SectionLabel({ action, children, ref, style, ...props }: Section
         {children}
       </span>
       {action}
-    </Row>
-  )
+    </Stack>
+  );
 }

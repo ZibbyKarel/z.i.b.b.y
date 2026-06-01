@@ -1,18 +1,18 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import { SegmentedField, SelectField, TextAreaField, TextField } from "./Field"
+import { FieldTestId, SegmentedField, SelectField, TextAreaField, TextField } from "./Field"
 
 describe("TextField", () => {
   it("associates the label with the input", () => {
     render(<TextField label="Název skillu" />)
-    expect(screen.getByLabelText("Název skillu")).toBeInTheDocument()
+    expect(screen.getByTestId(FieldTestId.Control)).toHaveAccessibleName("Název skillu")
   })
 
   it("accepts typing", async () => {
     const onChange = vi.fn()
     render(<TextField label="Název" onChange={onChange} />)
-    await userEvent.type(screen.getByLabelText("Název"), "rohlik")
+    await userEvent.type(screen.getByTestId(FieldTestId.Control), "rohlik")
     expect(onChange).toHaveBeenCalled()
   })
 })
@@ -20,8 +20,8 @@ describe("TextField", () => {
 describe("TextAreaField", () => {
   it("renders a labelled textarea with a hint", () => {
     render(<TextAreaField label="Popis" hint="z description v SKILL.md" />)
-    expect(screen.getByLabelText("Popis")).toBeInTheDocument()
-    expect(screen.getByText("z description v SKILL.md")).toBeInTheDocument()
+    expect(screen.getByTestId(FieldTestId.Control)).toHaveAccessibleName("Popis")
+    expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("z description v SKILL.md")
   })
 })
 
@@ -39,7 +39,7 @@ describe("SelectField", () => {
         ]}
       />,
     )
-    await userEvent.selectOptions(screen.getByLabelText("Model"), "sonnet")
+    await userEvent.selectOptions(screen.getByTestId(FieldTestId.Control), "sonnet")
     expect(onValueChange).toHaveBeenCalledWith("sonnet")
   })
 })
@@ -58,8 +58,11 @@ describe("SegmentedField", () => {
         ]}
       />,
     )
-    expect(screen.getByRole("radio", { name: "home" })).toHaveAttribute("aria-checked", "true")
-    await userEvent.click(screen.getByRole("radio", { name: "work" }))
+    const home = screen.getByTestId(`${FieldTestId.Option}-home`)
+    expect(home).toHaveRole("radio")
+    expect(home).toHaveAccessibleName("home")
+    expect(home).toHaveAttribute("aria-checked", "true")
+    await userEvent.click(screen.getByTestId(`${FieldTestId.Option}-work`))
     expect(onValueChange).toHaveBeenCalledWith("work")
   })
 })

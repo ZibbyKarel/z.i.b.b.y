@@ -27,6 +27,14 @@ The app composes UI from DS — it does not create its own primitives.
 
 See `.claude/skills/design-system/SKILL.md` for all DS conventions (tokens, components, Tailwind v4, tests, Storybook, a11y).
 
+### Testing (DS)
+
+Every DS component declares a `<Component>TestId` enum naming its important parts and wires
+`data-testid` onto them. Tests select elements via `getByTestId` (the primary selector) — not
+`querySelector`/`firstChild`/role/text queries. Roles and ARIA are kept only as **assertions**
+(`toHaveRole` / `toHaveAccessibleName` / `toHaveAttribute`); a test-id migration changes the
+selector, never the assertion set. See the design-system SKILL.md *Testid enum* and *Tests* sections.
+
 ---
 
 ## Routing

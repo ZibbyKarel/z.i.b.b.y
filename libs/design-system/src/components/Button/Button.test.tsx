@@ -1,24 +1,24 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import { Button } from "./Button"
+import { Button, ButtonTestId } from "./Button"
 
 describe("Button", () => {
   it("renders its label", () => {
     render(<Button>Spustit</Button>)
-    expect(screen.getByRole("button", { name: "Spustit" })).toBeInTheDocument()
+    expect(screen.getByTestId(ButtonTestId.Root)).toHaveAccessibleName("Spustit")
   })
 
   it("fires onClick", async () => {
     const onClick = vi.fn()
     render(<Button onClick={onClick}>Spustit</Button>)
-    await userEvent.click(screen.getByRole("button"))
+    await userEvent.click(screen.getByTestId(ButtonTestId.Root))
     expect(onClick).toHaveBeenCalledOnce()
   })
 
   it("renders a leading icon", () => {
-    const { container } = render(<Button icon="play">Spustit</Button>)
-    expect(container.querySelector("svg")).not.toBeNull()
+    render(<Button icon="play">Spustit</Button>)
+    expect(screen.getByTestId(ButtonTestId.Icon)).toBeInTheDocument()
   })
 
   it("does not fire when disabled", async () => {
@@ -28,13 +28,13 @@ describe("Button", () => {
         Spustit
       </Button>,
     )
-    await userEvent.click(screen.getByRole("button"))
+    await userEvent.click(screen.getByTestId(ButtonTestId.Root))
     expect(onClick).not.toHaveBeenCalled()
   })
 
   it("defaults to type=button", () => {
     render(<Button>Spustit</Button>)
-    expect(screen.getByRole("button")).toHaveAttribute("type", "button")
+    expect(screen.getByTestId(ButtonTestId.Root)).toHaveAttribute("type", "button")
   })
 
   it("forwards a ref", () => {

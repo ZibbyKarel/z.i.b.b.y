@@ -34,6 +34,12 @@ const ringClass: Record<DotTone, string> = {
   faint: "bg-foreground-faint",
 };
 
+export enum StatusDotTestId {
+  Root = "status-dot-root",
+  Pulse = "status-dot-pulse",
+  Dot = "status-dot-dot",
+}
+
 export interface StatusDotProps extends Omit<
   HTMLAttributes<HTMLSpanElement>,
   "className"
@@ -58,19 +64,21 @@ export function StatusDot({
   return (
     <span
       ref={ref}
+      data-testid={StatusDotTestId.Root}
       className="relative inline-block shrink-0"
       style={{ width: px, height: px }}
       {...props}
     >
       {pulse && (
         <span
+          data-testid={StatusDotTestId.Pulse}
           className={cn(
             "absolute -inset-1 rounded-full opacity-35 animate-zpulse",
             ringClass[tone],
           )}
         />
       )}
-      <span className={cn("absolute inset-0 rounded-full", toneClass[tone])} />
+      <span data-testid={StatusDotTestId.Dot} className={cn("absolute inset-0 rounded-full", toneClass[tone])} />
     </span>
   );
 }

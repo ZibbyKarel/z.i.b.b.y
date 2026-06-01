@@ -1,21 +1,20 @@
-import { render } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { StatusDot } from "./StatusDot"
+import { StatusDot, StatusDotTestId } from "./StatusDot"
 
 describe("StatusDot", () => {
   it("renders a sized dot", () => {
-    const { container } = render(<StatusDot tone="accent" size="150" />)
-    const el = container.firstElementChild as HTMLElement
-    expect(el.style.width).toBe("12px")
+    render(<StatusDot tone="accent" size="150" />)
+    expect(screen.getByTestId(StatusDotTestId.Root).style.width).toBe("12px")
   })
 
   it("adds a pulse ring when pulse is set", () => {
-    const { container } = render(<StatusDot tone="ok" pulse />)
-    expect(container.querySelector(".animate-zpulse")).not.toBeNull()
+    render(<StatusDot tone="ok" pulse />)
+    expect(screen.queryByTestId(StatusDotTestId.Pulse)).not.toBeNull()
   })
 
   it("omits the pulse ring by default", () => {
-    const { container } = render(<StatusDot tone="faint" />)
-    expect(container.querySelector(".animate-zpulse")).toBeNull()
+    render(<StatusDot tone="faint" />)
+    expect(screen.queryByTestId(StatusDotTestId.Pulse)).toBeNull()
   })
 })

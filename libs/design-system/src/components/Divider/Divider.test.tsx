@@ -1,29 +1,26 @@
 import { describe, expect, it } from "vitest";
+import { screen } from "@testing-library/react";
 import { render } from "../../utils/testRender";
-import { Divider } from "./Divider";
+import { Divider, DividerTestId } from "./Divider";
 
 describe("Divider", () => {
   it("renders a separator element", () => {
-    const { container } = render(<Divider />);
-    expect(container.querySelector('[role="separator"]')).not.toBeNull();
+    render(<Divider />);
+    expect(screen.getByTestId(DividerTestId.Root)).toHaveRole("separator");
   });
 
   it("is aria-hidden", () => {
-    const { container } = render(<Divider />);
-    const sep = container.querySelector('[role="separator"]')!;
-    expect(sep).toHaveAttribute("aria-hidden");
+    render(<Divider />);
+    expect(screen.getByTestId(DividerTestId.Root)).toHaveAttribute("aria-hidden");
   });
 
   it("horizontal variant spans full width at 1px height", () => {
-    const { container } = render(<Divider orientation="horizontal" />);
-    const sep = container.querySelector('[role="separator"]') as HTMLElement;
-    expect(sep.style.width).toBe("100%");
-    expect(sep.style.height).toBe("1px");
+    render(<Divider orientation="horizontal" />);
+    expect(screen.getByTestId(DividerTestId.Root)).toHaveClass("h-px", "w-full");
   });
 
   it("vertical variant is 1px wide", () => {
-    const { container } = render(<Divider orientation="vertical" />);
-    const sep = container.querySelector('[role="separator"]') as HTMLElement;
-    expect(sep.style.width).toBe("1px");
+    render(<Divider orientation="vertical" />);
+    expect(screen.getByTestId(DividerTestId.Root)).toHaveClass("w-px", "self-stretch");
   });
 });

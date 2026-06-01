@@ -1,6 +1,13 @@
 import { cn } from "../../utils/cn";
 import { Icon } from "../Icon/Icon";
 
+export enum ButtonGroupTestId {
+  Root = "button-group-root",
+  /** Each option button is suffixed with its `id`, e.g. `button-group-option-home`. */
+  Option = "button-group-option",
+  Add = "button-group-add",
+}
+
 export interface ButtonGroupOption {
   id: string;
   label: string;
@@ -32,6 +39,7 @@ export function ButtonGroup({
 }: ButtonGroupProps) {
   return (
     <div
+      data-testid={ButtonGroupTestId.Root}
       role="group"
       aria-label={ariaLabel}
       className="inline-flex items-center gap-0.5 rounded border border-border bg-background p-0.5"
@@ -41,6 +49,7 @@ export function ButtonGroup({
         return (
           <button
             key={o.id}
+            data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
             type="button"
             aria-pressed={active}
             onClick={() => onChange(o.id)}
@@ -66,6 +75,7 @@ export function ButtonGroup({
       })}
       {onAdd && (
         <button
+          data-testid={ButtonGroupTestId.Add}
           type="button"
           aria-label={addLabel}
           onClick={onAdd}

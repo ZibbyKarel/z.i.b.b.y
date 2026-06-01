@@ -1,29 +1,30 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
-import { Dialog } from "./Dialog";
+import { Dialog, DialogTestId } from "./Dialog";
 
 describe("Dialog", () => {
   it("renders nothing when closed", () => {
     render(<Dialog open={false}>Obsah</Dialog>);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByTestId(DialogTestId.Root)).toBeNull();
   });
 
   it("renders the dialog panel when open", () => {
     render(<Dialog open title="Smazat">Opravdu?</Dialog>);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("Smazat")).toBeInTheDocument();
+    expect(screen.getByTestId(DialogTestId.Root)).toHaveRole("dialog");
+    expect(screen.getByTestId(DialogTestId.Title)).toHaveTextContent("Smazat");
   });
 
   it("renders description when provided", () => {
     render(<Dialog open title="Potvrzení" description="Toto nelze vrátit">x</Dialog>);
-    expect(screen.getByText("Toto nelze vrátit")).toBeInTheDocument();
+    expect(screen.getByTestId(DialogTestId.Description)).toHaveTextContent("Toto nelze vrátit");
   });
 
   it("renders actions slot", () => {
     render(<Dialog open actions={<button>OK</button>}>x</Dialog>);
-    expect(screen.getByRole("button", { name: "OK" })).toBeInTheDocument();
+    const footer = screen.getByTestId(DialogTestId.Footer);
+    expect(within(footer).getByRole("button", { name: "OK" })).toBeInTheDocument();
   });
 
   it("calls onClose on Escape", async () => {

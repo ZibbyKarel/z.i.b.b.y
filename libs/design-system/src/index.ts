@@ -43,8 +43,8 @@ export {
   CONTAINER_STYLE_KEYS,
 } from "./components/Container";
 export type { ContainerProps, ContainerAs } from "./components/Container";
-export { Stack, Row } from "./components/Stack";
-export type { StackProps, RowProps } from "./components/Stack";
+export { Stack } from "./components/Stack";
+export type { StackProps } from "./components/Stack";
 export { Spacer } from "./components/Spacer";
 export type { SpacerProps } from "./components/Spacer";
 

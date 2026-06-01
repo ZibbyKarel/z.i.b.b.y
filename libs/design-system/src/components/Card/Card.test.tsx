@@ -1,22 +1,22 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
-import { Card, CardHeader, CardContent, CardFooter, CardActions } from "./Card";
+import { Card, CardTestId, CardHeader, CardContent, CardFooter, CardActions } from "./Card";
 
 describe("Card", () => {
   it("renders children", () => {
     render(<Card>Obsah karty</Card>);
-    expect(screen.getByText("Obsah karty")).toBeInTheDocument();
+    expect(screen.getByTestId(CardTestId.Root)).toHaveTextContent("Obsah karty");
   });
 
   it("renders the header slot", () => {
     render(<Card header="Nadpis">Obsah</Card>);
-    expect(screen.getByText("Nadpis")).toBeInTheDocument();
+    expect(screen.getByTestId(CardTestId.Header)).toHaveTextContent("Nadpis");
   });
 
   it("renders the footer slot", () => {
     render(<Card footer="Zápatí">Obsah</Card>);
-    expect(screen.getByText("Zápatí")).toBeInTheDocument();
+    expect(screen.getByTestId(CardTestId.Footer)).toHaveTextContent("Zápatí");
   });
 
   it("forwards a ref", () => {
@@ -27,21 +27,22 @@ describe("Card", () => {
 
   it("CardHeader renders its children", () => {
     render(<Card><CardHeader>Titulek</CardHeader></Card>);
-    expect(screen.getByText("Titulek")).toBeInTheDocument();
+    expect(screen.getByTestId(CardTestId.Header)).toHaveTextContent("Titulek");
   });
 
   it("CardContent renders its children", () => {
     render(<Card><CardContent>obsah</CardContent></Card>);
-    expect(screen.getByText("obsah")).toBeInTheDocument();
+    expect(screen.getByTestId(CardTestId.Content)).toHaveTextContent("obsah");
   });
 
   it("CardFooter renders its children", () => {
     render(<Card><CardFooter>zápatí</CardFooter></Card>);
-    expect(screen.getByText("zápatí")).toBeInTheDocument();
+    expect(screen.getByTestId(CardTestId.Footer)).toHaveTextContent("zápatí");
   });
 
   it("CardActions renders its children via CardFooter", () => {
     render(<Card><CardActions><button>OK</button></CardActions></Card>);
-    expect(screen.getByRole("button", { name: "OK" })).toBeInTheDocument();
+    const footer = screen.getByTestId(CardTestId.Footer);
+    expect(within(footer).getByRole("button", { name: "OK" })).toBeInTheDocument();
   });
 });

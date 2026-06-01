@@ -3,7 +3,7 @@ import { Typography } from "../Typography/Typography";
 import { Container } from "./Container";
 
 const meta: Meta<typeof Container> = {
-  title: "Primitives/Container",
+  title: "Components/Container",
   component: Container,
   parameters: { backgrounds: { default: "velin" } },
   args: { children: "Obsah kontejneru", padding: "200" },

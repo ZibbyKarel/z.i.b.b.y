@@ -6,6 +6,16 @@ import {
 } from "react";
 import { cn } from "../../utils/cn";
 
+export enum FieldTestId {
+  Root = "field-root",
+  Label = "field-label",
+  Control = "field-control",
+  Hint = "field-hint",
+  Group = "field-group",
+  /** Each segmented option button is suffixed with its `value`, e.g. `field-option-home`. */
+  Option = "field-option",
+}
+
 const labelClass =
   "font-mono text-sm uppercase tracking-wider text-foreground-faint";
 
@@ -26,13 +36,13 @@ function FieldShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className={labelClass}>
+    <div data-testid={FieldTestId.Root} className="flex flex-col gap-2">
+      <label htmlFor={id} data-testid={FieldTestId.Label} className={labelClass}>
         {label}
       </label>
       {children}
       {hint && (
-        <span className="font-mono text-xs text-foreground-faint">{hint}</span>
+        <span data-testid={FieldTestId.Hint} className="font-mono text-xs text-foreground-faint">{hint}</span>
       )}
     </div>
   );
@@ -52,7 +62,7 @@ export function TextField({ label, hint, ref, ...props }: TextFieldProps) {
   const id = useId();
   return (
     <FieldShell id={id} label={label} hint={hint}>
-      <input ref={ref} id={id} className={controlClass} {...props} />
+      <input ref={ref} id={id} data-testid={FieldTestId.Control} className={controlClass} {...props} />
     </FieldShell>
   );
 }
@@ -79,6 +89,7 @@ export function TextAreaField({
       <textarea
         ref={ref}
         id={id}
+        data-testid={FieldTestId.Control}
         className={cn(controlClass, "min-h-20 resize-y leading-relaxed")}
         {...props}
       />
@@ -112,6 +123,7 @@ export function SelectField({
     <FieldShell id={id} label={label} hint={hint}>
       <select
         id={id}
+        data-testid={FieldTestId.Control}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
         className={cn(controlClass, "cursor-pointer appearance-none")}
@@ -150,6 +162,7 @@ export function SegmentedField({
   return (
     <FieldShell id={id} label={label} hint={hint}>
       <div
+        data-testid={FieldTestId.Group}
         role="radiogroup"
         aria-label={label}
         className="flex flex-wrap gap-1.5"
@@ -159,6 +172,7 @@ export function SegmentedField({
           return (
             <button
               key={o.value}
+              data-testid={`${FieldTestId.Option}-${o.value}`}
               type="button"
               role="radio"
               aria-checked={on}

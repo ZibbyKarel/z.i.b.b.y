@@ -7,6 +7,13 @@ import {
   type Padding,
 } from "../../tokens";
 
+export enum CardTestId {
+  Root = "card-root",
+  Header = "card-header",
+  Content = "card-content",
+  Footer = "card-footer",
+}
+
 export type CornersTone = "accent" | "bad" | "ok" | "warn";
 
 const cornersToneClass: Record<CornersTone, string> = {
@@ -89,6 +96,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
+      data-testid={CardTestId.Root}
       {...rest}
       ref={ref}
       className={cn(
@@ -110,7 +118,7 @@ export function Card({
 
 export function CardHeader({ children }: { children: ReactNode }) {
   return (
-    <div className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim">
+    <div data-testid={CardTestId.Header} className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim">
       {children}
     </div>
   );
@@ -124,12 +132,12 @@ export function CardContent({
   padding?: Padding;
 }) {
   const [t, r, b, l] = resolvePadding(padding).map(spacingToPx);
-  return <div style={{ padding: `${t} ${r} ${b} ${l}` }}>{children}</div>;
+  return <div data-testid={CardTestId.Content} style={{ padding: `${t} ${r} ${b} ${l}` }}>{children}</div>;
 }
 
 export function CardFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="px-[14px] py-[10px] border-t border-border flex items-center gap-2">
+    <div data-testid={CardTestId.Footer} className="px-[14px] py-[10px] border-t border-border flex items-center gap-2">
       {children}
     </div>
   );

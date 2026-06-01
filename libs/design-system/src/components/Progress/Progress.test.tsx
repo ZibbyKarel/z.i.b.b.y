@@ -1,22 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Progress, usageTone } from "./Progress";
+import { Progress, ProgressTestId, usageTone } from "./Progress";
 
 describe("Progress", () => {
   it("exposes a progressbar role when labelled", () => {
     render(<Progress value={64} label="5h rolling" />);
-    const bar = screen.getByRole("progressbar", { name: "5h rolling" });
+    const bar = screen.getByTestId(ProgressTestId.Root);
+    expect(bar).toHaveRole("progressbar");
+    expect(bar).toHaveAccessibleName("5h rolling");
     expect(bar).toHaveAttribute("aria-valuenow", "64");
   });
 
   it("clamps values to 0–100", () => {
     render(<Progress value={150} label="over" />);
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByTestId(ProgressTestId.Root)).toHaveAttribute("aria-valuenow", "100");
   });
 
   it("renders no progressbar role without a label", () => {
-    const { container } = render(<Progress value={20} />);
-    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    render(<Progress value={20} />);
+    expect(screen.getByTestId(ProgressTestId.Root)).not.toHaveAttribute("role");
   });
 });
 

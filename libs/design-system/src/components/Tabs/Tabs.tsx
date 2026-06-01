@@ -16,6 +16,15 @@ function useTabsContext() {
   return ctx;
 }
 
+export enum TabsTestId {
+  Root = "tabs-root",
+  List = "tabs-list",
+  /** Each tab button is suffixed with its `value`, e.g. `tabs-tab-overview`. */
+  Tab = "tabs-tab",
+  /** Each rendered panel is suffixed with its `value`, e.g. `tabs-panel-overview`. */
+  Panel = "tabs-panel",
+}
+
 export interface TabsProps {
   defaultValue?: string;
   value?: string;
@@ -37,7 +46,7 @@ export function Tabs({
   };
   return (
     <TabsContext.Provider value={{ active, setActive }}>
-      <div className="flex flex-col">{children}</div>
+      <div data-testid={TabsTestId.Root} className="flex flex-col">{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -45,6 +54,7 @@ export function Tabs({
 export function TabList({ children }: { children: ReactNode }) {
   return (
     <div
+      data-testid={TabsTestId.List}
       role="tablist"
       className="flex gap-0.5 border-b border-border shrink-0"
     >
@@ -67,6 +77,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
 
   return (
     <button
+      data-testid={`${TabsTestId.Tab}-${value}`}
       {...rest}
       ref={ref}
       role="tab"
@@ -96,7 +107,7 @@ export function TabPanel({
   const { active } = useTabsContext();
   if (active !== value) return null;
   return (
-    <div role="tabpanel" className="flex-1 overflow-auto">
+    <div data-testid={`${TabsTestId.Panel}-${value}`} role="tabpanel" className="flex-1 overflow-auto">
       {children}
     </div>
   );

@@ -12,6 +12,10 @@ export type BadgeTone =
   | "sonnet"
   | "haiku";
 
+export enum BadgeTestId {
+  Root = "badge-root",
+}
+
 export interface BadgeProps extends Omit<
   HTMLAttributes<HTMLSpanElement>,
   "className"
@@ -61,6 +65,7 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
+      data-testid={BadgeTestId.Root}
       {...rest}
       ref={ref}
       className={cn(

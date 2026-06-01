@@ -3,6 +3,14 @@ import { cn } from "../../utils/cn";
 import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
 
+export enum ListTestId {
+  Root = "list-root",
+  /** Each row is suffixed with the item `id`, e.g. `list-item-overview`. */
+  Item = "list-item",
+  /** Each badge is suffixed with the item `id`, e.g. `list-item-badge-runs`. */
+  Badge = "list-item-badge",
+}
+
 export type LinkComponentType = ComponentType<{
   href: string;
   children: ReactNode;
@@ -53,7 +61,10 @@ function ListRow({
       </span>
       <span className="flex-1">{item.label}</span>
       {item.badge ? (
-        <span className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast">
+        <span
+          data-testid={`${ListTestId.Badge}-${item.id}`}
+          className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
+        >
           {item.badge}
         </span>
       ) : null}
@@ -64,6 +75,7 @@ function ListRow({
     return (
       <LinkComp
         href={item.href}
+        data-testid={`${ListTestId.Item}-${item.id}`}
         className={className}
         aria-current={active ? "page" : undefined}
       >
@@ -75,6 +87,7 @@ function ListRow({
   return (
     <button
       type="button"
+      data-testid={`${ListTestId.Item}-${item.id}`}
       aria-current={active ? "page" : undefined}
       onClick={() => onSelect(item.id)}
       className={className}
@@ -101,7 +114,7 @@ export function List({
   linkComponent,
 }: ListProps) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div data-testid={ListTestId.Root} className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-col gap-0.5">
         {items.map((item) => (
           <ListRow

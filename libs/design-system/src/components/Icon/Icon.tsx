@@ -8,6 +8,10 @@ export type { IconName };
 
 export type IconStroke = "thin" | "default" | "medium" | "bold";
 
+export enum IconTestId {
+  Root = "icon-root",
+}
+
 const iconSizePx: Record<Size, number> = {
   xs: 12,
   sm: 14,
@@ -48,6 +52,7 @@ export function Icon({
   return (
     <svg
       ref={ref}
+      data-testid={IconTestId.Root}
       viewBox="0 0 24 24"
       width={px}
       height={px}

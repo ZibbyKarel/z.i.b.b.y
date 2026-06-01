@@ -42,6 +42,11 @@ const button = cva(
   },
 );
 
+export enum ButtonTestId {
+  Root = "button-root",
+  Icon = "button-icon",
+}
+
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">, VariantProps<typeof button> {
   /** Optional leading icon glyph. */
@@ -63,11 +68,12 @@ export function Button({
   return (
     <button
       ref={ref}
+      data-testid={ButtonTestId.Root}
       type={type}
       className={button({ intent, size, block })}
       {...props}
     >
-      {icon ? <Icon name={icon} size={iconSize} stroke="medium" /> : null}
+      {icon ? <Icon name={icon} size={iconSize} stroke="medium" data-testid={ButtonTestId.Icon} /> : null}
       {children}
     </button>
   );

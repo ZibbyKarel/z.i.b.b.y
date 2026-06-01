@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
-import { Tabs, TabList, Tab, TabPanel } from "./Tabs";
+import { Tabs, TabsTestId, TabList, Tab, TabPanel } from "./Tabs";
 
 function BasicTabs() {
   return (
@@ -20,26 +20,26 @@ function BasicTabs() {
 describe("Tabs", () => {
   it("renders tabs and shows the default panel", () => {
     render(<BasicTabs />);
-    expect(screen.getByRole("tab", { name: "Přehled" })).toBeInTheDocument();
-    expect(screen.getByText("Obsah A")).toBeInTheDocument();
-    expect(screen.queryByText("Obsah B")).toBeNull();
+    expect(screen.getByTestId(`${TabsTestId.Tab}-a`)).toHaveAccessibleName("Přehled");
+    expect(screen.getByTestId(`${TabsTestId.Panel}-a`)).toHaveTextContent("Obsah A");
+    expect(screen.queryByTestId(`${TabsTestId.Panel}-b`)).toBeNull();
   });
 
   it("switches to the clicked tab's panel", async () => {
     render(<BasicTabs />);
-    await userEvent.click(screen.getByRole("tab", { name: "Detail" }));
-    expect(screen.getByText("Obsah B")).toBeInTheDocument();
-    expect(screen.queryByText("Obsah A")).toBeNull();
+    await userEvent.click(screen.getByTestId(`${TabsTestId.Tab}-b`));
+    expect(screen.getByTestId(`${TabsTestId.Panel}-b`)).toHaveTextContent("Obsah B");
+    expect(screen.queryByTestId(`${TabsTestId.Panel}-a`)).toBeNull();
   });
 
   it("marks the active tab as selected", () => {
     render(<BasicTabs />);
-    expect(screen.getByRole("tab", { name: "Přehled" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Detail" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByTestId(`${TabsTestId.Tab}-a`)).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId(`${TabsTestId.Tab}-b`)).toHaveAttribute("aria-selected", "false");
   });
 
   it("renders a tabpanel", () => {
     render(<BasicTabs />);
-    expect(screen.getByRole("tabpanel")).toBeInTheDocument();
+    expect(screen.getByTestId(`${TabsTestId.Panel}-a`)).toHaveRole("tabpanel");
   });
 });

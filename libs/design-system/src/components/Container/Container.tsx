@@ -17,6 +17,10 @@ export type ContainerAs =
   | "label"
   | "form";
 
+export enum ContainerTestId {
+  Root = "container-root",
+}
+
 export interface ContainerProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   as?: ContainerAs;
   // Padding
@@ -133,5 +137,5 @@ export function Container({
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <Tag {...(rest as any)} ref={ref as Ref<HTMLElement>} style={{ ...layoutStyle, ...style }} />;
+  return <Tag data-testid={ContainerTestId.Root} {...(rest as any)} ref={ref as Ref<HTMLElement>} style={{ ...layoutStyle, ...style }} />;
 }

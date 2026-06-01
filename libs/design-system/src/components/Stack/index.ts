@@ -1,2 +1,2 @@
-export { Stack, Row } from "./Stack";
-export type { StackProps, RowProps } from "./Stack";
+export { Stack } from "./Stack";
+export type { StackProps } from "./Stack";

@@ -4,6 +4,11 @@ import { spacingToPx, type Spacing } from "../../tokens";
 
 export type ProgressTone = "accent" | "ok" | "warn" | "bad";
 
+export enum ProgressTestId {
+  Root = "progress-root",
+  Fill = "progress-fill",
+}
+
 const toneBar: Record<ProgressTone, string> = {
   accent: "bg-accent",
   ok: "bg-ok",
@@ -47,6 +52,7 @@ export function Progress({
   return (
     <div
       ref={ref}
+      data-testid={ProgressTestId.Root}
       role={label ? "progressbar" : undefined}
       aria-label={label}
       aria-valuenow={label ? pct : undefined}
@@ -57,6 +63,7 @@ export function Progress({
       {...props}
     >
       <div
+        data-testid={ProgressTestId.Fill}
         className={cn(
           "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300",
           toneBar[tone],
