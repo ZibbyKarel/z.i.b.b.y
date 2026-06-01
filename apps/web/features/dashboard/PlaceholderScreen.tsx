@@ -1,5 +1,11 @@
 "use client";
-import { Icon, type IconName } from "@zibby/design-system"
+import {
+  Container,
+  IconTile,
+  Stack,
+  Typography,
+  type IconName,
+} from "@zibby/design-system"
 import { HudPanel } from "./components/HudPanel"
 
 export interface PlaceholderScreenProps {
@@ -10,22 +16,26 @@ export interface PlaceholderScreenProps {
 /** Graceful placeholder for screens that follow the same card → modal pattern. */
 export function PlaceholderScreen({ label, glyph }: PlaceholderScreenProps) {
   return (
-    <div className="mx-auto max-w-[1400px]">
-      <HudPanel className="p-10">
-        <div className="flex flex-col items-center gap-3.5 py-10 text-center">
-          <div className="grid h-14 w-14 place-items-center rounded border border-accent/35 bg-[rgba(255,255,255,0.02)] text-accent">
-            <Icon name={glyph} size="xl" />
-          </div>
-          <div className="text-3xl font-semibold">{label}</div>
-          <p className="max-w-md font-mono text-base leading-relaxed text-foreground-dim">
-            Tahle obrazovka je další na řadě. Drží stejný vzor — karty (= soubory na disku) → čudlík →
-            modal s promptem → běh na pozadí.
-          </p>
-          <span className="font-mono text-sm tracking-wider text-foreground-faint">
-            // v přípravě
-          </span>
-        </div>
+    <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
+      <HudPanel padding="500">
+        <Container padding={["500", "0"]} textAlign="center">
+          <Stack align="center" gap="150">
+            <IconTile glyph={glyph} size="xl" radius="default" filled={false} />
+            <Typography type="title" size="3xl" weight="semibold">
+              {label}
+            </Typography>
+            <Container maxWidth="28rem">
+              <Typography type="note" mono size="base" leading="relaxed" variant="secondary">
+                Tahle obrazovka je další na řadě. Drží stejný vzor — karty (= soubory na disku) → čudlík →
+                modal s promptem → běh na pozadí.
+              </Typography>
+            </Container>
+            <Typography type="note" mono size="sm" tracking="wider" variant="tertiary">
+              // v přípravě
+            </Typography>
+          </Stack>
+        </Container>
       </HudPanel>
-    </div>
+    </Container>
   )
 }

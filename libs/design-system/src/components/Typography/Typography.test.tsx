@@ -38,6 +38,31 @@ describe("Typography", () => {
     expect(screen.getByText("A").className).toContain("text-foreground");
   });
 
+  it("applies a semantic tone over the variant colour", () => {
+    render(<Typography type="note" tone="ok">A</Typography>);
+    const el = screen.getByText("A");
+    expect(el.className).toContain("text-ok");
+    expect(el.className).not.toContain("text-foreground");
+  });
+
+  it("overrides the rendered element via as", () => {
+    render(<Typography type="note" as="span">A</Typography>);
+    expect(screen.getByText("A").tagName).toBe("SPAN");
+  });
+
+  it("applies size, mono, uppercase and truncate", () => {
+    render(
+      <Typography type="note" mono uppercase truncate size="xs">
+        A
+      </Typography>,
+    );
+    const el = screen.getByText("A");
+    expect(el.className).toContain("font-mono");
+    expect(el.className).toContain("uppercase");
+    expect(el.className).toContain("truncate");
+    expect(el.style.fontSize).toBe("var(--text-xs)");
+  });
+
   it("forwards a ref", () => {
     let node: HTMLElement | null = null;
     render(

@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Icon, Chip } from "@zibby/design-system";
+import {
+  Button,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  Icon,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { Pipeline } from "../../domain";
 import { SectionLabel } from "./components/SectionLabel";
 import { HudPanel } from "./components/HudPanel";
@@ -45,12 +54,16 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
     />
   );
 
+  const addAction = (
+    <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
+      Přidat pipeline
+    </Button>
+  );
+
   if (list.length === 0) {
     return (
-      <div className="mx-auto max-w-[1400px]">
-        <SectionLabel action={<Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>Přidat pipeline</Button>}>
-          Pipeline · {context}
-        </SectionLabel>
+      <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
+        <SectionLabel action={addAction}>Pipeline · {context}</SectionLabel>
         <EmptyState
           glyph="flow"
           title="Zatím žádné pipeline"
@@ -60,18 +73,16 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
           hint="// vytvoří ~/zibby/pipelines/<název>.pipeline.md"
         />
         {addModal}
-      </div>
+      </Container>
     );
   }
 
   const rawCtx = context;
 
   return (
-    <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <div className="flex flex-col gap-3">
-        <SectionLabel action={<Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>Přidat pipeline</Button>}>
-          Pipeline · {context}
-        </SectionLabel>
+    <Grid sidebar="left" center maxWidth="1400px" gap="250" align="start">
+      <Stack gap="150">
+        <SectionLabel action={addAction}>Pipeline · {context}</SectionLabel>
         {list.map((p) => (
           <PipelineCard
             key={p.id}
@@ -81,49 +92,70 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
             onSelect={(id: string) => router.push(hrefWithCtx(`/pipelines/${id}`, rawCtx))}
           />
         ))}
-      </div>
+      </Stack>
 
       {selected && (
-        <div className="flex flex-col gap-5">
-          <HudPanel className="p-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-3xl font-semibold">{selected.name}</span>
-                  <Chip tone="accent">{context}</Chip>
-                </div>
-                <span className="mt-1.5 block font-mono text-caption text-foreground-dim">{selected.desc}</span>
-                <div className="mt-2.5 flex items-center gap-1.5">
-                  <Icon name="file" size="xs" className="text-foreground-faint" />
-                  <span className="font-mono text-sm text-foreground-faint">{selected.file}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button intent="ghost" icon="edit" size="sm">Editovat</Button>
-                <Button intent="ghost" icon="link" size="sm">Duplikovat</Button>
-                <Button intent="run" icon="play" onClick={() => setRunPipeline(selected)}>Spustit pipeline</Button>
-              </div>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-border pt-4">
-              <div className="flex items-center gap-2">
-                <Icon name="dollar" size="md" className="text-accent" />
-                <div>
-                  <span className="block font-mono text-2xs tracking-wider text-foreground-faint">STROP PIPELINE</span>
-                  <span className="font-mono text-xl font-bold text-foreground">${selected.budget}</span>
-                </div>
-              </div>
-              <div className="h-8 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                <Icon name="branch" size="md" className="text-foreground-dim" />
-                <span className="font-mono text-caption text-foreground-dim">výstup → izolovaná branch · PR k ranní review</span>
-              </div>
-            </div>
+        <Stack gap="250">
+          <HudPanel padding="250">
+            <Stack gap="200">
+              <Stack direction="row" wrap align="start" justify="between" gap="200">
+                <Container minW0>
+                  <Stack gap="100">
+                    <Stack direction="row" align="center" gap="100">
+                      <Typography type="title" size="3xl" weight="semibold">
+                        {selected.name}
+                      </Typography>
+                      <Chip tone="accent">{context}</Chip>
+                    </Stack>
+                    <Typography type="note" mono size="caption" variant="secondary">
+                      {selected.desc}
+                    </Typography>
+                    <Stack direction="row" align="center" gap="75">
+                      <Icon name="file" size="xs" tone="faint" />
+                      <Typography type="note" mono size="sm" variant="tertiary">
+                        {selected.file}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                </Container>
+                <Stack direction="row" align="center" gap="100">
+                  <Button intent="ghost" icon="edit" size="sm">Editovat</Button>
+                  <Button intent="ghost" icon="link" size="sm">Duplikovat</Button>
+                  <Button intent="run" icon="play" onClick={() => setRunPipeline(selected)}>
+                    Spustit pipeline
+                  </Button>
+                </Stack>
+              </Stack>
+              <Divider />
+              <Stack direction="row" wrap align="center" gap="250">
+                <Stack direction="row" align="center" gap="100">
+                  <Icon name="dollar" size="md" tone="accent" />
+                  <Container>
+                    <Typography type="note" mono size="2xs" tracking="wider" variant="tertiary">
+                      STROP PIPELINE
+                    </Typography>
+                    <Typography type="note" mono size="xl" weight="bold">
+                      ${selected.budget}
+                    </Typography>
+                  </Container>
+                </Stack>
+                <Container height="32px">
+                  <Divider orientation="vertical" />
+                </Container>
+                <Stack direction="row" align="center" gap="100">
+                  <Icon name="branch" size="md" tone="dim" />
+                  <Typography type="note" mono size="caption" variant="secondary">
+                    výstup → izolovaná branch · PR k ranní review
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Stack>
           </HudPanel>
 
-          <HudPanel title="zřetězení fází · soubory = předání" className="p-5">
+          <HudPanel title="zřetězení fází · soubory = předání" padding="250">
             <PhaseChain pipeline={selected} agents={agents} />
           </HudPanel>
-        </div>
+        </Stack>
       )}
 
       {runPipeline && (
@@ -136,6 +168,6 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
         />
       )}
       {addModal}
-    </div>
+    </Grid>
   );
 }

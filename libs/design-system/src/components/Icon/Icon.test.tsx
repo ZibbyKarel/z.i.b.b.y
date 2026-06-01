@@ -19,4 +19,9 @@ describe("Icon", () => {
     render(<Icon name="ok" />);
     expect(screen.getByTestId(IconTestId.Root).getAttribute("aria-hidden")).toBe("true");
   });
+
+  it("applies a semantic tone colour class", () => {
+    render(<Icon name="ok" tone="bad" />);
+    expect(screen.getByTestId(IconTestId.Root).getAttribute("class")).toContain("text-bad");
+  });
 });

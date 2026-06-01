@@ -5,8 +5,8 @@ import { ButtonGroup, ButtonGroupTestId } from "./ButtonGroup";
 import type { ButtonGroupOption } from "./ButtonGroup";
 
 const options: ButtonGroupOption[] = [
-  { id: "home", label: "home", swatchClass: "bg-home" },
-  { id: "work", label: "work", swatchClass: "bg-work" },
+  { id: "home", label: "home", tone: "home" },
+  { id: "work", label: "work", tone: "work" },
 ];
 
 describe("ButtonGroup", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@zibby/design-system";
+import { Button, Container, Grid } from "@zibby/design-system";
 import { SectionLabel } from "./components/SectionLabel";
 import { EntityFormModal } from "./components/EntityFormModal";
 import { EmptyState } from "./components/EmptyState";
@@ -18,7 +18,7 @@ export function AgentsScreen() {
   const list = agents.filter((a) => a.ctx === context);
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <SectionLabel
         action={
           <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
@@ -39,11 +39,11 @@ export function AgentsScreen() {
           hint="// vytvoří ~/zibby/agents/<název>.agent.md"
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Grid cols={1} sm={2} lg={3} gap="150">
           {list.map((a) => (
             <AgentCard key={a.id} agent={a} />
           ))}
-        </div>
+        </Grid>
       )}
 
       {adding && (
@@ -58,6 +58,6 @@ export function AgentsScreen() {
           onSubmit={(values) => { addAgent(values); setAdding(false); }}
         />
       )}
-    </div>
+    </Container>
   );
 }

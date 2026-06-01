@@ -30,6 +30,10 @@ export interface DialogProps {
   description?: ReactNode;
   actions?: ReactNode;
   width?: DialogWidth;
+  /** Accessible name override (use when `title` is non-string content). */
+  ariaLabel?: string;
+  /** Accessible label for the header close button. */
+  closeLabel?: string;
   children?: ReactNode;
 }
 
@@ -40,6 +44,8 @@ export function Dialog({
   description,
   actions,
   width = "md",
+  ariaLabel,
+  closeLabel = "Close dialog",
   children,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -79,12 +85,12 @@ export function Dialog({
         data-testid={DialogTestId.Root}
         role="dialog"
         aria-modal
-        aria-label={typeof title === "string" ? title : undefined}
+        aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
         tabIndex={-1}
         style={{ width: dialogWidthPx[width], maxWidth: "calc(100vw - 32px)" }}
         className="relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded shadow-modal animate-scale-in outline-none"
       >
-        {title && <DialogHeader title={title} description={description} onClose={onClose} />}
+        {title && <DialogHeader title={title} description={description} onClose={onClose} closeLabel={closeLabel} />}
         {children && <DialogBody>{children}</DialogBody>}
         {actions && <DialogFooter>{actions}</DialogFooter>}
       </div>
@@ -96,10 +102,12 @@ function DialogHeader({
   title,
   description,
   onClose,
+  closeLabel = "Close dialog",
 }: {
   title: ReactNode;
   description?: ReactNode;
   onClose?: () => void;
+  closeLabel?: string;
 }) {
   return (
     <div data-testid={DialogTestId.Header} className="px-5 pt-4 pb-[14px] border-b border-border shrink-0">
@@ -108,7 +116,7 @@ function DialogHeader({
         {onClose && (
           <button
             data-testid={DialogTestId.CloseButton}
-            aria-label="Close dialog"
+            aria-label={closeLabel}
             onClick={onClose}
             className="bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
           >

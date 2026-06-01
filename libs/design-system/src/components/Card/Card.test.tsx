@@ -25,6 +25,19 @@ describe("Card", () => {
     expect(node).toBeInstanceOf(HTMLDivElement);
   });
 
+  it("applies translucent background, dashed border and shadow", () => {
+    render(
+      <Card background="panel" borderStyle="dashed" shadow="dropdown" animate="scale">
+        x
+      </Card>,
+    );
+    const cls = screen.getByTestId(CardTestId.Root).className;
+    expect(cls).toContain("bg-surface-panel");
+    expect(cls).toContain("border-dashed");
+    expect(cls).toContain("shadow-dropdown");
+    expect(cls).toContain("animate-scale-in");
+  });
+
   it("CardHeader renders its children", () => {
     render(<Card><CardHeader>Titulek</CardHeader></Card>);
     expect(screen.getByTestId(CardTestId.Header)).toHaveTextContent("Titulek");

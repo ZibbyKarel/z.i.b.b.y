@@ -1,20 +1,34 @@
-import { Icon } from "@zibby/design-system";
+import { Container, Icon, Stack, Typography } from "@zibby/design-system";
+
+function Sep() {
+  return (
+    <Typography as="span" type="note" mono size="2xl" variant="tertiary">
+      ·
+    </Typography>
+  );
+}
 
 export function BrandLogo() {
   return (
-    <div className="px-1.5 pb-6 pt-1">
-      <div className="flex items-center gap-3">
-        <Icon name="butlerSign" size="xl" className="text-foreground" />
-        <div className="font-mono text-2xl font-bold tracking-mono text-foreground">
-          Z<span className="text-foreground-faint">·</span>I
-          <span className="text-foreground-faint">·</span>B
-          <span className="text-foreground-faint">·</span>B
-          <span className="text-foreground-faint">·</span>Y
-        </div>
-      </div>
-      <div className="mt-2 whitespace-nowrap font-mono text-2xs tracking-tighter text-foreground-faint">
-        Zestful Intuitive Brainy Butler for You
-      </div>
-    </div>
+    <Container padding={["50", "75", "300", "75"]}>
+      <Stack gap="100">
+        <Stack direction="row" align="center" gap="150">
+          <Icon name="butlerSign" size="xl" />
+          <Typography as="div" type="subtitle" mono weight="bold" size="2xl" tracking="mono">
+            Z<Sep />I<Sep />B<Sep />B<Sep />Y
+          </Typography>
+        </Stack>
+        <Typography
+          type="note"
+          mono
+          size="2xs"
+          tracking="tighter"
+          variant="tertiary"
+          nowrap
+        >
+          Zestful Intuitive Brainy Butler for You
+        </Typography>
+      </Stack>
+    </Container>
   );
 }

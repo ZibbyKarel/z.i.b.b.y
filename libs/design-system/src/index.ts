@@ -47,12 +47,27 @@ export { Stack } from "./components/Stack";
 export type { StackProps } from "./components/Stack";
 export { Spacer } from "./components/Spacer";
 export type { SpacerProps } from "./components/Spacer";
+export { Grid, GridTestId } from "./components/Grid/Grid";
+export type { GridProps, GridCols, GridAlign } from "./components/Grid/Grid";
+export { Surface, SurfaceTestId } from "./components/Surface/Surface";
+export type { SurfaceProps } from "./components/Surface/Surface";
+export { Pressable, PressableTestId } from "./components/Pressable/Pressable";
+export type { PressableProps } from "./components/Pressable/Pressable";
 
 // ---------------------------------------------------------------------------
 // Foundations
 // ---------------------------------------------------------------------------
 export { Icon, iconNames } from "./components/Icon/Icon";
-export type { IconName, IconProps, IconStroke } from "./components/Icon/Icon";
+export type { IconName, IconProps, IconStroke, IconTone } from "./components/Icon/Icon";
+
+export { IconTile, IconTileTestId } from "./components/IconTile/IconTile";
+export type {
+  IconTileProps,
+  IconTileSize,
+  IconTileTone,
+  IconTileRadius,
+  IconTileShape,
+} from "./components/IconTile/IconTile";
 
 // ---------------------------------------------------------------------------
 // Generic components
@@ -65,6 +80,12 @@ export type {
   TypographyProps,
   TypographyType,
   TypographyVariant,
+  TypographyTone,
+  TypographySize,
+  TypographyWeight,
+  TypographyTracking,
+  TypographyLeading,
+  TypographyAlign,
 } from "./components/Typography/Typography";
 
 export { Divider } from "./components/Divider/Divider";
@@ -152,6 +173,7 @@ export { ButtonGroup } from "./components/ButtonGroup/ButtonGroup";
 export type {
   ButtonGroupProps,
   ButtonGroupOption,
+  ButtonGroupTone,
 } from "./components/ButtonGroup/ButtonGroup";
 
 export {

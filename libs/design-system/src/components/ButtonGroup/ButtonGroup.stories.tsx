@@ -4,20 +4,8 @@ import { Typography } from "../Typography/Typography";
 import { ButtonGroup, type ButtonGroupOption } from "./ButtonGroup";
 
 const contextOptions: ButtonGroupOption[] = [
-  {
-    id: "home",
-    label: "home",
-    swatchClass: "bg-home",
-    activeClass:
-      "bg-home text-background shadow-[0_0_14px_rgba(240,180,41,0.33)]",
-  },
-  {
-    id: "work",
-    label: "work",
-    swatchClass: "bg-work",
-    activeClass:
-      "bg-work text-background shadow-[0_0_14px_rgba(91,141,239,0.33)]",
-  },
+  { id: "home", label: "home", tone: "home" },
+  { id: "work", label: "work", tone: "work" },
 ];
 
 const meta: Meta<typeof ButtonGroup> = {

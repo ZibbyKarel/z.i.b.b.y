@@ -9,13 +9,25 @@ export enum ButtonGroupTestId {
   Add = "button-group-add",
 }
 
+export type ButtonGroupTone = "home" | "work" | "accent";
+
+const toneSwatch: Record<ButtonGroupTone, string> = {
+  home: "bg-home",
+  work: "bg-work",
+  accent: "bg-accent",
+};
+
+const toneActive: Record<ButtonGroupTone, string> = {
+  home: "bg-home text-background shadow-[0_0_14px_rgba(240,180,41,0.33)]",
+  work: "bg-work text-background shadow-[0_0_14px_rgba(91,141,239,0.33)]",
+  accent: "bg-accent text-accent-contrast",
+};
+
 export interface ButtonGroupOption {
   id: string;
   label: string;
-  /** Tailwind bg class for the dot swatch shown when the option is inactive. */
-  swatchClass?: string;
-  /** Tailwind classes applied to the button when this option is active. */
-  activeClass?: string;
+  /** Semantic colour for the swatch + active state, resolved inside the DS. */
+  tone?: ButtonGroupTone;
 }
 
 export interface ButtonGroupProps {
@@ -59,15 +71,15 @@ export function ButtonGroup({
               "inline-flex items-center gap-2 rounded-sm border-none px-3 py-1.5 font-mono text-base font-semibold transition-all",
               "outline-none focus-visible:ring-2 focus-visible:ring-accent",
               active
-                ? (o.activeClass ?? "bg-accent text-accent-contrast")
+                ? (o.tone ? toneActive[o.tone] : "bg-accent text-accent-contrast")
                 : "bg-transparent text-foreground-dim hover:text-foreground",
             )}
           >
-            {o.swatchClass && (
+            {o.tone && (
               <span
                 className={cn(
                   "h-1.5 w-1.5 rounded-full",
-                  active ? "bg-background opacity-70" : o.swatchClass,
+                  active ? "bg-background opacity-70" : toneSwatch[o.tone],
                 )}
               />
             )}

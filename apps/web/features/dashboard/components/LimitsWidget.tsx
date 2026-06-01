@@ -2,130 +2,195 @@
 
 import { useState } from "react";
 import {
-  cn,
+  Card,
+  Container,
+  Divider,
   Icon,
+  Pressable,
   Progress,
   usageTone,
   Sparkline,
-  StatusDot,
-  type DotTone,
+  Stack,
+  Typography,
+  type ProgressTone,
 } from "@zibby/design-system";
 import type { AgentSdkCredit, ClaudeLimits, QuotaLimit } from "../../../domain";
 
-const toneText: Record<"ok" | "warn" | "bad" | "accent", string> = {
-  ok: "text-ok", warn: "text-warn", bad: "text-bad", accent: "text-accent",
-};
+type Tone = "ok" | "warn" | "bad" | "accent";
+const asTone = (t: ProgressTone): Tone => t as Tone;
 
 function MiniBar({ label, pct, width }: { label: string; pct: number; width: number }) {
   const tone = usageTone(pct);
   return (
-    <div style={{ width }}>
-      <div className="mb-1 flex justify-between">
-        <span className="font-mono text-xs text-foreground-faint">{label}</span>
-        <span className={cn("font-mono text-xs font-bold", toneText[tone])}>{pct}%</span>
-      </div>
-      <Progress value={pct} tone={tone} height="50" glow />
-    </div>
+    <Container width={`${width}px`}>
+      <Stack gap="25">
+        <Stack direction="row" justify="between">
+          <Typography type="note" mono size="xs" variant="tertiary">
+            {label}
+          </Typography>
+          <Typography type="note" mono size="xs" weight="bold" tone={asTone(tone)}>
+            {pct}%
+          </Typography>
+        </Stack>
+        <Progress value={pct} tone={tone} height="50" glow />
+      </Stack>
+    </Container>
   );
 }
 
 function LimitRow({ d }: { d: QuotaLimit }) {
   const tone = usageTone(d.usedPct);
   return (
-    <div>
-      <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="font-mono text-sm tracking-wide text-foreground-dim">{d.label}</span>
-        <span className={cn("font-mono text-sm font-semibold", toneText[tone])}>{d.usedPct}%</span>
-      </div>
+    <Stack gap="50">
+      <Stack direction="row" align="baseline" justify="between">
+        <Typography type="note" mono size="sm" tracking="wide" variant="secondary">
+          {d.label}
+        </Typography>
+        <Typography type="note" mono size="sm" weight="semibold" tone={asTone(tone)}>
+          {d.usedPct}%
+        </Typography>
+      </Stack>
       <Progress value={d.usedPct} tone={tone} height="50" glow label={d.label} />
-      <span className="mt-1.5 block font-mono text-xs text-foreground-faint">
+      <Typography type="note" mono size="xs" variant="tertiary">
         reset {d.resetIn} · {d.tokens}
-      </span>
-    </div>
+      </Typography>
+    </Stack>
   );
 }
 
 export interface LimitsWidgetProps {
   limits: ClaudeLimits;
   credit: AgentSdkCredit;
-  className?: string;
 }
 
-export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
+export function LimitsWidget({ limits, credit }: LimitsWidgetProps) {
   const [open, setOpen] = useState(false);
   const { rolling, weekly } = limits;
   const sdkTone = usageTone(credit.usedPct);
 
   return (
-    <div className={cn("relative", className)}>
-      <button
-        type="button"
+    <Container position="relative">
+      <Pressable
         aria-expanded={open}
         aria-label="Claude Code limits and Agent SDK credit"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-3.5 rounded border border-border bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-right font-mono text-2xs uppercase leading-tight tracking-wider text-foreground-faint">
-            inter-<br />aktivní
-          </span>
-          <MiniBar label="5h" pct={rolling.usedPct} width={62} />
-          <MiniBar label="týden" pct={weekly.usedPct} width={62} />
-        </div>
-        <div className="h-7 w-px bg-border-strong" />
-        <div className="flex items-center gap-2">
-          <span className={cn("flex items-center gap-1.5", toneText[sdkTone])}>
-            <Icon name="dollar" size="sm" />
-            <span className="font-mono text-2xs uppercase leading-tight tracking-wider text-foreground-faint">
-              agent<br />sdk
-            </span>
-          </span>
-          <div className="w-24">
-            <div className="mb-1 flex items-baseline justify-between">
-              <span className="font-mono text-caption font-bold text-foreground">${credit.remaining}</span>
-              <span className="font-mono text-xs text-foreground-faint">/ ${credit.total}</span>
-            </div>
-            <Progress value={credit.usedPct} tone={sdkTone} height="50" glow />
-          </div>
-        </div>
-        <Icon name="chevron" size="sm" className={cn("text-foreground-faint transition-transform", open && "rotate-90")} />
-      </button>
+        <Card background="background" radius="sm">
+          <Container padding={["100", "150"]}>
+            <Stack direction="row" align="center" gap="150">
+              <Stack direction="row" align="center" gap="100">
+                <Typography
+                  type="note"
+                  mono
+                  size="2xs"
+                  uppercase
+                  tracking="wider"
+                  variant="tertiary"
+                  leading="tight"
+                  align="right"
+                >
+                  inter-
+                  <br />
+                  aktivní
+                </Typography>
+                <MiniBar label="5h" pct={rolling.usedPct} width={62} />
+                <MiniBar label="týden" pct={weekly.usedPct} width={62} />
+              </Stack>
+              <Container height="28px">
+                <Divider orientation="vertical" />
+              </Container>
+              <Stack direction="row" align="center" gap="100">
+                <Stack direction="row" align="center" gap="75">
+                  <Icon name="dollar" size="sm" tone={asTone(sdkTone)} />
+                  <Typography
+                    type="note"
+                    mono
+                    size="2xs"
+                    uppercase
+                    tracking="wider"
+                    variant="tertiary"
+                    leading="tight"
+                  >
+                    agent
+                    <br />
+                    sdk
+                  </Typography>
+                </Stack>
+                <Container width="96px">
+                  <Stack gap="25">
+                    <Stack direction="row" align="baseline" justify="between">
+                      <Typography type="note" mono size="caption" weight="bold">
+                        ${credit.remaining}
+                      </Typography>
+                      <Typography type="note" mono size="xs" variant="tertiary">
+                        / ${credit.total}
+                      </Typography>
+                    </Stack>
+                    <Progress value={credit.usedPct} tone={sdkTone} height="50" glow />
+                  </Stack>
+                </Container>
+              </Stack>
+              <Icon
+                name="chevron"
+                size="sm"
+                tone="faint"
+                style={{
+                  transition: "transform 0.16s",
+                  transform: open ? "rotate(90deg)" : undefined,
+                }}
+              />
+            </Stack>
+          </Container>
+        </Card>
+      </Pressable>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[360px] animate-scale-in rounded border border-border-strong bg-raised p-5 shadow-dropdown">
-          <span className="font-mono text-xs uppercase tracking-widest text-foreground-faint">
-            Interaktivní limity · Claude Code
-          </span>
-          <div className="mt-3 flex flex-col gap-3.5">
-            <LimitRow d={rolling} />
-            <LimitRow d={weekly} />
-          </div>
-          <span className="mt-2.5 block font-mono text-xs text-foreground-faint">
-            čerpá tvůj chat · nezávislé na agentech
-          </span>
-          <div className="my-4 h-px bg-border-strong" />
-          <div className="flex items-center justify-between">
-            <span className={cn("font-mono text-xs uppercase tracking-widest", toneText[sdkTone])}>
-              Agent SDK kredit
-            </span>
-            <span className="font-mono text-xs text-foreground-faint">obnova {credit.renew}</span>
-          </div>
-          <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="font-mono text-5xl font-bold text-foreground">${credit.remaining}</span>
-            <span className="font-mono text-base text-foreground-dim">zbývá z ${credit.total}</span>
-          </div>
-          <div className="mt-2.5">
-            <Progress value={credit.usedPct} tone={sdkTone} height="75" glow />
-          </div>
-          <span className="mt-2 block font-mono text-xs text-foreground-faint">
-            spotřebováno ${credit.used} · běhy agentů čerpají odsud
-          </span>
-          <div className="mt-3.5">
-            <span className="font-mono text-xs tracking-wider text-foreground-faint">TREND 14 DNÍ ($/den)</span>
-            <div className="mt-1.5"><Sparkline data={credit.trend} /></div>
-          </div>
-        </div>
+        <Container position="absolute" top="calc(100% + 8px)" right="0" zIndex={50} width="360px">
+          <Card background="raised" radius="sm" shadow="dropdown" animate="scale">
+            <Container padding="250">
+              <Stack gap="150">
+                <Typography type="note" mono size="xs" uppercase tracking="widest" variant="tertiary">
+                  Interaktivní limity · Claude Code
+                </Typography>
+                <Stack gap="150">
+                  <LimitRow d={rolling} />
+                  <LimitRow d={weekly} />
+                </Stack>
+                <Typography type="note" mono size="xs" variant="tertiary">
+                  čerpá tvůj chat · nezávislé na agentech
+                </Typography>
+                <Divider />
+                <Stack direction="row" align="center" justify="between">
+                  <Typography type="note" mono size="xs" uppercase tracking="widest" tone={asTone(sdkTone)}>
+                    Agent SDK kredit
+                  </Typography>
+                  <Typography type="note" mono size="xs" variant="tertiary">
+                    obnova {credit.renew}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" align="baseline" gap="100">
+                  <Typography type="note" mono size="5xl" weight="bold">
+                    ${credit.remaining}
+                  </Typography>
+                  <Typography type="note" mono size="base" variant="secondary">
+                    zbývá z ${credit.total}
+                  </Typography>
+                </Stack>
+                <Progress value={credit.usedPct} tone={sdkTone} height="75" glow />
+                <Typography type="note" mono size="xs" variant="tertiary">
+                  spotřebováno ${credit.used} · běhy agentů čerpají odsud
+                </Typography>
+                <Stack gap="75">
+                  <Typography type="note" mono size="xs" tracking="wider" variant="tertiary">
+                    TREND 14 DNÍ ($/den)
+                  </Typography>
+                  <Sparkline data={credit.trend} />
+                </Stack>
+              </Stack>
+            </Container>
+          </Card>
+        </Container>
       )}
-    </div>
+    </Container>
   );
 }

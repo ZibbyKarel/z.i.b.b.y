@@ -2,12 +2,17 @@
 import { useMemo, useState } from "react"
 import {
   Button,
+  Card,
+  Container,
   Dialog,
   Icon,
+  IconTile,
   SegmentedField,
   SelectField,
+  Stack,
   TextAreaField,
   TextField,
+  Typography,
 } from "@zibby/design-system"
 import type { IconName, SelectOption, DialogWidth } from "@zibby/design-system"
 
@@ -75,15 +80,15 @@ export function EntityFormModal({
       onClose={onClose}
       width={width}
       title={
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-sm border border-accent/30 bg-accent-dim text-accent">
-            <Icon name={glyph} size="lg" />
-          </div>
-          <div>
-            <div className="font-mono text-xl font-bold text-foreground">{title}</div>
-            {subtitle && <div className="text-base text-foreground-dim">{subtitle}</div>}
-          </div>
-        </div>
+        <Stack direction="row" align="center" gap="150">
+          <IconTile glyph={glyph} size="md" />
+          <Container minW0>
+            <Typography type="note" mono weight="bold" size="xl">{title}</Typography>
+            {subtitle && (
+              <Typography type="note" variant="secondary" size="base">{subtitle}</Typography>
+            )}
+          </Container>
+        </Stack>
       }
       actions={
         <>
@@ -101,7 +106,7 @@ export function EntityFormModal({
           if (canSubmit) onSubmit(values)
         }}
       >
-        <div className="flex flex-col gap-4">
+        <Stack gap="200">
           {fields.map((f) => {
             const value = values[f.name] ?? ""
             if (f.kind === "textarea") {
@@ -151,14 +156,22 @@ export function EntityFormModal({
               />
             )
           })}
-        </div>
 
-        {preview && (
-          <div className="mt-4 flex items-center gap-2 rounded border border-border bg-background px-3 py-2.5">
-            <Icon name="file" size="sm" className="text-foreground-faint" />
-            <span className="truncate font-mono text-sm text-foreground-faint">{preview}</span>
-          </div>
-        )}
+          {preview && (
+            <Card background="background" radius="sm">
+              <Container padding={["150", "150"]}>
+                <Stack direction="row" align="center" gap="100">
+                  <Icon name="file" size="sm" tone="faint" />
+                  <Container minW0>
+                    <Typography type="note" mono size="sm" variant="tertiary" truncate>
+                      {preview}
+                    </Typography>
+                  </Container>
+                </Stack>
+              </Container>
+            </Card>
+          )}
+        </Stack>
       </form>
     </Dialog>
   )

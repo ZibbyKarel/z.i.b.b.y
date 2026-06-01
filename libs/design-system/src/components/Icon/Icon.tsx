@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import { cn } from "../../utils/cn";
 import { paths, iconNames } from "../../assets/icons";
 import type { IconName } from "../../assets/icons";
 import type { Size } from "../../tokens";
@@ -7,6 +8,25 @@ export { iconNames };
 export type { IconName };
 
 export type IconStroke = "thin" | "default" | "medium" | "bold";
+
+export type IconTone =
+  | "ok"
+  | "bad"
+  | "warn"
+  | "accent"
+  | "work"
+  | "dim"
+  | "faint";
+
+const toneClass: Record<IconTone, string> = {
+  ok: "text-ok",
+  bad: "text-bad",
+  warn: "text-warn",
+  accent: "text-accent",
+  work: "text-work",
+  dim: "text-foreground-dim",
+  faint: "text-foreground-faint",
+};
 
 export enum IconTestId {
   Root = "icon-root",
@@ -37,6 +57,8 @@ export interface IconProps extends Omit<
   size?: Size;
   /** Stroke weight. */
   stroke?: IconStroke;
+  /** Semantic colour; defaults to inheriting `currentColor`. */
+  tone?: IconTone;
   ref?: React.Ref<SVGSVGElement>;
 }
 
@@ -45,6 +67,8 @@ export function Icon({
   name,
   size = "md",
   stroke = "default",
+  tone,
+  className,
   ref,
   ...props
 }: IconProps) {
@@ -61,7 +85,7 @@ export function Icon({
       strokeWidth={strokeWidthPx[stroke]}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="block shrink-0"
+      className={cn("block shrink-0", tone && toneClass[tone], className)}
       aria-hidden="true"
       {...props}
     >

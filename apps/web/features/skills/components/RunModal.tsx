@@ -1,6 +1,17 @@
 "use client";
 import { useState } from "react";
-import { cn, Button, Icon } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Container,
+  Dialog,
+  Icon,
+  IconTile,
+  SegmentedField,
+  Stack,
+  TextAreaField,
+  Typography,
+} from "@zibby/design-system";
 import type { Skill } from "../../../domain";
 
 export interface RunModalProps {
@@ -18,12 +29,7 @@ export interface RunModalProps {
  * the backing SKILL.md path, then launch a background agent. Mounted only when
  * a skill is selected (mount with a `key` to reset state per skill).
  */
-export function RunModal({
-  skill,
-  projects,
-  onClose,
-  onLaunch,
-}: RunModalProps) {
+export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) {
   const [prompt, setPrompt] = useState("");
   const [project, setProject] = useState(projects[0] ?? "");
   const [launched, setLaunched] = useState(false);
@@ -34,116 +40,87 @@ export function RunModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Spustit ${skill.name}`}
-      onClick={onClose}
-      className="absolute inset-0 z-[100] flex animate-fade-in items-center justify-center bg-[rgba(5,7,10,0.72)] p-6 backdrop-blur-sm"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-[540px] max-w-full animate-scale-in overflow-hidden rounded-md border border-border-strong bg-raised shadow-modal"
-      >
-        {/* header */}
-        <div className="flex items-center gap-3 border-b border-border px-5 py-5">
-          <div className="grid h-9 w-9 place-items-center rounded-sm border border-accent/30 bg-accent-dim text-accent">
-            <Icon name={skill.glyph} size="lg" />
-          </div>
-          <div className="flex-1">
-            <div className="font-mono text-xl font-bold text-foreground">
+    <Dialog
+      open
+      width="lg"
+      onClose={onClose}
+      ariaLabel={`Spustit ${skill.name}`}
+      closeLabel="Zavřít"
+      title={
+        <Stack direction="row" align="center" gap="150">
+          <IconTile glyph={skill.glyph} size="md" />
+          <Container grow minW0>
+            <Typography type="note" mono weight="bold" size="xl">
               {skill.name}
-            </div>
-            <div className="text-base text-foreground-dim">{skill.desc}</div>
-          </div>
-          <button
-            type="button"
-            aria-label="Zavřít"
-            onClick={onClose}
-            className="flex p-1 text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <Icon name="x" size="md" />
-          </button>
-        </div>
-
-        {!launched ? (
-          <div className="p-5">
-            <label
-              htmlFor="run-prompt"
-              className="font-mono text-sm uppercase tracking-wider text-foreground-faint"
-            >
-              Zadání / prompt
-            </label>
-            <textarea
-              id="run-prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              autoFocus
-              placeholder={`Řekni ${skill.name}, co má udělat…`}
-              className="mt-2 min-h-24 w-full resize-y rounded border border-border bg-background px-3.5 py-3 font-sans text-md leading-relaxed text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-
-            <span className="mt-4 block font-mono text-sm uppercase tracking-wider text-foreground-faint">
-              Cílový projekt
-            </span>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {projects.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  aria-pressed={project === p}
-                  onClick={() => setProject(p)}
-                  className={cn(
-                    "rounded-sm border px-2.5 py-1.5 font-mono text-caption outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                    project === p
-                      ? "border-accent bg-accent text-accent-contrast"
-                      : "border-border bg-transparent text-foreground-dim hover:text-foreground",
-                  )}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4 flex items-center gap-2 rounded border border-border bg-background px-3 py-2.5">
-              <Icon name="file" size="sm" className="text-foreground-faint" />
-              <span className="font-mono text-caption text-foreground-faint">
-                {skill.file}
-              </span>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between">
-              <Button intent="ghost" icon="edit">
-                Edit raw SKILL.md
-              </Button>
-              <Button intent="run" icon="play" onClick={launch}>
-                Spustit agenta
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="px-5 pb-6 pt-8 text-center">
-            <div className="mx-auto grid h-[52px] w-[52px] place-items-center rounded-full border-[1.5px] border-accent text-accent shadow-glow-accent">
-              <Icon name="play" size="lg" stroke="medium" />
-            </div>
-            <div className="mt-4 text-xl font-semibold text-foreground">
+            </Typography>
+            <Typography type="note" variant="secondary" size="base">
+              {skill.desc}
+            </Typography>
+          </Container>
+        </Stack>
+      }
+      actions={
+        launched ? undefined : (
+          <Stack direction="row" align="center" justify="between" grow>
+            <Button intent="ghost" icon="edit">
+              Edit raw SKILL.md
+            </Button>
+            <Button intent="run" icon="play" onClick={launch}>
+              Spustit agenta
+            </Button>
+          </Stack>
+        )
+      }
+    >
+      {launched ? (
+        <Container textAlign="center" padding={["200", "100"]}>
+          <Stack align="center" gap="100">
+            <IconTile glyph="play" size="xl" shape="circle" filled={false} glow />
+            <Typography type="subtitle" size="xl" weight="semibold">
               Agent spuštěn na pozadí
-            </div>
-            <span className="mt-1.5 block font-mono text-base text-foreground-dim">
+            </Typography>
+            <Typography type="note" mono size="base" variant="secondary">
               {skill.name} → {project}
-            </span>
-            <div className="mt-2 text-md text-foreground-dim">
+            </Typography>
+            <Typography type="note" size="md" variant="secondary">
               Sleduj ho v sekci{" "}
-              <span className="text-accent">Běžící agenti</span>.
-            </div>
-            <div className="mt-5 inline-flex">
-              <Button intent="ghost" icon="pulse" onClick={onClose}>
-                Zavřít
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+              <Typography as="span" type="note" size="md" tone="accent">
+                Běžící agenti
+              </Typography>
+              .
+            </Typography>
+            <Button intent="ghost" icon="pulse" onClick={onClose}>
+              Zavřít
+            </Button>
+          </Stack>
+        </Container>
+      ) : (
+        <Stack gap="200">
+          <TextAreaField
+            label="Zadání / prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            autoFocus
+            placeholder={`Řekni ${skill.name}, co má udělat…`}
+          />
+          <SegmentedField
+            label="Cílový projekt"
+            value={project}
+            options={projects.map((p) => ({ value: p, label: p }))}
+            onValueChange={setProject}
+          />
+          <Card background="background" radius="sm">
+            <Container padding={["150", "150"]}>
+              <Stack direction="row" align="center" gap="100">
+                <Icon name="file" size="sm" tone="faint" />
+                <Typography type="note" mono size="caption" variant="tertiary">
+                  {skill.file}
+                </Typography>
+              </Stack>
+            </Container>
+          </Card>
+        </Stack>
+      )}
+    </Dialog>
   );
 }

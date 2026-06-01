@@ -43,6 +43,8 @@
   --color-elevated:         #0f141b;
   --color-raised:           #141b24;
   --color-hover:            #141b24;
+  --color-surface-panel:    rgba(13,17,23,0.72);
+  --color-surface-glass:    rgba(13,17,23,0.5);
 
   /* ---- Foreground / text ------------------------------------------------- */
   --color-foreground:       #e6edf3;

@@ -1,44 +1,59 @@
-import { cn, Icon, StatusDot } from "@zibby/design-system"
+import { Fragment } from "react"
+import {
+  Container,
+  Divider,
+  Icon,
+  Stack,
+  StatusDot,
+  Typography,
+  type IconTone,
+} from "@zibby/design-system"
 import type { ActivityEvent, ActivityIcon } from "../../../domain"
 
-const iconTone: Record<ActivityIcon, string> = {
-  run: "text-work",
-  wait: "text-warn",
-  ok: "text-ok",
-  edit: "text-foreground-dim",
+const iconTone: Record<ActivityIcon, IconTone> = {
+  run: "work",
+  wait: "warn",
+  ok: "ok",
+  edit: "dim",
 }
 
 export interface ActivityFeedProps {
   items: ActivityEvent[]
   /** Max number of events to show. */
   limit?: number
-  className?: string
 }
 
 /** A compact, time-stamped activity feed of recent agent events. */
-export function ActivityFeed({ items, limit = 5, className }: ActivityFeedProps) {
+export function ActivityFeed({ items, limit = 5 }: ActivityFeedProps) {
+  const shown = items.slice(0, limit)
   return (
-    <div className={className}>
-      {items.slice(0, limit).map((e) => (
-        <div
-          key={e.id}
-          className="flex gap-3 border-b border-border py-2.5 last:border-b-0"
-        >
-          <span className={cn("mt-px flex", iconTone[e.icon])}>
-            <Icon name={e.icon} size="sm" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-base text-foreground">{e.text}</div>
-            <span className="mt-0.5 block truncate font-mono text-sm text-foreground-faint">
-              {e.sub}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <StatusDot tone={e.ctx === "work" ? "work" : "home"} size="75" />
-            <span className="font-mono text-sm text-foreground-faint">{e.t}</span>
-          </div>
-        </div>
+    <Stack>
+      {shown.map((e, i) => (
+        <Fragment key={e.id}>
+          <Container padding={["100", "0"]}>
+            <Stack direction="row" gap="150">
+              <Icon name={e.icon} size="sm" tone={iconTone[e.icon]} />
+              <Container grow minW0>
+                <Stack gap="25">
+                  <Typography type="note" size="base">
+                    {e.text}
+                  </Typography>
+                  <Typography type="note" mono size="sm" variant="tertiary" truncate>
+                    {e.sub}
+                  </Typography>
+                </Stack>
+              </Container>
+              <Stack direction="row" align="center" gap="75">
+                <StatusDot tone={e.ctx === "work" ? "work" : "home"} size="75" />
+                <Typography type="note" mono size="sm" variant="tertiary">
+                  {e.t}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Container>
+          {i < shown.length - 1 && <Divider />}
+        </Fragment>
       ))}
-    </div>
+    </Stack>
   )
 }

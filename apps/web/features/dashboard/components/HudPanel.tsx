@@ -1,43 +1,64 @@
-import type { HTMLAttributes, ReactNode } from "react";
-import { cn, Corners } from "@zibby/design-system";
+import type { ReactNode } from "react";
+import {
+  Card,
+  Container,
+  Stack,
+  Typography,
+  type Padding,
+} from "@zibby/design-system";
 
-export interface HudPanelProps extends HTMLAttributes<HTMLDivElement> {
+export interface HudPanelProps {
   title?: string;
   action?: ReactNode;
   corners?: boolean;
-  ref?: React.Ref<HTMLDivElement>;
+  padding?: Padding;
+  children?: ReactNode;
 }
 
 export function HudPanel({
   title,
   action,
   corners = true,
-  className,
+  padding = "200",
   children,
-  ref,
-  ...props
 }: HudPanelProps) {
+  const hasHeader = Boolean(title || action);
   return (
-    <div
-      ref={ref}
-      className={cn(
-        "relative border border-border bg-[rgba(13,17,23,0.72)] p-4",
-        className,
-      )}
-      {...props}
-    >
-      {corners && <Corners inset="75" />}
-      {(title || action) && (
-        <div className="mb-3 flex items-center justify-between">
-          {title && (
-            <span className="font-mono text-xs uppercase tracking-widest text-foreground-faint">
-              <span className="text-accent opacity-80">//</span> {title}
-            </span>
+    <Card background="panel" radius="none" corners={corners}>
+      <Container padding={padding}>
+        <Stack gap="150">
+          {hasHeader && (
+            <Stack direction="row" align="center" justify="between">
+              {title ? (
+                <Typography
+                  type="note"
+                  mono
+                  size="xs"
+                  uppercase
+                  tracking="widest"
+                  variant="tertiary"
+                >
+                  <Typography
+                    as="span"
+                    type="note"
+                    mono
+                    size="xs"
+                    tone="accent"
+                    style={{ opacity: 0.8 }}
+                  >
+                    //
+                  </Typography>{" "}
+                  {title}
+                </Typography>
+              ) : (
+                <span />
+              )}
+              {action}
+            </Stack>
           )}
-          {action}
-        </div>
-      )}
-      {children}
-    </div>
+          {children}
+        </Stack>
+      </Container>
+    </Card>
   );
 }

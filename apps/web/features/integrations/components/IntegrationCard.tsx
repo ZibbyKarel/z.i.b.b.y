@@ -1,4 +1,15 @@
-import { cn, Button, Corners, Icon, Chip, StatusDot, type DotTone } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Chip,
+  Container,
+  Divider,
+  IconTile,
+  Stack,
+  StatusDot,
+  Typography,
+  type DotTone,
+} from "@zibby/design-system";
 import type { Integration, IntegrationStatus } from "../../../domain";
 
 const statusMeta: Record<IntegrationStatus, { tone: DotTone; label: string }> = {
@@ -17,49 +28,55 @@ export interface IntegrationCardProps {
   integration: Integration;
   onConfigure?: (integration: Integration) => void;
   onTest?: (integration: Integration) => void;
-  className?: string;
 }
 
-export function IntegrationCard({ integration, onConfigure, onTest, className }: IntegrationCardProps) {
+export function IntegrationCard({ integration, onConfigure, onTest }: IntegrationCardProps) {
   const sm = statusMeta[integration.status];
   return (
-    <div
-      className={cn(
-        "group relative rounded-sm border border-border bg-elevated p-3.5 transition-all hover:border-accent/35 hover:bg-raised",
-        className,
-      )}
-    >
-      <Corners inset="75" />
-      <div className="flex items-start gap-3">
-        <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-sm border border-accent/20 bg-accent-dim text-accent">
-          <Icon name={integration.glyph} size="md" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-mono text-md font-semibold text-foreground">
-            {integration.name}
-          </div>
-          <div className="mt-0.5 text-caption leading-snug text-foreground-dim">
-            {integration.desc}
-          </div>
-        </div>
-        <Chip tone={pillTone[integration.status]}>
-          <StatusDot tone={sm.tone} size="75" />
-          {sm.label}
-        </Chip>
-      </div>
-      <div className="mt-3.5 flex items-center justify-between border-t border-border pt-3">
-        <span className="max-w-[150px] truncate font-mono text-xs text-foreground-faint">
-          {integration.file}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Button intent="ghost" icon="link" size="sm" onClick={() => onTest?.(integration)}>
-            Test
-          </Button>
-          <Button intent="ghost" icon="gear" size="sm" onClick={() => onConfigure?.(integration)}>
-            Konfigurovat
-          </Button>
-        </div>
-      </div>
-    </div>
+    <Card interactive corners radius="sm">
+      <Container padding="150">
+        <Stack gap="150">
+          <Stack direction="row" align="start" gap="150">
+            <IconTile glyph={integration.glyph} size="md" />
+            <Container grow minW0>
+              <Stack gap="25">
+                <Typography type="note" mono weight="semibold" size="md" truncate>
+                  {integration.name}
+                </Typography>
+                <Typography
+                  type="note"
+                  variant="secondary"
+                  size="caption"
+                  leading="snug"
+                >
+                  {integration.desc}
+                </Typography>
+              </Stack>
+            </Container>
+            <Chip tone={pillTone[integration.status]}>
+              <StatusDot tone={sm.tone} size="75" />
+              {sm.label}
+            </Chip>
+          </Stack>
+
+          <Divider />
+          <Stack direction="row" align="center" justify="between">
+            <Container maxWidth="150px" minW0>
+              <Typography type="note" mono size="xs" variant="tertiary" truncate>
+                {integration.file}
+              </Typography>
+            </Container>
+            <Stack direction="row" align="center" gap="75">
+              <Button intent="ghost" icon="link" size="sm" onClick={() => onTest?.(integration)}>
+                Test
+              </Button>
+              <Button intent="ghost" icon="gear" size="sm" onClick={() => onConfigure?.(integration)}>
+                Konfigurovat
+              </Button>
+            </Stack>
+          </Stack>
+        </Stack>
+      </Container>
+    </Card>
   );
 }

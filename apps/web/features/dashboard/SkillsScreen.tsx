@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@zibby/design-system";
+import { Button, Container, Grid } from "@zibby/design-system";
 import type { Skill } from "../../domain";
 import { SectionLabel } from "./components/SectionLabel";
 import { EntityFormModal } from "./components/EntityFormModal";
@@ -22,7 +22,7 @@ export function SkillsScreen() {
   const list = skills.filter((s) => s.ctx === context);
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <SectionLabel
         action={
           <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
@@ -43,11 +43,11 @@ export function SkillsScreen() {
           hint="// vytvoří ~/zibby/skills/<název>/SKILL.md"
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Grid cols={1} sm={2} lg={3} gap="150">
           {list.map((s) => (
             <SkillTile key={s.id} skill={s} onRun={setRunSkill} />
           ))}
-        </div>
+        </Grid>
       )}
 
       {adding && (
@@ -71,6 +71,6 @@ export function SkillsScreen() {
           onClose={() => setRunSkill(null)}
         />
       )}
-    </div>
+    </Container>
   );
 }

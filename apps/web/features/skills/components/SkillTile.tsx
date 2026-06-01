@@ -1,44 +1,56 @@
-import { cn, Button, Corners, Icon } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Container,
+  IconTile,
+  Stack,
+  StatusDot,
+  Typography,
+} from "@zibby/design-system";
 import type { Skill } from "../../../domain";
 
 export interface SkillTileProps {
   skill: Skill;
   onRun: (skill: Skill) => void;
-  className?: string;
 }
 
-export function SkillTile({ skill, onRun, className }: SkillTileProps) {
+export function SkillTile({ skill, onRun }: SkillTileProps) {
   return (
-    <div
-      className={cn(
-        "group relative rounded-sm border border-border bg-elevated p-3.5 transition-all",
-        "hover:border-accent/35 hover:bg-raised hover:shadow-card",
-        className,
-      )}
-    >
-      <Corners inset="75" />
-      <div className="flex items-start gap-3">
-        <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-sm border border-accent/20 bg-accent-dim text-accent">
-          <Icon name={skill.glyph} size="md" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-mono text-md font-semibold text-foreground">
-            {skill.name}
-          </div>
-          <div className="mt-0.5 text-caption leading-snug text-foreground-dim">
-            {skill.desc}
-          </div>
-        </div>
-        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-faint" aria-hidden />
-      </div>
-      <div className="mt-3.5 flex items-center justify-between">
-        <span className="max-w-[130px] truncate font-mono text-xs text-foreground-faint">
-          {skill.file.replace("~/zibby/skills/", "")}
-        </span>
-        <Button intent="run" size="sm" icon="play" onClick={() => onRun(skill)}>
-          Spustit
-        </Button>
-      </div>
-    </div>
+    <Card interactive corners radius="sm">
+      <Container padding="150">
+        <Stack gap="150">
+          <Stack direction="row" align="start" gap="150">
+            <IconTile glyph={skill.glyph} size="md" />
+            <Container grow minW0>
+              <Stack gap="25">
+                <Typography type="note" mono weight="semibold" size="md" truncate>
+                  {skill.name}
+                </Typography>
+                <Typography
+                  type="note"
+                  variant="secondary"
+                  size="caption"
+                  leading="snug"
+                >
+                  {skill.desc}
+                </Typography>
+              </Stack>
+            </Container>
+            <StatusDot tone="faint" size="75" />
+          </Stack>
+
+          <Stack direction="row" align="center" justify="between">
+            <Container maxWidth="130px" minW0>
+              <Typography type="note" mono size="xs" variant="tertiary" truncate>
+                {skill.file.replace("~/zibby/skills/", "")}
+              </Typography>
+            </Container>
+            <Button intent="run" size="sm" icon="play" onClick={() => onRun(skill)}>
+              Spustit
+            </Button>
+          </Stack>
+        </Stack>
+      </Container>
+    </Card>
   );
 }

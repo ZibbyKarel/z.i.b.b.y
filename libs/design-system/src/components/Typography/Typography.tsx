@@ -1,4 +1,4 @@
-import type { HTMLAttributes, Ref } from "react";
+import type { CSSProperties, HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
 
 export type TypographyType =
@@ -10,52 +10,140 @@ export type TypographyType =
 
 export type TypographyVariant = "primary" | "secondary" | "tertiary";
 
+/** Semantic colour override, takes precedence over `variant`. */
+export type TypographyTone = "ok" | "bad" | "warn" | "accent";
+
+export type TypographySize =
+  | "2xs"
+  | "xs"
+  | "sm"
+  | "caption"
+  | "base"
+  | "md"
+  | "lg"
+  | "xl"
+  | "2xl"
+  | "3xl"
+  | "4xl"
+  | "5xl";
+
+export type TypographyWeight = "normal" | "medium" | "semibold" | "bold";
+
+export type TypographyTracking =
+  | "tighter"
+  | "normal"
+  | "wide"
+  | "wider"
+  | "widest"
+  | "mono";
+
+export type TypographyLeading = "tight" | "snug" | "normal" | "relaxed";
+
+export type TypographyAlign = "left" | "center" | "right";
+
 export enum TypographyTestId {
   Root = "typography-root",
 }
 
-type As = "h1" | "h2" | "h3" | "div" | "p" | "span";
+type As = "h1" | "h2" | "h3" | "div" | "p" | "span" | "label";
 
-export interface TypographyProps extends Omit<
-  HTMLAttributes<HTMLElement>,
-  "className"
-> {
-  type: TypographyType;
-  variant?: TypographyVariant;
-  mono?: boolean;
-  ref?: Ref<HTMLElement>;
+interface TypePreset {
+  tag: As;
+  size: TypographySize;
+  weight: TypographyWeight;
+  leading: number;
 }
 
-const typeToTag: Record<TypographyType, As> = {
-  pageTitle: "h1",
-  title: "h2",
-  subtitle: "h3",
-  text: "div",
-  note: "div",
+const typePreset: Record<TypographyType, TypePreset> = {
+  pageTitle: { tag: "h1", size: "5xl", weight: "bold", leading: 1.2 },
+  title: { tag: "h2", size: "3xl", weight: "semibold", leading: 1.25 },
+  subtitle: { tag: "h3", size: "2xl", weight: "medium", leading: 1.3 },
+  text: { tag: "div", size: "lg", weight: "normal", leading: 1.4 },
+  note: { tag: "div", size: "base", weight: "normal", leading: 1.5 },
 };
 
-const typeClasses: Record<TypographyType, string> = {
-  pageTitle: "text-5xl font-bold leading-[1.2]",
-  title: "text-3xl font-semibold leading-[1.25]",
-  subtitle: "text-2xl font-medium leading-[1.3]",
-  text: "text-lg font-normal leading-[1.4]",
-  note: "text-base font-normal leading-[1.5]",
-};
-
-const variantClasses: Record<TypographyVariant, string> = {
+const variantClass: Record<TypographyVariant, string> = {
   primary: "text-foreground",
   secondary: "text-foreground-dim",
   tertiary: "text-foreground-faint",
 };
 
+const toneClass: Record<TypographyTone, string> = {
+  ok: "text-ok",
+  bad: "text-bad",
+  warn: "text-warn",
+  accent: "text-accent",
+};
+
+const weightClass: Record<TypographyWeight, string> = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+};
+
+const leadingValue: Record<TypographyLeading, number> = {
+  tight: 1.2,
+  snug: 1.3,
+  normal: 1.4,
+  relaxed: 1.6,
+};
+
+export interface TypographyProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "className"
+> {
+  /** Preset that drives the default tag, size, weight and leading. */
+  type: TypographyType;
+  /** Neutral foreground level. */
+  variant?: TypographyVariant;
+  /** Semantic colour; overrides `variant` when set. */
+  tone?: TypographyTone;
+  mono?: boolean;
+  /** Override the preset font size. */
+  size?: TypographySize;
+  /** Override the preset font weight. */
+  weight?: TypographyWeight;
+  tracking?: TypographyTracking;
+  leading?: TypographyLeading;
+  uppercase?: boolean;
+  truncate?: boolean;
+  nowrap?: boolean;
+  align?: TypographyAlign;
+  /** Override the rendered element. */
+  as?: As;
+  ref?: Ref<HTMLElement>;
+}
+
 export function Typography({
   type,
   variant = "primary",
+  tone,
   mono,
+  size,
+  weight,
+  tracking,
+  leading,
+  uppercase,
+  truncate,
+  nowrap,
+  align,
+  as,
+  style,
   ref,
   ...rest
 }: TypographyProps) {
-  const Element = typeToTag[type];
+  const preset = typePreset[type];
+  const Element = as ?? preset.tag;
+
+  const computedStyle: CSSProperties = {
+    fontSize: `var(--text-${size ?? preset.size})`,
+    lineHeight: leading ? leadingValue[leading] : preset.leading,
+    ...(tracking ? { letterSpacing: `var(--tracking-${tracking})` } : {}),
+    ...(align ? { textAlign: align } : {}),
+    ...style,
+  };
+
   return (
     <Element
       data-testid={TypographyTestId.Root}
@@ -64,14 +152,19 @@ export function Typography({
           HTMLHeadingElement &
             HTMLDivElement &
             HTMLParagraphElement &
-            HTMLSpanElement
+            HTMLSpanElement &
+            HTMLLabelElement
         >
       }
       className={cn(
-        typeClasses[type],
-        variantClasses[variant],
+        weightClass[weight ?? preset.weight],
+        tone ? toneClass[tone] : variantClass[variant],
         mono && "font-mono",
+        uppercase && "uppercase",
+        truncate && "truncate",
+        nowrap && "whitespace-nowrap",
       )}
+      style={computedStyle}
       {...rest}
     />
   );

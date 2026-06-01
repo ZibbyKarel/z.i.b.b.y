@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { Container } from "@zibby/design-system";
 import { EntityFormModal, type FieldSchema } from "./EntityFormModal";
 
 const skillFields: FieldSchema[] = [
@@ -33,9 +34,9 @@ const meta: Meta<typeof EntityFormModal> = {
   parameters: { backgrounds: { default: "velin" }, layout: "fullscreen" },
   decorators: [
     (Story) => (
-      <div className="relative h-screen">
+      <Container position="relative" height="100vh">
         <Story />
-      </div>
+      </Container>
     ),
   ],
   args: {
