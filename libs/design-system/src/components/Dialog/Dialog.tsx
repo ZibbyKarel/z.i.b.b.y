@@ -133,8 +133,8 @@ export function DialogBody({ children }: { children: ReactNode }) {
 
 function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div data-testid={DialogTestId.Footer} className="px-5 pt-3 pb-4 border-t border-border flex justify-end gap-2 shrink-0">
-      {children}
+    <div data-testid={DialogTestId.Footer} className="px-5 pt-3 pb-4 border-t border-border shrink-0">
+      <Row justify="end" gap="100">{children}</Row>
     </div>
   );
 }

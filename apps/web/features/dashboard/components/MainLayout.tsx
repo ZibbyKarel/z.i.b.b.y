@@ -1,6 +1,13 @@
 import type { CSSProperties, ReactNode } from "react";
-import { List } from "@zibby/design-system";
-import type { ListItem, LinkComponentType } from "@zibby/design-system";
+import {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemBadge,
+  ListTestId,
+} from "@zibby/design-system";
+import type { NavItem, LinkComponentType } from "@zibby/design-system";
 import type { ContextName } from "../../../domain";
 import { TopBar } from "./TopBar";
 import { BrandLogo } from "./BrandLogo";
@@ -24,10 +31,10 @@ const scanOverlay: CSSProperties = {
 export interface MainLayoutProps {
   context: ContextName;
   onContextChange: (context: ContextName) => void;
-  navItems: ListItem[];
+  navItems: NavItem[];
   activeNav: string;
   onNavigate: (id: string) => void;
-  footerItem?: ListItem;
+  footerItem?: NavItem;
   breadcrumb: string;
   walletSlot?: ReactNode;
   onCommand?: () => void;
@@ -66,13 +73,44 @@ export function MainLayout({
           className="flex w-56 shrink-0 flex-col border-r border-border bg-background px-3.5 py-6"
         >
           <BrandLogo />
-          <List
-            items={navItems}
-            active={activeNav}
-            onNavigate={onNavigate}
-            footerItem={footerItem}
-            linkComponent={linkComponent}
-          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <List>
+              {navItems.map((item) => (
+                <ListItem
+                  key={item.id}
+                  active={item.id === activeNav}
+                  onSelect={() => onNavigate(item.id)}
+                  href={item.href}
+                  linkComponent={linkComponent}
+                  data-testid={`${ListTestId.Item}-${item.id}`}
+                >
+                  <ListItemIcon glyph={item.glyph} />
+                  <ListItemText>{item.label}</ListItemText>
+                  {item.badge ? (
+                    <ListItemBadge
+                      data-testid={`${ListTestId.Badge}-${item.id}`}
+                    >
+                      {item.badge}
+                    </ListItemBadge>
+                  ) : null}
+                </ListItem>
+              ))}
+            </List>
+            {footerItem && (
+              <div className="mt-auto border-t border-border pt-3">
+                <ListItem
+                  active={footerItem.id === activeNav}
+                  onSelect={() => onNavigate(footerItem.id)}
+                  href={footerItem.href}
+                  linkComponent={linkComponent}
+                  data-testid={`${ListTestId.Item}-${footerItem.id}`}
+                >
+                  <ListItemIcon glyph={footerItem.glyph} />
+                  <ListItemText>{footerItem.label}</ListItemText>
+                </ListItem>
+              </div>
+            )}
+          </div>
         </nav>
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar

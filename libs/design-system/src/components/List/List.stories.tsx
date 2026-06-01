@@ -1,8 +1,15 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { List, type ListItem } from "./List";
+import type { NavItem } from "./List";
+import {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemBadge,
+} from "./List";
 
-const items: ListItem[] = [
+const navItems: NavItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },
   { id: "skills", label: "Skilly", glyph: "spark" },
   { id: "agents", label: "Agenti", glyph: "bot" },
@@ -12,6 +19,8 @@ const items: ListItem[] = [
   { id: "memory", label: "Paměť", glyph: "brain" },
   { id: "runs", label: "Běžící agenti", glyph: "pulse", badge: 2 },
 ];
+
+const settingsItem: NavItem = { id: "settings", label: "Nastavení systému", glyph: "gear" };
 
 const meta: Meta<typeof List> = {
   title: "Dashboard/List",
@@ -33,12 +42,32 @@ export const Overview: Story = {
   render: () => {
     const [active, setActive] = useState("overview");
     return (
-      <List
-        items={items}
-        active={active}
-        onNavigate={setActive}
-        footerItem={{ id: "settings", label: "Nastavení systému", glyph: "gear" }}
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <List>
+          {navItems.map((item) => (
+            <ListItem
+              key={item.id}
+              active={item.id === active}
+              onSelect={() => setActive(item.id)}
+            >
+              <ListItemIcon glyph={item.glyph} />
+              <ListItemText>{item.label}</ListItemText>
+              {item.badge ? (
+                <ListItemBadge>{item.badge}</ListItemBadge>
+              ) : null}
+            </ListItem>
+          ))}
+        </List>
+        <div className="mt-auto border-t border-border pt-3">
+          <ListItem
+            active={settingsItem.id === active}
+            onSelect={() => setActive(settingsItem.id)}
+          >
+            <ListItemIcon glyph={settingsItem.glyph} />
+            <ListItemText>{settingsItem.label}</ListItemText>
+          </ListItem>
+        </div>
+      </div>
     );
   },
 };
@@ -47,11 +76,18 @@ export const Playground: Story = {
   render: () => {
     const [active, setActive] = useState("skills");
     return (
-      <List
-        items={items.slice(0, 4)}
-        active={active}
-        onNavigate={setActive}
-      />
+      <List>
+        {navItems.slice(0, 4).map((item) => (
+          <ListItem
+            key={item.id}
+            active={item.id === active}
+            onSelect={() => setActive(item.id)}
+          >
+            <ListItemIcon glyph={item.glyph} />
+            <ListItemText>{item.label}</ListItemText>
+          </ListItem>
+        ))}
+      </List>
     );
   },
 };

@@ -1,0 +1,2 @@
+[      91ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:6006/favicon.ico:0
+[     158ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:6006/@fs/Users/zibby/Workspace/z.i.b.b.y/node_modules/.cache/storybook/eb6cf026a80d0433158e6dea1b07e3c23b8b3b036fe0fcf00900cf15fcb0ebce/sb-vite/deps/chunk-YKRZB7DL.js?v=ab70c847:20102

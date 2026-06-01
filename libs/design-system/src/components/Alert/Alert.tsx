@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../../utils/cn";
+import { Stack } from "../Stack/Stack";
 
 export type AlertSeverity = "info" | "ok" | "warn" | "error";
 
@@ -39,24 +40,26 @@ export function Alert({
       {...rest}
       role="alert"
       className={cn(
-        "flex gap-[10px] px-[14px] py-[10px] rounded border",
+        "px-[14px] py-[10px] rounded border",
         severityClasses[severity],
       )}
     >
-      <div className="flex-1 text-base leading-relaxed">
-        {title && <div data-testid={AlertTestId.Title} className="font-semibold mb-0.5">{title}</div>}
-        {children}
-      </div>
-      {onClose && (
-        <button
-          data-testid={AlertTestId.CloseButton}
-          aria-label="Dismiss"
-          onClick={onClose}
-          className="bg-transparent border-none cursor-pointer text-current p-0 leading-none"
-        >
-          ✕
-        </button>
-      )}
+      <Stack direction="row" gap="150">
+        <div className="flex-1 text-base leading-relaxed">
+          {title && <div data-testid={AlertTestId.Title} className="font-semibold mb-0.5">{title}</div>}
+          {children}
+        </div>
+        {onClose && (
+          <button
+            data-testid={AlertTestId.CloseButton}
+            aria-label="Dismiss"
+            onClick={onClose}
+            className="bg-transparent border-none cursor-pointer text-current p-0 leading-none"
+          >
+            ✕
+          </button>
+        )}
+      </Stack>
     </div>
   );
 }

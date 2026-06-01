@@ -1,7 +1,7 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-01)
 
 ## Corpus Check
-- 186 files · ~46,719 words
+- 186 files · ~46,849 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

@@ -4,7 +4,7 @@
  * integrations, agents and pipelines all start empty and are created by the
  * user (see store.tsx). Files are the source of truth.
  */
-import type { ListItem, SelectOption } from "@zibby/design-system";
+import type { NavItem, SelectOption } from "@zibby/design-system";
 import type { AgentSdkCredit, ClaudeLimits } from "../../domain";
 
 export const PROJECTS = [
@@ -14,7 +14,7 @@ export const PROJECTS = [
   "~/cesta/k/projektu",
 ] as const;
 
-export const NAV_ITEMS: ListItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   { id: "overview",      label: "Přehled",          glyph: "grid",   href: "/overview" },
   { id: "skills",        label: "Skilly",            glyph: "spark",  href: "/skills" },
   { id: "agents",        label: "Agenti",            glyph: "bot",    href: "/agents" },
@@ -25,7 +25,7 @@ export const NAV_ITEMS: ListItem[] = [
   { id: "runs",          label: "Běžící agenti",     glyph: "pulse",  href: "/runs" },
 ];
 
-export const SETTINGS_ITEM: ListItem = {
+export const SETTINGS_ITEM: NavItem = {
   id: "settings",
   label: "Nastavení systému",
   glyph: "gear",

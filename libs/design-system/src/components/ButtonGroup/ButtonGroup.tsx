@@ -1,4 +1,5 @@
 import { cn } from "../../utils/cn";
+import { Stack } from "../Stack/Stack";
 import { Icon } from "../Icon/Icon";
 
 export enum ButtonGroupTestId {
@@ -42,8 +43,9 @@ export function ButtonGroup({
       data-testid={ButtonGroupTestId.Root}
       role="group"
       aria-label={ariaLabel}
-      className="inline-flex items-center gap-0.5 rounded border border-border bg-background p-0.5"
+      className="inline-block rounded border border-border bg-background p-0.5"
     >
+      <Stack direction="row" inline align="center" gap="25">
       {options.map((o) => {
         const active = value === o.id;
         return (
@@ -84,6 +86,7 @@ export function ButtonGroup({
           <Icon name="plus" size="sm" />
         </button>
       )}
+      </Stack>
     </div>
   );
 }

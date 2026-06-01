@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "../../utils/cn";
 import { Container } from "../Container/Container";
+import { Row } from "../Stack/Stack";
 import {
   spacingToPx,
   type Spacing,
@@ -136,8 +137,8 @@ export function CardContent({
 
 export function CardFooter({ children }: { children: ReactNode }) {
   return (
-    <div data-testid={CardTestId.Footer} className="px-[14px] py-[10px] border-t border-border flex items-center gap-2">
-      {children}
+    <div data-testid={CardTestId.Footer} className="px-[14px] py-[10px] border-t border-border">
+      <Row gap="100">{children}</Row>
     </div>
   );
 }

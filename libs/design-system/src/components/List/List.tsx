@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { createContext, useContext, type ComponentType, type ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Stack } from "../Stack/Stack";
 import type { IconName } from "../Icon/Icon";
@@ -6,9 +6,9 @@ import { Icon } from "../Icon/Icon";
 
 export enum ListTestId {
   Root = "list-root",
-  /** Each row is suffixed with the item `id`, e.g. `list-item-overview`. */
+  /** Suffix with item key when consumer needs per-item selection, e.g. `list-item-overview`. */
   Item = "list-item",
-  /** Each badge is suffixed with the item `id`, e.g. `list-item-badge-runs`. */
+  /** Suffix with item key when consumer needs per-badge selection, e.g. `list-item-badge-runs`. */
   Badge = "list-item-badge",
 }
 
@@ -19,29 +19,73 @@ export type LinkComponentType = ComponentType<{
   [key: string]: unknown;
 }>;
 
-/** A single navigation entry — chrome-level, domain-neutral. */
-export interface ListItem {
+/** Navigation item data shape — used by app-level nav config arrays. */
+export interface NavItem {
   id: string;
   label: string;
   glyph: IconName;
   badge?: number;
-  /** Optional URL for link-based navigation (used with linkComponent). */
   href?: string;
 }
 
-interface ListRowProps {
-  item: ListItem;
+interface ListItemCtxValue {
   active: boolean;
-  onSelect: (id: string) => void;
-  linkComponent?: LinkComponentType;
+}
+const ListItemCtx = createContext<ListItemCtxValue>({ active: false });
+
+// --- Sub-components ---
+
+export interface ListItemIconProps {
+  glyph: IconName;
 }
 
-function ListRow({
-  item,
-  active,
+export function ListItemIcon({ glyph }: ListItemIconProps) {
+  const { active } = useContext(ListItemCtx);
+  return (
+    <span className={cn("flex", active ? "text-accent" : "text-foreground-faint")}>
+      <Icon name={glyph} size="md" />
+    </span>
+  );
+}
+
+export function ListItemText({ children }: { children: ReactNode }) {
+  return <span className="flex-1">{children}</span>;
+}
+
+export type ListItemBadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, "className">;
+
+export function ListItemBadge({ children, ...rest }: ListItemBadgeProps) {
+  return (
+    <span
+      data-testid={ListTestId.Badge}
+      {...rest}
+      className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
+    >
+      {children}
+    </span>
+  );
+}
+
+// --- ListItem ---
+
+export type ListItemProps = Omit<
+  React.HTMLAttributes<HTMLElement>,
+  "className" | "onClick"
+> & {
+  active?: boolean;
+  onSelect?: () => void;
+  href?: string;
+  linkComponent?: LinkComponentType;
+};
+
+export function ListItem({
+  active = false,
   onSelect,
+  href,
   linkComponent: LinkComp,
-}: ListRowProps) {
+  children,
+  ...rest
+}: ListItemProps) {
   const className = cn(
     "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg outline-none transition-colors",
     "focus-visible:ring-2 focus-visible:ring-accent",
@@ -50,93 +94,66 @@ function ListRow({
       : "font-medium text-foreground-dim hover:text-foreground",
   );
 
-  const inner: ReactNode = (
-    <>
+  const inner = (
+    <ListItemCtx.Provider value={{ active }}>
       {active && (
         <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded bg-accent shadow-glow-accent" />
       )}
-      <span
-        className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
-      >
-        <Icon name={item.glyph} size="md" />
-      </span>
-      <span className="flex-1">{item.label}</span>
-      {item.badge ? (
-        <span
-          data-testid={`${ListTestId.Badge}-${item.id}`}
-          className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
-        >
-          {item.badge}
-        </span>
-      ) : null}
-    </>
+      {children}
+    </ListItemCtx.Provider>
   );
 
-  if (LinkComp && item.href) {
+  if (LinkComp && href) {
     return (
       <LinkComp
-        href={item.href}
-        data-testid={`${ListTestId.Item}-${item.id}`}
-        className={className}
+        href={href}
+        data-testid={ListTestId.Item}
+        {...rest}
         aria-current={active ? "page" : undefined}
+        className={className}
       >
         {inner}
       </LinkComp>
     );
   }
 
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        data-testid={ListTestId.Item}
+        {...rest}
+        aria-current={active ? "page" : undefined}
+        onClick={onSelect}
+        className={className}
+      >
+        {inner}
+      </button>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      data-testid={`${ListTestId.Item}-${item.id}`}
+    <div
+      data-testid={ListTestId.Item}
+      {...rest}
       aria-current={active ? "page" : undefined}
-      onClick={() => onSelect(item.id)}
       className={className}
     >
       {inner}
-    </button>
+    </div>
   );
 }
 
+// --- List container ---
+
 export interface ListProps {
-  items: ListItem[];
-  active: string;
-  onNavigate: (id: string) => void;
-  footerItem?: ListItem;
-  /** Optional link component for router-based navigation. */
-  linkComponent?: LinkComponentType;
+  children: ReactNode;
 }
 
-export function List({
-  items,
-  active,
-  onNavigate,
-  footerItem,
-  linkComponent,
-}: ListProps) {
+export function List({ children }: ListProps) {
   return (
-    <div data-testid={ListTestId.Root} className="flex min-h-0 flex-1 flex-col">
-      <Stack gap="25">
-        {items.map((item) => (
-          <ListRow
-            key={item.id}
-            item={item}
-            active={item.id === active}
-            onSelect={onNavigate}
-            linkComponent={linkComponent}
-          />
-        ))}
-      </Stack>
-      {footerItem && (
-        <div className="mt-auto border-t border-border pt-3">
-          <ListRow
-            item={footerItem}
-            active={footerItem.id === active}
-            onSelect={onNavigate}
-            linkComponent={linkComponent}
-          />
-        </div>
-      )}
-    </div>
+    <Stack data-testid={ListTestId.Root} gap="25">
+      {children}
+    </Stack>
   );
 }

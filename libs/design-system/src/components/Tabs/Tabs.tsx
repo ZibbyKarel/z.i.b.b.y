@@ -2,7 +2,7 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { createContext, useContext, useState } from "react";
 import { cn } from "../../utils/cn";
-import { Stack } from "../Stack/Stack";
+import { Row, Stack } from "../Stack/Stack";
 
 interface TabsContextValue {
   active: string;
@@ -54,12 +54,10 @@ export function Tabs({
 
 export function TabList({ children }: { children: ReactNode }) {
   return (
-    <div
-      data-testid={TabsTestId.List}
-      role="tablist"
-      className="flex gap-0.5 border-b border-border shrink-0"
-    >
-      {children}
+    <div className="border-b border-border shrink-0">
+      <Row data-testid={TabsTestId.List} role="tablist" gap="25" align="stretch">
+        {children}
+      </Row>
     </div>
   );
 }

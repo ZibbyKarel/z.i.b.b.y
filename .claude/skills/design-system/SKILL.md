@@ -353,9 +353,10 @@ a glyph via the `name` prop (union `IconName`, glyph set in `iconNames`).
 `ButtonGroup`, `List`, `TopBar` live in DS and **must not import domain types**.
 They must not import `next/link`/`usePathname` — Storybook has no Next router.
 
-- `List` accepts a `linkComponent?` prop (default = `<button>`); the app passes `<Link>`.
+- `List` is a compound container; each row is `<ListItem>` with optional `<ListItemIcon>`, `<ListItemText>`, `<ListItemBadge>` sub-components.
+- `ListItem` accepts `active?`, `onSelect?`, `href?`, `linkComponent?` — renders as button, link, or div depending on props.
+- `NavItem` (lives in `List.tsx`, re-exported from index) is the chrome data type for nav config arrays — not a domain entity.
 - `ContextName` (`"home"|"work"`) is a DS theme concept — chrome takes it from `DesignSystemContext/contextTokens`, not from `domain.ts`.
-- `ListItem` is a chrome type (lives in `List.tsx`, re-exported from index) — not a domain entity.
 - Domain wallet/limits are injected via slot: `TopBar` has `walletSlot?: ReactNode`; the app passes its `LimitsWidget` (`apps/web/features/dashboard/components/LimitsWidget.tsx`).
 - `MainLayout` (app's full chrome: grid overlay, nav, TopBar, content) lives in `apps/web/features/dashboard/components/MainLayout.tsx` — it is app-specific and not in DS.
 - `BrandLogo` lives in `apps/web/features/dashboard/components/BrandLogo.tsx`.

@@ -154,9 +154,19 @@ export type {
   ButtonGroupOption,
 } from "./components/ButtonGroup/ButtonGroup";
 
-export { List } from "./components/List/List";
+export {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemBadge,
+  ListTestId,
+} from "./components/List/List";
 export type {
   ListProps,
-  ListItem,
+  ListItemProps,
+  ListItemIconProps,
+  ListItemBadgeProps,
+  NavItem,
   LinkComponentType,
 } from "./components/List/List";
