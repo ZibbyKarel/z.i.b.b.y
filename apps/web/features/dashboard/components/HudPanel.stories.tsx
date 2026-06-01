@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { Button } from "../Button/Button"
+import { Button } from "@zibby/design-system"
 import { HudPanel } from "./HudPanel"
 
 const meta: Meta<typeof HudPanel> = {
-  title: "Components/HudPanel",
+  title: "Dashboard/HudPanel",
   component: HudPanel,
   parameters: { backgrounds: { default: "velin" } },
   decorators: [

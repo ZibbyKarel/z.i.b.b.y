@@ -4,9 +4,9 @@ import { StatusDot } from "./StatusDot"
 
 describe("StatusDot", () => {
   it("renders a sized dot", () => {
-    const { container } = render(<StatusDot size={10} />)
+    const { container } = render(<StatusDot size="150" />)
     const el = container.firstElementChild as HTMLElement
-    expect(el.style.width).toBe("10px")
+    expect(el.style.width).toBe("12px")
   })
 
   it("adds a pulse ring when pulse is set", () => {

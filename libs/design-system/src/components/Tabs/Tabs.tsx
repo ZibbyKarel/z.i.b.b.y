@@ -1,7 +1,7 @@
 "use client";
-import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from "react";
+import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { createContext, useContext, useState } from "react";
-import { useTokens } from "../../DesignSystemContext/hooks";
+import { cn } from "../../lib/cn";
 
 interface TabsContextValue {
   active: string;
@@ -21,10 +21,9 @@ export interface TabsProps {
   value?: string;
   onValueChange?: (value: string) => void;
   children: ReactNode;
-  className?: string;
 }
 
-export function Tabs({ defaultValue = "", value, onValueChange, children, className }: TabsProps) {
+export function Tabs({ defaultValue = "", value, onValueChange, children }: TabsProps) {
   const [internal, setInternal] = useState(defaultValue);
   const active = value ?? internal;
   const setActive = (id: string) => {
@@ -33,56 +32,32 @@ export function Tabs({ defaultValue = "", value, onValueChange, children, classN
   };
   return (
     <TabsContext.Provider value={{ active, setActive }}>
-      <div className={className} style={{ display: "flex", flexDirection: "column" }}>
+      <div className="flex flex-col">
         {children}
       </div>
     </TabsContext.Provider>
   );
 }
 
-export function TabList({ children, className }: { children: ReactNode; className?: string }) {
-  const tokens = useTokens();
+export function TabList({ children }: { children: ReactNode }) {
   return (
     <div
       role="tablist"
-      className={className}
-      style={{
-        display:        "flex",
-        gap:            "2px",
-        borderBottom:   `1px solid ${tokens.color.border.default}`,
-        paddingBottom:  "0",
-        flexShrink:     0,
-      }}
+      className="flex gap-0.5 border-b border-border shrink-0"
     >
       {children}
     </div>
   );
 }
 
-export interface TabProps extends HTMLAttributes<HTMLButtonElement> {
+export interface TabProps extends Omit<HTMLAttributes<HTMLButtonElement>, "className"> {
   value: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
-export function Tab({ value, children, style, ref, ...rest }: TabProps) {
+export function Tab({ value, children, ref, ...rest }: TabProps) {
   const { active, setActive } = useTabsContext();
-  const tokens = useTokens();
   const isActive = active === value;
-
-  const computedStyle: CSSProperties = {
-    background:     "none",
-    border:         "none",
-    borderBottom:   isActive ? `2px solid ${tokens.color.accent.active}` : "2px solid transparent",
-    cursor:         "pointer",
-    padding:        "8px 14px 7px",
-    fontFamily:     tokens.font.mono,
-    fontSize:       "0.75rem",
-    fontWeight:     isActive ? 600 : 400,
-    color:          isActive ? tokens.color.accent.active : tokens.color.text.secondary,
-    transition:     "color 0.12s, border-color 0.12s",
-    marginBottom:   "-1px",
-    ...style,
-  };
 
   return (
     <button
@@ -91,18 +66,25 @@ export function Tab({ value, children, style, ref, ...rest }: TabProps) {
       role="tab"
       aria-selected={isActive}
       onClick={() => setActive(value)}
-      style={computedStyle}
+      className={cn(
+        "bg-transparent border-none cursor-pointer font-mono text-base -mb-px px-[14px] pt-2 pb-[7px]",
+        "transition-[color,border-color] outline-none",
+        "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+        isActive
+          ? "border-b-2 border-accent text-accent font-semibold"
+          : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",
+      )}
     >
       {children}
     </button>
   );
 }
 
-export function TabPanel({ value, children, className }: { value: string; children: ReactNode; className?: string }) {
+export function TabPanel({ value, children }: { value: string; children: ReactNode }) {
   const { active } = useTabsContext();
   if (active !== value) return null;
   return (
-    <div role="tabpanel" className={className} style={{ flex: 1, overflow: "auto" }}>
+    <div role="tabpanel" className="flex-1 overflow-auto">
       {children}
     </div>
   );

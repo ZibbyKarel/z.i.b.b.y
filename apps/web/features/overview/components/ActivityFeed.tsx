@@ -1,7 +1,7 @@
 import { cn, Icon, StatusDot, type ActivityEvent, type ActivityIcon } from "@zibby/design-system"
 
 const iconTone: Record<ActivityIcon, string> = {
-  run: "text-run",
+  run: "text-work",
   wait: "text-warn",
   ok: "text-ok",
   edit: "text-foreground-dim",
@@ -24,7 +24,7 @@ export function ActivityFeed({ items, limit = 5, className }: ActivityFeedProps)
           className="flex gap-3 border-b border-border py-2.5 last:border-b-0"
         >
           <span className={cn("mt-px flex", iconTone[e.icon])}>
-            <Icon name={e.icon} size={15} />
+            <Icon name={e.icon} size="sm" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-base text-foreground">{e.text}</div>
@@ -33,7 +33,7 @@ export function ActivityFeed({ items, limit = 5, className }: ActivityFeedProps)
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <StatusDot tone={e.ctx === "work" ? "work" : "home"} size={5} />
+            <StatusDot tone={e.ctx === "work" ? "work" : "home"} size="75" />
             <span className="font-mono text-sm text-foreground-faint">{e.t}</span>
           </div>
         </div>

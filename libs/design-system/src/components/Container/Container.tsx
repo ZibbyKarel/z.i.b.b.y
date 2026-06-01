@@ -17,12 +17,10 @@ export type ContainerAs =
   | "label"
   | "form";
 
-export interface ContainerProps extends HTMLAttributes<HTMLElement> {
+export interface ContainerProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   as?: ContainerAs;
   // Padding
   padding?: Padding;
-  paddingX?: Padding;
-  paddingY?: Padding;
   // Dimensions
   width?: string;
   height?: string;
@@ -55,7 +53,7 @@ export interface ContainerProps extends HTMLAttributes<HTMLElement> {
 }
 
 export const CONTAINER_STYLE_KEYS: Array<keyof ContainerProps> = [
-  "padding","paddingX","paddingY","width","height","minWidth","minHeight",
+  "padding","width","height","minWidth","minHeight",
   "maxWidth","maxHeight","position","top","right","bottom","left","zIndex",
   "overflow","overflowX","overflowY","cursor","pointerEvents","userSelect",
   "textAlign","resize","grow","shrink","minW0",
@@ -67,16 +65,6 @@ export function computeContainerStyle(props: ContainerProps): CSSProperties {
   if (props.padding !== undefined) {
     const [t, r, b, l] = resolvePadding(props.padding).map(spacingToPx);
     style.padding = `${t} ${r} ${b} ${l}`;
-  }
-  if (props.paddingX !== undefined) {
-    const px = spacingToPx(typeof props.paddingX === "string" ? props.paddingX : props.paddingX[0]);
-    style.paddingLeft = px;
-    style.paddingRight = px;
-  }
-  if (props.paddingY !== undefined) {
-    const py = spacingToPx(typeof props.paddingY === "string" ? props.paddingY : props.paddingY[0]);
-    style.paddingTop = py;
-    style.paddingBottom = py;
   }
   if (props.width)      style.width = props.width;
   if (props.height)     style.height = props.height;
@@ -108,8 +96,6 @@ export function computeContainerStyle(props: ContainerProps): CSSProperties {
 export function Container({
   as: Tag = "div",
   padding,
-  paddingX,
-  paddingY,
   width,
   height,
   minWidth,
@@ -138,7 +124,7 @@ export function Container({
   ...rest
 }: ContainerProps) {
   const layoutStyle = computeContainerStyle({
-    padding, paddingX, paddingY,
+    padding,
     width, height, minWidth, minHeight, maxWidth, maxHeight,
     position, top, right, bottom, left, zIndex,
     overflow, overflowX, overflowY,

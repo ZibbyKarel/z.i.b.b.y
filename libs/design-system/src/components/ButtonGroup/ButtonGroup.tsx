@@ -19,7 +19,6 @@ export interface ButtonGroupProps {
   addLabel?: string;
   /** Accessible label for the group element. */
   ariaLabel?: string;
-  className?: string;
 }
 
 /** Generic segmented button group — a row of mutually exclusive toggle buttons. */
@@ -30,16 +29,12 @@ export function ButtonGroup({
   onAdd,
   addLabel = "Přidat",
   ariaLabel,
-  className,
 }: ButtonGroupProps) {
   return (
     <div
       role="group"
       aria-label={ariaLabel}
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded border border-border bg-surface-0 p-0.5",
-        className,
-      )}
+      className="inline-flex items-center gap-0.5 rounded border border-border bg-background p-0.5"
     >
       {options.map((o) => {
         const active = value === o.id;
@@ -61,7 +56,7 @@ export function ButtonGroup({
               <span
                 className={cn(
                   "h-1.5 w-1.5 rounded-full",
-                  active ? "bg-surface-0 opacity-70" : o.swatchClass,
+                  active ? "bg-background opacity-70" : o.swatchClass,
                 )}
               />
             )}
@@ -76,7 +71,7 @@ export function ButtonGroup({
           onClick={onAdd}
           className="flex px-2 py-1.5 text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <Icon name="plus" size={13} />
+          <Icon name="plus" size="sm" />
         </button>
       )}
     </div>

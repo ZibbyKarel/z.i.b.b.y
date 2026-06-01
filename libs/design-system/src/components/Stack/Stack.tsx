@@ -1,7 +1,7 @@
 import type { CSSProperties, ElementType, HTMLAttributes, Ref } from "react";
 import { spacingToPx, type Spacing } from "../../tokens";
 
-export interface StackProps extends HTMLAttributes<HTMLElement> {
+export interface StackProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   direction?: "row" | "col";
   gap?: Spacing;
   align?: "start" | "center" | "end" | "stretch" | "baseline";

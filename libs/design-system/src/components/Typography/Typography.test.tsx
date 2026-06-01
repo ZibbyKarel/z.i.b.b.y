@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DesignSystemProvider } from "../../DesignSystemContext/DesignSystemProvider";
-import { defaultDarkTokens } from "../../DesignSystemContext";
 import { Typography, TypographyTestId } from "./Typography";
 
 function renderTypo(ui: React.ReactNode) {
@@ -33,18 +32,14 @@ describe("Typography", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Přehled" })).toBeInTheDocument();
   });
 
-  it("resolves variant colors from tokens", () => {
+  it("applies secondary variant class", () => {
     renderTypo(<Typography type="text" variant="secondary">A</Typography>);
-    expect(screen.getByText("A")).toHaveStyle({
-      color: defaultDarkTokens.color.text.secondary,
-    });
+    expect(screen.getByText("A").className).toContain("text-foreground-dim");
   });
 
-  it("defaults to the primary variant", () => {
+  it("defaults to the primary variant class", () => {
     renderTypo(<Typography type="text">A</Typography>);
-    expect(screen.getByText("A")).toHaveStyle({
-      color: defaultDarkTokens.color.text.primary,
-    });
+    expect(screen.getByText("A").className).toContain("text-foreground");
   });
 
   it("forwards a ref", () => {

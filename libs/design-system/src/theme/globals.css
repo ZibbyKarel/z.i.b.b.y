@@ -2,98 +2,111 @@
 
 /* ---------------------------------------------------------------------------
  * Content sources — v4 auto-detect does NOT cross workspace package boundaries.
- * These explicit @source directives replace the old tailwind.config.ts content
- * globs. The app's globals.css adds its own @source for app dirs.
  * --------------------------------------------------------------------------- */
 @source "../components";
 @source "../primitives";
 
 /* ---------------------------------------------------------------------------
- * Dark mode — triggered by data-theme="dark" on DesignSystemProvider's root
- * OR by the legacy .dark class (for html-level fallback during transition).
+ * Dark mode — triggered by data-theme="dark" on DesignSystemProvider's root.
  * --------------------------------------------------------------------------- */
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
 /* ---------------------------------------------------------------------------
- * @theme — maps Tailwind utility names to CSS custom properties that are
- * injected at runtime by DesignSystemProvider via tokensToCssVars().
+ * @theme — maps CSS custom property names to Tailwind utility classes.
  *
- * The :root block below sets the dark-theme defaults so utilities render
- * correctly before the Provider mounts (SSR, Storybook fallback, FOUC guard).
+ * These are the DEFAULT values (dark theme). DesignSystemProvider overrides
+ * them at runtime by injecting inline styles — components inside the Provider
+ * always use the live theme values.
+ *
+ * Token naming (TS Theme property → CSS var → Tailwind class):
+ *   colorBackground     → --color-background     → bg-background
+ *   colorSurface        → --color-surface         → bg-surface
+ *   colorElevated       → --color-elevated        → bg-elevated
+ *   colorRaised         → --color-raised          → bg-raised
+ *   colorForeground     → --color-foreground      → text-foreground
+ *   colorForegroundDim  → --color-foreground-dim  → text-foreground-dim
+ *   colorBorder         → --color-border          → border-border
+ *   colorBorderStrong   → --color-border-strong   → border-border-strong
+ *   colorAccent         → --color-accent          → text-accent / bg-accent
+ *   colorAccentDim      → --color-accent-dim      → bg-accent-dim
+ *   colorOk / Warn / Danger → --color-ok/warn/bad → text-ok / bg-ok / …
+ *   radiusDefault       → --radius                → rounded
+ *   shadowGlowAccent    → --shadow-glow-accent    → shadow-glow-accent
  * --------------------------------------------------------------------------- */
 @theme {
-  /* Wipe Tailwind's built-in default color and spacing scales so only
-     z.i.b.b.y tokens exist. */
+  /* Wipe Tailwind's built-in default color scale so only z.i.b.b.y tokens exist. */
   --color-*: initial;
 
-  /* ---- Surfaces ---------------------------------------------------------- */
-  --color-background:    var(--bg-canvas);
-  --color-surface-0:     var(--bg-canvas);
-  --color-surface-1:     var(--bg-surface);
-  --color-surface-2:     var(--bg-elevated);
-  --color-panel:         var(--bg-elevated);
-  --color-panel-hi:      var(--bg-raised);
+  /* ---- Backgrounds ------------------------------------------------------- */
+  --color-background:       #0a0c10;
+  --color-surface:          #0d1117;
+  --color-elevated:         #0f141b;
+  --color-raised:           #141b24;
+  --color-hover:            #141b24;
+
+  /* ---- Foreground / text ------------------------------------------------- */
+  --color-foreground:       #e6edf3;
+  --color-foreground-dim:   #9aa7b4;
+  --color-foreground-faint: #5d6b7a;
 
   /* ---- Borders ----------------------------------------------------------- */
-  --color-border:        var(--border-default);
-  --color-border-hi:     var(--border-strong);
+  --color-border:           rgba(255,255,255,0.07);
+  --color-border-strong:    rgba(255,255,255,0.12);
 
-  /* ---- Text (foreground) ------------------------------------------------- */
-  --color-foreground:       var(--text-primary);
-  --color-foreground-dim:   var(--text-secondary);
-  --color-foreground-faint: var(--text-muted);
+  /* ---- Context accent (home=amber default; overridden by contextTokens) -- */
+  --color-accent:           #f0b429;
+  --color-accent-dim:       rgba(240,180,41,0.16);
+  --color-accent-contrast:  #0a0c10;
+  --color-accent-glow:      rgba(240,180,41,0.4);
 
-  /* ---- Context accents --------------------------------------------------- */
-  --color-accent:          var(--accent);
-  --color-accent-dim:      var(--accent-dim);
-  --color-accent-contrast: var(--accent-contrast);
-  --color-home:            var(--accent-amber);
-  --color-work:            var(--accent-sky);
+  /* ---- Named accents ----------------------------------------------------- */
+  --color-home:             #f0b429;
+  --color-work:             #5b8def;
 
   /* ---- Semantic status --------------------------------------------------- */
-  --color-ok:   var(--accent-emerald);
-  --color-warn: var(--accent-warn);
-  --color-bad:  var(--accent-rose);
-  --color-run:  var(--accent-sky);
+  --color-ok:               #39d98a;
+  --color-warn:             #f0b429;
+  --color-bad:              #ff6b6b;
 
-  /* ---- Model / thinking badges (orchestration) --------------------------- */
-  --color-model-opus:    var(--accent-violet);
-  --color-model-sonnet:  var(--accent-cyan);
-  --color-model-haiku:   var(--accent-green);
-  --color-think-high:    #f0883e;
-  --color-think-medium:  var(--accent-sky);
-  --color-think-low:     var(--text-muted);
+  /* ---- Model / thinking badges ------------------------------------------ */
+  --color-model-opus:       #b07cff;
+  --color-model-sonnet:     #56c4d6;
+  --color-model-haiku:      #7fd98a;
+  --color-think-high:       #f0883e;
+  --color-think-medium:     #5b8def;
+  --color-think-low:        #5d6b7a;
 
-  /* ---- Misc --------------------------------------------------------------- */
-  --color-transparent: transparent;
-  --color-current:     currentColor;
+  /* ---- Misc -------------------------------------------------------------- */
+  --color-transparent:      transparent;
+  --color-current:          currentColor;
+  --color-black:            #000000;
+  --color-white:            #ffffff;
 
-  /* ---- Typography: font families ----------------------------------------- */
-  /* Fallbacks only; next/font CSS vars override these on <html> via className. */
+  /* ---- Typography: font families ---------------------------------------- */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* ---- Typography: font sizes (HUD compact scale) ------------------------ */
-  --text-2xs:    0.5rem;       /* 8px  */
-  --text-xs:     0.5625rem;    /* 9px  */
-  --text-sm:     0.625rem;     /* 10px */
-  --text-caption: 0.6875rem;   /* 11px */
-  --text-base:   0.75rem;      /* 12px */
-  --text-md:     0.8125rem;    /* 13px */
-  --text-lg:     0.875rem;     /* 14px */
-  --text-xl:     0.9375rem;    /* 15px */
-  --text-2xl:    1.0625rem;    /* 17px */
-  --text-3xl:    1.25rem;      /* 20px */
-  --text-4xl:    1.375rem;     /* 22px */
-  --text-5xl:    1.6875rem;    /* 27px */
+  /* ---- Typography: font sizes (HUD compact scale) ----------------------- */
+  --text-2xs:     0.5rem;        /* 8px  */
+  --text-xs:      0.5625rem;     /* 9px  */
+  --text-sm:      0.625rem;      /* 10px */
+  --text-caption: 0.6875rem;     /* 11px */
+  --text-base:    0.75rem;       /* 12px */
+  --text-md:      0.8125rem;     /* 13px */
+  --text-lg:      0.875rem;      /* 14px */
+  --text-xl:      0.9375rem;     /* 15px */
+  --text-2xl:     1.0625rem;     /* 17px */
+  --text-3xl:     1.25rem;       /* 20px */
+  --text-4xl:     1.375rem;      /* 22px */
+  --text-5xl:     1.6875rem;     /* 27px */
 
-  /* ---- Typography: font weights ------------------------------------------ */
+  /* ---- Typography: font weights ----------------------------------------- */
   --font-weight-normal:   400;
   --font-weight-medium:   500;
   --font-weight-semibold: 600;
   --font-weight-bold:     700;
 
-  /* ---- Typography: letter spacing ---------------------------------------- */
+  /* ---- Typography: letter spacing --------------------------------------- */
   --tracking-tighter: -0.01em;
   --tracking-normal:   0;
   --tracking-wide:     0.04em;
@@ -101,85 +114,40 @@
   --tracking-widest:   0.18em;
   --tracking-mono:     0.3em;
 
-  /* ---- Border radius (angular HUD) --------------------------------------- */
+  /* ---- Border radius (angular HUD; overridden by Provider per theme) ---- */
   --radius-none: 0;
-  --radius-sm:   var(--radius-sm, 2px);
-  --radius:      var(--radius, 3px);
-  --radius-md:   var(--radius-md, 4px);
-  --radius-lg:   var(--radius-lg, 8px);
+  --radius-sm:   2px;
+  --radius:      3px;
+  --radius-md:   4px;
+  --radius-lg:   8px;
   --radius-xl:   11px;
   --radius-2xl:  12px;
   --radius-full: 9999px;
 
-  /* ---- Shadows ----------------------------------------------------------- */
-  --shadow-hairline: 0 1px 0 rgba(255,255,255,0.02);
-  --shadow-panel:    var(--shadow-sm, 0 8px 30px rgba(0,0,0,0.3));
-  --shadow-card:     var(--shadow-card, 0 6px 22px rgba(0,0,0,0.35));
-  --shadow-dropdown: 0 18px 50px rgba(0,0,0,0.5);
-  --shadow-modal:    var(--shadow-modal, 0 30px 80px rgba(0,0,0,0.6));
-  --shadow-glow-accent: var(--shadow-glow, 0 0 16px var(--accent-glow, rgba(240,180,41,0.4)));
+  /* ---- Shadows (overridden by Provider per theme) ----------------------- */
+  --shadow-hairline:    0 1px 0 rgba(255,255,255,0.02);
+  --shadow-card:        0 6px 22px rgba(0,0,0,0.35);
+  --shadow-modal:       0 30px 80px rgba(0,0,0,0.6);
+  --shadow-dropdown:    0 18px 50px rgba(0,0,0,0.5);
+  --shadow-glow-accent: 0 0 16px rgba(240,180,41,0.4);
 
-  /* ---- Custom spacing overrides (z.i.b.b.y HUD scale differs at 5/6/7) --- */
+  /* ---- Custom spacing overrides (z.i.b.b.y HUD scale differs at 5/6/7) -- */
   --spacing-5: 18px;
   --spacing-6: 22px;
   --spacing-7: 26px;
 
-  /* ---- Animations -------------------------------------------------------- */
+  /* ---- Animations ------------------------------------------------------- */
   --animate-zpulse:   zpulse 1.8s ease-out infinite;
   --animate-fade-in:  fade-in 0.16s ease-out;
   --animate-scale-in: scale-in 0.16s ease-out;
 }
 
 /* ---------------------------------------------------------------------------
- * :root defaults — dark theme values so utilities render before Provider mounts.
- * These are generated from defaultDarkTokens via tokensToCssVars().
- * If you update darkTheme.ts values, sync these defaults.
+ * Base layer — structural resets and body defaults.
  * --------------------------------------------------------------------------- */
 @layer base {
   :root {
     color-scheme: dark;
-    /* Text */
-    --text-primary:   #e6edf3;
-    --text-secondary: #9aa7b4;
-    --text-tertiary:  #5d6b7a;
-    --text-muted:     #5d6b7a;
-    /* Bg */
-    --bg-canvas:   #0a0c10;
-    --bg-surface:  #0d1117;
-    --bg-elevated: #0f141b;
-    --bg-raised:   #141b24;
-    --bg-hover:    #141b24;
-    /* Border */
-    --border-default: rgba(255,255,255,0.07);
-    --border-strong:  rgba(255,255,255,0.12);
-    /* Active accent (default: home/amber) */
-    --accent:          #f0b429;
-    --accent-dim:      rgba(240,180,41,0.16);
-    --accent-contrast: #0a0c10;
-    --accent-glow:     rgba(240,180,41,0.4);
-    /* Named accents */
-    --accent-amber:   #f0b429;
-    --accent-sky:     #5b8def;
-    --accent-emerald: #39d98a;
-    --accent-rose:    #ff6b6b;
-    --accent-warn:    #f0b429;
-    --accent-violet:  #b07cff;
-    --accent-cyan:    #56c4d6;
-    --accent-green:   #7fd98a;
-    /* Surface */
-    --surface-accent-soft: rgba(240,180,41,0.16);
-    --surface-accent-ring: rgba(240,180,41,0.30);
-    /* Size */
-    --radius:    3px;
-    --radius-sm: 2px;
-    --radius-md: 4px;
-    --radius-lg: 8px;
-    --radius-full: 9999px;
-    --shadow-sm:    0 8px 30px rgba(0,0,0,0.3);
-    --shadow-lg:    0 30px 80px rgba(0,0,0,0.6);
-    --shadow-card:  0 6px 22px rgba(0,0,0,0.35);
-    --shadow-modal: 0 30px 80px rgba(0,0,0,0.6);
-    --shadow-glow:  0 0 16px rgba(240,180,41,0.4);
   }
 
   * {
@@ -194,8 +162,8 @@
   }
 
   body {
-    background-color: var(--bg-surface);
-    color: var(--text-primary);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }

@@ -12,7 +12,7 @@ const toneText: Record<StatTone, string> = {
   neutral: "text-foreground-dim",
 }
 
-export interface StatProps extends HTMLAttributes<HTMLDivElement> {
+export interface StatProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   value: string | number
   label: string
   icon?: IconName
@@ -26,15 +26,14 @@ export function Stat({
   label,
   icon,
   tone = "neutral",
-  className,
   ref,
   ...props
 }: StatProps) {
   return (
-    <div ref={ref} className={cn("flex items-center gap-3", className)} {...props}>
+    <div ref={ref} className="flex items-center gap-3" {...props}>
       {icon && (
         <span className={cn("flex", toneText[tone])}>
-          <Icon name={icon} size={18} />
+          <Icon name={icon} size="md" />
         </span>
       )}
       <div>

@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
+import { spacingToPx, type Spacing } from "../../tokens";
 
 export type DotTone =
   | "accent"
@@ -12,11 +13,11 @@ export type DotTone =
   | "faint";
 
 const toneClass: Record<DotTone, string> = {
-  accent: "bg-accent shadow-[0_0_7px_var(--zb-accent-glow)]",
+  accent: "bg-accent shadow-[0_0_7px_var(--color-accent-glow)]",
   ok: "bg-ok shadow-[0_0_7px_#39d98a]",
   warn: "bg-warn shadow-[0_0_7px_#f0b429]",
   bad: "bg-bad shadow-[0_0_7px_#ff6b6b]",
-  run: "bg-run shadow-[0_0_7px_#5b8def]",
+  run: "bg-work shadow-[0_0_7px_#5b8def]",
   home: "bg-home shadow-[0_0_7px_#f0b429]",
   work: "bg-work shadow-[0_0_7px_#5b8def]",
   faint: "bg-foreground-faint",
@@ -27,16 +28,16 @@ const ringClass: Record<DotTone, string> = {
   ok: "bg-ok",
   warn: "bg-warn",
   bad: "bg-bad",
-  run: "bg-run",
+  run: "bg-work",
   home: "bg-home",
   work: "bg-work",
   faint: "bg-foreground-faint",
 };
 
-export interface StatusDotProps extends HTMLAttributes<HTMLSpanElement> {
+export interface StatusDotProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
   tone: DotTone;
-  /** Diameter in px. */
-  size?: number;
+  /** Diameter as a spacing token. */
+  size?: Spacing;
   /** Emit an expanding pulse ring (for live/running states). */
   pulse?: boolean;
   ref?: React.Ref<HTMLSpanElement>;
@@ -45,17 +46,17 @@ export interface StatusDotProps extends HTMLAttributes<HTMLSpanElement> {
 /** A glowing status dot, optionally pulsing. */
 export function StatusDot({
   tone,
-  size = 8,
+  size = "100",
   pulse = false,
-  className,
   ref,
   ...props
 }: StatusDotProps) {
+  const px = spacingToPx(size);
   return (
     <span
       ref={ref}
-      className={cn("relative inline-block shrink-0", className)}
-      style={{ width: size, height: size }}
+      className="relative inline-block shrink-0"
+      style={{ width: px, height: px }}
       {...props}
     >
       {pulse && (

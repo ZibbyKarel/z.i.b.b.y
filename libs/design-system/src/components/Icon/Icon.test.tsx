@@ -12,7 +12,7 @@ describe("Icon", () => {
   })
 
   it("applies size and stroke", () => {
-    const { container } = render(<Icon name="play" size={24} stroke={2} />)
+    const { container } = render(<Icon name="play" size="xl" stroke="medium" />)
     const svg = container.querySelector("svg")!
     expect(svg.getAttribute("width")).toBe("24")
     expect(svg.getAttribute("stroke-width")).toBe("2")

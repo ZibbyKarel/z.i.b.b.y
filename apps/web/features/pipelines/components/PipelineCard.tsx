@@ -43,12 +43,12 @@ export function PipelineCard({
         "group relative w-full rounded border p-3.5 text-left transition-all outline-none",
         "focus-visible:ring-2 focus-visible:ring-accent",
         selected
-          ? "border-accent bg-panel-hi shadow-[0_0_0_1px_var(--zb-accent-dim)]"
-          : "border-border bg-panel hover:border-accent/35",
+          ? "border-accent bg-raised shadow-[0_0_0_1px_var(--color-accent-dim)]"
+          : "border-border bg-elevated hover:border-accent/35",
         className,
       )}
     >
-      {selected && <Corners inset={5} />}
+      {selected && <Corners inset="75" />}
       <div className="flex items-center justify-between">
         <span className="font-mono text-md font-bold text-foreground">{pipeline.name}</span>
         <Chip tone={sm.tone}>
@@ -69,18 +69,18 @@ export function PipelineCard({
         {pipeline.phases.map((ph, i) => (
           <Fragment key={`${ph.agent}-${i}`}>
             <span className="inline-flex items-center gap-1 font-mono text-xs text-foreground-dim">
-              <Icon name={glyphForAgent(ph.agent, agents)} size={11} className="text-accent" />
+              <Icon name={glyphForAgent(ph.agent, agents)} size="xs" className="text-accent" />
               {ph.agent}
             </span>
             {i < pipeline.phases.length - 1 && (
-              <Icon name="arrow" size={11} className="text-foreground-faint" />
+              <Icon name="arrow" size="xs" className="text-foreground-faint" />
             )}
           </Fragment>
         ))}
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
         <span className="inline-flex items-center gap-1 font-mono text-xs text-foreground-faint">
-          <Icon name="dollar" size={11} className="text-foreground-faint" /> strop ${pipeline.budget}
+          <Icon name="dollar" size="xs" className="text-foreground-faint" /> strop ${pipeline.budget}
         </span>
         <span className="font-mono text-xs text-foreground-faint">poslední {pipeline.lastRun}</span>
       </div>

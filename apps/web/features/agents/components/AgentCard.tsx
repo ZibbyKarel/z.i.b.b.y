@@ -18,14 +18,14 @@ export function AgentCard({ agent, onEdit, className }: AgentCardProps) {
   return (
     <div
       className={cn(
-        "group relative rounded-sm border border-border bg-panel p-3.5 transition-all hover:border-accent/35 hover:bg-panel-hi",
+        "group relative rounded-sm border border-border bg-elevated p-3.5 transition-all hover:border-accent/35 hover:bg-raised",
         className,
       )}
     >
-      <Corners inset={5} />
+      <Corners inset="75" />
       <div className="flex items-start gap-3">
         <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-sm border border-accent/20 bg-accent-dim text-accent">
-          <Icon name={agent.glyph} size={17} />
+          <Icon name={agent.glyph} size="md" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate font-mono text-md font-semibold text-foreground">

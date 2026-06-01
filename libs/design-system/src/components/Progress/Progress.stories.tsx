@@ -5,7 +5,7 @@ const meta: Meta<typeof Progress> = {
   title: "Components/Progress",
   component: Progress,
   parameters: { backgrounds: { default: "velin" } },
-  args: { value: 64, tone: "warn", glow: true, height: 6 },
+  args: { value: 64, tone: "warn", glow: true, height: "75" },
   decorators: [
     (Story) => (
       <div className="w-64">

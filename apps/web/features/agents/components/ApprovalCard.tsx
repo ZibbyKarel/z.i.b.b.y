@@ -23,11 +23,11 @@ export function ApprovalCard({
   return (
     <div
       className={cn(
-        "relative rounded-sm border border-bad/30 bg-panel p-4 shadow-[0_0_0_1px_rgba(255,107,107,0.12),0_6px_24px_rgba(0,0,0,0.3)]",
+        "relative rounded-sm border border-bad/30 bg-elevated p-4 shadow-[0_0_0_1px_rgba(255,107,107,0.12),0_6px_24px_rgba(0,0,0,0.3)]",
         className,
       )}
     >
-      <Corners inset={5} className="border-bad" />
+      <Corners inset="75" tone="bad" />
       <div className="mb-3 flex items-center gap-2.5">
         <StatusDot tone="bad" pulse />
         <span className="font-mono text-sm font-semibold uppercase tracking-widest text-bad">
@@ -39,7 +39,7 @@ export function ApprovalCard({
       </div>
       <div className="flex items-center gap-2.5">
         <div className="grid h-8 w-8 place-items-center rounded-lg border border-accent/20 bg-accent-dim text-accent">
-          <Icon name="cart" size={16} />
+          <Icon name="cart" size="md" />
         </div>
         <div>
           <div className="text-md font-semibold text-foreground">
@@ -67,9 +67,9 @@ export function ApprovalCard({
               setDone("ok")
               onApprove?.(approval)
             }}
-            className="flex flex-1 items-center justify-center gap-2 rounded-sm border-none bg-ok px-3 py-2.5 font-mono text-base font-semibold text-surface-0 shadow-[0_0_14px_rgba(57,217,138,0.27)] outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ok"
+            className="flex flex-1 items-center justify-center gap-2 rounded-sm border-none bg-ok px-3 py-2.5 font-mono text-base font-semibold text-background shadow-[0_0_14px_rgba(57,217,138,0.27)] outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ok"
           >
-            <Icon name="check" size={14} stroke={2.4} /> Schválit
+            <Icon name="check" size="sm" stroke="bold" /> Schválit
           </button>
           <button
             type="button"
@@ -79,7 +79,7 @@ export function ApprovalCard({
             }}
             className="flex flex-1 items-center justify-center gap-2 rounded-sm border border-bad/40 bg-transparent px-3 py-2.5 font-mono text-base font-semibold text-bad outline-none hover:bg-bad/10 focus-visible:ring-2 focus-visible:ring-bad"
           >
-            <Icon name="x" size={14} stroke={2.4} /> Zamítnout
+            <Icon name="x" size="sm" stroke="bold" /> Zamítnout
           </button>
         </div>
       )}

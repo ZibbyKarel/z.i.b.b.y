@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Button,
-  EmptyState,
-  EntityFormModal,
-  SectionLabel,
-} from "@zibby/design-system";
+import { Button } from "@zibby/design-system";
+import { SectionLabel } from "./components/SectionLabel";
+import { EntityFormModal } from "./components/EntityFormModal";
+import { EmptyState } from "./components/EmptyState";
 import { IntegrationCard } from "../integrations/components/IntegrationCard";
 import { INTEGRATION_FORM } from "./forms";
 import { useDashboardStore } from "./store";

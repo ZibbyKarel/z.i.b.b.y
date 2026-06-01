@@ -1,48 +1,41 @@
 "use client";
 import { useMemo, useState } from "react"
-import type { IconName } from "../Icon/Icon"
-import { Button } from "../Button/Button"
 import {
+  Button,
+  Dialog,
+  Icon,
   SegmentedField,
   SelectField,
-  type SelectOption,
   TextAreaField,
   TextField,
-} from "../Field/Field"
-import { Icon } from "../Icon/Icon"
-import { ModalShell } from "../ModalShell/ModalShell"
+} from "@zibby/design-system"
+import type { IconName, SelectOption, DialogWidth } from "@zibby/design-system"
 
 export type FieldKind = "text" | "textarea" | "select" | "segmented"
 
 export interface FieldSchema {
-  /** Key in the resulting values record. */
   name: string
   label: string
   kind: FieldKind
   placeholder?: string
   hint?: string
   required?: boolean
-  /** For select / segmented. */
   options?: SelectOption[]
-  /** Initial value. */
   defaultValue?: string
 }
 
 export type EntityFormValues = Record<string, string>
 
 export interface EntityFormModalProps {
-  /** Title, e.g. "Nový skill". */
   title: string
   subtitle?: string
   glyph: IconName
   fields: FieldSchema[]
-  /** Live preview of the file path that will be created, given current values. */
   filePreview?: (values: EntityFormValues) => string
-  /** Label of the submit button, e.g. "Vytvořit skill". */
   submitLabel: string
   onClose: () => void
   onSubmit: (values: EntityFormValues) => void
-  widthClassName?: string
+  width?: DialogWidth
 }
 
 function initialValues(fields: FieldSchema[]): EntityFormValues {
@@ -53,12 +46,6 @@ function initialValues(fields: FieldSchema[]): EntityFormValues {
   return out
 }
 
-/**
- * A schema-driven "create new" form modal. One component backs adding skills,
- * integrations (plugins), agents and pipelines — each just supplies its field
- * schema and a file-path preview, keeping the "files = source of truth" model
- * visible (the new file is named right in the form).
- */
 export function EntityFormModal({
   title,
   subtitle,
@@ -68,7 +55,7 @@ export function EntityFormModal({
   submitLabel,
   onClose,
   onSubmit,
-  widthClassName = "w-[560px]",
+  width = "lg",
 }: EntityFormModalProps) {
   const [values, setValues] = useState<EntityFormValues>(() => initialValues(fields))
 
@@ -83,20 +70,36 @@ export function EntityFormModal({
   const preview = filePreview?.(values)
 
   return (
-    <ModalShell
-      label={title}
-      glyph={glyph}
-      title={title}
-      subtitle={subtitle}
+    <Dialog
+      open={true}
       onClose={onClose}
-      widthClassName={widthClassName}
+      width={width}
+      title={
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-sm border border-accent/30 bg-accent-dim text-accent">
+            <Icon name={glyph} size="lg" />
+          </div>
+          <div>
+            <div className="font-mono text-xl font-bold text-foreground">{title}</div>
+            {subtitle && <div className="text-base text-foreground-dim">{subtitle}</div>}
+          </div>
+        </div>
+      }
+      actions={
+        <>
+          <Button intent="ghost" onClick={onClose}>Zrušit</Button>
+          <Button intent="run" icon="plus" type="submit" form="entity-form" disabled={!canSubmit}>
+            {submitLabel}
+          </Button>
+        </>
+      }
     >
       <form
+        id="entity-form"
         onSubmit={(e) => {
           e.preventDefault()
           if (canSubmit) onSubmit(values)
         }}
-        className="p-5"
       >
         <div className="flex flex-col gap-4">
           {fields.map((f) => {
@@ -151,21 +154,12 @@ export function EntityFormModal({
         </div>
 
         {preview && (
-          <div className="mt-4 flex items-center gap-2 rounded border border-border bg-surface-0 px-3 py-2.5">
-            <Icon name="file" size={13} className="text-foreground-faint" />
+          <div className="mt-4 flex items-center gap-2 rounded border border-border bg-background px-3 py-2.5">
+            <Icon name="file" size="sm" className="text-foreground-faint" />
             <span className="truncate font-mono text-sm text-foreground-faint">{preview}</span>
           </div>
         )}
-
-        <div className="mt-5 flex items-center justify-between">
-          <Button intent="ghost" onClick={onClose}>
-            Zrušit
-          </Button>
-          <Button intent="run" icon="plus" type="submit" disabled={!canSubmit}>
-            {submitLabel}
-          </Button>
-        </div>
       </form>
-    </ModalShell>
+    </Dialog>
   )
 }

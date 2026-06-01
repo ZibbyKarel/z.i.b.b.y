@@ -5,7 +5,7 @@ const meta: Meta<typeof Icon> = {
   title: "Foundations/Icon",
   component: Icon,
   parameters: { backgrounds: { default: "velin" } },
-  args: { name: "spark", size: 24, stroke: 1.6 },
+  args: { name: "spark", size: "xl", stroke: "default" },
 };
 export default meta;
 
@@ -21,7 +21,7 @@ export const AllGlyphs: Story = {
           key={name}
           className="flex flex-col items-center gap-2 rounded border border-border p-3"
         >
-          <Icon name={name} size={22} />
+          <Icon name={name} size="lg" />
           <span className="font-mono text-2xs text-foreground-faint">
             {name}
           </span>
@@ -34,7 +34,7 @@ export const AllGlyphs: Story = {
 export const Brand: Story = {
   render: () => (
     <div className="flex items-center gap-3 text-foreground">
-      <Icon name="butlerSign" size={28} />
+      <Icon name="butlerSign" size="xl" />
       <span className="font-mono text-2xl font-bold tracking-mono">
         Z·I·B·B·Y
       </span>

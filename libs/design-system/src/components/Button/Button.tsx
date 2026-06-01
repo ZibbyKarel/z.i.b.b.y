@@ -1,6 +1,5 @@
 import { type ButtonHTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../../lib/cn";
 import { Icon, type IconName } from "../Icon/Icon";
 
 /**
@@ -15,7 +14,7 @@ const button = cva(
   "inline-flex items-center justify-center gap-1.5 font-mono font-semibold " +
     "cursor-pointer rounded-sm transition-all outline-none " +
     "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 " +
-    "focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-50",
+    "focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       intent: {
@@ -28,7 +27,7 @@ const button = cva(
           "border border-border text-foreground-dim bg-transparent " +
           "hover:bg-[rgba(255,255,255,0.05)] hover:text-foreground",
         approve:
-          "border-none bg-ok text-surface-0 shadow-[0_0_14px_rgba(57,217,138,0.27)] " +
+          "border-none bg-ok text-background shadow-[0_0_14px_rgba(57,217,138,0.27)] " +
           "hover:brightness-110",
         reject: "border border-bad/40 text-bad bg-transparent hover:bg-bad/10",
       },
@@ -44,7 +43,7 @@ const button = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof button> {
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">, VariantProps<typeof button> {
   /** Optional leading icon glyph. */
   icon?: IconName;
   ref?: React.Ref<HTMLButtonElement>;
@@ -55,21 +54,20 @@ export function Button({
   size,
   block,
   icon,
-  className,
   children,
   type = "button",
   ref,
   ...props
 }: ButtonProps) {
-  const iconSize = size === "lg" ? 14 : 12;
+  const iconSize = size === "lg" ? "sm" : "xs";
   return (
     <button
       ref={ref}
       type={type}
-      className={cn(button({ intent, size, block }), className)}
+      className={button({ intent, size, block })}
       {...props}
     >
-      {icon ? <Icon name={icon} size={iconSize} stroke={2} /> : null}
+      {icon ? <Icon name={icon} size={iconSize} stroke="medium" /> : null}
       {children}
     </button>
   );

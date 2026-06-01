@@ -2,16 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Button,
-  EmptyState,
-  EntityFormModal,
-  HudPanel,
-  Icon,
-  Chip,
-  SectionLabel,
-  type Pipeline,
-} from "@zibby/design-system";
+import { Button, Icon, Chip, type Pipeline } from "@zibby/design-system";
+import { SectionLabel } from "./components/SectionLabel";
+import { HudPanel } from "./components/HudPanel";
+import { EntityFormModal } from "./components/EntityFormModal";
+import { EmptyState } from "./components/EmptyState";
 import { PhaseChain } from "../pipelines/components/PhaseChain";
 import { PipelineCard } from "../pipelines/components/PipelineCard";
 import { PipelineRunModal } from "../pipelines/components/PipelineRunModal";
@@ -98,7 +93,7 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
                 </div>
                 <span className="mt-1.5 block font-mono text-caption text-foreground-dim">{selected.desc}</span>
                 <div className="mt-2.5 flex items-center gap-1.5">
-                  <Icon name="file" size={12} className="text-foreground-faint" />
+                  <Icon name="file" size="xs" className="text-foreground-faint" />
                   <span className="font-mono text-sm text-foreground-faint">{selected.file}</span>
                 </div>
               </div>
@@ -110,7 +105,7 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-border pt-4">
               <div className="flex items-center gap-2">
-                <Icon name="dollar" size={16} className="text-accent" />
+                <Icon name="dollar" size="md" className="text-accent" />
                 <div>
                   <span className="block font-mono text-2xs tracking-wider text-foreground-faint">STROP PIPELINE</span>
                   <span className="font-mono text-xl font-bold text-foreground">${selected.budget}</span>
@@ -118,7 +113,7 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="flex items-center gap-2">
-                <Icon name="branch" size={16} className="text-foreground-dim" />
+                <Icon name="branch" size="md" className="text-foreground-dim" />
                 <span className="font-mono text-caption text-foreground-dim">výstup → izolovaná branch · PR k ranní review</span>
               </div>
             </div>

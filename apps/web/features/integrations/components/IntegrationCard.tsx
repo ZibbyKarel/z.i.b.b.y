@@ -34,14 +34,14 @@ export function IntegrationCard({ integration, onConfigure, onTest, className }:
   return (
     <div
       className={cn(
-        "group relative rounded-sm border border-border bg-panel p-3.5 transition-all hover:border-accent/35 hover:bg-panel-hi",
+        "group relative rounded-sm border border-border bg-elevated p-3.5 transition-all hover:border-accent/35 hover:bg-raised",
         className,
       )}
     >
-      <Corners inset={5} />
+      <Corners inset="75" />
       <div className="flex items-start gap-3">
         <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-sm border border-accent/20 bg-accent-dim text-accent">
-          <Icon name={integration.glyph} size={17} />
+          <Icon name={integration.glyph} size="md" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate font-mono text-md font-semibold text-foreground">
@@ -52,7 +52,7 @@ export function IntegrationCard({ integration, onConfigure, onTest, className }:
           </div>
         </div>
         <Chip tone={pillTone[integration.status]}>
-          <StatusDot tone={sm.tone} size={5} />
+          <StatusDot tone={sm.tone} size="75" />
           {sm.label}
         </Chip>
       </div>

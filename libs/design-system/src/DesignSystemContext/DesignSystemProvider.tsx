@@ -7,10 +7,10 @@ import {
   useMemo,
 } from "react";
 import {
-  mergeTokens,
+  mergeTheme,
   tokensToCssVars,
-  type DesignTokens,
-  type PartialDesignTokens,
+  type Theme,
+  type PartialTheme,
 } from "../tokens";
 import { tokensForTheme } from "./themeRegistry";
 
@@ -18,7 +18,7 @@ import { tokensForTheme } from "./themeRegistry";
 // Context
 // ---------------------------------------------------------------------------
 
-export const DesignSystemTokenContext = createContext<DesignTokens | null>(null);
+export const DesignSystemTokenContext = createContext<Theme | null>(null);
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -27,7 +27,7 @@ export const DesignSystemTokenContext = createContext<DesignTokens | null>(null)
 export interface DesignSystemProviderProps {
   theme?: "dark" | "light";
   /** Partial token overrides — use contextTokens(context) for accent switching. */
-  tokens?: PartialDesignTokens;
+  tokens?: PartialTheme;
   layout?: "block" | "flex";
   style?: CSSProperties;
   className?: string;
@@ -35,8 +35,8 @@ export interface DesignSystemProviderProps {
 }
 
 /**
- * Wraps children in a design-system root div. Injects all token values as CSS
- * custom properties and makes the merged token set available via Context hooks.
+ * Wraps children in a design-system root div. Injects all theme values as CSS
+ * custom properties and makes the merged Theme available via Context hooks.
  *
  * - Sets `data-theme` so the Tailwind `dark:` variant works via @custom-variant.
  * - `h-full` is load-bearing: the dashboard shell relies on a full-height chain.
@@ -52,7 +52,7 @@ export function DesignSystemProvider({
 }: DesignSystemProviderProps) {
   const merged = useMemo(
     () =>
-      override ? mergeTokens(tokensForTheme(theme), override) : tokensForTheme(theme),
+      override ? mergeTheme(tokensForTheme(theme), override) : tokensForTheme(theme),
     [theme, override],
   );
 

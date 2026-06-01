@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
-import { List, TopBar } from "@zibby/design-system";
+import { List } from "@zibby/design-system";
 import type { ListItem, LinkComponentType } from "@zibby/design-system";
 import type { ContextName } from "@zibby/design-system";
+import { TopBar } from "./TopBar";
 import { BrandLogo } from "./BrandLogo";
 
 const gridOverlay: CSSProperties = {
@@ -48,7 +49,7 @@ export function MainLayout({
   children,
 }: MainLayoutProps) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-surface-1 font-sans text-foreground">
+    <div className="relative h-full w-full overflow-hidden bg-surface font-sans text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-35"
@@ -62,7 +63,7 @@ export function MainLayout({
       <div className="relative z-[1] flex h-full">
         <nav
           aria-label="Main navigation"
-          className="flex w-56 shrink-0 flex-col border-r border-border bg-surface-0 px-3.5 py-6"
+          className="flex w-56 shrink-0 flex-col border-r border-border bg-background px-3.5 py-6"
         >
           <BrandLogo />
           <List

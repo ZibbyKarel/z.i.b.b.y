@@ -74,11 +74,11 @@ export function PipelineRunModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90%] w-[580px] max-w-full animate-scale-in overflow-auto rounded-md border border-border-hi bg-panel-hi shadow-modal"
+        className="max-h-[90%] w-[580px] max-w-full animate-scale-in overflow-auto rounded-md border border-border-strong bg-raised shadow-modal"
       >
         <div className="flex items-center gap-3 border-b border-border px-5 py-5">
           <div className="grid h-9 w-9 place-items-center rounded-sm border border-accent/30 bg-accent-dim text-accent">
-            <Icon name="flow" size={19} />
+            <Icon name="flow" size="lg" />
           </div>
           <div className="flex-1">
             <div className="font-mono text-xl font-bold text-foreground">
@@ -94,7 +94,7 @@ export function PipelineRunModal({
             onClick={onClose}
             className="flex p-1 text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <Icon name="x" size={18} />
+            <Icon name="x" size="md" />
           </button>
         </div>
 
@@ -112,7 +112,7 @@ export function PipelineRunModal({
               onChange={(e) => setPrompt(e.target.value)}
               autoFocus
               placeholder={`Co má pipeline „${pipeline.name}" udělat…`}
-              className="mt-2 min-h-[84px] w-full resize-y rounded border border-border bg-surface-0 px-3.5 py-3 font-sans text-md leading-relaxed text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="mt-2 min-h-[84px] w-full resize-y rounded border border-border bg-background px-3.5 py-3 font-sans text-md leading-relaxed text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent"
             />
 
             <div className="mt-4 grid grid-cols-2 gap-5">
@@ -179,7 +179,7 @@ export function PipelineRunModal({
                 >
                   <Icon
                     name={glyphForAgent(ph.agent, agents)}
-                    size={14}
+                    size="sm"
                     className="text-accent"
                   />
                   <span className="flex-1 font-mono text-caption text-foreground">{ph.agent}</span>
@@ -225,7 +225,7 @@ export function PipelineRunModal({
         ) : (
           <div className="px-5 pb-6 pt-8 text-center">
             <div className="mx-auto grid h-[52px] w-[52px] place-items-center rounded-full border-[1.5px] border-accent text-accent shadow-glow-accent">
-              <Icon name="flow" size={22} />
+              <Icon name="flow" size="lg" />
             </div>
             <div className="mt-4 text-xl font-semibold text-foreground">
               Pipeline spuštěna na pozadí

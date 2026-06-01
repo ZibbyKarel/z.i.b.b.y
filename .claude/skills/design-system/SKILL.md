@@ -37,28 +37,73 @@ Each component lives in its own folder. Test and story files sit next to the com
 
 ## Design tokens
 
-Tokens are **TypeScript objects** (`tokens.ts`, `themes/`). `DesignSystemProvider` injects them
-as inline CSS custom properties via `tokensToCssVars()`. Tailwind `@theme` in `globals.css`
-maps Tailwind utility classes to those same CSS vars.
+The `Theme` interface in `tokens.ts` is the **single source of visual truth** — a flat object
+with descriptive property names (`colorForeground`, `colorBorderStrong`, `radiusSm`, …).
+
+`DesignSystemProvider` injects all `Theme` values as CSS custom properties via `tokensToCssVars()`.
+Tailwind `@theme` in `globals.css` maps Tailwind utility classes to those same CSS vars.
+
+**TS theme property → CSS var → Tailwind class:**
+- `colorForeground`      → `--color-foreground`      → `text-foreground`
+- `colorForegroundDim`   → `--color-foreground-dim`   → `text-foreground-dim`
+- `colorForegroundFaint` → `--color-foreground-faint` → `text-foreground-faint`
+- `colorBackground`      → `--color-background`       → `bg-background`
+- `colorSurface`         → `--color-surface`          → `bg-surface`
+- `colorElevated`        → `--color-elevated`         → `bg-elevated`
+- `colorRaised`          → `--color-raised`           → `bg-raised`
+- `colorBorder`          → `--color-border`           → `border-border`
+- `colorBorderStrong`    → `--color-border-strong`    → `border-border-strong`
+- `colorAccent`          → `--color-accent`           → `text-accent` / `bg-accent`
+- `colorAccentDim`       → `--color-accent-dim`       → `bg-accent-dim`
+- `colorAccentContrast`  → `--color-accent-contrast`  → `text-accent-contrast`
+- `colorHome` / `colorWork` → `--color-home/work`     → `text-home` / `text-work`
+- `colorOk/Warn/Danger`  → `--color-ok/warn/bad`      → `text-ok` / `bg-ok` / `bg-ok/12` …
+- `shadowGlowAccent`     → `--shadow-glow-accent`     → `shadow-glow-accent`
+- `radiusDefault`        → `--radius`                 → `rounded`
+- `radiusSm`             → `--radius-sm`              → `rounded-sm`
 
 ```ts
 type Spacing =
-  | "0"
-  | "25"
-  | "50"
-  | "75"
-  | "100"
-  | "150"
-  | "200"
-  | "250"
-  | "300"
-  | "350"
-  | "400"
-  | "450"
-  | "500";
-type ColorTokens = { text; bg; border; accent; surface };
-type DesignTokens = { color: ColorTokens; size: SizeTokens; font: FontTokens };
+  | "0"   // 0px
+  | "25"  // 2px
+  | "50"  // 4px
+  | "75"  // 6px
+  | "100" // 8px
+  | "150" // 12px
+  | "200" // 16px
+  | "250" // 20px
+  | "300" // 24px
+  | "350" // 28px
+  | "400" // 32px
+  | "450" // 36px
+  | "500"; // 40px
+
+type Padding = Spacing | [Spacing, Spacing] | [Spacing, Spacing, Spacing, Spacing];
+
+type Size = "xs" | "sm" | "md" | "lg" | "xl";  // semantic T-shirt sizes
+
+type IconStroke = "thin" | "default" | "medium" | "bold"; // 1.2 / 1.6 / 2 / 2.4
+type DialogWidth = "sm" | "md" | "lg" | "xl";            // 360 / 460 / 600 / 800px
 ```
+
+### Sealed component sizing — no raw px in public props
+
+All DS component props that control visual size use semantic tokens, never raw numbers or px strings.
+
+| Prop | Type | Component |
+|------|------|-----------|
+| `size` | `Size` | `Icon` — xs=12, sm=14, md=16, lg=20, xl=24 |
+| `stroke` | `IconStroke` | `Icon` — thin/default/medium/bold |
+| `size` | `Spacing` | `StatusDot` — diameter token, default "100" (8px) |
+| `height` | `Spacing` | `Progress` — track height token, default "75" (6px) |
+| `inset` | `Spacing` | `Corners` — corner bracket offset, default "75" (6px) |
+| `padding` | `Padding` | `CardContent` — content padding, default "200" (16px) |
+| `padding` | `Padding` | `Container` — accepts Spacing token(s) only |
+| `width` | `DialogWidth` | `Dialog` — sm/md/lg/xl preset widths |
+
+**No `paddingX` / `paddingY` props on `Container`** — use `padding={["0", "200"]}` (CSS [y, x] shorthand) or `padding={["t", "r", "b", "l"]}` (4-value shorthand).
+
+`Icon` omits `width`, `height`, and `strokeWidth` from SVG spread to prevent raw px overrides.
 
 ### Themes and context
 
@@ -81,24 +126,15 @@ type DesignTokens = { color: ColorTokens; size: SizeTokens; font: FontTokens };
 ### Hooks
 
 ```ts
-useTokens()       → DesignTokens
-useTextColors()   → ColorTokens["text"]
-useAccentColors() → ColorTokens["accent"]
-useSizeTokens()   → SizeTokens
-useFontTokens()   → FontTokens
+useTokens()   → Theme   // raw JS access — only for SVG attrs, canvas drawing
+useSpacing()  → string  // px value for a Spacing token
 ```
 
-### Surface layer (inline styling in components)
+**Do NOT use `useTokens()` in components for styling.** Use Tailwind classes instead.
+The `Theme` object is available in context for the rare case where a raw JS value is needed
+(e.g. SVG `fill=` attribute, canvas drawing).
 
-```ts
-// src/visualStyles.ts — pure functions, no hooks
-bgValue(bg, tokens)             → string
-borderColorValue(tone, tokens)  → string
-radiusValue(radius, tokens)     → string
-computeVisualStyle(props, tokens) → CSSProperties
-```
-
-Never hardcode token values — always use `useTokens()` or `var(--)`.
+Never hardcode token values — always use Tailwind classes or `var(--)`.
 
 ---
 
@@ -136,6 +172,7 @@ type ComponentProps = React.ComponentPropsWithoutRef<"button"> &
 ```
 
 Tailwind classes belong **only here** — the DS is sealed; no `className` overrides from outside.
+`className` is **Omitted from every DS component's public Props type.** Use typed variants/props instead.
 
 ### Variant maps (for non-CVA cases)
 
@@ -154,11 +191,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 const button = cva("...", { variants: { intent: {...}, size: {...} } })
 
-export type ButtonProps = React.ComponentPropsWithoutRef<"button"> &
+export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className"> &
   VariantProps<typeof button>
 
 // React 19 — ref as a regular prop, NO forwardRef
-export function Button({ intent, size, ref, className, ...props }: ButtonProps & {
+export function Button({ intent, size, ref, ...props }: ButtonProps & {
   ref?: React.Ref<HTMLButtonElement>
 }) {
   return <button ref={ref} className={button({ intent, size })} {...props} />
@@ -204,6 +241,9 @@ import { Text } from "../Text/Text"
 ```
 
 Good candidates to reach for: `Stack`, `Row`, `Container`, `Text`, `Heading`, `Icon`, `Card`, `Badge`, `Divider`, `Spacer`.
+
+`Corners` has a `tone` prop: `"accent" | "bad" | "ok" | "warn"` (default `"accent"`).
+`Chip` has a `size` prop: `"sm"` (default, compact) or `"md"` (larger, for labels/context tags).
 
 Full list: `Text`, `Heading`, `Divider`, `Badge`, `Chip`, `Kbd`, `Alert`, `Card`
 (`CardHeader`/`CardContent`/`CardFooter`/`CardActions`), `Dialog` (`DialogBody`),
@@ -366,3 +406,6 @@ Always export the Props type too — consumers in `apps/` need it for typing.
 - Add per-icon tests or per-icon stories
 - Add query hooks to `libs/` without a clear sharing reason
 - Create UI primitives in the app when they can be added to DS (decide explicitly first)
+- **Accept `className` in DS component Props** — DS is sealed; all styling is via typed variants/props. Every Props type must `Omit<..., "className">` (or exclude it from a custom interface). App code may never pass `className` to a DS component.
+- **Expose raw px values in component props** — use `Size`, `Spacing`, `Padding`, `IconStroke`, `DialogWidth` instead of `number` or `string`. This keeps sizing at the semantic/token level; users pick from preselected options.
+- **Add `paddingX` / `paddingY` props** — use `padding={[y, x]}` (2-tuple) or `padding={[t, r, b, l]}` (4-tuple) instead.

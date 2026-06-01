@@ -34,7 +34,7 @@ export function AgentRow({ agent, onStop, className }: AgentRowProps) {
         <div className="mt-0.5 truncate text-caption text-foreground-dim">{agent.prompt}</div>
         <div className="mt-2 flex items-center gap-2.5">
           <div className="flex-1">
-            <Progress value={agent.pct} tone="accent" height={4} glow label={`postup ${agent.skill}`} />
+            <Progress value={agent.pct} tone="accent" height="50" glow label={`postup ${agent.skill}`} />
           </div>
           <span className="font-mono text-sm font-semibold text-accent">{agent.pct}%</span>
         </div>
@@ -45,7 +45,7 @@ export function AgentRow({ agent, onStop, className }: AgentRowProps) {
         onClick={() => onStop?.(agent)}
         className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <Icon name="stop" size={12} />
+        <Icon name="stop" size="xs" />
       </button>
     </div>
   );

@@ -1,9 +1,10 @@
 /**
  * z.i.b.b.y design token system.
  *
- * TypeScript types + token objects are the single source of visual truth.
- * The DesignSystemProvider translates these into inline CSS custom properties;
- * globals.css @theme maps Tailwind utility namespaces onto those same vars.
+ * `Theme` is the single source of visual truth. `DesignSystemProvider` injects
+ * all theme values as CSS custom properties; globals.css `@theme` maps Tailwind
+ * utility classes onto those same vars. Components use only Tailwind classes —
+ * `useTokens()` is available for the rare JS/SVG cases that need raw values.
  */
 
 // ---------------------------------------------------------------------------
@@ -62,191 +63,152 @@ export function resolvePadding(
 }
 
 // ---------------------------------------------------------------------------
-// Color tokens
+// Theme
 // ---------------------------------------------------------------------------
 
-export interface ColorTokens {
-  text: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-    muted: string;
-  };
-  bg: {
-    canvas: string;
-    surface: string;
-    elevated: string;
-    raised: string;
-    hover: string;
-  };
-  border: {
-    default: string;
-    strong: string;
-  };
-  /**
-   * Semantic accent palette. `amber` = home accent, `sky` = work accent.
-   * The active accent is selected by `contextTokens(context)` override.
-   */
-  accent: {
-    /** Active context accent (default: amber/home). */
-    active: string;
-    /** Dimmed accent surface (e.g. bg-accent-dim). */
-    activeDim: string;
-    /** Contrast color on accent background. */
-    activeContrast: string;
-    /** Glow color for accent box-shadow. */
-    activeGlow: string;
-    /** Home context accent (amber). */
-    amber: string;
-    /** Work context accent (sky/blue). */
-    sky: string;
-    /** Success / ok. */
-    emerald: string;
-    /** Danger / error. */
-    rose: string;
-    /** Warning (shares amber). */
-    warn: string;
-    /** Opus model badge. */
-    violet: string;
-    /** Sonnet model badge. */
-    cyan: string;
-    /** Haiku model badge. */
-    green: string;
-  };
-  surface: {
-    accentSoft: string;
-    accentRing: string;
-  };
-}
+/**
+ * Flat theme object — all visual tokens in one place.
+ *
+ * Property names describe what the token IS (colorBorderStrong, radiusSm…).
+ * `tokensToCssVars()` maps these to CSS custom property names consumed by
+ * Tailwind utilities (bg-background, border-border-strong, rounded-sm…).
+ */
+export interface Theme {
+  // ---- Backgrounds -------------------------------------------------------
+  /** Deepest layer — page canvas / app shell background. */
+  colorBackground: string;
+  /** Default panel/card surface. */
+  colorSurface: string;
+  /** Elevated panel (one step above surface). */
+  colorElevated: string;
+  /** Raised panel (highest panel layer). */
+  colorRaised: string;
+  /** Interactive element hover background. */
+  colorHover: string;
 
-// ---------------------------------------------------------------------------
-// Size tokens
-// ---------------------------------------------------------------------------
+  // ---- Foreground / text -------------------------------------------------
+  /** Primary text. */
+  colorForeground: string;
+  /** Secondary / dimmed text. */
+  colorForegroundDim: string;
+  /** Muted / disabled text. */
+  colorForegroundFaint: string;
 
-export interface SizeTokens {
-  radius: string;
+  // ---- Borders -----------------------------------------------------------
+  /** Default hairline border. */
+  colorBorder: string;
+  /** Strong / prominent border. */
+  colorBorderStrong: string;
+
+  // ---- Context accent (home=amber, work=sky — switched at runtime) -------
+  /** Active context accent color. */
+  colorAccent: string;
+  /** Low-opacity accent surface (badge bg, icon bg…). */
+  colorAccentDim: string;
+  /** Text color on solid accent backgrounds. */
+  colorAccentContrast: string;
+  /** Glow color used in accent box-shadows. */
+  colorAccentGlow: string;
+
+  // ---- Named accents -----------------------------------------------------
+  /** Home context accent (amber). */
+  colorHome: string;
+  /** Work context accent / running-state color (sky). */
+  colorWork: string;
+
+  // ---- Semantic status ---------------------------------------------------
+  colorOk: string;
+  colorWarn: string;
+  colorDanger: string;
+
+  // ---- Model / thinking badges -------------------------------------------
+  colorModelOpus: string;
+  colorModelSonnet: string;
+  colorModelHaiku: string;
+  colorThinkHigh: string;
+  colorThinkMedium: string;
+  colorThinkLow: string;
+
+  // ---- Border radii ------------------------------------------------------
+  radiusDefault: string;
   radiusSm: string;
   radiusMd: string;
   radiusLg: string;
   radiusFull: string;
-  shadowSm: string;
-  shadowLg: string;
+
+  // ---- Shadows -----------------------------------------------------------
   shadowCard: string;
   shadowModal: string;
-  shadowGlow: string;
+  /** Accent glow box-shadow (color changes with context). */
+  shadowGlowAccent: string;
+
+  // ---- Fonts -------------------------------------------------------------
+  fontSans: string;
+  fontMono: string;
 }
 
-// ---------------------------------------------------------------------------
-// Font tokens
-// ---------------------------------------------------------------------------
+export type PartialTheme = Partial<Theme>;
 
-export interface FontTokens {
-  sans: string;
-  mono: string;
-}
-
-// ---------------------------------------------------------------------------
-// Composed DesignTokens
-// ---------------------------------------------------------------------------
-
-export interface DesignTokens {
-  color: ColorTokens;
-  size: SizeTokens;
-  font: FontTokens;
-}
-
-export type PartialDesignTokens = {
-  color?: Partial<{
-    text: Partial<ColorTokens["text"]>;
-    bg: Partial<ColorTokens["bg"]>;
-    border: Partial<ColorTokens["border"]>;
-    accent: Partial<ColorTokens["accent"]>;
-    surface: Partial<ColorTokens["surface"]>;
-  }>;
-  size?: Partial<SizeTokens>;
-  font?: Partial<FontTokens>;
-};
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-
-/** Deep-merge a partial token override onto a base token set. */
-export function mergeTokens(
-  base: DesignTokens,
-  override: PartialDesignTokens,
-): DesignTokens {
-  return {
-    color: {
-      text: { ...base.color.text, ...override.color?.text },
-      bg: { ...base.color.bg, ...override.color?.bg },
-      border: { ...base.color.border, ...override.color?.border },
-      accent: { ...base.color.accent, ...override.color?.accent },
-      surface: { ...base.color.surface, ...override.color?.surface },
-    },
-    size: { ...base.size, ...override.size },
-    font: { ...base.font, ...override.font },
-  };
+/** Deep-merge a partial theme override onto a base theme. */
+export function mergeTheme(base: Theme, override: PartialTheme): Theme {
+  return { ...base, ...override };
 }
 
 /**
- * Flatten a DesignTokens object into a flat Record of CSS custom property
- * names → values. These are injected as inline `style` by DesignSystemProvider.
+ * Flatten a Theme into a Record of CSS custom property names → values.
+ * These are injected as inline `style` by DesignSystemProvider.
  *
- * Naming convention: `--<group>-<key>` (e.g. `--text-primary`, `--bg-canvas`,
- * `--accent-active`, `--radius`, `--font-sans`).
+ * CSS var naming: `--color-*` for Tailwind color tokens, `--radius-*` for
+ * radius tokens, `--shadow-*` for shadow tokens, `--font-*` for font tokens.
+ * Tailwind generates matching utilities (bg-background, border-border, …).
  */
-export function tokensToCssVars(
-  t: DesignTokens,
-): Record<string, string> {
+export function tokensToCssVars(t: Theme): Record<string, string> {
   return {
-    // text
-    "--text-primary": t.color.text.primary,
-    "--text-secondary": t.color.text.secondary,
-    "--text-tertiary": t.color.text.tertiary,
-    "--text-muted": t.color.text.muted,
-    // bg
-    "--bg-canvas": t.color.bg.canvas,
-    "--bg-surface": t.color.bg.surface,
-    "--bg-elevated": t.color.bg.elevated,
-    "--bg-raised": t.color.bg.raised,
-    "--bg-hover": t.color.bg.hover,
-    // border
-    "--border-default": t.color.border.default,
-    "--border-strong": t.color.border.strong,
-    // accent (active context)
-    "--accent": t.color.accent.active,
-    "--accent-dim": t.color.accent.activeDim,
-    "--accent-contrast": t.color.accent.activeContrast,
-    "--accent-glow": t.color.accent.activeGlow,
-    // accent named
-    "--accent-amber": t.color.accent.amber,
-    "--accent-sky": t.color.accent.sky,
-    "--accent-emerald": t.color.accent.emerald,
-    "--accent-rose": t.color.accent.rose,
-    "--accent-warn": t.color.accent.warn,
-    "--accent-violet": t.color.accent.violet,
-    "--accent-cyan": t.color.accent.cyan,
-    "--accent-green": t.color.accent.green,
-    // surface
-    "--surface-accent-soft": t.color.surface.accentSoft,
-    "--surface-accent-ring": t.color.surface.accentRing,
-    // size
-    "--radius": t.size.radius,
-    "--radius-sm": t.size.radiusSm,
-    "--radius-md": t.size.radiusMd,
-    "--radius-lg": t.size.radiusLg,
-    "--radius-full": t.size.radiusFull,
-    "--shadow-sm": t.size.shadowSm,
-    "--shadow-lg": t.size.shadowLg,
-    "--shadow-card": t.size.shadowCard,
-    "--shadow-modal": t.size.shadowModal,
-    "--shadow-glow": t.size.shadowGlow,
-    // font
-    "--font-sans": t.font.sans,
-    "--font-mono": t.font.mono,
+    // backgrounds
+    "--color-background":        t.colorBackground,
+    "--color-surface":           t.colorSurface,
+    "--color-elevated":          t.colorElevated,
+    "--color-raised":            t.colorRaised,
+    "--color-hover":             t.colorHover,
+    // foreground
+    "--color-foreground":        t.colorForeground,
+    "--color-foreground-dim":    t.colorForegroundDim,
+    "--color-foreground-faint":  t.colorForegroundFaint,
+    // borders
+    "--color-border":            t.colorBorder,
+    "--color-border-strong":     t.colorBorderStrong,
+    // accent
+    "--color-accent":            t.colorAccent,
+    "--color-accent-dim":        t.colorAccentDim,
+    "--color-accent-contrast":   t.colorAccentContrast,
+    "--color-accent-glow":       t.colorAccentGlow,
+    // named accents
+    "--color-home":              t.colorHome,
+    "--color-work":              t.colorWork,
+    // status
+    "--color-ok":                t.colorOk,
+    "--color-warn":              t.colorWarn,
+    "--color-bad":               t.colorDanger,
+    // model badges
+    "--color-model-opus":        t.colorModelOpus,
+    "--color-model-sonnet":      t.colorModelSonnet,
+    "--color-model-haiku":       t.colorModelHaiku,
+    // think levels
+    "--color-think-high":        t.colorThinkHigh,
+    "--color-think-medium":      t.colorThinkMedium,
+    "--color-think-low":         t.colorThinkLow,
+    // radius
+    "--radius":                  t.radiusDefault,
+    "--radius-sm":               t.radiusSm,
+    "--radius-md":               t.radiusMd,
+    "--radius-lg":               t.radiusLg,
+    "--radius-full":             t.radiusFull,
+    // shadows
+    "--shadow-card":             t.shadowCard,
+    "--shadow-modal":            t.shadowModal,
+    "--shadow-glow-accent":      t.shadowGlowAccent,
+    // fonts
+    "--font-sans":               t.fontSans,
+    "--font-mono":               t.fontMono,
   };
 }
-
-// NOTE: tokensForTheme, defaultDarkTokens, defaultLightTokens are exported from
-// ./DesignSystemContext/index.ts to avoid a circular dependency (themes → tokens → themes).

@@ -26,7 +26,7 @@ function MiniBar({ label, pct, width }: { label: string; pct: number; width: num
         <span className="font-mono text-xs text-foreground-faint">{label}</span>
         <span className={cn("font-mono text-xs font-bold", toneText[tone])}>{pct}%</span>
       </div>
-      <Progress value={pct} tone={tone} height={4} glow />
+      <Progress value={pct} tone={tone} height="50" glow />
     </div>
   );
 }
@@ -39,7 +39,7 @@ function LimitRow({ d }: { d: QuotaLimit }) {
         <span className="font-mono text-sm tracking-wide text-foreground-dim">{d.label}</span>
         <span className={cn("font-mono text-sm font-semibold", toneText[tone])}>{d.usedPct}%</span>
       </div>
-      <Progress value={d.usedPct} tone={tone} height={5} glow label={d.label} />
+      <Progress value={d.usedPct} tone={tone} height="50" glow label={d.label} />
       <span className="mt-1.5 block font-mono text-xs text-foreground-faint">
         reset {d.resetIn} · {d.tokens}
       </span>
@@ -65,7 +65,7 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
         aria-expanded={open}
         aria-label="Claude Code limits and Agent SDK credit"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-3.5 rounded border border-border bg-surface-0 px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex items-center gap-3.5 rounded border border-border bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <div className="flex items-center gap-2.5">
           <span className="text-right font-mono text-2xs uppercase leading-tight tracking-wider text-foreground-faint">
@@ -74,10 +74,10 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
           <MiniBar label="5h" pct={rolling.usedPct} width={62} />
           <MiniBar label="týden" pct={weekly.usedPct} width={62} />
         </div>
-        <div className="h-7 w-px bg-border-hi" />
+        <div className="h-7 w-px bg-border-strong" />
         <div className="flex items-center gap-2">
           <span className={cn("flex items-center gap-1.5", toneText[sdkTone])}>
-            <Icon name="dollar" size={14} />
+            <Icon name="dollar" size="sm" />
             <span className="font-mono text-2xs uppercase leading-tight tracking-wider text-foreground-faint">
               agent<br />sdk
             </span>
@@ -87,14 +87,14 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
               <span className="font-mono text-caption font-bold text-foreground">${credit.remaining}</span>
               <span className="font-mono text-xs text-foreground-faint">/ ${credit.total}</span>
             </div>
-            <Progress value={credit.usedPct} tone={sdkTone} height={5} glow />
+            <Progress value={credit.usedPct} tone={sdkTone} height="50" glow />
           </div>
         </div>
-        <Icon name="chevron" size={13} className={cn("text-foreground-faint transition-transform", open && "rotate-90")} />
+        <Icon name="chevron" size="sm" className={cn("text-foreground-faint transition-transform", open && "rotate-90")} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[360px] animate-scale-in rounded border border-border-hi bg-panel-hi p-5 shadow-dropdown">
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[360px] animate-scale-in rounded border border-border-strong bg-raised p-5 shadow-dropdown">
           <span className="font-mono text-xs uppercase tracking-widest text-foreground-faint">
             Interaktivní limity · Claude Code
           </span>
@@ -105,7 +105,7 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
           <span className="mt-2.5 block font-mono text-xs text-foreground-faint">
             čerpá tvůj chat · nezávislé na agentech
           </span>
-          <div className="my-4 h-px bg-border-hi" />
+          <div className="my-4 h-px bg-border-strong" />
           <div className="flex items-center justify-between">
             <span className={cn("font-mono text-xs uppercase tracking-widest", toneText[sdkTone])}>
               Agent SDK kredit
@@ -117,7 +117,7 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
             <span className="font-mono text-base text-foreground-dim">zbývá z ${credit.total}</span>
           </div>
           <div className="mt-2.5">
-            <Progress value={credit.usedPct} tone={sdkTone} height={6} glow />
+            <Progress value={credit.usedPct} tone={sdkTone} height="75" glow />
           </div>
           <span className="mt-2 block font-mono text-xs text-foreground-faint">
             spotřebováno ${credit.used} · běhy agentů čerpají odsud

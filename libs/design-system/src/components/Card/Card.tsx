@@ -1,23 +1,56 @@
-"use client";
-import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from "react";
-import { useTokens } from "../../DesignSystemContext/hooks";
-import { computeVisualStyle } from "../../visualStyles";
-import { Corners } from "../HudPanel/HudPanel";
+import type { HTMLAttributes, ReactNode, Ref } from "react";
+import { cn } from "../../lib/cn";
+import { spacingToPx, resolvePadding, type Spacing, type Padding } from "../../tokens";
 
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Surface background. */
+export type CornersTone = "accent" | "bad" | "ok" | "warn";
+
+const cornersToneClass: Record<CornersTone, string> = {
+  accent: "border-accent",
+  bad:    "border-bad",
+  ok:     "border-ok",
+  warn:   "border-warn",
+};
+
+export interface CornersProps {
+  inset?: Spacing;
+  tone?: CornersTone;
+}
+
+export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
+  const px = spacingToPx(inset);
+  const base = cn("pointer-events-none absolute h-3 w-3 opacity-60", cornersToneClass[tone]);
+  return (
+    <>
+      <span className={cn(base, "border-t-[1.5px] border-l-[1.5px]")} style={{ top: px, left: px }} />
+      <span className={cn(base, "border-t-[1.5px] border-r-[1.5px]")} style={{ top: px, right: px }} />
+      <span className={cn(base, "border-b-[1.5px] border-l-[1.5px]")} style={{ bottom: px, left: px }} />
+      <span className={cn(base, "border-b-[1.5px] border-r-[1.5px]")} style={{ bottom: px, right: px }} />
+    </>
+  );
+}
+
+export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   background?: "elevated" | "raised" | "surface";
-  /** Show border. */
   bordered?: boolean;
-  /** Hover/focus interactive style. */
   interactive?: boolean;
   radius?: "none" | "sm" | "default";
-  /** Corner bracket decoration (HUD style). */
   corners?: boolean;
   header?: ReactNode;
   footer?: ReactNode;
   ref?: Ref<HTMLDivElement>;
 }
+
+const bgClasses: Record<NonNullable<CardProps["background"]>, string> = {
+  elevated: "bg-elevated",
+  raised:   "bg-raised",
+  surface:  "bg-surface",
+};
+
+const radiusClasses: Record<NonNullable<CardProps["radius"]>, string> = {
+  none:    "rounded-none",
+  sm:      "rounded-sm",
+  default: "rounded",
+};
 
 export function Card({
   background = "elevated",
@@ -28,40 +61,22 @@ export function Card({
   header,
   footer,
   children,
-  style,
-  className,
   ref,
   ...rest
 }: CardProps) {
-  const tokens = useTokens();
-
-  const bg = {
-    elevated: tokens.color.bg.elevated,
-    raised:   tokens.color.bg.raised,
-    surface:  tokens.color.bg.surface,
-  }[background];
-
-  const visual = computeVisualStyle(
-    {
-      borderColor: bordered ? "default" : undefined,
-      radius: radius,
-    },
-    tokens,
-  );
-
-  const computedStyle: CSSProperties = {
-    position:        "relative",
-    backgroundColor: bg,
-    transition:      interactive ? "border-color 0.15s, background-color 0.15s" : undefined,
-    ...visual,
-    ...style,
-  };
-
-  const classes = ["group", className].filter(Boolean).join(" ");
-
   return (
-    <div {...rest} ref={ref} style={computedStyle} className={classes}>
-      {corners && <Corners inset={5} />}
+    <div
+      {...rest}
+      ref={ref}
+      className={cn(
+        "relative group",
+        bgClasses[background],
+        radiusClasses[radius],
+        bordered && "border border-border",
+        interactive && "transition-colors hover:border-accent/40 hover:bg-raised",
+      )}
+    >
+      {corners && <Corners inset="75" />}
       {header && <CardHeader>{header}</CardHeader>}
       {children}
       {footer && <CardFooter>{footer}</CardFooter>}
@@ -69,56 +84,37 @@ export function Card({
   );
 }
 
-export function CardHeader({ children, className }: { children: ReactNode; className?: string }) {
-  const tokens = useTokens();
+export function CardHeader({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={className}
-      style={{
-        padding:         "12px 14px 10px",
-        borderBottom:    `1px solid ${tokens.color.border.default}`,
-        fontWeight:      600,
-        fontSize:        "0.75rem",
-        fontFamily:      tokens.font.mono,
-        letterSpacing:   "0.04em",
-        color:           tokens.color.text.secondary,
-      }}
-    >
+    <div className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim">
       {children}
     </div>
   );
 }
 
-export function CardContent({ children, className, padding = "14px" }: { children: ReactNode; className?: string; padding?: string }) {
+export function CardContent({
+  children,
+  padding = "200",
+}: {
+  children: ReactNode;
+  padding?: Padding;
+}) {
+  const [t, r, b, l] = resolvePadding(padding).map(spacingToPx);
   return (
-    <div className={className} style={{ padding }}>
+    <div style={{ padding: `${t} ${r} ${b} ${l}` }}>
       {children}
     </div>
   );
 }
 
-export function CardFooter({ children, className }: { children: ReactNode; className?: string }) {
-  const tokens = useTokens();
+export function CardFooter({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={className}
-      style={{
-        padding:      "10px 14px 12px",
-        borderTop:    `1px solid ${tokens.color.border.default}`,
-        display:      "flex",
-        alignItems:   "center",
-        gap:          "8px",
-      }}
-    >
+    <div className="px-[14px] py-[10px] border-t border-border flex items-center gap-2">
       {children}
     </div>
   );
 }
 
-export function CardActions({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <CardFooter className={className}>
-      {children}
-    </CardFooter>
-  );
+export function CardActions({ children }: { children: ReactNode }) {
+  return <CardFooter>{children}</CardFooter>;
 }

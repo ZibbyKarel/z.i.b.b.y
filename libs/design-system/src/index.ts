@@ -13,18 +13,15 @@ export {
   spacingToPx,
   resolvePadding,
   spacingValues,
-  mergeTokens,
+  mergeTheme,
   tokensToCssVars,
 } from "./tokens";
 export type {
   Spacing,
   Padding,
   Size,
-  ColorTokens,
-  SizeTokens,
-  FontTokens,
-  DesignTokens,
-  PartialDesignTokens,
+  Theme,
+  PartialTheme,
 } from "./tokens";
 
 // ---------------------------------------------------------------------------
@@ -41,34 +38,9 @@ export {
 // ---------------------------------------------------------------------------
 export { DesignSystemProvider } from "./DesignSystemContext/DesignSystemProvider";
 export type { DesignSystemProviderProps } from "./DesignSystemContext/DesignSystemProvider";
-export {
-  useTokens,
-  useTextColors,
-  useAccentColors,
-  useSizeTokens,
-  useFontTokens,
-  useSpacing,
-} from "./DesignSystemContext/hooks";
+export { useTokens, useSpacing } from "./DesignSystemContext/hooks";
 export { contextTokens } from "./DesignSystemContext/contextTokens";
 export type { ContextName } from "./DesignSystemContext/contextTokens";
-
-// ---------------------------------------------------------------------------
-// Surface layer
-// ---------------------------------------------------------------------------
-export {
-  bgValue,
-  borderColorValue,
-  radiusValue,
-  shadowValue,
-  computeVisualStyle,
-} from "./visualStyles";
-export type {
-  BgValue,
-  BorderTone,
-  RadiusValue,
-  ShadowValue,
-  VisualStyleProps,
-} from "./visualStyles";
 
 // ---------------------------------------------------------------------------
 // Domain types  (shared contract — stays in DS)
@@ -114,7 +86,7 @@ export type { SpacerProps } from "./components/Spacer";
 // Foundations
 // ---------------------------------------------------------------------------
 export { Icon, iconNames } from "./components/Icon/Icon";
-export type { IconName, IconProps } from "./components/Icon/Icon";
+export type { IconName, IconProps, IconStroke } from "./components/Icon/Icon";
 
 // ---------------------------------------------------------------------------
 // Generic components
@@ -151,23 +123,13 @@ export {
 export type { CardProps } from "./components/Card/Card";
 
 export { Dialog, DialogBody } from "./components/Dialog/Dialog";
-export type { DialogProps } from "./components/Dialog/Dialog";
+export type { DialogProps, DialogWidth } from "./components/Dialog/Dialog";
 
 export { Tabs, TabList, Tab, TabPanel } from "./components/Tabs/Tabs";
 export type { TabsProps, TabProps } from "./components/Tabs/Tabs";
 
-export {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  AccordionItem,
-} from "./components/Accordion/Accordion";
-export type {
-  AccordionProps,
-  AccordionSummaryProps,
-  AccordionDetailsProps,
-  AccordionItemProps,
-} from "./components/Accordion/Accordion";
+export { Accordion } from "./components/Accordion/Accordion";
+export type { AccordionProps, AccordionSection } from "./components/Accordion/Accordion";
 
 export { Button } from "./components/Button/Button";
 export type { ButtonProps } from "./components/Button/Button";
@@ -178,15 +140,9 @@ export type { ProgressProps, ProgressTone } from "./components/Progress/Progress
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { StatusDotProps, DotTone } from "./components/StatusDot/StatusDot";
 
+export { Corners } from "./components/Card/Card";
+export type { CornersProps, CornersTone } from "./components/Card/Card";
 
-export { HudPanel, Corners } from "./components/HudPanel/HudPanel";
-export type {
-  HudPanelProps,
-  CornersProps,
-} from "./components/HudPanel/HudPanel";
-
-export { SectionLabel } from "./components/SectionLabel/SectionLabel";
-export type { SectionLabelProps } from "./components/SectionLabel/SectionLabel";
 
 export { Stat } from "./components/Stat/Stat";
 export type { StatProps, StatTone } from "./components/Stat/Stat";
@@ -194,8 +150,6 @@ export type { StatProps, StatTone } from "./components/Stat/Stat";
 export { Sparkline } from "./components/Sparkline/Sparkline";
 export type { SparklineProps } from "./components/Sparkline/Sparkline";
 
-export { EmptyState } from "./components/EmptyState/EmptyState";
-export type { EmptyStateProps } from "./components/EmptyState/EmptyState";
 
 export {
   TextField,
@@ -211,24 +165,6 @@ export type {
   SelectOption,
 } from "./components/Field/Field";
 
-// ModalShell kept for backward compat — use Dialog for new code
-export { ModalShell } from "./components/ModalShell/ModalShell";
-export type { ModalShellProps } from "./components/ModalShell/ModalShell";
-
-export { EntityFormModal } from "./components/EntityFormModal/EntityFormModal";
-export type {
-  EntityFormModalProps,
-  EntityFormValues,
-  FieldSchema,
-  FieldKind,
-} from "./components/EntityFormModal/EntityFormModal";
-
-// ---------------------------------------------------------------------------
-// Domain composites now live in apps/web/features/<domain>/components/.
-// AgentCard, AgentRow, ApprovalCard, ActivityFeed, IntegrationCard, SkillTile,
-// RunModal, PipelineCard, PipelineRunModal, PhaseChain (+ ModelBadge/ThinkBadge)
-// and LimitsWidget were moved out of the DS — it stays domain-neutral.
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
@@ -239,13 +175,3 @@ export type { ButtonGroupProps, ButtonGroupOption } from "./components/ButtonGro
 export { List } from "./components/List/List";
 export type { ListProps, ListItem, LinkComponentType } from "./components/List/List";
 
-export { TopBar } from "./components/TopBar/TopBar";
-export type { TopBarProps } from "./components/TopBar/TopBar";
-
-// ---------------------------------------------------------------------------
-// Legacy theme exports (for gradual migration)
-// ---------------------------------------------------------------------------
-// contextStyle is no longer needed — use DesignSystemProvider instead.
-// Kept temporarily as a re-export to avoid breaking existing Storybook stories.
-export { contextStyle } from "./theme/context";
-export type { ContextName as LegacyContextName } from "./theme/tokens";

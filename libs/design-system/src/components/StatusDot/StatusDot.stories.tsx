@@ -5,7 +5,7 @@ const meta: Meta<typeof StatusDot> = {
   title: "Components/StatusDot",
   component: StatusDot,
   parameters: { backgrounds: { default: "velin" } },
-  args: { tone: "ok", size: 8, pulse: false },
+  args: { tone: "ok", size: "100", pulse: false },
 }
 export default meta
 

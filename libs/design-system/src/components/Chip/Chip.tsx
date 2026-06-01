@@ -1,6 +1,5 @@
 import type { HTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../../lib/cn";
 
 /**
  * A compact mono tag. Tones cover context, status and the orchestration
@@ -8,7 +7,7 @@ import { cn } from "../../lib/cn";
  */
 const chip = cva(
   "inline-flex items-center gap-1 font-mono text-xs font-semibold " +
-    "rounded-sm border px-2 py-0.5 whitespace-nowrap tracking-wide",
+    "rounded-sm border whitespace-nowrap tracking-wide",
   {
     variants: {
       tone: {
@@ -24,27 +23,31 @@ const chip = cva(
         "think-medium": "text-think-medium border-think-medium/35 bg-think-medium/10",
         "think-low": "text-think-low border-think-low/35 bg-think-low/10",
       },
+      size: {
+        sm: "px-2 py-0.5",
+        md: "px-2.5 py-1.5",
+      },
       solid: { true: "", false: "" },
     },
     compoundVariants: [
       { tone: "accent", solid: true, className: "bg-accent text-accent-contrast" },
-      { tone: "ok", solid: true, className: "bg-ok text-surface-0 border-ok" },
-      { tone: "warn", solid: true, className: "bg-warn text-surface-0 border-warn" },
-      { tone: "bad", solid: true, className: "bg-bad text-surface-0 border-bad" },
+      { tone: "ok", solid: true, className: "bg-ok text-background border-ok" },
+      { tone: "warn", solid: true, className: "bg-warn text-background border-warn" },
+      { tone: "bad", solid: true, className: "bg-bad text-background border-bad" },
     ],
-    defaultVariants: { tone: "neutral", solid: false },
+    defaultVariants: { tone: "neutral", solid: false, size: "sm" },
   },
 );
 
 export interface ChipProps
-  extends HTMLAttributes<HTMLSpanElement>,
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">,
     VariantProps<typeof chip> {
   ref?: React.Ref<HTMLSpanElement>;
 }
 
-export function Chip({ tone, solid, className, children, ref, ...props }: ChipProps) {
+export function Chip({ tone, solid, size, children, ref, ...props }: ChipProps) {
   return (
-    <span ref={ref} className={cn(chip({ tone, solid }), className)} {...props}>
+    <span ref={ref} className={chip({ tone, solid, size })} {...props}>
       {children}
     </span>
   );

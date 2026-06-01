@@ -10,7 +10,7 @@ const labelClass =
   "font-mono text-sm uppercase tracking-wider text-foreground-faint"
 
 const controlClass =
-  "w-full rounded border border-border bg-surface-0 px-3.5 py-2.5 font-sans text-md " +
+  "w-full rounded border border-border bg-background px-3.5 py-2.5 font-sans text-md " +
   "text-foreground outline-none transition-colors placeholder:text-foreground-faint " +
   "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent"
 
@@ -37,24 +37,24 @@ function FieldShell({
 }
 
 export interface TextFieldProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "className"> {
   label: string
   hint?: string
   ref?: React.Ref<HTMLInputElement>
 }
 
 /** Labelled single-line text input. */
-export function TextField({ label, hint, className, ref, ...props }: TextFieldProps) {
+export function TextField({ label, hint, ref, ...props }: TextFieldProps) {
   const id = useId()
   return (
     <FieldShell id={id} label={label} hint={hint}>
-      <input ref={ref} id={id} className={cn(controlClass, className)} {...props} />
+      <input ref={ref} id={id} className={controlClass} {...props} />
     </FieldShell>
   )
 }
 
 export interface TextAreaFieldProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id"> {
+  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id" | "className"> {
   label: string
   hint?: string
   ref?: React.Ref<HTMLTextAreaElement>
@@ -64,7 +64,6 @@ export interface TextAreaFieldProps
 export function TextAreaField({
   label,
   hint,
-  className,
   ref,
   ...props
 }: TextAreaFieldProps) {
@@ -74,7 +73,7 @@ export function TextAreaField({
       <textarea
         ref={ref}
         id={id}
-        className={cn(controlClass, "min-h-20 resize-y leading-relaxed", className)}
+        className={cn(controlClass, "min-h-20 resize-y leading-relaxed")}
         {...props}
       />
     </FieldShell>
@@ -92,7 +91,6 @@ export interface SelectFieldProps {
   value: string
   options: SelectOption[]
   onValueChange: (value: string) => void
-  className?: string
 }
 
 /** Labelled native select. */
@@ -102,7 +100,6 @@ export function SelectField({
   value,
   options,
   onValueChange,
-  className,
 }: SelectFieldProps) {
   const id = useId()
   return (
@@ -111,10 +108,10 @@ export function SelectField({
         id={id}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
-        className={cn(controlClass, "cursor-pointer appearance-none", className)}
+        className={cn(controlClass, "cursor-pointer appearance-none")}
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="bg-surface-0 text-foreground">
+          <option key={o.value} value={o.value} className="bg-background text-foreground">
             {o.label}
           </option>
         ))}

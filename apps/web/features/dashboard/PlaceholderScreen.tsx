@@ -1,5 +1,6 @@
 "use client";
-import { HudPanel, Icon, type IconName } from "@zibby/design-system"
+import { Icon, type IconName } from "@zibby/design-system"
+import { HudPanel } from "./components/HudPanel"
 
 export interface PlaceholderScreenProps {
   label: string
@@ -13,7 +14,7 @@ export function PlaceholderScreen({ label, glyph }: PlaceholderScreenProps) {
       <HudPanel className="p-10">
         <div className="flex flex-col items-center gap-3.5 py-10 text-center">
           <div className="grid h-14 w-14 place-items-center rounded border border-accent/35 bg-[rgba(255,255,255,0.02)] text-accent">
-            <Icon name={glyph} size={26} />
+            <Icon name={glyph} size="xl" />
           </div>
           <div className="text-3xl font-semibold">{label}</div>
           <p className="max-w-md font-mono text-base leading-relaxed text-foreground-dim">

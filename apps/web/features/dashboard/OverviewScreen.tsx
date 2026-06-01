@@ -3,9 +3,6 @@
 import { useState } from "react";
 import {
   Button,
-  EmptyState,
-  EntityFormModal,
-  HudPanel,
   Icon,
   Progress,
   Chip,
@@ -14,6 +11,9 @@ import {
   usageTone,
   type Skill,
 } from "@zibby/design-system";
+import { HudPanel } from "./components/HudPanel";
+import { EntityFormModal } from "./components/EntityFormModal";
+import { EmptyState } from "./components/EmptyState";
 import { SkillTile } from "../skills/components/SkillTile";
 import { RunModal } from "../skills/components/RunModal";
 import { AGENT_SDK, CLAUDE_LIMITS, PROJECTS } from "./config";
@@ -65,7 +65,7 @@ export function OverviewScreen() {
                 </span>
               </div>
             </div>
-            <Chip tone="accent" className="whitespace-nowrap px-2.5 py-1.5">
+            <Chip tone="accent" size="md">
               ctx · {context}
             </Chip>
           </div>
@@ -127,10 +127,10 @@ export function OverviewScreen() {
                   key={s.id}
                   type="button"
                   onClick={() => { /* navigation handled by links */ }}
-                  className="flex items-center gap-3 rounded border border-border bg-surface-0 px-3 py-2.5 text-left outline-none transition-colors hover:border-accent/35 focus-visible:ring-2 focus-visible:ring-accent"
+                  className="flex items-center gap-3 rounded border border-border bg-background px-3 py-2.5 text-left outline-none transition-colors hover:border-accent/35 focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-sm border border-accent/20 bg-accent-dim text-accent">
-                    <Icon name={s.glyph} size={16} />
+                    <Icon name={s.glyph} size="md" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-base font-medium text-foreground">
@@ -142,7 +142,7 @@ export function OverviewScreen() {
                   </span>
                   <Icon
                     name="plus"
-                    size={14}
+                    size="sm"
                     className="text-foreground-faint"
                   />
                 </button>
@@ -225,7 +225,7 @@ export function OverviewScreen() {
             <Progress
               value={AGENT_SDK.usedPct}
               tone={sdkTone}
-              height={6}
+              height="75"
               glow
               label="Agent SDK kredit"
             />
@@ -234,7 +234,7 @@ export function OverviewScreen() {
             běhy agentů čerpají odsud
           </span>
 
-          <div className="my-3.5 h-px bg-border-hi" />
+          <div className="my-3.5 h-px bg-border-strong" />
 
           <span className="block font-mono text-sm tracking-wide text-foreground-faint">
             INTERAKTIVNÍ · CLAUDE CODE
@@ -254,7 +254,7 @@ export function OverviewScreen() {
                 <Progress
                   value={d.usedPct}
                   tone={tone}
-                  height={5}
+                  height="50"
                   glow
                   label={d.label}
                 />

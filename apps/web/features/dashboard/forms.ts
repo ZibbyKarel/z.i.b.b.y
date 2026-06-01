@@ -2,7 +2,7 @@
  * Field schemas + file-path previews for each "+ Přidat …" form. Each entity
  * type reuses the single EntityFormModal; the schema is all that differs.
  */
-import type { EntityFormValues, FieldSchema } from "@zibby/design-system"
+import type { EntityFormValues, FieldSchema } from "./components/EntityFormModal"
 import { CONTEXT_OPTIONS, MODEL_OPTIONS, THINKING_OPTIONS } from "./config"
 
 const slugPreview = (name: string | undefined, fallback = "<název>") =>

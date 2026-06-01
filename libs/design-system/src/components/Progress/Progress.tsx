@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
+import { spacingToPx, type Spacing } from "../../tokens";
 
 export type ProgressTone = "accent" | "ok" | "warn" | "bad";
 
@@ -11,18 +12,18 @@ const toneBar: Record<ProgressTone, string> = {
 };
 
 const toneGlow: Record<ProgressTone, string> = {
-  accent: "shadow-[0_0_10px_var(--zb-accent-glow)]",
+  accent: "shadow-[0_0_10px_var(--color-accent-glow)]",
   ok: "shadow-[0_0_10px_rgba(57,217,138,0.53)]",
   warn: "shadow-[0_0_10px_rgba(240,180,41,0.53)]",
   bad: "shadow-[0_0_10px_rgba(255,107,107,0.53)]",
 };
 
-export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
+export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   /** Fill percentage, 0–100. */
   value: number;
   tone?: ProgressTone;
-  /** Track height in px. */
-  height?: number;
+  /** Track height as a spacing token. */
+  height?: Spacing;
   glow?: boolean;
   /** Accessible label; renders an ARIA progressbar when provided. */
   label?: string;
@@ -33,10 +34,9 @@ export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
 export function Progress({
   value,
   tone = "accent",
-  height = 6,
+  height = "75",
   glow = false,
   label,
-  className,
   ref,
   ...props
 }: ProgressProps) {
@@ -49,11 +49,8 @@ export function Progress({
       aria-valuenow={label ? pct : undefined}
       aria-valuemin={label ? 0 : undefined}
       aria-valuemax={label ? 100 : undefined}
-      className={cn(
-        "relative overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]",
-        className,
-      )}
-      style={{ height }}
+      className="relative overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]"
+      style={{ height: spacingToPx(height) }}
       {...props}
     >
       <div

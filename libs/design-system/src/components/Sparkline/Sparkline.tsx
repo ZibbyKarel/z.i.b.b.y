@@ -1,24 +1,25 @@
 import type { SVGProps } from "react"
 
-export interface SparklineProps extends Omit<SVGProps<SVGSVGElement>, "points"> {
+export interface SparklineProps extends Omit<SVGProps<SVGSVGElement>, "points" | "className" | "width" | "height"> {
   /** Series values. */
   data: number[]
   /** Stroke color (defaults to the active accent). */
   color?: string
-  width?: number
-  height?: number
   ref?: React.Ref<SVGSVGElement>
 }
+
+const VIEW_W = 260;
+const VIEW_H = 40;
 
 /** A tiny filled trend line — used by the Agent SDK 14-day spend widget. */
 export function Sparkline({
   data,
-  color = "rgb(var(--zb-accent))",
-  width = 260,
-  height = 40,
+  color = "var(--color-accent)",
   ref,
   ...props
 }: SparklineProps) {
+  const width = VIEW_W;
+  const height = VIEW_H;
   if (data.length === 0) return null
   const max = Math.max(...data)
   const min = Math.min(...data)

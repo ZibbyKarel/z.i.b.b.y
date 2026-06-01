@@ -1,102 +1,96 @@
 "use client";
-import type { ReactNode, Ref } from "react";
+import type { ReactNode } from "react";
 import { useState } from "react";
-import { useTokens } from "../../DesignSystemContext/hooks";
+import { cn } from "../../lib/cn";
+
+export interface AccordionSection {
+  title: ReactNode;
+  content: ReactNode;
+  defaultExpanded?: boolean;
+}
 
 export interface AccordionProps {
+  sections: AccordionSection[];
+  single?: boolean;
+}
+
+function Summary({
+  children,
+  expanded,
+  onToggle,
+}: {
   children: ReactNode;
-  className?: string;
-}
-
-export function Accordion({ children, className }: AccordionProps) {
-  const tokens = useTokens();
-  return (
-    <div
-      className={className}
-      style={{
-        borderWidth:  "1px",
-        borderStyle:  "solid",
-        borderColor:  tokens.color.border.default,
-        borderRadius: tokens.size.radius,
-        overflow:     "hidden",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-export interface AccordionSummaryProps {
-  children: ReactNode;
-  expanded?: boolean;
-  onToggle?: () => void;
-  className?: string;
-  ref?: Ref<HTMLButtonElement>;
-}
-
-export function AccordionSummary({ children, expanded = false, onToggle, className, ref }: AccordionSummaryProps) {
-  const tokens = useTokens();
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button
-      ref={ref}
-      className={className}
       aria-expanded={expanded}
       onClick={onToggle}
-      style={{
-        display:         "flex",
-        alignItems:      "center",
-        justifyContent:  "space-between",
-        width:           "100%",
-        padding:         "10px 14px",
-        background:      "none",
-        border:          "none",
-        borderBottom:    expanded ? `1px solid ${tokens.color.border.default}` : "none",
-        cursor:          "pointer",
-        fontFamily:      tokens.font.mono,
-        fontWeight:      500,
-        fontSize:        "0.75rem",
-        color:           tokens.color.text.primary,
-        textAlign:       "left",
-      }}
+      className={cn(
+        "flex w-full items-center justify-between px-[14px] py-[10px]",
+        "bg-transparent border-none cursor-pointer font-mono font-medium text-base text-foreground text-left",
+        "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+        expanded && "border-b border-border",
+      )}
     >
       <span>{children}</span>
-      <span style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s", fontSize: "0.625rem" }}>
+      <span
+        className="text-sm transition-transform duration-200"
+        style={{ transform: expanded ? "rotate(180deg)" : "none" }}
+      >
         ▾
       </span>
     </button>
   );
 }
 
-export interface AccordionDetailsProps {
+function Details({
+  children,
+  expanded,
+}: {
   children: ReactNode;
-  expanded?: boolean;
-  className?: string;
-}
-
-export function AccordionDetails({ children, expanded = false, className }: AccordionDetailsProps) {
+  expanded: boolean;
+}) {
   if (!expanded) return null;
+  return <div className="px-[14px] py-3">{children}</div>;
+}
+
+export function Accordion({ sections, single = false }: AccordionProps) {
+  const [expanded, setExpanded] = useState<Set<number>>(() => {
+    const init = new Set<number>();
+    sections.forEach((s, i) => {
+      if (s.defaultExpanded) init.add(i);
+    });
+    return init;
+  });
+
+  function toggle(i: number) {
+    if (single) {
+      setExpanded((prev) => (prev.has(i) ? new Set() : new Set([i])));
+    } else {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.has(i) ? next.delete(i) : next.add(i);
+        return next;
+      });
+    }
+  }
+
   return (
-    <div className={className} style={{ padding: "12px 14px" }}>
-      {children}
+    <div className="border border-border rounded overflow-hidden">
+      {sections.map((section, i) => {
+        const isExpanded = expanded.has(i);
+        const isLast = i === sections.length - 1;
+        return (
+          <div key={i} className={cn(!isLast && "border-b border-border")}>
+            <Summary expanded={isExpanded} onToggle={() => toggle(i)}>
+              {section.title}
+            </Summary>
+            <Details expanded={isExpanded}>{section.content}</Details>
+          </div>
+        );
+      })}
     </div>
-  );
-}
-
-// Convenience single-item accordion that manages own state
-export interface AccordionItemProps {
-  summary: ReactNode;
-  children: ReactNode;
-  defaultExpanded?: boolean;
-}
-
-export function AccordionItem({ summary, children, defaultExpanded = false }: AccordionItemProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  return (
-    <>
-      <AccordionSummary expanded={expanded} onToggle={() => setExpanded((v) => !v)}>
-        {summary}
-      </AccordionSummary>
-      <AccordionDetails expanded={expanded}>{children}</AccordionDetails>
-    </>
   );
 }
