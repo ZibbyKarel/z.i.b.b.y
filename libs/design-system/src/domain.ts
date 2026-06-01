@@ -137,15 +137,6 @@ export interface Integration {
   file: string;
 }
 
-export interface NavItem {
-  id: string;
-  label: string;
-  glyph: IconName;
-  badge?: number;
-  /** Optional URL for link-based navigation (used with linkComponent in Sidebar). */
-  href?: string;
-}
-
 export interface BriefingItem {
   tone: "ok" | "warn" | "bad";
   icon: IconName;

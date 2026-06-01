@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { ContextName } from "../../domain";
+import type { ContextName } from "../../DesignSystemContext/contextTokens";
 import { ContextSwitch } from "./ContextSwitch";
 
 const meta: Meta<typeof ContextSwitch> = {

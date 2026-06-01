@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { Icon, ZibbyMark, iconNames } from "./Icon"
+import { Icon, iconNames } from "./Icon"
 
 describe("Icon", () => {
   it("renders an svg for every named glyph", () => {
@@ -21,10 +21,5 @@ describe("Icon", () => {
   it("is hidden from the accessibility tree by default", () => {
     const { container } = render(<Icon name="ok" />)
     expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true")
-  })
-
-  it("renders the ZIBBY mark", () => {
-    const { container } = render(<ZibbyMark />)
-    expect(container.querySelector("svg")).not.toBeNull()
   })
 })

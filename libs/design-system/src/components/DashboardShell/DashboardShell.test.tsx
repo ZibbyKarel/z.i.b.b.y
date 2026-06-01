@@ -1,40 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { AgentSdkCredit, ClaudeLimits, NavItem } from "../../domain";
+import type { NavItem } from "../Sidebar/Sidebar";
 import { DashboardShell } from "./DashboardShell";
 
 const navItems: NavItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },
   { id: "pipelines", label: "Orchestrace", glyph: "flow" },
 ];
-const limits: ClaudeLimits = {
-  rolling: {
-    label: "5h rolling",
-    short: "5h",
-    usedPct: 64,
-    resetIn: "2h",
-    tokens: "x",
-  },
-  weekly: {
-    label: "Týdenní",
-    short: "týden",
-    usedPct: 38,
-    resetIn: "Po",
-    tokens: "y",
-  },
-};
-const credit: AgentSdkCredit = {
-  label: "Agent SDK kredit",
-  total: 200,
-  used: 72,
-  remaining: 128,
-  usedPct: 36,
-  renew: "1. čer",
-  byAgent: [],
-  byPipeline: [],
-  byContext: [["work", 57]],
-  trend: [1, 2, 3],
-};
 
 describe("DashboardShell", () => {
   it("renders chrome and content together", () => {
@@ -46,14 +18,13 @@ describe("DashboardShell", () => {
         activeNav="overview"
         onNavigate={() => {}}
         breadcrumb="Přehled"
-        limits={limits}
-        credit={credit}
+        walletSlot={<div>wallet</div>}
       >
         <div>tělo dashboardu</div>
       </DashboardShell>,
     );
     expect(
-      screen.getByRole("navigation", { name: "Hlavní navigace" }),
+      screen.getByRole("navigation", { name: "Main navigation" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("group", { name: "Přepínač kontextu" }),

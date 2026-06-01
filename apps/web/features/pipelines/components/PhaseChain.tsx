@@ -3,13 +3,41 @@ import {
   cn,
   Icon,
   Pill,
-  ModelBadge,
-  ThinkBadge,
   glyphForAgent,
   type AgentDef,
   type Pipeline,
   type PipelinePhase,
 } from "@zibby/design-system";
+
+const modelTone = {
+  opus: "opus",
+  sonnet: "sonnet",
+  haiku: "haiku",
+} as const;
+
+const thinkTone = {
+  high: "think-high",
+  medium: "think-medium",
+  low: "think-low",
+} as const;
+
+/** Per-run model badge (opus / sonnet / haiku). */
+export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
+  return (
+    <Pill tone={modelTone[model]} title="model (override per-run)">
+      {model}
+    </Pill>
+  );
+}
+
+/** Thinking-level badge (high / medium / low). */
+export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
+  return (
+    <Pill tone={thinkTone[level]} title="thinking level">
+      ◇ {level}
+    </Pill>
+  );
+}
 
 function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: AgentDef[]; idx: number; active: boolean }) {
   return (

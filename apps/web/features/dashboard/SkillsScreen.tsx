@@ -5,11 +5,11 @@ import {
   Button,
   EmptyState,
   EntityFormModal,
-  RunModal,
   SectionLabel,
   type Skill,
 } from "@zibby/design-system";
 import { SkillTile } from "../skills/components/SkillTile";
+import { RunModal } from "../skills/components/RunModal";
 import { PROJECTS } from "./config";
 import { SKILL_FORM } from "./forms";
 import { useDashboardStore } from "./store";

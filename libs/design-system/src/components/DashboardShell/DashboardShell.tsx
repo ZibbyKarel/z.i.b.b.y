@@ -1,12 +1,8 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { cn } from "../../lib/cn";
-import type {
-  AgentSdkCredit,
-  ClaudeLimits,
-  ContextName,
-  NavItem,
-} from "../../domain";
+import type { ContextName } from "../../DesignSystemContext/contextTokens";
 import { Sidebar } from "../Sidebar/Sidebar";
+import type { NavItem } from "../Sidebar/Sidebar";
 import { TopBar } from "../TopBar/TopBar";
 
 const gridOverlay: CSSProperties = {
@@ -40,8 +36,8 @@ export interface DashboardShellProps {
   onNavigate: (id: string) => void;
   footerItem?: NavItem;
   breadcrumb: string;
-  limits: ClaudeLimits;
-  credit: AgentSdkCredit;
+  /** Right-aligned top-bar slot — the app injects its domain wallet/limits widget. */
+  walletSlot?: ReactNode;
   onCommand?: () => void;
   /** Optional link component for router-based nav (e.g. Next.js Link). */
   linkComponent?: LinkComponentType;
@@ -61,8 +57,7 @@ export function DashboardShell({
   onNavigate,
   footerItem,
   breadcrumb,
-  limits,
-  credit,
+  walletSlot,
   onCommand,
   linkComponent,
   children,
@@ -93,8 +88,7 @@ export function DashboardShell({
             context={context}
             onContextChange={onContextChange}
             breadcrumb={breadcrumb}
-            limits={limits}
-            credit={credit}
+            walletSlot={walletSlot}
             onCommand={onCommand}
           />
           <div className="relative flex-1 overflow-auto px-7 py-6">

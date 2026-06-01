@@ -1,8 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { NavItem } from "../../domain"
-import { Sidebar } from "./Sidebar"
+import { Sidebar, type NavItem } from "./Sidebar"
 
 const items: NavItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },

@@ -18,6 +18,7 @@ import {
 } from "./config";
 import { DashboardStoreProvider } from "./store";
 import { DashboardContext } from "./dashboardContext";
+import { LimitsWidget } from "./components/LimitsWidget";
 
 function pathnameToNavId(pathname: string): string {
   const segment = pathname.split("/").filter(Boolean)[0] ?? "overview";
@@ -65,8 +66,7 @@ function ChromeInner({ children }: { children: ReactNode }) {
         onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, rawCtx))}
         footerItem={footerWithCtx}
         breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
-        limits={CLAUDE_LIMITS}
-        credit={AGENT_SDK}
+        walletSlot={<LimitsWidget limits={CLAUDE_LIMITS} credit={AGENT_SDK} />}
         linkComponent={Link as Parameters<typeof DashboardShell>[0]["linkComponent"]}
       >
         {children}

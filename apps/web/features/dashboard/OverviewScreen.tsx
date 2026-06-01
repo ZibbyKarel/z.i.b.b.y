@@ -9,13 +9,13 @@ import {
   Icon,
   Meter,
   Pill,
-  RunModal,
   Stat,
   StatusDot,
   usageTone,
   type Skill,
 } from "@zibby/design-system";
 import { SkillTile } from "../skills/components/SkillTile";
+import { RunModal } from "../skills/components/RunModal";
 import { AGENT_SDK, CLAUDE_LIMITS, PROJECTS } from "./config";
 import { SKILL_FORM } from "./forms";
 import { useDashboardStore } from "./store";

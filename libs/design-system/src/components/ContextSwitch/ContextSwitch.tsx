@@ -1,5 +1,5 @@
 import { cn } from "../../lib/cn";
-import type { ContextName } from "../../domain";
+import type { ContextName } from "../../DesignSystemContext/contextTokens";
 import { Icon } from "../Icon/Icon";
 
 interface ContextOption {

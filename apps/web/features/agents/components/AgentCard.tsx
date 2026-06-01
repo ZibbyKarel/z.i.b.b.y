@@ -3,11 +3,10 @@ import {
   Button,
   Corners,
   Icon,
-  ModelBadge,
-  ThinkBadge,
   Pill,
   type AgentDef,
 } from "@zibby/design-system";
+import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 
 export interface AgentCardProps {
   agent: AgentDef;

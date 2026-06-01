@@ -1,9 +1,18 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
-import type { NavItem } from "../../domain";
 import type { LinkComponentType } from "../DashboardShell/DashboardShell";
+import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
-import { ZibbyMark } from "../Icon/Icon";
+
+/** A single navigation entry — chrome-level, domain-neutral. */
+export interface NavItem {
+  id: string;
+  label: string;
+  glyph: IconName;
+  badge?: number;
+  /** Optional URL for link-based navigation (used with linkComponent). */
+  href?: string;
+}
 
 interface NavRowProps {
   item: NavItem;
@@ -12,7 +21,12 @@ interface NavRowProps {
   linkComponent?: LinkComponentType;
 }
 
-function NavRow({ item, active, onSelect, linkComponent: LinkComp }: NavRowProps) {
+function NavRow({
+  item,
+  active,
+  onSelect,
+  linkComponent: LinkComp,
+}: NavRowProps) {
   const className = cn(
     "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg outline-none transition-colors",
     "focus-visible:ring-2 focus-visible:ring-accent",
@@ -26,7 +40,9 @@ function NavRow({ item, active, onSelect, linkComponent: LinkComp }: NavRowProps
       {active && (
         <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded bg-accent shadow-glow-accent" />
       )}
-      <span className={cn("flex", active ? "text-accent" : "text-foreground-faint")}>
+      <span
+        className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
+      >
         <Icon name={item.glyph} size={17} />
       </span>
       <span className="flex-1">{item.label}</span>
@@ -40,7 +56,11 @@ function NavRow({ item, active, onSelect, linkComponent: LinkComp }: NavRowProps
 
   if (LinkComp && item.href) {
     return (
-      <LinkComp href={item.href} className={className} aria-current={active ? "page" : undefined}>
+      <LinkComp
+        href={item.href}
+        className={className}
+        aria-current={active ? "page" : undefined}
+      >
         {inner}
       </LinkComp>
     );
@@ -90,7 +110,7 @@ export function Sidebar({
       {/* brand */}
       <div className="px-1.5 pb-6 pt-1">
         <div className="flex items-center gap-3">
-          <ZibbyMark size={26} />
+          <Icon name="butlerSign" size={26} className="text-foreground" />
           <div className="font-mono text-2xl font-bold tracking-mono text-foreground">
             Z<span className="text-foreground-faint">·</span>I
             <span className="text-foreground-faint">·</span>B

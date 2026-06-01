@@ -8,13 +8,13 @@ import {
   EntityFormModal,
   HudPanel,
   Icon,
-  PipelineCard,
-  PipelineRunModal,
   Pill,
   SectionLabel,
   type Pipeline,
 } from "@zibby/design-system";
 import { PhaseChain } from "../pipelines/components/PhaseChain";
+import { PipelineCard } from "../pipelines/components/PipelineCard";
+import { PipelineRunModal } from "../pipelines/components/PipelineRunModal";
 import { PROJECTS } from "./config";
 import { PIPELINE_FORM } from "./forms";
 import { useDashboardStore } from "./store";

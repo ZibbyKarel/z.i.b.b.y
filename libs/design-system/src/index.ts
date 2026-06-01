@@ -30,7 +30,11 @@ export type {
 // ---------------------------------------------------------------------------
 // Theme registry
 // ---------------------------------------------------------------------------
-export { defaultDarkTokens, defaultLightTokens, tokensForTheme } from "./DesignSystemContext/themeRegistry";
+export {
+  defaultDarkTokens,
+  defaultLightTokens,
+  tokensForTheme,
+} from "./DesignSystemContext/themeRegistry";
 
 // ---------------------------------------------------------------------------
 // DesignSystemProvider + hooks
@@ -51,8 +55,20 @@ export type { ContextName } from "./DesignSystemContext/contextTokens";
 // ---------------------------------------------------------------------------
 // Surface layer
 // ---------------------------------------------------------------------------
-export { bgValue, borderColorValue, radiusValue, shadowValue, computeVisualStyle } from "./visualStyles";
-export type { BgValue, BorderTone, RadiusValue, ShadowValue, VisualStyleProps } from "./visualStyles";
+export {
+  bgValue,
+  borderColorValue,
+  radiusValue,
+  shadowValue,
+  computeVisualStyle,
+} from "./visualStyles";
+export type {
+  BgValue,
+  BorderTone,
+  RadiusValue,
+  ShadowValue,
+  VisualStyleProps,
+} from "./visualStyles";
 
 // ---------------------------------------------------------------------------
 // Domain types  (shared contract — stays in DS)
@@ -68,7 +84,6 @@ export type {
   Integration,
   IntegrationStatus,
   ModelName,
-  NavItem,
   Pipeline,
   PipelinePhase,
   PipelineState,
@@ -84,24 +99,36 @@ export { glyphForAgent } from "./domain";
 // ---------------------------------------------------------------------------
 // Primitives
 // ---------------------------------------------------------------------------
-export { Container, computeContainerStyle, CONTAINER_STYLE_KEYS } from "./primitives/Container";
-export type { ContainerProps, ContainerAs } from "./primitives/Container";
-export { Stack, Row } from "./primitives/Stack";
-export type { StackProps, RowProps } from "./primitives/Stack";
-export { Spacer } from "./primitives/Spacer";
-export type { SpacerProps } from "./primitives/Spacer";
+export {
+  Container,
+  computeContainerStyle,
+  CONTAINER_STYLE_KEYS,
+} from "./components/Container";
+export type { ContainerProps, ContainerAs } from "./components/Container";
+export { Stack, Row } from "./components/Stack";
+export type { StackProps, RowProps } from "./components/Stack";
+export { Spacer } from "./components/Spacer";
+export type { SpacerProps } from "./components/Spacer";
 
 // ---------------------------------------------------------------------------
 // Foundations
 // ---------------------------------------------------------------------------
-export { Icon, ZibbyMark, iconNames } from "./components/Icon/Icon";
-export type { IconName, IconProps, ZibbyMarkProps } from "./components/Icon/Icon";
+export { Icon, iconNames } from "./components/Icon/Icon";
+export type { IconName, IconProps } from "./components/Icon/Icon";
 
 // ---------------------------------------------------------------------------
 // Generic components
 // ---------------------------------------------------------------------------
 export { Text, Heading } from "./components/Text/Text";
-export type { TextProps, TextSize, TextTone, TextWeight, TextFont, HeadingProps, HeadingLevel } from "./components/Text/Text";
+export type {
+  TextProps,
+  TextSize,
+  TextTone,
+  TextWeight,
+  TextFont,
+  HeadingProps,
+  HeadingLevel,
+} from "./components/Text/Text";
 
 export { Divider } from "./components/Divider/Divider";
 export type { DividerProps } from "./components/Divider/Divider";
@@ -118,7 +145,13 @@ export type { KbdProps } from "./components/Kbd/Kbd";
 export { Alert } from "./components/Alert/Alert";
 export type { AlertProps, AlertSeverity } from "./components/Alert/Alert";
 
-export { Card, CardHeader, CardContent, CardFooter, CardActions } from "./components/Card/Card";
+export {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+  CardActions,
+} from "./components/Card/Card";
 export type { CardProps } from "./components/Card/Card";
 
 export { Dialog, DialogBody } from "./components/Dialog/Dialog";
@@ -127,8 +160,18 @@ export type { DialogProps } from "./components/Dialog/Dialog";
 export { Tabs, TabList, Tab, TabPanel } from "./components/Tabs/Tabs";
 export type { TabsProps, TabProps } from "./components/Tabs/Tabs";
 
-export { Accordion, AccordionSummary, AccordionDetails, AccordionItem } from "./components/Accordion/Accordion";
-export type { AccordionProps, AccordionSummaryProps, AccordionDetailsProps, AccordionItemProps } from "./components/Accordion/Accordion";
+export {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  AccordionItem,
+} from "./components/Accordion/Accordion";
+export type {
+  AccordionProps,
+  AccordionSummaryProps,
+  AccordionDetailsProps,
+  AccordionItemProps,
+} from "./components/Accordion/Accordion";
 
 export { Button } from "./components/Button/Button";
 export type { ButtonProps } from "./components/Button/Button";
@@ -144,7 +187,10 @@ export { Pill } from "./components/Pill/Pill";
 export type { PillProps } from "./components/Pill/Pill";
 
 export { HudPanel, Corners } from "./components/HudPanel/HudPanel";
-export type { HudPanelProps, CornersProps } from "./components/HudPanel/HudPanel";
+export type {
+  HudPanelProps,
+  CornersProps,
+} from "./components/HudPanel/HudPanel";
 
 export { SectionLabel } from "./components/SectionLabel/SectionLabel";
 export type { SectionLabelProps } from "./components/SectionLabel/SectionLabel";
@@ -185,50 +231,29 @@ export type {
 } from "./components/EntityFormModal/EntityFormModal";
 
 // ---------------------------------------------------------------------------
-// Domain composites (TODO: move to apps/web/features/<domain>/components/ per plan)
-// Kept here temporarily so screens compile while migration is in progress.
+// Domain composites now live in apps/web/features/<domain>/components/.
+// AgentCard, AgentRow, ApprovalCard, ActivityFeed, IntegrationCard, SkillTile,
+// RunModal, PipelineCard, PipelineRunModal, PhaseChain (+ ModelBadge/ThinkBadge)
+// and LimitsWidget were moved out of the DS — it stays domain-neutral.
 // ---------------------------------------------------------------------------
-export { RunModal } from "./components/RunModal/RunModal";
-export type { RunModalProps } from "./components/RunModal/RunModal";
-export { SkillTile } from "./components/SkillTile/SkillTile";
-export type { SkillTileProps } from "./components/SkillTile/SkillTile";
-export { IntegrationCard } from "./components/IntegrationCard/IntegrationCard";
-export type { IntegrationCardProps } from "./components/IntegrationCard/IntegrationCard";
-export { AgentCard } from "./components/AgentCard/AgentCard";
-export type { AgentCardProps } from "./components/AgentCard/AgentCard";
-export { ApprovalCard } from "./components/ApprovalCard/ApprovalCard";
-export type { ApprovalCardProps } from "./components/ApprovalCard/ApprovalCard";
-export { AgentRow } from "./components/AgentRow/AgentRow";
-export type { AgentRowProps } from "./components/AgentRow/AgentRow";
-export { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
-export type { ActivityFeedProps } from "./components/ActivityFeed/ActivityFeed";
-export { PipelineCard } from "./components/PipelineCard/PipelineCard";
-export type { PipelineCardProps } from "./components/PipelineCard/PipelineCard";
-export { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
-export type { PipelineRunModalProps } from "./components/PipelineRunModal/PipelineRunModal";
-export { LimitsWidget } from "./components/LimitsWidget/LimitsWidget";
-export type { LimitsWidgetProps } from "./components/LimitsWidget/LimitsWidget";
 
 // ---------------------------------------------------------------------------
-// Dashboard chrome (router-agnostic — stays in DS)
+// Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
 // ---------------------------------------------------------------------------
 export { ContextSwitch } from "./components/ContextSwitch/ContextSwitch";
 export type { ContextSwitchProps } from "./components/ContextSwitch/ContextSwitch";
 
 export { Sidebar } from "./components/Sidebar/Sidebar";
-export type { SidebarProps } from "./components/Sidebar/Sidebar";
+export type { SidebarProps, NavItem } from "./components/Sidebar/Sidebar";
 
 export { TopBar } from "./components/TopBar/TopBar";
 export type { TopBarProps } from "./components/TopBar/TopBar";
 
 export { DashboardShell } from "./components/DashboardShell/DashboardShell";
-export type { DashboardShellProps, LinkComponentType } from "./components/DashboardShell/DashboardShell";
-
-// ---------------------------------------------------------------------------
-// Orchestration chrome (stays in DS — no domain entity imports in these)
-// NOTE: ModelBadge / ThinkBadge remain here; PhaseChain moves to the app.
-// ---------------------------------------------------------------------------
-export { ModelBadge, ThinkBadge } from "./components/PhaseChain/PhaseChain";
+export type {
+  DashboardShellProps,
+  LinkComponentType,
+} from "./components/DashboardShell/DashboardShell";
 
 // ---------------------------------------------------------------------------
 // Legacy theme exports (for gradual migration)

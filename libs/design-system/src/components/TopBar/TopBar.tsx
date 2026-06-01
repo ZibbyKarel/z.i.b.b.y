@@ -1,16 +1,16 @@
+import type { ReactNode } from "react"
 import { cn } from "../../lib/cn"
-import type { AgentSdkCredit, ClaudeLimits, ContextName } from "../../domain"
+import type { ContextName } from "../../DesignSystemContext/contextTokens"
 import { ContextSwitch } from "../ContextSwitch/ContextSwitch"
 import { Icon } from "../Icon/Icon"
-import { LimitsWidget } from "../LimitsWidget/LimitsWidget"
 
 export interface TopBarProps {
   context: ContextName
   onContextChange: (context: ContextName) => void
   /** Current screen label, shown as a breadcrumb. */
   breadcrumb: string
-  limits: ClaudeLimits
-  credit: AgentSdkCredit
+  /** Right-aligned slot — the app injects its domain wallet/limits widget here. */
+  walletSlot?: ReactNode
   /** Invoked by the ⌘K command affordance. */
   onCommand?: () => void
   className?: string
@@ -18,14 +18,13 @@ export interface TopBarProps {
 
 /**
  * The always-visible top bar: context switch + breadcrumb on the left, command
- * palette trigger and the dual-wallet limits widget on the right.
+ * palette trigger and a domain-agnostic right-aligned slot (e.g. a limits widget).
  */
 export function TopBar({
   context,
   onContextChange,
   breadcrumb,
-  limits,
-  credit,
+  walletSlot,
   onCommand,
   className,
 }: TopBarProps) {
@@ -54,7 +53,7 @@ export function TopBar({
           ⌘K
         </span>
       </button>
-      <LimitsWidget limits={limits} credit={credit} />
+      {walletSlot}
     </header>
   )
 }
