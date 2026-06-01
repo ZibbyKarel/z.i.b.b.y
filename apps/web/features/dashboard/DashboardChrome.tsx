@@ -5,8 +5,7 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   DesignSystemProvider,
-  contextTokens,
-  type ContextName,
+  PartialTheme,
   type LinkComponentType,
 } from "@zibby/design-system";
 import { MainLayout } from "./components/MainLayout";
@@ -21,6 +20,28 @@ import { DashboardStoreProvider } from "./store";
 import { DashboardContext } from "./dashboardContext";
 import { LimitsWidget } from "./components/LimitsWidget";
 
+export type ContextName = "home" | "work";
+
+// THIS IS TEMPORARY. In the end this will be a dinamic list of contexts user can create
+export function contextTokens(context: ContextName): PartialTheme {
+  if (context === "work") {
+    return {
+      colorAccent: "#5b8def",
+      colorAccentDim: "rgba(91,141,239,0.16)",
+      colorAccentContrast: "#0a0c10",
+      colorAccentGlow: "rgba(91,141,239,0.4)",
+      shadowGlowAccent: "0 0 16px rgba(91,141,239,0.4)",
+    };
+  }
+  return {
+    colorAccent: "#f0b429",
+    colorAccentDim: "rgba(240,180,41,0.16)",
+    colorAccentContrast: "#0a0c10",
+    colorAccentGlow: "rgba(240,180,41,0.4)",
+    shadowGlowAccent: "0 0 16px rgba(240,180,41,0.4)",
+  };
+}
+
 function pathnameToNavId(pathname: string): string {
   const segment = pathname.split("/").filter(Boolean)[0] ?? "overview";
   return segment;
@@ -33,11 +54,11 @@ export function hrefWithCtx(href: string, ctx: string): string {
 }
 
 function ChromeInner({ children }: { children: ReactNode }) {
-  const pathname  = usePathname();
-  const params    = useSearchParams();
-  const router    = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const router = useRouter();
 
-  const rawCtx  = params.get("ctx") ?? "home";
+  const rawCtx = params.get("ctx") ?? "home";
   const context = (rawCtx === "work" ? "work" : "home") as ContextName;
   const activeNav = pathnameToNavId(pathname);
 
@@ -58,21 +79,23 @@ function ChromeInner({ children }: { children: ReactNode }) {
 
   return (
     <DashboardContext.Provider value={{ context }}>
-    <DesignSystemProvider theme="dark" tokens={contextTokens(context)}>
-      <MainLayout
-        context={context}
-        onContextChange={handleContextChange}
-        navItems={navItemsWithCtx}
-        activeNav={activeNav}
-        onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, rawCtx))}
-        footerItem={footerWithCtx}
-        breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
-        walletSlot={<LimitsWidget limits={CLAUDE_LIMITS} credit={AGENT_SDK} />}
-        linkComponent={Link as LinkComponentType}
-      >
-        {children}
-      </MainLayout>
-    </DesignSystemProvider>
+      <DesignSystemProvider theme="dark" tokens={contextTokens(context)}>
+        <MainLayout
+          context={context}
+          onContextChange={handleContextChange}
+          navItems={navItemsWithCtx}
+          activeNav={activeNav}
+          onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, rawCtx))}
+          footerItem={footerWithCtx}
+          breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
+          walletSlot={
+            <LimitsWidget limits={CLAUDE_LIMITS} credit={AGENT_SDK} />
+          }
+          linkComponent={Link as LinkComponentType}
+        >
+          {children}
+        </MainLayout>
+      </DesignSystemProvider>
     </DashboardContext.Provider>
   );
 }
@@ -80,7 +103,11 @@ function ChromeInner({ children }: { children: ReactNode }) {
 export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <DashboardStoreProvider>
-      <Suspense fallback={<div style={{ height: "100%", background: "var(--bg-surface)" }} />}>
+      <Suspense
+        fallback={
+          <div style={{ height: "100%", background: "var(--bg-surface)" }} />
+        }
+      >
         <ChromeInner>{children}</ChromeInner>
       </Suspense>
     </DashboardStoreProvider>
