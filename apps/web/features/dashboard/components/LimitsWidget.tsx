@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   cn,
   Icon,
-  Meter,
+  Progress,
   usageTone,
   Sparkline,
   StatusDot,
@@ -26,7 +26,7 @@ function MiniBar({ label, pct, width }: { label: string; pct: number; width: num
         <span className="font-mono text-xs text-foreground-faint">{label}</span>
         <span className={cn("font-mono text-xs font-bold", toneText[tone])}>{pct}%</span>
       </div>
-      <Meter value={pct} tone={tone} height={4} glow />
+      <Progress value={pct} tone={tone} height={4} glow />
     </div>
   );
 }
@@ -39,7 +39,7 @@ function LimitRow({ d }: { d: QuotaLimit }) {
         <span className="font-mono text-sm tracking-wide text-foreground-dim">{d.label}</span>
         <span className={cn("font-mono text-sm font-semibold", toneText[tone])}>{d.usedPct}%</span>
       </div>
-      <Meter value={d.usedPct} tone={tone} height={5} glow label={d.label} />
+      <Progress value={d.usedPct} tone={tone} height={5} glow label={d.label} />
       <span className="mt-1.5 block font-mono text-xs text-foreground-faint">
         reset {d.resetIn} · {d.tokens}
       </span>
@@ -87,7 +87,7 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
               <span className="font-mono text-caption font-bold text-foreground">${credit.remaining}</span>
               <span className="font-mono text-xs text-foreground-faint">/ ${credit.total}</span>
             </div>
-            <Meter value={credit.usedPct} tone={sdkTone} height={5} glow />
+            <Progress value={credit.usedPct} tone={sdkTone} height={5} glow />
           </div>
         </div>
         <Icon name="chevron" size={13} className={cn("text-foreground-faint transition-transform", open && "rotate-90")} />
@@ -117,7 +117,7 @@ export function LimitsWidget({ limits, credit, className }: LimitsWidgetProps) {
             <span className="font-mono text-base text-foreground-dim">zbývá z ${credit.total}</span>
           </div>
           <div className="mt-2.5">
-            <Meter value={credit.usedPct} tone={sdkTone} height={6} glow />
+            <Progress value={credit.usedPct} tone={sdkTone} height={6} glow />
           </div>
           <span className="mt-2 block font-mono text-xs text-foreground-faint">
             spotřebováno ${credit.used} · běhy agentů čerpají odsud

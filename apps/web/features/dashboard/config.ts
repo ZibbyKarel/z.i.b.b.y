@@ -7,7 +7,7 @@
 import type {
   AgentSdkCredit,
   ClaudeLimits,
-  NavItem,
+  ListItem,
   SelectOption,
 } from "@zibby/design-system";
 
@@ -18,7 +18,7 @@ export const PROJECTS = [
   "~/cesta/k/projektu",
 ] as const;
 
-export const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: ListItem[] = [
   { id: "overview",      label: "Přehled",          glyph: "grid",   href: "/overview" },
   { id: "skills",        label: "Skilly",            glyph: "spark",  href: "/skills" },
   { id: "agents",        label: "Agenti",            glyph: "bot",    href: "/agents" },
@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "runs",          label: "Běžící agenti",     glyph: "pulse",  href: "/runs" },
 ];
 
-export const SETTINGS_ITEM: NavItem = {
+export const SETTINGS_ITEM: ListItem = {
   id: "settings",
   label: "Nastavení systému",
   glyph: "gear",

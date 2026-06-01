@@ -119,16 +119,12 @@ export type { IconName, IconProps } from "./components/Icon/Icon";
 // ---------------------------------------------------------------------------
 // Generic components
 // ---------------------------------------------------------------------------
-export { Text, Heading } from "./components/Text/Text";
+export { Typography, TypographyTestId } from "./components/Typography/Typography";
 export type {
-  TextProps,
-  TextSize,
-  TextTone,
-  TextWeight,
-  TextFont,
-  HeadingProps,
-  HeadingLevel,
-} from "./components/Text/Text";
+  TypographyProps,
+  TypographyType,
+  TypographyVariant,
+} from "./components/Typography/Typography";
 
 export { Divider } from "./components/Divider/Divider";
 export type { DividerProps } from "./components/Divider/Divider";
@@ -136,8 +132,8 @@ export type { DividerProps } from "./components/Divider/Divider";
 export { Badge } from "./components/Badge/Badge";
 export type { BadgeProps, BadgeTone } from "./components/Badge/Badge";
 
-export { Chip, FilterChip } from "./components/Chip/Chip";
-export type { ChipProps, FilterChipProps } from "./components/Chip/Chip";
+export { Chip } from "./components/Chip/Chip";
+export type { ChipProps } from "./components/Chip/Chip";
 
 export { Kbd } from "./components/Kbd/Kbd";
 export type { KbdProps } from "./components/Kbd/Kbd";
@@ -176,15 +172,12 @@ export type {
 export { Button } from "./components/Button/Button";
 export type { ButtonProps } from "./components/Button/Button";
 
-export { Meter, usageTone } from "./components/Meter/Meter";
-export type { MeterProps, MeterTone } from "./components/Meter/Meter";
+export { Progress, usageTone } from "./components/Progress/Progress";
+export type { ProgressProps, ProgressTone } from "./components/Progress/Progress";
 
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { StatusDotProps, DotTone } from "./components/StatusDot/StatusDot";
 
-// Pill kept for backward compat — use Badge for new code
-export { Pill } from "./components/Pill/Pill";
-export type { PillProps } from "./components/Pill/Pill";
 
 export { HudPanel, Corners } from "./components/HudPanel/HudPanel";
 export type {
@@ -240,20 +233,14 @@ export type {
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
 // ---------------------------------------------------------------------------
-export { ContextSwitch } from "./components/ContextSwitch/ContextSwitch";
-export type { ContextSwitchProps } from "./components/ContextSwitch/ContextSwitch";
+export { ButtonGroup } from "./components/ButtonGroup/ButtonGroup";
+export type { ButtonGroupProps, ButtonGroupOption } from "./components/ButtonGroup/ButtonGroup";
 
-export { Sidebar } from "./components/Sidebar/Sidebar";
-export type { SidebarProps, NavItem } from "./components/Sidebar/Sidebar";
+export { List } from "./components/List/List";
+export type { ListProps, ListItem, LinkComponentType } from "./components/List/List";
 
 export { TopBar } from "./components/TopBar/TopBar";
 export type { TopBarProps } from "./components/TopBar/TopBar";
-
-export { DashboardShell } from "./components/DashboardShell/DashboardShell";
-export type {
-  DashboardShellProps,
-  LinkComponentType,
-} from "./components/DashboardShell/DashboardShell";
 
 // ---------------------------------------------------------------------------
 // Legacy theme exports (for gradual migration)

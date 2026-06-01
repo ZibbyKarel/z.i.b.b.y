@@ -7,8 +7,8 @@ import {
   EntityFormModal,
   HudPanel,
   Icon,
-  Meter,
-  Pill,
+  Progress,
+  Chip,
   Stat,
   StatusDot,
   usageTone,
@@ -65,9 +65,9 @@ export function OverviewScreen() {
                 </span>
               </div>
             </div>
-            <Pill tone="accent" className="whitespace-nowrap px-2.5 py-1.5">
+            <Chip tone="accent" className="whitespace-nowrap px-2.5 py-1.5">
               ctx · {context}
-            </Pill>
+            </Chip>
           </div>
           <div className="mt-6 flex flex-wrap gap-9 border-t border-border pt-5">
             <Stat value="00" label="běžící agenti" icon="pulse" tone="accent" />
@@ -222,7 +222,7 @@ export function OverviewScreen() {
             </span>
           </div>
           <div className="mt-2">
-            <Meter
+            <Progress
               value={AGENT_SDK.usedPct}
               tone={sdkTone}
               height={6}
@@ -251,7 +251,7 @@ export function OverviewScreen() {
                     {d.usedPct}%
                   </span>
                 </div>
-                <Meter
+                <Progress
                   value={d.usedPct}
                   tone={tone}
                   height={5}

@@ -5,10 +5,11 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   DesignSystemProvider,
-  DashboardShell,
   contextTokens,
   type ContextName,
+  type LinkComponentType,
 } from "@zibby/design-system";
+import { MainLayout } from "./components/MainLayout";
 import {
   NAV_ITEMS,
   NAV_LABELS,
@@ -58,7 +59,7 @@ function ChromeInner({ children }: { children: ReactNode }) {
   return (
     <DashboardContext.Provider value={{ context }}>
     <DesignSystemProvider theme="dark" tokens={contextTokens(context)}>
-      <DashboardShell
+      <MainLayout
         context={context}
         onContextChange={handleContextChange}
         navItems={navItemsWithCtx}
@@ -67,10 +68,10 @@ function ChromeInner({ children }: { children: ReactNode }) {
         footerItem={footerWithCtx}
         breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
         walletSlot={<LimitsWidget limits={CLAUDE_LIMITS} credit={AGENT_SDK} />}
-        linkComponent={Link as Parameters<typeof DashboardShell>[0]["linkComponent"]}
+        linkComponent={Link as LinkComponentType}
       >
         {children}
-      </DashboardShell>
+      </MainLayout>
     </DesignSystemProvider>
     </DashboardContext.Provider>
   );

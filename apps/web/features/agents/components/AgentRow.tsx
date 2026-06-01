@@ -1,7 +1,7 @@
 import {
   cn,
   Icon,
-  Meter,
+  Progress,
   StatusDot,
   type RunningAgent,
 } from "@zibby/design-system";
@@ -34,7 +34,7 @@ export function AgentRow({ agent, onStop, className }: AgentRowProps) {
         <div className="mt-0.5 truncate text-caption text-foreground-dim">{agent.prompt}</div>
         <div className="mt-2 flex items-center gap-2.5">
           <div className="flex-1">
-            <Meter value={agent.pct} tone="accent" height={4} glow label={`postup ${agent.skill}`} />
+            <Progress value={agent.pct} tone="accent" height={4} glow label={`postup ${agent.skill}`} />
           </div>
           <span className="font-mono text-sm font-semibold text-accent">{agent.pct}%</span>
         </div>

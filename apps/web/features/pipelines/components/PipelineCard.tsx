@@ -3,7 +3,7 @@ import {
   cn,
   Corners,
   Icon,
-  Pill,
+  Chip,
   glyphForAgent,
   type AgentDef,
   type Pipeline,
@@ -51,7 +51,7 @@ export function PipelineCard({
       {selected && <Corners inset={5} />}
       <div className="flex items-center justify-between">
         <span className="font-mono text-md font-bold text-foreground">{pipeline.name}</span>
-        <Pill tone={sm.tone}>
+        <Chip tone={sm.tone}>
           <span
             className={cn(
               "inline-block h-1 w-1 rounded-full",
@@ -62,7 +62,7 @@ export function PipelineCard({
             )}
           />
           {sm.label}
-        </Pill>
+        </Chip>
       </div>
       <div className="mt-1.5 text-caption leading-snug text-foreground-dim">{pipeline.desc}</div>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">

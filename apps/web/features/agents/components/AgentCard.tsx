@@ -3,7 +3,7 @@ import {
   Button,
   Corners,
   Icon,
-  Pill,
+  Chip,
   type AgentDef,
 } from "@zibby/design-system";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
@@ -40,7 +40,7 @@ export function AgentCard({ agent, onEdit, className }: AgentCardProps) {
         <ModelBadge model={agent.model} />
         <ThinkBadge level={agent.thinking} />
         {agent.tools.slice(0, 4).map((t) => (
-          <Pill key={t} tone="neutral">{t}</Pill>
+          <Chip key={t} tone="neutral">{t}</Chip>
         ))}
       </div>
       <div className="mt-3.5 flex items-center justify-between border-t border-border pt-3">

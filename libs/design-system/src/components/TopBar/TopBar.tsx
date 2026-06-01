@@ -1,8 +1,24 @@
 import type { ReactNode } from "react"
 import { cn } from "../../lib/cn"
 import type { ContextName } from "../../DesignSystemContext/contextTokens"
-import { ContextSwitch } from "../ContextSwitch/ContextSwitch"
+import { ButtonGroup } from "../ButtonGroup/ButtonGroup"
+import type { ButtonGroupOption } from "../ButtonGroup/ButtonGroup"
 import { Icon } from "../Icon/Icon"
+
+const CONTEXT_OPTIONS: ButtonGroupOption[] = [
+  {
+    id: "home",
+    label: "home",
+    swatchClass: "bg-home",
+    activeClass: "bg-home text-surface-0 shadow-[0_0_14px_rgba(240,180,41,0.33)]",
+  },
+  {
+    id: "work",
+    label: "work",
+    swatchClass: "bg-work",
+    activeClass: "bg-work text-surface-0 shadow-[0_0_14px_rgba(91,141,239,0.33)]",
+  },
+]
 
 export interface TopBarProps {
   context: ContextName
@@ -35,7 +51,12 @@ export function TopBar({
         className,
       )}
     >
-      <ContextSwitch context={context} onContextChange={onContextChange} />
+      <ButtonGroup
+        options={CONTEXT_OPTIONS}
+        value={context}
+        onChange={(v) => onContextChange(v as ContextName)}
+        ariaLabel="Přepínač kontextu"
+      />
       <div className="flex items-center gap-2 text-foreground-faint">
         <Icon name="chevron" size={13} />
         <span className="font-mono text-base text-foreground-dim">{breadcrumb}</span>

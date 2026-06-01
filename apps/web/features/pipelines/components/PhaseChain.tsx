@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import {
   cn,
   Icon,
-  Pill,
+  Chip,
   glyphForAgent,
   type AgentDef,
   type Pipeline,
@@ -24,18 +24,18 @@ const thinkTone = {
 /** Per-run model badge (opus / sonnet / haiku). */
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
   return (
-    <Pill tone={modelTone[model]} title="model (override per-run)">
+    <Chip tone={modelTone[model]} title="model (override per-run)">
       {model}
-    </Pill>
+    </Chip>
   );
 }
 
 /** Thinking-level badge (high / medium / low). */
 export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
   return (
-    <Pill tone={thinkTone[level]} title="thinking level">
+    <Chip tone={thinkTone[level]} title="thinking level">
       ◇ {level}
-    </Pill>
+    </Chip>
   );
 }
 

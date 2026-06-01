@@ -3,7 +3,7 @@ import {
   Button,
   Corners,
   Icon,
-  Pill,
+  Chip,
   StatusDot,
   type Integration,
   type IntegrationStatus,
@@ -51,10 +51,10 @@ export function IntegrationCard({ integration, onConfigure, onTest, className }:
             {integration.desc}
           </div>
         </div>
-        <Pill tone={pillTone[integration.status]}>
+        <Chip tone={pillTone[integration.status]}>
           <StatusDot tone={sm.tone} size={5} />
           {sm.label}
-        </Pill>
+        </Chip>
       </div>
       <div className="mt-3.5 flex items-center justify-between border-t border-border pt-3">
         <span className="max-w-[150px] truncate font-mono text-xs text-foreground-faint">

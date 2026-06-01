@@ -1,5 +1,5 @@
-import type { HTMLAttributes } from "react"
-import { cn } from "../../lib/cn"
+import type { HTMLAttributes } from "react";
+import { cn } from "../../lib/cn";
 
 export type DotTone =
   | "accent"
@@ -9,7 +9,7 @@ export type DotTone =
   | "run"
   | "home"
   | "work"
-  | "faint"
+  | "faint";
 
 const toneClass: Record<DotTone, string> = {
   accent: "bg-accent shadow-[0_0_7px_var(--zb-accent-glow)]",
@@ -20,7 +20,7 @@ const toneClass: Record<DotTone, string> = {
   home: "bg-home shadow-[0_0_7px_#f0b429]",
   work: "bg-work shadow-[0_0_7px_#5b8def]",
   faint: "bg-foreground-faint",
-}
+};
 
 const ringClass: Record<DotTone, string> = {
   accent: "bg-accent",
@@ -31,20 +31,20 @@ const ringClass: Record<DotTone, string> = {
   home: "bg-home",
   work: "bg-work",
   faint: "bg-foreground-faint",
-}
+};
 
 export interface StatusDotProps extends HTMLAttributes<HTMLSpanElement> {
-  tone?: DotTone
+  tone: DotTone;
   /** Diameter in px. */
-  size?: number
+  size?: number;
   /** Emit an expanding pulse ring (for live/running states). */
-  pulse?: boolean
-  ref?: React.Ref<HTMLSpanElement>
+  pulse?: boolean;
+  ref?: React.Ref<HTMLSpanElement>;
 }
 
 /** A glowing status dot, optionally pulsing. */
 export function StatusDot({
-  tone = "ok",
+  tone,
   size = 8,
   pulse = false,
   className,
@@ -68,5 +68,5 @@ export function StatusDot({
       )}
       <span className={cn("absolute inset-0 rounded-full", toneClass[tone])} />
     </span>
-  )
+  );
 }

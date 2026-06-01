@@ -8,7 +8,7 @@ import {
   EntityFormModal,
   HudPanel,
   Icon,
-  Pill,
+  Chip,
   SectionLabel,
   type Pipeline,
 } from "@zibby/design-system";
@@ -94,7 +94,7 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
               <div>
                 <div className="flex items-center gap-2.5">
                   <span className="text-3xl font-semibold">{selected.name}</span>
-                  <Pill tone="accent">{context}</Pill>
+                  <Chip tone="accent">{context}</Chip>
                 </div>
                 <span className="mt-1.5 block font-mono text-caption text-foreground-dim">{selected.desc}</span>
                 <div className="mt-2.5 flex items-center gap-1.5">
