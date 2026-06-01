@@ -142,6 +142,8 @@ export interface NavItem {
   label: string;
   glyph: IconName;
   badge?: number;
+  /** Optional URL for link-based navigation (used with linkComponent in Sidebar). */
+  href?: string;
 }
 
 export interface BriefingItem {

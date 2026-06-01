@@ -1,9 +1,5 @@
-import { DashboardApp } from "../features/dashboard/DashboardApp";
+import { redirect } from "next/navigation";
 
-export default function HomePage() {
-  return (
-    <main className="h-screen">
-      <DashboardApp />
-    </main>
-  );
+export default function RootPage() {
+  redirect("/overview");
 }

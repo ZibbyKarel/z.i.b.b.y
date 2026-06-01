@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "skills": "Skills",
+    "agents": "Agents",
+    "pipelines": "Pipelines",
+    "integrations": "Integrations",
+    "automations": "Automations",
+    "memory": "Memory",
+    "runs": "Running agents",
+    "settings": "System settings"
+  },
+  "topbar": {
+    "commandHint": "Command or skill (⌘K)",
+    "commandAriaLabel": "Command or skill"
+  },
+  "sidebar": {
+    "navLabel": "Main navigation",
+    "tagline": "Zestful Intuitive Brainy Butler for You"
+  },
+  "context": {
+    "home": "home",
+    "work": "work"
+  },
+  "overview": {
+    "title": "Good morning.",
+    "systemNominal": "System · NOMINAL",
+    "allRunning": "All systems running.",
+    "emptyTitle": "Dashboard is empty — build it up.",
+    "noSkills": "No skills to run",
+    "daemonReady": "daemon ready · no runs",
+    "runningAgents": "running agents",
+    "approvals": "approvals",
+    "skills": "skills"
+  },
+  "skills": {
+    "addSkill": "Add skill",
+    "runButton": "Run",
+    "emptyTitle": "No skills yet",
+    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card with a Run button.",
+    "emptyHint": "// creates ~/zibby/skills/<name>/SKILL.md"
+  },
+  "agents": {
+    "addAgent": "Add agent",
+    "emptyTitle": "No agents yet",
+    "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
+    "emptyHint": "// creates ~/zibby/agents/<name>.agent.md"
+  },
+  "integrations": {
+    "addIntegration": "Add integration",
+    "statusConnected": "connected",
+    "statusDisconnected": "disconnected",
+    "statusError": "error",
+    "emptyTitle": "No integrations yet",
+    "emptyDescription": "Integrations are drivers that connect the system to the outside world. Secrets live in .env — only configuration lives here.",
+    "emptyHint": "// creates ~/zibby/integrations/<name>.json"
+  },
+  "pipelines": {
+    "addPipeline": "Add pipeline",
+    "runPipeline": "Run pipeline",
+    "emptyTitle": "No pipelines yet",
+    "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
+    "emptyHint": "// creates ~/zibby/pipelines/<name>.pipeline.md",
+    "phaseCap": "PIPELINE BUDGET"
+  },
+  "limits": {
+    "ariaLabel": "Claude Code limits and Agent SDK credit",
+    "interactive": "inter-\nactive",
+    "agentSdk": "agent\nsdk",
+    "interactiveLimits": "Interactive limits · Claude Code",
+    "independentNote": "from your chat · independent of agents",
+    "agentSdkCredit": "Agent SDK credit",
+    "remaining": "remaining of",
+    "consumed": "consumed",
+    "agentNote": "agent runs draw from this",
+    "trend14": "14-DAY TREND ($/day)",
+    "byAgent": "BY AGENT",
+    "byPipeline": "BY PIPELINE"
+  },
+  "common": {
+    "stop": "Stop",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "configure": "Configure",
+    "test": "Test",
+    "close": "Close",
+    "loading": "Loading…",
+    "placeholder": "Coming soon"
+  }
+}

@@ -1,1 +1,7 @@
 @import "@zibby/design-system/theme/globals.css";
+
+/* Explicit content sources for the app — v4 auto-detect won't cross the
+   workspace package boundary into @zibby/design-system. */
+@source "../../libs/design-system/src";
+@source "./app";
+@source "./features";

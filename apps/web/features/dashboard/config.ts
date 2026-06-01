@@ -19,20 +19,21 @@ export const PROJECTS = [
 ] as const;
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: "overview", label: "Přehled", glyph: "grid" },
-  { id: "skills", label: "Skilly", glyph: "spark" },
-  { id: "agents", label: "Agenti", glyph: "bot" },
-  { id: "pipelines", label: "Orchestrace", glyph: "flow" },
-  { id: "integrations", label: "Integrace", glyph: "plug" },
-  { id: "automations", label: "Automatizace", glyph: "clock" },
-  { id: "memory", label: "Paměť", glyph: "brain" },
-  { id: "runs", label: "Běžící agenti", glyph: "pulse" },
+  { id: "overview",      label: "Přehled",          glyph: "grid",   href: "/overview" },
+  { id: "skills",        label: "Skilly",            glyph: "spark",  href: "/skills" },
+  { id: "agents",        label: "Agenti",            glyph: "bot",    href: "/agents" },
+  { id: "pipelines",     label: "Orchestrace",       glyph: "flow",   href: "/pipelines" },
+  { id: "integrations",  label: "Integrace",         glyph: "plug",   href: "/integrations" },
+  { id: "automations",   label: "Automatizace",      glyph: "clock",  href: "/automations" },
+  { id: "memory",        label: "Paměť",             glyph: "brain",  href: "/memory" },
+  { id: "runs",          label: "Běžící agenti",     glyph: "pulse",  href: "/runs" },
 ];
 
 export const SETTINGS_ITEM: NavItem = {
   id: "settings",
   label: "Nastavení systému",
   glyph: "gear",
+  href: "/settings",
 };
 
 export const NAV_LABELS: Record<string, string> = Object.fromEntries(

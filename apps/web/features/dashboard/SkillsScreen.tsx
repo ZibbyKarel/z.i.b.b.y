@@ -7,20 +7,16 @@ import {
   EntityFormModal,
   RunModal,
   SectionLabel,
-  SkillTile,
-  type ContextName,
   type Skill,
 } from "@zibby/design-system";
+import { SkillTile } from "../skills/components/SkillTile";
 import { PROJECTS } from "./config";
 import { SKILL_FORM } from "./forms";
 import { useDashboardStore } from "./store";
+import { useDashboardContext } from "./dashboardContext";
 
-export interface SkillsScreenProps {
-  context: ContextName;
-}
-
-/** Skilly: grid of skill cards for the active context + "Přidat skill". */
-export function SkillsScreen({ context }: SkillsScreenProps) {
+export function SkillsScreen() {
+  const { context } = useDashboardContext();
   const { skills, addSkill } = useDashboardStore();
   const [adding, setAdding] = useState(false);
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
@@ -31,12 +27,7 @@ export function SkillsScreen({ context }: SkillsScreenProps) {
     <div className="mx-auto max-w-[1400px]">
       <SectionLabel
         action={
-          <Button
-            intent="run"
-            icon="plus"
-            size="sm"
-            onClick={() => setAdding(true)}
-          >
+          <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
             Přidat skill
           </Button>
         }
@@ -70,10 +61,7 @@ export function SkillsScreen({ context }: SkillsScreenProps) {
           submitLabel={SKILL_FORM.submitLabel}
           filePreview={SKILL_FORM.filePreview}
           onClose={() => setAdding(false)}
-          onSubmit={(values) => {
-            addSkill(values);
-            setAdding(false);
-          }}
+          onSubmit={(values) => { addSkill(values); setAdding(false); }}
         />
       )}
 

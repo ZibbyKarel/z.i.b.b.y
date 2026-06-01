@@ -7,7 +7,6 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./theme/preset": "./src/theme/preset.ts",
     "./theme/globals.css": "./src/theme/globals.css"
   },
   "peerDependencies": {

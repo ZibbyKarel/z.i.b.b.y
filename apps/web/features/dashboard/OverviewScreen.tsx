@@ -10,27 +10,21 @@ import {
   Meter,
   Pill,
   RunModal,
-  SkillTile,
   Stat,
   StatusDot,
   usageTone,
-  type ContextName,
   type Skill,
 } from "@zibby/design-system";
+import { SkillTile } from "../skills/components/SkillTile";
 import { AGENT_SDK, CLAUDE_LIMITS, PROJECTS } from "./config";
 import { SKILL_FORM } from "./forms";
 import { useDashboardStore } from "./store";
+import { useDashboardContext } from "./dashboardContext";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-export interface OverviewScreenProps {
-  context: ContextName;
-  /** Jump to another screen (used by empty-state shortcuts). */
-  onNavigate?: (id: string) => void;
-}
-
-/** The dashboard home screen for a fresh, empty system. */
-export function OverviewScreen({ context, onNavigate }: OverviewScreenProps) {
+export function OverviewScreen() {
+  const { context } = useDashboardContext();
   const { skills, integrations, agents, pipelines, addSkill } =
     useDashboardStore();
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
@@ -132,7 +126,7 @@ export function OverviewScreen({ context, onNavigate }: OverviewScreenProps) {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => onNavigate?.(s.id)}
+                  onClick={() => { /* navigation handled by links */ }}
                   className="flex items-center gap-3 rounded border border-border bg-surface-0 px-3 py-2.5 text-left outline-none transition-colors hover:border-accent/35 focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-sm border border-accent/20 bg-accent-dim text-accent">

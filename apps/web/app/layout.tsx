@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
-import { Providers } from "./providers";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -17,27 +18,31 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZIBBY — Dashboard · Přehled",
-  description:
-    "Dashboard pro ZIBBY — Zestful Intuitive Brainy Butler for You. Okno do stavu agentického OS a ovládací panel.",
+  title: "ZIBBY — Dashboard",
+  description: "Dashboard pro ZIBBY — Zestful Intuitive Brainy Butler for You.",
 };
 
 export const viewport: Viewport = {
   themeColor: "#0d1117",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale   = await getLocale();
+  const messages = await getMessages();
+
   return (
     <html
-      lang="cs"
-      className={`dark ${geist.variable} ${jetbrainsMono.variable}`}
+      lang={locale}
+      className={`${geist.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <Providers>{children}</Providers>
+        <NextIntlClientProvider messages={messages} locale={locale}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

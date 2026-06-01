@@ -1,6 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { cn } from "../../lib/cn";
-import { contextStyle } from "../../theme/context";
 import type {
   AgentSdkCredit,
   ClaudeLimits,
@@ -26,6 +25,13 @@ const scanOverlay: CSSProperties = {
     "repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 4px)",
 };
 
+export type LinkComponentType = ComponentType<{
+  href: string;
+  children: ReactNode;
+  className?: string;
+  [key: string]: unknown;
+}>;
+
 export interface DashboardShellProps {
   context: ContextName;
   onContextChange: (context: ContextName) => void;
@@ -37,13 +43,15 @@ export interface DashboardShellProps {
   limits: ClaudeLimits;
   credit: AgentSdkCredit;
   onCommand?: () => void;
+  /** Optional link component for router-based nav (e.g. Next.js Link). */
+  linkComponent?: LinkComponentType;
   children: ReactNode;
 }
 
 /**
- * The full dashboard chrome: angular HUD background (grid + scanlines), left
- * Sidebar, always-visible TopBar and a scrollable content area. The active
- * context (home / work) drives the `accent` token via CSS variables on the root.
+ * Full dashboard chrome: angular HUD background (grid + scanlines), left
+ * Sidebar, always-visible TopBar and a scrollable content area.
+ * Context accent is applied by DesignSystemProvider wrapping this component.
  */
 export function DashboardShell({
   context,
@@ -56,13 +64,11 @@ export function DashboardShell({
   limits,
   credit,
   onCommand,
+  linkComponent,
   children,
 }: DashboardShellProps) {
   return (
-    <div
-      style={contextStyle(context)}
-      className="relative h-full w-full overflow-hidden bg-surface-1 font-sans text-foreground"
-    >
+    <div className="relative h-full w-full overflow-hidden bg-surface-1 font-sans text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-35"
@@ -80,6 +86,7 @@ export function DashboardShell({
           active={activeNav}
           onNavigate={onNavigate}
           footerItem={footerItem}
+          linkComponent={linkComponent}
         />
         <div className={cn("flex min-w-0 flex-1 flex-col")}>
           <TopBar

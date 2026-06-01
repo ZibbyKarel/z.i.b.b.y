@@ -1,3 +1,4 @@
+"use client";
 import { HudPanel, Icon, type IconName } from "@zibby/design-system"
 
 export interface PlaceholderScreenProps {

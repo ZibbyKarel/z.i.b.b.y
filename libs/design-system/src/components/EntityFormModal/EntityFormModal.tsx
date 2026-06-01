@@ -1,3 +1,4 @@
+"use client";
 import { useMemo, useState } from "react"
 import type { IconName } from "../Icon/Icon"
 import { Button } from "../Button/Button"

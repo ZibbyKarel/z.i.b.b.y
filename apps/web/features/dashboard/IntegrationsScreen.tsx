@@ -5,19 +5,15 @@ import {
   Button,
   EmptyState,
   EntityFormModal,
-  IntegrationCard,
   SectionLabel,
-  type ContextName,
 } from "@zibby/design-system";
+import { IntegrationCard } from "../integrations/components/IntegrationCard";
 import { INTEGRATION_FORM } from "./forms";
 import { useDashboardStore } from "./store";
+import { useDashboardContext } from "./dashboardContext";
 
-export interface IntegrationsScreenProps {
-  context: ContextName;
-}
-
-/** Integrace (pluginy): grid of integration cards + "Přidat integraci". */
-export function IntegrationsScreen({ context }: IntegrationsScreenProps) {
+export function IntegrationsScreen() {
+  const { context } = useDashboardContext();
   const { integrations, addIntegration } = useDashboardStore();
   const [adding, setAdding] = useState(false);
 
@@ -27,12 +23,7 @@ export function IntegrationsScreen({ context }: IntegrationsScreenProps) {
     <div className="mx-auto max-w-[1400px]">
       <SectionLabel
         action={
-          <Button
-            intent="run"
-            icon="plus"
-            size="sm"
-            onClick={() => setAdding(true)}
-          >
+          <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
             Přidat integraci
           </Button>
         }
@@ -44,7 +35,7 @@ export function IntegrationsScreen({ context }: IntegrationsScreenProps) {
         <EmptyState
           glyph="plug"
           title="Zatím žádné integrace"
-          description="Integrace jsou drivery, kterými systém osahá okolní svět (NAS, GitHub, kalendář, MCP servery). Secrets žijí v .env — tady je jen konfigurace."
+          description="Integrace jsou drivery, kterými systém osahá okolní svět. Secrets žijí v .env — tady je jen konfigurace."
           actionLabel="Přidat integraci"
           onAction={() => setAdding(true)}
           hint="// vytvoří ~/zibby/integrations/<název>.json"
@@ -66,10 +57,7 @@ export function IntegrationsScreen({ context }: IntegrationsScreenProps) {
           submitLabel={INTEGRATION_FORM.submitLabel}
           filePreview={INTEGRATION_FORM.filePreview}
           onClose={() => setAdding(false)}
-          onSubmit={(values) => {
-            addIntegration(values);
-            setAdding(false);
-          }}
+          onSubmit={(values) => { addIntegration(values); setAdding(false); }}
         />
       )}
     </div>

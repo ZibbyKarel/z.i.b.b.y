@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react"
 import { cn } from "../../lib/cn"
 import type { AgentSdkCredit, ClaudeLimits, QuotaLimit } from "../../domain"

@@ -2,22 +2,18 @@
 
 import { useState } from "react";
 import {
-  AgentCard,
   Button,
   EmptyState,
   EntityFormModal,
   SectionLabel,
-  type ContextName,
 } from "@zibby/design-system";
+import { AgentCard } from "../agents/components/AgentCard";
 import { AGENT_FORM } from "./forms";
 import { useDashboardStore } from "./store";
+import { useDashboardContext } from "./dashboardContext";
 
-export interface AgentsScreenProps {
-  context: ContextName;
-}
-
-/** Agenti: registry of agent definition files + "Přidat agenta". */
-export function AgentsScreen({ context }: AgentsScreenProps) {
+export function AgentsScreen() {
+  const { context } = useDashboardContext();
   const { agents, addAgent } = useDashboardStore();
   const [adding, setAdding] = useState(false);
 
@@ -27,12 +23,7 @@ export function AgentsScreen({ context }: AgentsScreenProps) {
     <div className="mx-auto max-w-[1400px]">
       <SectionLabel
         action={
-          <Button
-            intent="run"
-            icon="plus"
-            size="sm"
-            onClick={() => setAdding(true)}
-          >
+          <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
             Přidat agenta
           </Button>
         }
@@ -66,10 +57,7 @@ export function AgentsScreen({ context }: AgentsScreenProps) {
           submitLabel={AGENT_FORM.submitLabel}
           filePreview={AGENT_FORM.filePreview}
           onClose={() => setAdding(false)}
-          onSubmit={(values) => {
-            addAgent(values);
-            setAdding(false);
-          }}
+          onSubmit={(values) => { addAgent(values); setAdding(false); }}
         />
       )}
     </div>

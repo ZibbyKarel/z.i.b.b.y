@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import type { NavItem } from "../../domain";
+import type { LinkComponentType } from "../DashboardShell/DashboardShell";
 import { Icon } from "../Icon/Icon";
 import { ZibbyMark } from "../Icon/Icon";
 
@@ -7,28 +9,24 @@ interface NavRowProps {
   item: NavItem;
   active: boolean;
   onSelect: (id: string) => void;
+  linkComponent?: LinkComponentType;
 }
 
-function NavRow({ item, active, onSelect }: NavRowProps) {
-  return (
-    <button
-      type="button"
-      aria-current={active ? "page" : undefined}
-      onClick={() => onSelect(item.id)}
-      className={cn(
-        "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg outline-none transition-colors",
-        "focus-visible:ring-2 focus-visible:ring-accent",
-        active
-          ? "bg-[rgba(255,255,255,0.04)] font-semibold text-foreground"
-          : "font-medium text-foreground-dim hover:text-foreground",
-      )}
-    >
+function NavRow({ item, active, onSelect, linkComponent: LinkComp }: NavRowProps) {
+  const className = cn(
+    "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg outline-none transition-colors",
+    "focus-visible:ring-2 focus-visible:ring-accent",
+    active
+      ? "bg-[rgba(255,255,255,0.04)] font-semibold text-foreground"
+      : "font-medium text-foreground-dim hover:text-foreground",
+  );
+
+  const inner: ReactNode = (
+    <>
       {active && (
         <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded bg-accent shadow-glow-accent" />
       )}
-      <span
-        className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
-      >
+      <span className={cn("flex", active ? "text-accent" : "text-foreground-faint")}>
         <Icon name={item.glyph} size={17} />
       </span>
       <span className="flex-1">{item.label}</span>
@@ -37,6 +35,25 @@ function NavRow({ item, active, onSelect }: NavRowProps) {
           {item.badge}
         </span>
       ) : null}
+    </>
+  );
+
+  if (LinkComp && item.href) {
+    return (
+      <LinkComp href={item.href} className={className} aria-current={active ? "page" : undefined}>
+        {inner}
+      </LinkComp>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-current={active ? "page" : undefined}
+      onClick={() => onSelect(item.id)}
+      className={className}
+    >
+      {inner}
     </button>
   );
 }
@@ -45,26 +62,26 @@ export interface SidebarProps {
   items: NavItem[];
   active: string;
   onNavigate: (id: string) => void;
-  /** Optional pinned footer entry (e.g. system settings). */
   footerItem?: NavItem;
   className?: string;
+  /** Optional link component for router-based navigation. */
+  linkComponent?: LinkComponentType;
+  /** Accessible label for the nav landmark (pass via t() for i18n). */
+  navLabel?: string;
 }
 
-/**
- * The dashboard left rail: ZIBBY brand block + full navigation, with an optional
- * pinned footer item. Files are the source of truth, so each entry maps to a
- * real area of the system.
- */
 export function Sidebar({
   items,
   active,
   onNavigate,
   footerItem,
   className,
+  linkComponent,
+  navLabel = "Main navigation",
 }: SidebarProps) {
   return (
     <nav
-      aria-label="Hlavní navigace"
+      aria-label={navLabel}
       className={cn(
         "flex w-56 shrink-0 flex-col border-r border-border bg-surface-0 px-3.5 py-6",
         className,
@@ -93,6 +110,7 @@ export function Sidebar({
             item={item}
             active={item.id === active}
             onSelect={onNavigate}
+            linkComponent={linkComponent}
           />
         ))}
       </div>
@@ -103,6 +121,7 @@ export function Sidebar({
             item={footerItem}
             active={footerItem.id === active}
             onSelect={onNavigate}
+            linkComponent={linkComponent}
           />
         </div>
       )}
