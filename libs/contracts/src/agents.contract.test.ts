@@ -43,7 +43,6 @@ describe("agent schemas", () => {
   it("accepts a well-formed create body", () => {
     const parsed = CreateAgentSchema.safeParse({
       id: "code-reviewer",
-      name: "Code Reviewer",
       instructions: "Review pull requests.",
     })
     expect(parsed.success).toBe(true)
@@ -51,35 +50,21 @@ describe("agent schemas", () => {
 
   it("treats every update field as optional", () => {
     expect(UpdateAgentSchema.safeParse({}).success).toBe(true)
-    expect(UpdateAgentSchema.safeParse({ name: "x" }).success).toBe(true)
+    expect(UpdateAgentSchema.safeParse({ instructions: "x" }).success).toBe(true)
   })
 
   it("rejects path-traversal-shaped ids at the schema boundary", () => {
     for (const id of ["../../evil", "foo/bar", "/etc/passwd", "..", "", "a/../b"]) {
       expect(AGENT_ID_REGEX.test(id)).toBe(false)
-      expect(CreateAgentSchema.safeParse({ id, name: "n", instructions: "i" }).success).toBe(
-        false,
-      )
+      expect(CreateAgentSchema.safeParse({ id, instructions: "i" }).success).toBe(false)
     }
   })
 
-  it("requires ISO datetimes on the full entity", () => {
-    const ok = AgentSchema.safeParse({
-      id: "a",
-      name: "n",
-      instructions: "i",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
+  it("requires non-empty instructions on the full entity", () => {
+    const ok = AgentSchema.safeParse({ id: "a", instructions: "i" })
     expect(ok.success).toBe(true)
 
-    const bad = AgentSchema.safeParse({
-      id: "a",
-      name: "n",
-      instructions: "i",
-      createdAt: "not-a-date",
-      updatedAt: "not-a-date",
-    })
+    const bad = AgentSchema.safeParse({ id: "a", instructions: "" })
     expect(bad.success).toBe(false)
   })
 })

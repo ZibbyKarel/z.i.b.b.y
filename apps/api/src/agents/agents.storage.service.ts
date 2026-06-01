@@ -9,6 +9,7 @@ import {
   type CreateAgentInput,
   type UpdateAgentInput,
 } from "@zibby/contracts"
+import matter from "gray-matter"
 import {
   AgentConflictError,
   AgentNotFoundError,
@@ -19,10 +20,14 @@ import {
 /** DI token carrying the absolute path of the directory that holds agent files. */
 export const AGENTS_DIR = "AGENTS_DIR"
 
+const FILE_EXT = ".md"
+
 /**
- * File-backed persistence for agents: one JSON file per agent, named `<id>.json`,
- * inside a configurable data directory. There is intentionally no database — an
- * agent is just a stored file (richer behaviour will be layered on later).
+ * File-backed persistence for agents: one Markdown file per agent, named
+ * `<id>.md`, inside a configurable data directory. The file mirrors the
+ * Claude skill/agent format — YAML frontmatter (`name`, `description`) plus the
+ * `instructions` as the Markdown body. The file name (and frontmatter `name`) is
+ * the agent's id. There is intentionally no database.
  */
 @Injectable()
 export class AgentsStorageService implements OnModuleInit {
@@ -46,14 +51,10 @@ export class AgentsStorageService implements OnModuleInit {
     if (await this.exists(file)) {
       throw new AgentConflictError(input.id)
     }
-    const now = new Date().toISOString()
     const agent: Agent = {
       id: input.id,
-      name: input.name,
       ...(input.description !== undefined ? { description: input.description } : {}),
       instructions: input.instructions,
-      createdAt: now,
-      updatedAt: now,
     }
     await this.writeAtomic(file, agent)
     return agent
@@ -70,27 +71,26 @@ export class AgentsStorageService implements OnModuleInit {
     const entries = await fs.readdir(this.dir)
     const agents: Agent[] = []
     for (const entry of entries) {
-      if (!entry.endsWith(".json")) continue
+      if (!entry.endsWith(FILE_EXT)) continue
+      const id = path.basename(entry, FILE_EXT)
       const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
       if (raw === null) continue
-      const parsed = this.tryParse(raw)
+      const parsed = this.tryParse(raw, id)
       // Skip corrupt files instead of failing the whole listing.
       if (parsed) agents.push(parsed)
     }
-    return agents.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    return agents.sort((a, b) => a.id.localeCompare(b.id))
   }
 
   async update(id: string, patch: UpdateAgentInput): Promise<Agent> {
     const file = this.resolveFile(id)
     const existing = await this.get(id)
 
-    // Only overwrite fields that were actually provided; never touch id/createdAt.
+    // Only overwrite fields that were actually provided; never touch the id.
     const merged: Agent = {
       ...existing,
-      ...(patch.name !== undefined ? { name: patch.name } : {}),
       ...(patch.description !== undefined ? { description: patch.description } : {}),
       ...(patch.instructions !== undefined ? { instructions: patch.instructions } : {}),
-      updatedAt: this.nextTimestamp(existing.updatedAt),
     }
     await this.writeAtomic(file, merged)
     return merged
@@ -117,7 +117,7 @@ export class AgentsStorageService implements OnModuleInit {
     if (typeof id !== "string" || !AGENT_ID_REGEX.test(id)) {
       throw new InvalidAgentIdError(id)
     }
-    const file = path.resolve(this.dir, `${id}.json`)
+    const file = path.resolve(this.dir, `${id}${FILE_EXT}`)
     if (path.dirname(file) !== this.dir) {
       throw new InvalidAgentIdError(id)
     }
@@ -145,43 +145,52 @@ export class AgentsStorageService implements OnModuleInit {
   }
 
   private parse(raw: string, id: string): Agent {
-    const agent = this.tryParse(raw)
+    const agent = this.tryParse(raw, id)
     if (!agent) throw new CorruptAgentFileError(id)
     return agent
   }
 
-  private tryParse(raw: string): Agent | null {
-    let json: unknown
+  /**
+   * Parse a Markdown agent file into an {@link Agent}. The id comes from the file
+   * name (the source of truth), the description from frontmatter, and the
+   * instructions from the Markdown body. Returns null if the file is malformed.
+   */
+  private tryParse(raw: string, id: string): Agent | null {
+    let parsed: matter.GrayMatterFile<string>
     try {
-      json = JSON.parse(raw)
+      parsed = matter(raw)
     } catch {
       return null
     }
-    const result = AgentSchema.safeParse(json)
+    const data = parsed.data as Record<string, unknown>
+    const candidate = {
+      id,
+      ...(typeof data.description === "string" ? { description: data.description } : {}),
+      instructions: parsed.content.trim(),
+    }
+    const result = AgentSchema.safeParse(candidate)
     return result.success ? result.data : null
+  }
+
+  /** Serialize an agent to the Markdown-with-frontmatter format. */
+  private serialize(agent: Agent): string {
+    const data: Record<string, string> = { name: agent.id }
+    if (agent.description !== undefined) data.description = agent.description
+    // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
+    return matter.stringify(`\n${agent.instructions}\n`, data)
   }
 
   /** Write via a temp file + atomic rename so a crash can't leave a torn file. */
   private async writeAtomic(file: string, agent: Agent): Promise<void> {
     await this.ensureDir()
     const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`
-    await fs.writeFile(tmp, JSON.stringify(agent, null, 2), "utf8")
+    await fs.writeFile(tmp, this.serialize(agent), "utf8")
     try {
       await fs.rename(tmp, file)
     } catch (error) {
       await fs.rm(tmp, { force: true })
       throw error
     }
-  }
-
-  /** Guarantee a strictly newer `updatedAt`, even on sub-millisecond updates. */
-  private nextTimestamp(previous: string): string {
-    const now = new Date()
-    const prev = Date.parse(previous)
-    if (!Number.isNaN(prev) && now.getTime() <= prev) {
-      return new Date(prev + 1).toISOString()
-    }
-    return now.toISOString()
   }
 }
 

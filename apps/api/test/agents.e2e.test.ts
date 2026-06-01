@@ -38,7 +38,6 @@ describe("Agents API (e2e)", () => {
 
   const validBody = {
     id: "writer",
-    name: "Writer",
     description: "Writes things",
     instructions: "Write clearly.",
   }
@@ -46,8 +45,11 @@ describe("Agents API (e2e)", () => {
   it("runs the full happy path: create → get → list → update → delete", async () => {
     const created = await request(app.getHttpServer()).post(BASE).send(validBody)
     expect(created.status).toBe(201)
-    expect(created.body).toMatchObject({ id: "writer", name: "Writer" })
-    expect(created.body.createdAt).toEqual(expect.any(String))
+    expect(created.body).toEqual({
+      id: "writer",
+      description: "Writes things",
+      instructions: "Write clearly.",
+    })
 
     const got = await request(app.getHttpServer()).get(`${BASE}/writer`)
     expect(got.status).toBe(200)
@@ -60,10 +62,10 @@ describe("Agents API (e2e)", () => {
 
     const updated = await request(app.getHttpServer())
       .patch(`${BASE}/writer`)
-      .send({ name: "Senior Writer" })
+      .send({ instructions: "Write very clearly." })
     expect(updated.status).toBe(200)
-    expect(updated.body.name).toBe("Senior Writer")
-    expect(updated.body.createdAt).toBe(created.body.createdAt)
+    expect(updated.body.instructions).toBe("Write very clearly.")
+    expect(updated.body.id).toBe("writer")
 
     const deleted = await request(app.getHttpServer()).delete(`${BASE}/writer`)
     expect(deleted.status).toBe(200)
@@ -82,15 +84,12 @@ describe("Agents API (e2e)", () => {
 
   it("returns 400 for an invalid create body", async () => {
     // missing required `instructions`
-    await request(app.getHttpServer())
-      .post(BASE)
-      .send({ id: "bad", name: "Bad" })
-      .expect(400)
+    await request(app.getHttpServer()).post(BASE).send({ id: "bad" }).expect(400)
 
     // id with path separators is rejected by the contract schema
     await request(app.getHttpServer())
       .post(BASE)
-      .send({ id: "../evil", name: "x", instructions: "y" })
+      .send({ id: "../evil", instructions: "y" })
       .expect(400)
   })
 
@@ -98,7 +97,7 @@ describe("Agents API (e2e)", () => {
     await request(app.getHttpServer()).post(BASE).send(validBody).expect(201)
     await request(app.getHttpServer())
       .patch(`${BASE}/writer`)
-      .send({ name: "" }) // violates min(1)
+      .send({ instructions: "" }) // violates min(1)
       .expect(400)
   })
 
@@ -106,14 +105,14 @@ describe("Agents API (e2e)", () => {
     await request(app.getHttpServer()).get(`${BASE}/ghost`).expect(404)
     await request(app.getHttpServer())
       .patch(`${BASE}/ghost`)
-      .send({ name: "x" })
+      .send({ instructions: "x" })
       .expect(404)
     await request(app.getHttpServer()).delete(`${BASE}/ghost`).expect(404)
   })
 
-  it("persists to the isolated AGENTS_DIR", async () => {
+  it("persists a Markdown file to the isolated AGENTS_DIR", async () => {
     await request(app.getHttpServer()).post(BASE).send(validBody).expect(201)
     const files = await fs.readdir(dir)
-    expect(files).toContain("writer.json")
+    expect(files).toContain("writer.md")
   })
 })

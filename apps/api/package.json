@@ -15,6 +15,7 @@
     "@ts-rest/nest": "3.52.1",
     "@ts-rest/open-api": "3.52.1",
     "@zibby/contracts": "*",
+    "gray-matter": "^4.0.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "swagger-ui-express": "^5.0.1",

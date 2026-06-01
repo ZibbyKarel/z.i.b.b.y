@@ -13,6 +13,24 @@ fail to type-check until they are updated.
 import { agentsContract, type Agent } from "@zibby/contracts"
 ```
 
+## Agent model
+
+An agent is `{ id, description?, instructions }`. The `id` is the agent's name
+and is used as the file name. The backend persists each agent as a Markdown file
+`<id>.md` (Claude skill/agent style): YAML frontmatter (`name`, `description`)
+plus the `instructions` as the Markdown body, e.g.
+
+```md
+---
+name: code-reviewer
+description: Reviews pull requests for correctness and style
+---
+
+You are a meticulous senior engineer. Review diffs for bugs and clarity.
+```
+
+HTTP requests/responses are still JSON — the Markdown shape is a storage detail.
+
 ## Layout
 
 - `src/agent.schema.ts` — Zod schemas + inferred types (`Agent`, `CreateAgentInput`, …)
