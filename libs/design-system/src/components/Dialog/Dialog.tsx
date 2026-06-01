@@ -1,6 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
+import { Row } from "../Stack/Stack";
 
 export type DialogWidth = "sm" | "md" | "lg" | "xl";
 
@@ -102,7 +103,7 @@ function DialogHeader({
 }) {
   return (
     <div data-testid={DialogTestId.Header} className="px-5 pt-4 pb-[14px] border-b border-border shrink-0">
-      <div className="flex items-center justify-between gap-3">
+      <Row justify="between" gap="150">
         <div data-testid={DialogTestId.Title} className="font-mono font-semibold text-md text-foreground">{title}</div>
         {onClose && (
           <button
@@ -114,7 +115,7 @@ function DialogHeader({
             ✕
           </button>
         )}
-      </div>
+      </Row>
       {description && (
         <p data-testid={DialogTestId.Description} className="mt-1.5 text-base text-foreground-dim leading-relaxed">{description}</p>
       )}

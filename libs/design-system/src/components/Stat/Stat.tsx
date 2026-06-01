@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "../../utils/cn";
+import { Row, Stack } from "../Stack/Stack";
 import { Icon, type IconName } from "../Icon/Icon";
 
 export type StatTone = "accent" | "ok" | "warn" | "bad" | "neutral";
@@ -40,20 +41,20 @@ export function Stat({
   ...props
 }: StatProps) {
   return (
-    <div ref={ref} data-testid={StatTestId.Root} className="flex items-center gap-3" {...props}>
+    <Row ref={ref} data-testid={StatTestId.Root} gap="150" {...props}>
       {icon && (
         <span data-testid={StatTestId.Icon} className={cn("flex", toneText[tone])}>
           <Icon name={icon} size="md" />
         </span>
       )}
-      <div>
+      <Stack gap="50">
         <div data-testid={StatTestId.Value} className="whitespace-nowrap font-mono text-4xl font-bold leading-none text-foreground">
           {value}
         </div>
-        <div data-testid={StatTestId.Label} className="mt-1 whitespace-nowrap text-sm tracking-wide text-foreground-faint">
+        <div data-testid={StatTestId.Label} className="whitespace-nowrap text-sm tracking-wide text-foreground-faint">
           {label}
         </div>
-      </div>
-    </div>
+      </Stack>
+    </Row>
   );
 }

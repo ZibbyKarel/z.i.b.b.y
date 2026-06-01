@@ -2,6 +2,7 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { createContext, useContext, useState } from "react";
 import { cn } from "../../utils/cn";
+import { Stack } from "../Stack/Stack";
 
 interface TabsContextValue {
   active: string;
@@ -46,7 +47,7 @@ export function Tabs({
   };
   return (
     <TabsContext.Provider value={{ active, setActive }}>
-      <div data-testid={TabsTestId.Root} className="flex flex-col">{children}</div>
+      <Stack data-testid={TabsTestId.Root}>{children}</Stack>
     </TabsContext.Provider>
   );
 }

@@ -5,6 +5,7 @@ import {
   useId,
 } from "react";
 import { cn } from "../../utils/cn";
+import { Stack } from "../Stack/Stack";
 
 export enum FieldTestId {
   Root = "field-root",
@@ -36,7 +37,7 @@ function FieldShell({
   children: ReactNode;
 }) {
   return (
-    <div data-testid={FieldTestId.Root} className="flex flex-col gap-2">
+    <Stack data-testid={FieldTestId.Root} gap="100">
       <label htmlFor={id} data-testid={FieldTestId.Label} className={labelClass}>
         {label}
       </label>
@@ -44,7 +45,7 @@ function FieldShell({
       {hint && (
         <span data-testid={FieldTestId.Hint} className="font-mono text-xs text-foreground-faint">{hint}</span>
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -161,11 +162,13 @@ export function SegmentedField({
   const id = useId();
   return (
     <FieldShell id={id} label={label} hint={hint}>
-      <div
+      <Stack
+        direction="row"
+        wrap
+        gap="75"
         data-testid={FieldTestId.Group}
         role="radiogroup"
         aria-label={label}
-        className="flex flex-wrap gap-1.5"
       >
         {options.map((o) => {
           const on = o.value === value;
@@ -189,7 +192,7 @@ export function SegmentedField({
             </button>
           );
         })}
-      </div>
+      </Stack>
     </FieldShell>
   );
 }

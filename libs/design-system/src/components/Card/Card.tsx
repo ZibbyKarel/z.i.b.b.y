@@ -1,8 +1,8 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { Container } from "../Container/Container";
 import {
   spacingToPx,
-  resolvePadding,
   type Spacing,
   type Padding,
 } from "../../tokens";
@@ -131,8 +131,7 @@ export function CardContent({
   children: ReactNode;
   padding?: Padding;
 }) {
-  const [t, r, b, l] = resolvePadding(padding).map(spacingToPx);
-  return <div data-testid={CardTestId.Content} style={{ padding: `${t} ${r} ${b} ${l}` }}>{children}</div>;
+  return <Container data-testid={CardTestId.Content} padding={padding}>{children}</Container>;
 }
 
 export function CardFooter({ children }: { children: ReactNode }) {

@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { cn } from "../../utils/cn";
+import { Stack } from "../Stack/Stack";
 import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
 
@@ -115,7 +116,7 @@ export function List({
 }: ListProps) {
   return (
     <div data-testid={ListTestId.Root} className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-col gap-0.5">
+      <Stack gap="25">
         {items.map((item) => (
           <ListRow
             key={item.id}
@@ -125,7 +126,7 @@ export function List({
             linkComponent={linkComponent}
           />
         ))}
-      </div>
+      </Stack>
       {footerItem && (
         <div className="mt-auto border-t border-border pt-3">
           <ListRow
