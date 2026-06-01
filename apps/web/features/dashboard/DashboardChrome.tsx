@@ -1,13 +1,9 @@
 "use client";
 
-import { type ReactNode, Suspense } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  DesignSystemProvider,
-  type LinkComponentType,
-  PartialTheme,
-} from "@zibby/design-system";
+import { type LinkComponentType } from "@zibby/design-system";
 import { MainLayout } from "./components/MainLayout";
 import {
   AGENT_SDK,
@@ -17,30 +13,9 @@ import {
   SETTINGS_ITEM,
 } from "./config";
 import { DashboardStoreProvider } from "./store";
-import { DashboardContext } from "./dashboardContext";
 import { LimitsWidget } from "./components/LimitsWidget";
-
-export type ContextName = "home" | "work";
-
-// THIS IS TEMPORARY. In the end this will be a dinamic list of contexts user can create
-export function contextTokens(context: ContextName): PartialTheme {
-  if (context === "work") {
-    return {
-      colorAccent: "#5b8def",
-      colorAccentDim: "rgba(91,141,239,0.16)",
-      colorAccentContrast: "#0a0c10",
-      colorAccentGlow: "rgba(91,141,239,0.4)",
-      shadowGlowAccent: "0 0 16px rgba(91,141,239,0.4)",
-    };
-  }
-  return {
-    colorAccent: "#f0b429",
-    colorAccentDim: "rgba(240,180,41,0.16)",
-    colorAccentContrast: "#0a0c10",
-    colorAccentGlow: "rgba(240,180,41,0.4)",
-    shadowGlowAccent: "0 0 16px rgba(240,180,41,0.4)",
-  };
-}
+import type { ContextName } from "../../domain";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 function pathnameToNavId(pathname: string): string {
   const segment = pathname.split("/").filter(Boolean)[0] ?? "overview";
@@ -54,22 +29,19 @@ export function hrefWithCtx(href: string, ctx: string): string {
 }
 
 function ChromeInner({ children }: { children: ReactNode }) {
+  const { context } = useGlobalStateContext();
   const pathname = usePathname();
-  const params = useSearchParams();
   const router = useRouter();
-
-  const rawCtx = params.get("ctx") ?? "home";
-  const context = (rawCtx === "work" ? "work" : "home") as ContextName;
   const activeNav = pathnameToNavId(pathname);
 
   const navItemsWithCtx = NAV_ITEMS.map((item) => ({
     ...item,
-    href: hrefWithCtx(item.href ?? `/${item.id}`, rawCtx),
+    href: hrefWithCtx(item.href ?? `/${item.id}`, context),
   }));
 
   const footerWithCtx = {
     ...SETTINGS_ITEM,
-    href: hrefWithCtx(SETTINGS_ITEM.href ?? "/settings", rawCtx),
+    href: hrefWithCtx(SETTINGS_ITEM.href ?? "/settings", context),
   };
 
   function handleContextChange(next: ContextName) {
@@ -78,38 +50,26 @@ function ChromeInner({ children }: { children: ReactNode }) {
   }
 
   return (
-    <DashboardContext.Provider value={{ context }}>
-      <DesignSystemProvider theme="dark" tokens={contextTokens(context)}>
-        <MainLayout
-          activeNav={activeNav}
-          breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
-          context={context}
-          footerItem={footerWithCtx}
-          linkComponent={Link as LinkComponentType}
-          navItems={navItemsWithCtx}
-          onContextChange={handleContextChange}
-          onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, rawCtx))}
-          walletSlot={
-            <LimitsWidget credit={AGENT_SDK} limits={CLAUDE_LIMITS} />
-          }
-        >
-          {children}
-        </MainLayout>
-      </DesignSystemProvider>
-    </DashboardContext.Provider>
+    <MainLayout
+      activeNav={activeNav}
+      breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
+      context={context}
+      footerItem={footerWithCtx}
+      linkComponent={Link as LinkComponentType}
+      navItems={navItemsWithCtx}
+      onContextChange={handleContextChange}
+      onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, context))}
+      walletSlot={<LimitsWidget credit={AGENT_SDK} limits={CLAUDE_LIMITS} />}
+    >
+      {children}
+    </MainLayout>
   );
 }
 
 export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <DashboardStoreProvider>
-      <Suspense
-        fallback={
-          <div style={{ height: "100%", background: "var(--bg-surface)" }} />
-        }
-      >
-        <ChromeInner>{children}</ChromeInner>
-      </Suspense>
+      <ChromeInner>{children}</ChromeInner>
     </DashboardStoreProvider>
   );
 }

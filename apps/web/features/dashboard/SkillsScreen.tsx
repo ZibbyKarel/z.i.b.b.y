@@ -11,10 +11,10 @@ import { RunModal } from "../skills/components/RunModal";
 import { PROJECTS } from "./config";
 import { SKILL_FORM } from "./forms";
 import { useDashboardStore } from "./store";
-import { useDashboardContext } from "./dashboardContext";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 export function SkillsScreen() {
-  const { context } = useDashboardContext();
+  const { context } = useGlobalStateContext();
   const { skills, addSkill } = useDashboardStore();
   const [adding, setAdding] = useState(false);
   const [runSkill, setRunSkill] = useState<Skill | null>(null);

@@ -23,7 +23,7 @@ import { PipelineRunModal } from "../pipelines/components/PipelineRunModal";
 import { PROJECTS } from "./config";
 import { PIPELINE_FORM } from "./forms";
 import { useDashboardStore } from "./store";
-import { useDashboardContext } from "./dashboardContext";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 import { hrefWithCtx } from "./DashboardChrome";
 
 export interface PipelinesScreenProps {
@@ -32,7 +32,7 @@ export interface PipelinesScreenProps {
 }
 
 export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
-  const { context } = useDashboardContext();
+  const { context } = useGlobalStateContext();
   const { pipelines, agents, addPipeline } = useDashboardStore();
   const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
   const [adding, setAdding] = useState(false);

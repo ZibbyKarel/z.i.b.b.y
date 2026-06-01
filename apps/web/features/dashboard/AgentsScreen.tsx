@@ -8,10 +8,10 @@ import { EmptyState } from "./components/EmptyState";
 import { AgentCard } from "../agents/components/AgentCard";
 import { AGENT_FORM } from "./forms";
 import { useDashboardStore } from "./store";
-import { useDashboardContext } from "./dashboardContext";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 export function AgentsScreen() {
-  const { context } = useDashboardContext();
+  const { context } = useGlobalStateContext();
   const { agents, addAgent } = useDashboardStore();
   const [adding, setAdding] = useState(false);
 

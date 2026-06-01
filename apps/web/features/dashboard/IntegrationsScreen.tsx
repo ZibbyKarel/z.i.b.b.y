@@ -8,10 +8,10 @@ import { EmptyState } from "./components/EmptyState";
 import { IntegrationCard } from "../integrations/components/IntegrationCard";
 import { INTEGRATION_FORM } from "./forms";
 import { useDashboardStore } from "./store";
-import { useDashboardContext } from "./dashboardContext";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 export function IntegrationsScreen() {
-  const { context } = useDashboardContext();
+  const { context } = useGlobalStateContext();
   const { integrations, addIntegration } = useDashboardStore();
   const [adding, setAdding] = useState(false);
 

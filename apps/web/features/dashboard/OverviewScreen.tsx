@@ -27,7 +27,7 @@ import { RunModal } from "../skills/components/RunModal";
 import { AGENT_SDK, CLAUDE_LIMITS, PROJECTS } from "./config";
 import { SKILL_FORM } from "./forms";
 import { useDashboardStore } from "./store";
-import { useDashboardContext } from "./dashboardContext";
+import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -39,7 +39,7 @@ const STARTERS = [
 ];
 
 export function OverviewScreen() {
-  const { context } = useDashboardContext();
+  const { context } = useGlobalStateContext();
   const { skills, integrations, agents, pipelines, addSkill } = useDashboardStore();
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const [adding, setAdding] = useState(false);
