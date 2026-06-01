@@ -49,5 +49,23 @@ libs/
   design-system/   ← components, tokens, CVA variants — all Tailwind lives here
 apps/
   web/             ← Next.js App Router; imports from DS, never creates its own classes
-  api/             ← Node backend
+  api/             ← NestJS backend (ts-rest contract-first, agents stored as Markdown)
 ```
+
+---
+
+## API (`apps/api`)
+
+NestJS backend running on port **3333** by default. OpenAPI docs served at `/docs`.
+
+```bash
+pnpm install               # install all monorepo deps (run from root)
+```
+
+| Command                              | What it does                                   |
+| ------------------------------------ | ---------------------------------------------- |
+| `pnpm --filter @zibby/api dev`       | Start API in watch mode at http://localhost:3333 |
+| `pnpm --filter @zibby/api serve`     | Start API once (no reload)                     |
+| `pnpm --filter @zibby/api test`      | Run API tests                                  |
+
+Override the port with `PORT=<n>`.

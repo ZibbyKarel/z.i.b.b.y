@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@zibby/design-system": "*",
+    "@zibby/design-system": "workspace:*",
     "@tanstack/react-query": "^5.59.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
