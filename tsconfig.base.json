@@ -14,10 +14,14 @@
     "isolatedModules": true,
     "allowJs": false,
     "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
       "@zibby/design-system": ["libs/design-system/src/index.ts"],
-      "@zibby/design-system/*": ["libs/design-system/src/*"]
+      "@zibby/design-system/*": ["libs/design-system/src/*"],
+      "@zibby/contracts": ["libs/contracts/src/index.ts"],
+      "@zibby/contracts/*": ["libs/contracts/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", ".next"]
