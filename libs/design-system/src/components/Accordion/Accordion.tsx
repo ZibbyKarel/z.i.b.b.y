@@ -1,36 +1,79 @@
 "use client";
-import { memo, useCallback, useState } from "react";
-import type { ReactNode } from "react";
-import { cn } from "../../lib/cn";
+import type { ReactNode, Ref } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { cn } from "../../utils/cn";
 
-export interface AccordionSection {
-  title: ReactNode;
-  content: ReactNode;
-  defaultExpanded?: boolean;
+interface AccordionContextValue {
+  single: boolean;
+  openId: string | null;
+  toggle: (id: string) => void;
+  claimDefault: (id: string) => void;
 }
+
+const AccordionContext = createContext<AccordionContextValue | null>(null);
 
 export interface AccordionProps {
-  sections: AccordionSection[];
+  children: ReactNode;
   single?: boolean;
+  className?: string;
 }
 
-const Summary = memo(function Summary({
+export function Accordion({
   children,
-  expanded,
-  index,
-  onToggle,
-}: {
+  single = false,
+  className,
+}: AccordionProps) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const claimed = useRef(false);
+
+  const toggle = (id: string) =>
+    setOpenId((prev) => (prev === id ? null : id));
+
+  const claimDefault = (id: string) => {
+    if (!claimed.current) {
+      claimed.current = true;
+      setOpenId(id);
+    }
+  };
+
+  return (
+    <AccordionContext.Provider value={{ single, openId, toggle, claimDefault }}>
+      <div
+        className={cn("border border-border rounded overflow-hidden", className)}
+      >
+        {children}
+      </div>
+    </AccordionContext.Provider>
+  );
+}
+
+export interface AccordionSummaryProps {
   children: ReactNode;
-  expanded: boolean;
-  index: number;
-  onToggle: (i: number) => void;
-}) {
+  expanded?: boolean;
+  onToggle?: () => void;
+  ref?: Ref<HTMLButtonElement>;
+}
+
+export function AccordionSummary({
+  children,
+  expanded = false,
+  onToggle,
+  ref,
+}: AccordionSummaryProps) {
   return (
     <button
+      ref={ref}
       aria-expanded={expanded}
-      onClick={() => onToggle(index)}
+      onClick={onToggle}
       className={cn(
-        "flex w-full items-center justify-between px-[14px] py-[10px]",
+        "flex w-full items-center justify-between px-3.5 py-2.5",
         "bg-transparent border-none cursor-pointer font-mono font-medium text-base text-foreground text-left",
         "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
         expanded && "border-b border-border",
@@ -45,57 +88,57 @@ const Summary = memo(function Summary({
       </span>
     </button>
   );
-});
+}
 
-const Details = memo(function Details({
-  children,
-  expanded,
-}: {
+export interface AccordionDetailsProps {
   children: ReactNode;
-  expanded: boolean;
-}) {
+  expanded?: boolean;
+  className?: string;
+}
+
+export function AccordionDetails({
+  children,
+  expanded = false,
+  className,
+}: AccordionDetailsProps) {
   if (!expanded) return null;
-  return <div className="px-[14px] py-3">{children}</div>;
-});
+  return <div className={cn("px-3.5 py-3", className)}>{children}</div>;
+}
 
-export function Accordion({ sections, single = false }: AccordionProps) {
-  const [expanded, setExpanded] = useState<Set<number>>(() => {
-    const init = new Set<number>();
-    sections.forEach((s, i) => {
-      if (s.defaultExpanded) init.add(i);
-    });
-    return init;
-  });
+export interface AccordionItemProps {
+  summary: ReactNode;
+  children: ReactNode;
+  defaultExpanded?: boolean;
+}
 
-  const toggle = useCallback(
-    (i: number) => {
-      if (single) {
-        setExpanded((prev) => (prev.has(i) ? new Set() : new Set([i])));
-      } else {
-        setExpanded((prev) => {
-          const next = new Set(prev);
-          next.has(i) ? next.delete(i) : next.add(i);
-          return next;
-        });
-      }
-    },
-    [single],
-  );
+export function AccordionItem({
+  summary,
+  children,
+  defaultExpanded = false,
+}: AccordionItemProps) {
+  const id = useId();
+  const ctx = useContext(AccordionContext);
+  const [localExpanded, setLocalExpanded] = useState(defaultExpanded);
+
+  useLayoutEffect(() => {
+    if (ctx?.single && defaultExpanded) {
+      ctx.claimDefault(id);
+    }
+    // intentionally runs only on mount; claimDefault is idempotent via a ref guard
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const expanded = ctx?.single ? ctx.openId === id : localExpanded;
+  const onToggle = ctx?.single
+    ? () => ctx.toggle(id)
+    : () => setLocalExpanded((v) => !v);
 
   return (
-    <div className="border border-border rounded overflow-hidden">
-      {sections.map((section, i) => {
-        const isExpanded = expanded.has(i);
-        const isLast = i === sections.length - 1;
-        return (
-          <div key={i} className={cn(!isLast && "border-b border-border")}>
-            <Summary expanded={isExpanded} index={i} onToggle={toggle}>
-              {section.title}
-            </Summary>
-            <Details expanded={isExpanded}>{section.content}</Details>
-          </div>
-        );
-      })}
-    </div>
+    <>
+      <AccordionSummary expanded={expanded} onToggle={onToggle}>
+        {summary}
+      </AccordionSummary>
+      <AccordionDetails expanded={expanded}>{children}</AccordionDetails>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 import { Icon } from "../Icon/Icon";
 
 export interface ButtonGroupOption {

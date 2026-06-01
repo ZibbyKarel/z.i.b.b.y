@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 import { spacingToPx, type Spacing } from "../../tokens";
 
 export type DotTone =
@@ -34,7 +34,10 @@ const ringClass: Record<DotTone, string> = {
   faint: "bg-foreground-faint",
 };
 
-export interface StatusDotProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
+export interface StatusDotProps extends Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "className"
+> {
   tone: DotTone;
   /** Diameter as a spacing token. */
   size?: Spacing;

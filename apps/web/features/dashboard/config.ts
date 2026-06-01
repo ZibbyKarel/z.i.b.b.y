@@ -4,12 +4,8 @@
  * integrations, agents and pipelines all start empty and are created by the
  * user (see store.tsx). Files are the source of truth.
  */
-import type {
-  AgentSdkCredit,
-  ClaudeLimits,
-  ListItem,
-  SelectOption,
-} from "@zibby/design-system";
+import type { ListItem, SelectOption } from "@zibby/design-system";
+import type { AgentSdkCredit, ClaudeLimits } from "../../domain";
 
 export const PROJECTS = [
   "zibby-core",

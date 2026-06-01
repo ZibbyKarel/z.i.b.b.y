@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
 

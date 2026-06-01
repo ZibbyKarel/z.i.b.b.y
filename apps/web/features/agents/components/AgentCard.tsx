@@ -1,11 +1,5 @@
-import {
-  cn,
-  Button,
-  Corners,
-  Icon,
-  Chip,
-  type AgentDef,
-} from "@zibby/design-system";
+import { cn, Button, Corners, Icon, Chip } from "@zibby/design-system";
+import type { AgentDef } from "../../../domain";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 
 export interface AgentCardProps {

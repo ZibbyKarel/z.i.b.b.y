@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Typography } from "../Typography/Typography";
-import { Accordion } from "./Accordion";
+import { Accordion, AccordionItem } from "./Accordion";
 
 const meta: Meta<typeof Accordion> = {
   title: "Components/Accordion",
@@ -16,44 +16,33 @@ export const Overview: Story = {
     <div className="flex flex-col gap-8 w-96">
       <div className="flex flex-col gap-2">
         <Typography type="subtitle" variant="tertiary" mono>
-          multi-expand
+          multi-expand (default)
         </Typography>
-        <Accordion
-          sections={[
-            {
-              title: "Konfigurace agenta",
-              content: "Nastavení modelu, limitů a kontextu spuštění.",
-            },
-            {
-              title: "Vstupní schéma",
-              content: "Definice JSON vstupního payloadu agenta.",
-            },
-            {
-              title: "Výstupní schéma",
-              content: "Defaultně rozbaleno.",
-              defaultExpanded: true,
-            },
-          ]}
-        />
+        <Accordion>
+          <AccordionItem summary="Konfigurace agenta">
+            Nastavení modelu, limitů a kontextu spuštění.
+          </AccordionItem>
+          <AccordionItem summary="Vstupní schéma">
+            Definice JSON vstupního payloadu agenta.
+          </AccordionItem>
+          <AccordionItem summary="Výstupní schéma" defaultExpanded>
+            Defaultně rozbaleno.
+          </AccordionItem>
+        </Accordion>
       </div>
       <div className="flex flex-col gap-2">
         <Typography type="subtitle" variant="tertiary" mono>
           single — only one open at a time
         </Typography>
-        <Accordion
-          single
-          sections={[
-            {
-              title: "Sekce A",
-              content: "Pouze jedna sekce může být otevřena najednou.",
-            },
-            {
-              title: "Sekce B",
-              content: "Otevřením této sekce se zavře předchozí.",
-            },
-            { title: "Sekce C", content: "Obsah sekce C." },
-          ]}
-        />
+        <Accordion single>
+          <AccordionItem summary="Sekce A">
+            Pouze jedna sekce může být otevřena najednou.
+          </AccordionItem>
+          <AccordionItem summary="Sekce B">
+            Otevřením této sekce se zavře předchozí.
+          </AccordionItem>
+          <AccordionItem summary="Sekce C">Obsah sekce C.</AccordionItem>
+        </Accordion>
       </div>
     </div>
   ),
@@ -62,9 +51,11 @@ export const Overview: Story = {
 export const Playground: Story = {
   args: {
     single: false,
-    sections: [
-      { title: "Položka A", content: "Obsah položky A" },
-      { title: "Položka B", content: "Obsah položky B" },
-    ],
   },
+  render: ({ single }) => (
+    <Accordion single={single}>
+      <AccordionItem summary="Položka A">Obsah položky A</AccordionItem>
+      <AccordionItem summary="Položka B">Obsah položky B</AccordionItem>
+    </Accordion>
+  ),
 };

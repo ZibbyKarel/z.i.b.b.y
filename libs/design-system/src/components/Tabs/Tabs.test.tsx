@@ -1,12 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { DesignSystemProvider } from "../../DesignSystemContext/DesignSystemProvider";
+import { render } from "../../utils/testRender";
 import { Tabs, TabList, Tab, TabPanel } from "./Tabs";
-
-function wrap(ui: React.ReactNode) {
-  return render(<DesignSystemProvider theme="dark">{ui}</DesignSystemProvider>);
-}
 
 function BasicTabs() {
   return (
@@ -23,27 +19,27 @@ function BasicTabs() {
 
 describe("Tabs", () => {
   it("renders tabs and shows the default panel", () => {
-    wrap(<BasicTabs />);
+    render(<BasicTabs />);
     expect(screen.getByRole("tab", { name: "Přehled" })).toBeInTheDocument();
     expect(screen.getByText("Obsah A")).toBeInTheDocument();
     expect(screen.queryByText("Obsah B")).toBeNull();
   });
 
   it("switches to the clicked tab's panel", async () => {
-    wrap(<BasicTabs />);
+    render(<BasicTabs />);
     await userEvent.click(screen.getByRole("tab", { name: "Detail" }));
     expect(screen.getByText("Obsah B")).toBeInTheDocument();
     expect(screen.queryByText("Obsah A")).toBeNull();
   });
 
   it("marks the active tab as selected", () => {
-    wrap(<BasicTabs />);
+    render(<BasicTabs />);
     expect(screen.getByRole("tab", { name: "Přehled" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Detail" })).toHaveAttribute("aria-selected", "false");
   });
 
   it("renders a tabpanel", () => {
-    wrap(<BasicTabs />);
+    render(<BasicTabs />);
     expect(screen.getByRole("tabpanel")).toBeInTheDocument();
   });
 });

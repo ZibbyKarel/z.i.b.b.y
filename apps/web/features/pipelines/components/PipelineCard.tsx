@@ -1,14 +1,6 @@
 import { Fragment } from "react"
-import {
-  cn,
-  Corners,
-  Icon,
-  Chip,
-  glyphForAgent,
-  type AgentDef,
-  type Pipeline,
-  type PipelineState,
-} from "@zibby/design-system"
+import { cn, Corners, Icon, Chip } from "@zibby/design-system"
+import { glyphForAgent, type AgentDef, type Pipeline, type PipelineState } from "../../../domain"
 
 const stateMeta: Record<PipelineState, { tone: "ok" | "warn" | "bad" | "accent"; label: string }> = {
   done: { tone: "ok", label: "hotovo" },

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button, type Skill } from "@zibby/design-system";
+import { Button } from "@zibby/design-system";
+import type { Skill } from "../../domain";
 import { SectionLabel } from "./components/SectionLabel";
 import { EntityFormModal } from "./components/EntityFormModal";
 import { EmptyState } from "./components/EmptyState";

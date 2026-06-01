@@ -9,12 +9,12 @@ function isSupported(v: string | undefined): v is Locale {
 }
 
 export default getRequestConfig(async () => {
-  const store  = await cookies();
-  const raw    = store.get("locale")?.value;
+  const store = await cookies();
+  const raw = store.get("locale")?.value;
   const locale: Locale = isSupported(raw) ? raw : "cs";
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: (await import(`./messages/${locale}.json`)).default,
   };
 });

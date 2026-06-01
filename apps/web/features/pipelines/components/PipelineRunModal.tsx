@@ -1,15 +1,7 @@
 "use client";
 import { useState } from "react"
-import {
-  cn,
-  Button,
-  Icon,
-  glyphForAgent,
-  type AgentDef,
-  type ModelName,
-  type Pipeline,
-  type ThinkingLevel,
-} from "@zibby/design-system"
+import { cn, Button, Icon } from "@zibby/design-system"
+import { glyphForAgent, type AgentDef, type ModelName, type Pipeline, type ThinkingLevel } from "../../../domain"
 import { ModelBadge, ThinkBadge } from "./PhaseChain"
 
 const CYCLE_MODEL: ModelName[] = ["opus", "sonnet", "haiku"]

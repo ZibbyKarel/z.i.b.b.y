@@ -5,7 +5,7 @@ import {
   Icon,
 } from "@zibby/design-system"
 import type { ButtonGroupOption } from "@zibby/design-system"
-import type { ContextName } from "@zibby/design-system"
+import type { ContextName } from "../../../domain"
 
 const CONTEXT_OPTIONS: ButtonGroupOption[] = [
   {

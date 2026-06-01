@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import type { ActivityEvent } from "@zibby/design-system"
+import type { ActivityEvent } from "../../../domain"
 import { ActivityFeed } from "./ActivityFeed"
 
 const items: ActivityEvent[] = [

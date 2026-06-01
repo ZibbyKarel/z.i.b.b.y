@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { cn, Corners, Icon, StatusDot, type Approval } from "@zibby/design-system"
+import { cn, Corners, Icon, StatusDot } from "@zibby/design-system"
+import type { Approval } from "../../../domain"
 
 export interface ApprovalCardProps {
   approval: Approval

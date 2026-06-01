@@ -1,14 +1,5 @@
-import {
-  cn,
-  Button,
-  Corners,
-  Icon,
-  Chip,
-  StatusDot,
-  type Integration,
-  type IntegrationStatus,
-  type DotTone,
-} from "@zibby/design-system";
+import { cn, Button, Corners, Icon, Chip, StatusDot, type DotTone } from "@zibby/design-system";
+import type { Integration, IntegrationStatus } from "../../../domain";
 
 const statusMeta: Record<IntegrationStatus, { tone: DotTone; label: string }> = {
   connected:    { tone: "ok",    label: "připojeno" },

@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { ContextName } from "@zibby/design-system";
+import type { ContextName } from "../../domain";
 
 interface DashboardContextValue {
   context: ContextName;

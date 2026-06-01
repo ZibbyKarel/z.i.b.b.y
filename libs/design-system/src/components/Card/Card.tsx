@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 import {
   spacingToPx,
   resolvePadding,

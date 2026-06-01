@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
-export { cn } from "./lib/cn";
+export { cn } from "./utils/cn";
 
 // ---------------------------------------------------------------------------
 // Token system
@@ -33,32 +33,6 @@ export {
 export { DesignSystemProvider } from "./DesignSystemContext/DesignSystemProvider";
 export type { DesignSystemProviderProps } from "./DesignSystemContext/DesignSystemProvider";
 export { useTokens, useSpacing } from "./DesignSystemContext/hooks";
-
-// ---------------------------------------------------------------------------
-// Domain types  (shared contract — stays in DS)
-// ---------------------------------------------------------------------------
-export type {
-  ActivityEvent,
-  ActivityIcon,
-  AgentDef,
-  AgentSdkCredit,
-  Approval,
-  BriefingItem,
-  ClaudeLimits,
-  Integration,
-  IntegrationStatus,
-  ModelName,
-  Pipeline,
-  PipelinePhase,
-  PipelineState,
-  PhaseLoop,
-  QuotaLimit,
-  RunningAgent,
-  Skill,
-  SystemStatus,
-  ThinkingLevel,
-} from "./domain";
-export { glyphForAgent } from "./domain";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -123,10 +97,17 @@ export type { DialogProps, DialogWidth } from "./components/Dialog/Dialog";
 export { Tabs, TabList, Tab, TabPanel } from "./components/Tabs/Tabs";
 export type { TabsProps, TabProps } from "./components/Tabs/Tabs";
 
-export { Accordion } from "./components/Accordion/Accordion";
+export {
+  Accordion,
+  AccordionItem,
+  AccordionSummary,
+  AccordionDetails,
+} from "./components/Accordion/Accordion";
 export type {
   AccordionProps,
-  AccordionSection,
+  AccordionItemProps,
+  AccordionSummaryProps,
+  AccordionDetailsProps,
 } from "./components/Accordion/Accordion";
 
 export { Button } from "./components/Button/Button";

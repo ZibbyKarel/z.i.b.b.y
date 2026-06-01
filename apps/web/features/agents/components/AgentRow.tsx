@@ -1,10 +1,5 @@
-import {
-  cn,
-  Icon,
-  Progress,
-  StatusDot,
-  type RunningAgent,
-} from "@zibby/design-system";
+import { cn, Icon, Progress, StatusDot } from "@zibby/design-system";
+import type { RunningAgent } from "../../../domain";
 
 export interface AgentRowProps {
   agent: RunningAgent;

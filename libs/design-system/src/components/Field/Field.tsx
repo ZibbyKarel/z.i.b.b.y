@@ -3,16 +3,16 @@ import {
   type ReactNode,
   type TextareaHTMLAttributes,
   useId,
-} from "react"
-import { cn } from "../../lib/cn"
+} from "react";
+import { cn } from "../../utils/cn";
 
 const labelClass =
-  "font-mono text-sm uppercase tracking-wider text-foreground-faint"
+  "font-mono text-sm uppercase tracking-wider text-foreground-faint";
 
 const controlClass =
   "w-full rounded border border-border bg-background px-3.5 py-2.5 font-sans text-md " +
   "text-foreground outline-none transition-colors placeholder:text-foreground-faint " +
-  "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent"
+  "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent";
 
 function FieldShell({
   id,
@@ -20,10 +20,10 @@ function FieldShell({
   hint,
   children,
 }: {
-  id: string
-  label: string
-  hint?: string
-  children: ReactNode
+  id: string;
+  label: string;
+  hint?: string;
+  children: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -31,33 +31,39 @@ function FieldShell({
         {label}
       </label>
       {children}
-      {hint && <span className="font-mono text-xs text-foreground-faint">{hint}</span>}
+      {hint && (
+        <span className="font-mono text-xs text-foreground-faint">{hint}</span>
+      )}
     </div>
-  )
+  );
 }
 
-export interface TextFieldProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "className"> {
-  label: string
-  hint?: string
-  ref?: React.Ref<HTMLInputElement>
+export interface TextFieldProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "id" | "className"
+> {
+  label: string;
+  hint?: string;
+  ref?: React.Ref<HTMLInputElement>;
 }
 
 /** Labelled single-line text input. */
 export function TextField({ label, hint, ref, ...props }: TextFieldProps) {
-  const id = useId()
+  const id = useId();
   return (
     <FieldShell id={id} label={label} hint={hint}>
       <input ref={ref} id={id} className={controlClass} {...props} />
     </FieldShell>
-  )
+  );
 }
 
-export interface TextAreaFieldProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id" | "className"> {
-  label: string
-  hint?: string
-  ref?: React.Ref<HTMLTextAreaElement>
+export interface TextAreaFieldProps extends Omit<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  "id" | "className"
+> {
+  label: string;
+  hint?: string;
+  ref?: React.Ref<HTMLTextAreaElement>;
 }
 
 /** Labelled multi-line text input. */
@@ -67,7 +73,7 @@ export function TextAreaField({
   ref,
   ...props
 }: TextAreaFieldProps) {
-  const id = useId()
+  const id = useId();
   return (
     <FieldShell id={id} label={label} hint={hint}>
       <textarea
@@ -77,20 +83,20 @@ export function TextAreaField({
         {...props}
       />
     </FieldShell>
-  )
+  );
 }
 
 export interface SelectOption {
-  value: string
-  label: string
+  value: string;
+  label: string;
 }
 
 export interface SelectFieldProps {
-  label: string
-  hint?: string
-  value: string
-  options: SelectOption[]
-  onValueChange: (value: string) => void
+  label: string;
+  hint?: string;
+  value: string;
+  options: SelectOption[];
+  onValueChange: (value: string) => void;
 }
 
 /** Labelled native select. */
@@ -101,7 +107,7 @@ export function SelectField({
   options,
   onValueChange,
 }: SelectFieldProps) {
-  const id = useId()
+  const id = useId();
   return (
     <FieldShell id={id} label={label} hint={hint}>
       <select
@@ -111,21 +117,25 @@ export function SelectField({
         className={cn(controlClass, "cursor-pointer appearance-none")}
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="bg-background text-foreground">
+          <option
+            key={o.value}
+            value={o.value}
+            className="bg-background text-foreground"
+          >
             {o.label}
           </option>
         ))}
       </select>
     </FieldShell>
-  )
+  );
 }
 
 export interface SegmentedFieldProps {
-  label: string
-  hint?: string
-  value: string
-  options: SelectOption[]
-  onValueChange: (value: string) => void
+  label: string;
+  hint?: string;
+  value: string;
+  options: SelectOption[];
+  onValueChange: (value: string) => void;
 }
 
 /** Labelled segmented chooser — a row of mutually exclusive chip buttons. */
@@ -136,12 +146,16 @@ export function SegmentedField({
   options,
   onValueChange,
 }: SegmentedFieldProps) {
-  const id = useId()
+  const id = useId();
   return (
     <FieldShell id={id} label={label} hint={hint}>
-      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="flex flex-wrap gap-1.5"
+      >
         {options.map((o) => {
-          const on = o.value === value
+          const on = o.value === value;
           return (
             <button
               key={o.value}
@@ -159,9 +173,9 @@ export function SegmentedField({
             >
               {o.label}
             </button>
-          )
+          );
         })}
       </div>
     </FieldShell>
-  )
+  );
 }

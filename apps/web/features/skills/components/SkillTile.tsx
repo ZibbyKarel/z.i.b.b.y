@@ -1,10 +1,5 @@
-import {
-  cn,
-  Button,
-  Corners,
-  Icon,
-  type Skill,
-} from "@zibby/design-system";
+import { cn, Button, Corners, Icon } from "@zibby/design-system";
+import type { Skill } from "../../../domain";
 
 export interface SkillTileProps {
   skill: Skill;

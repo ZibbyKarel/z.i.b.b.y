@@ -1,4 +1,5 @@
-import { cn, Icon, StatusDot, type ActivityEvent, type ActivityIcon } from "@zibby/design-system"
+import { cn, Icon, StatusDot } from "@zibby/design-system"
+import type { ActivityEvent, ActivityIcon } from "../../../domain"
 
 const iconTone: Record<ActivityIcon, string> = {
   run: "text-work",

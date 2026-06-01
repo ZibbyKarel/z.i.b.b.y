@@ -1,7 +1,7 @@
 "use client";
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { createContext, useContext, useState } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 
 interface TabsContextValue {
   active: string;
@@ -23,7 +23,12 @@ export interface TabsProps {
   children: ReactNode;
 }
 
-export function Tabs({ defaultValue = "", value, onValueChange, children }: TabsProps) {
+export function Tabs({
+  defaultValue = "",
+  value,
+  onValueChange,
+  children,
+}: TabsProps) {
   const [internal, setInternal] = useState(defaultValue);
   const active = value ?? internal;
   const setActive = (id: string) => {
@@ -32,9 +37,7 @@ export function Tabs({ defaultValue = "", value, onValueChange, children }: Tabs
   };
   return (
     <TabsContext.Provider value={{ active, setActive }}>
-      <div className="flex flex-col">
-        {children}
-      </div>
+      <div className="flex flex-col">{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -50,7 +53,10 @@ export function TabList({ children }: { children: ReactNode }) {
   );
 }
 
-export interface TabProps extends Omit<HTMLAttributes<HTMLButtonElement>, "className"> {
+export interface TabProps extends Omit<
+  HTMLAttributes<HTMLButtonElement>,
+  "className"
+> {
   value: string;
   ref?: Ref<HTMLButtonElement>;
 }
@@ -80,7 +86,13 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
   );
 }
 
-export function TabPanel({ value, children }: { value: string; children: ReactNode }) {
+export function TabPanel({
+  value,
+  children,
+}: {
+  value: string;
+  children: ReactNode;
+}) {
   const { active } = useTabsContext();
   if (active !== value) return null;
   return (

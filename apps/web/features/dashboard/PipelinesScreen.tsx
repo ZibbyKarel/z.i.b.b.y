@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Icon, Chip, type Pipeline } from "@zibby/design-system";
+import { Button, Icon, Chip } from "@zibby/design-system";
+import type { Pipeline } from "../../domain";
 import { SectionLabel } from "./components/SectionLabel";
 import { HudPanel } from "./components/HudPanel";
 import { EntityFormModal } from "./components/EntityFormModal";

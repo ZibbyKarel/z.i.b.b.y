@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { cn, Button, Icon, type Skill } from "@zibby/design-system";
+import { cn, Button, Icon } from "@zibby/design-system";
+import type { Skill } from "../../../domain";
 
 export interface RunModalProps {
   /** Skill to run; the modal renders only when set. */

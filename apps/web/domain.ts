@@ -1,12 +1,4 @@
-/**
- * Shared dashboard domain types.
- *
- * These describe the files-as-source-of-truth model the dashboard renders
- * (skills, agents, pipelines, quotas). They live here — rather than beside a
- * single component — because both the presentational components and the web
- * app's data layer depend on them.
- */
-import type { IconName } from "./components/Icon/Icon";
+import type { IconName } from "@zibby/design-system";
 
 export type ContextName = "home" | "work";
 

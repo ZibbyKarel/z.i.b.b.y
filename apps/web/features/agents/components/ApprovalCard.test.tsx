@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { Approval } from "@zibby/design-system"
+import type { Approval } from "../../../domain"
 import { ApprovalCard } from "./ApprovalCard"
 
 const approval: Approval = {

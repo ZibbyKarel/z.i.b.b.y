@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { AgentDef, Pipeline } from "@zibby/design-system"
+import type { AgentDef, Pipeline } from "../../../domain"
 import { PipelineCard } from "./PipelineCard"
 
 const agents: AgentDef[] = [

@@ -1,8 +1,8 @@
-import type { HTMLAttributes } from "react"
-import { cn } from "../../lib/cn"
-import { Icon, type IconName } from "../Icon/Icon"
+import type { HTMLAttributes } from "react";
+import { cn } from "../../utils/cn";
+import { Icon, type IconName } from "../Icon/Icon";
 
-export type StatTone = "accent" | "ok" | "warn" | "bad" | "neutral"
+export type StatTone = "accent" | "ok" | "warn" | "bad" | "neutral";
 
 const toneText: Record<StatTone, string> = {
   accent: "text-accent",
@@ -10,14 +10,17 @@ const toneText: Record<StatTone, string> = {
   warn: "text-warn",
   bad: "text-bad",
   neutral: "text-foreground-dim",
-}
+};
 
-export interface StatProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  value: string | number
-  label: string
-  icon?: IconName
-  tone?: StatTone
-  ref?: React.Ref<HTMLDivElement>
+export interface StatProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "className"
+> {
+  value: string | number;
+  label: string;
+  icon?: IconName;
+  tone?: StatTone;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
 /** A single headline metric: glyph + big mono number + caption. */
@@ -45,5 +48,5 @@ export function Stat({
         </div>
       </div>
     </div>
-  )
+  );
 }

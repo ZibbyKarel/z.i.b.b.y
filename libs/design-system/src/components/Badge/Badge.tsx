@@ -1,11 +1,21 @@
 import type { HTMLAttributes, Ref } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 
 export type BadgeTone =
-  | "neutral" | "accent" | "ok" | "warn" | "bad" | "run"
-  | "opus" | "sonnet" | "haiku";
+  | "neutral"
+  | "accent"
+  | "ok"
+  | "warn"
+  | "bad"
+  | "run"
+  | "opus"
+  | "sonnet"
+  | "haiku";
 
-export interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
+export interface BadgeProps extends Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "className"
+> {
   tone?: BadgeTone;
   solid?: boolean;
   size?: "sm" | "md";
@@ -14,26 +24,26 @@ export interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, "class
 
 const toneBase: Record<BadgeTone, string> = {
   neutral: "text-foreground-dim bg-elevated border-border",
-  accent:  "text-accent bg-accent-dim border-accent/40",
-  ok:      "text-ok bg-ok/12 border-ok/25",
-  warn:    "text-warn bg-warn/12 border-warn/25",
-  bad:     "text-bad bg-bad/12 border-bad/25",
-  run:     "text-work bg-work/12 border-work/25",
-  opus:    "text-model-opus bg-model-opus/12 border-model-opus/25",
-  sonnet:  "text-model-sonnet bg-model-sonnet/12 border-model-sonnet/25",
-  haiku:   "text-model-haiku bg-model-haiku/12 border-model-haiku/25",
+  accent: "text-accent bg-accent-dim border-accent/40",
+  ok: "text-ok bg-ok/12 border-ok/25",
+  warn: "text-warn bg-warn/12 border-warn/25",
+  bad: "text-bad bg-bad/12 border-bad/25",
+  run: "text-work bg-work/12 border-work/25",
+  opus: "text-model-opus bg-model-opus/12 border-model-opus/25",
+  sonnet: "text-model-sonnet bg-model-sonnet/12 border-model-sonnet/25",
+  haiku: "text-model-haiku bg-model-haiku/12 border-model-haiku/25",
 };
 
 const toneSolid: Record<BadgeTone, string> = {
   neutral: "bg-foreground-dim border-transparent text-background",
-  accent:  "bg-accent border-transparent text-accent-contrast",
-  ok:      "bg-ok border-transparent text-background",
-  warn:    "bg-warn border-transparent text-background",
-  bad:     "bg-bad border-transparent text-background",
-  run:     "bg-work border-transparent text-background",
-  opus:    "bg-model-opus border-transparent text-background",
-  sonnet:  "bg-model-sonnet border-transparent text-background",
-  haiku:   "bg-model-haiku border-transparent text-background",
+  accent: "bg-accent border-transparent text-accent-contrast",
+  ok: "bg-ok border-transparent text-background",
+  warn: "bg-warn border-transparent text-background",
+  bad: "bg-bad border-transparent text-background",
+  run: "bg-work border-transparent text-background",
+  opus: "bg-model-opus border-transparent text-background",
+  sonnet: "bg-model-sonnet border-transparent text-background",
+  haiku: "bg-model-haiku border-transparent text-background",
 };
 
 const sizeClasses: Record<NonNullable<BadgeProps["size"]>, string> = {

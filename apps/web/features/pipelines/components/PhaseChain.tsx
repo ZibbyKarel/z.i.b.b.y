@@ -1,13 +1,6 @@
 import { Fragment } from "react";
-import {
-  cn,
-  Icon,
-  Chip,
-  glyphForAgent,
-  type AgentDef,
-  type Pipeline,
-  type PipelinePhase,
-} from "@zibby/design-system";
+import { cn, Icon, Chip } from "@zibby/design-system";
+import { glyphForAgent, type AgentDef, type Pipeline, type PipelinePhase } from "../../../domain";
 
 const modelTone = {
   opus: "opus",

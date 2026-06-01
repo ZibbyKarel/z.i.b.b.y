@@ -4,18 +4,18 @@ import { StatusDot } from "./StatusDot"
 
 describe("StatusDot", () => {
   it("renders a sized dot", () => {
-    const { container } = render(<StatusDot size="150" />)
+    const { container } = render(<StatusDot tone="accent" size="150" />)
     const el = container.firstElementChild as HTMLElement
     expect(el.style.width).toBe("12px")
   })
 
   it("adds a pulse ring when pulse is set", () => {
-    const { container } = render(<StatusDot pulse />)
+    const { container } = render(<StatusDot tone="ok" pulse />)
     expect(container.querySelector(".animate-zpulse")).not.toBeNull()
   })
 
   it("omits the pulse ring by default", () => {
-    const { container } = render(<StatusDot />)
+    const { container } = render(<StatusDot tone="faint" />)
     expect(container.querySelector(".animate-zpulse")).toBeNull()
   })
 })

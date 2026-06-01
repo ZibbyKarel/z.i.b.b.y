@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { List } from "@zibby/design-system";
 import type { ListItem, LinkComponentType } from "@zibby/design-system";
-import type { ContextName } from "@zibby/design-system";
+import type { ContextName } from "../../../domain";
 import { TopBar } from "./TopBar";
 import { BrandLogo } from "./BrandLogo";
 

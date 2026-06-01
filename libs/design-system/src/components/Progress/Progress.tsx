@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 import { spacingToPx, type Spacing } from "../../tokens";
 
 export type ProgressTone = "accent" | "ok" | "warn" | "bad";
@@ -18,7 +18,10 @@ const toneGlow: Record<ProgressTone, string> = {
   bad: "shadow-[0_0_10px_rgba(255,107,107,0.53)]",
 };
 
-export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
+export interface ProgressProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "className"
+> {
   /** Fill percentage, 0–100. */
   value: number;
   tone?: ProgressTone;

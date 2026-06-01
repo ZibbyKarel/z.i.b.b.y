@@ -1,9 +1,12 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 
 export type AlertSeverity = "info" | "ok" | "warn" | "error";
 
-export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title" | "className"> {
+export interface AlertProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "title" | "className"
+> {
   severity?: AlertSeverity;
   title?: ReactNode;
   onClose?: () => void;
@@ -11,13 +14,19 @@ export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"
 }
 
 const severityClasses: Record<AlertSeverity, string> = {
-  info:  "text-work bg-work/10 border-work/25",
-  ok:    "text-ok bg-ok/10 border-ok/25",
-  warn:  "text-warn bg-warn/10 border-warn/25",
+  info: "text-work bg-work/10 border-work/25",
+  ok: "text-ok bg-ok/10 border-ok/25",
+  warn: "text-warn bg-warn/10 border-warn/25",
   error: "text-bad bg-bad/10 border-bad/25",
 };
 
-export function Alert({ severity = "info", title, onClose, children, ...rest }: AlertProps) {
+export function Alert({
+  severity = "info",
+  title,
+  onClose,
+  children,
+  ...rest
+}: AlertProps) {
   return (
     <div
       {...rest}

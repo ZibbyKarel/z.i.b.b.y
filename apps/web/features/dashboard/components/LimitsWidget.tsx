@@ -8,11 +8,9 @@ import {
   usageTone,
   Sparkline,
   StatusDot,
-  type AgentSdkCredit,
-  type ClaudeLimits,
-  type QuotaLimit,
   type DotTone,
 } from "@zibby/design-system";
+import type { AgentSdkCredit, ClaudeLimits, QuotaLimit } from "../../../domain";
 
 const toneText: Record<"ok" | "warn" | "bad" | "accent", string> = {
   ok: "text-ok", warn: "text-warn", bad: "text-bad", accent: "text-accent",

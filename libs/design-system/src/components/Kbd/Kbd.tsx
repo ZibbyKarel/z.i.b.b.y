@@ -1,7 +1,10 @@
 import type { HTMLAttributes, Ref } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../utils/cn";
 
-export interface KbdProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
+export interface KbdProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "className"
+> {
   ref?: Ref<HTMLElement>;
 }
 

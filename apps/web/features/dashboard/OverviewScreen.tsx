@@ -9,8 +9,8 @@ import {
   Stat,
   StatusDot,
   usageTone,
-  type Skill,
 } from "@zibby/design-system";
+import type { Skill } from "../../domain";
 import { HudPanel } from "./components/HudPanel";
 import { EntityFormModal } from "./components/EntityFormModal";
 import { EmptyState } from "./components/EmptyState";
