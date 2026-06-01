@@ -4,14 +4,14 @@ import {
   Divider,
   List,
   ListItem,
+  ListItemBadge,
   ListItemIcon,
   ListItemText,
-  ListItemBadge,
   ListTestId,
   Stack,
   Surface,
 } from "@zibby/design-system";
-import type { NavItem, LinkComponentType } from "@zibby/design-system";
+import type { LinkComponentType, NavItem } from "@zibby/design-system";
 import type { ContextName } from "../../../domain";
 import { TopBar } from "./TopBar";
 import { BrandLogo } from "./BrandLogo";
@@ -46,14 +46,14 @@ export function MainLayout({
   return (
     <Surface grid scanlines>
       <Stack
-        as="nav"
         aria-label="Main navigation"
+        as="nav"
         shrink={false}
         style={{ width: 224, backgroundColor: "var(--color-background)" }}
       >
         <Container
-          padding={["300", "150"]}
           grow
+          padding={["300", "150"]}
           style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
         >
           <BrandLogo />
@@ -61,12 +61,12 @@ export function MainLayout({
             <List>
               {navItems.map((item) => (
                 <ListItem
-                  key={item.id}
                   active={item.id === activeNav}
-                  onSelect={() => onNavigate(item.id)}
-                  href={item.href}
-                  linkComponent={linkComponent}
                   data-testid={`${ListTestId.Item}-${item.id}`}
+                  href={item.href}
+                  key={item.id}
+                  linkComponent={linkComponent}
+                  onSelect={() => onNavigate(item.id)}
                 >
                   <ListItemIcon glyph={item.glyph} />
                   <ListItemText>{item.label}</ListItemText>
@@ -84,10 +84,10 @@ export function MainLayout({
                 <Container padding={["75", "0", "0", "0"]}>
                   <ListItem
                     active={footerItem.id === activeNav}
-                    onSelect={() => onNavigate(footerItem.id)}
+                    data-testid={`${ListTestId.Item}-${footerItem.id}`}
                     href={footerItem.href}
                     linkComponent={linkComponent}
-                    data-testid={`${ListTestId.Item}-${footerItem.id}`}
+                    onSelect={() => onNavigate(footerItem.id)}
                   >
                     <ListItemIcon glyph={footerItem.glyph} />
                     <ListItemText>{footerItem.label}</ListItemText>
@@ -103,17 +103,17 @@ export function MainLayout({
 
       <Stack grow style={{ minWidth: 0 }}>
         <TopBar
-          context={context}
-          onContextChange={onContextChange}
           breadcrumb={breadcrumb}
-          walletSlot={walletSlot}
+          context={context}
           onCommand={onCommand}
+          onContextChange={onContextChange}
+          walletSlot={walletSlot}
         />
         <Container
-          position="relative"
           grow
           overflow="auto"
           padding={["300", "350"]}
+          position="relative"
         >
           {children}
         </Container>

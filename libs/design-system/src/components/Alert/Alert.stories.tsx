@@ -16,7 +16,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6 w-96">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           severities
         </Typography>
         <div className="flex flex-col gap-3">
@@ -35,10 +35,10 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           with close
         </Typography>
-        <Alert severity="warn" title="Zavíratelný" onClose={() => undefined}>
+        <Alert onClose={() => undefined} severity="warn" title="Zavíratelný">
           Kvóta je z 80 % vyčerpána.
         </Alert>
       </div>

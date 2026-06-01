@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
-import { Tabs, TabsTestId, TabList, Tab, TabPanel } from "./Tabs";
+import { Tab, TabList, TabPanel, Tabs, TabsTestId } from "./Tabs";
 
 function BasicTabs() {
   return (

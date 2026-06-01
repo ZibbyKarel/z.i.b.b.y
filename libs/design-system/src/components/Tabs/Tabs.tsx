@@ -55,7 +55,7 @@ export function Tabs({
 export function TabList({ children }: { children: ReactNode }) {
   return (
     <div className="border-b border-border shrink-0">
-      <Row data-testid={TabsTestId.List} role="tablist" gap="25" align="stretch">
+      <Row align="stretch" data-testid={TabsTestId.List} gap="25" role="tablist">
         {children}
       </Row>
     </div>
@@ -78,10 +78,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
     <button
       data-testid={`${TabsTestId.Tab}-${value}`}
       {...rest}
-      ref={ref}
-      role="tab"
       aria-selected={isActive}
-      onClick={() => setActive(value)}
       className={cn(
         "bg-transparent border-none cursor-pointer font-mono text-base -mb-px px-[14px] pt-2 pb-[7px]",
         "transition-[color,border-color] outline-none",
@@ -90,6 +87,9 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
           ? "border-b-2 border-accent text-accent font-semibold"
           : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",
       )}
+      onClick={() => setActive(value)}
+      ref={ref}
+      role="tab"
     >
       {children}
     </button>
@@ -106,7 +106,7 @@ export function TabPanel({
   const { active } = useTabsContext();
   if (active !== value) return null;
   return (
-    <div data-testid={`${TabsTestId.Panel}-${value}`} role="tabpanel" className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto" data-testid={`${TabsTestId.Panel}-${value}`} role="tabpanel">
       {children}
     </div>
   );

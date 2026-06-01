@@ -21,14 +21,14 @@ describe("Spacer", () => {
   });
 
   it("axis=x only sets width", () => {
-    render(<Spacer size="100" axis="x" />);
+    render(<Spacer axis="x" size="100" />);
     const el = screen.getByTestId(SpacerTestId.Root);
     expect(el.style.width).toBe("8px");
     expect(el.style.height).toBe("");
   });
 
   it("axis=y only sets height", () => {
-    render(<Spacer size="100" axis="y" />);
+    render(<Spacer axis="y" size="100" />);
     const el = screen.getByTestId(SpacerTestId.Root);
     expect(el.style.height).toBe("8px");
     expect(el.style.width).toBe("");

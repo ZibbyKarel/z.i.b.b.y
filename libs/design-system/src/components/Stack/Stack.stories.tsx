@@ -14,8 +14,8 @@ type Story = StoryObj<typeof Stack>;
 
 const box = (label: string) => (
   <div
-    key={label}
     className="rounded border border-border bg-surface px-4 py-2 font-mono text-sm text-foreground-dim"
+    key={label}
   >
     {label}
   </div>
@@ -25,7 +25,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           Stack col
         </Typography>
         <Stack direction="col" gap="150">
@@ -33,7 +33,7 @@ export const Overview: Story = {
         </Stack>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           Row
         </Typography>
         <Stack direction="row" gap="150">
@@ -41,7 +41,7 @@ export const Overview: Story = {
         </Stack>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           Row justify=between
         </Typography>
         <Stack direction="row" justify="between" style={{ width: "100%" }}>

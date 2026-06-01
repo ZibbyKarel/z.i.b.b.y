@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
-import { Card, CardTestId, CardHeader, CardContent, CardFooter, CardActions } from "./Card";
+import { Card, CardActions, CardContent, CardFooter, CardHeader, CardTestId } from "./Card";
 
 describe("Card", () => {
   it("renders children", () => {
@@ -27,7 +27,7 @@ describe("Card", () => {
 
   it("applies translucent background, dashed border and shadow", () => {
     render(
-      <Card background="panel" borderStyle="dashed" shadow="dropdown" animate="scale">
+      <Card animate="scale" background="panel" borderStyle="dashed" shadow="dropdown">
         x
       </Card>,
     );

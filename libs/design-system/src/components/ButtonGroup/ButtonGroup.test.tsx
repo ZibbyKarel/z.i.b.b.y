@@ -12,7 +12,7 @@ const options: ButtonGroupOption[] = [
 describe("ButtonGroup", () => {
   it("marks the active option as pressed", () => {
     render(
-      <ButtonGroup options={options} value="home" onChange={() => {}} ariaLabel="Context" />,
+      <ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />,
     );
     expect(screen.getByTestId(`${ButtonGroupTestId.Option}-home`)).toHaveAttribute(
       "aria-pressed",
@@ -27,7 +27,7 @@ describe("ButtonGroup", () => {
   it("calls onChange on click", async () => {
     const onChange = vi.fn();
     render(
-      <ButtonGroup options={options} value="home" onChange={onChange} ariaLabel="Context" />,
+      <ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />,
     );
     await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-work`));
     expect(onChange).toHaveBeenCalledWith("work");
@@ -37,12 +37,12 @@ describe("ButtonGroup", () => {
     const onAdd = vi.fn();
     render(
       <ButtonGroup
-        options={options}
-        value="home"
-        onChange={() => {}}
-        onAdd={onAdd}
         addLabel="Přidat kontext"
         ariaLabel="Context"
+        onAdd={onAdd}
+        onChange={() => {}}
+        options={options}
+        value="home"
       />,
     );
     const add = screen.getByTestId(ButtonGroupTestId.Add);

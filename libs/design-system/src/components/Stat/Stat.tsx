@@ -41,17 +41,17 @@ export function Stat({
   ...props
 }: StatProps) {
   return (
-    <Row ref={ref} data-testid={StatTestId.Root} gap="150" {...props}>
+    <Row data-testid={StatTestId.Root} gap="150" ref={ref} {...props}>
       {icon && (
-        <span data-testid={StatTestId.Icon} className={cn("flex", toneText[tone])}>
+        <span className={cn("flex", toneText[tone])} data-testid={StatTestId.Icon}>
           <Icon name={icon} size="md" />
         </span>
       )}
       <Stack gap="50">
-        <div data-testid={StatTestId.Value} className="whitespace-nowrap font-mono text-4xl font-bold leading-none text-foreground">
+        <div className="whitespace-nowrap font-mono text-4xl font-bold leading-none text-foreground" data-testid={StatTestId.Value}>
           {value}
         </div>
-        <div data-testid={StatTestId.Label} className="whitespace-nowrap text-sm tracking-wide text-foreground-faint">
+        <div className="whitespace-nowrap text-sm tracking-wide text-foreground-faint" data-testid={StatTestId.Label}>
           {label}
         </div>
       </Stack>

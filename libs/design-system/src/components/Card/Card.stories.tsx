@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Typography } from "../Typography/Typography";
-import { Card, CardHeader, CardContent, CardFooter, CardActions } from "./Card";
+import { Card, CardActions, CardContent, CardFooter, CardHeader } from "./Card";
 import { Button } from "../Button/Button";
 
 const meta: Meta<typeof Card> = {
@@ -17,32 +17,32 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6 w-80">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           basic
         </Typography>
         <Card>Základní karta bez struktury</Card>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           header + content
         </Typography>
         <Card>
-          <CardHeader>// Statistiky</CardHeader>
+          <CardHeader>{'// Statistiky'}</CardHeader>
           <CardContent>Obsah sekce s hlavičkou</CardContent>
         </Card>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           header + content + footer
         </Typography>
         <Card>
-          <CardHeader>// Nastavení</CardHeader>
+          <CardHeader>{'// Nastavení'}</CardHeader>
           <CardContent>Hlavní obsah karty.</CardContent>
           <CardFooter>Zápatí s doplňkovými informacemi</CardFooter>
         </Card>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           with actions
         </Typography>
         <Card>
@@ -50,14 +50,14 @@ export const Overview: Story = {
           <CardContent>Opravdu chcete smazat tento pipeline?</CardContent>
           <CardActions>
             <Button intent="ghost">Zrušit</Button>
-            <Button intent="reject" icon="x">
+            <Button icon="x" intent="reject">
               Smazat
             </Button>
           </CardActions>
         </Card>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           corners (HUD style)
         </Typography>
         <Card corners>

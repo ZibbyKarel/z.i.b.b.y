@@ -27,53 +27,53 @@ export const Overview: Story = {
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <Typography type="subtitle" variant="tertiary" mono>
+          <Typography mono type="subtitle" variant="tertiary">
             TextField
           </Typography>
           <TextField
             label="Název skillu"
-            value={name}
             onChange={(e) => setName(e.target.value)}
+            value={name}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Typography type="subtitle" variant="tertiary" mono>
+          <Typography mono type="subtitle" variant="tertiary">
             TextAreaField
           </Typography>
           <TextAreaField
-            label="Popis"
             hint="z description v SKILL.md"
-            value={desc}
+            label="Popis"
             onChange={(e) => setDesc(e.target.value)}
+            value={desc}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Typography type="subtitle" variant="tertiary" mono>
+          <Typography mono type="subtitle" variant="tertiary">
             SelectField
           </Typography>
           <SelectField
             label="Model"
-            value={model}
             onValueChange={setModel}
             options={[
               { value: "opus", label: "opus" },
               { value: "sonnet", label: "sonnet" },
               { value: "haiku", label: "haiku" },
             ]}
+            value={model}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Typography type="subtitle" variant="tertiary" mono>
+          <Typography mono type="subtitle" variant="tertiary">
             SegmentedField
           </Typography>
           <SegmentedField
             label="Kontext"
-            value={ctx}
             onValueChange={setCtx}
             options={[
               { value: "home", label: "home" },
               { value: "work", label: "work" },
             ]}
+            value={ctx}
           />
         </div>
       </div>
@@ -86,10 +86,10 @@ export const Playground: Story = {
     const [value, setValue] = useState("");
     return (
       <TextField
-        label="Název"
         hint="Nápověda k poli"
-        value={value}
+        label="Název"
         onChange={(e) => setValue(e.target.value)}
+        value={value}
       />
     );
   },

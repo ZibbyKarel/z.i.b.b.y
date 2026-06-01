@@ -42,7 +42,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           type scale
         </Typography>
         <div className="flex flex-col gap-3">
@@ -54,12 +54,12 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           variants (primary / secondary / tertiary)
         </Typography>
         <div className="flex flex-col gap-6">
           {variants.map((variant) => (
-            <div key={variant} className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1" key={variant}>
               {types.map((type) => (
                 <Typography key={type} type={type} variant={variant}>
                   {variant} · {type}

@@ -24,27 +24,27 @@ export const Overview: Story = {
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <Typography type="subtitle" variant="tertiary" mono>
+          <Typography mono type="subtitle" variant="tertiary">
             default
           </Typography>
           <ButtonGroup
+            ariaLabel="Přepínač kontextu"
+            onChange={setValue}
             options={contextOptions}
             value={value}
-            onChange={setValue}
-            ariaLabel="Přepínač kontextu"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Typography type="subtitle" variant="tertiary" mono>
+          <Typography mono type="subtitle" variant="tertiary">
             with add button
           </Typography>
           <ButtonGroup
-            options={contextOptions}
-            value={valueAdd}
-            onChange={setValueAdd}
-            onAdd={() => {}}
             addLabel="Přidat kontext"
             ariaLabel="Přepínač s tlačítkem přidat"
+            onAdd={() => {}}
+            onChange={setValueAdd}
+            options={contextOptions}
+            value={valueAdd}
           />
         </div>
       </div>
@@ -57,10 +57,10 @@ export const Playground: Story = {
     const [value, setValue] = useState("home");
     return (
       <ButtonGroup
+        ariaLabel="Přepínač kontextu"
+        onChange={setValue}
         options={contextOptions}
         value={value}
-        onChange={setValue}
-        ariaLabel="Přepínač kontextu"
       />
     );
   },

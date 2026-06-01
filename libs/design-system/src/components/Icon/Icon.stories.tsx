@@ -16,8 +16,8 @@ export const Overview: Story = {
     <div className="grid grid-cols-8 gap-4 text-foreground">
       {iconNames.map((name) => (
         <div
-          key={name}
           className="flex flex-col items-center gap-2 rounded border border-border p-3"
+          key={name}
         >
           <Icon name={name} size="lg" />
           <span className="font-mono text-2xs text-foreground-faint">{name}</span>

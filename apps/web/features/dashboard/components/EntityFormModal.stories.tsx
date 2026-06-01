@@ -34,7 +34,7 @@ const meta: Meta<typeof EntityFormModal> = {
   parameters: { backgrounds: { default: "velin" }, layout: "fullscreen" },
   decorators: [
     (Story) => (
-      <Container position="relative" height="100vh">
+      <Container height="100vh" position="relative">
         <Story />
       </Container>
     ),

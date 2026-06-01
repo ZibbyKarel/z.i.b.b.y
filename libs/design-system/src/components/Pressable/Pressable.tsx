@@ -19,13 +19,13 @@ export interface PressableProps extends Omit<
 export function Pressable({ type = "button", ref, ...rest }: PressableProps) {
   return (
     <button
-      ref={ref}
-      type={type}
-      data-testid={PressableTestId.Root}
       className={cn(
         "cursor-pointer border-none bg-transparent p-0 text-inherit",
         "outline-none rounded-sm focus-visible:ring-2 focus-visible:ring-accent",
       )}
+      data-testid={PressableTestId.Root}
+      ref={ref}
+      type={type}
       {...rest}
     />
   );

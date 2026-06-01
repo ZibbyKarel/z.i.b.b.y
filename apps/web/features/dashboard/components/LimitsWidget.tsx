@@ -8,11 +8,11 @@ import {
   Icon,
   Pressable,
   Progress,
-  usageTone,
+  type ProgressTone,
   Sparkline,
   Stack,
   Typography,
-  type ProgressTone,
+  usageTone,
 } from "@zibby/design-system";
 import type { AgentSdkCredit, ClaudeLimits, QuotaLimit } from "../../../domain";
 
@@ -25,14 +25,14 @@ function MiniBar({ label, pct, width }: { label: string; pct: number; width: num
     <Container width={`${width}px`}>
       <Stack gap="25">
         <Stack direction="row" justify="between">
-          <Typography type="note" mono size="xs" variant="tertiary">
+          <Typography mono size="xs" type="note" variant="tertiary">
             {label}
           </Typography>
-          <Typography type="note" mono size="xs" weight="bold" tone={asTone(tone)}>
+          <Typography mono size="xs" tone={asTone(tone)} type="note" weight="bold">
             {pct}%
           </Typography>
         </Stack>
-        <Progress value={pct} tone={tone} height="50" glow />
+        <Progress glow height="50" tone={tone} value={pct} />
       </Stack>
     </Container>
   );
@@ -42,16 +42,16 @@ function LimitRow({ d }: { d: QuotaLimit }) {
   const tone = usageTone(d.usedPct);
   return (
     <Stack gap="50">
-      <Stack direction="row" align="baseline" justify="between">
-        <Typography type="note" mono size="sm" tracking="wide" variant="secondary">
+      <Stack align="baseline" direction="row" justify="between">
+        <Typography mono size="sm" tracking="wide" type="note" variant="secondary">
           {d.label}
         </Typography>
-        <Typography type="note" mono size="sm" weight="semibold" tone={asTone(tone)}>
+        <Typography mono size="sm" tone={asTone(tone)} type="note" weight="semibold">
           {d.usedPct}%
         </Typography>
       </Stack>
-      <Progress value={d.usedPct} tone={tone} height="50" glow label={d.label} />
-      <Typography type="note" mono size="xs" variant="tertiary">
+      <Progress glow height="50" label={d.label} tone={tone} value={d.usedPct} />
+      <Typography mono size="xs" type="note" variant="tertiary">
         reset {d.resetIn} · {d.tokens}
       </Typography>
     </Stack>
@@ -77,17 +77,17 @@ export function LimitsWidget({ limits, credit }: LimitsWidgetProps) {
       >
         <Card background="background" radius="sm">
           <Container padding={["100", "150"]}>
-            <Stack direction="row" align="center" gap="150">
-              <Stack direction="row" align="center" gap="100">
+            <Stack align="center" direction="row" gap="150">
+              <Stack align="center" direction="row" gap="100">
                 <Typography
-                  type="note"
                   mono
-                  size="2xs"
                   uppercase
-                  tracking="wider"
-                  variant="tertiary"
-                  leading="tight"
                   align="right"
+                  leading="tight"
+                  size="2xs"
+                  tracking="wider"
+                  type="note"
+                  variant="tertiary"
                 >
                   inter-
                   <br />
@@ -99,17 +99,17 @@ export function LimitsWidget({ limits, credit }: LimitsWidgetProps) {
               <Container height="28px">
                 <Divider orientation="vertical" />
               </Container>
-              <Stack direction="row" align="center" gap="100">
-                <Stack direction="row" align="center" gap="75">
+              <Stack align="center" direction="row" gap="100">
+                <Stack align="center" direction="row" gap="75">
                   <Icon name="dollar" size="sm" tone={asTone(sdkTone)} />
                   <Typography
-                    type="note"
                     mono
-                    size="2xs"
                     uppercase
-                    tracking="wider"
-                    variant="tertiary"
                     leading="tight"
+                    size="2xs"
+                    tracking="wider"
+                    type="note"
+                    variant="tertiary"
                   >
                     agent
                     <br />
@@ -118,26 +118,26 @@ export function LimitsWidget({ limits, credit }: LimitsWidgetProps) {
                 </Stack>
                 <Container width="96px">
                   <Stack gap="25">
-                    <Stack direction="row" align="baseline" justify="between">
-                      <Typography type="note" mono size="caption" weight="bold">
+                    <Stack align="baseline" direction="row" justify="between">
+                      <Typography mono size="caption" type="note" weight="bold">
                         ${credit.remaining}
                       </Typography>
-                      <Typography type="note" mono size="xs" variant="tertiary">
+                      <Typography mono size="xs" type="note" variant="tertiary">
                         / ${credit.total}
                       </Typography>
                     </Stack>
-                    <Progress value={credit.usedPct} tone={sdkTone} height="50" glow />
+                    <Progress glow height="50" tone={sdkTone} value={credit.usedPct} />
                   </Stack>
                 </Container>
               </Stack>
               <Icon
                 name="chevron"
                 size="sm"
-                tone="faint"
                 style={{
                   transition: "transform 0.16s",
                   transform: open ? "rotate(90deg)" : undefined,
                 }}
+                tone="faint"
               />
             </Stack>
           </Container>
@@ -145,43 +145,43 @@ export function LimitsWidget({ limits, credit }: LimitsWidgetProps) {
       </Pressable>
 
       {open && (
-        <Container position="absolute" top="calc(100% + 8px)" right="0" zIndex={50} width="360px">
-          <Card background="raised" radius="sm" shadow="dropdown" animate="scale">
+        <Container position="absolute" right="0" top="calc(100% + 8px)" width="360px" zIndex={50}>
+          <Card animate="scale" background="raised" radius="sm" shadow="dropdown">
             <Container padding="250">
               <Stack gap="150">
-                <Typography type="note" mono size="xs" uppercase tracking="widest" variant="tertiary">
+                <Typography mono uppercase size="xs" tracking="widest" type="note" variant="tertiary">
                   Interaktivní limity · Claude Code
                 </Typography>
                 <Stack gap="150">
                   <LimitRow d={rolling} />
                   <LimitRow d={weekly} />
                 </Stack>
-                <Typography type="note" mono size="xs" variant="tertiary">
+                <Typography mono size="xs" type="note" variant="tertiary">
                   čerpá tvůj chat · nezávislé na agentech
                 </Typography>
                 <Divider />
-                <Stack direction="row" align="center" justify="between">
-                  <Typography type="note" mono size="xs" uppercase tracking="widest" tone={asTone(sdkTone)}>
+                <Stack align="center" direction="row" justify="between">
+                  <Typography mono uppercase size="xs" tone={asTone(sdkTone)} tracking="widest" type="note">
                     Agent SDK kredit
                   </Typography>
-                  <Typography type="note" mono size="xs" variant="tertiary">
+                  <Typography mono size="xs" type="note" variant="tertiary">
                     obnova {credit.renew}
                   </Typography>
                 </Stack>
-                <Stack direction="row" align="baseline" gap="100">
-                  <Typography type="note" mono size="5xl" weight="bold">
+                <Stack align="baseline" direction="row" gap="100">
+                  <Typography mono size="5xl" type="note" weight="bold">
                     ${credit.remaining}
                   </Typography>
-                  <Typography type="note" mono size="base" variant="secondary">
+                  <Typography mono size="base" type="note" variant="secondary">
                     zbývá z ${credit.total}
                   </Typography>
                 </Stack>
-                <Progress value={credit.usedPct} tone={sdkTone} height="75" glow />
-                <Typography type="note" mono size="xs" variant="tertiary">
+                <Progress glow height="75" tone={sdkTone} value={credit.usedPct} />
+                <Typography mono size="xs" type="note" variant="tertiary">
                   spotřebováno ${credit.used} · běhy agentů čerpají odsud
                 </Typography>
                 <Stack gap="75">
-                  <Typography type="note" mono size="xs" tracking="wider" variant="tertiary">
+                  <Typography mono size="xs" tracking="wider" type="note" variant="tertiary">
                     TREND 14 DNÍ ($/den)
                   </Typography>
                   <Sparkline data={credit.trend} />

@@ -55,12 +55,12 @@ export function Surface({
     <Tag
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {...(rest as any)}
-      data-testid={SurfaceTestId.Root}
-      ref={ref as Ref<HTMLDivElement>}
       className={cn(
         "relative h-full w-full overflow-hidden font-sans text-foreground",
         bgClass[background],
       )}
+      data-testid={SurfaceTestId.Root}
+      ref={ref as Ref<HTMLDivElement>}
     >
       {grid && (
         <div
@@ -76,7 +76,7 @@ export function Surface({
           style={scanOverlay}
         />
       )}
-      <div data-testid={SurfaceTestId.Content} className="relative z-[1] flex h-full">
+      <div className="relative z-[1] flex h-full" data-testid={SurfaceTestId.Content}>
         {children}
       </div>
     </Tag>

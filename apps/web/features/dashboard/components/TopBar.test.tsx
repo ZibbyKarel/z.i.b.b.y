@@ -6,9 +6,9 @@ describe("TopBar", () => {
   it("renders the breadcrumb, context switch and wallet slot", () => {
     render(
       <TopBar
+        breadcrumb="Přehled"
         context="home"
         onContextChange={() => {}}
-        breadcrumb="Přehled"
         walletSlot={<div>wallet</div>}
       />,
     )

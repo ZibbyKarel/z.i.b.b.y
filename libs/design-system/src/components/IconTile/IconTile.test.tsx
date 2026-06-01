@@ -25,7 +25,7 @@ describe("IconTile", () => {
 
   it("acts as a button and fires onClick when interactive", async () => {
     const onClick = vi.fn()
-    render(<IconTile as="button" interactive glyph="edit" onClick={onClick} />)
+    render(<IconTile interactive as="button" glyph="edit" onClick={onClick} />)
     await userEvent.click(screen.getByRole("button"))
     expect(onClick).toHaveBeenCalledOnce()
   })

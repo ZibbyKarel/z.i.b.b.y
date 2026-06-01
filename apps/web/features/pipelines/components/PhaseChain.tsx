@@ -9,7 +9,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { glyphForAgent, type AgentDef, type Pipeline, type PipelinePhase } from "../../../domain";
+import { type AgentDef, type Pipeline, type PipelinePhase, glyphForAgent } from "../../../domain";
 
 const modelTone = {
   opus: "opus",
@@ -26,7 +26,7 @@ const thinkTone = {
 /** Per-run model badge (opus / sonnet / haiku). */
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
   return (
-    <Chip tone={modelTone[model]} title="model (override per-run)">
+    <Chip title="model (override per-run)" tone={modelTone[model]}>
       {model}
     </Chip>
   );
@@ -35,7 +35,7 @@ export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
 /** Thinking-level badge (high / medium / low). */
 export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
   return (
-    <Chip tone={thinkTone[level]} title="thinking level">
+    <Chip title="thinking level" tone={thinkTone[level]}>
       ◇ {level}
     </Chip>
   );
@@ -43,20 +43,20 @@ export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
 
 function IoRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <Stack direction="row" align="center" gap="75">
-      <Container width="30px" shrink={false}>
-        <Typography type="note" mono size="2xs" variant="tertiary">
+    <Stack align="center" direction="row" gap="75">
+      <Container shrink={false} width="30px">
+        <Typography mono size="2xs" type="note" variant="tertiary">
           {label}
         </Typography>
       </Container>
       <Container grow minW0>
         <Typography
-          type="note"
           mono
-          size="xs"
-          variant={accent ? undefined : "secondary"}
-          tone={accent ? "accent" : undefined}
           truncate
+          size="xs"
+          tone={accent ? "accent" : undefined}
+          type="note"
+          variant={accent ? undefined : "secondary"}
         >
           {value}
         </Typography>
@@ -67,28 +67,28 @@ function IoRow({ label, value, accent }: { label: string; value: string; accent?
 
 function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: AgentDef[]; idx: number; active: boolean }) {
   return (
-    <Card selected={active} radius="default" style={{ flex: "1 1 0%", minWidth: 0 }}>
+    <Card radius="default" selected={active} style={{ flex: "1 1 0%", minWidth: 0 }}>
       <Container padding="150">
         <Stack gap="100">
-          <Stack direction="row" align="center" gap="100">
+          <Stack align="center" direction="row" gap="100">
             <IconTile glyph={glyphForAgent(phase.agent, agents)} size="sm" />
             <Container minW0>
-              <Typography type="note" mono size="2xs" tracking="wider" variant="tertiary">
+              <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
                 FÁZE {idx + 1}
               </Typography>
-              <Typography type="note" mono size="base" weight="semibold" nowrap>
+              <Typography mono nowrap size="base" type="note" weight="semibold">
                 {phase.agent}
               </Typography>
             </Container>
           </Stack>
-          <Stack direction="row" wrap gap="75">
+          <Stack wrap direction="row" gap="75">
             <ModelBadge model={phase.model} />
             <ThinkBadge level={phase.thinking} />
           </Stack>
           <Divider />
           <Stack gap="75">
             <IoRow label="vstup" value={phase.consumes} />
-            <IoRow label="výstup" value={phase.produces} accent />
+            <IoRow accent label="výstup" value={phase.produces} />
           </Stack>
         </Stack>
       </Container>
@@ -108,37 +108,37 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
   return (
     <Stack>
       {loopPhase?.loop && (
-        <Container position="relative" height="34px">
+        <Container height="34px" position="relative">
           <svg
-            viewBox="0 0 100 34"
+            aria-hidden
             preserveAspectRatio="none"
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
-            aria-hidden
+            viewBox="0 0 100 34"
           >
             <path
               d="M62 30 C 62 6, 37 6, 37 30"
               fill="none"
               stroke="var(--color-bad)"
-              strokeWidth="1.2"
               strokeDasharray="3 3"
+              strokeWidth="1.2"
               vectorEffect="non-scaling-stroke"
             />
             <path d="M37 30 l 2.6 -5 l -5.2 0 z" fill="var(--color-bad)" />
           </svg>
-          <Container position="absolute" left="49.5%" top="0" style={{ transform: "translateX(-50%)" }}>
-            <Stack direction="row" align="center" gap="75">
+          <Container left="49.5%" position="absolute" style={{ transform: "translateX(-50%)" }} top="0">
+            <Stack align="center" direction="row" gap="75">
               <Icon name="retry" size="xs" tone="bad" />
-              <Typography type="note" mono size="xs" tone="bad">
+              <Typography mono size="xs" tone="bad" type="note">
                 retry · max {loopPhase.loop.maxRetries}
               </Typography>
             </Stack>
           </Container>
         </Container>
       )}
-      <Stack direction="row" align="stretch" gap="25">
+      <Stack align="stretch" direction="row" gap="25">
         {phases.map((ph, i) => (
           <Fragment key={`${ph.agent}-${i}`}>
-            <PhaseNode phase={ph} agents={agents} idx={i} active={Boolean(ph.loop)} />
+            <PhaseNode active={Boolean(ph.loop)} agents={agents} idx={i} phase={ph} />
             {i < phases.length - 1 && (
               <Stack
                 align="center"
@@ -148,7 +148,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
               >
                 <Container padding={["0", "50"]}>
                   <Stack align="center" gap="50">
-                    <Typography type="note" mono size="2xs" variant="tertiary" nowrap>
+                    <Typography mono nowrap size="2xs" type="note" variant="tertiary">
                       {phases[i + 1]!.consumes}
                     </Typography>
                     <Icon name="arrow" size="md" tone="faint" />

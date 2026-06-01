@@ -16,7 +16,7 @@ const cells = Array.from({ length: 6 }, (_, i) => i + 1);
 
 export const Responsive: Story = {
   render: () => (
-    <Grid cols={1} sm={2} lg={3} gap="150">
+    <Grid cols={1} gap="150" lg={3} sm={2}>
       {cells.map((c) => (
         <Card key={c}>
           <Container padding="200">Cell {c}</Container>
@@ -28,7 +28,7 @@ export const Responsive: Story = {
 
 export const MainAside: Story = {
   render: () => (
-    <Grid sidebar="right" gap="150" align="start">
+    <Grid align="start" gap="150" sidebar="right">
       <Card>
         <Container padding="200">Main</Container>
       </Card>

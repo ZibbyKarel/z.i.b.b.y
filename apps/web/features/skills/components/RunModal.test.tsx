@@ -17,14 +17,14 @@ const projects = ["media-vault", "home-ops"]
 
 describe("RunModal", () => {
   it("renders as a labelled modal dialog", () => {
-    render(<RunModal skill={skill} projects={projects} onClose={() => {}} />)
+    render(<RunModal onClose={() => {}} projects={projects} skill={skill} />)
     expect(screen.getByRole("dialog", { name: "Spustit rohlik" })).toBeInTheDocument()
   })
 
   it("launches with the composed request and shows confirmation", async () => {
     const onLaunch = vi.fn()
     render(
-      <RunModal skill={skill} projects={projects} onClose={() => {}} onLaunch={onLaunch} />,
+      <RunModal onClose={() => {}} onLaunch={onLaunch} projects={projects} skill={skill} />,
     )
     await userEvent.type(screen.getByLabelText(/Zadání/), "srovnej seriály")
     await userEvent.click(screen.getByRole("button", { name: /Spustit agenta/ }))
@@ -36,7 +36,7 @@ describe("RunModal", () => {
 
   it("closes from the close button", async () => {
     const onClose = vi.fn()
-    render(<RunModal skill={skill} projects={projects} onClose={onClose} />)
+    render(<RunModal onClose={onClose} projects={projects} skill={skill} />)
     await userEvent.click(screen.getByRole("button", { name: "Zavřít" }))
     expect(onClose).toHaveBeenCalled()
   })

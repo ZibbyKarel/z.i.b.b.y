@@ -39,20 +39,20 @@ describe("Typography", () => {
   });
 
   it("applies a semantic tone over the variant colour", () => {
-    render(<Typography type="note" tone="ok">A</Typography>);
+    render(<Typography tone="ok" type="note">A</Typography>);
     const el = screen.getByText("A");
     expect(el.className).toContain("text-ok");
     expect(el.className).not.toContain("text-foreground");
   });
 
   it("overrides the rendered element via as", () => {
-    render(<Typography type="note" as="span">A</Typography>);
+    render(<Typography as="span" type="note">A</Typography>);
     expect(screen.getByText("A").tagName).toBe("SPAN");
   });
 
   it("applies size, mono, uppercase and truncate", () => {
     render(
-      <Typography type="note" mono uppercase truncate size="xs">
+      <Typography mono truncate uppercase size="xs" type="note">
         A
       </Typography>,
     );
@@ -66,7 +66,7 @@ describe("Typography", () => {
   it("forwards a ref", () => {
     let node: HTMLElement | null = null;
     render(
-      <Typography type="title" ref={(el) => { node = el; }}>
+      <Typography ref={(el) => { node = el; }} type="title">
         A
       </Typography>,
     );
@@ -74,7 +74,7 @@ describe("Typography", () => {
   });
 
   it("passes through arbitrary props and sets the root testid", () => {
-    render(<Typography type="note" aria-label="poznámka">A</Typography>);
+    render(<Typography aria-label="poznámka" type="note">A</Typography>);
     const el = screen.getByTestId(TypographyTestId.Root);
     expect(el).toHaveAttribute("aria-label", "poznámka");
   });

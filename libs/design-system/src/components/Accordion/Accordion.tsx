@@ -53,8 +53,8 @@ export function Accordion({
   return (
     <AccordionContext.Provider value={{ single, openId, toggle, claimDefault }}>
       <div
-        data-testid={AccordionTestId.Root}
         className={cn("border border-border rounded overflow-hidden", className)}
+        data-testid={AccordionTestId.Root}
       >
         {children}
       </div>
@@ -77,21 +77,21 @@ export function AccordionSummary({
 }: AccordionSummaryProps) {
   return (
     <button
-      ref={ref}
-      data-testid={AccordionTestId.Summary}
       aria-expanded={expanded}
-      onClick={onToggle}
       className={cn(
         "flex w-full items-center justify-between px-3.5 py-2.5",
         "bg-transparent border-none cursor-pointer font-mono font-medium text-base text-foreground text-left",
         "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
         expanded && "border-b border-border",
       )}
+      data-testid={AccordionTestId.Summary}
+      onClick={onToggle}
+      ref={ref}
     >
       <span>{children}</span>
       <span
-        data-testid={AccordionTestId.Chevron}
         className="text-sm transition-transform duration-200"
+        data-testid={AccordionTestId.Chevron}
         style={{ transform: expanded ? "rotate(180deg)" : "none" }}
       >
         ▾
@@ -112,7 +112,7 @@ export function AccordionDetails({
   className,
 }: AccordionDetailsProps) {
   if (!expanded) return null;
-  return <div data-testid={AccordionTestId.Details} className={cn("px-3.5 py-3", className)}>{children}</div>;
+  return <div className={cn("px-3.5 py-3", className)} data-testid={AccordionTestId.Details}>{children}</div>;
 }
 
 export interface AccordionItemProps {

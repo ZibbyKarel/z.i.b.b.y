@@ -3,10 +3,10 @@ import {
   Container,
   Divider,
   Icon,
+  type IconTone,
   Stack,
   StatusDot,
   Typography,
-  type IconTone,
 } from "@zibby/design-system"
 import type { ActivityEvent, ActivityIcon } from "../../../domain"
 
@@ -35,17 +35,17 @@ export function ActivityFeed({ items, limit = 5 }: ActivityFeedProps) {
               <Icon name={e.icon} size="sm" tone={iconTone[e.icon]} />
               <Container grow minW0>
                 <Stack gap="25">
-                  <Typography type="note" size="base">
+                  <Typography size="base" type="note">
                     {e.text}
                   </Typography>
-                  <Typography type="note" mono size="sm" variant="tertiary" truncate>
+                  <Typography mono truncate size="sm" type="note" variant="tertiary">
                     {e.sub}
                   </Typography>
                 </Stack>
               </Container>
-              <Stack direction="row" align="center" gap="75">
-                <StatusDot tone={e.ctx === "work" ? "work" : "home"} size="75" />
-                <Typography type="note" mono size="sm" variant="tertiary">
+              <Stack align="center" direction="row" gap="75">
+                <StatusDot size="75" tone={e.ctx === "work" ? "work" : "home"} />
+                <Typography mono size="sm" type="note" variant="tertiary">
                   {e.t}
                 </Typography>
               </Stack>

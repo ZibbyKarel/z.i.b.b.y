@@ -38,31 +38,31 @@ export function Sparkline({
   const line = points.join(" ")
   return (
     <svg
-      ref={ref}
-      data-testid={SparklineTestId.Root}
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className="block w-full"
       aria-hidden="true"
+      className="block w-full"
+      data-testid={SparklineTestId.Root}
+      height={height}
+      preserveAspectRatio="none"
+      ref={ref}
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
       {...props}
     >
       <polyline
         data-testid={SparklineTestId.Area}
-        points={`0,${height} ${line} ${width},${height}`}
         fill={color}
         opacity="0.08"
+        points={`0,${height} ${line} ${width},${height}`}
         stroke="none"
       />
       <polyline
         data-testid={SparklineTestId.Line}
-        points={line}
         fill="none"
+        points={line}
         stroke={color}
-        strokeWidth="1.6"
-        strokeLinejoin="round"
         strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
       />
     </svg>
   )

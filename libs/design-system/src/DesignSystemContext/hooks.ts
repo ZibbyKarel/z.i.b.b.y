@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { spacingValues, type Spacing, type Theme } from "../tokens";
+import { type Spacing, type Theme, spacingValues } from "../tokens";
 import { DesignSystemTokenContext } from "./DesignSystemProvider";
 import { defaultDarkTokens } from "./themeRegistry";
 

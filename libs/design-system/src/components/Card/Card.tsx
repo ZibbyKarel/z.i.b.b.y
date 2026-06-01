@@ -3,9 +3,9 @@ import { cn } from "../../utils/cn";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import {
-  spacingToPx,
-  type Spacing,
   type Padding,
+  type Spacing,
+  spacingToPx,
 } from "../../tokens";
 
 export enum CardTestId {
@@ -145,7 +145,6 @@ export function Card({
       data-testid={CardTestId.Root}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {...(rest as any)}
-      ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
       className={cn(
         "relative group",
         bgClasses[background],
@@ -162,6 +161,7 @@ export function Card({
           "transition-colors hover:border-accent/40 hover:bg-raised",
         selected && "border-accent bg-raised shadow-[0_0_0_1px_var(--color-accent-dim)]",
       )}
+      ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
     >
       {corners && <Corners inset="75" tone={tone ?? "accent"} />}
       {header && <CardHeader>{header}</CardHeader>}
@@ -173,7 +173,7 @@ export function Card({
 
 export function CardHeader({ children }: { children: ReactNode }) {
   return (
-    <div data-testid={CardTestId.Header} className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim">
+    <div className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim" data-testid={CardTestId.Header}>
       {children}
     </div>
   );
@@ -191,7 +191,7 @@ export function CardContent({
 
 export function CardFooter({ children }: { children: ReactNode }) {
   return (
-    <div data-testid={CardTestId.Footer} className="px-[14px] py-[10px] border-t border-border">
+    <div className="px-[14px] py-[10px] border-t border-border" data-testid={CardTestId.Footer}>
       <Row gap="100">{children}</Row>
     </div>
   );

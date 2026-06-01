@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
-import { spacingToPx, type Spacing } from "../../tokens";
+import { type Spacing, spacingToPx } from "../../tokens";
 
 export enum GridTestId {
   Root = "grid-root",
@@ -88,8 +88,6 @@ export function Grid({
     <Tag
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {...(rest as any)}
-      data-testid={GridTestId.Root}
-      ref={ref as Ref<HTMLDivElement>}
       className={cn(
         sidebar === "right" && "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]",
         sidebar === "left" && "grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]",
@@ -101,6 +99,8 @@ export function Grid({
         ],
         align && alignClass[align],
       )}
+      data-testid={GridTestId.Root}
+      ref={ref as Ref<HTMLDivElement>}
       style={computedStyle}
     />
   );

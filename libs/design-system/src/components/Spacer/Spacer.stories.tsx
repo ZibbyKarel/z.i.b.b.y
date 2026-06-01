@@ -19,18 +19,18 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           fixed vertical gap
         </Typography>
         <div className="flex flex-col gap-1">
           {sizes.map((size) => (
-            <div key={size} className="flex items-center gap-4">
+            <div className="flex items-center gap-4" key={size}>
               <span className="w-12 font-mono text-xs text-foreground-faint">
                 {size}
               </span>
               <div className="flex flex-col">
                 <div className="h-px w-24 bg-border" />
-                <Spacer size={size} axis="y" />
+                <Spacer axis="y" size={size} />
                 <div className="h-px w-24 bg-border" />
               </div>
             </div>
@@ -38,7 +38,7 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           flex grow
         </Typography>
         <div className="flex h-8 w-full items-center border border-border px-3">

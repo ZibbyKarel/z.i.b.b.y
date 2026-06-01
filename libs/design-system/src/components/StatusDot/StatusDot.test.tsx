@@ -4,12 +4,12 @@ import { StatusDot, StatusDotTestId } from "./StatusDot"
 
 describe("StatusDot", () => {
   it("renders a sized dot", () => {
-    render(<StatusDot tone="accent" size="150" />)
+    render(<StatusDot size="150" tone="accent" />)
     expect(screen.getByTestId(StatusDotTestId.Root).style.width).toBe("12px")
   })
 
   it("adds a pulse ring when pulse is set", () => {
-    render(<StatusDot tone="ok" pulse />)
+    render(<StatusDot pulse tone="ok" />)
     expect(screen.queryByTestId(StatusDotTestId.Pulse)).not.toBeNull()
   })
 

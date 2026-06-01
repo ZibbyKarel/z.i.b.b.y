@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { type VariantProps, cva } from "class-variance-authority";
 
 /**
  * A compact mono tag. Tones cover context, status and the orchestration
@@ -51,7 +51,7 @@ export interface ChipProps
 
 export function Chip({ tone, solid, size, children, ref, ...props }: ChipProps) {
   return (
-    <span ref={ref} data-testid={ChipTestId.Root} className={chip({ tone, solid, size })} {...props}>
+    <span className={chip({ tone, solid, size })} data-testid={ChipTestId.Root} ref={ref} {...props}>
       {children}
     </span>
   );

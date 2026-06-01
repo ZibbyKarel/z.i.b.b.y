@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "../../utils/cn";
-import { spacingToPx, type Spacing } from "../../tokens";
+import { type Spacing, spacingToPx } from "../../tokens";
 
 export type DotTone =
   | "accent"
@@ -63,22 +63,22 @@ export function StatusDot({
   const px = spacingToPx(size);
   return (
     <span
-      ref={ref}
-      data-testid={StatusDotTestId.Root}
       className="relative inline-block shrink-0"
+      data-testid={StatusDotTestId.Root}
+      ref={ref}
       style={{ width: px, height: px }}
       {...props}
     >
       {pulse && (
         <span
-          data-testid={StatusDotTestId.Pulse}
           className={cn(
             "absolute -inset-1 rounded-full opacity-35 animate-zpulse",
             ringClass[tone],
           )}
+          data-testid={StatusDotTestId.Pulse}
         />
       )}
-      <span data-testid={StatusDotTestId.Dot} className={cn("absolute inset-0 rounded-full", toneClass[tone])} />
+      <span className={cn("absolute inset-0 rounded-full", toneClass[tone])} data-testid={StatusDotTestId.Dot} />
     </span>
   );
 }

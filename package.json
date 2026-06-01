@@ -10,7 +10,7 @@
     "dev": "next dev apps/web",
     "build": "next build apps/web",
     "start": "next start apps/web",
-    "lint": "next lint apps/web",
+    "lint": "eslint --fix .",
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006 -c libs/design-system/.storybook",
@@ -27,6 +27,7 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@storybook/addon-a11y": "^8.4.7",
     "@storybook/addon-essentials": "^8.4.7",
     "@storybook/react": "^8.4.7",
@@ -41,6 +42,9 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.7",
+    "eslint-plugin-react": "^7.37.5",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
     "storybook": "^8.4.7",

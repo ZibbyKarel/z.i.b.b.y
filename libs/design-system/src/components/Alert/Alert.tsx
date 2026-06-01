@@ -38,23 +38,23 @@ export function Alert({
     <div
       data-testid={AlertTestId.Root}
       {...rest}
-      role="alert"
       className={cn(
         "px-[14px] py-[10px] rounded border",
         severityClasses[severity],
       )}
+      role="alert"
     >
       <Stack direction="row" gap="150">
         <div className="flex-1 text-base leading-relaxed">
-          {title && <div data-testid={AlertTestId.Title} className="font-semibold mb-0.5">{title}</div>}
+          {title && <div className="font-semibold mb-0.5" data-testid={AlertTestId.Title}>{title}</div>}
           {children}
         </div>
         {onClose && (
           <button
-            data-testid={AlertTestId.CloseButton}
             aria-label="Dismiss"
-            onClick={onClose}
             className="bg-transparent border-none cursor-pointer text-current p-0 leading-none"
+            data-testid={AlertTestId.CloseButton}
+            onClick={onClose}
           >
             ✕
           </button>

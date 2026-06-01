@@ -10,7 +10,7 @@ describe("Chip", () => {
 
   it("applies a solid tone variant", () => {
     render(
-      <Chip tone="accent" solid>
+      <Chip solid tone="accent">
         work
       </Chip>,
     );

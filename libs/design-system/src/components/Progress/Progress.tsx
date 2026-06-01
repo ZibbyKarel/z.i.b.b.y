@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "../../utils/cn";
-import { spacingToPx, type Spacing } from "../../tokens";
+import { type Spacing, spacingToPx } from "../../tokens";
 
 export type ProgressTone = "accent" | "ok" | "warn" | "bad";
 
@@ -51,24 +51,24 @@ export function Progress({
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div
-      ref={ref}
-      data-testid={ProgressTestId.Root}
-      role={label ? "progressbar" : undefined}
       aria-label={label}
-      aria-valuenow={label ? pct : undefined}
-      aria-valuemin={label ? 0 : undefined}
       aria-valuemax={label ? 100 : undefined}
+      aria-valuemin={label ? 0 : undefined}
+      aria-valuenow={label ? pct : undefined}
       className="relative overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]"
+      data-testid={ProgressTestId.Root}
+      ref={ref}
+      role={label ? "progressbar" : undefined}
       style={{ height: spacingToPx(height) }}
       {...props}
     >
       <div
-        data-testid={ProgressTestId.Fill}
         className={cn(
           "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300",
           toneBar[tone],
           glow && toneGlow[tone],
         )}
+        data-testid={ProgressTestId.Fill}
         style={{ width: `${pct}%` }}
       />
     </div>

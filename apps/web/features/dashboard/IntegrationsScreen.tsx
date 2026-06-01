@@ -21,7 +21,7 @@ export function IntegrationsScreen() {
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <SectionLabel
         action={
-          <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
+          <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
             Přidat integraci
           </Button>
         }
@@ -31,31 +31,31 @@ export function IntegrationsScreen() {
 
       {list.length === 0 ? (
         <EmptyState
-          glyph="plug"
-          title="Zatím žádné integrace"
-          description="Integrace jsou drivery, kterými systém osahá okolní svět. Secrets žijí v .env — tady je jen konfigurace."
           actionLabel="Přidat integraci"
-          onAction={() => setAdding(true)}
+          description="Integrace jsou drivery, kterými systém osahá okolní svět. Secrets žijí v .env — tady je jen konfigurace."
+          glyph="plug"
           hint="// vytvoří ~/zibby/integrations/<název>.json"
+          onAction={() => setAdding(true)}
+          title="Zatím žádné integrace"
         />
       ) : (
-        <Grid cols={1} sm={2} lg={3} gap="150">
+        <Grid cols={1} gap="150" lg={3} sm={2}>
           {list.map((i) => (
-            <IntegrationCard key={i.id} integration={i} />
+            <IntegrationCard integration={i} key={i.id} />
           ))}
         </Grid>
       )}
 
       {adding && (
         <EntityFormModal
-          title={INTEGRATION_FORM.title}
-          subtitle={INTEGRATION_FORM.subtitle}
-          glyph={INTEGRATION_FORM.glyph}
           fields={INTEGRATION_FORM.fields}
-          submitLabel={INTEGRATION_FORM.submitLabel}
           filePreview={INTEGRATION_FORM.filePreview}
+          glyph={INTEGRATION_FORM.glyph}
           onClose={() => setAdding(false)}
           onSubmit={(values) => { addIntegration(values); setAdding(false); }}
+          submitLabel={INTEGRATION_FORM.submitLabel}
+          subtitle={INTEGRATION_FORM.subtitle}
+          title={INTEGRATION_FORM.title}
         />
       )}
     </Container>

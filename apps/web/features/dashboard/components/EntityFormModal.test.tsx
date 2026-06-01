@@ -22,13 +22,13 @@ describe("EntityFormModal", () => {
   it("renders all fields and a live file preview", () => {
     render(
       <EntityFormModal
-        title="Nový skill"
-        glyph="spark"
         fields={fields}
-        submitLabel="Vytvořit skill"
         filePreview={(v) => `~/zibby/skills/${v.name || "<název>"}/SKILL.md`}
+        glyph="spark"
         onClose={() => {}}
         onSubmit={() => {}}
+        submitLabel="Vytvořit skill"
+        title="Nový skill"
       />,
     )
     expect(screen.getByLabelText("Název skillu")).toBeInTheDocument()
@@ -40,12 +40,12 @@ describe("EntityFormModal", () => {
     const onSubmit = vi.fn()
     render(
       <EntityFormModal
-        title="Nový skill"
-        glyph="spark"
         fields={fields}
-        submitLabel="Vytvořit skill"
+        glyph="spark"
         onClose={() => {}}
         onSubmit={onSubmit}
+        submitLabel="Vytvořit skill"
+        title="Nový skill"
       />,
     )
     const submit = screen.getByRole("button", { name: /Vytvořit skill/ })
@@ -65,12 +65,12 @@ describe("EntityFormModal", () => {
     const onClose = vi.fn()
     render(
       <EntityFormModal
-        title="Nový skill"
-        glyph="spark"
         fields={fields}
-        submitLabel="Vytvořit"
+        glyph="spark"
         onClose={onClose}
         onSubmit={() => {}}
+        submitLabel="Vytvořit"
+        title="Nový skill"
       />,
     )
     await userEvent.click(screen.getByRole("button", { name: "Zrušit" }))

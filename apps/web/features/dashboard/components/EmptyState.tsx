@@ -26,25 +26,25 @@ export function EmptyState({
   hint,
 }: EmptyStateProps) {
   return (
-    <Card background="glass" borderStyle="dashed" radius="none" corners>
+    <Card corners background="glass" borderStyle="dashed" radius="none">
       <Container padding={["500", "300"]} textAlign="center">
         <Stack align="center" gap="150">
-          <IconTile glyph={glyph} size="xl" radius="default" />
-          <Typography type="title" size="3xl" weight="semibold">
+          <IconTile glyph={glyph} radius="default" size="xl" />
+          <Typography size="3xl" type="title" weight="semibold">
             {title}
           </Typography>
           <Container maxWidth="28rem">
-            <Typography type="note" mono size="base" leading="relaxed" variant="secondary">
+            <Typography mono leading="relaxed" size="base" type="note" variant="secondary">
               {description}
             </Typography>
           </Container>
           {actionLabel && (
-            <Button intent="run" icon="plus" onClick={onAction}>
+            <Button icon="plus" intent="run" onClick={onAction}>
               {actionLabel}
             </Button>
           )}
           {hint && (
-            <Typography type="note" mono size="sm" tracking="wider" variant="tertiary">
+            <Typography mono size="sm" tracking="wider" type="note" variant="tertiary">
               {hint}
             </Typography>
           )}

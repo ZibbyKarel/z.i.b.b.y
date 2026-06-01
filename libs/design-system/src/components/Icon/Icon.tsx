@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 import { cn } from "../../utils/cn";
-import { paths, iconNames } from "../../assets/icons";
+import { iconNames, paths } from "../../assets/icons";
 import type { IconName } from "../../assets/icons";
 import type { Size } from "../../tokens";
 
@@ -75,18 +75,18 @@ export function Icon({
   const px = iconSizePx[size];
   return (
     <svg
-      ref={ref}
+      aria-hidden="true"
+      className={cn("block shrink-0", tone && toneClass[tone], className)}
       data-testid={IconTestId.Root}
-      viewBox="0 0 24 24"
-      width={px}
-      height={px}
       fill="none"
+      height={px}
+      ref={ref}
       stroke="currentColor"
-      strokeWidth={strokeWidthPx[stroke]}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn("block shrink-0", tone && toneClass[tone], className)}
-      aria-hidden="true"
+      strokeWidth={strokeWidthPx[stroke]}
+      viewBox="0 0 24 24"
+      width={px}
       {...props}
     >
       {paths[name]}

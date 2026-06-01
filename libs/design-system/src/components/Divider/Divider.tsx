@@ -11,13 +11,13 @@ export interface DividerProps {
 export function Divider({ orientation = "horizontal" }: DividerProps) {
   return (
     <span
-      data-testid={DividerTestId.Root}
       aria-hidden
-      role="separator"
       className={cn(
         "bg-border",
         orientation === "vertical" ? "w-px self-stretch" : "h-px w-full",
       )}
+      data-testid={DividerTestId.Root}
+      role="separator"
     />
   );
 }

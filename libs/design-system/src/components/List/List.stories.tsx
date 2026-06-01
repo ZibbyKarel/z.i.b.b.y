@@ -4,9 +4,9 @@ import type { NavItem } from "./List";
 import {
   List,
   ListItem,
+  ListItemBadge,
   ListItemIcon,
   ListItemText,
-  ListItemBadge,
 } from "./List";
 
 const navItems: NavItem[] = [
@@ -46,8 +46,8 @@ export const Overview: Story = {
         <List>
           {navItems.map((item) => (
             <ListItem
-              key={item.id}
               active={item.id === active}
+              key={item.id}
               onSelect={() => setActive(item.id)}
             >
               <ListItemIcon glyph={item.glyph} />
@@ -79,8 +79,8 @@ export const Playground: Story = {
       <List>
         {navItems.slice(0, 4).map((item) => (
           <ListItem
-            key={item.id}
             active={item.id === active}
+            key={item.id}
             onSelect={() => setActive(item.id)}
           >
             <ListItemIcon glyph={item.glyph} />

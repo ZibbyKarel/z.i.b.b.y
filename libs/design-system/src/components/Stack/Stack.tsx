@@ -1,5 +1,5 @@
-import type { CSSProperties, HTMLAttributes, Ref } from "react";
-import { spacingToPx, type Spacing } from "../../tokens";
+import type { CSSProperties, ElementType, HTMLAttributes, Ref } from "react";
+import { type Spacing, spacingToPx } from "../../tokens";
 
 export enum StackTestId {
   Root = "stack-root",
@@ -73,12 +73,13 @@ export function Stack({
     ...style,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
+  const Component = Tag as ElementType;
   return (
-    <Tag
+    <Component
       data-testid={StackTestId.Root}
-      {...(rest as any)}
-      ref={ref as Ref<HTMLElement>}
+      {...rest}
+      ref={ref}
       style={computedStyle}
     />
   );
@@ -90,5 +91,5 @@ export interface RowProps extends Omit<StackProps, "direction"> {
 
 /** Horizontal Stack — shorthand for <Stack direction="row" align="center"> */
 export function Row({ align = "center", ref, ...props }: RowProps) {
-  return <Stack direction="row" align={align} ref={ref} {...props} />;
+  return <Stack align={align} direction="row" ref={ref} {...props} />;
 }

@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from "@zibby/design-system"
-import type { IconName, SelectOption, DialogWidth } from "@zibby/design-system"
+import type { DialogWidth, IconName, SelectOption } from "@zibby/design-system"
 
 export type FieldKind = "text" | "textarea" | "select" | "segmented"
 
@@ -76,28 +76,28 @@ export function EntityFormModal({
 
   return (
     <Dialog
-      open={true}
-      onClose={onClose}
-      width={width}
-      title={
-        <Stack direction="row" align="center" gap="150">
-          <IconTile glyph={glyph} size="md" />
-          <Container minW0>
-            <Typography type="note" mono weight="bold" size="xl">{title}</Typography>
-            {subtitle && (
-              <Typography type="note" variant="secondary" size="base">{subtitle}</Typography>
-            )}
-          </Container>
-        </Stack>
-      }
       actions={
         <>
           <Button intent="ghost" onClick={onClose}>Zrušit</Button>
-          <Button intent="run" icon="plus" type="submit" form="entity-form" disabled={!canSubmit}>
+          <Button disabled={!canSubmit} form="entity-form" icon="plus" intent="run" type="submit">
             {submitLabel}
           </Button>
         </>
       }
+      onClose={onClose}
+      open={true}
+      title={
+        <Stack align="center" direction="row" gap="150">
+          <IconTile glyph={glyph} size="md" />
+          <Container minW0>
+            <Typography mono size="xl" type="note" weight="bold">{title}</Typography>
+            {subtitle && (
+              <Typography size="base" type="note" variant="secondary">{subtitle}</Typography>
+            )}
+          </Container>
+        </Stack>
+      }
+      width={width}
     >
       <form
         id="entity-form"
@@ -112,47 +112,47 @@ export function EntityFormModal({
             if (f.kind === "textarea") {
               return (
                 <TextAreaField
+                  hint={f.hint}
                   key={f.name}
                   label={f.label}
-                  hint={f.hint}
+                  onChange={(e) => set(f.name, e.target.value)}
                   placeholder={f.placeholder}
                   value={value}
-                  onChange={(e) => set(f.name, e.target.value)}
                 />
               )
             }
             if (f.kind === "select") {
               return (
                 <SelectField
+                  hint={f.hint}
                   key={f.name}
                   label={f.label}
-                  hint={f.hint}
-                  value={value}
-                  options={f.options ?? []}
                   onValueChange={(v) => set(f.name, v)}
+                  options={f.options ?? []}
+                  value={value}
                 />
               )
             }
             if (f.kind === "segmented") {
               return (
                 <SegmentedField
+                  hint={f.hint}
                   key={f.name}
                   label={f.label}
-                  hint={f.hint}
-                  value={value}
-                  options={f.options ?? []}
                   onValueChange={(v) => set(f.name, v)}
+                  options={f.options ?? []}
+                  value={value}
                 />
               )
             }
             return (
               <TextField
+                hint={f.hint}
                 key={f.name}
                 label={f.label}
-                hint={f.hint}
+                onChange={(e) => set(f.name, e.target.value)}
                 placeholder={f.placeholder}
                 value={value}
-                onChange={(e) => set(f.name, e.target.value)}
               />
             )
           })}
@@ -160,10 +160,10 @@ export function EntityFormModal({
           {preview && (
             <Card background="background" radius="sm">
               <Container padding={["150", "150"]}>
-                <Stack direction="row" align="center" gap="100">
+                <Stack align="center" direction="row" gap="100">
                   <Icon name="file" size="sm" tone="faint" />
                   <Container minW0>
-                    <Typography type="note" mono size="sm" variant="tertiary" truncate>
+                    <Typography mono truncate size="sm" type="note" variant="tertiary">
                       {preview}
                     </Typography>
                   </Container>

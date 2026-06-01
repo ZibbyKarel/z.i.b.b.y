@@ -1,4 +1,4 @@
-import { createContext, useContext, type ComponentType, type ReactNode } from "react";
+import { type ComponentType, type ReactNode, createContext, useContext } from "react";
 import { cn } from "../../utils/cn";
 import { Stack } from "../Stack/Stack";
 import type { IconName } from "../Icon/Icon";
@@ -106,8 +106,8 @@ export function ListItem({
   if (LinkComp && href) {
     return (
       <LinkComp
-        href={href}
         data-testid={ListTestId.Item}
+        href={href}
         {...rest}
         aria-current={active ? "page" : undefined}
         className={className}
@@ -120,12 +120,12 @@ export function ListItem({
   if (onSelect) {
     return (
       <button
-        type="button"
         data-testid={ListTestId.Item}
+        type="button"
         {...rest}
         aria-current={active ? "page" : undefined}
-        onClick={onSelect}
         className={className}
+        onClick={onSelect}
       >
         {inner}
       </button>

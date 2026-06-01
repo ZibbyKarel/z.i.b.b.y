@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { type VariantProps, cva } from "class-variance-authority";
 import { Icon, type IconName } from "../Icon/Icon";
 
 /**
@@ -67,13 +67,13 @@ export function Button({
   const iconSize = size === "lg" ? "sm" : "xs";
   return (
     <button
-      ref={ref}
-      data-testid={ButtonTestId.Root}
-      type={type}
       className={button({ intent, size, block })}
+      data-testid={ButtonTestId.Root}
+      ref={ref}
+      type={type}
       {...props}
     >
-      {icon ? <Icon name={icon} size={iconSize} stroke="medium" data-testid={ButtonTestId.Icon} /> : null}
+      {icon ? <Icon data-testid={ButtonTestId.Icon} name={icon} size={iconSize} stroke="medium" /> : null}
       {children}
     </button>
   );

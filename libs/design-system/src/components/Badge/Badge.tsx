@@ -67,12 +67,12 @@ export function Badge({
     <span
       data-testid={BadgeTestId.Root}
       {...rest}
-      ref={ref}
       className={cn(
         "inline-flex items-center gap-1 border whitespace-nowrap font-mono font-semibold tracking-wide",
         sizeClasses[size],
         solid ? toneSolid[tone] : toneBase[tone],
       )}
+      ref={ref}
     >
       {children}
     </span>

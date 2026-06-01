@@ -1,20 +1,20 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { type ReactNode, Suspense } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   DesignSystemProvider,
-  PartialTheme,
   type LinkComponentType,
+  PartialTheme,
 } from "@zibby/design-system";
 import { MainLayout } from "./components/MainLayout";
 import {
+  AGENT_SDK,
+  CLAUDE_LIMITS,
   NAV_ITEMS,
   NAV_LABELS,
   SETTINGS_ITEM,
-  CLAUDE_LIMITS,
-  AGENT_SDK,
 } from "./config";
 import { DashboardStoreProvider } from "./store";
 import { DashboardContext } from "./dashboardContext";
@@ -81,17 +81,17 @@ function ChromeInner({ children }: { children: ReactNode }) {
     <DashboardContext.Provider value={{ context }}>
       <DesignSystemProvider theme="dark" tokens={contextTokens(context)}>
         <MainLayout
-          context={context}
-          onContextChange={handleContextChange}
-          navItems={navItemsWithCtx}
           activeNav={activeNav}
-          onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, rawCtx))}
-          footerItem={footerWithCtx}
           breadcrumb={NAV_LABELS[activeNav] ?? "Přehled"}
-          walletSlot={
-            <LimitsWidget limits={CLAUDE_LIMITS} credit={AGENT_SDK} />
-          }
+          context={context}
+          footerItem={footerWithCtx}
           linkComponent={Link as LinkComponentType}
+          navItems={navItemsWithCtx}
+          onContextChange={handleContextChange}
+          onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, rawCtx))}
+          walletSlot={
+            <LimitsWidget credit={AGENT_SDK} limits={CLAUDE_LIMITS} />
+          }
         >
           {children}
         </MainLayout>

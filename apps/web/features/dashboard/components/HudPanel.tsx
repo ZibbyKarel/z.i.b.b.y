@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import {
   Card,
   Container,
+  type Padding,
   Stack,
   Typography,
-  type Padding,
 } from "@zibby/design-system";
 
 export interface HudPanelProps {
@@ -24,29 +24,29 @@ export function HudPanel({
 }: HudPanelProps) {
   const hasHeader = Boolean(title || action);
   return (
-    <Card background="panel" radius="none" corners={corners}>
+    <Card background="panel" corners={corners} radius="none">
       <Container padding={padding}>
         <Stack gap="150">
           {hasHeader && (
-            <Stack direction="row" align="center" justify="between">
+            <Stack align="center" direction="row" justify="between">
               {title ? (
                 <Typography
-                  type="note"
                   mono
-                  size="xs"
                   uppercase
+                  size="xs"
                   tracking="widest"
+                  type="note"
                   variant="tertiary"
                 >
                   <Typography
-                    as="span"
-                    type="note"
                     mono
+                    as="span"
                     size="xs"
-                    tone="accent"
                     style={{ opacity: 0.8 }}
+                    tone="accent"
+                    type="note"
                   >
-                    //
+                    {'//'}
                   </Typography>{" "}
                   {title}
                 </Typography>

@@ -21,7 +21,7 @@ describe("Badge", () => {
   });
 
   it("sets transparent border when solid=true", () => {
-    render(<Badge tone="accent" solid>accent</Badge>);
+    render(<Badge solid tone="accent">accent</Badge>);
     expect(screen.getByTestId(BadgeTestId.Root)).toHaveClass("border-transparent");
   });
 });

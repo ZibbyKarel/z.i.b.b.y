@@ -16,7 +16,7 @@ describe("HudPanel", () => {
 
   it("renders an action slot", () => {
     render(
-      <HudPanel title="rozpočty" action={<button>Přidat</button>}>
+      <HudPanel action={<button>Přidat</button>} title="rozpočty">
         x
       </HudPanel>,
     )

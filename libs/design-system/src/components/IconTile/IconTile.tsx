@@ -88,8 +88,6 @@ export function IconTile({
   const px = tilePx[size];
   return (
     <Tag
-      ref={ref as Ref<HTMLSpanElement & HTMLDivElement & HTMLButtonElement>}
-      data-testid={IconTileTestId.Root}
       className={cn(
         "grid shrink-0 place-items-center border",
         shape === "circle" ? "rounded-full" : radiusClass[radius],
@@ -98,6 +96,8 @@ export function IconTile({
         interactive &&
           "cursor-pointer outline-none transition-colors hover:border-accent/35 hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent",
       )}
+      data-testid={IconTileTestId.Root}
+      ref={ref as Ref<HTMLSpanElement & HTMLDivElement & HTMLButtonElement>}
       style={{ width: px, height: px, ...style }}
       {...rest}
     >

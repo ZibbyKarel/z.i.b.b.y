@@ -4,11 +4,11 @@ import {
   Chip,
   Container,
   Divider,
+  type DotTone,
   IconTile,
   Stack,
   StatusDot,
   Typography,
-  type DotTone,
 } from "@zibby/design-system";
 import type { Integration, IntegrationStatus } from "../../../domain";
 
@@ -33,44 +33,44 @@ export interface IntegrationCardProps {
 export function IntegrationCard({ integration, onConfigure, onTest }: IntegrationCardProps) {
   const sm = statusMeta[integration.status];
   return (
-    <Card interactive corners radius="sm">
+    <Card corners interactive radius="sm">
       <Container padding="150">
         <Stack gap="150">
-          <Stack direction="row" align="start" gap="150">
+          <Stack align="start" direction="row" gap="150">
             <IconTile glyph={integration.glyph} size="md" />
             <Container grow minW0>
               <Stack gap="25">
-                <Typography type="note" mono weight="semibold" size="md" truncate>
+                <Typography mono truncate size="md" type="note" weight="semibold">
                   {integration.name}
                 </Typography>
                 <Typography
+                  leading="snug"
+                  size="caption"
                   type="note"
                   variant="secondary"
-                  size="caption"
-                  leading="snug"
                 >
                   {integration.desc}
                 </Typography>
               </Stack>
             </Container>
             <Chip tone={pillTone[integration.status]}>
-              <StatusDot tone={sm.tone} size="75" />
+              <StatusDot size="75" tone={sm.tone} />
               {sm.label}
             </Chip>
           </Stack>
 
           <Divider />
-          <Stack direction="row" align="center" justify="between">
-            <Container maxWidth="150px" minW0>
-              <Typography type="note" mono size="xs" variant="tertiary" truncate>
+          <Stack align="center" direction="row" justify="between">
+            <Container minW0 maxWidth="150px">
+              <Typography mono truncate size="xs" type="note" variant="tertiary">
                 {integration.file}
               </Typography>
             </Container>
-            <Stack direction="row" align="center" gap="75">
-              <Button intent="ghost" icon="link" size="sm" onClick={() => onTest?.(integration)}>
+            <Stack align="center" direction="row" gap="75">
+              <Button icon="link" intent="ghost" onClick={() => onTest?.(integration)} size="sm">
                 Test
               </Button>
-              <Button intent="ghost" icon="gear" size="sm" onClick={() => onConfigure?.(integration)}>
+              <Button icon="gear" intent="ghost" onClick={() => onConfigure?.(integration)} size="sm">
                 Konfigurovat
               </Button>
             </Stack>

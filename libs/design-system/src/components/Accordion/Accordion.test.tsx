@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
-import { Accordion, AccordionTestId, AccordionItem } from "./Accordion";
+import { Accordion, AccordionItem, AccordionTestId } from "./Accordion";
 
 describe("Accordion", () => {
   it("hides content by default", () => {
@@ -40,7 +40,7 @@ describe("Accordion", () => {
   it("renders expanded when defaultExpanded=true", () => {
     render(
       <Accordion>
-        <AccordionItem summary="Info" defaultExpanded>
+        <AccordionItem defaultExpanded summary="Info">
           Viditelný obsah
         </AccordionItem>
       </Accordion>,

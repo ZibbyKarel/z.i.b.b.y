@@ -22,7 +22,7 @@ const pipeline: Pipeline = {
 
 describe("PipelineCard", () => {
   it("renders name, state label and budget", () => {
-    render(<PipelineCard pipeline={pipeline} agents={agents} selected={false} onSelect={() => {}} />)
+    render(<PipelineCard agents={agents} onSelect={() => {}} pipeline={pipeline} selected={false} />)
     expect(screen.getByText("Build Feature")).toBeInTheDocument()
     expect(screen.getByText("zaparkováno")).toBeInTheDocument()
     expect(screen.getByText(/strop \$25/)).toBeInTheDocument()
@@ -30,7 +30,7 @@ describe("PipelineCard", () => {
 
   it("selects on click", async () => {
     const onSelect = vi.fn()
-    render(<PipelineCard pipeline={pipeline} agents={agents} selected={false} onSelect={onSelect} />)
+    render(<PipelineCard agents={agents} onSelect={onSelect} pipeline={pipeline} selected={false} />)
     await userEvent.click(screen.getByRole("button"))
     expect(onSelect).toHaveBeenCalledWith("build-feature")
   })

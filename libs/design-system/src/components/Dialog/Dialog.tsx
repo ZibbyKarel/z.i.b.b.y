@@ -75,22 +75,22 @@ export function Dialog({
 
   return (
     <div
-      data-testid={DialogTestId.Overlay}
       className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.55)] backdrop-blur-sm"
-      role="presentation"
+      data-testid={DialogTestId.Overlay}
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      role="presentation"
     >
       <div
-        ref={dialogRef}
-        data-testid={DialogTestId.Root}
-        role="dialog"
         aria-modal
         aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
-        tabIndex={-1}
-        style={{ width: dialogWidthPx[width], maxWidth: "calc(100vw - 32px)" }}
         className="relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded shadow-modal animate-scale-in outline-none"
+        data-testid={DialogTestId.Root}
+        ref={dialogRef}
+        role="dialog"
+        style={{ width: dialogWidthPx[width], maxWidth: "calc(100vw - 32px)" }}
+        tabIndex={-1}
       >
-        {title && <DialogHeader title={title} description={description} onClose={onClose} closeLabel={closeLabel} />}
+        {title && <DialogHeader closeLabel={closeLabel} description={description} onClose={onClose} title={title} />}
         {children && <DialogBody>{children}</DialogBody>}
         {actions && <DialogFooter>{actions}</DialogFooter>}
       </div>
@@ -110,22 +110,22 @@ function DialogHeader({
   closeLabel?: string;
 }) {
   return (
-    <div data-testid={DialogTestId.Header} className="px-5 pt-4 pb-[14px] border-b border-border shrink-0">
-      <Row justify="between" gap="150">
-        <div data-testid={DialogTestId.Title} className="font-mono font-semibold text-md text-foreground">{title}</div>
+    <div className="px-5 pt-4 pb-[14px] border-b border-border shrink-0" data-testid={DialogTestId.Header}>
+      <Row gap="150" justify="between">
+        <div className="font-mono font-semibold text-md text-foreground" data-testid={DialogTestId.Title}>{title}</div>
         {onClose && (
           <button
-            data-testid={DialogTestId.CloseButton}
             aria-label={closeLabel}
-            onClick={onClose}
             className="bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+            data-testid={DialogTestId.CloseButton}
+            onClick={onClose}
           >
             ✕
           </button>
         )}
       </Row>
       {description && (
-        <p data-testid={DialogTestId.Description} className="mt-1.5 text-base text-foreground-dim leading-relaxed">{description}</p>
+        <p className="mt-1.5 text-base text-foreground-dim leading-relaxed" data-testid={DialogTestId.Description}>{description}</p>
       )}
     </div>
   );
@@ -133,7 +133,7 @@ function DialogHeader({
 
 export function DialogBody({ children }: { children: ReactNode }) {
   return (
-    <div data-testid={DialogTestId.Body} className="px-5 py-4 overflow-y-auto flex-1">
+    <div className="px-5 py-4 overflow-y-auto flex-1" data-testid={DialogTestId.Body}>
       {children}
     </div>
   );
@@ -141,8 +141,8 @@ export function DialogBody({ children }: { children: ReactNode }) {
 
 function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div data-testid={DialogTestId.Footer} className="px-5 pt-3 pb-4 border-t border-border shrink-0">
-      <Row justify="end" gap="100">{children}</Row>
+    <div className="px-5 pt-3 pb-4 border-t border-border shrink-0" data-testid={DialogTestId.Footer}>
+      <Row gap="100" justify="end">{children}</Row>
     </div>
   );
 }

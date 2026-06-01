@@ -35,10 +35,6 @@ const preview: Preview = {
   decorators: [
     (Story, ctx) => (
       <DesignSystemProvider
-        theme={(ctx.globals["theme"] as "dark" | "light") ?? "dark"}
-        tokens={contextTokens(
-          (ctx.globals["context"] as "home" | "work") ?? "home",
-        )}
         style={{
           minHeight: "200px",
           display: "flex",
@@ -46,6 +42,10 @@ const preview: Preview = {
           justifyContent: "center",
           padding: "24px",
         }}
+        theme={(ctx.globals["theme"] as "dark" | "light") ?? "dark"}
+        tokens={contextTokens(
+          (ctx.globals["context"] as "home" | "work") ?? "home",
+        )}
       >
         <Story />
       </DesignSystemProvider>

@@ -4,7 +4,7 @@ import { Progress, ProgressTestId, usageTone } from "./Progress";
 
 describe("Progress", () => {
   it("exposes a progressbar role when labelled", () => {
-    render(<Progress value={64} label="5h rolling" />);
+    render(<Progress label="5h rolling" value={64} />);
     const bar = screen.getByTestId(ProgressTestId.Root);
     expect(bar).toHaveRole("progressbar");
     expect(bar).toHaveAccessibleName("5h rolling");
@@ -12,7 +12,7 @@ describe("Progress", () => {
   });
 
   it("clamps values to 0–100", () => {
-    render(<Progress value={150} label="over" />);
+    render(<Progress label="over" value={150} />);
     expect(screen.getByTestId(ProgressTestId.Root)).toHaveAttribute("aria-valuenow", "100");
   });
 

@@ -15,7 +15,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-8 w-96">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           multi-expand (default)
         </Typography>
         <Accordion>
@@ -25,13 +25,13 @@ export const Overview: Story = {
           <AccordionItem summary="Vstupní schéma">
             Definice JSON vstupního payloadu agenta.
           </AccordionItem>
-          <AccordionItem summary="Výstupní schéma" defaultExpanded>
+          <AccordionItem defaultExpanded summary="Výstupní schéma">
             Defaultně rozbaleno.
           </AccordionItem>
         </Accordion>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           single — only one open at a time
         </Typography>
         <Accordion single>

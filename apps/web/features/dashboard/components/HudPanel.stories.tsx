@@ -22,8 +22,8 @@ type Story = StoryObj<typeof HudPanel>
 export const Default: Story = {
   render: (args) => (
     <HudPanel {...args}>
-      <Typography type="note" size="md" variant="secondary">
-        Angular HUD panel s rohovými chevrony a <code>// title</code> popiskem.
+      <Typography size="md" type="note" variant="secondary">
+        Angular HUD panel s rohovými chevrony a <code>{'// title'}</code> popiskem.
       </Typography>
     </HudPanel>
   ),
@@ -31,8 +31,8 @@ export const Default: Story = {
 
 export const WithAction: Story = {
   render: (args) => (
-    <HudPanel {...args} action={<Button intent="ghost" icon="plus" size="sm">Přidat skill</Button>}>
-      <Typography type="note" size="md" variant="secondary">
+    <HudPanel {...args} action={<Button icon="plus" intent="ghost" size="sm">Přidat skill</Button>}>
+      <Typography size="md" type="note" variant="secondary">
         Panel s akcí v titulkovém řádku.
       </Typography>
     </HudPanel>

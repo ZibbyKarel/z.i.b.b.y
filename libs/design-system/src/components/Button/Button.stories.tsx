@@ -23,39 +23,39 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           intents
         </Typography>
         <div className="flex flex-wrap gap-3">
-          <Button intent="run" icon="play">
+          <Button icon="play" intent="run">
             Spustit
           </Button>
-          <Button intent="solid" icon="play">
+          <Button icon="play" intent="solid">
             Spustit
           </Button>
-          <Button intent="ghost" icon="edit">
+          <Button icon="edit" intent="ghost">
             Edit raw
           </Button>
-          <Button intent="approve" icon="check">
+          <Button icon="check" intent="approve">
             Schválit
           </Button>
-          <Button intent="reject" icon="x">
+          <Button icon="x" intent="reject">
             Zamítnout
           </Button>
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           sizes
         </Typography>
         <div className="flex flex-wrap items-center gap-3">
-          <Button intent="run" size="sm" icon="play">
+          <Button icon="play" intent="run" size="sm">
             sm
           </Button>
-          <Button intent="run" size="md" icon="play">
+          <Button icon="play" intent="run" size="md">
             md
           </Button>
-          <Button intent="run" size="lg" icon="play">
+          <Button icon="play" intent="run" size="lg">
             lg
           </Button>
         </div>

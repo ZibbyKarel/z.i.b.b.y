@@ -23,24 +23,24 @@ export const Overview: Story = {
   render: () => (
     <div className="flex w-64 flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           tones
         </Typography>
         <div className="flex flex-col gap-3">
-          <Progress value={38} tone="ok" glow />
-          <Progress value={64} tone="warn" glow />
-          <Progress value={92} tone="bad" glow />
-          <Progress value={36} tone="accent" glow />
+          <Progress glow tone="ok" value={38} />
+          <Progress glow tone="warn" value={64} />
+          <Progress glow tone="bad" value={92} />
+          <Progress glow tone="accent" value={36} />
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           heights
         </Typography>
         <div className="flex flex-col gap-3">
-          <Progress value={60} tone="ok" height="50" />
-          <Progress value={60} tone="ok" height="75" />
-          <Progress value={60} tone="ok" height="100" />
+          <Progress height="50" tone="ok" value={60} />
+          <Progress height="75" tone="ok" value={60} />
+          <Progress height="100" tone="ok" value={60} />
         </div>
       </div>
     </div>

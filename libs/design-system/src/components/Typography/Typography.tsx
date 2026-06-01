@@ -146,6 +146,14 @@ export function Typography({
 
   return (
     <Element
+      className={cn(
+        weightClass[weight ?? preset.weight],
+        tone ? toneClass[tone] : variantClass[variant],
+        mono && "font-mono",
+        uppercase && "uppercase",
+        truncate && "truncate",
+        nowrap && "whitespace-nowrap",
+      )}
       data-testid={TypographyTestId.Root}
       ref={
         ref as Ref<
@@ -156,14 +164,6 @@ export function Typography({
             HTMLLabelElement
         >
       }
-      className={cn(
-        weightClass[weight ?? preset.weight],
-        tone ? toneClass[tone] : variantClass[variant],
-        mono && "font-mono",
-        uppercase && "uppercase",
-        truncate && "truncate",
-        nowrap && "whitespace-nowrap",
-      )}
       style={computedStyle}
       {...rest}
     />

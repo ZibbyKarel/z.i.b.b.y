@@ -22,47 +22,47 @@ export function AgentRow({ agent, onStop, divider = true }: AgentRowProps) {
   return (
     <>
       <Container padding={["150", "0"]}>
-        <Stack direction="row" align="center" gap="150">
-          <StatusDot tone={tone} pulse />
+        <Stack align="center" direction="row" gap="150">
+          <StatusDot pulse tone={tone} />
           <Container grow minW0>
             <Stack gap="25">
-              <Stack direction="row" align="baseline" gap="100">
-                <Typography type="note" mono size="base" weight="semibold" nowrap>
+              <Stack align="baseline" direction="row" gap="100">
+                <Typography mono nowrap size="base" type="note" weight="semibold">
                   {agent.skill}
                 </Typography>
                 <Container minW0>
-                  <Typography type="note" mono size="sm" variant="tertiary" truncate>
+                  <Typography mono truncate size="sm" type="note" variant="tertiary">
                     · {agent.project}
                   </Typography>
                 </Container>
               </Stack>
-              <Typography type="note" size="caption" variant="secondary" truncate>
+              <Typography truncate size="caption" type="note" variant="secondary">
                 {agent.prompt}
               </Typography>
-              <Stack direction="row" align="center" gap="100">
+              <Stack align="center" direction="row" gap="100">
                 <Container grow minW0>
                   <Progress
-                    value={agent.pct}
-                    tone="accent"
-                    height="50"
                     glow
+                    height="50"
                     label={`postup ${agent.skill}`}
+                    tone="accent"
+                    value={agent.pct}
                   />
                 </Container>
-                <Typography type="note" mono size="sm" weight="semibold" tone="accent">
+                <Typography mono size="sm" tone="accent" type="note" weight="semibold">
                   {agent.pct}%
                 </Typography>
               </Stack>
             </Stack>
           </Container>
           <IconTile
-            as="button"
             interactive
-            tone="neutral"
-            size="sm"
-            radius="default"
             aria-label={`Zastavit ${agent.skill}`}
+            as="button"
             onClick={() => onStop?.(agent)}
+            radius="default"
+            size="sm"
+            tone="neutral"
           >
             <Icon name="stop" size="xs" />
           </IconTile>

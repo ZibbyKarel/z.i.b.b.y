@@ -16,36 +16,36 @@ export interface SkillTileProps {
 
 export function SkillTile({ skill, onRun }: SkillTileProps) {
   return (
-    <Card interactive corners radius="sm">
+    <Card corners interactive radius="sm">
       <Container padding="150">
         <Stack gap="150">
-          <Stack direction="row" align="start" gap="150">
+          <Stack align="start" direction="row" gap="150">
             <IconTile glyph={skill.glyph} size="md" />
             <Container grow minW0>
               <Stack gap="25">
-                <Typography type="note" mono weight="semibold" size="md" truncate>
+                <Typography mono truncate size="md" type="note" weight="semibold">
                   {skill.name}
                 </Typography>
                 <Typography
+                  leading="snug"
+                  size="caption"
                   type="note"
                   variant="secondary"
-                  size="caption"
-                  leading="snug"
                 >
                   {skill.desc}
                 </Typography>
               </Stack>
             </Container>
-            <StatusDot tone="faint" size="75" />
+            <StatusDot size="75" tone="faint" />
           </Stack>
 
-          <Stack direction="row" align="center" justify="between">
-            <Container maxWidth="130px" minW0>
-              <Typography type="note" mono size="xs" variant="tertiary" truncate>
+          <Stack align="center" direction="row" justify="between">
+            <Container minW0 maxWidth="130px">
+              <Typography mono truncate size="xs" type="note" variant="tertiary">
                 {skill.file.replace("~/zibby/skills/", "")}
               </Typography>
             </Container>
-            <Button intent="run" size="sm" icon="play" onClick={() => onRun(skill)}>
+            <Button icon="play" intent="run" onClick={() => onRun(skill)} size="sm">
               Spustit
             </Button>
           </Stack>

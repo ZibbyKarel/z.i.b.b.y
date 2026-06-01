@@ -19,7 +19,7 @@ describe("Container", () => {
   });
 
   it("applies width and height", () => {
-    render(<Container width="100px" height="50px">x</Container>);
+    render(<Container height="50px" width="100px">x</Container>);
     const el = screen.getByTestId(ContainerTestId.Root);
     expect(el.style.width).toBe("100px");
     expect(el.style.height).toBe("50px");

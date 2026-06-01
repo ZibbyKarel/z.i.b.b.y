@@ -26,20 +26,20 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
   const [done, setDone] = useState<"ok" | "no" | null>(null)
 
   return (
-    <Card tone="bad" corners radius="sm">
+    <Card corners radius="sm" tone="bad">
       <Container padding="200">
         <Stack gap="150">
-          <Stack direction="row" align="center" justify="between" gap="100">
-            <Stack direction="row" align="center" gap="100">
-              <StatusDot tone="bad" pulse />
+          <Stack align="center" direction="row" gap="100" justify="between">
+            <Stack align="center" direction="row" gap="100">
+              <StatusDot pulse tone="bad" />
               <Typography
-                type="note"
-                tone="bad"
                 mono
-                size="sm"
-                weight="semibold"
                 uppercase
+                size="sm"
+                tone="bad"
                 tracking="widest"
+                type="note"
+                weight="semibold"
               >
                 Čeká na tvé schválení
               </Typography>
@@ -47,19 +47,19 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
             <Badge tone="neutral">{approval.risk}</Badge>
           </Stack>
 
-          <Stack direction="row" align="center" gap="100">
-            <IconTile glyph="cart" size="sm" radius="default" />
+          <Stack align="center" direction="row" gap="100">
+            <IconTile glyph="cart" radius="default" size="sm" />
             <Stack gap="25">
-              <Typography type="note" size="md" weight="semibold">
-                <Typography as="span" type="note" size="md" mono tone="accent" weight="semibold">
+              <Typography size="md" type="note" weight="semibold">
+                <Typography mono as="span" size="md" tone="accent" type="note" weight="semibold">
                   {approval.skill}
                 </Typography>{" "}
-                <Typography as="span" type="note" size="md" variant="secondary" weight="normal">
+                <Typography as="span" size="md" type="note" variant="secondary" weight="normal">
                   chce
                 </Typography>{" "}
                 {approval.action}
               </Typography>
-              <Typography type="note" variant="secondary" size="base">
+              <Typography size="base" type="note" variant="secondary">
                 {approval.detail}
               </Typography>
             </Stack>
@@ -75,9 +75,9 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
             <Stack direction="row" gap="100">
               <Container grow>
                 <Button
-                  intent="approve"
-                  icon="check"
                   block
+                  icon="check"
+                  intent="approve"
                   onClick={() => {
                     setDone("ok")
                     onApprove?.(approval)
@@ -88,9 +88,9 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
               </Container>
               <Container grow>
                 <Button
-                  intent="reject"
-                  icon="x"
                   block
+                  icon="x"
+                  intent="reject"
                   onClick={() => {
                     setDone("no")
                     onReject?.(approval)

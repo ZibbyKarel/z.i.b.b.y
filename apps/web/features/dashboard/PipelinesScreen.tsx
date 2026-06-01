@@ -43,19 +43,19 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
 
   const addModal = adding && (
     <EntityFormModal
-      title={PIPELINE_FORM.title}
-      subtitle={PIPELINE_FORM.subtitle}
-      glyph={PIPELINE_FORM.glyph}
       fields={PIPELINE_FORM.fields}
-      submitLabel={PIPELINE_FORM.submitLabel}
       filePreview={PIPELINE_FORM.filePreview}
+      glyph={PIPELINE_FORM.glyph}
       onClose={() => setAdding(false)}
       onSubmit={(values) => { addPipeline(values); setAdding(false); }}
+      submitLabel={PIPELINE_FORM.submitLabel}
+      subtitle={PIPELINE_FORM.subtitle}
+      title={PIPELINE_FORM.title}
     />
   );
 
   const addAction = (
-    <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
+    <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
       Přidat pipeline
     </Button>
   );
@@ -65,12 +65,12 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
       <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
         <SectionLabel action={addAction}>Pipeline · {context}</SectionLabel>
         <EmptyState
-          glyph="flow"
-          title="Zatím žádné pipeline"
-          description="Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru."
           actionLabel="Přidat pipeline"
-          onAction={() => setAdding(true)}
+          description="Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru."
+          glyph="flow"
           hint="// vytvoří ~/zibby/pipelines/<název>.pipeline.md"
+          onAction={() => setAdding(true)}
+          title="Zatím žádné pipeline"
         />
         {addModal}
       </Container>
@@ -80,16 +80,16 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
   const rawCtx = context;
 
   return (
-    <Grid sidebar="left" center maxWidth="1400px" gap="250" align="start">
+    <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
       <Stack gap="150">
         <SectionLabel action={addAction}>Pipeline · {context}</SectionLabel>
         {list.map((p) => (
           <PipelineCard
-            key={p.id}
-            pipeline={p}
             agents={agents}
-            selected={p.id === (selected?.id ?? "")}
+            key={p.id}
             onSelect={(id: string) => router.push(hrefWithCtx(`/pipelines/${id}`, rawCtx))}
+            pipeline={p}
+            selected={p.id === (selected?.id ?? "")}
           />
         ))}
       </Stack>
@@ -98,43 +98,43 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
         <Stack gap="250">
           <HudPanel padding="250">
             <Stack gap="200">
-              <Stack direction="row" wrap align="start" justify="between" gap="200">
+              <Stack wrap align="start" direction="row" gap="200" justify="between">
                 <Container minW0>
                   <Stack gap="100">
-                    <Stack direction="row" align="center" gap="100">
-                      <Typography type="title" size="3xl" weight="semibold">
+                    <Stack align="center" direction="row" gap="100">
+                      <Typography size="3xl" type="title" weight="semibold">
                         {selected.name}
                       </Typography>
                       <Chip tone="accent">{context}</Chip>
                     </Stack>
-                    <Typography type="note" mono size="caption" variant="secondary">
+                    <Typography mono size="caption" type="note" variant="secondary">
                       {selected.desc}
                     </Typography>
-                    <Stack direction="row" align="center" gap="75">
+                    <Stack align="center" direction="row" gap="75">
                       <Icon name="file" size="xs" tone="faint" />
-                      <Typography type="note" mono size="sm" variant="tertiary">
+                      <Typography mono size="sm" type="note" variant="tertiary">
                         {selected.file}
                       </Typography>
                     </Stack>
                   </Stack>
                 </Container>
-                <Stack direction="row" align="center" gap="100">
-                  <Button intent="ghost" icon="edit" size="sm">Editovat</Button>
-                  <Button intent="ghost" icon="link" size="sm">Duplikovat</Button>
-                  <Button intent="run" icon="play" onClick={() => setRunPipeline(selected)}>
+                <Stack align="center" direction="row" gap="100">
+                  <Button icon="edit" intent="ghost" size="sm">Editovat</Button>
+                  <Button icon="link" intent="ghost" size="sm">Duplikovat</Button>
+                  <Button icon="play" intent="run" onClick={() => setRunPipeline(selected)}>
                     Spustit pipeline
                   </Button>
                 </Stack>
               </Stack>
               <Divider />
-              <Stack direction="row" wrap align="center" gap="250">
-                <Stack direction="row" align="center" gap="100">
+              <Stack wrap align="center" direction="row" gap="250">
+                <Stack align="center" direction="row" gap="100">
                   <Icon name="dollar" size="md" tone="accent" />
                   <Container>
-                    <Typography type="note" mono size="2xs" tracking="wider" variant="tertiary">
+                    <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
                       STROP PIPELINE
                     </Typography>
-                    <Typography type="note" mono size="xl" weight="bold">
+                    <Typography mono size="xl" type="note" weight="bold">
                       ${selected.budget}
                     </Typography>
                   </Container>
@@ -142,9 +142,9 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
                 <Container height="32px">
                   <Divider orientation="vertical" />
                 </Container>
-                <Stack direction="row" align="center" gap="100">
+                <Stack align="center" direction="row" gap="100">
                   <Icon name="branch" size="md" tone="dim" />
-                  <Typography type="note" mono size="caption" variant="secondary">
+                  <Typography mono size="caption" type="note" variant="secondary">
                     výstup → izolovaná branch · PR k ranní review
                   </Typography>
                 </Stack>
@@ -152,19 +152,19 @@ export function PipelinesScreen({ selectedId: routeId }: PipelinesScreenProps) {
             </Stack>
           </HudPanel>
 
-          <HudPanel title="zřetězení fází · soubory = předání" padding="250">
-            <PhaseChain pipeline={selected} agents={agents} />
+          <HudPanel padding="250" title="zřetězení fází · soubory = předání">
+            <PhaseChain agents={agents} pipeline={selected} />
           </HudPanel>
         </Stack>
       )}
 
       {runPipeline && (
         <PipelineRunModal
-          key={runPipeline.id}
-          pipeline={runPipeline}
           agents={agents}
-          projects={[...PROJECTS]}
+          key={runPipeline.id}
           onClose={() => setRunPipeline(null)}
+          pipeline={runPipeline}
+          projects={[...PROJECTS]}
         />
       )}
       {addModal}

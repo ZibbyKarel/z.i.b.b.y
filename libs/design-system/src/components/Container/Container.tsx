@@ -1,5 +1,5 @@
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
-import { spacingToPx, resolvePadding, type Padding } from "../../tokens";
+import { type Padding, resolvePadding, spacingToPx } from "../../tokens";
 
 export type ContainerAs =
   | "div"

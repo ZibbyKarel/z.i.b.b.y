@@ -12,10 +12,10 @@ import {
   Pressable,
   SegmentedField,
   Stack,
-  Typography,
   TextAreaField,
+  Typography,
 } from "@zibby/design-system"
-import { glyphForAgent, type AgentDef, type ModelName, type Pipeline, type ThinkingLevel } from "../../../domain"
+import { type AgentDef, type ModelName, type Pipeline, type ThinkingLevel, glyphForAgent } from "../../../domain"
 import { ModelBadge, ThinkBadge } from "./PhaseChain"
 
 const CYCLE_MODEL: ModelName[] = ["opus", "sonnet", "haiku"]
@@ -73,32 +73,15 @@ export function PipelineRunModal({
   return (
     <Dialog
       open
-      width="lg"
-      onClose={onClose}
-      ariaLabel={`Spustit pipeline ${pipeline.name}`}
-      closeLabel="Zavřít"
-      title={
-        <Stack direction="row" align="center" gap="150">
-          <IconTile glyph="flow" size="md" />
-          <Container grow minW0>
-            <Typography type="note" mono weight="bold" size="xl">
-              Spustit · {pipeline.name}
-            </Typography>
-            <Typography type="note" variant="secondary" size="base">
-              {pipeline.phases.length} fází · víceagentní běh na pozadí
-            </Typography>
-          </Container>
-        </Stack>
-      }
       actions={
         launched ? undefined : (
-          <Stack direction="row" align="center" justify="between" grow>
-            <Button intent="ghost" icon="edit">
+          <Stack grow align="center" direction="row" justify="between">
+            <Button icon="edit" intent="ghost">
               Edit raw .pipeline.md
             </Button>
             <Button
-              intent="run"
               icon="play"
+              intent="run"
               onClick={() => {
                 onLaunch?.({ pipeline, prompt, project, budget, overrides })
                 setLaunched(true)
@@ -109,25 +92,42 @@ export function PipelineRunModal({
           </Stack>
         )
       }
+      ariaLabel={`Spustit pipeline ${pipeline.name}`}
+      closeLabel="Zavřít"
+      onClose={onClose}
+      title={
+        <Stack align="center" direction="row" gap="150">
+          <IconTile glyph="flow" size="md" />
+          <Container grow minW0>
+            <Typography mono size="xl" type="note" weight="bold">
+              Spustit · {pipeline.name}
+            </Typography>
+            <Typography size="base" type="note" variant="secondary">
+              {pipeline.phases.length} fází · víceagentní běh na pozadí
+            </Typography>
+          </Container>
+        </Stack>
+      }
+      width="lg"
     >
       {launched ? (
-        <Container textAlign="center" padding={["200", "100"]}>
+        <Container padding={["200", "100"]} textAlign="center">
           <Stack align="center" gap="100">
-            <IconTile glyph="flow" size="xl" shape="circle" filled={false} glow />
-            <Typography type="subtitle" size="xl" weight="semibold">
+            <IconTile glow filled={false} glyph="flow" shape="circle" size="xl" />
+            <Typography size="xl" type="subtitle" weight="semibold">
               Pipeline spuštěna na pozadí
             </Typography>
-            <Typography type="note" mono size="base" variant="secondary">
+            <Typography mono size="base" type="note" variant="secondary">
               {pipeline.name} → {project} · strop ${budget}
             </Typography>
-            <Typography type="note" size="md" variant="secondary">
+            <Typography size="md" type="note" variant="secondary">
               Sleduj fáze v sekci{" "}
-              <Typography as="span" type="note" size="md" tone="accent">
+              <Typography as="span" size="md" tone="accent" type="note">
                 Běžící agenti
               </Typography>{" "}
               · pracuje v izolované branchi.
             </Typography>
-            <Button intent="ghost" icon="pulse" onClick={onClose}>
+            <Button icon="pulse" intent="ghost" onClick={onClose}>
               Zavřít
             </Button>
           </Stack>
@@ -135,35 +135,35 @@ export function PipelineRunModal({
       ) : (
         <Stack gap="200">
           <TextAreaField
-            label="Zadání"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
             autoFocus
+            label="Zadání"
+            onChange={(e) => setPrompt(e.target.value)}
             placeholder={`Co má pipeline „${pipeline.name}" udělat…`}
+            value={prompt}
           />
 
           <Grid cols={2} gap="250">
             <SegmentedField
               label="Cílový projekt"
-              value={project}
-              options={projects.slice(0, 4).map((p) => ({ value: p, label: p }))}
               onValueChange={setProject}
+              options={projects.slice(0, 4).map((p) => ({ value: p, label: p }))}
+              value={project}
             />
             <SegmentedField
               label="Rozpočet (strop)"
-              value={String(budget)}
-              options={[10, 25, 50].map((b) => ({ value: String(b), label: `$${b}` }))}
               onValueChange={(v) => setBudget(Number(v))}
+              options={[10, 25, 50].map((b) => ({ value: String(b), label: `$${b}` }))}
+              value={String(budget)}
             />
           </Grid>
 
           <Stack gap="75">
             <Typography
-              type="note"
               mono
-              size="sm"
               uppercase
+              size="sm"
               tracking="wider"
+              type="note"
               variant="tertiary"
             >
               Override modelu / thinking pro tenhle běh
@@ -173,10 +173,10 @@ export function PipelineRunModal({
                 <Fragment key={`${ph.agent}-${i}`}>
                   {i > 0 && <Divider />}
                   <Container padding={["100", "150"]}>
-                    <Stack direction="row" align="center" gap="100">
+                    <Stack align="center" direction="row" gap="100">
                       <Icon name={glyphForAgent(ph.agent, agents)} size="sm" tone="accent" />
                       <Container grow minW0>
-                        <Typography type="note" mono size="caption">
+                        <Typography mono size="caption" type="note">
                           {ph.agent}
                         </Typography>
                       </Container>
@@ -197,7 +197,7 @@ export function PipelineRunModal({
                 </Fragment>
               ))}
             </Card>
-            <Typography type="note" mono size="xs" variant="tertiary">
+            <Typography mono size="xs" type="note" variant="tertiary">
               klikni na badge pro override · defaulty z agent.md, push do branche čeká na tvé schválení
             </Typography>
           </Stack>

@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   List,
   ListItem,
+  ListItemBadge,
   ListItemIcon,
   ListItemText,
-  ListItemBadge,
   ListTestId,
 } from "./List";
 

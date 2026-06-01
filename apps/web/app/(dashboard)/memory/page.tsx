@@ -1,5 +1,5 @@
 import { PlaceholderScreen } from "../../../features/dashboard/PlaceholderScreen";
 
 export default function MemoryPage() {
-  return <PlaceholderScreen label="Paměť" glyph="brain" />;
+  return <PlaceholderScreen glyph="brain" label="Paměť" />;
 }

@@ -16,7 +16,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           horizontal
         </Typography>
         <div className="flex flex-col gap-4 p-4">
@@ -26,7 +26,7 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           vertical
         </Typography>
         <div className="flex h-8 items-center gap-4 p-4">

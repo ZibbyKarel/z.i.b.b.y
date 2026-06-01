@@ -19,7 +19,7 @@ describe("TextField", () => {
 
 describe("TextAreaField", () => {
   it("renders a labelled textarea with a hint", () => {
-    render(<TextAreaField label="Popis" hint="z description v SKILL.md" />)
+    render(<TextAreaField hint="z description v SKILL.md" label="Popis" />)
     expect(screen.getByTestId(FieldTestId.Control)).toHaveAccessibleName("Popis")
     expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("z description v SKILL.md")
   })
@@ -31,12 +31,12 @@ describe("SelectField", () => {
     render(
       <SelectField
         label="Model"
-        value="opus"
         onValueChange={onValueChange}
         options={[
           { value: "opus", label: "opus" },
           { value: "sonnet", label: "sonnet" },
         ]}
+        value="opus"
       />,
     )
     await userEvent.selectOptions(screen.getByTestId(FieldTestId.Control), "sonnet")
@@ -50,12 +50,12 @@ describe("SegmentedField", () => {
     render(
       <SegmentedField
         label="Kontext"
-        value="home"
         onValueChange={onValueChange}
         options={[
           { value: "home", label: "home" },
           { value: "work", label: "work" },
         ]}
+        value="home"
       />,
     )
     const home = screen.getByTestId(`${FieldTestId.Option}-home`)

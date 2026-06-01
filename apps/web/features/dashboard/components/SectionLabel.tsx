@@ -15,10 +15,10 @@ export function SectionLabel({
 }: SectionLabelProps) {
   return (
     <Stack
-      direction="row"
-      ref={ref}
       align="baseline"
+      direction="row"
       justify="between"
+      ref={ref}
       style={{ marginBottom: "0.875rem", ...style }}
       {...props}
     >

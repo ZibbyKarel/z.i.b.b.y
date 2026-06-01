@@ -35,28 +35,28 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <Container as="header" position="relative" zIndex={20}>
-      <Container padding={["0", "300"]} height="64px">
-        <Stack direction="row" align="center" gap="100" style={{ height: "100%" }}>
+      <Container height="64px" padding={["0", "300"]}>
+        <Stack align="center" direction="row" gap="100" style={{ height: "100%" }}>
           <ButtonGroup
+            ariaLabel="Přepínač kontextu"
+            onChange={(v) => onContextChange(v as ContextName)}
             options={CONTEXT_OPTIONS}
             value={context}
-            onChange={(v) => onContextChange(v as ContextName)}
-            ariaLabel="Přepínač kontextu"
           />
-          <Stack direction="row" align="center" gap="75">
+          <Stack align="center" direction="row" gap="75">
             <Icon name="chevron" size="sm" tone="faint" />
-            <Typography type="note" mono size="base" variant="secondary">
+            <Typography mono size="base" type="note" variant="secondary">
               {breadcrumb}
             </Typography>
           </Stack>
           <Spacer />
           <Button
-            intent="ghost"
-            size="sm"
-            icon="search"
-            onClick={onCommand}
-            title="Příkaz nebo skill (⌘K)"
             aria-label="Příkaz nebo skill"
+            icon="search"
+            intent="ghost"
+            onClick={onCommand}
+            size="sm"
+            title="Příkaz nebo skill (⌘K)"
           >
             <Kbd>⌘K</Kbd>
           </Button>

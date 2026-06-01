@@ -55,61 +55,61 @@ export function OverviewScreen() {
     pipelines.length === 0;
 
   return (
-    <Grid sidebar="right" center maxWidth="1400px" gap="250" align="start">
+    <Grid center align="start" gap="250" maxWidth="1400px" sidebar="right">
       {/* LEFT COLUMN */}
       <Container minW0>
         <Stack gap="250">
           <HudPanel padding="300">
             <Stack gap="250">
-              <Stack direction="row" align="start" justify="between" gap="200">
+              <Stack align="start" direction="row" gap="200" justify="between">
                 <Container minW0>
                   <Stack gap="150">
-                    <Stack direction="row" align="center" gap="100" wrap>
-                      <StatusDot tone="ok" pulse />
-                      <Typography type="note" mono size="caption" uppercase tracking="widest" tone="ok">
+                    <Stack wrap align="center" direction="row" gap="100">
+                      <StatusDot pulse tone="ok" />
+                      <Typography mono uppercase size="caption" tone="ok" tracking="widest" type="note">
                         Systém · NOMINAL
                       </Typography>
-                      <Typography type="note" mono size="sm" variant="tertiary">
+                      <Typography mono size="sm" type="note" variant="tertiary">
                         · démon připraven · žádné běhy
                       </Typography>
                     </Stack>
-                    <Typography type="pageTitle" weight="semibold" leading="tight" tracking="tighter">
+                    <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
                       Dobré ráno.{" "}
-                      <Typography as="span" type="pageTitle" weight="semibold" variant="secondary">
+                      <Typography as="span" type="pageTitle" variant="secondary" weight="semibold">
                         {isFresh ? "Dashboard je prázdný — postav si ho." : "Vše běží hladce."}
                       </Typography>
                     </Typography>
                   </Stack>
                 </Container>
-                <Chip tone="accent" size="md">
+                <Chip size="md" tone="accent">
                   ctx · {context}
                 </Chip>
               </Stack>
               <Divider />
-              <Stack direction="row" wrap gap="450">
-                <Stat value="00" label="běžící agenti" icon="pulse" tone="accent" />
-                <Stat value="00" label="schválení" icon="shield" tone="neutral" />
-                <Stat value={`$${AGENT_SDK.remaining}`} label="agent sdk kredit" icon="dollar" tone={sdkTone} />
-                <Stat value={pad2(ctxPipelines)} label="pipeline" icon="flow" tone="neutral" />
-                <Stat value={pad2(ctxSkills)} label="skilly" icon="spark" tone="neutral" />
+              <Stack wrap direction="row" gap="450">
+                <Stat icon="pulse" label="běžící agenti" tone="accent" value="00" />
+                <Stat icon="shield" label="schválení" tone="neutral" value="00" />
+                <Stat icon="dollar" label="agent sdk kredit" tone={sdkTone} value={`$${AGENT_SDK.remaining}`} />
+                <Stat icon="flow" label="pipeline" tone="neutral" value={pad2(ctxPipelines)} />
+                <Stat icon="spark" label="skilly" tone="neutral" value={pad2(ctxSkills)} />
               </Stack>
             </Stack>
           </HudPanel>
 
           {isFresh && (
             <HudPanel title="začni tady · postav dashboard">
-              <Grid cols={1} sm={2} gap="100">
+              <Grid cols={1} gap="100" sm={2}>
                 {STARTERS.map((s) => (
                   <Pressable key={s.id} onClick={() => { /* navigation handled by links */ }}>
-                    <Card background="background" radius="default" interactive>
+                    <Card interactive background="background" radius="default">
                       <Container padding={["100", "150"]}>
-                        <Stack direction="row" align="center" gap="150">
+                        <Stack align="center" direction="row" gap="150">
                           <IconTile glyph={s.glyph} size="sm" />
                           <Container grow minW0>
-                            <Typography type="note" size="base" weight="medium" align="left">
+                            <Typography align="left" size="base" type="note" weight="medium">
                               {s.label}
                             </Typography>
-                            <Typography type="note" mono size="sm" variant="tertiary" truncate align="left">
+                            <Typography mono truncate align="left" size="sm" type="note" variant="tertiary">
                               {s.sub}
                             </Typography>
                           </Container>
@@ -124,26 +124,26 @@ export function OverviewScreen() {
           )}
 
           <HudPanel
-            title={`rychlé spuštění · ${context}`}
             action={
-              <Button intent="ghost" icon="plus" size="sm" onClick={() => setAdding(true)}>
+              <Button icon="plus" intent="ghost" onClick={() => setAdding(true)} size="sm">
                 Přidat skill
               </Button>
             }
+            title={`rychlé spuštění · ${context}`}
           >
             {favorites.length === 0 ? (
               <EmptyState
-                glyph="spark"
-                title="Žádné skilly k spuštění"
-                description="Přidej skill a objeví se tu jako dlaždice s čudlíkem Spustit."
                 actionLabel="Přidat skill"
-                onAction={() => setAdding(true)}
+                description="Přidej skill a objeví se tu jako dlaždice s čudlíkem Spustit."
+                glyph="spark"
                 hint="// ~/zibby/skills/<název>/SKILL.md"
+                onAction={() => setAdding(true)}
+                title="Žádné skilly k spuštění"
               />
             ) : (
-              <Grid cols={1} sm={2} gap="150">
+              <Grid cols={1} gap="150" sm={2}>
                 {favorites.map((s) => (
-                  <SkillTile key={s.id} skill={s} onRun={setRunSkill} />
+                  <SkillTile key={s.id} onRun={setRunSkill} skill={s} />
                 ))}
               </Grid>
             )}
@@ -155,18 +155,18 @@ export function OverviewScreen() {
       <Container minW0>
         <Stack gap="250">
           <HudPanel title="fronta schválení">
-            <Stack direction="row" align="center" gap="100">
+            <Stack align="center" direction="row" gap="100">
               <StatusDot tone="ok" />
-              <Typography type="note" mono size="sm" variant="secondary">
+              <Typography mono size="sm" type="note" variant="secondary">
                 žádná akce nečeká · ZIBBY sám neobjedná
               </Typography>
             </Stack>
           </HudPanel>
 
           <HudPanel title="běžící agenti">
-            <Stack direction="row" align="center" gap="100">
+            <Stack align="center" direction="row" gap="100">
               <StatusDot tone="faint" />
-              <Typography type="note" mono size="sm" variant="secondary">
+              <Typography mono size="sm" type="note" variant="secondary">
                 žádný agent neběží
               </Typography>
             </Stack>
@@ -174,45 +174,45 @@ export function OverviewScreen() {
 
           <HudPanel title="rozpočty">
             <Stack gap="100">
-              <Stack direction="row" align="center" justify="between">
-                <Typography type="note" mono size="sm" tracking="wide" tone="ok">
+              <Stack align="center" direction="row" justify="between">
+                <Typography mono size="sm" tone="ok" tracking="wide" type="note">
                   AGENT SDK KREDIT
                 </Typography>
-                <Typography type="note" mono size="xs" variant="tertiary">
+                <Typography mono size="xs" type="note" variant="tertiary">
                   obnova {AGENT_SDK.renew}
                 </Typography>
               </Stack>
-              <Stack direction="row" align="baseline" gap="75">
-                <Typography type="note" mono size="4xl" weight="bold">
+              <Stack align="baseline" direction="row" gap="75">
+                <Typography mono size="4xl" type="note" weight="bold">
                   ${AGENT_SDK.remaining}
                 </Typography>
-                <Typography type="note" mono size="caption" variant="secondary">
+                <Typography mono size="caption" type="note" variant="secondary">
                   / ${AGENT_SDK.total}
                 </Typography>
               </Stack>
-              <Progress value={AGENT_SDK.usedPct} tone={sdkTone} height="75" glow label="Agent SDK kredit" />
-              <Typography type="note" mono size="xs" variant="tertiary">
+              <Progress glow height="75" label="Agent SDK kredit" tone={sdkTone} value={AGENT_SDK.usedPct} />
+              <Typography mono size="xs" type="note" variant="tertiary">
                 běhy agentů čerpají odsud
               </Typography>
 
               <Divider />
 
-              <Typography type="note" mono size="sm" tracking="wide" variant="tertiary">
+              <Typography mono size="sm" tracking="wide" type="note" variant="tertiary">
                 INTERAKTIVNÍ · CLAUDE CODE
               </Typography>
               {[CLAUDE_LIMITS.rolling, CLAUDE_LIMITS.weekly].map((d) => {
                 const tone = usageTone(d.usedPct);
                 return (
-                  <Stack key={d.label} gap="50">
-                    <Stack direction="row" align="baseline" justify="between">
-                      <Typography type="note" mono size="sm" variant="secondary" nowrap>
+                  <Stack gap="50" key={d.label}>
+                    <Stack align="baseline" direction="row" justify="between">
+                      <Typography mono nowrap size="sm" type="note" variant="secondary">
                         {d.label}
                       </Typography>
-                      <Typography type="note" mono size="sm" weight="bold" tone="ok">
+                      <Typography mono size="sm" tone="ok" type="note" weight="bold">
                         {d.usedPct}%
                       </Typography>
                     </Stack>
-                    <Progress value={d.usedPct} tone={tone} height="50" glow label={d.label} />
+                    <Progress glow height="50" label={d.label} tone={tone} value={d.usedPct} />
                   </Stack>
                 );
               })}
@@ -223,26 +223,26 @@ export function OverviewScreen() {
 
       {adding && (
         <EntityFormModal
-          title={SKILL_FORM.title}
-          subtitle={SKILL_FORM.subtitle}
-          glyph={SKILL_FORM.glyph}
           fields={SKILL_FORM.fields}
-          submitLabel={SKILL_FORM.submitLabel}
           filePreview={SKILL_FORM.filePreview}
+          glyph={SKILL_FORM.glyph}
           onClose={() => setAdding(false)}
           onSubmit={(values) => {
             addSkill(values);
             setAdding(false);
           }}
+          submitLabel={SKILL_FORM.submitLabel}
+          subtitle={SKILL_FORM.subtitle}
+          title={SKILL_FORM.title}
         />
       )}
 
       {runSkill && (
         <RunModal
           key={runSkill.id}
-          skill={runSkill}
-          projects={[...PROJECTS]}
           onClose={() => setRunSkill(null)}
+          projects={[...PROJECTS]}
+          skill={runSkill}
         />
       )}
     </Grid>

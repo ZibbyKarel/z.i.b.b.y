@@ -28,7 +28,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           tones
         </Typography>
         <div className="flex flex-wrap gap-2">
@@ -40,19 +40,19 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           solid
         </Typography>
         <div className="flex flex-wrap gap-2">
           {tones.map((tone) => (
-            <Badge key={tone} tone={tone} solid>
+            <Badge solid key={tone} tone={tone}>
               {tone}
             </Badge>
           ))}
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           sizes
         </Typography>
         <div className="flex items-center gap-3">

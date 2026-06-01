@@ -7,10 +7,10 @@ describe("EmptyState", () => {
   it("renders title, description and hint", () => {
     render(
       <EmptyState
-        glyph="spark"
-        title="Zatím žádné skilly"
         description="Vytvoř první SKILL.md."
+        glyph="spark"
         hint="~/zibby/skills/"
+        title="Zatím žádné skilly"
       />,
     )
     expect(screen.getByText("Zatím žádné skilly")).toBeInTheDocument()
@@ -22,11 +22,11 @@ describe("EmptyState", () => {
     const onAction = vi.fn()
     render(
       <EmptyState
-        glyph="spark"
-        title="x"
-        description="y"
         actionLabel="+ Přidat skill"
+        description="y"
+        glyph="spark"
         onAction={onAction}
+        title="x"
       />,
     )
     await userEvent.click(screen.getByRole("button", { name: /Přidat skill/ }))
@@ -34,7 +34,7 @@ describe("EmptyState", () => {
   })
 
   it("omits the action button when no label is given", () => {
-    render(<EmptyState glyph="spark" title="x" description="y" />)
+    render(<EmptyState description="y" glyph="spark" title="x" />)
     expect(screen.queryByRole("button")).toBeNull()
   })
 })

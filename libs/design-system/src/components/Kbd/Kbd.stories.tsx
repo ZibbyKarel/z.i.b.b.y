@@ -16,7 +16,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           shortcuts
         </Typography>
         <div className="flex flex-wrap items-center gap-2">
@@ -30,7 +30,7 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           inline in text
         </Typography>
         <span className="font-mono text-sm text-foreground-dim">

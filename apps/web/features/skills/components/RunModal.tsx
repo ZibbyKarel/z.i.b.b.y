@@ -42,54 +42,54 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
   return (
     <Dialog
       open
-      width="lg"
-      onClose={onClose}
-      ariaLabel={`Spustit ${skill.name}`}
-      closeLabel="Zavřít"
-      title={
-        <Stack direction="row" align="center" gap="150">
-          <IconTile glyph={skill.glyph} size="md" />
-          <Container grow minW0>
-            <Typography type="note" mono weight="bold" size="xl">
-              {skill.name}
-            </Typography>
-            <Typography type="note" variant="secondary" size="base">
-              {skill.desc}
-            </Typography>
-          </Container>
-        </Stack>
-      }
       actions={
         launched ? undefined : (
-          <Stack direction="row" align="center" justify="between" grow>
-            <Button intent="ghost" icon="edit">
+          <Stack grow align="center" direction="row" justify="between">
+            <Button icon="edit" intent="ghost">
               Edit raw SKILL.md
             </Button>
-            <Button intent="run" icon="play" onClick={launch}>
+            <Button icon="play" intent="run" onClick={launch}>
               Spustit agenta
             </Button>
           </Stack>
         )
       }
+      ariaLabel={`Spustit ${skill.name}`}
+      closeLabel="Zavřít"
+      onClose={onClose}
+      title={
+        <Stack align="center" direction="row" gap="150">
+          <IconTile glyph={skill.glyph} size="md" />
+          <Container grow minW0>
+            <Typography mono size="xl" type="note" weight="bold">
+              {skill.name}
+            </Typography>
+            <Typography size="base" type="note" variant="secondary">
+              {skill.desc}
+            </Typography>
+          </Container>
+        </Stack>
+      }
+      width="lg"
     >
       {launched ? (
-        <Container textAlign="center" padding={["200", "100"]}>
+        <Container padding={["200", "100"]} textAlign="center">
           <Stack align="center" gap="100">
-            <IconTile glyph="play" size="xl" shape="circle" filled={false} glow />
-            <Typography type="subtitle" size="xl" weight="semibold">
+            <IconTile glow filled={false} glyph="play" shape="circle" size="xl" />
+            <Typography size="xl" type="subtitle" weight="semibold">
               Agent spuštěn na pozadí
             </Typography>
-            <Typography type="note" mono size="base" variant="secondary">
+            <Typography mono size="base" type="note" variant="secondary">
               {skill.name} → {project}
             </Typography>
-            <Typography type="note" size="md" variant="secondary">
+            <Typography size="md" type="note" variant="secondary">
               Sleduj ho v sekci{" "}
-              <Typography as="span" type="note" size="md" tone="accent">
+              <Typography as="span" size="md" tone="accent" type="note">
                 Běžící agenti
               </Typography>
               .
             </Typography>
-            <Button intent="ghost" icon="pulse" onClick={onClose}>
+            <Button icon="pulse" intent="ghost" onClick={onClose}>
               Zavřít
             </Button>
           </Stack>
@@ -97,23 +97,23 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
       ) : (
         <Stack gap="200">
           <TextAreaField
-            label="Zadání / prompt"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
             autoFocus
+            label="Zadání / prompt"
+            onChange={(e) => setPrompt(e.target.value)}
             placeholder={`Řekni ${skill.name}, co má udělat…`}
+            value={prompt}
           />
           <SegmentedField
             label="Cílový projekt"
-            value={project}
-            options={projects.map((p) => ({ value: p, label: p }))}
             onValueChange={setProject}
+            options={projects.map((p) => ({ value: p, label: p }))}
+            value={project}
           />
           <Card background="background" radius="sm">
             <Container padding={["150", "150"]}>
-              <Stack direction="row" align="center" gap="100">
+              <Stack align="center" direction="row" gap="100">
                 <Icon name="file" size="sm" tone="faint" />
-                <Typography type="note" mono size="caption" variant="tertiary">
+                <Typography mono size="caption" type="note" variant="tertiary">
                   {skill.file}
                 </Typography>
               </Stack>

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Stack, StackTestId, Row } from "./Stack";
+import { Row, Stack, StackTestId } from "./Stack";
 
 describe("Stack", () => {
   it("renders as a div by default", () => {

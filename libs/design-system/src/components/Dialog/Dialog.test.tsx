@@ -17,7 +17,7 @@ describe("Dialog", () => {
   });
 
   it("renders description when provided", () => {
-    render(<Dialog open title="Potvrzení" description="Toto nelze vrátit">x</Dialog>);
+    render(<Dialog open description="Toto nelze vrátit" title="Potvrzení">x</Dialog>);
     expect(screen.getByTestId(DialogTestId.Description)).toHaveTextContent("Toto nelze vrátit");
   });
 

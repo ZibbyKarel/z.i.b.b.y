@@ -21,14 +21,14 @@ export const Overview: Story = {
   render: () => (
     <Dialog
       open
-      title="Smazat pipeline"
-      description="Pipeline a veškerá jeho data budou trvale odstraněna."
       actions={
         <>
           <Button intent="ghost">Zrušit</Button>
-          <Button intent="reject" icon="x">Smazat</Button>
+          <Button icon="x" intent="reject">Smazat</Button>
         </>
       }
+      description="Pipeline a veškerá jeho data budou trvale odstraněna."
+      title="Smazat pipeline"
     >
       <DialogBody>
         <p>Agent zpracovává 3 fronty a čeká na schválení.</p>

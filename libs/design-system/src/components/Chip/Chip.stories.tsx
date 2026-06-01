@@ -16,7 +16,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           tones
         </Typography>
         <div className="flex flex-wrap gap-2">
@@ -34,33 +34,33 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           solid
         </Typography>
         <div className="flex flex-wrap gap-2">
-          <Chip tone="accent" solid>
+          <Chip solid tone="accent">
             accent
           </Chip>
-          <Chip tone="ok" solid>
+          <Chip solid tone="ok">
             ok
           </Chip>
-          <Chip tone="warn" solid>
+          <Chip solid tone="warn">
             warn
           </Chip>
-          <Chip tone="bad" solid>
+          <Chip solid tone="bad">
             bad
           </Chip>
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="subtitle" variant="tertiary" mono>
+        <Typography mono type="subtitle" variant="tertiary">
           sizes
         </Typography>
         <div className="flex flex-wrap items-center gap-2">
-          <Chip tone="ok" size="sm">
+          <Chip size="sm" tone="ok">
             sm
           </Chip>
-          <Chip tone="ok" size="md">
+          <Chip size="md" tone="ok">
             md
           </Chip>
         </div>

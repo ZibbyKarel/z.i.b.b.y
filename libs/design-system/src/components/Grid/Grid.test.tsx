@@ -4,7 +4,7 @@ import { Grid, GridTestId } from "./Grid"
 
 describe("Grid", () => {
   it("renders a responsive column grid", () => {
-    render(<Grid cols={1} sm={2} lg={3} gap="150" />)
+    render(<Grid cols={1} gap="150" lg={3} sm={2} />)
     const el = screen.getByTestId(GridTestId.Root)
     expect(el.style.display).toBe("grid")
     expect(el.className).toContain("grid-cols-1")

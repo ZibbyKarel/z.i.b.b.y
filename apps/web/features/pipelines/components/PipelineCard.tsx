@@ -9,7 +9,7 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system"
-import { glyphForAgent, type AgentDef, type Pipeline, type PipelineState } from "../../../domain"
+import { type AgentDef, type Pipeline, type PipelineState, glyphForAgent } from "../../../domain"
 
 const stateMeta: Record<PipelineState, { tone: "ok" | "warn" | "bad" | "accent"; label: string }> = {
   done: { tone: "ok", label: "hotovo" },
@@ -30,37 +30,37 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
   const sm = stateMeta[pipeline.lastState]
   return (
     <Card
+      aria-pressed={selected}
       as="button"
+      corners={selected}
+      interactive={!selected}
+      onClick={() => onSelect(pipeline.id)}
       radius="sm"
       selected={selected}
-      interactive={!selected}
-      corners={selected}
-      aria-pressed={selected}
-      onClick={() => onSelect(pipeline.id)}
     >
       <Container padding="150">
         <Stack gap="150">
           <Stack gap="75">
-            <Stack direction="row" align="center" justify="between">
-              <Typography type="note" mono weight="bold" size="md">
+            <Stack align="center" direction="row" justify="between">
+              <Typography mono size="md" type="note" weight="bold">
                 {pipeline.name}
               </Typography>
               <Chip tone={sm.tone}>
-                <StatusDot tone={sm.tone} size="50" />
+                <StatusDot size="50" tone={sm.tone} />
                 {sm.label}
               </Chip>
             </Stack>
-            <Typography type="note" variant="secondary" size="caption" leading="snug">
+            <Typography leading="snug" size="caption" type="note" variant="secondary">
               {pipeline.desc}
             </Typography>
           </Stack>
 
-          <Stack direction="row" wrap align="center" gap="75">
+          <Stack wrap align="center" direction="row" gap="75">
             {pipeline.phases.map((ph, i) => (
               <Fragment key={`${ph.agent}-${i}`}>
-                <Stack direction="row" inline align="center" gap="50">
+                <Stack inline align="center" direction="row" gap="50">
                   <Icon name={glyphForAgent(ph.agent, agents)} size="xs" tone="accent" />
-                  <Typography type="note" mono size="xs" variant="secondary">
+                  <Typography mono size="xs" type="note" variant="secondary">
                     {ph.agent}
                   </Typography>
                 </Stack>
@@ -72,14 +72,14 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
           </Stack>
 
           <Divider />
-          <Stack direction="row" align="center" justify="between">
-            <Stack direction="row" inline align="center" gap="50">
+          <Stack align="center" direction="row" justify="between">
+            <Stack inline align="center" direction="row" gap="50">
               <Icon name="dollar" size="xs" tone="faint" />
-              <Typography type="note" mono size="xs" variant="tertiary">
+              <Typography mono size="xs" type="note" variant="tertiary">
                 {`strop $${pipeline.budget}`}
               </Typography>
             </Stack>
-            <Typography type="note" mono size="xs" variant="tertiary">
+            <Typography mono size="xs" type="note" variant="tertiary">
               poslední {pipeline.lastRun}
             </Typography>
           </Stack>

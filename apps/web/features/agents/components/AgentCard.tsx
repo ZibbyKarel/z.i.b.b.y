@@ -18,21 +18,21 @@ export interface AgentCardProps {
 
 export function AgentCard({ agent, onEdit }: AgentCardProps) {
   return (
-    <Card interactive corners radius="sm">
+    <Card corners interactive radius="sm">
       <Container padding="150">
         <Stack gap="150">
-          <Stack direction="row" align="start" gap="150">
+          <Stack align="start" direction="row" gap="150">
             <IconTile glyph={agent.glyph} size="md" />
             <Container grow minW0>
               <Stack gap="25">
-                <Typography type="note" mono weight="semibold" size="md" truncate>
+                <Typography mono truncate size="md" type="note" weight="semibold">
                   {agent.name}
                 </Typography>
                 <Typography
+                  leading="snug"
+                  size="caption"
                   type="note"
                   variant="secondary"
-                  size="caption"
-                  leading="snug"
                 >
                   {agent.role}
                 </Typography>
@@ -40,7 +40,7 @@ export function AgentCard({ agent, onEdit }: AgentCardProps) {
             </Container>
           </Stack>
 
-          <Stack direction="row" wrap gap="75">
+          <Stack wrap direction="row" gap="75">
             <ModelBadge model={agent.model} />
             <ThinkBadge level={agent.thinking} />
             {agent.tools.slice(0, 4).map((t) => (
@@ -51,13 +51,13 @@ export function AgentCard({ agent, onEdit }: AgentCardProps) {
           </Stack>
 
           <Divider />
-          <Stack direction="row" align="center" justify="between">
-            <Container maxWidth="150px" minW0>
-              <Typography type="note" mono size="xs" variant="tertiary" truncate>
+          <Stack align="center" direction="row" justify="between">
+            <Container minW0 maxWidth="150px">
+              <Typography mono truncate size="xs" type="note" variant="tertiary">
                 {agent.file}
               </Typography>
             </Container>
-            <Button intent="ghost" icon="edit" size="sm" onClick={() => onEdit?.(agent)}>
+            <Button icon="edit" intent="ghost" onClick={() => onEdit?.(agent)} size="sm">
               Edit raw .agent.md
             </Button>
           </Stack>

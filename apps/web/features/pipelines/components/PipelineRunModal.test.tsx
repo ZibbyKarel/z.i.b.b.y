@@ -29,7 +29,7 @@ const projects = ["zibby-core", "home-ops"]
 describe("PipelineRunModal", () => {
   it("renders a labelled dialog with per-agent overrides", () => {
     render(
-      <PipelineRunModal pipeline={pipeline} agents={agents} projects={projects} onClose={() => {}} />,
+      <PipelineRunModal agents={agents} onClose={() => {}} pipeline={pipeline} projects={projects} />,
     )
     expect(
       screen.getByRole("dialog", { name: "Spustit pipeline Build Feature" }),
@@ -41,11 +41,11 @@ describe("PipelineRunModal", () => {
     const onLaunch = vi.fn()
     render(
       <PipelineRunModal
-        pipeline={pipeline}
         agents={agents}
-        projects={projects}
         onClose={() => {}}
         onLaunch={onLaunch}
+        pipeline={pipeline}
+        projects={projects}
       />,
     )
     await userEvent.click(screen.getByRole("button", { name: /Spustit · max/ }))

@@ -21,7 +21,7 @@ export function AgentsScreen() {
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <SectionLabel
         action={
-          <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
+          <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
             Přidat agenta
           </Button>
         }
@@ -31,31 +31,31 @@ export function AgentsScreen() {
 
       {list.length === 0 ? (
         <EmptyState
-          glyph="bot"
-          title="Zatím žádní agenti"
-          description="Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci."
           actionLabel="Přidat agenta"
-          onAction={() => setAdding(true)}
+          description="Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci."
+          glyph="bot"
           hint="// vytvoří ~/zibby/agents/<název>.agent.md"
+          onAction={() => setAdding(true)}
+          title="Zatím žádní agenti"
         />
       ) : (
-        <Grid cols={1} sm={2} lg={3} gap="150">
+        <Grid cols={1} gap="150" lg={3} sm={2}>
           {list.map((a) => (
-            <AgentCard key={a.id} agent={a} />
+            <AgentCard agent={a} key={a.id} />
           ))}
         </Grid>
       )}
 
       {adding && (
         <EntityFormModal
-          title={AGENT_FORM.title}
-          subtitle={AGENT_FORM.subtitle}
-          glyph={AGENT_FORM.glyph}
           fields={AGENT_FORM.fields}
-          submitLabel={AGENT_FORM.submitLabel}
           filePreview={AGENT_FORM.filePreview}
+          glyph={AGENT_FORM.glyph}
           onClose={() => setAdding(false)}
           onSubmit={(values) => { addAgent(values); setAdding(false); }}
+          submitLabel={AGENT_FORM.submitLabel}
+          subtitle={AGENT_FORM.subtitle}
+          title={AGENT_FORM.title}
         />
       )}
     </Container>

@@ -1,16 +1,16 @@
 "use client";
 
 import {
-  createContext,
   type CSSProperties,
   type ReactNode,
+  createContext,
   useMemo,
 } from "react";
 import {
+  type PartialTheme,
+  type Theme,
   mergeTheme,
   tokensToCssVars,
-  type Theme,
-  type PartialTheme,
 } from "../tokens";
 import { tokensForTheme } from "./themeRegistry";
 

@@ -38,12 +38,12 @@ function FieldShell({
 }) {
   return (
     <Stack data-testid={FieldTestId.Root} gap="100">
-      <label htmlFor={id} data-testid={FieldTestId.Label} className={labelClass}>
+      <label className={labelClass} data-testid={FieldTestId.Label} htmlFor={id}>
         {label}
       </label>
       {children}
       {hint && (
-        <span data-testid={FieldTestId.Hint} className="font-mono text-xs text-foreground-faint">{hint}</span>
+        <span className="font-mono text-xs text-foreground-faint" data-testid={FieldTestId.Hint}>{hint}</span>
       )}
     </Stack>
   );
@@ -62,8 +62,8 @@ export interface TextFieldProps extends Omit<
 export function TextField({ label, hint, ref, ...props }: TextFieldProps) {
   const id = useId();
   return (
-    <FieldShell id={id} label={label} hint={hint}>
-      <input ref={ref} id={id} data-testid={FieldTestId.Control} className={controlClass} {...props} />
+    <FieldShell hint={hint} id={id} label={label}>
+      <input className={controlClass} data-testid={FieldTestId.Control} id={id} ref={ref} {...props} />
     </FieldShell>
   );
 }
@@ -86,12 +86,12 @@ export function TextAreaField({
 }: TextAreaFieldProps) {
   const id = useId();
   return (
-    <FieldShell id={id} label={label} hint={hint}>
+    <FieldShell hint={hint} id={id} label={label}>
       <textarea
-        ref={ref}
-        id={id}
-        data-testid={FieldTestId.Control}
         className={cn(controlClass, "min-h-20 resize-y leading-relaxed")}
+        data-testid={FieldTestId.Control}
+        id={id}
+        ref={ref}
         {...props}
       />
     </FieldShell>
@@ -121,19 +121,19 @@ export function SelectField({
 }: SelectFieldProps) {
   const id = useId();
   return (
-    <FieldShell id={id} label={label} hint={hint}>
+    <FieldShell hint={hint} id={id} label={label}>
       <select
-        id={id}
-        data-testid={FieldTestId.Control}
-        value={value}
-        onChange={(e) => onValueChange(e.target.value)}
         className={cn(controlClass, "cursor-pointer appearance-none")}
+        data-testid={FieldTestId.Control}
+        id={id}
+        onChange={(e) => onValueChange(e.target.value)}
+        value={value}
       >
         {options.map((o) => (
           <option
+            className="bg-background text-foreground"
             key={o.value}
             value={o.value}
-            className="bg-background text-foreground"
           >
             {o.label}
           </option>
@@ -161,25 +161,20 @@ export function SegmentedField({
 }: SegmentedFieldProps) {
   const id = useId();
   return (
-    <FieldShell id={id} label={label} hint={hint}>
+    <FieldShell hint={hint} id={id} label={label}>
       <Stack
-        direction="row"
         wrap
-        gap="75"
-        data-testid={FieldTestId.Group}
-        role="radiogroup"
         aria-label={label}
+        data-testid={FieldTestId.Group}
+        direction="row"
+        gap="75"
+        role="radiogroup"
       >
         {options.map((o) => {
           const on = o.value === value;
           return (
             <button
-              key={o.value}
-              data-testid={`${FieldTestId.Option}-${o.value}`}
-              type="button"
-              role="radio"
               aria-checked={on}
-              onClick={() => onValueChange(o.value)}
               className={cn(
                 "rounded-sm border px-3 py-1.5 font-mono text-sm outline-none transition-colors",
                 "focus-visible:ring-2 focus-visible:ring-accent",
@@ -187,6 +182,11 @@ export function SegmentedField({
                   ? "border-accent bg-accent text-accent-contrast"
                   : "border-border bg-transparent text-foreground-dim hover:text-foreground",
               )}
+              data-testid={`${FieldTestId.Option}-${o.value}`}
+              key={o.value}
+              onClick={() => onValueChange(o.value)}
+              role="radio"
+              type="button"
             >
               {o.label}
             </button>

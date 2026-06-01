@@ -25,7 +25,7 @@ export function SkillsScreen() {
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <SectionLabel
         action={
-          <Button intent="run" icon="plus" size="sm" onClick={() => setAdding(true)}>
+          <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
             Přidat skill
           </Button>
         }
@@ -35,40 +35,40 @@ export function SkillsScreen() {
 
       {list.length === 0 ? (
         <EmptyState
-          glyph="spark"
-          title="Zatím žádné skilly"
-          description="Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit."
           actionLabel="Přidat skill"
-          onAction={() => setAdding(true)}
+          description="Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit."
+          glyph="spark"
           hint="// vytvoří ~/zibby/skills/<název>/SKILL.md"
+          onAction={() => setAdding(true)}
+          title="Zatím žádné skilly"
         />
       ) : (
-        <Grid cols={1} sm={2} lg={3} gap="150">
+        <Grid cols={1} gap="150" lg={3} sm={2}>
           {list.map((s) => (
-            <SkillTile key={s.id} skill={s} onRun={setRunSkill} />
+            <SkillTile key={s.id} onRun={setRunSkill} skill={s} />
           ))}
         </Grid>
       )}
 
       {adding && (
         <EntityFormModal
-          title={SKILL_FORM.title}
-          subtitle={SKILL_FORM.subtitle}
-          glyph={SKILL_FORM.glyph}
           fields={SKILL_FORM.fields}
-          submitLabel={SKILL_FORM.submitLabel}
           filePreview={SKILL_FORM.filePreview}
+          glyph={SKILL_FORM.glyph}
           onClose={() => setAdding(false)}
           onSubmit={(values) => { addSkill(values); setAdding(false); }}
+          submitLabel={SKILL_FORM.submitLabel}
+          subtitle={SKILL_FORM.subtitle}
+          title={SKILL_FORM.title}
         />
       )}
 
       {runSkill && (
         <RunModal
           key={runSkill.id}
-          skill={runSkill}
-          projects={[...PROJECTS]}
           onClose={() => setRunSkill(null)}
+          projects={[...PROJECTS]}
+          skill={runSkill}
         />
       )}
     </Container>
