@@ -26,6 +26,8 @@
   },
   "projects": {
     "design-system": "libs/design-system",
-    "web": "apps/web"
+    "contracts": "libs/contracts",
+    "web": "apps/web",
+    "api": "apps/api"
   }
 }

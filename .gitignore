@@ -6,6 +6,9 @@ dist/
 .next/
 out/
 
+# Local agent storage (apps/api default data dir)
+apps/api/data/
+
 # Env / secrets — never commit
 .env
 .env.local
