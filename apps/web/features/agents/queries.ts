@@ -1,9 +1,6 @@
-import type { Agent, Category } from "@zibby/contracts";
 import { useQueryClient } from "@tanstack/react-query";
-import type { IconName } from "@zibby/design-system";
-import type { AgentCategory, AgentDef, ModelName, ThinkingLevel } from "../../domain";
+import type { Agent, Category } from "@zibby/contracts";
 import { apiClient } from "../../state/api";
-import { agentFile } from "./agentDraft";
 
 /** Shared cache key for the agent list — the TanStack cache is the FE source of truth. */
 const AGENTS_KEY = ["agents"] as const;
@@ -12,57 +9,16 @@ const AGENTS_KEY = ["agents"] as const;
 const CATEGORIES_KEY = ["categories"] as const;
 
 /**
- * Map a backend {@link Agent} (thin, frontmatter-backed) onto the rich UI
- * {@link AgentDef}. Fields the API does not persist are derived: `file` from the
- * id, and `state`/`runs` are runtime-only defaults. `description` carries the
- * agent's role; `instructions` is the editable Markdown body.
+ * Live agent catalog from `GET /api/agents` — the contract {@link Agent} entity is
+ * the single shape used end to end (no separate UI type). Backed by the shared
+ * `["agents"]` cache, so every screen that calls this (agents, pipelines, overview)
+ * reads one source and re-renders together on a mutation.
  */
-export function toAgentDef(a: Agent): AgentDef {
-  return {
-    id: a.id,
-    name: a.name ?? a.id,
-    glyph: (a.glyph as IconName | undefined) ?? "bot",
-    role: a.description ?? "",
-    model: (a.model as ModelName | undefined) ?? "sonnet",
-    thinking: (a.thinking as ThinkingLevel | undefined) ?? "medium",
-    tools: a.tools ?? ["read"],
-    category: a.category as AgentCategory | undefined,
-    enabled: a.enabled,
-    state: "idle",
-    runs: 0,
-    file: agentFile(a.id),
-    body: a.instructions,
-  };
-}
-
-/**
- * Map a UI {@link AgentDef} draft onto the contract create/update body. Structured
- * fields map to frontmatter (assembled by the API); `body` is sent verbatim as the
- * Markdown `instructions` — never synthesised. The editor guarantees a non-empty
- * body before save, matching the contract's `instructions: min(1)`.
- */
-function toAgentBody(d: AgentDef) {
-  return {
-    name: d.name.trim() || d.id,
-    description: d.role.trim() ? d.role.trim() : undefined,
-    glyph: d.glyph,
-    model: d.model,
-    thinking: d.thinking,
-    tools: d.tools,
-    category: d.category,
-    enabled: d.enabled,
-    instructions: d.body ?? "",
-  };
-}
-
-/**
- * Live agent catalog from `GET /api/agents`, mapped to the UI shape. Backed by
- * the shared `["agents"]` cache, so every screen that calls this (agents,
- * pipelines, overview) reads one source and re-renders together on a mutation.
- */
-export function useAgents(): AgentDef[] {
-  const { data } = apiClient.agents.listAgents.useQuery({ queryKey: AGENTS_KEY });
-  return (data?.body ?? []).map(toAgentDef);
+export function useAgents(): Agent[] {
+  const { data } = apiClient.agents.listAgents.useQuery({
+    queryKey: AGENTS_KEY,
+  });
+  return data?.body ?? [];
 }
 
 /** Create an agent (`POST /api/agents`); refreshes the catalog on success. */
@@ -73,9 +29,12 @@ export function useCreateAgent() {
   });
   return {
     ...mutation,
-    createAgent: (draft: AgentDef, options?: { onSuccess?: (id: string) => void }) =>
+    createAgent: (
+      draft: Agent,
+      options?: { onSuccess?: (id: string) => void },
+    ) =>
       mutation.mutate(
-        { body: { id: draft.id, ...toAgentBody(draft) } },
+        { body: draft },
         { onSuccess: () => options?.onSuccess?.(draft.id) },
       ),
   };
@@ -89,10 +48,8 @@ export function useUpdateAgent() {
   });
   return {
     ...mutation,
-    updateAgent: (draft: AgentDef) =>
-      mutation.mutate({ params: { id: draft.id }, body: toAgentBody(draft) }),
-    setEnabled: (id: string, enabled: boolean) =>
-      mutation.mutate({ params: { id }, body: { enabled } }),
+    updateAgent: ({ id, ...body }: Agent) =>
+      mutation.mutate({ params: { id }, body }),
   };
 }
 
@@ -101,7 +58,9 @@ export function useUpdateAgent() {
  * `["categories"]` cache so the agents screen and the agent editor read one source.
  */
 export function useCategories(): Category[] {
-  const { data } = apiClient.categories.listCategories.useQuery({ queryKey: CATEGORIES_KEY });
+  const { data } = apiClient.categories.listCategories.useQuery({
+    queryKey: CATEGORIES_KEY,
+  });
   return data?.body ?? [];
 }
 
@@ -113,8 +72,14 @@ export function useCreateCategory() {
   });
   return {
     ...mutation,
-    createCategory: (category: Category, options?: { onSuccess?: () => void }) =>
-      mutation.mutate({ body: category }, { onSuccess: () => options?.onSuccess?.() }),
+    createCategory: (
+      category: Category,
+      options?: { onSuccess?: () => void },
+    ) =>
+      mutation.mutate(
+        { body: category },
+        { onSuccess: () => options?.onSuccess?.() },
+      ),
   };
 }
 
@@ -143,6 +108,9 @@ export function useDeleteAgent() {
   return {
     ...mutation,
     deleteAgent: (id: string, options?: { onSuccess?: () => void }) =>
-      mutation.mutate({ params: { id } }, { onSuccess: () => options?.onSuccess?.() }),
+      mutation.mutate(
+        { params: { id } },
+        { onSuccess: () => options?.onSuccess?.() },
+      ),
   };
 }

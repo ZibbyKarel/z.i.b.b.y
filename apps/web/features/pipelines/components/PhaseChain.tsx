@@ -10,7 +10,8 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { type AgentDef, type Pipeline, type PipelinePhase, glyphForAgent } from "../../../domain";
+import type { Agent } from "@zibby/contracts";
+import { type Pipeline, type PipelinePhase, glyphForAgent } from "../../../domain";
 
 const modelTone = {
   opus: "opus",
@@ -68,7 +69,7 @@ function IoRow({ label, value, accent }: { label: string; value: string; accent?
   );
 }
 
-function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: AgentDef[]; idx: number; active: boolean }) {
+function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: Agent[]; idx: number; active: boolean }) {
   const t = useTranslations("phase");
   return (
     <Card radius="default" selected={active} style={{ flex: "1 1 0%", minWidth: 0 }}>
@@ -102,7 +103,7 @@ function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agent
 
 export interface PhaseChainProps {
   pipeline: Pipeline;
-  agents: AgentDef[];
+  agents: Agent[];
 }
 
 export function PhaseChain({ pipeline, agents }: PhaseChainProps) {

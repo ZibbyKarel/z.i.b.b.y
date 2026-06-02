@@ -87,7 +87,6 @@ describe("Agents API (e2e)", () => {
       thinking: "high",
       tools: ["read", "write"],
       category: "writing",
-      enabled: false,
       instructions: "Polish the prose.",
     }
     const created = await request(app.getHttpServer()).post(BASE).send(body)

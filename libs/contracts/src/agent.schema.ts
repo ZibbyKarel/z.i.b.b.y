@@ -28,7 +28,7 @@ export type AgentThinking = z.infer<typeof AgentThinkingSchema>
  * named `<id>.md` with YAML frontmatter and the `instructions` as the Markdown
  * body — the `id` is the file name. The frontmatter carries the structured config
  * the dashboard edits (`name`, `description`, `glyph`, `model`, `thinking`,
- * `tools`, `category`, `enabled`); only `id` + `instructions` are required.
+ * `tools`, `category`); only `id` + `instructions` are required.
  * `category` and `glyph` stay free-form strings on purpose — the closed set lives
  * in the web app, and the API shouldn't 400 on a new value it hasn't shipped yet.
  */
@@ -41,7 +41,6 @@ export const AgentSchema = z.object({
   thinking: AgentThinkingSchema.optional(),
   tools: z.array(z.string()).optional(),
   category: z.string().optional(),
-  enabled: z.boolean().optional(),
   instructions: z.string().min(1),
 })
 export type Agent = z.infer<typeof AgentSchema>

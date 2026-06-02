@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { AgentDef, Pipeline } from "../../../../domain"
+import type { Agent } from "@zibby/contracts"
+import type { Pipeline } from "../../../../domain"
 import { PipelineCard } from "./PipelineCard"
 
-const agents: AgentDef[] = [
-  { id: "architect", name: "Architekt", glyph: "compass", role: "", model: "opus", thinking: "high", tools: [], state: "idle", file: "" },
+const agents: Agent[] = [
+  { id: "architect", name: "Architekt", glyph: "compass", model: "opus", thinking: "high", tools: [], instructions: "x" },
 ]
 
 const pipeline: Pipeline = {

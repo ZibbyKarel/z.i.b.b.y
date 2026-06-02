@@ -1,4 +1,4 @@
-import type { AgentDef } from "../../domain";
+import type { Agent } from "@zibby/contracts";
 
 /** Slugify an agent name into a filesystem-safe id (diacritics stripped). */
 export const slugifyAgent = (name: string): string =>
@@ -24,22 +24,18 @@ export const agentFile = (id: string): string => `~/zibby/agents/${id}.agent.md`
  * categories are no longer a static constant, so the draft starts uncategorised
  * unless one is supplied.
  */
-export function newAgentDraft(category?: string): AgentDef {
+export function newAgentDraft(category?: string): Agent {
   return {
     id: "",
     name: "",
     glyph: "bot",
     // Seeded so the description always opens with the canonical phrasing Claude
     // Code expects for agent routing; the user completes the sentence.
-    role: "Use this agent when ",
+    description: "Use this agent when ",
     model: "sonnet",
     thinking: "medium",
     tools: ["read"],
     category,
-    state: "idle",
-    enabled: true,
-    runs: 0,
-    file: "",
-    body: "",
+    instructions: "",
   };
 }

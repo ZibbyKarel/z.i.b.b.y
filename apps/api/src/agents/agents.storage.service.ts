@@ -168,7 +168,6 @@ export class AgentsStorageService implements OnModuleInit {
     if (typeof data.description === "string") candidate.description = data.description
     if (typeof data.glyph === "string") candidate.glyph = data.glyph
     if (typeof data.category === "string") candidate.category = data.category
-    if (typeof data.enabled === "boolean") candidate.enabled = data.enabled
     if (Array.isArray(data.tools) && data.tools.every((t) => typeof t === "string")) {
       candidate.tools = data.tools
     }
@@ -188,7 +187,6 @@ export class AgentsStorageService implements OnModuleInit {
     if (agent.thinking !== undefined) data.thinking = agent.thinking
     if (agent.tools !== undefined) data.tools = agent.tools
     if (agent.category !== undefined) data.category = agent.category
-    if (agent.enabled !== undefined) data.enabled = agent.enabled
     // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
     return matter.stringify(`\n${agent.instructions}\n`, data)
   }

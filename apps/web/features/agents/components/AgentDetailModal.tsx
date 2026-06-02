@@ -8,52 +8,33 @@ import {
   Chip,
   Container,
   Dialog,
-  Divider,
   Icon,
+  type IconName,
   IconTile,
   Pressable,
   SegmentedField,
   Stack,
-  StatusDot,
   TextAreaField,
   TextField,
   Typography,
 } from "@zibby/design-system";
-import type { Category } from "@zibby/contracts";
-import type { ModelName, ThinkingLevel } from "../../../domain";
-import type { AgentDef, Pipeline } from "../../../domain";
+import type { Agent, Category } from "@zibby/contracts";
+import type { ModelName, Pipeline, ThinkingLevel } from "../../../domain";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
+import { agentFile } from "../agentDraft";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 
 export interface AgentDetailModalProps {
-  agent: AgentDef;
+  agent: Agent;
   /** "new" opens straight into the editor; "view" shows the read-only detail. */
   mode: "view" | "new";
   /** Live category taxonomy offered in the editor's category picker. */
   categories: Category[];
   pipelines: Pipeline[];
   onClose: () => void;
-  onSave: (agent: AgentDef, isNew: boolean) => void;
+  onSave: (agent: Agent, isNew: boolean) => void;
   onDelete: (id: string) => void;
-  onToggleEnabled: (agent: AgentDef) => void;
-  onRun: (agent: AgentDef) => void;
-}
-
-/** Active/paused/idle pill row used in the view header. */
-function ToggleButton({
-  paused,
-  label,
-  onClick,
-}: {
-  paused: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button icon={paused ? "play" : "pause"} intent={paused ? "solid" : "ghost"} onClick={onClick} size="sm">
-      {label}
-    </Button>
-  );
+  onRun: (agent: Agent) => void;
 }
 
 /** A clickable chip used for multi/single select (category, tools). */
@@ -81,48 +62,39 @@ export function AgentDetailModal({
   onClose,
   onSave,
   onDelete,
-  onToggleEnabled,
   onRun,
 }: AgentDetailModalProps) {
   const t = useTranslations("agents");
   const tk = useTranslations();
   const isNew = initialMode === "new";
   const [mode, setMode] = useState<"view" | "edit">(isNew ? "edit" : "view");
-  const [draft, setDraft] = useState<AgentDef>(agent);
+  const [draft, setDraft] = useState<Agent>(agent);
   const [confirm, setConfirm] = useState(false);
 
-  const paused = agent.enabled === false;
+  const name = agent.name ?? agent.id;
   const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
 
-  const set = (patch: Partial<AgentDef>) => setDraft((d) => ({ ...d, ...patch }));
+  const set = (patch: Partial<Agent>) => setDraft((d) => ({ ...d, ...patch }));
+  const tools = draft.tools ?? [];
   const toggleTool = (tool: string) =>
     set({
-      tools: draft.tools.includes(tool)
-        ? draft.tools.filter((x) => x !== tool)
-        : [...draft.tools, tool],
+      tools: tools.includes(tool) ? tools.filter((x) => x !== tool) : [...tools, tool],
     });
 
   const editing = mode === "edit" || isNew;
   // A name and a non-empty Markdown body are both required: the body is sent
   // verbatim as the contract's `instructions` (min(1)), never synthesised.
-  const canSave = draft.name.trim().length > 0 && (draft.body?.trim().length ?? 0) > 0;
+  const canSave = (draft.name ?? "").trim().length > 0 && draft.instructions.trim().length > 0;
 
   const title = (
     <Stack align="center" direction="row" gap="150">
-      <IconTile glyph={draft.glyph} size="md" />
+      <IconTile glyph={(draft.glyph as IconName | undefined) ?? "bot"} size="md" />
       <Container grow minW0>
         <Typography mono truncate size="xl" type="note" weight="bold">
-          {isNew ? t("newAgent") : agent.name}
+          {isNew ? t("newAgent") : name}
         </Typography>
         {draft.category && <Chip tone="neutral">{draft.category}</Chip>}
       </Container>
-      {!isNew && mode === "view" && (
-        <ToggleButton
-          label={paused ? t("paused") : t("active")}
-          onClick={() => onToggleEnabled(agent)}
-          paused={paused}
-        />
-      )}
     </Stack>
   );
 
@@ -165,7 +137,7 @@ export function AgentDetailModal({
     <>
       <Dialog
         actions={editing ? editActions : viewActions}
-        ariaLabel={isNew ? t("newAgent") : agent.name}
+        ariaLabel={isNew ? t("newAgent") : name}
         closeLabel={tk("common.close")}
         onClose={onClose}
         open={!confirm}
@@ -179,14 +151,14 @@ export function AgentDetailModal({
               label={t("fields.name")}
               onChange={(e) => set({ name: e.target.value })}
               placeholder={t("fields.namePlaceholder")}
-              value={draft.name}
+              value={draft.name ?? ""}
             />
 
             <TextField
               label={t("fields.whenToUse")}
-              onChange={(e) => set({ role: e.target.value })}
+              onChange={(e) => set({ description: e.target.value })}
               placeholder={t("fields.whenToUsePlaceholder")}
-              value={draft.role}
+              value={draft.description ?? ""}
             />
 
             <Stack gap="75">
@@ -212,7 +184,7 @@ export function AgentDetailModal({
                   label={t("fields.model")}
                   onValueChange={(v) => set({ model: v as ModelName })}
                   options={MODEL_OPTIONS}
-                  value={draft.model}
+                  value={draft.model ?? "sonnet"}
                 />
               </Container>
               <Container grow minW0>
@@ -220,7 +192,7 @@ export function AgentDetailModal({
                   label={t("fields.thinking")}
                   onValueChange={(v) => set({ thinking: v as ThinkingLevel })}
                   options={THINKING_OPTIONS}
-                  value={draft.thinking}
+                  value={draft.thinking ?? "medium"}
                 />
               </Container>
             </Stack>
@@ -253,7 +225,7 @@ export function AgentDetailModal({
               </Typography>
               <Stack wrap direction="row" gap="75">
                 {AGENT_TOOLS.map((tool) => (
-                  <ChipToggle active={draft.tools.includes(tool)} key={tool} onClick={() => toggleTool(tool)}>
+                  <ChipToggle active={tools.includes(tool)} key={tool} onClick={() => toggleTool(tool)}>
                     {tool}
                   </ChipToggle>
                 ))}
@@ -263,36 +235,21 @@ export function AgentDetailModal({
             <TextAreaField
               hint={t("fields.bodyHint")}
               label={t("fields.body")}
-              onChange={(e) => set({ body: e.target.value })}
-              value={draft.body ?? ""}
+              onChange={(e) => set({ instructions: e.target.value })}
+              value={draft.instructions}
             />
           </Stack>
         ) : (
           <Stack gap="200">
             <Typography leading="relaxed" size="base" type="note">
-              {agent.role}.
+              {agent.description}.
             </Typography>
 
             <Card background="background" radius="sm">
               <Container padding={["150", "150"]}>
                 <Stack wrap align="center" direction="row" gap="150">
-                  <Stack align="center" direction="row" gap="75">
-                    <StatusDot tone={paused ? "warn" : agent.state === "idle" ? "faint" : "accent"} />
-                    <Typography mono size="sm" type="note" variant="secondary">
-                      {paused ? t("paused") : tk(`agents.state${agent.state === "pipeline" ? "Pipeline" : agent.state === "running" ? "Running" : "Idle"}`)}
-                    </Typography>
-                  </Stack>
-                  <Container height="22px">
-                    <Divider orientation="vertical" />
-                  </Container>
-                  <ModelBadge model={agent.model} />
-                  <ThinkBadge level={agent.thinking} />
-                  <Container height="22px">
-                    <Divider orientation="vertical" />
-                  </Container>
-                  <Typography mono size="sm" type="note" variant="secondary">
-                    {t("runs", { count: agent.runs ?? 0 })}
-                  </Typography>
+                  <ModelBadge model={agent.model ?? "sonnet"} />
+                  <ThinkBadge level={agent.thinking ?? "medium"} />
                 </Stack>
               </Container>
             </Card>
@@ -302,7 +259,7 @@ export function AgentDetailModal({
                 {t("allowedTools")}
               </Typography>
               <Stack wrap direction="row" gap="75">
-                {agent.tools.map((tool) => (
+                {(agent.tools ?? []).map((tool) => (
                   <Chip key={tool} tone="neutral">
                     {tool}
                   </Chip>
@@ -341,17 +298,6 @@ export function AgentDetailModal({
               )}
             </Stack>
 
-            <Card background="background" radius="sm">
-              <Container padding={["100", "150"]}>
-                <Stack align="center" direction="row" gap="100">
-                  <Icon name="file" size="sm" tone="faint" />
-                  <Typography mono truncate size="xs" type="note" variant="tertiary">
-                    {agent.file}
-                  </Typography>
-                </Stack>
-              </Container>
-            </Card>
-
             <Stack gap="75">
               <Typography mono size="sm" type="note" variant="secondary">
                 {t("fields.body")}
@@ -369,7 +315,7 @@ export function AgentDetailModal({
                     type="note"
                     variant="secondary"
                   >
-                    {agent.body ?? ""}
+                    {agent.instructions}
                   </Typography>
                 </Container>
               </Card>
@@ -396,7 +342,7 @@ export function AgentDetailModal({
           width="sm"
         >
           <Typography size="base" type="note" variant="secondary">
-            {t("deleteBody", { name: agent.name, file: agent.file })}
+            {t("deleteBody", { name, file: agentFile(agent.id) })}
           </Typography>
         </Dialog>
       )}

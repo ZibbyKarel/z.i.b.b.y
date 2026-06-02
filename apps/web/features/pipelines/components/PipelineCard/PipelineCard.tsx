@@ -10,7 +10,8 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system"
-import { type AgentDef, type Pipeline, type PipelineState, glyphForAgent } from "../../../../domain"
+import type { Agent } from "@zibby/contracts"
+import { type Pipeline, type PipelineState, glyphForAgent } from "../../../../domain"
 
 const stateMeta = {
   done: { tone: "ok", labelKey: "stateDone" },
@@ -21,7 +22,7 @@ const stateMeta = {
 
 export interface PipelineCardProps {
   pipeline: Pipeline
-  agents: AgentDef[]
+  agents: Agent[]
   selected: boolean
   onSelect: (id: string) => void
 }

@@ -16,7 +16,8 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system"
-import { type AgentDef, type ModelName, type Pipeline, type ThinkingLevel, glyphForAgent } from "../../../../domain"
+import type { Agent } from "@zibby/contracts"
+import { type ModelName, type Pipeline, type ThinkingLevel, glyphForAgent } from "../../../../domain"
 import { ModelBadge, ThinkBadge } from "../PhaseChain"
 
 const CYCLE_MODEL: ModelName[] = ["opus", "sonnet", "haiku"]
@@ -30,7 +31,7 @@ interface Override {
 
 export interface PipelineRunModalProps {
   pipeline: Pipeline
-  agents: AgentDef[]
+  agents: Agent[]
   projects: string[]
   onClose: () => void
   onLaunch?: (req: {

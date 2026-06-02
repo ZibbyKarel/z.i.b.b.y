@@ -20,7 +20,7 @@ import { AgentDetailModal } from "./components/AgentDetailModal";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { PROJECTS } from "../../state/config";
-import { newAgentDraft, slugifyAgent } from "./agentDraft";
+import { agentFile, newAgentDraft, slugifyAgent } from "./agentDraft";
 import {
   useAgents,
   useCategories,
@@ -31,7 +31,8 @@ import {
   useUpdateAgent,
 } from "./queries";
 import { useCatalog } from "../../state/store";
-import type { AgentDef, Skill } from "../../domain";
+import type { Agent } from "@zibby/contracts";
+import type { Skill } from "../../domain";
 
 export function Screen() {
   const ta = useTranslations("agents");
@@ -39,31 +40,30 @@ export function Screen() {
   const categories = useCategories();
   const { pipelines } = useCatalog();
   const { createAgent } = useCreateAgent();
-  const { updateAgent, setEnabled } = useUpdateAgent();
+  const { updateAgent } = useUpdateAgent();
   const { deleteAgent } = useDeleteAgent();
   const { createCategory, isPending: creatingCategory } = useCreateCategory();
   const { deleteCategory } = useDeleteCategory();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<AgentDef | null>(null);
-  const [runAgent, setRunAgent] = useState<AgentDef | null>(null);
+  const [draft, setDraft] = useState<Agent | null>(null);
+  const [runAgent, setRunAgent] = useState<Agent | null>(null);
   const [addingCategory, setAddingCategory] = useState(false);
 
   const list = agents;
-  const activeCount = list.filter((a) => a.enabled !== false).length;
 
   // Agents whose category was deleted (or never set) must not vanish: surface
   // them in a trailing fallback section instead of dropping them from the catalog.
   const knownNames = new Set(categories.map((c) => c.name));
   const uncategorized = list.filter((a) => !a.category || !knownNames.has(a.category));
 
-  const pipelineCount = (a: AgentDef) =>
+  const pipelineCount = (a: Agent) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
 
   const openAgent = openId ? (agents.find((a) => a.id === openId) ?? null) : null;
 
-  const save = (d: AgentDef, isNew: boolean) => {
+  const save = (d: Agent, isNew: boolean) => {
     if (isNew) {
-      const id = slugifyAgent(d.name) || `agent-${Date.now()}`;
+      const id = slugifyAgent(d.name ?? "") || `agent-${Date.now()}`;
       createAgent({ ...d, id }, { onSuccess: setOpenId });
       setDraft(null);
     } else {
@@ -71,15 +71,15 @@ export function Screen() {
     }
   };
 
-  const toSkill = (a: AgentDef): Skill => ({
+  const toSkill = (a: Agent): Skill => ({
     id: a.id,
-    name: a.name,
-    glyph: a.glyph,
-    desc: a.role,
-    file: a.file,
+    name: a.name ?? a.id,
+    glyph: (a.glyph as IconName | undefined) ?? "bot",
+    desc: a.description ?? "",
+    file: agentFile(a.id),
   });
 
-  const renderSection = (key: string, label: string, glyph: IconName, items: AgentDef[]) => {
+  const renderSection = (key: string, label: string, glyph: IconName, items: Agent[]) => {
     const empty = items.length === 0;
     return (
       <Container key={key}>
@@ -125,7 +125,6 @@ export function Screen() {
                 key={a.id}
                 onOpen={(x) => setOpenId(x.id)}
                 onRun={(x) => setRunAgent(x)}
-                onToggleEnabled={(x) => setEnabled(x.id, x.enabled === false)}
                 pipelineCount={pipelineCount(a)}
               />
             ))}
@@ -146,7 +145,7 @@ export function Screen() {
                   {ta("title")}
                 </Typography>
                 <Typography mono size="sm" type="note" variant="tertiary">
-                  {ta("countSummary", { count: list.length, active: activeCount })}
+                  {ta("countSummary", { count: list.length })}
                 </Typography>
               </Stack>
             </Container>
@@ -201,7 +200,6 @@ export function Screen() {
             setOpenId(null);
           }}
           onSave={save}
-          onToggleEnabled={(a) => setEnabled(a.id, a.enabled === false)}
           pipelines={pipelines}
         />
       )}
@@ -216,7 +214,6 @@ export function Screen() {
           onDelete={() => setDraft(null)}
           onRun={() => {}}
           onSave={save}
-          onToggleEnabled={() => {}}
           pipelines={pipelines}
         />
       )}

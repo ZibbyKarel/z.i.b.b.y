@@ -1,3 +1,4 @@
+import type { Agent } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
 
@@ -107,26 +108,6 @@ export interface Pipeline {
   phases: PipelinePhase[];
 }
 
-export interface AgentDef {
-  id: string;
-  name: string;
-  glyph: IconName;
-  role: string;
-  model: ModelName;
-  thinking: ThinkingLevel;
-  tools: string[];
-  state: string;
-  file: string;
-  /** Functional category id (within a context) used to group the catalog. */
-  category?: AgentCategory;
-  /** Paused agents stay defined but are skipped by pipelines. Defaults to enabled. */
-  enabled?: boolean;
-  /** How many times the agent has been launched. */
-  runs?: number;
-  /** Raw `*.agent.md` body — the editable source of truth. */
-  body?: string;
-}
-
 export type IntegrationStatus = "connected" | "disconnected" | "error";
 
 export interface Integration {
@@ -154,6 +135,6 @@ export interface SystemStatus {
 }
 
 /** Glyph for an agent name, falling back to a generic bot. */
-export function glyphForAgent(name: string, agents: AgentDef[]): IconName {
-  return agents.find((a) => a.name === name)?.glyph ?? "bot";
+export function glyphForAgent(name: string, agents: Agent[]): IconName {
+  return (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ?? "bot";
 }

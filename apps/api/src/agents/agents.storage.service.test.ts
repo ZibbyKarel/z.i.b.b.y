@@ -79,7 +79,6 @@ describe("AgentsStorageService", () => {
         thinking: "high" as const,
         tools: ["read", "write"],
         category: "writing",
-        enabled: false,
         instructions: "Polish the prose.",
       }
       const created = await service.create(input)
