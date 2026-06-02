@@ -11,11 +11,11 @@ import { SkillTile } from "./components/SkillTile";
 import { RunModal } from "./components/RunModal/RunModal";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
-import { useDashboardStore } from "../../state/store";
+import { useCatalog } from "../../state/store";
 
 export function Screen() {
   const t = useTranslations();
-  const { skills, addSkill } = useDashboardStore();
+  const { skills, addSkill } = useCatalog();
   const [adding, setAdding] = useState(false);
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const form = useEntityForm("skill");

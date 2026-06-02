@@ -21,7 +21,8 @@ import { LimitsPanel } from "../../components/layout/LimitsPanel";
 import type { Skill } from "../../domain";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
-import { useDashboardStore } from "../../state/store";
+import { useCatalog } from "../../state/store";
+import { useAgents } from "../agents/queries";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { SkillTile } from "../skills/components/SkillTile";
 import { SummaryWidget } from "./SummaryWidget";
@@ -35,8 +36,8 @@ const STARTERS = [
 
 export function Screen() {
   const t = useTranslations();
-  const { skills, integrations, agents, pipelines, addSkill } =
-    useDashboardStore();
+  const { skills, integrations, pipelines, addSkill } = useCatalog();
+  const agents = useAgents();
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const [adding, setAdding] = useState(false);
   const form = useEntityForm("skill");

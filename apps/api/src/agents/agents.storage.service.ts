@@ -5,7 +5,9 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
 import {
   AGENT_ID_REGEX,
   type Agent,
+  AgentModelSchema,
   AgentSchema,
+  AgentThinkingSchema,
   type CreateAgentInput,
   type UpdateAgentInput,
 } from "@zibby/contracts"
@@ -51,11 +53,9 @@ export class AgentsStorageService implements OnModuleInit {
     if (await this.exists(file)) {
       throw new AgentConflictError(input.id)
     }
-    const agent: Agent = {
-      id: input.id,
-      ...(input.description !== undefined ? { description: input.description } : {}),
-      instructions: input.instructions,
-    }
+    // `name` always lands in the frontmatter (defaulting to the id), so the
+    // returned entity matches what a subsequent `get` parses back.
+    const agent: Agent = { ...input, name: input.name ?? input.id }
     await this.writeAtomic(file, agent)
     return agent
   }
@@ -86,12 +86,9 @@ export class AgentsStorageService implements OnModuleInit {
     const file = this.resolveFile(id)
     const existing = await this.get(id)
 
-    // Only overwrite fields that were actually provided; never touch the id.
-    const merged: Agent = {
-      ...existing,
-      ...(patch.description !== undefined ? { description: patch.description } : {}),
-      ...(patch.instructions !== undefined ? { instructions: patch.instructions } : {}),
-    }
+    // Only overwrite fields that were actually provided; never touch the id
+    // (the patch schema omits it, so the spread cannot clobber it).
+    const merged: Agent = { ...existing, ...patch, id: existing.id }
     await this.writeAtomic(file, merged)
     return merged
   }
@@ -152,8 +149,11 @@ export class AgentsStorageService implements OnModuleInit {
 
   /**
    * Parse a Markdown agent file into an {@link Agent}. The id comes from the file
-   * name (the source of truth), the description from frontmatter, and the
-   * instructions from the Markdown body. Returns null if the file is malformed.
+   * name (the source of truth); the structured config comes from the frontmatter
+   * and the instructions from the Markdown body. Returns null only if the file is
+   * structurally broken (bad YAML, empty body) — a single out-of-range field
+   * (e.g. a hand-edited `model: gpt-9`) is dropped rather than discarding the
+   * whole agent, so one typo never makes an agent vanish from the catalog.
    */
   private tryParse(raw: string, id: string): Agent | null {
     let parsed: matter.GrayMatterFile<string>
@@ -163,19 +163,32 @@ export class AgentsStorageService implements OnModuleInit {
       return null
     }
     const data = parsed.data as Record<string, unknown>
-    const candidate = {
-      id,
-      ...(typeof data.description === "string" ? { description: data.description } : {}),
-      instructions: parsed.content.trim(),
+    const candidate: Record<string, unknown> = { id, instructions: parsed.content.trim() }
+    if (typeof data.name === "string") candidate.name = data.name
+    if (typeof data.description === "string") candidate.description = data.description
+    if (typeof data.glyph === "string") candidate.glyph = data.glyph
+    if (typeof data.category === "string") candidate.category = data.category
+    if (typeof data.enabled === "boolean") candidate.enabled = data.enabled
+    if (Array.isArray(data.tools) && data.tools.every((t) => typeof t === "string")) {
+      candidate.tools = data.tools
     }
+    if (AgentModelSchema.safeParse(data.model).success) candidate.model = data.model
+    if (AgentThinkingSchema.safeParse(data.thinking).success) candidate.thinking = data.thinking
+
     const result = AgentSchema.safeParse(candidate)
     return result.success ? result.data : null
   }
 
   /** Serialize an agent to the Markdown-with-frontmatter format. */
   private serialize(agent: Agent): string {
-    const data: Record<string, string> = { name: agent.id }
+    const data: Record<string, unknown> = { name: agent.name ?? agent.id }
     if (agent.description !== undefined) data.description = agent.description
+    if (agent.glyph !== undefined) data.glyph = agent.glyph
+    if (agent.model !== undefined) data.model = agent.model
+    if (agent.thinking !== undefined) data.thinking = agent.thinking
+    if (agent.tools !== undefined) data.tools = agent.tools
+    if (agent.category !== undefined) data.category = agent.category
+    if (agent.enabled !== undefined) data.enabled = agent.enabled
     // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
     return matter.stringify(`\n${agent.instructions}\n`, data)
   }

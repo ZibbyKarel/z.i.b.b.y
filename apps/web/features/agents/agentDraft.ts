@@ -14,24 +14,22 @@ export const slugifyAgent = (name: string): string =>
 /** Backing file path for an agent id. */
 export const agentFile = (id: string): string => `~/zibby/agents/${id}.agent.md`;
 
-/** Generate a default `*.agent.md` body from a draft. */
+/**
+ * Generate a default agent `instructions` body from a draft. This is the Markdown
+ * body only — the structured config (`name`, `model`, `thinking`, `tools`,
+ * `category`, …) lives in the file's YAML frontmatter, written by the API from
+ * the contract fields, so it must NOT be duplicated here (a second `---` block
+ * would not round-trip back into the editor's structured controls).
+ */
 export function mkAgentBody(a: AgentDef): string {
-  const id = slugifyAgent(a.name) || "novy-agent";
+  const name = a.name.trim() || slugifyAgent(a.name) || "novy-agent";
   return [
-    "---",
-    `name: ${id}`,
-    `category: ${a.category ?? ""}`,
-    `model: ${a.model}`,
-    `thinking: ${a.thinking}`,
-    `tools: [${a.tools.join(", ")}]`,
-    "---",
-    "",
-    `# ${a.name || id}`,
+    `# ${name}`,
     "",
     a.role ? `${a.role}.` : "Describe the agent's role.",
     "",
     "## System prompt",
-    `You are ${a.name || id}. ${a.role || "Work autonomously and return a concise summary."}`,
+    `You are ${name}. ${a.role || "Work autonomously and return a concise summary."}`,
     "",
   ].join("\n");
 }

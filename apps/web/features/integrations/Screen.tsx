@@ -8,11 +8,11 @@ import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModa
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { IntegrationCard } from "./components/IntegrationCard";
 import { useEntityForm } from "../../state/forms";
-import { useDashboardStore } from "../../state/store";
+import { useCatalog } from "../../state/store";
 
 export function Screen() {
   const t = useTranslations();
-  const { integrations, addIntegration } = useDashboardStore();
+  const { integrations, addIntegration } = useCatalog();
   const [adding, setAdding] = useState(false);
   const form = useEntityForm("integration");
 

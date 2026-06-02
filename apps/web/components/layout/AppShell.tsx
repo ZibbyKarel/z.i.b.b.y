@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { type NavItem } from "@zibby/design-system";
 import { MainLayout } from "./MainLayout";
 import { NAV_ITEMS, type NavId, SETTINGS_ITEM } from "../../state/config";
-import { DashboardStoreProvider } from "../../state/store";
+import { CatalogProvider } from "../../state/store";
 
 const NAV_IDS = new Set<NavId>([...NAV_ITEMS.map((n) => n.id), SETTINGS_ITEM.id]);
 
@@ -46,10 +46,10 @@ function AppShellInner({ children }: { children: ReactNode }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <DashboardStoreProvider>
+    <CatalogProvider>
       <Suspense>
         <AppShellInner>{children}</AppShellInner>
       </Suspense>
-    </DashboardStoreProvider>
+    </CatalogProvider>
   );
 }

@@ -22,7 +22,8 @@ import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
-import { useDashboardStore } from "../../state/store";
+import { useCatalog } from "../../state/store";
+import { useAgents } from "../agents/queries";
 
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
@@ -31,7 +32,8 @@ export interface ScreenProps {
 
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
-  const { pipelines, agents, addPipeline } = useDashboardStore();
+  const { pipelines, addPipeline } = useCatalog();
+  const agents = useAgents();
   const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
   const [adding, setAdding] = useState(false);
   const router = useRouter();

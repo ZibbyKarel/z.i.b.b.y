@@ -13,14 +13,16 @@ import { MessageKey } from "apps/web/i18n/keys";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { AGENT_SDK } from "../../state/config";
-import { useDashboardStore } from "../../state/store";
+import { useCatalog } from "../../state/store";
+import { useAgents } from "../agents/queries";
 import { useHealth } from "../health/queries";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function SummaryWidget() {
   const t = useTranslations();
-  const { skills, integrations, agents, pipelines } = useDashboardStore();
+  const { skills, integrations, pipelines } = useCatalog();
+  const agents = useAgents();
 
   const { isFetching, isFetched, data } = useHealth();
   const isConnecting = isFetching && !isFetched;

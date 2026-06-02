@@ -39,6 +39,8 @@ describe("AgentsStorageService", () => {
 
       expect(agent).toEqual({
         id: "code-reviewer",
+        // `name` defaults to the id and is mirrored into the frontmatter.
+        name: "code-reviewer",
         description: "Reviews pull requests",
         instructions: "Be thorough and kind.",
       })
@@ -65,6 +67,42 @@ describe("AgentsStorageService", () => {
 
       const parsed = matter(await fs.readFile(fileFor(dir, "minimal"), "utf8"))
       expect(parsed.data).not.toHaveProperty("description")
+    })
+
+    it("round-trips the structured dashboard config through the frontmatter", async () => {
+      const input = {
+        id: "stylist",
+        name: "Stylist",
+        description: "Edits Czech copy",
+        glyph: "feather",
+        model: "opus" as const,
+        thinking: "high" as const,
+        tools: ["read", "write"],
+        category: "writing",
+        enabled: false,
+        instructions: "Polish the prose.",
+      }
+      const created = await service.create(input)
+      expect(created).toEqual(input)
+      // persisted and parsed back identically
+      expect(await service.get("stylist")).toEqual(input)
+    })
+
+    it("drops a single out-of-range field instead of discarding the agent", async () => {
+      // A hand-edited file with a bogus model must not vanish from the catalog.
+      await fs.writeFile(
+        fileFor(dir, "typo"),
+        matter.stringify("Do the work.\n", {
+          name: "typo",
+          model: "gpt-9",
+          thinking: "medium",
+        }),
+        "utf8",
+      )
+      const agent = await service.get("typo")
+      expect(agent.id).toBe("typo")
+      expect(agent.model).toBeUndefined()
+      expect(agent.thinking).toBe("medium")
     })
   })
 

@@ -1,12 +1,12 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-02)
 
 ## Corpus Check
-- 244 files · ~68,755 words
+- 245 files · ~69,651 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 404 nodes · 205 edges · 233 communities detected
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 15 edges (avg confidence: 0.8)
+- 411 nodes · 217 edges · 233 communities detected
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 21 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -246,27 +246,27 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `AgentsStorageService` - 16 edges
-2. `Screen()` - 5 edges
+2. `Screen()` - 9 edges
 3. `t()` - 5 edges
 4. `useTokens()` - 4 edges
-5. `parseRateLimits()` - 4 edges
-6. `useTabsContext()` - 3 edges
-7. `Tab()` - 3 edges
-8. `cn()` - 3 edges
-9. `mkAgentBody()` - 3 edges
+5. `mkAgentBody()` - 4 edges
+6. `parseRateLimits()` - 4 edges
+7. `useTabsContext()` - 3 edges
+8. `Tab()` - 3 edges
+9. `cn()` - 3 edges
 10. `newAgentDraft()` - 3 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Screen()` --calls--> `useDashboardStore()`  [INFERRED]
+- `Screen()` --calls--> `useAgents()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts
+- `Screen()` --calls--> `useCreateAgent()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts
+- `Screen()` --calls--> `useUpdateAgent()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts
+- `Screen()` --calls--> `useDeleteAgent()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts
+- `Screen()` --calls--> `useCatalog()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/state/store.tsx
-- `Screen()` --calls--> `t()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx
-- `PhaseNode()` --calls--> `t()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx
-- `t()` --calls--> `useEntityForm()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts
-- `useTokens()` --calls--> `TabList()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/DesignSystemContext/hooks.ts → /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Tabs/Tabs.tsx
 
 ## Communities
 
@@ -276,11 +276,11 @@ Nodes (3): AgentsStorageService, isErrnoException(), bootstrap()
 
 ### Community 1 - "Community 1"
 Cohesion: 0.16
-Nodes (6): mkAgentBody(), newAgentDraft(), slugifyAgent(), useEntityForm(), Screen(), useDashboardStore()
+Nodes (12): agentFile(), mkAgentBody(), newAgentDraft(), slugifyAgent(), toAgentBody(), toAgentDef(), useAgents(), useCreateAgent() (+4 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.15
-Nodes (4): AppShellInner(), pathnameToNavId(), PhaseNode(), t()
+Cohesion: 0.12
+Nodes (5): AppShellInner(), pathnameToNavId(), useEntityForm(), PhaseNode(), t()
 
 ### Community 3 - "Community 3"
 Cohesion: 0.17
@@ -1633,15 +1633,17 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `Screen()` connect `Community 1` to `Community 2`?**
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `t()` connect `Community 2` to `Community 1`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **Why does `parseRateLimits()` connect `Community 4` to `Community 0`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **Are the 4 inferred relationships involving `Screen()` (e.g. with `useDashboardStore()` and `newAgentDraft()`) actually correct?**
-  _`Screen()` has 4 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
+- **Are the 8 inferred relationships involving `Screen()` (e.g. with `useAgents()` and `useCatalog()`) actually correct?**
+  _`Screen()` has 8 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 4 inferred relationships involving `t()` (e.g. with `PhaseNode()` and `useEntityForm()`) actually correct?**
   _`t()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 3 inferred relationships involving `useTokens()` (e.g. with `TabList()` and `Tab()`) actually correct?**
   _`useTokens()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `AppModule`, `HealthModule`, `LimitsModule` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.12 - nodes in this community are weakly interconnected._

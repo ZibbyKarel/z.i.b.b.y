@@ -47,6 +47,8 @@ describe("Agents API (e2e)", () => {
     expect(created.status).toBe(201)
     expect(created.body).toEqual({
       id: "writer",
+      // `name` defaults to the id and is mirrored into the frontmatter head.
+      name: "writer",
       description: "Writes things",
       instructions: "Write clearly.",
     })
@@ -73,6 +75,34 @@ describe("Agents API (e2e)", () => {
 
     const gone = await request(app.getHttpServer()).get(`${BASE}/writer`)
     expect(gone.status).toBe(404)
+  })
+
+  it("round-trips the structured dashboard config through the API", async () => {
+    const body = {
+      id: "stylist",
+      name: "Stylist",
+      description: "Edits Czech copy",
+      glyph: "feather",
+      model: "opus",
+      thinking: "high",
+      tools: ["read", "write"],
+      category: "writing",
+      enabled: false,
+      instructions: "Polish the prose.",
+    }
+    const created = await request(app.getHttpServer()).post(BASE).send(body)
+    expect(created.status).toBe(201)
+    expect(created.body).toEqual(body)
+
+    const got = await request(app.getHttpServer()).get(`${BASE}/stylist`)
+    expect(got.body).toEqual(body)
+  })
+
+  it("rejects an out-of-range structured field at the API boundary (400)", async () => {
+    await request(app.getHttpServer())
+      .post(BASE)
+      .send({ id: "x", model: "gpt-9", instructions: "y" })
+      .expect(400)
   })
 
   it("returns 409 when creating a duplicate id", async () => {

@@ -8,42 +8,34 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { AgentDef, Integration, ModelName, Pipeline, Skill, ThinkingLevel } from "../domain";
+import type { Integration, Pipeline, Skill } from "../domain";
 import type { EntityFormValues } from "../components/EntityFormModal/EntityFormModal";
 
 /**
- * In-memory dashboard store. The system starts completely empty — no demo skills,
- * integrations, agents or pipelines — and the user creates each one through the
- * UI. In production these actions would POST to API routes that write the
- * backing files (SKILL.md, *.json, *.agent.md, *.pipeline.md); here they append
- * to client state so the dashboard is fully interactive.
+ * In-memory catalog store for the entities that have no backend yet — skills,
+ * integrations and pipelines. The system starts completely empty; the user
+ * creates each one through the UI and these actions append to client state so
+ * the dashboard stays interactive. Agents are NOT here: they are persisted by
+ * the API and read through `features/agents/queries.ts` (the TanStack cache is
+ * their shared source of truth).
  */
-interface DashboardState {
+interface CatalogState {
   skills: Skill[];
   integrations: Integration[];
-  agents: AgentDef[];
   pipelines: Pipeline[];
 }
 
-interface DashboardStore extends DashboardState {
+interface CatalogStore extends CatalogState {
   addSkill: (values: EntityFormValues, fallbackDesc: string) => void;
   addIntegration: (values: EntityFormValues, fallbackDesc: string) => void;
-  addAgent: (values: EntityFormValues, fallbackRole: string) => void;
   addPipeline: (values: EntityFormValues, fallbackDesc: string) => void;
-  /** Create a new agent or replace an existing one by id (full-control editor). */
-  upsertAgent: (agent: AgentDef) => void;
-  /** Delete an agent (and conceptually its backing file) by id. */
-  removeAgent: (id: string) => void;
-  /** Pause or re-activate an agent. */
-  setAgentEnabled: (id: string, enabled: boolean) => void;
 }
 
-const DashboardContext = createContext<DashboardStore | null>(null);
+const CatalogContext = createContext<CatalogStore | null>(null);
 
-const EMPTY: DashboardState = {
+const EMPTY: CatalogState = {
   skills: [],
   integrations: [],
-  agents: [],
   pipelines: [],
 };
 
@@ -54,8 +46,8 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || "novy";
 
-export function DashboardStoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DashboardState>(EMPTY);
+export function CatalogProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<CatalogState>(EMPTY);
 
   const addSkill = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "");
@@ -92,27 +84,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const addAgent = useCallback((values: EntityFormValues, fallbackRole: string) => {
-    const id = slug(values.name ?? "");
-    setState((s) => ({
-      ...s,
-      agents: [
-        ...s.agents,
-        {
-          id: `${id}-${s.agents.length}`,
-          name: values.name?.trim() || id,
-          glyph: "bot",
-          role: values.role?.trim() || fallbackRole,
-          model: (values.model as ModelName) || "sonnet",
-          thinking: (values.thinking as ThinkingLevel) || "medium",
-          tools: ["read"],
-          state: "idle",
-          file: `~/zibby/agents/${id}.agent.md`,
-        },
-      ],
-    }));
-  }, []);
-
   const addPipeline = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "");
     const budget = Number.parseInt(values.budget ?? "", 10);
@@ -142,64 +113,26 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const upsertAgent = useCallback((agent: AgentDef) => {
-    setState((s) => {
-      const exists = s.agents.some((a) => a.id === agent.id);
-      return {
-        ...s,
-        agents: exists
-          ? s.agents.map((a) => (a.id === agent.id ? agent : a))
-          : [...s.agents, agent],
-      };
-    });
-  }, []);
-
-  const removeAgent = useCallback((id: string) => {
-    setState((s) => ({ ...s, agents: s.agents.filter((a) => a.id !== id) }));
-  }, []);
-
-  const setAgentEnabled = useCallback((id: string, enabled: boolean) => {
-    setState((s) => ({
-      ...s,
-      agents: s.agents.map((a) => (a.id === id ? { ...a, enabled } : a)),
-    }));
-  }, []);
-
-  const value = useMemo<DashboardStore>(
+  const value = useMemo<CatalogStore>(
     () => ({
       ...state,
       addSkill,
       addIntegration,
-      addAgent,
       addPipeline,
-      upsertAgent,
-      removeAgent,
-      setAgentEnabled,
     }),
-    [
-      state,
-      addSkill,
-      addIntegration,
-      addAgent,
-      addPipeline,
-      upsertAgent,
-      removeAgent,
-      setAgentEnabled,
-    ],
+    [state, addSkill, addIntegration, addPipeline],
   );
 
   return (
-    <DashboardContext.Provider value={value}>
+    <CatalogContext.Provider value={value}>
       {children}
-    </DashboardContext.Provider>
+    </CatalogContext.Provider>
   );
 }
 
-export function useDashboardStore(): DashboardStore {
-  const ctx = useContext(DashboardContext);
+export function useCatalog(): CatalogStore {
+  const ctx = useContext(CatalogContext);
   if (!ctx)
-    throw new Error(
-      "useDashboardStore must be used within DashboardStoreProvider",
-    );
+    throw new Error("useCatalog must be used within CatalogProvider");
   return ctx;
 }
