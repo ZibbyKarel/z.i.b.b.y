@@ -3,7 +3,7 @@ import { Logger } from "@nestjs/common"
 import { NestFactory } from "@nestjs/core"
 import { initContract } from "@ts-rest/core"
 import { generateOpenApi } from "@ts-rest/open-api"
-import { agentsContract, healthContract } from "@zibby/contracts"
+import { agentsContract, healthContract, limitsContract } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
 import { AppModule } from "./app.module"
 
@@ -13,6 +13,7 @@ import { AppModule } from "./app.module"
 const apiContract = initContract().router({
   agents: agentsContract,
   health: healthContract,
+  limits: limitsContract,
 })
 
 async function bootstrap(): Promise<void> {

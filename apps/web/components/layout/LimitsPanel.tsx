@@ -3,8 +3,6 @@
 import { useTranslations } from "next-intl";
 import {
   Container,
-  Divider,
-  Icon,
   Progress,
   type ProgressTone,
   Stack,
@@ -12,7 +10,7 @@ import {
   usageTone,
 } from "@zibby/design-system";
 import { HudPanel } from "../HudPanel/HudPanel";
-import { AGENT_SDK, CLAUDE_LIMITS } from "../../state/config";
+import { useLimits } from "../../features/limits/queries";
 import type { QuotaLimit } from "../../domain";
 
 type Tone = "ok" | "warn" | "bad" | "accent";
@@ -66,15 +64,13 @@ function LimitBlock({ d }: { d: QuotaLimit }) {
 }
 
 /**
- * The dashboard limits panel — interactive Claude limits as the headline,
- * with the Agent SDK credit as a secondary strip. Lives at the top of the
- * right rail (it moved out of the top bar).
+ * The dashboard limits panel — the interactive Claude limits (rolling 5h and
+ * weekly), computed from real local usage and polled live. Lives at the top of
+ * the right rail (it moved out of the top bar).
  */
 export function LimitsPanel() {
   const t = useTranslations();
-  const { rolling, weekly } = CLAUDE_LIMITS;
-  const sdk = AGENT_SDK;
-  const sdkTone = usageTone(sdk.usedPct);
+  const { rolling, weekly } = useLimits();
 
   return (
     <HudPanel
@@ -88,42 +84,6 @@ export function LimitsPanel() {
       <Stack direction="row" gap="100">
         <LimitBlock d={rolling} />
         <LimitBlock d={weekly} />
-      </Stack>
-
-      <Divider />
-
-      <Stack align="center" direction="row" gap="150">
-        <Stack align="center" direction="row" gap="75" shrink={false}>
-          <Icon name="dollar" size="sm" tone={asTone(sdkTone)} />
-          <Typography
-            mono
-            uppercase
-            leading="tight"
-            size="2xs"
-            style={{ whiteSpace: "pre-line" }}
-            tracking="wide"
-            type="note"
-            variant="tertiary"
-          >
-            {t("limits.agentSdk")}
-          </Typography>
-        </Stack>
-        <Container grow minW0>
-          <Stack align="baseline" direction="row" gap="100" justify="between">
-            <Typography mono nowrap size="caption" type="note" weight="bold">
-              ${sdk.remaining}{" "}
-              <Typography mono as="span" size="xs" type="note" variant="tertiary">
-                / ${sdk.total}
-              </Typography>
-            </Typography>
-            <Typography mono size="2xs" type="note" variant="tertiary">
-              {t("limits.renew", { date: t(sdk.renew) })}
-            </Typography>
-          </Stack>
-          <Container style={{ marginTop: "0.375rem" }}>
-            <Progress glow height="50" label={t("limits.agentSdkCredit")} tone={sdkTone} value={sdk.usedPct} />
-          </Container>
-        </Container>
       </Stack>
     </HudPanel>
   );

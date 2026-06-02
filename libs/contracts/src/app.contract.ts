@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core"
 import { agentsContract } from "./agents.contract"
 import { healthContract } from "./health.contract"
+import { limitsContract } from "./limits.contract"
 
 const c = initContract()
 
@@ -14,6 +15,7 @@ const c = initContract()
 export const appContract = c.router({
   agents: agentsContract,
   health: healthContract,
+  limits: limitsContract,
 })
 
 export type AppContract = typeof appContract
