@@ -14,36 +14,24 @@ export const slugifyAgent = (name: string): string =>
 export const agentFile = (id: string): string => `~/zibby/agents/${id}.agent.md`;
 
 /**
- * Generate a default agent `instructions` body from a draft. This is the Markdown
- * body only — the structured config (`name`, `model`, `thinking`, `tools`,
- * `category`, …) lives in the file's YAML frontmatter, written by the API from
- * the contract fields, so it must NOT be duplicated here (a second `---` block
- * would not round-trip back into the editor's structured controls).
- */
-export function mkAgentBody(a: AgentDef): string {
-  const name = a.name.trim() || slugifyAgent(a.name) || "novy-agent";
-  return [
-    `# ${name}`,
-    "",
-    a.role ? `${a.role}.` : "Describe the agent's role.",
-    "",
-    "## System prompt",
-    `You are ${name}. ${a.role || "Work autonomously and return a concise summary."}`,
-    "",
-  ].join("\n");
-}
-
-/**
- * A blank draft for the "new agent" flow. `category` is seeded from the live
- * taxonomy by the caller (the agents screen) — categories are no longer a static
- * constant, so the draft starts uncategorised unless one is supplied.
+ * A blank draft for the "new agent" flow. The `body` starts empty: it is pure
+ * Markdown authored by the user in the editor, never synthesised. The structured
+ * config (`name`, `role`/description, `model`, `thinking`, `glyph`, `tools`,
+ * `category`, …) is carried as separate fields and assembled into the file's YAML
+ * frontmatter by the API — the frontend never writes a `---` block itself.
+ *
+ * `category` is seeded from the live taxonomy by the caller (the agents screen) —
+ * categories are no longer a static constant, so the draft starts uncategorised
+ * unless one is supplied.
  */
 export function newAgentDraft(category?: string): AgentDef {
-  const draft: AgentDef = {
+  return {
     id: "",
     name: "",
     glyph: "bot",
-    role: "",
+    // Seeded so the description always opens with the canonical phrasing Claude
+    // Code expects for agent routing; the user completes the sentence.
+    role: "Use this agent when ",
     model: "sonnet",
     thinking: "medium",
     tools: ["read"],
@@ -54,5 +42,4 @@ export function newAgentDraft(category?: string): AgentDef {
     file: "",
     body: "",
   };
-  return { ...draft, body: mkAgentBody(draft) };
 }

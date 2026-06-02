@@ -24,7 +24,6 @@ import type { ModelName, ThinkingLevel } from "../../../domain";
 import type { AgentDef, Pipeline } from "../../../domain";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
-import { mkAgentBody } from "../agentDraft";
 
 export interface AgentDetailModalProps {
   agent: AgentDef;
@@ -104,7 +103,9 @@ export function AgentDetailModal({
     });
 
   const editing = mode === "edit" || isNew;
-  const canSave = draft.name.trim().length > 0;
+  // A name and a non-empty Markdown body are both required: the body is sent
+  // verbatim as the contract's `instructions` (min(1)), never synthesised.
+  const canSave = draft.name.trim().length > 0 && (draft.body?.trim().length ?? 0) > 0;
 
   const title = (
     <Stack align="center" direction="row" gap="150">
@@ -182,9 +183,9 @@ export function AgentDetailModal({
             />
 
             <TextField
-              label={t("fields.role")}
+              label={t("fields.whenToUse")}
               onChange={(e) => set({ role: e.target.value })}
-              placeholder={t("fields.rolePlaceholder")}
+              placeholder={t("fields.whenToUsePlaceholder")}
               value={draft.role}
             />
 
@@ -368,7 +369,7 @@ export function AgentDetailModal({
                     type="note"
                     variant="secondary"
                   >
-                    {agent.body ?? mkAgentBody(agent)}
+                    {agent.body ?? ""}
                   </Typography>
                 </Container>
               </Card>

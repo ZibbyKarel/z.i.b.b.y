@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { IconName } from "@zibby/design-system";
 import type { AgentCategory, AgentDef, ModelName, ThinkingLevel } from "../../domain";
 import { apiClient } from "../../state/api";
-import { agentFile, mkAgentBody } from "./agentDraft";
+import { agentFile } from "./agentDraft";
 
 /** Shared cache key for the agent list — the TanStack cache is the FE source of truth. */
 const AGENTS_KEY = ["agents"] as const;
@@ -35,9 +35,13 @@ export function toAgentDef(a: Agent): AgentDef {
   };
 }
 
-/** Map a UI {@link AgentDef} draft onto the contract create/update body. */
+/**
+ * Map a UI {@link AgentDef} draft onto the contract create/update body. Structured
+ * fields map to frontmatter (assembled by the API); `body` is sent verbatim as the
+ * Markdown `instructions` — never synthesised. The editor guarantees a non-empty
+ * body before save, matching the contract's `instructions: min(1)`.
+ */
 function toAgentBody(d: AgentDef) {
-  const instructions = d.body && d.body.trim().length > 0 ? d.body : mkAgentBody(d);
   return {
     name: d.name.trim() || d.id,
     description: d.role.trim() ? d.role.trim() : undefined,
@@ -47,7 +51,7 @@ function toAgentBody(d: AgentDef) {
     tools: d.tools,
     category: d.category,
     enabled: d.enabled,
-    instructions,
+    instructions: d.body ?? "",
   };
 }
 

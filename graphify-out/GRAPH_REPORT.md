@@ -1,12 +1,12 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-02)
 
 ## Corpus Check
-- 258 files · ~86,231 words
+- 258 files · ~86,032 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 449 nodes · 243 edges · 247 communities detected
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.8)
+- 448 nodes · 239 edges · 247 communities detected
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 16 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -262,17 +262,15 @@
 1. `AgentsStorageService` - 16 edges
 2. `CategoriesStorageService` - 6 edges
 3. `useTokens()` - 4 edges
-4. `mkAgentBody()` - 4 edges
-5. `t()` - 4 edges
-6. `parseRateLimits()` - 4 edges
-7. `useTabsContext()` - 3 edges
-8. `Tab()` - 3 edges
-9. `cn()` - 3 edges
-10. `slugifyAgent()` - 3 edges
+4. `t()` - 4 edges
+5. `parseRateLimits()` - 4 edges
+6. `useTabsContext()` - 3 edges
+7. `Tab()` - 3 edges
+8. `cn()` - 3 edges
+9. `save()` - 3 edges
+10. `AppShellInner()` - 3 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `slugifyAgent()` --calls--> `save()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx
 - `useTokens()` --calls--> `TabList()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/DesignSystemContext/hooks.ts → /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Tabs/Tabs.tsx
 - `useTokens()` --calls--> `Tab()`  [INFERRED]
@@ -281,40 +279,42 @@
   /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/DesignSystemContext/hooks.ts → /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Badge/Badge.tsx
 - `Corners()` --calls--> `cn()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Card/Card.tsx → /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Divider/Divider.tsx
+- `ListItem()` --calls--> `cn()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx → /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Divider/Divider.tsx
 
 ## Communities
 
 ### Community 0 - "Community 0"
+Cohesion: 0.11
+Nodes (4): agentFile(), slugifyAgent(), toAgentDef(), save()
+
+### Community 1 - "Community 1"
 Cohesion: 0.23
 Nodes (2): AgentsStorageService, isErrnoException()
 
-### Community 1 - "Community 1"
+### Community 2 - "Community 2"
 Cohesion: 0.12
 Nodes (5): AppShellInner(), pathnameToNavId(), useEntityForm(), PhaseNode(), t()
 
-### Community 2 - "Community 2"
-Cohesion: 0.16
-Nodes (6): buildLimits(), LimitsService, clampPct(), parseRateLimits(), RateLimitsReader, save()
-
 ### Community 3 - "Community 3"
-Cohesion: 0.16
-Nodes (6): agentFile(), mkAgentBody(), newAgentDraft(), slugifyAgent(), toAgentBody(), toAgentDef()
-
-### Community 4 - "Community 4"
 Cohesion: 0.17
 Nodes (3): Corners(), cn(), ListItem()
+
+### Community 4 - "Community 4"
+Cohesion: 0.23
+Nodes (5): buildLimits(), LimitsService, clampPct(), parseRateLimits(), RateLimitsReader
 
 ### Community 5 - "Community 5"
 Cohesion: 0.24
 Nodes (6): Badge(), useTokens(), Tab(), TabList(), TabPanel(), useTabsContext()
 
 ### Community 6 - "Community 6"
-Cohesion: 0.22
-Nodes (4): AgentConflictError, AgentNotFoundError, CorruptAgentFileError, InvalidAgentIdError
-
-### Community 7 - "Community 7"
 Cohesion: 0.33
 Nodes (2): CategoriesStorageService, bootstrap()
+
+### Community 7 - "Community 7"
+Cohesion: 0.22
+Nodes (4): AgentConflictError, AgentNotFoundError, CorruptAgentFileError, InvalidAgentIdError
 
 ### Community 8 - "Community 8"
 Cohesion: 0.29
@@ -1721,17 +1721,17 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `parseRateLimits()` connect `Community 2` to `Community 0`?**
+- **Why does `parseRateLimits()` connect `Community 4` to `Community 1`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `save()` connect `Community 2` to `Community 3`?**
+- **Why does `save()` connect `Community 0` to `Community 4`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Why does `slugifyAgent()` connect `Community 3` to `Community 2`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `useTokens()` (e.g. with `TabList()` and `Tab()`) actually correct?**
   _`useTokens()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 3 inferred relationships involving `t()` (e.g. with `PhaseNode()` and `useEntityForm()`) actually correct?**
   _`t()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `AppModule`, `HealthModule`, `LimitsModule` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Community 1` be split into smaller, more focused modules?**
+- **Should `Community 0` be split into smaller, more focused modules?**
+  _Cohesion score 0.11 - nodes in this community are weakly interconnected._
+- **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.12 - nodes in this community are weakly interconnected._

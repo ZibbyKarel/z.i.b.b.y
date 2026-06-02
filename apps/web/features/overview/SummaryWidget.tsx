@@ -24,9 +24,9 @@ export function SummaryWidget() {
   const { skills, integrations, pipelines } = useCatalog();
   const agents = useAgents();
 
-  const { isFetching, isFetched, data } = useHealth();
+  const { isFetching, isFetched, isSuccess } = useHealth();
   const isConnecting = isFetching && !isFetched;
-  const isOnline = data?.body.status === "ok";
+  const isOnline = isSuccess;
 
   const healthTone = isConnecting ? "warn" : isOnline ? "ok" : "bad";
   const healthLabel: MessageKey = isConnecting

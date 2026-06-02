@@ -540,7 +540,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Card/Card.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_libs_design_system_src_components_card_card_tsx",
-      "community": 4,
+      "community": 3,
       "norm_label": "card.tsx"
     },
     {
@@ -549,7 +549,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Card/Card.tsx",
       "source_location": "L32",
       "id": "card_corners",
-      "community": 4,
+      "community": 3,
       "norm_label": "corners()"
     },
     {
@@ -558,7 +558,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Card/Card.tsx",
       "source_location": "L192",
       "id": "card_cardfooter",
-      "community": 4,
+      "community": 3,
       "norm_label": "cardfooter()"
     },
     {
@@ -567,7 +567,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Card/Card.tsx",
       "source_location": "L200",
       "id": "card_cardactions",
-      "community": 4,
+      "community": 3,
       "norm_label": "cardactions()"
     },
     {
@@ -1161,7 +1161,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_libs_design_system_src_components_list_list_tsx",
-      "community": 4,
+      "community": 3,
       "norm_label": "list.tsx"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx",
       "source_location": "L37",
       "id": "list_listitemicon",
-      "community": 4,
+      "community": 3,
       "norm_label": "listitemicon()"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx",
       "source_location": "L48",
       "id": "list_listitemtext",
-      "community": 4,
+      "community": 3,
       "norm_label": "listitemtext()"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx",
       "source_location": "L57",
       "id": "list_listitembadge",
-      "community": 4,
+      "community": 3,
       "norm_label": "listitembadge()"
     },
     {
@@ -1197,7 +1197,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx",
       "source_location": "L79",
       "id": "list_listitem",
-      "community": 4,
+      "community": 3,
       "norm_label": "listitem()"
     },
     {
@@ -1206,7 +1206,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/List/List.tsx",
       "source_location": "L135",
       "id": "list_list",
-      "community": 4,
+      "community": 3,
       "norm_label": "list()"
     },
     {
@@ -1242,7 +1242,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Divider/Divider.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_libs_design_system_src_components_divider_divider_tsx",
-      "community": 4,
+      "community": 3,
       "norm_label": "divider.tsx"
     },
     {
@@ -1251,7 +1251,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Divider/Divider.tsx",
       "source_location": "L15",
       "id": "divider_cn",
-      "community": 4,
+      "community": 3,
       "norm_label": "cn()"
     },
     {
@@ -2286,7 +2286,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_agentdraft_ts",
-      "community": 3,
+      "community": 0,
       "norm_label": "agentdraft.ts"
     },
     {
@@ -2295,7 +2295,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
       "source_location": "L4",
       "id": "agentdraft_slugifyagent",
-      "community": 3,
+      "community": 0,
       "norm_label": "slugifyagent()"
     },
     {
@@ -2304,25 +2304,16 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
       "source_location": "L14",
       "id": "agentdraft_agentfile",
-      "community": 3,
+      "community": 0,
       "norm_label": "agentfile()"
-    },
-    {
-      "label": "mkAgentBody()",
-      "file_type": "code",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
-      "source_location": "L23",
-      "id": "agentdraft_mkagentbody",
-      "community": 3,
-      "norm_label": "mkagentbody()"
     },
     {
       "label": "newAgentDraft()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
-      "source_location": "L41",
+      "source_location": "L27",
       "id": "agentdraft_newagentdraft",
-      "community": 3,
+      "community": 0,
       "norm_label": "newagentdraft()"
     },
     {
@@ -2331,7 +2322,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
-      "community": 3,
+      "community": 0,
       "norm_label": "queries.ts"
     },
     {
@@ -2340,79 +2331,79 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
       "source_location": "L20",
       "id": "queries_toagentdef",
-      "community": 3,
+      "community": 0,
       "norm_label": "toagentdef()"
     },
     {
       "label": "toAgentBody()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L39",
+      "source_location": "L44",
       "id": "queries_toagentbody",
-      "community": 3,
+      "community": 0,
       "norm_label": "toagentbody()"
     },
     {
       "label": "useAgents()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L59",
+      "source_location": "L63",
       "id": "queries_useagents",
-      "community": 3,
+      "community": 0,
       "norm_label": "useagents()"
     },
     {
       "label": "useCreateAgent()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L65",
+      "source_location": "L69",
       "id": "queries_usecreateagent",
-      "community": 3,
+      "community": 0,
       "norm_label": "usecreateagent()"
     },
     {
       "label": "useUpdateAgent()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L81",
+      "source_location": "L85",
       "id": "queries_useupdateagent",
-      "community": 3,
+      "community": 0,
       "norm_label": "useupdateagent()"
     },
     {
       "label": "useCategories()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L99",
+      "source_location": "L103",
       "id": "queries_usecategories",
-      "community": 3,
+      "community": 0,
       "norm_label": "usecategories()"
     },
     {
       "label": "useCreateCategory()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L105",
+      "source_location": "L109",
       "id": "queries_usecreatecategory",
-      "community": 3,
+      "community": 0,
       "norm_label": "usecreatecategory()"
     },
     {
       "label": "useDeleteCategory()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L122",
+      "source_location": "L126",
       "id": "queries_usedeletecategory",
-      "community": 3,
+      "community": 0,
       "norm_label": "usedeletecategory()"
     },
     {
       "label": "useDeleteAgent()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L134",
+      "source_location": "L138",
       "id": "queries_usedeleteagent",
-      "community": 3,
+      "community": 0,
       "norm_label": "usedeleteagent()"
     },
     {
@@ -2421,7 +2412,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_screen_tsx",
-      "community": 2,
+      "community": 0,
       "norm_label": "screen.tsx"
     },
     {
@@ -2430,7 +2421,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L59",
       "id": "screen_pipelinecount",
-      "community": 2,
+      "community": 0,
       "norm_label": "pipelinecount()"
     },
     {
@@ -2439,7 +2430,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L64",
       "id": "screen_save",
-      "community": 2,
+      "community": 0,
       "norm_label": "save()"
     },
     {
@@ -2448,7 +2439,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L74",
       "id": "screen_toskill",
-      "community": 2,
+      "community": 0,
       "norm_label": "toskill()"
     },
     {
@@ -2464,7 +2455,7 @@
       "label": "ToggleButton()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L44",
+      "source_location": "L43",
       "id": "agentdetailmodal_togglebutton",
       "community": 12,
       "norm_label": "togglebutton()"
@@ -2473,7 +2464,7 @@
       "label": "set()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L98",
+      "source_location": "L97",
       "id": "agentdetailmodal_set",
       "community": 12,
       "norm_label": "set()"
@@ -2482,7 +2473,7 @@
       "label": "toggleTool()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L99",
+      "source_location": "L98",
       "id": "agentdetailmodal_toggletool",
       "community": 12,
       "norm_label": "toggletool()"
@@ -2583,7 +2574,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_components_phasechain_tsx",
-      "community": 1,
+      "community": 2,
       "norm_label": "phasechain.tsx"
     },
     {
@@ -2592,7 +2583,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L28",
       "id": "phasechain_modelbadge",
-      "community": 1,
+      "community": 2,
       "norm_label": "modelbadge()"
     },
     {
@@ -2601,7 +2592,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L38",
       "id": "phasechain_thinkbadge",
-      "community": 1,
+      "community": 2,
       "norm_label": "thinkbadge()"
     },
     {
@@ -2610,7 +2601,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L47",
       "id": "phasechain_iorow",
-      "community": 1,
+      "community": 2,
       "norm_label": "iorow()"
     },
     {
@@ -2619,7 +2610,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L71",
       "id": "phasechain_phasenode",
-      "community": 1,
+      "community": 2,
       "norm_label": "phasenode()"
     },
     {
@@ -2637,7 +2628,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_components_pipelinerunmodal_pipelinerunmodal_tsx",
-      "community": 1,
+      "community": 2,
       "norm_label": "pipelinerunmodal.tsx"
     },
     {
@@ -2646,7 +2637,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L24",
       "id": "pipelinerunmodal_next",
-      "community": 1,
+      "community": 2,
       "norm_label": "next()"
     },
     {
@@ -2655,7 +2646,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L66",
       "id": "pipelinerunmodal_cyclemodel",
-      "community": 1,
+      "community": 2,
       "norm_label": "cyclemodel()"
     },
     {
@@ -2664,7 +2655,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L69",
       "id": "pipelinerunmodal_cyclethink",
-      "community": 1,
+      "community": 2,
       "norm_label": "cyclethink()"
     },
     {
@@ -2673,7 +2664,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L97",
       "id": "pipelinerunmodal_t",
-      "community": 1,
+      "community": 2,
       "norm_label": "t()"
     },
     {
@@ -2871,7 +2862,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_state_forms_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "forms.ts"
     },
     {
@@ -2880,7 +2871,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts",
       "source_location": "L13",
       "id": "forms_slugpreview",
-      "community": 1,
+      "community": 2,
       "norm_label": "slugpreview()"
     },
     {
@@ -2889,7 +2880,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts",
       "source_location": "L34",
       "id": "forms_useentityform",
-      "community": 1,
+      "community": 2,
       "norm_label": "useentityform()"
     },
     {
@@ -2970,7 +2961,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_appshell_tsx",
-      "community": 1,
+      "community": 2,
       "norm_label": "appshell.tsx"
     },
     {
@@ -2979,7 +2970,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell.tsx",
       "source_location": "L13",
       "id": "appshell_pathnametonavid",
-      "community": 1,
+      "community": 2,
       "norm_label": "pathnametonavid()"
     },
     {
@@ -2988,7 +2979,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell.tsx",
       "source_location": "L18",
       "id": "appshell_appshellinner",
-      "community": 1,
+      "community": 2,
       "norm_label": "appshellinner()"
     },
     {
@@ -2997,7 +2988,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell.tsx",
       "source_location": "L47",
       "id": "appshell_appshell",
-      "community": 1,
+      "community": 2,
       "norm_label": "appshell()"
     },
     {
@@ -3258,7 +3249,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/main.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_main_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "main.ts"
     },
     {
@@ -3267,7 +3258,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/main.ts",
       "source_location": "L25",
       "id": "main_bootstrap",
-      "community": 7,
+      "community": 6,
       "norm_label": "bootstrap()"
     },
     {
@@ -3357,7 +3348,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_limits_rate_limits_reader_ts",
-      "community": 2,
+      "community": 4,
       "norm_label": "rate-limits.reader.ts"
     },
     {
@@ -3366,7 +3357,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L38",
       "id": "rate_limits_reader_claudeconfigdir",
-      "community": 2,
+      "community": 4,
       "norm_label": "claudeconfigdir()"
     },
     {
@@ -3375,7 +3366,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L43",
       "id": "rate_limits_reader_clamppct",
-      "community": 2,
+      "community": 4,
       "norm_label": "clamppct()"
     },
     {
@@ -3384,7 +3375,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L55",
       "id": "rate_limits_reader_parseratelimits",
-      "community": 2,
+      "community": 4,
       "norm_label": "parseratelimits()"
     },
     {
@@ -3393,7 +3384,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L93",
       "id": "rate_limits_reader_ratelimitsreader",
-      "community": 2,
+      "community": 4,
       "norm_label": "ratelimitsreader"
     },
     {
@@ -3402,7 +3393,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L98",
       "id": "rate_limits_reader_ratelimitsreader_now",
-      "community": 2,
+      "community": 4,
       "norm_label": ".now()"
     },
     {
@@ -3411,7 +3402,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/rate-limits.reader.ts",
       "source_location": "L102",
       "id": "rate_limits_reader_ratelimitsreader_read",
-      "community": 2,
+      "community": 4,
       "norm_label": ".read()"
     },
     {
@@ -3474,7 +3465,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/limits.service.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_limits_limits_service_ts",
-      "community": 2,
+      "community": 4,
       "norm_label": "limits.service.ts"
     },
     {
@@ -3483,7 +3474,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/limits.service.ts",
       "source_location": "L6",
       "id": "limits_service_buildlimits",
-      "community": 2,
+      "community": 4,
       "norm_label": "buildlimits()"
     },
     {
@@ -3492,7 +3483,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/limits.service.ts",
       "source_location": "L23",
       "id": "limits_service_limitsservice",
-      "community": 2,
+      "community": 4,
       "norm_label": "limitsservice"
     },
     {
@@ -3501,7 +3492,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/limits.service.ts",
       "source_location": "L24",
       "id": "limits_service_limitsservice_constructor",
-      "community": 2,
+      "community": 4,
       "norm_label": ".constructor()"
     },
     {
@@ -3510,7 +3501,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/limits/limits.service.ts",
       "source_location": "L26",
       "id": "limits_service_limitsservice_snapshot",
-      "community": 2,
+      "community": 4,
       "norm_label": ".snapshot()"
     },
     {
@@ -3609,7 +3600,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_agents_storage_service_ts",
-      "community": 0,
+      "community": 1,
       "norm_label": "agents.storage.service.ts"
     },
     {
@@ -3618,7 +3609,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L35",
       "id": "agents_storage_service_agentsstorageservice",
-      "community": 0,
+      "community": 1,
       "norm_label": "agentsstorageservice"
     },
     {
@@ -3627,7 +3618,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L38",
       "id": "agents_storage_service_agentsstorageservice_constructor",
-      "community": 0,
+      "community": 1,
       "norm_label": ".constructor()"
     },
     {
@@ -3636,7 +3627,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L43",
       "id": "agents_storage_service_agentsstorageservice_onmoduleinit",
-      "community": 0,
+      "community": 1,
       "norm_label": ".onmoduleinit()"
     },
     {
@@ -3645,7 +3636,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L47",
       "id": "agents_storage_service_agentsstorageservice_ensuredir",
-      "community": 0,
+      "community": 1,
       "norm_label": ".ensuredir()"
     },
     {
@@ -3654,7 +3645,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L51",
       "id": "agents_storage_service_agentsstorageservice_create",
-      "community": 0,
+      "community": 1,
       "norm_label": ".create()"
     },
     {
@@ -3663,7 +3654,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L63",
       "id": "agents_storage_service_agentsstorageservice_get",
-      "community": 0,
+      "community": 1,
       "norm_label": ".get()"
     },
     {
@@ -3672,7 +3663,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L69",
       "id": "agents_storage_service_agentsstorageservice_list",
-      "community": 0,
+      "community": 1,
       "norm_label": ".list()"
     },
     {
@@ -3681,7 +3672,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L85",
       "id": "agents_storage_service_agentsstorageservice_update",
-      "community": 0,
+      "community": 1,
       "norm_label": ".update()"
     },
     {
@@ -3690,7 +3681,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L96",
       "id": "agents_storage_service_agentsstorageservice_delete",
-      "community": 0,
+      "community": 1,
       "norm_label": ".delete()"
     },
     {
@@ -3699,7 +3690,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L113",
       "id": "agents_storage_service_agentsstorageservice_resolvefile",
-      "community": 0,
+      "community": 1,
       "norm_label": ".resolvefile()"
     },
     {
@@ -3708,7 +3699,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L124",
       "id": "agents_storage_service_agentsstorageservice_exists",
-      "community": 0,
+      "community": 1,
       "norm_label": ".exists()"
     },
     {
@@ -3717,7 +3708,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L133",
       "id": "agents_storage_service_agentsstorageservice_readraw",
-      "community": 0,
+      "community": 1,
       "norm_label": ".readraw()"
     },
     {
@@ -3726,7 +3717,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L144",
       "id": "agents_storage_service_agentsstorageservice_parse",
-      "community": 0,
+      "community": 1,
       "norm_label": ".parse()"
     },
     {
@@ -3735,7 +3726,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L158",
       "id": "agents_storage_service_agentsstorageservice_tryparse",
-      "community": 0,
+      "community": 1,
       "norm_label": ".tryparse()"
     },
     {
@@ -3744,7 +3735,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L183",
       "id": "agents_storage_service_agentsstorageservice_serialize",
-      "community": 0,
+      "community": 1,
       "norm_label": ".serialize()"
     },
     {
@@ -3753,7 +3744,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L197",
       "id": "agents_storage_service_agentsstorageservice_writeatomic",
-      "community": 0,
+      "community": 1,
       "norm_label": ".writeatomic()"
     },
     {
@@ -3762,7 +3753,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.storage.service.ts",
       "source_location": "L210",
       "id": "agents_storage_service_iserrnoexception",
-      "community": 0,
+      "community": 1,
       "norm_label": "iserrnoexception()"
     },
     {
@@ -3771,7 +3762,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_agents_errors_ts",
-      "community": 6,
+      "community": 7,
       "norm_label": "agents.errors.ts"
     },
     {
@@ -3780,7 +3771,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L2",
       "id": "agents_errors_agentnotfounderror",
-      "community": 6,
+      "community": 7,
       "norm_label": "agentnotfounderror"
     },
     {
@@ -3789,7 +3780,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L3",
       "id": "agents_errors_agentnotfounderror_constructor",
-      "community": 6,
+      "community": 7,
       "norm_label": ".constructor()"
     },
     {
@@ -3798,7 +3789,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L10",
       "id": "agents_errors_agentconflicterror",
-      "community": 6,
+      "community": 7,
       "norm_label": "agentconflicterror"
     },
     {
@@ -3807,7 +3798,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L11",
       "id": "agents_errors_agentconflicterror_constructor",
-      "community": 6,
+      "community": 7,
       "norm_label": ".constructor()"
     },
     {
@@ -3816,7 +3807,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L18",
       "id": "agents_errors_invalidagentiderror",
-      "community": 6,
+      "community": 7,
       "norm_label": "invalidagentiderror"
     },
     {
@@ -3825,7 +3816,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L19",
       "id": "agents_errors_invalidagentiderror_constructor",
-      "community": 6,
+      "community": 7,
       "norm_label": ".constructor()"
     },
     {
@@ -3834,7 +3825,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L26",
       "id": "agents_errors_corruptagentfileerror",
-      "community": 6,
+      "community": 7,
       "norm_label": "corruptagentfileerror"
     },
     {
@@ -3843,7 +3834,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L27",
       "id": "agents_errors_corruptagentfileerror_constructor",
-      "community": 6,
+      "community": 7,
       "norm_label": ".constructor()"
     },
     {
@@ -3897,7 +3888,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_categories_storage_service_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "categories.storage.service.ts"
     },
     {
@@ -3906,7 +3897,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L22",
       "id": "categories_storage_service_categoriesstorageservice",
-      "community": 7,
+      "community": 6,
       "norm_label": "categoriesstorageservice"
     },
     {
@@ -3915,7 +3906,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L26",
       "id": "categories_storage_service_categoriesstorageservice_constructor",
-      "community": 7,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -3924,7 +3915,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L31",
       "id": "categories_storage_service_categoriesstorageservice_list",
-      "community": 7,
+      "community": 6,
       "norm_label": ".list()"
     },
     {
@@ -3933,7 +3924,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L50",
       "id": "categories_storage_service_categoriesstorageservice_create",
-      "community": 7,
+      "community": 6,
       "norm_label": ".create()"
     },
     {
@@ -3942,7 +3933,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L61",
       "id": "categories_storage_service_categoriesstorageservice_delete",
-      "community": 7,
+      "community": 6,
       "norm_label": ".delete()"
     },
     {
@@ -3951,7 +3942,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L70",
       "id": "categories_storage_service_categoriesstorageservice_writeatomic",
-      "community": 7,
+      "community": 6,
       "norm_label": ".writeatomic()"
     },
     {
@@ -5034,36 +5025,12 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
-      "source_location": "L23",
-      "weight": 1.0,
-      "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_agentdraft_ts",
-      "_tgt": "agentdraft_mkagentbody",
-      "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_agentdraft_ts",
-      "target": "agentdraft_mkagentbody",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
-      "source_location": "L41",
+      "source_location": "L27",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_agentdraft_ts",
       "_tgt": "agentdraft_newagentdraft",
       "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_agentdraft_ts",
       "target": "agentdraft_newagentdraft",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
-      "source_location": "L24",
-      "weight": 1.0,
-      "_src": "agentdraft_mkagentbody",
-      "_tgt": "agentdraft_slugifyagent",
-      "source": "agentdraft_slugifyagent",
-      "target": "agentdraft_mkagentbody",
       "confidence_score": 1.0
     },
     {
@@ -5091,30 +5058,6 @@
       "target": "queries_toagentdef"
     },
     {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
-      "source_location": "L57",
-      "weight": 1.0,
-      "_src": "agentdraft_newagentdraft",
-      "_tgt": "agentdraft_mkagentbody",
-      "source": "agentdraft_mkagentbody",
-      "target": "agentdraft_newagentdraft",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L37",
-      "weight": 1.0,
-      "_src": "agentdraft_mkagentbody",
-      "_tgt": "queries_toagentbody",
-      "source": "agentdraft_mkagentbody",
-      "target": "queries_toagentbody"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
@@ -5130,7 +5073,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L39",
+      "source_location": "L44",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_toagentbody",
@@ -5142,7 +5085,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L59",
+      "source_location": "L63",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_useagents",
@@ -5154,7 +5097,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L65",
+      "source_location": "L69",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_usecreateagent",
@@ -5166,7 +5109,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L81",
+      "source_location": "L85",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_useupdateagent",
@@ -5178,7 +5121,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L99",
+      "source_location": "L103",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_usecategories",
@@ -5190,7 +5133,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_usecreatecategory",
@@ -5202,7 +5145,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L122",
+      "source_location": "L126",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_usedeletecategory",
@@ -5214,7 +5157,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries.ts",
-      "source_location": "L134",
+      "source_location": "L138",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_ts",
       "_tgt": "queries_usedeleteagent",
@@ -5274,7 +5217,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L44",
+      "source_location": "L43",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_components_agentdetailmodal_tsx",
       "_tgt": "agentdetailmodal_togglebutton",
@@ -5286,7 +5229,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L98",
+      "source_location": "L97",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_components_agentdetailmodal_tsx",
       "_tgt": "agentdetailmodal_set",
@@ -5298,7 +5241,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L99",
+      "source_location": "L98",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_components_agentdetailmodal_tsx",
       "_tgt": "agentdetailmodal_toggletool",
@@ -5310,7 +5253,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentDetailModal.tsx",
-      "source_location": "L100",
+      "source_location": "L99",
       "weight": 1.0,
       "_src": "agentdetailmodal_toggletool",
       "_tgt": "agentdetailmodal_set",

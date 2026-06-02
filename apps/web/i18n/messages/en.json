@@ -154,8 +154,8 @@
     "fields": {
       "name": "Name",
       "namePlaceholder": "agent name",
-      "role": "Role",
-      "rolePlaceholder": "what the agent does (one line)",
+      "whenToUse": "When to use",
+      "whenToUsePlaceholder": "…reviewing a diff before push",
       "category": "Category",
       "model": "Model",
       "thinking": "Thinking",

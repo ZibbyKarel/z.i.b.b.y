@@ -154,8 +154,8 @@
     "fields": {
       "name": "Jméno",
       "namePlaceholder": "jméno agenta",
-      "role": "Role",
-      "rolePlaceholder": "co agent dělá (jedna věta)",
+      "whenToUse": "Kdy použít",
+      "whenToUsePlaceholder": "…při kontrole diffu před pushem",
       "category": "Kategorie",
       "model": "Model",
       "thinking": "Thinking",
