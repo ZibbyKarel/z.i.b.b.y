@@ -69,3 +69,28 @@ Routes are mounted under the `/api` prefix (`pathPrefix` in the router options).
 
 Run `npm run test` (or `npx vitest run --project contracts`) to check the
 contract in isolation.
+
+## How to add a whole new resource (new module)
+
+The steps above extend an existing resource. For a brand-new concern — a new
+`*.contract.ts` that is not part of `agentsContract` — you also wire a new NestJS
+module. The health endpoint is the reference example; follow its shape:
+
+1. **Contract** — `src/<name>.schema.ts` + `src/<name>.contract.ts`
+   (`c.router({...}, { pathPrefix: "/api", strictStatusCodes: true })`), exported
+   from `src/index.ts`. See `health.schema.ts` / `health.contract.ts`.
+2. **Controller** — `apps/api/src/<name>/<name>.controller.ts`, a `@Controller()`
+   with one `@TsRestHandler(<name>Contract)` method returning
+   `tsRestHandler(<name>Contract, { ... })`. See `health.controller.ts`.
+3. **Module** — `apps/api/src/<name>/<name>.module.ts` declaring the controller
+   (and any providers/services), then **register it** in
+   `apps/api/src/app.module.ts` `imports: [...]`. A controller that isn't in a
+   registered module is never mounted. See `health.module.ts`.
+4. **Docs** — add the contract to the composed `apiContract` router in
+   `apps/api/src/main.ts` so it appears in the generated OpenAPI at `/docs`.
+   Children keep their own `/api` prefix; the parent adds none.
+5. **Tests** — a contract test in `libs/contracts` and an e2e test in
+   `apps/api/test/` (`Test.createTestingModule({ imports: [AppModule] })`, then
+   `supertest`). See `health.contract.test.ts` and `test/health.e2e.test.ts`.
+
+Then run the project's standard checks: `npm run lint && npm run typecheck && npm run test`.

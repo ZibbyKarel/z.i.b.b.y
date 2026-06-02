@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DesignSystemProvider } from "@zibby/design-system";
 import {
@@ -51,15 +51,9 @@ export function Providers({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <Suspense
-        fallback={
-          <div style={{ height: "100%", background: "var(--bg-surface)" }} />
-        }
-      >
-        <GlobalStateProvider>
-          <DesignSystemProviderWrapper>{children}</DesignSystemProviderWrapper>
-        </GlobalStateProvider>
-      </Suspense>
+      <GlobalStateProvider>
+        <DesignSystemProviderWrapper>{children}</DesignSystemProviderWrapper>
+      </GlobalStateProvider>
     </QueryClientProvider>
   );
 }

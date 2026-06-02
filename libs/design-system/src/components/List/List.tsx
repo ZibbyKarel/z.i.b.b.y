@@ -1,4 +1,8 @@
-import { type ComponentType, type ReactNode, createContext, useContext } from "react";
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+} from "react";
 import { cn } from "../../utils/cn";
 import { Stack } from "../Stack/Stack";
 import type { IconName } from "../Icon/Icon";
@@ -6,18 +10,9 @@ import { Icon } from "../Icon/Icon";
 
 export enum ListTestId {
   Root = "list-root",
-  /** Suffix with item key when consumer needs per-item selection, e.g. `list-item-overview`. */
   Item = "list-item",
-  /** Suffix with item key when consumer needs per-badge selection, e.g. `list-item-badge-runs`. */
   Badge = "list-item-badge",
 }
-
-export type LinkComponentType = ComponentType<{
-  href: string;
-  children: ReactNode;
-  className?: string;
-  [key: string]: unknown;
-}>;
 
 /** Navigation item data shape — used by app-level nav config arrays. */
 export interface NavItem {
@@ -42,7 +37,9 @@ export interface ListItemIconProps {
 export function ListItemIcon({ glyph }: ListItemIconProps) {
   const { active } = useContext(ListItemCtx);
   return (
-    <span className={cn("flex", active ? "text-accent" : "text-foreground-faint")}>
+    <span
+      className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
+    >
       <Icon name={glyph} size="md" />
     </span>
   );
@@ -52,14 +49,17 @@ export function ListItemText({ children }: { children: ReactNode }) {
   return <span className="flex-1">{children}</span>;
 }
 
-export type ListItemBadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, "className">;
+export type ListItemBadgeProps = Omit<
+  React.HTMLAttributes<HTMLSpanElement>,
+  "className"
+>;
 
 export function ListItemBadge({ children, ...rest }: ListItemBadgeProps) {
   return (
     <span
-      data-testid={ListTestId.Badge}
       {...rest}
       className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
+      data-testid={ListTestId.Badge}
     >
       {children}
     </span>
@@ -74,15 +74,11 @@ export type ListItemProps = Omit<
 > & {
   active?: boolean;
   onSelect?: () => void;
-  href?: string;
-  linkComponent?: LinkComponentType;
 };
 
 export function ListItem({
   active = false,
   onSelect,
-  href,
-  linkComponent: LinkComp,
   children,
   ...rest
 }: ListItemProps) {
@@ -103,28 +99,14 @@ export function ListItem({
     </ListItemCtx.Provider>
   );
 
-  if (LinkComp && href) {
-    return (
-      <LinkComp
-        data-testid={ListTestId.Item}
-        href={href}
-        {...rest}
-        aria-current={active ? "page" : undefined}
-        className={className}
-      >
-        {inner}
-      </LinkComp>
-    );
-  }
-
   if (onSelect) {
     return (
       <button
-        data-testid={ListTestId.Item}
         type="button"
         {...rest}
         aria-current={active ? "page" : undefined}
         className={className}
+        data-testid={ListTestId.Item}
         onClick={onSelect}
       >
         {inner}
@@ -134,10 +116,10 @@ export function ListItem({
 
   return (
     <div
-      data-testid={ListTestId.Item}
       {...rest}
       aria-current={active ? "page" : undefined}
       className={className}
+      data-testid={ListTestId.Item}
     >
       {inner}
     </div>

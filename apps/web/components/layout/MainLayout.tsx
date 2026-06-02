@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Container,
@@ -8,11 +9,10 @@ import {
   ListItemBadge,
   ListItemIcon,
   ListItemText,
-  ListTestId,
   Stack,
   Surface,
 } from "@zibby/design-system";
-import type { LinkComponentType, NavItem } from "@zibby/design-system";
+import type { NavItem } from "@zibby/design-system";
 import type { ContextName } from "../../domain";
 import { TopBar } from "./TopBar/TopBar";
 import { BrandLogo } from "./BrandLogo";
@@ -22,12 +22,10 @@ export interface MainLayoutProps {
   onContextChange: (context: ContextName) => void;
   navItems: NavItem[];
   activeNav: string;
-  onNavigate: (id: string) => void;
   footerItem?: NavItem;
   breadcrumb: string;
   walletSlot?: ReactNode;
   onCommand?: () => void;
-  linkComponent?: LinkComponentType;
   children: ReactNode;
 }
 
@@ -36,12 +34,10 @@ export function MainLayout({
   onContextChange,
   navItems,
   activeNav,
-  onNavigate,
   footerItem,
   breadcrumb,
   walletSlot,
   onCommand,
-  linkComponent,
   children,
 }: MainLayoutProps) {
   const t = useTranslations("sidebar");
@@ -62,38 +58,34 @@ export function MainLayout({
           <Stack grow style={{ minHeight: 0 }}>
             <List>
               {navItems.map((item) => (
-                <ListItem
-                  active={item.id === activeNav}
-                  data-testid={`${ListTestId.Item}-${item.id}`}
-                  href={item.href}
+                <Link
+                  href={item.href ?? "/"}
                   key={item.id}
-                  linkComponent={linkComponent}
-                  onSelect={() => onNavigate(item.id)}
+                  style={{ display: "block" }}
                 >
-                  <ListItemIcon glyph={item.glyph} />
-                  <ListItemText>{item.label}</ListItemText>
-                  {item.badge ? (
-                    <ListItemBadge data-testid={`${ListTestId.Badge}-${item.id}`}>
-                      {item.badge}
-                    </ListItemBadge>
-                  ) : null}
-                </ListItem>
+                  <ListItem active={item.id === activeNav}>
+                    <ListItemIcon glyph={item.glyph} />
+                    <ListItemText>{item.label}</ListItemText>
+                    {item.badge ? (
+                      <ListItemBadge>{item.badge}</ListItemBadge>
+                    ) : null}
+                  </ListItem>
+                </Link>
               ))}
             </List>
             {footerItem && (
               <Container style={{ marginTop: "auto" }}>
                 <Divider />
                 <Container padding={["75", "0", "0", "0"]}>
-                  <ListItem
-                    active={footerItem.id === activeNav}
-                    data-testid={`${ListTestId.Item}-${footerItem.id}`}
-                    href={footerItem.href}
-                    linkComponent={linkComponent}
-                    onSelect={() => onNavigate(footerItem.id)}
+                  <Link
+                    href={footerItem.href ?? "/"}
+                    style={{ display: "block" }}
                   >
-                    <ListItemIcon glyph={footerItem.glyph} />
-                    <ListItemText>{footerItem.label}</ListItemText>
-                  </ListItem>
+                    <ListItem active={footerItem.id === activeNav}>
+                      <ListItemIcon glyph={footerItem.glyph} />
+                      <ListItemText>{footerItem.label}</ListItemText>
+                    </ListItem>
+                  </Link>
                 </Container>
               </Container>
             )}

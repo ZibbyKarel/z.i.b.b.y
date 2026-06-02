@@ -1,15 +1,16 @@
 "use client";
 
-import { type ReactNode, createContext, useContext } from "react";
-import { useSearchParams } from "next/navigation";
+import { type ReactNode, createContext, useContext, useState } from "react";
 import type { ContextName } from "apps/web/domain";
 
 export interface GlobalStateContextValue {
   context: ContextName;
+  setContext: (context: ContextName) => void;
 }
 
 export const GlobalStateContext = createContext<GlobalStateContextValue>({
   context: "home",
+  setContext: () => {},
 });
 
 export function useGlobalStateContext(): GlobalStateContextValue {
@@ -17,12 +18,10 @@ export function useGlobalStateContext(): GlobalStateContextValue {
 }
 
 export function GlobalStateProvider({ children }: { children: ReactNode }) {
-  const params = useSearchParams();
-  const rawCtx = params.get("ctx") ?? "home";
-  const context: ContextName = rawCtx === "work" ? "work" : "home";
+  const [context, setContext] = useState<ContextName>("home");
 
   return (
-    <GlobalStateContext.Provider value={{ context }}>
+    <GlobalStateContext.Provider value={{ context, setContext }}>
       {children}
     </GlobalStateContext.Provider>
   );

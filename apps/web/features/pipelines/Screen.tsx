@@ -25,7 +25,6 @@ import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useDashboardStore } from "../../state/store";
 import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
-import { hrefWithCtx } from "../../state/routing";
 
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
@@ -80,8 +79,6 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
     );
   }
 
-  const rawCtx = context;
-
   return (
     <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
       <Stack gap="150">
@@ -90,7 +87,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           <PipelineCard
             agents={agents}
             key={p.id}
-            onSelect={(id: string) => router.push(hrefWithCtx(`/pipelines/${id}`, rawCtx))}
+            onSelect={(id: string) => router.push(`/pipelines/${id}`)}
             pipeline={p}
             selected={p.id === (selected?.id ?? "")}
           />

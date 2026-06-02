@@ -18,6 +18,18 @@ apps/
 
 ---
 
+## Backend (apps/api)
+
+NestJS + ts-rest. `libs/contracts` is the single source of truth: Zod schemas →
+`c.router` contract → implemented in `apps/api` via `@ts-rest/nest`, no codegen.
+
+See `libs/contracts/README.md` for the full flow — *How to add a new endpoint*
+(extend an existing resource) and *How to add a whole new resource* (new
+contract + NestJS module/controller + e2e). The `health` endpoint is the
+reference example for a new resource.
+
+---
+
 ## Design system
 
 The DS (`libs/design-system`) is the **default source of UI primitives** for all generated components.

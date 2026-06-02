@@ -1,19 +1,28 @@
 import "reflect-metadata"
 import { Logger } from "@nestjs/common"
 import { NestFactory } from "@nestjs/core"
+import { initContract } from "@ts-rest/core"
 import { generateOpenApi } from "@ts-rest/open-api"
-import { agentsContract } from "@zibby/contracts"
+import { agentsContract, healthContract } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
 import { AppModule } from "./app.module"
+
+// Compose the resource contracts into one router purely for documentation. Each
+// child already carries its own `/api` prefix, so the parent adds none — paths
+// stay `/api/agents` and `/api/health`.
+const apiContract = initContract().router({
+  agents: agentsContract,
+  health: healthContract,
+})
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule)
 
-  // Human-facing OpenAPI doc derived from the contract — a generated artifact,
+  // Human-facing OpenAPI doc derived from the contracts — a generated artifact,
   // not a source of truth. Served at /docs for inspection.
   const document = generateOpenApi(
-    agentsContract,
-    { info: { title: "Agents API", version: "1.0.0" } },
+    apiContract,
+    { info: { title: "z.i.b.b.y API", version: "1.0.0" } },
     { setOperationId: true },
   )
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(document))

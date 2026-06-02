@@ -193,5 +193,4 @@ export type {
   ListItemIconProps,
   ListItemBadgeProps,
   NavItem,
-  LinkComponentType,
 } from "./components/List/List";

@@ -27,42 +27,33 @@ describe("ListItem", () => {
   it("marks active item with aria-current", () => {
     render(
       <List>
-        <ListItem active data-testid={`${ListTestId.Item}-overview`}>
+        <ListItem active>
           <ListItemText>Přehled</ListItemText>
         </ListItem>
-        <ListItem data-testid={`${ListTestId.Item}-skills`} onSelect={() => {}}>
+        <ListItem onSelect={() => {}}>
           <ListItemText>Skilly</ListItemText>
         </ListItem>
       </List>,
     );
-    expect(screen.getByTestId(`${ListTestId.Item}-overview`)).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(
-      screen.getByTestId(`${ListTestId.Item}-skills`),
-    ).not.toHaveAttribute("aria-current");
+    const [overviewItem, skillsItem] = screen.getAllByTestId(ListTestId.Item);
+    expect(overviewItem).toHaveAttribute("aria-current", "page");
+    expect(skillsItem).not.toHaveAttribute("aria-current");
   });
 
   it("calls onSelect on click", async () => {
     const onSelect = vi.fn();
     render(
-      <ListItem
-        data-testid={`${ListTestId.Item}-pipelines`}
-        onSelect={onSelect}
-      >
+      <ListItem onSelect={onSelect}>
         <ListItemText>Orchestrace</ListItemText>
       </ListItem>,
     );
-    await userEvent.click(
-      screen.getByTestId(`${ListTestId.Item}-pipelines`),
-    );
+    await userEvent.click(screen.getByTestId(ListTestId.Item));
     expect(onSelect).toHaveBeenCalledOnce();
   });
 
   it("renders as a button when onSelect is provided", () => {
     render(
-      <ListItem data-testid={ListTestId.Item} onSelect={() => {}}>
+      <ListItem onSelect={() => {}}>
         <ListItemText>Item</ListItemText>
       </ListItem>,
     );
@@ -71,7 +62,7 @@ describe("ListItem", () => {
 
   it("renders as a non-interactive div when no onSelect or href", () => {
     render(
-      <ListItem data-testid={ListTestId.Item}>
+      <ListItem>
         <ListItemText>Display only</ListItemText>
       </ListItem>,
     );
@@ -85,12 +76,10 @@ describe("ListItemBadge", () => {
     render(
       <ListItem onSelect={() => {}}>
         <ListItemText>Běžící agenti</ListItemText>
-        <ListItemBadge data-testid={`${ListTestId.Badge}-runs`}>2</ListItemBadge>
+        <ListItemBadge>2</ListItemBadge>
       </ListItem>,
     );
-    expect(screen.getByTestId(`${ListTestId.Badge}-runs`)).toHaveTextContent(
-      "2",
-    );
+    expect(screen.getByTestId(ListTestId.Badge)).toHaveTextContent("2");
   });
 });
 

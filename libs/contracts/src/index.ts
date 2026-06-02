@@ -1,2 +1,4 @@
 export * from "./agent.schema"
 export * from "./agents.contract"
+export * from "./health.schema"
+export * from "./health.contract"
