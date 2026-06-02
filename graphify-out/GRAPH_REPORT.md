@@ -1,11 +1,11 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-02)
 
 ## Corpus Check
-- 258 files · ~83,816 words
+- 258 files · ~86,231 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 451 nodes · 247 edges · 247 communities detected
+- 449 nodes · 243 edges · 247 communities detected
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -260,7 +260,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `AgentsStorageService` - 16 edges
-2. `CategoriesStorageService` - 8 edges
+2. `CategoriesStorageService` - 6 edges
 3. `useTokens()` - 4 edges
 4. `mkAgentBody()` - 4 edges
 5. `t()` - 4 edges
@@ -271,8 +271,8 @@
 10. `slugifyAgent()` - 3 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `save()` --calls--> `slugifyAgent()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts
+- `slugifyAgent()` --calls--> `save()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx
 - `useTokens()` --calls--> `TabList()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/DesignSystemContext/hooks.ts → /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/components/Tabs/Tabs.tsx
 - `useTokens()` --calls--> `Tab()`  [INFERRED]
@@ -309,12 +309,12 @@ Cohesion: 0.24
 Nodes (6): Badge(), useTokens(), Tab(), TabList(), TabPanel(), useTabsContext()
 
 ### Community 6 - "Community 6"
-Cohesion: 0.29
-Nodes (2): CategoriesStorageService, bootstrap()
-
-### Community 7 - "Community 7"
 Cohesion: 0.22
 Nodes (4): AgentConflictError, AgentNotFoundError, CorruptAgentFileError, InvalidAgentIdError
+
+### Community 7 - "Community 7"
+Cohesion: 0.33
+Nodes (2): CategoriesStorageService, bootstrap()
 
 ### Community 8 - "Community 8"
 Cohesion: 0.29
@@ -1722,9 +1722,9 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `parseRateLimits()` connect `Community 2` to `Community 0`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `save()` connect `Community 2` to `Community 3`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `save()` connect `Community 2` to `Community 3`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Why does `slugifyAgent()` connect `Community 3` to `Community 2`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `useTokens()` (e.g. with `TabList()` and `Tab()`) actually correct?**

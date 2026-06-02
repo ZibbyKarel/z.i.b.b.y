@@ -3258,7 +3258,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/main.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_main_ts",
-      "community": 6,
+      "community": 7,
       "norm_label": "main.ts"
     },
     {
@@ -3267,7 +3267,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/main.ts",
       "source_location": "L25",
       "id": "main_bootstrap",
-      "community": 6,
+      "community": 7,
       "norm_label": "bootstrap()"
     },
     {
@@ -3771,7 +3771,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_agents_errors_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "agents.errors.ts"
     },
     {
@@ -3780,7 +3780,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L2",
       "id": "agents_errors_agentnotfounderror",
-      "community": 7,
+      "community": 6,
       "norm_label": "agentnotfounderror"
     },
     {
@@ -3789,7 +3789,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L3",
       "id": "agents_errors_agentnotfounderror_constructor",
-      "community": 7,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -3798,7 +3798,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L10",
       "id": "agents_errors_agentconflicterror",
-      "community": 7,
+      "community": 6,
       "norm_label": "agentconflicterror"
     },
     {
@@ -3807,7 +3807,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L11",
       "id": "agents_errors_agentconflicterror_constructor",
-      "community": 7,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -3816,7 +3816,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L18",
       "id": "agents_errors_invalidagentiderror",
-      "community": 7,
+      "community": 6,
       "norm_label": "invalidagentiderror"
     },
     {
@@ -3825,7 +3825,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L19",
       "id": "agents_errors_invalidagentiderror_constructor",
-      "community": 7,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -3834,7 +3834,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L26",
       "id": "agents_errors_corruptagentfileerror",
-      "community": 7,
+      "community": 6,
       "norm_label": "corruptagentfileerror"
     },
     {
@@ -3843,7 +3843,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.errors.ts",
       "source_location": "L27",
       "id": "agents_errors_corruptagentfileerror_constructor",
-      "community": 7,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -3859,7 +3859,7 @@
       "label": "resolveAgentsDir()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.module.ts",
-      "source_location": "L9",
+      "source_location": "L15",
       "id": "agents_module_resolveagentsdir",
       "community": 25,
       "norm_label": "resolveagentsdir()"
@@ -3868,7 +3868,7 @@
       "label": "AgentsModule",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.module.ts",
-      "source_location": "L25",
+      "source_location": "L31",
       "id": "agents_module_agentsmodule",
       "community": 25,
       "norm_label": "agentsmodule"
@@ -3897,79 +3897,61 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_categories_storage_service_ts",
-      "community": 6,
+      "community": 7,
       "norm_label": "categories.storage.service.ts"
     },
     {
       "label": "CategoriesStorageService",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L37",
+      "source_location": "L22",
       "id": "categories_storage_service_categoriesstorageservice",
-      "community": 6,
+      "community": 7,
       "norm_label": "categoriesstorageservice"
     },
     {
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L41",
+      "source_location": "L26",
       "id": "categories_storage_service_categoriesstorageservice_constructor",
-      "community": 6,
+      "community": 7,
       "norm_label": ".constructor()"
-    },
-    {
-      "label": ".onModuleInit()",
-      "file_type": "code",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L47",
-      "id": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "community": 6,
-      "norm_label": ".onmoduleinit()"
     },
     {
       "label": ".list()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L54",
+      "source_location": "L31",
       "id": "categories_storage_service_categoriesstorageservice_list",
-      "community": 6,
+      "community": 7,
       "norm_label": ".list()"
     },
     {
       "label": ".create()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L73",
+      "source_location": "L50",
       "id": "categories_storage_service_categoriesstorageservice_create",
-      "community": 6,
+      "community": 7,
       "norm_label": ".create()"
     },
     {
       "label": ".delete()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L84",
+      "source_location": "L61",
       "id": "categories_storage_service_categoriesstorageservice_delete",
-      "community": 6,
+      "community": 7,
       "norm_label": ".delete()"
-    },
-    {
-      "label": ".exists()",
-      "file_type": "code",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L92",
-      "id": "categories_storage_service_categoriesstorageservice_exists",
-      "community": 6,
-      "norm_label": ".exists()"
     },
     {
       "label": ".writeAtomic()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L102",
+      "source_location": "L70",
       "id": "categories_storage_service_categoriesstorageservice_writeatomic",
-      "community": 6,
+      "community": 7,
       "norm_label": ".writeatomic()"
     },
     {
@@ -5091,8 +5073,8 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L66",
       "weight": 1.0,
-      "_src": "screen_save",
-      "_tgt": "agentdraft_slugifyagent",
+      "_src": "agentdraft_slugifyagent",
+      "_tgt": "screen_save",
       "source": "agentdraft_slugifyagent",
       "target": "screen_save"
     },
@@ -6615,8 +6597,8 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
       "source_location": "L59",
       "weight": 1.0,
-      "_src": "categories_storage_service_categoriesstorageservice_list",
-      "_tgt": "agents_storage_service_agentsstorageservice_parse",
+      "_src": "agents_storage_service_agentsstorageservice_parse",
+      "_tgt": "categories_storage_service_categoriesstorageservice_list",
       "source": "agents_storage_service_agentsstorageservice_parse",
       "target": "categories_storage_service_categoriesstorageservice_list"
     },
@@ -6732,7 +6714,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.module.ts",
-      "source_location": "L9",
+      "source_location": "L15",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_agents_module_ts",
       "_tgt": "agents_module_resolveagentsdir",
@@ -6744,7 +6726,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/agents.module.ts",
-      "source_location": "L25",
+      "source_location": "L31",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_agents_module_ts",
       "_tgt": "agents_module_agentsmodule",
@@ -6768,7 +6750,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L37",
+      "source_location": "L22",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_categories_storage_service_ts",
       "_tgt": "categories_storage_service_categoriesstorageservice",
@@ -6780,7 +6762,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L41",
+      "source_location": "L26",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice",
       "_tgt": "categories_storage_service_categoriesstorageservice_constructor",
@@ -6792,19 +6774,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L47",
-      "weight": 1.0,
-      "_src": "categories_storage_service_categoriesstorageservice",
-      "_tgt": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "source": "categories_storage_service_categoriesstorageservice",
-      "target": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L54",
+      "source_location": "L31",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice",
       "_tgt": "categories_storage_service_categoriesstorageservice_list",
@@ -6816,7 +6786,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L73",
+      "source_location": "L50",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice",
       "_tgt": "categories_storage_service_categoriesstorageservice_create",
@@ -6828,7 +6798,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L84",
+      "source_location": "L61",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice",
       "_tgt": "categories_storage_service_categoriesstorageservice_delete",
@@ -6840,19 +6810,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L92",
-      "weight": 1.0,
-      "_src": "categories_storage_service_categoriesstorageservice",
-      "_tgt": "categories_storage_service_categoriesstorageservice_exists",
-      "source": "categories_storage_service_categoriesstorageservice",
-      "target": "categories_storage_service_categoriesstorageservice_exists",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L102",
+      "source_location": "L70",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice",
       "_tgt": "categories_storage_service_categoriesstorageservice_writeatomic",
@@ -6864,31 +6822,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L49",
-      "weight": 1.0,
-      "_src": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "_tgt": "categories_storage_service_categoriesstorageservice_exists",
-      "source": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "target": "categories_storage_service_categoriesstorageservice_exists",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L50",
-      "weight": 1.0,
-      "_src": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "_tgt": "categories_storage_service_categoriesstorageservice_writeatomic",
-      "source": "categories_storage_service_categoriesstorageservice_onmoduleinit",
-      "target": "categories_storage_service_categoriesstorageservice_writeatomic",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L74",
+      "source_location": "L51",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice_create",
       "_tgt": "categories_storage_service_categoriesstorageservice_list",
@@ -6900,7 +6834,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L85",
+      "source_location": "L62",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice_delete",
       "_tgt": "categories_storage_service_categoriesstorageservice_list",
@@ -6912,7 +6846,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L79",
+      "source_location": "L56",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice_create",
       "_tgt": "categories_storage_service_categoriesstorageservice_writeatomic",
@@ -6924,7 +6858,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.ts",
-      "source_location": "L89",
+      "source_location": "L66",
       "weight": 1.0,
       "_src": "categories_storage_service_categoriesstorageservice_delete",
       "_tgt": "categories_storage_service_categoriesstorageservice_writeatomic",
