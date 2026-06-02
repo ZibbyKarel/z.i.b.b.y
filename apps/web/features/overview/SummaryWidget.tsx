@@ -1,50 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import {
-  Button,
-  Card,
   Container,
   Divider,
-  Grid,
-  Icon,
-  IconTile,
-  Pressable,
   Stack,
   Stat,
   StatusDot,
   Typography,
   usageTone,
 } from "@zibby/design-system";
-import type { Skill } from "../../domain";
+import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { LimitsPanel } from "../../components/layout/LimitsPanel";
-import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
-import { SkillTile } from "../skills/components/SkillTile";
-import { RunModal } from "../skills/components/RunModal/RunModal";
-import { AGENT_SDK, PROJECTS } from "../../state/config";
-import { useEntityForm } from "../../state/forms";
+import { AGENT_SDK } from "../../state/config";
 import { useDashboardStore } from "../../state/store";
 import { useHealth } from "../health/queries";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-const STARTERS = [
-  { id: "skills", glyph: "spark" as const },
-  { id: "integrations", glyph: "plug" as const },
-  { id: "agents", glyph: "bot" as const },
-  { id: "pipelines", glyph: "flow" as const },
-];
-
 export function SummaryWidget() {
   const t = useTranslations();
-  const { skills, integrations, agents, pipelines, addSkill } =
-    useDashboardStore();
-  const [runSkill, setRunSkill] = useState<Skill | null>(null);
-  const [adding, setAdding] = useState(false);
-  const form = useEntityForm("skill");
+  const { skills, integrations, agents, pipelines } = useDashboardStore();
 
   const { isFetching, isFetched, data } = useHealth();
   const isConnecting = isFetching && !isFetched;
@@ -61,7 +36,7 @@ export function SummaryWidget() {
     : "overview.apiUnreachable";
 
   const sdkTone = usageTone(AGENT_SDK.usedPct);
-  const favorites = skills.slice(0, 6);
+
   const ctxSkills = skills.length;
   const ctxPipelines = pipelines.length;
   const isFresh =

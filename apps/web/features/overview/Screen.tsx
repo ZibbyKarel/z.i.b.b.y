@@ -1,36 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
   Container,
-  Divider,
   Grid,
   Icon,
   IconTile,
   Pressable,
   Stack,
-  Stat,
   StatusDot,
   Typography,
-  usageTone,
 } from "@zibby/design-system";
-import type { Skill } from "../../domain";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { LimitsPanel } from "../../components/layout/LimitsPanel";
-import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
-import { SkillTile } from "../skills/components/SkillTile";
-import { RunModal } from "../skills/components/RunModal/RunModal";
-import { AGENT_SDK, PROJECTS } from "../../state/config";
+import type { Skill } from "../../domain";
+import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useDashboardStore } from "../../state/store";
-import { useHealth } from "../health/queries";
+import { RunModal } from "../skills/components/RunModal/RunModal";
+import { SkillTile } from "../skills/components/SkillTile";
 import { SummaryWidget } from "./SummaryWidget";
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
 
 const STARTERS = [
   { id: "skills", glyph: "spark" as const },
@@ -47,21 +41,8 @@ export function Screen() {
   const [adding, setAdding] = useState(false);
   const form = useEntityForm("skill");
 
-  const { online, pending } = useHealth();
-  const healthTone = pending ? "warn" : online ? "ok" : "bad";
-  const healthLabel = pending
-    ? "overview.systemConnecting"
-    : online
-      ? "overview.systemNominal"
-      : "overview.systemOffline";
-  const healthDetail = online
-    ? "overview.daemonReady"
-    : "overview.apiUnreachable";
-
-  const sdkTone = usageTone(AGENT_SDK.usedPct);
   const favorites = skills.slice(0, 6);
-  const ctxSkills = skills.length;
-  const ctxPipelines = pipelines.length;
+
   const isFresh =
     skills.length === 0 &&
     integrations.length === 0 &&
