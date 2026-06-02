@@ -169,6 +169,9 @@ export type {
   SelectOption,
 } from "./components/Field/Field";
 
+export { MarkdownEditor, MarkdownEditorTestId } from "./components/MarkdownEditor/MarkdownEditor";
+export type { MarkdownEditorProps } from "./components/MarkdownEditor/MarkdownEditor";
+
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
 // ---------------------------------------------------------------------------

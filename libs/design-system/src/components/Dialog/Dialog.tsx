@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Row } from "../Stack/Stack";
 
-export type DialogWidth = "sm" | "md" | "lg" | "xl";
+export type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl";
 
 export enum DialogTestId {
   Overlay = "dialog-overlay",
@@ -21,6 +21,7 @@ const dialogWidthPx: Record<DialogWidth, string> = {
   md: "460px",
   lg: "600px",
   xl: "800px",
+  "2xl": "1000px",
 };
 
 export interface DialogProps {

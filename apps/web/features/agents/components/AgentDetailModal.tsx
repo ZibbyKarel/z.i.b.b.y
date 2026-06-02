@@ -11,10 +11,10 @@ import {
   Icon,
   type IconName,
   IconTile,
+  MarkdownEditor,
   Pressable,
   SegmentedField,
   Stack,
-  TextAreaField,
   TextField,
   Typography,
 } from "@zibby/design-system";
@@ -142,102 +142,113 @@ export function AgentDetailModal({
         onClose={onClose}
         open={!confirm}
         title={title}
-        width="lg"
+        width={editing ? "2xl" : "lg"}
       >
         {editing ? (
-          <Stack gap="200">
-            <TextField
-              autoFocus
-              label={t("fields.name")}
-              onChange={(e) => set({ name: e.target.value })}
-              placeholder={t("fields.namePlaceholder")}
-              value={draft.name ?? ""}
-            />
-
-            <TextField
-              label={t("fields.whenToUse")}
-              onChange={(e) => set({ description: e.target.value })}
-              placeholder={t("fields.whenToUsePlaceholder")}
-              value={draft.description ?? ""}
-            />
-
-            <Stack gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("fields.category")}
-              </Typography>
-              <Stack wrap direction="row" gap="75">
-                {categories.map((c) => (
-                  <ChipToggle
-                    active={draft.category === c.name}
-                    key={c.name}
-                    onClick={() => set({ category: c.name })}
-                  >
-                    {c.name}
-                  </ChipToggle>
-                ))}
-              </Stack>
-            </Stack>
-
-            <Stack direction="row" gap="150">
-              <Container grow minW0>
-                <SegmentedField
-                  label={t("fields.model")}
-                  onValueChange={(v) => set({ model: v as ModelName })}
-                  options={MODEL_OPTIONS}
-                  value={draft.model ?? "sonnet"}
+          <Stack align="start" direction="row" gap="300">
+            {/* Left column — structured config assembled into YAML frontmatter
+                by the backend. The editor on the right never sees these. */}
+            <Container grow minW0>
+              <Stack gap="200">
+                <TextField
+                  autoFocus
+                  label={t("fields.name")}
+                  onChange={(e) => set({ name: e.target.value })}
+                  placeholder={t("fields.namePlaceholder")}
+                  value={draft.name ?? ""}
                 />
-              </Container>
-              <Container grow minW0>
-                <SegmentedField
-                  label={t("fields.thinking")}
-                  onValueChange={(v) => set({ thinking: v as ThinkingLevel })}
-                  options={THINKING_OPTIONS}
-                  value={draft.thinking ?? "medium"}
+
+                <TextField
+                  label={t("fields.whenToUse")}
+                  onChange={(e) => set({ description: e.target.value })}
+                  placeholder={t("fields.whenToUsePlaceholder")}
+                  value={draft.description ?? ""}
                 />
-              </Container>
-            </Stack>
 
-            <Stack gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("fields.icon")}
-              </Typography>
-              <Stack wrap direction="row" gap="75">
-                {AGENT_GLYPHS.map((g) => (
-                  <IconTile
-                    interactive
-                    aria-label={g}
-                    aria-pressed={draft.glyph === g}
-                    as="button"
-                    glyph={g}
-                    key={g}
-                    onClick={() => set({ glyph: g })}
-                    radius="default"
-                    size="sm"
-                    tone={draft.glyph === g ? "accent" : "neutral"}
-                  />
-                ))}
+                <Stack gap="75">
+                  <Typography mono size="sm" type="note" variant="secondary">
+                    {t("fields.category")}
+                  </Typography>
+                  <Stack wrap direction="row" gap="75">
+                    {categories.map((c) => (
+                      <ChipToggle
+                        active={draft.category === c.name}
+                        key={c.name}
+                        onClick={() => set({ category: c.name })}
+                      >
+                        {c.name}
+                      </ChipToggle>
+                    ))}
+                  </Stack>
+                </Stack>
+
+                <Stack direction="row" gap="150">
+                  <Container grow minW0>
+                    <SegmentedField
+                      label={t("fields.model")}
+                      onValueChange={(v) => set({ model: v as ModelName })}
+                      options={MODEL_OPTIONS}
+                      value={draft.model ?? "sonnet"}
+                    />
+                  </Container>
+                  <Container grow minW0>
+                    <SegmentedField
+                      label={t("fields.thinking")}
+                      onValueChange={(v) => set({ thinking: v as ThinkingLevel })}
+                      options={THINKING_OPTIONS}
+                      value={draft.thinking ?? "medium"}
+                    />
+                  </Container>
+                </Stack>
+
+                <Stack gap="75">
+                  <Typography mono size="sm" type="note" variant="secondary">
+                    {t("fields.icon")}
+                  </Typography>
+                  <Stack wrap direction="row" gap="75">
+                    {AGENT_GLYPHS.map((g) => (
+                      <IconTile
+                        interactive
+                        aria-label={g}
+                        aria-pressed={draft.glyph === g}
+                        as="button"
+                        glyph={g}
+                        key={g}
+                        onClick={() => set({ glyph: g })}
+                        radius="default"
+                        size="sm"
+                        tone={draft.glyph === g ? "accent" : "neutral"}
+                      />
+                    ))}
+                  </Stack>
+                </Stack>
+
+                <Stack gap="75">
+                  <Typography mono size="sm" type="note" variant="secondary">
+                    {t("allowedTools")}
+                  </Typography>
+                  <Stack wrap direction="row" gap="75">
+                    {AGENT_TOOLS.map((tool) => (
+                      <ChipToggle active={tools.includes(tool)} key={tool} onClick={() => toggleTool(tool)}>
+                        {tool}
+                      </ChipToggle>
+                    ))}
+                  </Stack>
+                </Stack>
               </Stack>
-            </Stack>
+            </Container>
 
-            <Stack gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("allowedTools")}
-              </Typography>
-              <Stack wrap direction="row" gap="75">
-                {AGENT_TOOLS.map((tool) => (
-                  <ChipToggle active={tools.includes(tool)} key={tool} onClick={() => toggleTool(tool)}>
-                    {tool}
-                  </ChipToggle>
-                ))}
-              </Stack>
-            </Stack>
-
-            <TextAreaField
-              hint={t("fields.bodyHint")}
-              label={t("fields.body")}
-              onChange={(e) => set({ instructions: e.target.value })}
-              value={draft.instructions}
-            />
+            {/* Right column — the Markdown body only. Frontmatter is hidden:
+                it is composed from the left-column fields by the API. */}
+            <Container grow minW0>
+              <MarkdownEditor
+                hint={t("fields.bodyHint")}
+                label={t("fields.body")}
+                onChange={(value) => set({ instructions: value })}
+                placeholder={t("fields.bodyPlaceholder")}
+                value={draft.instructions}
+              />
+            </Container>
           </Stack>
         ) : (
           <Stack gap="200">

@@ -83,7 +83,7 @@ type Padding = Spacing | [Spacing, Spacing] | [Spacing, Spacing, Spacing, Spacin
 type Size = "xs" | "sm" | "md" | "lg" | "xl";  // semantic T-shirt sizes
 
 type IconStroke = "thin" | "default" | "medium" | "bold"; // 1.2 / 1.6 / 2 / 2.4
-type DialogWidth = "sm" | "md" | "lg" | "xl";            // 360 / 460 / 600 / 800px
+type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl";    // 360 / 460 / 600 / 800 / 1000px
 ```
 
 ### Sealed component sizing — no raw px in public props
@@ -99,7 +99,7 @@ All DS component props that control visual size use semantic tokens, never raw n
 | `inset` | `Spacing` | `Corners` — corner bracket offset, default "75" (6px) |
 | `padding` | `Padding` | `CardContent` — content padding, default "200" (16px) |
 | `padding` | `Padding` | `Container` — accepts Spacing token(s) only |
-| `width` | `DialogWidth` | `Dialog` — sm/md/lg/xl preset widths |
+| `width` | `DialogWidth` | `Dialog` — sm/md/lg/xl/2xl preset widths |
 
 **No `paddingX` / `paddingY` props on `Container`** — use `padding={["0", "200"]}` (CSS [y, x] shorthand) or `padding={["t", "r", "b", "l"]}` (4-value shorthand).
 

@@ -153,7 +153,8 @@
       "thinking": "Thinking",
       "icon": "Ikona",
       "body": "agent.md",
-      "bodyHint": "Surová definice agenta — zdroj pravdy."
+      "bodyHint": "Tělo definice agenta. YAML frontmatter se skládá z polí vlevo až na backendu.",
+      "bodyPlaceholder": "Markdown popis agenta…"
     },
     "addCategory": "Přidat kategorii",
     "categoryDialog": {
