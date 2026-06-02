@@ -28,7 +28,8 @@
   "topbar": {
     "commandHint": "Příkaz nebo skill (⌘K)",
     "commandAriaLabel": "Příkaz nebo skill",
-    "contextSwitcher": "Přepínač kontextu"
+    "contextSwitcher": "Přepínač kontextu",
+    "commandPlaceholder": "Příkaz nebo skill…"
   },
   "sidebar": {
     "navLabel": "Hlavní navigace",
@@ -57,7 +58,9 @@
     "rollingReset": "—",
     "weeklyLabel": "Týdenní",
     "weeklyShort": "týden",
-    "weeklyReset": "Po 09:00"
+    "weeklyReset": "Po 09:00",
+    "panelTitle": "claude · interaktivní limity",
+    "fromChat": "čerpá tvůj chat"
   },
   "overview": {
     "systemNominal": "Systém · NOMINAL",
@@ -87,10 +90,22 @@
     "agentNote": "běhy agentů čerpají odsud",
     "interactiveCaps": "INTERAKTIVNÍ · CLAUDE CODE",
     "starters": {
-      "skills": { "label": "Přidej skill", "sub": "SKILL.md — jednotka práce" },
-      "integrations": { "label": "Přidej integraci", "sub": "driver do okolního světa" },
-      "agents": { "label": "Přidej agenta", "sub": ".agent.md — model + nástroje" },
-      "pipelines": { "label": "Přidej pipeline", "sub": "zřetězení agentů" }
+      "skills": {
+        "label": "Přidej skill",
+        "sub": "SKILL.md — jednotka práce"
+      },
+      "integrations": {
+        "label": "Přidej integraci",
+        "sub": "driver do okolního světa"
+      },
+      "agents": {
+        "label": "Přidej agenta",
+        "sub": ".agent.md — model + nástroje"
+      },
+      "pipelines": {
+        "label": "Přidej pipeline",
+        "sub": "zřetězení agentů"
+      }
     }
   },
   "skills": {
@@ -109,7 +124,54 @@
     "progressAria": "postup {skill}",
     "emptyTitle": "Zatím žádní agenti",
     "emptyDescription": "Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci.",
-    "emptyHint": "// vytvoří ~/zibby/agents/'<název>'.agent.md"
+    "emptyHint": "// vytvoří ~/zibby/agents/'<název>'.agent.md",
+    "title": "Agenti",
+    "countSummary": "{count, plural, =0 {žádní agenti} one {# agent} few {# agenti} other {# agentů}} · {active} aktivních · sdílený pool pro pipeline",
+    "run": "Spustit",
+    "runs": "{count}× spuštěno",
+    "paused": "pozastaveno",
+    "active": "aktivní",
+    "statePipeline": "v pipeline",
+    "stateRunning": "běží",
+    "stateIdle": "idle",
+    "pauseAria": "Pozastavit {name}",
+    "activateAria": "Aktivovat {name}",
+    "openAria": "Otevřít {name}",
+    "pipelineUsage": "{count} pipeline",
+    "usedInPipelines": "Použito v pipeline",
+    "notInPipeline": "Zatím v žádné pipeline — volný k použití.",
+    "phaseCount": "{count, plural, one {# fáze} few {# fáze} other {# fází}}",
+    "allowedTools": "Povolené nástroje",
+    "newAgent": "Nový agent",
+    "create": "Vytvořit agenta",
+    "save": "Uložit změny",
+    "edit": "Editovat",
+    "delete": "Smazat",
+    "runAdhoc": "Spustit ad-hoc",
+    "deleteTitle": "Smazat agenta?",
+    "deleteBody": "Opravdu smazat agenta {name}? Smaže se i soubor {file}. Tuto akci nelze vrátit.",
+    "fields": {
+      "name": "Jméno",
+      "namePlaceholder": "jméno agenta",
+      "context": "Kontext",
+      "role": "Role",
+      "rolePlaceholder": "co agent dělá (jedna věta)",
+      "category": "Kategorie",
+      "model": "Model",
+      "thinking": "Thinking",
+      "icon": "Ikona",
+      "body": "agent.md",
+      "bodyHint": "Surová definice agenta — zdroj pravdy."
+    },
+    "categories": {
+      "media": "Média",
+      "household": "Domácnost",
+      "writing": "Psaní",
+      "dev": "Vývoj",
+      "quality": "Kvalita",
+      "research": "Výzkum",
+      "docs": "Dokumentace"
+    }
   },
   "integrations": {
     "addIntegration": "Přidat integraci",

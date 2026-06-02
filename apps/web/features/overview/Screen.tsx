@@ -12,7 +12,6 @@ import {
   Icon,
   IconTile,
   Pressable,
-  Progress,
   Stack,
   Stat,
   StatusDot,
@@ -21,11 +20,12 @@ import {
 } from "@zibby/design-system";
 import type { Skill } from "../../domain";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { LimitsPanel } from "../../components/layout/LimitsPanel";
 import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { SkillTile } from "../skills/components/SkillTile";
 import { RunModal } from "../skills/components/RunModal/RunModal";
-import { AGENT_SDK, CLAUDE_LIMITS, PROJECTS } from "../../state/config";
+import { AGENT_SDK, PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useDashboardStore } from "../../state/store";
 import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
@@ -157,6 +157,8 @@ export function Screen() {
       {/* RIGHT RAIL */}
       <Container minW0>
         <Stack gap="250">
+          <LimitsPanel />
+
           <HudPanel title={t("overview.approvalsQueue")}>
             <Stack align="center" direction="row" gap="100">
               <StatusDot tone="ok" />
@@ -172,54 +174,6 @@ export function Screen() {
               <Typography mono size="sm" type="note" variant="secondary">
                 {t("overview.noAgentsRunning")}
               </Typography>
-            </Stack>
-          </HudPanel>
-
-          <HudPanel title={t("overview.budgets")}>
-            <Stack gap="100">
-              <Stack align="center" direction="row" justify="between">
-                <Typography mono size="sm" tone="ok" tracking="wide" type="note">
-                  {t("overview.sdkCreditCaps")}
-                </Typography>
-                <Typography mono size="xs" type="note" variant="tertiary">
-                  {t("overview.renew", { date: t(AGENT_SDK.renew) })}
-                </Typography>
-              </Stack>
-              <Stack align="baseline" direction="row" gap="75">
-                <Typography mono size="4xl" type="note" weight="bold">
-                  ${AGENT_SDK.remaining}
-                </Typography>
-                <Typography mono size="caption" type="note" variant="secondary">
-                  / ${AGENT_SDK.total}
-                </Typography>
-              </Stack>
-              <Progress glow height="75" label={t("overview.sdkCreditProgress")} tone={sdkTone} value={AGENT_SDK.usedPct} />
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {t("overview.agentNote")}
-              </Typography>
-
-              <Divider />
-
-              <Typography mono size="sm" tracking="wide" type="note" variant="tertiary">
-                {t("overview.interactiveCaps")}
-              </Typography>
-              {[CLAUDE_LIMITS.rolling, CLAUDE_LIMITS.weekly].map((d) => {
-                const tone = usageTone(d.usedPct);
-                const label = t(d.label);
-                return (
-                  <Stack gap="50" key={d.label}>
-                    <Stack align="baseline" direction="row" justify="between">
-                      <Typography mono nowrap size="sm" type="note" variant="secondary">
-                        {label}
-                      </Typography>
-                      <Typography mono size="sm" tone="ok" type="note" weight="bold">
-                        {d.usedPct}%
-                      </Typography>
-                    </Stack>
-                    <Progress glow height="50" label={label} tone={tone} value={d.usedPct} />
-                  </Stack>
-                );
-              })}
             </Stack>
           </HudPanel>
         </Stack>

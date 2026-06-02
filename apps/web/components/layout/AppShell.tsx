@@ -6,15 +6,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type LinkComponentType, type NavItem } from "@zibby/design-system";
 import { MainLayout } from "./MainLayout";
-import {
-  AGENT_SDK,
-  CLAUDE_LIMITS,
-  NAV_ITEMS,
-  SETTINGS_ITEM,
-} from "../../state/config";
+import { NAV_ITEMS, SETTINGS_ITEM } from "../../state/config";
 import { DashboardStoreProvider } from "../../state/store";
 import { hrefWithCtx } from "../../state/routing";
-import { LimitsWidget } from "./LimitsWidget";
 import type { ContextName } from "../../domain";
 import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
@@ -61,7 +55,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
       navItems={navItemsWithCtx}
       onContextChange={handleContextChange}
       onNavigate={(id) => router.push(hrefWithCtx(`/${id}`, context))}
-      walletSlot={<LimitsWidget credit={AGENT_SDK} limits={CLAUDE_LIMITS} />}
     >
       {children}
     </MainLayout>

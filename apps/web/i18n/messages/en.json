@@ -28,7 +28,8 @@
   "topbar": {
     "commandHint": "Command or skill (⌘K)",
     "commandAriaLabel": "Command or skill",
-    "contextSwitcher": "Context switch"
+    "contextSwitcher": "Context switch",
+    "commandPlaceholder": "Command or skill…"
   },
   "sidebar": {
     "navLabel": "Main navigation",
@@ -57,7 +58,9 @@
     "rollingReset": "—",
     "weeklyLabel": "Weekly",
     "weeklyShort": "week",
-    "weeklyReset": "Mon 09:00"
+    "weeklyReset": "Mon 09:00",
+    "panelTitle": "claude · interactive limits",
+    "fromChat": "from your chat"
   },
   "overview": {
     "systemNominal": "System · NOMINAL",
@@ -87,10 +90,22 @@
     "agentNote": "agent runs draw from this",
     "interactiveCaps": "INTERACTIVE · CLAUDE CODE",
     "starters": {
-      "skills": { "label": "Add skill", "sub": "SKILL.md — unit of work" },
-      "integrations": { "label": "Add integration", "sub": "driver to the outside world" },
-      "agents": { "label": "Add agent", "sub": ".agent.md — model + tools" },
-      "pipelines": { "label": "Add pipeline", "sub": "chaining of agents" }
+      "skills": {
+        "label": "Add skill",
+        "sub": "SKILL.md — unit of work"
+      },
+      "integrations": {
+        "label": "Add integration",
+        "sub": "driver to the outside world"
+      },
+      "agents": {
+        "label": "Add agent",
+        "sub": ".agent.md — model + tools"
+      },
+      "pipelines": {
+        "label": "Add pipeline",
+        "sub": "chaining of agents"
+      }
     }
   },
   "skills": {
@@ -109,7 +124,54 @@
     "progressAria": "progress {skill}",
     "emptyTitle": "No agents yet",
     "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
-    "emptyHint": "// creates ~/zibby/agents/'<name>'.agent.md"
+    "emptyHint": "// creates ~/zibby/agents/'<name>'.agent.md",
+    "title": "Agents",
+    "countSummary": "{count, plural, =0 {no agents} one {# agent} other {# agents}} · {active} active · shared pool for pipelines",
+    "run": "Run",
+    "runs": "{count}× run",
+    "paused": "paused",
+    "active": "active",
+    "statePipeline": "in pipeline",
+    "stateRunning": "running",
+    "stateIdle": "idle",
+    "pauseAria": "Pause {name}",
+    "activateAria": "Activate {name}",
+    "openAria": "Open {name}",
+    "pipelineUsage": "{count} pipeline",
+    "usedInPipelines": "Used in pipelines",
+    "notInPipeline": "Not in any pipeline yet — free to use.",
+    "phaseCount": "{count, plural, one {# phase} other {# phases}}",
+    "allowedTools": "Allowed tools",
+    "newAgent": "New agent",
+    "create": "Create agent",
+    "save": "Save changes",
+    "edit": "Edit",
+    "delete": "Delete",
+    "runAdhoc": "Run ad-hoc",
+    "deleteTitle": "Delete agent?",
+    "deleteBody": "Delete agent {name}? This also removes {file}. This cannot be undone.",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "agent name",
+      "context": "Context",
+      "role": "Role",
+      "rolePlaceholder": "what the agent does (one line)",
+      "category": "Category",
+      "model": "Model",
+      "thinking": "Thinking",
+      "icon": "Icon",
+      "body": "agent.md",
+      "bodyHint": "Raw agent definition — the source of truth."
+    },
+    "categories": {
+      "media": "Media",
+      "household": "Household",
+      "writing": "Writing",
+      "dev": "Development",
+      "quality": "Quality",
+      "research": "Research",
+      "docs": "Docs"
+    }
   },
   "integrations": {
     "addIntegration": "Add integration",

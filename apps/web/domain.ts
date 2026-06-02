@@ -114,6 +114,14 @@ export interface AgentDef {
   ctx: ContextName;
   state: string;
   file: string;
+  /** Functional category id (within a context) used to group the catalog. */
+  category?: string;
+  /** Paused agents stay defined but are skipped by pipelines. Defaults to enabled. */
+  enabled?: boolean;
+  /** How many times the agent has been launched. */
+  runs?: number;
+  /** Raw `*.agent.md` body — the editable source of truth. */
+  body?: string;
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";
