@@ -1,44 +1,46 @@
 import { describe, expect, it } from "vitest"
-import { LIMIT_CAPS, LimitsService, buildLimits, usedPct } from "./limits.service"
-import type { ClaudeUsageReader, UsageWindows } from "./usage.reader"
-
-describe("usedPct", () => {
-  it("rounds used/limit to a whole percent", () => {
-    expect(usedPct(0, 200_000)).toBe(0)
-    expect(usedPct(100_000, 200_000)).toBe(50)
-    expect(usedPct(1, 3)).toBe(33)
-  })
-
-  it("returns 0 for a zero limit and clamps overflow to 100", () => {
-    expect(usedPct(5, 0)).toBe(0)
-    expect(usedPct(300, 200)).toBe(100)
-  })
-})
+import { LimitsService, buildLimits } from "./limits.service"
+import type { RateLimitSnapshot, RateLimitsReader } from "./rate-limits.reader"
 
 describe("buildLimits", () => {
-  it("derives usedPct against the caps for both windows", () => {
-    const limits = buildLimits(
-      { rolling5hTokens: 50_000, weekly7dTokens: 2_500_000 },
-      { rollingTokens: 200_000, weeklyTokens: 5_000_000 },
-    )
-    expect(limits.rolling).toEqual({ usedTokens: 50_000, limitTokens: 200_000, usedPct: 25 })
-    expect(limits.weekly).toEqual({ usedTokens: 2_500_000, limitTokens: 5_000_000, usedPct: 50 })
+  it("shapes a fresh snapshot into the contract payload", () => {
+    const limits = buildLimits({
+      rolling5hPct: 3,
+      weekly7dPct: 8,
+      capturedAt: 1_780_000_000_000,
+      stale: false,
+    })
+    expect(limits).toEqual({
+      rolling: { usedPct: 3 },
+      weekly: { usedPct: 8 },
+      capturedAt: 1_780_000_000_000,
+      stale: false,
+    })
   })
 
-  it("clamps real usage over the cap to 100%", () => {
-    const limits = buildLimits({ rolling5hTokens: 271_000, weekly7dTokens: 0 }, LIMIT_CAPS)
-    expect(limits.rolling.usedPct).toBe(100)
+  it("carries the stale flag and null capturedAt through", () => {
+    const limits = buildLimits({
+      rolling5hPct: 0,
+      weekly7dPct: 0,
+      capturedAt: null,
+      stale: true,
+    })
+    expect(limits.stale).toBe(true)
+    expect(limits.capturedAt).toBeNull()
   })
 })
 
 describe("LimitsService.snapshot", () => {
-  const fakeReader = (windows: UsageWindows): ClaudeUsageReader =>
-    ({ read: async () => windows }) as unknown as ClaudeUsageReader
+  const fakeReader = (snapshot: RateLimitSnapshot): RateLimitsReader =>
+    ({ read: async () => snapshot }) as unknown as RateLimitsReader
 
-  it("reads real windowed usage and derives the limits payload", async () => {
-    const service = new LimitsService(fakeReader({ rolling5hTokens: 0, weekly7dTokens: 0 }))
+  it("reads the utilization snapshot and derives the limits payload", async () => {
+    const service = new LimitsService(
+      fakeReader({ rolling5hPct: 12, weekly7dPct: 47, capturedAt: 1_780_000_000_000, stale: false }),
+    )
     const snap = await service.snapshot()
-    expect(snap.rolling).toEqual({ usedTokens: 0, limitTokens: LIMIT_CAPS.rollingTokens, usedPct: 0 })
-    expect(snap.weekly.usedTokens).toBe(0)
+    expect(snap.rolling.usedPct).toBe(12)
+    expect(snap.weekly.usedPct).toBe(47)
+    expect(snap.stale).toBe(false)
   })
 })

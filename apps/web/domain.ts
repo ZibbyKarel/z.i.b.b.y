@@ -58,7 +58,9 @@ export interface QuotaLimit {
   short: MessageKey;
   usedPct: number;
   resetIn: MessageKey;
-  tokens: string;
+  /** Freshness of the reading (`limits.live` / `limits.stale`) — the status-line
+   * capture only updates while Claude Code is rendering. */
+  age: MessageKey;
 }
 
 export interface ClaudeLimits {

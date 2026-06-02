@@ -66,9 +66,10 @@ export const THINKING_OPTIONS: SelectOption[] = [
  * limits are at zero and the Agent SDK credit is full.
  */
 /**
- * `label`, `short` and `resetIn` hold message-catalog keys (resolved with the
- * `limits.*` namespace at render), not display text — keeps this data module
- * free of UI strings. Numeric/technical fields (`tokens`, `usedPct`) stay raw.
+ * `label`, `short`, `resetIn` and `age` hold message-catalog keys (resolved with
+ * the `limits.*` namespace at render), not display text — keeps this data module
+ * free of UI strings. `usedPct` stays raw. This is the zero-usage fallback shown
+ * before the first poll, so it reads as `stale` (no live capture yet).
  */
 export const CLAUDE_LIMITS: ClaudeLimits = {
   rolling: {
@@ -76,14 +77,14 @@ export const CLAUDE_LIMITS: ClaudeLimits = {
     short: "limits.rollingShort",
     usedPct: 0,
     resetIn: "limits.rollingReset",
-    tokens: "0 / 200k",
+    age: "limits.stale",
   },
   weekly: {
     label: "limits.weeklyLabel",
     short: "limits.weeklyShort",
     usedPct: 0,
     resetIn: "limits.weeklyReset",
-    tokens: "0 / 5M",
+    age: "limits.stale",
   },
 };
 

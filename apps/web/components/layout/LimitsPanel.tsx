@@ -57,7 +57,7 @@ function LimitBlock({ d }: { d: QuotaLimit }) {
         <Progress glow height="75" label={t(d.label)} tone={tone} value={d.usedPct} />
       </Container>
       <Typography mono truncate size="2xs" style={{ marginTop: "0.45rem", display: "block" }} type="note" variant="tertiary">
-        {t("limits.reset", { resetIn: t(d.resetIn), tokens: d.tokens })}
+        {t("limits.reset", { resetIn: t(d.resetIn), age: t(d.age) })}
       </Typography>
     </Container>
   );

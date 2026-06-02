@@ -24,17 +24,15 @@ describe("Limits API (e2e)", () => {
     expect(LimitsSchema.safeParse(res.body).success).toBe(true)
   })
 
-  it("derives usedPct consistently from the windowed token totals", async () => {
+  it("reports each window utilization within bounds", async () => {
     const res = await request(app.getHttpServer()).get("/api/limits")
+    // The real reading is captured from the local status line, so the magnitude
+    // varies by machine (and is absent on CI); only the invariants must hold.
     for (const window of [res.body.rolling, res.body.weekly]) {
-      // Real usage is read from local transcripts, so the magnitude varies by
-      // machine; the invariants (caps, bounds, derivation) must always hold.
-      expect(window.limitTokens).toBeGreaterThan(0)
-      expect(window.usedTokens).toBeGreaterThanOrEqual(0)
       expect(window.usedPct).toBeGreaterThanOrEqual(0)
       expect(window.usedPct).toBeLessThanOrEqual(100)
-      const expected = Math.min(100, Math.round((window.usedTokens / window.limitTokens) * 100))
-      expect(window.usedPct).toBe(expected)
     }
+    expect(typeof res.body.stale).toBe("boolean")
+    expect(res.body.capturedAt === null || typeof res.body.capturedAt === "number").toBe(true)
   })
 })
