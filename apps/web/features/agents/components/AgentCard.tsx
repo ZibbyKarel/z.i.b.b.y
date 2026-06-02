@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { AgentDef } from "../../../domain";
+import type { MessageKey } from "../../../i18n/keys";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 
 export interface AgentCardProps {
@@ -27,7 +28,7 @@ export interface AgentCardProps {
 
 interface StateMeta {
   tone: DotTone;
-  labelKey: string;
+  labelKey: MessageKey;
   pulse: boolean;
 }
 

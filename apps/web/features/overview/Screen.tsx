@@ -27,11 +27,11 @@ import { SkillTile } from "../skills/components/SkillTile";
 import { SummaryWidget } from "./SummaryWidget";
 
 const STARTERS = [
-  { id: "skills", glyph: "spark" as const },
-  { id: "integrations", glyph: "plug" as const },
-  { id: "agents", glyph: "bot" as const },
-  { id: "pipelines", glyph: "flow" as const },
-];
+  { id: "skills", glyph: "spark" },
+  { id: "integrations", glyph: "plug" },
+  { id: "agents", glyph: "bot" },
+  { id: "pipelines", glyph: "flow" },
+] as const;
 
 export function Screen() {
   const t = useTranslations();

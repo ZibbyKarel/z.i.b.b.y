@@ -38,7 +38,7 @@ export function mkAgentBody(a: AgentDef): string {
 
 /** A blank draft for the "new agent" flow. */
 export function newAgentDraft(): AgentDef {
-  const category = AGENT_CATEGORIES[0] ?? "";
+  const category = AGENT_CATEGORIES[0];
   const draft: AgentDef = {
     id: "",
     name: "",

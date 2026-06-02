@@ -1,4 +1,19 @@
 import type { IconName } from "@zibby/design-system";
+import type { MessageKey } from "./i18n/keys";
+
+/**
+ * Functional category id used to group the agent catalog. Resolved for display
+ * via the `agents.categories.<id>` message catalog. The runtime list lives in
+ * `state/config.ts` (`AGENT_CATEGORIES`), which is checked against this union.
+ */
+export type AgentCategory =
+  | "media"
+  | "household"
+  | "writing"
+  | "dev"
+  | "quality"
+  | "research"
+  | "docs";
 
 export interface Skill {
   id: string;
@@ -39,10 +54,10 @@ export interface ActivityEvent {
 }
 
 export interface QuotaLimit {
-  label: string;
-  short: string;
+  label: MessageKey;
+  short: MessageKey;
   usedPct: number;
-  resetIn: string;
+  resetIn: MessageKey;
   tokens: string;
 }
 
@@ -52,12 +67,12 @@ export interface ClaudeLimits {
 }
 
 export interface AgentSdkCredit {
-  label: string;
+  label: MessageKey;
   total: number;
   used: number;
   remaining: number;
   usedPct: number;
-  renew: string;
+  renew: MessageKey;
   byAgent: Array<[name: string, dollars: number]>;
   byPipeline: Array<[name: string, dollars: number]>;
   trend: number[];
@@ -106,7 +121,7 @@ export interface AgentDef {
   state: string;
   file: string;
   /** Functional category id (within a context) used to group the catalog. */
-  category?: string;
+  category?: AgentCategory;
   /** Paused agents stay defined but are skipped by pipelines. Defaults to enabled. */
   enabled?: boolean;
   /** How many times the agent has been launched. */

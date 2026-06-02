@@ -5,7 +5,7 @@
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
-import type { AgentSdkCredit, ClaudeLimits } from "../domain";
+import type { AgentCategory, AgentSdkCredit, ClaudeLimits } from "../domain";
 
 export const PROJECTS = [
   "zibby-core",
@@ -25,7 +25,7 @@ export interface NavConfig {
   href: string;
 }
 
-export const NAV_ITEMS: NavConfig[] = [
+export const NAV_ITEMS = [
   { id: "overview",     glyph: "grid",  href: "/overview" },
   { id: "skills",       glyph: "spark", href: "/skills" },
   { id: "agents",       glyph: "bot",   href: "/agents" },
@@ -34,13 +34,20 @@ export const NAV_ITEMS: NavConfig[] = [
   { id: "automations",  glyph: "clock", href: "/automations" },
   { id: "memory",       glyph: "brain", href: "/memory" },
   { id: "runs",         glyph: "pulse", href: "/runs" },
-];
+] as const satisfies readonly NavConfig[];
 
-export const SETTINGS_ITEM: NavConfig = {
+export const SETTINGS_ITEM = {
   id: "settings",
   glyph: "gear",
   href: "/settings",
-};
+} as const satisfies NavConfig;
+
+/**
+ * A navigation segment id — the `id` of any nav item (incl. settings). These
+ * double as keys under the `nav.<id>` message catalog, so typing them as a
+ * union lets `t(navId)` be validated at compile time.
+ */
+export type NavId = (typeof NAV_ITEMS)[number]["id"] | (typeof SETTINGS_ITEM)["id"];
 
 export const MODEL_OPTIONS: SelectOption[] = [
   { value: "opus", label: "opus" },
@@ -81,7 +88,7 @@ export const CLAUDE_LIMITS: ClaudeLimits = {
 };
 
 /** Agent catalog taxonomy. Category ids are stable keys resolved via `agents.categories.<id>`. */
-export const AGENT_CATEGORIES: string[] = [
+export const AGENT_CATEGORIES = [
   "media",
   "household",
   "writing",
@@ -89,7 +96,7 @@ export const AGENT_CATEGORIES: string[] = [
   "quality",
   "research",
   "docs",
-];
+] as const satisfies readonly AgentCategory[];
 
 /** Glyph shown next to each category section header. */
 export const AGENT_CATEGORY_GLYPH: Record<string, IconName> = {

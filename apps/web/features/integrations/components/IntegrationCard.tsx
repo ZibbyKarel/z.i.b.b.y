@@ -19,11 +19,11 @@ const statusTone: Record<IntegrationStatus, DotTone> = {
   error:        "bad",
 };
 
-const statusLabelKey: Record<IntegrationStatus, string> = {
+const statusLabelKey = {
   connected:    "statusConnected",
   disconnected: "statusDisconnected",
   error:        "statusError",
-};
+} as const satisfies Record<IntegrationStatus, string>;
 
 const pillTone: Record<IntegrationStatus, "ok" | "neutral" | "bad"> = {
   connected:    "ok",

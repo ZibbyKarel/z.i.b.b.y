@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type NavItem } from "@zibby/design-system";
 import { MainLayout } from "./MainLayout";
-import { NAV_ITEMS, SETTINGS_ITEM } from "../../state/config";
+import { NAV_ITEMS, type NavId, SETTINGS_ITEM } from "../../state/config";
 import { DashboardStoreProvider } from "../../state/store";
 
-const NAV_IDS = new Set(NAV_ITEMS.map((n) => n.id).concat(SETTINGS_ITEM.id));
+const NAV_IDS = new Set<NavId>([...NAV_ITEMS.map((n) => n.id), SETTINGS_ITEM.id]);
 
-function pathnameToNavId(pathname: string): string {
-  const segment = pathname.split("/").filter(Boolean)[0] ?? "overview";
-  return segment;
+function pathnameToNavId(pathname: string): NavId {
+  const segment = pathname.split("/").filter(Boolean)[0];
+  return segment !== undefined && NAV_IDS.has(segment as NavId) ? (segment as NavId) : "overview";
 }
 
 function AppShellInner({ children }: { children: ReactNode }) {
@@ -30,7 +30,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
     label: t(SETTINGS_ITEM.id),
   };
 
-  const breadcrumb = t(NAV_IDS.has(activeNav) ? activeNav : "overview");
+  const breadcrumb = t(activeNav);
 
   return (
     <MainLayout

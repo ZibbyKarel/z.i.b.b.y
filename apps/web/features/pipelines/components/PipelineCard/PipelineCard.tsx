@@ -12,12 +12,12 @@ import {
 } from "@zibby/design-system"
 import { type AgentDef, type Pipeline, type PipelineState, glyphForAgent } from "../../../../domain"
 
-const stateMeta: Record<PipelineState, { tone: "ok" | "warn" | "bad" | "accent"; labelKey: string }> = {
+const stateMeta = {
   done: { tone: "ok", labelKey: "stateDone" },
   parked: { tone: "warn", labelKey: "stateParked" },
   failed: { tone: "bad", labelKey: "stateFailed" },
   running: { tone: "accent", labelKey: "stateRunning" },
-}
+} as const satisfies Record<PipelineState, { tone: "ok" | "warn" | "bad" | "accent"; labelKey: string }>
 
 export interface PipelineCardProps {
   pipeline: Pipeline

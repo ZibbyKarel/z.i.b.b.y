@@ -9,6 +9,7 @@ import {
   Typography,
   usageTone,
 } from "@zibby/design-system";
+import { MessageKey } from "apps/web/i18n/keys";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { AGENT_SDK } from "../../state/config";
@@ -26,12 +27,13 @@ export function SummaryWidget() {
   const isOnline = data?.body.status === "ok";
 
   const healthTone = isConnecting ? "warn" : isOnline ? "ok" : "bad";
-  const healthLabel = isConnecting
+  const healthLabel: MessageKey = isConnecting
     ? "overview.systemConnecting"
     : isOnline
       ? "overview.systemNominal"
       : "overview.systemOffline";
-  const healthDetail = isOnline
+
+  const healthDetail: MessageKey = isOnline
     ? "overview.daemonReady"
     : "overview.apiUnreachable";
 
