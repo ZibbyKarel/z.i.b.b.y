@@ -5,13 +5,12 @@ import type { AgentDef, Pipeline } from "../../../../domain"
 import { PipelineCard } from "./PipelineCard"
 
 const agents: AgentDef[] = [
-  { id: "architect", name: "Architekt", glyph: "compass", role: "", model: "opus", thinking: "high", tools: [], ctx: "work", state: "idle", file: "" },
+  { id: "architect", name: "Architekt", glyph: "compass", role: "", model: "opus", thinking: "high", tools: [], state: "idle", file: "" },
 ]
 
 const pipeline: Pipeline = {
   id: "build-feature",
   name: "Build Feature",
-  ctx: "work",
   budget: 25,
   lastRun: "dnes 03:12",
   lastState: "parked",

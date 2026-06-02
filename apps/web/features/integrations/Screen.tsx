@@ -9,16 +9,14 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { IntegrationCard } from "./components/IntegrationCard";
 import { useEntityForm } from "../../state/forms";
 import { useDashboardStore } from "../../state/store";
-import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 export function Screen() {
   const t = useTranslations();
-  const { context } = useGlobalStateContext();
   const { integrations, addIntegration } = useDashboardStore();
   const [adding, setAdding] = useState(false);
   const form = useEntityForm("integration");
 
-  const list = integrations.filter((i) => i.ctx === context);
+  const list = integrations;
 
   return (
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
@@ -29,7 +27,7 @@ export function Screen() {
           </Button>
         }
       >
-        {t("integrations.sectionLabel", { ctx: context })}
+        {t("integrations.sectionLabel")}
       </SectionLabel>
 
       {list.length === 0 ? (

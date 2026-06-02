@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   Card,
+  CardProps,
   Container,
   type Padding,
   Stack,
@@ -13,6 +14,7 @@ export interface HudPanelProps {
   corners?: boolean;
   padding?: Padding;
   children?: ReactNode;
+  tone?: CardProps["tone"];
 }
 
 export function HudPanel({
@@ -20,11 +22,12 @@ export function HudPanel({
   action,
   corners = true,
   padding = "200",
+  tone,
   children,
 }: HudPanelProps) {
   const hasHeader = Boolean(title || action);
   return (
-    <Card background="panel" corners={corners} radius="none">
+    <Card background="panel" corners={corners} radius="none" tone={tone}>
       <Container padding={padding}>
         <Stack gap="150">
           {hasHeader && (
@@ -46,7 +49,7 @@ export function HudPanel({
                     tone="accent"
                     type="note"
                   >
-                    {'//'}
+                    {"//"}
                   </Typography>{" "}
                   {title}
                 </Typography>

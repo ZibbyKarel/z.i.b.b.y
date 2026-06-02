@@ -4,9 +4,9 @@ import type { ActivityEvent } from "../../../../domain"
 import { ActivityFeed } from "./ActivityFeed"
 
 const items: ActivityEvent[] = [
-  { id: "e1", t: "teď", icon: "run", ctx: "home", text: "tmdb-renamer běží", sub: "18 / 25" },
-  { id: "e2", t: "2m", icon: "wait", ctx: "home", text: "rohlik čeká", sub: "košík" },
-  { id: "e3", t: "14m", icon: "ok", ctx: "work", text: "ci-doctor hotov", sub: "auth-svc" },
+  { id: "e1", t: "teď", icon: "run", text: "tmdb-renamer běží", sub: "18 / 25" },
+  { id: "e2", t: "2m", icon: "wait", text: "rohlik čeká", sub: "košík" },
+  { id: "e3", t: "14m", icon: "ok", text: "ci-doctor hotov", sub: "auth-svc" },
 ]
 
 describe("ActivityFeed", () => {

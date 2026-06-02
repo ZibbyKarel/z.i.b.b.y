@@ -10,10 +10,6 @@
     "runs": "Running agents",
     "settings": "System settings"
   },
-  "context": {
-    "home": "home",
-    "work": "work"
-  },
   "common": {
     "stop": "Stop",
     "edit": "Edit",
@@ -28,7 +24,6 @@
   "topbar": {
     "commandHint": "Command or skill (⌘K)",
     "commandAriaLabel": "Command or skill",
-    "contextSwitcher": "Context switch",
     "commandPlaceholder": "Command or skill…"
   },
   "sidebar": {
@@ -64,18 +59,21 @@
   },
   "overview": {
     "systemNominal": "System · NOMINAL",
+    "systemConnecting": "System · CONNECTING",
+    "systemOffline": "System · OFFLINE",
     "daemonReady": "· daemon ready · no runs",
+    "apiUnreachable": "· api unreachable",
     "title": "Good morning.",
     "emptyTitle": "Dashboard is empty — build it up.",
     "allRunning": "All systems running.",
-    "ctxChip": "ctx · {ctx}",
+    "ctxChip": "ctx",
     "statRunningAgents": "running agents",
     "statApprovals": "approvals",
     "statSdkCredit": "agent sdk credit",
     "statPipelines": "pipelines",
     "statSkills": "skills",
     "starterTitle": "start here · build the dashboard",
-    "quickRun": "quick run · {ctx}",
+    "quickRun": "quick run",
     "quickRunEmptyDesc": "Add a skill and it will appear here as a tile with a Run button.",
     "quickRunEmptyHint": "// ~/zibby/skills/'<name>'/SKILL.md",
     "noSkills": "No skills to run",
@@ -111,14 +109,14 @@
   "skills": {
     "addSkill": "Add skill",
     "runButton": "Run",
-    "sectionLabel": "Skills · {ctx}",
+    "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card with a Run button.",
     "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md"
   },
   "agents": {
     "addAgent": "Add agent",
-    "sectionLabel": "Agents · {ctx}",
+    "sectionLabel": "Agents",
     "editRaw": "Edit raw .agent.md",
     "stopAria": "Stop {skill}",
     "progressAria": "progress {skill}",
@@ -153,7 +151,6 @@
     "fields": {
       "name": "Name",
       "namePlaceholder": "agent name",
-      "context": "Context",
       "role": "Role",
       "rolePlaceholder": "what the agent does (one line)",
       "category": "Category",
@@ -175,7 +172,7 @@
   },
   "integrations": {
     "addIntegration": "Add integration",
-    "sectionLabel": "Integrations · {ctx}",
+    "sectionLabel": "Integrations",
     "statusConnected": "connected",
     "statusDisconnected": "disconnected",
     "statusError": "error",
@@ -186,7 +183,7 @@
   "pipelines": {
     "addPipeline": "Add pipeline",
     "runPipeline": "Run pipeline",
-    "sectionLabel": "Pipelines · {ctx}",
+    "sectionLabel": "Pipelines",
     "emptyTitle": "No pipelines yet",
     "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
     "emptyHint": "// creates ~/zibby/pipelines/'<name>'.pipeline.md",
@@ -245,7 +242,6 @@
   },
   "forms": {
     "namePlaceholder": "'<name>'",
-    "context": "Context",
     "skill": {
       "title": "New skill",
       "subtitle": "creates SKILL.md on disk",

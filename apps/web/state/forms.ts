@@ -8,7 +8,7 @@
  */
 import { useTranslations } from "next-intl"
 import type { EntityFormValues, FieldSchema } from "../components/EntityFormModal/EntityFormModal"
-import { CONTEXT_OPTIONS, MODEL_OPTIONS, THINKING_OPTIONS } from "./config"
+import { MODEL_OPTIONS, THINKING_OPTIONS } from "./config"
 
 const slugPreview = (name: string | undefined, fallback: string) =>
   (name ?? "").trim()
@@ -35,14 +35,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
   const t = useTranslations()
   const fallbackName = t("forms.namePlaceholder")
 
-  const contextField: FieldSchema = {
-    name: "ctx",
-    label: t("forms.context"),
-    kind: "segmented",
-    defaultValue: "home",
-    options: CONTEXT_OPTIONS,
-  }
-
   switch (kind) {
     case "integration":
       return {
@@ -53,7 +45,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
         fields: [
           { name: "name", label: t("forms.integration.nameLabel"), kind: "text", placeholder: t("forms.integration.namePlaceholder"), required: true },
           { name: "desc", label: t("forms.integration.descLabel"), kind: "textarea", placeholder: t("forms.integration.descPlaceholder") },
-          contextField,
         ],
         filePreview: (v) => `~/zibby/integrations/${slugPreview(v.name, fallbackName)}.json`,
       }
@@ -68,7 +59,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
           { name: "role", label: t("forms.agent.roleLabel"), kind: "textarea", hint: t("forms.agent.roleHint"), placeholder: t("forms.agent.rolePlaceholder") },
           { name: "model", label: t("forms.agent.modelLabel"), kind: "select", defaultValue: "sonnet", options: MODEL_OPTIONS },
           { name: "thinking", label: t("forms.agent.thinkingLabel"), kind: "select", defaultValue: "medium", options: THINKING_OPTIONS },
-          contextField,
         ],
         filePreview: (v) => `~/zibby/agents/${slugPreview(v.name, fallbackName)}.agent.md`,
       }
@@ -86,7 +76,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
             { value: "25", label: "$25" },
             { value: "50", label: "$50" },
           ] },
-          contextField,
         ],
         filePreview: (v) => `~/zibby/pipelines/${slugPreview(v.name, fallbackName)}.pipeline.md`,
       }
@@ -100,7 +89,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
         fields: [
           { name: "name", label: t("forms.skill.nameLabel"), kind: "text", placeholder: t("forms.skill.namePlaceholder"), required: true },
           { name: "desc", label: t("forms.skill.descLabel"), kind: "textarea", hint: t("forms.skill.descHint"), placeholder: t("forms.skill.descPlaceholder") },
-          contextField,
         ],
         filePreview: (v) => `~/zibby/skills/${slugPreview(v.name, fallbackName)}/SKILL.md`,
       }

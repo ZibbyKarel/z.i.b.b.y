@@ -1,4 +1,4 @@
-import type { AgentDef, ContextName } from "../../domain";
+import type { AgentDef } from "../../domain";
 import { AGENT_CATEGORIES } from "../../state/config";
 
 /** Slugify an agent name into a filesystem-safe id (diacritics stripped). */
@@ -7,7 +7,7 @@ export const slugifyAgent = (name: string): string =>
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
@@ -20,7 +20,6 @@ export function mkAgentBody(a: AgentDef): string {
   return [
     "---",
     `name: ${id}`,
-    `context: ${a.ctx}`,
     `category: ${a.category ?? ""}`,
     `model: ${a.model}`,
     `thinking: ${a.thinking}`,
@@ -37,9 +36,9 @@ export function mkAgentBody(a: AgentDef): string {
   ].join("\n");
 }
 
-/** A blank draft for the "new agent" flow, seeded for the active context. */
-export function newAgentDraft(ctx: ContextName): AgentDef {
-  const category = AGENT_CATEGORIES[ctx][0] ?? "";
+/** A blank draft for the "new agent" flow. */
+export function newAgentDraft(): AgentDef {
+  const category = AGENT_CATEGORIES[0] ?? "";
   const draft: AgentDef = {
     id: "",
     name: "",
@@ -48,7 +47,6 @@ export function newAgentDraft(ctx: ContextName): AgentDef {
     model: "sonnet",
     thinking: "medium",
     tools: ["read"],
-    ctx,
     category,
     state: "idle",
     enabled: true,

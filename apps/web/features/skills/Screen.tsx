@@ -12,17 +12,15 @@ import { RunModal } from "./components/RunModal/RunModal";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useDashboardStore } from "../../state/store";
-import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 export function Screen() {
   const t = useTranslations();
-  const { context } = useGlobalStateContext();
   const { skills, addSkill } = useDashboardStore();
   const [adding, setAdding] = useState(false);
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const form = useEntityForm("skill");
 
-  const list = skills.filter((s) => s.ctx === context);
+  const list = skills;
 
   return (
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
@@ -33,7 +31,7 @@ export function Screen() {
           </Button>
         }
       >
-        {t("skills.sectionLabel", { ctx: context })}
+        {t("skills.sectionLabel")}
       </SectionLabel>
 
       {list.length === 0 ? (

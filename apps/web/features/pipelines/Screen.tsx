@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Chip,
   Container,
   Divider,
   Grid,
@@ -24,7 +23,6 @@ import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useDashboardStore } from "../../state/store";
-import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
@@ -33,14 +31,13 @@ export interface ScreenProps {
 
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
-  const { context } = useGlobalStateContext();
   const { pipelines, agents, addPipeline } = useDashboardStore();
   const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
   const [adding, setAdding] = useState(false);
   const router = useRouter();
   const form = useEntityForm("pipeline");
 
-  const list = pipelines.filter((p) => p.ctx === context);
+  const list = pipelines;
   const selected = (routeId ? list.find((p) => p.id === routeId) : null) ?? list[0];
 
   const addModal = adding && (
@@ -65,7 +62,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   if (list.length === 0) {
     return (
       <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
-        <SectionLabel action={addAction}>{t("pipelines.sectionLabel", { ctx: context })}</SectionLabel>
+        <SectionLabel action={addAction}>{t("pipelines.sectionLabel")}</SectionLabel>
         <EmptyState
           actionLabel={t("pipelines.addPipeline")}
           description={t("pipelines.emptyDescription")}
@@ -82,7 +79,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   return (
     <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
       <Stack gap="150">
-        <SectionLabel action={addAction}>{t("pipelines.sectionLabel", { ctx: context })}</SectionLabel>
+        <SectionLabel action={addAction}>{t("pipelines.sectionLabel")}</SectionLabel>
         {list.map((p) => (
           <PipelineCard
             agents={agents}
@@ -101,12 +98,9 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
               <Stack wrap align="start" direction="row" gap="200" justify="between">
                 <Container minW0>
                   <Stack gap="100">
-                    <Stack align="center" direction="row" gap="100">
-                      <Typography size="3xl" type="title" weight="semibold">
-                        {selected.name}
-                      </Typography>
-                      <Chip tone="accent">{context}</Chip>
-                    </Stack>
+                    <Typography size="3xl" type="title" weight="semibold">
+                      {selected.name}
+                    </Typography>
                     <Typography mono size="caption" type="note" variant="secondary">
                       {selected.desc}
                     </Typography>

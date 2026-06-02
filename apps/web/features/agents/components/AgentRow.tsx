@@ -20,12 +20,11 @@ export interface AgentRowProps {
 
 export function AgentRow({ agent, onStop, divider = true }: AgentRowProps) {
   const t = useTranslations("agents");
-  const tone = agent.ctx === "work" ? "work" : "home";
   return (
     <>
       <Container padding={["150", "0"]}>
         <Stack align="center" direction="row" gap="150">
-          <StatusDot pulse tone={tone} />
+          <StatusDot pulse tone="accent" />
           <Container grow minW0>
             <Stack gap="25">
               <Stack align="baseline" direction="row" gap="100">

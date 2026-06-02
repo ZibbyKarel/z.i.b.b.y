@@ -5,7 +5,7 @@
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
-import type { AgentSdkCredit, ClaudeLimits, ContextName } from "../domain";
+import type { AgentSdkCredit, ClaudeLimits } from "../domain";
 
 export const PROJECTS = [
   "zibby-core",
@@ -41,11 +41,6 @@ export const SETTINGS_ITEM: NavConfig = {
   glyph: "gear",
   href: "/settings",
 };
-
-export const CONTEXT_OPTIONS: SelectOption[] = [
-  { value: "home", label: "home" },
-  { value: "work", label: "work" },
-];
 
 export const MODEL_OPTIONS: SelectOption[] = [
   { value: "opus", label: "opus" },
@@ -85,15 +80,16 @@ export const CLAUDE_LIMITS: ClaudeLimits = {
   },
 };
 
-/**
- * Agent catalog taxonomy. Category ids are stable keys; their display labels are
- * resolved from the `agents.categories.<id>` message catalog at render time, so
- * no UI text lives here. Each context exposes its own set of categories.
- */
-export const AGENT_CATEGORIES: Record<ContextName, string[]> = {
-  home: ["media", "household", "writing"],
-  work: ["dev", "quality", "research", "docs"],
-};
+/** Agent catalog taxonomy. Category ids are stable keys resolved via `agents.categories.<id>`. */
+export const AGENT_CATEGORIES: string[] = [
+  "media",
+  "household",
+  "writing",
+  "dev",
+  "quality",
+  "research",
+  "docs",
+];
 
 /** Glyph shown next to each category section header. */
 export const AGENT_CATEGORY_GLYPH: Record<string, IconName> = {
@@ -137,6 +133,5 @@ export const AGENT_SDK: AgentSdkCredit = {
   renew: "limits.renewDate",
   byAgent: [],
   byPipeline: [],
-  byContext: [],
   trend: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 };

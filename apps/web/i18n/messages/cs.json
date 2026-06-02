@@ -10,10 +10,6 @@
     "runs": "Běžící agenti",
     "settings": "Nastavení systému"
   },
-  "context": {
-    "home": "home",
-    "work": "work"
-  },
   "common": {
     "stop": "Zastavit",
     "edit": "Editovat",
@@ -28,7 +24,6 @@
   "topbar": {
     "commandHint": "Příkaz nebo skill (⌘K)",
     "commandAriaLabel": "Příkaz nebo skill",
-    "contextSwitcher": "Přepínač kontextu",
     "commandPlaceholder": "Příkaz nebo skill…"
   },
   "sidebar": {
@@ -64,18 +59,21 @@
   },
   "overview": {
     "systemNominal": "Systém · NOMINAL",
+    "systemConnecting": "Systém · PŘIPOJOVÁNÍ",
+    "systemOffline": "Systém · OFFLINE",
     "daemonReady": "· démon připraven · žádné běhy",
+    "apiUnreachable": "· api nedostupné",
     "title": "Dobré ráno.",
     "emptyTitle": "Dashboard je prázdný — postav si ho.",
     "allRunning": "Vše běží hladce.",
-    "ctxChip": "ctx · {ctx}",
+    "ctxChip": "ctx",
     "statRunningAgents": "běžící agenti",
     "statApprovals": "schválení",
     "statSdkCredit": "agent sdk kredit",
     "statPipelines": "pipeline",
     "statSkills": "skilly",
     "starterTitle": "začni tady · postav dashboard",
-    "quickRun": "rychlé spuštění · {ctx}",
+    "quickRun": "rychlé spuštění",
     "quickRunEmptyDesc": "Přidej skill a objeví se tu jako dlaždice s čudlíkem Spustit.",
     "quickRunEmptyHint": "// ~/zibby/skills/'<název>'/SKILL.md",
     "noSkills": "Žádné skilly k spuštění",
@@ -111,14 +109,14 @@
   "skills": {
     "addSkill": "Přidat skill",
     "runButton": "Spustit",
-    "sectionLabel": "Skilly · {ctx}",
+    "sectionLabel": "Skilly",
     "emptyTitle": "Zatím žádné skilly",
     "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit.",
     "emptyHint": "// vytvoří ~/zibby/skills/'<název>'/SKILL.md"
   },
   "agents": {
     "addAgent": "Přidat agenta",
-    "sectionLabel": "Agenti · {ctx}",
+    "sectionLabel": "Agenti",
     "editRaw": "Edit raw .agent.md",
     "stopAria": "Zastavit {skill}",
     "progressAria": "postup {skill}",
@@ -153,7 +151,6 @@
     "fields": {
       "name": "Jméno",
       "namePlaceholder": "jméno agenta",
-      "context": "Kontext",
       "role": "Role",
       "rolePlaceholder": "co agent dělá (jedna věta)",
       "category": "Kategorie",
@@ -175,7 +172,7 @@
   },
   "integrations": {
     "addIntegration": "Přidat integraci",
-    "sectionLabel": "Integrace · {ctx}",
+    "sectionLabel": "Integrace",
     "statusConnected": "připojeno",
     "statusDisconnected": "odpojeno",
     "statusError": "chyba",
@@ -186,7 +183,7 @@
   "pipelines": {
     "addPipeline": "Přidat pipeline",
     "runPipeline": "Spustit pipeline",
-    "sectionLabel": "Pipeline · {ctx}",
+    "sectionLabel": "Pipeline",
     "emptyTitle": "Zatím žádné pipeline",
     "emptyDescription": "Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
     "emptyHint": "// vytvoří ~/zibby/pipelines/'<název>'.pipeline.md",
@@ -245,7 +242,6 @@
   },
   "forms": {
     "namePlaceholder": "'<název>'",
-    "context": "Kontext",
     "skill": {
       "title": "Nový skill",
       "subtitle": "vytvoří SKILL.md na disku",

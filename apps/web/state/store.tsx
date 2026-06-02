@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { AgentDef, ContextName, Integration, ModelName, Pipeline, Skill, ThinkingLevel } from "../domain";
+import type { AgentDef, Integration, ModelName, Pipeline, Skill, ThinkingLevel } from "../domain";
 import type { EntityFormValues } from "../components/EntityFormModal/EntityFormModal";
 
 /**
@@ -54,15 +54,11 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || "novy";
 
-const asContext = (v: string | undefined): ContextName =>
-  v === "work" ? "work" : "home";
-
 export function DashboardStoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DashboardState>(EMPTY);
 
   const addSkill = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "");
-    const ctx = asContext(values.ctx);
     setState((s) => ({
       ...s,
       skills: [
@@ -72,7 +68,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
           name: values.name?.trim() || id,
           glyph: "spark",
           desc: values.desc?.trim() || fallbackDesc,
-          ctx,
           file: `~/zibby/skills/${id}/SKILL.md`,
         },
       ],
@@ -81,7 +76,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
 
   const addIntegration = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "");
-    const ctx = asContext(values.ctx);
     setState((s) => ({
       ...s,
       integrations: [
@@ -91,7 +85,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
           name: values.name?.trim() || id,
           glyph: "plug",
           desc: values.desc?.trim() || fallbackDesc,
-          ctx,
           status: "disconnected",
           file: `~/zibby/integrations/${id}.json`,
         },
@@ -101,7 +94,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
 
   const addAgent = useCallback((values: EntityFormValues, fallbackRole: string) => {
     const id = slug(values.name ?? "");
-    const ctx = asContext(values.ctx);
     setState((s) => ({
       ...s,
       agents: [
@@ -114,7 +106,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
           model: (values.model as ModelName) || "sonnet",
           thinking: (values.thinking as ThinkingLevel) || "medium",
           tools: ["read"],
-          ctx,
           state: "idle",
           file: `~/zibby/agents/${id}.agent.md`,
         },
@@ -124,7 +115,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
 
   const addPipeline = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "");
-    const ctx = asContext(values.ctx);
     const budget = Number.parseInt(values.budget ?? "", 10);
     setState((s) => ({
       ...s,
@@ -133,7 +123,6 @@ export function DashboardStoreProvider({ children }: { children: ReactNode }) {
         {
           id: `${id}-${s.pipelines.length}`,
           name: values.name?.trim() || id,
-          ctx,
           budget: Number.isFinite(budget) ? budget : 25,
           lastRun: "—",
           lastState: "done",

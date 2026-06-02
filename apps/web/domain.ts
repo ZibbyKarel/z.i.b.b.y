@@ -1,13 +1,10 @@
 import type { IconName } from "@zibby/design-system";
 
-export type ContextName = "home" | "work";
-
 export interface Skill {
   id: string;
   name: string;
   glyph: IconName;
   desc: string;
-  ctx: ContextName;
   /** Path to the backing SKILL.md on disk. */
   file: string;
 }
@@ -15,7 +12,6 @@ export interface Skill {
 export interface RunningAgent {
   id: string;
   skill: string;
-  ctx: ContextName;
   prompt: string;
   state: "running" | "done" | "error";
   pct: number;
@@ -26,7 +22,6 @@ export interface RunningAgent {
 export interface Approval {
   id: string;
   skill: string;
-  ctx: ContextName;
   action: string;
   detail: string;
   /** Short risk tag, e.g. "platba". */
@@ -39,7 +34,6 @@ export interface ActivityEvent {
   id: string;
   t: string;
   icon: ActivityIcon;
-  ctx: ContextName;
   text: string;
   sub: string;
 }
@@ -64,9 +58,8 @@ export interface AgentSdkCredit {
   remaining: number;
   usedPct: number;
   renew: string;
-  byAgent: Array<[name: string, ctx: ContextName, dollars: number]>;
-  byPipeline: Array<[name: string, ctx: ContextName, dollars: number]>;
-  byContext: Array<[ctx: ContextName, dollars: number]>;
+  byAgent: Array<[name: string, dollars: number]>;
+  byPipeline: Array<[name: string, dollars: number]>;
   trend: number[];
 }
 
@@ -94,7 +87,6 @@ export type PipelineState = "done" | "parked" | "failed" | "running";
 export interface Pipeline {
   id: string;
   name: string;
-  ctx: ContextName;
   budget: number;
   lastRun: string;
   lastState: PipelineState;
@@ -111,7 +103,6 @@ export interface AgentDef {
   model: ModelName;
   thinking: ThinkingLevel;
   tools: string[];
-  ctx: ContextName;
   state: string;
   file: string;
   /** Functional category id (within a context) used to group the catalog. */
@@ -131,7 +122,6 @@ export interface Integration {
   name: string;
   glyph: IconName;
   desc: string;
-  ctx: ContextName;
   status: IntegrationStatus;
   /** Path to the backing config file on disk. */
   file: string;

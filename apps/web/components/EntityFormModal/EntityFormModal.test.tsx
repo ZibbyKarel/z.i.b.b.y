@@ -6,16 +6,6 @@ import { EntityFormModal, type FieldSchema } from "./EntityFormModal"
 const fields: FieldSchema[] = [
   { name: "name", label: "Název skillu", kind: "text", required: true },
   { name: "desc", label: "Popis", kind: "textarea" },
-  {
-    name: "ctx",
-    label: "Kontext",
-    kind: "segmented",
-    defaultValue: "home",
-    options: [
-      { value: "home", label: "home" },
-      { value: "work", label: "work" },
-    ],
-  },
 ]
 
 describe("EntityFormModal", () => {
@@ -52,12 +42,11 @@ describe("EntityFormModal", () => {
     expect(submit).toBeDisabled()
 
     await userEvent.type(screen.getByLabelText("Název skillu"), "rohlik")
-    await userEvent.click(screen.getByRole("radio", { name: "work" }))
     expect(submit).toBeEnabled()
 
     await userEvent.click(submit)
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "rohlik", ctx: "work" }),
+      expect.objectContaining({ name: "rohlik" }),
     )
   })
 

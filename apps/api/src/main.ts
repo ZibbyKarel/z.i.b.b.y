@@ -18,6 +18,14 @@ const apiContract = initContract().router({
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule)
 
+  // The web app (Next.js, default :3000) is a different origin than this API
+  // (:3333), so the browser needs CORS to read any response — plain fetch and a
+  // future EventSource alike. Origins come from CORS_ORIGIN (comma-separated);
+  // default to the local Next dev server.
+  app.enableCors({
+    origin: (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(","),
+  })
+
   // Human-facing OpenAPI doc derived from the contracts — a generated artifact,
   // not a source of truth. Served at /docs for inspection.
   const document = generateOpenApi(

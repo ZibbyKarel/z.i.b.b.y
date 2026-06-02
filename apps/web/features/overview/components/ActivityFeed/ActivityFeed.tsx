@@ -5,7 +5,6 @@ import {
   Icon,
   type IconTone,
   Stack,
-  StatusDot,
   Typography,
 } from "@zibby/design-system"
 import type { ActivityEvent, ActivityIcon } from "../../../../domain"
@@ -43,12 +42,9 @@ export function ActivityFeed({ items, limit = 5 }: ActivityFeedProps) {
                   </Typography>
                 </Stack>
               </Container>
-              <Stack align="center" direction="row" gap="75">
-                <StatusDot size="75" tone={e.ctx === "work" ? "work" : "home"} />
-                <Typography mono size="sm" type="note" variant="tertiary">
-                  {e.t}
-                </Typography>
-              </Stack>
+              <Typography mono size="sm" type="note" variant="tertiary">
+                {e.t}
+              </Typography>
             </Stack>
           </Container>
           {i < shown.length - 1 && <Divider />}

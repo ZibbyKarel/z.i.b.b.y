@@ -1,25 +1,12 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  Container,
-  Divider,
-  List,
-  ListItem,
-  ListItemBadge,
-  ListItemIcon,
-  ListItemText,
-  Stack,
-  Surface,
-} from "@zibby/design-system";
+import { Container, Divider, Stack, Surface } from "@zibby/design-system";
 import type { NavItem } from "@zibby/design-system";
-import type { ContextName } from "../../domain";
 import { TopBar } from "./TopBar/TopBar";
 import { BrandLogo } from "./BrandLogo";
+import { Sidebar } from "./Sidebar";
 
 export interface MainLayoutProps {
-  context: ContextName;
-  onContextChange: (context: ContextName) => void;
   navItems: NavItem[];
   activeNav: string;
   footerItem?: NavItem;
@@ -30,8 +17,6 @@ export interface MainLayoutProps {
 }
 
 export function MainLayout({
-  context,
-  onContextChange,
   navItems,
   activeNav,
   footerItem,
@@ -55,41 +40,7 @@ export function MainLayout({
           style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
         >
           <BrandLogo />
-          <Stack grow style={{ minHeight: 0 }}>
-            <List>
-              {navItems.map((item) => (
-                <Link
-                  href={item.href ?? "/"}
-                  key={item.id}
-                  style={{ display: "block" }}
-                >
-                  <ListItem active={item.id === activeNav}>
-                    <ListItemIcon glyph={item.glyph} />
-                    <ListItemText>{item.label}</ListItemText>
-                    {item.badge ? (
-                      <ListItemBadge>{item.badge}</ListItemBadge>
-                    ) : null}
-                  </ListItem>
-                </Link>
-              ))}
-            </List>
-            {footerItem && (
-              <Container style={{ marginTop: "auto" }}>
-                <Divider />
-                <Container padding={["75", "0", "0", "0"]}>
-                  <Link
-                    href={footerItem.href ?? "/"}
-                    style={{ display: "block" }}
-                  >
-                    <ListItem active={footerItem.id === activeNav}>
-                      <ListItemIcon glyph={footerItem.glyph} />
-                      <ListItemText>{footerItem.label}</ListItemText>
-                    </ListItem>
-                  </Link>
-                </Container>
-              </Container>
-            )}
-          </Stack>
+          <Sidebar {...{ activeNav, footerItem, navItems }} />
         </Container>
       </Stack>
 
@@ -98,9 +49,7 @@ export function MainLayout({
       <Stack grow style={{ minWidth: 0 }}>
         <TopBar
           breadcrumb={breadcrumb}
-          context={context}
           onCommand={onCommand}
-          onContextChange={onContextChange}
           walletSlot={walletSlot}
         />
         <Container

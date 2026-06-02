@@ -51,14 +51,13 @@ selector, never the assertion set. See the design-system SKILL.md *Testid enum* 
 
 ## Routing
 
-App Router route group `(dashboard)`. Context home/work = `?ctx=work` query param.
+App Router route group `(dashboard)`.
 
 - `/` → redirect to `/overview`
 - `/(dashboard)/layout.tsx` — server layout: Providers + `DashboardChrome`
 - `DashboardChrome` — `"use client"`, reads `useSearchParams()` (under `<Suspense>`), provides `DashboardContext`
 - Each page = `page.tsx` in its own segment
 - `/pipelines/[id]` — pipeline detail (client, reads `useDashboardStore()`)
-- `hrefWithCtx(href, ctx)` — helper that appends `?ctx=` to nav links
 
 ---
 

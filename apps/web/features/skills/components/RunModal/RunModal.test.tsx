@@ -9,7 +9,6 @@ const skill: Skill = {
   name: "rohlik",
   glyph: "cart",
   desc: "Naplní košík podle seznamu",
-  ctx: "home",
   file: "~/zibby/skills/rohlik/SKILL.md",
 }
 

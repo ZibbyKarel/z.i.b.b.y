@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Chip, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import { Button, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { SectionLabel } from "../../components/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -12,20 +12,18 @@ import { RunModal } from "../skills/components/RunModal/RunModal";
 import { AGENT_CATEGORIES, AGENT_CATEGORY_GLYPH, PROJECTS } from "../../state/config";
 import { agentFile, mkAgentBody, newAgentDraft, slugifyAgent } from "./agentDraft";
 import { useDashboardStore } from "../../state/store";
-import { useGlobalStateContext } from "apps/web/global/contexts/GlobalStateContext";
 import type { AgentDef, Skill } from "../../domain";
 
 export function Screen() {
   const ta = useTranslations("agents");
-  const { context } = useGlobalStateContext();
   const { agents, pipelines, upsertAgent, removeAgent, setAgentEnabled } = useDashboardStore();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AgentDef | null>(null);
   const [runAgent, setRunAgent] = useState<AgentDef | null>(null);
 
-  const list = agents.filter((a) => a.ctx === context);
+  const list = agents;
   const activeCount = list.filter((a) => a.enabled !== false).length;
-  const categories = AGENT_CATEGORIES[context];
+  const categories = AGENT_CATEGORIES;
 
   const pipelineCount = (a: AgentDef) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
@@ -49,7 +47,6 @@ export function Screen() {
     name: a.name,
     glyph: a.glyph,
     desc: a.role,
-    ctx: a.ctx,
     file: a.file,
   });
 
@@ -60,20 +57,15 @@ export function Screen() {
           <Stack wrap align="start" direction="row" gap="200" justify="between">
             <Container minW0>
               <Stack gap="75">
-                <Stack align="center" direction="row" gap="100">
-                  <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
-                    {ta("title")}
-                  </Typography>
-                  <Chip size="md" tone="accent">
-                    {context}
-                  </Chip>
-                </Stack>
+                <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
+                  {ta("title")}
+                </Typography>
                 <Typography mono size="sm" type="note" variant="tertiary">
                   {ta("countSummary", { count: list.length, active: activeCount })}
                 </Typography>
               </Stack>
             </Container>
-            <Button icon="plus" intent="run" onClick={() => setDraft(newAgentDraft(context))}>
+            <Button icon="plus" intent="run" onClick={() => setDraft(newAgentDraft())}>
               {ta("addAgent")}
             </Button>
           </Stack>
@@ -85,7 +77,7 @@ export function Screen() {
             description={ta("emptyDescription")}
             glyph="bot"
             hint={ta("emptyHint")}
-            onAction={() => setDraft(newAgentDraft(context))}
+            onAction={() => setDraft(newAgentDraft())}
             title={ta("emptyTitle")}
           />
         ) : (

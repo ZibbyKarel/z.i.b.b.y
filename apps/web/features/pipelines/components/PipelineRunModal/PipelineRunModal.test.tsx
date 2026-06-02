@@ -5,14 +5,13 @@ import type { AgentDef, Pipeline } from "../../../../domain"
 import { PipelineRunModal } from "./PipelineRunModal"
 
 const agents: AgentDef[] = [
-  { id: "architect", name: "Architekt", glyph: "compass", role: "", model: "opus", thinking: "high", tools: [], ctx: "work", state: "idle", file: "" },
-  { id: "coder", name: "Kodér", glyph: "code", role: "", model: "sonnet", thinking: "medium", tools: [], ctx: "work", state: "idle", file: "" },
+  { id: "architect", name: "Architekt", glyph: "compass", role: "", model: "opus", thinking: "high", tools: [], state: "idle", file: "" },
+  { id: "coder", name: "Kodér", glyph: "code", role: "", model: "sonnet", thinking: "medium", tools: [], state: "idle", file: "" },
 ]
 
 const pipeline: Pipeline = {
   id: "build-feature",
   name: "Build Feature",
-  ctx: "work",
   budget: 25,
   lastRun: "dnes",
   lastState: "parked",

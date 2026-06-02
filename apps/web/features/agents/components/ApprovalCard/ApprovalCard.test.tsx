@@ -7,7 +7,6 @@ import { ApprovalCard } from "./ApprovalCard"
 const approval: Approval = {
   id: "ap1",
   skill: "rohlik",
-  ctx: "home",
   action: "Objednat košík",
   detail: "14 položek · 1 248 Kč",
   risk: "platba",

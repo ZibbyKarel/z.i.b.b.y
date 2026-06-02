@@ -20,7 +20,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { ModelName, ThinkingLevel } from "../../../domain";
-import type { AgentDef, ContextName, Pipeline } from "../../../domain";
+import type { AgentDef, Pipeline } from "../../../domain";
 import {
   AGENT_CATEGORIES,
   AGENT_GLYPHS,
@@ -96,7 +96,7 @@ export function AgentDetailModal({
 
   const paused = agent.enabled === false;
   const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
-  const categories = AGENT_CATEGORIES[draft.ctx];
+  const categories = AGENT_CATEGORIES;
 
   const set = (patch: Partial<AgentDef>) => setDraft((d) => ({ ...d, ...patch }));
   const toggleTool = (tool: string) =>
@@ -105,10 +105,6 @@ export function AgentDetailModal({
         ? draft.tools.filter((x) => x !== tool)
         : [...draft.tools, tool],
     });
-  const setCtx = (ctx: ContextName) => {
-    const next = AGENT_CATEGORIES[ctx];
-    set({ ctx, category: next.includes(draft.category ?? "") ? draft.category : next[0] });
-  };
 
   const editing = mode === "edit" || isNew;
   const canSave = draft.name.trim().length > 0;
@@ -120,10 +116,9 @@ export function AgentDetailModal({
         <Typography mono truncate size="xl" type="note" weight="bold">
           {isNew ? t("newAgent") : agent.name}
         </Typography>
-        <Stack align="center" direction="row" gap="75">
-          <Chip tone="accent">{draft.ctx}</Chip>
-          {draft.category && <Chip tone="neutral">{t(`categories.${draft.category}`)}</Chip>}
-        </Stack>
+        {draft.category && (
+          <Chip tone="neutral">{t(`categories.${draft.category}`)}</Chip>
+        )}
       </Container>
       {!isNew && mode === "view" && (
         <ToggleButton
@@ -183,28 +178,13 @@ export function AgentDetailModal({
       >
         {editing ? (
           <Stack gap="200">
-            <Stack direction="row" gap="150">
-              <Container grow minW0>
-                <TextField
-                  autoFocus
-                  label={t("fields.name")}
-                  onChange={(e) => set({ name: e.target.value })}
-                  placeholder={t("fields.namePlaceholder")}
-                  value={draft.name}
-                />
-              </Container>
-              <Container grow minW0>
-                <SegmentedField
-                  label={t("fields.context")}
-                  onValueChange={(v) => setCtx(v as ContextName)}
-                  options={[
-                    { value: "home", label: tk("context.home") },
-                    { value: "work", label: tk("context.work") },
-                  ]}
-                  value={draft.ctx}
-                />
-              </Container>
-            </Stack>
+            <TextField
+              autoFocus
+              label={t("fields.name")}
+              onChange={(e) => set({ name: e.target.value })}
+              placeholder={t("fields.namePlaceholder")}
+              value={draft.name}
+            />
 
             <TextField
               label={t("fields.role")}
@@ -346,7 +326,6 @@ export function AgentDetailModal({
                               {p.name}
                             </Typography>
                           </Container>
-                          <Chip tone="accent">{p.ctx}</Chip>
                           <Typography mono nowrap size="xs" type="note" variant="tertiary">
                             {t("phaseCount", { count: p.phases.length })}
                           </Typography>

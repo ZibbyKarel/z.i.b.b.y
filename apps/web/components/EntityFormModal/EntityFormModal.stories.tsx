@@ -16,16 +16,6 @@ const skillFields: FieldSchema[] = [
     kind: "textarea",
     hint: "uloží se jako description v SKILL.md",
   },
-  {
-    name: "ctx",
-    label: "Kontext",
-    kind: "segmented",
-    defaultValue: "home",
-    options: [
-      { value: "home", label: "home" },
-      { value: "work", label: "work" },
-    ],
-  },
 ];
 
 const meta: Meta<typeof EntityFormModal> = {

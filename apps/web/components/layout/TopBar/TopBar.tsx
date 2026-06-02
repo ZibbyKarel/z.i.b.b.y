@@ -1,7 +1,6 @@
-import type { ReactNode } from "react"
-import { useTranslations } from "next-intl"
+import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
-  ButtonGroup,
   Container,
   Divider,
   Icon,
@@ -9,41 +8,25 @@ import {
   Spacer,
   Stack,
   Typography,
-} from "@zibby/design-system"
-import type { ButtonGroupOption } from "@zibby/design-system"
-import type { ContextName } from "../../../domain"
+} from "@zibby/design-system";
 
 export interface TopBarProps {
-  context: ContextName
-  onContextChange: (context: ContextName) => void
-  breadcrumb: string
-  walletSlot?: ReactNode
-  onCommand?: () => void
+  breadcrumb: string;
+  walletSlot?: ReactNode;
+  onCommand?: () => void;
 }
 
-export function TopBar({
-  context,
-  onContextChange,
-  breadcrumb,
-  walletSlot,
-  onCommand,
-}: TopBarProps) {
-  const t = useTranslations()
-  const tCtx = useTranslations("context")
-  const contextOptions: ButtonGroupOption[] = [
-    { id: "home", label: tCtx("home"), tone: "home" },
-    { id: "work", label: tCtx("work"), tone: "work" },
-  ]
+export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
+  const t = useTranslations();
   return (
     <Container as="header" position="relative" zIndex={20}>
       <Container height="64px" padding={["0", "300"]} position="relative">
-        <Stack align="center" direction="row" gap="100" style={{ height: "100%" }}>
-          <ButtonGroup
-            ariaLabel={t("topbar.contextSwitcher")}
-            onChange={(v) => onContextChange(v as ContextName)}
-            options={contextOptions}
-            value={context}
-          />
+        <Stack
+          align="center"
+          direction="row"
+          gap="100"
+          style={{ height: "100%" }}
+        >
           <Stack align="center" direction="row" gap="75">
             <Icon name="chevron" size="sm" tone="faint" />
             <Typography mono size="base" type="note" variant="secondary">
@@ -73,5 +56,5 @@ export function TopBar({
       </Container>
       <Divider />
     </Container>
-  )
+  );
 }
