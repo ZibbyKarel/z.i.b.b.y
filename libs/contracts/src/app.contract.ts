@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core"
 import { agentsContract } from "./agents.contract"
+import { categoriesContract } from "./categories.contract"
 import { healthContract } from "./health.contract"
 import { limitsContract } from "./limits.contract"
 
@@ -14,6 +15,7 @@ const c = initContract()
  */
 export const appContract = c.router({
   agents: agentsContract,
+  categories: categoriesContract,
   health: healthContract,
   limits: limitsContract,
 })

@@ -1,20 +1,17 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AGENT_CATEGORIES } from "../state/config";
 
 /**
- * Catalog parity + enum-key coverage.
+ * Catalog parity.
  *
  * The next-intl `AppConfig` augmentation (see `global.d.ts`) type-checks every
- * key against `en.json` only. These tests close the two gaps the compiler can't
- * see at all:
- *   1. **Locale drift** — other locales (cs) must hold exactly the same leaf
- *      keys as the reference (en): no missing, no extra.
- *   2. **Enum-driven keys** — keys built dynamically from a runtime list (e.g.
- *      `agents.categories.<id>`) must resolve in *every* locale. typecheck
- *      already guarantees `en` completeness for these (the source id is a typed
- *      union validated against the catalog), so parity carries it to cs — but
- *      we assert it directly too, as the explicit contract for context keys.
+ * key against `en.json` only. This test closes the gap the compiler can't see:
+ * **locale drift** — other locales (cs) must hold exactly the same leaf keys as
+ * the reference (en): no missing, no extra.
+ *
+ * (Agent categories used to be an enum with `agents.categories.<id>` keys; they
+ * are now a dynamic, untranslated taxonomy from the API, so there is no longer
+ * an enum-driven key set to assert here.)
  */
 
 const MESSAGES_DIR = new URL("./messages/", import.meta.url);
@@ -63,15 +60,6 @@ describe("translation catalogs", () => {
     it(`${locale}.json has no extra keys`, () => {
       const extra = [...keys].filter((k) => !referenceKeys.has(k)).sort();
       expect(extra).toEqual([]);
-    });
-  });
-
-  describe.each(locales)("enum-driven keys resolve in %s", (locale) => {
-    const keys = new Set(leafKeys(catalogs[locale] ?? {}));
-
-    it("every AGENT_CATEGORIES id has an agents.categories.<id> entry", () => {
-      const missing = AGENT_CATEGORIES.filter((c) => !keys.has(`agents.categories.${c}`));
-      expect(missing).toEqual([]);
     });
   });
 });

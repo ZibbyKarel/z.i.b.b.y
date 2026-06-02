@@ -19,15 +19,10 @@ import {
   TextField,
   Typography,
 } from "@zibby/design-system";
+import type { Category } from "@zibby/contracts";
 import type { ModelName, ThinkingLevel } from "../../../domain";
 import type { AgentDef, Pipeline } from "../../../domain";
-import {
-  AGENT_CATEGORIES,
-  AGENT_GLYPHS,
-  AGENT_TOOLS,
-  MODEL_OPTIONS,
-  THINKING_OPTIONS,
-} from "../../../state/config";
+import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 import { mkAgentBody } from "../agentDraft";
 
@@ -35,6 +30,8 @@ export interface AgentDetailModalProps {
   agent: AgentDef;
   /** "new" opens straight into the editor; "view" shows the read-only detail. */
   mode: "view" | "new";
+  /** Live category taxonomy offered in the editor's category picker. */
+  categories: Category[];
   pipelines: Pipeline[];
   onClose: () => void;
   onSave: (agent: AgentDef, isNew: boolean) => void;
@@ -80,6 +77,7 @@ function ChipToggle({
 export function AgentDetailModal({
   agent,
   mode: initialMode,
+  categories,
   pipelines,
   onClose,
   onSave,
@@ -96,7 +94,6 @@ export function AgentDetailModal({
 
   const paused = agent.enabled === false;
   const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
-  const categories = AGENT_CATEGORIES;
 
   const set = (patch: Partial<AgentDef>) => setDraft((d) => ({ ...d, ...patch }));
   const toggleTool = (tool: string) =>
@@ -116,9 +113,7 @@ export function AgentDetailModal({
         <Typography mono truncate size="xl" type="note" weight="bold">
           {isNew ? t("newAgent") : agent.name}
         </Typography>
-        {draft.category && (
-          <Chip tone="neutral">{t(`categories.${draft.category}`)}</Chip>
-        )}
+        {draft.category && <Chip tone="neutral">{draft.category}</Chip>}
       </Container>
       {!isNew && mode === "view" && (
         <ToggleButton
@@ -199,8 +194,12 @@ export function AgentDetailModal({
               </Typography>
               <Stack wrap direction="row" gap="75">
                 {categories.map((c) => (
-                  <ChipToggle active={draft.category === c} key={c} onClick={() => set({ category: c })}>
-                    {t(`categories.${c}`)}
+                  <ChipToggle
+                    active={draft.category === c.name}
+                    key={c.name}
+                    onClick={() => set({ category: c.name })}
+                  >
+                    {c.name}
                   </ChipToggle>
                 ))}
               </Stack>

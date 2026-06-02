@@ -24,7 +24,8 @@
   "topbar": {
     "commandHint": "Command or skill (⌘K)",
     "commandAriaLabel": "Command or skill",
-    "commandPlaceholder": "Command or skill…"
+    "commandPlaceholder": "Command or skill…",
+    "langSwitcherLabel": "Interface language"
   },
   "sidebar": {
     "navLabel": "Main navigation",
@@ -162,15 +163,19 @@
       "body": "agent.md",
       "bodyHint": "Raw agent definition — the source of truth."
     },
-    "categories": {
-      "media": "Media",
-      "household": "Household",
-      "writing": "Writing",
-      "dev": "Development",
-      "quality": "Quality",
-      "research": "Research",
-      "docs": "Docs"
-    }
+    "addCategory": "Add category",
+    "categoryDialog": {
+      "title": "New category",
+      "subtitle": "name + glyph",
+      "nameLabel": "Category name",
+      "namePlaceholder": "e.g. Finance",
+      "glyphLabel": "Glyph",
+      "duplicate": "Category “{name}” already exists."
+    },
+    "deleteEmptyCategory": "Delete",
+    "deleteEmptyCategoryAria": "Delete empty category {name}",
+    "emptyCategory": "Empty category — add an agent or delete it.",
+    "uncategorized": "Uncategorized"
   },
   "integrations": {
     "addIntegration": "Add integration",

@@ -1,0 +1,1411 @@
+[     288ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[     390ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES'). @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     390ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH'). @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     392ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     392ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     423ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[     481ms] [LOG] [Fast Refresh] done in 59ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[     550ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     550ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     551ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[     568ms] [LOG] [Fast Refresh] done in 17ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[     643ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     643ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     648ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[     659ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[     746ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     746ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     751ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[     769ms] [LOG] [Fast Refresh] done in 19ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[     850ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     850ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     854ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[     866ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[     948ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     948ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[     951ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[     965ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1045ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1045ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1049ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1063ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1140ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1140ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1144ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1155ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1239ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1239ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1243ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1260ms] [LOG] [Fast Refresh] done in 18ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1340ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1340ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1344ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1355ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1431ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1431ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1434ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1446ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1531ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1531ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1535ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1553ms] [LOG] [Fast Refresh] done in 18ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1728ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1728ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1733ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1748ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1825ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1825ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1831ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1845ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    1925ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1925ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    1928ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1940ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2007ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2007ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2011ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2021ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2093ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2093ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2097ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2110ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2176ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2176ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2180ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2189ms] [LOG] [Fast Refresh] done in 8ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2257ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2257ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2260ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2270ms] [LOG] [Fast Refresh] done in 9ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2338ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2338ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2342ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2352ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2434ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2434ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2437ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2447ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2513ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2513ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2517ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2526ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2602ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2602ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2606ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2619ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2701ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2701ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2705ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2720ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2804ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2804ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2808ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2822ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2904ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2904ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    2907ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2922ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3002ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3002ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3006ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3025ms] [LOG] [Fast Refresh] done in 19ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3102ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3102ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3106ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3122ms] [LOG] [Fast Refresh] done in 16ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3204ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3204ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3207ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3226ms] [LOG] [Fast Refresh] done in 18ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3335ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3335ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3340ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3391ms] [LOG] [Fast Refresh] done in 51ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3445ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3445ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3448ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3455ms] [LOG] [Fast Refresh] done in 7ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3505ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3505ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3509ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3512ms] [LOG] [Fast Refresh] done in 4ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3589ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3589ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3593ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3598ms] [LOG] [Fast Refresh] done in 6ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3676ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3676ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3679ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3691ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3767ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3767ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3771ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3784ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3857ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3857ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3860ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3877ms] [LOG] [Fast Refresh] done in 17ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3958ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3958ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    3961ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3971ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4044ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4044ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4047ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4059ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4131ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4131ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4134ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4143ms] [LOG] [Fast Refresh] done in 9ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4209ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4209ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4212ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4222ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4292ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4292ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4295ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4307ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4377ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4377ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4380ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4389ms] [LOG] [Fast Refresh] done in 9ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4455ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4455ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4458ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4469ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4538ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4538ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4541ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4550ms] [LOG] [Fast Refresh] done in 9ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4617ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4617ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4620ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4630ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4698ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4698ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4701ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4716ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4785ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4785ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4788ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4799ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4872ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4872ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4876ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4888ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4961ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4961ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    4965ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4975ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5047ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5047ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5050ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5061ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5126ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5126ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5129ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5142ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5211ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5211ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5216ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5235ms] [LOG] [Fast Refresh] done in 18ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5365ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5365ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5370ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5374ms] [LOG] [Fast Refresh] done in 5ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5453ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5453ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5456ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5468ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5551ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5551ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5554ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5566ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5639ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5639ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5642ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5655ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5744ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5744ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5749ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5761ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5839ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5839ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5843ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5854ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5923ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5923ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    5927ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5938ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6019ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6019ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6023ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6032ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6102ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6102ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6105ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6116ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6187ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6187ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6190ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6200ms] [LOG] [Fast Refresh] done in 9ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6284ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6284ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6288ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6301ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6396ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6396ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6401ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6414ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6502ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6502ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6506ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6519ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6593ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6593ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6596ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6607ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6688ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6688ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6692ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6703ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6778ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6778ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6782ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6793ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6867ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6867ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6870ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6881ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6960ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6960ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    6964ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6978ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7105ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7105ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7115ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7163ms] [LOG] [Fast Refresh] done in 48ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7272ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7272ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7277ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7295ms] [LOG] [Fast Refresh] done in 19ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7378ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7378ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7382ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7395ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7897ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7897ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    7903ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7927ms] [LOG] [Fast Refresh] done in 24ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8030ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8030ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8034ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8048ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8130ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8130ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8134ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8145ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8223ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8223ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8227ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8245ms] [LOG] [Fast Refresh] done in 17ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8332ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8332ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8335ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8348ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8432ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8432ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8435ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8449ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8532ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8532ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8535ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8548ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8629ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8629ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8632ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8647ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8901ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8901ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    8905ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8926ms] [LOG] [Fast Refresh] done in 21ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9009ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9009ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9014ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9026ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9107ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9107ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9111ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9126ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9213ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9213ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9218ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9235ms] [LOG] [Fast Refresh] done in 16ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9350ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9350ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9354ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9371ms] [LOG] [Fast Refresh] done in 16ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9500ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9500ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9506ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9534ms] [LOG] [Fast Refresh] done in 28ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9629ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9629ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9635ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9653ms] [LOG] [Fast Refresh] done in 18ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9762ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9762ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9770ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9786ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9878ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9878ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[    9882ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9897ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10017ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10017ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10022ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10039ms] [LOG] [Fast Refresh] done in 18ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10135ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10135ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10139ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10151ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10243ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10243ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10248ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10262ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10396ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10396ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10402ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10416ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10509ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10510ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10514ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10539ms] [LOG] [Fast Refresh] done in 24ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10644ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10644ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10651ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10674ms] [LOG] [Fast Refresh] done in 22ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10851ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10851ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10857ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10871ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10941ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10941ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   10944ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10955ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11029ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11030ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11033ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11044ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11122ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11122ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11125ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11133ms] [LOG] [Fast Refresh] done in 7ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11203ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11203ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11206ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11222ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11302ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11302ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11305ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11318ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11393ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11393ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11397ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11408ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11484ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11484ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11487ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11498ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11562ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11563ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11566ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11576ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11640ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11640ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11643ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11656ms] [LOG] [Fast Refresh] done in 13ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11732ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11733ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11736ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11747ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11822ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11822ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11825ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11835ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11899ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11899ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11902ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11914ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11981ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11981ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   11985ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11994ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12063ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12063ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12067ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12077ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12143ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12143ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12146ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12157ms] [LOG] [Fast Refresh] done in 10ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12227ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12227ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12230ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12241ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12311ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12311ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12315ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12325ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12389ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12389ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12393ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12405ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12465ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORIES' is not exported from '../../state/config' (imported as 'AGENT_CATEGORIES').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12465ms] [WARNING] ./features/agents/Screen.tsx
+Attempted import error: 'AGENT_CATEGORY_GLYPH' is not exported from '../../state/config' (imported as 'AGENT_CATEGORY_GLYPH').
+
+Import trace for requested module:
+./features/agents/Screen.tsx @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:241
+[   12468ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12477ms] [LOG] [Fast Refresh] done in 9ms @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12509ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/overview?_rsc=dwuERj0VtwyzmkWe:0
+[   12509ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/overview. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at async fetchServerResponse (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:21) @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   12511ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/overview?_rsc=dwuERj0VtwyzmkWe:0
+[   12511ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/overview. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at async fetchServerResponse (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:21) @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   12517ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/overview?_rsc=dwuERj0VtwyzmkWe:0
+[   12517ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/overview. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:163:33)
+    at async fetchServerResponse (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:88:21) @ webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@15.5.18_@babel+core@7.29.7_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   12518ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[   12519ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_font/geist-latin.woff2:0

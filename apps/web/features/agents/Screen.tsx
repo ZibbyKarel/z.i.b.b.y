@@ -2,33 +2,59 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Container,
+  Grid,
+  Icon,
+  type IconName,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { SectionLabel } from "../../components/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
+import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
-import { AGENT_CATEGORIES, AGENT_CATEGORY_GLYPH, PROJECTS } from "../../state/config";
+import { PROJECTS } from "../../state/config";
 import { newAgentDraft, slugifyAgent } from "./agentDraft";
-import { useAgents, useCreateAgent, useDeleteAgent, useUpdateAgent } from "./queries";
+import {
+  useAgents,
+  useCategories,
+  useCreateAgent,
+  useCreateCategory,
+  useDeleteAgent,
+  useDeleteCategory,
+  useUpdateAgent,
+} from "./queries";
 import { useCatalog } from "../../state/store";
 import type { AgentDef, Skill } from "../../domain";
 
 export function Screen() {
   const ta = useTranslations("agents");
   const agents = useAgents();
+  const categories = useCategories();
   const { pipelines } = useCatalog();
   const { createAgent } = useCreateAgent();
   const { updateAgent, setEnabled } = useUpdateAgent();
   const { deleteAgent } = useDeleteAgent();
+  const { createCategory, isPending: creatingCategory } = useCreateCategory();
+  const { deleteCategory } = useDeleteCategory();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AgentDef | null>(null);
   const [runAgent, setRunAgent] = useState<AgentDef | null>(null);
+  const [addingCategory, setAddingCategory] = useState(false);
 
   const list = agents;
   const activeCount = list.filter((a) => a.enabled !== false).length;
-  const categories = AGENT_CATEGORIES;
+
+  // Agents whose category was deleted (or never set) must not vanish: surface
+  // them in a trailing fallback section instead of dropping them from the catalog.
+  const knownNames = new Set(categories.map((c) => c.name));
+  const uncategorized = list.filter((a) => !a.category || !knownNames.has(a.category));
 
   const pipelineCount = (a: AgentDef) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
@@ -53,6 +79,62 @@ export function Screen() {
     file: a.file,
   });
 
+  const renderSection = (key: string, label: string, glyph: IconName, items: AgentDef[]) => {
+    const empty = items.length === 0;
+    return (
+      <Container key={key}>
+        <SectionLabel
+          action={
+            <Stack align="center" direction="row" gap="100">
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {items.length}
+              </Typography>
+              {empty && key !== "__uncategorized" && (
+                <Button
+                  aria-label={ta("deleteEmptyCategoryAria", { name: label })}
+                  icon="x"
+                  intent="reject"
+                  onClick={() => deleteCategory(label)}
+                  size="sm"
+                >
+                  {ta("deleteEmptyCategory")}
+                </Button>
+              )}
+            </Stack>
+          }
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+            <Icon name={glyph} size="sm" tone="accent" /> {label}
+          </span>
+        </SectionLabel>
+        {empty ? (
+          <Card background="background" radius="sm">
+            <Container padding="200">
+              <Stack align="center">
+                <Typography mono size="sm" type="note" variant="tertiary">
+                  {ta("emptyCategory")}
+                </Typography>
+              </Stack>
+            </Container>
+          </Card>
+        ) : (
+          <Grid cols={1} gap="150" lg={3} sm={2}>
+            {items.map((a) => (
+              <AgentCard
+                agent={a}
+                key={a.id}
+                onOpen={(x) => setOpenId(x.id)}
+                onRun={(x) => setRunAgent(x)}
+                onToggleEnabled={(x) => setEnabled(x.id, x.enabled === false)}
+                pipelineCount={pipelineCount(a)}
+              />
+            ))}
+          </Grid>
+        )}
+      </Container>
+    );
+  };
+
   return (
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <Stack gap="250">
@@ -68,13 +150,18 @@ export function Screen() {
                 </Typography>
               </Stack>
             </Container>
-            <Button icon="plus" intent="run" onClick={() => setDraft(newAgentDraft())}>
-              {ta("addAgent")}
-            </Button>
+            <Stack align="center" direction="row" gap="100">
+              <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
+                {ta("addCategory")}
+              </Button>
+              <Button icon="plus" intent="run" onClick={() => setDraft(newAgentDraft(categories[0]?.name))}>
+                {ta("addAgent")}
+              </Button>
+            </Stack>
           </Stack>
         </HudPanel>
 
-        {list.length === 0 ? (
+        {categories.length === 0 && list.length === 0 ? (
           <EmptyState
             actionLabel={ta("addAgent")}
             description={ta("emptyDescription")}
@@ -84,44 +171,25 @@ export function Screen() {
             title={ta("emptyTitle")}
           />
         ) : (
-          categories.map((cat) => {
-            const items = list.filter((a) => (a.category ?? categories[0]) === cat);
-            if (items.length === 0) return null;
-            return (
-              <Container key={cat}>
-                <SectionLabel
-                  action={
-                    <Typography mono size="xs" type="note" variant="tertiary">
-                      {items.length}
-                    </Typography>
-                  }
-                >
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-                    <Icon name={AGENT_CATEGORY_GLYPH[cat] ?? "bot"} size="sm" tone="accent" />{" "}
-                    {ta(`categories.${cat}`)}
-                  </span>
-                </SectionLabel>
-                <Grid cols={1} gap="150" lg={3} sm={2}>
-                  {items.map((a) => (
-                    <AgentCard
-                      agent={a}
-                      key={a.id}
-                      onOpen={(x) => setOpenId(x.id)}
-                      onRun={(x) => setRunAgent(x)}
-                      onToggleEnabled={(x) => setEnabled(x.id, x.enabled === false)}
-                      pipelineCount={pipelineCount(a)}
-                    />
-                  ))}
-                </Grid>
-              </Container>
-            );
-          })
+          <>
+            {categories.map((cat) =>
+              renderSection(
+                cat.name,
+                cat.name,
+                (cat.glyph as IconName) ?? "bot",
+                list.filter((a) => a.category === cat.name),
+              ),
+            )}
+            {uncategorized.length > 0 &&
+              renderSection("__uncategorized", ta("uncategorized"), "bot", uncategorized)}
+          </>
         )}
       </Stack>
 
       {openAgent && (
         <AgentDetailModal
           agent={openAgent}
+          categories={categories}
           key={openAgent.id}
           mode="view"
           onClose={() => setOpenId(null)}
@@ -141,6 +209,7 @@ export function Screen() {
       {draft && (
         <AgentDetailModal
           agent={draft}
+          categories={categories}
           key="new-agent"
           mode="new"
           onClose={() => setDraft(null)}
@@ -149,6 +218,17 @@ export function Screen() {
           onSave={save}
           onToggleEnabled={() => {}}
           pipelines={pipelines}
+        />
+      )}
+
+      {addingCategory && (
+        <CategoryDialog
+          existing={categories.map((c) => c.name)}
+          onClose={() => setAddingCategory(false)}
+          onSubmit={(category) =>
+            createCategory(category, { onSuccess: () => setAddingCategory(false) })
+          }
+          pending={creatingCategory}
         />
       )}
 

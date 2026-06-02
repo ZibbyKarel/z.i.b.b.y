@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-import { useTranslations } from "next-intl";
 import {
   Container,
   Divider,
@@ -9,6 +7,9 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export interface TopBarProps {
   breadcrumb: string;
@@ -25,6 +26,7 @@ export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
           align="center"
           direction="row"
           gap="100"
+          justify="between"
           style={{ height: "100%" }}
         >
           <Stack align="center" direction="row" gap="75">
@@ -35,9 +37,9 @@ export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
           </Stack>
           <Spacer />
           {walletSlot}
+          <LanguageSwitcher />
         </Stack>
 
-        {/* Centered command / search bar — the primary action in the top bar. */}
         <Container
           left="50%"
           maxWidth="40vw"

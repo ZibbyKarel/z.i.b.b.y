@@ -2,18 +2,13 @@ import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
 
 /**
- * Functional category id used to group the agent catalog. Resolved for display
- * via the `agents.categories.<id>` message catalog. The runtime list lives in
- * `state/config.ts` (`AGENT_CATEGORIES`), which is checked against this union.
+ * Functional category used to group the agent catalog. Categories are now a
+ * dynamic, user-managed taxonomy (`GET /api/agents/categories`), so this is a
+ * free-form string — the name is shown verbatim (no translation). `state/config.ts`
+ * (`AGENT_CATEGORIES` / `AGENT_CATEGORY_GLYPH`) only provides seed defaults and a
+ * glyph fallback for the picker.
  */
-export type AgentCategory =
-  | "media"
-  | "household"
-  | "writing"
-  | "dev"
-  | "quality"
-  | "research"
-  | "docs";
+export type AgentCategory = string;
 
 export interface Skill {
   id: string;

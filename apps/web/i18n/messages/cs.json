@@ -24,7 +24,8 @@
   "topbar": {
     "commandHint": "Příkaz nebo skill (⌘K)",
     "commandAriaLabel": "Příkaz nebo skill",
-    "commandPlaceholder": "Příkaz nebo skill…"
+    "commandPlaceholder": "Příkaz nebo skill…",
+    "langSwitcherLabel": "Jazyk rozhraní"
   },
   "sidebar": {
     "navLabel": "Hlavní navigace",
@@ -162,15 +163,19 @@
       "body": "agent.md",
       "bodyHint": "Surová definice agenta — zdroj pravdy."
     },
-    "categories": {
-      "media": "Média",
-      "household": "Domácnost",
-      "writing": "Psaní",
-      "dev": "Vývoj",
-      "quality": "Kvalita",
-      "research": "Výzkum",
-      "docs": "Dokumentace"
-    }
+    "addCategory": "Přidat kategorii",
+    "categoryDialog": {
+      "title": "Nová kategorie",
+      "subtitle": "název + glyph",
+      "nameLabel": "Název kategorie",
+      "namePlaceholder": "např. Finance",
+      "glyphLabel": "Glyph",
+      "duplicate": "Kategorie „{name}“ už existuje."
+    },
+    "deleteEmptyCategory": "Smazat",
+    "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
+    "emptyCategory": "Prázdná kategorie — přidej sem agenta, nebo ji smaž.",
+    "uncategorized": "Bez kategorie"
   },
   "integrations": {
     "addIntegration": "Přidat integraci",

@@ -5,7 +5,7 @@
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
-import type { AgentCategory, AgentSdkCredit, ClaudeLimits } from "../domain";
+import type { AgentSdkCredit, ClaudeLimits } from "../domain";
 
 export const PROJECTS = [
   "zibby-core",
@@ -88,29 +88,14 @@ export const CLAUDE_LIMITS: ClaudeLimits = {
   },
 };
 
-/** Agent catalog taxonomy. Category ids are stable keys resolved via `agents.categories.<id>`. */
-export const AGENT_CATEGORIES = [
-  "media",
-  "household",
-  "writing",
-  "dev",
-  "quality",
-  "research",
-  "docs",
-] as const satisfies readonly AgentCategory[];
+/**
+ * Agent catalog categories are now a dynamic, user-managed taxonomy served by
+ * `GET /api/agents/categories` (see `features/agents/queries.ts`) — names and
+ * glyphs live there, not in this static config. The shipped defaults are seeded
+ * by the backend on first run.
+ */
 
-/** Glyph shown next to each category section header. */
-export const AGENT_CATEGORY_GLYPH: Record<string, IconName> = {
-  media: "film",
-  household: "cart",
-  writing: "doc",
-  dev: "code",
-  quality: "shield",
-  research: "search",
-  docs: "spark",
-};
-
-/** Glyphs offered in the agent editor's icon picker. */
+/** Glyphs offered in the category and agent editor icon pickers. */
 export const AGENT_GLYPHS: IconName[] = [
   "compass",
   "code",

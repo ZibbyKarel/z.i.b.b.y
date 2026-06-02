@@ -179,6 +179,9 @@ export type {
   ButtonGroupTone,
 } from "./components/ButtonGroup/ButtonGroup";
 
+export { Dropdown, DropdownTestId } from "./components/Dropdown/Dropdown";
+export type { DropdownProps, DropdownOption } from "./components/Dropdown/Dropdown";
+
 export {
   List,
   ListItem,

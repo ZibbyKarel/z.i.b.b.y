@@ -1,5 +1,4 @@
 import type { AgentDef } from "../../domain";
-import { AGENT_CATEGORIES } from "../../state/config";
 
 /** Slugify an agent name into a filesystem-safe id (diacritics stripped). */
 export const slugifyAgent = (name: string): string =>
@@ -34,9 +33,12 @@ export function mkAgentBody(a: AgentDef): string {
   ].join("\n");
 }
 
-/** A blank draft for the "new agent" flow. */
-export function newAgentDraft(): AgentDef {
-  const category = AGENT_CATEGORIES[0];
+/**
+ * A blank draft for the "new agent" flow. `category` is seeded from the live
+ * taxonomy by the caller (the agents screen) — categories are no longer a static
+ * constant, so the draft starts uncategorised unless one is supplied.
+ */
+export function newAgentDraft(category?: string): AgentDef {
   const draft: AgentDef = {
     id: "",
     name: "",

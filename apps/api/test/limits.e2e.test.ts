@@ -1,3 +1,6 @@
+import { promises as fs } from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import { LimitsSchema } from "@zibby/contracts"
@@ -7,8 +10,14 @@ import { AppModule } from "../src/app.module"
 
 describe("Limits API (e2e)", () => {
   let app: INestApplication
+  let dir: string
 
   beforeAll(async () => {
+    // AppModule seeds the agents data dir on init; isolate it so this suite never
+    // touches the real `apps/api/data/agents`.
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "limits-e2e-"))
+    process.env.AGENTS_DIR = dir
+
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleRef.createNestApplication()
     await app.init()
@@ -16,6 +25,8 @@ describe("Limits API (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
+    await fs.rm(dir, { recursive: true, force: true })
+    delete process.env.AGENTS_DIR
   })
 
   it("returns both interactive windows matching the contract", async () => {

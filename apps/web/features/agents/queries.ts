@@ -1,4 +1,4 @@
-import type { Agent } from "@zibby/contracts";
+import type { Agent, Category } from "@zibby/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import type { IconName } from "@zibby/design-system";
 import type { AgentCategory, AgentDef, ModelName, ThinkingLevel } from "../../domain";
@@ -7,6 +7,9 @@ import { agentFile, mkAgentBody } from "./agentDraft";
 
 /** Shared cache key for the agent list — the TanStack cache is the FE source of truth. */
 const AGENTS_KEY = ["agents"] as const;
+
+/** Shared cache key for the category taxonomy. */
+const CATEGORIES_KEY = ["categories"] as const;
 
 /**
  * Map a backend {@link Agent} (thin, frontmatter-backed) onto the rich UI
@@ -86,6 +89,44 @@ export function useUpdateAgent() {
       mutation.mutate({ params: { id: draft.id }, body: toAgentBody(draft) }),
     setEnabled: (id: string, enabled: boolean) =>
       mutation.mutate({ params: { id }, body: { enabled } }),
+  };
+}
+
+/**
+ * Live category taxonomy from `GET /api/agents/categories`. Backed by the shared
+ * `["categories"]` cache so the agents screen and the agent editor read one source.
+ */
+export function useCategories(): Category[] {
+  const { data } = apiClient.categories.listCategories.useQuery({ queryKey: CATEGORIES_KEY });
+  return data?.body ?? [];
+}
+
+/** Create a category (`POST /api/agents/categories`); refreshes the taxonomy on success. */
+export function useCreateCategory() {
+  const qc = useQueryClient();
+  const mutation = apiClient.categories.createCategory.useMutation({
+    onSuccess: () => qc.invalidateQueries({ queryKey: CATEGORIES_KEY }),
+  });
+  return {
+    ...mutation,
+    createCategory: (category: Category, options?: { onSuccess?: () => void }) =>
+      mutation.mutate({ body: category }, { onSuccess: () => options?.onSuccess?.() }),
+  };
+}
+
+/**
+ * Delete a category (`DELETE /api/agents/categories/:name`). The API refuses
+ * (409) while any agent still references it, so only empty categories are
+ * removable; refreshes the taxonomy on success.
+ */
+export function useDeleteCategory() {
+  const qc = useQueryClient();
+  const mutation = apiClient.categories.deleteCategory.useMutation({
+    onSuccess: () => qc.invalidateQueries({ queryKey: CATEGORIES_KEY }),
+  });
+  return {
+    ...mutation,
+    deleteCategory: (name: string) => mutation.mutate({ params: { name } }),
   };
 }
 
