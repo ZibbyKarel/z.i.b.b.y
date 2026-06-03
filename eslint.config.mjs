@@ -10,6 +10,7 @@ export default [
       "**/dist/**",
       "**/storybook-static/**",
       "graphify-out/**",
+      "design-ref/**",
       "**/next-env.d.ts",
       "**/*.config.{js,mjs,ts,mts}",
     ],
