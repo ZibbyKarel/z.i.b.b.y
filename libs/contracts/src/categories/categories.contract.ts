@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core"
 import { z } from "zod"
-import { ErrorSchema } from "./agent.schema"
+import { ErrorSchema } from "../common.schema"
 import { CategoryNameSchema, CategorySchema, CreateCategorySchema } from "./category.schema"
 
 const c = initContract()

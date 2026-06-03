@@ -33,17 +33,34 @@ HTTP requests/responses are still JSON — the Markdown shape is a storage detai
 
 ## Layout
 
-- `src/agent.schema.ts` — Zod schemas + inferred types (`Agent`, `CreateAgentInput`, …)
-- `src/agents.contract.ts` — `c.router({...})` wiring schemas to routes
-- `src/index.ts` — public barrel
+Files are grouped **one folder per domain**; the barrel and the composed router
+stay at the root. Each domain folder holds its `*.schema.ts` (Zod schemas +
+inferred types), its `*.contract.ts` (`c.router({...})` wiring schemas to routes),
+and its `*.contract.test.ts`:
+
+```
+src/
+  agents/        agent.schema.ts · agents.contract.ts · agents.contract.test.ts
+  agent-runs/    agent-run.schema.ts · agent-runs.contract.ts · …   (runtime side of the agents resource)
+  categories/    category.schema.ts · categories.contract.ts · …
+  health/        health.schema.ts · health.contract.ts · …
+  limits/        limits.schema.ts · limits.contract.ts · …
+  common.schema.ts   ← cross-domain schemas shared by several contracts (`ErrorSchema`)
+  app.contract.ts    ← composed root router (every resource under a named key)
+  index.ts           ← public barrel
+```
+
+Cross-domain reuse: `ErrorSchema` lives in `common.schema.ts` (used by agents,
+agent-runs and categories); `AgentIdSchema` stays in `agents/agent.schema.ts` and
+is imported by `agent-runs` as a legitimate domain dependency (a run is *of* an agent).
 
 Routes are mounted under the `/api` prefix (`pathPrefix` in the router options).
 
 ## How to add a new endpoint
 
-1. **Model the data** in `src/agent.schema.ts` (or a new `*.schema.ts` file):
-   add/extend the Zod schemas and `z.infer` the TypeScript types.
-2. **Add the route** to `agentsContract` in `src/agents.contract.ts`:
+1. **Model the data** in `src/agents/agent.schema.ts` (or the relevant domain's
+   `*.schema.ts`): add/extend the Zod schemas and `z.infer` the TypeScript types.
+2. **Add the route** to `agentsContract` in `src/agents/agents.contract.ts`:
 
    ```ts
    archiveAgent: {
@@ -76,9 +93,11 @@ The steps above extend an existing resource. For a brand-new concern — a new
 `*.contract.ts` that is not part of `agentsContract` — you also wire a new NestJS
 module. The health endpoint is the reference example; follow its shape:
 
-1. **Contract** — `src/<name>.schema.ts` + `src/<name>.contract.ts`
-   (`c.router({...}, { pathPrefix: "/api", strictStatusCodes: true })`), exported
-   from `src/index.ts`. See `health.schema.ts` / `health.contract.ts`.
+1. **Contract** — a new `src/<name>/` folder with `<name>.schema.ts` +
+   `<name>.contract.ts` (`c.router({...}, { pathPrefix: "/api", strictStatusCodes: true })`),
+   exported from `src/index.ts`. Reuse the shared `ErrorSchema` from
+   `src/common.schema.ts` for error responses. See `src/health/health.schema.ts` /
+   `src/health/health.contract.ts`.
 2. **Controller** — `apps/api/src/<name>/<name>.controller.ts`, a `@Controller()`
    with one `@TsRestHandler(<name>Contract)` method returning
    `tsRestHandler(<name>Contract, { ... })`. See `health.controller.ts`.

@@ -13,16 +13,21 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
-import type { Skill } from "../../../../domain";
+import type { IconName } from "@zibby/design-system";
+import type { Agent } from "@zibby/contracts";
 
 export interface RunModalProps {
-  /** Skill to run; the modal renders only when set. */
-  skill: Skill;
+  /** Agent to run; the modal renders only when set. The contract `Agent` is the
+   * single shape used end to end — no bespoke run-target type to map through. */
+  agent: Agent;
+  /** Display-only backing file path (`agentFile(id)` for agents, the SKILL.md path
+   * for the not-yet-contracted skills placeholder). */
+  file: string;
   /** Selectable target projects (from projects.json). */
   projects: string[];
   onClose: () => void;
   /** Called with the composed run request when the user launches. */
-  onLaunch?: (req: { skill: Skill; prompt: string; project: string }) => void;
+  onLaunch?: (req: { agent: Agent; prompt: string; project: string }) => void;
 }
 
 /**
@@ -30,14 +35,18 @@ export interface RunModalProps {
  * the backing SKILL.md path, then launch a background agent. Mounted only when
  * a skill is selected (mount with a `key` to reset state per skill).
  */
-export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) {
+export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalProps) {
   const t = useTranslations();
   const [prompt, setPrompt] = useState("");
   const [project, setProject] = useState(projects[0] ?? "");
   const [launched, setLaunched] = useState(false);
 
+  const name = agent.name ?? agent.id;
+  const desc = agent.description ?? "";
+  const glyph = (agent.glyph as IconName | undefined) ?? "bot";
+
   function launch() {
-    onLaunch?.({ skill, prompt, project });
+    onLaunch?.({ agent, prompt, project });
     setLaunched(true);
   }
 
@@ -56,18 +65,18 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
           </Stack>
         )
       }
-      ariaLabel={t("runModal.runAria", { name: skill.name })}
+      ariaLabel={t("runModal.runAria", { name })}
       closeLabel={t("common.close")}
       onClose={onClose}
       title={
         <Stack align="center" direction="row" gap="150">
-          <IconTile glyph={skill.glyph} size="md" />
+          <IconTile glyph={glyph} size="md" />
           <Container grow minW0>
             <Typography mono size="xl" type="note" weight="bold">
-              {skill.name}
+              {name}
             </Typography>
             <Typography size="base" type="note" variant="secondary">
-              {skill.desc}
+              {desc}
             </Typography>
           </Container>
         </Stack>
@@ -82,7 +91,7 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
               {t("runModal.launchedTitle")}
             </Typography>
             <Typography mono size="base" type="note" variant="secondary">
-              {t("runModal.launchedTarget", { name: skill.name, project })}
+              {t("runModal.launchedTarget", { name, project })}
             </Typography>
             <Typography size="md" type="note" variant="secondary">
               {t.rich("runModal.watch", {
@@ -104,7 +113,7 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
             autoFocus
             label={t("runModal.promptLabel")}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={t("runModal.promptPlaceholder", { name: skill.name })}
+            placeholder={t("runModal.promptPlaceholder", { name })}
             value={prompt}
           />
           <SegmentedField
@@ -118,7 +127,7 @@ export function RunModal({ skill, projects, onClose, onLaunch }: RunModalProps) 
               <Stack align="center" direction="row" gap="100">
                 <Icon name="file" size="sm" tone="faint" />
                 <Typography mono size="caption" type="note" variant="tertiary">
-                  {skill.file}
+                  {file}
                 </Typography>
               </Stack>
             </Container>

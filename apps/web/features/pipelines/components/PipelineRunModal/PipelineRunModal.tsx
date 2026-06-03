@@ -16,17 +16,17 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system"
-import type { Agent } from "@zibby/contracts"
-import { type ModelName, type Pipeline, type ThinkingLevel, glyphForAgent } from "../../../../domain"
+import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts"
+import { type Pipeline, glyphForAgent } from "../../../../domain"
 import { ModelBadge, ThinkBadge } from "../PhaseChain"
 
-const CYCLE_MODEL: ModelName[] = ["opus", "sonnet", "haiku"]
-const CYCLE_THINK: ThinkingLevel[] = ["high", "medium", "low"]
+const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"]
+const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"]
 const next = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!
 
 interface Override {
-  model: ModelName
-  thinking: ThinkingLevel
+  model: AgentModel
+  thinking: AgentThinking
 }
 
 export interface PipelineRunModalProps {

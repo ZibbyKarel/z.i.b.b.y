@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { AgentIdSchema } from "./agent.schema"
+import { AgentIdSchema } from "../agents/agent.schema"
 
 /**
  * A single execution of an agent. The backend keeps these in an in-memory

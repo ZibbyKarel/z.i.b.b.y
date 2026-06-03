@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CategorySchema, categoriesContract } from "./index"
+import { CategorySchema, categoriesContract } from "../index"
 
 describe("categoriesContract", () => {
   it("lists categories under GET /api/agents/categories", () => {

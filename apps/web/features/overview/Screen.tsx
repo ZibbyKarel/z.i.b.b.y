@@ -18,7 +18,7 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { LimitsPanel } from "../../components/layout/LimitsPanel";
-import type { Skill } from "../../domain";
+import { type Skill, skillToAgent } from "../../domain";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useCatalog } from "../../state/store";
@@ -171,10 +171,11 @@ export function Screen() {
 
       {runSkill && (
         <RunModal
+          agent={skillToAgent(runSkill)}
+          file={runSkill.file}
           key={runSkill.id}
           onClose={() => setRunSkill(null)}
           projects={[...PROJECTS]}
-          skill={runSkill}
         />
       )}
     </Grid>

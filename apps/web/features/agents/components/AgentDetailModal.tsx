@@ -18,8 +18,8 @@ import {
   TextField,
   Typography,
 } from "@zibby/design-system";
-import type { Agent, Category } from "@zibby/contracts";
-import type { ModelName, Pipeline, ThinkingLevel } from "../../../domain";
+import type { Agent, AgentModel, AgentThinking, Category } from "@zibby/contracts";
+import type { Pipeline } from "../../../domain";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import { agentFile } from "../agentDraft";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
@@ -186,7 +186,7 @@ export function AgentDetailModal({
                   <Container grow minW0>
                     <SegmentedField
                       label={t("fields.model")}
-                      onValueChange={(v) => set({ model: v as ModelName })}
+                      onValueChange={(v) => set({ model: v as AgentModel })}
                       options={MODEL_OPTIONS}
                       value={draft.model ?? "sonnet"}
                     />
@@ -194,7 +194,7 @@ export function AgentDetailModal({
                   <Container grow minW0>
                     <SegmentedField
                       label={t("fields.thinking")}
-                      onValueChange={(v) => set({ thinking: v as ThinkingLevel })}
+                      onValueChange={(v) => set({ thinking: v as AgentThinking })}
                       options={THINKING_OPTIONS}
                       value={draft.thinking ?? "medium"}
                     />

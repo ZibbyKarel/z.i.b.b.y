@@ -1,4 +1,4 @@
-import type { Agent } from "@zibby/contracts";
+import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
 
@@ -18,6 +18,16 @@ export interface Skill {
   desc: string;
   /** Path to the backing SKILL.md on disk. */
   file: string;
+}
+
+/**
+ * Adapt the in-memory {@link Skill} placeholder to the contract `Agent` shape so
+ * it can flow through the shared `RunModal` (which speaks the contract type, not a
+ * bespoke run-target). Temporary: skills get their own ts-rest contract in Fáze 2b
+ * (see NEXT-STEPS), at which point this — and the `Skill` type — go away.
+ */
+export function skillToAgent(s: Skill): Agent {
+  return { id: s.id, name: s.name, glyph: s.glyph, description: s.desc, instructions: "" };
 }
 
 export interface Approval {
@@ -66,9 +76,6 @@ export interface AgentSdkCredit {
   trend: number[];
 }
 
-export type ModelName = "opus" | "sonnet" | "haiku";
-export type ThinkingLevel = "high" | "medium" | "low";
-
 export interface PhaseLoop {
   to: string;
   maxRetries: number;
@@ -80,8 +87,8 @@ export interface PipelinePhase {
   agent: string;
   consumes: string;
   produces: string;
-  model: ModelName;
-  thinking: ThinkingLevel;
+  model: AgentModel;
+  thinking: AgentThinking;
   loop?: PhaseLoop;
 }
 

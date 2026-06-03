@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { HealthSchema, healthContract } from "./index"
+import { HealthSchema, healthContract } from "../index"
 
 describe("healthContract", () => {
   it("exposes a GET /api/health route returning 200", () => {

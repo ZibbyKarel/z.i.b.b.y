@@ -32,7 +32,6 @@ import {
 } from "./mutations";
 import { useCatalog } from "../../state/store";
 import type { Agent } from "@zibby/contracts";
-import type { Skill } from "../../domain";
 
 export function Screen() {
   const ta = useTranslations("agents");
@@ -72,14 +71,6 @@ export function Screen() {
       updateAgent.mutate({ params: { id }, body });
     }
   };
-
-  const toSkill = (a: Agent): Skill => ({
-    id: a.id,
-    name: a.name ?? a.id,
-    glyph: (a.glyph as IconName | undefined) ?? "bot",
-    desc: a.description ?? "",
-    file: agentFile(a.id),
-  });
 
   const renderSection = (key: string, label: string, glyph: IconName, items: Agent[]) => {
     const empty = items.length === 0;
@@ -233,13 +224,14 @@ export function Screen() {
 
       {runAgent && (
         <RunModal
+          agent={runAgent}
+          file={agentFile(runAgent.id)}
           key={runAgent.id}
           onClose={() => setRunAgent(null)}
-          onLaunch={({ skill, prompt, project }) =>
-            startAgentRun.mutate({ params: { id: skill.id }, body: { prompt, project } })
+          onLaunch={({ agent, prompt, project }) =>
+            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project } })
           }
           projects={[...PROJECTS]}
-          skill={toSkill(runAgent)}
         />
       )}
     </Container>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { RunLogChunk } from "@zibby/contracts";
 import { API_URL } from "../../../state/api";
 
 /** Tail interval for a single run's log. */
@@ -31,7 +32,7 @@ export function useRunLogQuery(runId: string | null): { text: string; done: bool
           { headers: { accept: "application/json" } },
         );
         if (!active || !res.ok) return;
-        const chunk = (await res.json()) as { content: string; nextOffset: number; done: boolean };
+        const chunk = (await res.json()) as RunLogChunk;
         if (!active) return;
         if (chunk.content) setText((prev) => prev + chunk.content);
         offset = chunk.nextOffset;

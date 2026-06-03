@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core"
 import { z } from "zod"
-import { AgentIdSchema, ErrorSchema } from "./agent.schema"
+import { ErrorSchema } from "../common.schema"
+import { AgentIdSchema } from "../agents/agent.schema"
 import { AgentRunSchema, RunLogChunkSchema, StartRunSchema } from "./agent-run.schema"
 
 const c = initContract()

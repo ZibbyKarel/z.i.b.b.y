@@ -1,10 +1,10 @@
 import { initContract } from "@ts-rest/core"
 import { z } from "zod"
+import { ErrorSchema } from "../common.schema"
 import {
   AgentIdSchema,
   AgentSchema,
   CreateAgentSchema,
-  ErrorSchema,
   UpdateAgentSchema,
 } from "./agent.schema"
 

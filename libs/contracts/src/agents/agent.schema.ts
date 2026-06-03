@@ -52,7 +52,3 @@ export type CreateAgentInput = z.infer<typeof CreateAgentSchema>
 /** Body accepted by `updateAgent` — every field is optional (partial update), id excluded. */
 export const UpdateAgentSchema = AgentSchema.omit({ id: true }).partial()
 export type UpdateAgentInput = z.infer<typeof UpdateAgentSchema>
-
-/** Shared error body for 4xx responses. */
-export const ErrorSchema = z.object({ message: z.string() })
-export type ErrorBody = z.infer<typeof ErrorSchema>

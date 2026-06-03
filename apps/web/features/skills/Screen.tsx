@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Container, Grid } from "@zibby/design-system";
-import type { Skill } from "../../domain";
+import { type Skill, skillToAgent } from "../../domain";
 import { SectionLabel } from "../../components/SectionLabel";
 import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -66,10 +66,11 @@ export function Screen() {
 
       {runSkill && (
         <RunModal
+          agent={skillToAgent(runSkill)}
+          file={runSkill.file}
           key={runSkill.id}
           onClose={() => setRunSkill(null)}
           projects={[...PROJECTS]}
-          skill={runSkill}
         />
       )}
     </Container>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { AgentRunSchema, RunLogChunkSchema, agentRunsContract } from "./index"
+import { AgentRunSchema, RunLogChunkSchema, agentRunsContract } from "../index"
 
 describe("agentRunsContract", () => {
   it("exposes the run lifecycle routes under /api/agents", () => {

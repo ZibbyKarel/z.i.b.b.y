@@ -5,7 +5,7 @@ import {
   CreateAgentSchema,
   UpdateAgentSchema,
   agentsContract,
-} from "./index"
+} from "../index"
 
 describe("agentsContract", () => {
   it("exposes the five CRUD routes with the expected methods and paths", () => {

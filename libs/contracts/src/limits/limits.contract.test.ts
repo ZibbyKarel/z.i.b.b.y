@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { LimitsSchema, limitsContract } from "./index"
+import { LimitsSchema, limitsContract } from "../index"
 
 describe("limitsContract", () => {
   it("exposes a GET /api/limits route returning 200", () => {
