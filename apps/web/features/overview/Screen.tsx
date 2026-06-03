@@ -14,10 +14,10 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { Collection } from "../../components/Collection/Collection";
 import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { LimitsPanel } from "../../components/layout/LimitsPanel";
+import { LimitsPanel } from "../../components/layout/LimitsPanel/LimitsPanel";
 import { type Skill, skillToAgent } from "../../domain";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
@@ -115,22 +115,21 @@ export function Screen() {
             }
             title={t("overview.quickRun")}
           >
-            {favorites.length === 0 ? (
-              <EmptyState
-                actionLabel={t("skills.addSkill")}
-                description={t("overview.quickRunEmptyDesc")}
-                glyph="spark"
-                hint={t("overview.quickRunEmptyHint")}
-                onAction={() => setAdding(true)}
-                title={t("overview.noSkills")}
-              />
-            ) : (
-              <Grid cols={1} gap="150" sm={2}>
-                {favorites.map((s) => (
-                  <SkillTile key={s.id} onRun={setRunSkill} skill={s} />
-                ))}
-              </Grid>
-            )}
+            <Collection
+              empty={{
+                glyph: "spark",
+                title: t("overview.noSkills"),
+                description: t("overview.quickRunEmptyDesc"),
+                actionLabel: t("skills.addSkill"),
+                hint: t("overview.quickRunEmptyHint"),
+                onAction: () => setAdding(true),
+              }}
+              items={favorites}
+              lg={2}
+              renderItem={(s) => (
+                <SkillTile key={s.id} onRun={setRunSkill} skill={s} />
+              )}
+            />
           </HudPanel>
         </Stack>
       </Container>

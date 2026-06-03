@@ -1,7 +1,16 @@
 import type { Preview } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NextIntlClientProvider } from "next-intl";
 import { DesignSystemProvider } from "../src/DesignSystemContext/DesignSystemProvider";
 import { contextTokens } from "./contextTokens";
+import messages from "../../../apps/web/i18n/messages/cs.json";
 import "../src/theme/globals.css";
+
+// App stories pull in next-intl translations and React Query. A single shared
+// client is fine for Storybook — nothing here mutates the cache across stories.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 
 const preview: Preview = {
   globalTypes: {
@@ -47,7 +56,11 @@ const preview: Preview = {
           (ctx.globals["context"] as "home" | "work") ?? "home",
         )}
       >
-        <Story />
+        <NextIntlClientProvider locale="cs" messages={messages}>
+          <QueryClientProvider client={queryClient}>
+            <Story />
+          </QueryClientProvider>
+        </NextIntlClientProvider>
       </DesignSystemProvider>
     ),
   ],

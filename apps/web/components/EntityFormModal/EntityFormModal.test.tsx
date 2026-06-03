@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
+import { renderWithProviders as render, screen } from "../../test/render"
 import { EntityFormModal, type FieldSchema } from "./EntityFormModal"
 
 const fields: FieldSchema[] = [

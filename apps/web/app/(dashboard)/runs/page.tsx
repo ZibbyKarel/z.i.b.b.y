@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen";
+import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen/PlaceholderScreen";
 
 export default function RunsPage() {
   const t = useTranslations("nav");

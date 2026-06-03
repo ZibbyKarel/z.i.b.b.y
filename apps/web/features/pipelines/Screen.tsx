@@ -13,7 +13,8 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { Pipeline } from "../../domain";
-import { SectionLabel } from "../../components/SectionLabel";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -55,16 +56,18 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
     />
   );
 
-  const addAction = (
-    <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
-      {t("pipelines.addPipeline")}
-    </Button>
+  const toolbar = (
+    <SectionToolbar
+      addLabel={t("pipelines.addPipeline")}
+      label={t("pipelines.sectionLabel")}
+      onAdd={() => setAdding(true)}
+    />
   );
 
   if (list.length === 0) {
     return (
-      <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
-        <SectionLabel action={addAction}>{t("pipelines.sectionLabel")}</SectionLabel>
+      <PageContainer>
+        {toolbar}
         <EmptyState
           actionLabel={t("pipelines.addPipeline")}
           description={t("pipelines.emptyDescription")}
@@ -74,14 +77,14 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           title={t("pipelines.emptyTitle")}
         />
         {addModal}
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
     <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
       <Stack gap="150">
-        <SectionLabel action={addAction}>{t("pipelines.sectionLabel")}</SectionLabel>
+        {toolbar}
         {list.map((p) => (
           <PipelineCard
             agents={agents}

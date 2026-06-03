@@ -9,7 +9,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { LanguageSwitcher } from "./LanguageSwitcher";
+import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
 
 export interface TopBarProps {
   breadcrumb: string;

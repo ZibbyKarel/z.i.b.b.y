@@ -1,10 +1,10 @@
-import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
+import { renderWithProviders, screen } from "../../../test/render"
 import { TopBar } from "./TopBar"
 
 describe("TopBar", () => {
   it("renders the breadcrumb and wallet slot", () => {
-    render(
+    renderWithProviders(
       <TopBar
         breadcrumb="Přehled"
         walletSlot={<div>wallet</div>}

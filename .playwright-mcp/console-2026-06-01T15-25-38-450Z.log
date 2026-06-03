@@ -1,4 +1,0 @@
-[     223ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:6006/favicon.svg:0
-[     498ms] [WARNING] Backgrounds Addon: could not find the default color "velin".
-These are the available colors for your story based on your configuration:
-light, dark. @ http://localhost:6006/sb-manager/globals-runtime.js:6448

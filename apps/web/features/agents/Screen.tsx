@@ -6,14 +6,15 @@ import {
   Button,
   Card,
   Container,
-  Grid,
   Icon,
   type IconName,
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { SectionLabel } from "../../components/SectionLabel";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { CardGrid } from "../../components/CardGrid/CardGrid";
+import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
@@ -111,7 +112,7 @@ export function Screen() {
             </Container>
           </Card>
         ) : (
-          <Grid cols={1} gap="150" lg={3} sm={2}>
+          <CardGrid>
             {items.map((a) => (
               <AgentCard
                 agent={a}
@@ -121,37 +122,33 @@ export function Screen() {
                 pipelineCount={pipelineCount(a)}
               />
             ))}
-          </Grid>
+          </CardGrid>
         )}
       </Container>
     );
   };
 
   return (
-    <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
+    <PageContainer>
       <Stack gap="250">
-        <HudPanel padding="300">
-          <Stack wrap align="start" direction="row" gap="200" justify="between">
-            <Container minW0>
-              <Stack gap="75">
-                <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
-                  {ta("title")}
-                </Typography>
-                <Typography mono size="sm" type="note" variant="tertiary">
-                  {ta("countSummary", { count: list.length })}
-                </Typography>
-              </Stack>
-            </Container>
-            <Stack align="center" direction="row" gap="100">
+        <PageHeader
+          actions={
+            <>
               <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
                 {ta("addCategory")}
               </Button>
-              <Button icon="plus" intent="run" onClick={() => setDraft(newAgentDraft(categories[0]?.name))}>
+              <Button
+                icon="plus"
+                intent="run"
+                onClick={() => setDraft(newAgentDraft(categories[0]?.name))}
+              >
                 {ta("addAgent")}
               </Button>
-            </Stack>
-          </Stack>
-        </HudPanel>
+            </>
+          }
+          subtitle={ta("countSummary", { count: list.length })}
+          title={ta("title")}
+        />
 
         {categories.length === 0 && list.length === 0 ? (
           <EmptyState
@@ -234,6 +231,6 @@ export function Screen() {
           projects={[...PROJECTS]}
         />
       )}
-    </Container>
+    </PageContainer>
   );
 }
