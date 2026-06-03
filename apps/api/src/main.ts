@@ -9,6 +9,8 @@ import {
   categoriesContract,
   healthContract,
   limitsContract,
+  pipelineRunsContract,
+  pipelinesContract,
   skillRunsContract,
   skillsContract,
 } from "@zibby/contracts"
@@ -24,6 +26,8 @@ const apiContract = initContract().router({
   categories: categoriesContract,
   skills: skillsContract,
   skillRuns: skillRunsContract,
+  pipelines: pipelinesContract,
+  pipelineRuns: pipelineRunsContract,
   health: healthContract,
   limits: limitsContract,
 })

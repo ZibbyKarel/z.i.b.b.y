@@ -1,0 +1,310 @@
+import { promises as fs } from "node:fs"
+import * as path from "node:path"
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
+import {
+  type Pipeline,
+  type PipelinePhase,
+  type PipelineRun,
+  PipelineRunSchema,
+  type RunLogChunk,
+  type StageRun,
+} from "@zibby/contracts"
+import { RunnerCore } from "../runner/runner-core"
+import { PipelinesStorageService } from "./pipelines.storage.service"
+import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
+
+/** DI token carrying the absolute path of the directory that holds pipeline run artifacts. */
+export const PIPELINE_RUNS_DIR = "PIPELINE_RUNS_DIR"
+
+const RETENTION_MS = 30 * 60 * 1000
+const MAX_LISTED = 50
+const AGGREGATE_FILE = "run.json"
+
+// Re-exported so the controller can map it to a 404 without importing the core.
+export { RunNotFoundError } from "../runner/runner-core"
+
+/** Raised when a pipeline run id is unknown — controllers map it to a 404. */
+export class PipelineRunNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Pipeline run "${id}" not found`)
+    this.name = "PipelineRunNotFoundError"
+  }
+}
+
+/**
+ * Runs a pipeline by chaining its phases through the shared {@link RunnerCore}: one
+ * child process per phase (so each stage's log polls independently), handoff over
+ * disk (phase N's `produces` is copied into phase N+1's `consumes`), and the
+ * tester loop / back-edge with `maxRetries` as a hard fuse against an infinite
+ * loop.
+ *
+ * The aggregate {@link PipelineRun} is held in memory and mirrored to a
+ * `<runRoot>/run.json` sidecar after every transition, so a restart can report an
+ * accurate `currentStage`. A pipeline can't auto-resume a mid-flight child, so a
+ * run left `running` at restart is reconciled to `failed` (same honesty as agent
+ * runs being relabelled `interrupted`).
+ */
+@Injectable()
+export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
+  private readonly dir: string
+  private readonly core: RunnerCore<PipelineStageRecord>
+  private readonly runs = new Map<string, PipelineRun>()
+
+  constructor(
+    @Inject(PIPELINE_RUNS_DIR) dir: string,
+    private readonly pipelines: PipelinesStorageService,
+  ) {
+    this.dir = path.resolve(dir)
+    this.core = new RunnerCore(this.dir, pipelineStageStrategy)
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.core.init()
+    await this.reconstruct()
+  }
+
+  onModuleDestroy(): void {
+    this.core.shutdown()
+  }
+
+  /**
+   * Start a run of `pipelineId`. Returns immediately; phases run in the background.
+   * (The optional `project` from the request is reserved for the real `claude -p`
+   * executor in Phase 6 and intentionally unused in demo mode.)
+   */
+  async start(pipelineId: string): Promise<PipelineRun> {
+    // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
+    const pipeline = await this.pipelines.get(pipelineId)
+
+    const startedMs = Date.now()
+    const pipelineRunId = `${pipelineId}_${startedMs}`
+    const root = path.join(this.dir, pipelineRunId)
+    await fs.mkdir(root, { recursive: true })
+
+    const firstPhase = pipeline.phases[0]
+    const run: PipelineRun = {
+      pipelineRunId,
+      pipelineId,
+      status: "running",
+      currentStage: firstPhase ? firstPhase.id : null,
+      stageRuns: [],
+      startedAt: new Date(startedMs).toISOString(),
+      cwd: root,
+    }
+    this.runs.set(pipelineRunId, run)
+    await this.writeAggregate(run)
+
+    // Fire-and-forget driver; the FE polls getRun for progress.
+    void this.drive(run, pipeline)
+    return run
+  }
+
+  list(): PipelineRun[] {
+    const cutoff = Date.now() - RETENTION_MS
+    const out: PipelineRun[] = []
+    for (const [id, run] of this.runs) {
+      const finished = run.status !== "running"
+      if (finished && Date.parse(run.startedAt) < cutoff) {
+        this.runs.delete(id)
+        continue
+      }
+      out.push(run)
+    }
+    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED)
+  }
+
+  get(pipelineRunId: string): PipelineRun {
+    const run = this.runs.get(pipelineRunId)
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    return run
+  }
+
+  /** Read a stage's log by phase id (the most recent attempt of that phase). */
+  readStageLog(pipelineRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
+    const run = this.runs.get(pipelineRunId)
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    const stage = [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId)
+    if (!stage) throw new PipelineRunNotFoundError(`${pipelineRunId}/${phaseId}`)
+    return this.core.readLog(stage.runId, offset)
+  }
+
+  /**
+   * Drive the phases in order. The cursor moves forward on success; on failure it
+   * either takes the phase's back-edge (bounded by `maxRetries`) or fails the run.
+   */
+  private async drive(run: PipelineRun, pipeline: Pipeline): Promise<void> {
+    const byId = new Map(pipeline.phases.map((p) => [p.id, p]))
+    const order = pipeline.phases
+    const retries = new Map<string, number>()
+    // Absolute path of the file to feed into the next phase's `consumes` input.
+    let handoffSource: string | null = null
+    let cursor: string | null = order[0]?.id ?? null
+
+    while (cursor) {
+      const phase = byId.get(cursor)
+      if (!phase) break // defensive; superRefine guarantees targets exist
+      run.currentStage = phase.id
+
+      const attempt = (retries.get(phase.id) ?? 0) + 1
+      const stageCwd = path.join(run.cwd, phase.id)
+      await fs.mkdir(stageCwd, { recursive: true })
+      await this.placeHandoff(handoffSource, stageCwd, phase)
+
+      const stageRun = await this.runStage(run, pipeline, phase, stageCwd, attempt)
+      run.stageRuns.push(stageRun)
+      await this.writeAggregate(run)
+
+      if (stageRun.status === "done") {
+        handoffSource = path.join(stageCwd, phase.produces)
+        const idx = order.findIndex((p) => p.id === phase.id)
+        cursor = order[idx + 1]?.id ?? null
+        continue
+      }
+
+      // Stage failed (or was interrupted). Take the back-edge if one remains.
+      const loop = phase.loop
+      if (loop && (retries.get(phase.id) ?? 0) < loop.maxRetries) {
+        retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1)
+        handoffSource = await this.writeFailureContext(run, phase, stageRun)
+        cursor = loop.to
+        continue
+      }
+
+      // No loop, or retries exhausted: escalate (surface), then fall through.
+      if (loop?.escalate) {
+        run.stageRuns.push({
+          phaseId: phase.id,
+          runId: `${run.pipelineRunId}.${phase.id}.escalated`,
+          attempt,
+          status: "error",
+        })
+      }
+      if (!loop || loop.then === "fail") {
+        run.status = "failed"
+        cursor = null
+      } else {
+        handoffSource = await this.writeFailureContext(run, phase, stageRun)
+        cursor = loop.then
+      }
+    }
+
+    if (run.status === "running") run.status = "done"
+    run.currentStage = null
+    await this.writeAggregate(run)
+  }
+
+  /** Spawn one stage child and wait for it to finish; return its StageRun. */
+  private async runStage(
+    run: PipelineRun,
+    _pipeline: Pipeline,
+    phase: PipelinePhase,
+    stageCwd: string,
+    attempt: number,
+  ): Promise<StageRun> {
+    const { command, args } = this.buildStageCommand(phase, stageCwd)
+    const rec = await this.core.start({
+      kind: "pipeline-stage",
+      ownerId: `${run.pipelineRunId}.${phase.id}`,
+      command,
+      args,
+      cwd: stageCwd,
+      extra: { pipelineRunId: run.pipelineRunId, phaseId: phase.id, attempt },
+    })
+    const status = await this.waitForStage(rec.runId)
+    return { phaseId: phase.id, runId: rec.runId, attempt, status }
+  }
+
+  /** Poll the core until the stage's child leaves the `running` state. */
+  private async waitForStage(runId: string): Promise<StageRun["status"]> {
+    for (;;) {
+      const status = this.core.get(runId).status
+      if (status !== "running") return status
+      await new Promise((r) => setTimeout(r, 25))
+    }
+  }
+
+  /** Copy the handoff source (if any) into this stage's `consumes` path. */
+  private async placeHandoff(
+    source: string | null,
+    stageCwd: string,
+    phase: PipelinePhase,
+  ): Promise<void> {
+    if (!source) return
+    const dest = this.resolveInside(stageCwd, phase.consumes)
+    if (!dest) return
+    await fs.mkdir(path.dirname(dest), { recursive: true })
+    await fs.copyFile(source, dest).catch(() => {
+      // A missing source is not fatal — the stage simply starts without input.
+    })
+  }
+
+  /** Write the failed stage's log tail as the handoff context for the retry. */
+  private async writeFailureContext(
+    run: PipelineRun,
+    phase: PipelinePhase,
+    stageRun: StageRun,
+  ): Promise<string> {
+    const file = path.join(run.cwd, `${phase.id}.failure.txt`)
+    const log = await this.core.readLog(stageRun.runId, 0).catch(() => null)
+    const body = `Phase "${phase.id}" failed (attempt ${stageRun.attempt}).\n\n${log?.content ?? ""}`
+    await fs.writeFile(file, body, "utf8").catch(() => {})
+    return file
+  }
+
+  /** Resolve a relative path strictly inside `base`, rejecting `..` escapes. */
+  private resolveInside(base: string, rel: string): string | null {
+    const resolved = path.resolve(base, rel)
+    const baseResolved = path.resolve(base)
+    if (resolved !== baseResolved && !resolved.startsWith(baseResolved + path.sep)) {
+      return null
+    }
+    return resolved
+  }
+
+  private buildStageCommand(
+    phase: PipelinePhase,
+    cwd: string,
+  ): { command: string; args: string[] } {
+    if (process.env.AGENT_RUNNER_MODE === "claude") {
+      // Phase 6 builds a real prompt from the agent's instructions + handoff; the
+      // demo path covers the pipeline machinery without burning tokens.
+      return { command: "claude", args: ["-p", `Run phase ${phase.id} as agent ${phase.agent}`] }
+    }
+    const script =
+      process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs")
+    return { command: process.execPath, args: [script, cwd, phase.id, phase.produces, phase.consumes] }
+  }
+
+  private async writeAggregate(run: PipelineRun): Promise<void> {
+    await fs
+      .writeFile(path.join(run.cwd, AGGREGATE_FILE), JSON.stringify(run), "utf8")
+      .catch(() => {
+        // Best-effort: a failed write degrades restart fidelity, not the run.
+      })
+  }
+
+  /** Rebuild aggregates from `<runRoot>/run.json` sidecars; a mid-flight run fails. */
+  private async reconstruct(): Promise<void> {
+    const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => [])
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const file = path.join(this.dir, entry.name, AGGREGATE_FILE)
+      const raw = await fs.readFile(file, "utf8").catch(() => null)
+      if (raw === null) continue
+      let data: unknown
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        continue
+      }
+      const parsed = PipelineRunSchema.safeParse(data)
+      if (!parsed.success) continue
+      let run = parsed.data
+      if (run.status === "running") {
+        run = { ...run, status: "failed", currentStage: null }
+        await this.writeAggregate(run)
+      }
+      this.runs.set(run.pipelineRunId, run)
+    }
+  }
+}

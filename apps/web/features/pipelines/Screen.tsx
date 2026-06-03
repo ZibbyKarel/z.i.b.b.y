@@ -23,17 +23,28 @@ import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
-import { useCatalog } from "../../state/store";
 import { useAgentsQuery } from "../agents/queries";
+import { usePipelinesQuery } from "./queries";
+import { useCreatePipelineMutation, useStartPipelineRunMutation } from "./mutations";
 
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
   selectedId?: string;
 }
 
+/** Slugify a free-form name into a filename-safe pipeline id. */
+const slug = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "novy";
+
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
-  const { pipelines, addPipeline } = useCatalog();
+  const { data: pipelines = [] } = usePipelinesQuery();
+  const createPipeline = useCreatePipelineMutation();
+  const startRun = useStartPipelineRunMutation();
   const { data: agents = [] } = useAgentsQuery();
   const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
   const [adding, setAdding] = useState(false);
@@ -49,7 +60,35 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
       filePreview={form.filePreview}
       glyph={form.glyph}
       onClose={() => setAdding(false)}
-      onSubmit={(values) => { addPipeline(values, t("defaults.pipeline")); setAdding(false); }}
+      onSubmit={(values) => {
+        const id = slug(values.name ?? "");
+        const desc = values.desc?.trim() || t("defaults.pipeline");
+        const budget = Number.parseInt(values.budget ?? "", 10);
+        createPipeline.mutate(
+          {
+            body: {
+              id,
+              name: values.name?.trim() || id,
+              desc,
+              budget: Number.isFinite(budget) ? budget : 25,
+              instructions: desc,
+              // The minimal create form has no phase editor yet; seed a single
+              // editable phase so the .pipeline.md is valid (phases min 1).
+              phases: [
+                {
+                  id: "phase-1",
+                  agent: agents[0]?.id ?? "agent",
+                  consumes: "task.md",
+                  produces: "output.md",
+                  model: "sonnet",
+                  thinking: "medium",
+                },
+              ],
+            },
+          },
+          { onSuccess: () => setAdding(false) },
+        );
+      }}
       submitLabel={form.submitLabel}
       subtitle={form.subtitle}
       title={form.title}
@@ -162,6 +201,9 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           agents={agents}
           key={runPipeline.id}
           onClose={() => setRunPipeline(null)}
+          onLaunch={({ project }) =>
+            startRun.mutate({ params: { id: runPipeline.id }, body: { project } })
+          }
           pipeline={runPipeline}
           projects={[...PROJECTS]}
         />
