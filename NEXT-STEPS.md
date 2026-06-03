@@ -253,6 +253,198 @@ reject→neprovede; restart-during-awaiting test.
 
 ---
 
+## Fáze 3.5 — Gate policy engine (pravidla místo příznaku)
+
+> **Zařadit mezi Fázi 3 a Fázi 4.** Zobecňuje approval gate z F3: F3 dodá
+> _mechaniku_ (pauza, approval resource, restart sémantika), 3.5 dodá _policy
+> vrstvu_ nad ní — kdy se má pauznout a jak se gate vyčistí. Vstupní artefakty
+> už existují: `gate.schema.ts` + `gate.contract.ts`.
+
+### Proč samostatná fáze (a co to dělá s F3)
+
+F3 gatuje přes `requires_approval: boolean` + `risk: low/medium/high` ve
+frontmatteru. To je stejný anti-pattern jako „risk je vlastnost nástroje":
+příznak na entitě je moc hrubý (blokuje i bezpečné použití) i moc děravý (pustí
+nebezpečné použití „bezpečné" entity). `git push` do `feature/*` je neškodný,
+`git push --force main` je průšvih — jeden boolean to neumí rozlišit.
+
+Risk je vlastnost **(akce, argumenty/cíl, kontext)**, ne entity. 3.5 zavádí
+pravidlo jako jednotku rozhodování:
+
+```
+match (pole podmínek = AND)  →  decision  ( →  resolve, jen u "ask" )
+```
+
+**Vztah k F3 — explicitní migrace (rozhodnout, viz níže):**
+
+- F3 status `awaiting-approval` a celý approval resource (`pending/approve/
+reject`, durable storage, restart sémantika) **zůstávají beze změny** — 3.5 je
+  jen generuje na základě pravidel místo na základě boolu.
+- Frontmatter `requires_approval`/`risk` se **stává legacy sugar**: parse zůstává
+  tolerantní, ale gating řídí nové pole `gates: GateRule[]`.
+  `requires_approval: true` se desugaruje na jediné catch-all pravidlo
+  `{ match: [{type:'context', context:'*'}], decision: ask, resolve: human }`.
+  `risk` degraduje na čistě **display hint** v UI, ne rozhodovací vstup.
+
+### Cíl
+
+Runner před každou akcí s vnějším efektem vyhodnotí **zamýšlenou akci** proti
+pravidlům (systémový floor + pravidla agenta) a podle výsledného `decision` ji
+buď tiše provede (`allow`), provede a zaloguje (`notify`), pozastaví do
+vyřešení (`ask` → F3 mechanika), nebo odmítne (`deny`). `ask` se vyčistí přes
+`resolve` strom (human / check / agent / all / any).
+
+### Kde sekvencovat — a co rozhodnout
+
+**Doporučení: 3.5 hned po F3, PŘED F4.** Roadmapa říká, že F4 (memory write
+policy) i F5 (automations) „gatují přes approval". Když budou gatovat přes
+_boolean_ z F3 a engine přijde až po F5, přepíše se jim wiring podruhé. Když
+engine přistane před F4, F4/F5 se na něj napojí rovnou (memory write =
+`action: write` na `MEMORY.md` → `ask`; automation s vnějším efektem → projde
+stejným evaluátorem).
+
+**K explicitnímu rozhodnutí pro Claude Code:**
+
+1. **Fold do F3 vs. samostatná 3.5.** Pokud F3 ještě nešipla, lze rovnou postavit
+   F3 na engine a vynechat boolean. Doporučení: **samostatná 3.5** — drží
+   „minimální mechanika first" instinkt roadmapy a F3 zůstane malá identity-anchor.
+2. **Variant A vs B z F3.** Engine motivuje **variant B** (per-action gate):
+   child emituje `INTENT {json}` (rozšíření `APPROVAL_REQUEST` protokolu z F3),
+   runner ho prožene evaluátorem. Variant A (gate na hranici fáze) umí jen hrubé
+   gatování celé fáze. Doporučení: **3.5 dodá protokol B**, A z F3 zůstane jako
+   fallback pro fázové gaty bez per-action granularity.
+3. **Kde žije evaluátor.** In-process `GateEvaluatorService` v `apps/api`, který
+   volá runner přímo; `POST /gates/evaluate` je tenký HTTP wrapper nad tímtéž
+   service (pro UI dry-run). Žádné HTTP volání z runneru na sebe sama. Váže se na
+   cross-cutting rozhodnutí o `RunnerCore` (evaluační hook patří do jádra, ne do
+   tří wrapperů).
+
+### Scope
+
+**Kontrakty (`libs/contracts`)** — výchozí soubory existují
+
+- `gate.schema.ts` — `MatchCondition` (discriminated union: `tool` / `action` /
+  `threshold` / `scope` / `context`), `Decision` (`allow|notify|ask|deny`),
+  rekurzivní `ResolveSchema` (`human|check|agent|all|any`), `GateRule`
+  (`RuleBase & RuleOutcome`, kde `resolve` existuje jen u `ask`), `GateRuleInput`
+  (server dosadí `id`/`source`/`locked`), `IntendedAction`, `GateEvaluation`,
+  `PendingApproval` (+ `ApprovalStep`), `PolicyViolation`.
+- `gate.contract.ts` — `getSystemPolicy` (read-only floor), `getAgentGates`
+  (`inherited` + `own`), `replaceAgentGates` (`422 PolicyViolation` na pokus
+  oslabit floor), `evaluate` (dry-run), `listPendingApprovals`, `resolveApproval`.
+- **Sjednotit s F3 approval resource:** `PendingApproval` z gate modelu vs.
+  `Approval` z F3/`domain.ts` — jeden tvar, ne dva. Doporučení: `PendingApproval`
+  je nadmnožina (`steps[]` + `combinator`), F3 `Approval` se na ni mapuje
+  (`risk` zůstane jako display pole). Rozhodnout při slučování.
+- Mechanický recept pro nový resource (`libs/contracts/README.md`):
+  schema → contract → `index.ts` export → controller → module → `app.module.ts`
+  → `apiContract` v `main.ts` → contract test + e2e.
+
+**Backend (`apps/api`)**
+
+- `gates/` modul — controller + `GateEvaluatorService` (matcher → decision +
+  resolve flattening) + `policy.storage.service.ts`.
+- **Storage (Markdown, žádná DB — storage-service pattern):**
+  - Systémový floor = locked `POLICY.md` (frontmatter `policy: GateRule[]`,
+    `source: 'system'`, `locked: true`). `resolveFile` guardy + `tryParse`
+    tolerantní k jednomu vadnému pravidlu (zahodit pravidlo, ne celou politiku).
+  - Pravidla agenta = `gates: GateRuleInput[]` ve frontmatteru agenta/skillu.
+    Čtení: `GateRuleInput.array().parse(frontmatter.gates)`. Zápis: stejný tvar
+    zpět (serialize beze ztráty).
+- **Harden-only validace** (`replaceAgentGates`): pro každé `source:'system'`
+  locked pravidlo ověřit, že agentí pravidlo na stejný matcher nemá slabší
+  `decision` (`allow`/`notify` proti `ask`/`deny`). Porušení → `422
+PolicyViolation` s `ruleIndex` + důvodem. **Agent si floor nesmí odemknout** —
+  to je strukturální vynucení invariantu #4 (žádná autonomní transakce). Klíčové
+  proti prompt-injection: agent, co přečte untrusted obsah, si nepřepíše gate na
+  platbu.
+- **Evaluační hook v `RunnerCore`:** před akcí s vnějším efektem runner sestaví
+  `IntendedAction` (z `INTENT {json}` sentinelu varianty B nebo z hranice fáze) a
+  zavolá `GateEvaluatorService.evaluate`. Na `ask` → vytvoř `Approval(pending)` +
+  flatten `resolve` na `ApprovalStep[]`, run → `awaiting-approval` (F3 mechanika).
+  Non-human steps (`check`/`agent`) řeší runtime sám (CI poll, podpis jiného
+  agenta přes spawn). `deny` → terminuj akci, nikdy neprováděj.
+
+**Frontend (`apps/web`)** — DS-first
+
+- Redesign panelu „Pravidla schvalování" v editoru agenta (viz design prompt
+  `zibby-gate-rules-prompt.md`): skupina `inherited` (locked, zámek, read-only) +
+  `own` (editovatelná, drag-reorder = priorita) + modal „Přidat pravidlo"
+  (matcher typ → decision → resolve). DS komponenty, žádný appkový Tailwind.
+- Query hooky (`apps/web/features/gates/`): `useSystemPolicyQuery`,
+  `useAgentGatesQuery`, `useReplaceAgentGatesMutation`, `useEvaluateMutation`
+  (dry-run preview v modalu), `usePendingApprovalsQuery` (poll),
+  `useResolveApprovalMutation`. `select: selectApiResponseBody`. React 19 → žádný
+  `forwardRef`, žádný `any`.
+- `ApprovalCard` z F3 rozšířit o `steps[]` view (`👤 Ty` / `✓ CI` / `🤖 reviewer`
+  s `AND`/`OR`) místo prostého approve/reject; `resolveApproval` posílá `stepId`
+  pro human step. Pending approvals → ActivityFeed / approval lane.
+
+### Akceptační kritéria
+
+- Given agent s pravidlem `{match:[{type:'action',action:'git.push',branch:'main'}],
+decision:ask, resolve:human}`, when run dorazí na push do `main`, then
+  `run.status → awaiting-approval`, existuje `Approval(pending)`, **push se
+  neprovedl**; push do `feature/x` (pravidlo `decision:allow`) projde tiše.
+- Given locked floor `{action:purchase → ask:human}` a agent zkusí přepsat to
+  samé na `allow`, when `PUT /agents/:id/gates`, then `422 PolicyViolation` a
+  floor zůstane v platnosti (váže na user-skill `rohlik`: checkout nikdy
+  autonomně).
+- Given pravidlo `merge → ask, resolve:{all:[check.ci_green, human]}`, when CI
+  zelené a člověk schválí, then merge projde; když chybí kterýkoli step, gate
+  zůstává `pending`.
+- Given `IntendedAction` se `metrics:{'purchase.amount':540}` a pravidlo
+  `{type:'threshold', metric:'purchase.amount', op:gt, value:500} → ask`, when
+  evaluate, then `decision:ask`; při `amount:120` → `allow`.
+- Given restart backendu během `awaiting-approval` (z 3.5 pravidla), then
+  approval pořád `pending`, run pořád `awaiting-approval` (F3 restart sémantika
+  platí beze změny).
+- Given legacy agent s `requires_approval:true` a bez `gates`, when run, then se
+  chová jako catch-all `ask:human` (zpětná kompatibilita).
+
+### Testy
+
+Contract testy (`libs/contracts`) na `GateRule`/`Resolve` (rekurze, `resolve`
+jen u `ask`). Unit testy `GateEvaluatorService`: matcher precedence (první match
+v pořadí vyhrává), AND podmínky, threshold operátory, harden-only validace.
+Storage unit testy `POLICY.md` (klon `agents.storage.service.test.ts`,
+parse-tolerance). E2e (`apps/api/test`): demo agent s pravidlem → evaluate →
+`ask` → `awaiting-approval` → resolve → pokračuje; pokus oslabit floor → `422`;
+restart-during-awaiting. `npm run lint && npm run typecheck && npm run test`
+zelené.
+
+### Rizika / otevřené otázky
+
+- **Sjednocení `Approval` (F3) × `PendingApproval` (gate)** — jeden tvar, ne dva
+  (viz Scope). Pokud F3 už shiplo s `domain.ts` `Approval`, je to malá contract
+  migrace.
+- **Matcher precedence** — pořadí pole = priorita, první match vyhrává; potřebuje
+  deterministický test a jasné UI (drag-reorder ukazuje prioritu).
+- **Definice „akce s vnějším efektem"** (sdílí s F3) — konzervativní default:
+  cokoli mimo čtení/zápis do sandboxu a `daily/`. `purchase`/`payment`/`delete`
+  mimo `/tmp`/`git.force_push`/`send_email` jsou tvrdě ve floor.
+- **`resolve: agent`** (podpis jiného agenta) — vyžaduje spawn review agenta;
+  pozor na cyklus (reviewer, co sám potřebuje approval). Doporučení: review agenti
+  mají `gates: []` a běží v read-only sandboxu.
+- **Variant B protokol** — rozšířit `APPROVAL_REQUEST` na `INTENT {json}` =
+  `IntendedAction`; child blokuje na rozhodovacím souboru (stejně jako F3 var. B).
+
+### Tickety (Claude Code: přeskládej do svého plánu)
+
+- **3.5-1** Sjednotit `gate.schema.ts` s F3 `Approval`/`domain.ts` + `RunStatus`
+  (rozhodnout fold vs. samostatná, A vs. B, lokace evaluátoru).
+- **3.5-2** `gates` resource (contract + `POLICY.md` storage + agent frontmatter
+  `gates:` parse/serialize + harden-only `422`).
+- **3.5-3** `GateEvaluatorService` (matcher → decision + resolve flatten) +
+  `evaluate` endpoint + unit testy precedence/threshold/harden.
+- **3.5-4** Evaluační hook v `RunnerCore` + protokol B (`INTENT {json}`) → na
+  `ask` vytvoří approval, run `awaiting-approval`.
+- **3.5-5** FE: redesign panelu „Pravidla schvalování" (DS) + query hooky +
+  `ApprovalCard` se `steps[]`.
+- **3.5-6** Legacy desugar `requires_approval`/`risk` → catch-all pravidlo / display.
+
+---
+
 ## Fáze 4 — Memory layer naživo
 
 ### Cíl
@@ -432,13 +624,28 @@ po restartu, concurrent-safety, a reálné `claude -p` napojení mimo demo.
 
 ## Příloha — Cross-cutting, sekvencování, tikety
 
-### Pořadí a závislosti
+### Dopady na cross-cutting sekci roadmapy
+
+**Sekvenční diagram:**
 
 ```
-2b ──► 3 ──► 4 ──► 5
- │            ▲
- └──────► 6 ──┘   (6 lze rozběhnout paralelně po 2b; pgid jádro chce 3+5)
+2b ──► 3 ──► 3.5 ──► 4 ──► 5
+ │                   ▲
+ └──────► 6 ─────────┘   (6 paralelně po 2b; pgid jádro chce 3 + 3.5 + 5)
 ```
+
+**Co roste napříč fázemi (doplnit):**
+
+- **Frontmatter schéma:** `+gates: GateRule[]` (F3.5) se stává hlavní
+  konfigurační plochou approvalu; `requires_approval`/`risk` (F3) → legacy sugar
+  / display, parse-tolerantně dál. `action_safe_after` (F4) se přepíše jako
+  threshold/scope matcher místo samostatného pole (rozhodnout v F4).
+- **`RunStatus`:** beze změny oproti F3 (`awaiting-approval` stačí); mění se jen
+  _důvod_ přechodu (matchnuté `ask` pravidlo místo boolu).
+- **Nová locked plocha:** `POLICY.md` (systémový floor) — jediný zdroj pravdy pro
+  invariant #4, agent ho smí jen přitvrdit. Žije vedle agentích `.md`.
+- **Evaluační hook v `RunnerCore`** — další důvod generalizovat runner (cross-cutting
+  ⭐): policy se jinak musí napojit do tří runnerů zvlášť.
 
 - **2b první** (a v rámci něj jako úplně první ticket: rozhodnout sdílený
   `RunnerCore`).
