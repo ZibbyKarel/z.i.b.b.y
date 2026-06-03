@@ -20,16 +20,6 @@ export interface Skill {
   file: string;
 }
 
-export interface RunningAgent {
-  id: string;
-  skill: string;
-  prompt: string;
-  state: "running" | "done" | "error";
-  pct: number;
-  started: string;
-  project: string;
-}
-
 export interface Approval {
   id: string;
   skill: string;

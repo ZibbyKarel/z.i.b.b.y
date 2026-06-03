@@ -22,7 +22,8 @@ import type { Skill } from "../../domain";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useCatalog } from "../../state/store";
-import { useAgents } from "../agents/queries";
+import { RunningAgentsPanel } from "../agents/components/RunningAgentsPanel";
+import { useAgentsQuery } from "../agents/queries";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { SkillTile } from "../skills/components/SkillTile";
 import { SummaryWidget } from "./SummaryWidget";
@@ -37,7 +38,7 @@ const STARTERS = [
 export function Screen() {
   const t = useTranslations();
   const { skills, integrations, pipelines, addSkill } = useCatalog();
-  const agents = useAgents();
+  const { data: agents = [] } = useAgentsQuery();
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const [adding, setAdding] = useState(false);
   const form = useEntityForm("skill");
@@ -148,14 +149,7 @@ export function Screen() {
             </Stack>
           </HudPanel>
 
-          <HudPanel title={t("overview.runningAgents")}>
-            <Stack align="center" direction="row" gap="100">
-              <StatusDot tone="faint" />
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("overview.noAgentsRunning")}
-              </Typography>
-            </Stack>
-          </HudPanel>
+          <RunningAgentsPanel />
         </Stack>
       </Container>
 

@@ -10,7 +10,8 @@ import {
   usageTone,
 } from "@zibby/design-system";
 import { HudPanel } from "../HudPanel/HudPanel";
-import { useLimits } from "../../features/limits/queries";
+import { useLimitsQuery } from "../../features/limits/queries";
+import { CLAUDE_LIMITS } from "../../state/config";
 import type { QuotaLimit } from "../../domain";
 
 type Tone = "ok" | "warn" | "bad" | "accent";
@@ -70,7 +71,11 @@ function LimitBlock({ d }: { d: QuotaLimit }) {
  */
 export function LimitsPanel() {
   const t = useTranslations();
-  const { rolling, weekly } = useLimits();
+  // Before the first successful poll `data` is undefined; fall back to the static
+  // zero-usage config so the panel always renders and never flashes empty.
+  const { data } = useLimitsQuery();
+  const rolling = data?.rolling ?? CLAUDE_LIMITS.rolling;
+  const weekly = data?.weekly ?? CLAUDE_LIMITS.weekly;
 
   return (
     <HudPanel

@@ -289,5 +289,12 @@
     "integration": "Nová integrace",
     "agent": "Nový agent",
     "pipeline": "Nová pipeline"
+  },
+  "runLog": {
+    "aria": "Log běhu {agent}",
+    "close": "Zavřít",
+    "waiting": "čekání na výstup…",
+    "streaming": "streamuji…",
+    "finished": "dokončeno"
   }
 }

@@ -1,5 +1,7 @@
 export * from "./agent.schema"
 export * from "./agents.contract"
+export * from "./agent-run.schema"
+export * from "./agent-runs.contract"
 export * from "./category.schema"
 export * from "./categories.contract"
 export * from "./health.schema"

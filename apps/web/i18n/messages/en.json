@@ -289,5 +289,12 @@
     "integration": "New integration",
     "agent": "New agent",
     "pipeline": "New pipeline"
+  },
+  "runLog": {
+    "aria": "Run log for {agent}",
+    "close": "Close",
+    "waiting": "waiting for output…",
+    "streaming": "streaming…",
+    "finished": "finished"
   }
 }

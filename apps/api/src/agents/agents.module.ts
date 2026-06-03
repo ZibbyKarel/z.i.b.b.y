@@ -1,5 +1,7 @@
 import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { AgentRunnerService, RUNS_DIR } from "../agent-runs/agent-runner.service"
+import { AgentRunsController } from "../agent-runs/agent-runs.controller"
 import { AgentsController } from "./agents.controller"
 import { AGENTS_DIR, AgentsStorageService } from "./agents.storage.service"
 import { CategoriesController } from "./categories.controller"
@@ -16,15 +18,27 @@ export function resolveAgentsDir(): string {
   return process.env.AGENTS_DIR ?? path.resolve(__dirname, "..", "..", "data", "agents")
 }
 
+/** Default directory for run artifacts (logs + per-run sandboxes); a sibling of the
+ * agents dir, resolved the same way so dev and the test runner agree. */
+export function resolveRunsDir(): string {
+  return (
+    process.env.AGENT_RUNS_DIR ??
+    path.resolve(__dirname, "..", "..", "data", "agents", "runs")
+  )
+}
+
 @Module({
-  // CategoriesController is declared first so its `GET /agents/categories` route
-  // is registered before the agents resource's `GET /agents/:id`, which would
-  // otherwise capture "categories" as an agent id (an e2e test guards this).
-  controllers: [CategoriesController, AgentsController],
+  // CategoriesController and AgentRunsController are declared before AgentsController
+  // so their static routes (`GET /agents/categories`, `GET /agents/running`) are
+  // registered ahead of the agents resource's `GET /agents/:id`, which would
+  // otherwise capture "categories"/"running" as an agent id (e2e tests guard this).
+  controllers: [CategoriesController, AgentRunsController, AgentsController],
   providers: [
     { provide: AGENTS_DIR, useFactory: resolveAgentsDir },
+    { provide: RUNS_DIR, useFactory: resolveRunsDir },
     AgentsStorageService,
     CategoriesStorageService,
+    AgentRunnerService,
   ],
   exports: [AgentsStorageService, CategoriesStorageService],
 })

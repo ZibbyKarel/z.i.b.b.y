@@ -21,29 +21,30 @@ import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { PROJECTS } from "../../state/config";
 import { agentFile, newAgentDraft, slugifyAgent } from "./agentDraft";
+import { useAgentsQuery, useCategoriesQuery } from "./queries";
 import {
-  useAgents,
-  useCategories,
-  useCreateAgent,
-  useCreateCategory,
-  useDeleteAgent,
-  useDeleteCategory,
-  useUpdateAgent,
-} from "./queries";
+  useCreateAgentMutation,
+  useCreateCategoryMutation,
+  useDeleteAgentMutation,
+  useDeleteCategoryMutation,
+  useStartAgentRunMutation,
+  useUpdateAgentMutation,
+} from "./mutations";
 import { useCatalog } from "../../state/store";
 import type { Agent } from "@zibby/contracts";
 import type { Skill } from "../../domain";
 
 export function Screen() {
   const ta = useTranslations("agents");
-  const agents = useAgents();
-  const categories = useCategories();
+  const { data: agents = [] } = useAgentsQuery();
+  const { data: categories = [] } = useCategoriesQuery();
   const { pipelines } = useCatalog();
-  const { createAgent } = useCreateAgent();
-  const { updateAgent } = useUpdateAgent();
-  const { deleteAgent } = useDeleteAgent();
-  const { createCategory, isPending: creatingCategory } = useCreateCategory();
-  const { deleteCategory } = useDeleteCategory();
+  const createAgent = useCreateAgentMutation();
+  const updateAgent = useUpdateAgentMutation();
+  const deleteAgent = useDeleteAgentMutation();
+  const createCategory = useCreateCategoryMutation();
+  const deleteCategory = useDeleteCategoryMutation();
+  const startAgentRun = useStartAgentRunMutation();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Agent | null>(null);
   const [runAgent, setRunAgent] = useState<Agent | null>(null);
@@ -64,10 +65,11 @@ export function Screen() {
   const save = (d: Agent, isNew: boolean) => {
     if (isNew) {
       const id = slugifyAgent(d.name ?? "") || `agent-${Date.now()}`;
-      createAgent({ ...d, id }, { onSuccess: setOpenId });
+      createAgent.mutate({ body: { ...d, id } }, { onSuccess: () => setOpenId(id) });
       setDraft(null);
     } else {
-      updateAgent(d);
+      const { id, ...body } = d;
+      updateAgent.mutate({ params: { id }, body });
     }
   };
 
@@ -94,7 +96,7 @@ export function Screen() {
                   aria-label={ta("deleteEmptyCategoryAria", { name: label })}
                   icon="x"
                   intent="reject"
-                  onClick={() => deleteCategory(label)}
+                  onClick={() => deleteCategory.mutate({ params: { name: label } })}
                   size="sm"
                 >
                   {ta("deleteEmptyCategory")}
@@ -193,7 +195,7 @@ export function Screen() {
           mode="view"
           onClose={() => setOpenId(null)}
           onDelete={(id) => {
-            deleteAgent(id, { onSuccess: () => setOpenId(null) });
+            deleteAgent.mutate({ params: { id } }, { onSuccess: () => setOpenId(null) });
           }}
           onRun={(a) => {
             setRunAgent(a);
@@ -223,9 +225,9 @@ export function Screen() {
           existing={categories.map((c) => c.name)}
           onClose={() => setAddingCategory(false)}
           onSubmit={(category) =>
-            createCategory(category, { onSuccess: () => setAddingCategory(false) })
+            createCategory.mutate({ body: category }, { onSuccess: () => setAddingCategory(false) })
           }
-          pending={creatingCategory}
+          pending={createCategory.isPending}
         />
       )}
 
@@ -233,6 +235,9 @@ export function Screen() {
         <RunModal
           key={runAgent.id}
           onClose={() => setRunAgent(null)}
+          onLaunch={({ skill, prompt, project }) =>
+            startAgentRun.mutate({ params: { id: skill.id }, body: { prompt, project } })
+          }
           projects={[...PROJECTS]}
           skill={toSkill(runAgent)}
         />

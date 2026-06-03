@@ -73,7 +73,33 @@ App Router route group `(dashboard)`.
 
 ## TanStack Query
 
-Hooks live per-domain in `apps/web/features/<domain>/queries.ts`, not in `libs/`.
+Hooks live per-domain under `apps/web/features/<domain>/`, not in `libs/`. One hook
+per file, split into two folders (create only the folder(s) a domain actually needs —
+a query-only domain has no `mutations/`):
+
+```
+features/<domain>/
+  queries/      ← one useXxxQuery per file, re-exported from queries/index.ts
+  mutations/    ← one useXxxMutation per file, re-exported from mutations/index.ts
+```
+
+The hook and its file share one name with a `Query`/`Mutation` suffix
+(`useAgentsQuery.ts` → `useAgentsQuery`, `useCreateAgentMutation.ts` →
+`useCreateAgentMutation`).
+
+- **Queries**: return the `useQuery` result **directly** — don't unwrap to a bare
+  value. Pass `select: selectApiResponseBody` (from `state/selectApiResponseBody.ts`)
+  so the ts-rest `{ status, body }` envelope is stripped and `data` is the body; call
+  sites read `const { data } = useXxxQuery()` and supply their own default
+  (`data ?? []`). Each query file also exports a `getXxxQueryKey()` returning the cache
+  key, so mutations import it for invalidation instead of duplicating the literal.
+  (A domain that needs to reshape the body composes its own `select` around the helper —
+  see `useLimitsQuery`.)
+- **Mutations**: return the `useMutation` result **directly** — no wrapping in
+  `{ ...mutation, doThing: () => mutation.mutate(...) }`. Call sites use
+  `.mutate({ params, body }, { onSuccess })` and read `.isPending` etc. off the returned
+  object. The hook's own `onSuccess` (invalidation) and a call-site `onSuccess` both fire
+  (hook first), so keep invalidation in the hook.
 
 ---
 

@@ -14,17 +14,17 @@ import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { AGENT_SDK } from "../../state/config";
 import { useCatalog } from "../../state/store";
-import { useAgents } from "../agents/queries";
-import { useHealth } from "../health/queries";
+import { useAgentsQuery } from "../agents/queries";
+import { useHealthQuery } from "../health/queries";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function SummaryWidget() {
   const t = useTranslations();
   const { skills, integrations, pipelines } = useCatalog();
-  const agents = useAgents();
+  const { data: agents = [] } = useAgentsQuery();
 
-  const { isFetching, isFetched, isSuccess } = useHealth();
+  const { isFetching, isFetched, isSuccess } = useHealthQuery();
   const isConnecting = isFetching && !isFetched;
   const isOnline = isSuccess;
 

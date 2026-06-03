@@ -1,0 +1,57 @@
+import { z } from "zod"
+import { AgentIdSchema } from "./agent.schema"
+
+/**
+ * A single execution of an agent. The backend keeps these in an in-memory
+ * registry while the spawned process is alive (and briefly after it finishes, so
+ * the UI can report the final state); the captured output is persisted to a log
+ * file on disk so a frontend reload never loses it.
+ *
+ * `runId` doubles as the log file's base name — `<agentId>_<startTsMs>_<pid>` —
+ * mirroring how an agent's `id` doubles as its on-disk file name. The agent **id**
+ * (filesystem-safe) is used, never the optional free-form `name`.
+ */
+/**
+ * `interrupted` is the post-restart reconciliation state: a run whose process was
+ * still alive when the backend stopped. The child is a child of the API process,
+ * so it died with it and cannot be resumed — on startup the runner relabels any
+ * run left "running" (with no live handle) as `interrupted`.
+ */
+export const AgentRunStatusSchema = z.enum(["running", "done", "error", "interrupted"])
+export type AgentRunStatus = z.infer<typeof AgentRunStatusSchema>
+
+export const AgentRunSchema = z.object({
+  runId: z.string().min(1),
+  agentId: AgentIdSchema,
+  status: AgentRunStatusSchema,
+  /** Progress 0–100, parsed from `PROGRESS <n>` lines the run emits. */
+  pct: z.number().min(0).max(100),
+  prompt: z.string(),
+  /** Human-chosen target project label (presentation only). */
+  project: z.string(),
+  /** Absolute working directory the process ran in (its sandbox folder). */
+  cwd: z.string(),
+  startedAt: z.string().datetime(),
+  pid: z.number().int(),
+  logFile: z.string(),
+})
+export type AgentRun = z.infer<typeof AgentRunSchema>
+
+/** Body accepted by `startRun`. */
+export const StartRunSchema = z.object({
+  prompt: z.string(),
+  project: z.string().optional(),
+})
+export type StartRunInput = z.infer<typeof StartRunSchema>
+
+/**
+ * A slice of a run's log, read from a byte `offset`. The client appends `content`
+ * and advances its offset to `nextOffset`; `done` flips true once the process has
+ * exited and no more output will arrive.
+ */
+export const RunLogChunkSchema = z.object({
+  content: z.string(),
+  nextOffset: z.number().int().nonnegative(),
+  done: z.boolean(),
+})
+export type RunLogChunk = z.infer<typeof RunLogChunkSchema>
