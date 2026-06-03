@@ -153,7 +153,8 @@
       "thinking": "Thinking",
       "icon": "Icon",
       "body": "agent.md",
-      "bodyHint": "Raw agent definition — the source of truth."
+      "bodyHint": "The agent definition body. YAML frontmatter is assembled from the fields on the left by the backend.",
+      "bodyPlaceholder": "Markdown description of the agent…"
     },
     "addCategory": "Add category",
     "categoryDialog": {
