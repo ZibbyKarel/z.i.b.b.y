@@ -9,6 +9,8 @@ import {
   categoriesContract,
   healthContract,
   limitsContract,
+  skillRunsContract,
+  skillsContract,
 } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
 import { AppModule } from "./app.module"
@@ -20,6 +22,8 @@ const apiContract = initContract().router({
   agents: agentsContract,
   agentRuns: agentRunsContract,
   categories: categoriesContract,
+  skills: skillsContract,
+  skillRuns: skillRunsContract,
   health: healthContract,
   limits: limitsContract,
 })

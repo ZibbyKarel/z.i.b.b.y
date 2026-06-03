@@ -4,6 +4,7 @@ import { agentsContract } from "./agents/agents.contract"
 import { categoriesContract } from "./categories/categories.contract"
 import { healthContract } from "./health/health.contract"
 import { limitsContract } from "./limits/limits.contract"
+import { skillRunsContract, skillsContract } from "./skills/skills.contract"
 
 const c = initContract()
 
@@ -18,6 +19,8 @@ export const appContract = c.router({
   agents: agentsContract,
   agentRuns: agentRunsContract,
   categories: categoriesContract,
+  skills: skillsContract,
+  skillRuns: skillRunsContract,
   health: healthContract,
   limits: limitsContract,
 })
