@@ -31,14 +31,14 @@ import {
   useStartAgentRunMutation,
   useUpdateAgentMutation,
 } from "./mutations";
-import { useCatalog } from "../../state/store";
+import { usePipelinesQuery } from "../pipelines/queries";
 import type { Agent } from "@zibby/contracts";
 
 export function Screen() {
   const ta = useTranslations("agents");
   const { data: agents = [] } = useAgentsQuery();
   const { data: categories = [] } = useCategoriesQuery();
-  const { pipelines } = useCatalog();
+  const { data: pipelines = [] } = usePipelinesQuery();
   const createAgent = useCreateAgentMutation();
   const updateAgent = useUpdateAgentMutation();
   const deleteAgent = useDeleteAgentMutation();

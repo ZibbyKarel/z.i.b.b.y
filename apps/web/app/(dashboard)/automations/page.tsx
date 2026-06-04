@@ -1,7 +1,5 @@
-import { useTranslations } from "next-intl";
-import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen/PlaceholderScreen";
+import { Screen } from "../../../features/automations/Screen";
 
 export default function AutomationsPage() {
-  const t = useTranslations("nav");
-  return <PlaceholderScreen glyph="clock" label={t("automations")} />;
+  return <Screen />;
 }

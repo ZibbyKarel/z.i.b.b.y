@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { RiskSchema } from "../common.schema"
+import { GateRuleInputSchema } from "../gates/gate.schema"
 
 /**
  * Allowed shape of an agent `id`. The id doubles as the on-disk file name (and is
@@ -41,6 +43,20 @@ export const AgentSchema = z.object({
   thinking: AgentThinkingSchema.optional(),
   tools: z.array(z.string()).optional(),
   category: z.string().optional(),
+  /**
+   * Phase 3 approval gate. When true the runner pauses before spawning and waits
+   * for a decision (Variant A, gate at the run boundary). `risk` is a display hint.
+   * Phase 3.5 generalises both into the `gates` policy engine, keeping these as
+   * legacy sugar (`requires_approval` desugars to a catch-all `ask:human` rule).
+   */
+  requires_approval: z.boolean().optional(),
+  risk: RiskSchema.optional(),
+  /**
+   * Phase 3.5 gate policy. An agent's own rules (harden-only over the system
+   * floor). `requires_approval` is legacy sugar that desugars to a catch-all
+   * `ask:human` rule when `gates` is absent.
+   */
+  gates: z.array(GateRuleInputSchema).optional(),
   instructions: z.string().min(1),
 })
 export type Agent = z.infer<typeof AgentSchema>

@@ -27,6 +27,8 @@ const statusTone: Record<AgentRun["status"], "accent" | "ok" | "bad" | "warn"> =
   done: "ok",
   error: "bad",
   interrupted: "warn",
+  // Phase 3: paused on an approval — amber, like an interrupted-but-recoverable run.
+  "awaiting-approval": "warn",
 };
 
 export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps) {

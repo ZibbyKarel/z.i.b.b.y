@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { AgentIdSchema } from "../agents/agent.schema"
+import { RunStatusSchema } from "../common.schema"
 
 /**
  * A single execution of an agent. The backend keeps these in an in-memory
@@ -15,9 +16,13 @@ import { AgentIdSchema } from "../agents/agent.schema"
  * `interrupted` is the post-restart reconciliation state: a run whose process was
  * still alive when the backend stopped. The child is a child of the API process,
  * so it died with it and cannot be resumed — on startup the runner relabels any
- * run left "running" (with no live handle) as `interrupted`.
+ * run left "running" (with no live handle) as `interrupted`. `awaiting-approval`
+ * (Phase 3) is a paused state with no live child that survives restart unchanged.
+ *
+ * Aliased to the shared {@link RunStatusSchema} so every run kind moves in lockstep
+ * (widening it is a deliberate, single-point contract change).
  */
-export const AgentRunStatusSchema = z.enum(["running", "done", "error", "interrupted"])
+export const AgentRunStatusSchema = RunStatusSchema
 export type AgentRunStatus = z.infer<typeof AgentRunStatusSchema>
 
 export const AgentRunSchema = z.object({

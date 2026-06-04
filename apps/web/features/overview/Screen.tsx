@@ -22,10 +22,16 @@ import { type Skill, skillToAgent } from "../../domain";
 import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useCatalog } from "../../state/store";
+import { ApprovalCard } from "../agents/components/ApprovalCard/ApprovalCard";
 import { RunningAgentsPanel } from "../agents/components/RunningAgentsPanel";
 import { useAgentsQuery } from "../agents/queries";
+import { useApproveMutation, useRejectMutation } from "../approvals/mutations";
+import { useApprovalsQuery } from "../approvals/queries";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { SkillTile } from "../skills/components/SkillTile";
+import { useCreateSkillMutation, useStartSkillRunMutation } from "../skills/mutations";
+import { useSkillsQuery } from "../skills/queries";
+import { usePipelinesQuery } from "../pipelines/queries";
 import { SummaryWidget } from "./SummaryWidget";
 
 const STARTERS = [
@@ -35,10 +41,25 @@ const STARTERS = [
   { id: "pipelines", glyph: "flow" },
 ] as const;
 
+/** Slugify a free-form name into a filename-safe skill id. */
+const slug = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "novy";
+
 export function Screen() {
   const t = useTranslations();
-  const { skills, integrations, pipelines, addSkill } = useCatalog();
+  const { integrations } = useCatalog();
+  const { data: skills = [] } = useSkillsQuery();
+  const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
+  const { data: approvals = [] } = useApprovalsQuery();
+  const createSkill = useCreateSkillMutation();
+  const startSkillRun = useStartSkillRunMutation();
+  const approve = useApproveMutation();
+  const reject = useRejectMutation();
   const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const [adding, setAdding] = useState(false);
   const form = useEntityForm("skill");
@@ -140,12 +161,25 @@ export function Screen() {
           <LimitsPanel />
 
           <HudPanel title={t("overview.approvalsQueue")}>
-            <Stack align="center" direction="row" gap="100">
-              <StatusDot tone="ok" />
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("overview.noApprovals")}
-              </Typography>
-            </Stack>
+            {approvals.length === 0 ? (
+              <Stack align="center" direction="row" gap="100">
+                <StatusDot tone="ok" />
+                <Typography mono size="sm" type="note" variant="secondary">
+                  {t("overview.noApprovals")}
+                </Typography>
+              </Stack>
+            ) : (
+              <Stack gap="150">
+                {approvals.map((a) => (
+                  <ApprovalCard
+                    approval={a}
+                    key={a.id}
+                    onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
+                    onReject={() => reject.mutate({ params: { id: a.id }, body: {} })}
+                  />
+                ))}
+              </Stack>
+            )}
           </HudPanel>
 
           <RunningAgentsPanel />
@@ -159,8 +193,12 @@ export function Screen() {
           glyph={form.glyph}
           onClose={() => setAdding(false)}
           onSubmit={(values) => {
-            addSkill(values, t("defaults.skill"));
-            setAdding(false);
+            const id = slug(values.name ?? "");
+            const desc = values.desc?.trim() || t("defaults.skill");
+            createSkill.mutate(
+              { body: { id, name: values.name?.trim() || id, glyph: "spark", desc, instructions: desc } },
+              { onSuccess: () => setAdding(false) },
+            );
           }}
           submitLabel={form.submitLabel}
           subtitle={form.subtitle}
@@ -174,6 +212,9 @@ export function Screen() {
           file={runSkill.file}
           key={runSkill.id}
           onClose={() => setRunSkill(null)}
+          onLaunch={({ prompt, project }) =>
+            startSkillRun.mutate({ params: { id: runSkill.id }, body: { prompt, project } })
+          }
           projects={[...PROJECTS]}
         />
       )}

@@ -2,6 +2,9 @@ import * as path from "node:path"
 import { Module } from "@nestjs/common"
 import { AgentRunnerService, RUNS_DIR } from "../agent-runs/agent-runner.service"
 import { AgentRunsController } from "../agent-runs/agent-runs.controller"
+import { ApprovalsModule } from "../approvals/approvals.module"
+import { GatesController } from "../gates/gates.controller"
+import { GatesModule } from "../gates/gates.module"
 import { AgentsController } from "./agents.controller"
 import { AGENTS_DIR, AgentsStorageService } from "./agents.storage.service"
 import { CategoriesController } from "./categories.controller"
@@ -28,11 +31,12 @@ export function resolveRunsDir(): string {
 }
 
 @Module({
-  // CategoriesController and AgentRunsController are declared before AgentsController
-  // so their static routes (`GET /agents/categories`, `GET /agents/running`) are
-  // registered ahead of the agents resource's `GET /agents/:id`, which would
-  // otherwise capture "categories"/"running" as an agent id (e2e tests guard this).
-  controllers: [CategoriesController, AgentRunsController, AgentsController],
+  imports: [ApprovalsModule, GatesModule],
+  // CategoriesController, AgentRunsController and GatesController are declared
+  // before AgentsController so their static / more-specific routes
+  // (`GET /agents/categories`, `GET /agents/running`, `GET /agents/:id/gates`) are
+  // registered ahead of the agents resource's `GET /agents/:id`.
+  controllers: [CategoriesController, AgentRunsController, GatesController, AgentsController],
   providers: [
     { provide: AGENTS_DIR, useFactory: resolveAgentsDir },
     { provide: RUNS_DIR, useFactory: resolveRunsDir },
@@ -40,6 +44,6 @@ export function resolveRunsDir(): string {
     CategoriesStorageService,
     AgentRunnerService,
   ],
-  exports: [AgentsStorageService, CategoriesStorageService],
+  exports: [AgentsStorageService, CategoriesStorageService, AgentRunnerService],
 })
 export class AgentsModule {}

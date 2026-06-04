@@ -6,9 +6,17 @@ import { generateOpenApi } from "@ts-rest/open-api"
 import {
   agentRunsContract,
   agentsContract,
+  approvalsContract,
+  automationsContract,
   categoriesContract,
+  gatesContract,
   healthContract,
   limitsContract,
+  memoryContract,
+  pipelineRunsContract,
+  pipelinesContract,
+  skillRunsContract,
+  skillsContract,
 } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
 import { AppModule } from "./app.module"
@@ -20,6 +28,14 @@ const apiContract = initContract().router({
   agents: agentsContract,
   agentRuns: agentRunsContract,
   categories: categoriesContract,
+  skills: skillsContract,
+  skillRuns: skillRunsContract,
+  pipelines: pipelinesContract,
+  pipelineRuns: pipelineRunsContract,
+  approvals: approvalsContract,
+  gates: gatesContract,
+  memory: memoryContract,
+  automations: automationsContract,
   health: healthContract,
   limits: limitsContract,
 })

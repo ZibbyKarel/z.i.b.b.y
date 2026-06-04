@@ -1,9 +1,15 @@
 import { initContract } from "@ts-rest/core"
 import { agentRunsContract } from "./agent-runs/agent-runs.contract"
 import { agentsContract } from "./agents/agents.contract"
+import { approvalsContract } from "./approvals/approvals.contract"
+import { gatesContract } from "./gates/gate.contract"
+import { automationsContract } from "./automations/automations.contract"
+import { memoryContract } from "./memory/memory.contract"
 import { categoriesContract } from "./categories/categories.contract"
 import { healthContract } from "./health/health.contract"
 import { limitsContract } from "./limits/limits.contract"
+import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract"
+import { skillRunsContract, skillsContract } from "./skills/skills.contract"
 
 const c = initContract()
 
@@ -18,6 +24,14 @@ export const appContract = c.router({
   agents: agentsContract,
   agentRuns: agentRunsContract,
   categories: categoriesContract,
+  skills: skillsContract,
+  skillRuns: skillRunsContract,
+  pipelines: pipelinesContract,
+  pipelineRuns: pipelineRunsContract,
+  approvals: approvalsContract,
+  gates: gatesContract,
+  memory: memoryContract,
+  automations: automationsContract,
   health: healthContract,
   limits: limitsContract,
 })

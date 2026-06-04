@@ -1,56 +1,25 @@
-import { type ChildProcess, spawn } from "node:child_process"
-import { type WriteStream, createWriteStream } from "node:fs"
-import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
-import { type AgentRun, AgentRunSchema } from "@zibby/contracts"
+import type { AgentRun } from "@zibby/contracts"
+import type { IntendedAction } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
+import { ApprovalsService } from "../approvals/approvals.service"
+import { GateEvaluatorService } from "../gates/gate-evaluator.service"
+import { RunnerCore } from "../runner/runner-core"
+import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
 
 /** DI token carrying the absolute path of the directory that holds run artifacts. */
 export const RUNS_DIR = "RUNS_DIR"
 
-/** A run id may only contain the safe characters our filenames are built from. */
-const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/
-
-/** Finished runs stay in the list (and in memory) for this long after they start. */
-const RETENTION_MS = 30 * 60 * 1000
-
-/** Hard cap on how many runs the list returns, newest first. */
-const MAX_LISTED = 50
-
-/** Thrown when a run id is unknown or unsafe — the controller maps it to a 404. */
-export class RunNotFoundError extends Error {
-  constructor(runId: string) {
-    super(`Run "${runId}" not found`)
-    this.name = "RunNotFoundError"
-  }
-}
-
-interface RunHandle {
-  run: AgentRun
-  /** The live process, when this run was started in *this* backend process. A run
-   * reconstructed from disk after a restart has no child (it cannot be resumed). */
-  child?: ChildProcess
-  log?: WriteStream
-}
+// Re-exported so existing importers (the controller) keep their import path.
+export { RunNotFoundError } from "../runner/runner-core"
 
 /**
- * Spawns agents as child processes and tracks their runs durably.
- *
- * Persistence has two parts that together survive both a frontend reload and a
- * backend restart:
- * - the **log file** (`<runId>.log`) — captured stdout/stderr, the human-readable
- *   record;
- * - a **sidecar** (`<runId>.json`) — the structured metadata a log can't reliably
- *   carry (prompt, project, final status), serialized as an {@link AgentRun}.
- *
- * On startup {@link onModuleInit} rebuilds the in-memory registry from the
- * sidecars on disk. A sidecar still marked `running` means its process died with
- * the previous backend (the child is a child of the API process) — it can't be
- * resumed, so it is reconciled to `interrupted`. Caveat: a hard crash (kill -9 /
- * OOM) reparents children to init, so such an orphan may keep running yet still be
- * relabelled `interrupted` — acceptable for the demo; revisit for the real
- * `claude -p` executor.
+ * Spawns agents as child processes and tracks their runs durably. A thin wrapper
+ * over the shared {@link RunnerCore}: this class owns the Nest DI surface and the
+ * agent-specific command building and existence check, while spawn/log/sidecar/
+ * restart machinery lives once in the core (shared with skills and pipeline
+ * stages).
  *
  * Demo mode: every run executes the bundled token-free `demo-task.mjs` (it does
  * not interpret the agent's `instructions`). Set `AGENT_RUNNER_MODE=claude` to
@@ -60,50 +29,34 @@ interface RunHandle {
 @Injectable()
 export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
-  private readonly runs = new Map<string, RunHandle>()
+  private readonly core: RunnerCore<AgentRunRecord>
 
   constructor(
     @Inject(RUNS_DIR) dir: string,
     private readonly agents: AgentsStorageService,
+    private readonly approvals: ApprovalsService,
+    private readonly gates: GateEvaluatorService,
   ) {
     this.dir = path.resolve(dir)
+    this.core = new RunnerCore(this.dir, agentStrategy)
   }
 
-  /** Rebuild the registry from disk so runs survive a backend restart. */
+  /** Rebuild the registry from disk and register for approval decisions on agent runs. */
   async onModuleInit(): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
-    for (const entry of entries) {
-      if (!entry.endsWith(".json")) continue
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
-      if (raw === null) continue
-      let data: unknown
-      try {
-        data = JSON.parse(raw)
-      } catch {
-        continue
-      }
-      const parsed = AgentRunSchema.safeParse(data)
-      if (!parsed.success) continue
-      let run = parsed.data
-      // A run left "running" in a sidecar can't be live in this fresh process.
-      if (run.status === "running") {
-        run = {
-          ...run,
-          status: "interrupted",
-          pct: await this.readLastProgress(run.logFile, run.pct),
-        }
-        await this.writeSidecar(run)
-      }
-      this.runs.set(run.runId, { run })
-    }
+    this.approvals.register("agent", {
+      resume: async (runId) => {
+        await this.core.resume(runId)
+      },
+      cancel: (runId) => {
+        this.core.cancel(runId)
+      },
+    })
+    await this.core.init()
   }
 
   /** Kill any still-live children on shutdown so we don't leak zombies. */
   onModuleDestroy(): void {
-    for (const handle of this.runs.values()) {
-      if (handle.child && handle.run.status === "running") handle.child.kill()
-    }
+    this.core.shutdown()
   }
 
   /**
@@ -114,136 +67,83 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    */
   async start(agentId: string, prompt: string, project: string): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
-    await this.agents.get(agentId)
+    const agent = await this.agents.get(agentId)
 
     const startedMs = Date.now()
-    await fs.mkdir(this.dir, { recursive: true })
     // The sandbox the task runs in (and writes its file into). Named without the
-    // pid since we need it before spawning; the log file below carries the pid.
+    // pid since we need it before spawning; the run id below carries the pid.
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
-    await fs.mkdir(cwd, { recursive: true })
-
-    const { command, args } = this.buildCommand(prompt, cwd)
-    const child = spawn(command, args, { cwd, env: process.env })
-
-    // `child.pid` is set synchronously, and listeners attached now (before the
-    // next tick) cannot miss any output — so no early lines are lost.
-    const pid = child.pid ?? 0
-    const runId = `${agentId}_${startedMs}_${pid}`
-    const logFile = path.join(this.dir, `${runId}.log`)
-    const log = createWriteStream(logFile, { flags: "a" })
-
-    const run: AgentRun = {
-      runId,
-      agentId,
-      status: "running",
-      pct: 0,
-      prompt,
-      project,
+    // Phase 6: for the real `claude -p` executor, compose the prompt from the
+    // agent's instructions + the task. Demo mode ignores it. The run record keeps
+    // the bare task `prompt` for display.
+    const commandPrompt =
+      process.env.AGENT_RUNNER_MODE === "claude"
+        ? `${agent.instructions}\n\n# Task\n${prompt}`
+        : prompt
+    const { command, args } = this.buildCommand(commandPrompt, cwd)
+    const spec = {
+      kind: "agent" as const,
+      ownerId: agentId,
+      command,
+      args,
       cwd,
-      startedAt: new Date(startedMs).toISOString(),
-      pid,
-      logFile,
+      startedMs,
+      extra: { agentId, prompt, project },
     }
-    const handle: RunHandle = { run, child, log }
-    this.runs.set(runId, handle)
-    await this.writeSidecar(run)
 
-    const onChunk = (buf: Buffer) => {
-      const text = buf.toString("utf8")
-      log.write(text)
-      for (const line of text.split(/\r?\n/)) {
-        const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
-        if (match?.[1] !== undefined) {
-          run.pct = Math.min(100, Math.max(0, Number(match[1])))
-        }
-      }
+    // Phase 3.5: evaluate the intended action against the floor + the agent's own
+    // rules (with legacy `requires_approval` desugar). Variant A — gate at the
+    // spawn boundary. No action with an external effect runs until allowed.
+    const action: IntendedAction = { action: "run", context: agent.id }
+    const rules = await this.gates.rulesForAgent({
+      gates: agent.gates,
+      requires_approval: agent.requires_approval,
+    })
+    const decision = this.gates.evaluate(rules, action).decision
+
+    if (decision === "ask") {
+      const rec = await this.core.createPending(spec)
+      await this.approvals.requestApproval({
+        runId: rec.runId,
+        kind: "agent",
+        skill: agent.name ?? agent.id,
+        action: "run",
+        detail: prompt,
+        risk: agent.risk ?? "medium",
+      })
+      return toAgentRun(rec)
     }
-    child.stdout?.on("data", onChunk)
-    child.stderr?.on("data", onChunk)
 
-    const finalize = (status: AgentRun["status"]) => {
-      run.status = status
-      if (status === "done") run.pct = 100
-      log.end()
-      void this.writeSidecar(run)
+    if (decision === "deny") {
+      // Refused by policy: create then immediately terminate, never spawning.
+      const rec = await this.core.createPending(spec)
+      this.core.cancel(rec.runId)
+      return toAgentRun(this.core.get(rec.runId))
     }
-    child.on("error", () => finalize("error"))
-    child.on("exit", (code) => finalize(code === 0 ? "done" : "error"))
 
-    return run
+    const rec = await this.core.start(spec)
+    return toAgentRun(rec)
   }
 
   /** Running runs, plus any finished within the retention window; newest first. */
   listRunning(): AgentRun[] {
-    const cutoff = Date.now() - RETENTION_MS
-    const out: AgentRun[] = []
-    for (const [id, handle] of this.runs) {
-      const finished = handle.run.status !== "running"
-      // Drop long-finished runs from memory (their files stay on disk).
-      if (finished && Date.parse(handle.run.startedAt) < cutoff) {
-        this.runs.delete(id)
-        continue
-      }
-      out.push(handle.run)
-    }
-    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED)
+    return this.core.list().map(toAgentRun)
   }
 
   get(runId: string): AgentRun {
-    const handle = this.runs.get(runId)
-    if (!handle) throw new RunNotFoundError(runId)
-    return handle.run
+    return toAgentRun(this.core.get(runId))
   }
 
   stop(runId: string): AgentRun {
-    const handle = this.runs.get(runId)
-    if (!handle) throw new RunNotFoundError(runId)
-    // No child → already finished or reconstructed from disk: nothing to kill.
-    if (handle.child && handle.run.status === "running") handle.child.kill()
-    return handle.run
+    return toAgentRun(this.core.stop(runId))
   }
 
-  /**
-   * Read a run's log from `offset`. The log file is the source of truth, so this
-   * works whether or not the run is still in the registry (durable replay). A
-   * still-empty file for a live run yields an empty, not-done chunk.
-   */
-  async readLog(runId: string, offset: number): Promise<{
+  readLog(runId: string, offset: number): Promise<{
     content: string
     nextOffset: number
     done: boolean
   }> {
-    const handle = this.runs.get(runId)
-    const file = this.resolveLogFile(runId)
-
-    let content = ""
-    let size = offset
-    try {
-      const fd = await fs.open(file, "r")
-      try {
-        const stat = await fd.stat()
-        size = stat.size
-        if (offset < size) {
-          const length = size - offset
-          const buf = Buffer.alloc(length)
-          await fd.read(buf, 0, length, offset)
-          content = buf.toString("utf8")
-        }
-      } finally {
-        await fd.close()
-      }
-    } catch (error) {
-      if (isErrnoException(error) && error.code === "ENOENT") {
-        // No file yet: fine for a live run, a 404 for an unknown one.
-        if (handle) return { content: "", nextOffset: offset, done: false }
-        throw new RunNotFoundError(runId)
-      }
-      throw error
-    }
-
-    const done = handle ? handle.run.status !== "running" : true
-    return { content, nextOffset: size, done }
+    return this.core.readLog(runId, offset)
   }
 
   /** Build the command for a run. Demo by default; `claude -p` when opted in. */
@@ -254,44 +154,4 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const script = process.env.AGENT_DEMO_SCRIPT ?? path.resolve(__dirname, "demo-task.mjs")
     return { command: process.execPath, args: [script, cwd] }
   }
-
-  /** Persist a run's metadata next to its log so it survives a backend restart. */
-  private async writeSidecar(run: AgentRun): Promise<void> {
-    await fs
-      .writeFile(path.join(this.dir, `${run.runId}.json`), JSON.stringify(run), "utf8")
-      .catch(() => {
-        // Best-effort: a failed sidecar write degrades restart fidelity, not the run.
-      })
-  }
-
-  /** Last `PROGRESS <n>` seen in a log, or `fallback` if none/unreadable. */
-  private async readLastProgress(logFile: string, fallback: number): Promise<number> {
-    const content = await fs.readFile(logFile, "utf8").catch(() => null)
-    if (content === null) return fallback
-    let pct = fallback
-    for (const line of content.split(/\r?\n/)) {
-      const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
-      if (match?.[1] !== undefined) pct = Math.min(100, Math.max(0, Number(match[1])))
-    }
-    return pct
-  }
-
-  /**
-   * Map a run id to its log file path *inside* the runs directory, rejecting any
-   * id that could escape it — same defense-in-depth as the agents storage layer.
-   */
-  private resolveLogFile(runId: string): string {
-    if (typeof runId !== "string" || !RUN_ID_REGEX.test(runId)) {
-      throw new RunNotFoundError(runId)
-    }
-    const file = path.resolve(this.dir, `${runId}.log`)
-    if (path.dirname(file) !== this.dir) {
-      throw new RunNotFoundError(runId)
-    }
-    return file
-  }
-}
-
-function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error
 }
