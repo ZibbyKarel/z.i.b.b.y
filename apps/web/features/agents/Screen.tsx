@@ -97,9 +97,9 @@ export function Screen() {
             </Stack>
           }
         >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+          <Stack inline align="center" as="span" direction="row" gap="50">
             <Icon name={glyph} size="sm" tone="accent" /> {label}
-          </span>
+          </Stack>
         </SectionLabel>
         {empty ? (
           <Card background="background" radius="sm">

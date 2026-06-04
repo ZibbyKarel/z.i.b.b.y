@@ -17,7 +17,11 @@ export function PageContainer({
   children,
 }: PageContainerProps) {
   return (
-    <Container maxWidth={maxWidth} style={{ marginInline: "auto" }}>
+    <Container
+      maxWidth={maxWidth}
+       
+      style={{ marginInline: "auto" }}
+    >
       {children}
     </Container>
   );

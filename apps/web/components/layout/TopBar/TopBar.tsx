@@ -27,6 +27,7 @@ export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
           direction="row"
           gap="100"
           justify="between"
+           
           style={{ height: "100%" }}
         >
           <Stack align="center" direction="row" gap="75">
@@ -44,7 +45,9 @@ export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
           left="50%"
           maxWidth="40vw"
           position="absolute"
-          style={{ top: "50%", transform: "translate(-50%, -50%)" }}
+           
+          style={{ transform: "translate(-50%, -50%)" }}
+          top="50%"
           width="360px"
         >
           <SearchBar

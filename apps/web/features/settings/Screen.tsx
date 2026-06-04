@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Container, Divider, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Button, Container, Divider, Icon, Stack, StatusDot, Switch, Typography } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -44,7 +44,7 @@ function SettingRow({
           )}
         </Stack>
       </Container>
-      <div style={{ flex: "0 0 auto" }}>{control}</div>
+      <Container shrink={false}>{control}</Container>
     </Stack>
   );
 }
@@ -66,43 +66,6 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
   );
 }
 
-/** Bespoke on/off switch — small HUD toggle, themed via color variables. */
-function Switch({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) {
-  return (
-    <button
-      aria-checked={on}
-      aria-label={label}
-      onClick={onToggle}
-      role="switch"
-      style={{
-        width: 46,
-        height: 26,
-        borderRadius: 26,
-        padding: 3,
-        cursor: "pointer",
-        display: "flex",
-        justifyContent: on ? "flex-end" : "flex-start",
-        alignItems: "center",
-        border: `1px solid ${on ? "var(--color-accent)" : "var(--color-border)"}`,
-        background: on ? "var(--color-accent-dim)" : "var(--color-background)",
-        transition: "all .15s",
-      }}
-      type="button"
-    >
-      <span
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          background: on ? "var(--color-accent)" : "var(--color-foreground-faint)",
-          boxShadow: on ? "0 0 10px var(--color-accent-glow)" : "none",
-          transition: "all .15s",
-        }}
-      />
-    </button>
-  );
-}
-
 const CAFFEINATE_KEY = "zibby.caffeinate";
 
 /** Module-scoped so the cookie write isn't analyzed as an in-render mutation. */
@@ -119,8 +82,7 @@ export function Screen() {
   const [caffeinate, setCaffeinate] = useState(() =>
     typeof window === "undefined" ? true : localStorage.getItem(CAFFEINATE_KEY) !== "false",
   );
-  const toggleCaffeinate = () => {
-    const next = !caffeinate;
+  const setCaffeinateValue = (next: boolean) => {
     setCaffeinate(next);
     if (typeof window !== "undefined") localStorage.setItem(CAFFEINATE_KEY, String(next));
   };
@@ -157,7 +119,7 @@ export function Screen() {
             />
             <Divider />
             <SettingRow
-              control={<Switch label={t("caffeinate")} on={caffeinate} onToggle={toggleCaffeinate} />}
+              control={<Switch checked={caffeinate} label={t("caffeinate")} onChange={setCaffeinateValue} />}
               hint={t("caffeinateHint")}
               label={t("caffeinate")}
             />

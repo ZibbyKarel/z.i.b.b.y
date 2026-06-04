@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Button, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Button, Container, Icon, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import type { DashboardApproval } from "../approval";
 import { SEVERITY, riskMeta } from "../approval";
@@ -65,21 +65,15 @@ export function ApprovalDetail({
           </Stack>
 
           <Stack align="start" direction="row" gap="150">
-            <span
+            <IconTile
+              glyph={approval.glyph ?? meta.glyph}
+              size="lg"
               style={{
-                width: 46,
-                height: 46,
-                flex: "0 0 auto",
-                borderRadius: 3,
-                display: "grid",
-                placeItems: "center",
                 background: `color-mix(in srgb, ${meta.cssVar} 14%, transparent)`,
                 color: meta.cssVar,
-                border: `1px solid color-mix(in srgb, ${meta.cssVar} 40%, transparent)`,
+                borderColor: `color-mix(in srgb, ${meta.cssVar} 40%, transparent)`,
               }}
-            >
-              <Icon name={approval.glyph ?? meta.glyph} size="lg" />
-            </span>
+            />
             <Container minW0>
               <Stack gap="75">
                 <Typography leading="tight" type="subtitle" weight="semibold">
@@ -129,7 +123,10 @@ export function ApprovalDetail({
       <HudPanel padding="250" tone={sev.tone}>
         <Stack gap="200">
           {approval.consequence && (
+            // Bespoke severity-tinted callout: background + border are derived from
+            // the dynamic `sev.cssVar` (per-severity color), which no DS prop expresses.
             <div
+              // eslint-disable-next-line react/forbid-dom-props
               style={{
                 display: "flex",
                 gap: "0.6rem",

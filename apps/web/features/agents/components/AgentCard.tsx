@@ -32,12 +32,9 @@ export function AgentCard({ agent, pipelineCount = 0, onOpen, onRun }: AgentCard
     <Card corners interactive radius="sm">
       <Container padding="150" position="relative">
         <Stack gap="150">
-          <Pressable
-            aria-label={t("openAria", { name })}
-            onClick={() => onOpen?.(agent)}
-            style={{ display: "block", textAlign: "left" }}
-          >
-            <Stack gap="150">
+          <Pressable aria-label={t("openAria", { name })} onClick={() => onOpen?.(agent)}>
+            <Container textAlign="left">
+              <Stack gap="150">
               <Stack align="start" direction="row" gap="150">
                 <IconTile glyph={(agent.glyph as IconName | undefined) ?? "bot"} size="md" />
                 <Container grow minW0>
@@ -45,18 +42,18 @@ export function AgentCard({ agent, pipelineCount = 0, onOpen, onRun }: AgentCard
                     <Typography mono truncate size="md" type="note" weight="semibold">
                       {name}
                     </Typography>
-                    <Container
-                      style={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
+                    {/* 2-line clamp: -webkit-line-clamp has no DS equivalent. */}
+                    {/* eslint-disable-next-line react/forbid-dom-props */}
+                    <div style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}>
                       <Typography leading="snug" size="caption" type="note" variant="secondary">
                         {agent.description}
                       </Typography>
-                    </Container>
+                    </div>
                   </Stack>
                 </Container>
               </Stack>
@@ -80,7 +77,8 @@ export function AgentCard({ agent, pipelineCount = 0, onOpen, onRun }: AgentCard
                   ))}
                 </Stack>
               )}
-            </Stack>
+              </Stack>
+            </Container>
           </Pressable>
 
           <Divider />

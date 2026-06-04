@@ -18,6 +18,7 @@ export interface PlaceholderScreenProps {
 export function PlaceholderScreen({ label, glyph }: PlaceholderScreenProps) {
   const t = useTranslations("placeholder")
   return (
+     
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <HudPanel padding="500">
         <Container padding={["500", "0"]} textAlign="center">

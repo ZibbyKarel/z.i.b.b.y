@@ -45,6 +45,7 @@ export function HudPanel({
                     mono
                     as="span"
                     size="xs"
+                     
                     style={{ opacity: 0.8 }}
                     tone="accent"
                     type="note"

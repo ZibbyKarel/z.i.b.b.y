@@ -146,6 +146,15 @@ export type {
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { StatusDotProps, DotTone } from "./components/StatusDot/StatusDot";
 
+export { Switch, SwitchTestId } from "./components/Switch/Switch";
+export type { SwitchProps, SwitchSize } from "./components/Switch/Switch";
+
+export { Panel, PanelTestId } from "./components/Panel/Panel";
+export type { PanelProps } from "./components/Panel/Panel";
+
+export { CodeBlock, CodeBlockTestId } from "./components/CodeBlock/CodeBlock";
+export type { CodeBlockProps, CodeBlockHeight } from "./components/CodeBlock/CodeBlock";
+
 export { Corners } from "./components/Card/Card";
 export type { CornersProps, CornersTone } from "./components/Card/Card";
 

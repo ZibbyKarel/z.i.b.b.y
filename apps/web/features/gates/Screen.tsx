@@ -59,7 +59,7 @@ export function Screen() {
           <>
             <HudPanel padding="250">
               <Stack align="center" direction="row" gap="150">
-                <Container minW0 style={{ maxWidth: "320px" }}>
+                <Container minW0 maxWidth="320px">
                   <SelectField
                     label={t("forAgent")}
                     onValueChange={setAgentId}

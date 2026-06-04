@@ -53,4 +53,16 @@ export default [
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  {
+    // apps/web composes UI exclusively from the design system — it never sets
+    // inline styles on DOM elements. Genuinely dynamic / SVG values that have no
+    // DS prop use a per-line `// eslint-disable-next-line react/forbid-dom-props`
+    // escape. The design system itself is exempt (it owns the styling layer).
+    files: ["apps/web/**/*.{ts,tsx}"],
+    ignores: ["apps/web/**/*.stories.{ts,tsx}"],
+    plugins: { react: reactPlugin },
+    rules: {
+      "react/forbid-dom-props": ["error", { forbid: ["style"] }],
+    },
+  },
 ];

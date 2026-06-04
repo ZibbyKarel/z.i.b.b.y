@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
+  Card,
+  CodeBlock,
   Container,
   Dialog,
   IconTile,
@@ -27,12 +28,6 @@ export interface RunLogModalProps {
 export function RunLogModal({ run, onClose }: RunLogModalProps) {
   const t = useTranslations("runLog");
   const { text, done } = useRunLogQuery(run.runId);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [text]);
 
   return (
     <Dialog
@@ -56,29 +51,9 @@ export function RunLogModal({ run, onClose }: RunLogModalProps) {
       width="lg"
     >
       <Stack gap="150">
-        <div
-          ref={scrollRef}
-          style={{
-            maxHeight: "55vh",
-            overflow: "auto",
-            background: "var(--color-background)",
-            borderRadius: "var(--radius-sm)",
-            padding: "0.75rem 1rem",
-          }}
-        >
-          <pre
-            style={{
-              margin: 0,
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.8125rem",
-              lineHeight: 1.5,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {text || t("waiting")}
-          </pre>
-        </div>
+        <Card background="background" radius="sm">
+          <CodeBlock followTail maxHeight="viewport" scrollKey={text} text={text || t("waiting")} />
+        </Card>
         <Stack align="center" direction="row" gap="100">
           <StatusDot pulse={!done} tone={done ? "ok" : "accent"} />
           <Typography mono size="sm" type="note" variant="secondary">

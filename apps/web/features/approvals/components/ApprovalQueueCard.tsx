@@ -1,4 +1,4 @@
-import { Card, Container, Icon, Stack, Typography } from "@zibby/design-system";
+import { Card, Container, IconTile, Stack, Typography } from "@zibby/design-system";
 import type { DashboardApproval } from "../approval";
 import { SEVERITY, riskMeta } from "../approval";
 import { RiskBadge } from "./RiskBadge";
@@ -34,21 +34,15 @@ export function ApprovalQueueCard({
       <Container padding="200">
         <Stack gap="150">
           <Stack align="center" direction="row" gap="100">
-            <span
+            <IconTile
+              glyph={approval.glyph ?? meta.glyph}
+              size="sm"
               style={{
-                width: 32,
-                height: 32,
-                flex: "0 0 auto",
-                borderRadius: 2,
-                display: "grid",
-                placeItems: "center",
                 background: `color-mix(in srgb, ${meta.cssVar} 14%, transparent)`,
                 color: meta.cssVar,
-                border: `1px solid color-mix(in srgb, ${meta.cssVar} 40%, transparent)`,
+                borderColor: `color-mix(in srgb, ${meta.cssVar} 40%, transparent)`,
               }}
-            >
-              <Icon name={approval.glyph ?? meta.glyph} size="sm" />
-            </span>
+            />
             <Container minW0>
               <Stack gap="25">
                 <Stack align="center" direction="row" gap="75">

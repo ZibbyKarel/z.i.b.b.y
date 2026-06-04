@@ -19,6 +19,7 @@ export function SectionLabel({
       direction="row"
       justify="between"
       ref={ref}
+       
       style={{ marginBottom: "0.875rem", ...style }}
       {...props}
     >

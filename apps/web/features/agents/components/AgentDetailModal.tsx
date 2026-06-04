@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Chip,
+  CodeBlock,
   Container,
   Dialog,
   Icon,
@@ -314,21 +315,7 @@ export function AgentDetailModal({
                 {t("fields.body")}
               </Typography>
               <Card background="background" radius="sm">
-                <Container
-                  padding="150"
-                  style={{ maxHeight: 240, overflow: "auto" }}
-                >
-                  <Typography
-                    mono
-                    leading="relaxed"
-                    size="caption"
-                    style={{ whiteSpace: "pre-wrap" }}
-                    type="note"
-                    variant="secondary"
-                  >
-                    {agent.instructions}
-                  </Typography>
-                </Container>
+                <CodeBlock maxHeight="sm" text={agent.instructions} />
               </Card>
             </Stack>
           </Stack>

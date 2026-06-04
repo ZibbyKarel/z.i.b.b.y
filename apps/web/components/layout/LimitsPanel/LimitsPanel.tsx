@@ -34,6 +34,7 @@ function LimitBlock({ d }: { d: QuotaLimit }) {
     <Container
       grow
       minW0
+       
       style={{
         flex: "1 1 0",
         padding: "13px 14px",
@@ -43,23 +44,25 @@ function LimitBlock({ d }: { d: QuotaLimit }) {
         boxShadow: `0 0 18px color-mix(in srgb, ${color} 8%, transparent)`,
       }}
     >
-      <Typography mono nowrap uppercase size="xs" tracking="wide" type="note" variant="secondary">
-        {t(d.label)}
-      </Typography>
-      <Stack align="baseline" direction="row" gap="25" style={{ marginTop: "0.5rem" }}>
-        <Typography mono leading="tight" size="4xl" tone={asTone(tone)} type="note" weight="bold">
-          {d.usedPct}
+      <Stack gap="100">
+        <Typography mono nowrap uppercase size="xs" tracking="wide" type="note" variant="secondary">
+          {t(d.label)}
         </Typography>
-        <Typography mono size="xl" tone={asTone(tone)} type="note" weight="bold">
-          %
+        <Stack align="baseline" direction="row" gap="25">
+          <Typography mono leading="tight" size="4xl" tone={asTone(tone)} type="note" weight="bold">
+            {d.usedPct}
+          </Typography>
+          <Typography mono size="xl" tone={asTone(tone)} type="note" weight="bold">
+            %
+          </Typography>
+        </Stack>
+        <Container>
+          <Progress glow height="75" label={t(d.label)} tone={tone} value={d.usedPct} />
+        </Container>
+        <Typography mono truncate size="2xs" type="note" variant="tertiary">
+          {t("limits.reset", { resetIn: t(d.resetIn), age: t(d.age) })}
         </Typography>
       </Stack>
-      <Container style={{ marginTop: "0.625rem" }}>
-        <Progress glow height="75" label={t(d.label)} tone={tone} value={d.usedPct} />
-      </Container>
-      <Typography mono truncate size="2xs" style={{ marginTop: "0.45rem", display: "block" }} type="note" variant="tertiary">
-        {t("limits.reset", { resetIn: t(d.resetIn), age: t(d.age) })}
-      </Typography>
     </Container>
   );
 }

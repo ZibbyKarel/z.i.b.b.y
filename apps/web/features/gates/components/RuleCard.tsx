@@ -27,6 +27,7 @@ export function RuleCard({
   const meta = DECISION_META[rule.decision];
   const matcherIcon = MATCHER_ICON[rule.match[0]?.type ?? "action"];
   return (
+    // eslint-disable-next-line react/forbid-dom-props
     <div style={{ borderLeft: `3px solid ${meta.cssVar}`, borderRadius: 2 }}>
       <Card background="panel" radius="sm">
         <Container padding="150">

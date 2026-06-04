@@ -32,11 +32,13 @@ export function MainLayout({
         aria-label={t("navLabel")}
         as="nav"
         shrink={false}
+         
         style={{ width: 224, backgroundColor: "var(--color-background)" }}
       >
         <Container
           grow
           padding={["300", "150"]}
+           
           style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
         >
           <BrandLogo />
@@ -46,6 +48,7 @@ export function MainLayout({
 
       <Divider orientation="vertical" />
 
+      { }
       <Stack grow style={{ minWidth: 0 }}>
         <TopBar
           breadcrumb={breadcrumb}

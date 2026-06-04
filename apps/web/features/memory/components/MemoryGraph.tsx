@@ -69,6 +69,7 @@ export function MemoryGraph({ graph, selectedId, onSelect }: MemoryGraphProps) {
             data-testid={`memory-node-${n.id}`}
             key={n.id}
             onClick={() => onSelect(n.id)}
+            // eslint-disable-next-line react/forbid-dom-props
             style={{ cursor: "pointer" }}
           >
             <circle

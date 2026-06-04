@@ -7,6 +7,7 @@ import {
   ListItemBadge,
   ListItemIcon,
   ListItemText,
+  Spacer,
   Stack,
 } from "@zibby/design-system";
 import type { NavItem } from "@zibby/design-system";
@@ -19,9 +20,11 @@ export interface SidebarProps {
 
 export function Sidebar({ navItems, activeNav, footerItem }: SidebarProps) {
   return (
+     
     <Stack grow style={{ minHeight: 0 }}>
       <List>
         {navItems.map((item) => (
+           
           <Link
             href={item.href ?? "/"}
             key={item.id}
@@ -36,17 +39,21 @@ export function Sidebar({ navItems, activeNav, footerItem }: SidebarProps) {
         ))}
       </List>
       {footerItem && (
-        <Container style={{ marginTop: "auto" }}>
-          <Divider />
-          <Container padding={["75", "0", "0", "0"]}>
-            <Link href={footerItem.href ?? "/"} style={{ display: "block" }}>
-              <ListItem active={footerItem.id === activeNav}>
-                <ListItemIcon glyph={footerItem.glyph} />
-                <ListItemText>{footerItem.label}</ListItemText>
-              </ListItem>
-            </Link>
+        <>
+          <Spacer />
+          <Container>
+            <Divider />
+            <Container padding={["75", "0", "0", "0"]}>
+              { }
+              <Link href={footerItem.href ?? "/"} style={{ display: "block" }}>
+                <ListItem active={footerItem.id === activeNav}>
+                  <ListItemIcon glyph={footerItem.glyph} />
+                  <ListItemText>{footerItem.label}</ListItemText>
+                </ListItem>
+              </Link>
+            </Container>
           </Container>
-        </Container>
+        </>
       )}
     </Stack>
   );

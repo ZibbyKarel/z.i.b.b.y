@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import { Button, Container, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { type RunView, relativeTime } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
@@ -49,21 +49,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping }: RunDetailProps)
         <Stack gap="200">
           <Stack wrap align="start" direction="row" gap="150" justify="between">
             <Stack align="start" direction="row" gap="150">
-              <span
-                style={{
-                  width: 44,
-                  height: 44,
-                  flex: "0 0 auto",
-                  borderRadius: 3,
-                  display: "grid",
-                  placeItems: "center",
-                  background: "var(--color-accent-dim)",
-                  color: "var(--color-accent)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <Icon name={glyph} size="lg" />
-              </span>
+              <IconTile glyph={glyph} size="lg" />
               <Container minW0>
                 <Stack gap="50">
                   <Stack wrap align="center" direction="row" gap="100">

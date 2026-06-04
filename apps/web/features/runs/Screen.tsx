@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RunStatus } from "@zibby/contracts";
-import { Button, Container, Icon, Stack, Typography } from "@zibby/design-system";
+import { Button, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
 import { apiClient } from "../../state/api";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
@@ -75,7 +75,7 @@ export function Screen() {
         {runs.length === 0 ? (
           <EmptyState description={t("emptyDesc")} glyph="pulse" title={t("emptyTitle")} />
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "330px minmax(0, 1fr)", gap: "1.25rem", alignItems: "start" }}>
+          <Grid align="start" gap="300" sidebar="left">
             <Stack gap="100">
               {list.length > 0 ? (
                 list.map((r) => (
@@ -120,7 +120,7 @@ export function Screen() {
                 </Container>
               </HudPanel>
             )}
-          </div>
+          </Grid>
         )}
       </Stack>
     </PageContainer>

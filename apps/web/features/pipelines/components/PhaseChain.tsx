@@ -72,6 +72,7 @@ function IoRow({ label, value, accent }: { label: string; value: string; accent?
 function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: Agent[]; idx: number; active: boolean }) {
   const t = useTranslations("phase");
   return (
+     
     <Card radius="default" selected={active} style={{ flex: "1 1 0%", minWidth: 0 }}>
       <Container padding="150">
         <Stack gap="100">
@@ -118,6 +119,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
           <svg
             aria-hidden
             preserveAspectRatio="none"
+            // eslint-disable-next-line react/forbid-dom-props
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
             viewBox="0 0 100 34"
           >
@@ -131,6 +133,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
             />
             <path d="M37 30 l 2.6 -5 l -5.2 0 z" fill="var(--color-bad)" />
           </svg>
+          { }
           <Container left="49.5%" position="absolute" style={{ transform: "translateX(-50%)" }} top="0">
             <Stack align="center" direction="row" gap="75">
               <Icon name="retry" size="xs" tone="bad" />
@@ -146,6 +149,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
           <Fragment key={`${ph.agent}-${i}`}>
             <PhaseNode active={Boolean(ph.loop)} agents={agents} idx={i} phase={ph} />
             {i < phases.length - 1 && (
+               
               <Stack
                 align="center"
                 justify="center"

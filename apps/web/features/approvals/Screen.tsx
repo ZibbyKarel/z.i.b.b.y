@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Container, Stack, Stat } from "@zibby/design-system";
+import { Container, Grid, Stack, Stat } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -74,14 +74,7 @@ export function Screen() {
             title={t("emptyTitle")}
           />
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "340px minmax(0, 1fr)",
-              gap: "1.25rem",
-              alignItems: "start",
-            }}
-          >
+          <Grid align="start" gap="300" sidebar="left">
             <Stack gap="100">
               <SectionLabel>{t("queueTitle")}</SectionLabel>
               {queue.map((a) => (
@@ -115,7 +108,7 @@ export function Screen() {
                 </Container>
               </HudPanel>
             )}
-          </div>
+          </Grid>
         )}
       </Stack>
     </PageContainer>

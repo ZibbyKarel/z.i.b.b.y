@@ -152,6 +152,13 @@ Fix all errors before reporting the task as done. Do not skip steps.
 - Use `any` in TypeScript
 - Add query hooks to `libs/` without a clear sharing reason
 - Commit `.claude/settings.local.json` (it's in `.gitignore`)
+- Write inline `style={{…}}` on a DOM element in `apps/web` — ESLint
+  (`react/forbid-dom-props`) forbids it. Compose from DS primitives and use their
+  props (`Container` carries `maxHeight`/`overflow`/`position`/`grow`/`shrink`/…,
+  `Stack`/`Grid` carry layout, `IconTile`/`Panel`/`CodeBlock`/`Switch` are ready-made).
+  A genuinely dynamic value with no DS prop (computed width, SVG transform, a
+  CSS-var-interpolated colour) goes through a DS component's `style` passthrough, or —
+  only on a raw DOM/SVG node — behind a `// eslint-disable-next-line react/forbid-dom-props`.
 
 ---
 

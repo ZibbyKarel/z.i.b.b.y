@@ -1,5 +1,5 @@
 import type { Approval as ContractApproval } from "@zibby/contracts";
-import { Typography } from "@zibby/design-system";
+import { Stack, Typography } from "@zibby/design-system";
 import { SEVERITY } from "../approval";
 
 export interface SeverityMeterProps {
@@ -17,14 +17,20 @@ export interface SeverityMeterProps {
 export function SeverityMeter({ severity, label, showLabel = false }: SeverityMeterProps) {
   const sev = SEVERITY[severity];
   return (
-    <span
-      style={{ display: "inline-flex", alignItems: "center", gap: showLabel ? "0.45rem" : 0 }}
+    <Stack
+      inline
+      align="center"
+      direction="row"
+      gap={showLabel ? "75" : "0"}
       title={`závažnost: ${sev.label}`}
     >
-      <span style={{ display: "inline-flex", gap: 2 }}>
+      <Stack inline direction="row" gap="25">
         {[1, 2, 3].map((i) => (
+          // Per-segment fill/glow are computed from the dynamic `sev.cssVar`; the
+          // sizes are bespoke meter geometry — no DS prop expresses either.
           <span
             key={i}
+            // eslint-disable-next-line react/forbid-dom-props
             style={{
               width: 4,
               height: 11,
@@ -34,12 +40,12 @@ export function SeverityMeter({ severity, label, showLabel = false }: SeverityMe
             }}
           />
         ))}
-      </span>
+      </Stack>
       {showLabel && label && (
         <Typography mono uppercase size="caption" tone={sev.tone} type="note" weight="bold">
           {label}
         </Typography>
       )}
-    </span>
+    </Stack>
   );
 }

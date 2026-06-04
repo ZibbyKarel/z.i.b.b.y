@@ -74,13 +74,11 @@ export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps)
           <StatusDot pulse={run.status === "running"} tone={statusTone[run.status]} />
           <Container grow minW0>
             {onOpen ? (
-              <Pressable
-                aria-label={t("openAria", { name })}
-                onClick={() => onOpen(run)}
-                style={{ display: "block", textAlign: "left", width: "100%" }}
-              >
-                {body}
-              </Pressable>
+              <Stack>
+                <Pressable aria-label={t("openAria", { name })} onClick={() => onOpen(run)}>
+                  <Container textAlign="left">{body}</Container>
+                </Pressable>
+              </Stack>
             ) : (
               body
             )}
