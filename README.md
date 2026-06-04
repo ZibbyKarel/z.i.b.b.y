@@ -4,7 +4,7 @@
   ███╔╝  ██║ ██████╔╝ ██████╔╝ ╚████╔╝
  ███╔╝   ██║ ██╔══██╗ ██╔══██╗  ╚██╔╝
 ███████╗ ██║ ██████╔╝ ██████╔╝   ██║
-╚══════╝ ╚═╝ ╚═════╝ ╚═════╝     ╚═╝
+╚══════╝ ╚═╝ ╚═════╝  ╚═════╝    ╚═╝
 
 Zestful · Intuitive · Brainy · Butler · for You
 ─────────────────────────────────────────────────
@@ -26,20 +26,20 @@ NX monorepo — Next.js 15 App Router · React 19 · TanStack Query · Tailwind 
 pnpm install
 ```
 
-| Command                | What it does                                            |
-| ---------------------- | ------------------------------------------------------- |
-| `pnpm web:dev`         | Start the web app at http://localhost:3000              |
-| `pnpm web:build`       | Production build of the web app                         |
-| `pnpm web:start`       | Serve the production web build                          |
-| `pnpm web:test`        | Run web tests once                                      |
-| `pnpm api:dev`         | Start API in watch mode at http://localhost:3333        |
-| `pnpm api:start`       | Serve the API once (no reload)                          |
-| `pnpm api:test`        | Run API tests once                                      |
-| `pnpm test`            | Run all tests once                                      |
-| `pnpm test:watch`      | Run all tests in watch mode                             |
-| `pnpm storybook`       | Launch design system Storybook at http://localhost:6006 |
-| `pnpm lint`            | ESLint auto-fix across the monorepo                     |
-| `pnpm typecheck`       | Type-check the whole monorepo                           |
+| Command           | What it does                                            |
+| ----------------- | ------------------------------------------------------- |
+| `pnpm web:dev`    | Start the web app at http://localhost:3000              |
+| `pnpm web:build`  | Production build of the web app                         |
+| `pnpm web:start`  | Serve the production web build                          |
+| `pnpm web:test`   | Run web tests once                                      |
+| `pnpm api:dev`    | Start API in watch mode at http://localhost:3333        |
+| `pnpm api:start`  | Serve the API once (no reload)                          |
+| `pnpm api:test`   | Run API tests once                                      |
+| `pnpm test`       | Run all tests once                                      |
+| `pnpm test:watch` | Run all tests in watch mode                             |
+| `pnpm storybook`  | Launch design system Storybook at http://localhost:6006 |
+| `pnpm lint`       | ESLint auto-fix across the monorepo                     |
+| `pnpm typecheck`  | Type-check the whole monorepo                           |
 
 ### Start developing
 
