@@ -44,6 +44,6 @@ export function resolveRunsDir(): string {
     CategoriesStorageService,
     AgentRunnerService,
   ],
-  exports: [AgentsStorageService, CategoriesStorageService],
+  exports: [AgentsStorageService, CategoriesStorageService, AgentRunnerService],
 })
 export class AgentsModule {}

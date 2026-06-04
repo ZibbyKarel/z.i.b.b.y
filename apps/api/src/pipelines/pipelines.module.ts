@@ -29,6 +29,6 @@ export function resolvePipelineRunsDir(): string {
     PipelinesStorageService,
     PipelineRunnerService,
   ],
-  exports: [PipelinesStorageService],
+  exports: [PipelinesStorageService, PipelineRunnerService],
 })
 export class PipelinesModule {}

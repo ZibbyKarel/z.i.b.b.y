@@ -30,6 +30,6 @@ export function resolveSkillRunsDir(): string {
     SkillsStorageService,
     SkillRunnerService,
   ],
-  exports: [SkillsStorageService],
+  exports: [SkillsStorageService, SkillRunnerService],
 })
 export class SkillsModule {}

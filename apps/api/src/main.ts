@@ -7,6 +7,7 @@ import {
   agentRunsContract,
   agentsContract,
   approvalsContract,
+  automationsContract,
   categoriesContract,
   gatesContract,
   healthContract,
@@ -34,6 +35,7 @@ const apiContract = initContract().router({
   approvals: approvalsContract,
   gates: gatesContract,
   memory: memoryContract,
+  automations: automationsContract,
   health: healthContract,
   limits: limitsContract,
 })
