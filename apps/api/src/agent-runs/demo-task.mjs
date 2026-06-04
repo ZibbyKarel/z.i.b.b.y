@@ -11,8 +11,8 @@ import { writeFile } from "node:fs/promises"
 import * as path from "node:path"
 
 const workDir = process.argv[2] ?? process.cwd()
-const steps = Number(process.env.AGENT_DEMO_STEPS ?? 6)
-const delayMs = Number(process.env.AGENT_DEMO_DELAY_MS ?? 500)
+const steps = Number(process.env.AGENT_DEMO_STEPS)
+const delayMs = Number(process.env.AGENT_DEMO_DELAY_MS)
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 

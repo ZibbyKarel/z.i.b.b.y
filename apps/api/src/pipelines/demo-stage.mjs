@@ -12,9 +12,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises"
 import * as path from "node:path"
 
 const [cwd, phaseId, producesRel, consumesRel] = process.argv.slice(2)
-const steps = Number(process.env.AGENT_DEMO_STEPS ?? 3)
-const delayMs = Number(process.env.AGENT_DEMO_DELAY_MS ?? 60)
-const failPhases = (process.env.PIPELINE_DEMO_FAIL_PHASES ?? "")
+const steps = Number(process.env.AGENT_DEMO_STEPS)
+const delayMs = Number(process.env.AGENT_DEMO_DELAY_MS)
+const failPhases = (process.env.PIPELINE_DEMO_FAIL_PHASES || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean)

@@ -6,8 +6,6 @@ import { SkillRunnerService } from "../skills/skill-runner.service"
 import { AutomationsStorageService } from "./automations.storage.service"
 import { matchesCron } from "./cron"
 
-const DEFAULT_TICK_MS = 60_000
-
 /**
  * The heartbeat (Phase 5). A once-a-minute tick fires due cron automations,
  * starting their target run through the normal runners — so any external-effect
@@ -28,7 +26,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    const tickMs = Number(process.env.AUTOMATION_TICK_MS ?? DEFAULT_TICK_MS)
+    const tickMs = Number(process.env.AUTOMATION_TICK_MS)
     // A tick of 0 disables the loop (tests drive `tick()` directly).
     if (tickMs > 0) {
       this.timer = setInterval(() => void this.tick(), tickMs)

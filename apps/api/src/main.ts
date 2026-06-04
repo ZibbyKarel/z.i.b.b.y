@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
   // future EventSource alike. Origins come from CORS_ORIGIN (comma-separated);
   // default to the local Next dev server.
   app.enableCors({
-    origin: (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(","),
+    origin: process.env.CORS_ORIGIN!.split(","),
   })
 
   // Human-facing OpenAPI doc derived from the contracts — a generated artifact,
@@ -60,7 +60,7 @@ async function bootstrap(): Promise<void> {
   )
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(document))
 
-  const port = Number(process.env.PORT ?? 3333)
+  const port = Number(process.env.PORT)
   await app.listen(port)
   Logger.log(`api listening on http://localhost:${port} (docs at /docs)`, "Bootstrap")
 }

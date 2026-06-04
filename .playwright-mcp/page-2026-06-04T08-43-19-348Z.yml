@@ -1,0 +1,217 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - navigation "Hlavní navigace" [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e14]: Z·I·B·B·Y
+          - generic [ref=e15]: Zestful Intuitive Brainy Butler for You
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - link "Přehled" [ref=e18] [cursor=pointer]:
+              - /url: /overview
+              - generic [ref=e19]:
+                - img [ref=e21]
+                - generic [ref=e26]: Přehled
+            - link "Schválení 4" [ref=e27] [cursor=pointer]:
+              - /url: /approvals
+              - generic [ref=e28]:
+                - img [ref=e31]
+                - generic [ref=e33]: Schválení
+                - generic [ref=e34]: "4"
+            - link "Pravidla schvalování" [ref=e35] [cursor=pointer]:
+              - /url: /gates
+              - generic [ref=e36]:
+                - img [ref=e38]
+                - generic [ref=e40]: Pravidla schvalování
+            - link "Skilly" [ref=e41] [cursor=pointer]:
+              - /url: /skills
+              - generic [ref=e42]:
+                - img [ref=e44]
+                - generic [ref=e46]: Skilly
+            - link "Agenti" [ref=e47] [cursor=pointer]:
+              - /url: /agents
+              - generic [ref=e48]:
+                - img [ref=e50]
+                - generic [ref=e54]: Agenti
+            - link "Orchestrace" [ref=e55] [cursor=pointer]:
+              - /url: /pipelines
+              - generic [ref=e56]:
+                - img [ref=e58]
+                - generic [ref=e63]: Orchestrace
+            - link "Integrace" [ref=e64] [cursor=pointer]:
+              - /url: /integrations
+              - generic [ref=e65]:
+                - img [ref=e67]
+                - generic [ref=e70]: Integrace
+            - link "Automatizace" [ref=e71] [cursor=pointer]:
+              - /url: /automations
+              - generic [ref=e72]:
+                - img [ref=e74]
+                - generic [ref=e77]: Automatizace
+            - link "Paměť" [ref=e78] [cursor=pointer]:
+              - /url: /memory
+              - generic [ref=e79]:
+                - img [ref=e81]
+                - generic [ref=e83]: Paměť
+            - link "Běhy & aktivita" [ref=e84] [cursor=pointer]:
+              - /url: /runs
+              - generic [ref=e85]:
+                - img [ref=e87]
+                - generic [ref=e89]: Běhy & aktivita
+          - link "Nastavení systému" [ref=e92] [cursor=pointer]:
+            - /url: /settings
+            - generic [ref=e93]:
+              - img [ref=e95]
+              - generic [ref=e98]: Nastavení systému
+    - separator [ref=e99]
+    - generic [ref=e100]:
+      - banner [ref=e101]:
+        - generic [ref=e102]:
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - img [ref=e105]
+              - generic [ref=e107]: Schválení
+            - button "Jazyk rozhraní" [ref=e109] [cursor=pointer]:
+              - generic [ref=e110]: CZ
+              - generic [ref=e111]: Čeština
+              - img [ref=e112]
+          - button "Příkaz nebo skill" [ref=e115] [cursor=pointer]:
+            - img [ref=e116]
+            - generic [ref=e119]: Příkaz nebo skill…
+            - generic [ref=e120]: ⌘K
+      - generic [ref=e123]:
+        - generic [ref=e127]:
+          - generic [ref=e129]:
+            - heading "Schválení" [level=1] [ref=e130]
+            - generic [ref=e131]: 4 akcí čeká na tvé rozhodnutí · agenti jsou u nich pozastavení
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - img [ref=e136]
+              - generic [ref=e140]:
+                - generic [ref=e141]: "1"
+                - generic [ref=e142]: platba
+            - generic [ref=e143]:
+              - img [ref=e145]
+              - generic [ref=e147]:
+                - generic [ref=e148]: "1"
+                - generic [ref=e149]: mazání
+            - generic [ref=e150]:
+              - img [ref=e152]
+              - generic [ref=e157]:
+                - generic [ref=e158]: "1"
+                - generic [ref=e159]: push
+            - generic [ref=e160]:
+              - img [ref=e162]
+              - generic [ref=e164]:
+                - generic [ref=e165]: "1"
+                - generic [ref=e166]: odeslání
+        - generic [ref=e167]:
+          - generic [ref=e168]:
+            - generic [ref=e170]: Fronta schválení
+            - 'button "standup-gen skill Odeslat standup do #team-eng (Slack) odeslání" [ref=e171] [cursor=pointer]':
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - img [ref=e176]
+                  - generic [ref=e179]:
+                    - generic [ref=e180]:
+                      - generic [ref=e181]: standup-gen
+                      - generic [ref=e182]: skill
+                    - generic [ref=e183]: "Odeslat standup do #team-eng (Slack)"
+                - generic [ref=e185]:
+                  - generic [ref=e187]:
+                    - img [ref=e188]
+                    - text: odeslání
+                  - 'generic "závažnost: nízká" [ref=e190]'
+            - button "holly skill Smazat 312 GB starých snapshotů na Holly mazání" [ref=e195] [cursor=pointer]:
+              - generic [ref=e197]:
+                - generic [ref=e198]:
+                  - img [ref=e200]
+                  - generic [ref=e205]:
+                    - generic [ref=e206]:
+                      - generic [ref=e207]: holly
+                      - generic [ref=e208]: skill
+                    - generic [ref=e209]: Smazat 312 GB starých snapshotů na Holly
+                - generic [ref=e211]:
+                  - generic [ref=e213]:
+                    - img [ref=e214]
+                    - text: mazání
+                  - 'generic "závažnost: vysoká" [ref=e216]'
+            - button "PR Guard pipeline git push origin feat/api-rate-limit push" [ref=e221] [cursor=pointer]:
+              - generic [ref=e223]:
+                - generic [ref=e224]:
+                  - img [ref=e226]
+                  - generic [ref=e232]:
+                    - generic [ref=e233]:
+                      - generic [ref=e234]: PR Guard
+                      - generic [ref=e235]: pipeline
+                    - generic [ref=e236]: git push origin feat/api-rate-limit
+                - generic [ref=e238]:
+                  - generic [ref=e240]:
+                    - img [ref=e241]
+                    - text: push
+                  - 'generic "závažnost: střední" [ref=e246]'
+            - button "rohlik skill Objednat a zaplatit košík platba" [ref=e251] [cursor=pointer]:
+              - generic [ref=e253]:
+                - generic [ref=e254]:
+                  - img [ref=e256]
+                  - generic [ref=e261]:
+                    - generic [ref=e262]:
+                      - generic [ref=e263]: rohlik
+                      - generic [ref=e264]: skill
+                    - generic [ref=e265]: Objednat a zaplatit košík
+                - generic [ref=e267]:
+                  - generic [ref=e269]:
+                    - img [ref=e270]
+                    - text: platba
+                  - 'generic "závažnost: vysoká" [ref=e274]'
+          - generic [ref=e279]:
+            - generic [ref=e283]:
+              - generic [ref=e284]:
+                - generic [ref=e289]: Čeká na schválení
+                - generic [ref=e290]:
+                  - 'generic "závažnost: nízká" [ref=e291]':
+                    - generic [ref=e296]: nízká
+                  - generic [ref=e298]:
+                    - img [ref=e299]
+                    - text: odeslání
+              - generic [ref=e301]:
+                - img [ref=e303]
+                - generic [ref=e306]:
+                  - 'heading "standup-gen chce Odeslat standup do #team-eng (Slack)" [level=3] [ref=e307]'
+                  - generic [ref=e308]: "Vygenerováno z 7 commitů · 3 odrážky · adresát #team-eng"
+              - generic [ref=e309]:
+                - generic [ref=e310]:
+                  - generic [ref=e311]: Vyžádáno
+                  - generic [ref=e312]: 4. 6. 2026 8:22:27
+                - generic [ref=e313]:
+                  - generic [ref=e314]: Spustil
+                  - generic [ref=e315]: Ranní standup (automatizace)
+                - generic [ref=e316]:
+                  - generic [ref=e317]: Běh
+                  - generic [ref=e318]: standup-gen_1780554147162_40003
+            - generic [ref=e321]:
+              - generic [ref=e323]: // přesně tohle agent udělá
+              - generic [ref=e324]:
+                - generic [ref=e325]:
+                  - generic [ref=e326]:
+                    - img [ref=e327]
+                    - generic [ref=e329]: "odeslat → #team-eng · Slack"
+                  - generic [ref=e331]: Standup · út 3. čer
+                - generic [ref=e334]: "Včera: dotáhl rate-limiter (feat/api-rate-limit), čeká na review. Dnes: merge rate-limiteru, začínám na cache vrstvě. Blokace: žádné — CI je zelené."
+            - generic [ref=e338]:
+              - generic [ref=e339]:
+                - img [ref=e340]
+                - generic [ref=e343]:
+                  - generic [ref=e344]: co se stane po schválení
+                  - generic [ref=e345]: "Zpráva se odešle do veřejného kanálu #team-eng. Po odeslání ji nelze stáhnout."
+              - generic [ref=e346]:
+                - button "Schválit" [ref=e347] [cursor=pointer]:
+                  - img [ref=e348]
+                  - text: Schválit
+                - button "Zamítnout" [ref=e350] [cursor=pointer]:
+                  - img [ref=e351]
+                  - text: Zamítnout
+              - generic [ref=e354]: ZIBBY nikdy nedokončí rizikovou akci bez tvého souhlasu. Approval gate je vynucená vrstva, ne doporučení.
+  - alert [ref=e355]

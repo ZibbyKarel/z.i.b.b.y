@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConfigModule } from "@nestjs/config"
 import { AgentsModule } from "./agents/agents.module"
 import { ApprovalsModule } from "./approvals/approvals.module"
 import { AutomationsModule } from "./automations/automations.module"
@@ -10,6 +11,7 @@ import { SkillsModule } from "./skills/skills.module"
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     AgentsModule,
     SkillsModule,
     PipelinesModule,

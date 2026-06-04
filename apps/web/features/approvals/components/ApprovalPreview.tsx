@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   CodeBlock,
   Container,
@@ -9,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import type { ReactNode } from "react";
 import type { ApprovalPreview as Preview } from "../approval";
 
 const MONO = "var(--font-mono, ui-monospace, monospace)";
@@ -70,7 +70,11 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
             <div key={i}>
               <Container padding={["100", "150"]}>
                 <Stack direction="row" gap="150" justify="between">
-                  <Typography size="sm" type="text" variant={name.startsWith("+") ? "tertiary" : "secondary"}>
+                  <Typography
+                    size="sm"
+                    type="text"
+                    variant={name.startsWith("+") ? "tertiary" : "secondary"}
+                  >
                     {name}
                   </Typography>
                   <Typography mono size="sm" type="note">
@@ -86,7 +90,13 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
         <div style={{ background: "rgba(240,180,41,0.06)" }}>
           <Container padding={["150", "150"]}>
             <Stack align="baseline" direction="row" justify="between">
-              <Typography mono uppercase size="xs" type="note" variant="secondary">
+              <Typography
+                mono
+                uppercase
+                size="xs"
+                type="note"
+                variant="secondary"
+              >
                 {labels.total}
               </Typography>
               <Typography mono size="lg" tone="warn" type="note" weight="bold">
@@ -104,6 +114,7 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
       <PreviewShell icon="branch" label={preview.file} meta={preview.meta}>
         {preview.hunks.map((hunk, hi) => (
           <div key={hi}>
+            {}
             {/* eslint-disable-next-line react/forbid-dom-props */}
             <div style={{ fontFamily: MONO, fontSize: 11, color: "var(--color-accent)", background: "var(--color-accent-dim)" }}>
               <Container padding={["75", "150"]}>{hunk.h}</Container>
@@ -115,12 +126,19 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
                 // eslint-disable-next-line react/forbid-dom-props
                 <div key={i} style={{ background: m.bg }}>
                   <Stack direction="row">
-                    <Container shrink={false} textAlign="center" userSelect="none" width="22px">
+                    <Container
+                      shrink={false}
+                      textAlign="center"
+                      userSelect="none"
+                      width="22px"
+                    >
+                      {}
                       {/* eslint-disable-next-line react/forbid-dom-props */}
                       <span style={{ fontFamily: MONO, fontSize: 11.5, lineHeight: 1.7, color: m.color, opacity: 0.7 }}>
                         {m.sign}
                       </span>
                     </Container>
+                    {}
                     {/* eslint-disable-next-line react/forbid-dom-props */}
                     <span style={{ fontFamily: MONO, fontSize: 11.5, lineHeight: 1.7, color: kind === "ctx" ? "var(--color-foreground-dim)" : m.color, whiteSpace: "pre", paddingRight: "0.8rem" }}>
                       {text || " "}
@@ -137,7 +155,11 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
 
   if (preview.kind === "command") {
     return (
-      <PreviewShell icon="server" label={`${preview.shell}`} meta={preview.note}>
+      <PreviewShell
+        icon="server"
+        label={`${preview.shell}`}
+        meta={preview.note}
+      >
         <CodeBlock text={`$ ${preview.cmd}`} />
         <Divider />
         <Container padding={["100", "150"]}>
@@ -149,7 +171,12 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
               {preview.targets.map((t, i) => (
                 <Stack align="center" direction="row" gap="100" key={i}>
                   <Icon name="x" size="xs" tone="bad" />
-                  <Typography mono size="xs" type="note" variant={t.startsWith("…") ? "tertiary" : "secondary"}>
+                  <Typography
+                    mono
+                    size="xs"
+                    type="note"
+                    variant={t.startsWith("…") ? "tertiary" : "secondary"}
+                  >
                     {t}
                   </Typography>
                 </Stack>
@@ -163,9 +190,18 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
 
   // message
   return (
-    <PreviewShell icon="arrow" label={`${labels.sendTo} ${preview.to}`} meta={preview.subject}>
+    <PreviewShell
+      icon="arrow"
+      label={`${labels.sendTo} ${preview.to}`}
+      meta={preview.subject}
+    >
       <Container padding={["150", "200"]}>
-        <Typography leading="relaxed" size="base" style={{ whiteSpace: "pre-wrap" }} type="text">
+        <Typography
+          leading="relaxed"
+          size="base"
+          style={{ whiteSpace: "pre-wrap" }}
+          type="text"
+        >
           {preview.body}
         </Typography>
       </Container>
