@@ -1,198 +1,133 @@
-import {
-  type InputHTMLAttributes,
-  type ReactNode,
-  type TextareaHTMLAttributes,
-  useId,
-} from "react";
-import { cn } from "../../utils/cn";
+import { type ReactNode, type Ref, useId } from "react";
 import { Stack } from "../Stack/Stack";
 
 export enum FieldTestId {
   Root = "field-root",
   Label = "field-label",
-  Control = "field-control",
   Hint = "field-hint",
-  Group = "field-group",
-  /** Each segmented option button is suffixed with its `value`, e.g. `field-option-home`. */
-  Option = "field-option",
+  Error = "field-error",
 }
 
-const labelClass =
-  "font-mono text-sm uppercase tracking-wider text-foreground-faint";
+/** Stacking direction of label vs. control.
+ * - `column` — label on top, control below, message under it (text-like inputs).
+ * - `row` — control on the left, label + message to the right (toggle/checkbox). */
+export type FieldLayout = "column" | "row";
 
-const controlClass =
-  "w-full rounded border border-border bg-background px-3.5 py-2.5 font-sans text-md " +
-  "text-foreground outline-none transition-colors placeholder:text-foreground-faint " +
-  "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent";
-
-function FieldShell({
-  id,
-  label,
-  hint,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Stack data-testid={FieldTestId.Root} gap="100">
-      <label className={labelClass} data-testid={FieldTestId.Label} htmlFor={id}>
-        {label}
-      </label>
-      {children}
-      {hint && (
-        <span className="font-mono text-xs text-foreground-faint" data-testid={FieldTestId.Hint}>{hint}</span>
-      )}
-    </Stack>
-  );
-}
-
-export interface TextFieldProps extends Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  "id" | "className"
-> {
-  label: string;
-  hint?: string;
-  ref?: React.Ref<HTMLInputElement>;
-}
-
-/** Labelled single-line text input. */
-export function TextField({ label, hint, ref, ...props }: TextFieldProps) {
-  const id = useId();
-  return (
-    <FieldShell hint={hint} id={id} label={label}>
-      <input className={controlClass} data-testid={FieldTestId.Control} id={id} ref={ref} {...props} />
-    </FieldShell>
-  );
-}
-
-export interface TextAreaFieldProps extends Omit<
-  TextareaHTMLAttributes<HTMLTextAreaElement>,
-  "id" | "className"
-> {
-  label: string;
-  hint?: string;
-  ref?: React.Ref<HTMLTextAreaElement>;
-}
-
-/** Labelled multi-line text input. */
-export function TextAreaField({
-  label,
-  hint,
-  ref,
-  ...props
-}: TextAreaFieldProps) {
-  const id = useId();
-  return (
-    <FieldShell hint={hint} id={id} label={label}>
-      <textarea
-        className={cn(controlClass, "min-h-20 resize-y leading-relaxed")}
-        data-testid={FieldTestId.Control}
-        id={id}
-        ref={ref}
-        {...props}
-      />
-    </FieldShell>
-  );
-}
-
+/** A `{ value, label }` pair — shared by `Select` and `SegmentPicker`. */
 export interface SelectOption {
   value: string;
   label: string;
 }
 
-export interface SelectFieldProps {
-  label: string;
-  hint?: string;
-  value: string;
-  options: SelectOption[];
-  onValueChange: (value: string) => void;
+/** Wiring handed from `Field` to the control it wraps. */
+export interface FieldControl {
+  /** Control id; also the label's `htmlFor` target. */
+  id: string;
+  /** Label element id — for `aria-labelledby` on non-labelable controls (groups, toggles). */
+  labelId: string;
+  /** Id of the visible message (error or hint), or `undefined` when none. */
+  describedBy: string | undefined;
+  /** `true` when an error message is shown. */
+  invalid: boolean;
 }
 
-/** Labelled native select. */
-export function SelectField({
+export interface FieldProps {
+  label: string;
+  hint?: string;
+  /** When present, replaces the hint and marks the control invalid. */
+  error?: string;
+  layout?: FieldLayout;
+  /** Render the control, wired with the ids/aria handed down. */
+  children: (control: FieldControl) => ReactNode;
+  ref?: Ref<HTMLElement>;
+}
+
+const labelClass =
+  "font-mono text-sm uppercase tracking-wider text-foreground-faint";
+const hintClass = "font-mono text-xs text-foreground-faint";
+const errorClass = "font-mono text-xs text-bad";
+
+/** Shared control chrome for the text-like inputs (`TextInput`, `TextArea`, `Select`). */
+export const fieldControlClass =
+  "w-full rounded border border-border bg-background px-3.5 py-2.5 font-sans text-md " +
+  "text-foreground outline-none transition-colors placeholder:text-foreground-faint " +
+  "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent " +
+  'aria-[invalid="true"]:border-bad aria-[invalid="true"]:focus-visible:ring-bad';
+
+/**
+ * Generic form-field wrapper. Owns the parts every control shares — label, hint,
+ * error message, the id/aria plumbing — and lays them out per `layout`. The
+ * concrete control is supplied as a render function so `Field` can hand it the
+ * `id`, `labelId`, `describedBy` and `invalid` it needs to stay accessible.
+ */
+export function Field({
   label,
   hint,
-  value,
-  options,
-  onValueChange,
-}: SelectFieldProps) {
+  error,
+  layout = "column",
+  children,
+  ref,
+}: FieldProps) {
   const id = useId();
-  return (
-    <FieldShell hint={hint} id={id} label={label}>
-      <select
-        className={cn(controlClass, "cursor-pointer appearance-none")}
-        data-testid={FieldTestId.Control}
-        id={id}
-        onChange={(e) => onValueChange(e.target.value)}
-        value={value}
-      >
-        {options.map((o) => (
-          <option
-            className="bg-background text-foreground"
-            key={o.value}
-            value={o.value}
-          >
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </FieldShell>
+  const labelId = `${id}-label`;
+  const messageId = `${id}-message`;
+  const message = error ?? hint;
+  const control = children({
+    id,
+    labelId,
+    describedBy: message ? messageId : undefined,
+    invalid: Boolean(error),
+  });
+
+  const labelEl = (
+    <label
+      className={labelClass}
+      data-testid={FieldTestId.Label}
+      htmlFor={id}
+      id={labelId}
+    >
+      {label}
+    </label>
   );
-}
 
-export interface SegmentedFieldProps {
-  label: string;
-  hint?: string;
-  value: string;
-  options: SelectOption[];
-  onValueChange: (value: string) => void;
-}
+  const messageEl = error ? (
+    <span
+      className={errorClass}
+      data-testid={FieldTestId.Error}
+      id={messageId}
+      role="alert"
+    >
+      {error}
+    </span>
+  ) : hint ? (
+    <span className={hintClass} data-testid={FieldTestId.Hint} id={messageId}>
+      {hint}
+    </span>
+  ) : null;
 
-/** Labelled segmented chooser — a row of mutually exclusive chip buttons. */
-export function SegmentedField({
-  label,
-  hint,
-  value,
-  options,
-  onValueChange,
-}: SegmentedFieldProps) {
-  const id = useId();
-  return (
-    <FieldShell hint={hint} id={id} label={label}>
+  if (layout === "row") {
+    return (
       <Stack
-        wrap
-        aria-label={label}
-        data-testid={FieldTestId.Group}
+        align="start"
+        data-testid={FieldTestId.Root}
         direction="row"
-        gap="75"
-        role="radiogroup"
+        gap="150"
+        ref={ref}
       >
-        {options.map((o) => {
-          const on = o.value === value;
-          return (
-            <button
-              aria-checked={on}
-              className={cn(
-                "rounded-sm border px-3 py-1.5 font-mono text-sm outline-none transition-colors",
-                "focus-visible:ring-2 focus-visible:ring-accent",
-                on
-                  ? "border-accent bg-accent text-accent-contrast"
-                  : "border-border bg-transparent text-foreground-dim hover:text-foreground",
-              )}
-              data-testid={`${FieldTestId.Option}-${o.value}`}
-              key={o.value}
-              onClick={() => onValueChange(o.value)}
-              role="radio"
-              type="button"
-            >
-              {o.label}
-            </button>
-          );
-        })}
+        {control}
+        <Stack gap="50">
+          {labelEl}
+          {messageEl}
+        </Stack>
       </Stack>
-    </FieldShell>
+    );
+  }
+
+  return (
+    <Stack data-testid={FieldTestId.Root} gap="100" ref={ref}>
+      {labelEl}
+      {control}
+      {messageEl}
+    </Stack>
   );
 }

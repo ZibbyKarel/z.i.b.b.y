@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { GateRule, GateRuleInput } from "@zibby/contracts";
-import { Alert, Button, Container, Icon, SelectField, Stack, Typography } from "@zibby/design-system";
+import { Alert, Button, Container, Icon, Select, Stack, Typography } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -60,7 +60,7 @@ export function Screen() {
             <HudPanel padding="250">
               <Stack align="center" direction="row" gap="150">
                 <Container minW0 maxWidth="320px">
-                  <SelectField
+                  <Select
                     label={t("forAgent")}
                     onValueChange={setAgentId}
                     options={agents.map((a) => ({ value: a.id, label: a.name ?? a.id }))}

@@ -8,11 +8,11 @@ import {
   Dialog,
   Icon,
   IconTile,
-  SegmentedField,
-  SelectField,
+  SegmentPicker,
+  Select,
   Stack,
-  TextAreaField,
-  TextField,
+  TextArea,
+  TextInput,
   Typography,
 } from "@zibby/design-system"
 import type { DialogWidth, IconName, SelectOption } from "@zibby/design-system"
@@ -113,7 +113,7 @@ export function EntityFormModal({
             const value = values[f.name] ?? ""
             if (f.kind === "textarea") {
               return (
-                <TextAreaField
+                <TextArea
                   hint={f.hint}
                   key={f.name}
                   label={f.label}
@@ -125,7 +125,7 @@ export function EntityFormModal({
             }
             if (f.kind === "select") {
               return (
-                <SelectField
+                <Select
                   hint={f.hint}
                   key={f.name}
                   label={f.label}
@@ -137,7 +137,7 @@ export function EntityFormModal({
             }
             if (f.kind === "segmented") {
               return (
-                <SegmentedField
+                <SegmentPicker
                   hint={f.hint}
                   key={f.name}
                   label={f.label}
@@ -148,7 +148,7 @@ export function EntityFormModal({
               )
             }
             return (
-              <TextField
+              <TextInput
                 hint={f.hint}
                 key={f.name}
                 label={f.label}

@@ -8,9 +8,9 @@ import {
   Dialog,
   Icon,
   IconTile,
-  SegmentedField,
+  SegmentPicker,
   Stack,
-  TextAreaField,
+  TextArea,
   Typography,
 } from "@zibby/design-system";
 import type { IconName } from "@zibby/design-system";
@@ -109,14 +109,14 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
         </Container>
       ) : (
         <Stack gap="200">
-          <TextAreaField
+          <TextArea
             autoFocus
             label={t("runModal.promptLabel")}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={t("runModal.promptPlaceholder", { name })}
             value={prompt}
           />
-          <SegmentedField
+          <SegmentPicker
             label={t("common.targetProject")}
             onValueChange={setProject}
             options={projects.map((p) => ({ value: p, label: p }))}

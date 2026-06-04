@@ -28,6 +28,14 @@ export interface SwitchProps {
   label: string;
   size?: SwitchSize;
   disabled?: boolean;
+  /** Control id — set by `Field`/`Toggle` to wire a visible `<label htmlFor>`. */
+  id?: string;
+  /** Id of a describing message — set by `Field`/`Toggle`. */
+  "aria-describedby"?: string;
+  /** Invalid flag — set by `Field`/`Toggle`. */
+  "aria-invalid"?: boolean;
+  /** Overrides the default root test id (e.g. `Toggle` re-labels it). */
+  "data-testid"?: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -41,11 +49,17 @@ export function Switch({
   label,
   size = "md",
   disabled = false,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
+  "data-testid": testId = SwitchTestId.Root,
   ref,
 }: SwitchProps) {
   return (
     <button
       aria-checked={checked}
+      aria-describedby={describedBy}
+      aria-invalid={invalid}
       aria-label={label}
       className={cn(
         "inline-flex shrink-0 items-center rounded-full border outline-none transition-colors duration-150",
@@ -56,8 +70,9 @@ export function Switch({
           : "justify-start border-border bg-background",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
       )}
-      data-testid={SwitchTestId.Root}
+      data-testid={testId}
       disabled={disabled}
+      id={id}
       onClick={() => onChange(!checked)}
       ref={ref}
       role="switch"

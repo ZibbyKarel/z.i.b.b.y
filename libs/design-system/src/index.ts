@@ -164,19 +164,31 @@ export type { StatProps, StatTone } from "./components/Stat/Stat";
 export { Sparkline } from "./components/Sparkline/Sparkline";
 export type { SparklineProps } from "./components/Sparkline/Sparkline";
 
-export {
-  TextField,
-  TextAreaField,
-  SelectField,
-  SegmentedField,
-} from "./components/Field/Field";
+export { Field, FieldTestId } from "./components/Field/Field";
 export type {
-  TextFieldProps,
-  TextAreaFieldProps,
-  SelectFieldProps,
-  SegmentedFieldProps,
+  FieldProps,
+  FieldControl,
+  FieldLayout,
   SelectOption,
 } from "./components/Field/Field";
+
+export { TextInput, TextInputTestId } from "./components/Field/TextInput";
+export type { TextInputProps } from "./components/Field/TextInput";
+
+export { TextArea, TextAreaTestId } from "./components/Field/TextArea";
+export type { TextAreaProps } from "./components/Field/TextArea";
+
+export { Select } from "./components/Field/Select";
+export type { SelectProps } from "./components/Field/Select";
+
+export {
+  SegmentPicker,
+  SegmentPickerTestId,
+} from "./components/Field/SegmentPicker";
+export type { SegmentPickerProps } from "./components/Field/SegmentPicker";
+
+export { Toggle, ToggleTestId } from "./components/Field/Toggle";
+export type { ToggleProps } from "./components/Field/Toggle";
 
 export { MarkdownEditor, MarkdownEditorTestId } from "./components/MarkdownEditor/MarkdownEditor";
 export type { MarkdownEditorProps } from "./components/MarkdownEditor/MarkdownEditor";
@@ -192,7 +204,11 @@ export type {
 } from "./components/ButtonGroup/ButtonGroup";
 
 export { Dropdown, DropdownTestId } from "./components/Dropdown/Dropdown";
-export type { DropdownProps, DropdownOption } from "./components/Dropdown/Dropdown";
+export type {
+  DropdownProps,
+  DropdownOption,
+  DropdownVariant,
+} from "./components/Dropdown/Dropdown";
 
 export {
   List,

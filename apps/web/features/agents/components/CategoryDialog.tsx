@@ -9,7 +9,7 @@ import {
   type IconName,
   IconTile,
   Stack,
-  TextField,
+  TextInput,
   Typography,
 } from "@zibby/design-system";
 import { AGENT_GLYPHS } from "../../../state/config";
@@ -78,7 +78,7 @@ export function CategoryDialog({ existing, pending, onClose, onSubmit }: Categor
       width="sm"
     >
       <Stack gap="200">
-        <TextField
+        <TextInput
           autoFocus
           aria-invalid={duplicate}
           hint={duplicate ? t("categoryDialog.duplicate", { name }) : undefined}

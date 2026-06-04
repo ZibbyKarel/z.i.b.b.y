@@ -11,9 +11,9 @@ import {
   Icon,
   IconTile,
   Pressable,
-  SegmentedField,
+  SegmentPicker,
   Stack,
-  TextAreaField,
+  TextArea,
   Typography,
 } from "@zibby/design-system"
 import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts"
@@ -139,7 +139,7 @@ export function PipelineRunModal({
         </Container>
       ) : (
         <Stack gap="200">
-          <TextAreaField
+          <TextArea
             autoFocus
             label={t("pipelineRun.promptLabel")}
             onChange={(e) => setPrompt(e.target.value)}
@@ -148,13 +148,13 @@ export function PipelineRunModal({
           />
 
           <Grid cols={2} gap="250">
-            <SegmentedField
+            <SegmentPicker
               label={t("common.targetProject")}
               onValueChange={setProject}
               options={projects.slice(0, 4).map((p) => ({ value: p, label: p }))}
               value={project}
             />
-            <SegmentedField
+            <SegmentPicker
               label={t("pipelineRun.budgetLabel")}
               onValueChange={(v) => setBudget(Number(v))}
               options={[10, 25, 50].map((b) => ({ value: String(b), label: `$${b}` }))}

@@ -14,9 +14,9 @@ import {
   IconTile,
   MarkdownEditor,
   Pressable,
-  SegmentedField,
+  SegmentPicker,
   Stack,
-  TextField,
+  TextInput,
   Typography,
 } from "@zibby/design-system";
 import type { Agent, AgentModel, AgentThinking, Category } from "@zibby/contracts";
@@ -151,7 +151,7 @@ export function AgentDetailModal({
                 by the backend. The editor on the right never sees these. */}
             <Container grow minW0>
               <Stack gap="200">
-                <TextField
+                <TextInput
                   autoFocus
                   label={t("fields.name")}
                   onChange={(e) => set({ name: e.target.value })}
@@ -159,7 +159,7 @@ export function AgentDetailModal({
                   value={draft.name ?? ""}
                 />
 
-                <TextField
+                <TextInput
                   label={t("fields.whenToUse")}
                   onChange={(e) => set({ description: e.target.value })}
                   placeholder={t("fields.whenToUsePlaceholder")}
@@ -185,7 +185,7 @@ export function AgentDetailModal({
 
                 <Stack direction="row" gap="150">
                   <Container grow minW0>
-                    <SegmentedField
+                    <SegmentPicker
                       label={t("fields.model")}
                       onValueChange={(v) => set({ model: v as AgentModel })}
                       options={MODEL_OPTIONS}
@@ -193,7 +193,7 @@ export function AgentDetailModal({
                     />
                   </Container>
                   <Container grow minW0>
-                    <SegmentedField
+                    <SegmentPicker
                       label={t("fields.thinking")}
                       onValueChange={(v) => set({ thinking: v as AgentThinking })}
                       options={THINKING_OPTIONS}

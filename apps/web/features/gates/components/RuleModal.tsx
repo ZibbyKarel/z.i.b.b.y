@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Decision, GateRuleInput, MatchCondition, Resolve } from "@zibby/contracts";
-import { Button, Dialog, Stack, TextField } from "@zibby/design-system";
-import { SelectField } from "@zibby/design-system";
+import { Button, Dialog, Stack, TextInput } from "@zibby/design-system";
+import { Select } from "@zibby/design-system";
 import { MATCH_TYPE_ORDER, type MatchType } from "../gate";
 
 export interface RuleModalProps {
@@ -79,7 +79,7 @@ export function RuleModal({ onClose, onSave }: RuleModalProps) {
       width="md"
     >
       <Stack gap="200">
-        <SelectField
+        <Select
           label={t("matchType")}
           onValueChange={(v) => setMatchType(v as MatchType)}
           options={MATCH_TYPE_ORDER.map((m) => ({ value: m, label: t(`matcher.${m}`) }))}
@@ -88,25 +88,25 @@ export function RuleModal({ onClose, onSave }: RuleModalProps) {
 
         {matchType === "threshold" ? (
           <Stack direction="row" gap="100">
-            <TextField label={t("metric")} onChange={(e) => setValue1(e.target.value)} placeholder="purchase.amount" value={value1} />
-            <SelectField label={t("op")} onValueChange={(v) => setOp(v as (typeof OPS)[number])} options={OPS.map((o) => ({ value: o, label: OP_SYMBOL[o] }))} value={op} />
-            <TextField label={t("value")} onChange={(e) => setValue2(e.target.value)} placeholder="500" type="number" value={value2} />
+            <TextInput label={t("metric")} onChange={(e) => setValue1(e.target.value)} placeholder="purchase.amount" value={value1} />
+            <Select label={t("op")} onValueChange={(v) => setOp(v as (typeof OPS)[number])} options={OPS.map((o) => ({ value: o, label: OP_SYMBOL[o] }))} value={op} />
+            <TextInput label={t("value")} onChange={(e) => setValue2(e.target.value)} placeholder="500" type="number" value={value2} />
           </Stack>
         ) : (
           <Stack direction="row" gap="100">
-            <TextField
+            <TextInput
               label={t(`matchValue.${matchType}`)}
               onChange={(e) => setValue1(e.target.value)}
               placeholder={t(`matchPlaceholder.${matchType}`)}
               value={value1}
             />
             {matchType === "action" && (
-              <TextField label={t("branch")} onChange={(e) => setValue2(e.target.value)} placeholder="main" value={value2} />
+              <TextInput label={t("branch")} onChange={(e) => setValue2(e.target.value)} placeholder="main" value={value2} />
             )}
           </Stack>
         )}
 
-        <SelectField
+        <Select
           hint={t(`decisionHint.${decision}`)}
           label={t("decision")}
           onValueChange={(v) => setDecision(v as Decision)}
@@ -116,14 +116,14 @@ export function RuleModal({ onClose, onSave }: RuleModalProps) {
 
         {decision === "ask" && (
           <Stack direction="row" gap="100">
-            <SelectField
+            <Select
               label={t("resolveBy")}
               onValueChange={(v) => setResolveKind(v as ResolveKind)}
               options={(["human", "check", "agent"] as ResolveKind[]).map((k) => ({ value: k, label: t(`resolve.${k}`) }))}
               value={resolveKind}
             />
             {resolveKind !== "human" && (
-              <TextField
+              <TextInput
                 label={resolveKind === "agent" ? t("resolveAgent") : t("resolveCheck")}
                 onChange={(e) => setResolveName(e.target.value)}
                 placeholder={resolveKind === "agent" ? "reviewer" : "ci_green"}

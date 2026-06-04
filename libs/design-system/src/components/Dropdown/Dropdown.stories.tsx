@@ -32,6 +32,27 @@ export const Languages: Story = {
   },
 };
 
+export const FieldVariant: Story = {
+  render: () => {
+    const [value, setValue] = useState("opus");
+    return (
+      <div className="w-80 p-4">
+        <Dropdown
+          aria-label="Model"
+          onChange={setValue}
+          options={[
+            { value: "opus", label: "opus" },
+            { value: "sonnet", label: "sonnet" },
+            { value: "haiku", label: "haiku" },
+          ]}
+          value={value}
+          variant="field"
+        />
+      </div>
+    );
+  },
+};
+
 export const WithoutCodes: Story = {
   render: () => {
     const [value, setValue] = useState("a");
