@@ -20,6 +20,8 @@ export const SkillSchema = z.object({
   /** Phase 3 approval gate (see {@link AgentSchema}); `risk` is a display hint. */
   requires_approval: z.boolean().optional(),
   risk: RiskSchema.optional(),
+  /** Ids of linked global rules (the "Pravidla schvalování" catalog); see {@link AgentSchema}. */
+  gateRuleIds: z.array(z.string()).optional(),
   instructions: z.string().min(1),
 })
 export type Skill = z.infer<typeof SkillSchema>

@@ -124,3 +124,40 @@ export const PolicyViolationSchema = z.object({
   reason: z.string(),
 })
 export type PolicyViolation = z.infer<typeof PolicyViolationSchema>
+
+/**
+ * The global gate-rule catalog (the "Pravidla schvalování" page) — the middle
+ * layer between the locked system floor (`POLICY.md`) and an agent's/skill's own
+ * rules. A catalog rule is the same decision core as a gate rule plus display
+ * metadata (`name`/`desc`); agents and skills reference it by `id` (`gateRuleIds`)
+ * to share one rule across many entities. The list is ordered (first match wins).
+ */
+
+/** Allowed shape of a catalog rule `id` — filename-safe, no path separators/traversal. */
+export const GATE_RULE_ID_REGEX = /^[a-zA-Z0-9._-]+$/
+export const GateRuleIdSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(GATE_RULE_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
+
+/** The editable core of a catalog rule (no provenance id) — what a caller supplies. */
+const GlobalGateRuleBaseSchema = z.object({
+  /** Optional human label shown in the catalog (e.g. "Push do main"). */
+  name: z.string().min(1).optional(),
+  /** Optional one-line description under the matcher. */
+  desc: z.string().optional(),
+  match: z.array(MatchConditionSchema).min(1),
+  decision: DecisionSchema,
+  resolve: ResolveSchema.optional(),
+})
+
+/** Body accepted by `createGateRule` / `updateGateRule` — the server assigns the `id`. */
+export const GlobalGateRuleInputSchema = GlobalGateRuleBaseSchema.superRefine(refineResolve)
+export type GlobalGateRuleInput = z.infer<typeof GlobalGateRuleInputSchema>
+
+/** A stored catalog rule: the input plus its stable `id` (referenced by `gateRuleIds`). */
+export const GlobalGateRuleSchema = GlobalGateRuleBaseSchema.extend({
+  id: GateRuleIdSchema,
+}).superRefine(refineResolve)
+export type GlobalGateRule = z.infer<typeof GlobalGateRuleSchema>

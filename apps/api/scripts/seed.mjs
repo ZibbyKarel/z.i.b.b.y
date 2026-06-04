@@ -42,7 +42,7 @@ const md = (body, data) => matter.stringify(`\n${body.trim()}\n`, data)
 // Contract Skill: { id, name, glyph, desc, requires_approval?, risk?, instructions }.
 // No category/tools/model in the contract — those design fields can't round-trip.
 const SKILLS = [
-  { id: "rohlik", name: "rohlik", glyph: "cart", desc: "Naplní košík podle seznamu", tools: ["web", "read"], approval: true, risk: "high", when: "Před nákupem — když máš seznam a chceš hotový košík ke schválení." },
+  { id: "rohlik", name: "rohlik", glyph: "cart", desc: "Naplní košík podle seznamu", tools: ["web", "read"], approval: true, risk: "high", gateRuleIds: ["gr-big-purchase"], when: "Před nákupem — když máš seznam a chceš hotový košík ke schválení." },
   { id: "tmdb-renamer", name: "tmdb-renamer", glyph: "film", desc: "Přejmenuje média podle TMDB", tools: ["read", "write", "web"], risk: "low", when: "Po stažení dávky souborů, které mají rozházené názvy." },
   { id: "holly", name: "holly", glyph: "server", desc: "Ovládá NAS démona Holly", tools: ["bash", "read"], approval: true, risk: "high", when: "Když potřebuješ spravovat NAS — snapshoty, služby, místo na disku." },
   { id: "task-spec-writer", name: "task-spec-writer", glyph: "doc", desc: "Sepíše spec z volného zadání", tools: ["read", "write"], risk: "low", when: "Když máš nápad v hlavě a chceš z něj čitelné zadání." },
@@ -54,7 +54,7 @@ const SKILLS = [
   { id: "spec-skeleton", name: "spec→skeleton", glyph: "doc", desc: "Spec → kostra PR", tools: ["read", "write", "git"], risk: "medium", when: "Když máš hotový design.md a chceš rozjet implementaci." },
   { id: "pr-prereview", name: "pr-prereview", glyph: "check", desc: "Pre-review otevřeného PR", tools: ["read", "git"], risk: "medium", when: "Před tím, než pošleš PR kolegům na review." },
   { id: "ci-doctor", name: "ci-doctor", glyph: "shield", desc: "Diagnostikuje padající CI", tools: ["read", "bash", "git"], risk: "medium", when: "Když spadne pipeline a nevíš proč." },
-  { id: "standup-gen", name: "standup-gen", glyph: "spark", desc: "Vygeneruje standup z gitu", tools: ["read", "git"], approval: true, risk: "medium", when: "Ráno před standupem." },
+  { id: "standup-gen", name: "standup-gen", glyph: "spark", desc: "Vygeneruje standup z gitu", tools: ["read", "git"], approval: true, risk: "medium", gateRuleIds: ["gr-feature-push"], when: "Ráno před standupem." },
   { id: "changelog-gen", name: "changelog-gen", glyph: "doc", desc: "Sestaví changelog z merge commitů", tools: ["read", "git", "write"], risk: "medium", when: "Před releasem — z merge commitů od poslední verze." },
 ]
 
@@ -80,6 +80,7 @@ async function seedSkills() {
     if (s.desc) fm.desc = s.desc
     if (s.approval) fm.requires_approval = true
     if (s.risk) fm.risk = s.risk
+    if (s.gateRuleIds) fm.gateRuleIds = s.gateRuleIds
     await writeFile(dir("skills", `${s.id}.md`), md(skillBody(s), fm))
   }
   return SKILLS.length
@@ -96,12 +97,12 @@ const AGENTS = [
     ] },
   { id: "tester", name: "Tester", glyph: "flask", role: "Spustí testy, vrací report a vrací práci zpět", model: "sonnet", thinking: "medium", tools: ["read", "bash", "git"], category: "Kvalita",
     gates: [{ match: [{ type: "tool", tool: "bash" }], decision: "allow" }] },
-  { id: "reviewer", name: "Reviewer", glyph: "check", role: "Pre-review diffu před návrhem na push", model: "opus", thinking: "high", tools: ["read", "git"], category: "Kvalita",
+  { id: "reviewer", name: "Reviewer", glyph: "check", role: "Pre-review diffu před návrhem na push", model: "opus", thinking: "high", tools: ["read", "git"], category: "Kvalita", gateRuleIds: ["gr-push-main", "gr-merge"],
     gates: [{ match: [{ type: "action", action: "git.push" }], decision: "ask", resolve: { type: "human" } }] },
   { id: "researcher", name: "Researcher", glyph: "search", role: "Sbírá zdroje a syntetizuje poznámky do vaultu", model: "sonnet", thinking: "medium", tools: ["read", "web", "write"], category: "Výzkum" },
   { id: "doc", name: "Dokumentátor", glyph: "doc", role: "Sepíše README a changelog z výsledné branche", model: "sonnet", thinking: "low", tools: ["read", "write"], category: "Dokumentace" },
   { id: "curator", name: "Kurátor", glyph: "film", role: "Třídí a popisuje média v knihovně", model: "sonnet", thinking: "low", tools: ["read", "write", "web"], category: "Média" },
-  { id: "steward", name: "Hospodář", glyph: "cart", role: "Plánuje nákupy a hlídá domácí zásoby", model: "sonnet", thinking: "medium", tools: ["read", "write", "web"], category: "Domácnost" },
+  { id: "steward", name: "Hospodář", glyph: "cart", role: "Plánuje nákupy a hlídá domácí zásoby", model: "sonnet", thinking: "medium", tools: ["read", "write", "web"], category: "Domácnost", gateRuleIds: ["gr-big-purchase"] },
   { id: "chronicler", name: "Kronikář", glyph: "doc", role: "Vede deník a sumarizuje týden z poznámek", model: "sonnet", thinking: "low", tools: ["read", "write"], category: "Psaní" },
 ]
 
@@ -123,6 +124,7 @@ async function seedAgents() {
     if (a.approval) fm.requires_approval = true
     if (a.risk) fm.risk = a.risk
     if (a.gates) fm.gates = a.gates
+    if (a.gateRuleIds) fm.gateRuleIds = a.gateRuleIds
     await writeFile(dir("agents", `${a.id}.md`), md(agentBody(a), fm))
   }
   // Keep the token-free demo agent the runner uses.
