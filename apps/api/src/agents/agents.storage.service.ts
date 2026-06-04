@@ -9,6 +9,7 @@ import {
   AgentSchema,
   AgentThinkingSchema,
   type CreateAgentInput,
+  GateRuleInputSchema,
   RiskSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts"
@@ -176,6 +177,10 @@ export class AgentsStorageService implements OnModuleInit {
     if (AgentThinkingSchema.safeParse(data.thinking).success) candidate.thinking = data.thinking
     if (typeof data.requires_approval === "boolean") candidate.requires_approval = data.requires_approval
     if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk
+    // Drop the whole gates field if any rule is malformed (don't silently apply a
+    // partially-parsed policy); a single bad rule shouldn't weaken the gate.
+    const gates = GateRuleInputSchema.array().safeParse(data.gates)
+    if (gates.success) candidate.gates = gates.data
 
     const result = AgentSchema.safeParse(candidate)
     return result.success ? result.data : null
@@ -192,6 +197,7 @@ export class AgentsStorageService implements OnModuleInit {
     if (agent.category !== undefined) data.category = agent.category
     if (agent.requires_approval !== undefined) data.requires_approval = agent.requires_approval
     if (agent.risk !== undefined) data.risk = agent.risk
+    if (agent.gates !== undefined) data.gates = agent.gates
     // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
     return matter.stringify(`\n${agent.instructions}\n`, data)
   }

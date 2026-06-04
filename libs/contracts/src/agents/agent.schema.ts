@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { RiskSchema } from "../common.schema"
+import { GateRuleInputSchema } from "../gates/gate.schema"
 
 /**
  * Allowed shape of an agent `id`. The id doubles as the on-disk file name (and is
@@ -50,6 +51,12 @@ export const AgentSchema = z.object({
    */
   requires_approval: z.boolean().optional(),
   risk: RiskSchema.optional(),
+  /**
+   * Phase 3.5 gate policy. An agent's own rules (harden-only over the system
+   * floor). `requires_approval` is legacy sugar that desugars to a catch-all
+   * `ask:human` rule when `gates` is absent.
+   */
+  gates: z.array(GateRuleInputSchema).optional(),
   instructions: z.string().min(1),
 })
 export type Agent = z.infer<typeof AgentSchema>

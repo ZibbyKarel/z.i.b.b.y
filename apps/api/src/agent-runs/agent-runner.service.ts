@@ -1,8 +1,10 @@
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { AgentRun } from "@zibby/contracts"
+import type { IntendedAction } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
+import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { RunnerCore } from "../runner/runner-core"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
 
@@ -33,6 +35,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     @Inject(RUNS_DIR) dir: string,
     private readonly agents: AgentsStorageService,
     private readonly approvals: ApprovalsService,
+    private readonly gates: GateEvaluatorService,
   ) {
     this.dir = path.resolve(dir)
     this.core = new RunnerCore(this.dir, agentStrategy)
@@ -81,9 +84,17 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       extra: { agentId, prompt, project },
     }
 
-    // Phase 3 (Variant A): a gated agent pauses BEFORE spawning. No action with an
-    // external effect runs until the approval is granted.
-    if (agent.requires_approval) {
+    // Phase 3.5: evaluate the intended action against the floor + the agent's own
+    // rules (with legacy `requires_approval` desugar). Variant A — gate at the
+    // spawn boundary. No action with an external effect runs until allowed.
+    const action: IntendedAction = { action: "run", context: agent.id }
+    const rules = await this.gates.rulesForAgent({
+      gates: agent.gates,
+      requires_approval: agent.requires_approval,
+    })
+    const decision = this.gates.evaluate(rules, action).decision
+
+    if (decision === "ask") {
       const rec = await this.core.createPending(spec)
       await this.approvals.requestApproval({
         runId: rec.runId,
@@ -94,6 +105,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         risk: agent.risk ?? "medium",
       })
       return toAgentRun(rec)
+    }
+
+    if (decision === "deny") {
+      // Refused by policy: create then immediately terminate, never spawning.
+      const rec = await this.core.createPending(spec)
+      this.core.cancel(rec.runId)
+      return toAgentRun(this.core.get(rec.runId))
     }
 
     const rec = await this.core.start(spec)
