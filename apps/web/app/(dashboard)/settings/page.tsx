@@ -1,7 +1,5 @@
-import { useTranslations } from "next-intl";
-import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen/PlaceholderScreen";
+import { Screen } from "../../../features/settings/Screen";
 
 export default function SettingsPage() {
-  const t = useTranslations("nav");
-  return <PlaceholderScreen glyph="gear" label={t("settings")} />;
+  return <Screen />;
 }

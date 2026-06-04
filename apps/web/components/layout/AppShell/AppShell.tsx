@@ -7,6 +7,7 @@ import { type NavItem } from "@zibby/design-system";
 import { MainLayout } from "../MainLayout/MainLayout";
 import { NAV_ITEMS, type NavId, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
+import { useApprovalsQuery } from "../../../features/approvals/queries";
 
 const NAV_IDS = new Set<NavId>([...NAV_ITEMS.map((n) => n.id), SETTINGS_ITEM.id]);
 
@@ -20,9 +21,14 @@ function AppShellInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeNav = pathnameToNavId(pathname);
 
+  // Live pending-approval count drives the red badge on the Schválení nav item —
+  // the approval gate is the product's flagship, so its queue depth is always visible.
+  const { data: approvals = [] } = useApprovalsQuery();
+
   const navItems: NavItem[] = NAV_ITEMS.map((item) => ({
     ...item,
     label: t(item.id),
+    ...(item.id === "approvals" && approvals.length > 0 ? { badge: approvals.length } : {}),
   }));
 
   const footerItem: NavItem = {
