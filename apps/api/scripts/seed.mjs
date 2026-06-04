@@ -73,16 +73,42 @@ ${s.when}
 ## Nástroje
 ${s.tools.map((t) => `- ${t}`).join("\n")}`
 
+// Functional category per skill (mirrors data.jsx); links to the skill taxonomy.
+const SKILL_CATEGORY = {
+  rohlik: "Nákupy & domácnost",
+  "tmdb-renamer": "Média",
+  holly: "Systém & NAS",
+  "task-spec-writer": "Psaní & dokumenty",
+  "webshare-downloader": "Média",
+  "meal-planner": "Nákupy & domácnost",
+  "photo-cull": "Média",
+  "nas-backup": "Systém & NAS",
+  "journal-digest": "Psaní & dokumenty",
+  "spec-skeleton": "Vývoj",
+  "pr-prereview": "Review & CI",
+  "ci-doctor": "Review & CI",
+  "standup-gen": "Dokumentace",
+  "changelog-gen": "Dokumentace",
+}
+
 async function seedSkills() {
   for (const s of SKILLS) {
     const fm = { name: s.name }
     if (s.glyph) fm.glyph = s.glyph
     if (s.desc) fm.desc = s.desc
+    if (SKILL_CATEGORY[s.id]) fm.category = SKILL_CATEGORY[s.id]
     if (s.approval) fm.requires_approval = true
     if (s.risk) fm.risk = s.risk
     if (s.gateRuleIds) fm.gateRuleIds = s.gateRuleIds
     await writeFile(dir("skills", `${s.id}.md`), md(skillBody(s), fm))
   }
+  // Skill categories manifest.
+  const CATS = [
+    ["Vývoj", "code"], ["Review & CI", "check"], ["Dokumentace", "spark"],
+    ["Média", "film"], ["Nákupy & domácnost", "cart"], ["Systém & NAS", "server"],
+    ["Psaní & dokumenty", "doc"],
+  ].map(([name, glyph]) => ({ name, glyph }))
+  await writeFile(dir("skills", "_categories.json"), JSON.stringify(CATS, null, 2))
   return SKILLS.length
 }
 
@@ -172,6 +198,27 @@ async function seedPipelines() {
     await writeFile(dir("pipelines", `${p.id}.pipeline.md`), md(body, fm))
   }
   return PIPELINES.length
+}
+
+// --------------------------------------------------------------- projects ----
+// Contract Project: { id, name, path, desc?, ctx, category? } — a registry of
+// target directories agents/skills run against (mirrors data.jsx PROJECTS_DATA).
+const PROJECTS = [
+  { id: "zibby-core", name: "zibby-core", path: "~/zibby", desc: "ZIBBY démon, skilly, agenti, velín", ctx: "work", category: "Vývoj" },
+  { id: "auth-svc", name: "auth-svc", path: "~/Projects/auth-svc", desc: "Auth microservice – JWT, rate-limiter, testy", ctx: "work", category: "Vývoj" },
+  { id: "media-vault", name: "media-vault", path: "~/Projects/media-vault", desc: "Médiatéka – filmy, seriály, fotky na Holly", ctx: "home", category: "Média & domácnost" },
+  { id: "home-ops", name: "home-ops", path: "~/Projects/home-ops", desc: "Domácí provoz – nákupy, zálohy, NAS", ctx: "home", category: "Média & domácnost" },
+  { id: "rohlik-list", name: "rohlik-list", path: "~/Projects/rohlik-list", desc: "Nákupní seznam a jídelníček", ctx: "home", category: "Média & domácnost" },
+]
+
+async function seedProjects() {
+  await writeFile(dir("projects", "_projects.json"), JSON.stringify(PROJECTS, null, 2))
+  // Project categories manifest (default taxonomy: Vývoj / Média & domácnost / Ostatní).
+  const CATS = [
+    ["Vývoj", "code"], ["Média & domácnost", "film"], ["Ostatní", "grid"],
+  ].map(([name, glyph]) => ({ name, glyph }))
+  await writeFile(dir("projects", "_categories.json"), JSON.stringify(CATS, null, 2))
+  return PROJECTS.length
 }
 
 // ----------------------------------------------------------- automations ----
@@ -331,14 +378,16 @@ async function main() {
   await fs.mkdir(DATA, { recursive: true })
   const skills = await seedSkills()
   const agents = await seedAgents()
+  const projects = await seedProjects()
   const pipelines = await seedPipelines()
   const automations = await seedAutomations()
   const notes = await seedVault()
   const { approvals, runs } = await seedRunsAndApprovals()
 
   console.log("ZIBBY velín — demo data seeded into", DATA)
-  console.log(`  skills        ${skills}`)
+  console.log(`  skills        ${skills} + 7 categories`)
   console.log(`  agents        ${agents} (incl. agent-007) + 7 categories`)
+  console.log(`  projects      ${projects} + 3 categories`)
   console.log(`  pipelines     ${pipelines}`)
   console.log(`  automations   ${automations}`)
   console.log(`  vault notes   ${notes}`)

@@ -8,6 +8,7 @@ import { HealthModule } from "./health/health.module"
 import { LimitsModule } from "./limits/limits.module"
 import { MemoryModule } from "./memory/memory.module"
 import { PipelinesModule } from "./pipelines/pipelines.module"
+import { ProjectsModule } from "./projects/projects.module"
 import { SkillsModule } from "./skills/skills.module"
 
 @Module({
@@ -15,6 +16,7 @@ import { SkillsModule } from "./skills/skills.module"
     ConfigModule.forRoot({ isGlobal: true }),
     AgentsModule,
     SkillsModule,
+    ProjectsModule,
     PipelinesModule,
     ApprovalsModule,
     GateRulesModule,

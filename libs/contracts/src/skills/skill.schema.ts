@@ -17,6 +17,12 @@ export const SkillSchema = z.object({
   name: z.string().min(1).optional(),
   glyph: z.string().optional(),
   desc: z.string().optional(),
+  /**
+   * Functional category grouping the skill catalog. Links to the skill taxonomy
+   * (`GET /api/skills/categories`) by name; free-form for the same reason agents'
+   * is — the closed set lives in the web app, so the API won't 400 on a new value.
+   */
+  category: z.string().optional(),
   /** Phase 3 approval gate (see {@link AgentSchema}); `risk` is a display hint. */
   requires_approval: z.boolean().optional(),
   risk: RiskSchema.optional(),

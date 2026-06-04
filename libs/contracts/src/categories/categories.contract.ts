@@ -6,55 +6,75 @@ import { CategoryNameSchema, CategorySchema, CreateCategorySchema } from "./cate
 const c = initContract()
 
 /**
- * The agent-catalog taxonomy. Categories are stored separately from agents (a
- * manifest the backend owns), so a category can exist with zero agents — which
- * is what the "Add category" flow creates before any agent is filed under it.
- *
- * The routes deliberately nest under `/agents/categories`. `listCategories`
- * (`GET /agents/categories`) collides with the agents resource's
- * `GET /agents/:id` at the path level, so the backend mounts the categories
- * controller *first*; an e2e test guards that ordering. `createCategory` and
- * `deleteCategory` carry an extra segment / differ in method, so they never
- * collide.
+ * The catalog resources that carry a category taxonomy. Each keeps its own,
+ * independent list of categories (agents are not filed under the same taxonomy as
+ * skills or projects), so the contract is produced per resource by the factory
+ * below and mounted under that resource's URL space.
  */
-export const categoriesContract = c.router(
-  {
-    listCategories: {
-      method: "GET",
-      path: "/agents/categories",
-      responses: {
-        200: z.array(CategorySchema),
-      },
-      summary: "List all agent categories",
-    },
+export type CategorizedResource = "agents" | "skills" | "projects"
 
-    createCategory: {
-      method: "POST",
-      path: "/agents/categories",
-      body: CreateCategorySchema,
-      responses: {
-        201: CategorySchema,
-        409: ErrorSchema,
+/**
+ * Build the categories sub-router for a given catalog resource. Categories are
+ * stored separately from the entities they group (a manifest the backend owns),
+ * so a category can exist with zero members — which is what the "Add category"
+ * flow creates before any entity is filed under it.
+ *
+ * The routes deliberately nest under `/<resource>/categories`. `listCategories`
+ * (`GET /<resource>/categories`) collides with the resource's `GET /<resource>/:id`
+ * at the path level, so the backend mounts the categories controller *first*; an
+ * e2e/integration test guards that ordering. `createCategory` and `deleteCategory`
+ * carry an extra segment / differ in method, so they never collide.
+ */
+export function makeCategoriesContract(resource: CategorizedResource) {
+  return c.router(
+    {
+      listCategories: {
+        method: "GET",
+        path: `/${resource}/categories`,
+        responses: {
+          200: z.array(CategorySchema),
+        },
+        summary: `List all ${resource} categories`,
       },
-      summary: "Create a new agent category",
-    },
 
-    deleteCategory: {
-      method: "DELETE",
-      path: "/agents/categories/:name",
-      pathParams: z.object({ name: CategoryNameSchema }),
-      responses: {
-        200: z.object({ name: CategoryNameSchema }),
-        404: ErrorSchema,
-        409: ErrorSchema,
+      createCategory: {
+        method: "POST",
+        path: `/${resource}/categories`,
+        body: CreateCategorySchema,
+        responses: {
+          201: CategorySchema,
+          409: ErrorSchema,
+        },
+        summary: `Create a new ${resource} category`,
       },
-      summary: "Delete an empty agent category (409 if any agent still uses it)",
-    },
-  },
-  {
-    pathPrefix: "/api",
-    strictStatusCodes: true,
-  },
-)
 
+      deleteCategory: {
+        method: "DELETE",
+        path: `/${resource}/categories/:name`,
+        pathParams: z.object({ name: CategoryNameSchema }),
+        responses: {
+          200: z.object({ name: CategoryNameSchema }),
+          404: ErrorSchema,
+          409: ErrorSchema,
+        },
+        summary: `Delete an empty ${resource} category (409 if any entity still uses it)`,
+      },
+    },
+    {
+      pathPrefix: "/api",
+      strictStatusCodes: true,
+    },
+  )
+}
+
+/** Agent-catalog taxonomy — the original categories resource (`/api/agents/categories`). */
+export const categoriesContract = makeCategoriesContract("agents")
 export type CategoriesContract = typeof categoriesContract
+
+/** Skill-catalog taxonomy (`/api/skills/categories`). */
+export const skillCategoriesContract = makeCategoriesContract("skills")
+export type SkillCategoriesContract = typeof skillCategoriesContract
+
+/** Project-registry taxonomy (`/api/projects/categories`). */
+export const projectCategoriesContract = makeCategoriesContract("projects")
+export type ProjectCategoriesContract = typeof projectCategoriesContract
