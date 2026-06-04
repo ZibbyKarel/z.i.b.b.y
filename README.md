@@ -17,33 +17,37 @@ NX monorepo — Next.js 15 App Router · React 19 · TanStack Query · Tailwind 
 
 ## Quick start
 
-**Prerequisites:** Node.js 20+, npm
+**Prerequisites:** Node.js 20+, [pnpm](https://pnpm.io) 9+ (`corepack enable` or `npm i -g pnpm`)
+
+> **pnpm is the canonical package manager** for this monorepo (it uses the
+> `workspace:` protocol and `pnpm-lock.yaml`). Use `pnpm`, not `npm`.
 
 ```bash
-npm install
+pnpm install
 ```
 
-| Command                  | What it does                                            |
-| ------------------------ | ------------------------------------------------------- |
-| `npm run web:dev`        | Start the web app at http://localhost:3000              |
-| `npm run web:build`      | Production build of the web app                         |
-| `npm run web:start`      | Serve the production web build                          |
-| `npm run web:test`       | Run web tests once                                      |
-| `npm run api:dev`        | Start API in watch mode at http://localhost:3333        |
-| `npm run api:start`      | Serve the API once (no reload)                          |
-| `npm run api:test`       | Run API tests once                                      |
-| `npm run test`           | Run all tests once                                      |
-| `npm run test:watch`     | Run all tests in watch mode                             |
-| `npm run storybook`      | Launch design system Storybook at http://localhost:6006 |
-| `npm run typecheck`      | Type-check the whole monorepo                           |
+| Command                | What it does                                            |
+| ---------------------- | ------------------------------------------------------- |
+| `pnpm web:dev`         | Start the web app at http://localhost:3000              |
+| `pnpm web:build`       | Production build of the web app                         |
+| `pnpm web:start`       | Serve the production web build                          |
+| `pnpm web:test`        | Run web tests once                                      |
+| `pnpm api:dev`         | Start API in watch mode at http://localhost:3333        |
+| `pnpm api:start`       | Serve the API once (no reload)                          |
+| `pnpm api:test`        | Run API tests once                                      |
+| `pnpm test`            | Run all tests once                                      |
+| `pnpm test:watch`      | Run all tests in watch mode                             |
+| `pnpm storybook`       | Launch design system Storybook at http://localhost:6006 |
+| `pnpm lint`            | ESLint auto-fix across the monorepo                     |
+| `pnpm typecheck`       | Type-check the whole monorepo                           |
 
 ### Start developing
 
 ```bash
-npm install           # install dependencies
-npm run web:dev       # web app → http://localhost:3000
-npm run api:dev       # API → http://localhost:3333
-npm run storybook     # design system → http://localhost:6006
+pnpm install          # install dependencies
+pnpm web:dev          # web app → http://localhost:3000
+pnpm api:dev          # API → http://localhost:3333
+pnpm storybook        # design system → http://localhost:6006
 ```
 
 ---

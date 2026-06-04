@@ -5,6 +5,26 @@ Design system + Next.js app. Stack: Next.js 15 App Router, React 19, TanStack Qu
 
 ---
 
+## Running the project
+
+**pnpm is the canonical package manager** (the workspace uses the `workspace:`
+protocol and `pnpm-lock.yaml`). Always use `pnpm` — never `npm` or `yarn`.
+
+```bash
+corepack enable        # or: npm i -g pnpm  (Node 20+, pnpm 9+)
+pnpm install           # install all workspace dependencies
+
+pnpm web:dev           # web app  → http://localhost:3000
+pnpm api:dev           # API       → http://localhost:3333
+pnpm storybook         # design system → http://localhost:6006
+```
+
+Other scripts: `pnpm web:build` / `pnpm web:start`, `pnpm api:start`,
+`pnpm test` (all) / `pnpm web:test` / `pnpm api:test`, `pnpm e2e`,
+`pnpm lint`, `pnpm typecheck`. See `README.md` for the full table.
+
+---
+
 ## Monorepo structure
 
 ```
@@ -117,9 +137,9 @@ The hook and its file share one name with a `Query`/`Mutation` suffix
 Run these three commands in order after generating or modifying any code files:
 
 ```bash
-npm run lint       # ESLint auto-fix (acts as project formatter)
-npm run typecheck  # tsc --noEmit
-npm run test       # vitest run
+pnpm lint       # ESLint auto-fix (acts as project formatter)
+pnpm typecheck  # tsc --noEmit
+pnpm test       # vitest run
 ```
 
 Fix all errors before reporting the task as done. Do not skip steps.

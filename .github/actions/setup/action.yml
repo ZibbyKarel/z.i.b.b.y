@@ -1,0 +1,24 @@
+name: Setup
+description: Install pnpm + Node and the project dependencies from the frozen lockfile.
+
+# Single source of truth for the toolchain so every CI job stays in lockstep.
+# pnpm is the canonical package manager here (workspace: protocol in apps/api,
+# pnpm-lock.yaml is the maintained lockfile — the stale package-lock.json is not used).
+
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10 # matches lockfileVersion 9.0 in pnpm-lock.yaml
+
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
