@@ -51,7 +51,7 @@ export function RunLogModal({ run, onClose }: RunLogModalProps) {
       width="lg"
     >
       <Stack gap="150">
-        <Card background="background" radius="sm">
+        <Card background="background" bordered={false} radius="sm">
           <CodeBlock followTail maxHeight="viewport" scrollKey={text} text={text || t("waiting")} />
         </Card>
         <Stack align="center" direction="row" gap="100">
