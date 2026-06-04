@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
   // future EventSource alike. Origins come from CORS_ORIGIN (comma-separated);
   // default to the local Next dev server.
   app.enableCors({
-    origin: process.env.CORS_ORIGIN!.split(","),
+    origin: (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(","),
   })
 
   // Human-facing OpenAPI doc derived from the contracts — a generated artifact,

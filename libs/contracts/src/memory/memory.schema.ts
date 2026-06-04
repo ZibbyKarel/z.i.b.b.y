@@ -14,7 +14,7 @@ export const NoteSchema = z.object({
   path: z.string(),
   tier: MemoryTierSchema,
   title: z.string(),
-  frontmatter: z.record(z.unknown()),
+  frontmatter: z.record(z.string(), z.unknown()),
   links: z.array(z.string()),
   backlinks: z.array(z.string()).optional(),
   body: z.string().optional(),

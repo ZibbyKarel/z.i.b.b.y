@@ -1,4 +1,4 @@
-import type { ZodType, ZodTypeDef } from "zod"
+import type { ZodType } from "zod"
 
 /**
  * Which kind of thing a run executes. A single {@link RunnerCore} serves all
@@ -77,5 +77,5 @@ export interface KindStrategy<R extends BaseRun> {
    * untyped (`unknown`) so schemas may use `.default()` for back-compat without the
    * input type having to equal the fully-populated output `R`.
    */
-  schema: ZodType<R, ZodTypeDef, unknown>
+  schema: ZodType<R, unknown>
 }
