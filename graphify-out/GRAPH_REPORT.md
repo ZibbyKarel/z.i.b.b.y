@@ -1,7 +1,7 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-04)
 
 ## Corpus Check
-- 451 files · ~148,498 words
+- 451 files · ~180,408 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -437,8 +437,8 @@
   /Users/zibby/Workspace/z.i.b.b.y/e2e/global-setup.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/api/scripts/seed.mjs
 - `ruleLabels()` --calls--> `t()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx
-- `ago()` --calls--> `t()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunDetail.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx
+- `t()` --calls--> `ago()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunDetail.tsx
 - `render()` --calls--> `renderWithProviders()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/libs/design-system/src/utils/testRender.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/test/render.tsx
 - `useTokens()` --calls--> `TabList()`  [INFERRED]
@@ -2770,11 +2770,11 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `writeFile()` connect `Community 8` to `Community 0`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 9`, `Community 17`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `RunnerCore` connect `Community 0` to `Community 4`, `Community 7`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Why does `relativeTime()` connect `Community 1` to `Community 7`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `t()` connect `Community 4` to `Community 1`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `writeFile()` (e.g. with `globalSetup()` and `main()`) actually correct?**
   _`writeFile()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `AppModule`, `GatesModule`, `MemoryModule` to the rest of the system?**
