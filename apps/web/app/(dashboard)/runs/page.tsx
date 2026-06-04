@@ -1,7 +1,5 @@
-import { useTranslations } from "next-intl";
-import { PlaceholderScreen } from "../../../components/layout/PlaceholderScreen/PlaceholderScreen";
+import { Screen } from "../../../features/runs/Screen";
 
 export default function RunsPage() {
-  const t = useTranslations("nav");
-  return <PlaceholderScreen glyph="pulse" label={t("runs")} />;
+  return <Screen />;
 }

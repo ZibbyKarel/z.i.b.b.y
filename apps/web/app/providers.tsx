@@ -1,8 +1,8 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DesignSystemProvider } from "@zibby/design-system";
+import { type ReactNode, useState } from "react";
 import { apiClient } from "../state/api";
 
 export function Providers({ children }: { children: ReactNode }) {

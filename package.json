@@ -14,6 +14,7 @@
     "api:dev": "npm run dev --workspace=apps/api",
     "api:start": "pnpm --filter @zibby/api serve",
     "api:test": "vitest run --project api",
+    "seed": "node apps/api/scripts/seed.mjs",
     "lint": "eslint --fix .",
     "test": "vitest run",
     "test:watch": "vitest",
