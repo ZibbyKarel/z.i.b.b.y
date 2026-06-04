@@ -2,6 +2,7 @@ import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { AgentRun } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
+import { ApprovalsService } from "../approvals/approvals.service"
 import { RunnerCore } from "../runner/runner-core"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
 
@@ -31,14 +32,23 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(RUNS_DIR) dir: string,
     private readonly agents: AgentsStorageService,
+    private readonly approvals: ApprovalsService,
   ) {
     this.dir = path.resolve(dir)
     this.core = new RunnerCore(this.dir, agentStrategy)
   }
 
-  /** Rebuild the registry from disk so runs survive a backend restart. */
-  onModuleInit(): Promise<void> {
-    return this.core.init()
+  /** Rebuild the registry from disk and register for approval decisions on agent runs. */
+  async onModuleInit(): Promise<void> {
+    this.approvals.register("agent", {
+      resume: async (runId) => {
+        await this.core.resume(runId)
+      },
+      cancel: (runId) => {
+        this.core.cancel(runId)
+      },
+    })
+    await this.core.init()
   }
 
   /** Kill any still-live children on shutdown so we don't leak zombies. */
@@ -54,23 +64,39 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    */
   async start(agentId: string, prompt: string, project: string): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
-    await this.agents.get(agentId)
+    const agent = await this.agents.get(agentId)
 
     const startedMs = Date.now()
     // The sandbox the task runs in (and writes its file into). Named without the
     // pid since we need it before spawning; the run id below carries the pid.
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
     const { command, args } = this.buildCommand(prompt, cwd)
-
-    const rec = await this.core.start({
-      kind: "agent",
+    const spec = {
+      kind: "agent" as const,
       ownerId: agentId,
       command,
       args,
       cwd,
       startedMs,
       extra: { agentId, prompt, project },
-    })
+    }
+
+    // Phase 3 (Variant A): a gated agent pauses BEFORE spawning. No action with an
+    // external effect runs until the approval is granted.
+    if (agent.requires_approval) {
+      const rec = await this.core.createPending(spec)
+      await this.approvals.requestApproval({
+        runId: rec.runId,
+        kind: "agent",
+        skill: agent.name ?? agent.id,
+        action: "run",
+        detail: prompt,
+        risk: agent.risk ?? "medium",
+      })
+      return toAgentRun(rec)
+    }
+
+    const rec = await this.core.start(spec)
     return toAgentRun(rec)
   }
 

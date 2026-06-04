@@ -2,6 +2,7 @@ import * as path from "node:path"
 import { Module } from "@nestjs/common"
 import { AgentRunnerService, RUNS_DIR } from "../agent-runs/agent-runner.service"
 import { AgentRunsController } from "../agent-runs/agent-runs.controller"
+import { ApprovalsModule } from "../approvals/approvals.module"
 import { AgentsController } from "./agents.controller"
 import { AGENTS_DIR, AgentsStorageService } from "./agents.storage.service"
 import { CategoriesController } from "./categories.controller"
@@ -28,6 +29,7 @@ export function resolveRunsDir(): string {
 }
 
 @Module({
+  imports: [ApprovalsModule],
   // CategoriesController and AgentRunsController are declared before AgentsController
   // so their static routes (`GET /agents/categories`, `GET /agents/running`) are
   // registered ahead of the agents resource's `GET /agents/:id`, which would

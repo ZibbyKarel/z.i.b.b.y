@@ -1,5 +1,6 @@
 import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { ApprovalsModule } from "../approvals/approvals.module"
 import { SKILL_RUNS_DIR, SkillRunnerService } from "./skill-runner.service"
 import { SkillRunsController } from "./skill-runs.controller"
 import { SkillsController } from "./skills.controller"
@@ -18,6 +19,7 @@ export function resolveSkillRunsDir(): string {
 }
 
 @Module({
+  imports: [ApprovalsModule],
   // SkillRunsController is declared before SkillsController so its static routes
   // (`GET /skills/running`, `/skills/runs/:runId`) register ahead of `/skills/:id`,
   // which would otherwise capture "running"/"runs" as a skill id.

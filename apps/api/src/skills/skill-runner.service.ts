@@ -1,6 +1,7 @@
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { SkillRun } from "@zibby/contracts"
+import { ApprovalsService } from "../approvals/approvals.service"
 import { RunnerCore } from "../runner/runner-core"
 import { SkillsStorageService } from "./skills.storage.service"
 import { type SkillRunRecord, skillStrategy, toSkillRun } from "./skill-run.record"
@@ -25,13 +26,22 @@ export class SkillRunnerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(SKILL_RUNS_DIR) dir: string,
     private readonly skills: SkillsStorageService,
+    private readonly approvals: ApprovalsService,
   ) {
     this.dir = path.resolve(dir)
     this.core = new RunnerCore(this.dir, skillStrategy)
   }
 
-  onModuleInit(): Promise<void> {
-    return this.core.init()
+  async onModuleInit(): Promise<void> {
+    this.approvals.register("skill", {
+      resume: async (runId) => {
+        await this.core.resume(runId)
+      },
+      cancel: (runId) => {
+        this.core.cancel(runId)
+      },
+    })
+    await this.core.init()
   }
 
   onModuleDestroy(): void {
@@ -40,21 +50,36 @@ export class SkillRunnerService implements OnModuleInit, OnModuleDestroy {
 
   async start(skillId: string, prompt: string, project: string): Promise<SkillRun> {
     // Throws SkillNotFoundError / InvalidSkillIdError when the skill is unknown.
-    await this.skills.get(skillId)
+    const skill = await this.skills.get(skillId)
 
     const startedMs = Date.now()
     const cwd = path.join(this.dir, `${skillId}_${startedMs}`)
     const { command, args } = this.buildCommand(prompt, cwd)
-
-    const rec = await this.core.start({
-      kind: "skill",
+    const spec = {
+      kind: "skill" as const,
       ownerId: skillId,
       command,
       args,
       cwd,
       startedMs,
       extra: { skillId, prompt, project },
-    })
+    }
+
+    // Phase 3 (Variant A): a gated skill pauses before spawning.
+    if (skill.requires_approval) {
+      const rec = await this.core.createPending(spec)
+      await this.approvals.requestApproval({
+        runId: rec.runId,
+        kind: "skill",
+        skill: skill.name ?? skill.id,
+        action: "run",
+        detail: prompt,
+        risk: skill.risk ?? "medium",
+      })
+      return toSkillRun(rec)
+    }
+
+    const rec = await this.core.start(spec)
     return toSkillRun(rec)
   }
 

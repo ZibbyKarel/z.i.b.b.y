@@ -9,6 +9,7 @@ import {
   AgentSchema,
   AgentThinkingSchema,
   type CreateAgentInput,
+  RiskSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts"
 import matter from "gray-matter"
@@ -173,6 +174,8 @@ export class AgentsStorageService implements OnModuleInit {
     }
     if (AgentModelSchema.safeParse(data.model).success) candidate.model = data.model
     if (AgentThinkingSchema.safeParse(data.thinking).success) candidate.thinking = data.thinking
+    if (typeof data.requires_approval === "boolean") candidate.requires_approval = data.requires_approval
+    if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk
 
     const result = AgentSchema.safeParse(candidate)
     return result.success ? result.data : null
@@ -187,6 +190,8 @@ export class AgentsStorageService implements OnModuleInit {
     if (agent.thinking !== undefined) data.thinking = agent.thinking
     if (agent.tools !== undefined) data.tools = agent.tools
     if (agent.category !== undefined) data.category = agent.category
+    if (agent.requires_approval !== undefined) data.requires_approval = agent.requires_approval
+    if (agent.risk !== undefined) data.risk = agent.risk
     // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
     return matter.stringify(`\n${agent.instructions}\n`, data)
   }

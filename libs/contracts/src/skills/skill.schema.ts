@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { AgentIdSchema } from "../agents/agent.schema"
+import { RiskSchema } from "../common.schema"
 
 /**
  * A skill is the same on-disk shape as an agent — a `SKILL.md` file with YAML
@@ -16,6 +17,9 @@ export const SkillSchema = z.object({
   name: z.string().min(1).optional(),
   glyph: z.string().optional(),
   desc: z.string().optional(),
+  /** Phase 3 approval gate (see {@link AgentSchema}); `risk` is a display hint. */
+  requires_approval: z.boolean().optional(),
+  risk: RiskSchema.optional(),
   instructions: z.string().min(1),
 })
 export type Skill = z.infer<typeof SkillSchema>

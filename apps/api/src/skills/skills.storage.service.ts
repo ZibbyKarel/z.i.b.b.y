@@ -5,6 +5,7 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
 import {
   AGENT_ID_REGEX,
   type CreateSkillInput,
+  RiskSchema,
   type Skill,
   SkillSchema,
   type UpdateSkillInput,
@@ -156,6 +157,8 @@ export class SkillsStorageService implements OnModuleInit {
     if (typeof data.name === "string") candidate.name = data.name
     if (typeof data.glyph === "string") candidate.glyph = data.glyph
     if (typeof data.desc === "string") candidate.desc = data.desc
+    if (typeof data.requires_approval === "boolean") candidate.requires_approval = data.requires_approval
+    if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk
 
     const result = SkillSchema.safeParse(candidate)
     return result.success ? result.data : null
@@ -166,6 +169,8 @@ export class SkillsStorageService implements OnModuleInit {
     const data: Record<string, unknown> = { name: skill.name ?? skill.id }
     if (skill.glyph !== undefined) data.glyph = skill.glyph
     if (skill.desc !== undefined) data.desc = skill.desc
+    if (skill.requires_approval !== undefined) data.requires_approval = skill.requires_approval
+    if (skill.risk !== undefined) data.risk = skill.risk
     return matter.stringify(`\n${skill.instructions}\n`, data)
   }
 

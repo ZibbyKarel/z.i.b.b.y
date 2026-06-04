@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process"
+import { randomBytes } from "node:crypto"
 import { type WriteStream, createWriteStream } from "node:fs"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
@@ -33,6 +34,8 @@ interface RunHandle<R extends BaseRun> {
    * reconstructed from disk after a restart has no child (it cannot be resumed). */
   child?: ChildProcess
   log?: WriteStream
+  /** For an `awaiting-approval` run: the spec to spawn once it is approved. */
+  pendingSpec?: RunSpec
 }
 
 /**
@@ -45,12 +48,13 @@ interface RunHandle<R extends BaseRun> {
  * still marked `running` means its process died with the previous backend (the
  * child is a child of the API process); it can't be resumed, so it is reconciled
  * to `interrupted`. A run paused at `awaiting-approval` has no live child *by
- * design* — Phase 3 — so it survives restart unchanged.
+ * design* (Phase 3, Variant A — gate at the spawn boundary): it survives restart
+ * unchanged, and its spawn spec is persisted alongside so it can still be resumed
+ * after a restart once approved.
  *
  * The class is deliberately a plain class, not a Nest provider: per-kind wrappers
- * (`AgentRunnerService`, `SkillRunnerService`, `PipelineRunnerService`) own the DI
- * surface and delegate here, so liveness/restart/approval logic lives in exactly
- * one place.
+ * own the DI surface and delegate here, so liveness/restart/approval logic lives
+ * in exactly one place.
  */
 export class RunnerCore<R extends BaseRun> {
   private readonly dir: string
@@ -68,7 +72,7 @@ export class RunnerCore<R extends BaseRun> {
     await fs.mkdir(this.dir, { recursive: true })
     const entries = await fs.readdir(this.dir).catch(() => [] as string[])
     for (const entry of entries) {
-      if (!entry.endsWith(".json")) continue
+      if (!entry.endsWith(".json") || entry.endsWith(".pending.json")) continue
       const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
       if (raw === null) continue
       let data: unknown
@@ -80,17 +84,22 @@ export class RunnerCore<R extends BaseRun> {
       const parsed = this.strategy.schema.safeParse(data)
       if (!parsed.success) continue
       let run = parsed.data
-      // A run left "running" in a sidecar can't be live in this fresh process. A
-      // run paused at "awaiting-approval" expectedly has no child — leave it be.
       if (run.status === "running") {
+        // A run left "running" in a sidecar can't be live in this fresh process.
         run = {
           ...run,
           status: "interrupted",
           pct: await this.readLastProgress(run.logFile, run.pct),
         }
         await this.writeSidecar(run)
+        this.runs.set(run.runId, { run })
+      } else if (run.status === "awaiting-approval") {
+        // Expectedly has no child; restore its spawn spec so it can resume.
+        const pendingSpec = await this.readPendingSpec(run.runId)
+        this.runs.set(run.runId, { run, pendingSpec })
+      } else {
+        this.runs.set(run.runId, { run })
       }
-      this.runs.set(run.runId, { run })
     }
   }
 
@@ -102,9 +111,9 @@ export class RunnerCore<R extends BaseRun> {
   }
 
   /**
-   * Spawn one run from `spec` into a fresh sandbox, wiring its output to a log file
-   * plus a metadata sidecar. The returned record is the live in-memory object — a
-   * wrapper may project it down to its contract shape before returning to a client.
+   * Spawn one run from `spec` into a fresh sandbox immediately (no gate). The
+   * returned record is the live in-memory object — a wrapper may project it down
+   * to its contract shape before returning to a client.
    */
   async start(spec: RunSpec): Promise<R> {
     const startedMs = spec.startedMs ?? Date.now()
@@ -112,52 +121,80 @@ export class RunnerCore<R extends BaseRun> {
     await fs.mkdir(spec.cwd, { recursive: true })
 
     const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env })
-
-    // `child.pid` is set synchronously, and listeners attached now (before the
-    // next tick) cannot miss any output — so no early lines are lost.
     const pid = child.pid ?? 0
     const runId = `${spec.ownerId}_${startedMs}_${pid}`
     const logFile = path.join(this.dir, `${runId}.log`)
     const log = createWriteStream(logFile, { flags: "a" })
 
-    const base: BaseRun = {
-      runId,
-      kind: spec.kind,
-      status: "running",
-      pct: 0,
-      cwd: spec.cwd,
-      startedAt: new Date(startedMs).toISOString(),
-      pid,
-      logFile,
-    }
-    const run = this.strategy.assemble(base, spec)
+    const run = this.strategy.assemble(this.baseRun(spec, runId, startedMs, pid, logFile), spec)
     const handle: RunHandle<R> = { run, child, log }
     this.runs.set(runId, handle)
     await this.writeSidecar(run)
-
-    const onChunk = (buf: Buffer) => {
-      const text = buf.toString("utf8")
-      log.write(text)
-      for (const line of text.split(/\r?\n/)) {
-        const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
-        if (match?.[1] !== undefined) {
-          run.pct = Math.min(100, Math.max(0, Number(match[1])))
-        }
-      }
-    }
-    child.stdout?.on("data", onChunk)
-    child.stderr?.on("data", onChunk)
-
-    const finalize = (status: RunnerRunStatus) => {
-      run.status = status
-      if (status === "done") run.pct = 100
-      log.end()
-      void this.writeSidecar(run)
-    }
-    child.on("error", () => finalize("error"))
-    child.on("exit", (code) => finalize(code === 0 ? "done" : "error"))
-
+    this.wire(handle)
     return run
+  }
+
+  /**
+   * Create a run in the `awaiting-approval` state WITHOUT spawning (Phase 3). The
+   * spawn `spec` is stashed (in memory and on disk) so {@link resume} can start it
+   * once a decision arrives — even across a restart.
+   */
+  async createPending(spec: RunSpec): Promise<R> {
+    const startedMs = spec.startedMs ?? Date.now()
+    await fs.mkdir(this.dir, { recursive: true })
+    // No pid yet; a short random suffix keeps the id unique and filename-safe.
+    const runId = `${spec.ownerId}_${startedMs}_p${randomBytes(3).toString("hex")}`
+    const logFile = path.join(this.dir, `${runId}.log`)
+    const base = this.baseRun(spec, runId, startedMs, 0, logFile)
+    base.status = "awaiting-approval"
+    const run = this.strategy.assemble(base, spec)
+    this.runs.set(runId, { run, pendingSpec: spec })
+    await this.writeSidecar(run)
+    await this.writePendingSpec(runId, spec)
+    return run
+  }
+
+  /** Resume an approved `awaiting-approval` run by finally spawning its stashed spec. */
+  async resume(runId: string): Promise<R> {
+    const handle = this.runs.get(runId)
+    if (!handle) throw new RunNotFoundError(runId)
+    if (handle.run.status !== "awaiting-approval" || !handle.pendingSpec) return handle.run
+
+    const spec = handle.pendingSpec
+    handle.pendingSpec = undefined
+    await this.clearPendingSpec(runId)
+
+    await fs.mkdir(spec.cwd, { recursive: true })
+    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env })
+    handle.child = child
+    handle.log = createWriteStream(handle.run.logFile, { flags: "a" })
+    handle.run.pid = child.pid ?? 0
+    handle.run.status = "running"
+    await this.writeSidecar(handle.run)
+    this.wire(handle)
+    return handle.run
+  }
+
+  /**
+   * Cancel a run. An `awaiting-approval` run is terminated WITHOUT performing its
+   * action (reject path) → `interrupted`; a live run is killed.
+   */
+  cancel(runId: string): R {
+    const handle = this.runs.get(runId)
+    if (!handle) throw new RunNotFoundError(runId)
+    if (handle.run.status === "awaiting-approval") {
+      handle.run.status = "interrupted"
+      handle.pendingSpec = undefined
+      void this.clearPendingSpec(runId)
+      void this.writeSidecar(handle.run)
+    } else if (handle.child && handle.run.status === "running") {
+      handle.child.kill()
+    }
+    return handle.run
+  }
+
+  has(runId: string): boolean {
+    return this.runs.has(runId)
   }
 
   /** Running runs, plus any finished within the retention window; newest first. */
@@ -165,8 +202,9 @@ export class RunnerCore<R extends BaseRun> {
     const cutoff = Date.now() - RETENTION_MS
     const out: R[] = []
     for (const [id, handle] of this.runs) {
-      const finished = handle.run.status !== "running"
-      // Drop long-finished runs from memory (their files stay on disk).
+      const finished = handle.run.status === "done" || handle.run.status === "error"
+      // Drop long-finished runs from memory (their files stay on disk). Keep
+      // `awaiting-approval` (and `interrupted`) regardless of age.
       if (finished && Date.parse(handle.run.startedAt) < cutoff) {
         this.runs.delete(id)
         continue
@@ -183,17 +221,13 @@ export class RunnerCore<R extends BaseRun> {
   }
 
   stop(runId: string): R {
-    const handle = this.runs.get(runId)
-    if (!handle) throw new RunNotFoundError(runId)
-    // No child → already finished or reconstructed from disk: nothing to kill.
-    if (handle.child && handle.run.status === "running") handle.child.kill()
-    return handle.run
+    return this.cancel(runId)
   }
 
   /**
    * Read a run's log from `offset`. The log file is the source of truth, so this
    * works whether or not the run is still in the registry (durable replay). A
-   * still-empty file for a live run yields an empty, not-done chunk.
+   * still-empty file for a live (or pending) run yields an empty, not-done chunk.
    */
   async readLog(runId: string, offset: number): Promise<RunLogChunk> {
     const handle = this.runs.get(runId)
@@ -217,24 +251,91 @@ export class RunnerCore<R extends BaseRun> {
       }
     } catch (error) {
       if (isErrnoException(error) && error.code === "ENOENT") {
-        // No file yet: fine for a live run, a 404 for an unknown one.
         if (handle) return { content: "", nextOffset: offset, done: false }
         throw new RunNotFoundError(runId)
       }
       throw error
     }
 
-    const done = handle ? handle.run.status !== "running" : true
+    const done = handle ? handle.run.status === "done" || handle.run.status === "error" : true
     return { content, nextOffset: size, done }
+  }
+
+  /** Build the kind-agnostic base fields for a run record. */
+  private baseRun(
+    spec: RunSpec,
+    runId: string,
+    startedMs: number,
+    pid: number,
+    logFile: string,
+  ): BaseRun {
+    return {
+      runId,
+      kind: spec.kind,
+      status: "running",
+      pct: 0,
+      cwd: spec.cwd,
+      startedAt: new Date(startedMs).toISOString(),
+      pid,
+      logFile,
+    }
+  }
+
+  /** Attach output capture + exit handling to a live handle. */
+  private wire(handle: RunHandle<R>): void {
+    const { child, log, run } = handle
+    if (!child || !log) return
+
+    const onChunk = (buf: Buffer) => {
+      const text = buf.toString("utf8")
+      log.write(text)
+      for (const line of text.split(/\r?\n/)) {
+        const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
+        if (match?.[1] !== undefined) {
+          run.pct = Math.min(100, Math.max(0, Number(match[1])))
+        }
+      }
+    }
+    child.stdout?.on("data", onChunk)
+    child.stderr?.on("data", onChunk)
+
+    const finalize = (status: RunnerRunStatus) => {
+      run.status = status
+      if (status === "done") run.pct = 100
+      log.end()
+      void this.writeSidecar(run)
+    }
+    child.on("error", () => finalize("error"))
+    child.on("exit", (code) => finalize(code === 0 ? "done" : "error"))
   }
 
   /** Persist a run's metadata next to its log so it survives a backend restart. */
   private async writeSidecar(run: R): Promise<void> {
     await fs
       .writeFile(path.join(this.dir, `${run.runId}.json`), JSON.stringify(run), "utf8")
-      .catch(() => {
-        // Best-effort: a failed sidecar write degrades restart fidelity, not the run.
-      })
+      .catch(() => {})
+  }
+
+  private async writePendingSpec(runId: string, spec: RunSpec): Promise<void> {
+    await fs
+      .writeFile(path.join(this.dir, `${runId}.pending.json`), JSON.stringify(spec), "utf8")
+      .catch(() => {})
+  }
+
+  private async readPendingSpec(runId: string): Promise<RunSpec | undefined> {
+    const raw = await fs
+      .readFile(path.join(this.dir, `${runId}.pending.json`), "utf8")
+      .catch(() => null)
+    if (raw === null) return undefined
+    try {
+      return JSON.parse(raw) as RunSpec
+    } catch {
+      return undefined
+    }
+  }
+
+  private async clearPendingSpec(runId: string): Promise<void> {
+    await fs.rm(path.join(this.dir, `${runId}.pending.json`), { force: true }).catch(() => {})
   }
 
   /** Last `PROGRESS <n>` seen in a log, or `fallback` if none/unreadable. */

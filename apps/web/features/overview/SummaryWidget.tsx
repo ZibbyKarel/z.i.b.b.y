@@ -16,12 +16,16 @@ import { AGENT_SDK } from "../../state/config";
 import { useCatalog } from "../../state/store";
 import { useAgentsQuery } from "../agents/queries";
 import { useHealthQuery } from "../health/queries";
+import { usePipelinesQuery } from "../pipelines/queries";
+import { useSkillsQuery } from "../skills/queries";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function SummaryWidget() {
   const t = useTranslations();
-  const { skills, integrations, pipelines } = useCatalog();
+  const { integrations } = useCatalog();
+  const { data: skills = [] } = useSkillsQuery();
+  const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
 
   const { isFetching, isFetched, isSuccess } = useHealthQuery();

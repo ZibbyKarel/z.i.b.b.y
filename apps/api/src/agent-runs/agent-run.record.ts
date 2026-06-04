@@ -12,9 +12,6 @@ export const AgentRunRecordSchema = AgentRunSchema.extend({
   // Default so sidecars written before `kind` existed (and the restart-reconcile
   // test, which writes a bare AgentRun) still parse as agent runs.
   kind: z.literal("agent").default("agent"),
-  // The runner's status superset (Phase 3 adds `awaiting-approval`); the contract
-  // `AgentRun.status` widens to match in Phase 3-1.
-  status: z.enum(["running", "done", "error", "interrupted", "awaiting-approval"]),
   pgid: z.number().int().optional(),
 })
 

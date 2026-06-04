@@ -6,6 +6,7 @@ import { generateOpenApi } from "@ts-rest/open-api"
 import {
   agentRunsContract,
   agentsContract,
+  approvalsContract,
   categoriesContract,
   healthContract,
   limitsContract,
@@ -28,6 +29,7 @@ const apiContract = initContract().router({
   skillRuns: skillRunsContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract,
+  approvals: approvalsContract,
   health: healthContract,
   limits: limitsContract,
 })

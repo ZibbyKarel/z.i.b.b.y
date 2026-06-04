@@ -9,7 +9,6 @@ import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types
  */
 export const SkillRunRecordSchema = SkillRunSchema.extend({
   kind: z.literal("skill").default("skill"),
-  status: z.enum(["running", "done", "error", "interrupted", "awaiting-approval"]),
   pgid: z.number().int().optional(),
 })
 
