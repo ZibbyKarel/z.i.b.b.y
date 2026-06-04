@@ -38,7 +38,7 @@ describe("Gates API (e2e)", () => {
 
   it("exposes the seeded system floor", async () => {
     const res = await request(app.getHttpServer()).get("/api/gates/policy").expect(200)
-    const actions = res.body.rules.map((r: { match: { action?: string }[] }) => r.match[0].action)
+    const actions = res.body.rules.map((r: { match: { action?: string }[] }) => r.match[0]?.action)
     expect(actions).toContain("purchase")
     expect(res.body.rules.every((r: { locked: boolean }) => r.locked)).toBe(true)
   })

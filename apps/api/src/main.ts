@@ -11,6 +11,7 @@ import {
   gatesContract,
   healthContract,
   limitsContract,
+  memoryContract,
   pipelineRunsContract,
   pipelinesContract,
   skillRunsContract,
@@ -32,6 +33,7 @@ const apiContract = initContract().router({
   pipelineRuns: pipelineRunsContract,
   approvals: approvalsContract,
   gates: gatesContract,
+  memory: memoryContract,
   health: healthContract,
   limits: limitsContract,
 })

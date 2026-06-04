@@ -3,6 +3,7 @@ import { agentRunsContract } from "./agent-runs/agent-runs.contract"
 import { agentsContract } from "./agents/agents.contract"
 import { approvalsContract } from "./approvals/approvals.contract"
 import { gatesContract } from "./gates/gate.contract"
+import { memoryContract } from "./memory/memory.contract"
 import { categoriesContract } from "./categories/categories.contract"
 import { healthContract } from "./health/health.contract"
 import { limitsContract } from "./limits/limits.contract"
@@ -28,6 +29,7 @@ export const appContract = c.router({
   pipelineRuns: pipelineRunsContract,
   approvals: approvalsContract,
   gates: gatesContract,
+  memory: memoryContract,
   health: healthContract,
   limits: limitsContract,
 })
