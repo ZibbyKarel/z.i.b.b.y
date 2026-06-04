@@ -12,11 +12,8 @@ import {
   Icon,
   type IconName,
   IconTile,
-  MarkdownEditor,
   Pressable,
-  SegmentPicker,
   Stack,
-  TextInput,
   Typography,
 } from "@zibby/design-system";
 import type { Agent, AgentModel, AgentThinking, Category } from "@zibby/contracts";
@@ -24,12 +21,17 @@ import type { Pipeline } from "../../../domain";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import { agentFile } from "../agentDraft";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
+import {
+  Controller,
+  FormMarkdownEditor,
+  FormSegmentPicker,
+  FormTextInput,
+  useFormControls,
+} from "@zibby/forms";
 
 export interface AgentDetailModalProps {
   agent: Agent;
-  /** "new" opens straight into the editor; "view" shows the read-only detail. */
   mode: "view" | "new";
-  /** Live category taxonomy offered in the editor's category picker. */
   categories: Category[];
   pipelines: Pipeline[];
   onClose: () => void;
@@ -38,7 +40,17 @@ export interface AgentDetailModalProps {
   onRun: (agent: Agent) => void;
 }
 
-/** A clickable chip used for multi/single select (category, tools). */
+type AgentEditValues = {
+  name: string;
+  description: string;
+  glyph: string;
+  model: AgentModel;
+  thinking: AgentThinking;
+  tools: string[];
+  category: string;
+  instructions: string;
+};
+
 function ChipToggle({
   active,
   onClick,
@@ -69,35 +81,46 @@ export function AgentDetailModal({
   const tk = useTranslations();
   const isNew = initialMode === "new";
   const [mode, setMode] = useState<"view" | "edit">(isNew ? "edit" : "view");
-  const [draft, setDraft] = useState<Agent>(agent);
   const [confirm, setConfirm] = useState(false);
 
   const name = agent.name ?? agent.id;
   const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
 
-  const set = (patch: Partial<Agent>) => setDraft((d) => ({ ...d, ...patch }));
-  const tools = draft.tools ?? [];
-  const toggleTool = (tool: string) =>
-    set({
-      tools: tools.includes(tool) ? tools.filter((x) => x !== tool) : [...tools, tool],
-    });
+  const { renderForm, submit, form } = useFormControls<AgentEditValues>({
+    defaultValues: {
+      name: agent.name ?? "",
+      description: agent.description ?? "",
+      glyph: agent.glyph ?? "",
+      model: agent.model ?? "sonnet",
+      thinking: agent.thinking ?? "medium",
+      tools: agent.tools ?? [],
+      category: agent.category ?? "",
+      instructions: agent.instructions,
+    },
+    onSubmit: (values) => {
+      onSave(
+        {
+          ...agent,
+          name: values.name || undefined,
+          description: values.description || undefined,
+          glyph: values.glyph || undefined,
+          model: values.model,
+          thinking: values.thinking,
+          tools: values.tools,
+          category: values.category || undefined,
+          instructions: values.instructions,
+        },
+        isNew,
+      );
+      if (!isNew) setMode("view");
+    },
+  });
 
-  const editing = mode === "edit" || isNew;
-  // A name and a non-empty Markdown body are both required: the body is sent
-  // verbatim as the contract's `instructions` (min(1)), never synthesised.
-  const canSave = (draft.name ?? "").trim().length > 0 && draft.instructions.trim().length > 0;
+  const [watchedName, watchedInstructions] = form.watch(["name", "instructions"]);
+  const canSave =
+    (watchedName ?? "").trim().length > 0 && (watchedInstructions ?? "").trim().length > 0;
 
-  const title = (
-    <Stack align="center" direction="row" gap="150">
-      <IconTile glyph={(draft.glyph as IconName | undefined) ?? "bot"} size="md" />
-      <Container grow minW0>
-        <Typography mono truncate size="xl" type="note" weight="bold">
-          {isNew ? t("newAgent") : name}
-        </Typography>
-        {draft.category && <Chip tone="neutral">{draft.category}</Chip>}
-      </Container>
-    </Stack>
-  );
+  const watchedGlyph = form.watch("glyph");
 
   const viewActions = (
     <Stack grow align="center" direction="row" justify="between">
@@ -105,7 +128,24 @@ export function AgentDetailModal({
         {t("delete")}
       </Button>
       <Stack align="center" direction="row" gap="100">
-        <Button icon="edit" intent="ghost" onClick={() => { setDraft(agent); setMode("edit"); }} size="sm">
+        <Button
+          icon="edit"
+          intent="ghost"
+          onClick={() => {
+            form.reset({
+              name: agent.name ?? "",
+              description: agent.description ?? "",
+              glyph: agent.glyph ?? "",
+              model: agent.model ?? "sonnet",
+              thinking: agent.thinking ?? "medium",
+              tools: agent.tools ?? [],
+              category: agent.category ?? "",
+              instructions: agent.instructions,
+            });
+            setMode("edit");
+          }}
+          size="sm"
+        >
           {t("edit")}
         </Button>
         <Button icon="play" intent="run" onClick={() => onRun(agent)} size="sm">
@@ -117,24 +157,29 @@ export function AgentDetailModal({
 
   const editActions = (
     <>
-      <Button intent="ghost" onClick={() => { if (isNew) onClose(); else { setDraft(agent); setMode("view"); } }}>
+      <Button
+        intent="ghost"
+        onClick={() => {
+          if (isNew) onClose();
+          else setMode("view");
+        }}
+      >
         {tk("common.cancel")}
       </Button>
       <Button
         disabled={!canSave}
         icon={isNew ? "plus" : "check"}
         intent="run"
-        onClick={() => {
-          onSave(draft, isNew);
-          if (!isNew) setMode("view");
-        }}
+        onClick={() => void submit()}
       >
         {isNew ? t("create") : t("save")}
       </Button>
     </>
   );
 
-  return (
+  const editing = mode === "edit" || isNew;
+
+  return renderForm(
     <>
       <Dialog
         actions={editing ? editActions : viewActions}
@@ -142,112 +187,147 @@ export function AgentDetailModal({
         closeLabel={tk("common.close")}
         onClose={onClose}
         open={!confirm}
-        title={title}
+        title={
+          <Stack align="center" direction="row" gap="150">
+            <IconTile
+              glyph={((editing ? watchedGlyph : agent.glyph) as IconName | undefined) ?? "bot"}
+              size="md"
+            />
+            <Container grow minW0>
+              <Typography mono truncate size="xl" type="note" weight="bold">
+                {isNew ? t("newAgent") : name}
+              </Typography>
+              {agent.category && <Chip tone="neutral">{agent.category}</Chip>}
+            </Container>
+          </Stack>
+        }
         width={editing ? "2xl" : "lg"}
       >
         {editing ? (
           <Stack align="start" direction="row" gap="300">
-            {/* Left column — structured config assembled into YAML frontmatter
-                by the backend. The editor on the right never sees these. */}
             <Container grow minW0>
               <Stack gap="200">
-                <TextInput
+                <FormTextInput<AgentEditValues>
                   autoFocus
                   label={t("fields.name")}
-                  onChange={(e) => set({ name: e.target.value })}
+                  name="name"
                   placeholder={t("fields.namePlaceholder")}
-                  value={draft.name ?? ""}
                 />
 
-                <TextInput
+                <FormTextInput<AgentEditValues>
                   label={t("fields.whenToUse")}
-                  onChange={(e) => set({ description: e.target.value })}
+                  name="description"
                   placeholder={t("fields.whenToUsePlaceholder")}
-                  value={draft.description ?? ""}
                 />
 
-                <Stack gap="75">
-                  <Typography mono size="sm" type="note" variant="secondary">
-                    {t("fields.category")}
-                  </Typography>
-                  <Stack wrap direction="row" gap="75">
-                    {categories.map((c) => (
-                      <ChipToggle
-                        active={draft.category === c.name}
-                        key={c.name}
-                        onClick={() => set({ category: c.name })}
-                      >
-                        {c.name}
-                      </ChipToggle>
-                    ))}
-                  </Stack>
-                </Stack>
+                <Controller<AgentEditValues, "category">
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <Stack gap="75">
+                      <Typography mono size="sm" type="note" variant="secondary">
+                        {t("fields.category")}
+                      </Typography>
+                      <Stack wrap direction="row" gap="75">
+                        {categories.map((c) => (
+                          <ChipToggle
+                            active={field.value === c.name}
+                            key={c.name}
+                            onClick={() => field.onChange(c.name)}
+                          >
+                            {c.name}
+                          </ChipToggle>
+                        ))}
+                      </Stack>
+                    </Stack>
+                  )}
+                />
 
                 <Stack direction="row" gap="150">
                   <Container grow minW0>
-                    <SegmentPicker
+                    <FormSegmentPicker<AgentEditValues>
                       label={t("fields.model")}
-                      onValueChange={(v) => set({ model: v as AgentModel })}
+                      name="model"
                       options={MODEL_OPTIONS}
-                      value={draft.model ?? "sonnet"}
                     />
                   </Container>
                   <Container grow minW0>
-                    <SegmentPicker
+                    <FormSegmentPicker<AgentEditValues>
                       label={t("fields.thinking")}
-                      onValueChange={(v) => set({ thinking: v as AgentThinking })}
+                      name="thinking"
                       options={THINKING_OPTIONS}
-                      value={draft.thinking ?? "medium"}
                     />
                   </Container>
                 </Stack>
 
-                <Stack gap="75">
-                  <Typography mono size="sm" type="note" variant="secondary">
-                    {t("fields.icon")}
-                  </Typography>
-                  <Stack wrap direction="row" gap="75">
-                    {AGENT_GLYPHS.map((g) => (
-                      <IconTile
-                        interactive
-                        aria-label={g}
-                        aria-pressed={draft.glyph === g}
-                        as="button"
-                        glyph={g}
-                        key={g}
-                        onClick={() => set({ glyph: g })}
-                        radius="default"
-                        size="sm"
-                        tone={draft.glyph === g ? "accent" : "neutral"}
-                      />
-                    ))}
-                  </Stack>
-                </Stack>
+                <Controller<AgentEditValues, "glyph">
+                  control={form.control}
+                  name="glyph"
+                  render={({ field }) => (
+                    <Stack gap="75">
+                      <Typography mono size="sm" type="note" variant="secondary">
+                        {t("fields.icon")}
+                      </Typography>
+                      <Stack wrap direction="row" gap="75">
+                        {AGENT_GLYPHS.map((g) => (
+                          <IconTile
+                            interactive
+                            aria-label={g}
+                            aria-pressed={field.value === g}
+                            as="button"
+                            glyph={g}
+                            key={g}
+                            onClick={() => field.onChange(g)}
+                            radius="default"
+                            size="sm"
+                            tone={field.value === g ? "accent" : "neutral"}
+                          />
+                        ))}
+                      </Stack>
+                    </Stack>
+                  )}
+                />
 
-                <Stack gap="75">
-                  <Typography mono size="sm" type="note" variant="secondary">
-                    {t("allowedTools")}
-                  </Typography>
-                  <Stack wrap direction="row" gap="75">
-                    {AGENT_TOOLS.map((tool) => (
-                      <ChipToggle active={tools.includes(tool)} key={tool} onClick={() => toggleTool(tool)}>
-                        {tool}
-                      </ChipToggle>
-                    ))}
-                  </Stack>
-                </Stack>
+                <Controller<AgentEditValues, "tools">
+                  control={form.control}
+                  name="tools"
+                  render={({ field }) => {
+                    const tools = field.value ?? [];
+                    return (
+                      <Stack gap="75">
+                        <Typography mono size="sm" type="note" variant="secondary">
+                          {t("allowedTools")}
+                        </Typography>
+                        <Stack wrap direction="row" gap="75">
+                          {AGENT_TOOLS.map((tool) => (
+                            <ChipToggle
+                              active={tools.includes(tool)}
+                              key={tool}
+                              onClick={() =>
+                                field.onChange(
+                                  tools.includes(tool)
+                                    ? tools.filter((x) => x !== tool)
+                                    : [...tools, tool],
+                                )
+                              }
+                            >
+                              {tool}
+                            </ChipToggle>
+                          ))}
+                        </Stack>
+                      </Stack>
+                    );
+                  }}
+                />
               </Stack>
             </Container>
 
-            {/* Right column — the Markdown body only. Frontmatter is hidden:
-                it is composed from the left-column fields by the API. */}
             <Container grow minW0>
-              <MarkdownEditor
+              <FormMarkdownEditor<AgentEditValues>
                 hint={t("fields.bodyHint")}
                 label={t("fields.body")}
-                onChange={(value) => set({ instructions: value })}
+                name="instructions"
                 placeholder={t("fields.bodyPlaceholder")}
-                value={draft.instructions}
               />
             </Container>
           </Stack>
@@ -330,7 +410,14 @@ export function AgentDetailModal({
               <Button intent="ghost" onClick={() => setConfirm(false)}>
                 {tk("common.cancel")}
               </Button>
-              <Button icon="x" intent="reject" onClick={() => { setConfirm(false); onDelete(agent.id); }}>
+              <Button
+                icon="x"
+                intent="reject"
+                onClick={() => {
+                  setConfirm(false);
+                  onDelete(agent.id);
+                }}
+              >
                 {t("delete")}
               </Button>
             </>
@@ -344,6 +431,6 @@ export function AgentDetailModal({
           </Typography>
         </Dialog>
       )}
-    </>
+    </>,
   );
 }

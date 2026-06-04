@@ -7,6 +7,7 @@
 // `npm test` (vitest run) executes them all.
 const projects = [
   "./libs/design-system/vitest.config.ts",
+  "./libs/forms/vitest.config.ts",
   "./libs/contracts/vitest.config.ts",
   "./apps/api/vitest.config.ts",
   "./apps/web/vitest.config.ts",

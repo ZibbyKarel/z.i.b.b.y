@@ -1,8 +1,8 @@
-import { useState } from "react";
+"use client";
 import { useTranslations } from "next-intl";
 import type { Decision, GateRuleInput, MatchCondition, Resolve } from "@zibby/contracts";
-import { Button, Dialog, Stack, TextInput } from "@zibby/design-system";
-import { Select } from "@zibby/design-system";
+import { Button, Dialog, Stack } from "@zibby/design-system";
+import { FormSelect, FormTextInput, useFormControls } from "@zibby/forms";
 import { MATCH_TYPE_ORDER, type MatchType } from "../gate";
 
 export interface RuleModalProps {
@@ -15,53 +15,65 @@ const OPS = ["gt", "gte", "lt", "lte", "eq"] as const;
 const OP_SYMBOL: Record<(typeof OPS)[number], string> = { gt: ">", gte: "≥", lt: "<", lte: "≤", eq: "=" };
 type ResolveKind = "human" | "check" | "agent";
 
-/**
- * Compose one editable gate rule (`match → decision → resolve`). Deliberately a
- * single match condition + a flat resolve — enough to author harden-only rules
- * against the contract; nested all/any trees are rendered but not edited here.
- */
+type RuleFormValues = {
+  matchType: MatchType;
+  value1: string;
+  value2: string;
+  op: (typeof OPS)[number];
+  decision: Decision;
+  resolveKind: ResolveKind;
+  resolveName: string;
+};
+
+function buildMatch(v: RuleFormValues): MatchCondition | null {
+  const val = v.value1.trim();
+  switch (v.matchType) {
+    case "tool":
+      return val ? { type: "tool", tool: val } : null;
+    case "action":
+      return val ? { type: "action", action: val, ...(v.value2.trim() ? { branch: v.value2.trim() } : {}) } : null;
+    case "threshold":
+      return val && v.value2.trim() !== "" ? { type: "threshold", metric: val, op: v.op, value: Number(v.value2) } : null;
+    case "scope":
+      return val ? { type: "scope", scope: val } : null;
+    case "context":
+      return val ? { type: "context", context: val } : null;
+  }
+}
+
+function buildResolve(v: RuleFormValues): Resolve | undefined {
+  if (v.decision !== "ask") return undefined;
+  if (v.resolveKind === "human") return { type: "human" };
+  if (v.resolveKind === "check") return { type: "check", check: v.resolveName.trim() || "ci_green" };
+  return { type: "agent", agent: v.resolveName.trim() || "reviewer" };
+}
+
 export function RuleModal({ onClose, onSave }: RuleModalProps) {
   const t = useTranslations("gates");
-  const [matchType, setMatchType] = useState<MatchType>("action");
-  const [value1, setValue1] = useState("");
-  const [value2, setValue2] = useState("");
-  const [op, setOp] = useState<(typeof OPS)[number]>("gt");
-  const [decision, setDecision] = useState<Decision>("ask");
-  const [resolveKind, setResolveKind] = useState<ResolveKind>("human");
-  const [resolveName, setResolveName] = useState("");
 
-  const buildMatch = (): MatchCondition | null => {
-    const v = value1.trim();
-    switch (matchType) {
-      case "tool":
-        return v ? { type: "tool", tool: v } : null;
-      case "action":
-        return v ? { type: "action", action: v, ...(value2.trim() ? { branch: value2.trim() } : {}) } : null;
-      case "threshold":
-        return v && value2.trim() !== "" ? { type: "threshold", metric: v, op, value: Number(value2) } : null;
-      case "scope":
-        return v ? { type: "scope", scope: v } : null;
-      case "context":
-        return v ? { type: "context", context: v } : null;
-    }
-  };
+  const { renderForm, submit, form } = useFormControls<RuleFormValues>({
+    defaultValues: {
+      matchType: "action",
+      value1: "",
+      value2: "",
+      op: "gt",
+      decision: "ask",
+      resolveKind: "human",
+      resolveName: "",
+    },
+    onSubmit: (values) => {
+      const match = buildMatch(values);
+      if (!match) return;
+      onSave({ match: [match], decision: values.decision, resolve: buildResolve(values) });
+    },
+  });
 
-  const buildResolve = (): Resolve | undefined => {
-    if (decision !== "ask") return undefined;
-    if (resolveKind === "human") return { type: "human" };
-    if (resolveKind === "check") return { type: "check", check: resolveName.trim() || "ci_green" };
-    return { type: "agent", agent: resolveName.trim() || "reviewer" };
-  };
+  const values = form.watch();
+  const canSave =
+    buildMatch(values) !== null &&
+    (values.decision !== "ask" || values.resolveKind === "human" || values.resolveName.trim() !== "");
 
-  const canSave = buildMatch() !== null && (decision !== "ask" || resolveKind === "human" || resolveName.trim() !== "");
-
-  const save = () => {
-    const match = buildMatch();
-    if (!match) return;
-    onSave({ match: [match], decision, resolve: buildResolve() });
-  };
-
-  return (
+  return renderForm(
     <Dialog
       open
       actions={
@@ -69,7 +81,7 @@ export function RuleModal({ onClose, onSave }: RuleModalProps) {
           <Button intent="ghost" onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button disabled={!canSave} icon="check" intent="run" onClick={save}>
+          <Button disabled={!canSave} icon="check" intent="run" onClick={() => void submit()}>
             {t("saveRule")}
           </Button>
         </>
@@ -79,60 +91,75 @@ export function RuleModal({ onClose, onSave }: RuleModalProps) {
       width="md"
     >
       <Stack gap="200">
-        <Select
+        <FormSelect<MatchType, RuleFormValues>
           label={t("matchType")}
-          onValueChange={(v) => setMatchType(v as MatchType)}
+          name="matchType"
           options={MATCH_TYPE_ORDER.map((m) => ({ value: m, label: t(`matcher.${m}`) }))}
-          value={matchType}
         />
 
-        {matchType === "threshold" ? (
+        {values.matchType === "threshold" ? (
           <Stack direction="row" gap="100">
-            <TextInput label={t("metric")} onChange={(e) => setValue1(e.target.value)} placeholder="purchase.amount" value={value1} />
-            <Select label={t("op")} onValueChange={(v) => setOp(v as (typeof OPS)[number])} options={OPS.map((o) => ({ value: o, label: OP_SYMBOL[o] }))} value={op} />
-            <TextInput label={t("value")} onChange={(e) => setValue2(e.target.value)} placeholder="500" type="number" value={value2} />
+            <FormTextInput<RuleFormValues>
+              label={t("metric")}
+              name="value1"
+              placeholder="purchase.amount"
+            />
+            <FormSelect<(typeof OPS)[number], RuleFormValues>
+              label={t("op")}
+              name="op"
+              options={OPS.map((o) => ({ value: o, label: OP_SYMBOL[o] }))}
+            />
+            <FormTextInput<RuleFormValues>
+              label={t("value")}
+              name="value2"
+              placeholder="500"
+              type="number"
+            />
           </Stack>
         ) : (
           <Stack direction="row" gap="100">
-            <TextInput
-              label={t(`matchValue.${matchType}`)}
-              onChange={(e) => setValue1(e.target.value)}
-              placeholder={t(`matchPlaceholder.${matchType}`)}
-              value={value1}
+            <FormTextInput<RuleFormValues>
+              label={t(`matchValue.${values.matchType}`)}
+              name="value1"
+              placeholder={t(`matchPlaceholder.${values.matchType}`)}
             />
-            {matchType === "action" && (
-              <TextInput label={t("branch")} onChange={(e) => setValue2(e.target.value)} placeholder="main" value={value2} />
+            {values.matchType === "action" && (
+              <FormTextInput<RuleFormValues>
+                label={t("branch")}
+                name="value2"
+                placeholder="main"
+              />
             )}
           </Stack>
         )}
 
-        <Select
-          hint={t(`decisionHint.${decision}`)}
+        <FormSelect<Decision, RuleFormValues>
+          hint={t(`decisionHint.${values.decision}`)}
           label={t("decision")}
-          onValueChange={(v) => setDecision(v as Decision)}
+          name="decision"
           options={DECISIONS.map((d) => ({ value: d, label: t(`decision_.${d}`) }))}
-          value={decision}
         />
 
-        {decision === "ask" && (
+        {values.decision === "ask" && (
           <Stack direction="row" gap="100">
-            <Select
+            <FormSelect<ResolveKind, RuleFormValues>
               label={t("resolveBy")}
-              onValueChange={(v) => setResolveKind(v as ResolveKind)}
-              options={(["human", "check", "agent"] as ResolveKind[]).map((k) => ({ value: k, label: t(`resolve.${k}`) }))}
-              value={resolveKind}
+              name="resolveKind"
+              options={(["human", "check", "agent"] as ResolveKind[]).map((k) => ({
+                value: k,
+                label: t(`resolve.${k}`),
+              }))}
             />
-            {resolveKind !== "human" && (
-              <TextInput
-                label={resolveKind === "agent" ? t("resolveAgent") : t("resolveCheck")}
-                onChange={(e) => setResolveName(e.target.value)}
-                placeholder={resolveKind === "agent" ? "reviewer" : "ci_green"}
-                value={resolveName}
+            {values.resolveKind !== "human" && (
+              <FormTextInput<RuleFormValues>
+                label={values.resolveKind === "agent" ? t("resolveAgent") : t("resolveCheck")}
+                name="resolveName"
+                placeholder={values.resolveKind === "agent" ? "reviewer" : "ci_green"}
               />
             )}
           </Stack>
         )}
       </Stack>
-    </Dialog>
+    </Dialog>,
   );
 }

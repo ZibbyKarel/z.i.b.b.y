@@ -21,7 +21,9 @@
       "@zibby/design-system": ["libs/design-system/src/index.ts"],
       "@zibby/design-system/*": ["libs/design-system/src/*"],
       "@zibby/contracts": ["libs/contracts/src/index.ts"],
-      "@zibby/contracts/*": ["libs/contracts/src/*"]
+      "@zibby/contracts/*": ["libs/contracts/src/*"],
+      "@zibby/forms": ["libs/forms/src/index.ts"],
+      "@zibby/forms/*": ["libs/forms/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", ".next"]

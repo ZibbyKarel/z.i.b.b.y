@@ -9,40 +9,40 @@ import {
   type IconName,
   IconTile,
   Stack,
-  TextInput,
   Typography,
 } from "@zibby/design-system";
 import { AGENT_GLYPHS } from "../../../state/config";
+import { FormTextInput, useFormControls, zodResolver } from "@zibby/forms";
+import { z } from "zod";
 
 export interface CategoryDialogProps {
-  /** Existing category names — used to flag a duplicate before submitting. */
   existing: string[];
-  /** Disable the confirm action while the create request is in flight. */
   pending?: boolean;
   onClose: () => void;
   onSubmit: (category: { name: string; glyph: IconName }) => void;
 }
 
-/**
- * "Add category" dialog: a name field plus a glyph picker. Composes the design
- * system `Dialog` (Escape/overlay close, focus trap) with the same `IconTile`
- * glyph grid the agent editor uses, so the two pickers stay visually identical.
- * Duplicate names are caught client-side; the API is the final arbiter (409).
- */
+const categorySchema = z.object({ name: z.string().min(1) });
+type CategoryFormValues = z.infer<typeof categorySchema>;
+
 export function CategoryDialog({ existing, pending, onClose, onSubmit }: CategoryDialogProps) {
   const t = useTranslations("agents");
   const tk = useTranslations();
-  const [value, setValue] = useState("");
   const [glyph, setGlyph] = useState<IconName>("spark");
 
-  const name = value.trim();
-  const duplicate = name.length > 0 && existing.includes(name);
-  const valid = name.length > 0 && !duplicate;
+  const { renderForm, submit, form } = useFormControls<CategoryFormValues>({
+    defaultValues: { name: "" },
+    resolver: zodResolver(categorySchema),
+    mode: "onChange",
+    onSubmit: (values) => {
+      if (pending) return;
+      onSubmit({ name: values.name.trim(), glyph });
+    },
+  });
 
-  const submit = () => {
-    if (!valid || pending) return;
-    onSubmit({ name, glyph });
-  };
+  const rawName = form.watch("name").trim();
+  const duplicate = rawName.length > 0 && existing.includes(rawName);
+  const canSubmit = form.formState.isValid && !duplicate && !pending;
 
   const title = (
     <Stack align="center" direction="row" gap="150">
@@ -58,7 +58,7 @@ export function CategoryDialog({ existing, pending, onClose, onSubmit }: Categor
     </Stack>
   );
 
-  return (
+  return renderForm(
     <Dialog
       open
       actions={
@@ -66,7 +66,7 @@ export function CategoryDialog({ existing, pending, onClose, onSubmit }: Categor
           <Button intent="ghost" onClick={onClose}>
             {tk("common.cancel")}
           </Button>
-          <Button disabled={!valid || pending} icon="check" intent="run" onClick={submit}>
+          <Button disabled={!canSubmit} icon="check" intent="run" onClick={() => void submit()}>
             {t("addCategory")}
           </Button>
         </>
@@ -78,17 +78,15 @@ export function CategoryDialog({ existing, pending, onClose, onSubmit }: Categor
       width="sm"
     >
       <Stack gap="200">
-        <TextInput
+        <FormTextInput<CategoryFormValues>
           autoFocus
-          aria-invalid={duplicate}
-          hint={duplicate ? t("categoryDialog.duplicate", { name }) : undefined}
+          error={duplicate ? t("categoryDialog.duplicate", { name: rawName }) : undefined}
           label={t("categoryDialog.nameLabel")}
-          onChange={(e) => setValue(e.target.value)}
+          name="name"
           onKeyDown={(e) => {
-            if (e.key === "Enter") submit();
+            if (e.key === "Enter") void submit();
           }}
           placeholder={t("categoryDialog.namePlaceholder")}
-          value={value}
         />
 
         <Stack gap="75">
@@ -113,6 +111,6 @@ export function CategoryDialog({ existing, pending, onClose, onSubmit }: Categor
           </Stack>
         </Stack>
       </Stack>
-    </Dialog>
+    </Dialog>,
   );
 }

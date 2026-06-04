@@ -8,6 +8,7 @@ const config: StorybookConfig = {
   stories: [
     "../src/**/*.stories.@(ts|tsx)",
     "../../../apps/web/components/**/*.stories.@(ts|tsx)",
+    "../../../libs/forms/src/**/*.stories.@(ts|tsx)",
   ],
   addons: ["@storybook/addon-essentials", "@storybook/addon-a11y"],
   framework: { name: "@storybook/react-vite", options: {} },
@@ -49,6 +50,9 @@ const config: StorybookConfig = {
       // node_modules entry Rollup can find on its own (used by app data hooks).
       "@zibby/contracts": fileURLToPath(
         new URL("../../../libs/contracts/src/index.ts", import.meta.url),
+      ),
+      "@zibby/forms": fileURLToPath(
+        new URL("../../../libs/forms/src/index.ts", import.meta.url),
       ),
     };
     return config;

@@ -54,6 +54,17 @@ export default [
     },
   },
   {
+    // react-hook-form's useController derives field.name / field.value / field.onChange /
+    // field.onBlur from a useRef-backed _registerProps object. eslint-plugin-react-hooks v7
+    // (React Compiler rules) flags those accesses as "ref values used during render".
+    // The pattern is intentional in RHF (synchronous mutation before render) and cannot
+    // be changed without forking the library.
+    files: ["libs/forms/src/**/*.{ts,tsx}"],
+    rules: {
+      "react-hooks/refs": "off",
+    },
+  },
+  {
     // apps/web composes UI exclusively from the design system — it never sets
     // inline styles on DOM elements. Genuinely dynamic / SVG values that have no
     // DS prop use a per-line `// eslint-disable-next-line react/forbid-dom-props`

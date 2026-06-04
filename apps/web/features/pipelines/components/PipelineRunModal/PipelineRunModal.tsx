@@ -11,14 +11,13 @@ import {
   Icon,
   IconTile,
   Pressable,
-  SegmentPicker,
   Stack,
-  TextArea,
   Typography,
 } from "@zibby/design-system"
 import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts"
 import { type Pipeline, glyphForAgent } from "../../../../domain"
 import { ModelBadge, ThinkBadge } from "../PhaseChain"
+import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms"
 
 const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"]
 const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"]
@@ -43,11 +42,8 @@ export interface PipelineRunModalProps {
   }) => void
 }
 
-/**
- * Launch modal for a multi-agent pipeline: prompt, target project, budget cap
- * and per-agent model / thinking overrides (clickable badges). Mount with a
- * `key={pipeline.id}` so state initialises against the selected pipeline.
- */
+type PipelineRunFormValues = { prompt: string; project: string; budget: string }
+
 export function PipelineRunModal({
   pipeline,
   agents,
@@ -56,13 +52,11 @@ export function PipelineRunModal({
   onLaunch,
 }: PipelineRunModalProps) {
   const t = useTranslations()
-  const [prompt, setPrompt] = useState("")
-  const [project, setProject] = useState(projects[0] ?? "")
-  const [budget, setBudget] = useState(pipeline.budget)
   const [overrides, setOverrides] = useState<Override[]>(
     pipeline.phases.map((p) => ({ model: p.model, thinking: p.thinking })),
   )
   const [launched, setLaunched] = useState(false)
+  const [launchData, setLaunchData] = useState<PipelineRunFormValues | null>(null)
 
   function cycleModel(i: number) {
     setOverrides((o) => o.map((x, j) => (j === i ? { ...x, model: next(CYCLE_MODEL, x.model) } : x)))
@@ -73,6 +67,21 @@ export function PipelineRunModal({
     )
   }
 
+  function onFormSubmit(values: PipelineRunFormValues) {
+    setLaunchData(values)
+    onLaunch?.({
+      pipeline,
+      prompt: values.prompt,
+      project: values.project,
+      budget: Number(values.budget),
+      overrides,
+    })
+    setLaunched(true)
+  }
+
+  const launchedBudget = launchData ? Number(launchData.budget) : pipeline.budget
+  const launchedProject = launchData?.project ?? projects[0] ?? ""
+
   return (
     <Dialog
       open
@@ -82,15 +91,8 @@ export function PipelineRunModal({
             <Button icon="edit" intent="ghost">
               {t("pipelineRun.editRaw")}
             </Button>
-            <Button
-              icon="play"
-              intent="run"
-              onClick={() => {
-                onLaunch?.({ pipeline, prompt, project, budget, overrides })
-                setLaunched(true)
-              }}
-            >
-              {t("pipelineRun.launch", { budget })}
+            <Button form="pipeline-run-form" icon="play" intent="run" type="submit">
+              {t("pipelineRun.launch", { budget: pipeline.budget })}
             </Button>
           </Stack>
         )
@@ -121,7 +123,11 @@ export function PipelineRunModal({
               {t("pipelineRun.launchedTitle")}
             </Typography>
             <Typography mono size="base" type="note" variant="secondary">
-              {t("pipelineRun.launchedTarget", { name: pipeline.name, project, budget })}
+              {t("pipelineRun.launchedTarget", {
+                name: pipeline.name,
+                project: launchedProject,
+                budget: launchedBudget,
+              })}
             </Typography>
             <Typography size="md" type="note" variant="secondary">
               {t.rich("pipelineRun.watch", {
@@ -138,75 +144,84 @@ export function PipelineRunModal({
           </Stack>
         </Container>
       ) : (
-        <Stack gap="200">
-          <TextArea
-            autoFocus
-            label={t("pipelineRun.promptLabel")}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={t("pipelineRun.promptPlaceholder", { name: pipeline.name })}
-            value={prompt}
-          />
-
-          <Grid cols={2} gap="250">
-            <SegmentPicker
-              label={t("common.targetProject")}
-              onValueChange={setProject}
-              options={projects.slice(0, 4).map((p) => ({ value: p, label: p }))}
-              value={project}
+        <Form<PipelineRunFormValues>
+          formOptions={{
+            defaultValues: {
+              prompt: "",
+              project: projects[0] ?? "",
+              budget: String(pipeline.budget),
+            },
+          }}
+          id="pipeline-run-form"
+          onSubmit={onFormSubmit}
+        >
+          <Stack gap="200">
+            <FormTextArea<PipelineRunFormValues>
+              autoFocus
+              label={t("pipelineRun.promptLabel")}
+              name="prompt"
+              placeholder={t("pipelineRun.promptPlaceholder", { name: pipeline.name })}
             />
-            <SegmentPicker
-              label={t("pipelineRun.budgetLabel")}
-              onValueChange={(v) => setBudget(Number(v))}
-              options={[10, 25, 50].map((b) => ({ value: String(b), label: `$${b}` }))}
-              value={String(budget)}
-            />
-          </Grid>
 
-          <Stack gap="75">
-            <Typography
-              mono
-              uppercase
-              size="sm"
-              tracking="wider"
-              type="note"
-              variant="tertiary"
-            >
-              {t("pipelineRun.overrideTitle")}
-            </Typography>
-            <Card radius="sm">
-              {pipeline.phases.map((ph, i) => (
-                <Fragment key={`${ph.agent}-${i}`}>
-                  {i > 0 && <Divider />}
-                  <Container padding={["100", "150"]}>
-                    <Stack align="center" direction="row" gap="100">
-                      <Icon name={glyphForAgent(ph.agent, agents)} size="sm" tone="accent" />
-                      <Container grow minW0>
-                        <Typography mono size="caption" type="note">
-                          {ph.agent}
-                        </Typography>
-                      </Container>
-                      <Pressable
-                        aria-label={t("pipelineRun.changeModelAria", { agent: ph.agent })}
-                        onClick={() => cycleModel(i)}
-                      >
-                        <ModelBadge model={overrides[i]!.model} />
-                      </Pressable>
-                      <Pressable
-                        aria-label={t("pipelineRun.changeThinkAria", { agent: ph.agent })}
-                        onClick={() => cycleThink(i)}
-                      >
-                        <ThinkBadge level={overrides[i]!.thinking} />
-                      </Pressable>
-                    </Stack>
-                  </Container>
-                </Fragment>
-              ))}
-            </Card>
-            <Typography mono size="xs" type="note" variant="tertiary">
-              {t("pipelineRun.overrideHint")}
-            </Typography>
+            <Grid cols={2} gap="250">
+              <FormSegmentPicker<PipelineRunFormValues>
+                label={t("common.targetProject")}
+                name="project"
+                options={projects.slice(0, 4).map((p) => ({ value: p, label: p }))}
+              />
+              <FormSegmentPicker<PipelineRunFormValues>
+                label={t("pipelineRun.budgetLabel")}
+                name="budget"
+                options={[10, 25, 50].map((b) => ({ value: String(b), label: `$${b}` }))}
+              />
+            </Grid>
+
+            <Stack gap="75">
+              <Typography
+                mono
+                uppercase
+                size="sm"
+                tracking="wider"
+                type="note"
+                variant="tertiary"
+              >
+                {t("pipelineRun.overrideTitle")}
+              </Typography>
+              <Card radius="sm">
+                {pipeline.phases.map((ph, i) => (
+                  <Fragment key={`${ph.agent}-${i}`}>
+                    {i > 0 && <Divider />}
+                    <Container padding={["100", "150"]}>
+                      <Stack align="center" direction="row" gap="100">
+                        <Icon name={glyphForAgent(ph.agent, agents)} size="sm" tone="accent" />
+                        <Container grow minW0>
+                          <Typography mono size="caption" type="note">
+                            {ph.agent}
+                          </Typography>
+                        </Container>
+                        <Pressable
+                          aria-label={t("pipelineRun.changeModelAria", { agent: ph.agent })}
+                          onClick={() => cycleModel(i)}
+                        >
+                          <ModelBadge model={overrides[i]!.model} />
+                        </Pressable>
+                        <Pressable
+                          aria-label={t("pipelineRun.changeThinkAria", { agent: ph.agent })}
+                          onClick={() => cycleThink(i)}
+                        >
+                          <ThinkBadge level={overrides[i]!.thinking} />
+                        </Pressable>
+                      </Stack>
+                    </Container>
+                  </Fragment>
+                ))}
+              </Card>
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {t("pipelineRun.overrideHint")}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
+        </Form>
       )}
     </Dialog>
   )

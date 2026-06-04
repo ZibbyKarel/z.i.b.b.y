@@ -8,47 +8,39 @@ import {
   Dialog,
   Icon,
   IconTile,
-  SegmentPicker,
   Stack,
-  TextArea,
   Typography,
 } from "@zibby/design-system";
 import type { IconName } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
+import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms";
 
 export interface RunModalProps {
-  /** Agent to run; the modal renders only when set. The contract `Agent` is the
-   * single shape used end to end — no bespoke run-target type to map through. */
   agent: Agent;
-  /** Display-only backing file path (`agentFile(id)` for agents, the SKILL.md path
-   * for the not-yet-contracted skills placeholder). */
   file: string;
-  /** Selectable target projects (from projects.json). */
   projects: string[];
   onClose: () => void;
-  /** Called with the composed run request when the user launches. */
   onLaunch?: (req: { agent: Agent; prompt: string; project: string }) => void;
 }
 
-/**
- * The recurring dashboard interaction: write a prompt, pick a target project, see
- * the backing SKILL.md path, then launch a background agent. Mounted only when
- * a skill is selected (mount with a `key` to reset state per skill).
- */
+type RunFormValues = { prompt: string; project: string };
+
 export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalProps) {
   const t = useTranslations();
-  const [prompt, setPrompt] = useState("");
-  const [project, setProject] = useState(projects[0] ?? "");
   const [launched, setLaunched] = useState(false);
+  const [launchData, setLaunchData] = useState<RunFormValues | null>(null);
 
   const name = agent.name ?? agent.id;
   const desc = agent.description ?? "";
   const glyph = (agent.glyph as IconName | undefined) ?? "bot";
 
-  function launch() {
-    onLaunch?.({ agent, prompt, project });
+  function onFormSubmit(values: RunFormValues) {
+    setLaunchData(values);
+    onLaunch?.({ agent, prompt: values.prompt, project: values.project });
     setLaunched(true);
   }
+
+  const launchedProject = launchData?.project ?? projects[0] ?? "";
 
   return (
     <Dialog
@@ -59,7 +51,7 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
             <Button icon="edit" intent="ghost">
               {t("runModal.editRaw")}
             </Button>
-            <Button icon="play" intent="run" onClick={launch}>
+            <Button form="run-form" icon="play" intent="run" type="submit">
               {t("runModal.launch")}
             </Button>
           </Stack>
@@ -91,7 +83,7 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
               {t("runModal.launchedTitle")}
             </Typography>
             <Typography mono size="base" type="note" variant="secondary">
-              {t("runModal.launchedTarget", { name, project })}
+              {t("runModal.launchedTarget", { name, project: launchedProject })}
             </Typography>
             <Typography size="md" type="note" variant="secondary">
               {t.rich("runModal.watch", {
@@ -108,31 +100,35 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
           </Stack>
         </Container>
       ) : (
-        <Stack gap="200">
-          <TextArea
-            autoFocus
-            label={t("runModal.promptLabel")}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={t("runModal.promptPlaceholder", { name })}
-            value={prompt}
-          />
-          <SegmentPicker
-            label={t("common.targetProject")}
-            onValueChange={setProject}
-            options={projects.map((p) => ({ value: p, label: p }))}
-            value={project}
-          />
-          <Card background="background" radius="sm">
-            <Container padding={["150", "150"]}>
-              <Stack align="center" direction="row" gap="100">
-                <Icon name="file" size="sm" tone="faint" />
-                <Typography mono size="caption" type="note" variant="tertiary">
-                  {file}
-                </Typography>
-              </Stack>
-            </Container>
-          </Card>
-        </Stack>
+        <Form<RunFormValues>
+          formOptions={{ defaultValues: { prompt: "", project: projects[0] ?? "" } }}
+          id="run-form"
+          onSubmit={onFormSubmit}
+        >
+          <Stack gap="200">
+            <FormTextArea<RunFormValues>
+              autoFocus
+              label={t("runModal.promptLabel")}
+              name="prompt"
+              placeholder={t("runModal.promptPlaceholder", { name })}
+            />
+            <FormSegmentPicker<RunFormValues>
+              label={t("common.targetProject")}
+              name="project"
+              options={projects.map((p) => ({ value: p, label: p }))}
+            />
+            <Card background="background" radius="sm">
+              <Container padding={["150", "150"]}>
+                <Stack align="center" direction="row" gap="100">
+                  <Icon name="file" size="sm" tone="faint" />
+                  <Typography mono size="caption" type="note" variant="tertiary">
+                    {file}
+                  </Typography>
+                </Stack>
+              </Container>
+            </Card>
+          </Stack>
+        </Form>
       )}
     </Dialog>
   );
