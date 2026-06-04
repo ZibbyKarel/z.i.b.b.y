@@ -1,6 +1,3 @@
-import { randomBytes } from "node:crypto"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
 import {
   AGENT_ID_REGEX,
@@ -13,7 +10,7 @@ import {
   RiskSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts"
-import matter from "gray-matter"
+import { MarkdownEntityStore } from "../shared/file-storage"
 import {
   AgentConflictError,
   AgentNotFoundError,
@@ -24,8 +21,6 @@ import {
 /** DI token carrying the absolute path of the directory that holds agent files. */
 export const AGENTS_DIR = "AGENTS_DIR"
 
-const FILE_EXT = ".md"
-
 /**
  * File-backed persistence for agents: one Markdown file per agent, named
  * `<id>.md`, inside a configurable data directory. The file mirrors the
@@ -34,11 +29,12 @@ const FILE_EXT = ".md"
  * the agent's id. There is intentionally no database.
  */
 @Injectable()
-export class AgentsStorageService implements OnModuleInit {
-  private readonly dir: string
+export class AgentsStorageService extends MarkdownEntityStore<Agent> implements OnModuleInit {
+  protected readonly fileExt = ".md"
+  protected readonly idRegex = AGENT_ID_REGEX
 
   constructor(@Inject(AGENTS_DIR) dir: string) {
-    this.dir = path.resolve(dir)
+    super(dir)
   }
 
   /** Ensure the data directory exists before the app starts serving traffic. */
@@ -46,107 +42,49 @@ export class AgentsStorageService implements OnModuleInit {
     await this.ensureDir()
   }
 
-  async ensureDir(): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-  }
-
   async create(input: CreateAgentInput): Promise<Agent> {
     const file = this.resolveFile(input.id)
-    if (await this.exists(file)) {
+    if (await this.fileExists(file)) {
       throw new AgentConflictError(input.id)
     }
     // `name` always lands in the frontmatter (defaulting to the id), so the
     // returned entity matches what a subsequent `get` parses back.
     const agent: Agent = { ...input, name: input.name ?? input.id }
-    await this.writeAtomic(file, agent)
+    await this.writeEntity(agent)
     return agent
-  }
-
-  async get(id: string): Promise<Agent> {
-    const file = this.resolveFile(id)
-    const raw = await this.readRaw(file, id)
-    return this.parse(raw, id)
-  }
-
-  async list(): Promise<Agent[]> {
-    await this.ensureDir()
-    const entries = await fs.readdir(this.dir)
-    const agents: Agent[] = []
-    for (const entry of entries) {
-      if (!entry.endsWith(FILE_EXT)) continue
-      const id = path.basename(entry, FILE_EXT)
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
-      if (raw === null) continue
-      const parsed = this.tryParse(raw, id)
-      // Skip corrupt files instead of failing the whole listing.
-      if (parsed) agents.push(parsed)
-    }
-    return agents.sort((a, b) => a.id.localeCompare(b.id))
   }
 
   async update(id: string, patch: UpdateAgentInput): Promise<Agent> {
-    const file = this.resolveFile(id)
     const existing = await this.get(id)
-
     // Only overwrite fields that were actually provided; never touch the id
     // (the patch schema omits it, so the spread cannot clobber it).
     const merged: Agent = { ...existing, ...patch, id: existing.id }
-    await this.writeAtomic(file, merged)
+    await this.writeEntity(merged)
     return merged
   }
 
-  async delete(id: string): Promise<void> {
-    const file = this.resolveFile(id)
-    try {
-      await fs.unlink(file)
-    } catch (error) {
-      if (isErrnoException(error) && error.code === "ENOENT") {
-        throw new AgentNotFoundError(id)
-      }
-      throw error
-    }
+  protected idOf(agent: Agent): string {
+    return agent.id
   }
 
-  /**
-   * Map an id to an absolute file path *inside* the data directory, rejecting any
-   * id that could escape it. Two independent guards: the shared contract regex
-   * (no separators / traversal) and a resolved-path containment check.
-   */
-  private resolveFile(id: string): string {
-    if (typeof id !== "string" || !AGENT_ID_REGEX.test(id)) {
-      throw new InvalidAgentIdError(id)
-    }
-    const file = path.resolve(this.dir, `${id}${FILE_EXT}`)
-    if (path.dirname(file) !== this.dir) {
-      throw new InvalidAgentIdError(id)
-    }
-    return file
+  protected notFound(id: string): Error {
+    return new AgentNotFoundError(id)
   }
 
-  private async exists(file: string): Promise<boolean> {
-    try {
-      await fs.access(file)
-      return true
-    } catch {
-      return false
-    }
+  protected invalidId(id: string): Error {
+    return new InvalidAgentIdError(id)
   }
 
-  private async readRaw(file: string, id: string): Promise<string> {
-    try {
-      return await fs.readFile(file, "utf8")
-    } catch (error) {
-      if (isErrnoException(error) && error.code === "ENOENT") {
-        throw new AgentNotFoundError(id)
-      }
-      throw error
-    }
+  protected corruptError(id: string): Error {
+    return new CorruptAgentFileError(id)
   }
 
-  private parse(raw: string, id: string): Agent {
-    const agent = this.tryParse(raw, id)
-    if (!agent) throw new CorruptAgentFileError(id)
-    return agent
+  protected compare(a: Agent, b: Agent): number {
+    return a.id.localeCompare(b.id)
+  }
+
+  protected bodyOf(agent: Agent): string {
+    return agent.instructions
   }
 
   /**
@@ -157,15 +95,12 @@ export class AgentsStorageService implements OnModuleInit {
    * (e.g. a hand-edited `model: gpt-9`) is dropped rather than discarding the
    * whole agent, so one typo never makes an agent vanish from the catalog.
    */
-  private tryParse(raw: string, id: string): Agent | null {
-    let parsed: matter.GrayMatterFile<string>
-    try {
-      parsed = matter(raw)
-    } catch {
-      return null
-    }
-    const data = parsed.data as Record<string, unknown>
-    const candidate: Record<string, unknown> = { id, instructions: parsed.content.trim() }
+  protected fromFrontmatter(
+    data: Record<string, unknown>,
+    id: string,
+    body: string,
+  ): Agent | null {
+    const candidate: Record<string, unknown> = { id, instructions: body }
     if (typeof data.name === "string") candidate.name = data.name
     if (typeof data.description === "string") candidate.description = data.description
     if (typeof data.glyph === "string") candidate.glyph = data.glyph
@@ -186,8 +121,8 @@ export class AgentsStorageService implements OnModuleInit {
     return result.success ? result.data : null
   }
 
-  /** Serialize an agent to the Markdown-with-frontmatter format. */
-  private serialize(agent: Agent): string {
+  /** Serialize an agent's structured config to the YAML frontmatter object. */
+  protected toFrontmatter(agent: Agent): Record<string, unknown> {
     const data: Record<string, unknown> = { name: agent.name ?? agent.id }
     if (agent.description !== undefined) data.description = agent.description
     if (agent.glyph !== undefined) data.glyph = agent.glyph
@@ -198,24 +133,6 @@ export class AgentsStorageService implements OnModuleInit {
     if (agent.requires_approval !== undefined) data.requires_approval = agent.requires_approval
     if (agent.risk !== undefined) data.risk = agent.risk
     if (agent.gates !== undefined) data.gates = agent.gates
-    // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
-    return matter.stringify(`\n${agent.instructions}\n`, data)
+    return data
   }
-
-  /** Write via a temp file + atomic rename so a crash can't leave a torn file. */
-  private async writeAtomic(file: string, agent: Agent): Promise<void> {
-    await this.ensureDir()
-    const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`
-    await fs.writeFile(tmp, this.serialize(agent), "utf8")
-    try {
-      await fs.rename(tmp, file)
-    } catch (error) {
-      await fs.rm(tmp, { force: true })
-      throw error
-    }
-  }
-}
-
-function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error
 }

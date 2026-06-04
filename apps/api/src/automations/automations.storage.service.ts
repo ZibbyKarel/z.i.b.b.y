@@ -1,6 +1,3 @@
-import { randomBytes } from "node:crypto"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
 import {
   AGENT_ID_REGEX,
@@ -9,10 +6,9 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "@zibby/contracts"
+import { EntityFileStore, safeJson } from "../shared/file-storage"
 
 export const AUTOMATIONS_DIR = "AUTOMATIONS_DIR"
-
-const FILE_EXT = ".json"
 
 export class AutomationNotFoundError extends Error {
   constructor(public readonly id: string) {
@@ -35,54 +31,30 @@ export class InvalidAutomationIdError extends Error {
 
 /** Durable, file-backed persistence for automations — one `<id>.json` each. */
 @Injectable()
-export class AutomationsStorageService implements OnModuleInit {
-  private readonly dir: string
+export class AutomationsStorageService extends EntityFileStore<Automation> implements OnModuleInit {
+  protected readonly fileExt = ".json"
+  protected readonly idRegex = AGENT_ID_REGEX
 
   constructor(@Inject(AUTOMATIONS_DIR) dir: string) {
-    this.dir = path.resolve(dir)
+    super(dir)
   }
 
   async onModuleInit(): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
+    await this.ensureDir()
   }
 
   async create(input: CreateAutomationInput): Promise<Automation> {
     const file = this.resolveFile(input.id)
-    if (await this.exists(file)) throw new AutomationConflictError(input.id)
+    if (await this.fileExists(file)) throw new AutomationConflictError(input.id)
     const automation: Automation = { ...input }
-    await this.writeAtomic(automation)
+    await this.writeEntity(automation)
     return automation
-  }
-
-  async get(id: string): Promise<Automation> {
-    const file = this.resolveFile(id)
-    const raw = await fs.readFile(file, "utf8").catch((error: unknown) => {
-      if (isErrno(error) && error.code === "ENOENT") throw new AutomationNotFoundError(id)
-      throw error
-    })
-    const parsed = AutomationSchema.safeParse(safeJson(raw))
-    if (!parsed.success) throw new AutomationNotFoundError(id)
-    return parsed.data
-  }
-
-  async list(): Promise<Automation[]> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
-    const out: Automation[] = []
-    for (const entry of entries) {
-      if (!entry.endsWith(FILE_EXT)) continue
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
-      if (raw === null) continue
-      const parsed = AutomationSchema.safeParse(safeJson(raw))
-      if (parsed.success) out.push(parsed.data)
-    }
-    return out.sort((a, b) => a.id.localeCompare(b.id))
   }
 
   async update(id: string, patch: UpdateAutomationInput): Promise<Automation> {
     const existing = await this.get(id)
     const merged: Automation = { ...existing, ...patch, id: existing.id }
-    await this.writeAtomic(merged)
+    await this.writeEntity(merged)
     return merged
   }
 
@@ -90,55 +62,32 @@ export class AutomationsStorageService implements OnModuleInit {
   async markFired(id: string, at: string): Promise<Automation> {
     const existing = await this.get(id)
     const merged: Automation = { ...existing, lastFiredAt: at }
-    await this.writeAtomic(merged)
+    await this.writeEntity(merged)
     return merged
   }
 
-  async delete(id: string): Promise<void> {
-    const file = this.resolveFile(id)
-    try {
-      await fs.unlink(file)
-    } catch (error) {
-      if (isErrno(error) && error.code === "ENOENT") throw new AutomationNotFoundError(id)
-      throw error
-    }
+  protected idOf(automation: Automation): string {
+    return automation.id
   }
 
-  private resolveFile(id: string): string {
-    if (typeof id !== "string" || !AGENT_ID_REGEX.test(id)) throw new InvalidAutomationIdError(id)
-    const file = path.resolve(this.dir, `${id}${FILE_EXT}`)
-    if (path.dirname(file) !== this.dir) throw new InvalidAutomationIdError(id)
-    return file
+  protected serialize(automation: Automation): string {
+    return JSON.stringify(automation)
   }
 
-  private async exists(file: string): Promise<boolean> {
-    return fs
-      .access(file)
-      .then(() => true)
-      .catch(() => false)
+  protected tryParse(raw: string): Automation | null {
+    const parsed = AutomationSchema.safeParse(safeJson(raw))
+    return parsed.success ? parsed.data : null
   }
 
-  private async writeAtomic(automation: Automation): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const file = this.resolveFile(automation.id)
-    const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`
-    await fs.writeFile(tmp, JSON.stringify(automation), "utf8")
-    try {
-      await fs.rename(tmp, file)
-    } catch (error) {
-      await fs.rm(tmp, { force: true })
-      throw error
-    }
+  protected compare(a: Automation, b: Automation): number {
+    return a.id.localeCompare(b.id)
   }
-}
 
-function safeJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
+  protected notFound(id: string): Error {
+    return new AutomationNotFoundError(id)
   }
-}
-function isErrno(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error
+
+  protected invalidId(id: string): Error {
+    return new InvalidAutomationIdError(id)
+  }
 }

@@ -1,14 +1,11 @@
-import { randomBytes } from "node:crypto"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
 import { type Approval, ApprovalSchema } from "@zibby/contracts"
+import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage"
 import { ApprovalNotFoundError, InvalidApprovalIdError } from "./approvals.errors"
 
 /** DI token carrying the absolute path of the directory that holds approval files. */
 export const APPROVALS_DIR = "APPROVALS_DIR"
 
-const FILE_EXT = ".json"
 const ID_REGEX = /^[a-zA-Z0-9._-]+$/
 
 /**
@@ -18,87 +15,55 @@ const ID_REGEX = /^[a-zA-Z0-9._-]+$/
  * as run sidecars — a single corrupt file is skipped, never fatal to the list.
  */
 @Injectable()
-export class ApprovalsStorageService implements OnModuleInit {
-  private readonly dir: string
+export class ApprovalsStorageService extends EntityFileStore<Approval> implements OnModuleInit {
+  protected readonly fileExt = ".json"
+  protected readonly idRegex = ID_REGEX
 
   constructor(@Inject(APPROVALS_DIR) dir: string) {
-    this.dir = path.resolve(dir)
+    super(dir)
   }
 
   async onModuleInit(): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
+    await this.ensureDir()
   }
 
   async create(approval: Approval): Promise<Approval> {
-    await this.writeAtomic(approval)
+    await this.writeEntity(approval)
     return approval
   }
 
-  async get(id: string): Promise<Approval> {
-    const file = this.resolveFile(id)
-    const raw = await fs.readFile(file, "utf8").catch((error: unknown) => {
-      if (isErrnoException(error) && error.code === "ENOENT") throw new ApprovalNotFoundError(id)
-      throw error
-    })
-    const parsed = ApprovalSchema.safeParse(safeJson(raw))
-    if (!parsed.success) throw new ApprovalNotFoundError(id)
-    return parsed.data
-  }
-
-  async list(): Promise<Approval[]> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
-    const out: Approval[] = []
-    for (const entry of entries) {
-      if (!entry.endsWith(FILE_EXT)) continue
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
-      if (raw === null) continue
-      const parsed = ApprovalSchema.safeParse(safeJson(raw))
-      if (parsed.success) out.push(parsed.data)
-    }
-    return out.sort((a, b) => a.requestedAt.localeCompare(b.requestedAt))
-  }
-
   async update(approval: Approval): Promise<Approval> {
-    await this.writeAtomic(approval)
+    await this.writeEntity(approval)
     return approval
   }
 
   /** A fresh, filename-safe, collision-resistant approval id. */
   newId(prefix: string): string {
-    const safe = prefix.replace(/[^a-zA-Z0-9._-]/g, "-")
-    return `${safe}_${Date.now()}_${randomBytes(3).toString("hex")}`
+    return collisionResistantId(prefix)
   }
 
-  private resolveFile(id: string): string {
-    if (typeof id !== "string" || !ID_REGEX.test(id)) throw new InvalidApprovalIdError(id)
-    const file = path.resolve(this.dir, `${id}${FILE_EXT}`)
-    if (path.dirname(file) !== this.dir) throw new InvalidApprovalIdError(id)
-    return file
+  protected idOf(approval: Approval): string {
+    return approval.id
   }
 
-  private async writeAtomic(approval: Approval): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const file = this.resolveFile(approval.id)
-    const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`
-    await fs.writeFile(tmp, JSON.stringify(approval), "utf8")
-    try {
-      await fs.rename(tmp, file)
-    } catch (error) {
-      await fs.rm(tmp, { force: true })
-      throw error
-    }
+  protected serialize(approval: Approval): string {
+    return JSON.stringify(approval)
   }
-}
 
-function safeJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
+  protected tryParse(raw: string): Approval | null {
+    const parsed = ApprovalSchema.safeParse(safeJson(raw))
+    return parsed.success ? parsed.data : null
   }
-}
 
-function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error
+  protected compare(a: Approval, b: Approval): number {
+    return a.requestedAt.localeCompare(b.requestedAt)
+  }
+
+  protected notFound(id: string): Error {
+    return new ApprovalNotFoundError(id)
+  }
+
+  protected invalidId(id: string): Error {
+    return new InvalidApprovalIdError(id)
+  }
 }

@@ -1,8 +1,8 @@
-import { randomBytes } from "node:crypto"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable } from "@nestjs/common"
 import { type Category, CategorySchema, type CreateCategoryInput } from "@zibby/contracts"
+import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage"
 import { CategoryConflictError, CategoryNotFoundError } from "./categories.errors"
 import { AGENTS_DIR } from "./agents.storage.service"
 
@@ -31,13 +31,8 @@ export class CategoriesStorageService {
   async list(): Promise<Category[]> {
     const raw = await fs.readFile(this.file, "utf8").catch(() => null)
     if (raw === null) return []
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(raw)
-    } catch {
-      // A hand-corrupted manifest reads as empty rather than crashing the API.
-      return []
-    }
+    // A hand-corrupted manifest reads as empty rather than crashing the API.
+    const parsed = safeJson(raw)
     if (!Array.isArray(parsed)) return []
     // Drop any entry that no longer matches the schema instead of failing the
     // whole listing (mirrors how the agent listing skips corrupt files).
@@ -68,14 +63,7 @@ export class CategoriesStorageService {
 
   /** Write via a temp file + atomic rename so a crash can't leave a torn manifest. */
   private async writeAtomic(categories: Category[]): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const tmp = `${this.file}.${randomBytes(6).toString("hex")}.tmp`
-    await fs.writeFile(tmp, `${JSON.stringify(categories, null, 2)}\n`, "utf8")
-    try {
-      await fs.rename(tmp, this.file)
-    } catch (error) {
-      await fs.rm(tmp, { force: true })
-      throw error
-    }
+    await ensureDir(this.dir)
+    await writeFileAtomic(this.file, `${JSON.stringify(categories, null, 2)}\n`)
   }
 }
