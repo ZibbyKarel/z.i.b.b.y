@@ -73,7 +73,14 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // The sandbox the task runs in (and writes its file into). Named without the
     // pid since we need it before spawning; the run id below carries the pid.
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
-    const { command, args } = this.buildCommand(prompt, cwd)
+    // Phase 6: for the real `claude -p` executor, compose the prompt from the
+    // agent's instructions + the task. Demo mode ignores it. The run record keeps
+    // the bare task `prompt` for display.
+    const commandPrompt =
+      process.env.AGENT_RUNNER_MODE === "claude"
+        ? `${agent.instructions}\n\n# Task\n${prompt}`
+        : prompt
+    const { command, args } = this.buildCommand(commandPrompt, cwd)
     const spec = {
       kind: "agent" as const,
       ownerId: agentId,

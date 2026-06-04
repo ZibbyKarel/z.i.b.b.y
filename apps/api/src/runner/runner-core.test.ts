@@ -112,6 +112,66 @@ describe("RunnerCore", () => {
     expect(found?.kind).toBe("agent")
   })
 
+  it("does NOT relabel a still-alive orphan to interrupted on restart (pgid)", async () => {
+    // core1 starts a long sleeper in its own process group, then "crashes"
+    // (we never call shutdown) leaving the detached child alive.
+    const core1 = new RunnerCore(dir, strategy)
+    await core1.init()
+    const run = await core1.start({
+      kind: "agent",
+      ownerId: "sleeper",
+      command: NODE,
+      args: ["-e", "setTimeout(() => process.exit(0), 4000)"],
+      cwd: path.join(dir, "sleeper"),
+      extra: { label: "x" },
+    })
+    const pgid = run.pgid
+    expect(pgid).toBeGreaterThan(0)
+
+    // Restart: a fresh core over the same dir. The sidecar says "running"; the
+    // process group is still alive → it must stay running, not be reconciled.
+    const core2 = new RunnerCore(dir, strategy)
+    await core2.init()
+    expect(core2.get(run.runId).status).toBe("running")
+
+    // Clean up the orphan group.
+    try {
+      if (pgid) process.kill(-pgid, "SIGKILL")
+    } catch {
+      /* already gone */
+    }
+    core1.shutdown()
+  })
+
+  it("handles many concurrent runs without corrupting state", async () => {
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    const runs = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        core.start({
+          kind: "agent",
+          ownerId: `c${i}`,
+          command: NODE,
+          args: progressScript(100),
+          cwd: path.join(dir, `c${i}`),
+          extra: { label: `c${i}` },
+        }),
+      ),
+    )
+    // All ids are distinct and individually retrievable.
+    const ids = new Set(runs.map((r) => r.runId))
+    expect(ids.size).toBe(8)
+    for (const r of runs) expect(core.get(r.runId).runId).toBe(r.runId)
+
+    // Concurrent log reads don't throw, and every sidecar parses back.
+    await Promise.all(runs.map((r) => core.readLog(r.runId, 0)))
+    await sleep(150)
+    for (const r of runs) {
+      const raw = await fs.readFile(path.join(dir, `${r.runId}.json`), "utf8")
+      expect(TestRecordSchema.safeParse(JSON.parse(raw)).success).toBe(true)
+    }
+  })
+
   it("leaves an awaiting-approval sidecar untouched across restart", async () => {
     const runId = "paused_1780000000000_99"
     await fs.writeFile(path.join(dir, `${runId}.log`), "waiting\n", "utf8")

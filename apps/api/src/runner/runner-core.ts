@@ -85,7 +85,16 @@ export class RunnerCore<R extends BaseRun> {
       if (!parsed.success) continue
       let run = parsed.data
       if (run.status === "running") {
-        // A run left "running" in a sidecar can't be live in this fresh process.
+        // Phase 6: a run left "running" may be a live orphan that survived a hard
+        // crash (kill -9 reparents a detached child to init). Probe its process
+        // group before relabelling — if it's still alive, DON'T mark it
+        // interrupted; reattach exit-detection via pgid polling instead.
+        if (run.pgid && isAlive(run.pgid)) {
+          const handle: RunHandle<R> = { run }
+          this.runs.set(run.runId, handle)
+          this.monitorPgid(handle)
+          continue
+        }
         run = {
           ...run,
           status: "interrupted",
@@ -103,10 +112,10 @@ export class RunnerCore<R extends BaseRun> {
     }
   }
 
-  /** Kill any still-live children on shutdown so we don't leak zombies. */
+  /** Kill any still-live children (whole process group) on shutdown. */
   shutdown(): void {
     for (const handle of this.runs.values()) {
-      if (handle.child && handle.run.status === "running") handle.child.kill()
+      if (handle.child && handle.run.status === "running") killGroup(handle.run.pgid ?? handle.run.pid)
     }
   }
 
@@ -120,13 +129,17 @@ export class RunnerCore<R extends BaseRun> {
     await fs.mkdir(this.dir, { recursive: true })
     await fs.mkdir(spec.cwd, { recursive: true })
 
-    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env })
+    // `detached` puts the child in its own process group (pgid === pid on Linux),
+    // so Phase 6 can probe/kill the whole group and an orphan survives a crash.
+    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env, detached: true })
     const pid = child.pid ?? 0
     const runId = `${spec.ownerId}_${startedMs}_${pid}`
     const logFile = path.join(this.dir, `${runId}.log`)
     const log = createWriteStream(logFile, { flags: "a" })
 
-    const run = this.strategy.assemble(this.baseRun(spec, runId, startedMs, pid, logFile), spec)
+    const base = this.baseRun(spec, runId, startedMs, pid, logFile)
+    base.pgid = pid
+    const run = this.strategy.assemble(base, spec)
     const handle: RunHandle<R> = { run, child, log }
     this.runs.set(runId, handle)
     await this.writeSidecar(run)
@@ -165,10 +178,11 @@ export class RunnerCore<R extends BaseRun> {
     await this.clearPendingSpec(runId)
 
     await fs.mkdir(spec.cwd, { recursive: true })
-    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env })
+    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env, detached: true })
     handle.child = child
     handle.log = createWriteStream(handle.run.logFile, { flags: "a" })
     handle.run.pid = child.pid ?? 0
+    handle.run.pgid = child.pid ?? 0
     handle.run.status = "running"
     await this.writeSidecar(handle.run)
     this.wire(handle)
@@ -281,6 +295,26 @@ export class RunnerCore<R extends BaseRun> {
     }
   }
 
+  /**
+   * Reattach exit-detection to a reconstructed orphan: we can't re-pipe its stdout
+   * (the previous process owned the stream), so we poll its process group and
+   * finalize when it dies — done if it reached 100%, else interrupted.
+   */
+  private monitorPgid(handle: RunHandle<R>): void {
+    const pgid = handle.run.pgid ?? handle.run.pid
+    if (!pgid) return
+    const timer = setInterval(() => {
+      if (isAlive(pgid)) return
+      clearInterval(timer)
+      void this.readLastProgress(handle.run.logFile, handle.run.pct).then((pct) => {
+        handle.run.pct = pct
+        handle.run.status = pct >= 100 ? "done" : "interrupted"
+        void this.writeSidecar(handle.run)
+      })
+    }, 200)
+    timer.unref?.()
+  }
+
   /** Attach output capture + exit handling to a live handle. */
   private wire(handle: RunHandle<R>): void {
     const { child, log, run } = handle
@@ -368,4 +402,30 @@ export class RunnerCore<R extends BaseRun> {
 
 function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error
+}
+
+/** Is a process (group leader) still alive? `kill(pid, 0)` probes without signalling. */
+function isAlive(pid: number): boolean {
+  if (!pid || pid <= 1) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    // ESRCH = no such process; EPERM = exists but not ours (still "alive").
+    return isErrnoException(error) && error.code === "EPERM"
+  }
+}
+
+/** Terminate a whole detached process group (negative pid targets the group). */
+function killGroup(pgid: number): void {
+  if (!pgid || pgid <= 1) return
+  try {
+    process.kill(-pgid, "SIGTERM")
+  } catch {
+    try {
+      process.kill(pgid, "SIGTERM")
+    } catch {
+      // Already gone.
+    }
+  }
 }
