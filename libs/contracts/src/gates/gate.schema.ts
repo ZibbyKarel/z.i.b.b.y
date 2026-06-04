@@ -97,7 +97,7 @@ export const IntendedActionSchema = z.object({
   branch: z.string().optional(),
   context: z.string().optional(),
   /** Numeric facts a `threshold` matcher reads, e.g. `{ "purchase.amount": 540 }`. */
-  metrics: z.record(z.number()).optional(),
+  metrics: z.record(z.string(), z.number()).optional(),
 })
 export type IntendedAction = z.infer<typeof IntendedActionSchema>
 

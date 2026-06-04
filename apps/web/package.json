@@ -10,12 +10,13 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
-    "@ts-rest/react-query": "3.52.1",
+    "@ts-rest/react-query": "3.53.0-rc.1",
     "@zibby/contracts": "workspace:*",
     "@zibby/design-system": "workspace:*",
     "@zibby/forms": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.0.0"
   }
 }
