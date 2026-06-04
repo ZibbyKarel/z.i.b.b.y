@@ -1,0 +1,82 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * Playwright e2e — the only browser-driven layer (a 6th project, deliberately
+ * outside the vitest workspace). Covers a few critical UI throughlines where the
+ * contract → DS wiring is the thing under test; runner/approval/loop *correctness*
+ * lives in the fast NestJS + supertest e2e instead.
+ *
+ * Both servers are started with isolated `.e2e-data` dirs (gitignored) and demo
+ * mode, so runs are deterministic and token-free. The app's default locale is
+ * Czech; `global-setup` writes a `locale=en` cookie so selectors can use the
+ * stable English strings.
+ *
+ * Requires browsers (`npx playwright install chromium`). In a sandbox without a
+ * download, point at a system binary via PLAYWRIGHT_CHROMIUM_EXECUTABLE.
+ */
+const E2E_DATA = path.resolve(".e2e-data");
+const dir = (name: string) => path.join(E2E_DATA, name);
+
+const apiEnv: Record<string, string> = {
+  AGENTS_DIR: dir("agents"),
+  AGENT_RUNS_DIR: dir("agent-runs"),
+  SKILLS_DIR: dir("skills"),
+  SKILL_RUNS_DIR: dir("skill-runs"),
+  PIPELINES_DIR: dir("pipelines"),
+  PIPELINE_RUNS_DIR: dir("pipeline-runs"),
+  APPROVALS_DIR: dir("approvals"),
+  POLICY_DIR: dir("policy"),
+  VAULT_DIR: dir("vault"),
+  AUTOMATIONS_DIR: dir("automations"),
+  AUTOMATION_TICK_MS: "0",
+  AGENT_DEMO_STEPS: "3",
+  AGENT_DEMO_DELAY_MS: "80",
+  PORT: "3333",
+};
+
+const sandboxChrome =
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
+  "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const launchOptions = fs.existsSync(sandboxChrome)
+  ? { executablePath: sandboxChrome }
+  : undefined;
+
+export default defineConfig({
+  testDir: "./e2e",
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
+  fullyParallel: false,
+  workers: 1,
+  retries: 0,
+  globalSetup: "./e2e/global-setup.ts",
+  reporter: [["list"]],
+  use: {
+    baseURL: "http://localhost:3000",
+    storageState: "e2e/.auth/state.json",
+    trace: "on-first-retry",
+    ...(launchOptions ? { launchOptions } : {}),
+  },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: [
+    {
+      command: "npm run api:dev",
+      url: "http://localhost:3333/api/health",
+      env: apiEnv,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: "ignore",
+      stderr: "pipe",
+    },
+    {
+      command: "npm run web:dev",
+      url: "http://localhost:3000",
+      env: { NEXT_PUBLIC_API_URL: "http://localhost:3333" },
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      stdout: "ignore",
+      stderr: "pipe",
+    },
+  ],
+});

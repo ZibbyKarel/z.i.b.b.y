@@ -27,3 +27,9 @@ Thumbs.db
 
 # Local-only Claude Design handoff bundle (not committed)
 design-ref/
+
+# Playwright e2e
+/.e2e-data/
+/playwright-report/
+/test-results/
+/e2e/.auth/
