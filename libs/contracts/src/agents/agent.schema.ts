@@ -57,6 +57,12 @@ export const AgentSchema = z.object({
    * `ask:human` rule when `gates` is absent.
    */
   gates: z.array(GateRuleInputSchema).optional(),
+  /**
+   * Ids of global rules (the "Pravidla schvalování" catalog) linked to this agent.
+   * The shared middle policy layer: edited once on the catalog page, applied
+   * everywhere it is linked. Distinct from `gates`, which are this agent's own rules.
+   */
+  gateRuleIds: z.array(z.string()).optional(),
   instructions: z.string().min(1),
 })
 export type Agent = z.infer<typeof AgentSchema>

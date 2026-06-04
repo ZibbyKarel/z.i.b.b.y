@@ -2,127 +2,165 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { GateRule, GateRuleInput } from "@zibby/contracts";
-import { Alert, Button, Container, Icon, Select, Stack, Typography } from "@zibby/design-system";
+import type { Decision, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
+import { Button, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { useAgentsQuery } from "../agents/queries";
-import { useAgentGatesQuery, useSystemPolicyQuery } from "./queries";
-import { useReplaceAgentGatesMutation } from "./mutations/useReplaceAgentGatesMutation";
-import { RuleCard } from "./components/RuleCard";
+import { useSkillsQuery } from "../skills/queries";
+import { DECISION_META, DECISION_ORDER } from "./gate";
+import { useGateRulesQuery } from "./queries";
+import {
+  useCreateGateRuleMutation,
+  useDeleteGateRuleMutation,
+  useReorderGateRulesMutation,
+  useUpdateGateRuleMutation,
+} from "./mutations";
+import { GlobalRuleCard, type RuleUser } from "./components/GlobalRuleCard";
 import { RuleModal } from "./components/RuleModal";
 
-const toInput = (r: GateRule): GateRuleInput => ({ match: r.match, decision: r.decision, resolve: r.resolve });
+/** Move `id` one step in the `ids` order; returns the new order or null if it can't. */
+function moved(ids: string[], id: string, delta: -1 | 1): string[] | null {
+  const i = ids.indexOf(id);
+  const j = i + delta;
+  if (i === -1 || j < 0 || j >= ids.length) return null;
+  const next = [...ids];
+  [next[i], next[j]] = [next[j]!, next[i]!];
+  return next;
+}
 
 export function Screen() {
   const t = useTranslations("gates");
+  const { data: rules = [] } = useGateRulesQuery();
   const { data: agents = [] } = useAgentsQuery();
-  const { data: policy = [] } = useSystemPolicyQuery();
+  const { data: skills = [] } = useSkillsQuery();
 
-  const [agentId, setAgentId] = useState<string | null>(null);
-  const effectiveId = agentId ?? agents[0]?.id ?? null;
-  const { data: gates } = useAgentGatesQuery(effectiveId);
-  const replace = useReplaceAgentGatesMutation(effectiveId ?? "");
-  const [adding, setAdding] = useState(false);
+  const create = useCreateGateRuleMutation();
+  const update = useUpdateGateRuleMutation();
+  const remove = useDeleteGateRuleMutation();
+  const reorder = useReorderGateRulesMutation();
 
-  const own = gates?.own ?? [];
-  const inherited = gates?.inherited ?? policy;
+  const [filter, setFilter] = useState<Decision | null>(null);
+  const [editing, setEditing] = useState<GlobalGateRule | "new" | null>(null);
 
-  const commit = (rules: GateRuleInput[]) => {
-    if (!effectiveId) return;
-    replace.mutate({ params: { id: effectiveId }, body: { gates: rules } });
-  };
-  const addRule = (rule: GateRuleInput) => {
-    commit([...own.map(toInput), rule]);
-    setAdding(false);
-  };
-  const deleteRule = (id: string) => commit(own.filter((r) => r.id !== id).map(toInput));
+  const byDecision = (d: Decision) => rules.filter((r) => r.decision === d).length;
+  const shown = filter ? rules.filter((r) => r.decision === filter) : rules;
+  const ids = rules.map((r) => r.id);
 
-  const ruleLabels = (r: GateRule) => ({
-    decisionLabel: t(`decision_.${r.decision}`),
-    andLabel: "AND",
-    youLabel: t("you"),
-    notifyHint: t("notifyHint"),
+  const usersFor = (ruleId: string): { agents: RuleUser[]; skills: RuleUser[] } => ({
+    agents: agents
+      .filter((a) => a.gateRuleIds?.includes(ruleId))
+      .map((a) => ({ id: a.id, name: a.name ?? a.id, glyph: (a.glyph as IconName | undefined) ?? "bot" })),
+    skills: skills
+      .filter((s) => s.gateRuleIds?.includes(ruleId))
+      .map((s) => ({ id: s.id, name: s.name, glyph: s.glyph })),
   });
 
+  const move = (id: string, delta: -1 | 1) => {
+    const next = moved(ids, id, delta);
+    if (next) reorder.mutate({ body: { ids: next } });
+  };
+
+  const save = (input: GlobalGateRuleInput) => {
+    const done = { onSuccess: () => setEditing(null) };
+    if (editing && editing !== "new") update.mutate({ params: { id: editing.id }, body: input }, done);
+    else create.mutate({ body: input }, done);
+  };
+
   return (
-    <PageContainer maxWidth="980px">
+    <PageContainer maxWidth="1060px">
       <Stack gap="250">
-        <PageHeader subtitle={t("subtitle")} title={t("title")} />
+        <PageHeader
+          actions={
+            <Button icon="plus" intent="run" onClick={() => setEditing("new")}>
+              {t("newRule")}
+            </Button>
+          }
+          subtitle={t("subtitle")}
+          title={t("title")}
+        />
 
-        {agents.length === 0 ? (
-          <EmptyState description={t("emptyDesc")} glyph="shield" title={t("emptyTitle")} />
-        ) : (
-          <>
-            <HudPanel padding="250">
-              <Stack align="center" direction="row" gap="150">
-                <Container minW0 maxWidth="320px">
-                  <Select
-                    label={t("forAgent")}
-                    onValueChange={setAgentId}
-                    options={agents.map((a) => ({ value: a.id, label: a.name ?? a.id }))}
-                    value={effectiveId ?? ""}
-                  />
-                </Container>
-                <Container grow>
-                  <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
-                    {t("evalNote")}
-                  </Typography>
-                </Container>
-              </Stack>
-            </HudPanel>
-
-            {/* inherited (locked) system floor */}
-            <HudPanel padding="250" title={t("inheritedTitle")} tone="warn">
-              <Stack gap="100">
-                <Stack align="center" direction="row" gap="100">
-                  <Icon name="link" size="xs" tone="faint" />
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {t("inheritedNote")}
-                  </Typography>
-                </Stack>
-                {inherited.map((r) => (
-                  <RuleCard locked key={r.id} rule={r} {...ruleLabels(r)} />
-                ))}
-              </Stack>
-            </HudPanel>
-
-            {/* agent's own (editable) rules */}
-            <HudPanel padding="250">
-              <Stack gap="150">
-                <SectionLabel
-                  action={
-                    <Button icon="plus" intent="run" onClick={() => setAdding(true)} size="sm">
-                      {t("addRule")}
-                    </Button>
-                  }
+        {/* decision filter tabs */}
+        <HudPanel padding="200">
+          <Stack wrap align="center" direction="row" gap="100">
+            {DECISION_ORDER.map((d) => {
+              const on = filter === d;
+              return (
+                <Button
+                  aria-pressed={on}
+                  icon={DECISION_META[d].icon}
+                  intent={on ? "solid" : "ghost"}
+                  key={d}
+                  onClick={() => setFilter(on ? null : d)}
+                  size="sm"
                 >
-                  {t("ownTitle", { agent: agents.find((a) => a.id === effectiveId)?.name ?? effectiveId ?? "" })}
-                </SectionLabel>
+                  {t(`decision_.${d}`)} · {byDecision(d)}
+                </Button>
+              );
+            })}
+            <Stack grow align="center" direction="row" justify="end">
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("totalCount", { count: rules.length })}
+              </Typography>
+            </Stack>
+          </Stack>
+        </HudPanel>
 
-                {replace.isError && <Alert severity="error">{t("violation")}</Alert>}
+        {/* hierarchy note: system floor → this catalog → agent/skill rules */}
+        <HudPanel padding="150">
+          <Stack align="center" direction="row" gap="100">
+            <Icon name="bolt" size="xs" tone="accent" />
+            <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+              {t("hierarchyNote")}
+            </Typography>
+          </Stack>
+        </HudPanel>
 
-                {own.length === 0 ? (
-                  <Typography mono size="sm" type="note" variant="tertiary">
-                    {t("noOwnRules")}
-                  </Typography>
-                ) : (
-                  <Stack gap="100">
-                    {own.map((r) => (
-                      <RuleCard key={r.id} onDelete={deleteRule} rule={r} {...ruleLabels(r)} />
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-            </HudPanel>
-          </>
+        {shown.length === 0 ? (
+          <EmptyState
+            description={filter ? t("emptyFilteredDesc") : t("emptyDesc")}
+            glyph="shield"
+            title={filter ? t("emptyFilteredTitle") : t("emptyTitle")}
+          />
+        ) : (
+          <Stack gap="100">
+            {shown.map((rule) => {
+              const users = usersFor(rule.id);
+              const idx = ids.indexOf(rule.id);
+              return (
+                <GlobalRuleCard
+                  agents={users.agents}
+                  canReorder={filter === null}
+                  isFirst={idx === 0}
+                  isLast={idx === ids.length - 1}
+                  key={rule.id}
+                  onDelete={(id) => remove.mutate({ params: { id } })}
+                  onEdit={(r) => setEditing(r)}
+                  onMoveDown={(id) => move(id, 1)}
+                  onMoveUp={(id) => move(id, -1)}
+                  rule={rule}
+                  skills={users.skills}
+                />
+              );
+            })}
+          </Stack>
         )}
+
+        <Button block icon="plus" intent="ghost" onClick={() => setEditing("new")}>
+          {t("addRule")}
+        </Button>
       </Stack>
 
-      {adding && <RuleModal onClose={() => setAdding(false)} onSave={addRule} />}
+      {editing && (
+        <RuleModal
+          initial={editing === "new" ? undefined : editing}
+          onClose={() => setEditing(null)}
+          onSave={save}
+          pending={create.isPending || update.isPending}
+        />
+      )}
     </PageContainer>
   );
 }

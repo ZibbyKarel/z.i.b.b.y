@@ -21,6 +21,7 @@ function selectSkills(response: { body: ContractSkill[] }): Skill[] {
     glyph: (s.glyph as IconName | undefined) ?? "spark",
     desc: s.desc ?? "",
     file: `~/zibby/skills/${s.id}/SKILL.md`,
+    gateRuleIds: s.gateRuleIds,
   }));
 }
 
