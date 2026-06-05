@@ -6,8 +6,9 @@ dist/
 .next/
 out/
 
-# Local agent storage (apps/api default data dir)
+# Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
 apps/api/data/
+apps/api/data-test/
 
 # Env / secrets — never commit
 .env

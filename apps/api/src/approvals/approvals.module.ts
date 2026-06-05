@@ -1,12 +1,12 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { dataDir } from "../shared/data-dir"
 import { ApprovalsController } from "./approvals.controller"
 import { ApprovalsService } from "./approvals.service"
 import { APPROVALS_DIR, ApprovalsStorageService } from "./approvals.storage.service"
 
 /** Default approvals dir, anchored to `apps/api/data/approvals` like the run dirs. */
 export function resolveApprovalsDir(): string {
-  return process.env.APPROVALS_DIR ?? path.resolve(__dirname, "..", "..", "data", "approvals")
+  return process.env.APPROVALS_DIR ?? dataDir("approvals")
 }
 
 /**

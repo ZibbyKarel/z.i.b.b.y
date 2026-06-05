@@ -1,5 +1,5 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { dataDir } from "../shared/data-dir"
 import { ProjectCategoriesController } from "./project-categories.controller"
 import { ProjectCategoriesStorageService } from "./project-categories.storage.service"
 import { ProjectsController } from "./projects.controller"
@@ -12,7 +12,7 @@ import { PROJECTS_DIR, ProjectsStorageService } from "./projects.storage.service
  * (same rationale as `resolveAgentsDir`).
  */
 export function resolveProjectsDir(): string {
-  return process.env.PROJECTS_DIR ?? path.resolve(__dirname, "..", "..", "data", "projects")
+  return process.env.PROJECTS_DIR ?? dataDir("projects")
 }
 
 @Module({

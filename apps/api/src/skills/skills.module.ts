@@ -1,6 +1,6 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
 import { ApprovalsModule } from "../approvals/approvals.module"
+import { dataDir } from "../shared/data-dir"
 import { SkillCategoriesController } from "./skill-categories.controller"
 import { SkillCategoriesStorageService } from "./skill-categories.storage.service"
 import { SKILL_RUNS_DIR, SkillRunnerService } from "./skill-runner.service"
@@ -10,14 +10,12 @@ import { SKILLS_DIR, SkillsStorageService } from "./skills.storage.service"
 
 /** Default skills dir, anchored to `apps/api/data/skills` the same way agents are. */
 export function resolveSkillsDir(): string {
-  return process.env.SKILLS_DIR ?? path.resolve(__dirname, "..", "..", "data", "skills")
+  return process.env.SKILLS_DIR ?? dataDir("skills")
 }
 
 /** Default directory for skill run artifacts (logs + per-run sandboxes). */
 export function resolveSkillRunsDir(): string {
-  return (
-    process.env.SKILL_RUNS_DIR ?? path.resolve(__dirname, "..", "..", "data", "skills", "runs")
-  )
+  return process.env.SKILL_RUNS_DIR ?? dataDir("skills", "runs")
 }
 
 @Module({

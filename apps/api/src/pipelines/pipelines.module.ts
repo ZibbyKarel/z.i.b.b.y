@@ -1,5 +1,5 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { dataDir } from "../shared/data-dir"
 import { PIPELINE_RUNS_DIR, PipelineRunnerService } from "./pipeline-runner.service"
 import { PipelineRunsController } from "./pipeline-runs.controller"
 import { PipelinesController } from "./pipelines.controller"
@@ -7,15 +7,12 @@ import { PIPELINES_DIR, PipelinesStorageService } from "./pipelines.storage.serv
 
 /** Default pipelines dir, anchored to `apps/api/data/pipelines` like agents/skills. */
 export function resolvePipelinesDir(): string {
-  return process.env.PIPELINES_DIR ?? path.resolve(__dirname, "..", "..", "data", "pipelines")
+  return process.env.PIPELINES_DIR ?? dataDir("pipelines")
 }
 
 /** Default directory for pipeline run artifacts (per-run roots with stage sandboxes). */
 export function resolvePipelineRunsDir(): string {
-  return (
-    process.env.PIPELINE_RUNS_DIR ??
-    path.resolve(__dirname, "..", "..", "data", "pipelines", "runs")
-  )
+  return process.env.PIPELINE_RUNS_DIR ?? dataDir("pipelines", "runs")
 }
 
 @Module({
