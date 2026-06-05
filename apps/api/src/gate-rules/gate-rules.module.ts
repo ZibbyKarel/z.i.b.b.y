@@ -1,11 +1,11 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { dataDir } from "../shared/data-dir"
 import { GateRulesController } from "./gate-rules.controller"
 import { GATE_RULES_DIR, GateRulesStorageService } from "./gate-rules.storage.service"
 
 /** Default catalog dir, anchored to `apps/api/data` (holds `gate-rules.json`). */
 export function resolveGateRulesDir(): string {
-  return process.env.GATE_RULES_DIR ?? path.resolve(__dirname, "..", "..", "data")
+  return process.env.GATE_RULES_DIR ?? dataDir()
 }
 
 /**

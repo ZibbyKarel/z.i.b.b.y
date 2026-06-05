@@ -1,11 +1,11 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
+import { dataDir } from "../shared/data-dir"
 import { GateEvaluatorService } from "./gate-evaluator.service"
 import { POLICY_DIR, PolicyStorageService } from "./policy.storage.service"
 
 /** Default policy dir, anchored to `apps/api/data` (holds the locked POLICY.md). */
 export function resolvePolicyDir(): string {
-  return process.env.POLICY_DIR ?? path.resolve(__dirname, "..", "..", "data")
+  return process.env.POLICY_DIR ?? dataDir()
 }
 
 /**

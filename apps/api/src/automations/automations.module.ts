@@ -1,7 +1,7 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
+import { dataDir } from "../shared/data-dir"
 import { SkillsModule } from "../skills/skills.module"
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service"
 import { AutomationsController } from "./automations.controller"
@@ -9,7 +9,7 @@ import { SchedulerService } from "./scheduler.service"
 
 /** Default automations dir, anchored to `apps/api/data/automations`. */
 export function resolveAutomationsDir(): string {
-  return process.env.AUTOMATIONS_DIR ?? path.resolve(__dirname, "..", "..", "data", "automations")
+  return process.env.AUTOMATIONS_DIR ?? dataDir("automations")
 }
 
 /**

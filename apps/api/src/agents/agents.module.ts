@@ -1,10 +1,10 @@
-import * as path from "node:path"
 import { Module } from "@nestjs/common"
 import { AgentRunnerService, RUNS_DIR } from "../agent-runs/agent-runner.service"
 import { AgentRunsController } from "../agent-runs/agent-runs.controller"
 import { ApprovalsModule } from "../approvals/approvals.module"
 import { GatesController } from "../gates/gates.controller"
 import { GatesModule } from "../gates/gates.module"
+import { dataDir } from "../shared/data-dir"
 import { AgentsController } from "./agents.controller"
 import { AGENTS_DIR, AgentsStorageService } from "./agents.storage.service"
 import { CategoriesController } from "./categories.controller"
@@ -18,16 +18,13 @@ import { CategoriesStorageService } from "./categories.storage.service"
  * `data/agents` wherever the process happened to start.
  */
 export function resolveAgentsDir(): string {
-  return process.env.AGENTS_DIR ?? path.resolve(__dirname, "..", "..", "data", "agents")
+  return process.env.AGENTS_DIR ?? dataDir("agents")
 }
 
 /** Default directory for run artifacts (logs + per-run sandboxes); a sibling of the
  * agents dir, resolved the same way so dev and the test runner agree. */
 export function resolveRunsDir(): string {
-  return (
-    process.env.AGENT_RUNS_DIR ??
-    path.resolve(__dirname, "..", "..", "data", "agents", "runs")
-  )
+  return process.env.AGENT_RUNS_DIR ?? dataDir("agents", "runs")
 }
 
 @Module({

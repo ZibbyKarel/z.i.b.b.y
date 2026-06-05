@@ -23,7 +23,11 @@ import { fileURLToPath } from "node:url"
 import matter from "gray-matter"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DATA = path.resolve(__dirname, "..", "data")
+// Honors the same `ZIBBY_DATA_DIR` switch as the API so `seed:test` lands the
+// demo data in the test root instead of the live/dev one.
+const DATA = process.env.ZIBBY_DATA_DIR
+  ? path.resolve(process.env.ZIBBY_DATA_DIR)
+  : path.resolve(__dirname, "..", "data")
 const dir = (...p) => path.join(DATA, ...p)
 
 const now = Date.now()
