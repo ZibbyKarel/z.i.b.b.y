@@ -20,7 +20,7 @@ import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
-import { PROJECTS } from "../../state/config";
+import { useRunTargetProjects } from "../projects/useRunTargetProjects";
 import { agentFile, newAgentDraft, slugifyAgent } from "./agentDraft";
 import { useAgentsQuery, useCategoriesQuery } from "./queries";
 import {
@@ -45,6 +45,7 @@ export function Screen() {
   const createCategory = useCreateCategoryMutation();
   const deleteCategory = useDeleteCategoryMutation();
   const startAgentRun = useStartAgentRunMutation();
+  const runProjects = useRunTargetProjects();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Agent | null>(null);
   const [runAgent, setRunAgent] = useState<Agent | null>(null);
@@ -228,7 +229,7 @@ export function Screen() {
           onLaunch={({ agent, prompt, project }) =>
             startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project } })
           }
-          projects={[...PROJECTS]}
+          projects={runProjects}
         />
       )}
     </PageContainer>

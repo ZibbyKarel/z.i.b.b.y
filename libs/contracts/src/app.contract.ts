@@ -6,10 +6,15 @@ import { gatesContract } from "./gates/gate.contract"
 import { gateRulesContract } from "./gates/gate-rules.contract"
 import { automationsContract } from "./automations/automations.contract"
 import { memoryContract } from "./memory/memory.contract"
-import { categoriesContract } from "./categories/categories.contract"
+import {
+  categoriesContract,
+  projectCategoriesContract,
+  skillCategoriesContract,
+} from "./categories/categories.contract"
 import { healthContract } from "./health/health.contract"
 import { limitsContract } from "./limits/limits.contract"
 import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract"
+import { projectsContract } from "./projects/projects.contract"
 import { skillRunsContract, skillsContract } from "./skills/skills.contract"
 
 const c = initContract()
@@ -27,6 +32,9 @@ export const appContract = c.router({
   categories: categoriesContract,
   skills: skillsContract,
   skillRuns: skillRunsContract,
+  skillCategories: skillCategoriesContract,
+  projects: projectsContract,
+  projectCategories: projectCategoriesContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract,
   approvals: approvalsContract,

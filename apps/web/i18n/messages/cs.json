@@ -10,7 +10,8 @@
     "automations": "Automatizace",
     "memory": "Paměť",
     "runs": "Běhy & aktivita",
-    "settings": "Nastavení systému"
+    "settings": "Nastavení systému",
+    "projects": "Projekty"
   },
   "common": {
     "stop": "Zastavit",
@@ -117,7 +118,25 @@
     "sectionLabel": "Skilly",
     "emptyTitle": "Zatím žádné skilly",
     "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit.",
-    "emptyHint": "// vytvoří ~/zibby/skills/'<název>'/SKILL.md"
+    "emptyHint": "// vytvoří ~/zibby/skills/'<název>'/SKILL.md",
+    "title": "Skilly",
+    "countSummary": "{count, plural, =0 {žádné skilly} one {# skill} few {# skilly} other {# skillů}} · soubory SKILL.md spustitelné na pozadí",
+    "addCategory": "Přidat kategorii",
+    "fields": {
+      "category": "Kategorie"
+    },
+    "categoryDialog": {
+      "title": "Nová kategorie",
+      "subtitle": "název + glyph",
+      "nameLabel": "Název kategorie",
+      "namePlaceholder": "např. Média",
+      "glyphLabel": "Glyph",
+      "duplicate": "Kategorie „{name}“ už existuje."
+    },
+    "deleteEmptyCategory": "Smazat",
+    "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
+    "emptyCategory": "Prázdná kategorie — přidej sem skill, nebo ji smaž.",
+    "uncategorized": "Bez kategorie"
   },
   "agents": {
     "addAgent": "Přidat agenta",
@@ -327,9 +346,23 @@
     "previewTotal": "Celkem k platbě",
     "previewTargets": "cíle mazání",
     "previewSendTo": "odeslat →",
-    "risk": { "platba": "platba", "mazani": "mazání", "push": "push", "odeslani": "odeslání" },
-    "severity": { "low": "nízká", "medium": "střední", "high": "vysoká" },
-    "actorKind": { "skill": "skill", "agent": "agent", "pipeline": "pipeline", "pipeline-stage": "pipeline" }
+    "risk": {
+      "platba": "platba",
+      "mazani": "mazání",
+      "push": "push",
+      "odeslani": "odeslání"
+    },
+    "severity": {
+      "low": "nízká",
+      "medium": "střední",
+      "high": "vysoká"
+    },
+    "actorKind": {
+      "skill": "skill",
+      "agent": "agent",
+      "pipeline": "pipeline",
+      "pipeline-stage": "pipeline"
+    }
   },
   "settings": {
     "title": "Nastavení systému",
@@ -377,7 +410,11 @@
       "error": "chyba",
       "interrupted": "přerušeno"
     },
-    "kind": { "skill": "skill", "agent": "agent", "pipeline": "pipeline" }
+    "kind": {
+      "skill": "skill",
+      "agent": "agent",
+      "pipeline": "pipeline"
+    }
   },
   "gates": {
     "title": "Pravidla schvalování",
@@ -419,19 +456,89 @@
     "cancel": "Zrušit",
     "saveRule": "Uložit pravidlo",
     "matchType": "Matcher",
-    "matcher": { "tool": "Nástroj", "action": "Akce", "threshold": "Práh", "scope": "Rozsah", "context": "Kontext" },
-    "matchValue": { "tool": "Nástroj", "action": "Sloveso akce", "scope": "Rozsah", "context": "Kontext" },
-    "matchPlaceholder": { "tool": "bash", "action": "purchase", "scope": "feature/*", "context": "work" },
+    "matcher": {
+      "tool": "Nástroj",
+      "action": "Akce",
+      "threshold": "Práh",
+      "scope": "Rozsah",
+      "context": "Kontext"
+    },
+    "matchValue": {
+      "tool": "Nástroj",
+      "action": "Sloveso akce",
+      "scope": "Rozsah",
+      "context": "Kontext"
+    },
+    "matchPlaceholder": {
+      "tool": "bash",
+      "action": "purchase",
+      "scope": "feature/*",
+      "context": "work"
+    },
     "branch": "Cíl / větev (volitelně)",
     "metric": "Metrika",
     "op": "Op",
     "value": "Hodnota",
     "decision": "Rozhodnutí",
-    "decision_": { "allow": "allow", "notify": "notify", "ask": "ask", "deny": "deny" },
-    "decisionHint": { "allow": "tiše provede", "notify": "provede + zaloguje", "ask": "pozastaví → zeptá se (GATED)", "deny": "nikdy neprovede" },
+    "decision_": {
+      "allow": "allow",
+      "notify": "notify",
+      "ask": "ask",
+      "deny": "deny"
+    },
+    "decisionHint": {
+      "allow": "tiše provede",
+      "notify": "provede + zaloguje",
+      "ask": "pozastaví → zeptá se (GATED)",
+      "deny": "nikdy neprovede"
+    },
     "resolveBy": "Vyřeší",
-    "resolve": { "human": "Ty (člověk)", "check": "Automatická kontrola", "agent": "Revizní agent" },
+    "resolve": {
+      "human": "Ty (člověk)",
+      "check": "Automatická kontrola",
+      "agent": "Revizní agent"
+    },
     "resolveAgent": "Agent",
     "resolveCheck": "Kontrola"
+  },
+  "projects": {
+    "title": "Projekty",
+    "countSummary": "{count, plural, =0 {žádné projekty} one {# projekt} few {# projekty} other {# projektů}} · cílové adresáře pro spouštění agentů a skillů",
+    "addProject": "Přidat projekt",
+    "addCategory": "Přidat kategorii",
+    "openAria": "Otevřít {name}",
+    "emptyTitle": "Zatím žádné projekty",
+    "emptyDescription": "Projekty jsou cílové adresáře, proti kterým běží agenti a skilly. Přidej první a objeví se tu jako karta s cestou a kategorií.",
+    "emptyHint": "// registr ~/zibby/projects.json",
+    "emptyCategory": "Prázdná kategorie — přidej sem projekt, nebo ji smaž.",
+    "uncategorized": "Bez kategorie",
+    "deleteEmptyCategory": "Smazat",
+    "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
+    "newProject": "Nový projekt",
+    "create": "Vytvořit projekt",
+    "save": "Uložit změny",
+    "delete": "Smazat",
+    "deleteTitle": "Smazat projekt?",
+    "deleteBody": "Opravdu smazat projekt {name}? Soubory na disku zůstanou, odebere se jen záznam z velínu.",
+    "modalSubtitle": "název · cesta · kategorie · popis",
+    "fields": {
+      "name": "Název projektu",
+      "namePlaceholder": "media-vault",
+      "path": "Cesta k rootu",
+      "pathHint": "Na hostitelském systému.",
+      "pathPlaceholder": "~/Projects/media-vault",
+      "category": "Kategorie",
+      "desc": "Popis",
+      "descPlaceholder": "Čím se projekt zabývá",
+      "context": "Kontext"
+    },
+    "categoryDialog": {
+      "title": "Nová kategorie",
+      "subtitle": "název + glyph",
+      "nameLabel": "Název kategorie",
+      "namePlaceholder": "např. Vývoj",
+      "glyphLabel": "Glyph",
+      "duplicate": "Kategorie „{name}“ už existuje."
+    }
   }
 }

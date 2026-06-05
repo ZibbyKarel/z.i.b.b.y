@@ -1,6 +1,8 @@
 import * as path from "node:path"
 import { Module } from "@nestjs/common"
 import { ApprovalsModule } from "../approvals/approvals.module"
+import { SkillCategoriesController } from "./skill-categories.controller"
+import { SkillCategoriesStorageService } from "./skill-categories.storage.service"
 import { SKILL_RUNS_DIR, SkillRunnerService } from "./skill-runner.service"
 import { SkillRunsController } from "./skill-runs.controller"
 import { SkillsController } from "./skills.controller"
@@ -20,16 +22,18 @@ export function resolveSkillRunsDir(): string {
 
 @Module({
   imports: [ApprovalsModule],
-  // SkillRunsController is declared before SkillsController so its static routes
-  // (`GET /skills/running`, `/skills/runs/:runId`) register ahead of `/skills/:id`,
-  // which would otherwise capture "running"/"runs" as a skill id.
-  controllers: [SkillRunsController, SkillsController],
+  // SkillCategoriesController and SkillRunsController are declared before
+  // SkillsController so their static routes (`GET /skills/categories`,
+  // `GET /skills/running`, `/skills/runs/:runId`) register ahead of `/skills/:id`,
+  // which would otherwise capture "categories"/"running"/"runs" as a skill id.
+  controllers: [SkillCategoriesController, SkillRunsController, SkillsController],
   providers: [
     { provide: SKILLS_DIR, useFactory: resolveSkillsDir },
     { provide: SKILL_RUNS_DIR, useFactory: resolveSkillRunsDir },
     SkillsStorageService,
+    SkillCategoriesStorageService,
     SkillRunnerService,
   ],
-  exports: [SkillsStorageService, SkillRunnerService],
+  exports: [SkillsStorageService, SkillCategoriesStorageService, SkillRunnerService],
 })
 export class SkillsModule {}

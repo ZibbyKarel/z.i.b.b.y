@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { CategorySchema, categoriesContract } from "../index"
+import {
+  CategorySchema,
+  categoriesContract,
+  projectCategoriesContract,
+  skillCategoriesContract,
+} from "../index"
 
 describe("categoriesContract", () => {
   it("lists categories under GET /api/agents/categories", () => {
@@ -20,6 +25,16 @@ describe("categoriesContract", () => {
     expect(categoriesContract.deleteCategory.path).toBe("/api/agents/categories/:name")
     expect(categoriesContract.deleteCategory.responses).toHaveProperty("404")
     expect(categoriesContract.deleteCategory.responses).toHaveProperty("409")
+  })
+
+  it("nests the skill taxonomy under /api/skills/categories", () => {
+    expect(skillCategoriesContract.listCategories.path).toBe("/api/skills/categories")
+    expect(skillCategoriesContract.deleteCategory.path).toBe("/api/skills/categories/:name")
+  })
+
+  it("nests the project taxonomy under /api/projects/categories", () => {
+    expect(projectCategoriesContract.listCategories.path).toBe("/api/projects/categories")
+    expect(projectCategoriesContract.deleteCategory.path).toBe("/api/projects/categories/:name")
   })
 })
 

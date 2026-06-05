@@ -16,6 +16,8 @@ export interface Skill {
   name: string;
   glyph: IconName;
   desc: string;
+  /** Functional category grouping the skill catalog (`GET /api/skills/categories`). */
+  category?: string;
   /** Path to the backing SKILL.md on disk. */
   file: string;
   /** Ids of linked global gate rules (the "Pravidla schvalování" catalog). */

@@ -10,7 +10,8 @@
     "automations": "Automations",
     "memory": "Memory",
     "runs": "Runs & activity",
-    "settings": "System settings"
+    "settings": "System settings",
+    "projects": "Projects"
   },
   "common": {
     "stop": "Stop",
@@ -117,7 +118,25 @@
     "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card with a Run button.",
-    "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md"
+    "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md",
+    "title": "Skills",
+    "countSummary": "{count, plural, =0 {no skills} one {# skill} other {# skills}} · SKILL.md files runnable in the background",
+    "addCategory": "Add category",
+    "fields": {
+      "category": "Category"
+    },
+    "categoryDialog": {
+      "title": "New category",
+      "subtitle": "name + glyph",
+      "nameLabel": "Category name",
+      "namePlaceholder": "e.g. Media",
+      "glyphLabel": "Glyph",
+      "duplicate": "Category “{name}” already exists."
+    },
+    "deleteEmptyCategory": "Delete",
+    "deleteEmptyCategoryAria": "Delete empty category {name}",
+    "emptyCategory": "Empty category — add a skill or delete it.",
+    "uncategorized": "Uncategorized"
   },
   "agents": {
     "addAgent": "Add agent",
@@ -327,9 +346,23 @@
     "previewTotal": "Total to pay",
     "previewTargets": "delete targets",
     "previewSendTo": "send →",
-    "risk": { "platba": "payment", "mazani": "delete", "push": "push", "odeslani": "send" },
-    "severity": { "low": "low", "medium": "medium", "high": "high" },
-    "actorKind": { "skill": "skill", "agent": "agent", "pipeline": "pipeline", "pipeline-stage": "pipeline" }
+    "risk": {
+      "platba": "payment",
+      "mazani": "delete",
+      "push": "push",
+      "odeslani": "send"
+    },
+    "severity": {
+      "low": "low",
+      "medium": "medium",
+      "high": "high"
+    },
+    "actorKind": {
+      "skill": "skill",
+      "agent": "agent",
+      "pipeline": "pipeline",
+      "pipeline-stage": "pipeline"
+    }
   },
   "settings": {
     "title": "System settings",
@@ -377,7 +410,11 @@
       "error": "error",
       "interrupted": "interrupted"
     },
-    "kind": { "skill": "skill", "agent": "agent", "pipeline": "pipeline" }
+    "kind": {
+      "skill": "skill",
+      "agent": "agent",
+      "pipeline": "pipeline"
+    }
   },
   "gates": {
     "title": "Approval rules",
@@ -419,19 +456,89 @@
     "cancel": "Cancel",
     "saveRule": "Save rule",
     "matchType": "Matcher",
-    "matcher": { "tool": "Tool", "action": "Action", "threshold": "Threshold", "scope": "Scope", "context": "Context" },
-    "matchValue": { "tool": "Tool", "action": "Action verb", "scope": "Scope", "context": "Context" },
-    "matchPlaceholder": { "tool": "bash", "action": "purchase", "scope": "feature/*", "context": "work" },
+    "matcher": {
+      "tool": "Tool",
+      "action": "Action",
+      "threshold": "Threshold",
+      "scope": "Scope",
+      "context": "Context"
+    },
+    "matchValue": {
+      "tool": "Tool",
+      "action": "Action verb",
+      "scope": "Scope",
+      "context": "Context"
+    },
+    "matchPlaceholder": {
+      "tool": "bash",
+      "action": "purchase",
+      "scope": "feature/*",
+      "context": "work"
+    },
     "branch": "Target / branch (optional)",
     "metric": "Metric",
     "op": "Op",
     "value": "Value",
     "decision": "Decision",
-    "decision_": { "allow": "allow", "notify": "notify", "ask": "ask", "deny": "deny" },
-    "decisionHint": { "allow": "runs silently", "notify": "runs + logs", "ask": "pauses → asks (GATED)", "deny": "never runs" },
+    "decision_": {
+      "allow": "allow",
+      "notify": "notify",
+      "ask": "ask",
+      "deny": "deny"
+    },
+    "decisionHint": {
+      "allow": "runs silently",
+      "notify": "runs + logs",
+      "ask": "pauses → asks (GATED)",
+      "deny": "never runs"
+    },
     "resolveBy": "Resolve by",
-    "resolve": { "human": "You (human)", "check": "Automated check", "agent": "Reviewing agent" },
+    "resolve": {
+      "human": "You (human)",
+      "check": "Automated check",
+      "agent": "Reviewing agent"
+    },
     "resolveAgent": "Agent",
     "resolveCheck": "Check"
+  },
+  "projects": {
+    "title": "Projects",
+    "countSummary": "{count, plural, =0 {no projects} one {# project} other {# projects}} · target directories for running agents and skills",
+    "addProject": "Add project",
+    "addCategory": "Add category",
+    "openAria": "Open {name}",
+    "emptyTitle": "No projects yet",
+    "emptyDescription": "Projects are the target directories agents and skills run against. Add the first one and it appears here as a card with its path and category.",
+    "emptyHint": "// registry ~/zibby/projects.json",
+    "emptyCategory": "Empty category — add a project or delete it.",
+    "uncategorized": "Uncategorized",
+    "deleteEmptyCategory": "Delete",
+    "deleteEmptyCategoryAria": "Delete empty category {name}",
+    "newProject": "New project",
+    "create": "Create project",
+    "save": "Save changes",
+    "delete": "Delete",
+    "deleteTitle": "Delete project?",
+    "deleteBody": "Delete project {name}? The files on disk stay; only the registry record is removed.",
+    "modalSubtitle": "name · path · category · description",
+    "fields": {
+      "name": "Project name",
+      "namePlaceholder": "media-vault",
+      "path": "Root path",
+      "pathHint": "On the host system.",
+      "pathPlaceholder": "~/Projects/media-vault",
+      "category": "Category",
+      "desc": "Description",
+      "descPlaceholder": "What the project is about",
+      "context": "Context"
+    },
+    "categoryDialog": {
+      "title": "New category",
+      "subtitle": "name + glyph",
+      "nameLabel": "Category name",
+      "namePlaceholder": "e.g. Dev",
+      "glyphLabel": "Glyph",
+      "duplicate": "Category “{name}” already exists."
+    }
   }
 }

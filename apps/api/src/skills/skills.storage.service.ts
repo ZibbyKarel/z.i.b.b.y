@@ -93,6 +93,7 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> implements 
     if (typeof data.name === "string") candidate.name = data.name
     if (typeof data.glyph === "string") candidate.glyph = data.glyph
     if (typeof data.desc === "string") candidate.desc = data.desc
+    if (typeof data.category === "string") candidate.category = data.category
     if (typeof data.requires_approval === "boolean") candidate.requires_approval = data.requires_approval
     if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk
 
@@ -105,6 +106,7 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> implements 
     const data: Record<string, unknown> = { name: skill.name ?? skill.id }
     if (skill.glyph !== undefined) data.glyph = skill.glyph
     if (skill.desc !== undefined) data.desc = skill.desc
+    if (skill.category !== undefined) data.category = skill.category
     if (skill.requires_approval !== undefined) data.requires_approval = skill.requires_approval
     if (skill.risk !== undefined) data.risk = skill.risk
     return data
