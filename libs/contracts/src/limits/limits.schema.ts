@@ -4,13 +4,16 @@ import { z } from "zod"
  * Utilization of one interactive Claude window (the rolling 5-hour bucket and
  * the weekly bucket), as a whole percent in `[0, 100]`. This is the *server*-
  * computed utilization Anthropic returns in the `anthropic-ratelimit-unified-*`
- * response headers and surfaces to Claude Code's status line — not a local
- * token estimate. The backend reads it from the status-line capture file; see
- * `RateLimitsReader`. Locale- and format-agnostic on purpose: the backend owns
- * the number, the frontend owns the words.
+ * response headers — not a local token estimate. The backend reads it live off a
+ * minimal `/v1/messages` response (those same headers), falling back to the
+ * status-line capture file; see `UsageFetcher` / `RateLimitsReader`. `resetsAt`
+ * is when this window's utilization resets (epoch ms), or `null` when no reset is
+ * known. Locale- and format-agnostic on purpose: the backend owns the numbers,
+ * the frontend owns the words.
  */
 export const LimitWindowSchema = z.object({
   usedPct: z.number().min(0).max(100),
+  resetsAt: z.number().int().nonnegative().nullable(),
 })
 export type LimitWindow = z.infer<typeof LimitWindowSchema>
 

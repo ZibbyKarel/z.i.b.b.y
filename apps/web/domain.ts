@@ -31,7 +31,13 @@ export interface Skill {
  * (see NEXT-STEPS), at which point this — and the `Skill` type — go away.
  */
 export function skillToAgent(s: Skill): Agent {
-  return { id: s.id, name: s.name, glyph: s.glyph, description: s.desc, instructions: "" };
+  return {
+    id: s.id,
+    name: s.name,
+    glyph: s.glyph,
+    description: s.desc,
+    instructions: "",
+  };
 }
 
 export interface Approval {
@@ -51,21 +57,6 @@ export interface ActivityEvent {
   icon: ActivityIcon;
   text: string;
   sub: string;
-}
-
-export interface QuotaLimit {
-  label: MessageKey;
-  short: MessageKey;
-  usedPct: number;
-  resetIn: MessageKey;
-  /** Freshness of the reading (`limits.live` / `limits.stale`) — the status-line
-   * capture only updates while Claude Code is rendering. */
-  age: MessageKey;
-}
-
-export interface ClaudeLimits {
-  rolling: QuotaLimit;
-  weekly: QuotaLimit;
 }
 
 export interface AgentSdkCredit {
@@ -137,5 +128,8 @@ export interface SystemStatus {
 
 /** Glyph for an agent name, falling back to a generic bot. */
 export function glyphForAgent(name: string, agents: Agent[]): IconName {
-  return (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ?? "bot";
+  return (
+    (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ??
+    "bot"
+  );
 }

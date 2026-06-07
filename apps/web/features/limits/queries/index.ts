@@ -1,1 +1,1 @@
-export { getLimitsQueryKey, useLimitsQuery, type LimitsView } from "./useLimitsQuery";
+export { getLimitsQueryKey, useLimitsQuery } from "./useLimitsQuery";

@@ -7,7 +7,11 @@ import { Injectable, Logger } from "@nestjs/common"
 export interface RateLimitSnapshot {
   rolling5hPct: number
   weekly7dPct: number
-  /** When Claude Code last wrote the reading (epoch ms), or null if never. */
+  /** When the rolling 5h window's utilization resets (epoch ms), or null if unknown. */
+  rolling5hResetsAt: number | null
+  /** When the weekly window's utilization resets (epoch ms), or null if unknown. */
+  weekly7dResetsAt: number | null
+  /** When the reading was taken (epoch ms), or null if never. */
   capturedAt: number | null
   /** No fresh reading: either nothing captured yet or the capture has aged out. */
   stale: boolean
@@ -24,6 +28,8 @@ export const STALE_AFTER_MS = 10 * 60 * 1000
 const UNKNOWN: RateLimitSnapshot = {
   rolling5hPct: 0,
   weekly7dPct: 0,
+  rolling5hResetsAt: null,
+  weekly7dResetsAt: null,
   capturedAt: null,
   stale: true,
 }
@@ -40,9 +46,15 @@ export function claudeConfigDir(): string {
 }
 
 /** Round + clamp an unknown value to a `[0, 100]` whole percent; 0 if not a number. */
-function clampPct(v: unknown): number {
+export function clampPct(v: unknown): number {
   if (typeof v !== "number" || Number.isNaN(v)) return 0
   return Math.min(100, Math.max(0, Math.round(v)))
+}
+
+/** A `resets_at` epoch-seconds field → epoch ms, or null if absent/non-numeric. */
+function resetMs(v: unknown): number | null {
+  if (typeof v !== "number" || Number.isNaN(v)) return null
+  return Math.round(v * 1000)
 }
 
 /**
@@ -73,6 +85,8 @@ export function parseRateLimits(raw: string, now: number): RateLimitSnapshot {
   return {
     rolling5hPct: clampPct(five?.used_percentage),
     weekly7dPct: clampPct(seven?.used_percentage),
+    rolling5hResetsAt: resetMs(five?.resets_at),
+    weekly7dResetsAt: resetMs(seven?.resets_at),
     capturedAt,
     stale,
   }

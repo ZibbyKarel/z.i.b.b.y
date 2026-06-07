@@ -5,6 +5,7 @@ import type { IntendedAction } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
+import { LimitsService } from "../limits/limits.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
@@ -40,9 +41,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
     private readonly claude: ClaudeRunCommandService,
+    private readonly limits: LimitsService,
   ) {
     this.dir = path.resolve(dir)
-    this.core = new RunnerCore(this.dir, agentStrategy)
+    // Layer 2: a usage-limit signal in a run's output busts the limits cache so the
+    // next /api/limits read re-fetches the authoritative percentages.
+    this.core = new RunnerCore(this.dir, agentStrategy, () => this.limits.noteLimitHit())
   }
 
   /** Rebuild the registry from disk and register for approval decisions on agent runs. */

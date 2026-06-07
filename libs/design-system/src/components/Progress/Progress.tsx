@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
-import { cn } from "../../utils/cn";
 import { type Spacing, spacingToPx } from "../../tokens";
+import { cn } from "../../utils/cn";
 
 export type ProgressTone = "accent" | "ok" | "warn" | "bad";
 
@@ -76,7 +76,7 @@ export function Progress({
 }
 
 /** Maps a usage percentage to a traffic-light tone. */
-export function usageTone(pct: number): ProgressTone {
+export function getUsageTone(pct: number): ProgressTone {
   if (pct >= 85) return "bad";
   if (pct >= 60) return "warn";
   return "ok";

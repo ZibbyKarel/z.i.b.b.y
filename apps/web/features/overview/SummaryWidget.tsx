@@ -7,7 +7,7 @@ import {
   Stat,
   StatusDot,
   Typography,
-  usageTone,
+  getUsageTone,
 } from "@zibby/design-system";
 import { MessageKey } from "apps/web/i18n/keys";
 import { useTranslations } from "next-intl";
@@ -43,7 +43,7 @@ export function SummaryWidget() {
     ? "overview.daemonReady"
     : "overview.apiUnreachable";
 
-  const sdkTone = usageTone(AGENT_SDK.usedPct);
+  const sdkTone = getUsageTone(AGENT_SDK.usedPct);
 
   const ctxSkills = skills.length;
   const ctxPipelines = pipelines.length;

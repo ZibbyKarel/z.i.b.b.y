@@ -32,9 +32,24 @@ describe("parseRateLimits", () => {
     expect(parseRateLimits(capture({}), now)).toEqual({
       rolling5hPct: 3,
       weekly7dPct: 8,
+      rolling5hResetsAt: null,
+      weekly7dResetsAt: null,
       capturedAt: now,
       stale: false,
     })
+  })
+
+  it("reads resets_at (epoch seconds) into epoch-ms reset times", () => {
+    const raw = JSON.stringify({
+      rateLimits: {
+        five_hour: { used_percentage: 3, resets_at: 1_780_833_600 },
+        seven_day: { used_percentage: 8, resets_at: 1_780_862_400 },
+      },
+      capturedAt: now,
+    })
+    const snap = parseRateLimits(raw, now)
+    expect(snap.rolling5hResetsAt).toBe(1_780_833_600_000)
+    expect(snap.weekly7dResetsAt).toBe(1_780_862_400_000)
   })
 
   it("rounds and clamps out-of-range percentages", () => {
@@ -55,13 +70,22 @@ describe("parseRateLimits", () => {
 
   it("treats a missing rate_limits block as unknown (stale)", () => {
     const snap = parseRateLimits(JSON.stringify({ rateLimits: null, capturedAt: now }), now)
-    expect(snap).toEqual({ rolling5hPct: 0, weekly7dPct: 0, capturedAt: now, stale: true })
+    expect(snap).toEqual({
+      rolling5hPct: 0,
+      weekly7dPct: 0,
+      rolling5hResetsAt: null,
+      weekly7dResetsAt: null,
+      capturedAt: now,
+      stale: true,
+    })
   })
 
   it("degrades malformed JSON to unknown rather than throwing", () => {
     expect(parseRateLimits("not json", now)).toEqual({
       rolling5hPct: 0,
       weekly7dPct: 0,
+      rolling5hResetsAt: null,
+      weekly7dResetsAt: null,
       capturedAt: null,
       stale: true,
     })

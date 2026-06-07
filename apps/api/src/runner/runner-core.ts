@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto"
 import { type WriteStream, createWriteStream } from "node:fs"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
+import { detectLimit } from "./detect-limit"
 import type {
   BaseRun,
   KindStrategy,
@@ -63,6 +64,12 @@ export class RunnerCore<R extends BaseRun> {
   constructor(
     dir: string,
     private readonly strategy: KindStrategy<R>,
+    /**
+     * Layer 2 of the limit tracker: called the first time a run's output carries a
+     * usage-limit signal (with its reset epoch ms when the output named one). The
+     * agent runner wires this to bust the limits cache; other runners omit it.
+     */
+    private readonly onLimitHit?: (resetsAt: number | null) => void,
   ) {
     this.dir = path.resolve(dir)
   }
@@ -320,6 +327,7 @@ export class RunnerCore<R extends BaseRun> {
     const { child, log, run } = handle
     if (!child || !log) return
 
+    let limitSeen = false
     const onChunk = (buf: Buffer) => {
       const text = buf.toString("utf8")
       log.write(text)
@@ -327,6 +335,14 @@ export class RunnerCore<R extends BaseRun> {
         const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
         if (match?.[1] !== undefined) {
           run.pct = Math.min(100, Math.max(0, Number(match[1])))
+        }
+      }
+      // Layer 2: a usage-limit signal in the output busts the limits cache (once).
+      if (!limitSeen && this.onLimitHit) {
+        const { hit, resetsAt } = detectLimit(text)
+        if (hit) {
+          limitSeen = true
+          this.onLimitHit(resetsAt)
         }
       }
     }

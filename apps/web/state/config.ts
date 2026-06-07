@@ -5,7 +5,7 @@
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
-import type { AgentSdkCredit, ClaudeLimits } from "../domain";
+import type { AgentSdkCredit } from "../domain";
 
 export const PROJECTS = [
   "zibby-core",
@@ -26,17 +26,17 @@ export interface NavConfig {
 }
 
 export const NAV_ITEMS = [
-  { id: "overview",     glyph: "grid",       href: "/overview" },
-  { id: "approvals",    glyph: "shield",     href: "/approvals" },
-  { id: "gates",        glyph: "checkpoint", href: "/gates" },
-  { id: "skills",       glyph: "spark",      href: "/skills" },
-  { id: "agents",       glyph: "bot",   href: "/agents" },
-  { id: "projects",     glyph: "code",  href: "/projects" },
-  { id: "pipelines",    glyph: "flow",  href: "/pipelines" },
-  { id: "integrations", glyph: "plug",  href: "/integrations" },
-  { id: "automations",  glyph: "clock", href: "/automations" },
-  { id: "memory",       glyph: "brain", href: "/memory" },
-  { id: "runs",         glyph: "pulse", href: "/runs" },
+  { id: "overview", glyph: "grid", href: "/overview" },
+  { id: "approvals", glyph: "shield", href: "/approvals" },
+  { id: "gates", glyph: "checkpoint", href: "/gates" },
+  { id: "skills", glyph: "spark", href: "/skills" },
+  { id: "agents", glyph: "bot", href: "/agents" },
+  { id: "projects", glyph: "code", href: "/projects" },
+  { id: "pipelines", glyph: "flow", href: "/pipelines" },
+  { id: "integrations", glyph: "plug", href: "/integrations" },
+  { id: "automations", glyph: "clock", href: "/automations" },
+  { id: "memory", glyph: "brain", href: "/memory" },
+  { id: "runs", glyph: "pulse", href: "/runs" },
 ] as const satisfies readonly NavConfig[];
 
 export const SETTINGS_ITEM = {
@@ -50,7 +50,9 @@ export const SETTINGS_ITEM = {
  * double as keys under the `nav.<id>` message catalog, so typing them as a
  * union lets `t(navId)` be validated at compile time.
  */
-export type NavId = (typeof NAV_ITEMS)[number]["id"] | (typeof SETTINGS_ITEM)["id"];
+export type NavId =
+  | (typeof NAV_ITEMS)[number]["id"]
+  | (typeof SETTINGS_ITEM)["id"];
 
 export const MODEL_OPTIONS: SelectOption[] = [
   { value: "opus", label: "opus" },
@@ -63,33 +65,6 @@ export const THINKING_OPTIONS: SelectOption[] = [
   { value: "medium", label: "medium" },
   { value: "low", label: "low" },
 ];
-
-/**
- * Quota widget data for a fresh system: nothing has run yet, so interactive
- * limits are at zero and the Agent SDK credit is full.
- */
-/**
- * `label`, `short`, `resetIn` and `age` hold message-catalog keys (resolved with
- * the `limits.*` namespace at render), not display text — keeps this data module
- * free of UI strings. `usedPct` stays raw. This is the zero-usage fallback shown
- * before the first poll, so it reads as `stale` (no live capture yet).
- */
-export const CLAUDE_LIMITS: ClaudeLimits = {
-  rolling: {
-    label: "limits.rollingLabel",
-    short: "limits.rollingShort",
-    usedPct: 0,
-    resetIn: "limits.rollingReset",
-    age: "limits.stale",
-  },
-  weekly: {
-    label: "limits.weeklyLabel",
-    short: "limits.weeklyShort",
-    usedPct: 0,
-    resetIn: "limits.weeklyReset",
-    age: "limits.stale",
-  },
-};
 
 /**
  * Agent catalog categories are now a dynamic, user-managed taxonomy served by

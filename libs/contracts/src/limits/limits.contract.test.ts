@@ -11,8 +11,8 @@ describe("limitsContract", () => {
 
 describe("limits schema", () => {
   const ok = {
-    rolling: { usedPct: 3 },
-    weekly: { usedPct: 8 },
+    rolling: { usedPct: 3, resetsAt: 1_780_000_000_000 },
+    weekly: { usedPct: 8, resetsAt: null },
     capturedAt: 1_780_000_000_000,
     stale: false,
   }
@@ -26,8 +26,12 @@ describe("limits schema", () => {
   })
 
   it("rejects an out-of-range percent or a missing freshness flag", () => {
-    expect(LimitsSchema.safeParse({ ...ok, rolling: { usedPct: 120 } }).success).toBe(false)
-    expect(LimitsSchema.safeParse({ ...ok, rolling: { usedPct: -1 } }).success).toBe(false)
+    expect(LimitsSchema.safeParse({ ...ok, rolling: { usedPct: 120, resetsAt: null } }).success).toBe(
+      false,
+    )
+    expect(LimitsSchema.safeParse({ ...ok, rolling: { usedPct: -1, resetsAt: null } }).success).toBe(
+      false,
+    )
     const noStale = { rolling: ok.rolling, weekly: ok.weekly, capturedAt: ok.capturedAt }
     expect(LimitsSchema.safeParse(noStale).success).toBe(false)
   })

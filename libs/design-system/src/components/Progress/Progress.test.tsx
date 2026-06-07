@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Progress, ProgressTestId, usageTone } from "./Progress";
+import { Progress, ProgressTestId, getUsageTone } from "./Progress";
 
 describe("Progress", () => {
   it("exposes a progressbar role when labelled", () => {
@@ -13,7 +13,10 @@ describe("Progress", () => {
 
   it("clamps values to 0–100", () => {
     render(<Progress label="over" value={150} />);
-    expect(screen.getByTestId(ProgressTestId.Root)).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByTestId(ProgressTestId.Root)).toHaveAttribute(
+      "aria-valuenow",
+      "100",
+    );
   });
 
   it("renders no progressbar role without a label", () => {
@@ -24,8 +27,8 @@ describe("Progress", () => {
 
 describe("usageTone", () => {
   it("maps usage to traffic-light tones", () => {
-    expect(usageTone(10)).toBe("ok");
-    expect(usageTone(70)).toBe("warn");
-    expect(usageTone(90)).toBe("bad");
+    expect(getUsageTone(10)).toBe("ok");
+    expect(getUsageTone(70)).toBe("warn");
+    expect(getUsageTone(90)).toBe("bad");
   });
 });
