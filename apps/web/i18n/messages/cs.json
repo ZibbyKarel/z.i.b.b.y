@@ -34,6 +34,18 @@
     "navLabel": "Hlavní navigace",
     "tagline": "Zestful Intuitive Brainy Butler for You"
   },
+  "loading": {
+    "tagline": "Inteligentní automatizační platforma",
+    "version": "v2.4.1 · BUILD 2026.06",
+    "init": "Spouštím jádro systému…",
+    "registry": "Načítám registr agentů…",
+    "channel": "Navazuji zabezpečený kanál…",
+    "orchestrator": "Připojuji orchestrátor pipeline…",
+    "knowledge": "Synchronizuji znalostní bázi…",
+    "gates": "Kalibruji schvalovací pravidla…",
+    "inference": "Zahřívám inferenční endpointy…",
+    "ready": "Systém připraven."
+  },
   "placeholder": {
     "body": "Tahle obrazovka je další na řadě. Drží stejný vzor — karty (= soubory na disku) → čudlík → modal s promptem → běh na pozadí.",
     "hint": "// v přípravě"

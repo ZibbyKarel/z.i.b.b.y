@@ -1,5 +1,7 @@
+import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Container, Icon, Stack, Typography } from "@zibby/design-system";
+import { Container, Stack, Typography } from "@zibby/design-system";
+import Link from "next/link";
 
 function Sep() {
   return (
@@ -12,25 +14,44 @@ function Sep() {
 export function BrandLogo() {
   const t = useTranslations("sidebar");
   return (
-    <Container padding={["50", "75", "300", "75"]}>
-      <Stack gap="100">
-        <Stack align="center" direction="row" gap="150">
-          <Icon name="butlerSign" size="xl" />
-          <Typography mono as="div" size="2xl" tracking="mono" type="subtitle" weight="bold">
-            Z<Sep />I<Sep />B<Sep />B<Sep />Y
+    <Link href="/overview">
+      <Container padding={["0", "0", "200", "0"]} textAlign="center">
+        <Stack align="center" justify="center">
+          <Image
+            priority
+            alt="ZIBBY"
+            height={90}
+            src="/z.i.b.b.y-icon.png"
+            style={{
+              borderRadius: "50%",
+              filter: "drop-shadow(0 0 8px rgba(91,141,239,0.45))",
+            }}
+            width={90}
+          />
+          <Typography
+            mono
+            as="div"
+            size="2xl"
+            tracking="mono"
+            type="subtitle"
+            weight="bold"
+          >
+            <Stack align="center" direction="row" gap="150">
+              Z<Sep />I<Sep />B<Sep />B<Sep />Y
+            </Stack>
           </Typography>
         </Stack>
         <Typography
           mono
           nowrap
-          size="2xs"
+          size="xs"
           tracking="tighter"
           type="note"
           variant="tertiary"
         >
           {t("tagline")}
         </Typography>
-      </Stack>
-    </Container>
+      </Container>
+    </Link>
   );
 }

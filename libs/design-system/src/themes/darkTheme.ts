@@ -1,7 +1,7 @@
 /**
  * z.i.b.b.y dark theme — "JARVIS control room" HUD.
  *
- * Default context = home (amber accent). Use contextTokens(context) to get
+ * Default context = home (blue accent). Use contextTokens(context) to get
  * a PartialTheme override that switches the active accent.
  */
 import type { Theme } from "../tokens";
@@ -23,14 +23,14 @@ export const darkTheme: Theme = {
   colorBorder:           "rgba(255,255,255,0.07)",
   colorBorderStrong:     "rgba(255,255,255,0.12)",
 
-  // accent (default: home/amber — overridden via contextTokens)
-  colorAccent:           "#f0b429",
-  colorAccentDim:        "rgba(240,180,41,0.16)",
+  // accent (default: home/blue — overridden via contextTokens)
+  colorAccent:           "#5b8def",
+  colorAccentDim:        "rgba(91,141,239,0.16)",
   colorAccentContrast:   "#0a0c10",
-  colorAccentGlow:       "rgba(240,180,41,0.4)",
+  colorAccentGlow:       "rgba(91,141,239,0.4)",
 
   // named accents
-  colorHome:             "#f0b429",
+  colorHome:             "#5b8def",
   colorWork:             "#5b8def",
 
   // status
@@ -58,7 +58,7 @@ export const darkTheme: Theme = {
   // shadows
   shadowCard:            "0 6px 22px rgba(0,0,0,0.35)",
   shadowModal:           "0 30px 80px rgba(0,0,0,0.6)",
-  shadowGlowAccent:      "0 0 16px rgba(240,180,41,0.4)",
+  shadowGlowAccent:      "0 0 16px rgba(91,141,239,0.4)",
 
   // fonts
   fontSans: "var(--font-sans, Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",

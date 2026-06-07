@@ -34,6 +34,18 @@
     "navLabel": "Main navigation",
     "tagline": "Zestful Intuitive Brainy Butler for You"
   },
+  "loading": {
+    "tagline": "Intelligent Automation Platform",
+    "version": "v2.4.1 · BUILD 2026.06",
+    "init": "Initializing core systems…",
+    "registry": "Loading agent registry…",
+    "channel": "Establishing secure channel…",
+    "orchestrator": "Mounting pipeline orchestrator…",
+    "knowledge": "Syncing knowledge base…",
+    "gates": "Calibrating gate rules…",
+    "inference": "Warming inference endpoints…",
+    "ready": "System ready."
+  },
   "placeholder": {
     "body": "This screen is next in line. It follows the same pattern — cards (= files on disk) → button → prompt modal → background run.",
     "hint": "// coming soon"
