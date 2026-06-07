@@ -9,6 +9,8 @@ import {
   type RunLogChunk,
   type StageRun,
 } from "@zibby/contracts"
+import { AgentsStorageService } from "../agents/agents.storage.service"
+import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
 import { PipelinesStorageService } from "./pipelines.storage.service"
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
@@ -53,6 +55,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(PIPELINE_RUNS_DIR) dir: string,
     private readonly pipelines: PipelinesStorageService,
+    private readonly agents: AgentsStorageService,
+    private readonly claude: ClaudeRunCommandService,
   ) {
     this.dir = path.resolve(dir)
     this.core = new RunnerCore(this.dir, pipelineStageStrategy)
@@ -201,7 +205,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     stageCwd: string,
     attempt: number,
   ): Promise<StageRun> {
-    const { command, args } = this.buildStageCommand(phase, stageCwd)
+    const { command, args } = await this.buildStageCommand(phase, stageCwd)
     const rec = await this.core.start({
       kind: "pipeline-stage",
       ownerId: `${run.pipelineRunId}.${phase.id}`,
@@ -261,14 +265,23 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     return resolved
   }
 
-  private buildStageCommand(
+  private async buildStageCommand(
     phase: PipelinePhase,
     cwd: string,
-  ): { command: string; args: string[] } {
+  ): Promise<{ command: string; args: string[] }> {
     if (process.env.AGENT_RUNNER_MODE === "claude") {
-      // Phase 6 builds a real prompt from the agent's instructions + handoff; the
-      // demo path covers the pipeline machinery without burning tokens.
-      return { command: "claude", args: ["-p", `Run phase ${phase.id} as agent ${phase.agent}`] }
+      // The phase's agent drives the stage: its instructions become the session
+      // system prompt; the task tells it to consume the handoff and produce the
+      // next one. The demo path covers the pipeline machinery without tokens.
+      const agent = await this.agents.get(phase.agent)
+      const task = `Proveď fázi pipeline "${phase.id}". Vstup (pokud existuje) najdeš v "${phase.consumes}"; výstup zapiš do "${phase.produces}".`
+      return this.claude.buildClaudeCommand({
+        instructions: agent.instructions,
+        task,
+        tools: agent.tools,
+        model: agent.model,
+        thinking: agent.thinking,
+      })
     }
     const script =
       process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs")

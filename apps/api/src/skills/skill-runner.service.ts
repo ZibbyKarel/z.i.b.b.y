@@ -1,7 +1,8 @@
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
-import type { SkillRun } from "@zibby/contracts"
+import type { Skill, SkillRun } from "@zibby/contracts"
 import { ApprovalsService } from "../approvals/approvals.service"
+import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
 import { SkillsStorageService } from "./skills.storage.service"
 import { type SkillRunRecord, skillStrategy, toSkillRun } from "./skill-run.record"
@@ -27,6 +28,7 @@ export class SkillRunnerService implements OnModuleInit, OnModuleDestroy {
     @Inject(SKILL_RUNS_DIR) dir: string,
     private readonly skills: SkillsStorageService,
     private readonly approvals: ApprovalsService,
+    private readonly claude: ClaudeRunCommandService,
   ) {
     this.dir = path.resolve(dir)
     this.core = new RunnerCore(this.dir, skillStrategy)
@@ -54,7 +56,7 @@ export class SkillRunnerService implements OnModuleInit, OnModuleDestroy {
 
     const startedMs = Date.now()
     const cwd = path.join(this.dir, `${skillId}_${startedMs}`)
-    const { command, args } = this.buildCommand(prompt, cwd)
+    const { command, args } = await this.buildCommand(skill, prompt, cwd)
     const spec = {
       kind: "skill" as const,
       ownerId: skillId,
@@ -103,9 +105,18 @@ export class SkillRunnerService implements OnModuleInit, OnModuleDestroy {
     return this.core.readLog(runId, offset)
   }
 
-  private buildCommand(prompt: string, cwd: string): { command: string; args: string[] } {
+  /**
+   * Demo by default; `claude -p` when opted in. A skill carries no structured
+   * `tools`/`model`, so the builder applies its conservative defaults — see
+   * {@link ClaudeRunCommandService}.
+   */
+  private async buildCommand(
+    skill: Skill,
+    task: string,
+    cwd: string,
+  ): Promise<{ command: string; args: string[] }> {
     if (process.env.AGENT_RUNNER_MODE === "claude") {
-      return { command: "claude", args: ["-p", prompt] }
+      return this.claude.buildClaudeCommand({ instructions: skill.instructions, task })
     }
     const script = process.env.AGENT_DEMO_SCRIPT ?? path.resolve(__dirname, "..", "agent-runs", "demo-task.mjs")
     return { command: process.execPath, args: [script, cwd] }

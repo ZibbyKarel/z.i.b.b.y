@@ -1,10 +1,11 @@
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
-import type { AgentRun } from "@zibby/contracts"
+import type { Agent, AgentRun } from "@zibby/contracts"
 import type { IntendedAction } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
+import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
 
@@ -23,8 +24,10 @@ export { RunNotFoundError } from "../runner/runner-core"
  *
  * Demo mode: every run executes the bundled token-free `demo-task.mjs` (it does
  * not interpret the agent's `instructions`). Set `AGENT_RUNNER_MODE=claude` to
- * spawn `claude -p <prompt>` instead — a one-line swap, off by default so the test
- * agent never burns tokens.
+ * spawn a real `claude -p` session instead — the agent's instructions become the
+ * system prompt, every agent+skill the delegatable catalog, and its `tools` the
+ * permission scope (see {@link ClaudeRunCommandService}). Off by default so the
+ * test agent never burns tokens.
  */
 @Injectable()
 export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
@@ -36,6 +39,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly agents: AgentsStorageService,
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
+    private readonly claude: ClaudeRunCommandService,
   ) {
     this.dir = path.resolve(dir)
     this.core = new RunnerCore(this.dir, agentStrategy)
@@ -73,14 +77,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // The sandbox the task runs in (and writes its file into). Named without the
     // pid since we need it before spawning; the run id below carries the pid.
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
-    // Phase 6: for the real `claude -p` executor, compose the prompt from the
-    // agent's instructions + the task. Demo mode ignores it. The run record keeps
-    // the bare task `prompt` for display.
-    const commandPrompt =
-      process.env.AGENT_RUNNER_MODE === "claude"
-        ? `${agent.instructions}\n\n# Task\n${prompt}`
-        : prompt
-    const { command, args } = this.buildCommand(commandPrompt, cwd)
+    const { command, args } = await this.buildCommand(agent, prompt, cwd)
     const spec = {
       kind: "agent" as const,
       ownerId: agentId,
@@ -146,10 +143,24 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     return this.core.readLog(runId, offset)
   }
 
-  /** Build the command for a run. Demo by default; `claude -p` when opted in. */
-  private buildCommand(prompt: string, cwd: string): { command: string; args: string[] } {
+  /**
+   * Build the command for a run. Demo by default; `claude -p` when opted in.
+   * In claude mode the agent's instructions become the session's system prompt
+   * and its `tools` the permission scope — see {@link ClaudeRunCommandService}.
+   */
+  private async buildCommand(
+    agent: Agent,
+    task: string,
+    cwd: string,
+  ): Promise<{ command: string; args: string[] }> {
     if (process.env.AGENT_RUNNER_MODE === "claude") {
-      return { command: "claude", args: ["-p", prompt] }
+      return this.claude.buildClaudeCommand({
+        instructions: agent.instructions,
+        task,
+        tools: agent.tools,
+        model: agent.model,
+        thinking: agent.thinking,
+      })
     }
     const script = process.env.AGENT_DEMO_SCRIPT ?? path.resolve(__dirname, "demo-task.mjs")
     return { command: process.execPath, args: [script, cwd] }

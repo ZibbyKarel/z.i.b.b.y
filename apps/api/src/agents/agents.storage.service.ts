@@ -105,8 +105,17 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> implements 
     if (typeof data.description === "string") candidate.description = data.description
     if (typeof data.glyph === "string") candidate.glyph = data.glyph
     if (typeof data.category === "string") candidate.category = data.category
+    // `tools` is normally a YAML list, but some files write it inline as a
+    // comma/space-separated string (e.g. `tools: Read, Grep, Glob`). Accept both
+    // so the allow-list isn't silently dropped under `claude -p`'s `dontAsk`.
     if (Array.isArray(data.tools) && data.tools.every((t) => typeof t === "string")) {
       candidate.tools = data.tools
+    } else if (typeof data.tools === "string") {
+      const tools = data.tools
+        .split(/[,\s]+/)
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0)
+      if (tools.length > 0) candidate.tools = tools
     }
     if (AgentModelSchema.safeParse(data.model).success) candidate.model = data.model
     if (AgentThinkingSchema.safeParse(data.thinking).success) candidate.thinking = data.thinking

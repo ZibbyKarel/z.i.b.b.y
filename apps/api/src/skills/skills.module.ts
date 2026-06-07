@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { ApprovalsModule } from "../approvals/approvals.module"
+import { ClaudeRunModule } from "../runner/claude-run.module"
 import { dataDir } from "../shared/data-dir"
 import { SkillCategoriesController } from "./skill-categories.controller"
 import { SkillCategoriesStorageService } from "./skill-categories.storage.service"
@@ -19,7 +20,7 @@ export function resolveSkillRunsDir(): string {
 }
 
 @Module({
-  imports: [ApprovalsModule],
+  imports: [ApprovalsModule, ClaudeRunModule],
   // SkillCategoriesController and SkillRunsController are declared before
   // SkillsController so their static routes (`GET /skills/categories`,
   // `GET /skills/running`, `/skills/runs/:runId`) register ahead of `/skills/:id`,

@@ -1,0 +1,141 @@
+import type { Agent, Skill } from "@zibby/contracts"
+import { describe, expect, it } from "vitest"
+import type { AgentsStorageService } from "../agents/agents.storage.service"
+import type { SkillsStorageService } from "../skills/skills.storage.service"
+import { ClaudeRunCommandService } from "./claude-run-command.service"
+
+/** Build the service over fixed in-memory catalogs (only `list` is exercised). */
+function makeService(agents: Agent[], skills: Skill[]): ClaudeRunCommandService {
+  const agentStore = { list: async () => agents } as unknown as AgentsStorageService
+  const skillStore = { list: async () => skills } as unknown as SkillsStorageService
+  return new ClaudeRunCommandService(agentStore, skillStore)
+}
+
+/** Value following a flag in an argv array (single-valued flags). */
+function flagValue(args: string[], flag: string): string | undefined {
+  const i = args.indexOf(flag)
+  return i >= 0 ? args[i + 1] : undefined
+}
+
+const CODER: Agent = {
+  id: "coder",
+  name: "Kodér",
+  description: "Implementuje",
+  model: "sonnet",
+  thinking: "medium",
+  tools: ["read", "write", "bash", "git"],
+  instructions: "Jsi Kodér.",
+}
+
+const WRITER_SKILL: Skill = {
+  id: "task-spec-writer",
+  name: "task-spec-writer",
+  desc: "Sepíše spec",
+  instructions: "Jsi spec writer.",
+}
+
+describe("ClaudeRunCommandService.buildClaudeCommand", () => {
+  it("spawns claude in dontAsk mode with the task as the bare -p arg", async () => {
+    const svc = makeService([CODER], [])
+    const { command, args } = await svc.buildClaudeCommand({
+      instructions: CODER.instructions,
+      task: "Naprav bug",
+      tools: CODER.tools,
+      model: CODER.model,
+      thinking: CODER.thinking,
+    })
+
+    expect(command).toBe("claude")
+    expect(flagValue(args, "-p")).toBe("Naprav bug")
+    expect(flagValue(args, "--permission-mode")).toBe("dontAsk")
+    expect(flagValue(args, "--append-system-prompt")).toBe("Jsi Kodér.")
+    expect(flagValue(args, "--model")).toBe("sonnet")
+    expect(flagValue(args, "--effort")).toBe("medium")
+  })
+
+  /** The variadic `--allowedTools` values: everything up to the next flag. */
+  function allowedToolsOf(args: string[]): string[] {
+    const start = args.indexOf("--allowedTools") + 1
+    const end = args.findIndex((a, i) => i > start && a.startsWith("--"))
+    return args.slice(start, end)
+  }
+
+  it("maps the agent's tools onto the --allowedTools list (+ Agent)", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: CODER.instructions,
+      task: "x",
+      tools: CODER.tools,
+    })
+    expect(allowedToolsOf(args).sort()).toEqual(
+      ["Read", "Write", "Edit", "Bash", "Bash(git:*)", "Agent"].sort(),
+    )
+  })
+
+  it("unions catalog subagents' tools into --allowedTools so a broad worker isn't denied", async () => {
+    // Under dontAsk the allow-list is session-level: a narrow orchestrator that
+    // delegates to a broader worker must still carry the worker's tools.
+    const narrow: Agent = { id: "architect", tools: ["read", "web"], instructions: "Jsi architekt." }
+    const svc = makeService([narrow, CODER], [])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: narrow.instructions,
+      task: "x",
+      tools: narrow.tools,
+    })
+    const allowed = allowedToolsOf(args)
+    // From the narrow primary…
+    expect(allowed).toEqual(expect.arrayContaining(["Read", "WebFetch", "WebSearch"]))
+    // …plus the coder worker's bash/git/write, even though the primary lacks them.
+    expect(allowed).toEqual(expect.arrayContaining(["Write", "Edit", "Bash", "Bash(git:*)"]))
+    expect(allowed).toContain("Agent")
+  })
+
+  it("omits --model and --effort when the entity declares neither (skills)", async () => {
+    const svc = makeService([], [WRITER_SKILL])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: WRITER_SKILL.instructions,
+      task: "x",
+    })
+    expect(args).not.toContain("--model")
+    expect(args).not.toContain("--effort")
+  })
+
+  it("builds an --agents catalog of every agent and skill", async () => {
+    const svc = makeService([CODER], [WRITER_SKILL])
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}")
+
+    expect(catalog.coder).toEqual({
+      description: "Implementuje",
+      prompt: "Jsi Kodér.",
+      tools: "Read, Write, Edit, Bash, Bash(git:*)",
+      model: "sonnet",
+    })
+    // Skills: desc → description, default tools, no model.
+    expect(catalog["task-spec-writer"]).toEqual({
+      description: "Sepíše spec",
+      prompt: "Jsi spec writer.",
+      tools: "Read, Write, Edit",
+    })
+  })
+
+  it("lets an agent win over a skill that shares its id", async () => {
+    const clash: Skill = { id: "coder", desc: "skill clash", instructions: "skill body" }
+    const svc = makeService([CODER], [clash])
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}")
+    expect(catalog.coder.prompt).toBe("Jsi Kodér.")
+  })
+
+  it("degrades to an empty catalog when listing fails", async () => {
+    const agentStore = {
+      list: async () => {
+        throw new Error("disk gone")
+      },
+    } as unknown as AgentsStorageService
+    const skillStore = { list: async () => [] } as unknown as SkillsStorageService
+    const svc = new ClaudeRunCommandService(agentStore, skillStore)
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    expect(JSON.parse(flagValue(args, "--agents") ?? "null")).toEqual({})
+  })
+})
