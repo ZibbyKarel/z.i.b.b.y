@@ -321,6 +321,7 @@
   "runLog": {
     "aria": "Log běhu {agent}",
     "close": "Zavřít",
+    "prompt": "Zadání",
     "waiting": "čekání na výstup…",
     "streaming": "streamuji…",
     "finished": "dokončeno"

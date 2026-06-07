@@ -138,7 +138,14 @@ export class RunnerCore<R extends BaseRun> {
 
     // `detached` puts the child in its own process group (pgid === pid on Linux),
     // so Phase 6 can probe/kill the whole group and an orphan survives a crash.
-    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env, detached: true })
+    // `stdin: "ignore"` (= `< /dev/null`) stops `claude -p` from waiting 3s for
+    // piped input it will never get — its prompt arrives via `-p`, not stdin.
+    const child = spawn(spec.command, spec.args, {
+      cwd: spec.cwd,
+      env: process.env,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    })
     const pid = child.pid ?? 0
     const runId = `${spec.ownerId}_${startedMs}_${pid}`
     const logFile = path.join(this.dir, `${runId}.log`)
@@ -185,7 +192,12 @@ export class RunnerCore<R extends BaseRun> {
     await this.clearPendingSpec(runId)
 
     await fs.mkdir(spec.cwd, { recursive: true })
-    const child = spawn(spec.command, spec.args, { cwd: spec.cwd, env: process.env, detached: true })
+    const child = spawn(spec.command, spec.args, {
+      cwd: spec.cwd,
+      env: process.env,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    })
     handle.child = child
     handle.log = createWriteStream(handle.run.logFile, { flags: "a" })
     handle.run.pid = child.pid ?? 0

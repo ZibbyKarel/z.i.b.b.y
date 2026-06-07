@@ -321,6 +321,7 @@
   "runLog": {
     "aria": "Run log for {agent}",
     "close": "Close",
+    "prompt": "Prompt",
     "waiting": "waiting for output…",
     "streaming": "streaming…",
     "finished": "finished"

@@ -51,6 +51,16 @@ export function RunLogModal({ run, onClose }: RunLogModalProps) {
       width="lg"
     >
       <Stack gap="150">
+        {run.prompt && (
+          <Stack gap="50">
+            <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+              {t("prompt")}
+            </Typography>
+            <Typography leading="snug" size="sm" type="text" variant="secondary">
+              {run.prompt}
+            </Typography>
+          </Stack>
+        )}
         <Card background="background" bordered={false} radius="sm">
           <CodeBlock followTail maxHeight="viewport" scrollKey={text} text={text || t("waiting")} />
         </Card>

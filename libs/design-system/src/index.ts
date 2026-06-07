@@ -202,6 +202,18 @@ export { ToggleField, ToggleFieldTestId } from "./components/form/ToggleField/To
 export type { ToggleFieldProps } from "./components/form/ToggleField/ToggleField";
 
 export {
+  FilePickerField,
+  FilePickerFieldTestId,
+} from "./components/form/FilePickerField/FilePickerField";
+export type { FilePickerFieldProps } from "./components/form/FilePickerField/FilePickerField";
+
+export { DropZone, DropZoneTestId } from "./components/DropZone/DropZone";
+export type { DropZoneProps, FileAccept, FileRejection } from "./components/DropZone/DropZone";
+
+export { DropZoneField } from "./components/form/DropZoneField/DropZoneField";
+export type { DropZoneFieldProps } from "./components/form/DropZoneField/DropZoneField";
+
+export {
   MarkdownEditor,
   MarkdownEditorTestId,
 } from "./components/MarkdownEditor/MarkdownEditor";
