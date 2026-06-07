@@ -1,6 +1,6 @@
-import { cn } from "../../utils/cn";
-import { Stack } from "../Stack/Stack";
-import { Field, type SelectOption } from "./Field";
+import { cn } from "../../../utils/cn";
+import { Stack } from "../../Stack/Stack";
+import { Field, type SelectOption } from "../Field";
 
 export enum SegmentPickerTestId {
   Group = "segment-picker-group",

@@ -1,12 +1,14 @@
 import type { InputHTMLAttributes, Ref } from "react";
-import { Field, fieldControlClass } from "./Field";
+import { Field, fieldControlClass } from "../Field";
 
 export enum TextInputTestId {
   Control = "text-input-control",
 }
 
-export interface TextInputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "className"> {
+export interface TextInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "id" | "className"
+> {
   label: string;
   hint?: string;
   error?: string;
@@ -14,7 +16,13 @@ export interface TextInputProps
 }
 
 /** Labelled single-line text input. */
-export function TextInput({ label, hint, error, ref, ...props }: TextInputProps) {
+export function TextInput({
+  label,
+  hint,
+  error,
+  ref,
+  ...props
+}: TextInputProps) {
   return (
     <Field error={error} hint={hint} label={label}>
       {({ id, describedBy, invalid }) => (

@@ -21,7 +21,6 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { PhaseChain } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
-import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useAgentsQuery } from "../agents/queries";
 import { usePipelinesQuery } from "./queries";
@@ -205,7 +204,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
             startRun.mutate({ params: { id: runPipeline.id }, body: { project } })
           }
           pipeline={runPipeline}
-          projects={[...PROJECTS]}
+          projects={[]}
         />
       )}
       {addModal}

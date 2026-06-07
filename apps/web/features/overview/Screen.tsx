@@ -19,7 +19,6 @@ import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModa
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { LimitsPanel } from "../../components/layout/LimitsPanel/LimitsPanel";
 import { type Skill, skillToAgent } from "../../domain";
-import { PROJECTS } from "../../state/config";
 import { useEntityForm } from "../../state/forms";
 import { useCatalog } from "../../state/store";
 import { ApprovalCard } from "../agents/components/ApprovalCard/ApprovalCard";
@@ -215,7 +214,7 @@ export function Screen() {
           onLaunch={({ prompt, project }) =>
             startSkillRun.mutate({ params: { id: runSkill.id }, body: { prompt, project } })
           }
-          projects={[...PROJECTS]}
+          projects={[]}
         />
       )}
     </Grid>

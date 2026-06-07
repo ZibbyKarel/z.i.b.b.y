@@ -1,5 +1,5 @@
-import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
 import { TextInput } from "./TextInput";
 
 const meta: Meta<typeof TextInput> = {
@@ -29,7 +29,11 @@ export const Overview: Story = {
           value={name}
         />
         <TextInput hint="Nápověda k poli" label="S nápovědou" placeholder="…" />
-        <TextInput error="Toto pole je povinné" label="S chybou" placeholder="…" />
+        <TextInput
+          error="Toto pole je povinné"
+          label="S chybou"
+          placeholder="…"
+        />
       </div>
     );
   },

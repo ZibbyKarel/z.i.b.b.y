@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+import type { Agent } from "@zibby/contracts";
+import type { IconName } from "@zibby/design-system";
 import {
   Button,
   Card,
@@ -11,9 +11,9 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import type { IconName } from "@zibby/design-system";
-import type { Agent } from "@zibby/contracts";
 import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 export interface RunModalProps {
   agent: Agent;
@@ -25,7 +25,13 @@ export interface RunModalProps {
 
 type RunFormValues = { prompt: string; project: string };
 
-export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalProps) {
+export function RunModal({
+  agent,
+  file,
+  projects,
+  onClose,
+  onLaunch,
+}: RunModalProps) {
   const t = useTranslations();
   const [launched, setLaunched] = useState(false);
   const [launchData, setLaunchData] = useState<RunFormValues | null>(null);
@@ -78,7 +84,13 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
       {launched ? (
         <Container padding={["200", "100"]} textAlign="center">
           <Stack align="center" gap="100">
-            <IconTile glow filled={false} glyph="play" shape="circle" size="xl" />
+            <IconTile
+              glow
+              filled={false}
+              glyph="play"
+              shape="circle"
+              size="xl"
+            />
             <Typography size="xl" type="subtitle" weight="semibold">
               {t("runModal.launchedTitle")}
             </Typography>
@@ -101,7 +113,9 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
         </Container>
       ) : (
         <Form<RunFormValues>
-          formOptions={{ defaultValues: { prompt: "", project: projects[0] ?? "" } }}
+          formOptions={{
+            defaultValues: { prompt: "", project: projects[0] ?? "" },
+          }}
           id="run-form"
           onSubmit={onFormSubmit}
         >
@@ -112,16 +126,25 @@ export function RunModal({ agent, file, projects, onClose, onLaunch }: RunModalP
               name="prompt"
               placeholder={t("runModal.promptPlaceholder", { name })}
             />
-            <FormSegmentPicker<RunFormValues>
-              label={t("common.targetProject")}
-              name="project"
-              options={projects.map((p) => ({ value: p, label: p }))}
-            />
+
+            {projects.length > 0 && (
+              <FormSegmentPicker<RunFormValues>
+                label={t("common.targetProject")}
+                name="project"
+                options={projects.map((p) => ({ value: p, label: p }))}
+              />
+            )}
+
             <Card background="background" radius="sm">
               <Container padding={["150", "150"]}>
                 <Stack align="center" direction="row" gap="100">
                   <Icon name="file" size="sm" tone="faint" />
-                  <Typography mono size="caption" type="note" variant="tertiary">
+                  <Typography
+                    mono
+                    size="caption"
+                    type="note"
+                    variant="tertiary"
+                  >
                     {file}
                   </Typography>
                 </Stack>

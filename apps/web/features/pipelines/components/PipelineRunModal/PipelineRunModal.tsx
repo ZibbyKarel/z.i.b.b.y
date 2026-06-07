@@ -1,6 +1,5 @@
 "use client";
-import { Fragment, useState } from "react"
-import { useTranslations } from "next-intl"
+import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts";
 import {
   Button,
   Card,
@@ -13,36 +12,41 @@ import {
   Pressable,
   Stack,
   Typography,
-} from "@zibby/design-system"
-import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts"
-import { type Pipeline, glyphForAgent } from "../../../../domain"
-import { ModelBadge, ThinkBadge } from "../PhaseChain"
-import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms"
+} from "@zibby/design-system";
+import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms";
+import { useTranslations } from "next-intl";
+import { Fragment, useState } from "react";
+import { type Pipeline, glyphForAgent } from "../../../../domain";
+import { ModelBadge, ThinkBadge } from "../PhaseChain";
 
-const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"]
-const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"]
-const next = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!
+const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"];
+const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"];
+const next = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!;
 
 interface Override {
-  model: AgentModel
-  thinking: AgentThinking
+  model: AgentModel;
+  thinking: AgentThinking;
 }
 
 export interface PipelineRunModalProps {
-  pipeline: Pipeline
-  agents: Agent[]
-  projects: string[]
-  onClose: () => void
+  pipeline: Pipeline;
+  agents: Agent[];
+  projects: string[];
+  onClose: () => void;
   onLaunch?: (req: {
-    pipeline: Pipeline
-    prompt: string
-    project: string
-    budget: number
-    overrides: Override[]
-  }) => void
+    pipeline: Pipeline;
+    prompt: string;
+    project: string;
+    budget: number;
+    overrides: Override[];
+  }) => void;
 }
 
-type PipelineRunFormValues = { prompt: string; project: string; budget: string }
+type PipelineRunFormValues = {
+  prompt: string;
+  project: string;
+  budget: string;
+};
 
 export function PipelineRunModal({
   pipeline,
@@ -51,36 +55,46 @@ export function PipelineRunModal({
   onClose,
   onLaunch,
 }: PipelineRunModalProps) {
-  const t = useTranslations()
+  const t = useTranslations();
   const [overrides, setOverrides] = useState<Override[]>(
     pipeline.phases.map((p) => ({ model: p.model, thinking: p.thinking })),
-  )
-  const [launched, setLaunched] = useState(false)
-  const [launchData, setLaunchData] = useState<PipelineRunFormValues | null>(null)
+  );
+  const [launched, setLaunched] = useState(false);
+  const [launchData, setLaunchData] = useState<PipelineRunFormValues | null>(
+    null,
+  );
 
   function cycleModel(i: number) {
-    setOverrides((o) => o.map((x, j) => (j === i ? { ...x, model: next(CYCLE_MODEL, x.model) } : x)))
+    setOverrides((o) =>
+      o.map((x, j) =>
+        j === i ? { ...x, model: next(CYCLE_MODEL, x.model) } : x,
+      ),
+    );
   }
   function cycleThink(i: number) {
     setOverrides((o) =>
-      o.map((x, j) => (j === i ? { ...x, thinking: next(CYCLE_THINK, x.thinking) } : x)),
-    )
+      o.map((x, j) =>
+        j === i ? { ...x, thinking: next(CYCLE_THINK, x.thinking) } : x,
+      ),
+    );
   }
 
   function onFormSubmit(values: PipelineRunFormValues) {
-    setLaunchData(values)
+    setLaunchData(values);
     onLaunch?.({
       pipeline,
       prompt: values.prompt,
       project: values.project,
       budget: Number(values.budget),
       overrides,
-    })
-    setLaunched(true)
+    });
+    setLaunched(true);
   }
 
-  const launchedBudget = launchData ? Number(launchData.budget) : pipeline.budget
-  const launchedProject = launchData?.project ?? projects[0] ?? ""
+  const launchedBudget = launchData
+    ? Number(launchData.budget)
+    : pipeline.budget;
+  const launchedProject = launchData?.project ?? projects[0] ?? "";
 
   return (
     <Dialog
@@ -91,7 +105,12 @@ export function PipelineRunModal({
             <Button icon="edit" intent="ghost">
               {t("pipelineRun.editRaw")}
             </Button>
-            <Button form="pipeline-run-form" icon="play" intent="run" type="submit">
+            <Button
+              form="pipeline-run-form"
+              icon="play"
+              intent="run"
+              type="submit"
+            >
               {t("pipelineRun.launch", { budget: pipeline.budget })}
             </Button>
           </Stack>
@@ -118,7 +137,13 @@ export function PipelineRunModal({
       {launched ? (
         <Container padding={["200", "100"]} textAlign="center">
           <Stack align="center" gap="100">
-            <IconTile glow filled={false} glyph="flow" shape="circle" size="xl" />
+            <IconTile
+              glow
+              filled={false}
+              glyph="flow"
+              shape="circle"
+              size="xl"
+            />
             <Typography size="xl" type="subtitle" weight="semibold">
               {t("pipelineRun.launchedTitle")}
             </Typography>
@@ -160,19 +185,29 @@ export function PipelineRunModal({
               autoFocus
               label={t("pipelineRun.promptLabel")}
               name="prompt"
-              placeholder={t("pipelineRun.promptPlaceholder", { name: pipeline.name })}
+              placeholder={t("pipelineRun.promptPlaceholder", {
+                name: pipeline.name,
+              })}
             />
 
             <Grid cols={2} gap="250">
-              <FormSegmentPicker<PipelineRunFormValues>
-                label={t("common.targetProject")}
-                name="project"
-                options={projects.slice(0, 4).map((p) => ({ value: p, label: p }))}
-              />
+              {projects.length > 0 && (
+                <FormSegmentPicker<PipelineRunFormValues>
+                  label={t("common.targetProject")}
+                  name="project"
+                  options={projects
+                    .slice(0, 4)
+                    .map((p) => ({ value: p, label: p }))}
+                />
+              )}
+
               <FormSegmentPicker<PipelineRunFormValues>
                 label={t("pipelineRun.budgetLabel")}
                 name="budget"
-                options={[10, 25, 50].map((b) => ({ value: String(b), label: `$${b}` }))}
+                options={[10, 25, 50].map((b) => ({
+                  value: String(b),
+                  label: `$${b}`,
+                }))}
               />
             </Grid>
 
@@ -193,20 +228,28 @@ export function PipelineRunModal({
                     {i > 0 && <Divider />}
                     <Container padding={["100", "150"]}>
                       <Stack align="center" direction="row" gap="100">
-                        <Icon name={glyphForAgent(ph.agent, agents)} size="sm" tone="accent" />
+                        <Icon
+                          name={glyphForAgent(ph.agent, agents)}
+                          size="sm"
+                          tone="accent"
+                        />
                         <Container grow minW0>
                           <Typography mono size="caption" type="note">
                             {ph.agent}
                           </Typography>
                         </Container>
                         <Pressable
-                          aria-label={t("pipelineRun.changeModelAria", { agent: ph.agent })}
+                          aria-label={t("pipelineRun.changeModelAria", {
+                            agent: ph.agent,
+                          })}
                           onClick={() => cycleModel(i)}
                         >
                           <ModelBadge model={overrides[i]!.model} />
                         </Pressable>
                         <Pressable
-                          aria-label={t("pipelineRun.changeThinkAria", { agent: ph.agent })}
+                          aria-label={t("pipelineRun.changeThinkAria", {
+                            agent: ph.agent,
+                          })}
                           onClick={() => cycleThink(i)}
                         >
                           <ThinkBadge level={overrides[i]!.thinking} />
@@ -224,5 +267,5 @@ export function PipelineRunModal({
         </Form>
       )}
     </Dialog>
-  )
+  );
 }

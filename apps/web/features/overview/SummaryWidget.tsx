@@ -12,7 +12,6 @@ import {
 import { MessageKey } from "apps/web/i18n/keys";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { AGENT_SDK } from "../../state/config";
 import { useCatalog } from "../../state/store";
 import { useAgentsQuery } from "../agents/queries";
 import { useHealthQuery } from "../health/queries";
@@ -43,7 +42,7 @@ export function SummaryWidget() {
     ? "overview.daemonReady"
     : "overview.apiUnreachable";
 
-  const sdkTone = getUsageTone(AGENT_SDK.usedPct);
+  const sdkTone = getUsageTone(0);
 
   const ctxSkills = skills.length;
   const ctxPipelines = pipelines.length;
@@ -114,7 +113,7 @@ export function SummaryWidget() {
             icon="dollar"
             label={t("overview.statSdkCredit")}
             tone={sdkTone}
-            value={`$${AGENT_SDK.remaining}`}
+            value="$200"
           />
           <Stat
             icon="flow"

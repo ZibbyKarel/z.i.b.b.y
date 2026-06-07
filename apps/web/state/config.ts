@@ -1,18 +1,10 @@
 /**
- * Static dashboard configuration — navigation, target projects, option lists and
- * the (empty-system) quota readout. No domain content lives here: skills,
+ * Static dashboard configuration — navigation, option lists and icon/tool
+ * picker inventories. No domain content or default values live here: skills,
  * integrations, agents and pipelines all start empty and are created by the
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
-import type { AgentSdkCredit } from "../domain";
-
-export const PROJECTS = [
-  "zibby-core",
-  "home-ops",
-  "media-vault",
-  "~/cesta/k/projektu",
-] as const;
 
 /**
  * Navigation entry without a display label — the label is resolved from the
@@ -95,14 +87,3 @@ export const AGENT_GLYPHS: IconName[] = [
 /** Tools an agent can be granted in the editor. */
 export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
 
-export const AGENT_SDK: AgentSdkCredit = {
-  label: "limits.agentSdkCredit",
-  total: 200,
-  used: 0,
-  remaining: 200,
-  usedPct: 0,
-  renew: "limits.renewDate",
-  byAgent: [],
-  byPipeline: [],
-  trend: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-};

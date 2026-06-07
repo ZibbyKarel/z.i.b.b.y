@@ -172,31 +172,34 @@ export type { StatProps, StatTone } from "./components/Stat/Stat";
 export { Sparkline } from "./components/Sparkline/Sparkline";
 export type { SparklineProps } from "./components/Sparkline/Sparkline";
 
-export { Field, FieldTestId } from "./components/Field/Field";
+export { Field, FieldTestId } from "./components/form/Field";
 export type {
   FieldControl,
   FieldLayout,
   FieldProps,
   SelectOption,
-} from "./components/Field/Field";
+} from "./components/form/Field";
 
-export { TextInput, TextInputTestId } from "./components/Field/TextInput";
-export type { TextInputProps } from "./components/Field/TextInput";
+export {
+  TextInput,
+  TextInputTestId,
+} from "./components/form/TextInput/TextInput";
+export type { TextInputProps } from "./components/form/TextInput/TextInput";
 
-export { TextArea, TextAreaTestId } from "./components/Field/TextArea";
-export type { TextAreaProps } from "./components/Field/TextArea";
+export { TextArea, TextAreaTestId } from "./components/form/TextArea";
+export type { TextAreaProps } from "./components/form/TextArea";
 
-export { Select } from "./components/Field/Select";
-export type { SelectProps } from "./components/Field/Select";
+export { Select } from "./components/form/Select";
+export type { SelectProps } from "./components/form/Select";
 
 export {
   SegmentPicker,
   SegmentPickerTestId,
-} from "./components/Field/SegmentPicker";
-export type { SegmentPickerProps } from "./components/Field/SegmentPicker";
+} from "./components/form/SegmentPicker/SegmentPicker";
+export type { SegmentPickerProps } from "./components/form/SegmentPicker/SegmentPicker";
 
-export { Toggle, ToggleTestId } from "./components/Field/Toggle";
-export type { ToggleProps } from "./components/Field/Toggle";
+export { Toggle, ToggleTestId } from "./components/form/Toggle/Toggle";
+export type { ToggleProps } from "./components/form/Toggle/Toggle";
 
 export {
   MarkdownEditor,

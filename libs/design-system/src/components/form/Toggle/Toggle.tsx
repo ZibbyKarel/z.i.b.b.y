@@ -1,6 +1,6 @@
 import type { Ref } from "react";
-import { Switch, type SwitchSize } from "../Switch/Switch";
-import { Field } from "./Field";
+import { Switch, type SwitchSize } from "../../Switch/Switch";
+import { Field } from "../Field";
 
 export enum ToggleTestId {
   Control = "toggle-control",
