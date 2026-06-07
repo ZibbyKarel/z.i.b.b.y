@@ -247,6 +247,34 @@ export class RunnerCore<R extends BaseRun> {
     return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED)
   }
 
+  /**
+   * Every run we can find — the full on-disk history (sidecars never deleted by the
+   * retention sweep) overlaid with the in-memory copies (fresher `pct`/`status` for
+   * a still-live run). No age cutoff and no cap: this backs the "all runs" history
+   * view, whereas {@link list} backs the live panel. Newest first.
+   */
+  async listAll(): Promise<R[]> {
+    const byId = new Map<string, R>()
+    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
+    for (const entry of entries) {
+      if (!entry.endsWith(".json") || entry.endsWith(".pending.json")) continue
+      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
+      if (raw === null) continue
+      let data: unknown
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        continue
+      }
+      const parsed = this.strategy.schema.safeParse(data)
+      if (!parsed.success) continue
+      byId.set(parsed.data.runId, parsed.data)
+    }
+    // In-memory wins: a live run's pct only hits disk on a state transition.
+    for (const [id, handle] of this.runs) byId.set(id, handle.run)
+    return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  }
+
   get(runId: string): R {
     const handle = this.runs.get(runId)
     if (!handle) throw new RunNotFoundError(runId)
@@ -255,6 +283,51 @@ export class RunnerCore<R extends BaseRun> {
 
   stop(runId: string): R {
     return this.cancel(runId)
+  }
+
+  /**
+   * Permanently erase a run: kill a still-live child, drop it from the registry,
+   * and remove its sidecar (`<runId>.json`), log (`<runId>.log`), any stashed
+   * pending spec, and the sandbox folder it ran in. The sandbox path is taken from
+   * memory or recovered from the sidecar, so a run only on disk (after the
+   * retention sweep) is removed just as fully. Throws {@link RunNotFoundError} if no
+   * trace of the run exists.
+   */
+  async delete(runId: string): Promise<void> {
+    if (typeof runId !== "string" || !RUN_ID_REGEX.test(runId)) throw new RunNotFoundError(runId)
+    const handle = this.runs.get(runId)
+    const sidecar = this.resolveInDir(`${runId}.json`)
+
+    let cwd = handle?.run.cwd
+    let existed = handle !== undefined
+
+    const raw = await fs.readFile(sidecar, "utf8").catch(() => null)
+    if (raw !== null) {
+      existed = true
+      if (!cwd) {
+        try {
+          const parsed = this.strategy.schema.safeParse(JSON.parse(raw))
+          if (parsed.success) cwd = parsed.data.cwd
+        } catch {
+          // Malformed sidecar: still delete the files, just can't recover the cwd.
+        }
+      }
+    }
+
+    if (!existed) throw new RunNotFoundError(runId)
+
+    if (handle) {
+      if (handle.child && handle.run.status === "running") killGroup(handle.run.pgid ?? handle.run.pid)
+      handle.log?.end()
+      this.runs.delete(runId)
+    }
+
+    await fs.rm(sidecar, { force: true }).catch(() => {})
+    await fs.rm(this.resolveInDir(`${runId}.log`), { force: true }).catch(() => {})
+    await fs.rm(this.resolveInDir(`${runId}.pending.json`), { force: true }).catch(() => {})
+    if (cwd && this.isInsideDir(cwd)) {
+      await fs.rm(cwd, { recursive: true, force: true }).catch(() => {})
+    }
   }
 
   /**
@@ -425,6 +498,19 @@ export class RunnerCore<R extends BaseRun> {
       throw new RunNotFoundError(runId)
     }
     return file
+  }
+
+  /** Resolve a sidecar file name directly inside the runs dir, rejecting escapes. */
+  private resolveInDir(name: string): string {
+    const file = path.resolve(this.dir, name)
+    if (path.dirname(file) !== this.dir) throw new RunNotFoundError(name)
+    return file
+  }
+
+  /** Is `target` the runs dir itself or a path nested inside it? (rm guard) */
+  private isInsideDir(target: string): boolean {
+    const resolved = path.resolve(target)
+    return resolved === this.dir || resolved.startsWith(this.dir + path.sep)
   }
 }
 

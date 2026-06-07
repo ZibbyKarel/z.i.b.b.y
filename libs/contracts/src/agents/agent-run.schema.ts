@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
+import { AgentIdSchema } from "./agent.schema"
 import { RunStatusSchema } from "../common.schema"
 
 /**

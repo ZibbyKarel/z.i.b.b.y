@@ -2,7 +2,7 @@ import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { Agent, AgentRun } from "@zibby/contracts"
 import type { IntendedAction } from "@zibby/contracts"
-import { AgentsStorageService } from "../agents/agents.storage.service"
+import { AgentsStorageService } from "./agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
@@ -131,12 +131,22 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     return this.core.list().map(toAgentRun)
   }
 
+  /** The full run history (on disk + in memory), newest first; no age cutoff. */
+  async listAll(): Promise<AgentRun[]> {
+    return (await this.core.listAll()).map(toAgentRun)
+  }
+
   get(runId: string): AgentRun {
     return toAgentRun(this.core.get(runId))
   }
 
   stop(runId: string): AgentRun {
     return toAgentRun(this.core.stop(runId))
+  }
+
+  /** Permanently delete a run and all its artifacts (sidecar, log, sandbox). */
+  delete(runId: string): Promise<void> {
+    return this.core.delete(runId)
   }
 
   readLog(runId: string, offset: number): Promise<{

@@ -117,10 +117,53 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED)
   }
 
+  /** The full run history (on disk + in memory), newest first; no age cutoff. */
+  async listAll(): Promise<PipelineRun[]> {
+    const byId = new Map<string, PipelineRun>()
+    const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => [])
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const raw = await fs
+        .readFile(path.join(this.dir, entry.name, AGGREGATE_FILE), "utf8")
+        .catch(() => null)
+      if (raw === null) continue
+      let data: unknown
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        continue
+      }
+      const parsed = PipelineRunSchema.safeParse(data)
+      if (!parsed.success) continue
+      byId.set(parsed.data.pipelineRunId, parsed.data)
+    }
+    // In-memory wins: it carries the live `currentStage`/`status` of an active run.
+    for (const [id, run] of this.runs) byId.set(id, run)
+    return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  }
+
   get(pipelineRunId: string): PipelineRun {
     const run = this.runs.get(pipelineRunId)
     if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
     return run
+  }
+
+  /**
+   * Permanently delete a pipeline run. Each stage spawned through the core writes
+   * its sidecar/log to the *runs dir root* (not the stage cwd), so removing the run
+   * folder alone would orphan them — delete every stage's artifacts first, then the
+   * folder (aggregate + per-phase sandboxes). Throws if the run is unknown.
+   */
+  async delete(pipelineRunId: string): Promise<void> {
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    for (const stage of run.stageRuns) {
+      // Escalation markers have no real run behind them; a missing sidecar is fine.
+      await this.core.delete(stage.runId).catch(() => {})
+    }
+    this.runs.delete(pipelineRunId)
+    const root = this.resolveRunDir(pipelineRunId)
+    if (root) await fs.rm(root, { recursive: true, force: true }).catch(() => {})
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */
@@ -286,6 +329,27 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const script =
       process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs")
     return { command: process.execPath, args: [script, cwd, phase.id, phase.produces, phase.consumes] }
+  }
+
+  /** The run's folder inside the runs dir, or null if the id would escape it. */
+  private resolveRunDir(pipelineRunId: string): string | null {
+    const dir = path.resolve(this.dir, pipelineRunId)
+    if (path.dirname(dir) !== this.dir) return null
+    return dir
+  }
+
+  /** Read a run's aggregate `run.json` from disk (for a run dropped from memory). */
+  private async readAggregate(pipelineRunId: string): Promise<PipelineRun | null> {
+    const root = this.resolveRunDir(pipelineRunId)
+    if (!root) return null
+    const raw = await fs.readFile(path.join(root, AGGREGATE_FILE), "utf8").catch(() => null)
+    if (raw === null) return null
+    try {
+      const parsed = PipelineRunSchema.safeParse(JSON.parse(raw))
+      return parsed.success ? parsed.data : null
+    } catch {
+      return null
+    }
   }
 
   private async writeAggregate(run: PipelineRun): Promise<void> {

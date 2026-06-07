@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core"
 import { z } from "zod"
-import { RunLogChunkSchema } from "../agent-runs/agent-run.schema"
+import { RunLogChunkSchema } from "../agents/agent-run.schema"
 import { ErrorSchema } from "../common.schema"
 import { PipelineRunSchema, StartPipelineRunSchema } from "./pipeline-run.schema"
 import {
@@ -73,6 +73,12 @@ export const pipelineRunsContract = c.router(
       responses: { 200: z.array(PipelineRunSchema) },
       summary: "List currently running (and just-finished) pipeline runs",
     },
+    listAllPipelineRuns: {
+      method: "GET",
+      path: "/pipelines/run-history",
+      responses: { 200: z.array(PipelineRunSchema) },
+      summary: "List the full pipeline run history (on disk + in memory), newest first",
+    },
     getPipelineRun: {
       method: "GET",
       path: "/pipelines/runs/:pipelineRunId",
@@ -87,6 +93,13 @@ export const pipelineRunsContract = c.router(
       query: z.object({ offset: z.coerce.number().int().nonnegative().optional() }),
       responses: { 200: RunLogChunkSchema, 404: ErrorSchema },
       summary: "Read a pipeline stage's log from a byte offset",
+    },
+    deletePipelineRun: {
+      method: "DELETE",
+      path: "/pipelines/runs/:pipelineRunId",
+      pathParams: z.object({ pipelineRunId: z.string() }),
+      responses: { 200: z.object({ pipelineRunId: z.string() }), 404: ErrorSchema },
+      summary: "Delete a pipeline run and all its artifacts",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

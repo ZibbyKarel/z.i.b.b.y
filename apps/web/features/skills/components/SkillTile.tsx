@@ -1,6 +1,4 @@
-import { useTranslations } from "next-intl";
 import {
-  Button,
   Card,
   Container,
   IconTile,
@@ -12,13 +10,13 @@ import type { Skill } from "../../../domain";
 
 export interface SkillTileProps {
   skill: Skill;
-  onRun: (skill: Skill) => void;
 }
 
-export function SkillTile({ skill, onRun }: SkillTileProps) {
-  const t = useTranslations("skills");
+// A skill is a capability an agent invokes, not something you run on its own, so
+// the tile is a catalog entry — no "Run" affordance.
+export function SkillTile({ skill }: SkillTileProps) {
   return (
-    <Card corners interactive radius="sm">
+    <Card corners radius="sm">
       <Container padding="150">
         <Stack gap="150">
           <Stack align="start" direction="row" gap="150">
@@ -41,16 +39,11 @@ export function SkillTile({ skill, onRun }: SkillTileProps) {
             <StatusDot size="75" tone="faint" />
           </Stack>
 
-          <Stack align="center" direction="row" justify="between">
-            <Container minW0 maxWidth="130px">
-              <Typography mono truncate size="xs" type="note" variant="tertiary">
-                {skill.file.replace("~/zibby/skills/", "")}
-              </Typography>
-            </Container>
-            <Button icon="play" intent="run" onClick={() => onRun(skill)} size="sm">
-              {t("runButton")}
-            </Button>
-          </Stack>
+          <Container minW0>
+            <Typography mono truncate size="xs" type="note" variant="tertiary">
+              {skill.file.replace("~/zibby/skills/", "")}
+            </Typography>
+          </Container>
         </Stack>
       </Container>
     </Card>

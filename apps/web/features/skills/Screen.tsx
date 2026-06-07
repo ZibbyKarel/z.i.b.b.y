@@ -11,7 +11,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { type Skill, skillToAgent } from "../../domain";
+import type { Skill } from "../../domain";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { CardGrid } from "../../components/CardGrid/CardGrid";
@@ -20,16 +20,13 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { EntityFormModal, type FieldSchema } from "../../components/EntityFormModal/EntityFormModal";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { SkillTile } from "./components/SkillTile";
-import { RunModal } from "./components/RunModal/RunModal";
 import { useEntityForm } from "../../state/forms";
 import { useSkillCategoriesQuery, useSkillsQuery } from "./queries";
 import {
   useCreateSkillCategoryMutation,
   useCreateSkillMutation,
   useDeleteSkillCategoryMutation,
-  useStartSkillRunMutation,
 } from "./mutations";
-import { useRunTargetProjects } from "../projects/useRunTargetProjects";
 
 /** Slugify a free-form name into a filename-safe skill id. */
 const slug = (s: string) =>
@@ -45,13 +42,10 @@ export function Screen() {
   const { data: skills = [] } = useSkillsQuery();
   const { data: categories = [] } = useSkillCategoriesQuery();
   const createSkill = useCreateSkillMutation();
-  const startRun = useStartSkillRunMutation();
   const createCategory = useCreateSkillCategoryMutation();
   const deleteCategory = useDeleteSkillCategoryMutation();
-  const runProjects = useRunTargetProjects();
   const [adding, setAdding] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
-  const [runSkill, setRunSkill] = useState<Skill | null>(null);
   const form = useEntityForm("skill");
 
   // Skills whose category was deleted (or never set) surface in a trailing
@@ -115,7 +109,7 @@ export function Screen() {
         ) : (
           <CardGrid>
             {items.map((s) => (
-              <SkillTile key={s.id} onRun={setRunSkill} skill={s} />
+              <SkillTile key={s.id} skill={s} />
             ))}
           </CardGrid>
         )}
@@ -214,19 +208,6 @@ export function Screen() {
             createCategory.mutate({ body: category }, { onSuccess: () => setAddingCategory(false) })
           }
           pending={createCategory.isPending}
-        />
-      )}
-
-      {runSkill && (
-        <RunModal
-          agent={skillToAgent(runSkill)}
-          file={runSkill.file}
-          key={runSkill.id}
-          onClose={() => setRunSkill(null)}
-          onLaunch={({ prompt, project }) =>
-            startRun.mutate({ params: { id: runSkill.id }, body: { prompt, project } })
-          }
-          projects={runProjects}
         />
       )}
     </PageContainer>

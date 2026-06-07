@@ -226,12 +226,14 @@ async function seedProjects() {
 }
 
 // ----------------------------------------------------------- automations ----
+// A skill can't be an automation target — it's a capability an agent invokes, not
+// a runner. The former skill-targeted demos now fire an agent that wields the skill.
 const AUTOMATIONS = [
-  { id: "au-standup", name: "Ranní standup", trigger: { type: "cron", expr: "0 8 * * 1-5" }, target: { type: "skill", skillId: "standup-gen" }, enabled: true, lastFiredAt: iso(60 * MIN) },
+  { id: "au-standup", name: "Ranní standup", trigger: { type: "cron", expr: "0 8 * * 1-5" }, target: { type: "agent", agentId: "chronicler" }, enabled: true, lastFiredAt: iso(60 * MIN) },
   { id: "au-research", name: "Noční research", trigger: { type: "cron", expr: "40 2 * * *" }, target: { type: "pipeline", pipelineId: "nightly-research" }, enabled: true, lastFiredAt: iso(8 * 60 * MIN) },
-  { id: "au-media", name: "Po stažení srovnej média", trigger: { type: "event", event: "file.created" }, target: { type: "skill", skillId: "tmdb-renamer" }, enabled: true, lastFiredAt: iso(3 * MIN) },
-  { id: "au-nakup", name: "Nedělní nákup", trigger: { type: "cron", expr: "0 18 * * 0" }, target: { type: "skill", skillId: "rohlik" }, enabled: true, lastFiredAt: iso(2 * MIN) },
-  { id: "au-backup", name: "Záloha vaultu", trigger: { type: "cron", expr: "0 4 * * *" }, target: { type: "skill", skillId: "nas-backup" }, enabled: true, lastFiredAt: iso(6 * 60 * MIN) },
+  { id: "au-media", name: "Po stažení srovnej média", trigger: { type: "event", event: "file.created" }, target: { type: "agent", agentId: "curator" }, enabled: true, lastFiredAt: iso(3 * MIN) },
+  { id: "au-nakup", name: "Nedělní nákup", trigger: { type: "cron", expr: "0 18 * * 0" }, target: { type: "agent", agentId: "steward" }, enabled: true, lastFiredAt: iso(2 * MIN) },
+  { id: "au-backup", name: "Záloha vaultu", trigger: { type: "cron", expr: "0 4 * * *" }, target: { type: "agent", agentId: "steward" }, enabled: true, lastFiredAt: iso(6 * 60 * MIN) },
   { id: "au-pr", name: "Hlídač PR", trigger: { type: "event", event: "pr.opened" }, target: { type: "pipeline", pipelineId: "pr-guard" }, enabled: false },
 ]
 
@@ -264,8 +266,10 @@ async function seedVault() {
 }
 
 // ------------------------------------------------- runs + approvals -------
-// A run sidecar (skill kind) + its log. Each `awaiting-approval` run is referenced
-// by one approval so approve→resume / reject→cancel resolve cleanly.
+// A run sidecar (agent kind) + its log. Each `awaiting-approval` run is referenced
+// by one approval so approve→resume / reject→cancel resolve cleanly. Skills don't
+// run on their own, so the actor of every run/approval is an agent (which may wield
+// a skill from its catalog).
 const SKILL_RUNS_DIR = dir("skills", "runs")
 const AGENT_RUNS_DIR = dir("agents", "runs")
 
@@ -279,10 +283,10 @@ async function writeRun(runsDir, rec, logLines) {
   await fs.writeFile(path.join(runsDir, `${rec.runId}.log`), `${logLines.join("\n")}\n`, "utf8")
 }
 
-function skillRun({ skillId, startedMs, pid, status, pct, prompt, project }) {
-  const id = runId(skillId, startedMs, pid)
-  const cwd = path.join(SKILL_RUNS_DIR, `${skillId}_${startedMs}`)
-  return { kind: "skill", runId: id, skillId, status, pct, prompt, project, cwd, startedAt: new Date(startedMs).toISOString(), pid, logFile: path.join(SKILL_RUNS_DIR, `${id}.log`) }
+function agentRun({ agentId, startedMs, pid, status, pct, prompt, project }) {
+  const id = runId(agentId, startedMs, pid)
+  const cwd = path.join(AGENT_RUNS_DIR, `${agentId}_${startedMs}`)
+  return { kind: "agent", runId: id, agentId, status, pct, prompt, project, cwd, startedAt: new Date(startedMs).toISOString(), pid, logFile: path.join(AGENT_RUNS_DIR, `${id}.log`) }
 }
 
 async function seedRunsAndApprovals() {
@@ -291,7 +295,7 @@ async function seedRunsAndApprovals() {
   await fs.rm(AGENT_RUNS_DIR, { recursive: true, force: true })
   await fs.rm(dir("approvals"), { recursive: true, force: true })
 
-  // Four awaiting-approval skill runs, each backing one approval.
+  // Four awaiting-approval agent runs, each backing one approval.
   const awaiting = [
     { skillId: "rohlik", actor: "rohlik", actorKind: "skill", glyph: "cart", action: "Objednat a zaplatit košík", riskType: "platba", risk: "high", ageMin: 2,
       prompt: "Naplň košík podle seznamu na tento týden",
@@ -325,17 +329,17 @@ async function seedRunsAndApprovals() {
     const a = awaiting[i]
     const startedMs = now - a.ageMin * MIN
     const pid = 40000 + i
-    const rec = skillRun({ skillId: a.skillId, startedMs, pid, status: "awaiting-approval", pct: 100, prompt: a.prompt, project: a.actor })
-    await writeRun(SKILL_RUNS_DIR, rec, a.log)
+    const rec = agentRun({ agentId: a.skillId, startedMs, pid, status: "awaiting-approval", pct: 100, prompt: a.prompt, project: a.actor })
+    await writeRun(AGENT_RUNS_DIR, rec, a.log)
     runs++
 
     const detail = JSON.stringify({ riskType: a.riskType, actorKind: a.actorKind, glyph: a.glyph, summary: a.summary, via: a.via, consequence: a.consequence, preview: a.preview })
-    const approval = { id: `apq-${a.skillId}`, runId: rec.runId, kind: "skill", skill: a.actor, action: a.action, detail, risk: a.risk, status: "pending", requestedAt: rec.startedAt }
+    const approval = { id: `apq-${a.skillId}`, runId: rec.runId, kind: "agent", skill: a.actor, action: a.action, detail, risk: a.risk, status: "pending", requestedAt: rec.startedAt }
     await writeFile(dir("approvals", `${approval.id}.json`), JSON.stringify(approval))
     approvals++
   }
 
-  // Finished skill runs (fresh timestamps so done/error stay inside the 30-min window).
+  // Finished agent runs (fresh timestamps so done/error stay inside the 30-min window).
   const finished = [
     { skillId: "ci-doctor", status: "done", pct: 100, ageMin: 5, prompt: "Proč padá pipeline na main?", project: "auth-svc",
       log: ["00:00 spuštěn skill ci-doctor · projekt auth-svc", "00:40 staženy logy posledního běhu CI", "01:30 nalezen flaky test: auth.spec.ts „refresh token”", "02:30 navržen fix · seed náhodného času → fixed clock", "02:40 hotovo · report v test-report.md"] },
@@ -349,8 +353,8 @@ async function seedRunsAndApprovals() {
   for (let i = 0; i < finished.length; i++) {
     const f = finished[i]
     const startedMs = now - f.ageMin * MIN
-    const rec = skillRun({ skillId: f.skillId, startedMs, pid: 41000 + i, status: f.status, pct: f.pct, prompt: f.prompt, project: f.project })
-    await writeRun(SKILL_RUNS_DIR, rec, f.log)
+    const rec = agentRun({ agentId: f.skillId, startedMs, pid: 41000 + i, status: f.status, pct: f.pct, prompt: f.prompt, project: f.project })
+    await writeRun(AGENT_RUNS_DIR, rec, f.log)
     runs++
   }
 

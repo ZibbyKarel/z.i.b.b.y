@@ -3,6 +3,10 @@ export { Form, useFormControls } from "./Form"
 export type { FormControlsOptions, FormControls, FormProps } from "./Form"
 
 // Wrappers
+export { FormDropZone } from "./FormDropZone"
+export type { FormDropZoneProps } from "./FormDropZone"
+export { FormFilePicker } from "./FormFilePicker"
+export type { FormFilePickerProps } from "./FormFilePicker"
 export { FormMarkdownEditor } from "./FormMarkdownEditor"
 export type { FormMarkdownEditorProps } from "./FormMarkdownEditor"
 export { FormSegmentPicker } from "./FormSegmentPicker"

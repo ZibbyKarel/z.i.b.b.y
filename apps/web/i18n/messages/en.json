@@ -86,10 +86,6 @@
     "statPipelines": "pipelines",
     "statSkills": "skills",
     "starterTitle": "start here · build the dashboard",
-    "quickRun": "quick run",
-    "quickRunEmptyDesc": "Add a skill and it will appear here as a tile with a Run button.",
-    "quickRunEmptyHint": "// ~/zibby/skills/'<name>'/SKILL.md",
-    "noSkills": "No skills to run",
     "approvalsQueue": "approvals queue",
     "noApprovals": "nothing is waiting · ZIBBY never orders on its own",
     "runningAgents": "running agents",
@@ -121,13 +117,12 @@
   },
   "skills": {
     "addSkill": "Add skill",
-    "runButton": "Run",
     "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
-    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card with a Run button.",
+    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card. Agents invoke skills from their catalog.",
     "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md",
     "title": "Skills",
-    "countSummary": "{count, plural, =0 {no skills} one {# skill} other {# skills}} · SKILL.md files runnable in the background",
+    "countSummary": "{count, plural, =0 {no skills} one {# skill} other {# skills}} · SKILL.md files agents can invoke",
     "addCategory": "Add category",
     "fields": {
       "category": "Category"
@@ -399,6 +394,7 @@
     "selectHint": "Pick a run on the left for its detail and live log.",
     "stop": "Stop run",
     "decide": "Decide",
+    "delete": "Delete",
     "output": "run output",
     "liveLog": "live log",
     "log": "run log",
@@ -419,7 +415,6 @@
       "interrupted": "interrupted"
     },
     "kind": {
-      "skill": "skill",
       "agent": "agent",
       "pipeline": "pipeline"
     }

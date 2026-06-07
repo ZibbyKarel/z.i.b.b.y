@@ -86,10 +86,6 @@
     "statPipelines": "pipeline",
     "statSkills": "skilly",
     "starterTitle": "začni tady · postav dashboard",
-    "quickRun": "rychlé spuštění",
-    "quickRunEmptyDesc": "Přidej skill a objeví se tu jako dlaždice s čudlíkem Spustit.",
-    "quickRunEmptyHint": "// ~/zibby/skills/'<název>'/SKILL.md",
-    "noSkills": "Žádné skilly k spuštění",
     "approvalsQueue": "fronta schválení",
     "noApprovals": "žádná akce nečeká · ZIBBY sám neobjedná",
     "runningAgents": "běžící agenti",
@@ -121,13 +117,12 @@
   },
   "skills": {
     "addSkill": "Přidat skill",
-    "runButton": "Spustit",
     "sectionLabel": "Skilly",
     "emptyTitle": "Zatím žádné skilly",
-    "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta s čudlíkem Spustit.",
+    "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta. Skilly volají agenti ze svého katalogu.",
     "emptyHint": "// vytvoří ~/zibby/skills/'<název>'/SKILL.md",
     "title": "Skilly",
-    "countSummary": "{count, plural, =0 {žádné skilly} one {# skill} few {# skilly} other {# skillů}} · soubory SKILL.md spustitelné na pozadí",
+    "countSummary": "{count, plural, =0 {žádné skilly} one {# skill} few {# skilly} other {# skillů}} · soubory SKILL.md, které volají agenti",
     "addCategory": "Přidat kategorii",
     "fields": {
       "category": "Kategorie"
@@ -399,6 +394,7 @@
     "selectHint": "Vyber běh vlevo pro detail a živý log.",
     "stop": "Zastavit běh",
     "decide": "Rozhodnout",
+    "delete": "Smazat",
     "output": "výstup běhu",
     "liveLog": "živý log",
     "log": "log běhu",
@@ -419,7 +415,6 @@
       "interrupted": "přerušeno"
     },
     "kind": {
-      "skill": "skill",
       "agent": "agent",
       "pipeline": "pipeline"
     }

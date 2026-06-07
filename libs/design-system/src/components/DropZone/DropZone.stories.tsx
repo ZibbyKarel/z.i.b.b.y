@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { DropZone } from "./DropZone";
 
 const meta = {
-  title: "Design System/DropZone",
+  title: "DesignSystem/DropZone",
   component: DropZone,
   tags: ["autodocs"],
   parameters: { layout: "centered" },

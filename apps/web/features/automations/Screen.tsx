@@ -42,7 +42,7 @@ export function Screen() {
       {automations.length === 0 ? (
         <EmptyState
           actionLabel="Add automation"
-          description="Cron and event triggers run pipelines, agents and skills unprompted — overnight work, morning briefings. Every external-effect action still passes the approval gate."
+          description="Cron and event triggers run pipelines and agents unprompted — overnight work, morning briefings. Every external-effect action still passes the approval gate."
           glyph="clock"
           onAction={() => setAdding(true)}
           title="No automations yet"
@@ -86,9 +86,7 @@ function AutomationRow({
   const targetText =
     automation.target.type === "pipeline"
       ? `pipeline:${automation.target.pipelineId}`
-      : automation.target.type === "agent"
-        ? `agent:${automation.target.agentId}`
-        : `skill:${automation.target.skillId}`;
+      : `agent:${automation.target.agentId}`;
 
   return (
     <Card background="background" radius="default">
@@ -134,9 +132,7 @@ function CreateDialog({
   const target: Target =
     targetType === "pipeline"
       ? { type: "pipeline", pipelineId: targetId }
-      : targetType === "agent"
-        ? { type: "agent", agentId: targetId }
-        : { type: "skill", skillId: targetId };
+      : { type: "agent", agentId: targetId };
 
   const submit = () =>
     onCreate({
@@ -176,7 +172,6 @@ function CreateDialog({
           options={[
             { value: "pipeline", label: "Pipeline" },
             { value: "agent", label: "Agent" },
-            { value: "skill", label: "Skill" },
           ]}
           value={targetType}
         />

@@ -81,6 +81,97 @@ describe("RunnerCore", () => {
     await core.init()
     await expect(core.readLog("../escape", 0)).rejects.toBeInstanceOf(RunNotFoundError)
     expect(() => core.get("nope")).toThrow(RunNotFoundError)
+    await expect(core.delete("../escape")).rejects.toBeInstanceOf(RunNotFoundError)
+    await expect(core.delete("nope")).rejects.toBeInstanceOf(RunNotFoundError)
+  })
+
+  it("listAll surfaces finished runs beyond the live retention window", async () => {
+    // A long-finished run: dropped from the live `list()` (retention) but still
+    // present in the full history `listAll()` reads off disk.
+    const runId = "old_1700000000000_7"
+    const logFile = path.join(dir, `${runId}.log`)
+    await fs.writeFile(logFile, "PROGRESS 100\n", "utf8")
+    await fs.writeFile(
+      path.join(dir, `${runId}.json`),
+      JSON.stringify({
+        runId,
+        kind: "agent",
+        status: "done",
+        pct: 100,
+        cwd: path.join(dir, "old"),
+        startedAt: new Date(1700000000000).toISOString(),
+        pid: 7,
+        logFile,
+        label: "ancient",
+      }),
+      "utf8",
+    )
+
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    expect(core.list().some((r) => r.runId === runId)).toBe(false)
+    const found = (await core.listAll()).find((r) => r.runId === runId)
+    expect(found?.status).toBe("done")
+    expect(found?.label).toBe("ancient")
+  })
+
+  it("delete erases a run's sidecar, log, and sandbox, then 404s", async () => {
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    const sandbox = path.join(dir, "doomed_sandbox")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "doomed",
+      command: NODE,
+      args: progressScript(100),
+      cwd: sandbox,
+      extra: { label: "x" },
+    })
+    // Let it finish so no child is writing the log as we delete.
+    for (let i = 0; i < 100; i++) {
+      if ((await core.readLog(run.runId, 0)).done) break
+      await sleep(20)
+    }
+    await fs.writeFile(path.join(sandbox, "artifact.txt"), "out", "utf8")
+
+    await core.delete(run.runId)
+
+    expect(() => core.get(run.runId)).toThrow(RunNotFoundError)
+    await expect(fs.access(path.join(dir, `${run.runId}.json`))).rejects.toThrow()
+    await expect(fs.access(path.join(dir, `${run.runId}.log`))).rejects.toThrow()
+    await expect(fs.access(sandbox)).rejects.toThrow()
+    // Now truly gone: a second delete is a not-found.
+    await expect(core.delete(run.runId)).rejects.toBeInstanceOf(RunNotFoundError)
+  })
+
+  it("delete removes a run that exists only on disk (recovers cwd from sidecar)", async () => {
+    const runId = "disk_1700000000000_3"
+    const sandbox = path.join(dir, "disk_sandbox")
+    await fs.mkdir(sandbox, { recursive: true })
+    await fs.writeFile(path.join(sandbox, "f.txt"), "x", "utf8")
+    await fs.writeFile(path.join(dir, `${runId}.log`), "PROGRESS 100\n", "utf8")
+    await fs.writeFile(
+      path.join(dir, `${runId}.json`),
+      JSON.stringify({
+        runId,
+        kind: "agent",
+        status: "done",
+        pct: 100,
+        cwd: sandbox,
+        startedAt: new Date(1700000000000).toISOString(),
+        pid: 3,
+        logFile: path.join(dir, `${runId}.log`),
+        label: "",
+      }),
+      "utf8",
+    )
+
+    // A fresh core that never loaded this run into memory: cwd must come from the
+    // sidecar so the sandbox is still removed.
+    const core = new RunnerCore(dir, strategy)
+    await core.delete(runId)
+    await expect(fs.access(path.join(dir, `${runId}.json`))).rejects.toThrow()
+    await expect(fs.access(sandbox)).rejects.toThrow()
   })
 
   it("reconstructs an old-format sidecar with NO `kind` field as interrupted", async () => {

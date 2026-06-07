@@ -33,6 +33,8 @@ export class PipelineRunsController {
 
       listPipelineRuns: async () => ({ status: 200, body: this.runner.list() }),
 
+      listAllPipelineRuns: async () => ({ status: 200, body: await this.runner.listAll() }),
+
       getPipelineRun: async ({ params: { pipelineRunId } }) => {
         try {
           return { status: 200, body: this.runner.get(pipelineRunId) }
@@ -45,6 +47,16 @@ export class PipelineRunsController {
       getStageRunLogs: async ({ params: { pipelineRunId, phaseId }, query: { offset } }) => {
         try {
           return { status: 200, body: await this.runner.readStageLog(pipelineRunId, phaseId, offset ?? 0) }
+        } catch (error) {
+          if (isMissingRun(error)) return { status: 404, body: { message: notFound(pipelineRunId) } }
+          throw error
+        }
+      },
+
+      deletePipelineRun: async ({ params: { pipelineRunId } }) => {
+        try {
+          await this.runner.delete(pipelineRunId)
+          return { status: 200, body: { pipelineRunId } }
         } catch (error) {
           if (isMissingRun(error)) return { status: 404, body: { message: notFound(pipelineRunId) } }
           throw error

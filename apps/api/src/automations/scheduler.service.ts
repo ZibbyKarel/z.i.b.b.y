@@ -1,8 +1,7 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { Automation } from "@zibby/contracts"
-import { AgentRunnerService } from "../agent-runs/agent-runner.service"
+import { AgentRunnerService } from "../agents/agent-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
-import { SkillRunnerService } from "../skills/skill-runner.service"
 import { AutomationsStorageService } from "./automations.storage.service"
 import { matchesCron } from "./cron"
 
@@ -21,7 +20,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly storage: AutomationsStorageService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly skillRunner: SkillRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
   ) {}
 
@@ -73,10 +71,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     switch (target.type) {
       case "agent": {
         const run = await this.agentRunner.start(target.agentId, target.prompt ?? "", "automation")
-        return run.runId
-      }
-      case "skill": {
-        const run = await this.skillRunner.start(target.skillId, target.prompt ?? "", "automation")
         return run.runId
       }
       case "pipeline": {

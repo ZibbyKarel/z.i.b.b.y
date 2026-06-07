@@ -10,7 +10,12 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
-import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
+import {
+  allAgentRunsKey,
+  allPipelineRunsKey,
+  useRunGlyphMap,
+  useRunsQuery,
+} from "./queries/useRunsQuery";
 import { runGlyph } from "./run";
 import { RunCard } from "./components/RunCard";
 import { RunDetail } from "./components/RunDetail";
@@ -29,11 +34,17 @@ export function Screen() {
   const [filter, setFilter] = useState<Filter>("all");
   const [selId, setSelId] = useState<string | null>(null);
 
-  const stopSkill = apiClient.skillRuns.stopSkillRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["skillRuns", "running"] }),
-  });
   const stopAgent = apiClient.agentRuns.stopRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agentRuns", "running"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: allAgentRunsKey }),
+  });
+
+  // Deleting a run erases its on-disk artifacts; clearing the selection first keeps
+  // the detail pane from briefly pointing at a now-gone run before the refetch.
+  const deleteAgent = apiClient.agentRuns.deleteRun.useMutation({
+    onSuccess: () => qc.invalidateQueries({ queryKey: allAgentRunsKey }),
+  });
+  const deletePipeline = apiClient.pipelineRuns.deletePipelineRun.useMutation({
+    onSuccess: () => qc.invalidateQueries({ queryKey: allPipelineRunsKey }),
   });
 
   const list = filter === "all" ? runs : runs.filter((r) => r.status === filter);
@@ -44,8 +55,15 @@ export function Screen() {
 
   const stop = (runId: string, kind: string) => {
     if (kind === "agent") stopAgent.mutate({ params: { runId }, body: {} });
-    else if (kind === "skill") stopSkill.mutate({ params: { runId }, body: {} });
   };
+
+  const remove = (runId: string, kind: string) => {
+    setSelId(null);
+    if (kind === "agent") deleteAgent.mutate({ params: { runId } });
+    else if (kind === "pipeline") deletePipeline.mutate({ params: { pipelineRunId: runId } });
+  };
+
+  const deleting = deleteAgent.isPending || deletePipeline.isPending;
 
   const running = count("running");
   const awaiting = count("awaiting-approval");
@@ -101,12 +119,14 @@ export function Screen() {
 
             {selected ? (
               <RunDetail
+                deleting={deleting}
                 glyph={runGlyph(selected, glyphById)}
                 key={selected.runId}
                 now={now}
+                onDelete={() => remove(selected.runId, selected.kind)}
                 onStop={() => stop(selected.runId, selected.kind)}
                 run={selected}
-                stopping={stopSkill.isPending || stopAgent.isPending}
+                stopping={stopAgent.isPending}
               />
             ) : (
               <HudPanel padding="500">

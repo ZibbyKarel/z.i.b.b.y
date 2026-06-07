@@ -2,7 +2,7 @@ import { z } from "zod"
 import { RiskSchema } from "../common.schema"
 
 /** Which run kind an approval gates — so a decision can be routed to the right runner. */
-export const ApprovalRunKindSchema = z.enum(["agent", "skill", "pipeline-stage"])
+export const ApprovalRunKindSchema = z.enum(["agent", "pipeline-stage"])
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>
 
 /** Lifecycle of an approval: created `pending`, then a human decides. */

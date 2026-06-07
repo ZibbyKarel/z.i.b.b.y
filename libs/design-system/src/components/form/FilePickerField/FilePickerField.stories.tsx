@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { FilePickerField } from "./FilePickerField";
 
 const meta = {
-  title: "Design System/Form/FilePickerField",
+  title: "DesignSystem/Field/FilePickerField",
   component: FilePickerField,
   tags: ["autodocs"],
   parameters: { layout: "centered" },

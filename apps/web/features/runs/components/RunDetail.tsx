@@ -12,6 +12,8 @@ export interface RunDetailProps {
   now: number;
   onStop: () => void;
   stopping: boolean;
+  onDelete: () => void;
+  deleting: boolean;
 }
 
 function MetaCell({ label, value, tone }: { label: string; value: string; tone?: "accent" }) {
@@ -28,7 +30,7 @@ function MetaCell({ label, value, tone }: { label: string; value: string; tone?:
 }
 
 /** Run detail: header + meta strip + live log (or, for pipelines, a link out). */
-export function RunDetail({ run, glyph, now, onStop, stopping }: RunDetailProps) {
+export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deleting }: RunDetailProps) {
   const t = useTranslations("runs");
   const router = useRouter();
   const tone: "accent" | "ok" | "warn" | "bad" | undefined =
@@ -80,6 +82,9 @@ export function RunDetail({ run, glyph, now, onStop, stopping }: RunDetailProps)
                   {t("decide")}
                 </Button>
               )}
+              <Button disabled={deleting} icon="x" intent="reject" onClick={onDelete} size="sm">
+                {t("delete")}
+              </Button>
             </Stack>
           </Stack>
 

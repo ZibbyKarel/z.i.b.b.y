@@ -24,22 +24,6 @@ export interface Skill {
   gateRuleIds?: string[];
 }
 
-/**
- * Adapt the in-memory {@link Skill} placeholder to the contract `Agent` shape so
- * it can flow through the shared `RunModal` (which speaks the contract type, not a
- * bespoke run-target). Temporary: skills get their own ts-rest contract in Fáze 2b
- * (see NEXT-STEPS), at which point this — and the `Skill` type — go away.
- */
-export function skillToAgent(s: Skill): Agent {
-  return {
-    id: s.id,
-    name: s.name,
-    glyph: s.glyph,
-    description: s.desc,
-    instructions: "",
-  };
-}
-
 export interface Approval {
   id: string;
   skill: string;

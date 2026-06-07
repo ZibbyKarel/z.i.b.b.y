@@ -1,7 +1,7 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { agentRunsContract } from "@zibby/contracts"
-import { AgentNotFoundError, InvalidAgentIdError } from "../agents/agents.errors"
+import { AgentNotFoundError, InvalidAgentIdError } from "./agents.errors"
 import { AgentRunnerService, RunNotFoundError } from "./agent-runner.service"
 
 /**
@@ -30,6 +30,8 @@ export class AgentRunsController {
 
       listRunning: async () => ({ status: 200, body: this.runner.listRunning() }),
 
+      listRuns: async () => ({ status: 200, body: await this.runner.listAll() }),
+
       getRun: async ({ params: { runId } }) => {
         try {
           return { status: 200, body: this.runner.get(runId) }
@@ -51,6 +53,16 @@ export class AgentRunsController {
       stopRun: async ({ params: { runId } }) => {
         try {
           return { status: 200, body: this.runner.stop(runId) }
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } }
+          throw error
+        }
+      },
+
+      deleteRun: async ({ params: { runId } }) => {
+        try {
+          await this.runner.delete(runId)
+          return { status: 200, body: { runId } }
         } catch (error) {
           if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } }
           throw error

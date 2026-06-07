@@ -15,7 +15,6 @@ import {
   memoryContract,
   pipelineRunsContract,
   pipelinesContract,
-  skillRunsContract,
   skillsContract,
 } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
@@ -29,7 +28,6 @@ const apiContract = initContract().router({
   agentRuns: agentRunsContract,
   categories: categoriesContract,
   skills: skillsContract,
-  skillRuns: skillRunsContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract,
   approvals: approvalsContract,

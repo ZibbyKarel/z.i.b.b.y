@@ -8,11 +8,13 @@ export const TriggerSchema = z.discriminatedUnion("type", [
 ])
 export type Trigger = z.infer<typeof TriggerSchema>
 
-/** What an automation runs when it fires. */
+/**
+ * What an automation runs when it fires. A skill can't be a target: it isn't an
+ * autonomous executable — only agents and pipelines are real runners.
+ */
 export const TargetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pipeline"), pipelineId: AgentIdSchema }),
   z.object({ type: z.literal("agent"), agentId: AgentIdSchema, prompt: z.string().optional() }),
-  z.object({ type: z.literal("skill"), skillId: AgentIdSchema, prompt: z.string().optional() }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

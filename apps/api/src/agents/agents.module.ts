@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
-import { AgentRunnerService, RUNS_DIR } from "../agent-runs/agent-runner.service"
-import { AgentRunsController } from "../agent-runs/agent-runs.controller"
+import { AgentRunnerService, RUNS_DIR } from "./agent-runner.service"
+import { AgentRunsController } from "./agent-runs.controller"
 import { ApprovalsModule } from "../approvals/approvals.module"
 import { GatesController } from "../gates/gates.controller"
 import { GatesModule } from "../gates/gates.module"

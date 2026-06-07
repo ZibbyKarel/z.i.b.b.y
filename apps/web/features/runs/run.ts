@@ -1,4 +1,4 @@
-import type { AgentRun, PipelineRun, RunStatus, SkillRun } from "@zibby/contracts";
+import type { AgentRun, PipelineRun, RunStatus } from "@zibby/contracts";
 import type { BadgeTone, DotTone, IconName } from "@zibby/design-system";
 
 /**
@@ -6,13 +6,15 @@ import type { BadgeTone, DotTone, IconName } from "@zibby/design-system";
  * unified runs list (each kind has its own `…/running`) and no `name`/`glyph`/
  * `cost`/`elapsed`. So we merge the per-kind lists client-side into this view
  * model, deriving the missing display fields (see DESIGN_VS_API_NOTES.md).
+ * (Only agents and pipelines are runnable — a skill is a capability an agent
+ * invokes, not a standalone run.)
  */
-export type RunKind = "skill" | "agent" | "pipeline";
+export type RunKind = "agent" | "pipeline";
 
 export interface RunView {
   runId: string;
   kind: RunKind;
-  /** The owning skill/agent/pipeline id (the run's display name). */
+  /** The owning agent/pipeline id (the run's display name). */
   owner: string;
   status: RunStatus;
   /** 0–100, or null for pipeline runs (no single percentage). */
@@ -21,21 +23,7 @@ export interface RunView {
   project: string;
   startedAt: string;
   /** Log endpoint base — null for pipeline runs (no single log). */
-  logBase: "agents" | "skills" | null;
-}
-
-export function skillRunToView(r: SkillRun): RunView {
-  return {
-    runId: r.runId,
-    kind: "skill",
-    owner: r.skillId,
-    status: r.status,
-    pct: r.pct,
-    prompt: r.prompt,
-    project: r.project,
-    startedAt: r.startedAt,
-    logBase: "skills",
-  };
+  logBase: "agents" | null;
 }
 
 export function agentRunToView(r: AgentRun): RunView {
@@ -92,9 +80,9 @@ export const RUN_STATE: Record<RunStatus, RunStateMeta> = {
   interrupted: { key: "interrupted", badge: "neutral", dot: "faint", glyph: "stop", pulse: false },
 };
 
-const KIND_GLYPH: Record<RunKind, IconName> = { skill: "spark", agent: "bot", pipeline: "flow" };
+const KIND_GLYPH: Record<RunKind, IconName> = { agent: "bot", pipeline: "flow" };
 
-/** Resolve a run's display glyph from the catalog (skill/agent), else by kind. */
+/** Resolve a run's display glyph from the catalog (agent), else by kind. */
 export function runGlyph(run: RunView, glyphById: Map<string, IconName>): IconName {
   return glyphById.get(run.owner) ?? KIND_GLYPH[run.kind];
 }

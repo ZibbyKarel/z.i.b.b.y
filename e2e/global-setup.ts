@@ -35,7 +35,7 @@ export default async function globalSetup(): Promise<void> {
 
   const ctx = await request.newContext({ baseURL: API });
 
-  // A skill to run from its tile.
+  // A skill in the catalog (skills are catalog-only — invoked by agents, not run alone).
   await ctx
     .post("/api/skills", {
       data: { id: "demo-skill", name: "Demo Skill", glyph: "spark", desc: "a demo skill", instructions: "do the demo" },
