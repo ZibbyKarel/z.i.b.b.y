@@ -186,11 +186,11 @@ export {
 } from "./components/form/TextInput/TextInput";
 export type { TextInputProps } from "./components/form/TextInput/TextInput";
 
-export { TextArea, TextAreaTestId } from "./components/form/TextArea";
-export type { TextAreaProps } from "./components/form/TextArea";
+export { TextArea, TextAreaTestId } from "./components/form/TextArea/TextArea";
+export type { TextAreaProps } from "./components/form/TextArea/TextArea";
 
-export { Select } from "./components/form/Select";
-export type { SelectProps } from "./components/form/Select";
+export { Select } from "./components/form/Select/Select";
+export type { SelectProps } from "./components/form/Select/Select";
 
 export {
   SegmentPicker,
