@@ -12,7 +12,9 @@ export function getApprovalsQueryKey() {
  * (semantic risk type + severity + structured preview). Plain-string details
  * degrade to `{ text }`, so this is safe against an unenriched backend.
  */
-function selectApprovals(response: { body: ContractApproval[] }): DashboardApproval[] {
+function selectApprovals(response: {
+  body: ContractApproval[];
+}): DashboardApproval[] {
   return response.body.map(parseApprovalDetail);
 }
 
@@ -24,7 +26,7 @@ export function useApprovalsQuery() {
   return apiClient.approvals.listPendingApprovals.useQuery({
     queryKey: getApprovalsQueryKey(),
     queryData: { query: { status: "pending" } },
-    refetchInterval: 2000,
+    refetchInterval: 1 * 60 * 1000, //1m
     select: selectApprovals,
   });
 }
