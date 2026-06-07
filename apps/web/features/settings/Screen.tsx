@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Container, Divider, Icon, Stack, StatusDot, Switch, Typography } from "@zibby/design-system";
+import { Button, Container, Divider, Icon, Stack, StatusDot, Toggle, Typography } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -119,7 +119,7 @@ export function Screen() {
             />
             <Divider />
             <SettingRow
-              control={<Switch checked={caffeinate} label={t("caffeinate")} onChange={setCaffeinateValue} />}
+              control={<Toggle checked={caffeinate} label={t("caffeinate")} onChange={setCaffeinateValue} />}
               hint={t("caffeinateHint")}
               label={t("caffeinate")}
             />

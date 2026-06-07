@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { zodResolver } from "../zodResolver"
 import { z } from "zod"
 import { describe, expect, it, vi } from "vitest"
-import { FieldTestId, TextInputTestId } from "@zibby/design-system"
+import { FieldTestId, TextInputFieldTestId } from "@zibby/design-system"
 import { Form } from "../Form"
 import { FormTextInput } from "./FormTextInput"
 
@@ -23,7 +23,7 @@ describe("FormTextInput", () => {
     )
     await userEvent.click(screen.getByRole("button", { name: "Submit" }))
     expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Povinné pole")
-    expect(screen.getByTestId(TextInputTestId.Control)).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByTestId(TextInputFieldTestId.Control)).toHaveAttribute("aria-invalid", "true")
   })
 
   it("clears error after valid input", async () => {
@@ -38,7 +38,7 @@ describe("FormTextInput", () => {
     )
     await userEvent.click(screen.getByRole("button", { name: "Submit" }))
     expect(screen.getByTestId(FieldTestId.Error)).toBeInTheDocument()
-    await userEvent.type(screen.getByTestId(TextInputTestId.Control), "hello")
+    await userEvent.type(screen.getByTestId(TextInputFieldTestId.Control), "hello")
     expect(screen.queryByTestId(FieldTestId.Error)).not.toBeInTheDocument()
   })
 
@@ -51,7 +51,7 @@ describe("FormTextInput", () => {
         <FormTextInput<{ name: string }> label="Název" name="name" />
       </Form>,
     )
-    expect(screen.getByTestId(TextInputTestId.Control)).toHaveValue("initial")
+    expect(screen.getByTestId(TextInputFieldTestId.Control)).toHaveValue("initial")
   })
 
   it("forwards data-testid to the input element", () => {

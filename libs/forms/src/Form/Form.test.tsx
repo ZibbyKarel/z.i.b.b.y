@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { zodResolver } from "../zodResolver"
 import { z } from "zod"
 import { describe, expect, it, vi } from "vitest"
-import { TextInputTestId } from "@zibby/design-system"
+import { TextInputFieldTestId } from "@zibby/design-system"
 import { FormTextInput } from "../FormTextInput"
 import { Form, useFormControls } from "./Form"
 
@@ -22,7 +22,7 @@ describe("Form", () => {
         <button type="submit">Odeslat</button>
       </Form>,
     )
-    await userEvent.type(screen.getByTestId(TextInputTestId.Control), "hello")
+    await userEvent.type(screen.getByTestId(TextInputFieldTestId.Control), "hello")
     await userEvent.click(screen.getByRole("button", { name: "Odeslat" }))
     expect(onSubmit).toHaveBeenCalledWith({ name: "hello" }, expect.anything())
   })
@@ -72,7 +72,7 @@ describe("useFormControls", () => {
       )
     }
     render(<TestHarness />)
-    expect(screen.getByTestId(TextInputTestId.Control)).toBeInTheDocument()
+    expect(screen.getByTestId(TextInputFieldTestId.Control)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Odeslat" })).toBeInTheDocument()
   })
 })

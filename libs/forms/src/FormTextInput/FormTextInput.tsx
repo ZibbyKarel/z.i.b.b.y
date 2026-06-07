@@ -1,9 +1,9 @@
 import type { Ref } from "react"
 import { type FieldValues, type Path, useController } from "react-hook-form"
-import { TextInput, type TextInputProps } from "@zibby/design-system"
+import { TextInputField, type TextInputFieldProps } from "@zibby/design-system"
 
 export interface FormTextInputProps<TFieldValues extends FieldValues = FieldValues>
-  extends Omit<TextInputProps, "value" | "onChange" | "onBlur" | "defaultValue" | "name" | "ref"> {
+  extends Omit<TextInputFieldProps, "value" | "onChange" | "onBlur" | "defaultValue" | "name" | "ref"> {
   name: Path<TFieldValues>
   defaultValue?: string
 }
@@ -20,7 +20,7 @@ export function FormTextInput<TFieldValues extends FieldValues = FieldValues>({
     defaultValue: (defaultValue ?? "") as never,
   })
   return (
-    <TextInput
+    <TextInputField
       {...props}
       error={fieldState.error?.message ?? error}
       hint={hint}
@@ -32,3 +32,4 @@ export function FormTextInput<TFieldValues extends FieldValues = FieldValues>({
     />
   )
 }
+

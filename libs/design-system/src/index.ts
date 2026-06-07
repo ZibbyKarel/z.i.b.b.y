@@ -151,8 +151,8 @@ export type {
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 
-export { Switch, SwitchTestId } from "./components/Switch/Switch";
-export type { SwitchProps, SwitchSize } from "./components/Switch/Switch";
+export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";
+export type { ToggleProps, ToggleSize } from "./components/Toggle/Toggle";
 
 export { Panel, PanelTestId } from "./components/Panel/Panel";
 export type { PanelProps } from "./components/Panel/Panel";
@@ -181,25 +181,25 @@ export type {
 } from "./components/form/Field";
 
 export {
-  TextInput,
-  TextInputTestId,
-} from "./components/form/TextInput/TextInput";
-export type { TextInputProps } from "./components/form/TextInput/TextInput";
+  TextInputField,
+  TextInputFieldTestId,
+} from "./components/form/TextInputField/TextInputField";
+export type { TextInputFieldProps } from "./components/form/TextInputField/TextInputField";
 
-export { TextArea, TextAreaTestId } from "./components/form/TextArea/TextArea";
-export type { TextAreaProps } from "./components/form/TextArea/TextArea";
+export { TextAreaField, TextAreaFieldTestId } from "./components/form/TextAreaField/TextAreaField";
+export type { TextAreaFieldProps } from "./components/form/TextAreaField/TextAreaField";
 
-export { Select } from "./components/form/Select/Select";
-export type { SelectProps } from "./components/form/Select/Select";
+export { SelectField } from "./components/form/SelectField/SelectField";
+export type { SelectFieldProps } from "./components/form/SelectField/SelectField";
 
 export {
-  SegmentPicker,
-  SegmentPickerTestId,
-} from "./components/form/SegmentPicker/SegmentPicker";
-export type { SegmentPickerProps } from "./components/form/SegmentPicker/SegmentPicker";
+  SegmentPickerField,
+  SegmentPickerFieldTestId,
+} from "./components/form/SegmentPickerField/SegmentPickerField";
+export type { SegmentPickerFieldProps } from "./components/form/SegmentPickerField/SegmentPickerField";
 
-export { Toggle, ToggleTestId } from "./components/form/Toggle/Toggle";
-export type { ToggleProps } from "./components/form/Toggle/Toggle";
+export { ToggleField, ToggleFieldTestId } from "./components/form/ToggleField/ToggleField";
+export type { ToggleFieldProps } from "./components/form/ToggleField/ToggleField";
 
 export {
   MarkdownEditor,

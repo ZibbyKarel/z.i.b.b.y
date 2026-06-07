@@ -1,8 +1,8 @@
 import { type FieldValues, type Path, useController } from "react-hook-form"
-import { SegmentPicker, type SegmentPickerProps } from "@zibby/design-system"
+import { SegmentPickerField, type SegmentPickerFieldProps } from "@zibby/design-system"
 
 export interface FormSegmentPickerProps<TFieldValues extends FieldValues = FieldValues>
-  extends Omit<SegmentPickerProps, "value" | "onValueChange"> {
+  extends Omit<SegmentPickerFieldProps, "value" | "onValueChange"> {
   name: Path<TFieldValues>
   defaultValue?: string
 }
@@ -19,7 +19,7 @@ export function FormSegmentPicker<TFieldValues extends FieldValues = FieldValues
     defaultValue: (defaultValue ?? "") as never,
   })
   return (
-    <SegmentPicker
+    <SegmentPickerField
       {...props}
       error={fieldState.error?.message ?? error}
       hint={hint}

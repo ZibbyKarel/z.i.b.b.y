@@ -6,10 +6,10 @@ import {
   Card,
   Container,
   Dialog,
-  SegmentPicker,
+  SegmentPickerField,
   Stack,
   StatusDot,
-  TextInput,
+  TextInputField,
   Typography,
 } from "@zibby/design-system";
 import type { Automation, Target } from "@zibby/contracts";
@@ -164,13 +164,13 @@ function CreateDialog({
       width="md"
     >
       <Stack gap="200">
-        <TextInput label="Name" onChange={(e) => setName(e.target.value)} value={name} />
-        <TextInput
+        <TextInputField label="Name" onChange={(e) => setName(e.target.value)} value={name} />
+        <TextInputField
           label="Cron (Europe/Prague)"
           onChange={(e) => setExpr(e.target.value)}
           value={expr}
         />
-        <SegmentPicker
+        <SegmentPickerField
           label="Target"
           onValueChange={(v) => setTargetType(v as TargetType)}
           options={[
@@ -180,7 +180,7 @@ function CreateDialog({
           ]}
           value={targetType}
         />
-        <TextInput
+        <TextInputField
           label="Target id"
           onChange={(e) => setTargetId(e.target.value)}
           value={targetId}

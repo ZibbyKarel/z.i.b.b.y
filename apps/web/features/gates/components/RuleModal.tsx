@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Decision, GlobalGateRule, GlobalGateRuleInput, MatchCondition, Resolve } from "@zibby/contracts";
-import { Button, Dialog, Divider, SegmentPicker, Select, Stack, TextInput, Typography } from "@zibby/design-system";
+import { Button, Dialog, Divider, SegmentPickerField, SelectField, Stack, TextInputField, Typography } from "@zibby/design-system";
 import { FormSelect, FormTextInput, useFormControls } from "@zibby/forms";
 import { MATCH_TYPE_ORDER, type MatchType, flattenResolve } from "../gate";
 
@@ -190,7 +190,7 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
               {t("resolutionTitle")}
             </Typography>
             {leaves.length > 1 && (
-              <SegmentPicker
+              <SegmentPickerField
                 label={t("resolveMode")}
                 onValueChange={(v) => setMode(v as "all" | "any")}
                 options={[
@@ -202,7 +202,7 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
             )}
             {leaves.map((leaf, i) => (
               <Stack align="end" direction="row" gap="100" key={i}>
-                <Select<ResolveKind>
+                <SelectField<ResolveKind>
                   label={t("resolveBy")}
                   onValueChange={(v) => setLeaf(i, { kind: v })}
                   options={(["human", "check", "agent"] as ResolveKind[]).map((k) => ({
@@ -212,7 +212,7 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
                   value={leaf.kind}
                 />
                 {leaf.kind !== "human" && (
-                  <TextInput
+                  <TextInputField
                     label={leaf.kind === "agent" ? t("resolveAgent") : t("resolveCheck")}
                     onChange={(e) => setLeaf(i, { name: e.target.value })}
                     placeholder={leaf.kind === "agent" ? "reviewer" : "ci_green"}

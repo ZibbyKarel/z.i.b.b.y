@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { zodResolver } from "../zodResolver"
 import { z } from "zod"
 import { describe, expect, it, vi } from "vitest"
-import { FieldTestId, ToggleTestId } from "@zibby/design-system"
+import { FieldTestId, ToggleFieldTestId } from "@zibby/design-system"
 import { Form } from "../Form"
 import { FormToggle } from "./FormToggle"
 
@@ -36,7 +36,7 @@ describe("FormToggle", () => {
         <button type="submit">Submit</button>
       </Form>,
     )
-    await userEvent.click(screen.getByTestId(ToggleTestId.Control))
+    await userEvent.click(screen.getByTestId(ToggleFieldTestId.Control))
     await userEvent.click(screen.getByRole("button", { name: "Submit" }))
     expect(onSubmit).toHaveBeenCalledWith({ enabled: true }, expect.anything())
   })
@@ -50,7 +50,7 @@ describe("FormToggle", () => {
         <FormToggle<{ enabled: boolean }> label="Souhlasím" name="enabled" />
       </Form>,
     )
-    expect(screen.getByTestId(ToggleTestId.Control)).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByTestId(ToggleFieldTestId.Control)).toHaveAttribute("aria-checked", "true")
   })
 
   it("passes through hint when there is no error", () => {

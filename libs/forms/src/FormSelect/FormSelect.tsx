@@ -1,10 +1,10 @@
 import { type FieldValues, type Path, useController } from "react-hook-form"
-import { Select, type SelectProps } from "@zibby/design-system"
+import { SelectField, type SelectFieldProps } from "@zibby/design-system"
 
 export interface FormSelectProps<
   T extends string = string,
   TFieldValues extends FieldValues = FieldValues,
-> extends Omit<SelectProps<T>, "value" | "onValueChange"> {
+> extends Omit<SelectFieldProps<T>, "value" | "onValueChange"> {
   name: Path<TFieldValues>
   defaultValue?: T
 }
@@ -21,7 +21,7 @@ export function FormSelect<T extends string = string, TFieldValues extends Field
     defaultValue: (defaultValue ?? "") as never,
   })
   return (
-    <Select<T>
+    <SelectField<T>
       {...props}
       error={fieldState.error?.message ?? error}
       hint={hint}

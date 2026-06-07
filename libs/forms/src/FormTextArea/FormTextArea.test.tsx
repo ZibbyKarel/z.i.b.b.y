@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { zodResolver } from "../zodResolver"
 import { z } from "zod"
 import { describe, expect, it, vi } from "vitest"
-import { FieldTestId, TextAreaTestId } from "@zibby/design-system"
+import { FieldTestId, TextAreaFieldTestId } from "@zibby/design-system"
 import { Form } from "../Form"
 import { FormTextArea } from "./FormTextArea"
 
@@ -23,7 +23,7 @@ describe("FormTextArea", () => {
     )
     await userEvent.click(screen.getByRole("button", { name: "Submit" }))
     expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Povinné pole")
-    expect(screen.getByTestId(TextAreaTestId.Control)).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByTestId(TextAreaFieldTestId.Control)).toHaveAttribute("aria-invalid", "true")
   })
 
   it("uses defaultValues from Form to pre-fill the textarea", () => {
@@ -35,7 +35,7 @@ describe("FormTextArea", () => {
         <FormTextArea<{ body: string }> label="Popis" name="body" />
       </Form>,
     )
-    expect(screen.getByTestId(TextAreaTestId.Control)).toHaveValue("initial text")
+    expect(screen.getByTestId(TextAreaFieldTestId.Control)).toHaveValue("initial text")
   })
 
   it("forwards data-testid to the textarea element", () => {
