@@ -17,7 +17,9 @@ import { RunStatusSchema } from "../common.schema"
  * still alive when the backend stopped. The child is a child of the API process,
  * so it died with it and cannot be resumed — on startup the runner relabels any
  * run left "running" (with no live handle) as `interrupted`. `awaiting-approval`
- * (Phase 3) is a paused state with no live child that survives restart unchanged.
+ * is a run paused on an approval gate. A mid-run (Variant B) pause keeps its live
+ * child blocking on a decision file, so it does NOT survive restart — on startup a
+ * paused run with no stashed spawn spec is likewise reconciled to `interrupted`.
  *
  * Aliased to the shared {@link RunStatusSchema} so every run kind moves in lockstep
  * (widening it is a deliberate, single-point contract change).

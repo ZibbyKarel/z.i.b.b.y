@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto"
 import { type WriteStream, createWriteStream } from "node:fs"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
+import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts"
 import { detectLimit } from "./detect-limit"
 import type {
   BaseRun,
@@ -11,6 +12,18 @@ import type {
   RunSpec,
   RunnerRunStatus,
 } from "./runner-core.types"
+
+/**
+ * Called when a live run announces a mid-run action with an external effect (a
+ * `INTENT {json}` line on stdout — Variant B). The handler evaluates the action
+ * and steers the run via {@link RunnerCore.allowIntent} / {@link RunnerCore.denyIntent}
+ * / {@link RunnerCore.holdForApproval}; the child blocks on a decision file until it
+ * does. Wired by the agent runner (the core is entity-agnostic); other runners omit it.
+ */
+export type IntentHandler = (runId: string, action: IntendedAction, cwd: string) => void | Promise<void>
+
+/** The decision file a paused child polls for, written into its sandbox `cwd`. */
+const INTENT_DECISION_FILE = "intent-decision.json"
 
 /** A run id may only contain the safe characters our filenames are built from. */
 const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/
@@ -37,6 +50,12 @@ interface RunHandle<R extends BaseRun> {
   log?: WriteStream
   /** For an `awaiting-approval` run: the spec to spawn once it is approved. */
   pendingSpec?: RunSpec
+  /**
+   * Set when a run is being torn down on purpose (a denied / rejected mid-run
+   * intent). The child exits non-zero in response, but its terminal state is
+   * `interrupted`, not the `error` a non-zero exit normally means.
+   */
+  interrupting?: boolean
 }
 
 /**
@@ -48,10 +67,19 @@ interface RunHandle<R extends BaseRun> {
  * On {@link init} the registry is rebuilt from the sidecars on disk. A sidecar
  * still marked `running` means its process died with the previous backend (the
  * child is a child of the API process); it can't be resumed, so it is reconciled
- * to `interrupted`. A run paused at `awaiting-approval` has no live child *by
- * design* (Phase 3, Variant A — gate at the spawn boundary): it survives restart
- * unchanged, and its spawn spec is persisted alongside so it can still be resumed
- * after a restart once approved.
+ * to `interrupted`. An `awaiting-approval` run is reconciled by whether a spawn
+ * spec was stashed: with one (a spawn-boundary pause via {@link createPending}) it
+ * survives restart and can still be resumed once approved; without one (a Variant B
+ * mid-run pause, whose blocking child died with the backend) there is nothing to
+ * resume, so it is reconciled to `interrupted` like a dead `running` child.
+ *
+ * Variant B (mid-run gating): a live child may announce an external-effect action
+ * via a `INTENT {json}` stdout line and then block on a decision file in its
+ * sandbox. {@link wire} parses it and calls the {@link IntentHandler}, which steers
+ * the run with {@link allowIntent} / {@link denyIntent} / {@link holdForApproval}.
+ * A held run flips to `awaiting-approval` *without* killing its child; {@link resume}
+ * (approve) writes an `allow` decision and the child proceeds, {@link cancel}
+ * (reject) writes a `deny` and the child aborts.
  *
  * The class is deliberately a plain class, not a Nest provider: per-kind wrappers
  * own the DI surface and delegate here, so liveness/restart/approval logic lives
@@ -70,6 +98,12 @@ export class RunnerCore<R extends BaseRun> {
      * agent runner wires this to bust the limits cache; other runners omit it.
      */
     private readonly onLimitHit?: (resetsAt: number | null) => void,
+    /**
+     * Variant B mid-run gate: called when a live run emits an `INTENT {json}` line.
+     * The agent runner wires this to the gate evaluator; other runners omit it (any
+     * INTENT line then just falls through as ordinary, unhandled output).
+     */
+    private readonly onIntent?: IntentHandler,
   ) {
     this.dir = path.resolve(dir)
   }
@@ -110,9 +144,17 @@ export class RunnerCore<R extends BaseRun> {
         await this.writeSidecar(run)
         this.runs.set(run.runId, { run })
       } else if (run.status === "awaiting-approval") {
-        // Expectedly has no child; restore its spawn spec so it can resume.
         const pendingSpec = await this.readPendingSpec(run.runId)
-        this.runs.set(run.runId, { run, pendingSpec })
+        if (pendingSpec) {
+          // Spawn-boundary pause: the stashed spec lets it resume after a restart.
+          this.runs.set(run.runId, { run, pendingSpec })
+        } else {
+          // Variant B mid-run pause: its blocking child was a child of the previous
+          // backend and died with it; nothing to resume → reconcile to interrupted.
+          run = { ...run, status: "interrupted" }
+          await this.writeSidecar(run)
+          this.runs.set(run.runId, { run })
+        }
       } else {
         this.runs.set(run.runId, { run })
       }
@@ -122,7 +164,15 @@ export class RunnerCore<R extends BaseRun> {
   /** Kill any still-live children (whole process group) on shutdown. */
   shutdown(): void {
     for (const handle of this.runs.values()) {
-      if (handle.child && handle.run.status === "running") killGroup(handle.run.pgid ?? handle.run.pid)
+      // A run held at `awaiting-approval` (Variant B) still has a live child blocking
+      // on its decision file — kill it too so we don't orphan a node process.
+      const live = handle.run.status === "running" || handle.run.status === "awaiting-approval"
+      if (handle.child && live) {
+        // We are stopping the run, not failing it: flag it so the kill's non-zero
+        // exit reconciles to `interrupted`, not `error`.
+        handle.interrupting = true
+        killGroup(handle.run.pgid ?? handle.run.pid)
+      }
     }
   }
 
@@ -181,11 +231,26 @@ export class RunnerCore<R extends BaseRun> {
     return run
   }
 
-  /** Resume an approved `awaiting-approval` run by finally spawning its stashed spec. */
+  /**
+   * Resume an approved `awaiting-approval` run. Two shapes:
+   * - Variant B (a live child blocking on its decision file): write an `allow`
+   *   decision and flip back to `running` — the child proceeds, we never respawn.
+   * - Spawn-boundary pause (a stashed spec, no child): spawn the spec now.
+   */
   async resume(runId: string): Promise<R> {
     const handle = this.runs.get(runId)
     if (!handle) throw new RunNotFoundError(runId)
-    if (handle.run.status !== "awaiting-approval" || !handle.pendingSpec) return handle.run
+    if (handle.run.status !== "awaiting-approval") return handle.run
+
+    if (handle.child) {
+      // Variant B: release the blocked child.
+      await this.writeIntentDecision(handle.run.cwd, "allow")
+      handle.run.status = "running"
+      await this.writeSidecar(handle.run)
+      return handle.run
+    }
+
+    if (!handle.pendingSpec) return handle.run
 
     const spec = handle.pendingSpec
     handle.pendingSpec = undefined
@@ -216,14 +281,56 @@ export class RunnerCore<R extends BaseRun> {
     const handle = this.runs.get(runId)
     if (!handle) throw new RunNotFoundError(runId)
     if (handle.run.status === "awaiting-approval") {
+      if (handle.child) {
+        // Variant B: a live child is blocking on its decision file. Tell it to abort
+        // (it exits non-zero); `interrupting` makes its exit reconcile to interrupted.
+        handle.interrupting = true
+        void this.writeIntentDecision(handle.run.cwd, "deny")
+      } else {
+        // Spawn-boundary pause: it never spawned, so just mark it interrupted.
+        void this.clearPendingSpec(runId)
+      }
       handle.run.status = "interrupted"
       handle.pendingSpec = undefined
-      void this.clearPendingSpec(runId)
       void this.writeSidecar(handle.run)
     } else if (handle.child && handle.run.status === "running") {
       handle.child.kill()
     }
     return handle.run
+  }
+
+  /**
+   * Variant B — let a mid-run intent through: write an `allow` decision so the
+   * child unblocks and performs the action. The run stays `running`.
+   */
+  async allowIntent(runId: string): Promise<void> {
+    const handle = this.runs.get(runId)
+    if (!handle) return
+    await this.writeIntentDecision(handle.run.cwd, "allow")
+  }
+
+  /**
+   * Variant B — refuse a mid-run intent with no human in the loop: write a `deny`
+   * decision (the child aborts, exiting non-zero) and flag the run so its exit
+   * reconciles to `interrupted` rather than `error`.
+   */
+  async denyIntent(runId: string): Promise<void> {
+    const handle = this.runs.get(runId)
+    if (!handle) return
+    handle.interrupting = true
+    await this.writeIntentDecision(handle.run.cwd, "deny")
+  }
+
+  /**
+   * Variant B — pause a live run on a mid-run intent: flip it to `awaiting-approval`
+   * while its child keeps blocking on the (not-yet-written) decision file. A later
+   * {@link resume}/{@link cancel} writes the decision that unblocks or aborts it.
+   */
+  async holdForApproval(runId: string): Promise<void> {
+    const handle = this.runs.get(runId)
+    if (!handle) return
+    handle.run.status = "awaiting-approval"
+    await this.writeSidecar(handle.run)
   }
 
   has(runId: string): boolean {
@@ -413,13 +520,36 @@ export class RunnerCore<R extends BaseRun> {
     if (!child || !log) return
 
     let limitSeen = false
+    // Buffer partial lines across chunks: a control line (PROGRESS / INTENT) split
+    // over a chunk boundary must still be parsed whole — a missed INTENT would
+    // strand the child blocking on its decision file until the 10-minute timeout.
+    let residual = ""
     const onChunk = (buf: Buffer) => {
       const text = buf.toString("utf8")
       log.write(text)
-      for (const line of text.split(/\r?\n/)) {
-        const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
-        if (match?.[1] !== undefined) {
-          run.pct = Math.min(100, Math.max(0, Number(match[1])))
+      residual += text
+      const lines = residual.split(/\r?\n/)
+      residual = lines.pop() ?? ""
+      for (const raw of lines) {
+        const line = raw.trim()
+        const progress = /^PROGRESS\s+(\d+)/.exec(line)
+        if (progress?.[1] !== undefined) {
+          run.pct = Math.min(100, Math.max(0, Number(progress[1])))
+          continue
+        }
+        // Variant B: the child announced an external-effect action and is now
+        // blocking on its decision file. Parse it as an IntendedAction and hand it
+        // to the gate (which writes the file). A malformed line is ignored.
+        const intent = /^INTENT\s+(\{.*\})$/.exec(line)
+        if (intent?.[1] && this.onIntent) {
+          let action: IntendedAction | undefined
+          try {
+            const parsed = IntendedActionSchema.safeParse(JSON.parse(intent[1]))
+            if (parsed.success) action = parsed.data
+          } catch {
+            // Not JSON / not an IntendedAction — leave it as ordinary output.
+          }
+          if (action) void this.onIntent(run.runId, action, run.cwd)
         }
       }
       // Layer 2: a usage-limit signal in the output busts the limits cache (once).
@@ -441,13 +571,25 @@ export class RunnerCore<R extends BaseRun> {
       void this.writeSidecar(run)
     }
     child.on("error", () => finalize("error"))
-    child.on("exit", (code) => finalize(code === 0 ? "done" : "error"))
+    child.on("exit", (code) => {
+      // A run torn down on purpose (denied / rejected mid-run intent) exits non-zero
+      // but its terminal state is `interrupted`, not `error`.
+      if (handle.interrupting) return finalize("interrupted")
+      finalize(code === 0 ? "done" : "error")
+    })
   }
 
   /** Persist a run's metadata next to its log so it survives a backend restart. */
   private async writeSidecar(run: R): Promise<void> {
     await fs
       .writeFile(path.join(this.dir, `${run.runId}.json`), JSON.stringify(run), "utf8")
+      .catch(() => {})
+  }
+
+  /** Write the decision a Variant B child is polling for, into its sandbox `cwd`. */
+  private async writeIntentDecision(cwd: string, decision: "allow" | "deny"): Promise<void> {
+    await fs
+      .writeFile(path.join(cwd, INTENT_DECISION_FILE), JSON.stringify({ decision }), "utf8")
       .catch(() => {})
   }
 

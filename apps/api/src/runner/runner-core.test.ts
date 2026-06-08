@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import type { IntendedAction } from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 import { RunNotFoundError, RunnerCore } from "./runner-core"
@@ -35,6 +36,34 @@ const NODE = process.execPath
 /** A tiny inline child that prints a PROGRESS line then exits 0. */
 function progressScript(pct: number): string[] {
   return ["-e", `console.log("PROGRESS ${pct}"); process.exit(0)`]
+}
+
+/**
+ * A child that announces a mid-run INTENT (Variant B) then blocks polling its
+ * sandbox for `intent-decision.json`: on `allow` it finishes 0, otherwise exits 1.
+ */
+function intentScript(cwd: string): string[] {
+  const body = `const fs=require("node:fs");const p=require("node:path");const f=p.join(${JSON.stringify(
+    cwd,
+  )},"intent-decision.json");console.log("PROGRESS 10");process.stdout.write('INTENT {"action":"payment","metrics":{"purchase.amount":1200}}\\n');const t=setInterval(()=>{let r;try{r=fs.readFileSync(f,"utf8")}catch{return}clearInterval(t);let d;try{d=JSON.parse(r).decision}catch{d="deny"}if(d!=="allow")process.exit(1);console.log("PROGRESS 100");process.exit(0)},50)`
+  return ["-e", body]
+}
+
+/** Poll the in-memory run until it reaches `status`, or throw on timeout. */
+async function waitForStatus(
+  core: RunnerCore<TestRecord>,
+  runId: string,
+  status: string,
+  timeoutMs = 5000,
+): Promise<void> {
+  const start = Date.now()
+  for (;;) {
+    if (core.get(runId).status === status) return
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`waitForStatus: ${runId} never reached ${status} (now ${core.get(runId).status})`)
+    }
+    await sleep(20)
+  }
 }
 
 describe("RunnerCore", () => {
@@ -263,7 +292,9 @@ describe("RunnerCore", () => {
     }
   })
 
-  it("leaves an awaiting-approval sidecar untouched across restart", async () => {
+  it("keeps an awaiting-approval run with a stashed spec across restart", async () => {
+    // A spawn-boundary pause persists its spawn spec → it can still resume after a
+    // restart, so init() leaves it awaiting-approval.
     const runId = "paused_1780000000000_99"
     await fs.writeFile(path.join(dir, `${runId}.log`), "waiting\n", "utf8")
     await fs.writeFile(
@@ -280,10 +311,127 @@ describe("RunnerCore", () => {
       }),
       "utf8",
     )
+    await fs.writeFile(
+      path.join(dir, `${runId}.pending.json`),
+      JSON.stringify({
+        kind: "agent",
+        ownerId: "paused",
+        command: NODE,
+        args: progressScript(100),
+        cwd: path.join(dir, "paused"),
+        extra: { label: "x" },
+      }),
+      "utf8",
+    )
 
     const core = new RunnerCore(dir, strategy)
     await core.init()
     const found = core.list().find((r) => r.runId === runId)
     expect(found?.status).toBe("awaiting-approval")
+  })
+
+  it("reconciles a mid-run (Variant B) awaiting-approval orphan to interrupted on restart", async () => {
+    // A Variant B pause has NO stashed spec — its blocking child died with the
+    // previous backend, so there is nothing to resume → it becomes interrupted.
+    const runId = "midrun_1780000000000_77"
+    await fs.writeFile(path.join(dir, `${runId}.log`), "waiting\n", "utf8")
+    await fs.writeFile(
+      path.join(dir, `${runId}.json`),
+      JSON.stringify({
+        runId,
+        kind: "agent",
+        status: "awaiting-approval",
+        pct: 33,
+        cwd: path.join(dir, "midrun"),
+        startedAt: new Date().toISOString(),
+        pid: 77,
+        logFile: path.join(dir, `${runId}.log`),
+      }),
+      "utf8",
+    )
+
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    expect(core.get(runId).status).toBe("interrupted")
+  })
+
+  it("allows a mid-run INTENT and runs to done", async () => {
+    const seen: IntendedAction[] = []
+    const core = new RunnerCore(dir, strategy, undefined, (runId, action) => {
+      seen.push(action)
+      void core.allowIntent(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "intent_allow")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "ia",
+      command: NODE,
+      args: intentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "done")
+    expect(seen[0]?.action).toBe("payment")
+    expect(seen[0]?.metrics?.["purchase.amount"]).toBe(1200)
+    expect(core.get(run.runId).status).toBe("done")
+  })
+
+  it("denies a mid-run INTENT → the child aborts → interrupted (no error)", async () => {
+    const core = new RunnerCore(dir, strategy, undefined, (runId) => {
+      void core.denyIntent(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "intent_deny")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "id",
+      command: NODE,
+      args: intentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "interrupted")
+    expect(core.get(run.runId).status).toBe("interrupted")
+  })
+
+  it("holds a mid-run INTENT for approval, then resume releases it to done", async () => {
+    const core = new RunnerCore(dir, strategy, undefined, (runId) => {
+      void core.holdForApproval(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "intent_hold")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "ih",
+      command: NODE,
+      args: intentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "awaiting-approval")
+    await core.resume(run.runId)
+    await waitForStatus(core, run.runId, "done")
+    expect(core.get(run.runId).status).toBe("done")
+  })
+
+  it("rejecting a held mid-run INTENT interrupts the live child", async () => {
+    const core = new RunnerCore(dir, strategy, undefined, (runId) => {
+      void core.holdForApproval(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "intent_reject")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "ir",
+      command: NODE,
+      args: intentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "awaiting-approval")
+    core.cancel(run.runId)
+    await waitForStatus(core, run.runId, "interrupted")
+    expect(core.get(run.runId).status).toBe("interrupted")
   })
 })

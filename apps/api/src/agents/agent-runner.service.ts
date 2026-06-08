@@ -46,7 +46,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     this.dir = path.resolve(dir)
     // Layer 2: a usage-limit signal in a run's output busts the limits cache so the
     // next /api/limits read re-fetches the authoritative percentages.
-    this.core = new RunnerCore(this.dir, agentStrategy, () => this.limits.noteLimitHit())
+    // Variant B: a mid-run `INTENT {json}` line routes through the gate evaluator.
+    this.core = new RunnerCore(
+      this.dir,
+      agentStrategy,
+      () => this.limits.noteLimitHit(),
+      (runId, action) => this.onIntent(runId, action),
+    )
   }
 
   /** Rebuild the registry from disk and register for approval decisions on agent runs. */
@@ -92,38 +98,59 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       extra: { agentId, prompt, project },
     }
 
-    // Phase 3.5: evaluate the intended action against the floor + the agent's own
-    // rules (with legacy `requires_approval` desugar). Variant A — gate at the
-    // spawn boundary. No action with an external effect runs until allowed.
-    const action: IntendedAction = { action: "run", context: agent.id }
-    const rules = await this.gates.rulesForAgent({
-      gates: agent.gates,
-      requires_approval: agent.requires_approval,
-    })
-    const decision = this.gates.evaluate(rules, action).decision
-
-    if (decision === "ask") {
-      const rec = await this.core.createPending(spec)
-      await this.approvals.requestApproval({
-        runId: rec.runId,
-        kind: "agent",
-        skill: agent.name ?? agent.id,
-        action: "run",
-        detail: prompt,
-        risk: agent.risk ?? "medium",
-      })
-      return toAgentRun(rec)
-    }
-
-    if (decision === "deny") {
-      // Refused by policy: create then immediately terminate, never spawning.
-      const rec = await this.core.createPending(spec)
-      this.core.cancel(rec.runId)
-      return toAgentRun(this.core.get(rec.runId))
-    }
-
+    // Variant B: the run spawns immediately. Gating happens mid-run — when the
+    // child announces an external-effect action via a `INTENT {json}` line, the
+    // core routes it to {@link onIntent} below for evaluation.
     const rec = await this.core.start(spec)
     return toAgentRun(rec)
+  }
+
+  /**
+   * Variant B mid-run gate. A live run announced an external-effect `action` and is
+   * now blocking on its decision file. The core is entity-agnostic, so re-load the
+   * agent from this run's id, evaluate the action against its rules (with legacy
+   * `requires_approval` desugar) plus the locked floor, and steer the child:
+   *
+   * - `deny`   → write a deny decision; the child aborts → run `interrupted`.
+   * - `ask`    → hold the run at `awaiting-approval` and raise an approval; the
+   *              child keeps blocking until approve (resume → allow) or reject
+   *              (cancel → deny).
+   * - else     → write an allow decision; the child proceeds.
+   *
+   * Any failure (e.g. the agent was deleted mid-run) fails safe to a deny.
+   */
+  private async onIntent(runId: string, action: IntendedAction): Promise<void> {
+    try {
+      const rec = this.core.get(runId)
+      const agent = await this.agents.get(rec.agentId)
+      const rules = await this.gates.rulesForAgent({
+        gates: agent.gates,
+        requires_approval: agent.requires_approval,
+      })
+      const decision = this.gates.evaluate(rules, action).decision
+
+      if (decision === "deny") {
+        await this.core.denyIntent(runId)
+        return
+      }
+      if (decision === "ask") {
+        await this.core.holdForApproval(runId)
+        await this.approvals.requestApproval({
+          runId,
+          kind: "agent",
+          skill: agent.name ?? agent.id,
+          action: action.action,
+          detail: rec.prompt,
+          risk: agent.risk ?? "medium",
+        })
+        return
+      }
+      // allow / notify: let the action proceed immediately.
+      await this.core.allowIntent(runId)
+    } catch {
+      // Unknown agent / evaluation failure → fail safe: refuse the action.
+      await this.core.denyIntent(runId).catch(() => {})
+    }
   }
 
   /** Running runs, plus any finished within the retention window; newest first. */
