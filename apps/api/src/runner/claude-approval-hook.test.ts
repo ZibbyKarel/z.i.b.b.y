@@ -83,6 +83,16 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(res.stdout).toContain('"permissionDecision":"allow"')
   })
 
+  it("counts only real files in a compound rm command (not the && / chained binaries)", async () => {
+    await preApprove()
+    // The command a cleaner actually emits: three deletes chained with &&. The
+    // operators and the later `rmdir`/`rm` must NOT be counted as targets.
+    await runHook(cwd, bashEvent('rm .DS_Store && rmdir empty && rm "zibby-ascii 2.txt"', cwd))
+    const ctx = JSON.parse((await readRequest()).context)
+    expect(ctx.preview.targets).toEqual([".DS_Store", "empty", "zibby-ascii 2.txt"])
+    expect(ctx.summary).toBe("Delete 3 file(s)")
+  })
+
   it("gates `find … -delete` (the .DS_Store sweep that previously slipped the gate)", async () => {
     await preApprove()
     await runHook(cwd, bashEvent("find . -name .DS_Store -delete", cwd))

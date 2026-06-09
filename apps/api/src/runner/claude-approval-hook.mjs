@@ -55,18 +55,28 @@ function tokenize(command) {
   return tokens
 }
 
+const RM_BINARY = /^(rm|rmdir|unlink|shred|trash|trash-put)$/
+
 /**
  * Best-effort: pull the file targets out of an `rm`-style command for the card.
- * Only the rm family lists its files as positional args; for `find`/`git clean`
- * the deletion set is implicit (a query / the untracked set), so we list no
- * explicit targets and let the command-string preview be the source of truth.
+ * A cleanup is often a compound command (`rm a && rmdir b && rm "c d"`), so split
+ * on shell operators first and collect the file args of EACH rm-family segment —
+ * otherwise the operators and the later binaries (`&&`, `rmdir`, a second `rm`)
+ * get miscounted as files ("Delete 7 file(s)" for three real targets). Only the rm
+ * family lists its files as positional args; for `find … -delete` / `git clean` the
+ * deletion set is implicit (a query / the untracked set), so those contribute no
+ * explicit targets and the command-string preview is the source of truth.
  */
 function parseTargets(command) {
-  const tokens = tokenize(command)
-  if (!/^(rm|rmdir|unlink|shred|trash|trash-put)$/.test(tokens[0] ?? "")) return []
-  return tokens
-    .slice(1) // drop the binary
-    .filter((tok) => tok && !tok.startsWith("-")) // drop flags
+  const targets = []
+  for (const segment of command.split(/&&|\|\||;|\|/)) {
+    const tokens = tokenize(segment.trim())
+    if (!RM_BINARY.test(tokens[0] ?? "")) continue
+    for (const tok of tokens.slice(1)) {
+      if (tok && !tok.startsWith("-")) targets.push(tok) // drop flags
+    }
+  }
+  return targets
 }
 
 /** Emit a PreToolUse decision and exit. `allow` overrides dontAsk; `deny` blocks. */
