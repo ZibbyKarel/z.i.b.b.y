@@ -52,18 +52,38 @@ export const OPERATING_CONTRACT = [
   "Anything you print as a question gets NO reply — your turn simply ends and the run stops.",
   "",
   "- NEVER ask for confirmation or print a \"yes/no\" prompt and wait. It is a dead end.",
-  "- To delete, overwrite, or otherwise act with an external effect, just RUN the command.",
-  "- The platform intercepts destructive commands before they execute, shows the human an",
-  "  approval card, and pauses until they approve or reject. Consent happens there, not in chat.",
-  "- So: act directly. Do not describe a plan and stop — carry it out; the gate handles approval.",
+  "- If your own instructions tell you to get the user's approval/confirmation BEFORE a",
+  "  destructive action, you obtain that approval by RUNNING the command — the platform",
+  "  intercepts it, shows the human an approval card, and pauses until they approve or reject.",
+  "  Running the command IS the approval step. There is no separate \"ask the user\" step, and",
+  "  printing the request as text instead does NOT reach the human — it just ends your run.",
+  "- So \"present a plan and wait for approval\" means: state the plan in one line, then RUN it.",
+  "  Do not stop after the plan — carry it out; the gate does the asking for you, out of band.",
+  "- This covers delete, overwrite, move, and any other external effect.",
   "",
   "---",
   "",
 ].join("\n")
 
+/**
+ * Appended to the user turn (the `-p` task), so it is the LAST and highest-authority
+ * instruction the model sees — it must override an agent body that says "ask the user
+ * first". A prepended system-prompt contract loses on recency to the agent's own body
+ * (which ends with its confirmation step); a directive in the user's own voice does not.
+ */
+export const EXECUTION_DIRECTIVE =
+  "\n\n(Run the actions directly — do NOT stop to ask me to confirm. Any destructive step is" +
+  " intercepted and I approve it on a card before it runs, so executing the command is how you" +
+  " ask. Asking in text reaches no one and just ends the run.)"
+
 /** Prefix an agent/skill body with the operating contract that frames every run. */
 function withOperatingContract(instructions: string): string {
   return `${OPERATING_CONTRACT}${instructions}`
+}
+
+/** Append the execution directive so the user turn ends with "act, don't ask". */
+function withExecutionDirective(task: string): string {
+  return `${task}${EXECUTION_DIRECTIVE}`
 }
 
 /**
@@ -127,7 +147,7 @@ export class ClaudeRunCommandService {
     const { catalog, allowedTools } = await this.buildCatalog(opts.tools)
     const args = [
       "-p",
-      opts.task.trim() ? opts.task : KICKOFF_FALLBACK,
+      withExecutionDirective(opts.task.trim() ? opts.task : KICKOFF_FALLBACK),
       "--permission-mode",
       "dontAsk",
       "--allowedTools",

@@ -2,7 +2,11 @@ import type { Agent, Skill } from "@zibby/contracts"
 import { describe, expect, it } from "vitest"
 import type { AgentsStorageService } from "../agents/agents.storage.service"
 import type { SkillsStorageService } from "../skills/skills.storage.service"
-import { ClaudeRunCommandService, OPERATING_CONTRACT } from "./claude-run-command.service"
+import {
+  ClaudeRunCommandService,
+  EXECUTION_DIRECTIVE,
+  OPERATING_CONTRACT,
+} from "./claude-run-command.service"
 
 /** Build the service over fixed in-memory catalogs (only `list` is exercised). */
 function makeService(agents: Agent[], skills: Skill[]): ClaudeRunCommandService {
@@ -46,7 +50,9 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     })
 
     expect(command).toBe("claude")
-    expect(flagValue(args, "-p")).toBe("Naprav bug")
+    // The task carries the user's prompt plus the execution directive (last word, so it
+    // overrides an agent body that says "ask the user first").
+    expect(flagValue(args, "-p")).toBe(`Naprav bug${EXECUTION_DIRECTIVE}`)
     expect(flagValue(args, "--permission-mode")).toBe("dontAsk")
     // The agent body is framed by the operating contract (prepended), which steers
     // the headless run to EXECUTE destructive actions through the gate instead of
@@ -72,8 +78,17 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const svc = makeService([CODER], [])
     for (const task of ["", "   "]) {
       const { args } = await svc.buildClaudeCommand({ instructions: CODER.instructions, task })
-      expect(flagValue(args, "-p")).toBe("Begin.")
+      expect(flagValue(args, "-p")).toBe(`Begin.${EXECUTION_DIRECTIVE}`)
     }
+  })
+
+  it("appends the execution directive to the user turn so 'act, don't ask' is the last word", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({ instructions: CODER.instructions, task: "ukliď" })
+    const prompt = flagValue(args, "-p") ?? ""
+    expect(prompt.startsWith("ukliď")).toBe(true)
+    expect(prompt.endsWith(EXECUTION_DIRECTIVE)).toBe(true)
+    expect(prompt).toMatch(/do NOT stop to ask me to confirm/)
   })
 
   /** The variadic `--allowedTools` values: everything up to the next flag. */

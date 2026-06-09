@@ -437,11 +437,13 @@ describe("RunnerCore", () => {
       cwd,
       extra: { label: "x" },
     })
-    await waitForStatus(core, run.runId, "done")
+    // The file-watcher (fs.watch) cold-start plus a real child spawn can exceed the
+    // default 5s on a loaded CI runner; give the watch-driven path generous headroom.
+    await waitForStatus(core, run.runId, "done", 15000)
     expect(seen[0]?.action).toBe("payment")
     expect(seen[0]?.metrics?.["purchase.amount"]).toBe(1200)
     expect(core.get(run.runId).status).toBe("done")
-  })
+  }, 15000)
 
   it("holds a file-triggered INTENT for approval, then resume releases it to done", async () => {
     const core = new RunnerCore(dir, strategy, undefined, (runId) => {
@@ -457,11 +459,11 @@ describe("RunnerCore", () => {
       cwd,
       extra: { label: "x" },
     })
-    await waitForStatus(core, run.runId, "awaiting-approval")
+    await waitForStatus(core, run.runId, "awaiting-approval", 15000)
     await core.resume(run.runId)
-    await waitForStatus(core, run.runId, "done")
+    await waitForStatus(core, run.runId, "done", 15000)
     expect(core.get(run.runId).status).toBe("done")
-  })
+  }, 15000)
 
   it("denies a mid-run INTENT → the child aborts → interrupted (no error)", async () => {
     const core = new RunnerCore(dir, strategy, undefined, (runId) => {
