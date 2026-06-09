@@ -27,12 +27,22 @@ export type IntentHandler = (runId: string, action: IntendedAction, cwd: string)
 const INTENT_DECISION_FILE = "intent-decision.json"
 
 /**
- * The request file a real `claude -p` run's PreToolUse approval hook writes into its
- * sandbox `cwd` to announce a destructive action (the file-based equivalent of the
- * stdout `INTENT` line a demo child prints). {@link wire} watches `cwd` for it and
- * routes it through the same {@link IntentHandler}.
+ * The request file a real `claude -p` run's PreToolUse approval hook writes into the
+ * coordination directory to announce a destructive action (the file-based equivalent
+ * of the stdout `INTENT` line a demo child prints). {@link wire} watches that dir for
+ * it and routes it through the same {@link IntentHandler}.
  */
 const INTENT_REQUEST_FILE = "intent-request.json"
+
+/**
+ * Env var naming the directory the approval hook and the core exchange their
+ * `intent-request.json` / `intent-decision.json` through. We set it explicitly to the
+ * run's sandbox cwd on spawn rather than letting the hook guess from the Bash call's
+ * own cwd — that cwd is the *granted target directory* (an `--add-dir` the agent
+ * operates on), so the hook would otherwise drop the request where the core never
+ * watches, stranding the gate. The hook reads this first (see claude-approval-hook.mjs).
+ */
+export const INTENT_DIR_ENV = "ZIBBY_INTENT_DIR"
 
 /** A run id may only contain the safe characters our filenames are built from. */
 const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/
@@ -221,7 +231,10 @@ export class RunnerCore<R extends BaseRun> {
     // piped input it will never get — its prompt arrives via `-p`, not stdin.
     const child = spawn(spec.command, spec.args, {
       cwd: spec.cwd,
-      env: process.env,
+      // Pin the gate's coordination dir to the sandbox so the hook writes its
+      // request where {@link watchIntentRequest} watches — not into whatever
+      // `--add-dir` target the destructive command happens to run in.
+      env: { ...process.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     })
@@ -297,7 +310,8 @@ export class RunnerCore<R extends BaseRun> {
     await fs.mkdir(spec.cwd, { recursive: true })
     const child = spawn(spec.command, spec.args, {
       cwd: spec.cwd,
-      env: process.env,
+      // Same coordination-dir pin as the initial spawn (see {@link start}).
+      env: { ...process.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     })

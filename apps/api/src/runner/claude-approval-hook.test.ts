@@ -20,9 +20,9 @@ interface HookResult {
 }
 
 /** Run the hook with `event` on stdin, in `cwd`; resolve once it exits. */
-function runHook(cwd: string, event: unknown): Promise<HookResult> {
+function runHook(cwd: string, event: unknown, env?: Record<string, string>): Promise<HookResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [HOOK], { cwd })
+    const child = spawn(process.execPath, [HOOK], { cwd, env: { ...process.env, ...env } })
     let stdout = ""
     child.stdout.on("data", (b: Buffer) => {
       stdout += b.toString()
@@ -102,6 +102,31 @@ describe("claude approval hook — destructive-command gate", () => {
     const res = await runHook(cwd, bashEvent('git commit -m "clean up the workspace"', cwd))
     expect(res.code).toBe(0)
     expect(await present(requestFile())).toBe(false)
+  })
+
+  it("writes the request into ZIBBY_INTENT_DIR, not the command's cwd", async () => {
+    // The regression: a clean agent runs `rm` inside the granted target directory, so
+    // the Bash call's cwd is the target — not the sandbox the core watches. The hook
+    // must honour the explicit coordination dir and ignore `input.cwd`.
+    const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-"))
+    const target = await fs.mkdtemp(path.join(os.tmpdir(), "target-"))
+    try {
+      await fs.writeFile(
+        path.join(sandbox, "intent-decision.json"),
+        JSON.stringify({ decision: "allow" }),
+        "utf8",
+      )
+      // Event reports the *target* as cwd; env points the gate at the *sandbox*.
+      await runHook(target, bashEvent("rm -rf scratch.tmp", target), {
+        ZIBBY_INTENT_DIR: sandbox,
+      })
+      // Request landed in the sandbox (watched), never in the target (the regression).
+      expect(await present(path.join(sandbox, "intent-request.json"))).toBe(true)
+      expect(await present(path.join(target, "intent-request.json"))).toBe(false)
+    } finally {
+      await fs.rm(sandbox, { recursive: true, force: true })
+      await fs.rm(target, { recursive: true, force: true })
+    }
   })
 
   it("denies (exit-blocks) when the decision is reject", async () => {

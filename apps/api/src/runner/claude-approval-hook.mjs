@@ -14,8 +14,12 @@
 //   4. The hook returns the decision to Claude as `hookSpecificOutput`, which
 //      overrides `--permission-mode dontAsk` (verified by spike).
 //
-// The cwd is the per-run sandbox (Claude runs there; the directory it cleans is a
-// separate `--add-dir` grant), so these coordination files never pollute the target.
+// The coordination directory is the run's sandbox, passed explicitly by RunnerCore as
+// `ZIBBY_INTENT_DIR`. We must NOT use the Bash call's own cwd: a clean/tidy agent runs
+// `rm …` *inside* the granted `--add-dir` target (that's its working dir), so trusting
+// `input.cwd` would drop the request into the target — where the core never watches —
+// stranding the gate and leaving a stray `intent-request.json` behind. The env var
+// keeps both sides pointed at the same sandbox regardless of where the command runs.
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -117,7 +121,10 @@ function main() {
   const command = input?.tool_input?.command ?? ""
   if (input?.tool_name !== "Bash" || !isDestructive(command)) process.exit(0)
 
-  const cwd = input.cwd || process.cwd()
+  // The sandbox RunnerCore watches — pinned via env, not the command's cwd (which is
+  // the granted target the agent is operating on). Fall back to the call's cwd only if
+  // the env var is somehow absent (e.g. a non-RunnerCore invocation).
+  const cwd = process.env.ZIBBY_INTENT_DIR || input.cwd || process.cwd()
   const targets = parseTargets(command)
   const context = JSON.stringify({
     riskType: "delete",
