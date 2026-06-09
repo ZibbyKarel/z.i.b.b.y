@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { IconName } from "@zibby/design-system";
+import { getApprovalsQueryKey } from "../../approvals/queries/useApprovalsQuery";
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import { type RunView, agentRunToView, pipelineRunToView } from "../run";
@@ -56,6 +58,19 @@ export function useRunsQuery(): { runs: RunView[] } {
     ];
     return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }, [agents.data, pipelines.data]);
+
+  // The 2s runs poll is the freshest signal that a run has paused at a gate, so
+  // when one *enters* `awaiting-approval` we refetch the pending-approval queue
+  // immediately rather than waiting out its own 60s fallback poll. Edge-detect by
+  // run id (not count) so a run re-entering the state at a later gate still fires.
+  const qc = useQueryClient();
+  const awaitingRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const awaiting = new Set(runs.filter((r) => r.status === "awaiting-approval").map((r) => r.runId));
+    const entered = [...awaiting].some((id) => !awaitingRef.current.has(id));
+    awaitingRef.current = awaiting;
+    if (entered) void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+  }, [runs, qc]);
 
   return { runs };
 }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
 import type { RunStatus } from "@zibby/contracts";
 import {
   ButtonGroup,
@@ -13,20 +12,19 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { apiClient } from "../../state/api";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
-import {
-  allAgentRunsKey,
-  allPipelineRunsKey,
-  useRunGlyphMap,
-  useRunsQuery,
-} from "./queries/useRunsQuery";
+import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
 import { runGlyph } from "./run";
 import { RunCard } from "./components/RunCard";
 import { RunDetail } from "./components/RunDetail";
+import {
+  useDeleteAgentRunMutation,
+  useDeletePipelineRunMutation,
+  useStopAgentMutation,
+} from "./mutations";
 
 type Filter = "all" | RunStatus;
 const FILTERS: Filter[] = [
@@ -40,7 +38,6 @@ const FILTERS: Filter[] = [
 
 export function Screen() {
   const t = useTranslations("runs");
-  const qc = useQueryClient();
   const { runs } = useRunsQuery();
   const glyphById = useRunGlyphMap();
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
@@ -54,18 +51,12 @@ export function Screen() {
   );
   const [selId, setSelId] = useState<string | null>(null);
 
-  const stopAgent = apiClient.agentRuns.stopRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: allAgentRunsKey }),
-  });
+  const stopAgent = useStopAgentMutation();
 
   // Deleting a run erases its on-disk artifacts; clearing the selection first keeps
   // the detail pane from briefly pointing at a now-gone run before the refetch.
-  const deleteAgent = apiClient.agentRuns.deleteRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: allAgentRunsKey }),
-  });
-  const deletePipeline = apiClient.pipelineRuns.deletePipelineRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: allPipelineRunsKey }),
-  });
+  const deleteAgent = useDeleteAgentRunMutation();
+  const deletePipeline = useDeletePipelineRunMutation();
 
   const list =
     filter === "all" ? runs : runs.filter((r) => r.status === filter);

@@ -19,8 +19,9 @@ function selectApprovals(response: {
 }
 
 /**
- * Poll the pending approval queue (`GET /api/approvals?status=pending`). The gate
- * is the identity core, so the queue refreshes briskly (2s) — polling, not SSE.
+ * Poll the pending approval queue (`GET /api/approvals?status=pending`). The 60s
+ * interval is only a fallback: the runs feed invalidates this key the instant a run
+ * enters `awaiting-approval` (see `useRunsQuery`), so a new gate surfaces in ~2s.
  */
 export function useApprovalsQuery() {
   return apiClient.approvals.listPendingApprovals.useQuery({
