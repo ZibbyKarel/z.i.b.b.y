@@ -8,6 +8,8 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useHealthQuery } from "../health/queries";
+import { ShortcutCapture } from "../voice/components/ShortcutCapture";
+import { useVoice } from "../voice";
 
 type Locale = "cs" | "en";
 
@@ -78,6 +80,7 @@ export function Screen() {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const { data: health, isSuccess } = useHealthQuery();
+  const { shortcut, setShortcut } = useVoice();
 
   const [caffeinate, setCaffeinate] = useState(() =>
     typeof window === "undefined" ? true : localStorage.getItem(CAFFEINATE_KEY) !== "false",
@@ -122,6 +125,12 @@ export function Screen() {
               control={<Toggle checked={caffeinate} label={t("caffeinate")} onChange={setCaffeinateValue} />}
               hint={t("caffeinateHint")}
               label={t("caffeinate")}
+            />
+            <Divider />
+            <SettingRow
+              control={<ShortcutCapture onChange={setShortcut} value={shortcut} />}
+              hint={t("voiceShortcutHint")}
+              label={t("voiceShortcut")}
             />
           </Stack>
         </HudPanel>
