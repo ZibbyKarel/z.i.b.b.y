@@ -25,6 +25,14 @@ export type IntentHandler = (runId: string, action: IntendedAction, cwd: string)
 /** The decision file a paused child polls for, written into its sandbox `cwd`. */
 const INTENT_DECISION_FILE = "intent-decision.json"
 
+/**
+ * The request file a real `claude -p` run's PreToolUse approval hook writes into its
+ * sandbox `cwd` to announce a destructive action (the file-based equivalent of the
+ * stdout `INTENT` line a demo child prints). {@link wire} watches `cwd` for it and
+ * routes it through the same {@link IntentHandler}.
+ */
+const INTENT_REQUEST_FILE = "intent-request.json"
+
 /** A run id may only contain the safe characters our filenames are built from. */
 const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/
 
@@ -56,6 +64,8 @@ interface RunHandle<R extends BaseRun> {
    * `interrupted`, not the `error` a non-zero exit normally means.
    */
   interrupting?: boolean
+  /** Poll timer watching `cwd` for the hook's `intent-request.json` (Variant B). */
+  intentTimer?: ReturnType<typeof setInterval>
 }
 
 /**
@@ -284,8 +294,14 @@ export class RunnerCore<R extends BaseRun> {
       if (handle.child) {
         // Variant B: a live child is blocking on its decision file. Tell it to abort
         // (it exits non-zero); `interrupting` makes its exit reconcile to interrupted.
+        // Then kill the group: a demo child exits on the `deny` itself, but a real
+        // `claude` session may keep going (and could raise a *new* gate request via a
+        // retried `rm`). Stop the watcher and the process so a cancelled run is truly
+        // dead — no phantom approval on an already-rejected run.
         handle.interrupting = true
         void this.writeIntentDecision(handle.run.cwd, "deny")
+        this.stopIntentWatch(handle)
+        killGroup(handle.run.pgid ?? handle.run.pid)
       } else {
         // Spawn-boundary pause: it never spawned, so just mark it interrupted.
         void this.clearPendingSpec(runId)
@@ -319,6 +335,11 @@ export class RunnerCore<R extends BaseRun> {
     if (!handle) return
     handle.interrupting = true
     await this.writeIntentDecision(handle.run.cwd, "deny")
+    // As with a reject: a real `claude` session won't necessarily exit on the deny,
+    // so stop watching and kill the group to land on `interrupted` deterministically
+    // and block any follow-up gate request from a retried destructive command.
+    this.stopIntentWatch(handle)
+    if (handle.child) killGroup(handle.run.pgid ?? handle.run.pid)
   }
 
   /**
@@ -564,9 +585,16 @@ export class RunnerCore<R extends BaseRun> {
     child.stdout?.on("data", onChunk)
     child.stderr?.on("data", onChunk)
 
+    // Variant B (real claude): the gate is a PreToolUse hook that writes an
+    // `intent-request.json` into the sandbox rather than printing an INTENT line
+    // (a hook's stdout never reaches this pipe). Watch for it alongside the stdout
+    // path so both demo and real runs route through the same {@link IntentHandler}.
+    this.watchIntentRequest(handle)
+
     const finalize = (status: RunnerRunStatus) => {
       run.status = status
       if (status === "done") run.pct = 100
+      this.stopIntentWatch(handle)
       log.end()
       void this.writeSidecar(run)
     }
@@ -577,6 +605,47 @@ export class RunnerCore<R extends BaseRun> {
       if (handle.interrupting) return finalize("interrupted")
       finalize(code === 0 ? "done" : "error")
     })
+  }
+
+  /**
+   * Poll a live run's sandbox `cwd` for the approval hook's `intent-request.json`.
+   * On appearance: consume it, parse it as an {@link IntendedAction}, and hand it to
+   * the {@link IntentHandler} — the same path the stdout `INTENT` line takes. The
+   * handler then writes the decision via {@link writeIntentDecision} (into `cwd`),
+   * which the blocking hook polls for. Removing the request file lets a later
+   * destructive command in the same run raise a fresh request.
+   */
+  private watchIntentRequest(handle: RunHandle<R>): void {
+    if (!this.onIntent) return
+    const reqFile = path.join(handle.run.cwd, INTENT_REQUEST_FILE)
+    const timer = setInterval(() => {
+      void fs
+        .readFile(reqFile, "utf8")
+        .then(async (raw) => {
+          await fs.rm(reqFile, { force: true }).catch(() => {})
+          let action: IntendedAction | undefined
+          try {
+            const parsed = IntendedActionSchema.safeParse(JSON.parse(raw))
+            if (parsed.success) action = parsed.data
+          } catch {
+            // Malformed request → ignore; the hook will time out to a safe deny.
+          }
+          if (action) await this.onIntent?.(handle.run.runId, action, handle.run.cwd)
+        })
+        .catch(() => {
+          // No request file yet (ENOENT) — the common case between polls.
+        })
+    }, 200)
+    timer.unref?.()
+    handle.intentTimer = timer
+  }
+
+  /** Stop the intent-request watcher for a run (on terminal status / teardown). */
+  private stopIntentWatch(handle: RunHandle<R>): void {
+    if (handle.intentTimer) {
+      clearInterval(handle.intentTimer)
+      handle.intentTimer = undefined
+    }
   }
 
   /** Persist a run's metadata next to its log so it survives a backend restart. */

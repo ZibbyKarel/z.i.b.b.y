@@ -148,4 +148,36 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
     expect(JSON.parse(flagValue(args, "--agents") ?? "null")).toEqual({})
   })
+
+  it("registers the PreToolUse approval hook on Bash via --settings", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    const settings = JSON.parse(flagValue(args, "--settings") ?? "{}")
+    const entry = settings.hooks?.PreToolUse?.[0]
+    expect(entry.matcher).toBe("Bash")
+    expect(entry.hooks[0].type).toBe("command")
+    expect(entry.hooks[0].command).toContain("claude-approval-hook.mjs")
+  })
+
+  it("grants each target directory with --add-dir", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      grantDirs: ["/tmp/a", "/tmp/b"],
+    })
+    const grants = args.filter((a, i) => args[i - 1] === "--add-dir")
+    expect(grants).toEqual(["/tmp/a", "/tmp/b"])
+  })
+
+  it("honours CLAUDE_BIN as the binary seam (defaults to claude)", async () => {
+    const svc = makeService([CODER], [])
+    process.env.CLAUDE_BIN = "/usr/bin/fake-claude"
+    try {
+      const { command } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+      expect(command).toBe("/usr/bin/fake-claude")
+    } finally {
+      delete process.env.CLAUDE_BIN
+    }
+  })
 })

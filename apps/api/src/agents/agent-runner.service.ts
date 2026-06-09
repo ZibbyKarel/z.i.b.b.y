@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { Agent, AgentRun } from "@zibby/contracts"
@@ -23,28 +24,20 @@ export { RunNotFoundError } from "../runner/runner-core"
  * restart machinery lives once in the core (shared with skills and pipeline
  * stages).
  *
- * Demo mode: every run executes the bundled token-free `demo-task.mjs` (it does
- * not interpret the agent's `instructions`). Set `AGENT_RUNNER_MODE=claude` to
- * spawn a real `claude -p` session instead — the agent's instructions become the
+ * Every run spawns a real `claude -p` session: the agent's instructions become the
  * system prompt, every agent+skill the delegatable catalog, and its `tools` the
- * permission scope (see {@link ClaudeRunCommandService}). Off by default so the
- * test agent never burns tokens.
+ * permission scope (see {@link ClaudeRunCommandService}). The session runs from a
+ * fresh per-run sandbox and is *granted* access to the directories it must operate
+ * on (the run's `files`) via `--add-dir` — it is never spawned inside them.
+ *
+ * Mid-run approval gate (Variant B): a destructive Bash command trips a PreToolUse
+ * hook that writes an `intent-request.json` into the sandbox and blocks; the core
+ * watches for it and routes the action through {@link onIntent} (allow / ask / deny).
  */
 @Injectable()
 export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
   private readonly core: RunnerCore<AgentRunRecord>
-
-  /**
-   * Agents backed by a bundled, deterministic task script keyed by id. These run
-   * their `.mjs` in **every** mode — including claude mode — because the script is
-   * the demo: the Cleaner's `cleaner-task.mjs` drives the Variant B approval gate
-   * (it emits `INTENT {action:"delete"}` and blocks for a decision), which a real
-   * `claude -p … --permission-mode dontAsk` session would bypass entirely.
-   */
-  private static readonly REAL_TASK_SCRIPTS: Record<string, string> = {
-    cleaner: "cleaner-task.mjs",
-  }
 
   constructor(
     @Inject(RUNS_DIR) dir: string,
@@ -100,10 +93,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const agent = await this.agents.get(agentId)
 
     const startedMs = Date.now()
-    // The sandbox the task runs in (and writes its file into). Named without the
-    // pid since we need it before spawning; the run id below carries the pid.
+    // The per-run sandbox the session runs in (its cwd). The directories it
+    // operates on are passed separately as `--add-dir` grants, never as the cwd.
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
-    const { command, args } = await this.buildCommand(agent, prompt, cwd)
+    const grantDirs = await this.resolveGrantDirs(files)
+    const { command, args } = await this.buildCommand(agent, prompt, grantDirs)
     const spec = {
       kind: "agent" as const,
       ownerId: agentId,
@@ -204,41 +198,49 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Build the command for a run. Demo by default; `claude -p` when opted in.
-   * In claude mode the agent's instructions become the session's system prompt
-   * and its `tools` the permission scope — see {@link ClaudeRunCommandService}.
+   * Build the `claude -p` command for a run. The agent's instructions become the
+   * session's system prompt and its `tools` the permission scope (see
+   * {@link ClaudeRunCommandService}). `grantDirs` (the run's `files` that resolve
+   * to directories) are surfaced both in the task text — so the model knows which
+   * directory to act on — and as `--add-dir` access grants.
    */
-  private async buildCommand(
+  private buildCommand(
     agent: Agent,
-    task: string,
-    cwd: string,
+    prompt: string,
+    grantDirs: string[],
   ): Promise<{ command: string; args: string[] }> {
-    // Real-task agents (the Cleaner) always run their bundled script — see
-    // REAL_TASK_SCRIPTS. Only the remaining agents honour claude mode.
-    const isRealTask = agent.id in AgentRunnerService.REAL_TASK_SCRIPTS
-    if (process.env.AGENT_RUNNER_MODE === "claude" && !isRealTask) {
-      return this.claude.buildClaudeCommand({
-        instructions: agent.instructions,
-        task,
-        tools: agent.tools,
-        model: agent.model,
-        thinking: agent.thinking,
-      })
-    }
-    // The task script receives the sandbox `cwd` and the run's task/prompt (some
-    // scripts, e.g. the Cleaner, read the prompt as a target directory).
-    return { command: process.execPath, args: [this.demoScriptFor(agent), cwd, task] }
+    const task = grantDirs.length
+      ? `${prompt}\n\nOperate on this directory: ${grantDirs[0]}`.trim()
+      : prompt
+    return this.claude.buildClaudeCommand({
+      instructions: agent.instructions,
+      task,
+      tools: agent.tools,
+      model: agent.model,
+      thinking: agent.thinking,
+      grantDirs,
+    })
   }
 
   /**
-   * Pick the bundled task script for a run. `AGENT_DEMO_SCRIPT` (used by tests)
-   * overrides everything; otherwise a real-task agent maps to its own script by id
-   * (see REAL_TASK_SCRIPTS), and every other agent falls back to the generic
-   * token-free `demo-task.mjs`.
+   * Resolve a run's `files` to the absolute directories the session should be
+   * granted (`--add-dir`). Only **absolute** paths are accepted: a relative entry
+   * is dropped, never resolved. Resolving a relative path here would root it
+   * against the API process cwd (`apps/api`) — so a bare folder name like `test`
+   * (all the browser folder picker can surface) would silently grant
+   * `apps/api/test`, a real directory. For a delete-capable agent that is a
+   * data-loss footgun, so the boundary refuses anything not already absolute.
+   * Non-directory, missing, or relative entries are dropped — a run with no valid
+   * directory simply gets no grant (the model then has nothing external to touch).
    */
-  private demoScriptFor(agent: Agent): string {
-    if (process.env.AGENT_DEMO_SCRIPT) return process.env.AGENT_DEMO_SCRIPT
-    const script = AgentRunnerService.REAL_TASK_SCRIPTS[agent.id] ?? "demo-task.mjs"
-    return path.resolve(__dirname, script)
+  private async resolveGrantDirs(files: string[]): Promise<string[]> {
+    const dirs: string[] = []
+    for (const f of files) {
+      if (!path.isAbsolute(f)) continue
+      const abs = path.resolve(f)
+      const stat = await fs.stat(abs).catch(() => null)
+      if (stat?.isDirectory()) dirs.push(abs)
+    }
+    return dirs
   }
 }

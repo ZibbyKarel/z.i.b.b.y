@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { renderWithProviders as render, screen } from "../../../../test/render"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Agent } from "@zibby/contracts"
@@ -12,47 +12,37 @@ const agent: Agent = {
   instructions: "Naplní košík podle seznamu",
 }
 
-const file = "~/zibby/skills/rohlik/SKILL.md"
-const projects = ["media-vault", "home-ops"]
-
 describe("RunModal", () => {
   it("renders as a labelled modal dialog", () => {
-    render(<RunModal agent={agent} file={file} onClose={() => {}} projects={projects} />)
+    render(<RunModal agent={agent} onClose={() => {}} />)
     expect(screen.getByRole("dialog", { name: "Spustit rohlik" })).toBeInTheDocument()
   })
 
-  it("launches against a project with the composed request and shows confirmation", async () => {
+  it("blocks launch when the target is not an absolute path", async () => {
     const onLaunch = vi.fn()
-    render(
-      <RunModal agent={agent} file={file} onClose={() => {}} onLaunch={onLaunch} projects={projects} />,
-    )
-    await userEvent.type(screen.getByLabelText(/Zadání/), "srovnej seriály")
+    render(<RunModal agent={agent} onClose={() => {}} onLaunch={onLaunch} />)
+    await userEvent.type(screen.getByLabelText(/Zadání/), "ukliď")
+    await userEvent.type(screen.getByLabelText(/Cílová složka/), "relative/path")
+    await userEvent.click(screen.getByRole("button", { name: /Spustit agenta/ }))
+    expect(onLaunch).not.toHaveBeenCalled()
+    expect(await screen.findByText(/absolutní cestu/i)).toBeInTheDocument()
+  })
+
+  it("launches against the absolute path typed into the target-directory field", async () => {
+    const onLaunch = vi.fn()
+    render(<RunModal agent={agent} onClose={() => {}} onLaunch={onLaunch} />)
+    await userEvent.type(screen.getByLabelText(/Zadání/), "ukliď")
+    await userEvent.type(screen.getByLabelText(/Cílová složka/), "/Users/zibby/test")
     await userEvent.click(screen.getByRole("button", { name: /Spustit agenta/ }))
     expect(onLaunch).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: "srovnej seriály", project: "media-vault", files: [] }),
+      expect.objectContaining({ prompt: "ukliď", files: ["/Users/zibby/test"] }),
     )
     expect(screen.getByText("Agent spuštěn na pozadí")).toBeInTheDocument()
   })
 
-  it("launches against picked files when the target is switched to Soubory", async () => {
-    const onLaunch = vi.fn()
-    render(
-      <RunModal agent={agent} file={file} onClose={() => {}} onLaunch={onLaunch} projects={projects} />,
-    )
-    await userEvent.type(screen.getByLabelText(/Zadání/), "ukliď")
-    // Switch the target toggle from the project picker to the directory picker.
-    await userEvent.click(screen.getByRole("radio", { name: "Soubory" }))
-    const picked = new File(["x"], "list.md", { type: "text/markdown" })
-    await userEvent.upload(screen.getByLabelText(/Složka/), picked)
-    await userEvent.click(screen.getByRole("button", { name: /Spustit agenta/ }))
-    expect(onLaunch).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: "ukliď", project: "", files: ["list.md"] }),
-    )
-  })
-
   it("closes from the close button", async () => {
     const onClose = vi.fn()
-    render(<RunModal agent={agent} file={file} onClose={onClose} projects={projects} />)
+    render(<RunModal agent={agent} onClose={onClose} />)
     await userEvent.click(screen.getByRole("button", { name: "Zavřít" }))
     expect(onClose).toHaveBeenCalled()
   })

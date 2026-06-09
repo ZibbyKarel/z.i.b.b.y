@@ -20,8 +20,7 @@ import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
-import { useRunTargetProjects } from "../projects/useRunTargetProjects";
-import { agentFile, newAgentDraft, slugifyAgent } from "./agentDraft";
+import { newAgentDraft, slugifyAgent } from "./agentDraft";
 import { useAgentsQuery, useCategoriesQuery } from "./queries";
 import {
   useCreateAgentMutation,
@@ -45,7 +44,6 @@ export function Screen() {
   const createCategory = useCreateCategoryMutation();
   const deleteCategory = useDeleteCategoryMutation();
   const startAgentRun = useStartAgentRunMutation();
-  const runProjects = useRunTargetProjects();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Agent | null>(null);
   const [runAgent, setRunAgent] = useState<Agent | null>(null);
@@ -223,13 +221,11 @@ export function Screen() {
       {runAgent && (
         <RunModal
           agent={runAgent}
-          file={agentFile(runAgent.id)}
           key={runAgent.id}
           onClose={() => setRunAgent(null)}
-          onLaunch={({ agent, prompt, project, files }) =>
-            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project, files } })
+          onLaunch={({ agent, prompt, files }) =>
+            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project: "", files } })
           }
-          projects={runProjects}
         />
       )}
     </PageContainer>

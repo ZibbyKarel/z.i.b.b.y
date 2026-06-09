@@ -3,102 +3,39 @@ import type { Agent } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import {
   Button,
-  Card,
   Container,
   Dialog,
-  Icon,
   IconTile,
   Stack,
   Typography,
 } from "@zibby/design-system";
-import {
-  Form,
-  FormFilePicker,
-  FormSegmentPicker,
-  FormTextArea,
-  useWatch,
-} from "@zibby/forms";
+import { Form, FormTextArea, FormTextInput, zodResolver } from "@zibby/forms";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { z } from "zod";
 
 export interface RunModalProps {
   agent: Agent;
-  file: string;
-  projects: string[];
   onClose: () => void;
   onLaunch?: (req: {
     agent: Agent;
     prompt: string;
-    project: string;
     files: string[];
   }) => void;
 }
 
-type RunMode = "project" | "files";
 type RunFormValues = {
   prompt: string;
-  mode: RunMode;
-  project: string;
-  files: File[];
+  /**
+   * Absolute path of the directory the agent is granted access to — the run
+   * target. The user types (or pastes) it; it must be an absolute path so the
+   * API grants the right directory.
+   */
+  targetDir: string;
 };
 
-/**
- * Folder-relative path of a picked file. The browser never exposes the
- * host-absolute path, so a directory pick yields `webkitRelativePath`
- * (e.g. `src/index.ts`); an individual file falls back to its bare name.
- */
-const filePath = (f: File) => f.webkitRelativePath || f.name;
-
-/**
- * Target chooser rendered inside the form so it can watch the `mode` field:
- * a Project/Files toggle (only when projects exist) followed by either the
- * project segment picker or a directory picker.
- */
-function TargetFields({ projects }: { projects: string[] }) {
-  const t = useTranslations();
-  const mode = (useWatch({ name: "mode" }) as RunMode | undefined) ?? "project";
-  const hasProjects = projects.length > 0;
-  const showProject = mode === "project" && hasProjects;
-
-  return (
-    <>
-      {hasProjects && (
-        <FormSegmentPicker<RunFormValues>
-          label={t("runModal.targetLabel")}
-          name="mode"
-          options={[
-            { value: "project", label: t("runModal.targetProjectOption") },
-            { value: "files", label: t("runModal.targetFilesOption") },
-          ]}
-        />
-      )}
-
-      {showProject ? (
-        <FormSegmentPicker<RunFormValues>
-          label={t("common.targetProject")}
-          name="project"
-          options={projects.map((p) => ({ value: p, label: p }))}
-        />
-      ) : (
-        <FormFilePicker<RunFormValues>
-          directory
-          hint={t("runModal.filesHint")}
-          label={t("runModal.filesLabel")}
-          name="files"
-        />
-      )}
-    </>
-  );
-}
-
-export function RunModal({
-  agent,
-  file,
-  projects,
-  onClose,
-  onLaunch,
-}: RunModalProps) {
+export function RunModal({ agent, onClose, onLaunch }: RunModalProps) {
   const t = useTranslations();
   const [launched, setLaunched] = useState(false);
   const [launchedTarget, setLaunchedTarget] = useState("");
@@ -106,16 +43,29 @@ export function RunModal({
   const name = agent.name ?? agent.id;
   const desc = agent.description ?? "";
   const glyph = (agent.glyph as IconName | undefined) ?? "bot";
-  const hasProjects = projects.length > 0;
+
+  // The target must be an absolute path: anything else would be rejected by the
+  // API and grant nothing, so block launch here and tell the user to complete
+  // the path. The Run button is the only confirmation — this is validation.
+  const resolver = useMemo(
+    () =>
+      zodResolver(
+        z.object({
+          prompt: z.string(),
+          targetDir: z
+            .string()
+            .refine((v) => v.trim().startsWith("/"), {
+              message: t("runModal.targetDirError"),
+            }),
+        }),
+      ),
+    [t],
+  );
 
   function onFormSubmit(values: RunFormValues) {
-    const useFiles = values.mode === "files" || !hasProjects;
-    const files = useFiles ? values.files.map(filePath) : [];
-    const project = useFiles ? "" : values.project;
-    setLaunchedTarget(
-      useFiles ? t("runModal.filesTarget", { count: files.length }) : project,
-    );
-    onLaunch?.({ agent, prompt: values.prompt, project, files });
+    const dir = values.targetDir.trim();
+    setLaunchedTarget(dir);
+    onLaunch?.({ agent, prompt: values.prompt, files: [dir] });
     setLaunched(true);
   }
 
@@ -187,11 +137,10 @@ export function RunModal({
       ) : (
         <Form<RunFormValues>
           formOptions={{
+            resolver,
             defaultValues: {
               prompt: "",
-              mode: hasProjects ? "project" : "files",
-              project: projects[0] ?? "",
-              files: [],
+              targetDir: "",
             },
           }}
           id="run-form"
@@ -205,23 +154,12 @@ export function RunModal({
               placeholder={t("runModal.promptPlaceholder", { name })}
             />
 
-            <TargetFields projects={projects} />
-
-            <Card background="background" radius="sm">
-              <Container padding={["150", "150"]}>
-                <Stack align="center" direction="row" gap="100">
-                  <Icon name="file" size="sm" tone="faint" />
-                  <Typography
-                    mono
-                    size="caption"
-                    type="note"
-                    variant="tertiary"
-                  >
-                    {file}
-                  </Typography>
-                </Stack>
-              </Container>
-            </Card>
+            <FormTextInput<RunFormValues>
+              hint={t("runModal.targetDirHint")}
+              label={t("runModal.targetDirLabel")}
+              name="targetDir"
+              placeholder="/Users/you/folder"
+            />
           </Stack>
         </Form>
       )}

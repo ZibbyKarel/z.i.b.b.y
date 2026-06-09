@@ -1,3 +1,4 @@
+import * as path from "node:path"
 import { Injectable } from "@nestjs/common"
 import type { Agent, Skill } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
@@ -16,6 +17,31 @@ export interface ClaudeRunOptions {
   tools?: readonly string[]
   model?: Agent["model"]
   thinking?: Agent["thinking"]
+  /**
+   * Absolute directories the session may operate on beyond its sandbox cwd
+   * (`--add-dir`). The agent runs *from* its per-run sandbox and is *granted*
+   * access to these — e.g. the Cleaner's directory-to-clean. So coordination
+   * artifacts stay in the sandbox and the target only receives the real effect.
+   */
+  grantDirs?: readonly string[]
+}
+
+/** Absolute path of the PreToolUse approval hook, resolved next to this module. */
+const APPROVAL_HOOK = path.resolve(__dirname, "claude-approval-hook.mjs")
+
+/**
+ * Settings JSON registering the approval hook on every Bash tool call. The hook
+ * gates only destructive commands (it self-filters and otherwise allows), so
+ * attaching it unconditionally is cheap. `command` is shell-quoted so a node or
+ * hook path with spaces still resolves.
+ */
+function approvalSettings(): string {
+  const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)}`
+  return JSON.stringify({
+    hooks: {
+      PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command, timeout: 600 }] }],
+    },
+  })
 }
 
 /** A single subagent in the `--agents` catalog JSON. */
@@ -73,13 +99,21 @@ export class ClaudeRunCommandService {
       opts.instructions,
       "--agents",
       JSON.stringify(catalog),
+      // Mid-run approval gate: a PreToolUse hook intercepts destructive Bash and
+      // blocks on a decision RunnerCore writes (see claude-approval-hook.mjs).
+      "--settings",
+      approvalSettings(),
     ]
+    // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
+    for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir)
     if (opts.model) args.push("--model", opts.model)
     if (opts.thinking) {
       const effort = THINKING_TO_EFFORT[opts.thinking]
       if (effort) args.push("--effort", effort)
     }
-    return { command: "claude", args }
+    // `CLAUDE_BIN` is a test seam (point it at a stub binary); production runs the
+    // real `claude` CLI. The command/args are always the real claude shape.
+    return { command: process.env.CLAUDE_BIN ?? "claude", args }
   }
 
   /**

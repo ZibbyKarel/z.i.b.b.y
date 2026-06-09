@@ -251,8 +251,10 @@
     "targetProjectOption": "Projekt",
     "targetFilesOption": "Soubory",
     "filesLabel": "Složka",
-    "filesHint": "Vyber složku — všechny její soubory se stanou cílem běhu",
-    "filesTarget": "{count, plural, =0 {žádné soubory} one {# soubor} few {# soubory} other {# souborů}}"
+    "filesHint": "Vyber složku pro předvyplnění cesty níže, nebo ji napiš přímo",
+    "targetDirLabel": "Cílová složka",
+    "targetDirHint": "Absolutní cesta ke složce — před spuštěním ji zkontroluj",
+    "targetDirError": "Zadej absolutní cestu (začínající /)"
   },
   "pipelineRun": {
     "editRaw": "Edit raw .pipeline.md",

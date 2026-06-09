@@ -1,12 +1,15 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { fileURLToPath } from "node:url"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
 import { SchedulerService } from "../src/automations/scheduler.service"
+
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
 
 describe("Automations API (e2e)", () => {
   let app: INestApplication
@@ -18,8 +21,9 @@ describe("Automations API (e2e)", () => {
       process.env[key] = dirs[key]
     }
     process.env.AUTOMATION_TICK_MS = "0" // disable the background loop; drive tick() directly
-    process.env.AGENT_DEMO_STEPS = "2"
-    process.env.AGENT_DEMO_DELAY_MS = "30"
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "2"
+    process.env.FAKE_CLAUDE_DELAY_MS = "30"
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleRef.createNestApplication()
@@ -34,7 +38,7 @@ describe("Automations API (e2e)", () => {
   afterAll(async () => {
     await app.close()
     for (const d of Object.values(dirs)) await fs.rm(d, { recursive: true, force: true })
-    for (const k of ["AGENTS_DIR", "AGENT_RUNS_DIR", "AUTOMATIONS_DIR", "APPROVALS_DIR", "AUTOMATION_TICK_MS", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS"]) {
+    for (const k of ["AGENTS_DIR", "AGENT_RUNS_DIR", "AUTOMATIONS_DIR", "APPROVALS_DIR", "AUTOMATION_TICK_MS", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS"]) {
       delete process.env[k]
     }
   })

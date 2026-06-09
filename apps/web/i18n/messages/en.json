@@ -251,8 +251,10 @@
     "targetProjectOption": "Project",
     "targetFilesOption": "Files",
     "filesLabel": "Directory",
-    "filesHint": "Pick a folder — all its files become the run target",
-    "filesTarget": "{count, plural, =0 {no files} one {# file} other {# files}}"
+    "filesHint": "Pick a folder to seed the path below, or type it directly",
+    "targetDirLabel": "Target directory",
+    "targetDirHint": "Absolute path of the folder to operate on — confirm it before running",
+    "targetDirError": "Enter an absolute path (starting with /)"
   },
   "pipelineRun": {
     "editRaw": "Edit raw .pipeline.md",

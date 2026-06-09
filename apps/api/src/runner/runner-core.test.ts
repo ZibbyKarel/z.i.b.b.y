@@ -49,6 +49,18 @@ function intentScript(cwd: string): string[] {
   return ["-e", body]
 }
 
+/**
+ * A child that announces its intent the *real-claude* way: it writes
+ * `intent-request.json` into its cwd (as the PreToolUse hook would) instead of
+ * printing an INTENT line, then blocks polling `intent-decision.json`.
+ */
+function fileIntentScript(cwd: string): string[] {
+  const req = JSON.stringify(path.join(cwd, "intent-request.json"))
+  const dec = JSON.stringify(path.join(cwd, "intent-decision.json"))
+  const body = `const fs=require("node:fs");console.log("PROGRESS 10");fs.writeFileSync(${req},JSON.stringify({action:"payment",metrics:{"purchase.amount":1200}}));const t=setInterval(()=>{let r;try{r=fs.readFileSync(${dec},"utf8")}catch{return}clearInterval(t);let d;try{d=JSON.parse(r).decision}catch{d="deny"}if(d!=="allow")process.exit(1);console.log("PROGRESS 100");process.exit(0)},50)`
+  return ["-e", body]
+}
+
 /** Poll the in-memory run until it reaches `status`, or throw on timeout. */
 async function waitForStatus(
   core: RunnerCore<TestRecord>,
@@ -374,6 +386,50 @@ describe("RunnerCore", () => {
     await waitForStatus(core, run.runId, "done")
     expect(seen[0]?.action).toBe("payment")
     expect(seen[0]?.metrics?.["purchase.amount"]).toBe(1200)
+    expect(core.get(run.runId).status).toBe("done")
+  })
+
+  it("allows a file-triggered INTENT (the real-claude hook path) and runs to done", async () => {
+    // The hook writes intent-request.json into cwd; the core's file watcher must
+    // pick it up and route it through the same IntentHandler as the stdout path.
+    const seen: IntendedAction[] = []
+    const core = new RunnerCore(dir, strategy, undefined, (runId, action) => {
+      seen.push(action)
+      void core.allowIntent(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "file_intent_allow")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "fia",
+      command: NODE,
+      args: fileIntentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "done")
+    expect(seen[0]?.action).toBe("payment")
+    expect(seen[0]?.metrics?.["purchase.amount"]).toBe(1200)
+    expect(core.get(run.runId).status).toBe("done")
+  })
+
+  it("holds a file-triggered INTENT for approval, then resume releases it to done", async () => {
+    const core = new RunnerCore(dir, strategy, undefined, (runId) => {
+      void core.holdForApproval(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "file_intent_hold")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "fih",
+      command: NODE,
+      args: fileIntentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "awaiting-approval")
+    await core.resume(run.runId)
+    await waitForStatus(core, run.runId, "done")
     expect(core.get(run.runId).status).toBe("done")
   })
 

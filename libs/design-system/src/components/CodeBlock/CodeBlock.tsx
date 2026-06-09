@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, type Ref, useEffect, useRef } from "react";
-import { cn } from "../../utils/cn";
+import { cn, mergeRefs } from "@zibby/design-system";
 
 export enum CodeBlockTestId {
   Root = "code-block-root",
@@ -81,16 +81,4 @@ export function CodeBlock({
       )}
     </div>
   );
-}
-
-/** Set both the internal scroll ref and a forwarded consumer ref. */
-function mergeRefs(
-  internal: { current: HTMLDivElement | null },
-  external?: Ref<HTMLDivElement>,
-) {
-  return (node: HTMLDivElement | null) => {
-    internal.current = node;
-    if (typeof external === "function") external(node);
-    else if (external) (external as { current: HTMLDivElement | null }).current = node;
-  };
 }

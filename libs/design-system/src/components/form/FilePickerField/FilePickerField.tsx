@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { type InputHTMLAttributes, type Ref, useRef, useState } from "react";
 import { cn } from "../../../utils/cn";
@@ -12,14 +12,18 @@ export enum FilePickerFieldTestId {
   Trigger = "file-picker-field-trigger",
 }
 
-export interface FilePickerFieldProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "className" | "type"> {
+export interface FilePickerFieldProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "id" | "className" | "type"
+> {
   label: string;
   hint?: string;
   error?: string;
   /**
    * Enables folder selection via `webkitdirectory`. When true the user picks an
-   * entire directory; all files inside are passed to `onChange`.
+   * entire directory; all files inside are still passed to `onChange` (the
+   * browser exposes no other handle), but the control presents as a directory
+   * picker — the display shows the picked folder's name, not a file count.
    */
   directory?: boolean;
   /** Text shown when no file is selected. */
@@ -58,6 +62,11 @@ export function FilePickerField({
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) {
       setDisplay(null);
+    } else if (directory) {
+      // A directory pick is a single target: show the folder name (the first
+      // segment of `webkitRelativePath`), never the per-file count.
+      const rel = files[0]?.webkitRelativePath;
+      setDisplay(rel?.split("/")[0] ?? files[0]?.name ?? null);
     } else if (files.length === 1) {
       setDisplay(files[0]?.name ?? null);
     } else {
@@ -94,8 +103,19 @@ export function FilePickerField({
             className="flex min-w-0 flex-1 items-center gap-2 px-3.5 py-2.5 font-sans text-md"
             data-testid={FilePickerFieldTestId.Display}
           >
-            <Icon aria-hidden name="file" size="sm" stroke="default" tone="faint" />
-            <span className={cn("truncate", display ? "text-foreground" : "text-foreground-faint")}>
+            <Icon
+              aria-hidden
+              name="file"
+              size="sm"
+              stroke="default"
+              tone="faint"
+            />
+            <span
+              className={cn(
+                "truncate",
+                display ? "text-foreground" : "text-foreground-faint",
+              )}
+            >
               {display ?? placeholder}
             </span>
           </span>

@@ -1,11 +1,15 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { fileURLToPath } from "node:url"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+
+/** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -30,9 +34,10 @@ describe("Agent runs API (e2e)", () => {
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "runs-e2e-runs-"))
     process.env.AGENTS_DIR = agentsDir
     process.env.AGENT_RUNS_DIR = runsDir
-    // Keep the demo task fast for CI.
-    process.env.AGENT_DEMO_STEPS = "3"
-    process.env.AGENT_DEMO_DELAY_MS = "60"
+    // Run the stub instead of the real claude CLI; keep it fast for CI.
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "3"
+    process.env.FAKE_CLAUDE_DELAY_MS = "60"
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleRef.createNestApplication()
@@ -51,8 +56,9 @@ describe("Agent runs API (e2e)", () => {
     await fs.rm(runsDir, { recursive: true, force: true })
     delete process.env.AGENTS_DIR
     delete process.env.AGENT_RUNS_DIR
-    delete process.env.AGENT_DEMO_STEPS
-    delete process.env.AGENT_DEMO_DELAY_MS
+    delete process.env.CLAUDE_BIN
+    delete process.env.FAKE_CLAUDE_STEPS
+    delete process.env.FAKE_CLAUDE_DELAY_MS
   })
 
   it("runs an agent end to end: start → running → logs → finishes, leaving a marker + durable log", async () => {
@@ -90,7 +96,7 @@ describe("Agent runs API (e2e)", () => {
 
     // The "simple task": a marker file in the sandbox folder.
     const marker = await fs.readFile(path.join(cwd, "agent-007-was-here.txt"), "utf8")
-    expect(marker).toContain("Agent 007 ran at")
+    expect(marker).toContain("ran at")
 
     // The log file persists on disk (survives a frontend reload).
     const onDisk = await fs.readFile(logFile, "utf8")
@@ -99,14 +105,14 @@ describe("Agent runs API (e2e)", () => {
   })
 
   it("stops a running agent", async () => {
-    process.env.AGENT_DEMO_STEPS = "50"
-    process.env.AGENT_DEMO_DELAY_MS = "100"
+    process.env.FAKE_CLAUDE_STEPS = "50"
+    process.env.FAKE_CLAUDE_DELAY_MS = "100"
     const start = await request(app.getHttpServer())
       .post("/api/agents/agent-007/run")
       .send({ prompt: "long one", project: "zibby-core" })
       .expect(201)
-    process.env.AGENT_DEMO_STEPS = "3"
-    process.env.AGENT_DEMO_DELAY_MS = "60"
+    process.env.FAKE_CLAUDE_STEPS = "3"
+    process.env.FAKE_CLAUDE_DELAY_MS = "60"
 
     const { runId } = start.body
     const stopped = await request(app.getHttpServer())
@@ -151,8 +157,9 @@ describe("Agent runs persistence across restart (e2e)", () => {
   beforeAll(async () => {
     agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "restart-e2e-agents-"))
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "restart-e2e-runs-"))
-    process.env.AGENT_DEMO_STEPS = "3"
-    process.env.AGENT_DEMO_DELAY_MS = "60"
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "3"
+    process.env.FAKE_CLAUDE_DELAY_MS = "60"
 
     const seed = await bootApp()
     await request(seed.getHttpServer())
@@ -167,8 +174,9 @@ describe("Agent runs persistence across restart (e2e)", () => {
     await fs.rm(runsDir, { recursive: true, force: true })
     delete process.env.AGENTS_DIR
     delete process.env.AGENT_RUNS_DIR
-    delete process.env.AGENT_DEMO_STEPS
-    delete process.env.AGENT_DEMO_DELAY_MS
+    delete process.env.CLAUDE_BIN
+    delete process.env.FAKE_CLAUDE_STEPS
+    delete process.env.FAKE_CLAUDE_DELAY_MS
   })
 
   it("a completed run reappears in the list after a backend restart", async () => {

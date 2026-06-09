@@ -91,6 +91,22 @@ describe("FilePickerField", () => {
     expect(screen.getByTestId(FilePickerFieldTestId.Trigger)).toHaveFocus();
   });
 
+  it("shows the folder name (not a file count) in directory mode", () => {
+    render(<FilePickerField directory label="Složka" />);
+    const input = screen.getByTestId(FilePickerFieldTestId.Input);
+
+    const a = new File([""], "a.txt");
+    const b = new File([""], "b.txt");
+    Object.defineProperty(a, "webkitRelativePath", { value: "my-project/a.txt" });
+    Object.defineProperty(b, "webkitRelativePath", { value: "my-project/nested/b.txt" });
+    Object.defineProperty(input, "files", { value: [a, b], configurable: true });
+    fireEvent.change(input);
+
+    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent(
+      "my-project",
+    );
+  });
+
   it("sets webkitdirectory attribute when directory prop is true", () => {
     render(<FilePickerField directory label="Složka" />);
     expect(screen.getByTestId(FilePickerFieldTestId.Input).getAttribute("webkitdirectory")).toBe(

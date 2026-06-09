@@ -1,11 +1,14 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { fileURLToPath } from "node:url"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 async function until<T>(fn: () => Promise<T>, timeoutMs = 8000): Promise<T> {
@@ -24,7 +27,7 @@ const fileExists = (p: string) =>
     .then(() => true)
     .catch(() => false)
 
-/** The benign marker the demo always writes; not the gated action. */
+/** The benign marker the stub always writes; not the gated action. */
 const benignMarker = (cwd: string) => fileExists(path.join(cwd, "agent-007-was-here.txt"))
 /** The gated external effect — written only once an INTENT is allowed. */
 const paymentDone = (cwd: string) => fileExists(path.join(cwd, "payment-done.txt"))
@@ -46,6 +49,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     process.env.AGENT_RUNS_DIR = runsDir
     process.env.APPROVALS_DIR = approvalsDir
     process.env.POLICY_DIR = policyDir
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     const fresh = moduleRef.createNestApplication()
     await fresh.init()
@@ -77,8 +81,8 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "appr-runs-"))
     approvalsDir = await fs.mkdtemp(path.join(os.tmpdir(), "appr-store-"))
     policyDir = await fs.mkdtemp(path.join(os.tmpdir(), "appr-policy-"))
-    process.env.AGENT_DEMO_STEPS = "4"
-    process.env.AGENT_DEMO_DELAY_MS = "40"
+    process.env.FAKE_CLAUDE_STEPS = "4"
+    process.env.FAKE_CLAUDE_DELAY_MS = "40"
     app = await boot()
 
     // A threshold gate: pause when a purchase tops 500.
@@ -127,16 +131,17 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
       "AGENT_RUNS_DIR",
       "APPROVALS_DIR",
       "POLICY_DIR",
-      "AGENT_DEMO_STEPS",
-      "AGENT_DEMO_DELAY_MS",
-      "AGENT_DEMO_INTENT",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_INTENT",
     ]) {
       delete process.env[k]
     }
   })
 
   it("runs to completion when a mid-run intent matches no rule (allow)", async () => {
-    process.env.AGENT_DEMO_INTENT = BENIGN_INTENT
+    process.env.FAKE_CLAUDE_INTENT = BENIGN_INTENT
     const { runId, cwd } = await startRun("free", "browse the catalog")
 
     const final = await until(async () => ((await runStatus(runId)) === "done" ? true : null))
@@ -147,7 +152,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
   })
 
   it("pauses mid-run on a threshold intent, then resumes to done on approve", async () => {
-    process.env.AGENT_DEMO_INTENT = PAYMENT_INTENT
+    process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT
     const { runId, cwd } = await startRun("payer", "buy the expensive thing")
 
     // It spawned and did benign work, then paused at the gate — payment not yet made.
@@ -169,7 +174,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
   })
 
   it("rejecting a paused mid-run intent interrupts the run without performing the action", async () => {
-    process.env.AGENT_DEMO_INTENT = PAYMENT_INTENT
+    process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT
     const { runId, cwd } = await startRun("payer", "nope")
 
     const approval = await until(async () => (await pendingFor(runId)) ?? null)
@@ -189,7 +194,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
   })
 
   it("a deny rule aborts the action mid-run with no human in the loop", async () => {
-    process.env.AGENT_DEMO_INTENT = PAYMENT_INTENT
+    process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT
     const { runId, cwd } = await startRun("denier", "try to pay")
 
     await until(async () => ((await runStatus(runId)) === "interrupted" ? true : null))
@@ -210,6 +215,7 @@ describe("Mid-run pause is not durable across restart (e2e)", () => {
     process.env.AGENT_RUNS_DIR = runsDir
     process.env.APPROVALS_DIR = approvalsDir
     process.env.POLICY_DIR = policyDir
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     const fresh = moduleRef.createNestApplication()
     await fresh.init()
@@ -232,18 +238,19 @@ describe("Mid-run pause is not durable across restart (e2e)", () => {
       "AGENT_RUNS_DIR",
       "APPROVALS_DIR",
       "POLICY_DIR",
-      "AGENT_DEMO_STEPS",
-      "AGENT_DEMO_DELAY_MS",
-      "AGENT_DEMO_INTENT",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_INTENT",
     ]) {
       delete process.env[k]
     }
   })
 
   it("a run paused mid-run becomes interrupted after a restart (its blocking child is gone)", async () => {
-    process.env.AGENT_DEMO_STEPS = "4"
-    process.env.AGENT_DEMO_DELAY_MS = "40"
-    process.env.AGENT_DEMO_INTENT = JSON.stringify({
+    process.env.FAKE_CLAUDE_STEPS = "4"
+    process.env.FAKE_CLAUDE_DELAY_MS = "40"
+    process.env.FAKE_CLAUDE_INTENT = JSON.stringify({
       action: "payment",
       metrics: { "purchase.amount": 1200 },
     })

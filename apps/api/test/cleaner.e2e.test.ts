@@ -1,11 +1,14 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { fileURLToPath } from "node:url"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 async function until<T>(fn: () => Promise<T>, timeoutMs = 8000): Promise<T> {
@@ -24,10 +27,24 @@ const exists = (p: string) =>
     .then(() => true)
     .catch(() => false)
 
+/** The junk/duplicate files Cleaner proposes to delete, plus the keepers. */
+const JUNK = ["scratch.tmp", "build.log", "empty.txt", ".DS_Store", "report-copy (1).txt"]
+async function seedTarget(dir: string): Promise<void> {
+  await fs.writeFile(path.join(dir, "report-final.txt"), "the only copy that matters\n", "utf8")
+  await fs.writeFile(path.join(dir, "report-copy.txt"), "duplicate me\n", "utf8")
+  await fs.writeFile(path.join(dir, "report-copy (1).txt"), "duplicate me\n", "utf8")
+  await fs.writeFile(path.join(dir, "scratch.tmp"), "throwaway\n", "utf8")
+  await fs.writeFile(path.join(dir, "build.log"), "noisy build output\n", "utf8")
+  await fs.writeFile(path.join(dir, "empty.txt"), "", "utf8")
+  await fs.writeFile(path.join(dir, ".DS_Store"), " ", "utf8")
+}
+
 /**
- * The Cleaner agent end to end: with no target directory in the prompt it seeds a
- * throwaway sandbox, finds the junk + duplicates, pauses mid-run on the `delete`
- * floor rule, and only after approval removes exactly the announced files.
+ * The Cleaner agent end to end: a real `claude -p` run (stubbed) is granted access
+ * to a target directory, announces its deletions through the PreToolUse approval
+ * hook (intent-request → gate → decision), pauses on the `delete` floor rule, and
+ * removes exactly the approved files only after approval — leaving the target dir
+ * itself the only place anything is deleted (no coordination files leak into it).
  */
 describe("Cleaner agent (Variant B, e2e)", () => {
   let app: INestApplication
@@ -35,17 +52,14 @@ describe("Cleaner agent (Variant B, e2e)", () => {
   let runsDir: string
   let approvalsDir: string
   let policyDir: string
-  const prevRunnerMode = process.env.AGENT_RUNNER_MODE
 
   async function boot(): Promise<INestApplication> {
     process.env.AGENTS_DIR = agentsDir
     process.env.AGENT_RUNS_DIR = runsDir
     process.env.APPROVALS_DIR = approvalsDir
     process.env.POLICY_DIR = policyDir
-    // The Cleaner is a real-task agent: it must run its deterministic approval-gate
-    // script even in claude mode (where a `claude -p … --permission-mode dontAsk`
-    // session would bypass the gate). Booting under claude mode locks that in.
-    process.env.AGENT_RUNNER_MODE = "claude"
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_DELETE = JUNK.join(",")
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     const fresh = moduleRef.createNestApplication()
     await fresh.init()
@@ -62,6 +76,13 @@ describe("Cleaner agent (Variant B, e2e)", () => {
       .query({ status: "pending" })
       .expect(200)
     return res.body.find((a: { runId: string }) => a.runId === runId)
+  }
+
+  /** Make a fresh seeded target directory the Cleaner will be granted. */
+  async function freshTarget(): Promise<string> {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "clean-target-"))
+    await seedTarget(dir)
+    return dir
   }
 
   beforeAll(async () => {
@@ -86,14 +107,15 @@ describe("Cleaner agent (Variant B, e2e)", () => {
     for (const k of ["AGENTS_DIR", "AGENT_RUNS_DIR", "APPROVALS_DIR", "POLICY_DIR"]) {
       delete process.env[k]
     }
-    if (prevRunnerMode === undefined) delete process.env.AGENT_RUNNER_MODE
-    else process.env.AGENT_RUNNER_MODE = prevRunnerMode
+    delete process.env.CLAUDE_BIN
+    delete process.env.FAKE_CLAUDE_DELETE
   })
 
-  it("seeds a sandbox, pauses for approval, then deletes exactly the approved files", async () => {
+  it("pauses for approval, then deletes exactly the approved files in the granted dir", async () => {
+    const target = await freshTarget()
     const start = await request(app.getHttpServer())
       .post("/api/agents/cleaner/run")
-      .send({ prompt: "tidy up my workspace", project: "zibby-core" })
+      .send({ prompt: "tidy up my workspace", project: "zibby-core", files: [target] })
       .expect(201)
     const { runId, cwd } = start.body as { runId: string; cwd: string }
 
@@ -105,15 +127,13 @@ describe("Cleaner agent (Variant B, e2e)", () => {
 
     // The deletion list reached the card as enrichment JSON (a `command` preview).
     const enrichment = JSON.parse(approval.detail)
-    expect(enrichment.riskType).toBe("mazani")
+    expect(enrichment.riskType).toBe("delete")
     expect(enrichment.preview.kind).toBe("command")
     expect(enrichment.preview.targets.length).toBeGreaterThan(0)
 
-    // The seeded junk/duplicate files exist; the file Cleaner keeps also exists.
-    expect(await exists(path.join(cwd, "scratch.tmp"))).toBe(true)
-    expect(await exists(path.join(cwd, "report-final.txt"))).toBe(true)
-    const reportCopiesBefore = (await fs.readdir(cwd)).filter((f) => f.startsWith("report-copy"))
-    expect(reportCopiesBefore.length).toBe(2)
+    // Everything still present in the TARGET dir while we deliberate.
+    expect(await exists(path.join(target, "scratch.tmp"))).toBe(true)
+    expect(await exists(path.join(target, "report-final.txt"))).toBe(true)
 
     await request(app.getHttpServer())
       .post(`/api/approvals/${approval.id}/approve`)
@@ -122,22 +142,30 @@ describe("Cleaner agent (Variant B, e2e)", () => {
 
     await until(async () => ((await runStatus(runId)) === "done" ? true : null))
 
-    // Junk and empties are gone; the unique file survives; exactly one duplicate remains.
-    expect(await exists(path.join(cwd, "scratch.tmp"))).toBe(false)
-    expect(await exists(path.join(cwd, "build.log"))).toBe(false)
-    expect(await exists(path.join(cwd, "empty.txt"))).toBe(false)
-    expect(await exists(path.join(cwd, ".DS_Store"))).toBe(false)
-    expect(await exists(path.join(cwd, "report-final.txt"))).toBe(true)
-    const reportCopiesAfter = (await fs.readdir(cwd)).filter((f) => f.startsWith("report-copy"))
-    expect(reportCopiesAfter.length).toBe(1)
+    // Junk and the duplicate are gone; the unique file + one copy survive.
+    expect(await exists(path.join(target, "scratch.tmp"))).toBe(false)
+    expect(await exists(path.join(target, "build.log"))).toBe(false)
+    expect(await exists(path.join(target, "empty.txt"))).toBe(false)
+    expect(await exists(path.join(target, ".DS_Store"))).toBe(false)
+    expect(await exists(path.join(target, "report-final.txt"))).toBe(true)
+    const copiesAfter = (await fs.readdir(target)).filter((f) => f.startsWith("report-copy"))
+    expect(copiesAfter.length).toBe(1)
+
+    // Gate coordination stayed in the sandbox — the target dir was never polluted.
+    expect(await exists(path.join(target, "intent-request.json"))).toBe(false)
+    expect(await exists(path.join(target, "intent-decision.json"))).toBe(false)
+    expect(path.resolve(cwd)).not.toBe(path.resolve(target))
+
+    await fs.rm(target, { recursive: true, force: true })
   })
 
   it("rejecting the deletion leaves every file untouched and interrupts the run", async () => {
+    const target = await freshTarget()
     const start = await request(app.getHttpServer())
       .post("/api/agents/cleaner/run")
-      .send({ prompt: "tidy up again", project: "zibby-core" })
+      .send({ prompt: "tidy up again", project: "zibby-core", files: [target] })
       .expect(201)
-    const { runId, cwd } = start.body as { runId: string; cwd: string }
+    const { runId } = start.body as { runId: string }
 
     const approval = await until(async () => (await pendingFor(runId)) ?? null)
     await request(app.getHttpServer())
@@ -147,8 +175,10 @@ describe("Cleaner agent (Variant B, e2e)", () => {
 
     await until(async () => ((await runStatus(runId)) === "interrupted" ? true : null))
     // Nothing was removed — the junk the agent proposed is all still there.
-    expect(await exists(path.join(cwd, "scratch.tmp"))).toBe(true)
-    expect(await exists(path.join(cwd, ".DS_Store"))).toBe(true)
-    expect(await exists(path.join(cwd, "empty.txt"))).toBe(true)
+    expect(await exists(path.join(target, "scratch.tmp"))).toBe(true)
+    expect(await exists(path.join(target, ".DS_Store"))).toBe(true)
+    expect(await exists(path.join(target, "empty.txt"))).toBe(true)
+
+    await fs.rm(target, { recursive: true, force: true })
   })
 })

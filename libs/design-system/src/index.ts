@@ -5,6 +5,7 @@
 // Utilities
 // ---------------------------------------------------------------------------
 export { cn } from "./utils/cn";
+export { mergeRefs } from "./utils/refs";
 
 // ---------------------------------------------------------------------------
 // Token system
@@ -186,7 +187,10 @@ export {
 } from "./components/form/TextInputField/TextInputField";
 export type { TextInputFieldProps } from "./components/form/TextInputField/TextInputField";
 
-export { TextAreaField, TextAreaFieldTestId } from "./components/form/TextAreaField/TextAreaField";
+export {
+  TextAreaField,
+  TextAreaFieldTestId,
+} from "./components/form/TextAreaField/TextAreaField";
 export type { TextAreaFieldProps } from "./components/form/TextAreaField/TextAreaField";
 
 export { SelectField } from "./components/form/SelectField/SelectField";
@@ -198,7 +202,10 @@ export {
 } from "./components/form/SegmentPickerField/SegmentPickerField";
 export type { SegmentPickerFieldProps } from "./components/form/SegmentPickerField/SegmentPickerField";
 
-export { ToggleField, ToggleFieldTestId } from "./components/form/ToggleField/ToggleField";
+export {
+  ToggleField,
+  ToggleFieldTestId,
+} from "./components/form/ToggleField/ToggleField";
 export type { ToggleFieldProps } from "./components/form/ToggleField/ToggleField";
 
 export {
@@ -208,7 +215,11 @@ export {
 export type { FilePickerFieldProps } from "./components/form/FilePickerField/FilePickerField";
 
 export { DropZone, DropZoneTestId } from "./components/DropZone/DropZone";
-export type { DropZoneProps, FileAccept, FileRejection } from "./components/DropZone/DropZone";
+export type {
+  DropZoneProps,
+  FileAccept,
+  FileRejection,
+} from "./components/DropZone/DropZone";
 
 export { DropZoneField } from "./components/form/DropZoneField/DropZoneField";
 export type { DropZoneFieldProps } from "./components/form/DropZoneField/DropZoneField";
