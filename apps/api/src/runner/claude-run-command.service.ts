@@ -24,6 +24,14 @@ export interface ClaudeRunOptions {
    * artifacts stay in the sandbox and the target only receives the real effect.
    */
   grantDirs?: readonly string[]
+  /**
+   * Emit the full transcript as `--output-format stream-json` (one JSON event per
+   * line) instead of default text mode, which prints only the final message. The
+   * runner flattens each event back into readable log text (see
+   * {@link formatClaudeStreamLine}), so the log shows the agent's whole run — text,
+   * every tool call, tool results — not just its closing summary.
+   */
+  streamTranscript?: boolean
 }
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
@@ -161,6 +169,9 @@ export class ClaudeRunCommandService {
       "--settings",
       approvalSettings(),
     ]
+    // Full-transcript logging: stream every step as JSON (the runner flattens it back
+    // to readable log lines). `stream-json` requires `--verbose` in print mode.
+    if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose")
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
     for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir)
     if (opts.model) args.push("--model", opts.model)
