@@ -72,6 +72,24 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(prompt).toMatch(/NEVER ask for confirmation/)
   })
 
+  it("omits stream-json output unless streamTranscript is set (default text mode)", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    expect(args).not.toContain("--output-format")
+  })
+
+  it("emits the full transcript as stream-json (+ --verbose) when streamTranscript is set", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      streamTranscript: true,
+    })
+    // stream-json captures every step for the log; it requires --verbose in print mode.
+    expect(flagValue(args, "--output-format")).toBe("stream-json")
+    expect(args).toContain("--verbose")
+  })
+
   it("falls back to a non-empty kickoff prompt when the task is blank", async () => {
     // `claude --print` rejects an empty prompt; a run launched with no prompt must
     // still get a usable `-p` value (the system prompt carries the real intent).

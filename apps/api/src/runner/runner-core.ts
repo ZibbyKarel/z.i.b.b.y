@@ -133,6 +133,15 @@ export class RunnerCore<R extends BaseRun> {
      * correlation key for background work.
      */
     private readonly logger?: ScopedLogger,
+    /**
+     * Optional per-line transform applied before writing a run's output to its log.
+     * The agent runner passes a stream-json flattener so the log captures the whole
+     * transcript in readable form; runners without it (and the demo/test path) write
+     * output verbatim. Returning `null` omits the line from the log entirely. A line
+     * that isn't a recognised event must be returned unchanged, so control signals
+     * (`PROGRESS` / `INTENT`) — still parsed from the *raw* line — stay intact.
+     */
+    private readonly formatLine?: (raw: string) => string | null,
   ) {
     this.dir = path.resolve(dir)
   }
@@ -591,11 +600,18 @@ export class RunnerCore<R extends BaseRun> {
     let residual = ""
     const onChunk = (buf: Buffer) => {
       const text = buf.toString("utf8")
-      log.write(text)
+      // Without a formatter the raw buffer is the log, written verbatim (partial tail
+      // included). With one, the log is written per complete line below — the trailing
+      // partial line is held in `residual` until it completes (or `finalize` flushes it).
+      if (!this.formatLine) log.write(text)
       residual += text
       const lines = residual.split(/\r?\n/)
       residual = lines.pop() ?? ""
       for (const raw of lines) {
+        if (this.formatLine) {
+          const formatted = this.formatLine(raw)
+          if (formatted !== null) log.write(`${formatted}\n`)
+        }
         const line = raw.trim()
         const progress = /^PROGRESS\s+(\d+)/.exec(line)
         if (progress?.[1] !== undefined) {
@@ -646,6 +662,13 @@ export class RunnerCore<R extends BaseRun> {
       run.status = status
       if (status === "done") run.pct = 100
       this.stopIntentWatch(handle)
+      // Flush a final line the child emitted without a trailing newline (only the
+      // formatted path buffers it; the raw path already wrote it as part of the chunk).
+      if (this.formatLine && residual) {
+        const formatted = this.formatLine(residual)
+        if (formatted !== null) log.write(`${formatted}\n`)
+        residual = ""
+      }
       log.end()
       void this.writeSidecar(run)
       const meta = { runId: run.runId, status, pct: run.pct }

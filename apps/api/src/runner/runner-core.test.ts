@@ -4,6 +4,7 @@ import * as path from "node:path"
 import type { IntendedAction } from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
+import { formatClaudeStreamLine } from "./claude-stream-format"
 import { INTENT_DIR_ENV, RunNotFoundError, RunnerCore } from "./runner-core"
 import type { BaseRun, KindStrategy } from "./runner-core.types"
 
@@ -117,6 +118,38 @@ describe("RunnerCore", () => {
       await sleep(20)
     }
     expect(log).toContain("PROGRESS 55")
+    expect(core.get(run.runId).status).toBe("done")
+    expect(core.get(run.runId).pct).toBe(100)
+  })
+
+  it("flattens stream-json output through formatLine while leaving control lines intact", async () => {
+    // With a formatter attached (the agent runner wires the stream-json flattener),
+    // JSON events become readable log text; a bare PROGRESS line still drives pct.
+    const core = new RunnerCore(dir, strategy, undefined, undefined, undefined, formatClaudeStreamLine)
+    await core.init()
+    const event = '{"type":"assistant","message":{"content":[{"type":"text","text":"hello world"}]}}'
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "fmt",
+      command: NODE,
+      args: ["-e", `console.log(${JSON.stringify(event)});console.log("PROGRESS 100");process.exit(0)`],
+      cwd: path.join(dir, "fmt_sandbox"),
+      extra: { label: "x" },
+    })
+
+    let offset = 0
+    let log = ""
+    for (let i = 0; i < 100; i++) {
+      const chunk = await core.readLog(run.runId, offset)
+      log += chunk.content
+      offset = chunk.nextOffset
+      if (chunk.done) break
+      await sleep(20)
+    }
+    // The assistant event is flattened to its text; the raw JSON never reaches the log.
+    expect(log).toContain("hello world")
+    expect(log).not.toContain('"type":"assistant"')
+    // The bare control line passed through unchanged and still moved pct to 100.
     expect(core.get(run.runId).status).toBe("done")
     expect(core.get(run.runId).pct).toBe(100)
   })

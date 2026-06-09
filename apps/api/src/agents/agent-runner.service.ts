@@ -9,6 +9,7 @@ import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
+import { formatClaudeStreamLine } from "../runner/claude-stream-format"
 import { RunnerCore } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -64,12 +65,16 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // Layer 2: a usage-limit signal in a run's output busts the limits cache so the
     // next /api/limits read re-fetches the authoritative percentages.
     // Variant B: a mid-run `INTENT {json}` line routes through the gate evaluator.
+    // Runs spawn with `--output-format stream-json` (see buildCommand), so flatten
+    // each JSON event back into readable log text — the log then shows the agent's
+    // whole run, not just its final message.
     this.core = new RunnerCore(
       this.dir,
       agentStrategy,
       () => this.limits.noteLimitHit(),
       (runId, action) => this.onIntent(runId, action),
       logger.child("RunnerCore:agent"),
+      formatClaudeStreamLine,
     )
   }
 
@@ -261,6 +266,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       model: agent.model,
       thinking: agent.thinking,
       grantDirs,
+      // Capture the full transcript so the run log shows every step, not just the
+      // final summary (the core flattens the stream-json events back to text).
+      streamTranscript: true,
     })
   }
 
