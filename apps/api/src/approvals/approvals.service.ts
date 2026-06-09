@@ -1,5 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { Approval, ApprovalRunKind } from "@zibby/contracts"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { ApprovalAlreadyDecidedError } from "./approvals.errors"
 import { ApprovalsStorageService } from "./approvals.storage.service"
 
@@ -35,12 +36,21 @@ export interface RequestApprovalInput {
 @Injectable()
 export class ApprovalsService {
   private readonly runners = new Map<ApprovalRunKind, ResumableRunner>()
+  private readonly log?: ScopedLogger
 
-  constructor(private readonly storage: ApprovalsStorageService) {}
+  constructor(
+    private readonly storage: ApprovalsStorageService,
+    // Optional so unit tests can `new ApprovalsService(storage)`; in the running
+    // app the global LoggingModule always supplies it.
+    @Optional() logger?: LoggerService,
+  ) {
+    this.log = logger?.child(ApprovalsService.name)
+  }
 
   /** A runner registers itself so decisions on its kind can be routed back to it. */
   register(kind: ApprovalRunKind, runner: ResumableRunner): void {
     this.runners.set(kind, runner)
+    this.log?.debug("runner registered for approvals", { kind })
   }
 
   /** Create a pending approval for a paused run. */
@@ -56,6 +66,13 @@ export class ApprovalsService {
       status: "pending",
       requestedAt: new Date().toISOString(),
     }
+    this.log?.info("approval requested", {
+      id: approval.id,
+      runId: approval.runId,
+      kind: approval.kind,
+      action: approval.action,
+      risk: approval.risk,
+    })
     return this.storage.create(approval)
   }
 
@@ -70,6 +87,11 @@ export class ApprovalsService {
   /** Approve a pending approval and resume its gated run. */
   async approve(id: string): Promise<Approval> {
     const approval = await this.decide(id, "approved")
+    this.log?.info("approval approved; resuming run", {
+      id,
+      runId: approval.runId,
+      kind: approval.kind,
+    })
     await this.runners.get(approval.kind)?.resume(approval.runId)
     return approval
   }
@@ -77,6 +99,11 @@ export class ApprovalsService {
   /** Reject a pending approval and terminate its gated run (no action taken). */
   async reject(id: string): Promise<Approval> {
     const approval = await this.decide(id, "rejected")
+    this.log?.info("approval rejected; cancelling run", {
+      id,
+      runId: approval.runId,
+      kind: approval.kind,
+    })
     this.runners.get(approval.kind)?.cancel(approval.runId)
     return approval
   }

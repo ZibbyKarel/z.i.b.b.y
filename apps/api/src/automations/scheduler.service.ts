@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto"
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { Automation } from "@zibby/contracts"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
+import { TraceContextService } from "../shared/logging/trace-context.service"
 import { AutomationsStorageService } from "./automations.storage.service"
 import { matchesCron } from "./cron"
 
@@ -16,12 +19,17 @@ import { matchesCron } from "./cron"
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null
+  private readonly log: ScopedLogger
 
   constructor(
     private readonly storage: AutomationsStorageService,
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
-  ) {}
+    private readonly logger: LoggerService,
+    private readonly trace: TraceContextService,
+  ) {
+    this.log = logger.child(SchedulerService.name)
+  }
 
   onModuleInit(): void {
     const tickMs = Number(process.env.AUTOMATION_TICK_MS)
@@ -30,6 +38,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       this.timer = setInterval(() => void this.tick(), tickMs)
       // Don't keep the event loop alive just for the scheduler.
       this.timer.unref?.()
+      this.log.info("scheduler started", { tickMs })
+    } else {
+      this.log.debug("scheduler tick disabled (AUTOMATION_TICK_MS <= 0)")
     }
   }
 
@@ -46,9 +57,14 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       if (!matchesCron(automation.trigger.expr, now)) continue
       // Idempotence: don't fire twice within the same wall minute.
       if (automation.lastFiredAt?.slice(0, 16) === minute) continue
-      await this.fire(automation, now.toISOString())
+      // Each cron-fired run gets its own trace scope (no request to inherit one),
+      // so the run it dispatches links back to this tick.
+      await this.trace.run({ traceId: randomUUID() }, () =>
+        this.fire(automation, now.toISOString()),
+      )
       fired.push(automation.id)
     }
+    if (fired.length > 0) this.log.info("automations fired", { count: fired.length, ids: fired })
     return fired
   }
 
@@ -68,6 +84,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   /** Start the target run via the appropriate runner; return its id reference. */
   private async dispatch(automation: Automation): Promise<string> {
     const { target } = automation
+    this.log.info("dispatching automation", { id: automation.id, target: target.type })
     switch (target.type) {
       case "agent": {
         const run = await this.agentRunner.start(target.agentId, target.prompt ?? "", "automation")

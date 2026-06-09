@@ -90,6 +90,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
       onClick={() => setActive(value)}
       ref={ref}
       role="tab"
+      type="button"
     >
       {children}
     </button>

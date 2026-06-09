@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type {
   Decision,
   GateEvaluation,
@@ -8,6 +8,7 @@ import type {
   MatchCondition,
   PolicyViolation,
 } from "@zibby/contracts"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { PolicyStorageService } from "./policy.storage.service"
 
 /** Strength ordering: a higher rank is a stricter decision. */
@@ -32,7 +33,15 @@ export interface AgentPolicyInput {
  */
 @Injectable()
 export class GateEvaluatorService {
-  constructor(private readonly policy: PolicyStorageService) {}
+  private readonly log?: ScopedLogger
+
+  constructor(
+    private readonly policy: PolicyStorageService,
+    // Optional so the unit test can `new GateEvaluatorService(policy)`.
+    @Optional() logger?: LoggerService,
+  ) {
+    this.log = logger?.child(GateEvaluatorService.name)
+  }
 
   floor(): Promise<GateRule[]> {
     return this.policy.floor()
@@ -71,12 +80,20 @@ export class GateEvaluatorService {
 
   /** Evaluate an action against an ordered rule list — first match wins. */
   evaluate(rules: GateRule[], action: IntendedAction): GateEvaluation {
+    let evaluation: GateEvaluation = { decision: "allow" }
     for (const rule of rules) {
       if (rule.match.every((cond) => this.matches(cond, action))) {
-        return { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve }
+        evaluation = { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve }
+        break
       }
     }
-    return { decision: "allow" }
+    this.log?.debug("gate evaluated", {
+      action: action.action,
+      tool: action.tool,
+      decision: evaluation.decision,
+      ruleId: evaluation.ruleId,
+    })
+    return evaluation
   }
 
   /**
@@ -90,6 +107,11 @@ export class GateEvaluatorService {
       for (const floorRule of floor) {
         if (!this.sameAction(rule.match, floorRule.match)) continue
         if (DECISION_RANK[rule.decision] < DECISION_RANK[floorRule.decision]) {
+          this.log?.warn("policy violation: agent rule weakens the floor", {
+            ruleIndex: i,
+            ruleDecision: rule.decision,
+            floorDecision: floorRule.decision,
+          })
           return {
             message: `rule ${i} weakens the locked system floor`,
             ruleIndex: i,

@@ -1,0 +1,101 @@
+[
+  {
+    "name": "Smazání",
+    "match": [
+      {
+        "type": "tool",
+        "tool": "rm"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "gr_1781007585329_772ab7"
+  },
+  {
+    "name": "Push do main",
+    "desc": "Přímý push do hlavní větve vždy projde tvým schválením.",
+    "match": [
+      {
+        "type": "action",
+        "action": "git.push",
+        "branch": "main"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "gr-push-main"
+  },
+  {
+    "name": "Merge PR",
+    "desc": "Sloučení až po zelené CI a tvém potvrzení.",
+    "match": [
+      {
+        "type": "action",
+        "action": "merge"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "all",
+      "all": [
+        {
+          "type": "check",
+          "check": "ci_green"
+        },
+        {
+          "type": "human"
+        }
+      ]
+    },
+    "id": "gr-merge"
+  },
+  {
+    "name": "Deploy nechá zrevidovat",
+    "desc": "Nasazení zreviduje agent reviewer, než se provede.",
+    "match": [
+      {
+        "type": "action",
+        "action": "deploy"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "agent",
+      "agent": "reviewer"
+    },
+    "id": "gr-deploy-work"
+  },
+  {
+    "name": "Push do feature větve",
+    "desc": "Bezpečné — provede se a jen zaloguje do activity feedu.",
+    "match": [
+      {
+        "type": "scope",
+        "scope": "feature/*"
+      }
+    ],
+    "decision": "notify",
+    "id": "gr-feature-push"
+  },
+  {
+    "name": "Velký nákup",
+    "desc": "Nákup nad 500 Kč potřebuje tvé potvrzení.",
+    "match": [
+      {
+        "type": "threshold",
+        "metric": "purchase.amount",
+        "op": "gt",
+        "value": 500
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "gr-big-purchase"
+  }
+]

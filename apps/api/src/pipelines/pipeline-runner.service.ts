@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
@@ -12,6 +13,8 @@ import {
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
+import { TraceContextService } from "../shared/logging/trace-context.service"
 import { PipelinesStorageService } from "./pipelines.storage.service"
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
 
@@ -51,15 +54,25 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
   private readonly core: RunnerCore<PipelineStageRecord>
   private readonly runs = new Map<string, PipelineRun>()
+  private readonly log: ScopedLogger
 
   constructor(
     @Inject(PIPELINE_RUNS_DIR) dir: string,
     private readonly pipelines: PipelinesStorageService,
     private readonly agents: AgentsStorageService,
     private readonly claude: ClaudeRunCommandService,
+    private readonly logger: LoggerService,
+    private readonly trace: TraceContextService,
   ) {
     this.dir = path.resolve(dir)
-    this.core = new RunnerCore(this.dir, pipelineStageStrategy)
+    this.log = logger.child(PipelineRunnerService.name)
+    this.core = new RunnerCore(
+      this.dir,
+      pipelineStageStrategy,
+      undefined,
+      undefined,
+      logger.child("RunnerCore:pipeline"),
+    )
   }
 
   async onModuleInit(): Promise<void> {
@@ -98,8 +111,17 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     this.runs.set(pipelineRunId, run)
     await this.writeAggregate(run)
 
-    // Fire-and-forget driver; the FE polls getRun for progress.
-    void this.drive(run, pipeline)
+    this.log.info("starting pipeline run", {
+      pipelineId,
+      pipelineRunId,
+      phases: pipeline.phases.length,
+    })
+
+    // Fire-and-forget driver; the FE polls getRun for progress. The driver runs
+    // after this request returns, so re-open a logging scope keyed by the run id
+    // (carrying the originating trace id) for every line the background work emits.
+    const traceId = this.trace.getTraceId() ?? randomUUID()
+    void this.trace.run({ traceId, runId: pipelineRunId }, () => this.drive(run, pipeline))
     return run
   }
 
@@ -197,11 +219,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       await fs.mkdir(stageCwd, { recursive: true })
       await this.placeHandoff(handoffSource, stageCwd, phase)
 
+      this.log.info("pipeline phase starting", { phase: phase.id, agent: phase.agent, attempt })
       const stageRun = await this.runStage(run, pipeline, phase, stageCwd, attempt)
       run.stageRuns.push(stageRun)
       await this.writeAggregate(run)
 
       if (stageRun.status === "done") {
+        this.log.info("pipeline phase done", { phase: phase.id, attempt })
         handoffSource = path.join(stageCwd, phase.produces)
         const idx = order.findIndex((p) => p.id === phase.id)
         cursor = order[idx + 1]?.id ?? null
@@ -212,6 +236,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const loop = phase.loop
       if (loop && (retries.get(phase.id) ?? 0) < loop.maxRetries) {
         retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1)
+        this.log.warn("pipeline phase failed; retrying", {
+          phase: phase.id,
+          status: stageRun.status,
+          attempt,
+          retryTo: loop.to,
+        })
         handoffSource = await this.writeFailureContext(run, phase, stageRun)
         cursor = loop.to
         continue
@@ -219,6 +249,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
       // No loop, or retries exhausted: escalate (surface), then fall through.
       if (loop?.escalate) {
+        this.log.warn("pipeline phase escalated (retries exhausted)", { phase: phase.id, attempt })
         run.stageRuns.push({
           phaseId: phase.id,
           runId: `${run.pipelineRunId}.${phase.id}.escalated`,
@@ -227,6 +258,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         })
       }
       if (!loop || loop.then === "fail") {
+        this.log.error("pipeline phase failed; failing run", {
+          phase: phase.id,
+          status: stageRun.status,
+        })
         run.status = "failed"
         cursor = null
       } else {
@@ -238,6 +273,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     if (run.status === "running") run.status = "done"
     run.currentStage = null
     await this.writeAggregate(run)
+    this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
   }
 
   /** Spawn one stage child and wait for it to finish; return its StageRun. */
