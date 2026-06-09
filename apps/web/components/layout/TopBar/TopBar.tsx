@@ -14,10 +14,11 @@ import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
 export interface TopBarProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
+  voiceSlot?: ReactNode;
   onCommand?: () => void;
 }
 
-export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
+export function TopBar({ breadcrumb, walletSlot, voiceSlot, onCommand }: TopBarProps) {
   const t = useTranslations();
   return (
     <Container as="header" position="relative" zIndex={20}>
@@ -38,6 +39,7 @@ export function TopBar({ breadcrumb, walletSlot, onCommand }: TopBarProps) {
           </Stack>
           <Spacer />
           {walletSlot}
+          {voiceSlot}
           <LanguageSwitcher />
         </Stack>
 

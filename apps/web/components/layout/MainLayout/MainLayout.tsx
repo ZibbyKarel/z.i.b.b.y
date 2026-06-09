@@ -12,6 +12,7 @@ export interface MainLayoutProps {
   footerItem?: NavItem;
   breadcrumb: string;
   walletSlot?: ReactNode;
+  voiceSlot?: ReactNode;
   onCommand?: () => void;
   children: ReactNode;
 }
@@ -22,6 +23,7 @@ export function MainLayout({
   footerItem,
   breadcrumb,
   walletSlot,
+  voiceSlot,
   onCommand,
   children,
 }: MainLayoutProps) {
@@ -53,6 +55,7 @@ export function MainLayout({
         <TopBar
           breadcrumb={breadcrumb}
           onCommand={onCommand}
+          voiceSlot={voiceSlot}
           walletSlot={walletSlot}
         />
         <Container

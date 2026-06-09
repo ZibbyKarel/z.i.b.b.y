@@ -28,7 +28,10 @@
     "commandHint": "Command or skill (⌘K)",
     "commandAriaLabel": "Command or skill",
     "commandPlaceholder": "Command or skill…",
-    "langSwitcherLabel": "Interface language"
+    "langSwitcherLabel": "Interface language",
+    "voice": "VOICE",
+    "voiceLabel": "Open voice mode",
+    "voiceTitle": "Voice Mode"
   },
   "sidebar": {
     "navLabel": "Main navigation",
@@ -402,6 +405,11 @@
     "languageHint": "Full interface translation is rolling out gradually — Czech and English are available for now.",
     "caffeinate": "Keep Mac awake (caffeinate)",
     "caffeinateHint": "Keeps the daemon running overnight for scheduled agent runs.",
+    "voiceShortcut": "Keyboard shortcut — Voice Mode",
+    "voiceShortcutHint": "Press the assigned key combination from anywhere in the cockpit to switch to voice mode. Esc always returns to the HUD.",
+    "voiceShortcutChange": "Change shortcut",
+    "voiceShortcutCapturing": "↩ press a key…",
+    "voiceShortcutReset": "reset",
     "system": "System",
     "daemon": "Daemon",
     "host": "Host",
@@ -410,6 +418,41 @@
     "online": "NOMINAL · online",
     "offline": "OFFLINE",
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You"
+  },
+  "voice": {
+    "modeLabel": "VOICE MODE",
+    "exit": "HUD",
+    "state": {
+      "idle": "Waiting for your command…",
+      "listening": "Listening…",
+      "thinking": "Thinking…",
+      "speaking": "ZIBBY is answering…"
+    },
+    "speakNow": "// speak now",
+    "panel": {
+      "agents": "Active agents",
+      "approvals": "Awaiting approval",
+      "activity": "Recent activity",
+      "actions": "Quick actions",
+      "noAgents": "No agents running",
+      "noApprovals": "Nothing awaiting approval",
+      "noActivity": "No recent activity",
+      "noActions": "No skills yet"
+    },
+    "tag": {
+      "user": "YOU",
+      "zibby": "ZIBBY"
+    },
+    "demo": {
+      "user1": "Prepare my standup for today",
+      "zibby1": "Done. 3 PRs since yesterday, 1 flaky test fixed in auth-svc. Standup saved to work/daily/2026-06-09.md.",
+      "user2": "Run the Build Feature pipeline for auth-svc",
+      "zibby2": "Pipeline started. The architect is working on design.md — estimated 8 minutes. Track progress in Orchestration."
+    },
+    "micStart": "Start demo (click)",
+    "micStop": "Stop (click)",
+    "volume": "Volume",
+    "hint": "click the mic for a demo · Esc for HUD"
   },
   "runs": {
     "title": "Runs & activity",

@@ -8,6 +8,7 @@ import { MainLayout } from "../MainLayout/MainLayout";
 import { NAV_ITEMS, type NavId, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
 import { useApprovalsQuery } from "../../../features/approvals/queries";
+import { VoiceButton, VoiceProvider } from "../../../features/voice";
 
 const NAV_IDS = new Set<NavId>([...NAV_ITEMS.map((n) => n.id), SETTINGS_ITEM.id]);
 
@@ -44,6 +45,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       breadcrumb={breadcrumb}
       footerItem={footerItem}
       navItems={navItems}
+      voiceSlot={<VoiceButton />}
     >
       {children}
     </MainLayout>
@@ -53,9 +55,11 @@ function AppShellInner({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
-      <Suspense>
-        <AppShellInner>{children}</AppShellInner>
-      </Suspense>
+      <VoiceProvider>
+        <Suspense>
+          <AppShellInner>{children}</AppShellInner>
+        </Suspense>
+      </VoiceProvider>
     </CatalogProvider>
   );
 }
