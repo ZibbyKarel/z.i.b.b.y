@@ -5,7 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RunStatus } from "@zibby/contracts";
-import { Button, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import {
+  ButtonGroup,
+  Container,
+  Grid,
+  Icon,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { apiClient } from "../../state/api";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
@@ -22,7 +29,14 @@ import { RunCard } from "./components/RunCard";
 import { RunDetail } from "./components/RunDetail";
 
 type Filter = "all" | RunStatus;
-const FILTERS: Filter[] = ["all", "running", "awaiting-approval", "done", "error", "interrupted"];
+const FILTERS: Filter[] = [
+  "all",
+  "running",
+  "awaiting-approval",
+  "done",
+  "error",
+  "interrupted",
+];
 
 export function Screen() {
   const t = useTranslations("runs");
@@ -53,11 +67,15 @@ export function Screen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: allPipelineRunsKey }),
   });
 
-  const list = filter === "all" ? runs : runs.filter((r) => r.status === filter);
-  const selected = runs.find((r) => r.runId === selId) ?? list[0] ?? runs[0] ?? null;
+  const list =
+    filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  const selected =
+    runs.find((r) => r.runId === selId) ?? list[0] ?? runs[0] ?? null;
 
-  const count = (f: Filter) => (f === "all" ? runs.length : runs.filter((r) => r.status === f).length);
-  const ago = (n: number, unit: string) => (n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n }));
+  const count = (f: Filter) =>
+    f === "all" ? runs.length : runs.filter((r) => r.status === f).length;
+  const ago = (n: number, unit: string) =>
+    n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
   const stop = (runId: string, kind: string) => {
     if (kind === "agent") stopAgent.mutate({ params: { runId }, body: {} });
@@ -66,7 +84,8 @@ export function Screen() {
   const remove = (runId: string, kind: string) => {
     setSelId(null);
     if (kind === "agent") deleteAgent.mutate({ params: { runId } });
-    else if (kind === "pipeline") deletePipeline.mutate({ params: { pipelineRunId: runId } });
+    else if (kind === "pipeline")
+      deletePipeline.mutate({ params: { pipelineRunId: runId } });
   };
 
   const deleting = deleteAgent.isPending || deletePipeline.isPending;
@@ -79,25 +98,27 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Stack wrap direction="row" gap="50">
-              {FILTERS.map((f) => (
-                <Button
-                  intent={filter === f ? "solid" : "ghost"}
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  size="sm"
-                >
-                  {f === "all" ? t("filterAll") : t(`state.${f}`)} {count(f)}
-                </Button>
-              ))}
-            </Stack>
+            <ButtonGroup
+              ariaLabel={t("title")}
+              onChange={(v) => setFilter(v as Filter)}
+              options={FILTERS.map((f) => ({
+                id: f,
+                label: f === "all" ? t("filterAll") : t(`state.${f}`),
+                trailing: count(f),
+              }))}
+              value={filter}
+            />
           }
           subtitle={t("summary", { running, awaiting, total: runs.length })}
           title={t("title")}
         />
 
         {runs.length === 0 ? (
-          <EmptyState description={t("emptyDesc")} glyph="pulse" title={t("emptyTitle")} />
+          <EmptyState
+            description={t("emptyDesc")}
+            glyph="pulse"
+            title={t("emptyTitle")}
+          />
         ) : (
           <Grid align="start" gap="300" sidebar="left">
             <Stack gap="100">
@@ -154,7 +175,11 @@ export function Screen() {
 }
 
 // Local relative-time wrapper (keeps the `ago` resolver close to its labels).
-function relative(iso: string, now: number, ago: (n: number, unit: string) => string): string {
+function relative(
+  iso: string,
+  now: number,
+  ago: (n: number, unit: string) => string,
+): string {
   const min = Math.floor(Math.max(0, now - Date.parse(iso)) / 60000);
   if (min < 1) return ago(0, "m");
   if (min < 60) return ago(min, "m");

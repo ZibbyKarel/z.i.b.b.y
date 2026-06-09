@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Container, Divider, Icon, Stack, StatusDot, Toggle, Typography } from "@zibby/design-system";
+import { ButtonGroup, Container, Divider, Icon, Stack, StatusDot, Toggle, Typography } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -104,18 +104,15 @@ export function Screen() {
           <Stack gap="200">
             <SettingRow
               control={
-                <Stack direction="row" gap="50">
-                  {(["cs", "en"] as const).map((l) => (
-                    <Button
-                      intent={locale === l ? "solid" : "ghost"}
-                      key={l}
-                      onClick={() => setLocale(l)}
-                      size="sm"
-                    >
-                      {l === "cs" ? "Čeština" : "English"}
-                    </Button>
-                  ))}
-                </Stack>
+                <ButtonGroup
+                  ariaLabel={t("language")}
+                  onChange={(v) => setLocale(v as Locale)}
+                  options={[
+                    { id: "cs", label: "Čeština" },
+                    { id: "en", label: "English" },
+                  ]}
+                  value={locale}
+                />
               }
               hint={t("languageHint")}
               label={t("language")}

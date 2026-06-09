@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Stack } from "../Stack/Stack";
 import { Icon } from "../Icon/Icon";
@@ -6,6 +7,10 @@ export enum ButtonGroupTestId {
   Root = "button-group-root",
   /** Each option button is suffixed with its `id`, e.g. `button-group-option-home`. */
   Option = "button-group-option",
+  /** Leading slot of an option, suffixed with its `id`, e.g. `button-group-leading-home`. */
+  Leading = "button-group-leading",
+  /** Trailing slot of an option, suffixed with its `id`, e.g. `button-group-trailing-home`. */
+  Trailing = "button-group-trailing",
   Add = "button-group-add",
 }
 
@@ -28,12 +33,21 @@ export interface ButtonGroupOption {
   label: string;
   /** Semantic colour for the swatch + active state, resolved inside the DS. */
   tone?: ButtonGroupTone;
+  /** Arbitrary content rendered before the label (icon, status dot, …). */
+  leading?: ReactNode;
+  /** Arbitrary content rendered after the label (count, badge, …). */
+  trailing?: ReactNode;
 }
 
 export interface ButtonGroupProps {
   options: ButtonGroupOption[];
+  /** The active option `id`, or `""` for no selection. */
   value: string;
+  /** Fires with the clicked option `id`, or `""` when the active option is
+   *  toggled off (only possible when `deselectable`). */
   onChange: (value: string) => void;
+  /** Allow clicking the active option to clear the selection (emits `""`). */
+  deselectable?: boolean;
   onAdd?: () => void;
   /** Accessible label for the add-option affordance. */
   addLabel?: string;
@@ -46,6 +60,7 @@ export function ButtonGroup({
   options,
   value,
   onChange,
+  deselectable = false,
   onAdd,
   addLabel = "Přidat",
   ariaLabel,
@@ -72,9 +87,17 @@ export function ButtonGroup({
             )}
             data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
             key={o.id}
-            onClick={() => onChange(o.id)}
+            onClick={() => onChange(deselectable && active ? "" : o.id)}
             type="button"
           >
+            {o.leading && (
+              <span
+                className="inline-flex items-center"
+                data-testid={`${ButtonGroupTestId.Leading}-${o.id}`}
+              >
+                {o.leading}
+              </span>
+            )}
             {o.tone && (
               <span
                 className={cn(
@@ -84,6 +107,14 @@ export function ButtonGroup({
               />
             )}
             {o.label}
+            {o.trailing && (
+              <span
+                className="inline-flex items-center"
+                data-testid={`${ButtonGroupTestId.Trailing}-${o.id}`}
+              >
+                {o.trailing}
+              </span>
+            )}
           </button>
         );
       })}

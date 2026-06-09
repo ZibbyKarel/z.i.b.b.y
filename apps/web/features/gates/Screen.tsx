@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Decision, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
-import { Button, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import { Button, ButtonGroup, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -85,21 +85,18 @@ export function Screen() {
         {/* decision filter tabs */}
         <HudPanel padding="200">
           <Stack wrap align="center" direction="row" gap="100">
-            {DECISION_ORDER.map((d) => {
-              const on = filter === d;
-              return (
-                <Button
-                  aria-pressed={on}
-                  icon={DECISION_META[d].icon}
-                  intent={on ? "solid" : "ghost"}
-                  key={d}
-                  onClick={() => setFilter(on ? null : d)}
-                  size="sm"
-                >
-                  {t(`decision_.${d}`)} · {byDecision(d)}
-                </Button>
-              );
-            })}
+            <ButtonGroup
+              deselectable
+              ariaLabel={t("title")}
+              onChange={(v) => setFilter(v ? (v as Decision) : null)}
+              options={DECISION_ORDER.map((d) => ({
+                id: d,
+                label: t(`decision_.${d}`),
+                leading: <Icon name={DECISION_META[d].icon} size="sm" />,
+                trailing: byDecision(d),
+              }))}
+              value={filter ?? ""}
+            />
             <Stack grow align="center" direction="row" justify="end">
               <Typography mono size="2xs" type="note" variant="tertiary">
                 {t("totalCount", { count: rules.length })}
