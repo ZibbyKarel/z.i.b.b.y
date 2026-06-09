@@ -28,6 +28,17 @@ describe("agentsContract", () => {
     expect(agentsContract.deleteAgent.path).toBe("/api/agents/:id")
   })
 
+  it("exposes a search route declared before the `:id` route", () => {
+    expect(agentsContract.searchAgents.method).toBe("GET")
+    expect(agentsContract.searchAgents.path).toBe("/api/agents/search")
+    expect(agentsContract.searchAgents.responses).toHaveProperty("200")
+
+    // The static `/search` route must precede `/:id` in the contract so the
+    // router matches it as its own route rather than capturing it as an id.
+    const keys = Object.keys(agentsContract)
+    expect(keys.indexOf("searchAgents")).toBeLessThan(keys.indexOf("getAgent"))
+  })
+
   it("declares the error responses required by the task", () => {
     expect(agentsContract.createAgent.responses).toHaveProperty("201")
     expect(agentsContract.createAgent.responses).toHaveProperty("409")

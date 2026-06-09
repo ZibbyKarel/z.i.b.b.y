@@ -30,6 +30,11 @@ export class SkillsController {
 
       listSkills: async () => ({ status: 200, body: await this.storage.list() }),
 
+      searchSkills: async ({ query: { q } }) => ({
+        status: 200,
+        body: await this.storage.search(q),
+      }),
+
       getSkill: async ({ params: { id } }) => {
         try {
           return { status: 200, body: await this.storage.get(id) }

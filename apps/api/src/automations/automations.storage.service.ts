@@ -6,7 +6,7 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "@zibby/contracts"
-import { EntityFileStore, safeJson } from "../shared/file-storage"
+import { EntityFileStore, safeJson, searchByText } from "../shared/file-storage"
 
 export const AUTOMATIONS_DIR = "AUTOMATIONS_DIR"
 
@@ -56,6 +56,11 @@ export class AutomationsStorageService extends EntityFileStore<Automation> imple
     const merged: Automation = { ...existing, ...patch, id: existing.id }
     await this.writeEntity(merged)
     return merged
+  }
+
+  /** Free-text search over automations by id and name. */
+  async search(query: string): Promise<Automation[]> {
+    return searchByText(await this.list(), query, (a) => [a.id, a.name])
   }
 
   /** Stamp the last-fired time (idempotence + display); separate from user updates. */

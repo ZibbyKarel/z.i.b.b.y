@@ -2,24 +2,21 @@ import {
   Container,
   Divider,
   Icon,
-  SearchBar,
   Spacer,
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
+import { GlobalSearch } from "../GlobalSearch/GlobalSearch";
 
 export interface TopBarProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
   voiceSlot?: ReactNode;
-  onCommand?: () => void;
 }
 
-export function TopBar({ breadcrumb, walletSlot, voiceSlot, onCommand }: TopBarProps) {
-  const t = useTranslations();
+export function TopBar({ breadcrumb, walletSlot, voiceSlot }: TopBarProps) {
   return (
     <Container as="header" position="relative" zIndex={20}>
       <Container height="64px" padding={["0", "300"]} position="relative">
@@ -47,18 +44,12 @@ export function TopBar({ breadcrumb, walletSlot, voiceSlot, onCommand }: TopBarP
           left="50%"
           maxWidth="40vw"
           position="absolute"
-           
+
           style={{ transform: "translate(-50%, -50%)" }}
           top="50%"
           width="360px"
         >
-          <SearchBar
-            ariaLabel={t("topbar.commandAriaLabel")}
-            onClick={onCommand}
-            placeholder={t("topbar.commandPlaceholder")}
-            shortcut="⌘K"
-            title={t("topbar.commandHint")}
-          />
+          <GlobalSearch />
         </Container>
       </Container>
       <Divider />

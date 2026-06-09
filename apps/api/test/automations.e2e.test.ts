@@ -92,4 +92,18 @@ describe("Automations API (e2e)", () => {
   it("404s on triggering an unknown automation", async () => {
     await request(app.getHttpServer()).post("/api/automations/ghost/trigger").send({}).expect(404)
   })
+
+  it("searches automations by id/name without colliding with /:id", async () => {
+    // The "morning" automation created earlier matches by name.
+    const hits = await request(app.getHttpServer())
+      .get("/api/automations/search?q=morning")
+      .expect(200)
+    expect(hits.body.map((a: { id: string }) => a.id)).toContain("morning")
+
+    // "/search" resolves to the search route, never to GET /automations/:id (→ 404).
+    const empty = await request(app.getHttpServer())
+      .get("/api/automations/search?q=zzz-none")
+      .expect(200)
+    expect(empty.body).toEqual([])
+  })
 })

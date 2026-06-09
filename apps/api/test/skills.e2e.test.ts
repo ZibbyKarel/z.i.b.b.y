@@ -42,4 +42,21 @@ describe("Skills API (e2e)", () => {
   it("404s for an unknown skill", async () => {
     await request(app.getHttpServer()).get("/api/skills/no-such-skill").expect(404)
   })
+
+  it("searches skills by name/desc without colliding with /:id", async () => {
+    await request(app.getHttpServer())
+      .post("/api/skills")
+      .send({ id: "translate", glyph: "spark", desc: "Render text in another language", instructions: "Translate." })
+      .expect(201)
+
+    // Matches "translate" by id and "summarize" by its description content.
+    const hits = await request(app.getHttpServer()).get("/api/skills/search?q=trans").expect(200)
+    expect(Array.isArray(hits.body)).toBe(true)
+    expect(hits.body.map((s: { id: string }) => s.id)).toContain("translate")
+    expect(hits.body.map((s: { id: string }) => s.id)).not.toContain("summarize")
+
+    // `/search` must resolve to the search route, never be treated as a skill id.
+    const empty = await request(app.getHttpServer()).get("/api/skills/search?q=zzz-none").expect(200)
+    expect(empty.body).toEqual([])
+  })
 })

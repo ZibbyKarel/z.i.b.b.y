@@ -7,7 +7,7 @@ import {
   SkillSchema,
   type UpdateSkillInput,
 } from "@zibby/contracts"
-import { MarkdownEntityStore } from "../shared/file-storage"
+import { MarkdownEntityStore, searchByText } from "../shared/file-storage"
 import {
   CorruptSkillFileError,
   InvalidSkillIdError,
@@ -45,6 +45,11 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> implements 
     const skill: Skill = { ...input, name: input.name ?? input.id }
     await this.writeEntity(skill)
     return skill
+  }
+
+  /** Free-text search over the catalog by id, name, desc and category. */
+  async search(query: string): Promise<Skill[]> {
+    return searchByText(await this.list(), query, (s) => [s.id, s.name, s.desc, s.category])
   }
 
   async update(id: string, patch: UpdateSkillInput): Promise<Skill> {

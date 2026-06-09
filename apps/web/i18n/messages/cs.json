@@ -33,6 +33,20 @@
     "voiceLabel": "Otevřít hlasový režim",
     "voiceTitle": "Hlasový režim"
   },
+  "search": {
+    "placeholder": "Hledat agenty, skilly, projekty…",
+    "ariaLabel": "Hledat v pracovním prostoru",
+    "empty": "Žádné výsledky",
+    "agents": "Agenti",
+    "skills": "Skilly",
+    "projects": "Projekty",
+    "integrations": "Integrace",
+    "automations": "Automatizace",
+    "trigger": {
+      "cron": "Plánováno (cron)",
+      "event": "Událost"
+    }
+  },
   "sidebar": {
     "navLabel": "Hlavní navigace",
     "tagline": "Zestful Intuitive Brainy Butler for You"

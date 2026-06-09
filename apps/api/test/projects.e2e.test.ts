@@ -70,6 +70,22 @@ describe("Projects API (e2e)", () => {
     await request(app.getHttpServer()).delete(`${BASE}/media-vault`).expect(200)
   })
 
+  it("searches projects by name/desc/category without colliding with /:id or /categories", async () => {
+    await request(app.getHttpServer())
+      .post(BASE)
+      .send({ id: "auth-svc", name: "auth-svc", desc: "Login service", path: "~/p/auth", ctx: "work" })
+      .expect(201)
+
+    const hits = await request(app.getHttpServer()).get(`${BASE}/search?q=login`).expect(200)
+    expect(hits.body.map((p: { id: string }) => p.id)).toEqual(["auth-svc"])
+
+    // "/search" resolves to the search route, never to GET /projects/:id (→ 404).
+    const empty = await request(app.getHttpServer()).get(`${BASE}/search?q=zzz`).expect(200)
+    expect(empty.body).toEqual([])
+
+    await request(app.getHttpServer()).delete(`${BASE}/auth-svc`).expect(200)
+  })
+
   it("refuses to delete a project category that still has projects (409)", async () => {
     await request(app.getHttpServer()).post(CATS).send({ name: "Vývoj", glyph: "code" }).expect(201)
     await request(app.getHttpServer())

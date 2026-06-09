@@ -24,6 +24,15 @@ export const skillsContract = c.router(
       responses: { 200: z.array(SkillSchema) },
       summary: "List all skills",
     },
+    // Declared before `getSkill` so `/skills/search` is matched as its own route
+    // rather than captured by the `/skills/:id` param.
+    searchSkills: {
+      method: "GET",
+      path: "/skills/search",
+      query: z.object({ q: z.string() }),
+      responses: { 200: z.array(SkillSchema) },
+      summary: "Search skills by id, name, desc or category",
+    },
     getSkill: {
       method: "GET",
       path: "/skills/:id",

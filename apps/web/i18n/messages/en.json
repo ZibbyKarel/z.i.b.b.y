@@ -33,6 +33,20 @@
     "voiceLabel": "Open voice mode",
     "voiceTitle": "Voice Mode"
   },
+  "search": {
+    "placeholder": "Search agents, skills, projects…",
+    "ariaLabel": "Search the workspace",
+    "empty": "No results",
+    "agents": "Agents",
+    "skills": "Skills",
+    "projects": "Projects",
+    "integrations": "Integrations",
+    "automations": "Automations",
+    "trigger": {
+      "cron": "Cron schedule",
+      "event": "Event trigger"
+    }
+  },
   "sidebar": {
     "navLabel": "Main navigation",
     "tagline": "Zestful Intuitive Brainy Butler for You"

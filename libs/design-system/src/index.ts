@@ -109,6 +109,13 @@ export type { KbdProps } from "./components/Kbd/Kbd";
 export { SearchBar, SearchBarTestId } from "./components/SearchBar/SearchBar";
 export type { SearchBarProps } from "./components/SearchBar/SearchBar";
 
+export { SearchMenu, SearchMenuTestId } from "./components/SearchMenu/SearchMenu";
+export type {
+  SearchMenuProps,
+  SearchMenuItem,
+  SearchMenuSection,
+} from "./components/SearchMenu/SearchMenu";
+
 export { Alert } from "./components/Alert/Alert";
 export type { AlertProps, AlertSeverity } from "./components/Alert/Alert";
 

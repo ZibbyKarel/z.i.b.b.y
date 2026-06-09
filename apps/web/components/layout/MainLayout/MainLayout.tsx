@@ -13,7 +13,6 @@ export interface MainLayoutProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
   voiceSlot?: ReactNode;
-  onCommand?: () => void;
   children: ReactNode;
 }
 
@@ -24,7 +23,6 @@ export function MainLayout({
   breadcrumb,
   walletSlot,
   voiceSlot,
-  onCommand,
   children,
 }: MainLayoutProps) {
   const t = useTranslations("sidebar");
@@ -54,7 +52,6 @@ export function MainLayout({
       <Stack grow style={{ minWidth: 0 }}>
         <TopBar
           breadcrumb={breadcrumb}
-          onCommand={onCommand}
           voiceSlot={voiceSlot}
           walletSlot={walletSlot}
         />

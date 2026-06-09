@@ -7,6 +7,13 @@ describe("automationsContract", () => {
     expect(automationsContract.triggerAutomation.path).toBe("/api/automations/:id/trigger")
     expect(automationsContract.updateAutomation.method).toBe("PATCH")
   })
+
+  it("exposes a search route declared before the `:id` route", () => {
+    expect(automationsContract.searchAutomations.method).toBe("GET")
+    expect(automationsContract.searchAutomations.path).toBe("/api/automations/search")
+    const keys = Object.keys(automationsContract)
+    expect(keys.indexOf("searchAutomations")).toBeLessThan(keys.indexOf("getAutomation"))
+  })
 })
 
 describe("automation schema", () => {

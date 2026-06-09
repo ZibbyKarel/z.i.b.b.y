@@ -33,6 +33,15 @@ export const projectsContract = c.router(
       responses: { 200: z.array(ProjectSchema) },
       summary: "List all projects",
     },
+    // Declared before `getProject` so `/projects/search` is matched as its own
+    // route rather than captured by the `/projects/:id` param.
+    searchProjects: {
+      method: "GET",
+      path: "/projects/search",
+      query: z.object({ q: z.string() }),
+      responses: { 200: z.array(ProjectSchema) },
+      summary: "Search projects by id, name, desc, path or category",
+    },
     getProject: {
       method: "GET",
       path: "/projects/:id",

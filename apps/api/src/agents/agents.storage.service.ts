@@ -10,7 +10,7 @@ import {
   RiskSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts"
-import { MarkdownEntityStore } from "../shared/file-storage"
+import { MarkdownEntityStore, searchByText } from "../shared/file-storage"
 import {
   AgentConflictError,
   AgentNotFoundError,
@@ -52,6 +52,11 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> implements 
     const agent: Agent = { ...input, name: input.name ?? input.id }
     await this.writeEntity(agent)
     return agent
+  }
+
+  /** Free-text search over the catalog by id, name, description and category. */
+  async search(query: string): Promise<Agent[]> {
+    return searchByText(await this.list(), query, (a) => [a.id, a.name, a.description, a.category])
   }
 
   async update(id: string, patch: UpdateAgentInput): Promise<Agent> {
