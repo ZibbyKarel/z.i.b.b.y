@@ -117,6 +117,44 @@ async function seedSkills() {
 }
 
 // ---------------------------------------------------------------- agents ----
+// The Cleaner's full body. Unlike the other agents (generic `agentBody`), this one
+// is hand-written because the whole point is the delete→gate handshake: it must RUN
+// the destructive command (which the platform intercepts and surfaces as an approval
+// card) rather than printing a "yes/no?" question — a dead end in a single-turn run.
+const CLEANER_BODY = `# Cleaner
+
+You are **Cleaner**, a tidy-up agent. You are given exactly ONE directory to clean.
+Operate only inside that directory — never read, write, or delete anything outside it
+(no parent dirs, no siblings, no home).
+
+## What to remove
+- OS cruft: \`.DS_Store\`, \`Thumbs.db\`, \`desktop.ini\`, \`*.tmp\`, and the like.
+- Empty directories.
+- Content duplicates: files whose contents are byte-identical (compare by hash). Keep the
+  canonical one (the cleaner name — no \` 2\`, \`copy\`, \`(1)\` markers) and remove the rest.
+
+## How to delete — read this carefully
+You run non-interactively (a single \`claude -p\` turn). There is no human at a prompt and
+no stdin: if you print a question like "Approve? (yes/no)" your turn simply ends and
+**nothing is deleted**. Asking in text is a dead end.
+
+So when you have decided what to remove:
+1. State the deletion list in one short block (this is what the human sees on the card).
+2. Immediately RUN the deletion with \`bash\` — a single command, e.g.
+   \`rm -rf -- .DS_Store empty "zibby-ascii 2.txt"\`.
+
+Running the \`rm\` IS how you ask for approval: the platform intercepts the command before
+it executes, shows me an approval card with your targets, and pauses until I approve or
+reject. Consent happens there, out of band — not in the chat. Do **not** stop after the
+plan and wait; carry it out.
+
+## Rules
+- Stay inside the given directory. Use only: read, write, bash.
+- Quote paths and use \`--\` so names with spaces (e.g. \`"zibby-ascii 2.txt"\`) stay one target.
+- Removing files with \`rm\` (or \`rmdir\`/\`find … -delete\`) is what triggers the approval
+  card — that is intended; just run it once you have the list.
+- After the deletion runs, report what was removed.`
+
 // Contract Agent: full shape incl. category + gates (GateRuleInput[]).
 const AGENTS = [
   { id: "architect", name: "Architekt", glyph: "compass", role: "Navrhne řešení a rozepíše plán do design.md", model: "opus", thinking: "high", tools: ["read", "web", "write"], category: "Vývoj" },
@@ -134,6 +172,12 @@ const AGENTS = [
   { id: "curator", name: "Kurátor", glyph: "film", role: "Třídí a popisuje média v knihovně", model: "sonnet", thinking: "low", tools: ["read", "write", "web"], category: "Média" },
   { id: "steward", name: "Hospodář", glyph: "cart", role: "Plánuje nákupy a hlídá domácí zásoby", model: "sonnet", thinking: "medium", tools: ["read", "write", "web"], category: "Domácnost", gateRuleIds: ["gr-big-purchase"] },
   { id: "chronicler", name: "Kronikář", glyph: "doc", role: "Vede deník a sumarizuje týden z poznámek", model: "sonnet", thinking: "low", tools: ["read", "write"], category: "Psaní" },
+  // Cleaner — the reference tidy-up agent. Deletes through the approval gate, so its
+  // body deliberately tells it to RUN the delete (not ask in chat): the platform
+  // intercepts the command and raises the approval card. `sonnet` (not `haiku`) so it
+  // actually follows that instruction instead of defaulting to "ask first". `approval`
+  // makes every intercepted destructive command pause for a human yes/no.
+  { id: "cleaner", name: "Cleaner", glyph: "shield", role: "Scans a single directory for junk and content-duplicate files and removes them through the approval gate", model: "sonnet", thinking: "medium", tools: ["read", "write", "bash"], category: "Údržba", approval: true, risk: "high", body: CLEANER_BODY },
 ]
 
 const agentBody = (a) => `# ${a.name}
@@ -155,7 +199,8 @@ async function seedAgents() {
     if (a.risk) fm.risk = a.risk
     if (a.gates) fm.gates = a.gates
     if (a.gateRuleIds) fm.gateRuleIds = a.gateRuleIds
-    await writeFile(dir("agents", `${a.id}.md`), md(agentBody(a), fm))
+    // A hand-written body (Cleaner) wins; everyone else gets the generic template.
+    await writeFile(dir("agents", `${a.id}.md`), md(a.body ?? agentBody(a), fm))
   }
   // Keep the token-free demo agent the runner uses.
   const demo = { name: "Agent 007", description: "Testovací agent — v zadané složce vytvoří soubor a hlásí progress. Nespálí žádné tokeny.", glyph: "bot", model: "haiku", thinking: "low", tools: ["write"] }
@@ -164,7 +209,7 @@ async function seedAgents() {
   // Agent categories manifest.
   const CATS = [
     ["Vývoj", "code"], ["Kvalita", "shield"], ["Výzkum", "search"], ["Dokumentace", "spark"],
-    ["Média", "film"], ["Domácnost", "cart"], ["Psaní", "doc"],
+    ["Média", "film"], ["Domácnost", "cart"], ["Psaní", "doc"], ["Údržba", "server"],
   ].map(([name, glyph]) => ({ name, glyph }))
   await writeFile(dir("agents", "_categories.json"), JSON.stringify(CATS, null, 2))
   return AGENTS.length + 1
