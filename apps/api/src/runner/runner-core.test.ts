@@ -85,7 +85,11 @@ describe("RunnerCore", () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "runner-core-"))
   })
   afterEach(async () => {
-    await fs.rm(dir, { recursive: true, force: true })
+    // Tests spawn real detached children into `dir`; one may still be finalizing its
+    // exit (flushing the log, releasing the sandbox) when cleanup runs, which races
+    // the recursive remove to `ENOTEMPTY`. `maxRetries`/`retryDelay` is Node's
+    // built-in remedy for exactly that transient on `fs.rm`.
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
   })
 
   it("spawns a child, captures the log, and reaches done with pct 100", async () => {

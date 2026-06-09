@@ -30,6 +30,43 @@ export interface ClaudeRunOptions {
 const APPROVAL_HOOK = path.resolve(__dirname, "claude-approval-hook.mjs")
 
 /**
+ * Operating contract prepended to every run's system prompt. Runs are headless
+ * `claude -p` sessions: single-turn, with stdin ignored. There is no human at a
+ * terminal, so a question printed to chat ("Approve? yes/no") receives no reply —
+ * the turn just ends and the process exits `done` having done nothing. This is the
+ * exact failure mode where an agent prints a deletion plan, asks for confirmation,
+ * and terminates before its approval gate ever engages.
+ *
+ * Consent is NOT obtained in chat: the platform intercepts destructive commands
+ * (the rm family, `find … -delete`, `git clean`) via a PreToolUse hook BEFORE they
+ * run, surfaces an approval card to the human, and blocks the command until they
+ * approve or reject — out of band from this session. So the correct behaviour is to
+ * EXECUTE the action (run the `rm`); the gate handles human consent. Asking first
+ * defeats it. Prepended (not appended) so it frames the agent's own body, and
+ * separated by a rule the body can't easily override.
+ */
+export const OPERATING_CONTRACT = [
+  "## Execution environment (read first)",
+  "",
+  "You run non-interactively (`claude -p`): a single turn, no interactive human, stdin closed.",
+  "Anything you print as a question gets NO reply — your turn simply ends and the run stops.",
+  "",
+  "- NEVER ask for confirmation or print a \"yes/no\" prompt and wait. It is a dead end.",
+  "- To delete, overwrite, or otherwise act with an external effect, just RUN the command.",
+  "- The platform intercepts destructive commands before they execute, shows the human an",
+  "  approval card, and pauses until they approve or reject. Consent happens there, not in chat.",
+  "- So: act directly. Do not describe a plan and stop — carry it out; the gate handles approval.",
+  "",
+  "---",
+  "",
+].join("\n")
+
+/** Prefix an agent/skill body with the operating contract that frames every run. */
+function withOperatingContract(instructions: string): string {
+  return `${OPERATING_CONTRACT}${instructions}`
+}
+
+/**
  * Settings JSON registering the approval hook on every Bash tool call. The hook
  * gates only destructive commands (it self-filters and otherwise allows), so
  * attaching it unconditionally is cheap. `command` is shell-quoted so a node or
@@ -96,7 +133,7 @@ export class ClaudeRunCommandService {
       "--allowedTools",
       ...allowedTools,
       "--append-system-prompt",
-      opts.instructions,
+      withOperatingContract(opts.instructions),
       "--agents",
       JSON.stringify(catalog),
       // Mid-run approval gate: a PreToolUse hook intercepts destructive Bash and
