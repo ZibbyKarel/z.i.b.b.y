@@ -2,7 +2,7 @@ import type { Agent, Skill } from "@zibby/contracts"
 import { describe, expect, it } from "vitest"
 import type { AgentsStorageService } from "../agents/agents.storage.service"
 import type { SkillsStorageService } from "../skills/skills.storage.service"
-import { ClaudeRunCommandService } from "./claude-run-command.service"
+import { ClaudeRunCommandService, OPERATING_CONTRACT } from "./claude-run-command.service"
 
 /** Build the service over fixed in-memory catalogs (only `list` is exercised). */
 function makeService(agents: Agent[], skills: Skill[]): ClaudeRunCommandService {
@@ -48,9 +48,22 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(command).toBe("claude")
     expect(flagValue(args, "-p")).toBe("Naprav bug")
     expect(flagValue(args, "--permission-mode")).toBe("dontAsk")
-    expect(flagValue(args, "--append-system-prompt")).toBe("Jsi Kodér.")
+    // The agent body is framed by the operating contract (prepended), which steers
+    // the headless run to EXECUTE destructive actions through the gate instead of
+    // asking for confirmation in chat (a dead end in non-interactive `-p` mode).
+    expect(flagValue(args, "--append-system-prompt")).toBe(`${OPERATING_CONTRACT}Jsi Kodér.`)
     expect(flagValue(args, "--model")).toBe("sonnet")
     expect(flagValue(args, "--effort")).toBe("medium")
+  })
+
+  it("prepends the operating contract so the agent executes rather than asking in chat", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({ instructions: CODER.instructions, task: "x" })
+    const prompt = flagValue(args, "--append-system-prompt") ?? ""
+    // Contract comes first, then the agent's own body — order matters (it frames the body).
+    expect(prompt.startsWith(OPERATING_CONTRACT)).toBe(true)
+    expect(prompt.endsWith("Jsi Kodér.")).toBe(true)
+    expect(prompt).toMatch(/NEVER ask for confirmation/)
   })
 
   it("falls back to a non-empty kickoff prompt when the task is blank", async () => {
