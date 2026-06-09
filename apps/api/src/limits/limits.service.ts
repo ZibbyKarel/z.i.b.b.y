@@ -20,7 +20,7 @@ export function buildLimits(snapshot: RateLimitSnapshot): Limits {
  * resets (see {@link LimitsService.refresh}), so the first request after a reset
  * sees fresh numbers.
  */
-export const CACHE_TTL_MS = 5 * 60 * 1000
+export const CACHE_TTL_MS = 10 * 60 * 1000
 
 /**
  * Computes the interactive-limits readout backing the dashboard panel.
