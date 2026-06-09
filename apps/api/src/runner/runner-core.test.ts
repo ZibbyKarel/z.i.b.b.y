@@ -4,7 +4,7 @@ import * as path from "node:path"
 import type { IntendedAction } from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
-import { RunNotFoundError, RunnerCore } from "./runner-core"
+import { INTENT_DIR_ENV, RunNotFoundError, RunnerCore } from "./runner-core"
 import type { BaseRun, KindStrategy } from "./runner-core.types"
 
 // A minimal record + strategy mirroring how a real wrapper plugs into the core.
@@ -119,6 +119,32 @@ describe("RunnerCore", () => {
     expect(log).toContain("PROGRESS 55")
     expect(core.get(run.runId).status).toBe("done")
     expect(core.get(run.runId).pct).toBe(100)
+  })
+
+  it("spawns the child with the gate coordination dir pinned to its sandbox", async () => {
+    // Regression: the approval hook must exchange its request/decision files in the
+    // sandbox the core watches — not the granted target the destructive command runs
+    // in. The core advertises that sandbox to the child via `ZIBBY_INTENT_DIR`.
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    const cwd = path.join(dir, "env_sandbox")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "envp",
+      command: NODE,
+      args: ["-e", `console.log("DIR=" + process.env.${INTENT_DIR_ENV}); process.exit(0)`],
+      cwd,
+      extra: { label: "x" },
+    })
+
+    let log = ""
+    for (let i = 0; i < 100; i++) {
+      const chunk = await core.readLog(run.runId, 0)
+      log = chunk.content
+      if (chunk.done) break
+      await sleep(20)
+    }
+    expect(log).toContain(`DIR=${cwd}`)
   })
 
   it("throws RunNotFoundError for an unknown or unsafe run id", async () => {
