@@ -257,7 +257,7 @@ export function AgentDetailModal({
             </TabList>
 
             <TabPanel value="basics">
-              <Container paddingTop="200">
+              <Container padding={["200", "0", "0", "0"]}>
                 <Stack align="start" direction="row" gap="300">
                   <Container grow minW0>
                     <Stack gap="200">
@@ -389,7 +389,7 @@ export function AgentDetailModal({
             </TabPanel>
 
             <TabPanel value="rules">
-              <Container paddingTop="200">
+              <Container padding={["200", "0", "0", "0"]}>
                 <AgentRulesSection
                   agentName={watchedName || agent.name || agent.id}
                   gateRuleIds={watchedGateRuleIds}
