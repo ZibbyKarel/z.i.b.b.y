@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Stack } from "../Stack/Stack";
+import { Pressable } from "../Pressable/Pressable";
 
 export type AlertSeverity = "info" | "ok" | "warn" | "error";
 
@@ -50,14 +51,13 @@ export function Alert({
           {children}
         </div>
         {onClose && (
-          <button
+          <Pressable
             aria-label="Dismiss"
-            className="bg-transparent border-none cursor-pointer text-current p-0 leading-none"
             data-testid={AlertTestId.CloseButton}
             onClick={onClose}
           >
             ✕
-          </button>
+          </Pressable>
         )}
       </Stack>
     </div>
