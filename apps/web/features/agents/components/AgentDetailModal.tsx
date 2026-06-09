@@ -14,13 +14,26 @@ import {
   IconTile,
   Pressable,
   Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
   Typography,
 } from "@zibby/design-system";
-import type { Agent, AgentModel, AgentThinking, Category } from "@zibby/contracts";
+import type {
+  Agent,
+  AgentModel,
+  AgentThinking,
+  Category,
+  GateRuleInput,
+  GlobalGateRule,
+} from "@zibby/contracts";
 import type { Pipeline } from "../../../domain";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import { agentFile } from "../agentDraft";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
+import { RuleModal } from "../../gates/components/RuleModal";
+import { AgentRulesSection } from "./AgentRulesSection";
 import {
   Controller,
   FormMarkdownEditor,
@@ -49,7 +62,16 @@ type AgentEditValues = {
   tools: string[];
   category: string;
   instructions: string;
+  /** The agent's own approval-gate rules (frontmatter `gates`). */
+  gates: GateRuleInput[];
+  /** Ids of linked global catalog rules (frontmatter `gateRuleIds`). */
+  gateRuleIds: string[];
 };
+
+/** Convert an own rule into the shape `RuleModal` prefills from (a global rule). */
+function ownRuleToInitial(gate: GateRuleInput): GlobalGateRule {
+  return { id: "own", match: gate.match, decision: gate.decision, ...(gate.resolve ? { resolve: gate.resolve } : {}) };
+}
 
 function ChipToggle({
   active,
@@ -82,6 +104,9 @@ export function AgentDetailModal({
   const isNew = initialMode === "new";
   const [mode, setMode] = useState<"view" | "edit">(isNew ? "edit" : "view");
   const [confirm, setConfirm] = useState(false);
+  const [editTab, setEditTab] = useState<"basics" | "rules">("basics");
+  /** The own-rule being edited: an index, "new", or null when the editor is closed. */
+  const [editingRule, setEditingRule] = useState<number | "new" | null>(null);
 
   const name = agent.name ?? agent.id;
   const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
@@ -96,6 +121,8 @@ export function AgentDetailModal({
       tools: agent.tools ?? [],
       category: agent.category ?? "",
       instructions: agent.instructions,
+      gates: agent.gates ?? [],
+      gateRuleIds: agent.gateRuleIds ?? [],
     },
     onSubmit: (values) => {
       onSave(
@@ -109,6 +136,8 @@ export function AgentDetailModal({
           tools: values.tools,
           category: values.category || undefined,
           instructions: values.instructions,
+          gates: values.gates,
+          gateRuleIds: values.gateRuleIds,
         },
         isNew,
       );
@@ -121,6 +150,20 @@ export function AgentDetailModal({
     (watchedName ?? "").trim().length > 0 && (watchedInstructions ?? "").trim().length > 0;
 
   const watchedGlyph = form.watch("glyph");
+  const watchedGates = form.watch("gates") ?? [];
+  const watchedGateRuleIds = form.watch("gateRuleIds") ?? [];
+
+  const setGates = (next: GateRuleInput[]) => form.setValue("gates", next, { shouldDirty: true });
+
+  /** Save one own-rule from the rule editor (append for "new", replace by index). */
+  const saveRule = (gate: GateRuleInput) => {
+    setGates(
+      editingRule === "new"
+        ? [...watchedGates, gate]
+        : watchedGates.map((g, i) => (i === editingRule ? gate : g)),
+    );
+    setEditingRule(null);
+  };
 
   const viewActions = (
     <Stack grow align="center" direction="row" justify="between">
@@ -141,7 +184,10 @@ export function AgentDetailModal({
               tools: agent.tools ?? [],
               category: agent.category ?? "",
               instructions: agent.instructions,
+              gates: agent.gates ?? [],
+              gateRuleIds: agent.gateRuleIds ?? [],
             });
+            setEditTab("basics");
             setMode("edit");
           }}
           size="sm"
@@ -186,7 +232,7 @@ export function AgentDetailModal({
         ariaLabel={isNew ? t("newAgent") : name}
         closeLabel={tk("common.close")}
         onClose={onClose}
-        open={!confirm}
+        open={!confirm && editingRule === null}
         title={
           <Stack align="center" direction="row" gap="150">
             <IconTile
@@ -204,9 +250,17 @@ export function AgentDetailModal({
         width={editing ? "2xl" : "lg"}
       >
         {editing ? (
-          <Stack align="start" direction="row" gap="300">
-            <Container grow minW0>
-              <Stack gap="200">
+          <Tabs onValueChange={(v) => setEditTab(v as "basics" | "rules")} value={editTab}>
+            <TabList>
+              <Tab value="basics">{t("tabBasics")}</Tab>
+              <Tab value="rules">{t("tabRules")}</Tab>
+            </TabList>
+
+            <TabPanel value="basics">
+              <Container paddingTop="200">
+                <Stack align="start" direction="row" gap="300">
+                  <Container grow minW0>
+                    <Stack gap="200">
                 <FormTextInput<AgentEditValues>
                   autoFocus
                   label={t("fields.name")}
@@ -329,8 +383,25 @@ export function AgentDetailModal({
                 name="instructions"
                 placeholder={t("fields.bodyPlaceholder")}
               />
-            </Container>
-          </Stack>
+                  </Container>
+                </Stack>
+              </Container>
+            </TabPanel>
+
+            <TabPanel value="rules">
+              <Container paddingTop="200">
+                <AgentRulesSection
+                  agentName={watchedName || agent.name || agent.id}
+                  gateRuleIds={watchedGateRuleIds}
+                  gates={watchedGates}
+                  onAddRule={() => setEditingRule("new")}
+                  onDeleteRule={(i) => setGates(watchedGates.filter((_, j) => j !== i))}
+                  onEditRule={(i) => setEditingRule(i)}
+                  onLinkedChange={(ids) => form.setValue("gateRuleIds", ids, { shouldDirty: true })}
+                />
+              </Container>
+            </TabPanel>
+          </Tabs>
         ) : (
           <Stack gap="200">
             <Typography leading="relaxed" size="base" type="note">
@@ -430,6 +501,20 @@ export function AgentDetailModal({
             {t("deleteBody", { name, file: agentFile(agent.id) })}
           </Typography>
         </Dialog>
+      )}
+
+      {editingRule !== null && (
+        <RuleModal
+          initial={typeof editingRule === "number" ? ownRuleToInitial(watchedGates[editingRule]!) : undefined}
+          onClose={() => setEditingRule(null)}
+          onSave={(rule) =>
+            saveRule({
+              match: rule.match,
+              decision: rule.decision,
+              ...(rule.resolve ? { resolve: rule.resolve } : {}),
+            })
+          }
+        />
       )}
     </>,
   );

@@ -158,6 +158,8 @@
     "notInPipeline": "Not in any pipeline yet — free to use.",
     "phaseCount": "{count, plural, one {# phase} other {# phases}}",
     "allowedTools": "Allowed tools",
+    "tabBasics": "Basics",
+    "tabRules": "Rules",
     "newAgent": "New agent",
     "create": "Create agent",
     "save": "Save changes",
@@ -244,7 +246,13 @@
     "launchedTarget": "{name} → {project}",
     "watch": "Watch it in the <agents>Running agents</agents> section.",
     "promptLabel": "Prompt",
-    "promptPlaceholder": "Tell {name} what to do…"
+    "promptPlaceholder": "Tell {name} what to do…",
+    "targetLabel": "Target",
+    "targetProjectOption": "Project",
+    "targetFilesOption": "Files",
+    "filesLabel": "Directory",
+    "filesHint": "Pick a folder — all its files become the run target",
+    "filesTarget": "{count, plural, =0 {no files} one {# file} other {# files}}"
   },
   "pipelineRun": {
     "editRaw": "Edit raw .pipeline.md",
@@ -273,7 +281,24 @@
       "namePlaceholder": "e.g. rohlik",
       "descLabel": "Description",
       "descHint": "saved as the description in SKILL.md",
-      "descPlaceholder": "What the skill does…"
+      "descPlaceholder": "What the skill does…",
+      "content": {
+        "label": "Skill content",
+        "glyphLabel": "Icon",
+        "noCategory": "No category",
+        "directoryTab": "Directory",
+        "editorTab": "Editor",
+        "directory": {
+          "label": "Load from a folder",
+          "hint": ".md · .markdown · .txt · subfolders included",
+          "summary": "{total, plural, one {# file} other {# files}} · {selected} selected",
+          "import": "Import to editor",
+          "fileSize": "{kb} kB"
+        },
+        "editor": {
+          "placeholder": "Markdown skill content…"
+        }
+      }
     },
     "integration": {
       "title": "New integration",
@@ -449,6 +474,13 @@
     "evalNote": "Risk is a property of (action, target, context) — not of a tool. The locked floor may only be hardened.",
     "inheritedTitle": "Inherited system rules",
     "inheritedNote": "Security floor from POLICY.md — an agent may only harden it, never loosen it.",
+    "noInherited": "No system rules — the floor is empty.",
+    "linkedTitle": "Global rules",
+    "linkedNote": "From the Approval rules page — edit them there; they apply everywhere they are linked.",
+    "noLinked": "No global rules linked.",
+    "linkGlobal": "Link a global rule",
+    "linkGlobalPlaceholder": "Choose a global rule…",
+    "unlink": "Unlink",
     "ownTitle": "Rules · {agent}",
     "addRule": "Add rule",
     "noOwnRules": "No own rules — this agent runs on the system floor only.",

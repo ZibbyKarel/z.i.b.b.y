@@ -17,10 +17,9 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { CardGrid } from "../../components/CardGrid/CardGrid";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
-import { EntityFormModal, type FieldSchema } from "../../components/EntityFormModal/EntityFormModal";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
+import { AddSkillModal } from "./components/AddSkillModal/AddSkillModal";
 import { SkillTile } from "./components/SkillTile";
-import { useEntityForm } from "../../state/forms";
 import { useSkillCategoriesQuery, useSkillsQuery } from "./queries";
 import {
   useCreateSkillCategoryMutation,
@@ -46,27 +45,11 @@ export function Screen() {
   const deleteCategory = useDeleteSkillCategoryMutation();
   const [adding, setAdding] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
-  const form = useEntityForm("skill");
 
   // Skills whose category was deleted (or never set) surface in a trailing
   // fallback section instead of vanishing from the catalog.
   const knownNames = new Set(categories.map((c) => c.name));
   const uncategorized = skills.filter((s) => !s.category || !knownNames.has(s.category));
-
-  // The shared EntityFormModal is field-driven: add a category picker only when
-  // at least one category exists, so a skill can be filed on creation.
-  const fields: FieldSchema[] =
-    categories.length > 0
-      ? [
-          ...form.fields,
-          {
-            name: "category",
-            label: t("fields.category"),
-            kind: "select",
-            options: categories.map((c) => ({ value: c.name, label: c.name })),
-          },
-        ]
-      : form.fields;
 
   const renderSection = (key: string, label: string, glyph: IconName, items: Skill[]) => {
     const empty = items.length === 0;
@@ -161,33 +144,29 @@ export function Screen() {
       </Stack>
 
       {adding && (
-        <EntityFormModal
-          fields={fields}
-          filePreview={form.filePreview}
-          glyph={form.glyph}
+        <AddSkillModal
+          categories={categories.map((c) => c.name)}
           onClose={() => setAdding(false)}
-          onSubmit={(values) => {
-            const id = slug(values.name ?? "");
-            const desc = values.desc?.trim() || tk("defaults.skill");
+          onSubmit={({ name, desc, category, glyph, instructions }) => {
+            const id = slug(name);
+            // Description and body both fall back so the SKILL.md is never empty,
+            // even when the user creates a skill from name alone.
+            const safeDesc = desc || tk("defaults.skill");
             createSkill.mutate(
               {
                 body: {
                   id,
-                  name: values.name?.trim() || id,
-                  glyph: "spark",
-                  desc,
-                  category: values.category?.trim() || undefined,
-                  // The form captures no body yet; seed instructions from the
-                  // description so the SKILL.md has a non-empty body to start from.
-                  instructions: desc,
+                  name: name || id,
+                  glyph,
+                  desc: safeDesc,
+                  category,
+                  instructions: instructions || safeDesc,
                 },
               },
               { onSuccess: () => setAdding(false) },
             );
           }}
-          submitLabel={form.submitLabel}
-          subtitle={form.subtitle}
-          title={form.title}
+          pending={createSkill.isPending}
         />
       )}
 

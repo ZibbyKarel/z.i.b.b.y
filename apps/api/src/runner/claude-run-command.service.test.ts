@@ -53,6 +53,16 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(flagValue(args, "--effort")).toBe("medium")
   })
 
+  it("falls back to a non-empty kickoff prompt when the task is blank", async () => {
+    // `claude --print` rejects an empty prompt; a run launched with no prompt must
+    // still get a usable `-p` value (the system prompt carries the real intent).
+    const svc = makeService([CODER], [])
+    for (const task of ["", "   "]) {
+      const { args } = await svc.buildClaudeCommand({ instructions: CODER.instructions, task })
+      expect(flagValue(args, "-p")).toBe("Begin.")
+    }
+  })
+
   /** The variadic `--allowedTools` values: everything up to the next flag. */
   function allowedToolsOf(args: string[]): string[] {
     const start = args.indexOf("--allowedTools") + 1

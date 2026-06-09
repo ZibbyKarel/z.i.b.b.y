@@ -35,6 +35,17 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
   private readonly core: RunnerCore<AgentRunRecord>
 
+  /**
+   * Agents backed by a bundled, deterministic task script keyed by id. These run
+   * their `.mjs` in **every** mode — including claude mode — because the script is
+   * the demo: the Cleaner's `cleaner-task.mjs` drives the Variant B approval gate
+   * (it emits `INTENT {action:"delete"}` and blocks for a decision), which a real
+   * `claude -p … --permission-mode dontAsk` session would bypass entirely.
+   */
+  private static readonly REAL_TASK_SCRIPTS: Record<string, string> = {
+    cleaner: "cleaner-task.mjs",
+  }
+
   constructor(
     @Inject(RUNS_DIR) dir: string,
     private readonly agents: AgentsStorageService,
@@ -79,7 +90,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * a fresh per-run sandbox folder, and wires its output to a log file plus a
    * metadata sidecar.
    */
-  async start(agentId: string, prompt: string, project: string): Promise<AgentRun> {
+  async start(
+    agentId: string,
+    prompt: string,
+    project: string,
+    files: string[] = [],
+  ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId)
 
@@ -95,7 +111,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       args,
       cwd,
       startedMs,
-      extra: { agentId, prompt, project },
+      extra: { agentId, prompt, project, files },
     }
 
     // Variant B: the run spawns immediately. Gating happens mid-run — when the
@@ -140,7 +156,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           kind: "agent",
           skill: agent.name ?? agent.id,
           action: action.action,
-          detail: rec.prompt,
+          // The action's own `context` (e.g. the Cleaner's deletion list, packed as
+          // approval-enrichment JSON) is what the card should show; fall back to the
+          // run's prompt when the action carried no detail of its own.
+          detail: action.context ?? rec.prompt,
           risk: agent.risk ?? "medium",
         })
         return
@@ -194,7 +213,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     task: string,
     cwd: string,
   ): Promise<{ command: string; args: string[] }> {
-    if (process.env.AGENT_RUNNER_MODE === "claude") {
+    // Real-task agents (the Cleaner) always run their bundled script — see
+    // REAL_TASK_SCRIPTS. Only the remaining agents honour claude mode.
+    const isRealTask = agent.id in AgentRunnerService.REAL_TASK_SCRIPTS
+    if (process.env.AGENT_RUNNER_MODE === "claude" && !isRealTask) {
       return this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,
@@ -203,7 +225,20 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         thinking: agent.thinking,
       })
     }
-    const script = process.env.AGENT_DEMO_SCRIPT ?? path.resolve(__dirname, "demo-task.mjs")
-    return { command: process.execPath, args: [script, cwd] }
+    // The task script receives the sandbox `cwd` and the run's task/prompt (some
+    // scripts, e.g. the Cleaner, read the prompt as a target directory).
+    return { command: process.execPath, args: [this.demoScriptFor(agent), cwd, task] }
+  }
+
+  /**
+   * Pick the bundled task script for a run. `AGENT_DEMO_SCRIPT` (used by tests)
+   * overrides everything; otherwise a real-task agent maps to its own script by id
+   * (see REAL_TASK_SCRIPTS), and every other agent falls back to the generic
+   * token-free `demo-task.mjs`.
+   */
+  private demoScriptFor(agent: Agent): string {
+    if (process.env.AGENT_DEMO_SCRIPT) return process.env.AGENT_DEMO_SCRIPT
+    const script = AgentRunnerService.REAL_TASK_SCRIPTS[agent.id] ?? "demo-task.mjs"
+    return path.resolve(__dirname, script)
   }
 }

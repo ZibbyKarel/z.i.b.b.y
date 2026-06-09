@@ -12,6 +12,10 @@ export interface RuleCardProps {
   /** Locked (inherited) system rules can't be edited or removed. */
   locked?: boolean;
   onDelete?: (id: string) => void;
+  /** When provided (and not locked), an edit button is shown before delete. */
+  onEdit?: (rule: GateRule) => void;
+  deleteLabel?: string;
+  editLabel?: string;
 }
 
 /** One gate rule: matcher → decision (→ resolve, for `ask`). Left border = decision. */
@@ -23,6 +27,9 @@ export function RuleCard({
   notifyHint,
   locked = false,
   onDelete,
+  onEdit,
+  deleteLabel = "smazat pravidlo",
+  editLabel = "upravit pravidlo",
 }: RuleCardProps) {
   const meta = DECISION_META[rule.decision];
   const matcherIcon = MATCHER_ICON[rule.match[0]?.type ?? "action"];
@@ -40,9 +47,14 @@ export function RuleCard({
               {locked ? (
                 <Icon name="link" size="xs" tone="faint" />
               ) : (
-                onDelete && (
-                  <Button aria-label="smazat pravidlo" icon="x" intent="ghost" onClick={() => onDelete(rule.id)} size="sm" />
-                )
+                <Stack align="center" direction="row" gap="50">
+                  {onEdit && (
+                    <Button aria-label={editLabel} icon="edit" intent="ghost" onClick={() => onEdit(rule)} size="sm" />
+                  )}
+                  {onDelete && (
+                    <Button aria-label={deleteLabel} icon="x" intent="ghost" onClick={() => onDelete(rule.id)} size="sm" />
+                  )}
+                </Stack>
               )}
             </Stack>
             <Stack wrap align="center" direction="row" gap="100">

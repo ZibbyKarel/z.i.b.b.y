@@ -68,7 +68,7 @@ export function CodeBlock({
         <span data-testid={CodeBlockTestId.Placeholder}>{placeholder}</span>
       ) : (
         <pre
-          className="m-0 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-foreground"
+          className="m-0 font-mono text-s leading-relaxed break-words whitespace-pre-wrap text-foreground"
           data-testid={CodeBlockTestId.Pre}
         >
           {text}

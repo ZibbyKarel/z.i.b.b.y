@@ -32,6 +32,7 @@ export const agentStrategy: KindStrategy<AgentRunRecord> = {
       agentId: AgentIdSchema.parse(spec.extra.agentId),
       prompt: String(spec.extra.prompt ?? ""),
       project: String(spec.extra.project ?? ""),
+      files: Array.isArray(spec.extra.files) ? spec.extra.files.map(String) : [],
     }
   },
 }

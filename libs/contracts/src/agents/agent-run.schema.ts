@@ -36,6 +36,14 @@ export const AgentRunSchema = z.object({
   prompt: z.string(),
   /** Human-chosen target project label (presentation only). */
   project: z.string(),
+  /**
+   * Folder-relative paths of the files the run targets when the user picked a
+   * directory instead of a project (presentation only — these are browser
+   * `webkitRelativePath` strings, never host-absolute, so they do not drive the
+   * sandbox `cwd`). Empty when a project was chosen. Defaulted so sidecars written
+   * before this field existed still parse.
+   */
+  files: z.array(z.string()).default([]),
   /** Absolute working directory the process ran in (its sandbox folder). */
   cwd: z.string(),
   startedAt: z.string().datetime(),
@@ -48,6 +56,8 @@ export type AgentRun = z.infer<typeof AgentRunSchema>
 export const StartRunSchema = z.object({
   prompt: z.string(),
   project: z.string().optional(),
+  /** Folder-relative paths when the run targets a directory rather than a project. */
+  files: z.array(z.string()).optional(),
 })
 export type StartRunInput = z.infer<typeof StartRunSchema>
 

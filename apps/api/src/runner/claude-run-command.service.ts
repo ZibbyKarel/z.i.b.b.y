@@ -26,6 +26,15 @@ interface CatalogEntry {
   model?: string
 }
 
+/**
+ * Kickoff prompt used when a run is launched with a blank task. `claude --print`
+ * rejects an empty prompt ("Input must be provided …"), and a run started from the
+ * UI may carry no prompt at all (the agent's body in `--append-system-prompt`
+ * already says what to do, so the user prompt is optional). A minimal kickoff lets
+ * the session start; the system prompt drives it from there.
+ */
+const KICKOFF_FALLBACK = "Begin."
+
 /** Thinking budget → `--effort` level (1:1 today; kept as a seam for divergence). */
 const THINKING_TO_EFFORT: Record<NonNullable<Agent["thinking"]>, string> = {
   low: "low",
@@ -55,7 +64,7 @@ export class ClaudeRunCommandService {
     const { catalog, allowedTools } = await this.buildCatalog(opts.tools)
     const args = [
       "-p",
-      opts.task,
+      opts.task.trim() ? opts.task : KICKOFF_FALLBACK,
       "--permission-mode",
       "dontAsk",
       "--allowedTools",

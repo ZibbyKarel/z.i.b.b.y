@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RunStatus } from "@zibby/contracts";
@@ -31,7 +32,12 @@ export function Screen() {
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
 
-  const [filter, setFilter] = useState<Filter>("all");
+  // Deep-link the active tab via `?filter=` (e.g. RunModal points here at "running").
+  const searchParams = useSearchParams();
+  const paramFilter = searchParams.get("filter");
+  const [filter, setFilter] = useState<Filter>(
+    FILTERS.includes(paramFilter as Filter) ? (paramFilter as Filter) : "all",
+  );
   const [selId, setSelId] = useState<string | null>(null);
 
   const stopAgent = apiClient.agentRuns.stopRun.useMutation({

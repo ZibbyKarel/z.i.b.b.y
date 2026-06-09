@@ -21,7 +21,7 @@ describe("RunModal", () => {
     expect(screen.getByRole("dialog", { name: "Spustit rohlik" })).toBeInTheDocument()
   })
 
-  it("launches with the composed request and shows confirmation", async () => {
+  it("launches against a project with the composed request and shows confirmation", async () => {
     const onLaunch = vi.fn()
     render(
       <RunModal agent={agent} file={file} onClose={() => {}} onLaunch={onLaunch} projects={projects} />,
@@ -29,9 +29,25 @@ describe("RunModal", () => {
     await userEvent.type(screen.getByLabelText(/Zadání/), "srovnej seriály")
     await userEvent.click(screen.getByRole("button", { name: /Spustit agenta/ }))
     expect(onLaunch).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: "srovnej seriály", project: "media-vault" }),
+      expect.objectContaining({ prompt: "srovnej seriály", project: "media-vault", files: [] }),
     )
     expect(screen.getByText("Agent spuštěn na pozadí")).toBeInTheDocument()
+  })
+
+  it("launches against picked files when the target is switched to Soubory", async () => {
+    const onLaunch = vi.fn()
+    render(
+      <RunModal agent={agent} file={file} onClose={() => {}} onLaunch={onLaunch} projects={projects} />,
+    )
+    await userEvent.type(screen.getByLabelText(/Zadání/), "ukliď")
+    // Switch the target toggle from the project picker to the directory picker.
+    await userEvent.click(screen.getByRole("radio", { name: "Soubory" }))
+    const picked = new File(["x"], "list.md", { type: "text/markdown" })
+    await userEvent.upload(screen.getByLabelText(/Složka/), picked)
+    await userEvent.click(screen.getByRole("button", { name: /Spustit agenta/ }))
+    expect(onLaunch).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "ukliď", project: "", files: ["list.md"] }),
+    )
   })
 
   it("closes from the close button", async () => {

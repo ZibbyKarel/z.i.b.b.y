@@ -226,8 +226,8 @@ export function Screen() {
           file={agentFile(runAgent.id)}
           key={runAgent.id}
           onClose={() => setRunAgent(null)}
-          onLaunch={({ agent, prompt, project }) =>
-            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project } })
+          onLaunch={({ agent, prompt, project, files }) =>
+            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project, files } })
           }
           projects={runProjects}
         />
