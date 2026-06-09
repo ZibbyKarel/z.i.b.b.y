@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
@@ -9,6 +10,8 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
+import { TraceContextService } from "../shared/logging/trace-context.service"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
 
 /** DI token carrying the absolute path of the directory that holds run artifacts. */
@@ -38,6 +41,13 @@ export { RunNotFoundError } from "../runner/runner-core"
 export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
   private readonly core: RunnerCore<AgentRunRecord>
+  private readonly log: ScopedLogger
+  /**
+   * runId → the `traceId` of the request that started it. A mid-run gate fires
+   * long after that request returned (from child output), so we stash the origin
+   * here to re-link its background logs to where the run came from.
+   */
+  private readonly runOrigins = new Map<string, string>()
 
   constructor(
     @Inject(RUNS_DIR) dir: string,
@@ -46,8 +56,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly gates: GateEvaluatorService,
     private readonly claude: ClaudeRunCommandService,
     private readonly limits: LimitsService,
+    private readonly logger: LoggerService,
+    private readonly trace: TraceContextService,
   ) {
     this.dir = path.resolve(dir)
+    this.log = logger.child(AgentRunnerService.name)
     // Layer 2: a usage-limit signal in a run's output busts the limits cache so the
     // next /api/limits read re-fetches the authoritative percentages.
     // Variant B: a mid-run `INTENT {json}` line routes through the gate evaluator.
@@ -56,6 +69,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       agentStrategy,
       () => this.limits.noteLimitHit(),
       (runId, action) => this.onIntent(runId, action),
+      logger.child("RunnerCore:agent"),
     )
   }
 
@@ -70,6 +84,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       },
     })
     await this.core.init()
+    this.log.debug("agent runner initialized")
   }
 
   /** Kill any still-live children on shutdown so we don't leak zombies. */
@@ -89,6 +104,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     project: string,
     files: string[] = [],
   ): Promise<AgentRun> {
+    this.log.info("starting agent run", { agentId, project, files: files.length })
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId)
 
@@ -112,6 +128,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // child announces an external-effect action via a `INTENT {json}` line, the
     // core routes it to {@link onIntent} below for evaluation.
     const rec = await this.core.start(spec)
+    // Remember which request started this run so a later mid-run gate (fired from
+    // child output, outside any request) can re-link its logs to that origin.
+    const origin = this.trace.getTraceId()
+    if (origin) this.runOrigins.set(rec.runId, origin)
     return toAgentRun(rec)
   }
 
@@ -129,7 +149,14 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    *
    * Any failure (e.g. the agent was deleted mid-run) fails safe to a deny.
    */
-  private async onIntent(runId: string, action: IntendedAction): Promise<void> {
+  private onIntent(runId: string, action: IntendedAction): Promise<void> {
+    // Re-establish a logging scope for this background gate: the originating
+    // request's trace id (so it links back) plus the run id (the durable key).
+    const traceId = this.runOrigins.get(runId) ?? this.trace.getTraceId() ?? randomUUID()
+    return this.trace.run({ traceId, runId }, () => this.evaluateIntent(runId, action))
+  }
+
+  private async evaluateIntent(runId: string, action: IntendedAction): Promise<void> {
     try {
       const rec = this.core.get(runId)
       const agent = await this.agents.get(rec.agentId)
@@ -137,13 +164,23 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         gates: agent.gates,
         requires_approval: agent.requires_approval,
       })
-      const decision = this.gates.evaluate(rules, action).decision
+      const evaluation = this.gates.evaluate(rules, action)
+      const decision = evaluation.decision
+      this.log.info("evaluating mid-run intent", {
+        agentId: rec.agentId,
+        action: action.action,
+        tool: action.tool,
+        decision,
+        ruleId: evaluation.ruleId,
+      })
 
       if (decision === "deny") {
+        this.log.warn("mid-run intent denied", { action: action.action, ruleId: evaluation.ruleId })
         await this.core.denyIntent(runId)
         return
       }
       if (decision === "ask") {
+        this.log.info("mid-run intent held for approval", { action: action.action })
         await this.core.holdForApproval(runId)
         await this.approvals.requestApproval({
           runId,
@@ -160,8 +197,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       }
       // allow / notify: let the action proceed immediately.
       await this.core.allowIntent(runId)
-    } catch {
+    } catch (error) {
       // Unknown agent / evaluation failure → fail safe: refuse the action.
+      this.log.error("mid-run intent evaluation failed; failing safe to deny", {
+        err: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
       await this.core.denyIntent(runId).catch(() => {})
     }
   }
@@ -186,6 +227,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /** Permanently delete a run and all its artifacts (sidecar, log, sandbox). */
   delete(runId: string): Promise<void> {
+    this.runOrigins.delete(runId)
     return this.core.delete(runId)
   }
 

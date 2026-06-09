@@ -4,6 +4,7 @@ import { type WriteStream, createWriteStream } from "node:fs"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts"
+import type { ScopedLogger } from "../shared/logging/logger.service"
 import { detectLimit } from "./detect-limit"
 import type {
   BaseRun,
@@ -114,6 +115,14 @@ export class RunnerCore<R extends BaseRun> {
      * INTENT line then just falls through as ordinary, unhandled output).
      */
     private readonly onIntent?: IntentHandler,
+    /**
+     * Per-run lifecycle logging (spawn / finish / intent / reconcile). Optional so
+     * the core stays a plain, DI-free class: wrappers pass a context-scoped logger,
+     * tests omit it. Every line carries an explicit `runId` because these fire from
+     * child-process events outside any request scope — the runId *is* the
+     * correlation key for background work.
+     */
+    private readonly logger?: ScopedLogger,
   ) {
     this.dir = path.resolve(dir)
   }
@@ -153,6 +162,11 @@ export class RunnerCore<R extends BaseRun> {
         }
         await this.writeSidecar(run)
         this.runs.set(run.runId, { run })
+        this.logger?.warn("run reconciled after restart", {
+          runId: run.runId,
+          from: "running",
+          to: "interrupted",
+        })
       } else if (run.status === "awaiting-approval") {
         const pendingSpec = await this.readPendingSpec(run.runId)
         if (pendingSpec) {
@@ -164,6 +178,11 @@ export class RunnerCore<R extends BaseRun> {
           run = { ...run, status: "interrupted" }
           await this.writeSidecar(run)
           this.runs.set(run.runId, { run })
+          this.logger?.warn("run reconciled after restart", {
+            runId: run.runId,
+            from: "awaiting-approval",
+            to: "interrupted",
+          })
         }
       } else {
         this.runs.set(run.runId, { run })
@@ -218,6 +237,14 @@ export class RunnerCore<R extends BaseRun> {
     this.runs.set(runId, handle)
     await this.writeSidecar(run)
     this.wire(handle)
+    this.logger?.info("run spawned", {
+      runId,
+      kind: spec.kind,
+      ownerId: spec.ownerId,
+      pid,
+      command: spec.command,
+      cwd: spec.cwd,
+    })
     return run
   }
 
@@ -257,6 +284,7 @@ export class RunnerCore<R extends BaseRun> {
       await this.writeIntentDecision(handle.run.cwd, "allow")
       handle.run.status = "running"
       await this.writeSidecar(handle.run)
+      this.logger?.info("run resumed (intent released)", { runId })
       return handle.run
     }
 
@@ -280,6 +308,7 @@ export class RunnerCore<R extends BaseRun> {
     handle.run.status = "running"
     await this.writeSidecar(handle.run)
     this.wire(handle)
+    this.logger?.info("run resumed (spawned)", { runId, pid: handle.run.pid })
     return handle.run
   }
 
@@ -312,6 +341,7 @@ export class RunnerCore<R extends BaseRun> {
     } else if (handle.child && handle.run.status === "running") {
       handle.child.kill()
     }
+    this.logger?.info("run cancelled", { runId, status: handle.run.status })
     return handle.run
   }
 
@@ -570,7 +600,14 @@ export class RunnerCore<R extends BaseRun> {
           } catch {
             // Not JSON / not an IntendedAction — leave it as ordinary output.
           }
-          if (action) void this.onIntent(run.runId, action, run.cwd)
+          if (action) {
+            this.logger?.info("run announced intent", {
+              runId: run.runId,
+              action: action.action,
+              tool: action.tool,
+            })
+            void this.onIntent(run.runId, action, run.cwd)
+          }
         }
       }
       // Layer 2: a usage-limit signal in the output busts the limits cache (once).
@@ -597,6 +634,9 @@ export class RunnerCore<R extends BaseRun> {
       this.stopIntentWatch(handle)
       log.end()
       void this.writeSidecar(run)
+      const meta = { runId: run.runId, status, pct: run.pct }
+      if (status === "error") this.logger?.error("run finished", meta)
+      else this.logger?.info("run finished", meta)
     }
     child.on("error", () => finalize("error"))
     child.on("exit", (code) => {
@@ -630,7 +670,14 @@ export class RunnerCore<R extends BaseRun> {
           } catch {
             // Malformed request → ignore; the hook will time out to a safe deny.
           }
-          if (action) await this.onIntent?.(handle.run.runId, action, handle.run.cwd)
+          if (action) {
+            this.logger?.info("run announced intent", {
+              runId: handle.run.runId,
+              action: action.action,
+              tool: action.tool,
+            })
+            await this.onIntent?.(handle.run.runId, action, handle.run.cwd)
+          }
         })
         .catch(() => {
           // No request file yet (ENOENT) — the common case between polls.

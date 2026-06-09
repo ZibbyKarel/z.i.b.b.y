@@ -9,11 +9,13 @@ import { LimitsModule } from "./limits/limits.module"
 import { MemoryModule } from "./memory/memory.module"
 import { PipelinesModule } from "./pipelines/pipelines.module"
 import { ProjectsModule } from "./projects/projects.module"
+import { LoggingModule } from "./shared/logging/logging.module"
 import { SkillsModule } from "./skills/skills.module"
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    LoggingModule,
     AgentsModule,
     SkillsModule,
     ProjectsModule,
