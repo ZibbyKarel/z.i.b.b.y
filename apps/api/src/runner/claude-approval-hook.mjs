@@ -6,7 +6,8 @@
 // session's own sandbox cwd:
 //
 //   1. Non-destructive Bash → allow immediately (exit 0).
-//   2. A destructive command (rm/rmdir/unlink/shred/trash) → announce it by writing
+//   2. A destructive command (the rm family, plus `find … -delete` and `git clean`,
+//      which delete with no rm token to catch) → announce it by writing
 //      `intent-request.json` into cwd, then BLOCK polling for `intent-decision.json`.
 //   3. RunnerCore watches cwd for the request, routes it through the gate evaluator
 //      (allow / ask-a-human / deny), and writes the decision file the hook polls.
@@ -24,15 +25,46 @@ const DECISION_FILE = "intent-decision.json"
 const POLL_MS = 200
 const TIMEOUT_MS = 10 * 60 * 1000
 
-/** True for shell commands that delete files — the only ops we gate. */
+// File-removal binaries invoked directly. The leading class covers command
+// boundaries (start, separators, subshells, command-substitution) so `$(rm …)`
+// and `` `rm …` `` are caught too, not just a bare `rm` at column 0.
+const RM_FAMILY = /(^|[\s;&|(`])(rm|rmdir|unlink|shred|trash|trash-put)(\s|$)/
+
+/**
+ * True for shell commands that delete files — the only ops we gate. A denylist is
+ * inherently leaky, but it must at least cover the idioms an autonomous tidy/clean
+ * agent actually reaches for: the rm family, `find … -delete` (the canonical
+ * `.DS_Store` sweep, which carries no rm token), and `git clean` (removes untracked
+ * files). `find … -exec rm …` is already covered by RM_FAMILY via its `rm` token.
+ */
 function isDestructive(command) {
-  return /(^|[\s;&|(])(rm|rmdir|unlink|shred|trash)(\s|$)/.test(command)
+  if (RM_FAMILY.test(command)) return true
+  if (/\bfind\b[\s\S]*\s-delete(\s|$)/.test(command)) return true
+  // `git clean` as an adjacent subcommand — not the word "clean" anywhere after
+  // `git` (which would gate a harmless `git commit -m "clean up"`).
+  if (/\bgit\s+clean(\s|$)/.test(command)) return true
+  return false
 }
 
-/** Best-effort: pull the file targets out of an `rm`-style command for the card. */
+/** Quote-aware tokenizer so a target like `"zibby-ascii 2.txt"` stays one token. */
+function tokenize(command) {
+  const tokens = []
+  const re = /"([^"]*)"|'([^']*)'|(\S+)/g
+  let m
+  while ((m = re.exec(command)) !== null) tokens.push(m[1] ?? m[2] ?? m[3])
+  return tokens
+}
+
+/**
+ * Best-effort: pull the file targets out of an `rm`-style command for the card.
+ * Only the rm family lists its files as positional args; for `find`/`git clean`
+ * the deletion set is implicit (a query / the untracked set), so we list no
+ * explicit targets and let the command-string preview be the source of truth.
+ */
 function parseTargets(command) {
-  return command
-    .split(/\s+/)
+  const tokens = tokenize(command)
+  if (!/^(rm|rmdir|unlink|shred|trash|trash-put)$/.test(tokens[0] ?? "")) return []
+  return tokens
     .slice(1) // drop the binary
     .filter((tok) => tok && !tok.startsWith("-")) // drop flags
 }
@@ -89,7 +121,7 @@ function main() {
   const targets = parseTargets(command)
   const context = JSON.stringify({
     riskType: "delete",
-    summary: `Delete ${targets.length} file(s)`,
+    summary: targets.length ? `Delete ${targets.length} file(s)` : "Delete files matched by the command",
     consequence: "The listed files will be permanently removed.",
     preview: { kind: "command", command, targets },
   })
