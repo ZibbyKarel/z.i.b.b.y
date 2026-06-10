@@ -131,7 +131,9 @@
         "label": "Add pipeline",
         "sub": "chaining of agents"
       }
-    }
+    },
+    "quickLaunch": "quick launch",
+    "quickLaunchEmpty": "no pinned agents · pin one from the Agents page"
   },
   "skills": {
     "addSkill": "Add skill",
@@ -183,7 +185,6 @@
     "save": "Save changes",
     "edit": "Edit",
     "delete": "Delete",
-    "runAdhoc": "Run ad-hoc",
     "deleteTitle": "Delete agent?",
     "deleteBody": "Delete agent {name}? This also removes {file}. This cannot be undone.",
     "fields": {
@@ -211,7 +212,9 @@
     "deleteEmptyCategory": "Delete",
     "deleteEmptyCategoryAria": "Delete empty category {name}",
     "emptyCategory": "Empty category — add an agent or delete it.",
-    "uncategorized": "Uncategorized"
+    "uncategorized": "Uncategorized",
+    "pin": "Pin {name} to quick launch",
+    "unpin": "Unpin {name} from quick launch"
   },
   "integrations": {
     "addIntegration": "Add integration",

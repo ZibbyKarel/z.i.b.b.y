@@ -131,7 +131,9 @@
         "label": "Přidej pipeline",
         "sub": "zřetězení agentů"
       }
-    }
+    },
+    "quickLaunch": "rychlé spuštění",
+    "quickLaunchEmpty": "žádní připnutí agenti · připni si je na stránce Agenti"
   },
   "skills": {
     "addSkill": "Přidat skill",
@@ -183,7 +185,6 @@
     "save": "Uložit změny",
     "edit": "Editovat",
     "delete": "Smazat",
-    "runAdhoc": "Spustit ad-hoc",
     "deleteTitle": "Smazat agenta?",
     "deleteBody": "Opravdu smazat agenta {name}? Smaže se i soubor {file}. Tuto akci nelze vrátit.",
     "fields": {
@@ -211,7 +212,9 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "emptyCategory": "Prázdná kategorie — přidej sem agenta, nebo ji smaž.",
-    "uncategorized": "Bez kategorie"
+    "uncategorized": "Bez kategorie",
+    "pin": "Připnout {name} na rychlé spuštění",
+    "unpin": "Odepnout {name} z rychlého spuštění"
   },
   "integrations": {
     "addIntegration": "Přidat integraci",

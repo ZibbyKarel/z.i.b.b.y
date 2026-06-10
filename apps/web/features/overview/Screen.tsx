@@ -16,6 +16,7 @@ import { useCatalog } from "../../state/store";
 import { useAgentsQuery } from "../agents/queries";
 import { useSkillsQuery } from "../skills/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
+import { QuickLaunchPanel } from "./components/QuickLaunchPanel";
 import { SummaryWidget } from "./SummaryWidget";
 
 const STARTERS = [
@@ -44,6 +45,8 @@ export function Screen() {
   return (
     <Stack gap="250">
       <SummaryWidget />
+
+      {agents.length > 0 && <QuickLaunchPanel />}
 
       {isFresh && (
         <HudPanel title={t("overview.starterTitle")}>

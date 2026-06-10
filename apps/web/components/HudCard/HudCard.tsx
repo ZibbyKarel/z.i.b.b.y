@@ -1,0 +1,134 @@
+import { Fragment, type ReactNode } from "react";
+import {
+  Button,
+  Card,
+  Container,
+  Divider,
+  type IconName,
+  IconTile,
+  Pressable,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
+
+export interface HudCardProps {
+  /** Mono title shown next to the glyph. Truncated to a single line. */
+  title: string;
+  /** Icon rendered in the leading tile. Defaults to "bot". */
+  glyph?: IconName;
+  /** Secondary text under the title, clamped to two lines. */
+  description?: ReactNode;
+  /**
+   * Rows of badges. Each inner array wraps onto its own line; rows that hold
+   * no truthy node are skipped, so callers can pass conditional chips inline.
+   */
+  badges?: ReactNode[][];
+  /** When set, the body becomes a clickable target (opens / inspects). */
+  onOpen?: () => void;
+  /** Accessible label for the open target. */
+  openLabel?: string;
+  /** Whether the card is currently pinned. */
+  pinned?: boolean;
+  /** When provided, renders a pin toggle in the top-right corner. */
+  onPinChange?: (pinned: boolean) => void;
+  /** Accessible label for the pin toggle while pinned. */
+  unpinLabel?: string;
+  /** Accessible label for the pin toggle while unpinned. */
+  pinLabel?: string;
+  /** Footer content (typically buttons), rendered under a divider. */
+  actions?: ReactNode;
+}
+
+/**
+ * Presentational dashboard card: leading glyph, mono title + clamped
+ * description, wrapping badge rows and a footer action slot. Dumb by design —
+ * all labels and behaviour come in as props (see AgentCard for a live caller).
+ */
+export function HudCard({
+  title,
+  glyph,
+  description,
+  badges,
+  onOpen,
+  openLabel,
+  pinned = false,
+  onPinChange,
+  unpinLabel,
+  pinLabel,
+  actions,
+}: HudCardProps) {
+  const rows = (badges ?? []).filter((row) => row.some(Boolean));
+
+  const body = (
+    <Container textAlign="left">
+      <Stack gap="150">
+        <Stack align="start" direction="row" gap="150">
+          <IconTile glyph={glyph ?? "bot"} size="md" />
+          {/* Reserve room on the right so title/description never slide under
+              the absolutely-positioned pin button. */}
+          <Container grow minW0 padding={onPinChange ? ["0", "500", "0", "0"] : undefined}>
+            <Stack gap="25">
+              <Typography mono truncate size="md" type="note" weight="semibold">
+                {title}
+              </Typography>
+              {description != null && description !== "" && (
+                <>
+                  {/* 2-line clamp: -webkit-line-clamp has no DS equivalent. */}
+                  {/* eslint-disable-next-line react/forbid-dom-props */}
+                  <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    <Typography leading="snug" size="caption" type="note" variant="secondary">
+                      {description}
+                    </Typography>
+                  </div>
+                </>
+              )}
+            </Stack>
+          </Container>
+        </Stack>
+
+        {rows.map((row, i) => (
+          // Badge rows are positional and stable; index keys are appropriate.
+          <Stack wrap direction="row" gap="75" key={i}>
+            {row.map((node, j) => (
+              <Fragment key={j}>{node}</Fragment>
+            ))}
+          </Stack>
+        ))}
+      </Stack>
+    </Container>
+  );
+
+  return (
+    <Card corners interactive radius="sm">
+      <Container padding="150" position="relative">
+        {onPinChange && (
+          <Container position="absolute" right="12px" top="12px" zIndex={1}>
+            <Button
+              aria-label={pinned ? unpinLabel : pinLabel}
+              icon="pin"
+              intent={pinned ? "solid" : "ghost"}
+              onClick={() => onPinChange(!pinned)}
+              size="sm"
+            />
+          </Container>
+        )}
+        <Stack gap="150">
+          {onOpen ? (
+            <Pressable aria-label={openLabel} onClick={onOpen}>
+              {body}
+            </Pressable>
+          ) : (
+            body
+          )}
+
+          {actions != null && (
+            <>
+              <Divider />
+              {actions}
+            </>
+          )}
+        </Stack>
+      </Container>
+    </Card>
+  );
+}

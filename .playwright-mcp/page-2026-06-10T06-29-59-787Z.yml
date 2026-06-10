@@ -1,0 +1,204 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - navigation "Hlavní navigace" [ref=e5]:
+        - generic [ref=e6]:
+          - link "ZIBBY Z · I · B · B · Y Zestful Intuitive Brainy Butler for You" [ref=e7] [cursor=pointer]:
+            - /url: /overview
+            - generic [ref=e8]:
+              - generic [ref=e9]:
+                - img "ZIBBY" [ref=e10]
+                - generic [ref=e12]:
+                  - text: Z
+                  - generic [ref=e13]: ·
+                  - text: I
+                  - generic [ref=e14]: ·
+                  - text: B
+                  - generic [ref=e15]: ·
+                  - text: B
+                  - generic [ref=e16]: ·
+                  - text: "Y"
+              - generic [ref=e17]: Zestful Intuitive Brainy Butler for You
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - link "Přehled" [ref=e20] [cursor=pointer]:
+                - /url: /overview
+                - generic [ref=e21]:
+                  - img [ref=e23]
+                  - generic [ref=e28]: Přehled
+              - link "Schválení" [ref=e29] [cursor=pointer]:
+                - /url: /approvals
+                - generic [ref=e30]:
+                  - img [ref=e32]
+                  - generic [ref=e34]: Schválení
+              - link "Pravidla schvalování" [ref=e35] [cursor=pointer]:
+                - /url: /gates
+                - generic [ref=e36]:
+                  - img [ref=e38]
+                  - generic [ref=e40]: Pravidla schvalování
+              - link "Skilly" [ref=e41] [cursor=pointer]:
+                - /url: /skills
+                - generic [ref=e42]:
+                  - img [ref=e44]
+                  - generic [ref=e46]: Skilly
+              - link "Agenti" [ref=e47] [cursor=pointer]:
+                - /url: /agents
+                - generic [ref=e48]:
+                  - img [ref=e51]
+                  - generic [ref=e55]: Agenti
+              - link "Projekty" [ref=e56] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e57]:
+                  - img [ref=e59]
+                  - generic [ref=e61]: Projekty
+              - link "Orchestrace" [ref=e62] [cursor=pointer]:
+                - /url: /pipelines
+                - generic [ref=e63]:
+                  - img [ref=e65]
+                  - generic [ref=e70]: Orchestrace
+              - link "Integrace" [ref=e71] [cursor=pointer]:
+                - /url: /integrations
+                - generic [ref=e72]:
+                  - img [ref=e74]
+                  - generic [ref=e77]: Integrace
+              - link "Automatizace" [ref=e78] [cursor=pointer]:
+                - /url: /automations
+                - generic [ref=e79]:
+                  - img [ref=e81]
+                  - generic [ref=e84]: Automatizace
+              - link "Paměť" [ref=e85] [cursor=pointer]:
+                - /url: /memory
+                - generic [ref=e86]:
+                  - img [ref=e88]
+                  - generic [ref=e90]: Paměť
+              - link "Běhy & aktivita" [ref=e91] [cursor=pointer]:
+                - /url: /runs
+                - generic [ref=e92]:
+                  - img [ref=e94]
+                  - generic [ref=e96]: Běhy & aktivita
+            - link "Nastavení systému" [ref=e99] [cursor=pointer]:
+              - /url: /settings
+              - generic [ref=e100]:
+                - img [ref=e102]
+                - generic [ref=e105]: Nastavení systému
+      - separator [ref=e106]
+      - generic [ref=e107]:
+        - banner [ref=e108]:
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - img [ref=e112]
+                - generic [ref=e114]: Agenti
+              - button "Otevřít hlasový režim" [ref=e115] [cursor=pointer]:
+                - img [ref=e116]
+                - text: VOICE
+              - button "Jazyk rozhraní" [ref=e121] [cursor=pointer]:
+                - generic [ref=e122]: CZ
+                - generic [ref=e123]: Čeština
+                - img [ref=e124]
+            - generic [ref=e128]:
+              - img [ref=e129]
+              - combobox "Hledat v pracovním prostoru" [ref=e132]
+              - generic [ref=e133]: ⌘K
+        - generic [ref=e136]:
+          - generic [ref=e140]:
+            - generic [ref=e142]:
+              - heading "Agenti" [level=1] [ref=e143]
+              - generic [ref=e144]: 3 agenti · sdílený pool pro pipeline
+            - generic [ref=e145]:
+              - button "Přidat kategorii" [ref=e146] [cursor=pointer]:
+                - img [ref=e147]
+                - text: Přidat kategorii
+              - button "Přidat agenta" [ref=e149] [cursor=pointer]:
+                - img [ref=e150]
+                - text: Přidat agenta
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e155]:
+                - img [ref=e156]
+                - text: Bez kategorie
+              - generic [ref=e161]: "3"
+            - generic [ref=e162]:
+              - generic [ref=e164]:
+                - button "Odepnout Cleaner z rychlého spuštění" [ref=e166] [cursor=pointer]:
+                  - img [ref=e167]
+                - generic [ref=e169]:
+                  - button "Otevřít Cleaner" [ref=e170] [cursor=pointer]:
+                    - generic [ref=e172]:
+                      - generic [ref=e173]:
+                        - img [ref=e175]
+                        - generic [ref=e178]:
+                          - generic [ref=e179]: Cleaner
+                          - generic [ref=e181]: Scans a single directory for junk and content-duplicate files, then removes them once you approve the list.
+                      - generic [ref=e182]:
+                        - generic "model (override per-run)" [ref=e183]: haiku
+                        - generic "thinking level" [ref=e184]: ◇ low
+                      - generic [ref=e185]:
+                        - generic [ref=e186]: read
+                        - generic [ref=e187]: write
+                        - generic [ref=e188]: bash
+                  - separator [ref=e189]
+                  - button "Spustit" [ref=e191] [cursor=pointer]:
+                    - img [ref=e192]
+                    - text: Spustit
+              - generic [ref=e195]:
+                - button "Připnout Gated Agent na rychlé spuštění" [ref=e197] [cursor=pointer]:
+                  - img [ref=e198]
+                - generic [ref=e200]:
+                  - button "Otevřít Gated Agent" [ref=e201] [cursor=pointer]:
+                    - generic [ref=e203]:
+                      - generic [ref=e204]:
+                        - img [ref=e206]
+                        - generic [ref=e212]: Gated Agent
+                      - generic [ref=e213]:
+                        - generic "model (override per-run)" [ref=e214]: sonnet
+                        - generic "thinking level" [ref=e215]: ◇ medium
+                  - separator [ref=e216]
+                  - button "Spustit" [ref=e218] [cursor=pointer]:
+                    - img [ref=e219]
+                    - text: Spustit
+              - generic [ref=e222]:
+                - button "Odepnout research-analyst z rychlého spuštění" [ref=e224] [cursor=pointer]:
+                  - img [ref=e225]
+                - generic [ref=e227]:
+                  - button "Otevřít research-analyst" [ref=e228] [cursor=pointer]:
+                    - generic [ref=e230]:
+                      - generic [ref=e231]:
+                        - img [ref=e233]
+                        - generic [ref=e238]:
+                          - generic [ref=e239]: research-analyst
+                          - generic [ref=e241]: Use this agent when you need comprehensive research across multiple sources with synthesis of findings into actionable insights, trend identification, and detailed reporting.
+                      - generic [ref=e242]:
+                        - generic "model (override per-run)" [ref=e243]: sonnet
+                        - generic "thinking level" [ref=e244]: ◇ low
+                      - generic [ref=e245]:
+                        - generic [ref=e246]: Read
+                        - generic [ref=e247]: Grep
+                        - generic [ref=e248]: Glob
+                        - generic [ref=e249]: WebFetch
+                        - generic [ref=e250]: WebSearch
+                  - separator [ref=e251]
+                  - button "Spustit" [ref=e253] [cursor=pointer]:
+                    - img [ref=e254]
+                    - text: Spustit
+    - status "Načítání…" [ref=e256]:
+      - generic [ref=e257]: v2.4.1 · BUILD 2026.06
+      - img
+      - generic [ref=e258]:
+        - img "ZIBBY" [ref=e267]
+        - generic [ref=e268]:
+          - generic [ref=e269]: Z
+          - generic [ref=e270]: .
+          - generic [ref=e271]: I
+          - generic [ref=e272]: .
+          - generic [ref=e273]: B
+          - generic [ref=e274]: .
+          - generic [ref=e275]: B
+          - generic [ref=e276]: .
+          - generic [ref=e277]: "Y"
+        - generic [ref=e278]: Inteligentní automatizační platforma
+        - progressbar "Načítání…" [ref=e281]
+        - generic [ref=e305]: Načítání…
+  - button "Open Next.js Dev Tools" [ref=e311] [cursor=pointer]:
+    - img [ref=e312]
+  - alert [ref=e315]

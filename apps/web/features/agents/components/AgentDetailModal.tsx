@@ -194,9 +194,6 @@ export function AgentDetailModal({
         >
           {t("edit")}
         </Button>
-        <Button icon="play" intent="run" onClick={() => onRun(agent)} size="sm">
-          {t("runAdhoc")}
-        </Button>
       </Stack>
     </Stack>
   );
