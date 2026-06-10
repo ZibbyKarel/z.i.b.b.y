@@ -13,6 +13,11 @@ export interface MainLayoutProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
   voiceSlot?: ReactNode;
+  /**
+   * Persistent right rail, mirrored on the left navigation: when provided it
+   * renders as a fixed-width aside that stays visible on every page.
+   */
+  railSlot?: ReactNode;
   children: ReactNode;
 }
 
@@ -23,6 +28,7 @@ export function MainLayout({
   breadcrumb,
   walletSlot,
   voiceSlot,
+  railSlot,
   children,
 }: MainLayoutProps) {
   const t = useTranslations("sidebar");
@@ -64,6 +70,22 @@ export function MainLayout({
           {children}
         </Container>
       </Stack>
+
+      {railSlot && (
+        <>
+          <Divider orientation="vertical" />
+          <Stack
+            aria-label={t("railLabel")}
+            as="aside"
+            shrink={false}
+            style={{ width: 340, backgroundColor: "var(--color-background)" }}
+          >
+            <Container grow overflow="auto" padding={["300", "250"]}>
+              {railSlot}
+            </Container>
+          </Stack>
+        </>
+      )}
     </Surface>
   );
 }
