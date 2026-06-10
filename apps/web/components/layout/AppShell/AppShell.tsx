@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type NavItem } from "@zibby/design-system";
 import { MainLayout } from "../MainLayout/MainLayout";
+import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
 import { useApprovalsQuery } from "../../../features/approvals/queries";
@@ -45,6 +46,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       breadcrumb={breadcrumb}
       footerItem={footerItem}
       navItems={navItems}
+      railSlot={<RightRail />}
       voiceSlot={<VoiceButton />}
     >
       {children}

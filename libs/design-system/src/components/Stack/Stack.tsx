@@ -27,7 +27,8 @@ export interface StackProps extends Omit<
     | "span"
     | "form"
     | "header"
-    | "footer";
+    | "footer"
+    | "aside";
   ref?: Ref<HTMLElement>;
 }
 

@@ -23,6 +23,13 @@ const meta: Meta<typeof MainLayout> = {
         </Typography>
       </Container>
     ),
+    railSlot: (
+      <Container padding="200">
+        <Typography mono type="note" variant="tertiary">
+          Persistentní postranní panel
+        </Typography>
+      </Container>
+    ),
   },
 }
 export default meta
