@@ -15,6 +15,7 @@ import { limitsContract } from "./limits/limits.contract"
 import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract"
 import { projectsContract } from "./projects/projects.contract"
 import { skillsContract } from "./skills/skills.contract"
+import { tasksContract } from "./tasks/tasks.contract"
 
 const c = initContract()
 
@@ -42,6 +43,7 @@ export const appContract = c.router({
   automations: automationsContract,
   health: healthContract,
   limits: limitsContract,
+  tasks: tasksContract,
 })
 
 export type AppContract = typeof appContract

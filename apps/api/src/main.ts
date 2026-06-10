@@ -16,6 +16,7 @@ import {
   pipelineRunsContract,
   pipelinesContract,
   skillsContract,
+  tasksContract,
 } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
 import { AppModule } from "./app.module"
@@ -36,6 +37,7 @@ const apiContract = initContract().router({
   automations: automationsContract,
   health: healthContract,
   limits: limitsContract,
+  tasks: tasksContract,
 })
 
 async function bootstrap(): Promise<void> {

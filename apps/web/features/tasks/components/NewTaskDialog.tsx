@@ -8,11 +8,12 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAgentsQuery } from "../../agents/queries";
-import { usePipelinesQuery } from "../../pipelines/queries";
-import { classifyTask } from "../classify";
-import { type TaskRouting, type TaskTarget, extractPaths } from "../task";
+import { useCallback, useMemo, useState } from "react";
+import { useStartAgentRunMutation } from "../../agents/mutations";
+import { useStartPipelineRunMutation } from "../../pipelines/mutations";
+import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
+import { useClassifyTaskMutation } from "../mutations";
+import { type TaskRouting, type TaskTarget, extractPaths, toClientRouting } from "../task";
 import { ClassifyingState } from "./ClassifyingState";
 import { DispatchedState } from "./DispatchedState";
 import { RoutingResult } from "./RoutingResult";
@@ -22,23 +23,20 @@ type Stage = "compose" | "classifying" | "routing" | "dispatched";
 
 export interface NewTaskDialogProps {
   onClose: () => void;
-  /**
-   * How long the "classifying" step lingers before the routing verdict appears.
-   * Real-feeling by default; set to 0 in tests to skip the wait.
-   */
-  classifyDelayMs?: number;
 }
 
 /**
  * The whole New Task flow in one modal: a four-stage machine that never runs
  * anything on its own — `compose → classifying → routing → dispatched`. The
- * routing stage is an approval gate; only the explicit `Dispatch` action in the
- * footer advances to `dispatched` and hands the task off to a run.
+ * backend classifies the task (the classifying stage is the mutation's pending
+ * state); the routing stage is an approval gate; only the explicit `Dispatch`
+ * action starts a run (`POST /api/agents/:id/run` or `/pipelines/:id/run`).
  */
-export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialogProps) {
+export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
-  const { data: agents = [] } = useAgentsQuery();
-  const { data: pipelines = [] } = usePipelinesQuery();
+  const classify = useClassifyTaskMutation();
+  const startAgentRun = useStartAgentRunMutation();
+  const startPipelineRun = useStartPipelineRunMutation();
 
   const [stage, setStage] = useState<Stage>("compose");
   const [text, setText] = useState("");
@@ -47,33 +45,32 @@ export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialog
   const [selectedTarget, setSelectedTarget] = useState<TaskTarget | null>(null);
   const [overrideOpen, setOverrideOpen] = useState(false);
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
-
   const paths = useMemo(
     () => extractPaths(text).filter((p) => !removedPaths.has(p)),
     [text, removedPaths],
   );
   const canSubmit = text.trim().length > 2;
-
-  const handleClose = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    onClose();
-  }, [onClose]);
+  const dispatching = startAgentRun.isPending || startPipelineRun.isPending;
 
   const handleClassify = useCallback(() => {
     if (!canSubmit) return;
     setStage("classifying");
-    const run = () => {
-      const result = classifyTask(text, paths, agents, pipelines);
-      setRouting(result);
-      setSelectedTarget(result.target);
-      setOverrideOpen(false);
-      setStage("routing");
-    };
-    if (classifyDelayMs <= 0) run();
-    else timerRef.current = setTimeout(run, classifyDelayMs);
-  }, [canSubmit, text, paths, agents, pipelines, classifyDelayMs]);
+    classify.mutate(
+      { body: { text, paths } },
+      {
+        onSuccess: (res) => {
+          const result = toClientRouting(selectApiResponseBody(res));
+          setRouting(result);
+          setSelectedTarget(result.target);
+          setOverrideOpen(false);
+          setStage("routing");
+        },
+        // The endpoint rarely errors (it has a server-side fallback); on a transport
+        // failure, return to compose so the user can retry.
+        onError: () => setStage("compose"),
+      },
+    );
+  }, [canSubmit, text, paths, classify]);
 
   const handleRemovePath = useCallback((path: string) => {
     setRemovedPaths((prev) => new Set(prev).add(path));
@@ -85,9 +82,17 @@ export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialog
   }, []);
 
   const handleDispatch = useCallback(() => {
-    if (!selectedTarget) return;
-    setStage("dispatched");
-  }, [selectedTarget]);
+    if (!selectedTarget || dispatching) return;
+    const onSuccess = () => setStage("dispatched");
+    if (selectedTarget.kind === "agent") {
+      startAgentRun.mutate(
+        { params: { id: selectedTarget.id }, body: { prompt: text, project: "", files: paths } },
+        { onSuccess },
+      );
+    } else {
+      startPipelineRun.mutate({ params: { id: selectedTarget.id }, body: {} }, { onSuccess });
+    }
+  }, [selectedTarget, dispatching, text, paths, startAgentRun, startPipelineRun]);
 
   const header = (
     <Stack align="center" direction="row" gap="150">
@@ -107,7 +112,7 @@ export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialog
     if (stage === "compose") {
       return (
         <Stack grow align="center" direction="row" gap="100" justify="end">
-          <Button icon="x" intent="ghost" onClick={handleClose}>
+          <Button icon="x" intent="ghost" onClick={onClose}>
             {t("cancel")}
           </Button>
           <Button disabled={!canSubmit} icon="bolt" intent="run" onClick={handleClassify}>
@@ -126,7 +131,7 @@ export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialog
             <Button icon="chevron" intent="ghost" onClick={() => setStage("compose")}>
               {t("routing.back")}
             </Button>
-            <Button icon="bolt" intent="solid" onClick={handleDispatch}>
+            <Button disabled={dispatching} icon="bolt" intent="solid" onClick={handleDispatch}>
               {t("routing.dispatch")}
             </Button>
           </Stack>
@@ -142,7 +147,7 @@ export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialog
       actions={actions}
       ariaLabel={t("dialogTitle")}
       closeLabel={t("dispatched.close")}
-      onClose={handleClose}
+      onClose={onClose}
       title={header}
       width="lg"
     >
@@ -167,7 +172,7 @@ export function NewTaskDialog({ onClose, classifyDelayMs = 1100 }: NewTaskDialog
         />
       )}
       {stage === "dispatched" && selectedTarget && (
-        <DispatchedState onClose={handleClose} target={selectedTarget} />
+        <DispatchedState onClose={onClose} target={selectedTarget} />
       )}
     </Dialog>
   );

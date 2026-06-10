@@ -1,7 +1,7 @@
 export { NewTaskProvider, useNewTask, NEW_TASK_SHORTCUT } from "./TaskContext";
 export { NewTaskButton } from "./components/NewTaskButton";
 export { NewTaskDialog } from "./components/NewTaskDialog";
-export { classifyTask } from "./classify";
+export { useClassifyTaskMutation } from "./mutations";
 export {
   type ConfidenceBand,
   type TaskRouting,
@@ -10,4 +10,5 @@ export {
   confidenceBand,
   extractPaths,
   isLowConfidence,
+  toClientRouting,
 } from "./task";

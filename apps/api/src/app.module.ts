@@ -12,6 +12,7 @@ import { PipelinesModule } from "./pipelines/pipelines.module"
 import { ProjectsModule } from "./projects/projects.module"
 import { LoggingModule } from "./shared/logging/logging.module"
 import { SkillsModule } from "./skills/skills.module"
+import { TasksModule } from "./tasks/tasks.module"
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SkillsModule } from "./skills/skills.module"
     HealthModule,
     LimitsModule,
     EventsModule,
+    TasksModule,
   ],
 })
 export class AppModule {}
