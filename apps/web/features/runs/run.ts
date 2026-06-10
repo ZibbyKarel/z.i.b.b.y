@@ -1,5 +1,5 @@
 import type { AgentRun, PipelineRun, RunStatus } from "@zibby/contracts";
-import type { BadgeTone, DotTone, IconName } from "@zibby/design-system";
+import type { ChipTone, DotTone, IconName } from "@zibby/design-system";
 
 /**
  * The Runs screen shows a single feed across run kinds, but the contract has no
@@ -66,29 +66,63 @@ export function pipelineRunToView(r: PipelineRun): RunView {
 export interface RunStateMeta {
   /** i18n key suffix under `runs.state.*`. */
   key: RunStatus;
-  badge: BadgeTone;
+  badge: ChipTone;
   dot: DotTone;
   glyph: IconName;
   pulse: boolean;
 }
 
 export const RUN_STATE: Record<RunStatus, RunStateMeta> = {
-  running: { key: "running", badge: "run", dot: "run", glyph: "run", pulse: true },
-  "awaiting-approval": { key: "awaiting-approval", badge: "warn", dot: "warn", glyph: "wait", pulse: true },
+  running: {
+    key: "running",
+    badge: "run",
+    dot: "run",
+    glyph: "run",
+    pulse: true,
+  },
+  "awaiting-approval": {
+    key: "awaiting-approval",
+    badge: "warn",
+    dot: "warn",
+    glyph: "wait",
+    pulse: true,
+  },
   done: { key: "done", badge: "ok", dot: "ok", glyph: "ok", pulse: false },
-  error: { key: "error", badge: "bad", dot: "bad", glyph: "warn", pulse: false },
-  interrupted: { key: "interrupted", badge: "neutral", dot: "faint", glyph: "stop", pulse: false },
+  error: {
+    key: "error",
+    badge: "bad",
+    dot: "bad",
+    glyph: "warn",
+    pulse: false,
+  },
+  interrupted: {
+    key: "interrupted",
+    badge: "neutral",
+    dot: "faint",
+    glyph: "stop",
+    pulse: false,
+  },
 };
 
-const KIND_GLYPH: Record<RunKind, IconName> = { agent: "bot", pipeline: "flow" };
+const KIND_GLYPH: Record<RunKind, IconName> = {
+  agent: "bot",
+  pipeline: "flow",
+};
 
 /** Resolve a run's display glyph from the catalog (agent), else by kind. */
-export function runGlyph(run: RunView, glyphById: Map<string, IconName>): IconName {
+export function runGlyph(
+  run: RunView,
+  glyphById: Map<string, IconName>,
+): IconName {
   return glyphById.get(run.owner) ?? KIND_GLYPH[run.kind];
 }
 
 /** Human relative time like "před 3 m" / "3 m ago" — coarse, for the feed. */
-export function relativeTime(iso: string, now: number, ago: (n: number, unit: string) => string): string {
+export function relativeTime(
+  iso: string,
+  now: number,
+  ago: (n: number, unit: string) => string,
+): string {
   const diffMs = Math.max(0, now - Date.parse(iso));
   const min = Math.floor(diffMs / 60000);
   if (min < 1) return ago(0, "m");

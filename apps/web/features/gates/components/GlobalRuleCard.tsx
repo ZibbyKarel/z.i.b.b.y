@@ -1,7 +1,16 @@
-import { useTranslations } from "next-intl";
 import type { GlobalGateRule } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
-import { Badge, Button, Card, Chip, Container, Divider, Icon, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Chip,
+  Container,
+  Divider,
+  Icon,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
+import { useTranslations } from "next-intl";
 import { DECISION_META, MATCHER_ICON } from "../gate";
 import { DecisionBadge, MatcherText, ResolveChips } from "./RuleParts";
 
@@ -82,10 +91,23 @@ export function GlobalRuleCard({
                     <Typography mono size="2xs" type="note" variant="tertiary">
                       →
                     </Typography>
-                    <DecisionBadge decision={rule.decision} label={t(`decision_.${rule.decision}`)} />
-                    {rule.decision === "ask" && <ResolveChips resolve={rule.resolve} youLabel={t("you")} />}
+                    <DecisionBadge
+                      decision={rule.decision}
+                      label={t(`decision_.${rule.decision}`)}
+                    />
+                    {rule.decision === "ask" && (
+                      <ResolveChips
+                        resolve={rule.resolve}
+                        youLabel={t("you")}
+                      />
+                    )}
                     {rule.decision === "notify" && (
-                      <Typography mono size="2xs" type="note" variant="tertiary">
+                      <Typography
+                        mono
+                        size="2xs"
+                        type="note"
+                        variant="tertiary"
+                      >
                         {t("notifyHint")}
                       </Typography>
                     )}
@@ -100,12 +122,18 @@ export function GlobalRuleCard({
 
               <Stack align="center" direction="row" gap="50">
                 {total > 0 ? (
-                  <Badge tone="accent">
-                    <Stack inline align="center" as="span" direction="row" gap="50">
+                  <Chip tone="accent">
+                    <Stack
+                      inline
+                      align="center"
+                      as="span"
+                      direction="row"
+                      gap="50"
+                    >
                       <Icon name="bot" size="xs" />
                       {total}
                     </Stack>
-                  </Badge>
+                  </Chip>
                 ) : (
                   <Typography mono size="2xs" type="note" variant="tertiary">
                     {t("unused")}
@@ -133,7 +161,13 @@ export function GlobalRuleCard({
                     </Button>
                   </>
                 )}
-                <Button aria-label={t("edit")} icon="edit" intent="ghost" onClick={() => onEdit(rule)} size="sm" />
+                <Button
+                  aria-label={t("edit")}
+                  icon="edit"
+                  intent="ghost"
+                  onClick={() => onEdit(rule)}
+                  size="sm"
+                />
                 <Button
                   aria-label={t("delete")}
                   icon="x"
@@ -149,8 +183,19 @@ export function GlobalRuleCard({
                 <Divider />
                 <Stack wrap align="center" direction="row" gap="100">
                   {agents.length > 0 && (
-                    <Stack inline align="center" as="span" direction="row" gap="75">
-                      <Typography mono size="2xs" type="note" variant="tertiary">
+                    <Stack
+                      inline
+                      align="center"
+                      as="span"
+                      direction="row"
+                      gap="75"
+                    >
+                      <Typography
+                        mono
+                        size="2xs"
+                        type="note"
+                        variant="tertiary"
+                      >
                         {t("usedByAgents")}
                       </Typography>
                       {agents.map((a) => (
@@ -159,8 +204,19 @@ export function GlobalRuleCard({
                     </Stack>
                   )}
                   {skills.length > 0 && (
-                    <Stack inline align="center" as="span" direction="row" gap="75">
-                      <Typography mono size="2xs" type="note" variant="tertiary">
+                    <Stack
+                      inline
+                      align="center"
+                      as="span"
+                      direction="row"
+                      gap="75"
+                    >
+                      <Typography
+                        mono
+                        size="2xs"
+                        type="note"
+                        variant="tertiary"
+                      >
                         {t("usedBySkills")}
                       </Typography>
                       {skills.map((s) => (

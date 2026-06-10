@@ -1,5 +1,5 @@
 import type { Approval as ContractApproval } from "@zibby/contracts";
-import type { BadgeTone, IconName } from "@zibby/design-system";
+import type { ChipTone, IconName } from "@zibby/design-system";
 
 /**
  * The design models an approval much richer than the contract does: the contract
@@ -21,9 +21,20 @@ export type ApprovalActorKind = "skill" | "agent" | "pipeline";
 
 /** Structured preview of the exact action an agent is about to take. */
 export type ApprovalPreview =
-  | { kind: "cart"; total: string; meta?: string; items: Array<[name: string, price: string]> }
+  | {
+      kind: "cart";
+      total: string;
+      meta?: string;
+      items: Array<[name: string, price: string]>;
+    }
   | { kind: "diff"; file: string; meta?: string; hunks: DiffHunk[] }
-  | { kind: "command"; shell: string; cmd: string; note?: string; targets: string[] }
+  | {
+      kind: "command";
+      shell: string;
+      cmd: string;
+      note?: string;
+      targets: string[];
+    }
   | { kind: "message"; to: string; subject?: string; body: string };
 
 export interface DiffHunk {
@@ -43,7 +54,8 @@ export interface ApprovalEnrichment {
 }
 
 /** A contract approval plus the parsed enrichment (or a plain-text fallback). */
-export interface DashboardApproval extends ContractApproval, ApprovalEnrichment {
+export interface DashboardApproval
+  extends ContractApproval, ApprovalEnrichment {
   /** Plain-text detail when `detail` was not enriched JSON. */
   text?: string;
 }
@@ -58,51 +70,91 @@ function isRecord(v: unknown): v is Record<string, unknown> {
  * (unenriched) backend payload.
  */
 export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
-  let data: unknown
+  let data: unknown;
   try {
-    data = JSON.parse(a.detail)
+    data = JSON.parse(a.detail);
   } catch {
-    return { ...a, text: a.detail }
+    return { ...a, text: a.detail };
   }
-  if (!isRecord(data) || !("preview" in data || "riskType" in data || "summary" in data)) {
-    return { ...a, text: a.detail }
+  if (
+    !isRecord(data) ||
+    !("preview" in data || "riskType" in data || "summary" in data)
+  ) {
+    return { ...a, text: a.detail };
   }
-  const e = data as ApprovalEnrichment
+  const e = data as ApprovalEnrichment;
   // Overwrite `detail` with the human summary so any consumer that shows the raw
   // `detail` line (e.g. the overview ApprovalCard) reads cleanly, while this
   // screen uses the structured `preview`/`consequence` fields directly.
-  return { ...a, ...e, detail: e.summary ?? a.detail }
+  return { ...a, ...e, detail: e.summary ?? a.detail };
 }
 
 /** Tone usable for Card / Typography / StatusDot / Icon / Stat (excludes Badge-only tones). */
-export type UiTone = "accent" | "ok" | "warn" | "bad"
+export type UiTone = "accent" | "ok" | "warn" | "bad";
 
 interface RiskMeta {
-  label: string
-  glyph: IconName
+  label: string;
+  glyph: IconName;
   /** Badge tone (the Badge component accepts the full palette incl. `run`). */
-  tone: BadgeTone
+  tone: ChipTone;
   /** Tone for Card/Stat/etc. (`run` collapses to `accent`). */
-  uiTone: UiTone
+  uiTone: UiTone;
   /** Color CSS variable used by the bespoke detail accents. */
-  cssVar: string
+  cssVar: string;
 }
 
 /** Semantic risk-type presentation. There is no `trash` glyph, so delete uses `x`. */
 export const RISK_META: Record<RiskType, RiskMeta> = {
-  platba: { label: "platba", glyph: "cart", tone: "warn", uiTone: "warn", cssVar: "var(--color-warn)" },
-  mazani: { label: "mazání", glyph: "x", tone: "bad", uiTone: "bad", cssVar: "var(--color-bad)" },
-  push: { label: "push", glyph: "branch", tone: "accent", uiTone: "accent", cssVar: "var(--color-accent)" },
-  odeslani: { label: "odeslání", glyph: "arrow", tone: "run", uiTone: "accent", cssVar: "var(--color-work)" },
-}
+  platba: {
+    label: "platba",
+    glyph: "cart",
+    tone: "warn",
+    uiTone: "warn",
+    cssVar: "var(--color-warn)",
+  },
+  mazani: {
+    label: "mazání",
+    glyph: "x",
+    tone: "bad",
+    uiTone: "bad",
+    cssVar: "var(--color-bad)",
+  },
+  push: {
+    label: "push",
+    glyph: "branch",
+    tone: "accent",
+    uiTone: "accent",
+    cssVar: "var(--color-accent)",
+  },
+  odeslani: {
+    label: "odeslání",
+    glyph: "arrow",
+    tone: "run",
+    uiTone: "accent",
+    cssVar: "var(--color-work)",
+  },
+};
 
 export function riskMeta(type: RiskType | undefined): RiskMeta {
-  return (type && RISK_META[type]) || RISK_META.platba
+  return (type && RISK_META[type]) || RISK_META.platba;
 }
 
 /** Severity (contract `risk`) → meter segments + tone. */
-export const SEVERITY: Record<ContractApproval["risk"], { segments: number; tone: UiTone; cssVar: string; label: string }> = {
+export const SEVERITY: Record<
+  ContractApproval["risk"],
+  { segments: number; tone: UiTone; cssVar: string; label: string }
+> = {
   low: { segments: 1, tone: "ok", cssVar: "var(--color-ok)", label: "nízká" },
-  medium: { segments: 2, tone: "warn", cssVar: "var(--color-warn)", label: "střední" },
-  high: { segments: 3, tone: "bad", cssVar: "var(--color-bad)", label: "vysoká" },
-}
+  medium: {
+    segments: 2,
+    tone: "warn",
+    cssVar: "var(--color-warn)",
+    label: "střední",
+  },
+  high: {
+    segments: 3,
+    tone: "bad",
+    cssVar: "var(--color-bad)",
+    label: "vysoká",
+  },
+};

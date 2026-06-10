@@ -1,19 +1,27 @@
-import { Fragment } from "react";
 import type { Decision, MatchCondition, Resolve } from "@zibby/contracts";
-import { Badge, Icon, Stack, Typography } from "@zibby/design-system";
+import { Chip, Icon, Stack, Typography } from "@zibby/design-system";
+import { Fragment } from "react";
 import { DECISION_META, flattenResolve, matchText } from "../gate";
 
 const MONO = "var(--font-mono, ui-monospace, monospace)";
 
-export function DecisionBadge({ decision, label, size = "sm" }: { decision: Decision; label: string; size?: "sm" | "md" }) {
+export function DecisionBadge({
+  decision,
+  label,
+  size = "sm",
+}: {
+  decision: Decision;
+  label: string;
+  size?: "sm" | "md";
+}) {
   const meta = DECISION_META[decision];
   return (
-    <Badge size={size} tone={meta.tone}>
+    <Chip size={size} tone={meta.tone}>
       <Stack inline align="center" as="span" direction="row" gap="50">
         <Icon name={meta.icon} size="xs" />
         {label}
       </Stack>
-    </Badge>
+    </Chip>
   );
 }
 
@@ -40,7 +48,13 @@ function Pat({ children }: { children: string }) {
 }
 
 /** Render the rule's AND-ed match conditions as human-readable text. */
-export function MatcherText({ match, andLabel }: { match: MatchCondition[]; andLabel: string }) {
+export function MatcherText({
+  match,
+  andLabel,
+}: {
+  match: MatchCondition[];
+  andLabel: string;
+}) {
   return (
     <Stack
       inline
@@ -49,7 +63,6 @@ export function MatcherText({ match, andLabel }: { match: MatchCondition[]; andL
       as="span"
       direction="row"
       gap="75"
-       
       style={{ lineHeight: 1.5 }}
     >
       {match.map((c, i) => {
@@ -57,7 +70,13 @@ export function MatcherText({ match, andLabel }: { match: MatchCondition[]; andL
         return (
           <Fragment key={i}>
             {i > 0 && (
-              <Typography mono size="2xs" type="note" variant="tertiary" weight="bold">
+              <Typography
+                mono
+                size="2xs"
+                type="note"
+                variant="tertiary"
+                weight="bold"
+              >
                 {andLabel}
               </Typography>
             )}
@@ -68,7 +87,9 @@ export function MatcherText({ match, andLabel }: { match: MatchCondition[]; andL
               {pattern && (
                 <>
                   {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <span style={{ color: "var(--color-foreground-faint)" }}>→</span>
+                  <span style={{ color: "var(--color-foreground-faint)" }}>
+                    →
+                  </span>
                   <Pat>{pattern}</Pat>
                 </>
               )}
@@ -81,7 +102,13 @@ export function MatcherText({ match, andLabel }: { match: MatchCondition[]; andL
 }
 
 /** Resolution chips (only meaningful for `ask`): human / check / agent, AND/OR-combined. */
-export function ResolveChips({ resolve, youLabel }: { resolve: Resolve | undefined; youLabel: string }) {
+export function ResolveChips({
+  resolve,
+  youLabel,
+}: {
+  resolve: Resolve | undefined;
+  youLabel: string;
+}) {
   const { leaves, mode } = flattenResolve(resolve);
   if (leaves.length === 0) return null;
   return (
@@ -89,16 +116,40 @@ export function ResolveChips({ resolve, youLabel }: { resolve: Resolve | undefin
       {leaves.map((leaf, i) => (
         <Fragment key={i}>
           {i > 0 && (
-            <Typography mono size="2xs" type="note" variant="tertiary" weight="bold">
+            <Typography
+              mono
+              size="2xs"
+              type="note"
+              variant="tertiary"
+              weight="bold"
+            >
               {mode === "all" ? "AND" : "OR"}
             </Typography>
           )}
-          <Badge size="sm" tone={leaf.kind === "check" ? "ok" : leaf.kind === "agent" ? "accent" : "neutral"}>
+          <Chip
+            size="sm"
+            tone={
+              leaf.kind === "check"
+                ? "ok"
+                : leaf.kind === "agent"
+                  ? "accent"
+                  : "neutral"
+            }
+          >
             <Stack inline align="center" as="span" direction="row" gap="50">
-              <Icon name={leaf.kind === "agent" ? "bot" : leaf.kind === "check" ? "check" : "shield"} size="xs" />
+              <Icon
+                name={
+                  leaf.kind === "agent"
+                    ? "bot"
+                    : leaf.kind === "check"
+                      ? "check"
+                      : "shield"
+                }
+                size="xs"
+              />
               {leaf.kind === "human" ? youLabel : leaf.name}
             </Stack>
-          </Badge>
+          </Chip>
         </Fragment>
       ))}
     </Stack>

@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { Container } from "@zibby/design-system";
+import type { ReactNode } from "react";
 
 export interface PageContainerProps {
   /** Max content width; defaults to the dashboard's 1400px reading column. */
@@ -17,11 +17,7 @@ export function PageContainer({
   children,
 }: PageContainerProps) {
   return (
-    <Container
-      maxWidth={maxWidth}
-       
-      style={{ marginInline: "auto" }}
-    >
+    <Container maxWidth={maxWidth} style={{ marginInline: "auto" }}>
       {children}
     </Container>
   );

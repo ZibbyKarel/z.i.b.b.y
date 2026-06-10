@@ -1,5 +1,10 @@
-import type { Decision, GateRule, MatchCondition, Resolve } from "@zibby/contracts";
-import type { BadgeTone, IconName } from "@zibby/design-system";
+import type {
+  Decision,
+  GateRule,
+  MatchCondition,
+  Resolve,
+} from "@zibby/contracts";
+import type { ChipTone, IconName } from "@zibby/design-system";
 
 /**
  * The gate engine (chat 6 — the newest design): a rule is `matcher → decision
@@ -9,7 +14,7 @@ import type { BadgeTone, IconName } from "@zibby/design-system";
  */
 
 export interface DecisionMeta {
-  tone: BadgeTone;
+  tone: ChipTone;
   icon: IconName;
   cssVar: string;
 }
@@ -34,10 +39,19 @@ export const MATCHER_ICON: Record<MatchType, IconName> = {
   context: "compass",
 };
 
-export const MATCH_TYPE_ORDER: MatchType[] = ["tool", "action", "threshold", "scope", "context"];
+export const MATCH_TYPE_ORDER: MatchType[] = [
+  "tool",
+  "action",
+  "threshold",
+  "scope",
+  "context",
+];
 
 /** A short human string for one match condition (the value is the emphasized part). */
-export function matchText(c: MatchCondition): { lead: string; pattern: string } {
+export function matchText(c: MatchCondition): {
+  lead: string;
+  pattern: string;
+} {
   switch (c.type) {
     case "tool":
       return { lead: "tool", pattern: c.tool };
@@ -58,12 +72,24 @@ export interface ResolveLeaf {
   name?: string;
 }
 
-export function flattenResolve(r: Resolve | undefined): { leaves: ResolveLeaf[]; mode: "all" | "any" } {
+export function flattenResolve(r: Resolve | undefined): {
+  leaves: ResolveLeaf[];
+  mode: "all" | "any";
+} {
   if (!r) return { leaves: [], mode: "all" };
-  if (r.type === "all") return { leaves: r.all.flatMap((x) => flattenResolve(x).leaves), mode: "all" };
-  if (r.type === "any") return { leaves: r.any.flatMap((x) => flattenResolve(x).leaves), mode: "any" };
+  if (r.type === "all")
+    return {
+      leaves: r.all.flatMap((x) => flattenResolve(x).leaves),
+      mode: "all",
+    };
+  if (r.type === "any")
+    return {
+      leaves: r.any.flatMap((x) => flattenResolve(x).leaves),
+      mode: "any",
+    };
   if (r.type === "human") return { leaves: [{ kind: "human" }], mode: "all" };
-  if (r.type === "check") return { leaves: [{ kind: "check", name: r.check }], mode: "all" };
+  if (r.type === "check")
+    return { leaves: [{ kind: "check", name: r.check }], mode: "all" };
   return { leaves: [{ kind: "agent", name: r.agent }], mode: "all" };
 }
 
@@ -72,4 +98,7 @@ export function freshRuleId(): string {
   return `own-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export type EditableRule = Pick<GateRule, "id" | "match" | "decision" | "resolve">;
+export type EditableRule = Pick<
+  GateRule,
+  "id" | "match" | "decision" | "resolve"
+>;

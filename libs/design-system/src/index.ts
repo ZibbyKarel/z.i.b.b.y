@@ -97,9 +97,6 @@ export type {
 export { Divider } from "./components/Divider/Divider";
 export type { DividerProps } from "./components/Divider/Divider";
 
-export { Badge } from "./components/Badge/Badge";
-export type { BadgeProps, BadgeTone } from "./components/Badge/Badge";
-
 export { Chip } from "./components/Chip/Chip";
 export type { ChipProps, ChipTone } from "./components/Chip/Chip";
 
@@ -109,10 +106,13 @@ export type { KbdProps } from "./components/Kbd/Kbd";
 export { SearchBar, SearchBarTestId } from "./components/SearchBar/SearchBar";
 export type { SearchBarProps } from "./components/SearchBar/SearchBar";
 
-export { SearchMenu, SearchMenuTestId } from "./components/SearchMenu/SearchMenu";
+export {
+  SearchMenu,
+  SearchMenuTestId,
+} from "./components/SearchMenu/SearchMenu";
 export type {
-  SearchMenuProps,
   SearchMenuItem,
+  SearchMenuProps,
   SearchMenuSection,
 } from "./components/SearchMenu/SearchMenu";
 

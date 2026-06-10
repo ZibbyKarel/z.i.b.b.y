@@ -1,5 +1,5 @@
 import type { RunStatus } from "@zibby/contracts";
-import { Badge, Icon, Stack } from "@zibby/design-system";
+import { Chip, Icon, Stack } from "@zibby/design-system";
 import { RUN_STATE } from "../run";
 
 export interface RunStateBadgeProps {
@@ -11,16 +11,21 @@ export interface RunStateBadgeProps {
 }
 
 /** Run-state badge — Czech label up front, canonical contract name in the tooltip. */
-export function RunStateBadge({ status, canonTitle, label, size = "sm" }: RunStateBadgeProps) {
+export function RunStateBadge({
+  status,
+  canonTitle,
+  label,
+  size = "sm",
+}: RunStateBadgeProps) {
   const meta = RUN_STATE[status];
   return (
     <span title={canonTitle ?? status}>
-      <Badge size={size} tone={meta.badge}>
+      <Chip size={size} tone={meta.badge}>
         <Stack inline align="center" direction="row" gap="50">
           <Icon name={meta.glyph} size="xs" />
           {label}
         </Stack>
-      </Badge>
+      </Chip>
     </span>
   );
 }

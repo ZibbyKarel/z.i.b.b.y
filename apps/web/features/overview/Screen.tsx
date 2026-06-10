@@ -10,12 +10,13 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { PageContainer } from "apps/web/components/PageContainer/PageContainer";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useCatalog } from "../../state/store";
 import { useAgentsQuery } from "../agents/queries";
-import { useSkillsQuery } from "../skills/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
+import { useSkillsQuery } from "../skills/queries";
 import { QuickLaunchPanel } from "./components/QuickLaunchPanel";
 import { SummaryWidget } from "./SummaryWidget";
 
@@ -39,11 +40,8 @@ export function Screen() {
     agents.length === 0 &&
     pipelines.length === 0;
 
-  // The limits / approvals / running-agents rail now lives in the app shell
-  // (MainLayout) so it persists across pages — the overview body itself spans
-  // the full content width.
   return (
-    <Stack gap="250">
+    <PageContainer>
       <SummaryWidget />
 
       {agents.length > 0 && <QuickLaunchPanel />}
@@ -91,6 +89,6 @@ export function Screen() {
           </Grid>
         </HudPanel>
       )}
-    </Stack>
+    </PageContainer>
   );
 }

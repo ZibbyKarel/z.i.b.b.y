@@ -1,31 +1,35 @@
-import { useState } from "react"
-import { useTranslations } from "next-intl"
 import {
   Alert,
-  Badge,
   Button,
   Card,
+  Chip,
   Container,
   IconTile,
   Stack,
   StatusDot,
   Typography,
-} from "@zibby/design-system"
-import type { Approval } from "../../../../domain"
+} from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import type { Approval } from "../../../../domain";
 
 export interface ApprovalCardProps {
-  approval: Approval
-  onApprove?: (approval: Approval) => void
-  onReject?: (approval: Approval) => void
+  approval: Approval;
+  onApprove?: (approval: Approval) => void;
+  onReject?: (approval: Approval) => void;
 }
 
 /**
  * Guardrail card: ZIBBY never clicks "order / pay" itself. Shows what the agent
  * wants to do with explicit Approve / Reject actions.
  */
-export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProps) {
-  const t = useTranslations("approval")
-  const [done, setDone] = useState<"ok" | "no" | null>(null)
+export function ApprovalCard({
+  approval,
+  onApprove,
+  onReject,
+}: ApprovalCardProps) {
+  const t = useTranslations("approval");
+  const [done, setDone] = useState<"ok" | "no" | null>(null);
 
   return (
     <Card corners radius="sm" tone="bad">
@@ -46,17 +50,30 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
                 {t("waiting")}
               </Typography>
             </Stack>
-            <Badge tone="neutral">{approval.risk}</Badge>
+            <Chip tone="neutral">{approval.risk}</Chip>
           </Stack>
 
           <Stack align="center" direction="row" gap="100">
             <IconTile glyph="cart" radius="default" size="sm" />
             <Stack gap="25">
               <Typography size="md" type="note" weight="semibold">
-                <Typography mono as="span" size="md" tone="accent" type="note" weight="semibold">
+                <Typography
+                  mono
+                  as="span"
+                  size="md"
+                  tone="accent"
+                  type="note"
+                  weight="semibold"
+                >
                   {approval.skill}
                 </Typography>{" "}
-                <Typography as="span" size="md" type="note" variant="secondary" weight="normal">
+                <Typography
+                  as="span"
+                  size="md"
+                  type="note"
+                  variant="secondary"
+                  weight="normal"
+                >
                   {t("wants")}
                 </Typography>{" "}
                 {approval.action}
@@ -79,8 +96,8 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
                   icon="check"
                   intent="approve"
                   onClick={() => {
-                    setDone("ok")
-                    onApprove?.(approval)
+                    setDone("ok");
+                    onApprove?.(approval);
                   }}
                 >
                   {t("approve")}
@@ -92,8 +109,8 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
                   icon="x"
                   intent="reject"
                   onClick={() => {
-                    setDone("no")
-                    onReject?.(approval)
+                    setDone("no");
+                    onReject?.(approval);
                   }}
                 >
                   {t("reject")}
@@ -104,5 +121,5 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
         </Stack>
       </Container>
     </Card>
-  )
+  );
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { LoadingScreen } from "./LoadingScreen";
 
 const meta: Meta<typeof LoadingScreen> = {
-  title: "App/LoadingScreen",
+  title: "Dashboard/LoadingScreen",
   component: LoadingScreen,
   parameters: { layout: "fullscreen" },
   args: {
@@ -64,6 +64,13 @@ export const Animated: Story = {
       return () => clearInterval(id);
     }, []);
     const status = [...PHASES].reverse().find((p) => p.at <= progress)?.text;
-    return <LoadingScreen {...args} logo={<Mark />} progress={progress} status={status} />;
+    return (
+      <LoadingScreen
+        {...args}
+        logo={<Mark />}
+        progress={progress}
+        status={status}
+      />
+    );
   },
 };
