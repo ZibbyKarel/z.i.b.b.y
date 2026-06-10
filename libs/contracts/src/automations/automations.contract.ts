@@ -32,6 +32,15 @@ export const automationsContract = c.router(
       responses: { 200: z.array(AutomationSchema) },
       summary: "List automations",
     },
+    // Declared before `getAutomation` so `/automations/search` is matched as its
+    // own route rather than captured by the `/automations/:id` param.
+    searchAutomations: {
+      method: "GET",
+      path: "/automations/search",
+      query: z.object({ q: z.string() }),
+      responses: { 200: z.array(AutomationSchema) },
+      summary: "Search automations by id or name",
+    },
     getAutomation: {
       method: "GET",
       path: "/automations/:id",

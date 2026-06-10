@@ -33,6 +33,11 @@ export class AutomationsController {
 
       listAutomations: async () => ({ status: 200, body: await this.storage.list() }),
 
+      searchAutomations: async ({ query: { q } }) => ({
+        status: 200,
+        body: await this.storage.search(q),
+      }),
+
       getAutomation: async ({ params: { id } }) => {
         try {
           return { status: 200, body: await this.storage.get(id) }

@@ -97,6 +97,27 @@ describe("Agents API (e2e)", () => {
     expect(got.body).toEqual(body)
   })
 
+  it("searches agents by id/name/description/category and never collides with /:id", async () => {
+    await request(app.getHttpServer())
+      .post(BASE)
+      .send({ id: "writer", description: "Writes things", category: "prose", instructions: "Write." })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post(BASE)
+      .send({ id: "reviewer", description: "Reviews PRs", instructions: "Review." })
+      .expect(201)
+
+    const byCategory = await request(app.getHttpServer()).get(`${BASE}/search?q=prose`).expect(200)
+    expect(byCategory.body.map((a: { id: string }) => a.id)).toEqual(["writer"])
+
+    const byDesc = await request(app.getHttpServer()).get(`${BASE}/search?q=reviews`).expect(200)
+    expect(byDesc.body.map((a: { id: string }) => a.id)).toEqual(["reviewer"])
+
+    // "/search" must hit the search route, not be parsed as an agent id (→ would 404).
+    const empty = await request(app.getHttpServer()).get(`${BASE}/search?q=nomatch`).expect(200)
+    expect(empty.body).toEqual([])
+  })
+
   it("rejects an out-of-range structured field at the API boundary (400)", async () => {
     await request(app.getHttpServer())
       .post(BASE)

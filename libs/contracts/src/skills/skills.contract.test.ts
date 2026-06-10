@@ -8,6 +8,13 @@ describe("skillsContract", () => {
     expect(skillsContract.listSkills.path).toBe("/api/skills")
     expect(skillsContract.getSkill.path).toBe("/api/skills/:id")
   })
+
+  it("exposes a search route declared before the `:id` route", () => {
+    expect(skillsContract.searchSkills.method).toBe("GET")
+    expect(skillsContract.searchSkills.path).toBe("/api/skills/search")
+    const keys = Object.keys(skillsContract)
+    expect(keys.indexOf("searchSkills")).toBeLessThan(keys.indexOf("getSkill"))
+  })
 })
 
 describe("skill schema", () => {

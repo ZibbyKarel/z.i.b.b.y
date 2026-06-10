@@ -35,6 +35,11 @@ export class ProjectsController {
 
       listProjects: async () => ({ status: 200, body: await this.storage.list() }),
 
+      searchProjects: async ({ query: { q } }) => ({
+        status: 200,
+        body: await this.storage.search(q),
+      }),
+
       getProject: async ({ params: { id } }) => {
         try {
           return { status: 200, body: await this.storage.get(id) }

@@ -38,6 +38,18 @@ export const agentsContract = c.router(
       summary: "List all agents",
     },
 
+    // Declared before `getAgent` so `/agents/search` is matched as its own route
+    // rather than captured by the `/agents/:id` param.
+    searchAgents: {
+      method: "GET",
+      path: "/agents/search",
+      query: z.object({ q: z.string() }),
+      responses: {
+        200: z.array(AgentSchema),
+      },
+      summary: "Search agents by id, name, description or category",
+    },
+
     getAgent: {
       method: "GET",
       path: "/agents/:id",

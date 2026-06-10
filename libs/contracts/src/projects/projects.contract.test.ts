@@ -14,6 +14,13 @@ describe("projectsContract", () => {
     expect(projectsContract.createProject.responses).toHaveProperty("409")
   })
 
+  it("exposes a search route declared before the `:id` route", () => {
+    expect(projectsContract.searchProjects.method).toBe("GET")
+    expect(projectsContract.searchProjects.path).toBe("/api/projects/search")
+    const keys = Object.keys(projectsContract)
+    expect(keys.indexOf("searchProjects")).toBeLessThan(keys.indexOf("getProject"))
+  })
+
   it("updates a project via PATCH /api/projects/:id (404)", () => {
     expect(projectsContract.updateProject.method).toBe("PATCH")
     expect(projectsContract.updateProject.path).toBe("/api/projects/:id")

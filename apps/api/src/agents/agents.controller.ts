@@ -34,6 +34,11 @@ export class AgentsController {
 
       listAgents: async () => ({ status: 200, body: await this.storage.list() }),
 
+      searchAgents: async ({ query: { q } }) => ({
+        status: 200,
+        body: await this.storage.search(q),
+      }),
+
       getAgent: async ({ params: { id } }) => {
         try {
           return { status: 200, body: await this.storage.get(id) }

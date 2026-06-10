@@ -7,7 +7,7 @@ import {
   ProjectSchema,
   type UpdateProjectInput,
 } from "@zibby/contracts"
-import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage"
+import { ensureDir, safeJson, searchByText, writeFileAtomic } from "../shared/file-storage"
 import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors"
 
 /** DI token carrying the absolute path of the directory that holds the registry. */
@@ -53,6 +53,11 @@ export class ProjectsStorageService {
     const project = (await this.list()).find((p) => p.id === id)
     if (!project) throw new ProjectNotFoundError(id)
     return project
+  }
+
+  /** Free-text search over the registry by id, name, desc, path and category. */
+  async search(query: string): Promise<Project[]> {
+    return searchByText(await this.list(), query, (p) => [p.id, p.name, p.desc, p.path, p.category])
   }
 
   async create(input: CreateProjectInput): Promise<Project> {
