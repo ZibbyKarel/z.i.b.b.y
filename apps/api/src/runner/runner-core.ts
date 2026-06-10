@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process"
 import { randomBytes } from "node:crypto"
+import { EventEmitter } from "node:events"
 import { type WriteStream, createWriteStream } from "node:fs"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
@@ -109,6 +110,14 @@ interface RunHandle<R extends BaseRun> {
 export class RunnerCore<R extends BaseRun> {
   private readonly dir: string
   private readonly runs = new Map<string, RunHandle<R>>()
+  /**
+   * Push channel behind the SSE endpoints (logs + status). Plain Node events keep
+   * the core DI-free: a `status` event fires the full record on every lifecycle
+   * transition, a `log` event fires a run id whenever new bytes hit its log file.
+   * Subscribers (the per-kind wrappers' controllers) turn these into one
+   * `Observable<MessageEvent>` each, replacing the old per-client interval polls.
+   */
+  private readonly events = new EventEmitter()
 
   constructor(
     dir: string,
@@ -144,6 +153,41 @@ export class RunnerCore<R extends BaseRun> {
     private readonly formatLine?: (raw: string) => string | null,
   ) {
     this.dir = path.resolve(dir)
+    // One listener pair is added per open SSE connection; with many concurrent
+    // log streams the default cap of 10 would log a false "leak" warning.
+    this.events.setMaxListeners(0)
+  }
+
+  /**
+   * Subscribe to every run's lifecycle transitions (start / pause / resume /
+   * finish / reconcile). The listener gets the live record; the caller projects
+   * it to its contract shape. Returns an unsubscribe to call on stream teardown.
+   */
+  onStatus(listener: (run: R) => void): () => void {
+    this.events.on("status", listener)
+    return () => this.events.off("status", listener)
+  }
+
+  /**
+   * Subscribe to new-bytes-appended notifications for one run's log. The listener
+   * carries no payload — it signals "read again from your last offset", so the
+   * SSE layer reuses {@link readLog} and stays byte-identical to the poll path.
+   * Returns an unsubscribe to call on stream teardown.
+   */
+  onLog(runId: string, listener: () => void): () => void {
+    const scoped = (id: string) => {
+      if (id === runId) listener()
+    }
+    this.events.on("log", scoped)
+    return () => this.events.off("log", scoped)
+  }
+
+  private emitStatus(run: R): void {
+    this.events.emit("status", run)
+  }
+
+  private emitLog(runId: string): void {
+    this.events.emit("log", runId)
   }
 
   /** Rebuild the registry from disk so runs survive a backend restart. */
@@ -267,6 +311,7 @@ export class RunnerCore<R extends BaseRun> {
       command: spec.command,
       cwd: spec.cwd,
     })
+    this.emitStatus(run)
     return run
   }
 
@@ -287,6 +332,7 @@ export class RunnerCore<R extends BaseRun> {
     this.runs.set(runId, { run, pendingSpec: spec })
     await this.writeSidecar(run)
     await this.writePendingSpec(runId, spec)
+    this.emitStatus(run)
     return run
   }
 
@@ -306,6 +352,7 @@ export class RunnerCore<R extends BaseRun> {
       await this.writeIntentDecision(handle.run.cwd, "allow")
       handle.run.status = "running"
       await this.writeSidecar(handle.run)
+      this.emitStatus(handle.run)
       this.logger?.info("run resumed (intent released)", { runId })
       return handle.run
     }
@@ -331,6 +378,7 @@ export class RunnerCore<R extends BaseRun> {
     handle.run.status = "running"
     await this.writeSidecar(handle.run)
     this.wire(handle)
+    this.emitStatus(handle.run)
     this.logger?.info("run resumed (spawned)", { runId, pid: handle.run.pid })
     return handle.run
   }
@@ -361,7 +409,9 @@ export class RunnerCore<R extends BaseRun> {
       handle.run.status = "interrupted"
       handle.pendingSpec = undefined
       void this.writeSidecar(handle.run)
+      this.emitStatus(handle.run)
     } else if (handle.child && handle.run.status === "running") {
+      // The kill's `exit` lands in `finalize`, which emits the terminal status.
       handle.child.kill()
     }
     this.logger?.info("run cancelled", { runId, status: handle.run.status })
@@ -405,6 +455,7 @@ export class RunnerCore<R extends BaseRun> {
     if (!handle) return
     handle.run.status = "awaiting-approval"
     await this.writeSidecar(handle.run)
+    this.emitStatus(handle.run)
   }
 
   has(runId: string): boolean {
@@ -583,6 +634,7 @@ export class RunnerCore<R extends BaseRun> {
         handle.run.pct = pct
         handle.run.status = pct >= 100 ? "done" : "interrupted"
         void this.writeSidecar(handle.run)
+        this.emitStatus(handle.run)
       })
     }, 200)
     timer.unref?.()
@@ -648,6 +700,8 @@ export class RunnerCore<R extends BaseRun> {
           this.onLimitHit(resetsAt)
         }
       }
+      // Nudge any open log stream to read the freshly-appended bytes.
+      this.emitLog(run.runId)
     }
     child.stdout?.on("data", onChunk)
     child.stderr?.on("data", onChunk)
@@ -669,8 +723,14 @@ export class RunnerCore<R extends BaseRun> {
         if (formatted !== null) log.write(`${formatted}\n`)
         residual = ""
       }
-      log.end()
+      // Signal the final log read only once the stream has flushed and closed, so a
+      // tail the child emitted right before exit can't be lost to the done event
+      // racing the buffered write to disk.
+      log.end(() => this.emitLog(run.runId))
       void this.writeSidecar(run)
+      // Status is already terminal in memory, so the channel can fire immediately
+      // (it doesn't depend on the log file being flushed).
+      this.emitStatus(run)
       const meta = { runId: run.runId, status, pct: run.pct }
       if (status === "error") this.logger?.error("run finished", meta)
       else this.logger?.info("run finished", meta)

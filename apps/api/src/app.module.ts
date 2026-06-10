@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config"
 import { AgentsModule } from "./agents/agents.module"
 import { ApprovalsModule } from "./approvals/approvals.module"
 import { AutomationsModule } from "./automations/automations.module"
+import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { HealthModule } from "./health/health.module"
 import { LimitsModule } from "./limits/limits.module"
@@ -26,6 +27,7 @@ import { SkillsModule } from "./skills/skills.module"
     AutomationsModule,
     HealthModule,
     LimitsModule,
+    EventsModule,
   ],
 })
 export class AppModule {}
