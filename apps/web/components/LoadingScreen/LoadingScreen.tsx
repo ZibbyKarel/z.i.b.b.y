@@ -108,11 +108,10 @@ export function LoadingScreen({
         </div>
       )}
 
-      <CircuitTraces />
-
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {/* Brand mark + orbiting HUD */}
         <div className="relative mb-11 flex h-[220px] w-[220px] items-center justify-center">
+          <CircuitTraces />
           <div className="animate-ripple absolute inset-0 rounded-full" style={{ background: "rgba(91,141,239,0.08)" }} />
           <div className="animate-ripple absolute inset-0 rounded-full" style={{ background: "rgba(91,141,239,0.05)", animationDelay: "1.4s" }} />
           <div
@@ -260,10 +259,11 @@ function CircuitTraces() {
   return (
     <svg
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 opacity-55"
+      className="pointer-events-none absolute opacity-55"
       preserveAspectRatio="xMidYMid meet"
       viewBox="0 0 1000 1000"
       xmlns="http://www.w3.org/2000/svg"
+      style={{ width: "100vw", height: "100vh", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
     >
       <defs>
         <filter id="loading-glow">
