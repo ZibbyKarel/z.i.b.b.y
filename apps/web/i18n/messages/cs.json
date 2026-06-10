@@ -33,6 +33,58 @@
     "voiceLabel": "Otevřít hlasový režim",
     "voiceTitle": "Hlasový režim"
   },
+  "tasks": {
+    "triggerLabel": "TASK",
+    "triggerAria": "Nový task",
+    "triggerTitle": "Nový task",
+    "dialogTitle": "NOVÝ TASK",
+    "dialogSubtitle": "Popiš zadání — ZIBBY ho zařadí a předá agentovi",
+    "cancel": "Zrušit",
+    "classifyRun": "Zařadit & spustit",
+    "composer": {
+      "label": "Zadání",
+      "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
+      "pathsTitle": "Detekované cesty · přidány do kontextu",
+      "removePathAria": "Odebrat cestu {path}",
+      "submitHint": "⌘↩ zařadit"
+    },
+    "classifying": {
+      "title": "Zařazuji task…",
+      "note": "Čtu zadání a hledám nejvhodnějšího agenta. Chvíli strpení."
+    },
+    "routing": {
+      "title": "Návrh směrování",
+      "confidenceLabel": "Jistota",
+      "band": {
+        "high": "vysoká",
+        "medium": "střední",
+        "low": "nízká"
+      },
+      "reason": "Shoda na: {terms}.",
+      "reasonNone": "Bez jasné shody — vyber cíl ručně.",
+      "reasonLow": "Nízká jistota — doporučuji potvrdit ruční volbou.",
+      "manual": "ruční volba",
+      "targetKind": {
+        "agent": "agent",
+        "pipeline": "pipeline"
+      },
+      "pathsTitle": "Kontext",
+      "override": "Změnit cíl",
+      "overrideClose": "Zpět na návrh",
+      "overrideTitle": "Vyber cíl ručně",
+      "pickerAgents": "Agenti",
+      "pickerPipelines": "Orchestrace",
+      "back": "Zpět",
+      "dispatch": "Dispatch",
+      "dispatchHint": "Nic se nespustí bez tvého potvrzení."
+    },
+    "dispatched": {
+      "title": "Task předán",
+      "detail": "{name} přebírá zadání. Sleduj průběh v Bězích.",
+      "watch": "Otevřít běhy",
+      "close": "Zavřít"
+    }
+  },
   "search": {
     "placeholder": "Hledat agenty, skilly, projekty…",
     "ariaLabel": "Hledat v pracovním prostoru",
