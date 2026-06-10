@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { Typography } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Typography } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { CardGrid } from "../../../components/CardGrid/CardGrid";
+import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { AgentCard } from "../../agents/components/AgentCard";
-import { useAgentsQuery } from "../../agents/queries";
 import { useStartAgentRunMutation } from "../../agents/mutations";
 import { togglePinnedAgent, usePinnedAgents } from "../../agents/pinnedAgents";
+import { useAgentsQuery } from "../../agents/queries";
 import { usePipelinesQuery } from "../../pipelines/queries";
 import { RunModal } from "../../skills/components/RunModal/RunModal";
 
@@ -25,12 +25,14 @@ export function QuickLaunchPanel() {
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const pinnedIds = usePinnedAgents();
-  const startAgentRun = useStartAgentRunMutation();
+  const { mutate: startAgent } = useStartAgentRunMutation();
   const [runAgent, setRunAgent] = useState<Agent | null>(null);
 
   // Preserve pin order, and drop ids whose agent was since deleted.
   const byId = new Map(agents.map((a) => [a.id, a]));
-  const pinned = pinnedIds.map((id) => byId.get(id)).filter((a): a is Agent => Boolean(a));
+  const pinned = pinnedIds
+    .map((id) => byId.get(id))
+    .filter((a): a is Agent => Boolean(a));
 
   const pipelineCount = (a: Agent) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
@@ -42,7 +44,7 @@ export function QuickLaunchPanel() {
           {t("overview.quickLaunchEmpty")}
         </Typography>
       ) : (
-        <CardGrid lg={2}>
+        <CardGrid lg={3}>
           {pinned.map((agent) => (
             <AgentCard
               pinned
@@ -63,7 +65,10 @@ export function QuickLaunchPanel() {
           key={runAgent.id}
           onClose={() => setRunAgent(null)}
           onLaunch={({ agent, prompt, files }) =>
-            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project: "", files } })
+            startAgent({
+              params: { id: agent.id },
+              body: { prompt, project: "", files },
+            })
           }
         />
       )}

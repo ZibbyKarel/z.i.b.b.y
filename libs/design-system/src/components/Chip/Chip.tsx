@@ -1,10 +1,7 @@
 import type { HTMLAttributes } from "react";
 import { type VariantProps, cva } from "class-variance-authority";
+import { cn } from "../../utils/cn";
 
-/**
- * A compact mono tag. Tones cover context, status and the orchestration
- * model / thinking badges.
- */
 const chip = cva(
   "inline-flex items-center gap-1 font-mono text-xs font-semibold " +
     "rounded-sm border whitespace-nowrap tracking-wide",
@@ -16,6 +13,7 @@ const chip = cva(
         ok: "text-ok border-ok/35 bg-ok/10",
         warn: "text-warn border-warn/35 bg-warn/10",
         bad: "text-bad border-bad/35 bg-bad/10",
+        run: "text-work border-work/35 bg-work/10",
         opus: "text-model-opus border-model-opus/35 bg-model-opus/10",
         sonnet: "text-model-sonnet border-model-sonnet/35 bg-model-sonnet/10",
         haiku: "text-model-haiku border-model-haiku/35 bg-model-haiku/10",
@@ -30,14 +28,24 @@ const chip = cva(
       solid: { true: "", false: "" },
     },
     compoundVariants: [
-      { tone: "accent", solid: true, className: "bg-accent text-accent-contrast" },
-      { tone: "ok", solid: true, className: "bg-ok text-background border-ok" },
-      { tone: "warn", solid: true, className: "bg-warn text-background border-warn" },
-      { tone: "bad", solid: true, className: "bg-bad text-background border-bad" },
+      { tone: "neutral", solid: true, className: "bg-foreground-dim text-background border-transparent" },
+      { tone: "accent", solid: true, className: "bg-accent text-accent-contrast border-transparent" },
+      { tone: "ok", solid: true, className: "bg-ok text-background border-transparent" },
+      { tone: "warn", solid: true, className: "bg-warn text-background border-transparent" },
+      { tone: "bad", solid: true, className: "bg-bad text-background border-transparent" },
+      { tone: "run", solid: true, className: "bg-work text-background border-transparent" },
+      { tone: "opus", solid: true, className: "bg-model-opus text-background border-transparent" },
+      { tone: "sonnet", solid: true, className: "bg-model-sonnet text-background border-transparent" },
+      { tone: "haiku", solid: true, className: "bg-model-haiku text-background border-transparent" },
+      { tone: "think-high", solid: true, className: "bg-think-high text-background border-transparent" },
+      { tone: "think-medium", solid: true, className: "bg-think-medium text-background border-transparent" },
+      { tone: "think-low", solid: true, className: "bg-think-low text-background border-transparent" },
     ],
     defaultVariants: { tone: "neutral", solid: false, size: "sm" },
   },
 );
+
+export type ChipTone = NonNullable<VariantProps<typeof chip>["tone"]>;
 
 export enum ChipTestId {
   Root = "chip-root",
@@ -51,7 +59,7 @@ export interface ChipProps
 
 export function Chip({ tone, solid, size, children, ref, ...props }: ChipProps) {
   return (
-    <span className={chip({ tone, solid, size })} data-testid={ChipTestId.Root} ref={ref} {...props}>
+    <span className={cn(chip({ tone, solid, size }))} data-testid={ChipTestId.Root} ref={ref} {...props}>
       {children}
     </span>
   );

@@ -101,7 +101,7 @@ export { Badge } from "./components/Badge/Badge";
 export type { BadgeProps, BadgeTone } from "./components/Badge/Badge";
 
 export { Chip } from "./components/Chip/Chip";
-export type { ChipProps } from "./components/Chip/Chip";
+export type { ChipProps, ChipTone } from "./components/Chip/Chip";
 
 export { Kbd } from "./components/Kbd/Kbd";
 export type { KbdProps } from "./components/Kbd/Kbd";
