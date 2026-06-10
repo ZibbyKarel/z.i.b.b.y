@@ -43,12 +43,6 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
   private readonly core: RunnerCore<AgentRunRecord>
   private readonly log: ScopedLogger
-  /**
-   * runId → the `traceId` of the request that started it. A mid-run gate fires
-   * long after that request returned (from child output), so we stash the origin
-   * here to re-link its background logs to where the run came from.
-   */
-  private readonly runOrigins = new Map<string, string>()
 
   constructor(
     @Inject(RUNS_DIR) dir: string,
@@ -126,17 +120,16 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       args,
       cwd,
       startedMs,
-      extra: { agentId, prompt, project, files },
+      // The originating request's traceId rides along in the persisted record, so
+      // a later mid-run gate (fired from child output, outside any request — even
+      // after an API restart) can re-link its logs to that origin.
+      extra: { agentId, prompt, project, files, traceId: this.trace.getTraceId() },
     }
 
     // Variant B: the run spawns immediately. Gating happens mid-run — when the
     // child announces an external-effect action via a `INTENT {json}` line, the
     // core routes it to {@link onIntent} below for evaluation.
     const rec = await this.core.start(spec)
-    // Remember which request started this run so a later mid-run gate (fired from
-    // child output, outside any request) can re-link its logs to that origin.
-    const origin = this.trace.getTraceId()
-    if (origin) this.runOrigins.set(rec.runId, origin)
     return toAgentRun(rec)
   }
 
@@ -157,8 +150,17 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private onIntent(runId: string, action: IntendedAction): Promise<void> {
     // Re-establish a logging scope for this background gate: the originating
     // request's trace id (so it links back) plus the run id (the durable key).
-    const traceId = this.runOrigins.get(runId) ?? this.trace.getTraceId() ?? randomUUID()
+    const traceId = this.originOf(runId) ?? this.trace.getTraceId() ?? randomUUID()
     return this.trace.run({ traceId, runId }, () => this.evaluateIntent(runId, action))
+  }
+
+  /** The persisted origin traceId of a run, or undefined for an unknown run. */
+  private originOf(runId: string): string | undefined {
+    try {
+      return this.core.get(runId).traceId
+    } catch {
+      return undefined
+    }
   }
 
   private async evaluateIntent(runId: string, action: IntendedAction): Promise<void> {
@@ -232,7 +234,6 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /** Permanently delete a run and all its artifacts (sidecar, log, sandbox). */
   delete(runId: string): Promise<void> {
-    this.runOrigins.delete(runId)
     return this.core.delete(runId)
   }
 

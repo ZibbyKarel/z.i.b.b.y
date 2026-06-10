@@ -1,6 +1,7 @@
 import { useDropzone } from "react-dropzone";
 import type { Accept, FileRejection } from "react-dropzone";
 import { cn } from "../../utils/cn";
+import { focusRingOffset } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
 
 export { type FileRejection };
@@ -65,8 +66,8 @@ export function DropZone({
       className={cn(
         "flex cursor-pointer flex-col items-center justify-center gap-3",
         "rounded border-2 border-dashed border-border bg-background p-8",
-        "outline-none transition-colors",
-        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+        "transition-colors",
+        focusRingOffset,
         isDragActive && isDragAccept && "border-accent bg-accent/5",
         isDragActive && isDragReject && "border-bad bg-bad/10",
         invalid && !isDragActive && "border-bad",

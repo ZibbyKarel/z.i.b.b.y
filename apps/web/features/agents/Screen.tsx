@@ -20,7 +20,8 @@ import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
-import { newAgentDraft, slugifyAgent } from "./agentDraft";
+import { slug } from "../../utils/slug";
+import { newAgentDraft } from "./agentDraft";
 import { togglePinnedAgent, usePinnedAgents } from "./pinnedAgents";
 import { useAgentsQuery, useCategoriesQuery } from "./queries";
 import {
@@ -65,7 +66,7 @@ export function Screen() {
 
   const save = (d: Agent, isNew: boolean) => {
     if (isNew) {
-      const id = slugifyAgent(d.name ?? "") || `agent-${Date.now()}`;
+      const id = slug(d.name ?? "") || `agent-${Date.now()}`;
       createAgent.mutate({ body: { ...d, id } }, { onSuccess: () => setOpenId(id) });
       setDraft(null);
     } else {

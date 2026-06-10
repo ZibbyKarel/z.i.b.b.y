@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import {
@@ -116,10 +117,10 @@ const toneBorder: Record<NonNullable<CardProps["tone"]>, string> = {
 };
 
 const toneGlow: Record<NonNullable<CardProps["tone"]>, string> = {
-  accent: "shadow-[0_0_0_1px_rgba(240,180,41,0.12)]",
-  ok: "shadow-[0_0_0_1px_rgba(57,217,138,0.12)]",
-  warn: "shadow-[0_0_0_1px_rgba(240,180,41,0.12)]",
-  bad: "shadow-[0_0_0_1px_rgba(255,107,107,0.12)]",
+  accent: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_12%,transparent)]",
+  ok: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-ok)_12%,transparent)]",
+  warn: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-warn)_12%,transparent)]",
+  bad: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-bad)_12%,transparent)]",
 };
 
 export function Card({
@@ -155,8 +156,7 @@ export function Card({
         bordered && tone && "border",
         tone && toneGlow[tone],
         borderStyle === "dashed" && "border-dashed",
-        Tag === "button" &&
-          "w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        Tag === "button" && cn("w-full text-left cursor-pointer", focusRing),
         interactive &&
           "transition-colors hover:border-accent/40 hover:bg-raised",
         selected && "border-accent bg-raised shadow-[0_0_0_1px_var(--color-accent-dim)]",

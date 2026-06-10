@@ -16,15 +16,13 @@ import type { Automation, Target } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { slug } from "../../utils/slug";
 import { useAutomationsQuery } from "./queries";
 import {
   useCreateAutomationMutation,
   useTriggerAutomationMutation,
   useUpdateAutomationMutation,
 } from "./mutations";
-
-const slug = (s: string) =>
-  s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "novy";
 
 type TargetType = Target["type"];
 
@@ -136,8 +134,8 @@ function CreateDialog({
 
   const submit = () =>
     onCreate({
-      id: slug(name),
-      name: name.trim() || slug(name),
+      id: slug(name, "novy"),
+      name: name.trim() || slug(name, "novy"),
       trigger: { type: "cron", expr },
       target,
       enabled: true,

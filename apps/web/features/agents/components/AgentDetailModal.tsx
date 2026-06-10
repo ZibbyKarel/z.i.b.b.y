@@ -1,18 +1,14 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Card,
   Chip,
-  CodeBlock,
   Container,
   Dialog,
-  Icon,
   type IconName,
   IconTile,
-  Pressable,
   Stack,
   Tab,
   TabList,
@@ -20,27 +16,15 @@ import {
   Tabs,
   Typography,
 } from "@zibby/design-system";
-import type {
-  Agent,
-  AgentModel,
-  AgentThinking,
-  Category,
-  GateRuleInput,
-  GlobalGateRule,
-} from "@zibby/contracts";
+import type { Agent, Category, GateRuleInput, GlobalGateRule } from "@zibby/contracts";
+import { useFormControls } from "@zibby/forms";
 import type { Pipeline } from "../../../domain";
-import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import { agentFile } from "../agentDraft";
-import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 import { RuleModal } from "../../gates/components/RuleModal";
 import { AgentRulesSection } from "./AgentRulesSection";
-import {
-  Controller,
-  FormMarkdownEditor,
-  FormSegmentPicker,
-  FormTextInput,
-  useFormControls,
-} from "@zibby/forms";
+import { AgentEditBasics } from "./AgentEditBasics";
+import { AgentViewDetails } from "./AgentViewDetails";
+import type { AgentEditValues } from "./agentEditValues";
 
 export interface AgentDetailModalProps {
   agent: Agent;
@@ -53,42 +37,33 @@ export interface AgentDetailModalProps {
   onRun: (agent: Agent) => void;
 }
 
-type AgentEditValues = {
-  name: string;
-  description: string;
-  glyph: string;
-  model: AgentModel;
-  thinking: AgentThinking;
-  tools: string[];
-  category: string;
-  instructions: string;
-  /** The agent's own approval-gate rules (frontmatter `gates`). */
-  gates: GateRuleInput[];
-  /** Ids of linked global catalog rules (frontmatter `gateRuleIds`). */
-  gateRuleIds: string[];
-};
-
 /** Convert an own rule into the shape `RuleModal` prefills from (a global rule). */
 function ownRuleToInitial(gate: GateRuleInput): GlobalGateRule {
   return { id: "own", match: gate.match, decision: gate.decision, ...(gate.resolve ? { resolve: gate.resolve } : {}) };
 }
 
-function ChipToggle({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Pressable onClick={onClick}>
-      <Chip tone={active ? "accent" : "neutral"}>{children}</Chip>
-    </Pressable>
-  );
+/** The agent's persisted fields as form defaults (used on open and on edit-reset). */
+function toFormValues(agent: Agent): AgentEditValues {
+  return {
+    name: agent.name ?? "",
+    description: agent.description ?? "",
+    glyph: agent.glyph ?? "",
+    model: agent.model ?? "sonnet",
+    thinking: agent.thinking ?? "medium",
+    tools: agent.tools ?? [],
+    category: agent.category ?? "",
+    instructions: agent.instructions,
+    gates: agent.gates ?? [],
+    gateRuleIds: agent.gateRuleIds ?? [],
+  };
 }
 
+/**
+ * The agent detail dialog — an orchestrator over three states: the read-only
+ * view ({@link AgentViewDetails}), the tabbed editor ({@link AgentEditBasics} +
+ * {@link AgentRulesSection}) and the delete confirmation. It owns the form
+ * instance, the view/edit switch and the own-rule editor wiring.
+ */
 export function AgentDetailModal({
   agent,
   mode: initialMode,
@@ -112,18 +87,7 @@ export function AgentDetailModal({
   const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
 
   const { renderForm, submit, form } = useFormControls<AgentEditValues>({
-    defaultValues: {
-      name: agent.name ?? "",
-      description: agent.description ?? "",
-      glyph: agent.glyph ?? "",
-      model: agent.model ?? "sonnet",
-      thinking: agent.thinking ?? "medium",
-      tools: agent.tools ?? [],
-      category: agent.category ?? "",
-      instructions: agent.instructions,
-      gates: agent.gates ?? [],
-      gateRuleIds: agent.gateRuleIds ?? [],
-    },
+    defaultValues: toFormValues(agent),
     onSubmit: (values) => {
       onSave(
         {
@@ -175,18 +139,7 @@ export function AgentDetailModal({
           icon="edit"
           intent="ghost"
           onClick={() => {
-            form.reset({
-              name: agent.name ?? "",
-              description: agent.description ?? "",
-              glyph: agent.glyph ?? "",
-              model: agent.model ?? "sonnet",
-              thinking: agent.thinking ?? "medium",
-              tools: agent.tools ?? [],
-              category: agent.category ?? "",
-              instructions: agent.instructions,
-              gates: agent.gates ?? [],
-              gateRuleIds: agent.gateRuleIds ?? [],
-            });
+            form.reset(toFormValues(agent));
             setEditTab("basics");
             setMode("edit");
           }}
@@ -254,135 +207,7 @@ export function AgentDetailModal({
             </TabList>
 
             <TabPanel value="basics">
-              <Container padding={["200", "0", "0", "0"]}>
-                <Stack align="start" direction="row" gap="300">
-                  <Container grow minW0>
-                    <Stack gap="200">
-                <FormTextInput<AgentEditValues>
-                  autoFocus
-                  label={t("fields.name")}
-                  name="name"
-                  placeholder={t("fields.namePlaceholder")}
-                />
-
-                <FormTextInput<AgentEditValues>
-                  label={t("fields.whenToUse")}
-                  name="description"
-                  placeholder={t("fields.whenToUsePlaceholder")}
-                />
-
-                <Controller<AgentEditValues, "category">
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <Stack gap="75">
-                      <Typography mono size="sm" type="note" variant="secondary">
-                        {t("fields.category")}
-                      </Typography>
-                      <Stack wrap direction="row" gap="75">
-                        {categories.map((c) => (
-                          <ChipToggle
-                            active={field.value === c.name}
-                            key={c.name}
-                            onClick={() => field.onChange(c.name)}
-                          >
-                            {c.name}
-                          </ChipToggle>
-                        ))}
-                      </Stack>
-                    </Stack>
-                  )}
-                />
-
-                <Stack direction="row" gap="150">
-                  <Container grow minW0>
-                    <FormSegmentPicker<AgentEditValues>
-                      label={t("fields.model")}
-                      name="model"
-                      options={MODEL_OPTIONS}
-                    />
-                  </Container>
-                  <Container grow minW0>
-                    <FormSegmentPicker<AgentEditValues>
-                      label={t("fields.thinking")}
-                      name="thinking"
-                      options={THINKING_OPTIONS}
-                    />
-                  </Container>
-                </Stack>
-
-                <Controller<AgentEditValues, "glyph">
-                  control={form.control}
-                  name="glyph"
-                  render={({ field }) => (
-                    <Stack gap="75">
-                      <Typography mono size="sm" type="note" variant="secondary">
-                        {t("fields.icon")}
-                      </Typography>
-                      <Stack wrap direction="row" gap="75">
-                        {AGENT_GLYPHS.map((g) => (
-                          <IconTile
-                            interactive
-                            aria-label={g}
-                            aria-pressed={field.value === g}
-                            as="button"
-                            glyph={g}
-                            key={g}
-                            onClick={() => field.onChange(g)}
-                            radius="default"
-                            size="sm"
-                            tone={field.value === g ? "accent" : "neutral"}
-                          />
-                        ))}
-                      </Stack>
-                    </Stack>
-                  )}
-                />
-
-                <Controller<AgentEditValues, "tools">
-                  control={form.control}
-                  name="tools"
-                  render={({ field }) => {
-                    const tools = field.value ?? [];
-                    return (
-                      <Stack gap="75">
-                        <Typography mono size="sm" type="note" variant="secondary">
-                          {t("allowedTools")}
-                        </Typography>
-                        <Stack wrap direction="row" gap="75">
-                          {AGENT_TOOLS.map((tool) => (
-                            <ChipToggle
-                              active={tools.includes(tool)}
-                              key={tool}
-                              onClick={() =>
-                                field.onChange(
-                                  tools.includes(tool)
-                                    ? tools.filter((x) => x !== tool)
-                                    : [...tools, tool],
-                                )
-                              }
-                            >
-                              {tool}
-                            </ChipToggle>
-                          ))}
-                        </Stack>
-                      </Stack>
-                    );
-                  }}
-                />
-              </Stack>
-            </Container>
-
-            <Container grow minW0>
-              <FormMarkdownEditor<AgentEditValues>
-                hint={t("fields.bodyHint")}
-                label={t("fields.body")}
-                name="instructions"
-                placeholder={t("fields.bodyPlaceholder")}
-              />
-                  </Container>
-                </Stack>
-              </Container>
+              <AgentEditBasics categories={categories} control={form.control} />
             </TabPanel>
 
             <TabPanel value="rules">
@@ -400,73 +225,7 @@ export function AgentDetailModal({
             </TabPanel>
           </Tabs>
         ) : (
-          <Stack gap="200">
-            <Typography leading="relaxed" size="base" type="note">
-              {agent.description}.
-            </Typography>
-
-            <Card background="background" radius="sm">
-              <Container padding={["150", "150"]}>
-                <Stack wrap align="center" direction="row" gap="150">
-                  <ModelBadge model={agent.model ?? "sonnet"} />
-                  <ThinkBadge level={agent.thinking ?? "medium"} />
-                </Stack>
-              </Container>
-            </Card>
-
-            <Stack gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("allowedTools")}
-              </Typography>
-              <Stack wrap direction="row" gap="75">
-                {(agent.tools ?? []).map((tool) => (
-                  <Chip key={tool} tone="neutral">
-                    {tool}
-                  </Chip>
-                ))}
-              </Stack>
-            </Stack>
-
-            <Stack gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("usedInPipelines")}
-              </Typography>
-              {usedBy.length > 0 ? (
-                <Stack gap="75">
-                  {usedBy.map((p) => (
-                    <Card background="background" key={p.id} radius="sm">
-                      <Container padding={["100", "150"]}>
-                        <Stack align="center" direction="row" gap="100">
-                          <Icon name="flow" size="sm" tone="accent" />
-                          <Container grow minW0>
-                            <Typography mono truncate size="sm" type="note">
-                              {p.name}
-                            </Typography>
-                          </Container>
-                          <Typography mono nowrap size="xs" type="note" variant="tertiary">
-                            {t("phaseCount", { count: p.phases.length })}
-                          </Typography>
-                        </Stack>
-                      </Container>
-                    </Card>
-                  ))}
-                </Stack>
-              ) : (
-                <Typography mono size="sm" type="note" variant="tertiary">
-                  {t("notInPipeline")}
-                </Typography>
-              )}
-            </Stack>
-
-            <Stack gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("fields.body")}
-              </Typography>
-              <Card background="background" radius="sm">
-                <CodeBlock maxHeight="sm" text={agent.instructions} />
-              </Card>
-            </Stack>
-          </Stack>
+          <AgentViewDetails agent={agent} usedBy={usedBy} />
         )}
       </Dialog>
 

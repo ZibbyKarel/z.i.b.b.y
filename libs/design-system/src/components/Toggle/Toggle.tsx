@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 
 export enum ToggleTestId {
   Root = "switch-root",
@@ -62,8 +63,8 @@ export function Toggle({
       aria-invalid={invalid}
       aria-label={label}
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border outline-none transition-colors duration-150",
-        "focus-visible:ring-2 focus-visible:ring-accent",
+        "inline-flex shrink-0 items-center rounded-full border transition-colors duration-150",
+        focusRing,
         track[size],
         checked
           ? "justify-end border-accent bg-accent-dim"

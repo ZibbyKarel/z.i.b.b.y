@@ -1,12 +1,18 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { agentsContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import {
   AgentConflictError,
   AgentNotFoundError,
   InvalidAgentIdError,
 } from "./agents.errors"
 import { AgentsStorageService } from "./agents.storage.service"
+
+const errors = makeErrorMapper("Agent", {
+  missing: [AgentNotFoundError, InvalidAgentIdError],
+  conflict: [AgentConflictError],
+})
 
 /**
  * Implements `agentsContract` against the file-backed storage service. Request
@@ -20,17 +26,7 @@ export class AgentsController {
   @TsRestHandler(agentsContract)
   handler() {
     return tsRestHandler(agentsContract, {
-      createAgent: async ({ body }) => {
-        try {
-          const agent = await this.storage.create(body)
-          return { status: 201, body: agent }
-        } catch (error) {
-          if (error instanceof AgentConflictError) {
-            return { status: 409, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      createAgent: ({ body }) => errors.created(() => this.storage.create(body)),
 
       listAgents: async () => ({ status: 200, body: await this.storage.list() }),
 
@@ -39,48 +35,16 @@ export class AgentsController {
         body: await this.storage.search(q),
       }),
 
-      getAgent: async ({ params: { id } }) => {
-        try {
-          return { status: 200, body: await this.storage.get(id) }
-        } catch (error) {
-          if (isMissing(error)) {
-            return { status: 404, body: { message: notFoundMessage(id) } }
-          }
-          throw error
-        }
-      },
+      getAgent: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updateAgent: async ({ params: { id }, body }) => {
-        try {
-          return { status: 200, body: await this.storage.update(id, body) }
-        } catch (error) {
-          if (isMissing(error)) {
-            return { status: 404, body: { message: notFoundMessage(id) } }
-          }
-          throw error
-        }
-      },
+      updateAgent: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.storage.update(id, body)),
 
-      deleteAgent: async ({ params: { id } }) => {
-        try {
+      deleteAgent: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           await this.storage.delete(id)
-          return { status: 200, body: { id } }
-        } catch (error) {
-          if (isMissing(error)) {
-            return { status: 404, body: { message: notFoundMessage(id) } }
-          }
-          throw error
-        }
-      },
+          return { id }
+        }),
     })
   }
-}
-
-/** Treat both "no such file" and "unsafe id" as a 404 for read/update/delete. */
-function isMissing(error: unknown): boolean {
-  return error instanceof AgentNotFoundError || error instanceof InvalidAgentIdError
-}
-
-function notFoundMessage(id: string): string {
-  return `Agent "${id}" not found`
 }

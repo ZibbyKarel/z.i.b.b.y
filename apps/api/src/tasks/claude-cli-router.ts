@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process"
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { ClassifyTaskInput, TaskRouting } from "@zibby/contracts"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router"
 
 /** How long the headless `claude -p` router may take before we give up and fall back. */
@@ -48,7 +49,11 @@ interface RouterVerdict {
  */
 @Injectable()
 export class ClaudeCliRouter implements TaskRouter {
-  private readonly logger = new Logger(ClaudeCliRouter.name)
+  private readonly log: ScopedLogger
+
+  constructor(logger: LoggerService) {
+    this.log = logger.child(ClaudeCliRouter.name)
+  }
 
   async route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null> {
     if (process.env.VITEST) return null
@@ -58,7 +63,7 @@ export class ClaudeCliRouter implements TaskRouter {
     try {
       raw = await this.runClaude(this.buildPrompt(input, candidates))
     } catch (err) {
-      this.logger.debug(`router CLI call failed: ${(err as Error).message}`)
+      this.log.debug("router CLI call failed", { error: (err as Error).message })
       return null
     }
 
@@ -67,7 +72,9 @@ export class ClaudeCliRouter implements TaskRouter {
 
     const chosen = candidates.find((c) => c.id === verdict.targetId && c.kind === verdict.targetKind)
     if (!chosen) {
-      this.logger.debug(`router chose an unknown target ${verdict.targetKind}:${verdict.targetId}`)
+      this.log.debug("router chose an unknown target", {
+        target: `${verdict.targetKind}:${verdict.targetId}`,
+      })
       return null
     }
 

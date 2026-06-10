@@ -9,6 +9,18 @@ describe("HudCard", () => {
     expect(screen.getByText("dělá věci")).toBeInTheDocument()
   })
 
+  it("renders the subtitle meta line and the header aside", () => {
+    render(
+      <HudCard
+        aside={<span>připojeno</span>}
+        subtitle="~/Projects/zibby"
+        title="reviewer"
+      />,
+    )
+    expect(screen.getByText("~/Projects/zibby")).toBeInTheDocument()
+    expect(screen.getByText("připojeno")).toBeInTheDocument()
+  })
+
   it("renders badge rows and skips empty rows", () => {
     render(
       <HudCard

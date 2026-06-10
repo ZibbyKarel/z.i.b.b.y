@@ -6,6 +6,7 @@ import {
   useContext,
 } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 import { Stack } from "../Stack/Stack";
 import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
@@ -85,8 +86,8 @@ export function ListItem({
   ...rest
 }: ListItemProps) {
   const className = cn(
-    "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg outline-none transition-colors",
-    "focus-visible:ring-2 focus-visible:ring-accent",
+    "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg transition-colors",
+    focusRing,
     active
       ? "bg-[rgba(255,255,255,0.04)] font-semibold text-foreground"
       : "font-medium text-foreground-dim hover:text-foreground",

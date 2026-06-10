@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 
 /** The server-computed interactive-window utilization, as whole percents. */
 export interface RateLimitSnapshot {
@@ -105,8 +106,13 @@ export function parseRateLimits(raw: string, now: number): RateLimitSnapshot {
  */
 @Injectable()
 export class RateLimitsReader {
-  private readonly logger = new Logger(RateLimitsReader.name)
+  private readonly log?: ScopedLogger
   private readonly file = join(claudeConfigDir(), "rate-limits.json")
+
+  // Optional so a test can `new (class extends RateLimitsReader …)()` without DI.
+  constructor(@Optional() logger?: LoggerService) {
+    this.log = logger?.child(RateLimitsReader.name)
+  }
 
   /** Override point for tests; production reads the wall clock. */
   protected now(): number {
@@ -118,7 +124,7 @@ export class RateLimitsReader {
     try {
       raw = await fs.readFile(this.file, "utf8")
     } catch (err) {
-      this.logger.debug(`rate-limits capture not readable: ${(err as Error).message}`)
+      this.log?.debug("rate-limits capture not readable", { error: (err as Error).message })
       return UNKNOWN
     }
     return parseRateLimits(raw, this.now())

@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
 import { Kbd } from "../Kbd/Kbd";
 
@@ -42,9 +43,9 @@ export function SearchBar({
       className={cn(
         "flex items-center gap-2.5 w-full px-3.5 py-2 cursor-pointer",
         "bg-background border border-border rounded-sm text-foreground-faint",
-        "transition-colors outline-none",
+        "transition-colors",
         "hover:border-border-strong hover:text-foreground-dim",
-        "focus-visible:ring-2 focus-visible:ring-accent",
+        focusRing,
       )}
       data-testid={SearchBarTestId.Root}
       onClick={onClick}

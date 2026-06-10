@@ -11,9 +11,10 @@ import {
   getUsageTone,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 import { useLimitsQuery } from "../../../features/limits/queries";
+import { useNow } from "../../../hooks/useNow";
 import type { MessageKey } from "../../../i18n/keys";
+import { DAY_MS, HOUR_MS, MINUTE_MS } from "../../../utils/time";
 import { HudPanel } from "../../HudPanel/HudPanel";
 
 const CLAUDE_LIMITS: Limits = {
@@ -33,10 +34,6 @@ const toneVar: Record<Tone, string> = {
   bad: "var(--color-bad)",
   accent: "var(--color-accent)",
 };
-
-const MINUTE_MS = 60_000;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
 
 /**
  * Format the time from `now` until `resetsAt` (both epoch ms) as a compact
@@ -65,21 +62,6 @@ export function formatResetIn(
 
 /** Reset-countdown tick. */
 const NOW_TICK_MS = 30_000;
-
-/**
- * Current epoch ms, re-read every {@link NOW_TICK_MS} so the reset countdown
- * stays fresh between the (slower) limit polls. Keeping `Date.now()` in a lazy
- * initializer + interval, rather than calling it inline in render, satisfies the
- * React purity rule.
- */
-function useNow(intervalMs: number): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
 
 interface LimitPanelProps {
   /** Catalog key for the window's title (e.g. `limits.rollingLabel`). */

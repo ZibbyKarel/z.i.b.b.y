@@ -2,6 +2,7 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { createContext, useContext, useState } from "react";
 import { cn } from "../../utils/cn";
+import { focusRingInset } from "../../utils/focus";
 import { Row, Stack } from "../Stack/Stack";
 
 interface TabsContextValue {
@@ -81,8 +82,8 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
       aria-selected={isActive}
       className={cn(
         "bg-transparent border-none cursor-pointer font-mono text-base -mb-px px-[14px] pt-2 pb-[7px]",
-        "transition-[color,border-color] outline-none",
-        "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+        "transition-[color,border-color]",
+        focusRingInset,
         isActive
           ? "border-b-2 border-accent text-accent font-semibold"
           : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",

@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 
 export enum PressableTestId {
   Root = "pressable-root",
@@ -21,7 +22,8 @@ export function Pressable({ type = "button", ref, ...rest }: PressableProps) {
     <button
       className={cn(
         "cursor-pointer border-none bg-transparent p-0 text-inherit",
-        "outline-none rounded-sm focus-visible:ring-2 focus-visible:ring-accent",
+        "rounded-sm",
+        focusRing,
       )}
       data-testid={PressableTestId.Root}
       ref={ref}

@@ -1,15 +1,5 @@
 import type { Agent } from "@zibby/contracts";
 
-/** Slugify an agent name into a filesystem-safe id (diacritics stripped). */
-export const slugifyAgent = (name: string): string =>
-  name
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
 /** Backing file path for an agent id. */
 export const agentFile = (id: string): string => `~/zibby/agents/${id}.agent.md`;
 

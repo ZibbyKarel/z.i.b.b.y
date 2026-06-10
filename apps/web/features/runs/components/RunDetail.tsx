@@ -2,7 +2,8 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button, Container, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { type RunView, relativeTime } from "../run";
+import { relativeTime } from "../../../utils/time";
+import type { RunView } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunLogStream } from "./RunLogStream";
 

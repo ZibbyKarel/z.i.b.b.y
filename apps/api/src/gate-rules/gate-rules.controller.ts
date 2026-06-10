@@ -1,8 +1,13 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { gateRulesContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import { GateRuleNotFoundError, InvalidGateRuleIdError } from "./gate-rules.errors"
 import { GateRulesStorageService } from "./gate-rules.storage.service"
+
+const errors = makeErrorMapper("Gate rule", {
+  missing: [GateRuleNotFoundError, InvalidGateRuleIdError],
+})
 
 /**
  * Implements `gateRulesContract` — CRUD + reorder over the global gate-rule catalog
@@ -27,32 +32,14 @@ export class GateRulesController {
         return { status: 200, body: { rules } }
       },
 
-      updateGateRule: async ({ params: { id }, body }) => {
-        try {
-          return { status: 200, body: await this.store.update(id, body) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      updateGateRule: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.store.update(id, body)),
 
-      deleteGateRule: async ({ params: { id } }) => {
-        try {
+      deleteGateRule: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           await this.store.remove(id)
-          return { status: 200, body: { id } }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+          return { id }
+        }),
     })
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof GateRuleNotFoundError || error instanceof InvalidGateRuleIdError
-}
-
-function notFound(id: string): string {
-  return `Gate rule "${id}" not found`
 }

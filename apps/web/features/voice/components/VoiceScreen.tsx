@@ -4,32 +4,19 @@
    no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
-import { useApprovalsQuery } from "../../approvals/queries";
-import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { RUN_STATE } from "../../runs/run";
-import { useCatalog } from "../../../state/store";
-import { VoiceOrb, type VoiceState } from "./VoiceOrb";
+import { useNow } from "../../../hooks/useNow";
+import { MINUTE_MS, compactAgo } from "../../../utils/time";
+import { useVoiceData } from "../hooks/useVoiceData";
+import { useVoiceDemoSequence } from "../hooks/useVoiceDemoSequence";
+import { VoiceOrb } from "./VoiceOrb";
 import { VoicePanel } from "./VoicePanel";
 import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
 
 const ACCENT = "var(--color-accent)";
-
-interface DemoStep {
-  s: VoiceState;
-  ms: number;
-  reveal?: boolean;
-}
-
-/** Compact relative time ("now" / "3m" / "2h") for the activity panel. */
-function compactAgo(iso: string, now: number): string {
-  const min = Math.floor(Math.max(0, now - Date.parse(iso)) / 60_000);
-  if (min < 1) return "now";
-  if (min < 60) return `${min}m`;
-  return `${Math.floor(min / 60)}h`;
-}
 
 export interface VoiceScreenProps {
   onExit: () => void;
@@ -37,28 +24,19 @@ export interface VoiceScreenProps {
 
 /**
  * The voice-first interface — a JARVIS-style full-screen takeover with a central
- * animated orb, a state machine (idle → listening → thinking → speaking) driven
- * by the mic button for now, a fading conversation transcript and four ambient
- * glass panels fed by the live HUD data (running agents, pending approvals,
- * recent runs, quick-action skills). `Esc` (or the HUD button) returns to the HUD.
+ * animated orb, a fading conversation transcript and four ambient glass panels.
+ * Render-only: the session state machine lives in {@link useVoiceDemoSequence}
+ * and the live HUD data (running agents, pending approvals, recent runs,
+ * quick-action skills) in {@link useVoiceData}. `Esc` (or the HUD button)
+ * returns to the HUD.
  */
 export function VoiceScreen({ onExit }: VoiceScreenProps) {
   const t = useTranslations("voice");
 
-  const [state, setState] = useState<VoiceState>("idle");
-  const [revealed, setRevealed] = useState(false);
-  // A render-stable "now", ticked once a minute (Date.now() in render is impure).
-  const [now, setNow] = useState(() => Date.now());
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const { data: approvals = [] } = useApprovalsQuery();
-  const { runs } = useRunsQuery();
-  const { skills } = useCatalog();
-
-  const liveRuns = runs.filter((r) => r.status === "running");
-  const recent = [...runs]
-    .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
-    .slice(0, 3);
+  const { state, revealed, isActive, toggleMic } = useVoiceDemoSequence();
+  const { approvals, liveRuns, recent, skills } = useVoiceData();
+  // A render-stable "now" for the relative times, ticked once a minute.
+  const now = useNow(MINUTE_MS);
 
   const demoMessages: VoiceMessage[] = [
     { role: "user", text: t("demo.user1") },
@@ -77,40 +55,6 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [onExit]);
 
-  // Tick the clock / relative times once a minute.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => () => clearTimeout(timerRef.current ?? undefined), []);
-
-  // Mic drives a scripted demo cycle (until real speech recognition is wired in).
-  const handleMic = () => {
-    if (state !== "idle") {
-      clearTimeout(timerRef.current ?? undefined);
-      setState("idle");
-      return;
-    }
-    const seq: DemoStep[] = [
-      { s: "listening", ms: 2200 },
-      { s: "thinking", ms: 2600 },
-      { s: "speaking", ms: 3000, reveal: true },
-      { s: "idle", ms: 0 },
-    ];
-    let idx = 0;
-    const step = () => {
-      const cur = seq[idx];
-      if (!cur) return;
-      setState(cur.s);
-      if (cur.reveal) setRevealed(true);
-      idx += 1;
-      if (idx < seq.length) timerRef.current = setTimeout(step, cur.ms);
-    };
-    step();
-  };
-
-  const isActive = state !== "idle";
   const time = new Date(now);
   const timeStr = `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`;
 
@@ -341,7 +285,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
       <div className="relative z-[2] flex shrink-0 items-center justify-center gap-[14px] border-t border-border px-6 py-[15px]">
         <button
           className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full transition-all"
-          onClick={handleMic}
+          onClick={toggleMic}
           style={{
             background: isActive ? ACCENT : "rgba(91,141,239,0.10)",
             border: `1.5px solid ${ACCENT}`,

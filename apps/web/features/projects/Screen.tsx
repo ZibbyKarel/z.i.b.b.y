@@ -28,16 +28,7 @@ import {
   useDeleteProjectMutation,
   useUpdateProjectMutation,
 } from "./mutations";
-
-/** Slugify a free-form name into a filename-safe project id (mirrors agents). */
-const slug = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+import { slug } from "../../utils/slug";
 
 function newProjectDraft(category?: string): Project {
   return { id: "", name: "", path: "~/Projects/", desc: "", ctx: "work", category };

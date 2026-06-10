@@ -1,8 +1,14 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { projectsContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors"
 import { ProjectsStorageService } from "./projects.storage.service"
+
+const errors = makeErrorMapper("Project", {
+  missing: [ProjectNotFoundError],
+  conflict: [ProjectConflictError],
+})
 
 /**
  * Implements `projectsContract` against the JSON-manifest-backed storage service.
@@ -21,17 +27,7 @@ export class ProjectsController {
   @TsRestHandler(projectsContract)
   handler() {
     return tsRestHandler(projectsContract, {
-      createProject: async ({ body }) => {
-        try {
-          const project = await this.storage.create(body)
-          return { status: 201, body: project }
-        } catch (error) {
-          if (error instanceof ProjectConflictError) {
-            return { status: 409, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      createProject: ({ body }) => errors.created(() => this.storage.create(body)),
 
       listProjects: async () => ({ status: 200, body: await this.storage.list() }),
 
@@ -40,39 +36,16 @@ export class ProjectsController {
         body: await this.storage.search(q),
       }),
 
-      getProject: async ({ params: { id } }) => {
-        try {
-          return { status: 200, body: await this.storage.get(id) }
-        } catch (error) {
-          if (error instanceof ProjectNotFoundError) {
-            return { status: 404, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      getProject: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updateProject: async ({ params: { id }, body }) => {
-        try {
-          return { status: 200, body: await this.storage.update(id, body) }
-        } catch (error) {
-          if (error instanceof ProjectNotFoundError) {
-            return { status: 404, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      updateProject: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.storage.update(id, body)),
 
-      deleteProject: async ({ params: { id } }) => {
-        try {
+      deleteProject: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           await this.storage.delete(id)
-          return { status: 200, body: { id } }
-        } catch (error) {
-          if (error instanceof ProjectNotFoundError) {
-            return { status: 404, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+          return { id }
+        }),
     })
   }
 }

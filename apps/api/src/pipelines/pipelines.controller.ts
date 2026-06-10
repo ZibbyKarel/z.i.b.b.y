@@ -1,6 +1,7 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { pipelinesContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import {
   InvalidPipelineError,
   InvalidPipelineIdError,
@@ -8,6 +9,17 @@ import {
   PipelineNotFoundError,
 } from "./pipelines.errors"
 import { PipelinesStorageService } from "./pipelines.storage.service"
+
+const errors = makeErrorMapper("Pipeline", {
+  missing: [PipelineNotFoundError, InvalidPipelineIdError],
+  conflict: [PipelineConflictError],
+})
+
+/** A dangling loop target (caught by the schema/storage) maps to a 422. */
+const invalid = (error: unknown) =>
+  error instanceof InvalidPipelineError
+    ? ({ status: 422, body: { message: error.message } } as const)
+    : undefined
 
 /**
  * Implements `pipelinesContract` against the file-backed storage service. A
@@ -21,60 +33,20 @@ export class PipelinesController {
   @TsRestHandler(pipelinesContract)
   handler() {
     return tsRestHandler(pipelinesContract, {
-      createPipeline: async ({ body }) => {
-        try {
-          return { status: 201, body: await this.storage.create(body) }
-        } catch (error) {
-          if (error instanceof PipelineConflictError) {
-            return { status: 409, body: { message: error.message } }
-          }
-          if (error instanceof InvalidPipelineError) {
-            return { status: 422, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      createPipeline: ({ body }) => errors.created(() => this.storage.create(body), invalid),
 
       listPipelines: async () => ({ status: 200, body: await this.storage.list() }),
 
-      getPipeline: async ({ params: { id } }) => {
-        try {
-          return { status: 200, body: await this.storage.get(id) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      getPipeline: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updatePipeline: async ({ params: { id }, body }) => {
-        try {
-          return { status: 200, body: await this.storage.update(id, body) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          if (error instanceof InvalidPipelineError) {
-            return { status: 422, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      updatePipeline: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.storage.update(id, body), invalid),
 
-      deletePipeline: async ({ params: { id } }) => {
-        try {
+      deletePipeline: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           await this.storage.delete(id)
-          return { status: 200, body: { id } }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+          return { id }
+        }),
     })
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof PipelineNotFoundError || error instanceof InvalidPipelineIdError
-}
-
-function notFound(id: string): string {
-  return `Pipeline "${id}" not found`
 }

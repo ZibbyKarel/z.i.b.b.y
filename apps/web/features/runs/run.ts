@@ -116,17 +116,3 @@ export function runGlyph(
 ): IconName {
   return glyphById.get(run.owner) ?? KIND_GLYPH[run.kind];
 }
-
-/** Human relative time like "před 3 m" / "3 m ago" — coarse, for the feed. */
-export function relativeTime(
-  iso: string,
-  now: number,
-  ago: (n: number, unit: string) => string,
-): string {
-  const diffMs = Math.max(0, now - Date.parse(iso));
-  const min = Math.floor(diffMs / 60000);
-  if (min < 1) return ago(0, "m");
-  if (min < 60) return ago(min, "m");
-  const h = Math.floor(min / 60);
-  return ago(h, "h");
-}

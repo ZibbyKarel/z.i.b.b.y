@@ -1,4 +1,5 @@
 import { type ReactNode, type Ref, useId } from "react";
+import { focusRing } from "../../utils/focus";
 import { Stack } from "../Stack/Stack";
 
 export enum FieldTestId {
@@ -50,8 +51,8 @@ const errorClass = "font-mono text-xs text-bad";
 /** Shared control chrome for the text-like inputs (`TextInput`, `TextArea`, `Select`). */
 export const fieldControlClass =
   "w-full rounded border border-border bg-background px-3.5 py-2.5 font-sans text-md " +
-  "text-foreground outline-none transition-colors placeholder:text-foreground-faint " +
-  "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent " +
+  "text-foreground transition-colors placeholder:text-foreground-faint " +
+  `${focusRing} focus-visible:border-accent/50 ` +
   'aria-[invalid="true"]:border-bad aria-[invalid="true"]:focus-visible:ring-bad';
 
 /**

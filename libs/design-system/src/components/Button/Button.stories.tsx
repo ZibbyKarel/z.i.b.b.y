@@ -9,9 +9,9 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     intent: {
       control: "select",
-      options: ["run", "solid", "ghost", "approve", "reject"],
+      options: ["run", "solid", "ghost", "outline", "approve", "reject"],
     },
-    size: { control: "select", options: ["sm", "md", "lg"] },
+    size: { control: "select", options: ["xs", "sm", "md", "lg"] },
   },
   args: { children: "Spustit", intent: "run", size: "md" },
 };
@@ -36,6 +36,9 @@ export const Overview: Story = {
           <Button icon="edit" intent="ghost">
             Edit raw
           </Button>
+          <Button icon="mic" intent="outline" size="xs">
+            Voice
+          </Button>
           <Button icon="check" intent="approve">
             Schválit
           </Button>
@@ -49,6 +52,9 @@ export const Overview: Story = {
           sizes
         </Typography>
         <div className="flex flex-wrap items-center gap-3">
+          <Button icon="play" intent="run" size="xs">
+            xs
+          </Button>
           <Button icon="play" intent="run" size="sm">
             sm
           </Button>

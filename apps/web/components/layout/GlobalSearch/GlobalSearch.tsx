@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SearchMenu, type SearchMenuSection } from "@zibby/design-system";
@@ -8,6 +8,7 @@ import { useAgentsSearchQuery } from "../../../features/agents/queries";
 import { useSkillsSearchQuery } from "../../../features/skills/queries";
 import { useProjectsSearchQuery } from "../../../features/projects/queries";
 import { useAutomationsSearchQuery } from "../../../features/automations/queries";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { useCatalog } from "../../../state/store";
 
 /** Section ids double as the navigation target for a chosen result. */
@@ -21,16 +22,6 @@ const ROUTES = {
 
 /** How long to wait after the last keystroke before hitting the search APIs. */
 const DEBOUNCE_MS = 200;
-
-/** Debounce a fast-changing value so we don't fire a request on every keystroke. */
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
-}
 
 /**
  * Topbar global search. Aggregates the per-resource `search` endpoints (agents,

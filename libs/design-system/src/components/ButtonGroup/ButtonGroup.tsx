@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 import { Stack } from "../Stack/Stack";
 import { Icon } from "../Icon/Icon";
 
@@ -23,8 +24,8 @@ const toneSwatch: Record<ButtonGroupTone, string> = {
 };
 
 const toneActive: Record<ButtonGroupTone, string> = {
-  home: "bg-home text-background shadow-[0_0_14px_rgba(240,180,41,0.33)]",
-  work: "bg-work text-background shadow-[0_0_14px_rgba(91,141,239,0.33)]",
+  home: "bg-home text-background shadow-[0_0_14px_color-mix(in_srgb,var(--color-home)_33%,transparent)]",
+  work: "bg-work text-background shadow-[0_0_14px_color-mix(in_srgb,var(--color-work)_33%,transparent)]",
   accent: "bg-accent text-accent-contrast",
 };
 
@@ -80,7 +81,7 @@ export function ButtonGroup({
             aria-pressed={active}
             className={cn(
               "inline-flex items-center gap-2 rounded-sm border-none px-3 py-1.5 font-mono text-base font-semibold transition-all",
-              "outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              focusRing,
               active
                 ? (o.tone ? toneActive[o.tone] : "bg-accent text-accent-contrast")
                 : "bg-transparent text-foreground-dim hover:text-foreground",
@@ -121,7 +122,10 @@ export function ButtonGroup({
       {onAdd && (
         <button
           aria-label={addLabel}
-          className="flex px-2 py-1.5 text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+          className={cn(
+            "flex px-2 py-1.5 text-foreground-faint hover:text-foreground",
+            focusRing,
+          )}
           data-testid={ButtonGroupTestId.Add}
           onClick={onAdd}
           type="button"

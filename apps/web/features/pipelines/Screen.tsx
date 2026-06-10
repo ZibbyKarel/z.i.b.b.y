@@ -22,6 +22,7 @@ import { PhaseChain } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
 import { useEntityForm } from "../../state/forms";
+import { slug } from "../../utils/slug";
 import { useAgentsQuery } from "../agents/queries";
 import { usePipelinesQuery } from "./queries";
 import { useCreatePipelineMutation, useStartPipelineRunMutation } from "./mutations";
@@ -30,14 +31,6 @@ export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
   selectedId?: string;
 }
-
-/** Slugify a free-form name into a filename-safe pipeline id. */
-const slug = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "novy";
 
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
@@ -60,7 +53,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
       glyph={form.glyph}
       onClose={() => setAdding(false)}
       onSubmit={(values) => {
-        const id = slug(values.name ?? "");
+        const id = slug(values.name ?? "", "novy");
         const desc = values.desc?.trim() || t("defaults.pipeline");
         const budget = Number.parseInt(values.budget ?? "", 10);
         createPipeline.mutate(

@@ -2,6 +2,7 @@
 
 import { type InputHTMLAttributes, type Ref, useRef, useState } from "react";
 import { cn } from "../../../utils/cn";
+import { focusRingInset } from "../../../utils/focus";
 import { Icon } from "../../Icon/Icon";
 import { Field } from "../Field";
 
@@ -121,12 +122,12 @@ export function FilePickerField({
           </span>
           <button
             aria-label="Procházet soubory"
-            className={
-              "shrink-0 cursor-pointer self-stretch border-l border-border px-3.5 " +
-              "bg-transparent font-mono text-sm font-semibold text-accent transition-colors " +
-              "hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 " +
-              "focus-visible:ring-inset focus-visible:ring-accent"
-            }
+            className={cn(
+              "shrink-0 cursor-pointer self-stretch border-l border-border px-3.5",
+              "bg-transparent font-mono text-sm font-semibold text-accent transition-colors",
+              "hover:bg-accent/10",
+              focusRingInset,
+            )}
             data-testid={FilePickerFieldTestId.Trigger}
             onClick={() => ownRef.current?.click()}
             type="button"

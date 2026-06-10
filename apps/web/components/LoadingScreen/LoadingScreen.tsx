@@ -261,9 +261,9 @@ function CircuitTraces() {
       aria-hidden="true"
       className="pointer-events-none absolute opacity-55"
       preserveAspectRatio="xMidYMid meet"
+      style={{ width: "100vw", height: "100vh", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
       viewBox="0 0 1000 1000"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ width: "100vw", height: "100vh", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
     >
       <defs>
         <filter id="loading-glow">

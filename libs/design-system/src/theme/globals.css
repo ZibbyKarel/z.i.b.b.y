@@ -54,6 +54,8 @@
   /* ---- Borders ----------------------------------------------------------- */
   --color-border:           rgba(255,255,255,0.07);
   --color-border-strong:    rgba(255,255,255,0.12);
+  /* Darkness of the modal backdrop (Dialog overlay). */
+  --color-overlay:          rgba(0,0,0,0.55);
 
   /* ---- Context accent (home=blue default; overridden by contextTokens) --- */
   --color-accent:           #5b8def;
@@ -64,11 +66,16 @@
   /* ---- Named accents ----------------------------------------------------- */
   --color-home:             #5b8def;
   --color-work:             #5b8def;
+  --color-home-glow:        #f0b429;
+  --color-work-glow:        #5b8def;
 
   /* ---- Semantic status --------------------------------------------------- */
   --color-ok:               #39d98a;
   --color-warn:             #f0b429;
   --color-bad:              #ff6b6b;
+  --color-ok-glow:          #39d98a;
+  --color-warn-glow:        #f0b429;
+  --color-bad-glow:         #ff6b6b;
 
   /* ---- Model / thinking badges ------------------------------------------ */
   --color-model-opus:       #b07cff;

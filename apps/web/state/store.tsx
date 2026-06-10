@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { Integration, Pipeline, Skill } from "../domain";
+import { slug } from "../utils/slug";
 import type { EntityFormValues } from "../components/EntityFormModal/EntityFormModal";
 
 /**
@@ -39,18 +40,11 @@ const EMPTY: CatalogState = {
   pipelines: [],
 };
 
-const slug = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "novy";
-
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CatalogState>(EMPTY);
 
   const addSkill = useCallback((values: EntityFormValues, fallbackDesc: string) => {
-    const id = slug(values.name ?? "");
+    const id = slug(values.name ?? "", "novy");
     setState((s) => ({
       ...s,
       skills: [
@@ -67,7 +61,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addIntegration = useCallback((values: EntityFormValues, fallbackDesc: string) => {
-    const id = slug(values.name ?? "");
+    const id = slug(values.name ?? "", "novy");
     setState((s) => ({
       ...s,
       integrations: [
@@ -85,7 +79,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addPipeline = useCallback((values: EntityFormValues, fallbackDesc: string) => {
-    const id = slug(values.name ?? "");
+    const id = slug(values.name ?? "", "novy");
     const budget = Number.parseInt(values.budget ?? "", 10);
     setState((s) => ({
       ...s,

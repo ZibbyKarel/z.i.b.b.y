@@ -1,6 +1,7 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { automationsContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import {
   AutomationConflictError,
   AutomationNotFoundError,
@@ -8,6 +9,11 @@ import {
   InvalidAutomationIdError,
 } from "./automations.storage.service"
 import { SchedulerService } from "./scheduler.service"
+
+const errors = makeErrorMapper("Automation", {
+  missing: [AutomationNotFoundError, InvalidAutomationIdError],
+  conflict: [AutomationConflictError],
+})
 
 /** Implements `automationsContract` against the storage + scheduler. */
 @Controller()
@@ -20,16 +26,7 @@ export class AutomationsController {
   @TsRestHandler(automationsContract)
   handler() {
     return tsRestHandler(automationsContract, {
-      createAutomation: async ({ body }) => {
-        try {
-          return { status: 201, body: await this.storage.create(body) }
-        } catch (error) {
-          if (error instanceof AutomationConflictError) {
-            return { status: 409, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      createAutomation: ({ body }) => errors.created(() => this.storage.create(body)),
 
       listAutomations: async () => ({ status: 200, body: await this.storage.list() }),
 
@@ -38,50 +35,19 @@ export class AutomationsController {
         body: await this.storage.search(q),
       }),
 
-      getAutomation: async ({ params: { id } }) => {
-        try {
-          return { status: 200, body: await this.storage.get(id) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      getAutomation: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updateAutomation: async ({ params: { id }, body }) => {
-        try {
-          return { status: 200, body: await this.storage.update(id, body) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      updateAutomation: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.storage.update(id, body)),
 
-      deleteAutomation: async ({ params: { id } }) => {
-        try {
+      deleteAutomation: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           await this.storage.delete(id)
-          return { status: 200, body: { id } }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+          return { id }
+        }),
 
-      triggerAutomation: async ({ params: { id } }) => {
-        try {
-          return { status: 200, body: { runRef: await this.scheduler.trigger(id) } }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      triggerAutomation: ({ params: { id } }) =>
+        errors.or404(id, async () => ({ runRef: await this.scheduler.trigger(id) })),
     })
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof AutomationNotFoundError || error instanceof InvalidAutomationIdError
-}
-
-function notFound(id: string): string {
-  return `Automation "${id}" not found`
 }

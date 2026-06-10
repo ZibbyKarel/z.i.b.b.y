@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
 import type { IconName } from "../Icon/Icon";
 import type { Size } from "../../tokens";
@@ -94,7 +95,10 @@ export function IconTile({
         filled ? toneClass[tone] : outlineToneClass[tone],
         glow && "shadow-glow-accent",
         interactive &&
-          "cursor-pointer outline-none transition-colors hover:border-accent/35 hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent",
+          cn(
+            "cursor-pointer transition-colors hover:border-accent/35 hover:text-foreground",
+            focusRing,
+          ),
       )}
       data-testid={IconTileTestId.Root}
       ref={ref as Ref<HTMLSpanElement & HTMLDivElement & HTMLButtonElement>}

@@ -26,14 +26,7 @@ import {
   useCreateSkillMutation,
   useDeleteSkillCategoryMutation,
 } from "./mutations";
-
-/** Slugify a free-form name into a filename-safe skill id. */
-const slug = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "novy";
+import { slug } from "../../utils/slug";
 
 export function Screen() {
   const t = useTranslations("skills");
@@ -148,7 +141,7 @@ export function Screen() {
           categories={categories.map((c) => c.name)}
           onClose={() => setAdding(false)}
           onSubmit={({ name, desc, category, glyph, instructions }) => {
-            const id = slug(name);
+            const id = slug(name, "novy");
             // Description and body both fall back so the SKILL.md is never empty,
             // even when the user creates a skill from name alone.
             const safeDesc = desc || tk("defaults.skill");

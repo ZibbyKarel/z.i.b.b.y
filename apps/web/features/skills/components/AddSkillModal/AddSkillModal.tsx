@@ -4,13 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Card,
   Container,
   Dialog,
-  Divider,
   DropZoneField,
   Grid,
-  Icon,
   type IconName,
   IconTile,
   Stack,
@@ -30,14 +27,8 @@ import {
 } from "@zibby/forms";
 import { z } from "zod";
 import { AGENT_GLYPHS } from "../../../../state/config";
-
-/** Extensions the directory tab ingests — `.md` often carries an empty MIME type,
- *  so accepted files are matched by name, never by the browser's content type. */
-const MD_EXTENSIONS = /\.(md|markdown|txt)$/i;
-
-/** A skill's content can be merged from many files; the design joins them with a
- *  horizontal rule so the boundaries survive in the editor. */
-const MERGE_SEPARATOR = "\n\n---\n\n";
+import { useSkillFileList } from "../../hooks/useSkillFileList";
+import { SkillFileList } from "./SkillFileList";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -64,25 +55,12 @@ export interface AddSkillModalProps {
   onSubmit: (values: AddSkillSubmit) => void;
 }
 
-/** A file read from a dropped folder, awaiting selection before import. */
-interface LoadedFile {
-  /** Relative path within the dropped folder (`webkitRelativePath`-style). */
-  path: string;
-  name: string;
-  content: string;
-  size: number;
-  checked: boolean;
-}
-
-/** react-dropzone tags each `File` with its in-folder path; the base `File` type doesn't. */
-type FileWithPath = File & { path?: string };
-
 export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSkillModalProps) {
   const t = useTranslations("forms.skill");
   const tk = useTranslations();
   const [glyph, setGlyph] = useState<IconName>("spark");
   const [contentTab, setContentTab] = useState("directory");
-  const [files, setFiles] = useState<LoadedFile[]>([]);
+  const { files, selectedCount, handleDrop, toggleFile, mergeSelected } = useSkillFileList();
 
   const { renderForm, submit, form } = useFormControls<AddSkillFormValues>({
     defaultValues: { name: "", desc: "", category: "", instructions: "" },
@@ -102,30 +80,9 @@ export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSki
 
   const canSubmit = form.formState.isValid && !pending;
 
-  /** Read dropped files, keep only Markdown-ish ones, sort by path. Dropping a
-   *  folder makes react-dropzone walk its subfolders, so this handles directories. */
-  const handleDrop = (accepted: File[]) => {
-    const mdFiles = accepted.filter((f) => MD_EXTENSIONS.test(f.name));
-    if (mdFiles.length === 0) return;
-    void Promise.all(
-      mdFiles.map(async (f): Promise<LoadedFile> => {
-        const path = (f as FileWithPath).path?.replace(/^\.?\//, "") ?? f.name;
-        return { path, name: f.name, content: await f.text(), size: f.size, checked: true };
-      }),
-    ).then((loaded) => setFiles(loaded.sort((a, b) => a.path.localeCompare(b.path))));
-  };
-
-  const toggleFile = (path: string) =>
-    setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, checked: !f.checked } : f)));
-
-  const selectedCount = files.filter((f) => f.checked).length;
-
   /** Merge the checked files into the editor body and jump to the editor tab. */
   const importToEditor = () => {
-    const merged = files
-      .filter((f) => f.checked)
-      .map((f) => f.content)
-      .join(MERGE_SEPARATOR);
+    const merged = mergeSelected();
     if (!merged) return;
     form.setValue("instructions", merged, { shouldDirty: true, shouldValidate: true });
     setContentTab("editor");
@@ -235,86 +192,12 @@ export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSki
                 />
 
                 {files.length > 0 && (
-                  <Stack gap="100">
-                    <Stack align="center" direction="row" gap="100">
-                      <Container grow minW0>
-                        <Typography mono size="xs" type="note" variant="tertiary">
-                          {t("content.directory.summary", {
-                            total: files.length,
-                            selected: selectedCount,
-                          })}
-                        </Typography>
-                      </Container>
-                      <Button
-                        disabled={selectedCount === 0}
-                        icon="check"
-                        intent="run"
-                        onClick={importToEditor}
-                        size="sm"
-                        type="button"
-                      >
-                        {t("content.directory.import")}
-                      </Button>
-                    </Stack>
-
-                    <Card background="background" radius="sm">
-                      <Container maxHeight="18rem" overflowY="auto">
-                        <Stack>
-                          {files.map((f, i) => {
-                            const folder = f.path.includes("/")
-                              ? f.path.split("/").slice(0, -1).join("/")
-                              : "";
-                            return (
-                              <Container key={f.path}>
-                                {i > 0 && <Divider />}
-                                <Container padding={["100", "150"]}>
-                                  <Stack align="center" direction="row" gap="100">
-                                    <IconTile
-                                      interactive
-                                      aria-checked={f.checked}
-                                      aria-label={f.name}
-                                      as="button"
-                                      filled={f.checked}
-                                      glyph={f.checked ? "check" : undefined}
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        toggleFile(f.path);
-                                      }}
-                                      role="checkbox"
-                                      size="sm"
-                                      tone={f.checked ? "accent" : "neutral"}
-                                    />
-                                    <Icon name="doc" size="sm" tone="faint" />
-                                    <Container grow minW0>
-                                      <Typography
-                                        mono
-                                        truncate
-                                        size="sm"
-                                        type="note"
-                                        variant={f.checked ? "primary" : "tertiary"}
-                                      >
-                                        {f.name}
-                                      </Typography>
-                                      {folder && (
-                                        <Typography mono truncate size="xs" type="note" variant="tertiary">
-                                          {folder}
-                                        </Typography>
-                                      )}
-                                    </Container>
-                                    <Typography mono size="xs" type="note" variant="tertiary">
-                                      {t("content.directory.fileSize", {
-                                        kb: (f.size / 1024).toFixed(1),
-                                      })}
-                                    </Typography>
-                                  </Stack>
-                                </Container>
-                              </Container>
-                            );
-                          })}
-                        </Stack>
-                      </Container>
-                    </Card>
-                  </Stack>
+                  <SkillFileList
+                    files={files}
+                    onImport={importToEditor}
+                    onToggle={toggleFile}
+                    selectedCount={selectedCount}
+                  />
                 )}
               </Stack>
             </TabPanel>

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { cn } from "../../utils/cn";
+import { focusRingInset } from "../../utils/focus";
 
 interface AccordionContextValue {
   single: boolean;
@@ -81,7 +82,7 @@ export function AccordionSummary({
       className={cn(
         "flex w-full items-center justify-between px-3.5 py-2.5",
         "bg-transparent border-none cursor-pointer font-mono font-medium text-base text-foreground text-left",
-        "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+        focusRingInset,
         expanded && "border-b border-border",
       )}
       data-testid={AccordionTestId.Summary}

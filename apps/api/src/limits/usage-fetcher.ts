@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { type RateLimitSnapshot, clampPct } from "./rate-limits.reader"
 
 const execFileAsync = promisify(execFile)
@@ -59,7 +60,12 @@ const KEYCHAIN_SERVICE = "Claude Code-credentials"
  */
 @Injectable()
 export class UsageFetcher {
-  private readonly logger = new Logger(UsageFetcher.name)
+  private readonly log?: ScopedLogger
+
+  // Optional so a test can `new (class extends UsageFetcher …)()` without DI.
+  constructor(@Optional() logger?: LoggerService) {
+    this.log = logger?.child(UsageFetcher.name)
+  }
 
   protected now(): number {
     return Date.now()
@@ -78,7 +84,7 @@ export class UsageFetcher {
         ?.accessToken
       return typeof token === "string" && token.length > 0 ? token : null
     } catch (err) {
-      this.logger.debug(`oauth token not readable: ${(err as Error).message}`)
+      this.log?.debug("oauth token not readable", { error: (err as Error).message })
       return null
     }
   }
@@ -119,7 +125,7 @@ export class UsageFetcher {
       await res.text().catch(() => undefined)
       return parseUsageHeaders(res.headers, this.now())
     } catch (err) {
-      this.logger.debug(`usage fetch failed: ${(err as Error).message}`)
+      this.log?.debug("usage fetch failed", { error: (err as Error).message })
       return null
     }
   }

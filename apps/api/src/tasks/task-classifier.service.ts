@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common"
 import {
   type ClassifyTaskInput,
   type TaskRouting,
@@ -6,6 +6,7 @@ import {
 } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { KeywordScorer } from "./keyword-scorer"
 import { type RoutableTarget, TASK_ROUTER, type TaskRouter } from "./task-router"
 
@@ -23,14 +24,17 @@ import { type RoutableTarget, TASK_ROUTER, type TaskRouter } from "./task-router
  */
 @Injectable()
 export class TaskClassifierService {
-  private readonly logger = new Logger(TaskClassifierService.name)
+  private readonly log: ScopedLogger
 
   constructor(
     private readonly agents: AgentsStorageService,
     private readonly pipelines: PipelinesStorageService,
     @Inject(TASK_ROUTER) private readonly router: TaskRouter,
     private readonly fallback: KeywordScorer,
-  ) {}
+    logger: LoggerService,
+  ) {
+    this.log = logger.child(TaskClassifierService.name)
+  }
 
   async classify(input: ClassifyTaskInput): Promise<TaskRouting | null> {
     const candidates = await this.buildCandidates()
@@ -40,7 +44,7 @@ export class TaskClassifierService {
       const routed = await this.router.route(input, candidates)
       if (routed && this.isCoherent(routed, candidates)) return routed
     } catch (err) {
-      this.logger.warn(`router failed, using keyword fallback: ${(err as Error).message}`)
+      this.log.warn("router failed, using keyword fallback", { error: (err as Error).message })
     }
     return this.fallback.score(input, candidates)
   }

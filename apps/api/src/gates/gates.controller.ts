@@ -3,7 +3,12 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { type GateRuleInput, gatesContract } from "@zibby/contracts"
 import { AgentNotFoundError, InvalidAgentIdError } from "../agents/agents.errors"
 import { AgentsStorageService } from "../agents/agents.storage.service"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import { GateEvaluatorService } from "./gate-evaluator.service"
+
+const errors = makeErrorMapper("Agent", {
+  missing: [AgentNotFoundError, InvalidAgentIdError],
+})
 
 /**
  * Implements `gatesContract`. Lives in the agents module so it can load agents
@@ -29,16 +34,12 @@ export class GatesController {
         return { status: 200, body: this.evaluator.evaluate(rules, action) }
       },
 
-      getAgentGates: async ({ params: { id } }) => {
-        try {
+      getAgentGates: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           const inherited = await this.evaluator.floor()
           const own = this.evaluator.ownRules(await this.policyInput(id))
-          return { status: 200, body: { inherited, own } }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+          return { inherited, own }
+        }),
 
       replaceAgentGates: async ({ params: { id }, body: { gates } }) => {
         try {
@@ -51,7 +52,7 @@ export class GatesController {
           const own = this.evaluator.ownRules({ gates })
           return { status: 200, body: { inherited: floor, own } }
         } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
+          if (errors.isMissing(error)) return errors.notFound(id)
           throw error
         }
       },
@@ -62,12 +63,4 @@ export class GatesController {
     const agent = await this.agents.get(id)
     return { gates: agent.gates, requires_approval: agent.requires_approval }
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof AgentNotFoundError || error instanceof InvalidAgentIdError
-}
-
-function notFound(id: string): string {
-  return `Agent "${id}" not found`
 }

@@ -1,6 +1,8 @@
 "use client";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
+import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
 import { Row } from "../Stack/Stack";
 
 export type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl";
@@ -67,7 +69,8 @@ export function Dialog({
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = "";
-        prev?.focus();
+        // The opener may have unmounted while the dialog was up.
+        if (prev?.isConnected) prev.focus();
       };
     }
   }, [open]);
@@ -76,7 +79,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.55)] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] backdrop-blur-sm"
       data-testid={DialogTestId.Overlay}
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
       role="presentation"
@@ -117,7 +120,10 @@ function DialogHeader({
         {onClose && (
           <button
             aria-label={closeLabel}
-            className="bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+            className={cn(
+              "bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base hover:text-foreground",
+              focusRing,
+            )}
             data-testid={DialogTestId.CloseButton}
             onClick={onClose}
           >

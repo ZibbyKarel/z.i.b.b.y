@@ -14,12 +14,12 @@ export type DotTone =
 
 const toneClass: Record<DotTone, string> = {
   accent: "bg-accent shadow-[0_0_7px_var(--color-accent-glow)]",
-  ok: "bg-ok shadow-[0_0_7px_#39d98a]",
-  warn: "bg-warn shadow-[0_0_7px_#f0b429]",
-  bad: "bg-bad shadow-[0_0_7px_#ff6b6b]",
-  run: "bg-work shadow-[0_0_7px_#5b8def]",
-  home: "bg-home shadow-[0_0_7px_#f0b429]",
-  work: "bg-work shadow-[0_0_7px_#5b8def]",
+  ok: "bg-ok shadow-[0_0_7px_var(--color-ok-glow)]",
+  warn: "bg-warn shadow-[0_0_7px_var(--color-warn-glow)]",
+  bad: "bg-bad shadow-[0_0_7px_var(--color-bad-glow)]",
+  run: "bg-work shadow-[0_0_7px_var(--color-work-glow)]",
+  home: "bg-home shadow-[0_0_7px_var(--color-home-glow)]",
+  work: "bg-work shadow-[0_0_7px_var(--color-work-glow)]",
   faint: "bg-foreground-faint",
 };
 

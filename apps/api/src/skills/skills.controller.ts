@@ -1,8 +1,14 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { skillsContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
 import { InvalidSkillIdError, SkillConflictError, SkillNotFoundError } from "./skills.errors"
 import { SkillsStorageService } from "./skills.storage.service"
+
+const errors = makeErrorMapper("Skill", {
+  missing: [SkillNotFoundError, InvalidSkillIdError],
+  conflict: [SkillConflictError],
+})
 
 /**
  * Implements `skillsContract` against the file-backed storage service. Mirrors
@@ -16,17 +22,7 @@ export class SkillsController {
   @TsRestHandler(skillsContract)
   handler() {
     return tsRestHandler(skillsContract, {
-      createSkill: async ({ body }) => {
-        try {
-          const skill = await this.storage.create(body)
-          return { status: 201, body: skill }
-        } catch (error) {
-          if (error instanceof SkillConflictError) {
-            return { status: 409, body: { message: error.message } }
-          }
-          throw error
-        }
-      },
+      createSkill: ({ body }) => errors.created(() => this.storage.create(body)),
 
       listSkills: async () => ({ status: 200, body: await this.storage.list() }),
 
@@ -35,41 +31,16 @@ export class SkillsController {
         body: await this.storage.search(q),
       }),
 
-      getSkill: async ({ params: { id } }) => {
-        try {
-          return { status: 200, body: await this.storage.get(id) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      getSkill: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updateSkill: async ({ params: { id }, body }) => {
-        try {
-          return { status: 200, body: await this.storage.update(id, body) }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+      updateSkill: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.storage.update(id, body)),
 
-      deleteSkill: async ({ params: { id } }) => {
-        try {
+      deleteSkill: ({ params: { id } }) =>
+        errors.or404(id, async () => {
           await this.storage.delete(id)
-          return { status: 200, body: { id } }
-        } catch (error) {
-          if (isMissing(error)) return { status: 404, body: { message: notFound(id) } }
-          throw error
-        }
-      },
+          return { id }
+        }),
     })
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof SkillNotFoundError || error instanceof InvalidSkillIdError
-}
-
-function notFound(id: string): string {
-  return `Skill "${id}" not found`
 }

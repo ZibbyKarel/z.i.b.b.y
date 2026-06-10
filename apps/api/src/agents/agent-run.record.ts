@@ -13,6 +13,12 @@ export const AgentRunRecordSchema = AgentRunSchema.extend({
   // test, which writes a bare AgentRun) still parse as agent runs.
   kind: z.literal("agent").default("agent"),
   pgid: z.number().int().optional(),
+  /**
+   * The `traceId` of the request that started the run. A mid-run gate fires long
+   * after that request returned (from child output), so the origin is persisted
+   * with the run to re-link its background logs — surviving an API restart.
+   */
+  traceId: z.string().optional(),
 })
 
 export type AgentRunRecord = z.infer<typeof AgentRunRecordSchema> & BaseRun
@@ -33,6 +39,7 @@ export const agentStrategy: KindStrategy<AgentRunRecord> = {
       prompt: String(spec.extra.prompt ?? ""),
       project: String(spec.extra.project ?? ""),
       files: Array.isArray(spec.extra.files) ? spec.extra.files.map(String) : [],
+      ...(spec.extra.traceId ? { traceId: String(spec.extra.traceId) } : {}),
     }
   },
 }

@@ -1,4 +1,5 @@
 import { cn } from "../../../utils/cn";
+import { focusRing } from "../../../utils/focus";
 import { Stack } from "../../Stack/Stack";
 import { Field, type SelectOption } from "../Field";
 
@@ -44,8 +45,8 @@ export function SegmentPickerField({
               <button
                 aria-checked={on}
                 className={cn(
-                  "rounded-sm border px-3 py-1.5 font-mono text-sm outline-none transition-colors",
-                  "focus-visible:ring-2 focus-visible:ring-accent",
+                  "rounded-sm border px-3 py-1.5 font-mono text-sm transition-colors",
+                  focusRing,
                   on
                     ? "border-accent bg-accent text-accent-contrast"
                     : "border-border bg-transparent text-foreground-dim hover:text-foreground",

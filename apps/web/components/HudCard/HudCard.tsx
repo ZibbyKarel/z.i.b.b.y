@@ -16,8 +16,12 @@ export interface HudCardProps {
   title: string;
   /** Icon rendered in the leading tile. Defaults to "bot". */
   glyph?: IconName;
+  /** Mono meta line right under the title (a path, an id…), single-line truncated. */
+  subtitle?: string;
   /** Secondary text under the title, clamped to two lines. */
   description?: ReactNode;
+  /** Trailing node in the header row (a status chip…), aligned to the top right. */
+  aside?: ReactNode;
   /**
    * Rows of badges. Each inner array wraps onto its own line; rows that hold
    * no truthy node are skipped, so callers can pass conditional chips inline.
@@ -47,7 +51,9 @@ export interface HudCardProps {
 export function HudCard({
   title,
   glyph,
+  subtitle,
   description,
+  aside,
   badges,
   onOpen,
   openLabel,
@@ -71,6 +77,11 @@ export function HudCard({
               <Typography mono truncate size="md" type="note" weight="semibold">
                 {title}
               </Typography>
+              {subtitle != null && subtitle !== "" && (
+                <Typography mono truncate size="caption" type="note" variant="tertiary">
+                  {subtitle}
+                </Typography>
+              )}
               {description != null && description !== "" && (
                 <>
                   {/* 2-line clamp: -webkit-line-clamp has no DS equivalent. */}
@@ -84,6 +95,7 @@ export function HudCard({
               )}
             </Stack>
           </Container>
+          {aside}
         </Stack>
 
         {rows.map((row, i) => (

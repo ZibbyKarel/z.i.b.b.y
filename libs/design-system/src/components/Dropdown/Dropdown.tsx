@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
+import { focusRingInset } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
 
 export interface DropdownOption<T extends string = string> {
@@ -135,7 +136,7 @@ export function Dropdown<T extends string = string>({
                   className={cn(
                     "w-full flex items-center gap-2.5 px-[11px] py-[9px]",
                     "rounded-sm cursor-pointer border-none text-left",
-                    "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+                    focusRingInset,
                     "transition-colors duration-100",
                     selected ? "bg-accent-dim" : "bg-transparent hover:bg-surface",
                   )}

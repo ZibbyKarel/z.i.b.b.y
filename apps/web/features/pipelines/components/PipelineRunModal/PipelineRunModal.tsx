@@ -1,5 +1,5 @@
 "use client";
-import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts";
+import type { Agent } from "@zibby/contracts";
 import {
   Button,
   Card,
@@ -17,16 +17,8 @@ import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms";
 import { useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
 import { type Pipeline, glyphForAgent } from "../../../../domain";
+import { type PhaseOverride, usePhaseOverrides } from "../../hooks/usePhaseOverrides";
 import { ModelBadge, ThinkBadge } from "../PhaseChain";
-
-const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"];
-const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"];
-const next = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!;
-
-interface Override {
-  model: AgentModel;
-  thinking: AgentThinking;
-}
 
 export interface PipelineRunModalProps {
   pipeline: Pipeline;
@@ -38,7 +30,7 @@ export interface PipelineRunModalProps {
     prompt: string;
     project: string;
     budget: number;
-    overrides: Override[];
+    overrides: PhaseOverride[];
   }) => void;
 }
 
@@ -56,28 +48,11 @@ export function PipelineRunModal({
   onLaunch,
 }: PipelineRunModalProps) {
   const t = useTranslations();
-  const [overrides, setOverrides] = useState<Override[]>(
-    pipeline.phases.map((p) => ({ model: p.model, thinking: p.thinking })),
-  );
+  const { overrides, cycleModel, cycleThink } = usePhaseOverrides(pipeline);
   const [launched, setLaunched] = useState(false);
   const [launchData, setLaunchData] = useState<PipelineRunFormValues | null>(
     null,
   );
-
-  function cycleModel(i: number) {
-    setOverrides((o) =>
-      o.map((x, j) =>
-        j === i ? { ...x, model: next(CYCLE_MODEL, x.model) } : x,
-      ),
-    );
-  }
-  function cycleThink(i: number) {
-    setOverrides((o) =>
-      o.map((x, j) =>
-        j === i ? { ...x, thinking: next(CYCLE_THINK, x.thinking) } : x,
-      ),
-    );
-  }
 
   function onFormSubmit(values: PipelineRunFormValues) {
     setLaunchData(values);
