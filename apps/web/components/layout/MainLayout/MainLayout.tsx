@@ -12,6 +12,7 @@ export interface MainLayoutProps {
   footerItem?: NavItem;
   breadcrumb: string;
   walletSlot?: ReactNode;
+  taskSlot?: ReactNode;
   voiceSlot?: ReactNode;
   /**
    * Persistent right rail, mirrored on the left navigation: when provided it
@@ -27,6 +28,7 @@ export function MainLayout({
   footerItem,
   breadcrumb,
   walletSlot,
+  taskSlot,
   voiceSlot,
   railSlot,
   children,
@@ -58,6 +60,7 @@ export function MainLayout({
       <Stack grow style={{ minWidth: 0 }}>
         <TopBar
           breadcrumb={breadcrumb}
+          taskSlot={taskSlot}
           voiceSlot={voiceSlot}
           walletSlot={walletSlot}
         />

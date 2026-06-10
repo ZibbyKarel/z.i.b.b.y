@@ -13,10 +13,11 @@ import { GlobalSearch } from "../GlobalSearch/GlobalSearch";
 export interface TopBarProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
+  taskSlot?: ReactNode;
   voiceSlot?: ReactNode;
 }
 
-export function TopBar({ breadcrumb, walletSlot, voiceSlot }: TopBarProps) {
+export function TopBar({ breadcrumb, walletSlot, taskSlot, voiceSlot }: TopBarProps) {
   return (
     <Container as="header" position="relative" zIndex={20}>
       <Container height="64px" padding={["0", "300"]} position="relative">
@@ -36,6 +37,7 @@ export function TopBar({ breadcrumb, walletSlot, voiceSlot }: TopBarProps) {
           </Stack>
           <Spacer />
           {walletSlot}
+          {taskSlot}
           {voiceSlot}
           <LanguageSwitcher />
         </Stack>
