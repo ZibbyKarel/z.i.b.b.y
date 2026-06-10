@@ -245,6 +245,26 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Subscribe to every agent run's lifecycle transitions, already projected to the
+   * `AgentRun` contract shape. Backs the unified `/api/events` SSE channel, which
+   * replaces the dashboard's 2s polling of the running/all-runs lists. Returns an
+   * unsubscribe for the controller to call when the stream closes.
+   */
+  onRunStatus(listener: (run: AgentRun) => void): () => void {
+    return this.core.onStatus((rec) => listener(toAgentRun(rec)))
+  }
+
+  /**
+   * Subscribe to new-bytes-appended notifications for one run's log — the push
+   * signal behind the per-run log SSE endpoint (replaces the 1s log poll). The
+   * listener re-reads via {@link readLog}, so the streamed bytes match the poll
+   * path exactly. Returns an unsubscribe for stream teardown.
+   */
+  onLogAppend(runId: string, listener: () => void): () => void {
+    return this.core.onLog(runId, listener)
+  }
+
+  /**
    * Build the `claude -p` command for a run. The agent's instructions become the
    * session's system prompt and its `tools` the permission scope (see
    * {@link ClaudeRunCommandService}). `grantDirs` (the run's `files` that resolve

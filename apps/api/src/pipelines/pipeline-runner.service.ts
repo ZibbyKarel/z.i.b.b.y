@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { EventEmitter } from "node:events"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
@@ -55,6 +56,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly core: RunnerCore<PipelineStageRecord>
   private readonly runs = new Map<string, PipelineRun>()
   private readonly log: ScopedLogger
+  /**
+   * Push channel for aggregate transitions. Unlike agent runs (whose lifecycle the
+   * core owns), the pipeline aggregate lives here, so the event fires from
+   * {@link writeAggregate} — every persisted transition (stage advance, finish)
+   * notifies the `/api/events` SSE channel, replacing the FE's 1s aggregate poll.
+   */
+  private readonly events = new EventEmitter()
 
   constructor(
     @Inject(PIPELINE_RUNS_DIR) dir: string,
@@ -66,6 +74,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   ) {
     this.dir = path.resolve(dir)
     this.log = logger.child(PipelineRunnerService.name)
+    // One listener per open SSE connection; lift the default cap of 10.
+    this.events.setMaxListeners(0)
     this.core = new RunnerCore(
       this.dir,
       pipelineStageStrategy,
@@ -388,12 +398,25 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Subscribe to aggregate transitions of every pipeline run. Backs the unified
+   * `/api/events` SSE channel; returns an unsubscribe for the controller to call
+   * when the stream closes.
+   */
+  onRunStatus(listener: (run: PipelineRun) => void): () => void {
+    this.events.on("status", listener)
+    return () => this.events.off("status", listener)
+  }
+
   private async writeAggregate(run: PipelineRun): Promise<void> {
     await fs
       .writeFile(path.join(run.cwd, AGGREGATE_FILE), JSON.stringify(run), "utf8")
       .catch(() => {
         // Best-effort: a failed write degrades restart fidelity, not the run.
       })
+    // Persisting is the transition point — notify the status channel after it so a
+    // subscriber that refetches sees the same state we just wrote to disk.
+    this.events.emit("status", run)
   }
 
   /** Rebuild aggregates from `<runRoot>/run.json` sidecars; a mid-flight run fails. */

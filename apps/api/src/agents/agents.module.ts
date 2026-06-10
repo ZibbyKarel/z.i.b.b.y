@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { AgentRunLogsController } from "./agent-run-logs.controller"
 import { AgentRunnerService, RUNS_DIR } from "./agent-runner.service"
 import { AgentRunsController } from "./agent-runs.controller"
 import { ApprovalsModule } from "../approvals/approvals.module"
@@ -35,7 +36,13 @@ export function resolveRunsDir(): string {
   // before AgentsController so their static / more-specific routes
   // (`GET /agents/categories`, `GET /agents/running`, `GET /agents/:id/gates`) are
   // registered ahead of the agents resource's `GET /agents/:id`.
-  controllers: [CategoriesController, AgentRunsController, GatesController, AgentsController],
+  controllers: [
+    CategoriesController,
+    AgentRunsController,
+    AgentRunLogsController,
+    GatesController,
+    AgentsController,
+  ],
   providers: [
     { provide: AGENTS_DIR, useFactory: resolveAgentsDir },
     { provide: RUNS_DIR, useFactory: resolveRunsDir },

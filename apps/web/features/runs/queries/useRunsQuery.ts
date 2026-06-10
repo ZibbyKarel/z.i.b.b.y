@@ -4,6 +4,7 @@ import type { IconName } from "@zibby/design-system";
 import { getApprovalsQueryKey } from "../../approvals/queries/useApprovalsQuery";
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
+import { useRunEventsConnected } from "../runEvents";
 import { type RunView, agentRunToView, pipelineRunToView } from "../run";
 
 const POLL_MS = 2_000;
@@ -31,21 +32,26 @@ function pollWhileLive(query: {
  * The unified runs feed. There is no cross-kind list endpoint, so this merges the
  * per-kind *full-history* lists (agent + pipeline) client-side, newest first — the
  * history endpoints return finished runs too (read from their on-disk sidecars), so
- * the feed isn't limited to the live retention window. Each underlying query
- * self-gates polling — it keeps refetching while any of its runs is still
- * `running`/`awaiting-approval`, idling otherwise.
+ * the feed isn't limited to the live retention window.
+ *
+ * Freshness is push-driven via the `/api/events` SSE channel, which invalidates
+ * both keys on every run transition. The self-gating poll (refetch while any run is
+ * `running`/`awaiting-approval`/`parked`) is kept only as the fallback for when the
+ * stream is down — `refetchInterval` is `false` while it's connected.
  */
 export function useRunsQuery(): { runs: RunView[] } {
+  const streamConnected = useRunEventsConnected();
+  const fallbackPoll = streamConnected ? false : pollWhileLive;
   const agents = apiClient.agentRuns.listRuns.useQuery({
     queryKey: allAgentRunsKey,
-    refetchInterval: pollWhileLive,
+    refetchInterval: fallbackPoll,
     refetchIntervalInBackground: true,
     retry: false,
     select: selectApiResponseBody,
   });
   const pipelines = apiClient.pipelineRuns.listAllPipelineRuns.useQuery({
     queryKey: allPipelineRunsKey,
-    refetchInterval: pollWhileLive,
+    refetchInterval: fallbackPoll,
     refetchIntervalInBackground: true,
     retry: false,
     select: selectApiResponseBody,

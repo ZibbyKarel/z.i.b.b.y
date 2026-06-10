@@ -122,6 +122,42 @@ describe("RunnerCore", () => {
     expect(core.get(run.runId).pct).toBe(100)
   })
 
+  it("emits status transitions and log-append signals to subscribers (SSE push)", async () => {
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    // Subscribe before start so the first `running` transition is captured.
+    const statuses: string[] = []
+    const offStatus = core.onStatus((r) => statuses.push(r.status))
+
+    // A child that delays its first output, so we can attach the log listener after
+    // start() and still reliably observe an append (plus the finalize flush).
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "emit",
+      command: NODE,
+      args: [
+        "-e",
+        'setTimeout(()=>{console.log("PROGRESS 50");setTimeout(()=>{console.log("PROGRESS 100");process.exit(0)},60)},60)',
+      ],
+      cwd: path.join(dir, "emit_sandbox"),
+      extra: { label: "x" },
+    })
+    let logSignals = 0
+    const offLog = core.onLog(run.runId, () => {
+      logSignals++
+    })
+
+    await waitForStatus(core, run.runId, "done")
+    // Let the finalize end-callback (final log flush signal) fire.
+    await sleep(80)
+    offStatus()
+    offLog()
+
+    expect(statuses[0]).toBe("running")
+    expect(statuses).toContain("done")
+    expect(logSignals).toBeGreaterThan(0)
+  })
+
   it("flattens stream-json output through formatLine while leaving control lines intact", async () => {
     // With a formatter attached (the agent runner wires the stream-json flattener),
     // JSON events become readable log text; a bare PROGRESS line still drives pct.

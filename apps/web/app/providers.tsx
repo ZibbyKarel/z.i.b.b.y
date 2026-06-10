@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DesignSystemProvider } from "@zibby/design-system";
 import { type ReactNode, useState } from "react";
 import { apiClient } from "../state/api";
+import { RunEventsProvider } from "../features/runs/runEvents";
 import { BootSplash } from "../components/layout/BootSplash/BootSplash";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -18,9 +19,11 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <apiClient.ReactQueryProvider>
-        <DesignSystemProvider theme="dark">
-          <BootSplash>{children}</BootSplash>
-        </DesignSystemProvider>
+        <RunEventsProvider>
+          <DesignSystemProvider theme="dark">
+            <BootSplash>{children}</BootSplash>
+          </DesignSystemProvider>
+        </RunEventsProvider>
       </apiClient.ReactQueryProvider>
     </QueryClientProvider>
   );
