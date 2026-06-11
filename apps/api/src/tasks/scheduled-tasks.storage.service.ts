@@ -3,6 +3,7 @@ import {
   type CreateTaskInput,
   type ScheduledTask,
   ScheduledTaskSchema,
+  type TaskOutcome,
   type TaskTarget,
 } from "@zibby/contracts"
 import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage"
@@ -47,10 +48,15 @@ export class ScheduledTasksStorageService
     await this.ensureDir()
   }
 
+  /** A fresh collision-resistant task id (exposed so a run can be born linked). */
+  newId(): string {
+    return collisionResistantId("task")
+  }
+
   /** Persist a fresh `scheduled` task built from the create input. */
   async create(input: CreateTaskInput & { scheduledAt: number }, createdAt: string): Promise<ScheduledTask> {
     const task: ScheduledTask = {
-      id: collisionResistantId("task"),
+      id: this.newId(),
       title: input.title ?? "",
       text: input.text,
       paths: input.paths ?? [],
@@ -60,6 +66,45 @@ export class ScheduledTasksStorageService
     }
     await this.writeEntity(task)
     return task
+  }
+
+  /**
+   * Persist an immediately-dispatched task as a `dispatched` record (with the
+   * pre-generated `id` its run was born linked to). `scheduledAt` is the dispatch
+   * time — there was never a future fire time.
+   */
+  async createDispatched(
+    id: string,
+    input: CreateTaskInput,
+    runRef: string,
+    target: TaskTarget,
+    now: number,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      scheduledAt: now,
+      status: "dispatched",
+      createdAt: new Date(now).toISOString(),
+      runRef,
+      target,
+    }
+    await this.writeEntity(task)
+    return task
+  }
+
+  /**
+   * Write a dispatched run's terminal outcome onto its task — idempotent: the
+   * first write wins (the fast path and the catch-up sweep may both fire).
+   */
+  async writeOutcome(id: string, outcome: TaskOutcome): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    if (existing.outcome) return existing
+    const merged: ScheduledTask = { ...existing, outcome }
+    await this.writeEntity(merged)
+    return merged
   }
 
   /** Stamp a task dispatched: record the chosen target and the started run's ref. */

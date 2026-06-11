@@ -135,7 +135,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * (The optional `project` from the request is reserved for the real `claude -p`
    * executor in Phase 6 and intentionally unused in demo mode.)
    */
-  async start(pipelineId: string): Promise<PipelineRun> {
+  async start(pipelineId: string, taskId?: string): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId)
 
@@ -159,6 +159,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       stageRuns: [],
       startedAt: new Date(startedMs).toISOString(),
       cwd: root,
+      ...(taskId ? { taskId } : {}),
     }
     this.runs.set(pipelineRunId, run)
     await this.writeAggregate(run)

@@ -44,6 +44,8 @@ export const PipelineRunSchema = z.object({
   pipelineRunId: z.string().min(1),
   pipelineId: AgentIdSchema,
   status: PipelineStateSchema,
+  /** The task record this run was dispatched from, when it was born from one. */
+  taskId: z.string().optional(),
   /** Phase id currently executing, or null once the run has finished. */
   currentStage: z.string().nullable(),
   stageRuns: z.array(StageRunSchema),

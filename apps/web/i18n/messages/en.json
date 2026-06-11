@@ -521,6 +521,11 @@
     "metaScheduled": "fires",
     "metaTarget": "target",
     "metaKind": "type",
+    "metaTask": "task",
+    "taskOutcome": {
+      "done": "succeeded",
+      "error": "failed"
+    },
     "agoNow": "now",
     "agoM": "{n} m ago",
     "agoH": "{n} h ago",

@@ -47,6 +47,8 @@ export const tasksContract = c.router(
       responses: {
         201: CreateTaskResultSchema,
         422: ErrorSchema,
+        // Claude CLI preflight refused the immediate dispatch (missing/broken CLI).
+        503: ErrorSchema,
       },
       summary:
         "Create a task — dispatch it now (classify + start a run), or schedule it for a future `scheduledAt`",

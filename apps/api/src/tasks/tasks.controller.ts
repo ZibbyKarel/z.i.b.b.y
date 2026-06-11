@@ -1,6 +1,7 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { tasksContract } from "@zibby/contracts"
+import { ClaudeUnavailableError } from "../runner/claude-preflight.service"
 import { makeErrorMapper } from "../shared/http/error-mapping"
 import {
   InvalidScheduledTaskIdError,
@@ -48,6 +49,9 @@ export class TasksController {
         } catch (error) {
           if (error instanceof EmptyCatalogError) {
             return { status: 422, body: { message: error.message } }
+          }
+          if (error instanceof ClaudeUnavailableError) {
+            return { status: 503, body: { message: error.message } }
           }
           throw error
         }

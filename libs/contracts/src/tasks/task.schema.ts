@@ -119,6 +119,17 @@ export const ScheduledTaskStatusSchema = z.enum([
 export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>
 
 /**
+ * How a task's dispatched run ended: a terminal verdict plus a short, readable
+ * summary (an agent run's last log line, or a pipeline's stage tally).
+ */
+export const TaskOutcomeSchema = z.object({
+  status: z.enum(["done", "error"]),
+  summary: z.string(),
+  finishedAt: z.string().datetime(),
+})
+export type TaskOutcome = z.infer<typeof TaskOutcomeSchema>
+
+/**
  * A task whose dispatch was deferred to a future `scheduledAt`. Persisted as one
  * JSON file per id; the scheduler tick fires it when due (classify → start a run).
  */
@@ -138,6 +149,13 @@ export const ScheduledTaskSchema = z.object({
   runRef: z.string().optional(),
   /** Set on `failed`: a short reason. */
   error: z.string().optional(),
+  /**
+   * Written back once the dispatched run reaches a terminal state. `status` is
+   * the run's verdict (`interrupted` and a failed pipeline both map to `error`);
+   * the task-level `status` enum is untouched — `failed` keeps meaning the
+   * DISPATCH failed, while a dispatched run that errored lands here.
+   */
+  outcome: TaskOutcomeSchema.optional(),
 })
 export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>
 
@@ -163,6 +181,8 @@ export const CreateTaskResultSchema = z.discriminatedUnion("outcome", [
     outcome: z.literal("dispatched"),
     runRef: z.string().min(1),
     target: TaskTargetSchema,
+    /** The persisted task record the run was born linked to (outcome lands on it). */
+    task: ScheduledTaskSchema,
   }),
   z.object({
     outcome: z.literal("scheduled"),

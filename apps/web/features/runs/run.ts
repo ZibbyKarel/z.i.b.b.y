@@ -37,6 +37,12 @@ export interface RunView {
   startedAt: string;
   /** Log endpoint base — null for pipeline runs and scheduled tasks (no log). */
   logBase: "agents" | null;
+  /** The task record this run was dispatched from (when born from one). */
+  taskId?: string;
+  /** Enriched from the task record: its display title (or text). */
+  taskTitle?: string;
+  /** Enriched from the task record: the written-back run outcome. */
+  taskOutcome?: "done" | "error";
 }
 
 /** Task-first display name: explicit title, else the task text, else the target. */
@@ -74,6 +80,7 @@ export function agentRunToView(r: AgentRun): RunView {
     project: r.project,
     startedAt: r.startedAt,
     logBase: "agents",
+    taskId: r.taskId,
   };
 }
 
@@ -98,6 +105,26 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     project: r.cwd.split("/").pop() ?? "",
     startedAt: r.startedAt,
     logBase: null,
+    taskId: r.taskId,
+  };
+}
+
+/**
+ * Fold the originating task record (title + written-back outcome) into a run
+ * view. Dispatched tasks stay hidden as separate feed rows — the run row is the
+ * canonical card — so this is where their data surfaces.
+ */
+export function enrichRunWithTask(
+  run: RunView,
+  tasksById: ReadonlyMap<string, ScheduledTask>,
+): RunView {
+  if (!run.taskId) return run;
+  const task = tasksById.get(run.taskId);
+  if (!task) return run;
+  return {
+    ...run,
+    taskTitle: task.title || task.text,
+    taskOutcome: task.outcome?.status,
   };
 }
 

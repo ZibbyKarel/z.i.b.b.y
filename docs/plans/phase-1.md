@@ -114,7 +114,7 @@ core/gates/approvals; waitForStage rides through awaiting-approval; parked recon
 e2e in pipelines.e2e.test.ts: park on gated intent → approve → done; reject → failed; ↓
 parked-at-restart → failed. Leave the 2 quarantined flaky pipeline tests alone.
 ↓
-1.3 Task → run → outcome linkage
+1.3 Task → run → outcome linkage — ✅ HOTOVO
 ↓
 
 - Persist immediate tasks: createTask immediate path persists a record with

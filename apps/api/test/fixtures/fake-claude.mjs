@@ -73,6 +73,13 @@ async function main() {
     "utf8",
   )
 
+  // Deterministic failure seam: exit non-zero right after starting, so tests can
+  // assert error paths (failed runs, error outcomes) without gate machinery.
+  if (process.env.FAKE_CLAUDE_FAIL) {
+    log("Simulated failure.")
+    process.exit(1)
+  }
+
   const steps = Number(process.env.FAKE_CLAUDE_STEPS) || 2
   const delay = Number(process.env.FAKE_CLAUDE_DELAY_MS) || 20
   const half = Math.floor(steps / 2)

@@ -255,4 +255,65 @@ describe("Tasks API (e2e)", () => {
     const res = await request(app.getHttpServer()).post(CREATE).send({ text: "do something now" })
     expect(res.status).toBe(422)
   })
+
+  it("an immediate task is persisted, its run carries the taskId, and the outcome lands as done", async () => {
+    await seedCatalog()
+    const res = await request(app.getHttpServer())
+      .post(CREATE)
+      .send({ title: "Outcome check", text: "Srovnej a popiš média v mé knihovně" })
+      .expect(201)
+    expect(res.body.outcome).toBe("dispatched")
+    expect(res.body.task.status).toBe("dispatched")
+    expect(res.body.task.runRef).toBe(res.body.runRef)
+
+    // The run was born linked to the task record.
+    const run = await request(app.getHttpServer())
+      .get(`/api/agents/runs/${res.body.runRef}`)
+      .expect(200)
+    expect(run.body.taskId).toBe(res.body.task.id)
+
+    // Once the run finishes, the outcome is written back onto the task record.
+    const task = await until(async () => {
+      const list = await request(app.getHttpServer()).get(SCHEDULED).expect(200)
+      const found = list.body.find((t: { id: string }) => t.id === res.body.task.id)
+      return found?.outcome ? found : null
+    })
+    expect(task.outcome.status).toBe("done")
+    expect(typeof task.outcome.summary).toBe("string")
+    expect(task.outcome.summary.length).toBeGreaterThan(0)
+    expect(Number.isNaN(Date.parse(task.outcome.finishedAt))).toBe(false)
+  })
+
+  it("a failing run writes outcome error onto its task", async () => {
+    await seedCatalog()
+    // The fixture exits non-zero right after starting → the run lands `error`.
+    process.env.FAKE_CLAUDE_FAIL = "1"
+    try {
+      const res = await request(app.getHttpServer())
+        .post(CREATE)
+        .send({ title: "Doomed", text: "Srovnej a popiš média v mé knihovně" })
+        .expect(201)
+
+      const task = await until(async () => {
+        const list = await request(app.getHttpServer()).get(SCHEDULED).expect(200)
+        const found = list.body.find((t: { id: string }) => t.id === res.body.task.id)
+        return found?.outcome ? found : null
+      })
+      expect(task.outcome.status).toBe("error")
+      expect(task.outcome.summary).toContain("Simulated failure")
+    } finally {
+      delete process.env.FAKE_CLAUDE_FAIL
+    }
+  })
 })
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+async function until<T>(fn: () => Promise<T | null | undefined>, timeoutMs = 8000): Promise<T> {
+  const start = Date.now()
+  for (;;) {
+    const result = await fn()
+    if (result) return result
+    if (Date.now() - start > timeoutMs) throw new Error("until: timed out")
+    await sleep(40)
+  }
+}

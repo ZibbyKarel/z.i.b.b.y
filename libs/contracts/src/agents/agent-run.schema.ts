@@ -31,6 +31,8 @@ export const AgentRunSchema = z.object({
   runId: z.string().min(1),
   agentId: AgentIdSchema,
   status: AgentRunStatusSchema,
+  /** The task record this run was dispatched from, when it was born from one. */
+  taskId: z.string().optional(),
   /** Progress 0–100, parsed from `PROGRESS <n>` lines the run emits. */
   pct: z.number().min(0).max(100),
   /**

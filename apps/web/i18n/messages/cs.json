@@ -521,6 +521,11 @@
     "metaScheduled": "spustí se",
     "metaTarget": "cíl",
     "metaKind": "typ",
+    "metaTask": "úkol",
+    "taskOutcome": {
+      "done": "úspěch",
+      "error": "selhání"
+    },
     "agoNow": "teď",
     "agoM": "před {n} m",
     "agoH": "před {n} h",

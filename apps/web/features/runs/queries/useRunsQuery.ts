@@ -10,6 +10,7 @@ import { useRunEventsConnected } from "../runEvents";
 import {
   type RunView,
   agentRunToView,
+  enrichRunWithTask,
   pipelineRunToView,
   scheduledTaskToView,
 } from "../run";
@@ -84,9 +85,12 @@ export function useRunsQuery(): { runs: RunView[] } {
   });
 
   const runs = useMemo<RunView[]>(() => {
+    // Task lookup for run enrichment (origin title + written-back outcome);
+    // dispatched tasks stay out of the feed — their run row is the canonical card.
+    const tasksById = new Map((scheduled.data ?? []).map((t) => [t.id, t]));
     const merged: RunView[] = [
-      ...(agents.data ?? []).map(agentRunToView),
-      ...(pipelines.data ?? []).map(pipelineRunToView),
+      ...(agents.data ?? []).map((r) => enrichRunWithTask(agentRunToView(r), tasksById)),
+      ...(pipelines.data ?? []).map((r) => enrichRunWithTask(pipelineRunToView(r), tasksById)),
       ...(scheduled.data ?? []).flatMap((t) => scheduledTaskToView(t) ?? []),
     ];
     return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));

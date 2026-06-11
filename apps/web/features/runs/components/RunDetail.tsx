@@ -165,6 +165,16 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
             />
             {run.owner && <MetaCell label={t("metaTarget")} value={run.owner} />}
             <MetaCell label={t("metaKind")} value={t(`kind.${run.kind}`)} />
+            {run.taskTitle && (
+              <MetaCell
+                label={t("metaTask")}
+                value={
+                  run.taskOutcome
+                    ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
+                    : run.taskTitle
+                }
+              />
+            )}
             {approval && (
               <MetaCell
                 label={tApprovals("requestedLabel")}

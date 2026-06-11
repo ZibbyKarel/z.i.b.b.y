@@ -6,6 +6,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
 import { type RunView, runTitle } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 
@@ -32,8 +33,12 @@ export function TaskCard({
   startedLabel,
   onSelect,
 }: TaskCardProps) {
+  const t = useTranslations("runs");
   const live = run.status === "running" || run.status === "awaiting-approval";
   const headline = runTitle(run);
+  // The task-origin line is only worth a row when it adds something the
+  // headline doesn't already say.
+  const taskLine = run.taskTitle && run.taskTitle !== headline ? run.taskTitle : "";
   return (
     <Card
       as="button"
@@ -52,12 +57,29 @@ export function TaskCard({
               {run.prompt}
             </Typography>
           )}
+          {taskLine && (
+            <Typography mono truncate size="2xs" type="note" variant="tertiary">
+              {t("metaTask")} · {taskLine}
+            </Typography>
+          )}
           <Stack align="center" direction="row" gap="100" justify="between">
-            <RunStateBadge
-              canonTitle={run.status}
-              label={stateLabel}
-              status={run.status}
-            />
+            <Stack align="center" direction="row" gap="100">
+              <RunStateBadge
+                canonTitle={run.status}
+                label={stateLabel}
+                status={run.status}
+              />
+              {run.taskOutcome && (
+                <Typography
+                  mono
+                  size="2xs"
+                  tone={run.taskOutcome === "done" ? "ok" : "bad"}
+                  type="note"
+                >
+                  {t("metaTask")} → {t(`taskOutcome.${run.taskOutcome}`)}
+                </Typography>
+              )}
+            </Stack>
             <Stack align="center" direction="row" gap="50">
               {run.owner && <Icon name={glyph} size="xs" tone="faint" />}
               <Typography mono size="2xs" type="note" variant="tertiary">

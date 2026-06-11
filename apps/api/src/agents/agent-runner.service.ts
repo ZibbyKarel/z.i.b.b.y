@@ -107,10 +107,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     project: string,
     files: string[] = [],
     title = "",
+    taskId?: string,
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId)
-    return this.launch(agent, prompt, project, files, title)
+    return this.launch(agent, prompt, project, files, title, taskId)
   }
 
   /**
@@ -122,8 +123,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * already hands every run the full agent+skill catalog as `--agents` subagents
    * with `Agent` allowed, so the orchestrator can self-delegate out of the box.
    */
-  startOrchestrator(prompt: string, files: string[] = [], title = ""): Promise<AgentRun> {
-    return this.launch(ORCHESTRATOR_AGENT, prompt, "", files, title)
+  startOrchestrator(
+    prompt: string,
+    files: string[] = [],
+    title = "",
+    taskId?: string,
+  ): Promise<AgentRun> {
+    return this.launch(ORCHESTRATOR_AGENT, prompt, "", files, title, taskId)
   }
 
   /** Shared spawn path: build the command for `agent` and hand it to the core. */
@@ -133,6 +139,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     project: string,
     files: string[],
     title: string,
+    taskId?: string,
   ): Promise<AgentRun> {
     const agentId = agent.id
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
@@ -156,7 +163,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // The originating request's traceId rides along in the persisted record, so
       // a later mid-run gate (fired from child output, outside any request — even
       // after an API restart) can re-link its logs to that origin.
-      extra: { agentId, title, prompt, project, files, traceId: this.trace.getTraceId() },
+      extra: { agentId, title, prompt, project, files, taskId, traceId: this.trace.getTraceId() },
     }
 
     // Variant B: the run spawns immediately. Gating happens mid-run — when the

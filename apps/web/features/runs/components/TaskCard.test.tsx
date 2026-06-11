@@ -55,6 +55,41 @@ describe("TaskCard", () => {
     ).toHaveLength(1);
   });
 
+  it("renders the task-origin line and the written-back outcome badge", () => {
+    render(
+      <TaskCard
+        glyph="bot"
+        onSelect={() => {}}
+        run={{
+          ...run,
+          status: "done",
+          taskId: "task-9",
+          taskTitle: "Oprav rozbitý test",
+          taskOutcome: "done",
+        }}
+        selected={false}
+        startedLabel="před 5 m"
+        stateLabel="hotovo"
+      />,
+    );
+    expect(screen.getByText(/úkol · Oprav rozbitý test/)).toBeInTheDocument();
+    expect(screen.getByText(/úkol → úspěch/)).toBeInTheDocument();
+  });
+
+  it("marks a failed task outcome as selhání", () => {
+    render(
+      <TaskCard
+        glyph="bot"
+        onSelect={() => {}}
+        run={{ ...run, status: "error", taskId: "task-9", taskOutcome: "error" }}
+        selected={false}
+        startedLabel="před 5 m"
+        stateLabel="chyba"
+      />,
+    );
+    expect(screen.getByText(/úkol → selhání/)).toBeInTheDocument();
+  });
+
   it("selects on click", async () => {
     const onSelect = vi.fn();
     render(
