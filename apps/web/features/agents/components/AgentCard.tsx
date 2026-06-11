@@ -8,21 +8,15 @@ export interface AgentCardProps {
   agent: Agent;
   /** How many pipelines reference this agent (drives the usage chip). */
   pipelineCount?: number;
-  /** Whether this agent is pinned to the Overview quick-launch panel. */
-  pinned?: boolean;
   onOpen?: (agent: Agent) => void;
   onRun?: (agent: Agent) => void;
-  /** When provided, renders a pin toggle; omit to hide the control entirely. */
-  onTogglePin?: (agent: Agent) => void;
 }
 
 export function AgentCard({
   agent,
   pipelineCount = 0,
-  pinned = false,
   onOpen,
   onRun,
-  onTogglePin,
 }: AgentCardProps) {
   const t = useTranslations("agents");
   const name = agent.name ?? agent.id;
@@ -56,12 +50,8 @@ export function AgentCard({
       description={agent.description}
       glyph={(agent.glyph as IconName | undefined) ?? "bot"}
       onOpen={onOpen ? () => onOpen(agent) : undefined}
-      onPinChange={onTogglePin ? () => onTogglePin(agent) : undefined}
       openLabel={t("openAria", { name })}
-      pinLabel={t("pin", { name })}
-      pinned={pinned}
       title={name}
-      unpinLabel={t("unpin", { name })}
     />
   );
 }

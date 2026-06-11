@@ -40,7 +40,7 @@
     "dialogTitle": "NOVÝ TASK",
     "dialogSubtitle": "Popiš zadání — ZIBBY ho zařadí a předá agentovi",
     "cancel": "Zrušit",
-    "classifyRun": "Zařadit & spustit",
+    "classifyRun": "Spustit",
     "composer": {
       "label": "Zadání",
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
@@ -74,9 +74,7 @@
       "overrideTitle": "Vyber cíl ručně",
       "pickerAgents": "Agenti",
       "pickerPipelines": "Orchestrace",
-      "back": "Zpět",
-      "dispatch": "Dispatch",
-      "dispatchHint": "Nic se nespustí bez tvého potvrzení."
+      "back": "Zpět"
     },
     "dispatched": {
       "title": "Task předán",
@@ -184,8 +182,7 @@
         "sub": "zřetězení agentů"
       }
     },
-    "quickLaunch": "rychlé spuštění",
-    "quickLaunchEmpty": "žádní připnutí agenti · připni si je na stránce Agenti"
+    "allApprovals": "celá fronta →"
   },
   "skills": {
     "addSkill": "Přidat skill",
@@ -264,9 +261,7 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "emptyCategory": "Prázdná kategorie — přidej sem agenta, nebo ji smaž.",
-    "uncategorized": "Bez kategorie",
-    "pin": "Připnout {name} na rychlé spuštění",
-    "unpin": "Odepnout {name} z rychlého spuštění"
+    "uncategorized": "Bez kategorie"
   },
   "integrations": {
     "addIntegration": "Přidat integraci",
@@ -495,7 +490,12 @@
     "status": "Stav",
     "online": "NOMINAL · online",
     "offline": "OFFLINE",
-    "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You"
+    "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "subnav": {
+      "ariaLabel": "Sekce nastavení",
+      "general": "Obecné",
+      "gates": "Pravidla schvalování"
+    }
   },
   "voice": {
     "modeLabel": "VOICE MODE",

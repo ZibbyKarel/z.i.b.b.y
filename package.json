@@ -22,7 +22,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006 -c libs/design-system/.storybook",
-    "typecheck": "tsc -p tsconfig.base.json --noEmit",
+    "typecheck": "tsc -p tsconfig.base.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
     "e2e": "playwright test",
     "e2e:report": "playwright show-report"
   },

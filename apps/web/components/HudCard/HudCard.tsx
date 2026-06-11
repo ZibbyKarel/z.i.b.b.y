@@ -1,6 +1,5 @@
 import { Fragment, type ReactNode } from "react";
 import {
-  Button,
   Card,
   Container,
   Divider,
@@ -31,14 +30,6 @@ export interface HudCardProps {
   onOpen?: () => void;
   /** Accessible label for the open target. */
   openLabel?: string;
-  /** Whether the card is currently pinned. */
-  pinned?: boolean;
-  /** When provided, renders a pin toggle in the top-right corner. */
-  onPinChange?: (pinned: boolean) => void;
-  /** Accessible label for the pin toggle while pinned. */
-  unpinLabel?: string;
-  /** Accessible label for the pin toggle while unpinned. */
-  pinLabel?: string;
   /** Footer content (typically buttons), rendered under a divider. */
   actions?: ReactNode;
 }
@@ -57,10 +48,6 @@ export function HudCard({
   badges,
   onOpen,
   openLabel,
-  pinned = false,
-  onPinChange,
-  unpinLabel,
-  pinLabel,
   actions,
 }: HudCardProps) {
   const rows = (badges ?? []).filter((row) => row.some(Boolean));
@@ -70,9 +57,7 @@ export function HudCard({
       <Stack gap="150">
         <Stack align="start" direction="row" gap="150">
           <IconTile glyph={glyph ?? "bot"} size="md" />
-          {/* Reserve room on the right so title/description never slide under
-              the absolutely-positioned pin button. */}
-          <Container grow minW0 padding={onPinChange ? ["0", "500", "0", "0"] : undefined}>
+          <Container grow minW0>
             <Stack gap="25">
               <Typography mono truncate size="md" type="note" weight="semibold">
                 {title}
@@ -113,17 +98,6 @@ export function HudCard({
   return (
     <Card interactive>
       <Container padding="150" position="relative">
-        {onPinChange && (
-          <Container position="absolute" right="12px" top="12px" zIndex={1}>
-            <Button
-              aria-label={pinned ? unpinLabel : pinLabel}
-              icon="pin"
-              intent={pinned ? "primary" : "ghost"}
-              onClick={() => onPinChange(!pinned)}
-              size="sm"
-            />
-          </Container>
-        )}
         <Stack gap="150">
           {onOpen ? (
             <Pressable aria-label={openLabel} onClick={onOpen}>

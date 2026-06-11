@@ -22,7 +22,6 @@ import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { slug } from "../../utils/slug";
 import { newAgentDraft } from "./agentDraft";
-import { togglePinnedAgent, usePinnedAgents } from "./pinnedAgents";
 import { useAgentsQuery, useCategoriesQuery } from "./queries";
 import {
   useCreateAgentMutation,
@@ -40,7 +39,6 @@ export function Screen() {
   const { data: agents = [] } = useAgentsQuery();
   const { data: categories = [] } = useCategoriesQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
-  const pinned = usePinnedAgents();
   const createAgent = useCreateAgentMutation();
   const updateAgent = useUpdateAgentMutation();
   const deleteAgent = useDeleteAgentMutation();
@@ -121,8 +119,6 @@ export function Screen() {
                 key={a.id}
                 onOpen={(x) => setOpenId(x.id)}
                 onRun={(x) => setRunAgent(x)}
-                onTogglePin={(x) => togglePinnedAgent(x.id)}
-                pinned={pinned.includes(a.id)}
                 pipelineCount={pipelineCount(a)}
               />
             ))}

@@ -43,22 +43,4 @@ describe("HudCard", () => {
     expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
-  it("toggles the pin with the next state", () => {
-    const onPinChange = vi.fn()
-    render(
-      <HudCard
-        onPinChange={onPinChange}
-        pinLabel="připnout reviewer"
-        pinned={false}
-        title="reviewer"
-      />,
-    )
-    fireEvent.click(screen.getByRole("button", { name: "připnout reviewer" }))
-    expect(onPinChange).toHaveBeenCalledWith(true)
-  })
-
-  it("hides the pin toggle without onPinChange", () => {
-    render(<HudCard pinLabel="připnout reviewer" title="reviewer" />)
-    expect(screen.queryByRole("button", { name: "připnout reviewer" })).toBeNull()
-  })
 })

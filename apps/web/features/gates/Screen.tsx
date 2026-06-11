@@ -10,6 +10,7 @@ import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { useAgentsQuery } from "../agents/queries";
 import { useSkillsQuery } from "../skills/queries";
+import { SettingsSubnav } from "../settings/components/SettingsSubnav";
 import { DECISION_META, DECISION_ORDER } from "./gate";
 import { useGateRulesQuery } from "./queries";
 import {
@@ -81,6 +82,8 @@ export function Screen() {
           subtitle={t("subtitle")}
           title={t("title")}
         />
+
+        <SettingsSubnav />
 
         {/* decision filter tabs */}
         <HudPanel padding="200">

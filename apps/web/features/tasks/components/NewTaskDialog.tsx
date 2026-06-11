@@ -16,21 +16,20 @@ import { useClassifyTaskMutation } from "../mutations";
 import { type TaskRouting, type TaskTarget, extractPaths, toClientRouting } from "../task";
 import { ClassifyingState } from "./ClassifyingState";
 import { DispatchedState } from "./DispatchedState";
-import { RoutingResult } from "./RoutingResult";
 import { TaskComposer } from "./TaskComposer";
 
-type Stage = "compose" | "classifying" | "routing" | "dispatched";
+type Stage = "compose" | "classifying" | "dispatched";
 
 export interface NewTaskDialogProps {
   onClose: () => void;
 }
 
 /**
- * The whole New Task flow in one modal: a four-stage machine that never runs
- * anything on its own — `compose → classifying → routing → dispatched`. The
- * backend classifies the task (the classifying stage is the mutation's pending
- * state); the routing stage is an approval gate; only the explicit `Dispatch`
- * action starts a run (`POST /api/agents/:id/run` or `/pipelines/:id/run`).
+ * The whole New Task flow in one modal — describe → Spustit → done. The task
+ * is classified in the background and handed straight to the routed agent or
+ * pipeline; the user watches the "classifying" state and never confirms
+ * anything here. Risky actions are still caught later by the approval gate
+ * (the rules engine), which is the real guardrail — not this dialog.
  */
 export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
@@ -42,18 +41,32 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   const [text, setText] = useState("");
   const [removedPaths, setRemovedPaths] = useState<Set<string>>(new Set());
   const [routing, setRouting] = useState<TaskRouting | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState<TaskTarget | null>(null);
-  const [overrideOpen, setOverrideOpen] = useState(false);
 
   const paths = useMemo(
     () => extractPaths(text).filter((p) => !removedPaths.has(p)),
     [text, removedPaths],
   );
   const canSubmit = text.trim().length > 2;
-  const dispatching = startAgentRun.isPending || startPipelineRun.isPending;
 
-  const handleClassify = useCallback(() => {
-    if (!canSubmit) return;
+  const dispatch = useCallback(
+    (target: TaskTarget) => {
+      const onSuccess = () => setStage("dispatched");
+      // A transport failure returns to compose so the user can retry.
+      const onError = () => setStage("compose");
+      if (target.kind === "agent") {
+        startAgentRun.mutate(
+          { params: { id: target.id }, body: { prompt: text, project: "", files: paths } },
+          { onSuccess, onError },
+        );
+      } else {
+        startPipelineRun.mutate({ params: { id: target.id }, body: {} }, { onSuccess, onError });
+      }
+    },
+    [text, paths, startAgentRun, startPipelineRun],
+  );
+
+  const handleSubmit = useCallback(() => {
+    if (!canSubmit || stage !== "compose") return;
     setStage("classifying");
     classify.mutate(
       { body: { text, paths } },
@@ -61,38 +74,19 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
         onSuccess: (res) => {
           const result = toClientRouting(selectApiResponseBody(res));
           setRouting(result);
-          setSelectedTarget(result.target);
-          setOverrideOpen(false);
-          setStage("routing");
+          // Auto-run: hand the task straight to the routed target.
+          dispatch(result.target);
         },
         // The endpoint rarely errors (it has a server-side fallback); on a transport
         // failure, return to compose so the user can retry.
         onError: () => setStage("compose"),
       },
     );
-  }, [canSubmit, text, paths, classify]);
+  }, [canSubmit, stage, text, paths, classify, dispatch]);
 
   const handleRemovePath = useCallback((path: string) => {
     setRemovedPaths((prev) => new Set(prev).add(path));
   }, []);
-
-  const handlePick = useCallback((target: TaskTarget) => {
-    setSelectedTarget(target);
-    setOverrideOpen(false);
-  }, []);
-
-  const handleDispatch = useCallback(() => {
-    if (!selectedTarget || dispatching) return;
-    const onSuccess = () => setStage("dispatched");
-    if (selectedTarget.kind === "agent") {
-      startAgentRun.mutate(
-        { params: { id: selectedTarget.id }, body: { prompt: text, project: "", files: paths } },
-        { onSuccess },
-      );
-    } else {
-      startPipelineRun.mutate({ params: { id: selectedTarget.id }, body: {} }, { onSuccess });
-    }
-  }, [selectedTarget, dispatching, text, paths, startAgentRun, startPipelineRun]);
 
   const header = (
     <Stack align="center" direction="row" gap="150">
@@ -108,38 +102,17 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
     </Stack>
   );
 
-  const actions = (() => {
-    if (stage === "compose") {
-      return (
-        <Stack grow align="center" direction="row" gap="100" justify="end">
-          <Button icon="x" intent="ghost" onClick={onClose}>
-            {t("cancel")}
-          </Button>
-          <Button disabled={!canSubmit} icon="bolt" intent="primary" onClick={handleClassify}>
-            {t("classifyRun")}
-          </Button>
-        </Stack>
-      );
-    }
-    if (stage === "routing") {
-      return (
-        <Stack grow align="center" direction="row" gap="100" justify="between">
-          <Typography mono size="2xs" type="note" variant="tertiary">
-            {t("routing.dispatchHint")}
-          </Typography>
-          <Stack align="center" direction="row" gap="100">
-            <Button icon="chevron" intent="ghost" onClick={() => setStage("compose")}>
-              {t("routing.back")}
-            </Button>
-            <Button disabled={dispatching} icon="bolt" intent="primary" onClick={handleDispatch}>
-              {t("routing.dispatch")}
-            </Button>
-          </Stack>
-        </Stack>
-      );
-    }
-    return undefined;
-  })();
+  const actions =
+    stage === "compose" ? (
+      <Stack grow align="center" direction="row" gap="100" justify="end">
+        <Button icon="x" intent="ghost" onClick={onClose}>
+          {t("cancel")}
+        </Button>
+        <Button disabled={!canSubmit} icon="play" intent="primary" onClick={handleSubmit}>
+          {t("classifyRun")}
+        </Button>
+      </Stack>
+    ) : undefined;
 
   return (
     <Dialog
@@ -155,24 +128,14 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
         <TaskComposer
           onChange={setText}
           onRemovePath={handleRemovePath}
-          onSubmit={handleClassify}
+          onSubmit={handleSubmit}
           paths={paths}
           value={text}
         />
       )}
       {stage === "classifying" && <ClassifyingState />}
-      {stage === "routing" && routing && selectedTarget && (
-        <RoutingResult
-          onPick={handlePick}
-          onToggleOverride={() => setOverrideOpen((v) => !v)}
-          overrideOpen={overrideOpen}
-          paths={paths}
-          routing={routing}
-          selectedTarget={selectedTarget}
-        />
-      )}
-      {stage === "dispatched" && selectedTarget && (
-        <DispatchedState onClose={onClose} target={selectedTarget} />
+      {stage === "dispatched" && routing && (
+        <DispatchedState onClose={onClose} target={routing.target} />
       )}
     </Dialog>
   );

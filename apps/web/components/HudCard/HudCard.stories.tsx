@@ -57,16 +57,6 @@ export const Default: Story = {
   args: { badges: badgeRows, actions: runAction, openLabel: "otevřít reviewer" },
 }
 
-export const Pinned: Story = {
-  args: {
-    badges: badgeRows,
-    actions: runAction,
-    pinned: true,
-    pinLabel: "připnout reviewer",
-    unpinLabel: "odepnout reviewer",
-  },
-}
-
 export const Minimal: Story = {
   args: { description: undefined, badges: undefined, actions: undefined },
 }

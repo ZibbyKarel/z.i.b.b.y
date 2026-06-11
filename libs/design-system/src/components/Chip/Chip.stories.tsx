@@ -12,20 +12,7 @@ export default meta;
 
 type Story = StoryObj<typeof Chip>;
 
-const tones: ChipTone[] = [
-  "neutral",
-  "accent",
-  "ok",
-  "warn",
-  "bad",
-  "run",
-  "opus",
-  "sonnet",
-  "haiku",
-  "think-high",
-  "think-medium",
-  "think-low",
-];
+const tones: ChipTone[] = ["neutral", "accent", "ok", "warn", "bad", "run"];
 
 export const Overview: Story = {
   render: () => (

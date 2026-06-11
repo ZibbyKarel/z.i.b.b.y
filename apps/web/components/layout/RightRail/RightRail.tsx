@@ -2,6 +2,7 @@
 
 import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { ApprovalCard } from "../../../features/agents/components/ApprovalCard/ApprovalCard";
 import { RunningAgentsPanel } from "../../../features/agents/components/RunningAgentsPanel";
 import { useApproveMutation, useRejectMutation } from "../../../features/approvals/mutations";
@@ -22,7 +23,16 @@ export function RightRail() {
 
   return (
     <Stack gap="250">
-      <HudPanel title={t("overview.approvalsQueue")}>
+      <HudPanel
+        action={
+          <Link href="/approvals">
+            <Typography mono size="xs" tone="accent" type="note">
+              {t("overview.allApprovals")}
+            </Typography>
+          </Link>
+        }
+        title={t("overview.approvalsQueue")}
+      >
         {approvals.length === 0 ? (
           <Stack align="center" direction="row" gap="100">
             <StatusDot tone="ok" />

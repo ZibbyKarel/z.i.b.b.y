@@ -5,9 +5,9 @@ import { NewTaskDialog } from "./NewTaskDialog";
 
 /**
  * The classifier and run endpoints are mocked so the dialog's FSM is exercised
- * end-to-end without a backend: the classify mock resolves a canned routing, and
- * the run mocks resolve immediately. The point under test is the approval gate —
- * nothing dispatches until the explicit Dispatch click.
+ * end-to-end without a backend: the classify mock resolves a canned routing and
+ * the run mocks resolve immediately. The point under test is the auto-run flow —
+ * one "Spustit" click classifies AND dispatches, with no confirm step between.
  */
 const CANNED_ROUTING = {
   status: 200,
@@ -44,7 +44,7 @@ describe("NewTaskDialog", () => {
   it("renders as a labelled modal dialog on the compose step", () => {
     render(<NewTaskDialog onClose={() => {}} />);
     expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Zařadit & spustit/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Spustit/ })).toBeInTheDocument();
   });
 
   it("surfaces detected paths as removable context chips", async () => {
@@ -63,29 +63,15 @@ describe("NewTaskDialog", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("is approval-first: routing shows Dispatch but nothing runs until it is clicked", async () => {
+  it("auto-runs: one Spustit click classifies and dispatches with no confirm step", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
-    await userEvent.click(screen.getByRole("button", { name: /Zařadit & spustit/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Spustit/ }));
 
-    const dispatch = await screen.findByRole("button", { name: /Dispatch/ });
-    expect(dispatch).toBeInTheDocument();
-    expect(screen.getByText(/Nic se nespustí/)).toBeInTheDocument();
-    expect(screen.queryByText("Task předán")).not.toBeInTheDocument();
-    expect(startAgentRun).not.toHaveBeenCalled();
-
-    await userEvent.click(dispatch);
     expect(startAgentRun).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Task předán")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Otevřít běhy/ })).toBeInTheDocument();
-  });
-
-  it("opens the manual override picker from the routing stage", async () => {
-    render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "udělej něco");
-    await userEvent.click(screen.getByRole("button", { name: /Zařadit & spustit/ }));
-    await userEvent.click(await screen.findByRole("button", { name: /Změnit cíl/ }));
-    expect(screen.getByText("Vyber cíl ručně")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Dispatch/ })).not.toBeInTheDocument();
   });
 
   it("closes via the cancel action", async () => {

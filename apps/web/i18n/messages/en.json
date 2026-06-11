@@ -40,7 +40,7 @@
     "dialogTitle": "NEW TASK",
     "dialogSubtitle": "Describe the task — ZIBBY classifies it and hands it to an agent",
     "cancel": "Cancel",
-    "classifyRun": "Classify & Run",
+    "classifyRun": "Run",
     "composer": {
       "label": "Task",
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
@@ -74,9 +74,7 @@
       "overrideTitle": "Pick a target manually",
       "pickerAgents": "Agents",
       "pickerPipelines": "Pipelines",
-      "back": "Back",
-      "dispatch": "Dispatch",
-      "dispatchHint": "Nothing runs without your confirmation."
+      "back": "Back"
     },
     "dispatched": {
       "title": "Task dispatched",
@@ -184,8 +182,7 @@
         "sub": "chaining of agents"
       }
     },
-    "quickLaunch": "quick launch",
-    "quickLaunchEmpty": "no pinned agents · pin one from the Agents page"
+    "allApprovals": "full queue →"
   },
   "skills": {
     "addSkill": "Add skill",
@@ -264,9 +261,7 @@
     "deleteEmptyCategory": "Delete",
     "deleteEmptyCategoryAria": "Delete empty category {name}",
     "emptyCategory": "Empty category — add an agent or delete it.",
-    "uncategorized": "Uncategorized",
-    "pin": "Pin {name} to quick launch",
-    "unpin": "Unpin {name} from quick launch"
+    "uncategorized": "Uncategorized"
   },
   "integrations": {
     "addIntegration": "Add integration",
@@ -495,7 +490,12 @@
     "status": "Status",
     "online": "NOMINAL · online",
     "offline": "OFFLINE",
-    "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You"
+    "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "subnav": {
+      "ariaLabel": "Settings sections",
+      "general": "General",
+      "gates": "Approval rules"
+    }
   },
   "voice": {
     "modeLabel": "VOICE MODE",

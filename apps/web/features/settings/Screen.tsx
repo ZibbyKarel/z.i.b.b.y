@@ -10,6 +10,7 @@ import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useHealthQuery } from "../health/queries";
 import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { useVoice } from "../voice";
+import { SettingsSubnav } from "./components/SettingsSubnav";
 
 type Locale = "cs" | "en";
 
@@ -99,6 +100,8 @@ export function Screen() {
     <PageContainer maxWidth="880px">
       <Stack gap="250">
         <PageHeader subtitle={`${DAEMON} · ${t("daemonOn")} ${HOST}`} title={t("title")} />
+
+        <SettingsSubnav />
 
         <HudPanel padding="300" title={t("preferences")}>
           <Stack gap="200">

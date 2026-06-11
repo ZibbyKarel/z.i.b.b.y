@@ -19,8 +19,6 @@ export interface NavConfig {
 
 export const NAV_ITEMS = [
   { id: "overview", glyph: "grid", href: "/overview" },
-  { id: "approvals", glyph: "shield", href: "/approvals" },
-  { id: "gates", glyph: "checkpoint", href: "/gates" },
   { id: "skills", glyph: "spark", href: "/skills" },
   { id: "agents", glyph: "bot", href: "/agents" },
   { id: "projects", glyph: "code", href: "/projects" },
@@ -38,12 +36,24 @@ export const SETTINGS_ITEM = {
 } as const satisfies NavConfig;
 
 /**
- * A navigation segment id — the `id` of any nav item (incl. settings). These
- * double as keys under the `nav.<id>` message catalog, so typing them as a
- * union lets `t(navId)` be validated at compile time.
+ * Screens that stay routable but carry no sidebar entry: the approvals queue
+ * is reached from the Overview rail, and the gate rules live as a Settings
+ * sub-section.
+ */
+export const ROUTE_ONLY_ITEMS = [
+  { id: "approvals", glyph: "shield", href: "/approvals" },
+  { id: "gates", glyph: "checkpoint", href: "/gates" },
+] as const satisfies readonly NavConfig[];
+
+/**
+ * A navigation segment id — the `id` of any nav item (incl. settings and the
+ * route-only screens). These double as keys under the `nav.<id>` message
+ * catalog, so typing them as a union lets `t(navId)` be validated at compile
+ * time.
  */
 export type NavId =
   | (typeof NAV_ITEMS)[number]["id"]
+  | (typeof ROUTE_ONLY_ITEMS)[number]["id"]
   | (typeof SETTINGS_ITEM)["id"];
 
 export const MODEL_OPTIONS: SelectOption[] = [
