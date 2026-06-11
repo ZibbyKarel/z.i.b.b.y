@@ -44,7 +44,8 @@ export function ApprovalDetail({
   const meta = riskMeta(approval.riskType);
   const sev = SEVERITY[approval.risk];
   const riskLabel = approval.riskType ? t(`risk.${approval.riskType}`) : "";
-  const statusTone = decision === "approved" ? "ok" : decision === "rejected" ? "faint" : sev.tone;
+  // Dot = state: a pending approval sits in the amber "waiting for you" state.
+  const statusTone = decision === "approved" ? "ok" : decision === "rejected" ? "idle" : "wait";
 
   return (
     <Stack gap="200">
@@ -168,10 +169,10 @@ export function ApprovalDetail({
             </Stack>
           ) : (
             <Stack direction="row" gap="100">
-              <Button block disabled={pending} icon="check" intent="approve" onClick={onApprove}>
+              <Button block disabled={pending} icon="check" intent="primary" onClick={onApprove} tone="ok">
                 {t("approve")}
               </Button>
-              <Button block disabled={pending} icon="x" intent="reject" onClick={onReject}>
+              <Button block disabled={pending} icon="x" intent="danger" onClick={onReject}>
                 {t("reject")}
               </Button>
             </Stack>

@@ -32,7 +32,7 @@ export function AgentCard({
     <HudCard
       actions={
         <Stack align="center" direction="row" gap="100" justify="end">
-          <Button icon="play" intent="run" onClick={() => onRun?.(agent)} size="sm">
+          <Button icon="play" intent="primary" onClick={() => onRun?.(agent)} size="sm">
             {t("run")}
           </Button>
         </Stack>

@@ -134,7 +134,6 @@ function LimitPanel({ label, resetsAt, usedPct, now }: LimitPanelProps) {
         </Stack>
         <Container>
           <Progress
-            glow
             height="75"
             label={t(label)}
             tone={tone}

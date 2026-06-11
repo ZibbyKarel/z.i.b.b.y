@@ -131,7 +131,7 @@ export function AgentDetailModal({
 
   const viewActions = (
     <Stack grow align="center" direction="row" justify="between">
-      <Button icon="x" intent="reject" onClick={() => setConfirm(true)} size="sm">
+      <Button icon="x" intent="danger" onClick={() => setConfirm(true)} size="sm">
         {t("delete")}
       </Button>
       <Stack align="center" direction="row" gap="100">
@@ -165,7 +165,7 @@ export function AgentDetailModal({
       <Button
         disabled={!canSave}
         icon={isNew ? "plus" : "check"}
-        intent="run"
+        intent="primary"
         onClick={() => void submit()}
       >
         {isNew ? t("create") : t("save")}
@@ -239,7 +239,7 @@ export function AgentDetailModal({
               </Button>
               <Button
                 icon="x"
-                intent="reject"
+                intent="danger"
                 onClick={() => {
                   setConfirm(false);
                   onDelete(agent.id);

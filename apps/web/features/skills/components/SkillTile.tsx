@@ -36,7 +36,7 @@ export function SkillTile({ skill }: SkillTileProps) {
                 </Typography>
               </Stack>
             </Container>
-            <StatusDot size="75" tone="faint" />
+            <StatusDot size="75" tone="idle" />
           </Stack>
 
           <Container minW0>

@@ -151,7 +151,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                 <Stack align="center" direction="row" gap="100">
                   <Button icon="edit" intent="ghost" size="sm">{t("common.edit")}</Button>
                   <Button icon="link" intent="ghost" size="sm">{t("common.duplicate")}</Button>
-                  <Button icon="play" intent="run" onClick={() => setRunPipeline(selected)}>
+                  <Button icon="play" intent="primary" onClick={() => setRunPipeline(selected)}>
                     {t("pipelines.runPipeline")}
                   </Button>
                 </Stack>

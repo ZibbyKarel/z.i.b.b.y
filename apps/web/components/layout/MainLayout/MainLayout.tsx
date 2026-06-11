@@ -35,13 +35,13 @@ export function MainLayout({
 }: MainLayoutProps) {
   const t = useTranslations("sidebar");
   return (
-    <Surface grid scanlines>
+    <Surface background="scene">
       <Stack
         aria-label={t("navLabel")}
         as="nav"
         shrink={false}
-         
-        style={{ width: 224, backgroundColor: "var(--color-background)" }}
+
+        style={{ width: 224, backgroundColor: "var(--color-background-deep)" }}
       >
         <Container
           grow
@@ -81,7 +81,7 @@ export function MainLayout({
             aria-label={t("railLabel")}
             as="aside"
             shrink={false}
-            style={{ width: 340, backgroundColor: "var(--color-background)" }}
+            style={{ width: 324, backgroundColor: "var(--color-background-deep)" }}
           >
             <Container grow overflow="auto" padding={["300", "250"]}>
               {railSlot}

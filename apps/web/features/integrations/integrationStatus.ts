@@ -8,7 +8,7 @@ import type { IntegrationStatus } from "../../domain";
  */
 export const INTEGRATION_STATUS = {
   connected: { dot: "ok", pill: "ok", labelKey: "statusConnected" },
-  disconnected: { dot: "faint", pill: "neutral", labelKey: "statusDisconnected" },
+  disconnected: { dot: "idle", pill: "neutral", labelKey: "statusDisconnected" },
   error: { dot: "bad", pill: "bad", labelKey: "statusError" },
 } as const satisfies Record<
   IntegrationStatus,

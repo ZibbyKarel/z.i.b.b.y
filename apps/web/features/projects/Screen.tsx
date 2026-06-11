@@ -79,7 +79,7 @@ export function Screen() {
                 <Button
                   aria-label={t("deleteEmptyCategoryAria", { name: label })}
                   icon="x"
-                  intent="reject"
+                  intent="danger"
                   onClick={() => deleteCategory.mutate({ params: { name: label } })}
                   size="sm"
                 >
@@ -125,7 +125,7 @@ export function Screen() {
               </Button>
               <Button
                 icon="plus"
-                intent="run"
+                intent="primary"
                 onClick={() => setDraft(newProjectDraft(categories[0]?.name))}
               >
                 {t("addProject")}

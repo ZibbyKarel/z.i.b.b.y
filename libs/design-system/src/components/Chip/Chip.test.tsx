@@ -31,6 +31,6 @@ describe("Chip", () => {
 
   it("renders the run tone", () => {
     render(<Chip tone="run">běží</Chip>);
-    expect(screen.getByTestId(ChipTestId.Root)).toHaveClass("text-work");
+    expect(screen.getByTestId(ChipTestId.Root)).toHaveClass("text-run");
   });
 });

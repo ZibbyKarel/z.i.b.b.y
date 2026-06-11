@@ -26,8 +26,6 @@ export interface ProgressProps extends Omit<
   tone?: ProgressTone;
   /** Track height as a spacing token. */
   height?: Spacing;
-  /** @deprecated Bars are matte — glow is reserved for live states. Ignored. */
-  glow?: boolean;
   /** Accessible label; renders an ARIA progressbar when provided. */
   label?: string;
   ref?: React.Ref<HTMLDivElement>;
@@ -38,12 +36,10 @@ export function Progress({
   value,
   tone = "accent",
   height = "50",
-  glow,
   label,
   ref,
   ...props
 }: ProgressProps) {
-  void glow; // deprecated and ignored — bars are matte, glow belongs to live states
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div

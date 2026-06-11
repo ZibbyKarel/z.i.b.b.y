@@ -10,7 +10,7 @@ import {
 import type { ActivityEvent, ActivityIcon } from "../../../../domain"
 
 const iconTone: Record<ActivityIcon, IconTone> = {
-  run: "work",
+  run: "run",
   wait: "warn",
   ok: "ok",
   edit: "dim",

@@ -26,7 +26,7 @@ export const DesignSystemTokenContext = createContext<Theme | null>(null);
 
 export interface DesignSystemProviderProps {
   theme?: "dark" | "light";
-  /** Partial token overrides — use contextTokens(context) for accent switching. */
+  /** Partial token overrides. */
   tokens?: PartialTheme;
   layout?: "block" | "flex";
   style?: CSSProperties;

@@ -28,10 +28,6 @@ export const lightTheme: Theme = {
   colorAccentContrast:   "#ffffff",
   colorAccentGlow:       "rgba(201,137,10,0.35)",
 
-  // named accents
-  colorHome:             "#c9890a",
-  colorWork:             "#3b6fd4",
-
   // status
   colorOk:               "#1a9b5f",
   colorWarn:             "#c9890a",
@@ -43,16 +39,6 @@ export const lightTheme: Theme = {
   colorRiskDeletion:     "#e03030",
   colorRiskPush:         "#7c3fb0",
   colorRiskSend:         "#1d8fa5",
-
-  // model badges
-  colorModelOpus:        "#7c3fb0",
-  colorModelSonnet:      "#1d8fa5",
-  colorModelHaiku:       "#2a8a3a",
-
-  // think levels
-  colorThinkHigh:        "#d4660a",
-  colorThinkMedium:      "#3b6fd4",
-  colorThinkLow:         "#6b7c8d",
 
   // radii
   radiusDefault:         "6px",

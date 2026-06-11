@@ -74,7 +74,7 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Button icon="plus" intent="run" onClick={() => setEditing("new")}>
+            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
               {t("newRule")}
             </Button>
           }

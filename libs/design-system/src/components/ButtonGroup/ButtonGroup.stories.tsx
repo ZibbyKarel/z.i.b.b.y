@@ -5,8 +5,8 @@ import { Icon } from "../Icon/Icon";
 import { ButtonGroup, type ButtonGroupOption } from "./ButtonGroup";
 
 const contextOptions: ButtonGroupOption[] = [
-  { id: "home", label: "home", tone: "home" },
-  { id: "work", label: "work", tone: "work" },
+  { id: "home", label: "home", tone: "accent" },
+  { id: "work", label: "work", tone: "ok" },
 ];
 
 const decisionOptions: ButtonGroupOption[] = [

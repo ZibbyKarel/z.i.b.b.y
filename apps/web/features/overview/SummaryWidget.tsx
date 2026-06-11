@@ -7,7 +7,6 @@ import {
   Stat,
   StatusDot,
   Typography,
-  getUsageTone,
 } from "@zibby/design-system";
 import { MessageKey } from "apps/web/i18n/keys";
 import { useTranslations } from "next-intl";
@@ -32,6 +31,8 @@ export function SummaryWidget() {
   const isOnline = isSuccess;
 
   const healthTone = isConnecting ? "warn" : isOnline ? "ok" : "bad";
+  // Dot = state: connecting maps to the amber waiting state; pulse only while live.
+  const healthDotTone = isConnecting ? "wait" : isOnline ? "ok" : "bad";
   const healthLabel: MessageKey = isConnecting
     ? "overview.systemConnecting"
     : isOnline
@@ -41,8 +42,6 @@ export function SummaryWidget() {
   const healthDetail: MessageKey = isOnline
     ? "overview.daemonReady"
     : "overview.apiUnreachable";
-
-  const sdkTone = getUsageTone(0);
 
   const ctxSkills = skills.length;
   const ctxPipelines = pipelines.length;
@@ -59,7 +58,7 @@ export function SummaryWidget() {
           <Container minW0>
             <Stack gap="150">
               <Stack wrap align="center" direction="row" gap="100">
-                <StatusDot pulse tone={healthTone} />
+                <StatusDot pulse={isConnecting} tone={healthDotTone} />
                 <Typography
                   mono
                   uppercase
@@ -108,12 +107,6 @@ export function SummaryWidget() {
             label={t("overview.statApprovals")}
             tone="neutral"
             value="00"
-          />
-          <Stat
-            icon="dollar"
-            label={t("overview.statSdkCredit")}
-            tone={sdkTone}
-            value="$200"
           />
           <Stat
             icon="flow"

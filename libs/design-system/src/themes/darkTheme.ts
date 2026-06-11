@@ -31,10 +31,6 @@ export const darkTheme: Theme = {
   colorAccentContrast:   "#0b0e13",
   colorAccentGlow:       "rgba(91,141,239,0.4)",
 
-  // named accents (home/work context is dead — kept for compat, both blue)
-  colorHome:             "#5b8def",
-  colorWork:             "#5b8def",
-
   // status — the only colors allowed to glow
   colorOk:               "#3fcf8e",
   colorWarn:             "#f0b429",
@@ -46,16 +42,6 @@ export const darkTheme: Theme = {
   colorRiskDeletion:     "#ff6b6b",
   colorRiskPush:         "#b07cff",
   colorRiskSend:         "#56c4d6",
-
-  // model badges (deprecated — models render as glyph + text, no color)
-  colorModelOpus:        "#b07cff",
-  colorModelSonnet:      "#56c4d6",
-  colorModelHaiku:       "#7fd98a",
-
-  // think levels
-  colorThinkHigh:        "#f0883e",
-  colorThinkMedium:      "#5b8def",
-  colorThinkLow:         "#66737f",
 
   // radii — rCtl 6px (controls/chips), rPanel 10px (panels/modals)
   radiusDefault:         "6px",

@@ -66,7 +66,7 @@ export function CategoryDialog({ existing, pending, onClose, onSubmit }: Categor
           <Button intent="ghost" onClick={onClose}>
             {tk("common.cancel")}
           </Button>
-          <Button disabled={!canSubmit} icon="check" intent="run" onClick={() => void submit()}>
+          <Button disabled={!canSubmit} icon="check" intent="primary" onClick={() => void submit()}>
             {t("addCategory")}
           </Button>
         </>

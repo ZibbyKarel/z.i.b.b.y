@@ -89,7 +89,7 @@ export function CategoryDialog({
           <Button intent="ghost" onClick={onClose}>
             {tk("common.cancel")}
           </Button>
-          <Button disabled={!canSubmit} icon="check" intent="run" onClick={() => void submit()}>
+          <Button disabled={!canSubmit} icon="check" intent="primary" onClick={() => void submit()}>
             {labels.submit}
           </Button>
         </>

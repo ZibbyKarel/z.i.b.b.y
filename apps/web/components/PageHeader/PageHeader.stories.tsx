@@ -28,7 +28,7 @@ export const WithActions: Story = {
         <Button icon="plus" intent="ghost">
           Přidat kategorii
         </Button>
-        <Button icon="plus" intent="run">
+        <Button icon="plus" intent="primary">
           Přidat agenta
         </Button>
       </Stack>

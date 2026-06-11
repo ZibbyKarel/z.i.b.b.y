@@ -18,9 +18,9 @@ export function VoiceButton() {
     <Button
       aria-label={t("voiceLabel")}
       icon="mic"
-      intent="outline"
+      intent="ghost"
       onClick={open}
-      size="xs"
+      size="sm"
       title={`${t("voiceTitle")} (${combo})`}
     >
       {t("voice")}

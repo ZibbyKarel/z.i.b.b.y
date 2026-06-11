@@ -26,7 +26,7 @@ export function DispatchedState({ target, onClose }: DispatchedStateProps) {
         </Typography>
         <Stack align="center" direction="row" gap="100">
           <Link href="/runs?filter=running" onClick={onClose}>
-            <Button icon="pulse" intent="run">
+            <Button icon="pulse" intent="primary">
               {t("watch")}
             </Button>
           </Link>

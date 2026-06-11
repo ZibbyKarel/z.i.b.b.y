@@ -89,7 +89,7 @@ export function Screen() {
                 <Button
                   aria-label={ta("deleteEmptyCategoryAria", { name: label })}
                   icon="x"
-                  intent="reject"
+                  intent="danger"
                   onClick={() => deleteCategory.mutate({ params: { name: label } })}
                   size="sm"
                 >
@@ -143,7 +143,7 @@ export function Screen() {
               </Button>
               <Button
                 icon="plus"
-                intent="run"
+                intent="primary"
                 onClick={() => setDraft(newAgentDraft(categories[0]?.name))}
               >
                 {ta("addAgent")}

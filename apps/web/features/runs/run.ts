@@ -83,7 +83,7 @@ export const RUN_STATE: Record<RunStatus, RunStateMeta> = {
   "awaiting-approval": {
     key: "awaiting-approval",
     badge: "warn",
-    dot: "warn",
+    dot: "wait",
     glyph: "wait",
     pulse: true,
   },
@@ -98,7 +98,7 @@ export const RUN_STATE: Record<RunStatus, RunStateMeta> = {
   interrupted: {
     key: "interrupted",
     badge: "neutral",
-    dot: "faint",
+    dot: "idle",
     glyph: "stop",
     pulse: false,
   },

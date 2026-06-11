@@ -15,18 +15,20 @@ export enum ButtonGroupTestId {
   Add = "button-group-add",
 }
 
-export type ButtonGroupTone = "home" | "work" | "accent";
+export type ButtonGroupTone = "accent" | "ok" | "warn" | "bad";
 
 const toneSwatch: Record<ButtonGroupTone, string> = {
-  home: "bg-home",
-  work: "bg-work",
   accent: "bg-accent",
+  ok: "bg-ok",
+  warn: "bg-warn",
+  bad: "bg-bad",
 };
 
 const toneActive: Record<ButtonGroupTone, string> = {
-  home: "bg-home text-background shadow-[0_0_14px_color-mix(in_srgb,var(--color-home)_33%,transparent)]",
-  work: "bg-work text-background shadow-[0_0_14px_color-mix(in_srgb,var(--color-work)_33%,transparent)]",
   accent: "bg-accent text-accent-contrast",
+  ok: "bg-ok text-accent-contrast",
+  warn: "bg-warn text-accent-contrast",
+  bad: "bg-bad text-accent-contrast",
 };
 
 export interface ButtonGroupOption {

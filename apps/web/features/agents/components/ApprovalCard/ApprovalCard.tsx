@@ -94,11 +94,12 @@ export function ApprovalCard({
                 <Button
                   block
                   icon="check"
-                  intent="approve"
+                  intent="primary"
                   onClick={() => {
                     setDone("ok");
                     onApprove?.(approval);
                   }}
+                  tone="ok"
                 >
                   {t("approve")}
                 </Button>
@@ -107,7 +108,7 @@ export function ApprovalCard({
                 <Button
                   block
                   icon="x"
-                  intent="reject"
+                  intent="danger"
                   onClick={() => {
                     setDone("no");
                     onReject?.(approval);

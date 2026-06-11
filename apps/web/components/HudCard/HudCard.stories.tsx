@@ -25,10 +25,10 @@ type Story = StoryObj<typeof HudCard>
 
 const badgeRows = [
   [
-    <Chip key="model" tone="sonnet">
+    <Chip key="model" tone="neutral">
       sonnet
     </Chip>,
-    <Chip key="think" tone="think-medium">
+    <Chip key="think" tone="neutral">
       ◇ medium
     </Chip>,
     <Chip key="usage" tone="accent">
@@ -47,7 +47,7 @@ const badgeRows = [
 
 const runAction = (
   <Container textAlign="right">
-    <Button icon="play" intent="run" size="sm">
+    <Button icon="play" intent="primary" size="sm">
       spustit
     </Button>
   </Container>

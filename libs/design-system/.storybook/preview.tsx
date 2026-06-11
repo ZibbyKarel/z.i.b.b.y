@@ -2,7 +2,6 @@ import type { Preview } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import { DesignSystemProvider } from "../src/DesignSystemContext/DesignSystemProvider";
-import { contextTokens } from "./contextTokens";
 import messages from "../../../apps/web/i18n/messages/cs.json";
 import "../src/theme/globals.css";
 
@@ -27,19 +26,6 @@ const preview: Preview = {
         dynamicTitle: true,
       },
     },
-    context: {
-      description: "Dashboard context accent",
-      defaultValue: "home",
-      toolbar: {
-        title: "Context",
-        icon: "lightning",
-        items: [
-          { value: "home", title: "Home (amber)" },
-          { value: "work", title: "Work (blue)" },
-        ],
-        dynamicTitle: true,
-      },
-    },
   },
   decorators: [
     (Story, ctx) => (
@@ -52,9 +38,6 @@ const preview: Preview = {
           padding: "24px",
         }}
         theme={(ctx.globals["theme"] as "dark" | "light") ?? "dark"}
-        tokens={contextTokens(
-          (ctx.globals["context"] as "home" | "work") ?? "home",
-        )}
       >
         <NextIntlClientProvider locale="cs" messages={messages}>
           <QueryClientProvider client={queryClient}>

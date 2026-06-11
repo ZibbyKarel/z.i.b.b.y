@@ -58,7 +58,7 @@ export function Screen() {
                 <Button
                   aria-label={t("deleteEmptyCategoryAria", { name: label })}
                   icon="x"
-                  intent="reject"
+                  intent="danger"
                   onClick={() => deleteCategory.mutate({ params: { name: label } })}
                   size="sm"
                 >
@@ -102,7 +102,7 @@ export function Screen() {
               <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
                 {t("addCategory")}
               </Button>
-              <Button icon="plus" intent="run" onClick={() => setAdding(true)}>
+              <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
                 {t("addSkill")}
               </Button>
             </>

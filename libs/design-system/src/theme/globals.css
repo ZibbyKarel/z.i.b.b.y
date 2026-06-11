@@ -64,12 +64,6 @@
   --color-accent-contrast:  #0b0e13;
   --color-accent-glow:      rgba(91,141,239,0.4);
 
-  /* ---- Named accents (home/work context dead — kept for compat) ---------- */
-  --color-home:             #5b8def;
-  --color-work:             #5b8def;
-  --color-home-glow:        #5b8def;
-  --color-work-glow:        #5b8def;
-
   /* ---- Semantic status (the only colors allowed to glow) ----------------- */
   --color-ok:               #3fcf8e;
   --color-warn:             #f0b429;
@@ -86,13 +80,9 @@
   --color-risk-push:        #b07cff;
   --color-risk-send:        #56c4d6;
 
-  /* ---- Model / thinking badges (deprecated — models are glyph + text) ---- */
-  --color-model-opus:       #b07cff;
-  --color-model-sonnet:     #56c4d6;
-  --color-model-haiku:      #7fd98a;
-  --color-think-high:       #f0883e;
-  --color-think-medium:     #5b8def;
-  --color-think-low:        #66737f;
+  /* ---- Scene ------------------------------------------------------------- */
+  /* Depth comes from the background itself — no scanlines, no grid overlays. */
+  --gradient-scene: radial-gradient(ellipse 120% 90% at 50% -8%, #101722 0%, var(--color-background) 58%);
 
   /* ---- Misc -------------------------------------------------------------- */
   --color-transparent:      transparent;

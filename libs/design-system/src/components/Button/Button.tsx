@@ -9,9 +9,7 @@ import { Icon, type IconName } from "../Icon/Icon";
  *   primary — filled accent, dark text
  *   ghost   — quiet, hairline-bordered mono action
  *   danger  — red outline that tints on hover
- *
- * Legacy intents (run/solid/outline/approve/reject) are deprecated aliases
- * kept until app call sites migrate; they map onto the three variants.
+ * `tone` recolors primary/danger (e.g. the green approve = primary + ok).
  */
 const button = cva(
   [
@@ -62,35 +60,7 @@ const spinnerClass: Record<"primary" | "ghost" | "danger", string> = {
 };
 
 export type ButtonIntent = "primary" | "ghost" | "danger";
-
-/** @deprecated Legacy intent names — use primary/ghost/danger (+ tone). */
-export type ButtonLegacyIntent =
-  | "run"
-  | "solid"
-  | "outline"
-  | "approve"
-  | "reject";
-
-const legacyIntentMap: Record<
-  ButtonLegacyIntent,
-  { intent: ButtonIntent; tone?: "ok" }
-> = {
-  run: { intent: "primary" },
-  solid: { intent: "primary" },
-  outline: { intent: "ghost" },
-  approve: { intent: "primary", tone: "ok" },
-  reject: { intent: "danger" },
-};
-
 export type ButtonSize = "sm" | "md";
-
-/** @deprecated Legacy size names — use sm/md. */
-export type ButtonLegacySize = "xs" | "lg";
-
-const legacySizeMap: Record<ButtonLegacySize, ButtonSize> = {
-  xs: "sm",
-  lg: "md",
-};
 
 export enum ButtonTestId {
   Root = "button-root",
@@ -101,21 +71,13 @@ export enum ButtonTestId {
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">,
     Omit<VariantProps<typeof button>, "intent" | "size"> {
-  intent?: ButtonIntent | ButtonLegacyIntent;
-  size?: ButtonSize | ButtonLegacySize;
+  intent?: ButtonIntent;
+  size?: ButtonSize;
   /** Optional leading icon glyph. */
   icon?: IconName;
   /** Replaces the icon with a spinner and suppresses clicks. */
   loading?: boolean;
   ref?: React.Ref<HTMLButtonElement>;
-}
-
-function isLegacyIntent(i: ButtonIntent | ButtonLegacyIntent): i is ButtonLegacyIntent {
-  return i in legacyIntentMap;
-}
-
-function isLegacySize(s: ButtonSize | ButtonLegacySize): s is ButtonLegacySize {
-  return s in legacySizeMap;
 }
 
 export function Button({
@@ -132,21 +94,12 @@ export function Button({
   ref,
   ...props
 }: ButtonProps) {
-  const mapped = isLegacyIntent(intent) ? legacyIntentMap[intent] : { intent };
-  const resolvedIntent = mapped.intent;
-  const resolvedTone = tone ?? mapped.tone;
-  const resolvedSize = isLegacySize(size) ? legacySizeMap[size] : size;
-  const iconSize = resolvedSize === "sm" ? "xs" : "sm";
+  const iconSize = size === "sm" ? "xs" : "sm";
 
   return (
     <button
       aria-busy={loading || undefined}
-      className={button({
-        intent: resolvedIntent,
-        tone: resolvedTone,
-        size: resolvedSize,
-        block,
-      })}
+      className={button({ intent, tone, size, block })}
       data-testid={ButtonTestId.Root}
       disabled={disabled}
       onClick={loading ? undefined : onClick}
@@ -158,7 +111,7 @@ export function Button({
         <span
           className={cn(
             "h-3 w-3 shrink-0 rounded-full border-[1.5px] animate-spinner motion-reduce:animate-none",
-            spinnerClass[resolvedIntent],
+            spinnerClass[intent],
           )}
           data-testid={ButtonTestId.Spinner}
         />

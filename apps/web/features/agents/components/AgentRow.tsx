@@ -10,6 +10,7 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system";
+import type { DotTone, ProgressTone } from "@zibby/design-system";
 import type { AgentRun } from "@zibby/contracts";
 
 export interface AgentRowProps {
@@ -21,15 +22,28 @@ export interface AgentRowProps {
   divider?: boolean;
 }
 
-/** Literal union assignable to both StatusDot's `DotTone` and Progress's `ProgressTone`. */
-const statusTone: Record<AgentRun["status"], "accent" | "ok" | "bad" | "warn"> = {
-  running: "accent",
+/** Color = state: running has its own color, distinct from the accent. */
+const statusDotTone: Record<AgentRun["status"], DotTone> = {
+  running: "run",
+  done: "ok",
+  error: "bad",
+  interrupted: "idle",
+  "awaiting-approval": "wait",
+};
+
+const statusBarTone: Record<AgentRun["status"], ProgressTone> = {
+  running: "run",
   done: "ok",
   error: "bad",
   interrupted: "warn",
-  // Phase 3: paused on an approval — amber, like an interrupted-but-recoverable run.
   "awaiting-approval": "warn",
 };
+
+/** Live states — the only ones that pulse. */
+const liveStatuses: ReadonlySet<AgentRun["status"]> = new Set([
+  "running",
+  "awaiting-approval",
+]);
 
 export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps) {
   const t = useTranslations("agents");
@@ -53,10 +67,9 @@ export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps)
       <Stack align="center" direction="row" gap="100">
         <Container grow minW0>
           <Progress
-            glow
             height="50"
             label={t("progressAria", { skill: name })}
-            tone={statusTone[run.status]}
+            tone={statusBarTone[run.status]}
             value={run.pct}
           />
         </Container>
@@ -71,7 +84,7 @@ export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps)
     <>
       <Container padding={["150", "0"]}>
         <Stack align="center" direction="row" gap="150">
-          <StatusDot pulse={run.status === "running"} tone={statusTone[run.status]} />
+          <StatusDot pulse={liveStatuses.has(run.status)} tone={statusDotTone[run.status]} />
           <Container grow minW0>
             {onOpen ? (
               <Stack>

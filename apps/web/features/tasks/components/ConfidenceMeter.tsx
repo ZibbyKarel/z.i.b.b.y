@@ -39,7 +39,7 @@ export function ConfidenceMeter({ confidence }: ConfidenceMeterProps) {
           </Typography>
         </Stack>
       </Stack>
-      <Progress glow height="50" label={t("confidenceLabel")} tone={tone} value={pct} />
+      <Progress height="50" label={t("confidenceLabel")} tone={tone} value={pct} />
     </Stack>
   );
 }

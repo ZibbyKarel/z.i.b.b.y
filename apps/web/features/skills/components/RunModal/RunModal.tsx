@@ -78,7 +78,7 @@ export function RunModal({ agent, onClose, onLaunch }: RunModalProps) {
             <Button icon="edit" intent="ghost">
               {t("runModal.editRaw")}
             </Button>
-            <Button form="run-form" icon="play" intent="run" type="submit">
+            <Button form="run-form" icon="play" intent="primary" type="submit">
               {t("runModal.launch")}
             </Button>
           </Stack>

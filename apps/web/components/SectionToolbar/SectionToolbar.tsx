@@ -11,7 +11,7 @@ export interface SectionToolbarProps {
 
 /**
  * A SectionLabel paired with the conventional primary "+ add" button. Collapses
- * the repeated `<SectionLabel action={<Button icon="plus" intent="run" …>}>`
+ * the repeated `<SectionLabel action={<Button icon="plus" intent="primary" …>}>`
  * pattern shared by the skills, integrations and pipelines screens.
  */
 export function SectionToolbar({ label, addLabel, onAdd }: SectionToolbarProps) {
@@ -19,7 +19,7 @@ export function SectionToolbar({ label, addLabel, onAdd }: SectionToolbarProps) 
     <SectionLabel
       action={
         addLabel ? (
-          <Button icon="plus" intent="run" onClick={onAdd} size="sm">
+          <Button icon="plus" intent="primary" onClick={onAdd} size="sm">
             {addLabel}
           </Button>
         ) : undefined

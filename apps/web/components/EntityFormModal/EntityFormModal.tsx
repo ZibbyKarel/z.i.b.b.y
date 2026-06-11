@@ -81,7 +81,7 @@ export function EntityFormModal({
       actions={
         <>
           <Button intent="ghost" onClick={onClose}>{t("cancel")}</Button>
-          <Button disabled={!canSubmit} form="entity-form" icon="plus" intent="run" type="submit">
+          <Button disabled={!canSubmit} form="entity-form" icon="plus" intent="primary" type="submit">
             {submitLabel}
           </Button>
         </>

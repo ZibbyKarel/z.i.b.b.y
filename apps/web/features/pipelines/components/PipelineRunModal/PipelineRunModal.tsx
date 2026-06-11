@@ -83,7 +83,7 @@ export function PipelineRunModal({
             <Button
               form="pipeline-run-form"
               icon="play"
-              intent="run"
+              intent="primary"
               type="submit"
             >
               {t("pipelineRun.launch", { budget: pipeline.budget })}

@@ -3,23 +3,11 @@ import { cn } from "../../utils/cn";
 import { type Spacing, spacingToPx } from "../../tokens";
 
 /**
- * Canonical states: ok / run / wait / bad / idle ("color = state").
- * Non-live dots are matte; glow + 2s opacity pulse appear only with `pulse`
- * (live states: running, awaiting approval).
- *
- * accent/home/work/faint are deprecated aliases kept until call sites migrate.
+ * Canonical states: ok / run / wait / bad / idle ("color = state"), plus
+ * accent for interaction/selection markers. Non-live dots are matte; glow +
+ * 2s opacity pulse appear only with `pulse` (running, awaiting approval).
  */
-export type DotTone =
-  | "ok"
-  | "run"
-  | "wait"
-  | "bad"
-  | "idle"
-  | "accent"
-  | "warn"
-  | "home"
-  | "work"
-  | "faint";
+export type DotTone = "ok" | "run" | "wait" | "bad" | "idle" | "accent";
 
 const toneClass: Record<DotTone, string> = {
   ok: "bg-ok",
@@ -28,10 +16,6 @@ const toneClass: Record<DotTone, string> = {
   bad: "bg-bad",
   idle: "bg-foreground-faint",
   accent: "bg-accent",
-  warn: "bg-warn",
-  home: "bg-accent",
-  work: "bg-accent",
-  faint: "bg-foreground-faint",
 };
 
 /** Live glow — only rendered when `pulse` is set. */
@@ -42,10 +26,6 @@ const glowClass: Record<DotTone, string> = {
   bad: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-bad)_67%,transparent)]",
   idle: "",
   accent: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_67%,transparent)]",
-  warn: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-warn)_67%,transparent)]",
-  home: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_67%,transparent)]",
-  work: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_67%,transparent)]",
-  faint: "",
 };
 
 export enum StatusDotTestId {

@@ -2,7 +2,6 @@ import {
   Container,
   Divider,
   Icon,
-  Spacer,
   Stack,
   Typography,
 } from "@zibby/design-system";
@@ -25,8 +24,7 @@ export function TopBar({ breadcrumb, walletSlot, taskSlot, voiceSlot }: TopBarPr
           align="center"
           direction="row"
           gap="100"
-          justify="between"
-           
+
           style={{ height: "100%" }}
         >
           <Stack align="center" direction="row" gap="75">
@@ -35,24 +33,21 @@ export function TopBar({ breadcrumb, walletSlot, taskSlot, voiceSlot }: TopBarPr
               {breadcrumb}
             </Typography>
           </Stack>
-          <Spacer />
-          {walletSlot}
+          {/* Search sits in flow (flex: 0 1 360px) so it can never overlap
+              its neighbours — the absolute ⌘K collision was an audit finding. */}
+          <Container
+            minW0
+
+            style={{ flex: "0 1 360px", minWidth: 150, margin: "0 auto" }}
+          >
+            <GlobalSearch />
+          </Container>
           {taskSlot}
           {voiceSlot}
           <LanguageSwitcher />
+          <Divider orientation="vertical" />
+          {walletSlot}
         </Stack>
-
-        <Container
-          left="50%"
-          maxWidth="40vw"
-          position="absolute"
-
-          style={{ transform: "translate(-50%, -50%)" }}
-          top="50%"
-          width="360px"
-        >
-          <GlobalSearch />
-        </Container>
       </Container>
       <Divider />
     </Container>

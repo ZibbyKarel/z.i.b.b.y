@@ -97,7 +97,7 @@ export function ProjectModal({
   const actions = (
     <Stack grow align="center" direction="row" justify="between">
       {!isNew ? (
-        <Button icon="x" intent="reject" onClick={() => setConfirm(true)} size="sm">
+        <Button icon="x" intent="danger" onClick={() => setConfirm(true)} size="sm">
           {t("delete")}
         </Button>
       ) : (
@@ -107,7 +107,7 @@ export function ProjectModal({
         <Button intent="ghost" onClick={onClose}>
           {tk("common.cancel")}
         </Button>
-        <Button disabled={!canSave} icon={isNew ? "plus" : "check"} intent="run" onClick={() => void submit()}>
+        <Button disabled={!canSave} icon={isNew ? "plus" : "check"} intent="primary" onClick={() => void submit()}>
           {isNew ? t("create") : t("save")}
         </Button>
       </Stack>
@@ -218,7 +218,7 @@ export function ProjectModal({
               </Button>
               <Button
                 icon="x"
-                intent="reject"
+                intent="danger"
                 onClick={() => {
                   setConfirm(false);
                   onDelete(project.id);

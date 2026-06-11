@@ -161,7 +161,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
                 {approvals.slice(0, 3).map((a) => (
                   <Stack gap="25" key={a.id}>
                     <Stack align="center" direction="row" gap="75">
-                      <StatusDot size="50" tone="warn" />
+                      <StatusDot size="50" tone="wait" />
                       <Typography mono size="xs" type="note">
                         {a.skill}
                       </Typography>

@@ -13,8 +13,8 @@ export type IconTone =
   | "ok"
   | "bad"
   | "warn"
+  | "run"
   | "accent"
-  | "work"
   | "dim"
   | "faint";
 
@@ -22,8 +22,8 @@ const toneClass: Record<IconTone, string> = {
   ok: "text-ok",
   bad: "text-bad",
   warn: "text-warn",
+  run: "text-run",
   accent: "text-accent",
-  work: "text-work",
   dim: "text-foreground-dim",
   faint: "text-foreground-faint",
 };

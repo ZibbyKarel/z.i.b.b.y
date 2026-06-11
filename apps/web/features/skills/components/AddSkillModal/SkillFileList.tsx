@@ -42,7 +42,7 @@ export function SkillFileList({ files, selectedCount, onToggle, onImport }: Skil
         <Button
           disabled={selectedCount === 0}
           icon="check"
-          intent="run"
+          intent="primary"
           onClick={onImport}
           size="sm"
           type="button"

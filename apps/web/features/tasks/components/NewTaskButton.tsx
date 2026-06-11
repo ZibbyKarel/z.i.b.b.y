@@ -18,9 +18,9 @@ export function NewTaskButton() {
     <Button
       aria-label={t("triggerAria")}
       icon="plus"
-      intent="outline"
+      intent="ghost"
       onClick={open}
-      size="xs"
+      size="sm"
       title={`${t("triggerTitle")} (${NEW_TASK_SHORTCUT.toUpperCase()})`}
     >
       {t("triggerLabel")}

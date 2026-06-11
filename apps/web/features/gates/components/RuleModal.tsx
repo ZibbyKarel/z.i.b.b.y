@@ -136,7 +136,7 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
           <Button intent="ghost" onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button disabled={!canSave || pending} icon="check" intent="run" onClick={() => void submit()}>
+          <Button disabled={!canSave || pending} icon="check" intent="primary" onClick={() => void submit()}>
             {t("saveRule")}
           </Button>
         </>

@@ -118,7 +118,7 @@ export function HudCard({
             <Button
               aria-label={pinned ? unpinLabel : pinLabel}
               icon="pin"
-              intent={pinned ? "solid" : "ghost"}
+              intent={pinned ? "primary" : "ghost"}
               onClick={() => onPinChange(!pinned)}
               size="sm"
             />

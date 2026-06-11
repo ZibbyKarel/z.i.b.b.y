@@ -115,7 +115,7 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
           <Button icon="x" intent="ghost" onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button disabled={!canSubmit} icon="bolt" intent="run" onClick={handleClassify}>
+          <Button disabled={!canSubmit} icon="bolt" intent="primary" onClick={handleClassify}>
             {t("classifyRun")}
           </Button>
         </Stack>
@@ -131,7 +131,7 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
             <Button icon="chevron" intent="ghost" onClick={() => setStage("compose")}>
               {t("routing.back")}
             </Button>
-            <Button disabled={dispatching} icon="bolt" intent="solid" onClick={handleDispatch}>
+            <Button disabled={dispatching} icon="bolt" intent="primary" onClick={handleDispatch}>
               {t("routing.dispatch")}
             </Button>
           </Stack>

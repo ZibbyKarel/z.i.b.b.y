@@ -74,16 +74,16 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
             </Stack>
             <Stack align="center" direction="row" gap="100">
               {run.status === "running" && (
-                <Button disabled={stopping} icon="stop" intent="reject" onClick={onStop} size="sm">
+                <Button disabled={stopping} icon="stop" intent="danger" onClick={onStop} size="sm">
                   {t("stop")}
                 </Button>
               )}
               {run.status === "awaiting-approval" && (
-                <Button icon="shield" intent="run" onClick={() => router.push("/approvals")} size="sm">
+                <Button icon="shield" intent="primary" onClick={() => router.push("/approvals")} size="sm">
                   {t("decide")}
                 </Button>
               )}
-              <Button disabled={deleting} icon="x" intent="reject" onClick={onDelete} size="sm">
+              <Button disabled={deleting} icon="x" intent="danger" onClick={onDelete} size="sm">
                 {t("delete")}
               </Button>
             </Stack>

@@ -112,12 +112,6 @@ export interface Theme {
   /** Glow color used in accent box-shadows. */
   colorAccentGlow: string;
 
-  // ---- Named accents -----------------------------------------------------
-  /** Home context accent (amber). */
-  colorHome: string;
-  /** Work context accent / running-state color (sky). */
-  colorWork: string;
-
   // ---- Semantic status ---------------------------------------------------
   colorOk: string;
   colorWarn: string;
@@ -130,14 +124,6 @@ export interface Theme {
   colorRiskDeletion: string;
   colorRiskPush: string;
   colorRiskSend: string;
-
-  // ---- Model / thinking badges (deprecated — models are glyph + text now) -
-  colorModelOpus: string;
-  colorModelSonnet: string;
-  colorModelHaiku: string;
-  colorThinkHigh: string;
-  colorThinkMedium: string;
-  colorThinkLow: string;
 
   // ---- Border radii ------------------------------------------------------
   radiusDefault: string;
@@ -193,9 +179,6 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--color-accent-dim":        t.colorAccentDim,
     "--color-accent-contrast":   t.colorAccentContrast,
     "--color-accent-glow":       t.colorAccentGlow,
-    // named accents
-    "--color-home":              t.colorHome,
-    "--color-work":              t.colorWork,
     // status
     "--color-ok":                t.colorOk,
     "--color-warn":              t.colorWarn,
@@ -206,14 +189,6 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--color-risk-deletion":     t.colorRiskDeletion,
     "--color-risk-push":         t.colorRiskPush,
     "--color-risk-send":         t.colorRiskSend,
-    // model badges
-    "--color-model-opus":        t.colorModelOpus,
-    "--color-model-sonnet":      t.colorModelSonnet,
-    "--color-model-haiku":       t.colorModelHaiku,
-    // think levels
-    "--color-think-high":        t.colorThinkHigh,
-    "--color-think-medium":      t.colorThinkMedium,
-    "--color-think-low":         t.colorThinkLow,
     // radius
     "--radius":                  t.radiusDefault,
     "--radius-sm":               t.radiusSm,

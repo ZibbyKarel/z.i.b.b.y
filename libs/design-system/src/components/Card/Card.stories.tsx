@@ -50,7 +50,7 @@ export const Overview: Story = {
           <CardContent>Opravdu chcete smazat tento pipeline?</CardContent>
           <CardActions>
             <Button intent="ghost">Zrušit</Button>
-            <Button icon="x" intent="reject">
+            <Button icon="x" intent="danger">
               Smazat
             </Button>
           </CardActions>

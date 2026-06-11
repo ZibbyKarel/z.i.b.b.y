@@ -110,7 +110,7 @@ export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSki
           <Button intent="ghost" onClick={onClose}>
             {tk("common.cancel")}
           </Button>
-          <Button disabled={!canSubmit} icon="plus" intent="run" onClick={() => void submit()}>
+          <Button disabled={!canSubmit} icon="plus" intent="primary" onClick={() => void submit()}>
             {t("submitLabel")}
           </Button>
         </>

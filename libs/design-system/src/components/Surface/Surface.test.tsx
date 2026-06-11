@@ -12,21 +12,17 @@ describe("Surface", () => {
     expect(screen.getByTestId(SurfaceTestId.Content)).toHaveTextContent("shell")
   })
 
-  it("omits decorative overlays by default", () => {
-    render(<Surface>x</Surface>)
+  it("renders no decorative overlay elements", () => {
+    render(<Surface background="scene">x</Surface>)
     expect(
       screen.getByTestId(SurfaceTestId.Root).querySelectorAll('[aria-hidden="true"]'),
     ).toHaveLength(0)
   })
 
-  it("renders grid and scanline overlays when enabled", () => {
-    render(
-      <Surface grid scanlines>
-        x
-      </Surface>,
+  it("paints the scene gradient for the app shell", () => {
+    render(<Surface background="scene">x</Surface>)
+    expect(screen.getByTestId(SurfaceTestId.Root).className).toContain(
+      "bg-[image:var(--gradient-scene)]",
     )
-    expect(
-      screen.getByTestId(SurfaceTestId.Root).querySelectorAll('[aria-hidden="true"]'),
-    ).toHaveLength(2)
   })
 })

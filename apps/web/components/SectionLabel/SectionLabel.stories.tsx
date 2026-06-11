@@ -24,7 +24,7 @@ export const Default: Story = {}
 export const WithAction: Story = {
   args: {
     action: (
-      <Button icon="plus" intent="run" size="sm">
+      <Button icon="plus" intent="primary" size="sm">
         Přidat skill
       </Button>
     ),

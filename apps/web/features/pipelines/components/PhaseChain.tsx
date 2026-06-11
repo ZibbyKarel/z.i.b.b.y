@@ -13,23 +13,11 @@ import {
 import type { Agent } from "@zibby/contracts";
 import { type Pipeline, type PipelinePhase, glyphForAgent } from "../../../domain";
 
-const modelTone = {
-  opus: "opus",
-  sonnet: "sonnet",
-  haiku: "haiku",
-} as const;
-
-const thinkTone = {
-  high: "think-high",
-  medium: "think-medium",
-  low: "think-low",
-} as const;
-
 /** Per-run model badge (opus / sonnet / haiku). */
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
   const t = useTranslations("phase");
   return (
-    <Chip title={t("modelTitle")} tone={modelTone[model]}>
+    <Chip title={t("modelTitle")} tone="neutral">
       {model}
     </Chip>
   );
@@ -39,7 +27,7 @@ export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
 export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
   const t = useTranslations("phase");
   return (
-    <Chip title={t("thinkTitle")} tone={thinkTone[level]}>
+    <Chip title={t("thinkTitle")} tone="neutral">
       ◇ {level}
     </Chip>
   );

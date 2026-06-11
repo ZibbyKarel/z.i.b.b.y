@@ -91,7 +91,7 @@ function AutomationRow({
       <Container padding={["150", "200"]}>
         <Stack align="center" direction="row" gap="200" justify="between">
           <Stack align="center" direction="row" gap="150">
-            <StatusDot tone={automation.enabled ? "ok" : "warn"} />
+            <StatusDot tone={automation.enabled ? "ok" : "wait"} />
             <Container minW0>
               <Typography size="base" type="note" weight="semibold">
                 {automation.name ?? automation.id}
@@ -146,7 +146,7 @@ function CreateDialog({
       open
       actions={
         <Stack grow align="center" direction="row" justify="end">
-          <Button intent="run" onClick={submit}>
+          <Button intent="primary" onClick={submit}>
             Create
           </Button>
         </Stack>

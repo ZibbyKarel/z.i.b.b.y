@@ -2,23 +2,23 @@ import { Fragment } from "react"
 import { useTranslations } from "next-intl"
 import {
   Card,
-  Chip,
   Container,
   Divider,
   Icon,
   Stack,
-  StatusDot,
+  StatusChip,
+  type StatusChipState,
   Typography,
 } from "@zibby/design-system"
 import type { Agent } from "@zibby/contracts"
 import { type Pipeline, type PipelineState, glyphForAgent } from "../../../../domain"
 
 const stateMeta = {
-  done: { tone: "ok", labelKey: "stateDone" },
-  parked: { tone: "warn", labelKey: "stateParked" },
-  failed: { tone: "bad", labelKey: "stateFailed" },
-  running: { tone: "accent", labelKey: "stateRunning" },
-} as const satisfies Record<PipelineState, { tone: "ok" | "warn" | "bad" | "accent"; labelKey: string }>
+  done: { state: "ok", labelKey: "stateDone" },
+  parked: { state: "wait", labelKey: "stateParked" },
+  failed: { state: "bad", labelKey: "stateFailed" },
+  running: { state: "run", labelKey: "stateRunning" },
+} as const satisfies Record<PipelineState, { state: StatusChipState; labelKey: string }>
 
 export interface PipelineCardProps {
   pipeline: Pipeline
@@ -48,10 +48,7 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
               <Typography mono size="md" type="note" weight="bold">
                 {pipeline.name}
               </Typography>
-              <Chip tone={sm.tone}>
-                <StatusDot size="50" tone={sm.tone} />
-                {t(sm.labelKey)}
-              </Chip>
+              <StatusChip state={sm.state}>{t(sm.labelKey)}</StatusChip>
             </Stack>
             <Typography leading="snug" size="caption" type="note" variant="secondary">
               {pipeline.desc}

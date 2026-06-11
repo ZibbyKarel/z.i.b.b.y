@@ -27,7 +27,7 @@ export function RunningAgentsPanel() {
     <HudPanel title={t("overview.runningAgents")}>
       {runs.length === 0 ? (
         <Stack align="center" direction="row" gap="100">
-          <StatusDot tone="faint" />
+          <StatusDot tone="idle" />
           <Typography mono size="sm" type="note" variant="secondary">
             {t("overview.noAgentsRunning")}
           </Typography>

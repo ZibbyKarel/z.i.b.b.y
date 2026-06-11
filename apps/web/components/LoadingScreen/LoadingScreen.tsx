@@ -180,7 +180,7 @@ export function LoadingScreen({
         {/* Progress */}
         <div className="animate-fade-up mb-4 w-[260px] opacity-0" style={{ animationDelay: "1.8s" }}>
           <div className="relative" data-testid={LoadingScreenTestId.Progress}>
-            <Progress glow height="25" label={status ?? "Loading"} value={pct} />
+            <Progress height="25" label={status ?? "Loading"} value={pct} />
             {/* Bright leading-edge node riding the fill */}
             <div
               aria-hidden="true"

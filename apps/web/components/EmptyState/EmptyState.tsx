@@ -39,7 +39,7 @@ export function EmptyState({
             </Typography>
           </Container>
           {actionLabel && (
-            <Button icon="plus" intent="run" onClick={onAction}>
+            <Button icon="plus" intent="primary" onClick={onAction}>
               {actionLabel}
             </Button>
           )}

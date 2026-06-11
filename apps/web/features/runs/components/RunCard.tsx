@@ -53,7 +53,7 @@ export function RunCard({
           {showBar && (
             <Stack align="center" direction="row" gap="100">
               <Container grow>
-                <Progress glow tone={run.status === "awaiting-approval" ? "warn" : "accent"} value={run.pct ?? 0} />
+                <Progress tone={run.status === "awaiting-approval" ? "warn" : "accent"} value={run.pct ?? 0} />
               </Container>
               <Typography mono size="2xs" tone={run.status === "awaiting-approval" ? "warn" : "accent"} type="note" weight="semibold">
                 {run.pct}%
