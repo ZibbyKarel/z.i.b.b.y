@@ -16,7 +16,8 @@ import { useState } from "react";
 import type { Approval } from "../../../../domain";
 
 export interface ApprovalCardProps {
-  approval: Approval;
+  /** Domain approval; an enriched backend payload may add a semantic `riskType`. */
+  approval: Approval & { riskType?: string };
   onApprove?: (approval: Approval) => void;
   onReject?: (approval: Approval) => void;
 }
@@ -47,7 +48,10 @@ export function ApprovalCard({
   const t = useTranslations("approval");
   const [done, setDone] = useState<"ok" | "no" | null>(null);
 
-  const kind = riskKind[approval.risk];
+  // Prefer the semantic risk type (platba/mazani/…); `risk` itself may carry
+  // either a type tag (mock data) or a severity (low/medium/high) — severities
+  // simply don't match the map and fall back to the plain chip + button.
+  const kind = riskKind[approval.riskType ?? approval.risk];
   const hold = kind !== undefined && highRisk.has(kind);
 
   return (
