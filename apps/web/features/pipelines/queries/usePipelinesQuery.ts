@@ -9,7 +9,7 @@ export function getPipelinesQueryKey() {
 
 /**
  * Map the contract `Pipeline` onto the dashboard's domain `Pipeline`: derive the
- * display-only `file` path, default the budget, and drop the phase `id` the UI
+ * display-only `file` path, and drop the phase `id` the UI
  * doesn't render. `lastRun`/`lastState` are run-history fields the definition
  * doesn't carry — defaulted here until the run list feeds them.
  */
@@ -17,7 +17,6 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
   return response.body.map((p) => ({
     id: p.id,
     name: p.name ?? p.id,
-    budget: p.budget ?? 0,
     lastRun: "—",
     lastState: "done",
     desc: p.desc ?? "",

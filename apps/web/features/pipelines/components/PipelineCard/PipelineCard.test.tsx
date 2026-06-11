@@ -12,7 +12,6 @@ const agents: Agent[] = [
 const pipeline: Pipeline = {
   id: "build-feature",
   name: "Build Feature",
-  budget: 25,
   lastRun: "dnes 03:12",
   lastState: "parked",
   desc: "spec → impl → test",
@@ -21,11 +20,11 @@ const pipeline: Pipeline = {
 }
 
 describe("PipelineCard", () => {
-  it("renders name, state label and budget", () => {
+  it("renders name, state label and last run", () => {
     render(<PipelineCard agents={agents} onSelect={() => {}} pipeline={pipeline} selected={false} />)
     expect(screen.getByText("Build Feature")).toBeInTheDocument()
     expect(screen.getByText("zaparkováno")).toBeInTheDocument()
-    expect(screen.getByText(/strop \$25/)).toBeInTheDocument()
+    expect(screen.getByText(/dnes 03:12/)).toBeInTheDocument()
   })
 
   it("selects on click", async () => {

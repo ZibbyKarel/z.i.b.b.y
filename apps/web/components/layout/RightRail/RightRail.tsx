@@ -25,7 +25,7 @@ export function RightRail() {
     <Stack gap="250">
       <HudPanel
         action={
-          <Link href="/approvals">
+          <Link href="/runs?filter=awaiting-approval">
             <Typography mono size="xs" tone="accent" type="note">
               {t("overview.allApprovals")}
             </Typography>

@@ -124,17 +124,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
             kind: "textarea",
             placeholder: t("forms.pipeline.descPlaceholder"),
           },
-          {
-            name: "budget",
-            label: t("forms.pipeline.budgetLabel"),
-            kind: "segmented",
-            defaultValue: "25",
-            options: [
-              { value: "10", label: "$10" },
-              { value: "25", label: "$25" },
-              { value: "50", label: "$50" },
-            ],
-          },
         ],
         filePreview: (v) =>
           `~/zibby/pipelines/${slugPreview(v.name, fallbackName)}.pipeline.md`,

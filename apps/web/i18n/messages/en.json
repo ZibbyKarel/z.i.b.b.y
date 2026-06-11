@@ -280,10 +280,8 @@
     "emptyTitle": "No pipelines yet",
     "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
     "emptyHint": "// creates ~/zibby/pipelines/'<name>'.pipeline.md",
-    "phaseCap": "PIPELINE BUDGET",
     "branchNote": "output → isolated branch · PR for morning review",
     "chainTitle": "phase chain · files = handoff",
-    "cardBudget": "cap ${budget}",
     "cardLastRun": "last {lastRun}",
     "stateDone": "done",
     "stateParked": "parked",
@@ -334,16 +332,15 @@
   },
   "pipelineRun": {
     "editRaw": "Edit raw .pipeline.md",
-    "launch": "Run · max ${budget}",
+    "launch": "Run pipeline",
     "runAria": "Run pipeline {name}",
     "title": "Run · {name}",
     "subtitle": "{count} phases · multi-agent background run",
     "launchedTitle": "Pipeline launched in the background",
-    "launchedTarget": "{name} → {project} · cap ${budget}",
+    "launchedTarget": "{name} → {project}",
     "watch": "Watch the phases in the <agents>Running agents</agents> section · it works in an isolated branch.",
     "promptLabel": "Prompt",
     "promptPlaceholder": "What should the „{name}\" pipeline do…",
-    "budgetLabel": "Budget (cap)",
     "overrideTitle": "Override model / thinking for this run",
     "overrideHint": "click a badge to override · defaults from agent.md, push to branch awaits your approval",
     "changeModelAria": "Change model for {agent}",
@@ -406,8 +403,7 @@
       "nameLabel": "Pipeline name",
       "namePlaceholder": "e.g. Build Feature",
       "descLabel": "Description",
-      "descPlaceholder": "What the pipeline does…",
-      "budgetLabel": "Budget (cap $)"
+      "descPlaceholder": "What the pipeline does…"
     }
   },
   "defaults": {
@@ -541,7 +537,6 @@
     "emptyFilter": "No runs in this state.",
     "selectHint": "Pick a run on the left for its detail and live log.",
     "stop": "Stop run",
-    "decide": "Decide",
     "delete": "Delete",
     "output": "run output",
     "liveLog": "live log",
@@ -687,8 +682,7 @@
       "pathPlaceholder": "~/Projects/media-vault",
       "category": "Category",
       "desc": "Description",
-      "descPlaceholder": "What the project is about",
-      "context": "Context"
+      "descPlaceholder": "What the project is about"
     },
     "categoryDialog": {
       "title": "New category",

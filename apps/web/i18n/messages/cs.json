@@ -280,10 +280,8 @@
     "emptyTitle": "Zatím žádné pipeline",
     "emptyDescription": "Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
     "emptyHint": "// vytvoří ~/zibby/pipelines/'<název>'.pipeline.md",
-    "phaseCap": "STROP PIPELINE",
     "branchNote": "výstup → izolovaná branch · PR k ranní review",
     "chainTitle": "zřetězení fází · soubory = předání",
-    "cardBudget": "strop ${budget}",
     "cardLastRun": "poslední {lastRun}",
     "stateDone": "hotovo",
     "stateParked": "zaparkováno",
@@ -334,16 +332,15 @@
   },
   "pipelineRun": {
     "editRaw": "Edit raw .pipeline.md",
-    "launch": "Spustit · max ${budget}",
+    "launch": "Spustit pipeline",
     "runAria": "Spustit pipeline {name}",
     "title": "Spustit · {name}",
     "subtitle": "{count} fází · víceagentní běh na pozadí",
     "launchedTitle": "Pipeline spuštěna na pozadí",
-    "launchedTarget": "{name} → {project} · strop ${budget}",
+    "launchedTarget": "{name} → {project}",
     "watch": "Sleduj fáze v sekci <agents>Běžící agenti</agents> · pracuje v izolované branchi.",
     "promptLabel": "Zadání",
     "promptPlaceholder": "Co má pipeline „{name}\" udělat…",
-    "budgetLabel": "Rozpočet (strop)",
     "overrideTitle": "Override modelu / thinking pro tenhle běh",
     "overrideHint": "klikni na badge pro override · defaulty z agent.md, push do branche čeká na tvé schválení",
     "changeModelAria": "Změnit model pro {agent}",
@@ -406,8 +403,7 @@
       "nameLabel": "Název pipeline",
       "namePlaceholder": "např. Build Feature",
       "descLabel": "Popis",
-      "descPlaceholder": "Co pipeline dělá…",
-      "budgetLabel": "Rozpočet (strop $)"
+      "descPlaceholder": "Co pipeline dělá…"
     }
   },
   "defaults": {
@@ -541,7 +537,6 @@
     "emptyFilter": "Žádné běhy v tomto stavu.",
     "selectHint": "Vyber běh vlevo pro detail a živý log.",
     "stop": "Zastavit běh",
-    "decide": "Rozhodnout",
     "delete": "Smazat",
     "output": "výstup běhu",
     "liveLog": "živý log",
@@ -687,8 +682,7 @@
       "pathPlaceholder": "~/Projects/media-vault",
       "category": "Kategorie",
       "desc": "Popis",
-      "descPlaceholder": "Čím se projekt zabývá",
-      "context": "Kontext"
+      "descPlaceholder": "Čím se projekt zabývá"
     },
     "categoryDialog": {
       "title": "Nová kategorie",

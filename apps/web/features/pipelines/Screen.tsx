@@ -55,14 +55,12 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
       onSubmit={(values) => {
         const id = slug(values.name ?? "", "novy");
         const desc = values.desc?.trim() || t("defaults.pipeline");
-        const budget = Number.parseInt(values.budget ?? "", 10);
         createPipeline.mutate(
           {
             body: {
               id,
               name: values.name?.trim() || id,
               desc,
-              budget: Number.isFinite(budget) ? budget : 25,
               instructions: desc,
               // The minimal create form has no phase editor yet; seed a single
               // editable phase so the .pipeline.md is valid (phases min 1).
@@ -157,27 +155,11 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                 </Stack>
               </Stack>
               <Divider />
-              <Stack wrap align="center" direction="row" gap="250">
-                <Stack align="center" direction="row" gap="100">
-                  <Icon name="dollar" size="md" tone="accent" />
-                  <Container>
-                    <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-                      {t("pipelines.phaseCap")}
-                    </Typography>
-                    <Typography mono size="xl" type="note" weight="bold">
-                      ${selected.budget}
-                    </Typography>
-                  </Container>
-                </Stack>
-                <Container height="32px">
-                  <Divider orientation="vertical" />
-                </Container>
-                <Stack align="center" direction="row" gap="100">
-                  <Icon name="branch" size="md" tone="dim" />
-                  <Typography mono size="caption" type="note" variant="secondary">
-                    {t("pipelines.branchNote")}
-                  </Typography>
-                </Stack>
+              <Stack align="center" direction="row" gap="100">
+                <Icon name="branch" size="md" tone="dim" />
+                <Typography mono size="caption" type="note" variant="secondary">
+                  {t("pipelines.branchNote")}
+                </Typography>
               </Stack>
             </Stack>
           </HudPanel>

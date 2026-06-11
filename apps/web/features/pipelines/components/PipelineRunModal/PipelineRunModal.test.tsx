@@ -13,7 +13,6 @@ const agents: Agent[] = [
 const pipeline: Pipeline = {
   id: "build-feature",
   name: "Build Feature",
-  budget: 25,
   lastRun: "dnes",
   lastState: "parked",
   desc: "d",
@@ -37,7 +36,7 @@ describe("PipelineRunModal", () => {
     expect(screen.getByLabelText("Změnit model pro Architekt")).toBeInTheDocument()
   })
 
-  it("launches with budget and overrides", async () => {
+  it("launches with the chosen project and overrides", async () => {
     const onLaunch = vi.fn()
     render(
       <PipelineRunModal
@@ -48,9 +47,9 @@ describe("PipelineRunModal", () => {
         projects={projects}
       />,
     )
-    await userEvent.click(screen.getByRole("button", { name: /Spustit · max/ }))
+    await userEvent.click(screen.getByRole("button", { name: /Spustit pipeline$/ }))
     expect(onLaunch).toHaveBeenCalledWith(
-      expect.objectContaining({ budget: 25, project: "zibby-core" }),
+      expect.objectContaining({ project: "zibby-core" }),
     )
     expect(screen.getByText("Pipeline spuštěna na pozadí")).toBeInTheDocument()
   })

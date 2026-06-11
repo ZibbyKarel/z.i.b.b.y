@@ -31,7 +31,7 @@ import {
 import { slug } from "../../utils/slug";
 
 function newProjectDraft(category?: string): Project {
-  return { id: "", name: "", path: "~/Projects/", desc: "", ctx: "work", category };
+  return { id: "", name: "", path: "~/Projects/", desc: "", category };
 }
 
 export function Screen() {

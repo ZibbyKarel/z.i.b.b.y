@@ -27,7 +27,7 @@ export interface PipelineCardProps {
   onSelect: (id: string) => void
 }
 
-/** Master-list card for a pipeline: name, state, phase chips, budget + last run. */
+/** Master-list card for a pipeline: name, state, phase chips + last run. */
 export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineCardProps) {
   const t = useTranslations("pipelines")
   const sm = stateMeta[pipeline.lastState]
@@ -70,13 +70,7 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
           </Stack>
 
           <Divider />
-          <Stack align="center" direction="row" justify="between">
-            <Stack inline align="center" direction="row" gap="50">
-              <Icon name="dollar" size="xs" tone="faint" />
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {t("cardBudget", { budget: pipeline.budget })}
-              </Typography>
-            </Stack>
+          <Stack align="center" direction="row" justify="end">
             <Typography mono size="xs" type="note" variant="tertiary">
               {t("cardLastRun", { lastRun: pipeline.lastRun })}
             </Typography>

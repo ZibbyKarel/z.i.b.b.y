@@ -13,7 +13,6 @@ describe("ProjectsStorageService", () => {
     id: "media-vault",
     name: "media-vault",
     path: "~/Projects/media-vault",
-    ctx: "home" as const,
     category: "Média & domácnost",
   }
 
@@ -43,8 +42,8 @@ describe("ProjectsStorageService", () => {
 
   it("partially updates an existing project, keeping its id", async () => {
     await service.create(base)
-    const updated = await service.update("media-vault", { ctx: "work", desc: "moved" })
-    expect(updated).toMatchObject({ id: "media-vault", ctx: "work", desc: "moved" })
+    const updated = await service.update("media-vault", { desc: "moved" })
+    expect(updated).toMatchObject({ id: "media-vault", desc: "moved" })
   })
 
   it("throws when updating or getting a missing project", async () => {
@@ -54,7 +53,7 @@ describe("ProjectsStorageService", () => {
 
   it("deletes a project, leaving the rest", async () => {
     await service.create(base)
-    await service.create({ ...base, id: "auth-svc", name: "auth-svc", path: "~/p/auth", ctx: "work" })
+    await service.create({ ...base, id: "auth-svc", name: "auth-svc", path: "~/p/auth" })
     await service.delete("media-vault")
     expect((await service.list()).map((p) => p.id)).toEqual(["auth-svc"])
   })

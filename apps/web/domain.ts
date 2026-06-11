@@ -76,7 +76,6 @@ export type PipelineState = "done" | "parked" | "failed" | "running";
 export interface Pipeline {
   id: string;
   name: string;
-  budget: number;
   lastRun: string;
   lastState: PipelineState;
   desc: string;

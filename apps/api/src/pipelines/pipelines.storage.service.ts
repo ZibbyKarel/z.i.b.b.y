@@ -20,7 +20,7 @@ export const PIPELINES_DIR = "PIPELINES_DIR"
 
 /**
  * File-backed persistence for pipelines: one `<id>.pipeline.md` per pipeline. The
- * frontmatter carries the structured config (`name`, `desc`, `budget`, `phases`)
+ * frontmatter carries the structured config (`name`, `desc`, `phases`)
  * and the Markdown body is `instructions`. Same guarantees as the agents/skills
  * stores — atomic writes, defense-in-depth id guards, tolerant listing — but the
  * `phases` array is validated by the contract schema (a malformed chain makes the
@@ -106,7 +106,6 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> imple
     }
     if (typeof data.name === "string") candidate.name = data.name
     if (typeof data.desc === "string") candidate.desc = data.desc
-    if (typeof data.budget === "number") candidate.budget = data.budget
 
     const result = PipelineSchema.safeParse(candidate)
     return result.success ? result.data : null
@@ -118,7 +117,6 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> imple
       phases: pipeline.phases,
     }
     if (pipeline.desc !== undefined) data.desc = pipeline.desc
-    if (pipeline.budget !== undefined) data.budget = pipeline.budget
     return data
   }
 }

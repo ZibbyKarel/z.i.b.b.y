@@ -4,6 +4,7 @@ import { Button, Container, type IconName, IconTile, Stack, Typography } from "@
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { relativeTime } from "../../../utils/time";
 import type { RunView } from "../run";
+import { RunApprovalGate } from "./RunApprovalGate";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunLogStream } from "./RunLogStream";
 
@@ -78,11 +79,6 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
                   {t("stop")}
                 </Button>
               )}
-              {run.status === "awaiting-approval" && (
-                <Button icon="shield" intent="primary" onClick={() => router.push("/approvals")} size="sm">
-                  {t("decide")}
-                </Button>
-              )}
               <Button disabled={deleting} icon="x" intent="danger" onClick={onDelete} size="sm">
                 {t("delete")}
               </Button>
@@ -96,6 +92,8 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
           </Stack>
         </Stack>
       </HudPanel>
+
+      {run.status === "awaiting-approval" && <RunApprovalGate runId={run.runId} />}
 
       {run.logBase ? (
         <HudPanel padding="250" title={t("output")}>

@@ -10,13 +10,6 @@ import { AgentIdSchema } from "../agents/agent.schema"
 export const ProjectIdSchema = AgentIdSchema
 
 /**
- * Which life context a project belongs to. Mirrors the dashboard's `ctx` toggle
- * (`work` / `home`) used across agents and skills to colour and group entities.
- */
-export const ProjectContextSchema = z.enum(["work", "home"])
-export type ProjectContext = z.infer<typeof ProjectContextSchema>
-
-/**
  * A target directory agents and skills can run against — the catalog of run
  * destinations the RunModal offers (instead of a hard-coded list). Projects live
  * in a registry the backend owns (`_projects.json`), not as files on disk, so
@@ -29,12 +22,11 @@ export const ProjectSchema = z.object({
   name: z.string().min(1),
   path: z.string().min(1),
   desc: z.string().optional(),
-  ctx: ProjectContextSchema,
   category: z.string().optional(),
 })
 export type Project = z.infer<typeof ProjectSchema>
 
-/** Body accepted by `createProject` — the full entity (`id` + `name` + `path` + `ctx` required). */
+/** Body accepted by `createProject` — the full entity (`id` + `name` + `path` required). */
 export const CreateProjectSchema = ProjectSchema
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>
 

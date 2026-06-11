@@ -29,7 +29,6 @@ export interface PipelineRunModalProps {
     pipeline: Pipeline;
     prompt: string;
     project: string;
-    budget: number;
     overrides: PhaseOverride[];
   }) => void;
 }
@@ -37,7 +36,6 @@ export interface PipelineRunModalProps {
 type PipelineRunFormValues = {
   prompt: string;
   project: string;
-  budget: string;
 };
 
 export function PipelineRunModal({
@@ -60,15 +58,11 @@ export function PipelineRunModal({
       pipeline,
       prompt: values.prompt,
       project: values.project,
-      budget: Number(values.budget),
       overrides,
     });
     setLaunched(true);
   }
 
-  const launchedBudget = launchData
-    ? Number(launchData.budget)
-    : pipeline.budget;
   const launchedProject = launchData?.project ?? projects[0] ?? "";
 
   return (
@@ -86,7 +80,7 @@ export function PipelineRunModal({
               intent="primary"
               type="submit"
             >
-              {t("pipelineRun.launch", { budget: pipeline.budget })}
+              {t("pipelineRun.launch")}
             </Button>
           </Stack>
         )
@@ -126,7 +120,6 @@ export function PipelineRunModal({
               {t("pipelineRun.launchedTarget", {
                 name: pipeline.name,
                 project: launchedProject,
-                budget: launchedBudget,
               })}
             </Typography>
             <Typography size="md" type="note" variant="secondary">
@@ -149,7 +142,6 @@ export function PipelineRunModal({
             defaultValues: {
               prompt: "",
               project: projects[0] ?? "",
-              budget: String(pipeline.budget),
             },
           }}
           id="pipeline-run-form"
@@ -176,14 +168,6 @@ export function PipelineRunModal({
                 />
               )}
 
-              <FormSegmentPicker<PipelineRunFormValues>
-                label={t("pipelineRun.budgetLabel")}
-                name="budget"
-                options={[10, 25, 50].map((b) => ({
-                  value: String(b),
-                  label: `$${b}`,
-                }))}
-              />
             </Grid>
 
             <Stack gap="75">

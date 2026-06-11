@@ -18,7 +18,7 @@ export const WithWalletSlot: Story = {
   args: {
     walletSlot: (
       <Typography mono size="sm" type="note" variant="secondary">
-        $128.40
+        5h 32% · týd 61%
       </Typography>
     ),
   },

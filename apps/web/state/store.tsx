@@ -80,7 +80,6 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
   const addPipeline = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "", "novy");
-    const budget = Number.parseInt(values.budget ?? "", 10);
     setState((s) => ({
       ...s,
       pipelines: [
@@ -88,7 +87,6 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         {
           id: `${id}-${s.pipelines.length}`,
           name: values.name?.trim() || id,
-          budget: Number.isFinite(budget) ? budget : 25,
           lastRun: "—",
           lastState: "done",
           desc: values.desc?.trim() || fallbackDesc,

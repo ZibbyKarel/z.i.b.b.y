@@ -18,7 +18,6 @@ describe("Projects API (e2e)", () => {
     id: "media-vault",
     name: "media-vault",
     path: "~/Projects/media-vault",
-    ctx: "home",
     category: "Média & domácnost",
   }
 
@@ -46,14 +45,14 @@ describe("Projects API (e2e)", () => {
   it("creates, reads, updates and deletes a project", async () => {
     const created = await request(app.getHttpServer()).post(BASE).send(project)
     expect(created.status).toBe(201)
-    expect(created.body).toMatchObject({ id: "media-vault", ctx: "home" })
+    expect(created.body).toMatchObject({ id: "media-vault", path: "~/Projects/media-vault" })
 
     await request(app.getHttpServer()).get(`${BASE}/media-vault`).expect(200)
 
     const updated = await request(app.getHttpServer())
       .patch(`${BASE}/media-vault`)
-      .send({ ctx: "work" })
-    expect(updated.body.ctx).toBe("work")
+      .send({ desc: "moved" })
+    expect(updated.body.desc).toBe("moved")
 
     await request(app.getHttpServer()).delete(`${BASE}/media-vault`).expect(200)
     await request(app.getHttpServer()).get(`${BASE}/media-vault`).expect(404)
@@ -62,10 +61,10 @@ describe("Projects API (e2e)", () => {
   it("rejects a duplicate id (409) and an invalid body (400)", async () => {
     await request(app.getHttpServer()).post(BASE).send(project).expect(201)
     await request(app.getHttpServer()).post(BASE).send(project).expect(409)
-    // Missing required path / bad ctx → contract 400.
+    // Missing required path → contract 400.
     await request(app.getHttpServer())
       .post(BASE)
-      .send({ id: "x", name: "x", ctx: "cloud", path: "~/x" })
+      .send({ id: "x", name: "x" })
       .expect(400)
     await request(app.getHttpServer()).delete(`${BASE}/media-vault`).expect(200)
   })
@@ -73,7 +72,7 @@ describe("Projects API (e2e)", () => {
   it("searches projects by name/desc/category without colliding with /:id or /categories", async () => {
     await request(app.getHttpServer())
       .post(BASE)
-      .send({ id: "auth-svc", name: "auth-svc", desc: "Login service", path: "~/p/auth", ctx: "work" })
+      .send({ id: "auth-svc", name: "auth-svc", desc: "Login service", path: "~/p/auth" })
       .expect(201)
 
     const hits = await request(app.getHttpServer()).get(`${BASE}/search?q=login`).expect(200)
@@ -90,7 +89,7 @@ describe("Projects API (e2e)", () => {
     await request(app.getHttpServer()).post(CATS).send({ name: "Vývoj", glyph: "code" }).expect(201)
     await request(app.getHttpServer())
       .post(BASE)
-      .send({ id: "auth-svc", name: "auth-svc", path: "~/p/auth", ctx: "work", category: "Vývoj" })
+      .send({ id: "auth-svc", name: "auth-svc", path: "~/p/auth", category: "Vývoj" })
       .expect(201)
 
     await request(app.getHttpServer()).delete(`${CATS}/Vývoj`).expect(409)

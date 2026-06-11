@@ -38,7 +38,6 @@ const PipelineObject = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).optional(),
   desc: z.string().optional(),
-  budget: z.number().nonnegative().optional(),
   phases: z.array(PipelinePhaseSchema).min(1),
   instructions: z.string().min(1),
 })

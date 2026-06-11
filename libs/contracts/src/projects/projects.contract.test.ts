@@ -35,30 +35,26 @@ describe("projectsContract", () => {
 })
 
 describe("project schema", () => {
-  it("accepts a project with id, name, path and ctx", () => {
+  it("accepts a project with id, name and path", () => {
     expect(
       ProjectSchema.safeParse({
         id: "media-vault",
         name: "media-vault",
         path: "~/Projects/media-vault",
-        ctx: "home",
         category: "Média & domácnost",
       }).success,
     ).toBe(true)
   })
 
-  it("requires a non-empty path and a known context", () => {
+  it("requires a non-empty path", () => {
     expect(
-      ProjectSchema.safeParse({ id: "x", name: "x", path: "", ctx: "work" }).success,
-    ).toBe(false)
-    expect(
-      ProjectSchema.safeParse({ id: "x", name: "x", path: "~/x", ctx: "cloud" }).success,
+      ProjectSchema.safeParse({ id: "x", name: "x", path: "" }).success,
     ).toBe(false)
   })
 
   it("rejects an id with a path separator (defense in depth)", () => {
     expect(
-      ProjectSchema.safeParse({ id: "a/b", name: "x", path: "~/x", ctx: "work" }).success,
+      ProjectSchema.safeParse({ id: "a/b", name: "x", path: "~/x" }).success,
     ).toBe(false)
   })
 })

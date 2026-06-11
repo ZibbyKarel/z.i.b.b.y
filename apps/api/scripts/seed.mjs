@@ -219,21 +219,21 @@ async function seedAgents() {
 // Contract phase.agent = agent id (design uses display name); phases need ids;
 // loop.then must be an existing phase id or "fail" (design's "park_for_review" → "fail").
 const PIPELINES = [
-  { id: "build-feature", name: "Build Feature", budget: 25, desc: "Spec → implementace → testy → docs, se zpětnou smyčkou u Testera.",
+  { id: "build-feature", name: "Build Feature", desc: "Spec → implementace → testy → docs, se zpětnou smyčkou u Testera.",
     phases: [
       { id: "architect", agent: "architect", consumes: "task.md", produces: "design.md", model: "opus", thinking: "high" },
       { id: "coder", agent: "coder", consumes: "design.md", produces: "branch", model: "sonnet", thinking: "medium" },
       { id: "tester", agent: "tester", consumes: "branch", produces: "test-report.md", model: "sonnet", thinking: "medium", loop: { to: "coder", maxRetries: 3, escalate: true, then: "fail" } },
       { id: "doc", agent: "doc", consumes: "branch", produces: "README.md", model: "sonnet", thinking: "low" },
     ] },
-  { id: "nightly-research", name: "Nightly Research", budget: 15, desc: "Researcher nasbírá zdroje, Architekt je zsyntetizuje do poznámky.",
+  { id: "nightly-research", name: "Nightly Research", desc: "Researcher nasbírá zdroje, Architekt je zsyntetizuje do poznámky.",
     phases: [
       { id: "researcher", agent: "researcher", consumes: "topic.md", produces: "sources.md", model: "sonnet", thinking: "medium" },
       { id: "architect", agent: "architect", consumes: "sources.md", produces: "knowledge.md", model: "opus", thinking: "high" },
     ] },
-  { id: "pr-guard", name: "PR Guard", budget: 8, desc: "Reviewer projde diff a připraví push k tvému schválení.",
+  { id: "pr-guard", name: "PR Guard", desc: "Reviewer projde diff a připraví push k tvému schválení.",
     phases: [{ id: "reviewer", agent: "reviewer", consumes: "branch", produces: "review.md", model: "opus", thinking: "high" }] },
-  { id: "media-tidy", name: "Media tidy", budget: 5, desc: "Stáhne a srovná média na Holly.",
+  { id: "media-tidy", name: "Media tidy", desc: "Stáhne a srovná média na Holly.",
     phases: [
       { id: "researcher", agent: "researcher", consumes: "watchlist.md", produces: "plan.md", model: "sonnet", thinking: "low" },
       { id: "coder", agent: "coder", consumes: "plan.md", produces: "media", model: "sonnet", thinking: "low" },
@@ -242,7 +242,7 @@ const PIPELINES = [
 
 async function seedPipelines() {
   for (const p of PIPELINES) {
-    const fm = { name: p.name, phases: p.phases, desc: p.desc, budget: p.budget }
+    const fm = { name: p.name, phases: p.phases, desc: p.desc }
     const body = `# ${p.name}\n\n${p.desc}\n\n## Fáze\n${p.phases.map((ph, i) => `${i + 1}. **${ph.agent}** — \`${ph.consumes}\` → \`${ph.produces}\``).join("\n")}`
     await writeFile(dir("pipelines", `${p.id}.pipeline.md`), md(body, fm))
   }
@@ -250,14 +250,14 @@ async function seedPipelines() {
 }
 
 // --------------------------------------------------------------- projects ----
-// Contract Project: { id, name, path, desc?, ctx, category? } — a registry of
+// Contract Project: { id, name, path, desc?, category? } — a registry of
 // target directories agents/skills run against (mirrors data.jsx PROJECTS_DATA).
 const PROJECTS = [
-  { id: "zibby-core", name: "zibby-core", path: "~/zibby", desc: "ZIBBY démon, skilly, agenti, velín", ctx: "work", category: "Vývoj" },
-  { id: "auth-svc", name: "auth-svc", path: "~/Projects/auth-svc", desc: "Auth microservice – JWT, rate-limiter, testy", ctx: "work", category: "Vývoj" },
-  { id: "media-vault", name: "media-vault", path: "~/Projects/media-vault", desc: "Médiatéka – filmy, seriály, fotky na Holly", ctx: "home", category: "Média & domácnost" },
-  { id: "home-ops", name: "home-ops", path: "~/Projects/home-ops", desc: "Domácí provoz – nákupy, zálohy, NAS", ctx: "home", category: "Média & domácnost" },
-  { id: "rohlik-list", name: "rohlik-list", path: "~/Projects/rohlik-list", desc: "Nákupní seznam a jídelníček", ctx: "home", category: "Média & domácnost" },
+  { id: "zibby-core", name: "zibby-core", path: "~/zibby", desc: "ZIBBY démon, skilly, agenti, velín", category: "Vývoj" },
+  { id: "auth-svc", name: "auth-svc", path: "~/Projects/auth-svc", desc: "Auth microservice – JWT, rate-limiter, testy", category: "Vývoj" },
+  { id: "media-vault", name: "media-vault", path: "~/Projects/media-vault", desc: "Médiatéka – filmy, seriály, fotky na Holly", category: "Média & domácnost" },
+  { id: "home-ops", name: "home-ops", path: "~/Projects/home-ops", desc: "Domácí provoz – nákupy, zálohy, NAS", category: "Média & domácnost" },
+  { id: "rohlik-list", name: "rohlik-list", path: "~/Projects/rohlik-list", desc: "Nákupní seznam a jídelníček", category: "Média & domácnost" },
 ]
 
 async function seedProjects() {

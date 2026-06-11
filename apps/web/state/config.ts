@@ -36,12 +36,11 @@ export const SETTINGS_ITEM = {
 } as const satisfies NavConfig;
 
 /**
- * Screens that stay routable but carry no sidebar entry: the approvals queue
- * is reached from the Overview rail, and the gate rules live as a Settings
- * sub-section.
+ * Screens that stay routable but carry no sidebar entry: the gate rules live
+ * as a Settings sub-section. (Approvals have no screen at all — pending gates
+ * are decided inline in the run detail and the Overview rail.)
  */
 export const ROUTE_ONLY_ITEMS = [
-  { id: "approvals", glyph: "shield", href: "/approvals" },
   { id: "gates", glyph: "checkpoint", href: "/gates" },
 ] as const satisfies readonly NavConfig[];
 

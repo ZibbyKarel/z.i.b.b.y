@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import type { Category, Project, ProjectContext } from "@zibby/contracts";
+import type { Category, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
 
 export interface ProjectModalProps {
@@ -28,11 +28,8 @@ type ProjectEditValues = {
   name: string;
   path: string;
   desc: string;
-  ctx: ProjectContext;
   category: string;
 };
-
-const CONTEXTS: ProjectContext[] = ["work", "home"];
 
 function ChipToggle({
   active,
@@ -51,8 +48,8 @@ function ChipToggle({
 }
 
 /**
- * Editor for a project (target directory): name, host path, category, description
- * and work/home context. Opens straight into the form (projects have no read-only
+ * Editor for a project (target directory): name, host path, category and
+ * description. Opens straight into the form (projects have no read-only
  * view), with a guarded delete that only removes the registry record.
  */
 export function ProjectModal({
@@ -72,7 +69,6 @@ export function ProjectModal({
       name: project.name ?? "",
       path: project.path ?? "~/Projects/",
       desc: project.desc ?? "",
-      ctx: project.ctx ?? "work",
       category: project.category ?? categories[0]?.name ?? "",
     },
     onSubmit: (values) => {
@@ -82,7 +78,6 @@ export function ProjectModal({
           name: values.name.trim(),
           path: values.path.trim(),
           desc: values.desc.trim() || undefined,
-          ctx: values.ctx,
           category: values.category || undefined,
         },
         isNew,
@@ -181,29 +176,6 @@ export function ProjectModal({
             label={t("fields.desc")}
             name="desc"
             placeholder={t("fields.descPlaceholder")}
-          />
-
-          <Controller<ProjectEditValues, "ctx">
-            control={form.control}
-            name="ctx"
-            render={({ field }) => (
-              <Stack gap="75">
-                <Typography mono size="sm" type="note" variant="secondary">
-                  {t("fields.context")}
-                </Typography>
-                <Stack wrap direction="row" gap="75">
-                  {CONTEXTS.map((c) => (
-                    <ChipToggle
-                      active={field.value === c}
-                      key={c}
-                      onClick={() => field.onChange(c)}
-                    >
-                      {c}
-                    </ChipToggle>
-                  ))}
-                </Stack>
-              </Stack>
-            )}
           />
         </Stack>
       </Dialog>
