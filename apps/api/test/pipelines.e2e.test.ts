@@ -208,6 +208,88 @@ describe("Pipelines API (e2e)", () => {
     await fs.rm(projectDir, { recursive: true, force: true })
   })
 
+  it("retries exhaustion with then:'park' parks the run; resume-with-note completes it", async () => {
+    process.env.PIPELINE_DEMO_FAIL_PHASES = "b"
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "parking",
+        phases: [
+          phase("a"),
+          phase("b", { loop: { to: "a", maxRetries: 0, escalate: true, then: "park" } }),
+        ],
+        instructions: "park on exhaustion",
+      })
+      .expect(201)
+
+    const start = await request(app.getHttpServer())
+      .post("/api/pipelines/parking/run")
+      .send({})
+      .expect(201)
+    const { pipelineRunId } = start.body
+
+    // b fails, maxRetries 0 → immediately exhausted → durable parking.
+    const parked = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+      return res.body.status === "parked" ? res.body : null
+    })
+    expect(parked.parkedReason).toBe("retries")
+    expect(parked.parked).toMatchObject({ phaseId: "b", attempts: 1 })
+
+    // A premature resume of a non-parked run 409s (sanity: wrong id state).
+    delete process.env.PIPELINE_DEMO_FAIL_PHASES
+    const resumed = await request(app.getHttpServer())
+      .post(`/api/pipelines/runs/${pipelineRunId}/resume`)
+      .send({ note: "zelená cesta — tentokrát to projde" })
+      .expect(200)
+    expect(resumed.body.status).toBe("running")
+
+    const final = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+      return res.body.status !== "running" ? res.body : null
+    })
+    expect(final.status).toBe("done")
+    // The note landed next to the run for the audit trail.
+    const note = await fs.readFile(path.join(final.cwd, "b.note.md"), "utf8")
+    expect(note).toContain("zelená cesta")
+
+    // Resuming a finished run is refused.
+    await request(app.getHttpServer())
+      .post(`/api/pipelines/runs/${pipelineRunId}/resume`)
+      .send({})
+      .expect(409)
+  })
+
+  it("a retries-parked run survives a restart still parked (and resumable)", async () => {
+    const runId = "parking_1780000000002"
+    const root = path.join(runsDir, runId)
+    await fs.mkdir(root, { recursive: true })
+    const failureFile = path.join(root, "b.failure.txt")
+    await fs.writeFile(failureFile, 'Phase "b" failed (attempt 1).', "utf8")
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: runId,
+        pipelineId: "parking",
+        status: "parked",
+        parkedReason: "retries",
+        parked: { phaseId: "b", attempts: 1, failureFile },
+        retries: { b: 0 },
+        currentStage: "b",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    )
+
+    const app2 = await boot()
+    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
+    expect(res.body.status).toBe("parked")
+    expect(res.body.parkedReason).toBe("retries")
+    await app2.close()
+  })
+
   it("reconciles a pipeline run left 'running' at restart to 'failed'", async () => {
     const runId = "ghost_1780000000000"
     const root = path.join(runsDir, runId)

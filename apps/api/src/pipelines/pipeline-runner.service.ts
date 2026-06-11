@@ -6,6 +6,7 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 import {
   DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
+  type PhaseEscalation,
   type Pipeline,
   type PipelinePhase,
   type PipelineRun,
@@ -41,6 +42,18 @@ export class PipelineRunNotFoundError extends Error {
   constructor(id: string) {
     super(`Pipeline run "${id}" not found`)
     this.name = "PipelineRunNotFoundError"
+  }
+}
+
+/**
+ * Raised when resume-with-note targets a run that is not retries-parked —
+ * controllers map it to a 409. Approval-parked runs resume only through the
+ * approvals path, so there is exactly one gate per parking machine.
+ */
+export class RunNotRetriesParkedError extends Error {
+  constructor(id: string) {
+    super(`Pipeline run "${id}" is not retries-parked`)
+    this.name = "RunNotRetriesParkedError"
   }
 }
 
@@ -203,11 +216,93 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Re-resolve a run's project from its persisted `projectPath` (for resume
+   * after restart). A registry record deleted in the meantime degrades to a
+   * synthetic project carrying just the path — cwd still applies, checks fall
+   * back to the defaults.
+   */
+  private async projectForRun(run: PipelineRun): Promise<Project | null> {
+    if (!run.projectPath) return null
+    const all = await this.projects.list().catch((): Project[] => [])
+    return (
+      all.find((p) => p.path === run.projectPath) ?? {
+        id: "unregistered",
+        name: "unregistered",
+        path: run.projectPath,
+      }
+    )
+  }
+
+  /**
+   * Resume a retries-parked run with an operator note: the note lands in
+   * `<phaseId>.note.md` AND is appended to the failure context file (so the
+   * retried phase sees failure + guidance in one handoff), the parked phase's
+   * retry counter resets, and the driver re-enters the machine at `loop.to`.
+   * Throws {@link RunNotRetriesParkedError} (→ 409) for any other state.
+   */
+  async resumeParked(pipelineRunId: string, note?: string): Promise<PipelineRun> {
+    let run = this.runs.get(pipelineRunId)
+    if (!run) {
+      const fromDisk = await this.readAggregate(pipelineRunId)
+      if (!fromDisk) throw new PipelineRunNotFoundError(pipelineRunId)
+      this.runs.set(pipelineRunId, fromDisk)
+      run = fromDisk
+    }
+    if (run.status !== "parked" || run.parkedReason !== "retries" || !run.parked) {
+      throw new RunNotRetriesParkedError(pipelineRunId)
+    }
+    const pipeline = await this.pipelines.get(run.pipelineId)
+    const parked = run.parked
+    const phase = pipeline.phases.find((p) => p.id === parked.phaseId)
+    if (!phase?.loop) throw new RunNotRetriesParkedError(pipelineRunId)
+
+    const trimmed = note?.trim()
+    if (trimmed) {
+      await fs
+        .writeFile(path.join(run.cwd, `${parked.phaseId}.note.md`), `${trimmed}\n`, "utf8")
+        .catch(() => {})
+      await fs
+        .appendFile(parked.failureFile, `\n\n## Operator note\n\n${trimmed}\n`, "utf8")
+        .catch(() => {})
+    }
+
+    const retries = new Map(Object.entries(run.retries ?? {}))
+    retries.set(parked.phaseId, 0)
+
+    run.status = "running"
+    delete run.parkedReason
+    delete run.parked
+    run.retries = Object.fromEntries(retries)
+    run.currentStage = phase.loop.to
+    await this.writeAggregate(run)
+    this.log.info("parked pipeline run resumed", {
+      pipelineRunId,
+      phase: parked.phaseId,
+      retryTo: phase.loop.to,
+      withNote: Boolean(trimmed),
+    })
+
+    const project = await this.projectForRun(run)
+    const cursor = phase.loop.to
+    const traceId = this.trace.getTraceId() ?? randomUUID()
+    void this.trace.run({ traceId, runId: pipelineRunId }, () =>
+      this.drive(run, pipeline, project, {
+        cursor,
+        handoffSource: parked.failureFile,
+        retries,
+      }),
+    )
+    return run
+  }
+
   list(): PipelineRun[] {
     const cutoff = Date.now() - RETENTION_MS
     const out: PipelineRun[] = []
     for (const [id, run] of this.runs) {
-      const finished = run.status !== "running"
+      // Parked runs stay in memory regardless of age: a retries-parked run may
+      // sit for days and must remain resumable without a restart round-trip.
+      const finished = run.status !== "running" && run.status !== "parked"
       if (finished && Date.parse(run.startedAt) < cutoff) {
         this.runs.delete(id)
         continue
@@ -283,13 +378,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     run: PipelineRun,
     pipeline: Pipeline,
     project: Project | null = null,
+    resume?: { cursor: string; handoffSource: string | null; retries: Map<string, number> },
   ): Promise<void> {
     const byId = new Map(pipeline.phases.map((p) => [p.id, p]))
     const order = pipeline.phases
-    const retries = new Map<string, number>()
+    const retries = resume?.retries ?? new Map<string, number>()
     // Absolute path of the file to feed into the next phase's `consumes` input.
-    let handoffSource: string | null = null
-    let cursor: string | null = order[0]?.id ?? null
+    let handoffSource: string | null = resume?.handoffSource ?? null
+    let cursor: string | null = resume?.cursor ?? order[0]?.id ?? null
 
     while (cursor) {
       const phase = byId.get(cursor)
@@ -310,7 +406,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const stageRun = await this.runStage(run, phase, stageCwd, attempt, project)
       // A rejected approval lands here with the aggregate still "parked" (the
       // cancel path flips only the stage) — un-park before recording the outcome.
-      if (run.status === "parked") run.status = "running"
+      if (run.status === "parked") {
+        run.status = "running"
+        delete run.parkedReason
+      }
       run.stageRuns.push(stageRun)
       await this.writeAggregate(run)
 
@@ -337,6 +436,24 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         handoffSource = await this.writeFailureContext(run, phase, stageRun)
         cursor = loop.to
         continue
+      }
+
+      // Retries exhausted with `then: "park"`: durable parking — no synthetic
+      // error marker (the parked detail is the surface), no failed status. The
+      // driver exits; {@link resumeParked} re-enters this machine with a note.
+      if (loop?.then === "park") {
+        const failureFile = await this.writeFailureContext(run, phase, stageRun)
+        run.status = "parked"
+        run.parkedReason = "retries"
+        run.parked = { phaseId: phase.id, attempts: attempt, failureFile }
+        run.retries = Object.fromEntries(retries)
+        run.currentStage = phase.id
+        await this.writeAggregate(run)
+        this.log.warn("pipeline run parked (retries exhausted)", {
+          phase: phase.id,
+          attempts: attempt,
+        })
+        return
       }
 
       // No loop, or retries exhausted: escalate (surface), then fall through.
@@ -368,6 +485,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
   }
 
+  /**
+   * The escalation rung for `attempt` (1 = the original run, no override; retry
+   * n applies rung n, later retries clamp to the last rung).
+   */
+  private escalationFor(phase: PipelinePhase, attempt: number): PhaseEscalation | null {
+    const ladder = phase.loop?.escalation
+    if (!ladder || ladder.length === 0 || attempt <= 1) return null
+    return ladder[Math.min(attempt - 2, ladder.length - 1)] ?? null
+  }
+
   /** Spawn one stage child and wait for it to finish; return its StageRun. */
   private async runStage(
     run: PipelineRun,
@@ -376,7 +503,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     attempt: number,
     project: Project | null,
   ): Promise<StageRun> {
-    const { command, args, spawnCwd } = await this.buildStageCommand(phase, stageCwd, project)
+    const escalation = this.escalationFor(phase, attempt)
+    if (escalation) {
+      this.log.info("applying escalation rung", { phase: phase.id, attempt, ...escalation })
+    }
+    const { command, args, spawnCwd } = await this.buildStageCommand(
+      phase,
+      stageCwd,
+      project,
+      escalation,
+    )
     const rec = await this.core.start({
       kind: "pipeline-stage",
       ownerId: `${run.pipelineRunId}.${phase.id}`,
@@ -450,9 +586,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       }
       if (evaluation.decision === "ask") {
         // Hold the stage (its child keeps blocking) and park the aggregate — the
-        // web maps parked → awaiting-approval and refetches the approvals queue.
+        // web maps parked+approval → awaiting-approval and refetches approvals.
         await this.core.holdForApproval(stageRunId)
         run.status = "parked"
+        run.parkedReason = "approval"
         await this.writeAggregate(run)
         await this.approvals.requestApproval({
           runId: stageRunId,
@@ -485,6 +622,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const run = this.runs.get(rec.pipelineRunId)
     if (!run) return
     run.status = status
+    if (status !== "parked") delete run.parkedReason
     await this.writeAggregate(run)
   }
 
@@ -531,6 +669,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     phase: PipelinePhase,
     cwd: string,
     project: Project | null,
+    escalation: PhaseEscalation | null = null,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     // Verify phases are deterministic shell checks — identical in demo and
     // claude mode (no model, no tokens, no intents, no preflight). They run in
@@ -565,8 +704,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         instructions: agent.instructions,
         task,
         tools: agent.tools,
-        model: phase.model ?? agent.model,
-        thinking: phase.thinking ?? agent.thinking,
+        // Escalation rung (a retry's harder model/thinking) > phase > agent.
+        model: escalation?.model ?? phase.model ?? agent.model,
+        thinking: escalation?.thinking ?? phase.thinking ?? agent.thinking,
         // The sandbox holds the handoff files; with cwd in the project the
         // session still needs write access to it (reverse grant).
         ...(project ? { grantDirs: [cwd] } : {}),
@@ -641,10 +781,18 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       if (!parsed.success) continue
       let run = parsed.data
       // A run left "running" lost its mid-flight child with the previous backend.
-      // A "parked" run is the same situation: its blocking child died with the
-      // API, so honest reconciliation is `failed` (visibility, not resumption).
-      if (run.status === "running" || run.status === "parked") {
-        run = { ...run, status: "failed", currentStage: null }
+      // An APPROVAL-parked run is the same situation (its blocking child died
+      // with the API) → honest reconciliation is `failed`. A RETRIES-parked run
+      // has no child at all — it is durable and stays parked, resumable.
+      const approvalParked = run.status === "parked" && run.parkedReason !== "retries"
+      if (run.status === "running" || approvalParked) {
+        run = {
+          ...run,
+          status: "failed",
+          currentStage: null,
+          parkedReason: undefined,
+          parked: undefined,
+        }
         await this.writeAggregate(run)
       }
       this.runs.set(run.pipelineRunId, run)

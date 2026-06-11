@@ -128,7 +128,7 @@ invocation then passes (marker-file script in test/fixtures/), asserting
 loop-back to the agent phase and eventual done; web-components snapshot of a
 verify node in PhaseChain.
 
-2.3 Escalating retries + parking surfaced
+2.3 Escalating retries + parking surfaced — ✅ HOTOVO
 
 Contracts:
 

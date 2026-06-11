@@ -31,6 +31,7 @@ const FILTERS: Filter[] = [
   "all",
   "running",
   "awaiting-approval",
+  "parked",
   "scheduled",
   "done",
   "error",

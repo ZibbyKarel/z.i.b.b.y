@@ -18,8 +18,10 @@ import type { DotTone, IconName, TagTone } from "@zibby/design-system";
  */
 export type RunKind = "agent" | "pipeline" | "scheduled";
 
-/** Feed status: the shared run states plus the not-yet-fired `scheduled`. */
-export type FeedStatus = RunStatus | "scheduled";
+/** Feed status: the shared run states plus the not-yet-fired `scheduled` and the
+ * retries-parked `parked` (approval-parked pipelines keep reading as
+ * `awaiting-approval` — that mapping is load-bearing for the approvals gate). */
+export type FeedStatus = RunStatus | "scheduled" | "parked";
 
 export interface RunView {
   runId: string;
@@ -43,6 +45,8 @@ export interface RunView {
   taskTitle?: string;
   /** Enriched from the task record: the written-back run outcome. */
   taskOutcome?: "done" | "error";
+  /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
+  parked?: PipelineRun["parked"];
 }
 
 /** Task-first display name: explicit title, else the task text, else the target. */
@@ -84,11 +88,18 @@ export function agentRunToView(r: AgentRun): RunView {
   };
 }
 
-/** Pipeline run → view. Maps the pipeline lifecycle onto the shared run states. */
+/**
+ * Pipeline run → view. Maps the pipeline lifecycle onto the feed states. The
+ * split on `parkedReason` is load-bearing: approval-parked runs keep reading as
+ * `awaiting-approval` (the gate UI), retries-parked runs surface as first-class
+ * `parked` (the resume-with-note queue).
+ */
 export function pipelineRunToView(r: PipelineRun): RunView {
-  const status: RunStatus =
+  const status: FeedStatus =
     r.status === "parked"
-      ? "awaiting-approval"
+      ? r.parkedReason === "retries"
+        ? "parked"
+        : "awaiting-approval"
       : r.status === "failed"
         ? "error"
         : r.status === "done"
@@ -106,6 +117,7 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     startedAt: r.startedAt,
     logBase: null,
     taskId: r.taskId,
+    parked: r.parked,
   };
 }
 
@@ -208,6 +220,13 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
     badge: "neutral",
     dot: "idle",
     glyph: "stop",
+    pulse: false,
+  },
+  parked: {
+    key: "parked",
+    badge: "warn",
+    dot: "wait",
+    glyph: "wait",
     pulse: false,
   },
 };

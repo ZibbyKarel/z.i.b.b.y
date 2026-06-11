@@ -7,6 +7,7 @@ import { ApprovalCard } from "../../../features/agents/components/ApprovalCard/A
 import { RunningAgentsPanel } from "../../../features/agents/components/RunningAgentsPanel";
 import { useApproveMutation, useRejectMutation } from "../../../features/approvals/mutations";
 import { useApprovalsQuery } from "../../../features/approvals/queries";
+import { ParkedRunsPanel } from "../../../features/runs/components/ParkedRunsPanel";
 import { HudPanel } from "../../HudPanel/HudPanel";
 
 /**
@@ -53,6 +54,8 @@ export function RightRail() {
           </Stack>
         )}
       </HudPanel>
+
+      <ParkedRunsPanel />
 
       <RunningAgentsPanel />
     </Stack>

@@ -2,17 +2,31 @@ import { z } from "zod"
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema"
 
 /**
+ * One rung of the loop's escalation ladder: the model/thinking override applied
+ * to a retry attempt (rung n applies to retry n, 1-based; later retries clamp
+ * to the last rung). Both fields optional — escalate only what changes.
+ */
+export const PhaseEscalationSchema = z.object({
+  model: AgentModelSchema.optional(),
+  thinking: AgentThinkingSchema.optional(),
+})
+export type PhaseEscalation = z.infer<typeof PhaseEscalationSchema>
+
+/**
  * A phase's optional back-edge (the "tester loop"). On failure the runner jumps
  * back to phase `to` with the failure context as its handoff input, up to
  * `maxRetries` times — the hard fuse against an infinite loop. After exhaustion it
  * `escalate`s (surfaces, never continues silently) and falls through to `then`
- * (another phase id, or the literal `"fail"`).
+ * (another phase id, the literal `"fail"`, or `"park"` — durable parking for a
+ * human note instead of failing).
  */
 export const PhaseLoopSchema = z.object({
   to: z.string().min(1),
   maxRetries: z.number().int().min(0),
   escalate: z.boolean(),
   then: z.string().min(1),
+  /** Per-retry model/thinking ladder (rung n → retry n; clamps to the last rung). */
+  escalation: z.array(PhaseEscalationSchema).optional(),
 })
 export type PhaseLoop = z.infer<typeof PhaseLoopSchema>
 
@@ -97,7 +111,8 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
       ["to", ph.loop.to],
       ["then", ph.loop.then],
     ] as const) {
-      if (target !== "fail" && !idSet.has(target)) {
+      const literals = key === "then" ? ["fail", "park"] : ["fail"]
+      if (!literals.includes(target) && !idSet.has(target)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `loop.${key} "${target}" is not an existing phase id`,

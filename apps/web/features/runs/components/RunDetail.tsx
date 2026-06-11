@@ -17,6 +17,7 @@ import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { type RunView, approvalForRun, runTitle } from "../run";
 import { RunApprovalGate } from "./RunApprovalGate";
+import { RunParkedPanel } from "./RunParkedPanel";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunLogStream } from "./RunLogStream";
 
@@ -60,7 +61,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
   const tone: "accent" | "ok" | "warn" | "bad" | undefined =
     run.status === "running"
       ? "accent"
-      : run.status === "awaiting-approval"
+      : run.status === "awaiting-approval" || run.status === "parked"
         ? "warn"
         : run.status === "done"
           ? "ok"
@@ -189,6 +190,13 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
       {approval ? (
         <>
           <RunApprovalGate approval={approval} deleting={deleting} onDelete={onDelete} />
+          <Accordion>
+            <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
+          </Accordion>
+        </>
+      ) : run.status === "parked" && run.kind === "pipeline" ? (
+        <>
+          <RunParkedPanel run={run} />
           <Accordion>
             <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
           </Accordion>

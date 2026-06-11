@@ -37,6 +37,26 @@ export const StageRunSchema = z.object({
 export type StageRun = z.infer<typeof StageRunSchema>
 
 /**
+ * Why a run is `parked` — the two parkings are different machines:
+ * - `approval`: a live stage child is blocking on a gate decision; it does NOT
+ *   survive a restart (the child dies with the API → reconciled to failed).
+ * - `retries`: a loop exhausted its retries with `then: "park"`; no live child,
+ *   durable, resumable with an operator note.
+ */
+export const ParkedReasonSchema = z.enum(["approval", "retries"])
+export type ParkedReason = z.infer<typeof ParkedReasonSchema>
+
+/** Detail of a retries-parking: which phase, how many attempts, the failure file. */
+export const ParkedDetailSchema = z.object({
+  phaseId: z.string().min(1),
+  attempts: z.number().int().min(1),
+  /** Absolute path of the failure-context file (the retry handoff + note target). */
+  failureFile: z.string(),
+  note: z.string().optional(),
+})
+export type ParkedDetail = z.infer<typeof ParkedDetailSchema>
+
+/**
  * A run of a pipeline: the aggregate of its per-phase stage runs, the phase
  * currently executing, and an overall status mapped to {@link PipelineStateSchema}.
  */
@@ -58,6 +78,12 @@ export const PipelineRunSchema = z.object({
    * restart/parking keep it.
    */
   projectPath: z.string().optional(),
+  /** Present while status is `parked` — which parking machine holds the run. */
+  parkedReason: ParkedReasonSchema.optional(),
+  /** Present while retries-parked: the surface the operator resumes from. */
+  parked: ParkedDetailSchema.optional(),
+  /** Persisted per-phase retry counters, so a parked run resumes accurately. */
+  retries: z.record(z.string(), z.number()).optional(),
 })
 export type PipelineRun = z.infer<typeof PipelineRunSchema>
 
@@ -66,3 +92,9 @@ export const StartPipelineRunSchema = z.object({
   project: z.string().optional(),
 })
 export type StartPipelineRunInput = z.infer<typeof StartPipelineRunSchema>
+
+/** Body accepted by `resumePipelineRun` — the operator's note for the retried phase. */
+export const ResumePipelineRunSchema = z.object({
+  note: z.string().optional(),
+})
+export type ResumePipelineRunInput = z.infer<typeof ResumePipelineRunSchema>

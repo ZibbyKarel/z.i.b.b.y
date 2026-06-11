@@ -7,6 +7,7 @@ import {
   PipelineRunNotFoundError,
   PipelineRunnerService,
   RunNotFoundError,
+  RunNotRetriesParkedError,
 } from "./pipeline-runner.service"
 
 /**
@@ -44,6 +45,18 @@ export class PipelineRunsController {
           return { status: 200, body: this.runner.get(pipelineRunId) }
         } catch (error) {
           if (isMissingRun(error)) return { status: 404, body: { message: notFound(pipelineRunId) } }
+          throw error
+        }
+      },
+
+      resumePipelineRun: async ({ params: { pipelineRunId }, body }) => {
+        try {
+          return { status: 200, body: await this.runner.resumeParked(pipelineRunId, body.note) }
+        } catch (error) {
+          if (isMissingRun(error)) return { status: 404, body: { message: notFound(pipelineRunId) } }
+          if (error instanceof RunNotRetriesParkedError) {
+            return { status: 409, body: { message: error.message } }
+          }
           throw error
         }
       },

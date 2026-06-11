@@ -31,6 +31,7 @@ interface FakeCore {
   holdForApproval: ReturnType<typeof vi.fn>
   allowIntent: ReturnType<typeof vi.fn>
   denyIntent: ReturnType<typeof vi.fn>
+  readLog: ReturnType<typeof vi.fn>
   shutdown: ReturnType<typeof vi.fn>
 }
 
@@ -109,6 +110,7 @@ async function makeHarness(dir: string): Promise<Harness> {
     holdForApproval: vi.fn(async () => {}),
     allowIntent: vi.fn(async () => {}),
     denyIntent: vi.fn(async () => {}),
+    readLog: vi.fn(async () => ({ content: "tail of the failure", nextOffset: 0, done: true })),
     shutdown: vi.fn(),
   }
   ;(service as unknown as { core: FakeCore }).core = core
@@ -339,7 +341,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     })
   })
 
-  it("reconstruct reconciles a parked aggregate to failed", async () => {
+  it("reconstruct reconciles an approval-parked aggregate to failed", async () => {
     const ghostId = "ghost_1780000000000"
     const root = path.join(dir, ghostId)
     await fs.mkdir(root, { recursive: true })
@@ -349,6 +351,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         pipelineRunId: ghostId,
         pipelineId: "release",
         status: "parked",
+        parkedReason: "approval",
         currentStage: "build",
         stageRuns: [],
         startedAt: new Date().toISOString(),
@@ -360,5 +363,189 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     const run = h.service.get(ghostId)
     expect(run.status).toBe("failed")
     expect(run.currentStage).toBeNull()
+    expect(run.parkedReason).toBeUndefined()
+  })
+
+  it("reconstruct keeps a retries-parked aggregate parked (durable, no child)", async () => {
+    const ghostId = "ghost_1780000000001"
+    const root = path.join(dir, ghostId)
+    await fs.mkdir(root, { recursive: true })
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: ghostId,
+        pipelineId: "release",
+        status: "parked",
+        parkedReason: "retries",
+        parked: { phaseId: "build", attempts: 3, failureFile: path.join(root, "build.failure.txt") },
+        retries: { build: 2 },
+        currentStage: "build",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    )
+    await (h.service as unknown as { reconstruct(): Promise<void> }).reconstruct()
+    const run = h.service.get(ghostId)
+    expect(run.status).toBe("parked")
+    expect(run.parkedReason).toBe("retries")
+    expect(run.retries).toEqual({ build: 2 })
+  })
+
+  describe("escalation ladder", () => {
+    const phaseWithLadder: PipelinePhase = {
+      id: "review",
+      type: "agent",
+      agent: "writer",
+      consumes: "in.md",
+      produces: "out.md",
+      model: "sonnet",
+      thinking: "medium",
+      loop: {
+        to: "build",
+        maxRetries: 5,
+        escalate: true,
+        then: "park",
+        escalation: [{ model: "opus" }, { model: "opus", thinking: "high" }],
+      },
+    }
+
+    const rungFor = (attempt: number) =>
+      (
+        h.service as unknown as {
+          escalationFor(phase: PipelinePhase, attempt: number): unknown
+        }
+      ).escalationFor(phaseWithLadder, attempt)
+
+    it("applies no rung to the original attempt", () => {
+      expect(rungFor(1)).toBeNull()
+    })
+
+    it("retry n applies rung n (1-based)", () => {
+      expect(rungFor(2)).toEqual({ model: "opus" })
+      expect(rungFor(3)).toEqual({ model: "opus", thinking: "high" })
+    })
+
+    it("later retries clamp to the last rung", () => {
+      expect(rungFor(6)).toEqual({ model: "opus", thinking: "high" })
+    })
+  })
+
+  describe("retries parking + resume", () => {
+    const parkedPipeline = {
+      id: "release",
+      phases: [
+        {
+          id: "build",
+          type: "agent",
+          agent: "writer",
+          consumes: "in.md",
+          produces: "out.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+        {
+          id: "review",
+          type: "agent",
+          agent: "writer",
+          consumes: "out.md",
+          produces: "review.md",
+          model: "sonnet",
+          thinking: "medium",
+          loop: { to: "build", maxRetries: 0, escalate: true, then: "park" },
+        },
+      ],
+      instructions: "ship",
+    }
+
+    it("exhaustion with then:'park' parks durably — no failed status, no synthetic marker", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)
+      if (!run) throw new Error("missing run")
+      // Stage results: build done, review error → retries (0) exhausted → park.
+      const statuses = ["done", "error"]
+      let call = 0
+      ;(h.service as unknown as { runStage: unknown }).runStage = vi.fn(
+        async (_run: unknown, phase: { id: string }, _cwd: string, attempt: number) => ({
+          phaseId: phase.id,
+          runId: `${PIPELINE_RUN_ID}.${phase.id}_${call}`,
+          attempt,
+          status: statuses[Math.min(call++, statuses.length - 1)],
+        }),
+      )
+
+      await (
+        h.service as unknown as {
+          drive(run: PipelineRun, pipeline: unknown): Promise<void>
+        }
+      ).drive(run, parkedPipeline)
+
+      expect(run.status).toBe("parked")
+      expect(run.parkedReason).toBe("retries")
+      expect(run.parked).toMatchObject({ phaseId: "review", attempts: 1 })
+      expect(run.retries).toEqual({})
+      // No synthetic ".escalated" marker on the park path.
+      expect(run.stageRuns.some((s) => s.runId.endsWith(".escalated"))).toBe(false)
+      // The failure context exists (the resume handoff).
+      const failure = await fs.readFile(run.parked?.failureFile ?? "", "utf8")
+      expect(failure).toContain('Phase "review" failed')
+    })
+
+    it("resumeParked injects the note, resets the counter and re-enters at loop.to", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)
+      if (!run) throw new Error("missing run")
+      const failureFile = path.join(run.cwd, "review.failure.txt")
+      await fs.writeFile(failureFile, "Phase review failed.", "utf8")
+      run.status = "parked"
+      run.parkedReason = "retries"
+      run.parked = { phaseId: "review", attempts: 3, failureFile }
+      run.retries = { review: 2 }
+      ;(
+        h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+      ).pipelines.get.mockResolvedValue(parkedPipeline)
+
+      const drive = vi.fn(async () => {})
+      ;(h.service as unknown as { drive: unknown }).drive = drive
+
+      const resumed = await h.service.resumeParked(PIPELINE_RUN_ID, "zkus to přes mock")
+      expect(resumed.status).toBe("running")
+      expect(resumed.parkedReason).toBeUndefined()
+      expect(resumed.parked).toBeUndefined()
+      expect(resumed.retries).toEqual({ review: 0 })
+      expect(resumed.currentStage).toBe("build")
+
+      // The note landed in its own file AND in the failure-context handoff.
+      const note = await fs.readFile(path.join(run.cwd, "review.note.md"), "utf8")
+      expect(note).toContain("zkus to přes mock")
+      const failure = await fs.readFile(failureFile, "utf8")
+      expect(failure).toContain("Operator note")
+      expect(failure).toContain("zkus to přes mock")
+
+      // The driver re-entered the machine at loop.to with the failure handoff.
+      await vi.waitFor(() => expect(drive).toHaveBeenCalled())
+      const resume = drive.mock.calls[0]?.[3] as {
+        cursor: string
+        handoffSource: string
+        retries: Map<string, number>
+      }
+      expect(resume.cursor).toBe("build")
+      expect(resume.handoffSource).toBe(failureFile)
+      expect(resume.retries.get("review")).toBe(0)
+    })
+
+    it("resumeParked refuses a run that is not retries-parked (409 material)", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)
+      if (!run) throw new Error("missing run")
+      run.status = "parked"
+      run.parkedReason = "approval"
+      await expect(h.service.resumeParked(PIPELINE_RUN_ID)).rejects.toMatchObject({
+        name: "RunNotRetriesParkedError",
+      })
+      run.status = "running"
+      delete run.parkedReason
+      await expect(h.service.resumeParked(PIPELINE_RUN_ID)).rejects.toMatchObject({
+        name: "RunNotRetriesParkedError",
+      })
+    })
   })
 })

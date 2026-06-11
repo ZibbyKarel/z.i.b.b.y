@@ -2,7 +2,11 @@ import { initContract } from "@ts-rest/core"
 import { z } from "zod"
 import { RunLogChunkSchema } from "../agents/agent-run.schema"
 import { ErrorSchema } from "../common.schema"
-import { PipelineRunSchema, StartPipelineRunSchema } from "./pipeline-run.schema"
+import {
+  PipelineRunSchema,
+  ResumePipelineRunSchema,
+  StartPipelineRunSchema,
+} from "./pipeline-run.schema"
 import {
   CreatePipelineSchema,
   PipelineSchema,
@@ -86,6 +90,16 @@ export const pipelineRunsContract = c.router(
       pathParams: z.object({ pipelineRunId: z.string() }),
       responses: { 200: PipelineRunSchema, 404: ErrorSchema },
       summary: "Get a single pipeline run by id",
+    },
+    resumePipelineRun: {
+      method: "POST",
+      path: "/pipelines/runs/:pipelineRunId/resume",
+      pathParams: z.object({ pipelineRunId: z.string() }),
+      body: ResumePipelineRunSchema,
+      // 409: the run is not retries-parked (approval-parked runs resume only via
+      // the approvals path — one gate, not two).
+      responses: { 200: PipelineRunSchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Resume a retries-parked pipeline run with an operator note",
     },
     getStageRunLogs: {
       method: "GET",
