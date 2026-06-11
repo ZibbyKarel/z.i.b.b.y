@@ -282,6 +282,9 @@ export type {
   DropdownVariant,
 } from "./components/Dropdown/Dropdown";
 
+export { MenuSurface, MenuSurfaceTestId } from "./components/MenuSurface/MenuSurface";
+export type { MenuSurfaceAlign, MenuSurfaceProps } from "./components/MenuSurface/MenuSurface";
+
 export {
   List,
   ListItem,

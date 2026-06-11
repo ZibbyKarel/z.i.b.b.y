@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 import { Icon, type IconName } from "../Icon/Icon";
 import { Kbd } from "../Kbd/Kbd";
+import { MenuSurface } from "../MenuSurface/MenuSurface";
 
 export enum SearchMenuTestId {
   Root = "searchmenu-root",
@@ -197,17 +198,14 @@ export function SearchMenu({
       </div>
 
       {panelOpen ? (
-        <div
-          className={cn(
-            "absolute left-0 right-0 top-[calc(100%+6px)] z-50",
-            "max-h-[60vh] overflow-y-auto",
-            "bg-elevated border border-border rounded-sm shadow-glow-accent",
-            "py-1.5",
-          )}
+        <MenuSurface
+          scroll
+          align="stretch"
           data-testid={SearchMenuTestId.Panel}
           id={listboxId}
           role="listbox"
         >
+          <div className="py-1.5">
           {showEmpty ? (
             <p
               className="px-3.5 py-2 text-base text-foreground-faint"
@@ -266,7 +264,8 @@ export function SearchMenu({
               </div>
             ))
           )}
-        </div>
+          </div>
+        </MenuSurface>
       ) : null}
     </div>
   );

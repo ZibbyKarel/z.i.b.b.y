@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 import { focusRingInset } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
+import { MenuSurface } from "../MenuSurface/MenuSurface";
 
 export interface DropdownOption<T extends string = string> {
   value: T;
@@ -118,16 +119,12 @@ export function Dropdown<T extends string = string>({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={close} />
-          <div
-            className={cn(
-              "absolute top-[calc(100%+6px)] z-50",
-              isField ? "left-0 right-0" : "right-0 min-w-[168px]",
-              "bg-raised border border-border rounded-md overflow-hidden p-1",
-              "shadow-dropdown",
-            )}
+          <MenuSurface
+            align={isField ? "stretch" : "end"}
             data-testid={DropdownTestId.Panel}
             role="listbox"
           >
+          <div className="p-1">
             {options.map((opt) => {
               const selected = opt.value === value;
               return (
@@ -167,6 +164,7 @@ export function Dropdown<T extends string = string>({
               );
             })}
           </div>
+          </MenuSurface>
         </>
       )}
     </div>
