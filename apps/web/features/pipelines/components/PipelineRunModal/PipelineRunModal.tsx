@@ -16,7 +16,7 @@ import {
 import { Form, FormSegmentPicker, FormTextArea } from "@zibby/forms";
 import { useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
-import { type Pipeline, glyphForAgent } from "../../../../domain";
+import { type Pipeline, glyphForPhase } from "../../../../domain";
 import { type PhaseOverride, usePhaseOverrides } from "../../hooks/usePhaseOverrides";
 import { ModelBadge, ThinkBadge } from "../PhaseChain";
 
@@ -183,36 +183,46 @@ export function PipelineRunModal({
               </Typography>
               <Card radius="sm">
                 {pipeline.phases.map((ph, i) => (
-                  <Fragment key={`${ph.agent}-${i}`}>
+                  <Fragment key={`${ph.agent ?? ph.type}-${i}`}>
                     {i > 0 && <Divider />}
                     <Container padding={["100", "150"]}>
                       <Stack align="center" direction="row" gap="100">
                         <Icon
-                          name={glyphForAgent(ph.agent, agents)}
+                          name={glyphForPhase(ph, agents)}
                           size="sm"
                           tone="accent"
                         />
                         <Container grow minW0>
                           <Typography mono size="caption" type="note">
-                            {ph.agent}
+                            {ph.type === "verify"
+                              ? t("phase.verifyLabel")
+                              : ph.agent}
                           </Typography>
                         </Container>
-                        <Pressable
-                          aria-label={t("pipelineRun.changeModelAria", {
-                            agent: ph.agent,
-                          })}
-                          onClick={() => cycleModel(i)}
-                        >
-                          <ModelBadge model={overrides[i]!.model} />
-                        </Pressable>
-                        <Pressable
-                          aria-label={t("pipelineRun.changeThinkAria", {
-                            agent: ph.agent,
-                          })}
-                          onClick={() => cycleThink(i)}
-                        >
-                          <ThinkBadge level={overrides[i]!.thinking} />
-                        </Pressable>
+                        {ph.type === "verify" ? (
+                          <Typography mono size="2xs" type="note" variant="tertiary">
+                            {t("phase.checksLabel")}
+                          </Typography>
+                        ) : (
+                          <>
+                            <Pressable
+                              aria-label={t("pipelineRun.changeModelAria", {
+                                agent: ph.agent ?? ph.type,
+                              })}
+                              onClick={() => cycleModel(i)}
+                            >
+                              <ModelBadge model={overrides[i]!.model} />
+                            </Pressable>
+                            <Pressable
+                              aria-label={t("pipelineRun.changeThinkAria", {
+                                agent: ph.agent ?? ph.type,
+                              })}
+                              onClick={() => cycleThink(i)}
+                            >
+                              <ThinkBadge level={overrides[i]!.thinking} />
+                            </Pressable>
+                          </>
+                        )}
                       </Stack>
                     </Container>
                   </Fragment>

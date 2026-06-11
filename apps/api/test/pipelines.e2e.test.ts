@@ -10,6 +10,8 @@ import { AppModule } from "../src/app.module"
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
+/** Check script that fails on its first invocation, then passes (see fixtures/flaky-check.mjs). */
+const FLAKY_CHECK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/flaky-check.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 async function until<T>(fn: () => Promise<T>, timeoutMs = 10000): Promise<T> {
@@ -36,10 +38,12 @@ describe("Pipelines API (e2e)", () => {
   let app: INestApplication
   let pipelinesDir: string
   let runsDir: string
+  let projectsDir: string
 
   async function boot(): Promise<INestApplication> {
     process.env.PIPELINES_DIR = pipelinesDir
     process.env.PIPELINE_RUNS_DIR = runsDir
+    process.env.PROJECTS_DIR = projectsDir
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     const fresh = moduleRef.createNestApplication()
     await fresh.init()
@@ -49,6 +53,7 @@ describe("Pipelines API (e2e)", () => {
   beforeAll(async () => {
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipelines-e2e-"))
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-runs-e2e-"))
+    projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-projects-e2e-"))
     process.env.AGENT_DEMO_STEPS = "2"
     process.env.AGENT_DEMO_DELAY_MS = "30"
     app = await boot()
@@ -58,7 +63,8 @@ describe("Pipelines API (e2e)", () => {
     await app.close()
     await fs.rm(pipelinesDir, { recursive: true, force: true })
     await fs.rm(runsDir, { recursive: true, force: true })
-    for (const k of ["PIPELINES_DIR", "PIPELINE_RUNS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "PIPELINE_DEMO_FAIL_PHASES"]) {
+    await fs.rm(projectsDir, { recursive: true, force: true })
+    for (const k of ["PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "PIPELINE_DEMO_FAIL_PHASES"]) {
       delete process.env[k]
     }
   })
@@ -152,6 +158,54 @@ describe("Pipelines API (e2e)", () => {
     // A re-ran because of the back-edge.
     const aAttempts = final.stageRuns.filter((s: { phaseId: string }) => s.phaseId === "a").length
     expect(aAttempts).toBeGreaterThanOrEqual(2)
+  })
+
+  it("a verify phase runs the project checks: red → loop back → green → done", async () => {
+    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "verify-proj-"))
+    const marker = path.join(projectDir, "fixed.marker")
+    const check = `${JSON.stringify(process.execPath)} ${JSON.stringify(FLAKY_CHECK)} ${JSON.stringify(marker)}`
+
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "verify-proj", name: "Verify project", path: projectDir, checks: [check] })
+      .expect(201)
+
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "verified",
+        phases: [
+          phase("a"),
+          { id: "v", type: "verify", loop: { to: "a", maxRetries: 1, escalate: false, then: "fail" } },
+          phase("b"),
+        ],
+        instructions: "agent → verify → agent",
+      })
+      .expect(201)
+
+    const start = await request(app.getHttpServer())
+      .post("/api/pipelines/verified/run")
+      .send({ project: "verify-proj" })
+      .expect(201)
+    expect(start.body.projectPath).toBe(projectDir)
+    const { pipelineRunId } = start.body
+
+    const final = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+      return res.body.status !== "running" ? res.body : null
+    })
+
+    expect(final.status).toBe("done")
+    // First verify ran red (creating the marker), looped back to `a`, then green.
+    expect(
+      final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
+    ).toEqual(["a:done", "v:error", "a:done", "v:done", "b:done"])
+
+    // Handoff passthrough: verify transforms nothing, so `b` still consumed `a`'s output.
+    const handoff = await fs.readFile(path.join(final.cwd, "b", "b.in"), "utf8")
+    expect(handoff).toContain("output of a")
+
+    await fs.rm(projectDir, { recursive: true, force: true })
   })
 
   it("reconciles a pipeline run left 'running' at restart to 'failed'", async () => {

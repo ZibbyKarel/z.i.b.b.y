@@ -18,8 +18,8 @@ const pipeline: Pipeline = {
   desc: "d",
   file: "f",
   phases: [
-    { agent: "Architekt", consumes: "task.md", produces: "design.md", model: "opus", thinking: "high" },
-    { agent: "Kodér", consumes: "design.md", produces: "branch", model: "sonnet", thinking: "medium" },
+    { type: "agent" as const, agent: "Architekt", consumes: "task.md", produces: "design.md", model: "opus" as const, thinking: "high" as const },
+    { type: "agent" as const, agent: "Kodér", consumes: "design.md", produces: "branch", model: "sonnet" as const, thinking: "medium" as const },
   ],
 }
 

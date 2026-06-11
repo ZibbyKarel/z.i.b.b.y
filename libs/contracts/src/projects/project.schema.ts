@@ -23,6 +23,11 @@ export const ProjectSchema = z.object({
   path: z.string().min(1),
   desc: z.string().optional(),
   category: z.string().optional(),
+  /**
+   * Shell commands a pipeline verify phase runs against this project (in
+   * `path`), joined with `&&`. Absent → the shared default checks apply.
+   */
+  checks: z.array(z.string().min(1)).optional(),
 })
 export type Project = z.infer<typeof ProjectSchema>
 

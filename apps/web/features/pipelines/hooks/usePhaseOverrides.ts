@@ -20,8 +20,13 @@ export interface PhaseOverride {
  * buttons. Seeded from the pipeline definition; the dialog only renders.
  */
 export function usePhaseOverrides(pipeline: Pipeline) {
+  // Verify phases carry no model/thinking; their override slot is a dummy the
+  // dialog never renders (it shows the checks label instead of the badges).
   const [overrides, setOverrides] = useState<PhaseOverride[]>(
-    pipeline.phases.map((p) => ({ model: p.model, thinking: p.thinking })),
+    pipeline.phases.map((p) => ({
+      model: p.model ?? "sonnet",
+      thinking: p.thinking ?? "medium",
+    })),
   );
 
   const cycleModel = (i: number) =>

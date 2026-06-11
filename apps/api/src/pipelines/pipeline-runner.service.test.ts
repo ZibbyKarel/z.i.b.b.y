@@ -1,7 +1,13 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import type { IntendedAction, PipelineRun } from "@zibby/contracts"
+import {
+  DEFAULT_VERIFY_CHECKS,
+  type IntendedAction,
+  type PipelinePhase,
+  type PipelineRun,
+  type Project,
+} from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ResumableRunner } from "../approvals/approvals.service"
 import { RunNotFoundError } from "../runner/runner-core"
@@ -84,6 +90,7 @@ async function makeHarness(dir: string): Promise<Harness> {
     { assertAvailable: vi.fn(), probe: vi.fn() } as never,
     approvals as never,
     gates as never,
+    { get: vi.fn(async () => null), list: vi.fn(async () => []) } as never,
     fakeLogger as never,
     fakeTrace as never,
   )
@@ -219,6 +226,117 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     ).waitForStage(STAGE_RUN_ID)
     expect(status).toBe("done")
     expect(i).toBeGreaterThanOrEqual(4)
+  })
+
+  describe("buildStageCommand", () => {
+    const PROJECT: Project = {
+      id: "demo-proj",
+      name: "Demo project",
+      path: "/srv/checkouts/demo",
+      checks: ["pnpm check:one", "pnpm check:two"],
+    }
+
+    const build = (phase: PipelinePhase, project: Project | null) =>
+      (
+        h.service as unknown as {
+          buildStageCommand(
+            phase: PipelinePhase,
+            cwd: string,
+            project: Project | null,
+          ): Promise<{ command: string; args: string[]; spawnCwd?: string }>
+        }
+      ).buildStageCommand(phase, "/sandbox/stage", project)
+
+    const verifyPhase = (over: Partial<PipelinePhase> = {}): PipelinePhase => ({
+      id: "verify",
+      type: "verify",
+      ...over,
+    })
+
+    const agentPhase = (over: Partial<PipelinePhase> = {}): PipelinePhase => ({
+      id: "build",
+      type: "agent",
+      agent: "writer",
+      consumes: "in.md",
+      produces: "out.md",
+      model: "sonnet",
+      thinking: "medium",
+      ...over,
+    })
+
+    afterEach(() => {
+      delete process.env.AGENT_RUNNER_MODE
+    })
+
+    it("verify: a phase-level commands override wins", async () => {
+      const cmd = await build(verifyPhase({ commands: ["make test"] }), PROJECT)
+      expect(cmd).toEqual({
+        command: "/bin/sh",
+        args: ["-c", "make test"],
+        spawnCwd: "/srv/checkouts/demo",
+      })
+    })
+
+    it("verify: falls back to the project's checks, joined with &&", async () => {
+      const cmd = await build(verifyPhase(), PROJECT)
+      expect(cmd.args).toEqual(["-c", "pnpm check:one && pnpm check:two"])
+      expect(cmd.spawnCwd).toBe("/srv/checkouts/demo")
+    })
+
+    it("verify: falls back to the shared defaults in the sandbox without a project", async () => {
+      const cmd = await build(verifyPhase(), null)
+      expect(cmd.args).toEqual(["-c", DEFAULT_VERIFY_CHECKS.join(" && ")])
+      expect(cmd.spawnCwd).toBeUndefined()
+    })
+
+    it("verify runs identically in claude mode (no model, no preflight)", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude"
+      const cmd = await build(verifyPhase(), PROJECT)
+      expect(cmd.command).toBe("/bin/sh")
+    })
+
+    it("claude: a project-targeted stage spawns in the checkout with the sandbox granted", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude"
+      const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({
+        command: "claude",
+        args: ["-p", opts.task],
+      }))
+      ;(h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude }
+      ;(h.service as unknown as { agents: unknown }).agents = {
+        get: vi.fn(async () => ({ id: "writer", instructions: "write", model: "opus" })),
+      }
+
+      const cmd = await build(agentPhase(), PROJECT)
+      expect(cmd.spawnCwd).toBe("/srv/checkouts/demo")
+      const opts = buildClaude.mock.calls[0]?.[0] as {
+        task: string
+        grantDirs?: readonly string[]
+        model?: string
+      }
+      expect(opts.grantDirs).toEqual(["/sandbox/stage"])
+      // Handoff paths are absolute — sandbox-relative would resolve in the repo.
+      expect(opts.task).toContain(path.join("/sandbox/stage", "in.md"))
+      expect(opts.task).toContain(path.join("/sandbox/stage", "out.md"))
+      // The phase-level model wins over the agent's default.
+      expect(opts.model).toBe("sonnet")
+    })
+
+    it("claude: without a project the stage stays in its sandbox (no grant)", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude"
+      const buildClaude = vi.fn(async (opts: { task: string }) => ({
+        command: "claude",
+        args: ["-p", opts.task],
+      }))
+      ;(h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude }
+      ;(h.service as unknown as { agents: unknown }).agents = {
+        get: vi.fn(async () => ({ id: "writer", instructions: "write" })),
+      }
+
+      const cmd = await build(agentPhase(), null)
+      expect(cmd.spawnCwd).toBeUndefined()
+      const opts = buildClaude.mock.calls[0]?.[0] as { grantDirs?: readonly string[] }
+      expect(opts.grantDirs).toBeUndefined()
+    })
   })
 
   it("reconstruct reconciles a parked aggregate to failed", async () => {

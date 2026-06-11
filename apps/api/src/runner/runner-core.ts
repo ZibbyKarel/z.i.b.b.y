@@ -283,10 +283,12 @@ export class RunnerCore<R extends BaseRun> {
     // `stdin: "ignore"` (= `< /dev/null`) stops `claude -p` from waiting 3s for
     // piped input it will never get — its prompt arrives via `-p`, not stdin.
     const child = spawn(spec.command, spec.args, {
-      cwd: spec.cwd,
+      // A project-targeted stage spawns inside the project checkout (context
+      // loads from cwd); everything else spawns in its sandbox.
+      cwd: spec.spawnCwd ?? spec.cwd,
       // Pin the gate's coordination dir to the sandbox so the hook writes its
       // request where {@link watchIntentRequest} watches — not into whatever
-      // `--add-dir` target the destructive command happens to run in.
+      // `--add-dir` target (or project spawn cwd) the destructive command runs in.
       env: { ...process.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -365,7 +367,7 @@ export class RunnerCore<R extends BaseRun> {
 
     await fs.mkdir(spec.cwd, { recursive: true })
     const child = spawn(spec.command, spec.args, {
-      cwd: spec.cwd,
+      cwd: spec.spawnCwd ?? spec.cwd,
       // Same coordination-dir pin as the initial spawn (see {@link start}).
       env: { ...process.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,

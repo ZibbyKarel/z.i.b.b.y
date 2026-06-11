@@ -93,6 +93,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           file: `~/zibby/pipelines/${id}.pipeline.md`,
           phases: [
             {
+              type: "agent" as const,
               agent: "Agent",
               consumes: "task.md",
               produces: "output.md",

@@ -49,6 +49,13 @@ export interface RunSpec {
   /** The sandbox the process runs in; the core creates it before spawning. */
   cwd: string
   /**
+   * Optional working directory the child SPAWNS in, when it differs from the
+   * sandbox `cwd` (a claude stage of a project-targeted pipeline run spawns
+   * inside the project checkout so its real CLAUDE.md/.claude context loads).
+   * Logs, sidecar and the intent coordination dir stay anchored to `cwd`.
+   */
+  spawnCwd?: string
+  /**
    * Timestamp used for both the run id's middle segment and `startedAt`. Pass it
    * so a wrapper's sandbox-folder name and the resulting run id agree; defaults to
    * `Date.now()` when omitted.

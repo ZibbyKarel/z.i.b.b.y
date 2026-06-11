@@ -115,6 +115,7 @@ export function NewPipelineDialog({
       instructions: description,
       phases: steps.map((s, i) => ({
         id: `phase-${i + 1}`,
+        type: "agent" as const,
         agent: s.agent,
         consumes: i === 0 ? assignment.trim() : steps[i - 1]!.produces.trim(),
         produces: s.produces.trim(),

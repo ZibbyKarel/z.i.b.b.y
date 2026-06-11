@@ -259,6 +259,7 @@
   },
   "pipelines": {
     "addPipeline": "Přidat pipeline",
+    "verify": "verify",
     "runPipeline": "Spustit pipeline",
     "sectionLabel": "Pipeline",
     "emptyTitle": "Zatím žádné pipeline",
@@ -278,7 +279,10 @@
     "phaseLabel": "FÁZE {n}",
     "input": "vstup",
     "output": "výstup",
-    "retry": "retry · max {n}"
+    "retry": "retry · max {n}",
+    "verifyLabel": "verify",
+    "checksLabel": "kontroly",
+    "checksTitle": "deterministické kontroly (bez modelu)"
   },
   "approval": {
     "waiting": "Čeká na tvé schválení",

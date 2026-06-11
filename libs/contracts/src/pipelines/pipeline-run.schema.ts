@@ -52,6 +52,12 @@ export const PipelineRunSchema = z.object({
   startedAt: z.string().datetime(),
   /** Absolute shared root dir holding the per-phase sandboxes for this run. */
   cwd: z.string(),
+  /**
+   * Absolute path of the resolved target project, when the run was started with
+   * one. Drives verify-phase cwd and claude-stage spawn cwd; persisted so
+   * restart/parking keep it.
+   */
+  projectPath: z.string().optional(),
 })
 export type PipelineRun = z.infer<typeof PipelineRunSchema>
 

@@ -60,6 +60,7 @@ describe("NewPipelineDialog", () => {
     expect(input.phases).toEqual([
       {
         id: "phase-1",
+        type: "agent",
         agent: "writer",
         consumes: "task.md",
         produces: "review.md",
@@ -68,6 +69,7 @@ describe("NewPipelineDialog", () => {
       },
       {
         id: "phase-2",
+        type: "agent",
         agent: "writer",
         consumes: "review.md",
         produces: "handoff-2.md",

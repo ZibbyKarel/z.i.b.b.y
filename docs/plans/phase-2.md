@@ -79,7 +79,7 @@ can expose `then: park` + escalation; 2.4 needs 2.1 and 2.3.)
 
 ---
 
-2.1 Deterministic verification phase
+2.1 Deterministic verification phase — ✅ HOTOVO
 
 Contracts (libs/contracts/src/pipelines/pipeline.schema.ts + projects/project.schema.ts):
 

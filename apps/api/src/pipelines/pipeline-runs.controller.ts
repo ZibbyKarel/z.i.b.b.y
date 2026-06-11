@@ -20,9 +20,9 @@ export class PipelineRunsController {
   @TsRestHandler(pipelineRunsContract)
   handler() {
     return tsRestHandler(pipelineRunsContract, {
-      startPipelineRun: async ({ params: { id } }) => {
+      startPipelineRun: async ({ params: { id }, body }) => {
         try {
-          const run = await this.runner.start(id)
+          const run = await this.runner.start(id, undefined, body.project)
           return { status: 201, body: run }
         } catch (error) {
           if (isMissingPipeline(error)) {

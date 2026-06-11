@@ -63,11 +63,15 @@ export interface PhaseLoop {
 }
 
 export interface PipelinePhase {
-  agent: string;
-  consumes: string;
-  produces: string;
-  model: AgentModel;
-  thinking: AgentThinking;
+  /** What the phase executes: an agent session, or deterministic verify checks. */
+  type: "agent" | "verify";
+  agent?: string;
+  consumes?: string;
+  produces?: string;
+  model?: AgentModel;
+  thinking?: AgentThinking;
+  /** Verify phases only: shell commands run with `&&` (override project checks). */
+  commands?: string[];
   loop?: PhaseLoop;
 }
 
@@ -110,9 +114,17 @@ export interface SystemStatus {
 }
 
 /** Glyph for an agent name, falling back to a generic bot. */
-export function glyphForAgent(name: string, agents: Agent[]): IconName {
+export function glyphForAgent(
+  name: string | undefined,
+  agents: Agent[],
+): IconName {
   return (
     (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ??
     "bot"
   );
+}
+
+/** Glyph for a pipeline phase: verify phases get the shield, agents their glyph. */
+export function glyphForPhase(phase: PipelinePhase, agents: Agent[]): IconName {
+  return phase.type === "verify" ? "shield" : glyphForAgent(phase.agent, agents);
 }

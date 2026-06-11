@@ -22,11 +22,13 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
     desc: p.desc ?? "",
     file: `~/zibby/pipelines/${p.id}.pipeline.md`,
     phases: p.phases.map((ph) => ({
+      type: ph.type,
       agent: ph.agent,
       consumes: ph.consumes,
       produces: ph.produces,
       model: ph.model,
       thinking: ph.thinking,
+      commands: ph.commands,
       loop: ph.loop,
     })),
   }));

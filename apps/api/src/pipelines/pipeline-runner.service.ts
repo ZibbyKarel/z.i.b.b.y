@@ -4,11 +4,13 @@ import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import {
+  DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
   type Pipeline,
   type PipelinePhase,
   type PipelineRun,
   PipelineRunSchema,
+  type Project,
   type RunLogChunk,
   type StageRun,
 } from "@zibby/contracts"
@@ -18,6 +20,7 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
+import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { PipelinesStorageService } from "./pipelines.storage.service"
@@ -76,6 +79,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly preflight: ClaudePreflightService,
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
+    private readonly projects: ProjectsStorageService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -132,10 +136,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Start a run of `pipelineId`. Returns immediately; phases run in the background.
-   * (The optional `project` from the request is reserved for the real `claude -p`
-   * executor in Phase 6 and intentionally unused in demo mode.)
+   * `project` (id or name from the request) resolves against the registry: its
+   * `path` becomes the spawn cwd of claude stages and the verify-phase cwd, and
+   * its `checks` the verify fallback. Unresolvable → sandbox-only (deterministic
+   * for demo/e2e).
    */
-  async start(pipelineId: string, taskId?: string): Promise<PipelineRun> {
+  async start(pipelineId: string, taskId?: string, projectRef?: string): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId)
 
@@ -144,6 +150,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     if (process.env.AGENT_RUNNER_MODE === "claude") {
       await this.preflight.assertAvailable()
     }
+
+    const project = await this.resolveProject(projectRef)
 
     const startedMs = Date.now()
     const pipelineRunId = `${pipelineId}_${startedMs}`
@@ -160,6 +168,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       startedAt: new Date(startedMs).toISOString(),
       cwd: root,
       ...(taskId ? { taskId } : {}),
+      ...(project ? { projectPath: project.path } : {}),
     }
     this.runs.set(pipelineRunId, run)
     await this.writeAggregate(run)
@@ -168,14 +177,30 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       pipelineId,
       pipelineRunId,
       phases: pipeline.phases.length,
+      projectPath: project?.path,
     })
 
     // Fire-and-forget driver; the FE polls getRun for progress. The driver runs
     // after this request returns, so re-open a logging scope keyed by the run id
     // (carrying the originating trace id) for every line the background work emits.
     const traceId = this.trace.getTraceId() ?? randomUUID()
-    void this.trace.run({ traceId, runId: pipelineRunId }, () => this.drive(run, pipeline))
+    void this.trace.run({ traceId, runId: pipelineRunId }, () => this.drive(run, pipeline, project))
     return run
+  }
+
+  /**
+   * Resolve the request's free-form project reference against the registry —
+   * by id first, then by exact name. Unknown/absent → null (sandbox-only run);
+   * never throws (the project is an enhancement, not a precondition).
+   */
+  private async resolveProject(projectRef: string | undefined): Promise<Project | null> {
+    if (!projectRef) return null
+    try {
+      return await this.projects.get(projectRef)
+    } catch {
+      const all = await this.projects.list().catch((): Project[] => [])
+      return all.find((p) => p.name === projectRef) ?? null
+    }
   }
 
   list(): PipelineRun[] {
@@ -254,7 +279,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * Drive the phases in order. The cursor moves forward on success; on failure it
    * either takes the phase's back-edge (bounded by `maxRetries`) or fails the run.
    */
-  private async drive(run: PipelineRun, pipeline: Pipeline): Promise<void> {
+  private async drive(
+    run: PipelineRun,
+    pipeline: Pipeline,
+    project: Project | null = null,
+  ): Promise<void> {
     const byId = new Map(pipeline.phases.map((p) => [p.id, p]))
     const order = pipeline.phases
     const retries = new Map<string, number>()
@@ -272,8 +301,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       await fs.mkdir(stageCwd, { recursive: true })
       await this.placeHandoff(handoffSource, stageCwd, phase)
 
-      this.log.info("pipeline phase starting", { phase: phase.id, agent: phase.agent, attempt })
-      const stageRun = await this.runStage(run, pipeline, phase, stageCwd, attempt)
+      this.log.info("pipeline phase starting", {
+        phase: phase.id,
+        type: phase.type,
+        agent: phase.agent,
+        attempt,
+      })
+      const stageRun = await this.runStage(run, phase, stageCwd, attempt, project)
       // A rejected approval lands here with the aggregate still "parked" (the
       // cancel path flips only the stage) — un-park before recording the outcome.
       if (run.status === "parked") run.status = "running"
@@ -282,7 +316,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
       if (stageRun.status === "done") {
         this.log.info("pipeline phase done", { phase: phase.id, attempt })
-        handoffSource = path.join(stageCwd, phase.produces)
+        // A verify phase transforms nothing: it leaves the handoff untouched, so
+        // the next phase consumes the last *producing* phase's output.
+        if (phase.produces) handoffSource = path.join(stageCwd, phase.produces)
         const idx = order.findIndex((p) => p.id === phase.id)
         cursor = order[idx + 1]?.id ?? null
         continue
@@ -335,18 +371,19 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   /** Spawn one stage child and wait for it to finish; return its StageRun. */
   private async runStage(
     run: PipelineRun,
-    _pipeline: Pipeline,
     phase: PipelinePhase,
     stageCwd: string,
     attempt: number,
+    project: Project | null,
   ): Promise<StageRun> {
-    const { command, args } = await this.buildStageCommand(phase, stageCwd)
+    const { command, args, spawnCwd } = await this.buildStageCommand(phase, stageCwd, project)
     const rec = await this.core.start({
       kind: "pipeline-stage",
       ownerId: `${run.pipelineRunId}.${phase.id}`,
       command,
       args,
       cwd: stageCwd,
+      ...(spawnCwd ? { spawnCwd } : {}),
       extra: { pipelineRunId: run.pipelineRunId, phaseId: phase.id, attempt },
     })
     const status = await this.waitForStage(rec.runId)
@@ -390,6 +427,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const pipeline = await this.pipelines.get(run.pipelineId)
       const phase = pipeline.phases.find((p) => p.id === rec.phaseId)
       if (!phase) throw new Error(`Phase "${rec.phaseId}" not found in "${run.pipelineId}"`)
+      // Verify phases never spawn claude, so they can't raise intents — an
+      // agent-less phase here is a malformed signal; the catch denies it.
+      if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`)
       const agent = await this.agents.get(phase.agent)
       const rules = await this.gates.rulesForAgent({
         gates: agent.gates,
@@ -454,7 +494,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     stageCwd: string,
     phase: PipelinePhase,
   ): Promise<void> {
-    if (!source) return
+    // A verify phase declares no `consumes` — it checks the project, not a file.
+    if (!source || !phase.consumes) return
     const dest = this.resolveInside(stageCwd, phase.consumes)
     if (!dest) return
     await fs.mkdir(path.dirname(dest), { recursive: true })
@@ -489,24 +530,55 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   private async buildStageCommand(
     phase: PipelinePhase,
     cwd: string,
-  ): Promise<{ command: string; args: string[] }> {
+    project: Project | null,
+  ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
+    // Verify phases are deterministic shell checks — identical in demo and
+    // claude mode (no model, no tokens, no intents, no preflight). They run in
+    // the project checkout when one was resolved, else in the stage sandbox.
+    if (phase.type === "verify") {
+      const commands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS]
+      return {
+        command: "/bin/sh",
+        args: ["-c", commands.join(" && ")],
+        ...(project ? { spawnCwd: project.path } : {}),
+      }
+    }
     if (process.env.AGENT_RUNNER_MODE === "claude") {
       // The phase's agent drives the stage: its instructions become the session
       // system prompt; the task tells it to consume the handoff and produce the
       // next one. The demo path covers the pipeline machinery without tokens.
+      if (!phase.agent) throw new Error(`Agent phase "${phase.id}" carries no agent`)
       const agent = await this.agents.get(phase.agent)
-      const task = `Proveď fázi pipeline "${phase.id}". Vstup (pokud existuje) najdeš v "${phase.consumes}"; výstup zapiš do "${phase.produces}".`
-      return this.claude.buildClaudeCommand({
+      // Handoff paths are passed ABSOLUTE: with a project resolved the session
+      // spawns inside the checkout (its real CLAUDE.md/.claude context loads),
+      // so anything sandbox-relative would silently resolve against the repo.
+      const consumesAbs = phase.consumes ? path.join(cwd, phase.consumes) : null
+      const producesAbs = phase.produces ? path.join(cwd, phase.produces) : null
+      const task = [
+        `Proveď fázi pipeline "${phase.id}".`,
+        consumesAbs ? `Vstup (pokud existuje) najdeš v "${consumesAbs}".` : "",
+        producesAbs ? `Výstup zapiš do "${producesAbs}".` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+      const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,
         tools: agent.tools,
-        model: agent.model,
-        thinking: agent.thinking,
+        model: phase.model ?? agent.model,
+        thinking: phase.thinking ?? agent.thinking,
+        // The sandbox holds the handoff files; with cwd in the project the
+        // session still needs write access to it (reverse grant).
+        ...(project ? { grantDirs: [cwd] } : {}),
       })
+      return project ? { ...built, spawnCwd: project.path } : built
     }
     const script =
       process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs")
-    return { command: process.execPath, args: [script, cwd, phase.id, phase.produces, phase.consumes] }
+    return {
+      command: process.execPath,
+      args: [script, cwd, phase.id, phase.produces ?? "", phase.consumes ?? ""],
+    }
   }
 
   /** The run's folder inside the runs dir, or null if the id would escape it. */

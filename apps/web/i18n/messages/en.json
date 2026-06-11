@@ -259,6 +259,7 @@
   },
   "pipelines": {
     "addPipeline": "Add pipeline",
+    "verify": "verify",
     "runPipeline": "Run pipeline",
     "sectionLabel": "Pipelines",
     "emptyTitle": "No pipelines yet",
@@ -278,7 +279,10 @@
     "phaseLabel": "PHASE {n}",
     "input": "input",
     "output": "output",
-    "retry": "retry · max {n}"
+    "retry": "retry · max {n}",
+    "verifyLabel": "verify",
+    "checksLabel": "checks",
+    "checksTitle": "deterministic checks (no model)"
   },
   "approval": {
     "waiting": "Waiting for your approval",

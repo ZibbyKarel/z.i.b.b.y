@@ -10,8 +10,8 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
-import type { Agent } from "@zibby/contracts";
-import { type Pipeline, type PipelinePhase, glyphForAgent } from "../../../domain";
+import { type Agent, DEFAULT_VERIFY_CHECKS } from "@zibby/contracts";
+import { type Pipeline, type PipelinePhase, glyphForPhase } from "../../../domain";
 
 /** Per-run model badge (opus / sonnet / haiku). */
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
@@ -59,31 +59,50 @@ function IoRow({ label, value, accent }: { label: string; value: string; accent?
 
 function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: Agent[]; idx: number; active: boolean }) {
   const t = useTranslations("phase");
+  const isVerify = phase.type === "verify";
   return (
-     
+
     <Card radius="default" selected={active} style={{ flex: "1 1 0%", minWidth: 0 }}>
       <Container padding="150">
         <Stack gap="100">
           <Stack align="center" direction="row" gap="100">
-            <IconTile glyph={glyphForAgent(phase.agent, agents)} size="sm" />
+            <IconTile glyph={glyphForPhase(phase, agents)} size="sm" />
             <Container minW0>
               <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
                 {t("phaseLabel", { n: idx + 1 })}
               </Typography>
               <Typography mono nowrap size="base" type="note" weight="semibold">
-                {phase.agent}
+                {isVerify ? t("verifyLabel") : phase.agent}
               </Typography>
             </Container>
           </Stack>
-          <Stack wrap direction="row" gap="75">
-            <ModelBadge model={phase.model} />
-            <ThinkBadge level={phase.thinking} />
-          </Stack>
-          <Divider />
-          <Stack gap="75">
-            <IoRow label={t("input")} value={phase.consumes} />
-            <IoRow accent label={t("output")} value={phase.produces} />
-          </Stack>
+          {isVerify ? (
+            <>
+              <Stack wrap direction="row" gap="75">
+                <Tag title={t("checksTitle")} tone="neutral">
+                  {t("checksLabel")}
+                </Tag>
+              </Stack>
+              <Divider />
+              <Stack data-testid="phase-verify-checks" gap="75">
+                {(phase.commands ?? [...DEFAULT_VERIFY_CHECKS]).map((cmd) => (
+                  <IoRow key={cmd} label="$" value={cmd} />
+                ))}
+              </Stack>
+            </>
+          ) : (
+            <>
+              <Stack wrap direction="row" gap="75">
+                <ModelBadge model={phase.model} />
+                <ThinkBadge level={phase.thinking} />
+              </Stack>
+              <Divider />
+              <Stack gap="75">
+                <IoRow label={t("input")} value={phase.consumes ?? ""} />
+                <IoRow accent label={t("output")} value={phase.produces ?? ""} />
+              </Stack>
+            </>
+          )}
         </Stack>
       </Container>
     </Card>
@@ -134,7 +153,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
       )}
       <Stack align="stretch" direction="row" gap="25">
         {phases.map((ph, i) => (
-          <Fragment key={`${ph.agent}-${i}`}>
+          <Fragment key={`${ph.agent ?? ph.type}-${i}`}>
             <PhaseNode active={Boolean(ph.loop)} agents={agents} idx={i} phase={ph} />
             {i < phases.length - 1 && (
                
@@ -147,7 +166,7 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
                 <Container padding={["0", "50"]}>
                   <Stack align="center" gap="50">
                     <Typography mono nowrap size="2xs" type="note" variant="tertiary">
-                      {phases[i + 1]!.consumes}
+                      {phases[i + 1]!.consumes ?? ""}
                     </Typography>
                     <Icon name="arrow" size="md" tone="faint" />
                   </Stack>

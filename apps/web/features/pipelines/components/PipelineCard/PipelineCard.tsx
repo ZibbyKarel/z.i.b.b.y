@@ -11,7 +11,7 @@ import {
   Typography,
 } from "@zibby/design-system"
 import type { Agent } from "@zibby/contracts"
-import { type Pipeline, type PipelineState, glyphForAgent } from "../../../../domain"
+import { type Pipeline, type PipelineState, glyphForPhase } from "../../../../domain"
 
 const stateMeta = {
   done: { tone: "ok", pulse: false, labelKey: "stateDone" },
@@ -60,11 +60,11 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
 
           <Stack wrap align="center" direction="row" gap="75">
             {pipeline.phases.map((ph, i) => (
-              <Fragment key={`${ph.agent}-${i}`}>
+              <Fragment key={`${ph.agent ?? ph.type}-${i}`}>
                 <Stack inline align="center" direction="row" gap="50">
-                  <Icon name={glyphForAgent(ph.agent, agents)} size="xs" tone="accent" />
+                  <Icon name={glyphForPhase(ph, agents)} size="xs" tone="accent" />
                   <Typography mono size="xs" type="note" variant="secondary">
-                    {ph.agent}
+                    {ph.type === "verify" ? t("verify") : ph.agent}
                   </Typography>
                 </Stack>
                 {i < pipeline.phases.length - 1 && (
