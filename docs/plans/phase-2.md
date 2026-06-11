@@ -64,6 +64,15 @@ Decisions taken (defaults chosen, flag if you disagree):
    the project checkout directly, which is also what the operator does by hand.)
 4. Duplicate = client-side createPipeline with copied body + new id (no new
    endpoint; create already returns 409 on collision).
+5. Claude stages of a project-targeted run spawn with cwd = project.path, not
+   the stage sandbox — --add-dir grants file access but loads no context; the
+   target's real CLAUDE.md/.claude (skills, hooks, settings) only apply with
+   cwd inside the repo. Sandbox stays the artifact home, granted via --add-dir
+   in the reverse direction; handoff paths must be passed absolute. Registering
+   a project = trusting its repo config (its settings/hooks execute on spawn);
+   ZIBBY's approval hook via --settings + the locked floor apply regardless.
+   No project resolved → sandbox cwd unchanged (demo/e2e deterministic).
+   Phase 3 worktrees replace the checkout with a worktree, same cwd rule.
 
 Implementation order: 2.1 → 2.3 → 2.2 → 2.4. (2.3 before 2.2 so the authoring UI
 can expose `then: park` + escalation; 2.4 needs 2.1 and 2.3.)
@@ -94,6 +103,11 @@ Runner (apps/api/src/pipelines/pipeline-runner.service.ts):
   store resolved path on the aggregate (new optional `projectPath` on
   PipelineRunSchema) so restart/parking keep it. Missing/unresolvable project →
   verify runs in the stage sandbox (deterministic for demo/e2e).
+- The same resolved projectPath drives stage cwd across the board (decision 5):
+  the claude branch of buildStageCommand sets spawn cwd = projectPath when
+  present (sandbox otherwise) so the target project's real context loads; the
+  stage sandbox is passed via --add-dir and all handoff/intent paths in the
+  prompt and env stay absolute. Demo branch is untouched (sandbox cwd).
 - Handoff: a successful verify leaves handoffSource untouched (it transforms
   nothing — the next phase consumes the last *producing* phase's output). On
   failure the existing `<phaseId>.failure.txt` mechanism applies unchanged, which
@@ -106,7 +120,9 @@ distinct glyph and "checks" label instead of agent/model/thinking badges (read
 side only here; authoring comes in 2.2).
 
 Tests: unit (command assembly: phase override > project checks > defaults;
-handoff passthrough; result mapping); e2e in pipelines.e2e.test.ts: pipeline
+handoff passthrough; result mapping; claude-stage spawn cwd = projectPath when
+resolved / sandbox when not, sandbox present in --add-dir); e2e in
+pipelines.e2e.test.ts: pipeline
 agent→verify→agent against a fixture project whose check script fails on first
 invocation then passes (marker-file script in test/fixtures/), asserting
 loop-back to the agent phase and eventual done; web-components snapshot of a
@@ -250,3 +266,10 @@ Watch-outs:
 - Verify against project.path mutates nothing but runs real commands in a real
   checkout — keep e2e on fixture projects only; never point a test at a live
   repo.
+- cwd = project.path means the target repo's .claude settings and hooks execute
+  in the spawned process — that is the point (real conventions apply), but it
+  is a trust decision: only operator-registered projects, and the gate hook +
+  locked floor ride along via --settings either way. Anything in the run
+  command that was relative to the sandbox cwd (handoff files, intent-request
+  watcher paths, log targets) must be absolute or it silently breaks when cwd
+  moves.

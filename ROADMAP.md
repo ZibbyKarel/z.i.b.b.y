@@ -98,6 +98,9 @@ Nothing downstream is worth building until this is boringly reliable.*
 - Audit `claude-run-command.service.ts` flags against the real CLI once on
   this machine (model/effort/allowedTools/agents catalog) and pin a smoke
   script `apps/api/scripts/claude-smoke.mjs` that runs one trivial real run.
+  The audit also pins the context-loading rule Phases 2–3 build on: project
+  context (`CLAUDE.md`, `.claude/`) loads from the spawn **cwd**, not from
+  `--add-dir` directories.
 - **Tests:** keep all e2e on demo mode (deterministic); add a manually-run
   `pnpm api:smoke` real-mode smoke (not in CI); unit tests for command
   builder flag matrix already exist — extend for any flag changes.
@@ -123,6 +126,16 @@ code, not generating code."*
   tail as context (`<phaseId>.failure.txt` mechanism already exists).
 - Implement as a runner concern, not a prompt — `runner-core` executes it
   without spawning claude.
+- **Real project context for project-targeted stages:** when a run resolves a
+  project, claude stages spawn with **cwd = the project checkout**, not the
+  run sandbox — `--add-dir` grants file access only and loads no context, so
+  the target's own `CLAUDE.md`, `.claude/` skills, hooks, and settings apply
+  exactly as they would for the operator. The run sandbox stays the artifact
+  home (logs, sidecars, handoffs), granted via `--add-dir` in the other
+  direction. Registering a project = trusting its repo config; the approval
+  hook injected via `--settings` and the locked gate floor apply regardless
+  (Law 1). Worktree isolation arrives in 3.1 — until then this is the same
+  trust posture as the verify stage running in the checkout.
 - **Tests:** unit for verify-stage command assembly + result mapping; e2e:
   pipeline with a verify stage against a fixture repo whose tests fail once
   then pass (scripted fixture), asserting the loop-back and eventual `done`.
@@ -180,8 +193,11 @@ completely, and stops. Push/merge are gated actions, not conventions.*
   a branch `zibby/<runId>-<slug>` (worktree under the run sandbox via
   `git worktree add`, so parallel runs never collide on one checkout); record
   branch + worktree path in the run sidecar; clean up worktrees on delete.
-- Agents receive the worktree as cwd via existing `--add-dir` mechanics —
-  never the project's main checkout.
+- Agents spawn with the **worktree as cwd** — the project's real context
+  (`CLAUDE.md`, `.claude/` skills, hooks, settings) loads exactly as it would
+  for the operator, while the main checkout is never touched. This replaces
+  Phase 2's interim direct-checkout cwd; the run sandbox keeps being granted
+  via `--add-dir` for artifacts.
 - **Tests:** unit with a temp git fixture repo (init/branch/worktree/cleanup);
   e2e: agent run against fixture project lands commits on its own branch,
   main untouched.

@@ -155,7 +155,10 @@ parked-at-restart → failed. Leave the 2 quarantined flaky pipeline tests alone
   claude-run-command.service.ts:154–185 (-p, --permission-mode dontAsk, --allowedTools, ↓
   --append-system-prompt, --agents, --settings approval hook, --output-format stream-json,
   --model haiku), asserting exit 0 + parseable result; per-flag-group pass/fail table so ↓
-  CLI drift is visible. Honours CLAUDE_BIN.
+  CLI drift is visible. Honours CLAUDE_BIN. (3) context-loading probe: spawn with cwd in
+  a fixture dir whose CLAUDE.md holds a marker phrase, a second marker dir passed via ↓
+  --add-dir; assert the run sees the cwd marker and not the --add-dir one — pins the
+  rule Phase 2/3 build on (project context loads from cwd, --add-dir is access only). ↓
 - Root package.json: "api:smoke": "node apps/api/scripts/claude-smoke.mjs" — not in CI. ↓
 - Run the smoke once on this machine; any flag drift → fix the builder + extend the existing
   flag-matrix tests (claude-run-command.service.test.ts). ↓
