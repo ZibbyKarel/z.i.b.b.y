@@ -2,21 +2,70 @@ import { z } from "zod"
 import { AgentIdSchema } from "../agents/agent.schema"
 
 /**
- * A candidate destination for a free-text task — one stored agent or one stored
- * pipeline. `glyph` is a free-form string (the API doesn't know the design
- * system's `IconName` union, exactly as `AgentSchema.glyph` is a plain string);
- * the web client narrows it to an `IconName` on receipt.
+ * Display fields every routing target carries. `glyph` is a free-form string
+ * (the API doesn't know the design system's `IconName` union, exactly as
+ * `AgentSchema.glyph` is a plain string); the web client narrows it to an
+ * `IconName` on receipt.
  */
-export const TaskTargetSchema = z.object({
-  kind: z.enum(["agent", "pipeline"]),
-  id: AgentIdSchema,
+const taskTargetDisplayShape = {
   name: z.string().min(1),
   glyph: z.string().optional(),
   /** Free-form functional area, when the definition carries one. */
   category: z.string().optional(),
+}
+
+/** A stored agent as a routing destination. */
+export const AgentTaskTargetSchema = z.object({
+  kind: z.literal("agent"),
+  id: AgentIdSchema,
+  ...taskTargetDisplayShape,
 })
+
+/** A stored pipeline as a routing destination. */
+export const PipelineTaskTargetSchema = z.object({
+  kind: z.literal("pipeline"),
+  id: AgentIdSchema,
+  ...taskTargetDisplayShape,
+})
+
+/**
+ * The terminal routing fallback: a single orchestrator session that has every
+ * stored agent available as a delegatable subagent and can also do the task
+ * directly — so a task always executes. It is synthetic (no stored definition),
+ * hence no `id`; `name`/`glyph` exist purely so the dashboard can render it.
+ */
+export const OrchestratorTaskTargetSchema = z.object({
+  kind: z.literal("orchestrator"),
+  ...taskTargetDisplayShape,
+})
+
+/**
+ * A destination for a free-text task: a stored agent, a stored pipeline, or the
+ * orchestrator fallback.
+ */
+export const TaskTargetSchema = z.discriminatedUnion("kind", [
+  AgentTaskTargetSchema,
+  PipelineTaskTargetSchema,
+  OrchestratorTaskTargetSchema,
+])
 export type TaskTarget = z.infer<typeof TaskTargetSchema>
 export type TaskTargetKind = TaskTarget["kind"]
+
+/** A target that references a stored definition (has an `id`) — what the routers rank. */
+export type CatalogTaskTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" }>
+
+/**
+ * Reserved owner id orchestrator runs carry as their `agentId` in the run feed.
+ * Not a stored agent — a stored definition with this id would shadow it.
+ */
+export const ORCHESTRATOR_ID = "orchestrator"
+
+/** The orchestrator's synthetic display identity (the dashboard renders these). */
+export const ORCHESTRATOR_TARGET = {
+  kind: "orchestrator",
+  name: "Orchestrator",
+  glyph: "compass",
+} as const satisfies TaskTarget
 
 /**
  * Request body for the classifier: the free-text task plus any file/folder paths

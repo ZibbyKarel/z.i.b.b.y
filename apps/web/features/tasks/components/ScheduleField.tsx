@@ -34,13 +34,20 @@ export function ScheduleField({
     { value: "now", label: t("now") },
     { value: "in-1h", label: t("in1h") },
     ...(resetsAt !== null && resetsAt > now
-      ? [{ value: "limit-reset", label: t("limitReset", { time: clockLabel(resetsAt) }) }]
+      ? [
+          {
+            value: "limit-reset",
+            label: t("limitReset", { time: clockLabel(resetsAt) }),
+          },
+        ]
       : []),
   ];
 
   const scheduledAt = resolveScheduledAt(value, now, resetsAt);
   const hint =
-    scheduledAt !== null ? t("willRun", { when: whenLabel(scheduledAt, now) }) : undefined;
+    scheduledAt !== null
+      ? t("willRun", { when: whenLabel(scheduledAt, now) })
+      : undefined;
 
   return (
     <SegmentPickerField

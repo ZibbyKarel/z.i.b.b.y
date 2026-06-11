@@ -37,4 +37,17 @@ describe("TaskRoutingSchema", () => {
   it("rejects an empty candidate list", () => {
     expect(TaskRoutingSchema.safeParse({ ...valid, candidates: [] }).success).toBe(false)
   })
+
+  it("accepts the orchestrator fallback target (no id, synthetic display)", () => {
+    const routing = {
+      ...valid,
+      target: { kind: "orchestrator", name: "Orchestrator", glyph: "compass" },
+    }
+    expect(TaskRoutingSchema.safeParse(routing).success).toBe(true)
+  })
+
+  it("rejects an agent target without an id", () => {
+    const routing = { ...valid, target: { kind: "agent", name: "Kurátor" } }
+    expect(TaskRoutingSchema.safeParse(routing).success).toBe(false)
+  })
 })

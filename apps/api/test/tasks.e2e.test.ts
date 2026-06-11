@@ -125,15 +125,19 @@ describe("Tasks API (e2e)", () => {
     expect(res.body.candidates.some((c: { kind: string }) => c.kind === "pipeline")).toBe(true)
   })
 
-  it("still returns a low-confidence target when nothing matches", async () => {
+  it("routes to the orchestrator (low confidence) when nothing matches", async () => {
     await seedCatalog()
     const res = await request(app.getHttpServer())
       .post(CLASSIFY)
       .send({ text: "qqq zzz xyzzy" })
 
     expect(res.status).toBe(200)
+    expect(res.body.target.kind).toBe("orchestrator")
+    expect(res.body.target.id).toBeUndefined()
+    expect(res.body.target.name).toBeTruthy()
     expect(res.body.confidence).toBeLessThan(0.4)
-    expect(res.body.target).toBeDefined()
+    // The real catalog is still offered for a manual override.
+    expect(res.body.candidates).toHaveLength(3)
   })
 
   it("returns 422 when the catalog is empty", async () => {
@@ -164,6 +168,24 @@ describe("Tasks API (e2e)", () => {
     const run = await request(app.getHttpServer()).get(`/api/agents/runs/${res.body.runRef}`)
     expect(run.status).toBe(200)
     expect(run.body.title).toBe("Vault sync")
+  })
+
+  it("createTask with an unmatched task dispatches a run via the orchestrator", async () => {
+    await seedCatalog()
+    const res = await request(app.getHttpServer())
+      .post(CREATE)
+      .send({ title: "Mystery", text: "qqq zzz xyzzy" })
+
+    expect(res.status).toBe(201)
+    expect(res.body.outcome).toBe("dispatched")
+    expect(res.body.target.kind).toBe("orchestrator")
+    expect(typeof res.body.runRef).toBe("string")
+
+    // The orchestrator run is a normal agent-feed run under the reserved owner id.
+    const run = await request(app.getHttpServer()).get(`/api/agents/runs/${res.body.runRef}`)
+    expect(run.status).toBe(200)
+    expect(run.body.agentId).toBe("orchestrator")
+    expect(run.body.title).toBe("Mystery")
   })
 
   it("createTask with a future scheduledAt parks the task instead of dispatching", async () => {

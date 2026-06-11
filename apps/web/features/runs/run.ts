@@ -1,8 +1,10 @@
-import type {
-  AgentRun,
-  PipelineRun,
-  RunStatus,
-  ScheduledTask,
+import {
+  type AgentRun,
+  ORCHESTRATOR_ID,
+  type PipelineRun,
+  type RunStatus,
+  type ScheduledTask,
+  type TaskTarget,
 } from "@zibby/contracts";
 import type { DotTone, IconName, TagTone } from "@zibby/design-system";
 
@@ -81,6 +83,15 @@ export function pipelineRunToView(r: PipelineRun): RunView {
 }
 
 /**
+ * Owner id a routed target reads as in the feed: the stored definition's id, or
+ * the reserved orchestrator id for the synthetic fallback target (which has none).
+ */
+function targetOwner(target: TaskTarget | undefined): string {
+  if (!target) return "";
+  return target.kind === "orchestrator" ? ORCHESTRATOR_ID : target.id;
+}
+
+/**
  * Scheduled task → view, or null for `dispatched` (its run is already in the feed
  * via the run lists — including it again would duplicate the task). `cancelled`
  * reads as `interrupted`, a failed dispatch as `error`.
@@ -96,7 +107,7 @@ export function scheduledTaskToView(t: ScheduledTask): RunView | null {
   return {
     runId: t.id,
     kind: "scheduled",
-    owner: t.target?.id ?? "",
+    owner: targetOwner(t.target),
     status,
     pct: null,
     title: t.title,

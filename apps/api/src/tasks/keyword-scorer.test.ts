@@ -33,7 +33,7 @@ const scorer = new KeywordScorer()
 describe("KeywordScorer", () => {
   it("routes to the candidate whose catalog terms match the description", () => {
     const r = scorer.score({ text: "Srovnej a popiš média v knihovně" }, candidates)
-    expect(r?.target.id).toBe("curator")
+    expect(r?.target).toMatchObject({ kind: "agent", id: "curator" })
     expect(r?.matchedTerms.length).toBeGreaterThan(0)
     expect(r?.confidence ?? 0).toBeGreaterThan(0.4)
   })
@@ -68,6 +68,6 @@ describe("KeywordScorer", () => {
     const a = scorer.score({ text: "Implementuj podle design.md" }, candidates)
     const b = scorer.score({ text: "Implementuj podle design.md" }, candidates)
     expect(a).toEqual(b)
-    expect(a?.target.id).toBe("coder")
+    expect(a?.target).toMatchObject({ kind: "agent", id: "coder" })
   })
 })

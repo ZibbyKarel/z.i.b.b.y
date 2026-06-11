@@ -134,7 +134,13 @@ export class TaskSchedulerService implements OnModuleInit, OnModuleDestroy {
       const run = await this.agentRunner.start(target.id, text, "", paths, title)
       return { runRef: run.runId, target }
     }
-    const run = await this.pipelineRunner.start(target.id)
-    return { runRef: run.pipelineRunId, target }
+    if (target.kind === "pipeline") {
+      const run = await this.pipelineRunner.start(target.id)
+      return { runRef: run.pipelineRunId, target }
+    }
+    // Terminal fallback: the orchestrator session self-delegates to the right
+    // subagent(s) or does the task directly — a task never no-ops.
+    const run = await this.agentRunner.startOrchestrator(text, paths, title)
+    return { runRef: run.runId, target }
   }
 }

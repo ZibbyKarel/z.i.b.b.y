@@ -1,17 +1,19 @@
-import type { ClassifyTaskInput, TaskRouting, TaskTarget } from "@zibby/contracts"
+import type { CatalogTaskTarget, ClassifyTaskInput, TaskRouting } from "@zibby/contracts"
 
 /**
- * A routable destination: a {@link TaskTarget} plus the free-text catalog blob
+ * A routable destination: a {@link CatalogTaskTarget} (a stored agent or
+ * pipeline — never the synthetic orchestrator, which is the classifier's
+ * terminal fallback, not a ranked candidate) plus the free-text catalog blob
  * (`search`) used to score and describe it (name, id, category, description /
  * pipeline desc + phase agents). The contract response carries only the plain
- * {@link TaskTarget}, so {@link toTaskTarget} strips the internal `search`.
+ * target, so {@link toTaskTarget} strips the internal `search`.
  */
-export interface RoutableTarget extends TaskTarget {
+export type RoutableTarget = CatalogTaskTarget & {
   search: string
 }
 
 /** Project a routable candidate down to the contract's wire shape (drops `search`). */
-export function toTaskTarget(candidate: RoutableTarget): TaskTarget {
+export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget {
   return {
     kind: candidate.kind,
     id: candidate.id,

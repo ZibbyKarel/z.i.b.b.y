@@ -13,7 +13,9 @@ import { formatClaudeStreamLine } from "../runner/claude-stream-format"
 import { RunnerCore } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { ORCHESTRATOR_ID } from "@zibby/contracts"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
+import { ORCHESTRATOR_AGENT } from "./orchestrator.agent"
 
 /** DI token carrying the absolute path of the directory that holds run artifacts. */
 export const RUNS_DIR = "RUNS_DIR"
@@ -104,9 +106,34 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     files: string[] = [],
     title = "",
   ): Promise<AgentRun> {
-    this.log.info("starting agent run", { agentId, project, files: files.length })
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId)
+    return this.launch(agent, prompt, project, files, title)
+  }
+
+  /**
+   * Start the orchestrator fallback run (`kind: "orchestrator"` task routing).
+   * There is no stored agent — the synthetic {@link ORCHESTRATOR_AGENT} supplies
+   * the instructions and tool scope, and the record carries the reserved
+   * {@link ORCHESTRATOR_ID} as its `agentId`, so the run joins the normal agent-run
+   * feed (list / log / SSE / approvals) with no extra plumbing. The command builder
+   * already hands every run the full agent+skill catalog as `--agents` subagents
+   * with `Agent` allowed, so the orchestrator can self-delegate out of the box.
+   */
+  startOrchestrator(prompt: string, files: string[] = [], title = ""): Promise<AgentRun> {
+    return this.launch(ORCHESTRATOR_AGENT, prompt, "", files, title)
+  }
+
+  /** Shared spawn path: build the command for `agent` and hand it to the core. */
+  private async launch(
+    agent: Agent,
+    prompt: string,
+    project: string,
+    files: string[],
+    title: string,
+  ): Promise<AgentRun> {
+    const agentId = agent.id
+    this.log.info("starting agent run", { agentId, project, files: files.length })
 
     const startedMs = Date.now()
     // The per-run sandbox the session runs in (its cwd). The directories it
@@ -167,7 +194,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private async evaluateIntent(runId: string, action: IntendedAction): Promise<void> {
     try {
       const rec = this.core.get(runId)
-      const agent = await this.agents.get(rec.agentId)
+      // The orchestrator is synthetic (not in storage); its empty gates/
+      // requires_approval mean the evaluation runs on the locked floor alone.
+      const agent =
+        rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId)
       const rules = await this.gates.rulesForAgent({
         gates: agent.gates,
         requires_approval: agent.requires_approval,

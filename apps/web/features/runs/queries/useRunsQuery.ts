@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { ORCHESTRATOR_ID, ORCHESTRATOR_TARGET } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import { getApprovalsQueryKey } from "../../approvals/queries/useApprovalsQuery";
 import { apiClient } from "../../../state/api";
@@ -119,6 +120,9 @@ export function useRunGlyphMap(): Map<string, IconName> {
   });
   return useMemo(() => {
     const map = new Map<string, IconName>();
+    // The orchestrator is synthetic (never in the catalogs); its run rows carry
+    // the reserved owner id, so seed its glyph from the contract constant.
+    map.set(ORCHESTRATOR_ID, ORCHESTRATOR_TARGET.glyph as IconName);
     for (const s of skills.data ?? []) if (s.glyph) map.set(s.id, s.glyph as IconName);
     for (const a of agents.data ?? []) if (a.glyph) map.set(a.id, a.glyph as IconName);
     return map;

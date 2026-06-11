@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import {
   type ClassifyTaskInput,
+  ORCHESTRATOR_TARGET,
   type TaskRouting,
   TaskRoutingSchema,
 } from "@zibby/contracts"
@@ -8,7 +9,15 @@ import { AgentsStorageService } from "../agents/agents.storage.service"
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { KeywordScorer } from "./keyword-scorer"
-import { type RoutableTarget, TASK_ROUTER, type TaskRouter } from "./task-router"
+import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from "./task-router"
+
+/**
+ * Keyword-scorer confidence below which the verdict is not trusted to name a
+ * specific agent/pipeline and the task routes to the orchestrator instead. The
+ * scorer reports 0.22 for a zero-term match and ≥ 0.55 from the first matched
+ * term, so 0.5 separates "guessed the top catalog entry" from "actually matched".
+ */
+export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5
 
 /**
  * Classifies a free-text task to a stored agent or pipeline. It builds the
@@ -18,9 +27,14 @@ import { type RoutableTarget, TASK_ROUTER, type TaskRouter } from "./task-router
  * out, errors, or returns an incoherent verdict. The result is side-effect-free —
  * starting a run is a separate, explicit step (approval-first).
  *
+ * "No match" is impossible: when the LLM router fails AND the keyword scorer's
+ * confidence falls below {@link ORCHESTRATOR_FALLBACK_THRESHOLD}, the terminal
+ * rule routes the task to the orchestrator (`kind: "orchestrator"`), which has
+ * every agent as a delegatable subagent and can also do the task directly.
+ *
  * Returns `null` only when the catalog is genuinely empty (the controller maps
- * that to 422); every other failure is absorbed into the fallback, so the endpoint
- * never hard-fails.
+ * that to 422); every other failure is absorbed into the fallbacks, so the
+ * endpoint never hard-fails.
  */
 @Injectable()
 export class TaskClassifierService {
@@ -46,7 +60,23 @@ export class TaskClassifierService {
     } catch (err) {
       this.log.warn("router failed, using keyword fallback", { error: (err as Error).message })
     }
-    return this.fallback.score(input, candidates)
+
+    const scored = this.fallback.score(input, candidates)
+    if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) return scored
+
+    // Terminal rule: nothing matched confidently — the orchestrator takes the task.
+    this.log.info("no confident match, routing to orchestrator", {
+      confidence: scored?.confidence ?? 0,
+    })
+    return {
+      target: ORCHESTRATOR_TARGET,
+      // Carry the weak score through so the UI still reads this as a low-confidence
+      // verdict (steering the user toward the manual picker on the preview path).
+      confidence: scored?.confidence ?? 0,
+      reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
+      matchedTerms: scored?.matchedTerms ?? [],
+      candidates: candidates.map(toTaskTarget),
+    }
   }
 
   /** Build the rankable candidate catalog from both stores (tolerant of listing failures). */
@@ -80,8 +110,10 @@ export class TaskClassifierService {
   /** A verdict is usable only if it parses and names a target that's actually in the catalog. */
   private isCoherent(routing: TaskRouting, candidates: RoutableTarget[]): boolean {
     if (!TaskRoutingSchema.safeParse(routing).success) return false
-    return candidates.some(
-      (c) => c.id === routing.target.id && c.kind === routing.target.kind,
-    )
+    const target = routing.target
+    // The orchestrator is this service's own terminal rule — a router that picks
+    // it (instead of a catalog entry) is not a usable verdict.
+    if (target.kind === "orchestrator") return false
+    return candidates.some((c) => c.id === target.id && c.kind === target.kind)
   }
 }

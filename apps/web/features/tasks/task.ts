@@ -18,19 +18,25 @@ export function extractPaths(text: string): string[] {
   return [...new Set(matches)];
 }
 
-/** A candidate destination for a task — a single agent or a whole pipeline. */
-export type TaskTargetKind = "agent" | "pipeline";
+/** A destination for a task — an agent, a pipeline, or the orchestrator fallback. */
+export type TaskTargetKind = "agent" | "pipeline" | "orchestrator";
 
-export interface TaskTarget {
-  kind: TaskTargetKind;
-  /** Filesystem-safe id (doubles as the on-disk definition name). */
-  id: string;
+interface TaskTargetDisplay {
   /** Display name. */
   name: string;
   glyph: IconName;
   /** Free-form functional area, when the definition carries one. */
   category?: string;
 }
+
+/**
+ * Mirrors the contract's discriminated union: agents and pipelines carry the
+ * filesystem-safe `id` of their stored definition; the orchestrator is synthetic
+ * (no stored definition, no id) and exists in the UI purely as a name + glyph.
+ */
+export type TaskTarget =
+  | (TaskTargetDisplay & { kind: "agent" | "pipeline"; id: string })
+  | (TaskTargetDisplay & { kind: "orchestrator" });
 
 /**
  * The classifier verdict the approval gate renders: the chosen target, a 0–1
@@ -54,14 +60,20 @@ export interface TaskRouting {
  * coerce it here, defaulting to the kind's icon when absent — exactly how the
  * former client-side classifier mapped the raw catalog.
  */
+const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
+  agent: "bot",
+  pipeline: "flow",
+  orchestrator: "compass",
+};
+
 function toClientTarget(target: ApiTaskTarget): TaskTarget {
-  return {
-    kind: target.kind,
-    id: target.id,
+  const display = {
     name: target.name,
-    glyph: (target.glyph as IconName | undefined) ?? (target.kind === "pipeline" ? "flow" : "bot"),
+    glyph: (target.glyph as IconName | undefined) ?? KIND_FALLBACK_GLYPH[target.kind],
     category: target.category,
   };
+  if (target.kind === "orchestrator") return { kind: "orchestrator", ...display };
+  return { kind: target.kind, id: target.id, ...display };
 }
 
 /** Map the `POST /api/tasks/classify` response body onto the client routing shape. */
