@@ -1,29 +1,44 @@
-import type { AgentRun, PipelineRun, RunStatus } from "@zibby/contracts";
+import type {
+  AgentRun,
+  PipelineRun,
+  RunStatus,
+  ScheduledTask,
+} from "@zibby/contracts";
 import type { DotTone, IconName, TagTone } from "@zibby/design-system";
 
 /**
- * The Runs screen shows a single feed across run kinds, but the contract has no
- * unified runs list (each kind has its own `…/running`) and no `name`/`glyph`/
- * `cost`/`elapsed`. So we merge the per-kind lists client-side into this view
- * model, deriving the missing display fields (see DESIGN_VS_API_NOTES.md).
- * (Only agents and pipelines are runnable — a skill is a capability an agent
- * invokes, not a standalone run.)
+ * The Runs screen is a task feed: what the user asked for is the headline, the
+ * agent/pipeline the task was routed to is metadata. The contract has no unified
+ * task-run list, so we merge the per-kind lists client-side into this view model
+ * (agent runs + pipeline runs + still-waiting scheduled tasks), deriving the
+ * missing display fields (see DESIGN_VS_API_NOTES.md).
  */
-export type RunKind = "agent" | "pipeline";
+export type RunKind = "agent" | "pipeline" | "scheduled";
+
+/** Feed status: the shared run states plus the not-yet-fired `scheduled`. */
+export type FeedStatus = RunStatus | "scheduled";
 
 export interface RunView {
   runId: string;
   kind: RunKind;
-  /** The owning agent/pipeline id (the run's display name). */
+  /** The routed agent/pipeline id — `""` for a not-yet-dispatched scheduled task. */
   owner: string;
-  status: RunStatus;
+  status: FeedStatus;
   /** 0–100, or null for pipeline runs (no single percentage). */
   pct: number | null;
+  /** Short human task name from the New Task dialog; `""` when absent. */
+  title: string;
   prompt: string;
   project: string;
+  /** Start time — for a scheduled task, the future fire time (sorts it to the top). */
   startedAt: string;
-  /** Log endpoint base — null for pipeline runs (no single log). */
+  /** Log endpoint base — null for pipeline runs and scheduled tasks (no log). */
   logBase: "agents" | null;
+}
+
+/** Task-first display name: explicit title, else the task text, else the target. */
+export function runTitle(run: RunView): string {
+  return run.title || run.prompt || run.owner;
 }
 
 export function agentRunToView(r: AgentRun): RunView {
@@ -33,6 +48,7 @@ export function agentRunToView(r: AgentRun): RunView {
     owner: r.agentId,
     status: r.status,
     pct: r.pct,
+    title: r.title,
     prompt: r.prompt,
     project: r.project,
     startedAt: r.startedAt,
@@ -56,6 +72,7 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     owner: r.pipelineId,
     status,
     pct: null,
+    title: "",
     prompt: r.currentStage ? `fáze: ${r.currentStage}` : "",
     project: r.cwd.split("/").pop() ?? "",
     startedAt: r.startedAt,
@@ -63,16 +80,50 @@ export function pipelineRunToView(r: PipelineRun): RunView {
   };
 }
 
+/**
+ * Scheduled task → view, or null for `dispatched` (its run is already in the feed
+ * via the run lists — including it again would duplicate the task). `cancelled`
+ * reads as `interrupted`, a failed dispatch as `error`.
+ */
+export function scheduledTaskToView(t: ScheduledTask): RunView | null {
+  if (t.status === "dispatched") return null;
+  const status: FeedStatus =
+    t.status === "scheduled"
+      ? "scheduled"
+      : t.status === "cancelled"
+        ? "interrupted"
+        : "error";
+  return {
+    runId: t.id,
+    kind: "scheduled",
+    owner: t.target?.id ?? "",
+    status,
+    pct: null,
+    title: t.title,
+    prompt: t.text,
+    project: "",
+    startedAt: new Date(t.scheduledAt).toISOString(),
+    logBase: null,
+  };
+}
+
 export interface RunStateMeta {
   /** i18n key suffix under `runs.state.*`. */
-  key: RunStatus;
+  key: FeedStatus;
   badge: TagTone;
   dot: DotTone;
   glyph: IconName;
   pulse: boolean;
 }
 
-export const RUN_STATE: Record<RunStatus, RunStateMeta> = {
+export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
+  scheduled: {
+    key: "scheduled",
+    badge: "neutral",
+    dot: "idle",
+    glyph: "clock",
+    pulse: false,
+  },
   running: {
     key: "running",
     badge: "run",
@@ -107,6 +158,7 @@ export const RUN_STATE: Record<RunStatus, RunStateMeta> = {
 const KIND_GLYPH: Record<RunKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
+  scheduled: "clock",
 };
 
 /** Resolve a run's display glyph from the catalog (agent), else by kind. */

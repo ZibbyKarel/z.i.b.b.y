@@ -42,3 +42,5 @@ design-ref/
 /e2e/.auth/
 
 z-i-b-b-y
+# Playwright MCP session artifacts (snapshots/console logs)
+/.playwright-mcp/

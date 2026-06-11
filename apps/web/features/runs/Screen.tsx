@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import type { RunStatus } from "@zibby/contracts";
 import {
   ButtonGroup,
   Container,
@@ -16,9 +15,10 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { useCancelScheduledTaskMutation } from "../tasks/mutations";
 import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
-import { runGlyph } from "./run";
-import { RunCard } from "./components/RunCard";
+import { type FeedStatus, type RunView, runGlyph } from "./run";
+import { TaskCard } from "./components/TaskCard";
 import { RunDetail } from "./components/RunDetail";
 import {
   useDeleteAgentRunMutation,
@@ -26,11 +26,12 @@ import {
   useStopAgentMutation,
 } from "./mutations";
 
-type Filter = "all" | RunStatus;
+type Filter = "all" | FeedStatus;
 const FILTERS: Filter[] = [
   "all",
   "running",
   "awaiting-approval",
+  "scheduled",
   "done",
   "error",
   "interrupted",
@@ -56,8 +57,10 @@ export function Screen() {
 
   // Deleting a run erases its on-disk artifacts; clearing the selection first keeps
   // the detail pane from briefly pointing at a now-gone run before the refetch.
+  // A scheduled task has no artifacts yet — "delete" cancels it instead.
   const deleteAgent = useDeleteAgentRunMutation();
   const deletePipeline = useDeletePipelineRunMutation();
+  const cancelTask = useCancelScheduledTaskMutation();
 
   const list =
     filter === "all" ? runs : runs.filter((r) => r.status === filter);
@@ -69,6 +72,18 @@ export function Screen() {
   const ago = (n: number, unit: string) =>
     n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
+  // Feed time label: runs read as "ago"; a waiting scheduled task fires in the
+  // future, so it reads as "in …" instead.
+  const timeLabel = (r: RunView) => {
+    const inMin = Math.floor((Date.parse(r.startedAt) - now) / 60000);
+    if (r.status === "scheduled" && inMin >= 1) {
+      return inMin < 60
+        ? t("inM", { n: inMin })
+        : t("inH", { n: Math.floor(inMin / 60) });
+    }
+    return relative(r.startedAt, now, ago);
+  };
+
   const stop = (runId: string, kind: string) => {
     if (kind === "agent") stopAgent.mutate({ params: { runId }, body: {} });
   };
@@ -78,9 +93,11 @@ export function Screen() {
     if (kind === "agent") deleteAgent.mutate({ params: { runId } });
     else if (kind === "pipeline")
       deletePipeline.mutate({ params: { pipelineRunId: runId } });
+    else if (kind === "scheduled") cancelTask.mutate({ params: { id: runId } });
   };
 
-  const deleting = deleteAgent.isPending || deletePipeline.isPending;
+  const deleting =
+    deleteAgent.isPending || deletePipeline.isPending || cancelTask.isPending;
 
   const running = count("running");
   const awaiting = count("awaiting-approval");
@@ -116,14 +133,13 @@ export function Screen() {
             <Stack gap="100">
               {list.length > 0 ? (
                 list.map((r) => (
-                  <RunCard
+                  <TaskCard
                     glyph={runGlyph(r, glyphById)}
                     key={r.runId}
-                    kindLabel={t(`kind.${r.kind}`)}
                     onSelect={setSelId}
                     run={r}
                     selected={selected?.runId === r.runId}
-                    startedLabel={relative(r.startedAt, now, ago)}
+                    startedLabel={timeLabel(r)}
                     stateLabel={t(`state.${r.status}`)}
                   />
                 ))

@@ -15,7 +15,7 @@ import { relativeTime } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
-import type { RunView } from "../run";
+import { type RunView, runTitle } from "../run";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunLogStream } from "./RunLogStream";
@@ -72,6 +72,17 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
             : undefined;
   const ago = (n: number, unit: string) => (n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n }));
 
+  // A waiting scheduled task fires in the future — its time reads "in …".
+  const inMin = Math.floor((Date.parse(run.startedAt) - now) / 60000);
+  const startedValue =
+    run.status === "scheduled" && inMin >= 1
+      ? inMin < 60
+        ? t("inM", { n: inMin })
+        : t("inH", { n: Math.floor(inMin / 60) })
+      : relativeTime(run.startedAt, now, ago);
+
+  const headline = runTitle(run);
+
   const logPanel = run.logBase ? (
     <RunLogStream
       linesLabel={(n) => t("lines", { n })}
@@ -79,7 +90,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
       logLabel={t("log")}
       run={run}
     />
-  ) : (
+  ) : run.kind === "pipeline" ? (
     <Stack align="center" direction="row" gap="100" justify="between">
       <Typography mono size="sm" type="note" variant="secondary">
         {t("pipelineNote")}
@@ -88,6 +99,10 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
         {t("openPipeline")}
       </Button>
     </Stack>
+  ) : (
+    <Typography mono size="sm" type="note" variant="secondary">
+      {t("scheduledNote")}
+    </Typography>
   );
 
   return (
@@ -101,11 +116,11 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
                 <Stack gap="50">
                   <Stack wrap align="center" direction="row" gap="100">
                     <Typography type="subtitle" weight="semibold">
-                      {run.owner}
+                      {headline}
                     </Typography>
                     <RunStateBadge canonTitle={run.status} label={t(`state.${run.status}`)} size="md" status={run.status} />
                   </Stack>
-                  {run.prompt && (
+                  {run.prompt && run.prompt !== headline && (
                     <Typography leading="snug" size="sm" type="text" variant="secondary">
                       {run.prompt}
                     </Typography>
@@ -139,7 +154,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
                   </Button>
                 )}
                 <Button disabled={deleting} icon="x" intent="danger" onClick={onDelete} size="sm">
-                  {t("delete")}
+                  {run.status === "scheduled" ? t("cancelTask") : t("delete")}
                 </Button>
               </Stack>
             )}
@@ -147,7 +162,11 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
 
           <Stack wrap direction="row" gap="300">
             {run.project && <MetaCell label={t("metaProject")} tone="accent" value={run.project} />}
-            <MetaCell label={t("metaStarted")} value={relativeTime(run.startedAt, now, ago)} />
+            <MetaCell
+              label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
+              value={startedValue}
+            />
+            {run.owner && <MetaCell label={t("metaTarget")} value={run.owner} />}
             <MetaCell label={t("metaKind")} value={t(`kind.${run.kind}`)} />
             {approval && (
               <MetaCell

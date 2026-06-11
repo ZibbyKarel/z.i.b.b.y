@@ -5,6 +5,7 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from "
 import { getRunningAgentsQueryKey } from "../agents/queries/useRunningAgentsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
 import { getPipelineRunQueryKey } from "../pipelines/queries/usePipelineRunQuery";
+import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { API_URL } from "../../state/api";
 import { allAgentRunsKey, allPipelineRunsKey } from "./queries/useRunsQuery";
 
@@ -66,6 +67,11 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
+      }
+      // A new run may be a scheduled task firing (scheduled → dispatched); refresh
+      // the deferred queue so the waiting card swaps for its run instead of doubling.
+      if (parsed.status === "running") {
+        void qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
       }
     };
 

@@ -4,8 +4,14 @@ import type { IconName } from "@zibby/design-system";
 import { getApprovalsQueryKey } from "../../approvals/queries/useApprovalsQuery";
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
+import { getScheduledTasksQueryKey } from "../../tasks/queries/useScheduledTasksQuery";
 import { useRunEventsConnected } from "../runEvents";
-import { type RunView, agentRunToView, pipelineRunToView } from "../run";
+import {
+  type RunView,
+  agentRunToView,
+  pipelineRunToView,
+  scheduledTaskToView,
+} from "../run";
 
 const POLL_MS = 2_000;
 
@@ -26,6 +32,14 @@ function pollWhileLive(query: {
 }): number | false {
   const runs = query.state.data?.body ?? [];
   return runs.some((r) => LIVE_STATES.has(r.status)) ? POLL_MS : false;
+}
+
+/** Poll the deferred-task queue while any task is still waiting to fire. */
+function pollWhileScheduled(query: {
+  state: { data?: { body?: ReadonlyArray<{ status: string }> } };
+}): number | false {
+  const tasks = query.state.data?.body ?? [];
+  return tasks.some((t) => t.status === "scheduled") ? POLL_MS : false;
 }
 
 /**
@@ -56,14 +70,26 @@ export function useRunsQuery(): { runs: RunView[] } {
     retry: false,
     select: selectApiResponseBody,
   });
+  // Deferred tasks join the feed too (the scheduler fires them into real runs);
+  // `scheduledTaskToView` drops `dispatched` ones so a fired task isn't doubled.
+  // Its poll gates on its own data: while any task still waits, its due time can
+  // arrive at any moment (the run-state gate would never match task statuses).
+  const scheduled = apiClient.tasks.listScheduledTasks.useQuery({
+    queryKey: getScheduledTasksQueryKey(),
+    refetchInterval: streamConnected ? false : pollWhileScheduled,
+    refetchIntervalInBackground: true,
+    retry: false,
+    select: selectApiResponseBody,
+  });
 
   const runs = useMemo<RunView[]>(() => {
     const merged: RunView[] = [
       ...(agents.data ?? []).map(agentRunToView),
       ...(pipelines.data ?? []).map(pipelineRunToView),
+      ...(scheduled.data ?? []).flatMap((t) => scheduledTaskToView(t) ?? []),
     ];
     return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-  }, [agents.data, pipelines.data]);
+  }, [agents.data, pipelines.data, scheduled.data]);
 
   // The 2s runs poll is the freshest signal that a run has paused at a gate, so
   // when one *enters* `awaiting-approval` we refetch the pending-approval queue

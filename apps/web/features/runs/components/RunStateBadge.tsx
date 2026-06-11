@@ -1,9 +1,8 @@
-import type { RunStatus } from "@zibby/contracts";
 import { Icon, Stack, Tag } from "@zibby/design-system";
-import { RUN_STATE } from "../run";
+import { type FeedStatus, RUN_STATE } from "../run";
 
 export interface RunStateBadgeProps {
-  status: RunStatus;
+  status: FeedStatus;
   /** Canonical contract name, surfaced as a tooltip (design keeps it behind the Czech label). */
   canonTitle?: string;
   label: string;
