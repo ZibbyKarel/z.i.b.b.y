@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import { SegmentPickerField, SegmentPickerFieldTestId } from "./SegmentPickerField"
+import { ButtonGroupTestId } from "../../ButtonGroup/ButtonGroup"
+import { SegmentPickerField } from "./SegmentPickerField"
 
 describe("SegmentPickerField", () => {
-  it("marks the active option as checked and switches", async () => {
+  it("marks the active option as pressed and switches", async () => {
     const onValueChange = vi.fn()
     render(
       <SegmentPickerField
@@ -17,12 +18,11 @@ describe("SegmentPickerField", () => {
         value="home"
       />,
     )
-    expect(screen.getByTestId(SegmentPickerFieldTestId.Group)).toHaveAccessibleName("Kontext")
-    const home = screen.getByTestId(`${SegmentPickerFieldTestId.Option}-home`)
-    expect(home).toHaveRole("radio")
+    expect(screen.getByTestId(ButtonGroupTestId.Root)).toHaveAccessibleName("Kontext")
+    const home = screen.getByTestId(`${ButtonGroupTestId.Option}-home`)
     expect(home).toHaveAccessibleName("home")
-    expect(home).toHaveAttribute("aria-checked", "true")
-    await userEvent.click(screen.getByTestId(`${SegmentPickerFieldTestId.Option}-work`))
+    expect(home).toHaveAttribute("aria-pressed", "true")
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-work`))
     expect(onValueChange).toHaveBeenCalledWith("work")
   })
 })

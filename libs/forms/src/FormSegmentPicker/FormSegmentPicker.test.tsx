@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { zodResolver } from "../zodResolver"
 import { z } from "zod"
 import { describe, expect, it, vi } from "vitest"
-import { FieldTestId, SegmentPickerFieldTestId } from "@zibby/design-system"
+import { ButtonGroupTestId, FieldTestId } from "@zibby/design-system"
 import { Form } from "../Form"
 import { FormSegmentPicker } from "./FormSegmentPicker"
 
@@ -41,7 +41,7 @@ describe("FormSegmentPicker", () => {
         <button type="submit">Submit</button>
       </Form>,
     )
-    await userEvent.click(screen.getByTestId(`${SegmentPickerFieldTestId.Option}-week`))
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-week`))
     await userEvent.click(screen.getByRole("button", { name: "Submit" }))
     expect(onSubmit).toHaveBeenCalledWith({ period: "week" }, expect.anything())
   })
@@ -55,8 +55,8 @@ describe("FormSegmentPicker", () => {
         <FormSegmentPicker<{ period: string }> label="Období" name="period" options={options} />
       </Form>,
     )
-    expect(screen.getByTestId(`${SegmentPickerFieldTestId.Option}-month`)).toHaveAttribute(
-      "aria-checked",
+    expect(screen.getByTestId(`${ButtonGroupTestId.Option}-month`)).toHaveAttribute(
+      "aria-pressed",
       "true",
     )
   })

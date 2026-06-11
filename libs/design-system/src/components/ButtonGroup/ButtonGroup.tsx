@@ -56,6 +56,10 @@ export interface ButtonGroupProps {
   addLabel?: string;
   /** Accessible label for the group element. */
   ariaLabel?: string;
+  /** Id of an external label element — wins over `ariaLabel` (e.g. a `Field` label). */
+  ariaLabelledby?: string;
+  /** Id of an external description/error element (e.g. a `Field` message). */
+  ariaDescribedby?: string;
 }
 
 /** Generic segmented button group — a row of mutually exclusive toggle buttons. */
@@ -67,10 +71,14 @@ export function ButtonGroup({
   onAdd,
   addLabel = "Přidat",
   ariaLabel,
+  ariaLabelledby,
+  ariaDescribedby,
 }: ButtonGroupProps) {
   return (
     <div
-      aria-label={ariaLabel}
+      aria-describedby={ariaDescribedby}
+      aria-label={ariaLabelledby ? undefined : ariaLabel}
+      aria-labelledby={ariaLabelledby}
       className="inline-block rounded border border-border bg-background p-0.5"
       data-testid={ButtonGroupTestId.Root}
       role="group"

@@ -234,7 +234,6 @@ export type { SelectFieldProps } from "./components/form/SelectField/SelectField
 
 export {
   SegmentPickerField,
-  SegmentPickerFieldTestId,
 } from "./components/form/SegmentPickerField/SegmentPickerField";
 export type { SegmentPickerFieldProps } from "./components/form/SegmentPickerField/SegmentPickerField";
 
@@ -269,7 +268,7 @@ export type { MarkdownEditorProps } from "./components/MarkdownEditor/MarkdownEd
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
 // ---------------------------------------------------------------------------
-export { ButtonGroup } from "./components/ButtonGroup/ButtonGroup";
+export { ButtonGroup, ButtonGroupTestId } from "./components/ButtonGroup/ButtonGroup";
 export type {
   ButtonGroupOption,
   ButtonGroupProps,
