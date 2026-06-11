@@ -549,7 +549,14 @@ export class RunnerCore<R extends BaseRun> {
     if (!existed) throw new RunNotFoundError(runId)
 
     if (handle) {
-      if (handle.child && handle.run.status === "running") killGroup(handle.run.pgid ?? handle.run.pid)
+      // An `awaiting-approval` run (Variant B) still has a live child blocking on its
+      // decision file — kill it too, or deleting the run would orphan the process.
+      const live = handle.run.status === "running" || handle.run.status === "awaiting-approval"
+      if (handle.child && live) {
+        handle.interrupting = true
+        killGroup(handle.run.pgid ?? handle.run.pid)
+      }
+      this.stopIntentWatch(handle)
       handle.log?.end()
       this.runs.delete(runId)
     }
@@ -648,7 +655,7 @@ export class RunnerCore<R extends BaseRun> {
     let limitSeen = false
     // Buffer partial lines across chunks: a control line (PROGRESS / INTENT) split
     // over a chunk boundary must still be parsed whole — a missed INTENT would
-    // strand the child blocking on its decision file until the 10-minute timeout.
+    // strand the child blocking on its decision file indefinitely.
     let residual = ""
     const onChunk = (buf: Buffer) => {
       const text = buf.toString("utf8")
@@ -713,6 +720,10 @@ export class RunnerCore<R extends BaseRun> {
     this.watchIntentRequest(handle)
 
     const finalize = (status: RunnerRunStatus) => {
+      // A child that exits while the run is still `awaiting-approval` ended without
+      // the gate ever being decided (e.g. its blocking hook died) — that must never
+      // surface as `done`, which would read as "completed as if approved".
+      if (run.status === "awaiting-approval") status = "interrupted"
       run.status = status
       if (status === "done") run.pct = 100
       this.stopIntentWatch(handle)

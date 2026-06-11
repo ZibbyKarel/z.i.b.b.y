@@ -572,6 +572,64 @@ describe("RunnerCore", () => {
     expect(core.get(run.runId).status).toBe("done")
   })
 
+  it("a child that exits while still awaiting-approval lands on interrupted, never done", async () => {
+    // Simulates the gate's blocking hook dying: the child announces an INTENT, is
+    // held, then gives up and exits 0 with no decision ever written. Reporting that
+    // as `done` would read as "completed as if approved".
+    const core = new RunnerCore(dir, strategy, undefined, (runId) => {
+      void core.holdForApproval(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "intent_walkout")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "iw",
+      command: NODE,
+      args: [
+        "-e",
+        `console.log("PROGRESS 10");process.stdout.write('INTENT {"action":"payment","metrics":{}}\\n');setTimeout(()=>{console.log("PROGRESS 100");process.exit(0)},300)`,
+      ],
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "awaiting-approval")
+    await waitForStatus(core, run.runId, "interrupted")
+    expect(core.get(run.runId).status).toBe("interrupted")
+  })
+
+  it("delete kills the live child of an awaiting-approval run", async () => {
+    const core = new RunnerCore(dir, strategy, undefined, (runId) => {
+      void core.holdForApproval(runId)
+    })
+    await core.init()
+    const cwd = path.join(dir, "intent_delete")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "idel",
+      command: NODE,
+      args: intentScript(cwd),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "awaiting-approval")
+    const pid = core.get(run.runId).pid
+    await core.delete(run.runId)
+    expect(() => core.get(run.runId)).toThrow()
+    // The blocked child must not survive the delete as an orphan.
+    const start = Date.now()
+    for (;;) {
+      let alive = true
+      try {
+        process.kill(pid, 0)
+      } catch {
+        alive = false
+      }
+      if (!alive) break
+      if (Date.now() - start > 5000) throw new Error(`child ${pid} survived delete`)
+      await sleep(20)
+    }
+  })
+
   it("rejecting a held mid-run INTENT interrupts the live child", async () => {
     const core = new RunnerCore(dir, strategy, undefined, (runId) => {
       void core.holdForApproval(runId)

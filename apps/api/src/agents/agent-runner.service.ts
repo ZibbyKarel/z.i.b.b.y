@@ -233,8 +233,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Permanently delete a run and all its artifacts (sidecar, log, sandbox). */
-  delete(runId: string): Promise<void> {
-    return this.core.delete(runId)
+  async delete(runId: string): Promise<void> {
+    await this.core.delete(runId)
+    // A run deleted while paused on the gate leaves its approval pending forever —
+    // resolve it here (no runner round-trip; the run is already gone).
+    await this.approvals.cancelPendingForRun(runId)
   }
 
   readLog(runId: string, offset: number): Promise<{

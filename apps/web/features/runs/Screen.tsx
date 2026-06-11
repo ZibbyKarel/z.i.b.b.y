@@ -43,13 +43,14 @@ export function Screen() {
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
 
-  // Deep-link the active tab via `?filter=` (e.g. RunModal points here at "running").
+  // Deep-link the active tab via `?filter=` (e.g. RunModal points here at "running")
+  // and the selected run via `?run=` (the New Task dialog lands on its fresh run).
   const searchParams = useSearchParams();
   const paramFilter = searchParams.get("filter");
   const [filter, setFilter] = useState<Filter>(
     FILTERS.includes(paramFilter as Filter) ? (paramFilter as Filter) : "all",
   );
-  const [selId, setSelId] = useState<string | null>(null);
+  const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
   const stopAgent = useStopAgentMutation();
 

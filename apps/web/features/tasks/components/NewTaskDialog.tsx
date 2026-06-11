@@ -8,81 +8,84 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { useStartAgentRunMutation } from "../../agents/mutations";
 import { useStartPipelineRunMutation } from "../../pipelines/mutations";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import { useClassifyTaskMutation } from "../mutations";
-import { type TaskRouting, type TaskTarget, extractPaths, toClientRouting } from "../task";
-import { ClassifyingState } from "./ClassifyingState";
-import { DispatchedState } from "./DispatchedState";
+import { type TaskTarget, extractPaths, toClientRouting } from "../task";
 import { TaskComposer } from "./TaskComposer";
-
-type Stage = "compose" | "classifying" | "dispatched";
 
 export interface NewTaskDialogProps {
   onClose: () => void;
 }
 
 /**
- * The whole New Task flow in one modal — describe → Spustit → done. The task
- * is classified in the background and handed straight to the routed agent or
- * pipeline; the user watches the "classifying" state and never confirms
- * anything here. Risky actions are still caught later by the approval gate
- * (the rules engine), which is the real guardrail — not this dialog.
+ * The whole New Task flow in one modal — describe → Spustit → the runs page.
+ * One click classifies the task in the background, hands it straight to the
+ * routed agent or pipeline, and redirects to the new run's detail; there is no
+ * intermediate "classifying" screen and nothing else to confirm here. Risky
+ * actions are still caught later by the approval gate (the rules engine), which
+ * is the real guardrail — not this dialog.
  */
 export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
+  const router = useRouter();
   const classify = useClassifyTaskMutation();
   const startAgentRun = useStartAgentRunMutation();
   const startPipelineRun = useStartPipelineRunMutation();
 
-  const [stage, setStage] = useState<Stage>("compose");
   const [text, setText] = useState("");
   const [removedPaths, setRemovedPaths] = useState<Set<string>>(new Set());
-  const [routing, setRouting] = useState<TaskRouting | null>(null);
 
   const paths = useMemo(
     () => extractPaths(text).filter((p) => !removedPaths.has(p)),
     [text, removedPaths],
   );
+  const busy =
+    classify.isPending || startAgentRun.isPending || startPipelineRun.isPending;
   const canSubmit = text.trim().length > 2;
+
+  const handover = useCallback(
+    (runId: string) => {
+      router.push(`/runs?run=${encodeURIComponent(runId)}`);
+      onClose();
+    },
+    [router, onClose],
+  );
 
   const dispatch = useCallback(
     (target: TaskTarget) => {
-      const onSuccess = () => setStage("dispatched");
-      // A transport failure returns to compose so the user can retry.
-      const onError = () => setStage("compose");
+      // A transport failure leaves the dialog open so the user can retry.
       if (target.kind === "agent") {
         startAgentRun.mutate(
           { params: { id: target.id }, body: { prompt: text, project: "", files: paths } },
-          { onSuccess, onError },
+          { onSuccess: (res) => handover(selectApiResponseBody(res).runId) },
         );
       } else {
-        startPipelineRun.mutate({ params: { id: target.id }, body: {} }, { onSuccess, onError });
+        startPipelineRun.mutate(
+          { params: { id: target.id }, body: {} },
+          { onSuccess: (res) => handover(selectApiResponseBody(res).pipelineRunId) },
+        );
       }
     },
-    [text, paths, startAgentRun, startPipelineRun],
+    [text, paths, startAgentRun, startPipelineRun, handover],
   );
 
   const handleSubmit = useCallback(() => {
-    if (!canSubmit || stage !== "compose") return;
-    setStage("classifying");
+    if (!canSubmit || busy) return;
     classify.mutate(
       { body: { text, paths } },
       {
-        onSuccess: (res) => {
-          const result = toClientRouting(selectApiResponseBody(res));
-          setRouting(result);
-          // Auto-run: hand the task straight to the routed target.
-          dispatch(result.target);
-        },
-        // The endpoint rarely errors (it has a server-side fallback); on a transport
-        // failure, return to compose so the user can retry.
-        onError: () => setStage("compose"),
+        // Auto-run: hand the task straight to the routed target. The endpoint
+        // rarely errors (it has a server-side fallback); on a transport failure
+        // the dialog simply stays open for a retry.
+        onSuccess: (res) =>
+          dispatch(toClientRouting(selectApiResponseBody(res)).target),
       },
     );
-  }, [canSubmit, stage, text, paths, classify, dispatch]);
+  }, [canSubmit, busy, text, paths, classify, dispatch]);
 
   const handleRemovePath = useCallback((path: string) => {
     setRemovedPaths((prev) => new Set(prev).add(path));
@@ -102,41 +105,40 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
     </Stack>
   );
 
-  const actions =
-    stage === "compose" ? (
-      <Stack grow align="center" direction="row" gap="100" justify="end">
-        <Button icon="x" intent="ghost" onClick={onClose}>
-          {t("cancel")}
-        </Button>
-        <Button disabled={!canSubmit} icon="play" intent="primary" onClick={handleSubmit}>
-          {t("classifyRun")}
-        </Button>
-      </Stack>
-    ) : undefined;
+  const actions = (
+    <Stack grow align="center" direction="row" gap="100" justify="end">
+      <Button icon="x" intent="ghost" onClick={onClose}>
+        {t("cancel")}
+      </Button>
+      <Button
+        disabled={!canSubmit}
+        icon="play"
+        intent="primary"
+        loading={busy}
+        onClick={handleSubmit}
+      >
+        {t("classifyRun")}
+      </Button>
+    </Stack>
+  );
 
   return (
     <Dialog
       open
       actions={actions}
       ariaLabel={t("dialogTitle")}
-      closeLabel={t("dispatched.close")}
+      closeLabel={t("cancel")}
       onClose={onClose}
       title={header}
       width="lg"
     >
-      {stage === "compose" && (
-        <TaskComposer
-          onChange={setText}
-          onRemovePath={handleRemovePath}
-          onSubmit={handleSubmit}
-          paths={paths}
-          value={text}
-        />
-      )}
-      {stage === "classifying" && <ClassifyingState />}
-      {stage === "dispatched" && routing && (
-        <DispatchedState onClose={onClose} target={routing.target} />
-      )}
+      <TaskComposer
+        onChange={setText}
+        onRemovePath={handleRemovePath}
+        onSubmit={handleSubmit}
+        paths={paths}
+        value={text}
+      />
     </Dialog>
   );
 }

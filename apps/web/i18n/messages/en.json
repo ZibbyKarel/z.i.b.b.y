@@ -47,40 +47,6 @@
       "pathsTitle": "Detected paths · added to context",
       "removePathAria": "Remove path {path}",
       "submitHint": "⌘↩ to classify"
-    },
-    "classifying": {
-      "title": "Classifying task…",
-      "note": "Reading the brief and finding the best-fit agent. One moment."
-    },
-    "routing": {
-      "title": "Proposed routing",
-      "confidenceLabel": "Confidence",
-      "band": {
-        "high": "high",
-        "medium": "medium",
-        "low": "low"
-      },
-      "reason": "Matched on: {terms}.",
-      "reasonNone": "No clear match — pick a target manually.",
-      "reasonLow": "Low confidence — please confirm with a manual choice.",
-      "manual": "manual override",
-      "targetKind": {
-        "agent": "agent",
-        "pipeline": "pipeline"
-      },
-      "pathsTitle": "Context",
-      "override": "Change target",
-      "overrideClose": "Back to proposal",
-      "overrideTitle": "Pick a target manually",
-      "pickerAgents": "Agents",
-      "pickerPipelines": "Pipelines",
-      "back": "Back"
-    },
-    "dispatched": {
-      "title": "Task dispatched",
-      "detail": "{name} is taking the task. Follow its progress in Runs.",
-      "watch": "Open runs",
-      "close": "Close"
     }
   },
   "search": {
@@ -421,29 +387,14 @@
     "finished": "finished"
   },
   "approvals": {
-    "title": "Approvals",
-    "subtitlePending": "{count} actions awaiting your decision · their agents are paused",
-    "subtitleEmpty": "the queue is empty — nothing awaits approval",
-    "queueTitle": "Approval queue",
-    "emptyTitle": "Nothing waiting",
-    "emptyDesc": "No risky action is queued. When an agent wants to pay, delete, push or send something, it shows up here.",
-    "awaiting": "Awaiting approval",
-    "approvedLabel": "Approved",
-    "rejectedLabel": "Rejected",
     "wants": "wants to",
     "exactAction": "exactly what the agent will do",
     "consequenceLabel": "what happens after approval",
-    "approve": "Approve",
-    "reject": "Reject",
-    "approvedMsg": "Approved — the agent continues",
-    "rejectedMsg": "Rejected — action cancelled",
-    "approvedSub": "run {run} continues in the background · watch it in Runs & activity",
-    "rejectedSub": "run {run} terminated · no data changed",
-    "backToQueue": "Back to queue",
+    "confirm": "Confirm",
+    "discard": "Delete",
     "guarantee": "ZIBBY never completes a risky action without your consent. The approval gate is an enforced layer, not a suggestion.",
     "requestedLabel": "Requested",
     "viaLabel": "Triggered by",
-    "runLabel": "Run",
     "previewCart": "cart preview",
     "previewTotal": "Total to pay",
     "previewTargets": "delete targets",
@@ -458,12 +409,6 @@
       "low": "low",
       "medium": "medium",
       "high": "high"
-    },
-    "actorKind": {
-      "skill": "skill",
-      "agent": "agent",
-      "pipeline": "pipeline",
-      "pipeline-stage": "pipeline"
     }
   },
   "settings": {

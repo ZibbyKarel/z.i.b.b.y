@@ -47,40 +47,6 @@
       "pathsTitle": "Detekované cesty · přidány do kontextu",
       "removePathAria": "Odebrat cestu {path}",
       "submitHint": "⌘↩ zařadit"
-    },
-    "classifying": {
-      "title": "Zařazuji task…",
-      "note": "Čtu zadání a hledám nejvhodnějšího agenta. Chvíli strpení."
-    },
-    "routing": {
-      "title": "Návrh směrování",
-      "confidenceLabel": "Jistota",
-      "band": {
-        "high": "vysoká",
-        "medium": "střední",
-        "low": "nízká"
-      },
-      "reason": "Shoda na: {terms}.",
-      "reasonNone": "Bez jasné shody — vyber cíl ručně.",
-      "reasonLow": "Nízká jistota — doporučuji potvrdit ruční volbou.",
-      "manual": "ruční volba",
-      "targetKind": {
-        "agent": "agent",
-        "pipeline": "pipeline"
-      },
-      "pathsTitle": "Kontext",
-      "override": "Změnit cíl",
-      "overrideClose": "Zpět na návrh",
-      "overrideTitle": "Vyber cíl ručně",
-      "pickerAgents": "Agenti",
-      "pickerPipelines": "Orchestrace",
-      "back": "Zpět"
-    },
-    "dispatched": {
-      "title": "Task předán",
-      "detail": "{name} přebírá zadání. Sleduj průběh v Bězích.",
-      "watch": "Otevřít běhy",
-      "close": "Zavřít"
     }
   },
   "search": {
@@ -421,29 +387,14 @@
     "finished": "dokončeno"
   },
   "approvals": {
-    "title": "Schválení",
-    "subtitlePending": "{count} akcí čeká na tvé rozhodnutí · agenti jsou u nich pozastavení",
-    "subtitleEmpty": "fronta je prázdná — nic nečeká na schválení",
-    "queueTitle": "Fronta schválení",
-    "emptyTitle": "Nic nečeká",
-    "emptyDesc": "Žádná riziková akce není ve frontě. Až bude agent chtít zaplatit, smazat, pushnout nebo něco odeslat, objeví se to tady.",
-    "awaiting": "Čeká na schválení",
-    "approvedLabel": "Schváleno",
-    "rejectedLabel": "Zamítnuto",
     "wants": "chce",
     "exactAction": "přesně tohle agent udělá",
     "consequenceLabel": "co se stane po schválení",
-    "approve": "Schválit",
-    "reject": "Zamítnout",
-    "approvedMsg": "Schváleno — agent pokračuje",
-    "rejectedMsg": "Zamítnuto — akce zrušena",
-    "approvedSub": "běh {run} pokračuje na pozadí · sleduj v Běhy & aktivita",
-    "rejectedSub": "běh {run} ukončen · žádná data nezměněna",
-    "backToQueue": "Vrátit do fronty",
+    "confirm": "Potvrdit",
+    "discard": "Smazat",
     "guarantee": "ZIBBY nikdy nedokončí rizikovou akci bez tvého souhlasu. Approval gate je vynucená vrstva, ne doporučení.",
     "requestedLabel": "Vyžádáno",
     "viaLabel": "Spustil",
-    "runLabel": "Běh",
     "previewCart": "náhled košíku",
     "previewTotal": "Celkem k platbě",
     "previewTargets": "cíle mazání",
@@ -458,12 +409,6 @@
       "low": "nízká",
       "medium": "střední",
       "high": "vysoká"
-    },
-    "actorKind": {
-      "skill": "skill",
-      "agent": "agent",
-      "pipeline": "pipeline",
-      "pipeline-stage": "pipeline"
     }
   },
   "settings": {

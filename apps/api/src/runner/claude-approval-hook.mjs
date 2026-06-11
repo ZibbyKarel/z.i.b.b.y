@@ -27,7 +27,6 @@ import path from "node:path"
 const REQUEST_FILE = "intent-request.json"
 const DECISION_FILE = "intent-decision.json"
 const POLL_MS = 200
-const TIMEOUT_MS = 10 * 60 * 1000
 
 // File-removal binaries invoked directly. The leading class covers command
 // boundaries (start, separators, subshells, command-substitution) so `$(rm …)`
@@ -88,7 +87,11 @@ function decide(permissionDecision, reason) {
 }
 
 function waitForDecision(decisionFile) {
-  const deadline = Date.now() + TIMEOUT_MS
+  // No deadline: the gate is a hard guarantee, so the hook blocks until a human
+  // (or the gate evaluator) decides. A timeout here would let the session carry
+  // on without the approval — the run would "finish" as if it had been confirmed.
+  // An abandoned run is ended by rejecting or deleting it, which kills this hook
+  // along with the whole process group.
   for (;;) {
     if (existsSync(decisionFile)) {
       let decision = "deny"
@@ -102,7 +105,6 @@ function waitForDecision(decisionFile) {
       rmSync(decisionFile, { force: true })
       return decision
     }
-    if (Date.now() > deadline) return "deny"
     // Busy-block is acceptable: the hook is a short-lived child whose whole job is
     // to wait. A small synchronous sleep keeps the CPU idle between polls.
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, POLL_MS)
@@ -141,7 +143,7 @@ function main() {
 
   const decision = waitForDecision(path.join(cwd, DECISION_FILE))
   if (decision === "allow") decide("allow", "Approved by the gate.")
-  decide("deny", "Blocked by the gate (denied or timed out).")
+  decide("deny", "Blocked by the gate (denied).")
 }
 
 main()

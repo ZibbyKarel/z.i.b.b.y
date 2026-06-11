@@ -108,6 +108,20 @@ export class ApprovalsService {
     return approval
   }
 
+  /**
+   * Resolve any pending approval that belongs to `runId` as rejected, WITHOUT
+   * routing the decision back to the runner. Called by a runner that is deleting
+   * the run itself (the run is already being torn down), so the queue doesn't keep
+   * a pending card for a run that no longer exists.
+   */
+  async cancelPendingForRun(runId: string): Promise<void> {
+    const pending = await this.list("pending")
+    for (const approval of pending.filter((a) => a.runId === runId)) {
+      await this.decide(approval.id, "rejected").catch(() => {})
+      this.log?.info("pending approval cancelled with its run", { id: approval.id, runId })
+    }
+  }
+
   private async decide(id: string, status: "approved" | "rejected"): Promise<Approval> {
     const approval = await this.storage.get(id)
     if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id)

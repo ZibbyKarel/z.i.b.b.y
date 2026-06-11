@@ -62,6 +62,22 @@ describe("ApprovalsService", () => {
     await expect(service.approve(created.id)).rejects.toBeInstanceOf(ApprovalAlreadyDecidedError)
   })
 
+  it("cancelPendingForRun rejects the run's pending approval without a runner round-trip", async () => {
+    const resume = vi.fn()
+    const cancel = vi.fn()
+    service.register("agent", { resume, cancel })
+    const created = await request()
+
+    await service.cancelPendingForRun("agent-007_1_p0")
+    const got = await service.get(created.id)
+    expect(got.status).toBe("rejected")
+    // The caller is the runner deleting the run itself — no resume/cancel back-call.
+    expect(resume).not.toHaveBeenCalled()
+    expect(cancel).not.toHaveBeenCalled()
+    // Other runs' approvals are untouched and an empty match is a no-op.
+    await expect(service.cancelPendingForRun("other-run")).resolves.toBeUndefined()
+  })
+
   it("404s on an unknown id", async () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ApprovalNotFoundError)
   })
