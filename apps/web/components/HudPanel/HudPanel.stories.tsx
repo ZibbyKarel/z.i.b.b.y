@@ -13,7 +13,7 @@ const meta: Meta<typeof HudPanel> = {
       </Container>
     ),
   ],
-  args: { title: "rychlé spuštění · home", corners: true },
+  args: { title: "běžící agenti" },
 }
 export default meta
 
@@ -23,7 +23,7 @@ export const Default: Story = {
   render: (args) => (
     <HudPanel {...args}>
       <Typography size="md" type="note" variant="secondary">
-        Angular HUD panel s rohovými chevrony a <code>{'// title'}</code> popiskem.
+        Matný panel s mono popiskem — rohové závorky nese jen živý panel.
       </Typography>
     </HudPanel>
   ),
@@ -31,9 +31,13 @@ export const Default: Story = {
 
 export const WithAction: Story = {
   render: (args) => (
-    <HudPanel {...args} action={<Button icon="plus" intent="ghost" size="sm">Přidat skill</Button>}>
+    <HudPanel
+      {...args}
+      action={<Button icon="plus" intent="ghost" size="sm">Přidat skill</Button>}
+      tone="run"
+    >
       <Typography size="md" type="note" variant="secondary">
-        Panel s akcí v titulkovém řádku.
+        Živý panel s akcí v titulkovém řádku.
       </Typography>
     </HudPanel>
   ),

@@ -16,7 +16,7 @@ export interface SkillTileProps {
 // the tile is a catalog entry — no "Run" affordance.
 export function SkillTile({ skill }: SkillTileProps) {
   return (
-    <Card corners radius="sm">
+    <Card interactive>
       <Container padding="150">
         <Stack gap="150">
           <Stack align="start" direction="row" gap="150">

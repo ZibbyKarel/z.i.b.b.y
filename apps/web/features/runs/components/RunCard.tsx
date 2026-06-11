@@ -22,15 +22,15 @@ export function RunCard({
   startedLabel,
   onSelect,
 }: RunCardProps) {
-  const showBar = run.pct !== null && (run.status === "running" || run.status === "awaiting-approval");
+  const live = run.status === "running" || run.status === "awaiting-approval";
+  const showBar = run.pct !== null && live;
   return (
     <Card
-      corners
       as="button"
-      background="panel"
+      corners={live}
       onClick={() => onSelect(run.runId)}
-      radius="sm"
       selected={selected}
+      tone={live ? (run.status === "running" ? "run" : "warn") : undefined}
     >
       <Container padding="200">
         <Stack gap="100">

@@ -17,16 +17,15 @@ export function BrandLogo() {
     <Link href="/overview">
       <Container padding={["0", "0", "200", "0"]} textAlign="center">
         <Stack align="center" justify="center">
+          {/* De-glowed brand — light is reserved for live states. */}
           <Image
             priority
             alt="ZIBBY"
-            height={90}
+            height={44}
             src="/z.i.b.b.y-icon.png"
-            style={{
-              borderRadius: "50%",
-              filter: "drop-shadow(0 0 8px rgba(91,141,239,0.45))",
-            }}
-            width={90}
+
+            style={{ borderRadius: "50%" }}
+            width={44}
           />
           <Typography
             mono

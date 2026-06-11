@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type NavItem } from "@zibby/design-system";
 import { MainLayout } from "../MainLayout/MainLayout";
+import { LimitsRings } from "../LimitsRings/LimitsRings";
 import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
@@ -50,6 +51,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       railSlot={<RightRail />}
       taskSlot={<NewTaskButton />}
       voiceSlot={<VoiceButton />}
+      walletSlot={<LimitsRings />}
     >
       {children}
     </MainLayout>

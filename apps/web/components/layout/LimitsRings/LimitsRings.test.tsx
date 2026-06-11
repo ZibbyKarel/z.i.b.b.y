@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { renderWithProviders, screen } from "../../../test/render"
-import { LimitsPanel, formatResetIn } from "./LimitsPanel"
+import { LimitsRings, formatResetIn } from "./LimitsRings"
 
-describe("LimitsPanel", () => {
-  it("renders the panel title and falls back to the static zero-usage config", () => {
-    renderWithProviders(<LimitsPanel />)
-    // Before the first poll the query is pending, so the panel renders from the
+describe("LimitsRings", () => {
+  it("renders both window rings from the static zero-usage fallback", () => {
+    renderWithProviders(<LimitsRings />)
+    // Before the first poll the query is pending, so the rings render from the
     // static CLAUDE_LIMITS fallback rather than flashing empty.
-    expect(screen.getByText(/interaktivní limity/)).toBeInTheDocument()
+    expect(screen.getByLabelText("5h rolling")).toBeInTheDocument()
+    expect(screen.getByLabelText("Týdenní")).toBeInTheDocument()
   })
 })
 

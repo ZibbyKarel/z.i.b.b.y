@@ -73,7 +73,7 @@ export interface CardProps extends Omit<
   animate?: "none" | "fade" | "scale";
   corners?: boolean;
   /** Toned emphasis: colours the border, corners and adds a faint ring glow. */
-  tone?: "accent" | "ok" | "warn" | "bad";
+  tone?: "accent" | "ok" | "warn" | "bad" | "run";
   /** Render as a selectable button (forwards onClick / aria-pressed). */
   as?: "div" | "button";
   /** Highlighted selected state (accent border + ring). */
@@ -117,6 +117,7 @@ const toneBorder: Record<NonNullable<CardProps["tone"]>, string> = {
   ok: "border-ok/30",
   warn: "border-warn/30",
   bad: "border-bad/30",
+  run: "border-run/30",
 };
 
 const toneGlow: Record<NonNullable<CardProps["tone"]>, string> = {
@@ -124,6 +125,7 @@ const toneGlow: Record<NonNullable<CardProps["tone"]>, string> = {
   ok: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-ok)_12%,transparent)]",
   warn: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-warn)_12%,transparent)]",
   bad: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-bad)_12%,transparent)]",
+  run: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-run)_12%,transparent)]",
 };
 
 export function Card({

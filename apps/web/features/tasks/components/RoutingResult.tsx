@@ -51,11 +51,10 @@ export function RoutingResult({
 
   return (
     <Stack gap="200">
+      {/* Brackets only while the low-confidence suggestion waits on the user. */}
       <Card
-        corners
-        background="panel"
-        radius="sm"
-        tone={overridden ? "accent" : warnTone ? "warn" : "accent"}
+        corners={warnTone}
+        tone={warnTone ? "warn" : undefined}
       >
         <Container padding="200">
           <Stack gap="150">

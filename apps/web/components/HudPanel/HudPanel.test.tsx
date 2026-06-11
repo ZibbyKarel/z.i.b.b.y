@@ -8,10 +8,9 @@ describe("HudPanel", () => {
     expect(screen.getByText("obsah")).toBeInTheDocument()
   })
 
-  it("renders a title with the // prefix", () => {
+  it("renders a plain mono label title", () => {
     render(<HudPanel title="běžící agenti">x</HudPanel>)
-    expect(screen.getByText(/běžící agenti/)).toBeInTheDocument()
-    expect(screen.getByText("//")).toBeInTheDocument()
+    expect(screen.getByText("běžící agenti")).toBeInTheDocument()
   })
 
   it("renders an action slot", () => {

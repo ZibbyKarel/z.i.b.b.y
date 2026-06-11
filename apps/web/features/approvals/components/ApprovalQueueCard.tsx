@@ -25,9 +25,7 @@ export function ApprovalQueueCard({
     <Card
       corners
       as="button"
-      background="panel"
       onClick={() => onSelect(approval.id)}
-      radius="sm"
       selected={selected}
       tone={SEVERITY[approval.risk].tone}
     >

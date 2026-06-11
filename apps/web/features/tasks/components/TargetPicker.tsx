@@ -29,13 +29,10 @@ function TargetRow({
   const t = useTranslations("tasks.routing");
   return (
     <Card
-      corners
       as="button"
-      background="panel"
+      interactive={!selected}
       onClick={() => onPick(target)}
-      radius="sm"
       selected={selected}
-      tone="accent"
     >
       <Container padding="150">
         <Stack align="center" direction="row" gap="100">

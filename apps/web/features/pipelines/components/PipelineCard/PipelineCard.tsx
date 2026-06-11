@@ -35,10 +35,8 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
     <Card
       aria-pressed={selected}
       as="button"
-      corners={selected}
       interactive={!selected}
       onClick={() => onSelect(pipeline.id)}
-      radius="sm"
       selected={selected}
     >
       <Container padding="150">

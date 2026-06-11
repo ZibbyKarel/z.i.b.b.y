@@ -309,7 +309,15 @@
     "approved": "✓ Approved — agent continues",
     "rejected": "✕ Rejected — action cancelled",
     "approve": "Approve",
-    "reject": "Reject"
+    "reject": "Reject",
+    "holdToApprove": "Hold to approve",
+    "holdDone": "Approved",
+    "riskTag": {
+      "payment": "payment",
+      "deletion": "deletion",
+      "push": "push",
+      "send": "send"
+    }
   },
   "runModal": {
     "editRaw": "Edit raw SKILL.md",

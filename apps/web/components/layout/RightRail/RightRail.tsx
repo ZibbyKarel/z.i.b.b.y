@@ -7,14 +7,12 @@ import { RunningAgentsPanel } from "../../../features/agents/components/RunningA
 import { useApproveMutation, useRejectMutation } from "../../../features/approvals/mutations";
 import { useApprovalsQuery } from "../../../features/approvals/queries";
 import { HudPanel } from "../../HudPanel/HudPanel";
-import { LimitsPanel } from "../LimitsPanel/LimitsPanel";
 
 /**
- * The persistent right rail — interactive Claude limits, the approvals queue and
- * the running-agents panel. It used to be the overview's right column; it now
- * lives in the app shell ({@link MainLayout}) so it stays visible on every page,
- * the same way the left navigation does. Self-contained: it reads its own data,
- * so the shell can drop it in as a slot without threading props through.
+ * The right rail — the approvals queue and the running-agents panel (the
+ * limits moved to their single home, the top-bar rings). Self-contained: it
+ * reads its own data, so the shell can drop it in as a slot without threading
+ * props through.
  */
 export function RightRail() {
   const t = useTranslations();
@@ -24,8 +22,6 @@ export function RightRail() {
 
   return (
     <Stack gap="250">
-      <LimitsPanel />
-
       <HudPanel title={t("overview.approvalsQueue")}>
         {approvals.length === 0 ? (
           <Stack align="center" direction="row" gap="100">

@@ -166,6 +166,12 @@ export type {
   ProgressTone,
 } from "./components/Progress/Progress";
 
+export { ProgressRing } from "./components/ProgressRing/ProgressRing";
+export type {
+  ProgressRingProps,
+  ProgressRingSize,
+} from "./components/ProgressRing/ProgressRing";
+
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 

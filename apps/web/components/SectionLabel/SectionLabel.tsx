@@ -23,17 +23,7 @@ export function SectionLabel({
       style={{ marginBottom: "0.875rem", ...style }}
       {...props}
     >
-      <Typography
-        mono
-        uppercase
-        as="span"
-        size="caption"
-        tracking="widest"
-        type="note"
-        variant="tertiary"
-      >
-        {children}
-      </Typography>
+      <Typography type="label">{children}</Typography>
       {action}
     </Stack>
   );

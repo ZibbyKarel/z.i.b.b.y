@@ -111,7 +111,7 @@ export function HudCard({
   );
 
   return (
-    <Card corners interactive radius="sm">
+    <Card interactive>
       <Container padding="150" position="relative">
         {onPinChange && (
           <Container position="absolute" right="12px" top="12px" zIndex={1}>

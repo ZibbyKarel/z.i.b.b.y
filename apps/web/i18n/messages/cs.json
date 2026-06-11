@@ -309,7 +309,15 @@
     "approved": "✓ Schváleno — agent pokračuje",
     "rejected": "✕ Zamítnuto — akce zrušena",
     "approve": "Schválit",
-    "reject": "Zamítnout"
+    "reject": "Zamítnout",
+    "holdToApprove": "Podržet pro schválení",
+    "holdDone": "Schváleno",
+    "riskTag": {
+      "payment": "platba",
+      "deletion": "mazání",
+      "push": "push",
+      "send": "odeslání"
+    }
   },
   "runModal": {
     "editRaw": "Edit raw SKILL.md",

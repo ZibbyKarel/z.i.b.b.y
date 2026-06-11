@@ -15,7 +15,7 @@ export type TypographyType =
 export type TypographyVariant = "primary" | "secondary" | "tertiary";
 
 /** Semantic colour override, takes precedence over `variant`. */
-export type TypographyTone = "ok" | "bad" | "warn" | "accent";
+export type TypographyTone = "ok" | "bad" | "warn" | "run" | "accent";
 
 export type TypographySize =
   | "2xs"
@@ -88,6 +88,7 @@ const toneClass: Record<TypographyTone, string> = {
   ok: "text-ok",
   bad: "text-bad",
   warn: "text-warn",
+  run: "text-run",
   accent: "text-accent",
 };
 
