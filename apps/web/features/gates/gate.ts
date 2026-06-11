@@ -4,7 +4,7 @@ import type {
   MatchCondition,
   Resolve,
 } from "@zibby/contracts";
-import type { ChipTone, IconName } from "@zibby/design-system";
+import type { IconName, TagTone } from "@zibby/design-system";
 
 /**
  * The gate engine (chat 6 — the newest design): a rule is `matcher → decision
@@ -14,7 +14,7 @@ import type { ChipTone, IconName } from "@zibby/design-system";
  */
 
 export interface DecisionMeta {
-  tone: ChipTone;
+  tone: TagTone;
   icon: IconName;
   cssVar: string;
 }

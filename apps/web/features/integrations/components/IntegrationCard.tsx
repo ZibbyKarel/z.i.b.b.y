@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Button, Chip, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Button, Container, Stack, StatusDot, Tag, Typography } from "@zibby/design-system";
 import { HudCard } from "../../../components/HudCard/HudCard";
 import type { Integration } from "../../../domain";
 import { INTEGRATION_STATUS } from "../integrationStatus";
@@ -38,10 +38,10 @@ export function IntegrationCard({ integration, onConfigure, onTest }: Integratio
         </Stack>
       }
       aside={
-        <Chip tone={status.pill}>
+        <Tag tone={status.pill}>
           <StatusDot size="75" tone={status.dot} />
           {t(`integrations.${status.labelKey}`)}
-        </Chip>
+        </Tag>
       }
       description={integration.desc}
       glyph={integration.glyph}

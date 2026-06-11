@@ -3,11 +3,11 @@
 import { useTranslations } from "next-intl";
 import {
   Card,
-  Chip,
   CodeBlock,
   Container,
   Icon,
   Stack,
+  Tag,
   Typography,
 } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
@@ -49,9 +49,9 @@ export function AgentViewDetails({ agent, usedBy }: AgentViewDetailsProps) {
         </Typography>
         <Stack wrap direction="row" gap="75">
           {(agent.tools ?? []).map((tool) => (
-            <Chip key={tool} tone="neutral">
+            <Tag key={tool} tone="neutral">
               {tool}
-            </Chip>
+            </Tag>
           ))}
         </Stack>
       </Stack>

@@ -1,4 +1,4 @@
-import { Chip, Icon, Pressable, Stack } from "@zibby/design-system";
+import { Icon, Pressable, Stack, Tag } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 
 export interface PathChipsProps {
@@ -25,17 +25,17 @@ export function PathChips({ paths, onRemove }: PathChipsProps) {
             key={path}
             onClick={() => onRemove(path)}
           >
-            <Chip size="sm" tone="accent">
+            <Tag size="sm" tone="accent">
               <Icon name="file" size="xs" />
               {path}
               <Icon name="x" size="xs" />
-            </Chip>
+            </Tag>
           </Pressable>
         ) : (
-          <Chip key={path} size="sm" tone="accent">
+          <Tag key={path} size="sm" tone="accent">
             <Icon name="file" size="xs" />
             {path}
-          </Chip>
+          </Tag>
         ),
       )}
     </Stack>

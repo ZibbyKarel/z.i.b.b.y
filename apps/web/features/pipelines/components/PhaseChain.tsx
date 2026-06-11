@@ -2,12 +2,12 @@ import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 import {
   Card,
-  Chip,
   Container,
   Divider,
   Icon,
   IconTile,
   Stack,
+  Tag,
   Typography,
 } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
@@ -17,9 +17,9 @@ import { type Pipeline, type PipelinePhase, glyphForAgent } from "../../../domai
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
   const t = useTranslations("phase");
   return (
-    <Chip title={t("modelTitle")} tone="neutral">
+    <Tag title={t("modelTitle")} tone="neutral">
       {model}
-    </Chip>
+    </Tag>
   );
 }
 
@@ -27,9 +27,9 @@ export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
 export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
   const t = useTranslations("phase");
   return (
-    <Chip title={t("thinkTitle")} tone="neutral">
+    <Tag title={t("thinkTitle")} tone="neutral">
       ◇ {level}
-    </Chip>
+    </Tag>
   );
 }
 

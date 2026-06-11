@@ -97,8 +97,11 @@ export type {
 export { Divider } from "./components/Divider/Divider";
 export type { DividerProps } from "./components/Divider/Divider";
 
-export { Chip } from "./components/Chip/Chip";
+export { Chip, ChipTestId } from "./components/Chip/Chip";
 export type { ChipProps, ChipTone } from "./components/Chip/Chip";
+
+export { Tag, TagTestId, riskIcon } from "./components/Tag/Tag";
+export type { RiskKind, TagProps, TagTone } from "./components/Tag/Tag";
 
 export { Kbd } from "./components/Kbd/Kbd";
 export type { KbdProps } from "./components/Kbd/Kbd";
@@ -174,19 +177,6 @@ export type {
 
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
-
-export { StatusChip } from "./components/StatusChip/StatusChip";
-export type {
-  StatusChipProps,
-  StatusChipState,
-} from "./components/StatusChip/StatusChip";
-
-export { RiskTag } from "./components/RiskTag/RiskTag";
-export type {
-  RiskKind,
-  RiskTagProps,
-  RiskTagSize,
-} from "./components/RiskTag/RiskTag";
 
 export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";
 export type { ToggleProps, ToggleSize } from "./components/Toggle/Toggle";

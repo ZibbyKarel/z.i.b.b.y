@@ -3,11 +3,11 @@ import type { IconName } from "@zibby/design-system";
 import {
   Button,
   Card,
-  Chip,
   Container,
   Divider,
   Icon,
   Stack,
+  Tag,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -40,12 +40,12 @@ export interface GlobalRuleCardProps {
 /** A chip naming one agent/skill that uses the rule. */
 function UserChip({ user }: { user: RuleUser }) {
   return (
-    <Chip tone="neutral">
+    <Tag tone="neutral">
       <Stack inline align="center" as="span" direction="row" gap="50">
         <Icon name={user.glyph} size="xs" tone="accent" />
         {user.name}
       </Stack>
-    </Chip>
+    </Tag>
   );
 }
 
@@ -122,7 +122,7 @@ export function GlobalRuleCard({
 
               <Stack align="center" direction="row" gap="50">
                 {total > 0 ? (
-                  <Chip tone="accent">
+                  <Tag tone="accent">
                     <Stack
                       inline
                       align="center"
@@ -133,7 +133,7 @@ export function GlobalRuleCard({
                       <Icon name="bot" size="xs" />
                       {total}
                     </Stack>
-                  </Chip>
+                  </Tag>
                 ) : (
                   <Typography mono size="2xs" type="note" variant="tertiary">
                     {t("unused")}

@@ -1,5 +1,5 @@
 import type { Decision, MatchCondition, Resolve } from "@zibby/contracts";
-import { Chip, Icon, Stack, Typography } from "@zibby/design-system";
+import { Icon, Stack, Tag, Typography } from "@zibby/design-system";
 import { Fragment } from "react";
 import { DECISION_META, flattenResolve, matchText } from "../gate";
 
@@ -16,12 +16,12 @@ export function DecisionBadge({
 }) {
   const meta = DECISION_META[decision];
   return (
-    <Chip size={size} tone={meta.tone}>
+    <Tag size={size} tone={meta.tone}>
       <Stack inline align="center" as="span" direction="row" gap="50">
         <Icon name={meta.icon} size="xs" />
         {label}
       </Stack>
-    </Chip>
+    </Tag>
   );
 }
 
@@ -126,7 +126,7 @@ export function ResolveChips({
               {mode === "all" ? "AND" : "OR"}
             </Typography>
           )}
-          <Chip
+          <Tag
             size="sm"
             tone={
               leaf.kind === "check"
@@ -149,7 +149,7 @@ export function ResolveChips({
               />
               {leaf.kind === "human" ? youLabel : leaf.name}
             </Stack>
-          </Chip>
+          </Tag>
         </Fragment>
       ))}
     </Stack>

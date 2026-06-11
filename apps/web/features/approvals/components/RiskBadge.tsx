@@ -1,4 +1,4 @@
-import { Chip, Icon, Stack } from "@zibby/design-system";
+import { Icon, Stack, Tag } from "@zibby/design-system";
 import { type RiskType, riskMeta } from "../approval";
 
 export interface RiskBadgeProps {
@@ -12,11 +12,11 @@ export interface RiskBadgeProps {
 export function RiskBadge({ type, label, size = "sm" }: RiskBadgeProps) {
   const meta = riskMeta(type);
   return (
-    <Chip size={size} tone={meta.tone}>
+    <Tag size={size} tone={meta.tone}>
       <Stack inline align="center" direction="row" gap="50">
         <Icon name={meta.glyph} size={size === "md" ? "sm" : "xs"} />
         {label}
       </Stack>
-    </Chip>
+    </Tag>
   );
 }

@@ -3,11 +3,11 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Chip,
   Container,
   IconTile,
   Pressable,
   Stack,
+  Tag,
   Typography,
 } from "@zibby/design-system";
 import type { Category } from "@zibby/contracts";
@@ -32,7 +32,7 @@ function ChipToggle({
 }) {
   return (
     <Pressable onClick={onClick}>
-      <Chip tone={active ? "accent" : "neutral"}>{children}</Chip>
+      <Tag tone={active ? "accent" : "neutral"}>{children}</Tag>
     </Pressable>
   );
 }

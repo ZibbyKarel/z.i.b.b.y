@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Chip } from "@zibby/design-system";
+import { Tag } from "@zibby/design-system";
 import type { Project } from "@zibby/contracts";
 import { HudCard } from "../../../components/HudCard/HudCard";
 
@@ -20,7 +20,7 @@ export function ProjectCard({ project, onOpen }: ProjectCardProps) {
   return (
     <HudCard
       badges={
-        project.category ? [[<Chip key="cat" tone="neutral">{project.category}</Chip>]] : undefined
+        project.category ? [[<Tag key="cat" tone="neutral">{project.category}</Tag>]] : undefined
       }
       description={project.desc}
       glyph="code"

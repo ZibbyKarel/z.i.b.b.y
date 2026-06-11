@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Button, Chip, Icon, type IconName, Stack } from "@zibby/design-system";
+import { Button, Icon, type IconName, Stack, Tag } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
 import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
 import { HudCard } from "../../../components/HudCard/HudCard";
@@ -36,15 +36,15 @@ export function AgentCard({
           <ModelBadge key="model" model={agent.model ?? "sonnet"} />,
           <ThinkBadge key="think" level={agent.thinking ?? "medium"} />,
           pipelineCount > 0 ? (
-            <Chip key="usage" tone="accent">
+            <Tag key="usage" tone="accent">
               <Icon name="flow" size="xs" /> {t("pipelineUsage", { count: pipelineCount })}
-            </Chip>
+            </Tag>
           ) : null,
         ],
         tools.map((tool) => (
-          <Chip key={tool} tone="neutral">
+          <Tag key={tool} tone="neutral">
             {tool}
-          </Chip>
+          </Tag>
         )),
       ]}
       description={agent.description}

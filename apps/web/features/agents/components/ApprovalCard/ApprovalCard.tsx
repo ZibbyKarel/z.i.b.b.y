@@ -2,14 +2,14 @@ import {
   Alert,
   Button,
   Card,
-  Chip,
   Container,
   HoldButton,
   type RiskKind,
-  RiskTag,
   Stack,
   StatusDot,
+  Tag,
   Typography,
+  riskIcon,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -75,9 +75,11 @@ export function ApprovalCard({
               </Typography>
             </Stack>
             {kind ? (
-              <RiskTag risk={kind}>{t(`riskTag.${kind}`)}</RiskTag>
+              <Tag icon={riskIcon[kind]} tone={kind}>
+                {t(`riskTag.${kind}`)}
+              </Tag>
             ) : (
-              <Chip tone="neutral">{approval.risk}</Chip>
+              <Tag tone="neutral">{approval.risk}</Tag>
             )}
           </Stack>
 

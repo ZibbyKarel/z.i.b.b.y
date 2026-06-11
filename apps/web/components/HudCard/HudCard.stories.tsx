@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { Button, Chip, Container, Icon } from "@zibby/design-system"
+import { Button, Container, Icon, Tag } from "@zibby/design-system"
 import { HudCard } from "./HudCard"
 
 const meta: Meta<typeof HudCard> = {
@@ -25,23 +25,23 @@ type Story = StoryObj<typeof HudCard>
 
 const badgeRows = [
   [
-    <Chip key="model" tone="neutral">
+    <Tag key="model" tone="neutral">
       sonnet
-    </Chip>,
-    <Chip key="think" tone="neutral">
+    </Tag>,
+    <Tag key="think" tone="neutral">
       ◇ medium
-    </Chip>,
-    <Chip key="usage" tone="accent">
+    </Tag>,
+    <Tag key="usage" tone="accent">
       <Icon name="flow" size="xs" /> 3 pipelines
-    </Chip>,
+    </Tag>,
   ],
   [
-    <Chip key="read" tone="neutral">
+    <Tag key="read" tone="neutral">
       read
-    </Chip>,
-    <Chip key="grep" tone="neutral">
+    </Tag>,
+    <Tag key="grep" tone="neutral">
       grep
-    </Chip>,
+    </Tag>,
   ],
 ]
 

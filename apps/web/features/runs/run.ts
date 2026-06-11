@@ -1,5 +1,5 @@
 import type { AgentRun, PipelineRun, RunStatus } from "@zibby/contracts";
-import type { ChipTone, DotTone, IconName } from "@zibby/design-system";
+import type { DotTone, IconName, TagTone } from "@zibby/design-system";
 
 /**
  * The Runs screen shows a single feed across run kinds, but the contract has no
@@ -66,7 +66,7 @@ export function pipelineRunToView(r: PipelineRun): RunView {
 export interface RunStateMeta {
   /** i18n key suffix under `runs.state.*`. */
   key: RunStatus;
-  badge: ChipTone;
+  badge: TagTone;
   dot: DotTone;
   glyph: IconName;
   pulse: boolean;

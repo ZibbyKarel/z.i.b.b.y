@@ -1,5 +1,5 @@
 import type { RunStatus } from "@zibby/contracts";
-import { Chip, Icon, Stack } from "@zibby/design-system";
+import { Icon, Stack, Tag } from "@zibby/design-system";
 import { RUN_STATE } from "../run";
 
 export interface RunStateBadgeProps {
@@ -20,12 +20,12 @@ export function RunStateBadge({
   const meta = RUN_STATE[status];
   return (
     <span title={canonTitle ?? status}>
-      <Chip size={size} tone={meta.badge}>
+      <Tag size={size} tone={meta.badge}>
         <Stack inline align="center" direction="row" gap="50">
           <Icon name={meta.glyph} size="xs" />
           {label}
         </Stack>
-      </Chip>
+      </Tag>
     </span>
   );
 }

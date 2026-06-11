@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Chip,
   Container,
   Dialog,
   type IconName,
@@ -14,6 +13,7 @@ import {
   TabList,
   TabPanel,
   Tabs,
+  Tag,
   Typography,
 } from "@zibby/design-system";
 import type { Agent, Category, GateRuleInput, GlobalGateRule } from "@zibby/contracts";
@@ -193,7 +193,7 @@ export function AgentDetailModal({
               <Typography mono truncate size="xl" type="note" weight="bold">
                 {isNew ? t("newAgent") : name}
               </Typography>
-              {agent.category && <Chip tone="neutral">{agent.category}</Chip>}
+              {agent.category && <Tag tone="neutral">{agent.category}</Tag>}
             </Container>
           </Stack>
         }

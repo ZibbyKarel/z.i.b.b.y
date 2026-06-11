@@ -1,53 +1,52 @@
-import type { HTMLAttributes } from "react";
-import { type VariantProps, cva } from "class-variance-authority";
+import type { HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { type DotTone, StatusDot } from "../StatusDot/StatusDot";
 
-const chip = cva(
-  "inline-flex items-center gap-1 font-mono text-xs font-semibold " +
-    "rounded-sm border whitespace-nowrap tracking-wide",
-  {
-    variants: {
-      tone: {
-        neutral: "text-foreground-dim border-border bg-[rgba(255,255,255,0.04)]",
-        accent: "text-accent border-accent/35 bg-accent-dim",
-        ok: "text-ok border-ok/35 bg-ok/10",
-        warn: "text-warn border-warn/35 bg-warn/10",
-        bad: "text-bad border-bad/35 bg-bad/10",
-        run: "text-run border-run/35 bg-run/10",
-      },
-      size: {
-        sm: "px-2 py-0.5",
-        md: "px-2.5 py-1.5",
-      },
-      solid: { true: "", false: "" },
-    },
-    compoundVariants: [
-      { tone: "neutral", solid: true, className: "bg-foreground-dim text-background border-transparent" },
-      { tone: "accent", solid: true, className: "bg-accent text-accent-contrast border-transparent" },
-      { tone: "ok", solid: true, className: "bg-ok text-background border-transparent" },
-      { tone: "warn", solid: true, className: "bg-warn text-background border-transparent" },
-      { tone: "bad", solid: true, className: "bg-bad text-background border-transparent" },
-      { tone: "run", solid: true, className: "bg-run text-background border-transparent" },
-    ],
-    defaultVariants: { tone: "neutral", solid: false, size: "sm" },
-  },
-);
+/** Chip tones mirror the status palette so the optional dot stays in sync. */
+export type ChipTone = DotTone;
 
-export type ChipTone = NonNullable<VariantProps<typeof chip>["tone"]>;
+const toneClass: Record<ChipTone, string> = {
+  ok: "text-ok border-ok/20 bg-ok/[0.06]",
+  run: "text-run border-run/20 bg-run/[0.06]",
+  wait: "text-warn border-warn/20 bg-warn/[0.06]",
+  bad: "text-bad border-bad/20 bg-bad/[0.06]",
+  idle: "text-foreground-faint border-border bg-[rgba(255,255,255,0.03)]",
+  accent: "text-accent border-accent/20 bg-accent/[0.06]",
+};
 
 export enum ChipTestId {
   Root = "chip-root",
+  Dot = "chip-dot",
 }
 
-export interface ChipProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">,
-    VariantProps<typeof chip> {
-  ref?: React.Ref<HTMLSpanElement>;
+export interface ChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
+  tone?: ChipTone;
+  /** Show a leading status dot. */
+  dot?: boolean;
+  /** Live — the dot glows and pulses (only meaningful with `dot`). */
+  pulse?: boolean;
+  ref?: Ref<HTMLSpanElement>;
 }
 
-export function Chip({ tone, solid, size, children, ref, ...props }: ChipProps) {
+/**
+ * Rounded status pill — a tone-coloured label, optionally led by a status dot.
+ * The "color = state" half of the badge family (the angular {@link Tag} is the
+ * "shape = category" half).
+ */
+export function Chip({ tone = "idle", dot = false, pulse = false, children, ref, ...props }: ChipProps) {
   return (
-    <span className={cn(chip({ tone, solid, size }))} data-testid={ChipTestId.Root} ref={ref} {...props}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border py-[3px]",
+        dot ? "pl-2 pr-2.5" : "px-2.5",
+        "font-mono text-xs whitespace-nowrap",
+        toneClass[tone],
+      )}
+      data-testid={ChipTestId.Root}
+      ref={ref}
+      {...props}
+    >
+      {dot && <StatusDot data-testid={ChipTestId.Dot} pulse={pulse} size="75" tone={tone} />}
       {children}
     </span>
   );

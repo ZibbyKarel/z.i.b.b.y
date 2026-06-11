@@ -1,5 +1,5 @@
 import type { Approval as ContractApproval } from "@zibby/contracts";
-import type { ChipTone, IconName } from "@zibby/design-system";
+import type { IconName, TagTone } from "@zibby/design-system";
 
 /**
  * The design models an approval much richer than the contract does: the contract
@@ -96,7 +96,7 @@ interface RiskMeta {
   label: string;
   glyph: IconName;
   /** Badge tone (the Badge component accepts the full palette incl. `run`). */
-  tone: ChipTone;
+  tone: TagTone;
   /** Tone for Card/Stat/etc. (`run` collapses to `accent`). */
   uiTone: UiTone;
   /** Color CSS variable used by the bespoke detail accents. */
