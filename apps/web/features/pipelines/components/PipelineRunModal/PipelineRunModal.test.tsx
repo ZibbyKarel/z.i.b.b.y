@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { renderWithProviders as render, screen } from "../../../../test/render"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Agent } from "@zibby/contracts"

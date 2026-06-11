@@ -24,7 +24,7 @@ const slugPreview = (name: string | undefined, fallback: string) =>
         .replace(/(^-|-$)/g, "")
     : fallback;
 
-export type EntityKind = "skill" | "integration" | "agent" | "pipeline";
+export type EntityKind = "skill" | "integration" | "agent";
 
 export interface EntityForm {
   title: string;
@@ -103,30 +103,6 @@ export function useEntityForm(kind: EntityKind): EntityForm {
         ],
         filePreview: (v) =>
           `~/zibby/agents/${slugPreview(v.name, fallbackName)}.agent.md`,
-      };
-    case "pipeline":
-      return {
-        title: t("forms.pipeline.title"),
-        subtitle: t("forms.pipeline.subtitle"),
-        glyph: "flow",
-        submitLabel: t("forms.pipeline.submitLabel"),
-        fields: [
-          {
-            name: "name",
-            label: t("forms.pipeline.nameLabel"),
-            kind: "text",
-            placeholder: t("forms.pipeline.namePlaceholder"),
-            required: true,
-          },
-          {
-            name: "desc",
-            label: t("forms.pipeline.descLabel"),
-            kind: "textarea",
-            placeholder: t("forms.pipeline.descPlaceholder"),
-          },
-        ],
-        filePreview: (v) =>
-          `~/zibby/pipelines/${slugPreview(v.name, fallbackName)}.pipeline.md`,
       };
     case "skill":
     default:

@@ -380,12 +380,22 @@
     },
     "pipeline": {
       "title": "New pipeline",
-      "subtitle": "creates .pipeline.md · add phases in the editor",
+      "subtitle": "creates .pipeline.md · chain agents via handoff files",
       "submitLabel": "Create pipeline",
       "nameLabel": "Pipeline name",
       "namePlaceholder": "e.g. Build Feature",
       "descLabel": "Description",
-      "descPlaceholder": "What the pipeline does…"
+      "descPlaceholder": "What the pipeline does…",
+      "agentLabel": "Agent",
+      "assignmentLabel": "First assignment file",
+      "assignmentHint": "the first agent picks this file up as its assignment",
+      "handoffLabel": "Handoff file",
+      "handoffHint": "written by this agent · the next agent picks it up as its assignment",
+      "outputHint": "written by this agent · the pipeline's final output",
+      "handoffNote": "next agent's assignment",
+      "addStep": "Add agent",
+      "removeStepAria": "Remove phase {n}",
+      "noAgents": "Create an agent first — the chain needs at least one."
     }
   },
   "defaults": {

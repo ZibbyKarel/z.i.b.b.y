@@ -3,8 +3,8 @@ import { defineConfig } from "vitest/config"
 import react from "@vitejs/plugin-react"
 
 // Component tests for apps/web run under jsdom + React (the `web` project stays
-// node-only for the i18n catalog checks). Scoped strictly to components/** so the
-// deliberately-excluded legacy feature tests under features/** stay out.
+// node-only for the i18n catalog checks). Covers components/** plus the feature
+// composites' own components/** folders.
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -22,6 +22,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.tsx"],
-    include: ["components/**/*.test.{ts,tsx}"],
+    include: [
+      "components/**/*.test.{ts,tsx}",
+      "features/**/components/**/*.test.{ts,tsx}",
+    ],
   },
 })

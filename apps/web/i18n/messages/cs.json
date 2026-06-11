@@ -380,12 +380,22 @@
     },
     "pipeline": {
       "title": "Nová pipeline",
-      "subtitle": "vytvoří .pipeline.md · fáze doplníš v editoru",
+      "subtitle": "vytvoří .pipeline.md · zřetěz agenty přes předávací soubory",
       "submitLabel": "Vytvořit pipeline",
       "nameLabel": "Název pipeline",
       "namePlaceholder": "např. Build Feature",
       "descLabel": "Popis",
-      "descPlaceholder": "Co pipeline dělá…"
+      "descPlaceholder": "Co pipeline dělá…",
+      "agentLabel": "Agent",
+      "assignmentLabel": "Soubor s prvním zadáním",
+      "assignmentHint": "první agent si tenhle soubor vezme jako zadání",
+      "handoffLabel": "Předávací soubor",
+      "handoffHint": "zapíše tenhle agent · další agent si ho vezme jako zadání",
+      "outputHint": "zapíše tenhle agent · finální výstup pipeline",
+      "handoffNote": "zadání pro dalšího agenta",
+      "addStep": "Přidat agenta",
+      "removeStepAria": "Odebrat fázi {n}",
+      "noAgents": "Nejdřív vytvoř agenta — řetěz potřebuje aspoň jednoho."
     }
   },
   "defaults": {

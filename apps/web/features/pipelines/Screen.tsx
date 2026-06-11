@@ -16,13 +16,11 @@ import type { Pipeline } from "../../domain";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { EntityFormModal } from "../../components/EntityFormModal/EntityFormModal";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
 import { PhaseChain } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
-import { useEntityForm } from "../../state/forms";
-import { slug } from "../../utils/slug";
 import { useAgentsQuery } from "../agents/queries";
 import { usePipelinesQuery } from "./queries";
 import { useCreatePipelineMutation, useStartPipelineRunMutation } from "./mutations";
@@ -41,47 +39,18 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
   const [adding, setAdding] = useState(false);
   const router = useRouter();
-  const form = useEntityForm("pipeline");
 
   const list = pipelines;
   const selected = (routeId ? list.find((p) => p.id === routeId) : null) ?? list[0];
 
   const addModal = adding && (
-    <EntityFormModal
-      fields={form.fields}
-      filePreview={form.filePreview}
-      glyph={form.glyph}
+    <NewPipelineDialog
+      agents={agents}
+      isPending={createPipeline.isPending}
       onClose={() => setAdding(false)}
-      onSubmit={(values) => {
-        const id = slug(values.name ?? "", "novy");
-        const desc = values.desc?.trim() || t("defaults.pipeline");
-        createPipeline.mutate(
-          {
-            body: {
-              id,
-              name: values.name?.trim() || id,
-              desc,
-              instructions: desc,
-              // The minimal create form has no phase editor yet; seed a single
-              // editable phase so the .pipeline.md is valid (phases min 1).
-              phases: [
-                {
-                  id: "phase-1",
-                  agent: agents[0]?.id ?? "agent",
-                  consumes: "task.md",
-                  produces: "output.md",
-                  model: "sonnet",
-                  thinking: "medium",
-                },
-              ],
-            },
-          },
-          { onSuccess: () => setAdding(false) },
-        );
-      }}
-      submitLabel={form.submitLabel}
-      subtitle={form.subtitle}
-      title={form.title}
+      onCreate={(body) =>
+        createPipeline.mutate({ body }, { onSuccess: () => setAdding(false) })
+      }
     />
   );
 
