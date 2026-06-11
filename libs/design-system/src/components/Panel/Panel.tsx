@@ -1,7 +1,6 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
-import { cn } from "../../utils/cn";
 import { Container } from "../Container/Container";
-import { Corners, type CornersTone } from "../Card/Card";
+import { Card, Corners, type CornersTone } from "../Card/Card";
 import type { Padding } from "../../tokens";
 
 export enum PanelTestId {
@@ -22,13 +21,14 @@ export interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, "classN
   /** Bracket color of a live panel. */
   liveTone?: CornersTone;
   /** Elevated panel — one step above surface, with the elevation shadow. */
-  hi?: boolean;
+  elevated?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
- * The single titled surface (design `ZtPanel`) — matte by default; corner
- * brackets mark live panels only ("light only on what's alive").
+ * The single titled surface (design `ZtPanel`) — a clipped {@link Card} with a
+ * matte default; corner brackets mark live panels only ("light only on what's
+ * alive").
  */
 export function Panel({
   header,
@@ -36,20 +36,18 @@ export function Panel({
   padding,
   live = false,
   liveTone = "run",
-  hi = false,
+  elevated = false,
   children,
   ref,
   ...rest
 }: PanelProps) {
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-lg border",
-        hi
-          ? "border-border-strong bg-elevated shadow-[var(--shadow-elevated)]"
-          : "border-border bg-surface",
-      )}
+    <Card
+      clip
+      background="surface"
       data-testid={PanelTestId.Root}
+      elevated={elevated}
+      radius="lg"
       ref={ref}
       {...rest}
     >
@@ -70,6 +68,6 @@ export function Panel({
       ) : (
         <div data-testid={PanelTestId.Body}>{children}</div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -67,6 +67,11 @@ export interface CardProps extends Omit<
   background?: "elevated" | "raised" | "surface" | "panel" | "glass" | "background";
   bordered?: boolean;
   borderStyle?: "solid" | "dashed";
+  /** One step above surface — elevated background, strong border, elevation shadow.
+   *  A shorthand that wins over `background`/`shadow`. */
+  elevated?: boolean;
+  /** Clip content to the card radius (`overflow-hidden`) — for edge-to-edge bodies. */
+  clip?: boolean;
   interactive?: boolean;
   radius?: "none" | "sm" | "default" | "lg";
   shadow?: "none" | "card" | "dropdown" | "modal";
@@ -132,6 +137,8 @@ export function Card({
   background = "surface",
   bordered = true,
   borderStyle = "solid",
+  elevated = false,
+  clip = false,
   interactive = false,
   radius = "lg",
   shadow = "none",
@@ -153,11 +160,17 @@ export function Card({
       {...(rest as any)}
       className={cn(
         "relative group",
-        bgClasses[background],
+        elevated ? "bg-elevated" : bgClasses[background],
         radiusClasses[radius],
-        shadowClasses[shadow],
+        elevated ? "shadow-[var(--shadow-elevated)]" : shadowClasses[shadow],
         animateClasses[animate],
-        bordered && (tone ? toneBorder[tone] : "border border-border"),
+        clip && "overflow-hidden",
+        bordered &&
+          (tone
+            ? toneBorder[tone]
+            : elevated
+              ? "border border-border-strong"
+              : "border border-border"),
         bordered && tone && "border",
         tone && toneGlow[tone],
         borderStyle === "dashed" && "border-dashed",

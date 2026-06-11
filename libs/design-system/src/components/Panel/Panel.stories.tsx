@@ -70,8 +70,8 @@ export const Overview: Story = {
         <Typography type="data">live panel — awaiting tone</Typography>
       </Panel>
 
-      <Panel hi header={<Label>elevated</Label>} padding="200">
-        <Typography type="data">hi panel — one step above surface</Typography>
+      <Panel elevated header={<Label>elevated</Label>} padding="200">
+        <Typography type="data">elevated panel — one step above surface</Typography>
       </Panel>
     </div>
   ),
