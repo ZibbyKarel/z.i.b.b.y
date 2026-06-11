@@ -75,7 +75,9 @@ export function resolvePadding(
  */
 export interface Theme {
   // ---- Backgrounds -------------------------------------------------------
-  /** Deepest layer — page canvas / app shell background. */
+  /** Deepest layer — sidebar / rail / input wells (design `bg0`). */
+  colorBackgroundDeep: string;
+  /** Page canvas / scene background. */
   colorBackground: string;
   /** Default panel/card surface. */
   colorSurface: string;
@@ -120,8 +122,16 @@ export interface Theme {
   colorOk: string;
   colorWarn: string;
   colorDanger: string;
+  /** Running-state color — deliberately distinct from the interaction accent. */
+  colorRun: string;
 
-  // ---- Model / thinking badges -------------------------------------------
+  // ---- Risk categories (the only categorical palette) ---------------------
+  colorRiskPayment: string;
+  colorRiskDeletion: string;
+  colorRiskPush: string;
+  colorRiskSend: string;
+
+  // ---- Model / thinking badges (deprecated — models are glyph + text now) -
   colorModelOpus: string;
   colorModelSonnet: string;
   colorModelHaiku: string;
@@ -165,6 +175,7 @@ export function mergeTheme(base: Theme, override: PartialTheme): Theme {
 export function tokensToCssVars(t: Theme): Record<string, string> {
   return {
     // backgrounds
+    "--color-background-deep":   t.colorBackgroundDeep,
     "--color-background":        t.colorBackground,
     "--color-surface":           t.colorSurface,
     "--color-elevated":          t.colorElevated,
@@ -189,6 +200,12 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--color-ok":                t.colorOk,
     "--color-warn":              t.colorWarn,
     "--color-bad":               t.colorDanger,
+    "--color-run":               t.colorRun,
+    // risk categories
+    "--color-risk-payment":      t.colorRiskPayment,
+    "--color-risk-deletion":     t.colorRiskDeletion,
+    "--color-risk-push":         t.colorRiskPush,
+    "--color-risk-send":         t.colorRiskSend,
     // model badges
     "--color-model-opus":        t.colorModelOpus,
     "--color-model-sonnet":      t.colorModelSonnet,

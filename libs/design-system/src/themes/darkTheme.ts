@@ -1,44 +1,53 @@
 /**
- * z.i.b.b.y dark theme — "JARVIS control room" HUD.
+ * z.i.b.b.y dark theme — "tichý velín" (quiet control room).
  *
- * Default context = home (blue accent). Use contextTokens(context) to get
- * a PartialTheme override that switches the active accent.
+ * Final audited token set (ZT): color = state, shape = category; only live
+ * states (running / awaiting) may glow or pulse. Single blue accent for
+ * interaction/selection — the running state has its own distinct color.
  */
 import type { Theme } from "../tokens";
 
 export const darkTheme: Theme = {
-  // backgrounds
-  colorBackground:       "#0a0c10",
-  colorSurface:          "#0d1117",
-  colorElevated:         "#0f141b",
-  colorRaised:           "#141b24",
-  colorHover:            "#141b24",
+  // backgrounds — exactly 3 surface levels + deep shell layer
+  colorBackgroundDeep:   "#090c11",
+  colorBackground:       "#0b0e13",
+  colorSurface:          "#10151c",
+  colorElevated:         "#151c25",
+  colorRaised:           "#151c25",
+  colorHover:            "#151c25",
 
   // foreground
   colorForeground:       "#e6edf3",
   colorForegroundDim:    "#9aa7b4",
-  colorForegroundFaint:  "#5d6b7a",
+  colorForegroundFaint:  "#66737f",
 
   // borders
-  colorBorder:           "rgba(255,255,255,0.07)",
-  colorBorderStrong:     "rgba(255,255,255,0.12)",
+  colorBorder:           "rgba(255,255,255,0.08)",
+  colorBorderStrong:     "rgba(255,255,255,0.14)",
 
-  // accent (default: home/blue — overridden via contextTokens)
+  // accent — interaction/selection/brand only (NOT the running state)
   colorAccent:           "#5b8def",
-  colorAccentDim:        "rgba(91,141,239,0.16)",
-  colorAccentContrast:   "#0a0c10",
+  colorAccentDim:        "rgba(91,141,239,0.14)",
+  colorAccentContrast:   "#0b0e13",
   colorAccentGlow:       "rgba(91,141,239,0.4)",
 
-  // named accents
+  // named accents (home/work context is dead — kept for compat, both blue)
   colorHome:             "#5b8def",
   colorWork:             "#5b8def",
 
-  // status
-  colorOk:               "#39d98a",
+  // status — the only colors allowed to glow
+  colorOk:               "#3fcf8e",
   colorWarn:             "#f0b429",
   colorDanger:           "#ff6b6b",
+  colorRun:              "#7aa5f8",
 
-  // model badges
+  // risk categories — the only categorical palette
+  colorRiskPayment:      "#f0b429",
+  colorRiskDeletion:     "#ff6b6b",
+  colorRiskPush:         "#b07cff",
+  colorRiskSend:         "#56c4d6",
+
+  // model badges (deprecated — models render as glyph + text, no color)
   colorModelOpus:        "#b07cff",
   colorModelSonnet:      "#56c4d6",
   colorModelHaiku:       "#7fd98a",
@@ -46,16 +55,16 @@ export const darkTheme: Theme = {
   // think levels
   colorThinkHigh:        "#f0883e",
   colorThinkMedium:      "#5b8def",
-  colorThinkLow:         "#5d6b7a",
+  colorThinkLow:         "#66737f",
 
-  // radii
-  radiusDefault:         "3px",
-  radiusSm:              "2px",
-  radiusMd:              "4px",
-  radiusLg:              "8px",
+  // radii — rCtl 6px (controls/chips), rPanel 10px (panels/modals)
+  radiusDefault:         "6px",
+  radiusSm:              "6px",
+  radiusMd:              "6px",
+  radiusLg:              "10px",
   radiusFull:            "9999px",
 
-  // shadows
+  // shadows — panels matte; elevation only on hi/modal layers
   shadowCard:            "0 6px 22px rgba(0,0,0,0.35)",
   shadowModal:           "0 30px 80px rgba(0,0,0,0.6)",
   shadowGlowAccent:      "0 0 16px rgba(91,141,239,0.4)",

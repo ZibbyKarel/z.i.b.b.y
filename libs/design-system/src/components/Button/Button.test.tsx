@@ -32,6 +32,20 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it("shows a spinner instead of the icon and suppresses clicks when loading", async () => {
+    const onClick = vi.fn()
+    render(
+      <Button loading icon="play" onClick={onClick}>
+        Spouštím
+      </Button>,
+    )
+    expect(screen.getByTestId(ButtonTestId.Spinner)).toBeInTheDocument()
+    expect(screen.queryByTestId(ButtonTestId.Icon)).toBeNull()
+    expect(screen.getByTestId(ButtonTestId.Root)).toHaveAttribute("aria-busy", "true")
+    await userEvent.click(screen.getByTestId(ButtonTestId.Root))
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
   it("defaults to type=button", () => {
     render(<Button>Spustit</Button>)
     expect(screen.getByTestId(ButtonTestId.Root)).toHaveAttribute("type", "button")

@@ -87,7 +87,7 @@ export function Dialog({
       <div
         aria-modal
         aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
-        className="relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded shadow-modal animate-scale-in outline-none"
+        className="relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded-lg shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_13%,transparent),var(--shadow-modal)] animate-scale-in outline-none"
         data-testid={DialogTestId.Root}
         ref={dialogRef}
         role="dialog"

@@ -16,23 +16,24 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography mono type="subtitle" variant="tertiary">
-          tones
-        </Typography>
+        <Typography type="label">states (matte)</Typography>
         <div className="flex items-center gap-5">
-          <StatusDot pulse tone="ok" />
-          <StatusDot tone="warn" />
-          <StatusDot pulse tone="bad" />
-          <StatusDot pulse tone="run" />
-          <StatusDot tone="home" />
-          <StatusDot tone="work" />
-          <StatusDot tone="faint" />
+          <StatusDot tone="ok" />
+          <StatusDot tone="run" />
+          <StatusDot tone="wait" />
+          <StatusDot tone="bad" />
+          <StatusDot tone="idle" />
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography mono type="subtitle" variant="tertiary">
-          sizes
-        </Typography>
+        <Typography type="label">live (pulse + glow)</Typography>
+        <div className="flex items-center gap-5">
+          <StatusDot pulse tone="run" />
+          <StatusDot pulse tone="wait" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">sizes</Typography>
         <div className="flex items-center gap-5">
           <StatusDot size="75" tone="ok" />
           <StatusDot size="100" tone="ok" />

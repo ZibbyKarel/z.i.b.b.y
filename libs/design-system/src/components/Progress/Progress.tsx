@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 import { type Spacing, spacingToPx } from "../../tokens";
 import { cn } from "../../utils/cn";
 
-export type ProgressTone = "accent" | "ok" | "warn" | "bad";
+export type ProgressTone = "accent" | "ok" | "warn" | "bad" | "run";
 
 export enum ProgressTestId {
   Root = "progress-root",
@@ -14,13 +14,7 @@ const toneBar: Record<ProgressTone, string> = {
   ok: "bg-ok",
   warn: "bg-warn",
   bad: "bg-bad",
-};
-
-const toneGlow: Record<ProgressTone, string> = {
-  accent: "shadow-[0_0_10px_var(--color-accent-glow)]",
-  ok: "shadow-[0_0_10px_rgba(57,217,138,0.53)]",
-  warn: "shadow-[0_0_10px_rgba(240,180,41,0.53)]",
-  bad: "shadow-[0_0_10px_rgba(255,107,107,0.53)]",
+  run: "bg-run",
 };
 
 export interface ProgressProps extends Omit<
@@ -32,22 +26,24 @@ export interface ProgressProps extends Omit<
   tone?: ProgressTone;
   /** Track height as a spacing token. */
   height?: Spacing;
+  /** @deprecated Bars are matte — glow is reserved for live states. Ignored. */
   glow?: boolean;
   /** Accessible label; renders an ARIA progressbar when provided. */
   label?: string;
   ref?: React.Ref<HTMLDivElement>;
 }
 
-/** A thin progress bar — the dashboard's quota/usage readout. */
+/** A thin matte progress bar — the dashboard's quota/usage readout. */
 export function Progress({
   value,
   tone = "accent",
-  height = "75",
-  glow = false,
+  height = "50",
+  glow,
   label,
   ref,
   ...props
 }: ProgressProps) {
+  void glow; // deprecated and ignored — bars are matte, glow belongs to live states
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div
@@ -55,7 +51,7 @@ export function Progress({
       aria-valuemax={label ? 100 : undefined}
       aria-valuemin={label ? 0 : undefined}
       aria-valuenow={label ? pct : undefined}
-      className="relative overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]"
+      className="relative overflow-hidden rounded-full bg-[rgba(255,255,255,0.07)]"
       data-testid={ProgressTestId.Root}
       ref={ref}
       role={label ? "progressbar" : undefined}
@@ -66,7 +62,6 @@ export function Progress({
         className={cn(
           "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300",
           toneBar[tone],
-          glow && toneGlow[tone],
         )}
         data-testid={ProgressTestId.Fill}
         style={{ width: `${pct}%` }}

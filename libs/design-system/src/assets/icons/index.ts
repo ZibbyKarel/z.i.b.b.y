@@ -44,6 +44,7 @@ import { arrow } from "./arrow";
 import { butlerSign } from "./butlerSign";
 import { pin } from "./pin"
 import { mic } from "./mic";
+import { trash } from "./trash";
 
 /** Every glyph available in the dashboard icon set. */
 export const iconNames = [
@@ -91,6 +92,7 @@ export const iconNames = [
   "butlerSign",
   "pin",
   "mic",
+  "trash",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -141,4 +143,5 @@ export const paths: Record<IconName, ReactNode> = {
   butlerSign,
   pin,
   mic,
+  trash,
 };

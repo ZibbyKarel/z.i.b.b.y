@@ -6,6 +6,7 @@ import type { Theme } from "../tokens";
 
 export const lightTheme: Theme = {
   // backgrounds
+  colorBackgroundDeep:   "#eef1f6",
   colorBackground:       "#f5f7fa",
   colorSurface:          "#ffffff",
   colorElevated:         "#f0f3f7",
@@ -35,6 +36,13 @@ export const lightTheme: Theme = {
   colorOk:               "#1a9b5f",
   colorWarn:             "#c9890a",
   colorDanger:           "#e03030",
+  colorRun:              "#3b6fd4",
+
+  // risk categories
+  colorRiskPayment:      "#c9890a",
+  colorRiskDeletion:     "#e03030",
+  colorRiskPush:         "#7c3fb0",
+  colorRiskSend:         "#1d8fa5",
 
   // model badges
   colorModelOpus:        "#7c3fb0",
@@ -47,10 +55,10 @@ export const lightTheme: Theme = {
   colorThinkLow:         "#6b7c8d",
 
   // radii
-  radiusDefault:         "3px",
-  radiusSm:              "2px",
-  radiusMd:              "4px",
-  radiusLg:              "8px",
+  radiusDefault:         "6px",
+  radiusSm:              "6px",
+  radiusMd:              "6px",
+  radiusLg:              "10px",
   radiusFull:            "9999px",
 
   // shadows

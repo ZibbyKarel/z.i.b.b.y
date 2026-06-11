@@ -6,7 +6,11 @@ export type TypographyType =
   | "title"
   | "subtitle"
   | "text"
-  | "note";
+  | "note"
+  | "num"
+  | "data"
+  | "label"
+  | "micro";
 
 export type TypographyVariant = "primary" | "secondary" | "tertiary";
 
@@ -52,14 +56,26 @@ interface TypePreset {
   size: TypographySize;
   weight: TypographyWeight;
   leading: number;
+  mono?: boolean;
+  uppercase?: boolean;
+  tracking?: TypographyTracking;
+  variant?: TypographyVariant;
 }
 
+/**
+ * The 8-step scale: display 30 · title 21 · body 14 · bodySm 13 ·
+ * num 26 · data 12 · label 11 · micro 11 — mono = data, sans = prose.
+ */
 const typePreset: Record<TypographyType, TypePreset> = {
-  pageTitle: { tag: "h1", size: "5xl", weight: "bold", leading: 1.2 },
-  title: { tag: "h2", size: "3xl", weight: "semibold", leading: 1.25 },
+  pageTitle: { tag: "h1", size: "5xl", weight: "semibold", leading: 1.2, tracking: "tighter" },
+  title: { tag: "h2", size: "3xl", weight: "semibold", leading: 1.25, tracking: "tighter" },
   subtitle: { tag: "h3", size: "2xl", weight: "medium", leading: 1.3 },
-  text: { tag: "div", size: "lg", weight: "normal", leading: 1.4 },
-  note: { tag: "div", size: "base", weight: "normal", leading: 1.5 },
+  text: { tag: "div", size: "lg", weight: "normal", leading: 1.6 },
+  note: { tag: "div", size: "caption", weight: "normal", leading: 1.5 },
+  num: { tag: "span", size: "4xl", weight: "semibold", leading: 1, mono: true },
+  data: { tag: "span", size: "sm", weight: "normal", leading: 1.6, mono: true, variant: "secondary" },
+  label: { tag: "span", size: "xs", weight: "medium", leading: 1.2, mono: true, uppercase: true, tracking: "wider", variant: "tertiary" },
+  micro: { tag: "span", size: "xs", weight: "normal", leading: 1.5, mono: true, variant: "tertiary" },
 };
 
 const variantClass: Record<TypographyVariant, string> = {
@@ -117,7 +133,7 @@ export interface TypographyProps extends Omit<
 
 export function Typography({
   type,
-  variant = "primary",
+  variant,
   tone,
   mono,
   size,
@@ -135,11 +151,14 @@ export function Typography({
 }: TypographyProps) {
   const preset = typePreset[type];
   const Element = as ?? preset.tag;
+  const resolvedTracking = tracking ?? preset.tracking;
 
   const computedStyle: CSSProperties = {
     fontSize: `var(--text-${size ?? preset.size})`,
     lineHeight: leading ? leadingValue[leading] : preset.leading,
-    ...(tracking ? { letterSpacing: `var(--tracking-${tracking})` } : {}),
+    ...(resolvedTracking
+      ? { letterSpacing: `var(--tracking-${resolvedTracking})` }
+      : {}),
     ...(align ? { textAlign: align } : {}),
     ...style,
   };
@@ -148,9 +167,9 @@ export function Typography({
     <Element
       className={cn(
         weightClass[weight ?? preset.weight],
-        tone ? toneClass[tone] : variantClass[variant],
-        mono && "font-mono",
-        uppercase && "uppercase",
+        tone ? toneClass[tone] : variantClass[variant ?? preset.variant ?? "primary"],
+        (mono ?? preset.mono) && "font-mono",
+        (uppercase ?? preset.uppercase) && "uppercase",
         truncate && "truncate",
         nowrap && "whitespace-nowrap",
       )}

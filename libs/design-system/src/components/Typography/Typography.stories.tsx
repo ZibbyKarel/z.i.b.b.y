@@ -12,7 +12,17 @@ const meta: Meta<typeof Typography> = {
   argTypes: {
     type: {
       control: "select",
-      options: ["pageTitle", "title", "subtitle", "text", "note"],
+      options: [
+        "pageTitle",
+        "title",
+        "subtitle",
+        "text",
+        "note",
+        "num",
+        "data",
+        "label",
+        "micro",
+      ],
     },
     variant: {
       control: "select",
@@ -35,6 +45,10 @@ const types: TypographyType[] = [
   "subtitle",
   "text",
   "note",
+  "num",
+  "data",
+  "label",
+  "micro",
 ];
 const variants: TypographyVariant[] = ["primary", "secondary", "tertiary"];
 

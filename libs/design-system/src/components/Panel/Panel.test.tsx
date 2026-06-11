@@ -28,4 +28,12 @@ describe("Panel", () => {
     render(<Panel data-testid="custom-panel">x</Panel>);
     expect(screen.getByTestId("custom-panel")).toBeInTheDocument();
   });
+
+  it("stays matte by default and elevates with hi", () => {
+    const { rerender } = render(<Panel>x</Panel>);
+    expect(screen.getByTestId(PanelTestId.Root).className).toContain("bg-surface");
+
+    rerender(<Panel hi>x</Panel>);
+    expect(screen.getByTestId(PanelTestId.Root).className).toContain("bg-elevated");
+  });
 });

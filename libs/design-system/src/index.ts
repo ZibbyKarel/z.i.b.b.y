@@ -148,7 +148,17 @@ export type {
 } from "./components/Accordion/Accordion";
 
 export { Button } from "./components/Button/Button";
-export type { ButtonProps } from "./components/Button/Button";
+export type {
+  ButtonIntent,
+  ButtonProps,
+  ButtonSize,
+} from "./components/Button/Button";
+
+export { HoldButton } from "./components/HoldButton/HoldButton";
+export type {
+  HoldButtonProps,
+  HoldButtonTone,
+} from "./components/HoldButton/HoldButton";
 
 export { getUsageTone, Progress } from "./components/Progress/Progress";
 export type {
@@ -158,6 +168,19 @@ export type {
 
 export { StatusDot } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
+
+export { StatusChip } from "./components/StatusChip/StatusChip";
+export type {
+  StatusChipProps,
+  StatusChipState,
+} from "./components/StatusChip/StatusChip";
+
+export { RiskTag } from "./components/RiskTag/RiskTag";
+export type {
+  RiskKind,
+  RiskTagProps,
+  RiskTagSize,
+} from "./components/RiskTag/RiskTag";
 
 export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";
 export type { ToggleProps, ToggleSize } from "./components/Toggle/Toggle";

@@ -6,7 +6,7 @@ const meta: Meta<typeof Progress> = {
   title: "DesignSystem/Progress",
   component: Progress,
   parameters: { backgrounds: { default: "velin" } },
-  args: { value: 64, tone: "warn", glow: true, height: "75" },
+  args: { value: 64, tone: "warn", height: "50" },
   decorators: [
     (Story) => (
       <div className="w-64">
@@ -23,20 +23,17 @@ export const Overview: Story = {
   render: () => (
     <div className="flex w-64 flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography mono type="subtitle" variant="tertiary">
-          tones
-        </Typography>
+        <Typography type="label">tones (matte — bars never glow)</Typography>
         <div className="flex flex-col gap-3">
-          <Progress glow tone="ok" value={38} />
-          <Progress glow tone="warn" value={64} />
-          <Progress glow tone="bad" value={92} />
-          <Progress glow tone="accent" value={36} />
+          <Progress tone="ok" value={38} />
+          <Progress tone="warn" value={64} />
+          <Progress tone="bad" value={92} />
+          <Progress tone="run" value={48} />
+          <Progress tone="accent" value={36} />
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography mono type="subtitle" variant="tertiary">
-          heights
-        </Typography>
+        <Typography type="label">heights</Typography>
         <div className="flex flex-col gap-3">
           <Progress height="50" tone="ok" value={60} />
           <Progress height="75" tone="ok" value={60} />

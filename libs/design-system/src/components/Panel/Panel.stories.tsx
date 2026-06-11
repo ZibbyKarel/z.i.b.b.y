@@ -52,6 +52,27 @@ export const Overview: Story = {
           <Typography type="text">A header-less framed panel.</Typography>
         </Container>
       </Panel>
+
+      <Panel
+        live
+        header={<Label>running build</Label>}
+        padding="200"
+      >
+        <Typography type="data">live panel — corner brackets in the run color</Typography>
+      </Panel>
+
+      <Panel
+        live
+        header={<Label>awaiting approval</Label>}
+        liveTone="warn"
+        padding="200"
+      >
+        <Typography type="data">live panel — awaiting tone</Typography>
+      </Panel>
+
+      <Panel hi header={<Label>elevated</Label>} padding="200">
+        <Typography type="data">hi panel — one step above surface</Typography>
+      </Panel>
     </div>
   ),
 };

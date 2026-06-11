@@ -16,13 +16,14 @@ export enum CardTestId {
   Footer = "card-footer",
 }
 
-export type CornersTone = "accent" | "bad" | "ok" | "warn";
+export type CornersTone = "accent" | "bad" | "ok" | "warn" | "run";
 
 const cornersToneClass: Record<CornersTone, string> = {
   accent: "border-accent",
   bad: "border-bad",
   ok: "border-ok",
   warn: "border-warn",
+  run: "border-run",
 };
 
 export interface CornersProps {
@@ -30,10 +31,11 @@ export interface CornersProps {
   tone?: CornersTone;
 }
 
+/** HUD bracket marks — the signature of a live panel; never decorative. */
 export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
   const px = spacingToPx(inset);
   const base = cn(
-    "pointer-events-none absolute h-3 w-3 opacity-60",
+    "pointer-events-none absolute h-2.5 w-2.5 opacity-55",
     cornersToneClass[tone],
   );
   return (
@@ -66,7 +68,7 @@ export interface CardProps extends Omit<
   bordered?: boolean;
   borderStyle?: "solid" | "dashed";
   interactive?: boolean;
-  radius?: "none" | "sm" | "default";
+  radius?: "none" | "sm" | "default" | "lg";
   shadow?: "none" | "card" | "dropdown" | "modal";
   animate?: "none" | "fade" | "scale";
   corners?: boolean;
@@ -94,6 +96,7 @@ const radiusClasses: Record<NonNullable<CardProps["radius"]>, string> = {
   none: "rounded-none",
   sm: "rounded-sm",
   default: "rounded",
+  lg: "rounded-lg",
 };
 
 const shadowClasses: Record<NonNullable<CardProps["shadow"]>, string> = {
@@ -124,11 +127,11 @@ const toneGlow: Record<NonNullable<CardProps["tone"]>, string> = {
 };
 
 export function Card({
-  background = "elevated",
+  background = "surface",
   bordered = true,
   borderStyle = "solid",
   interactive = false,
-  radius = "default",
+  radius = "lg",
   shadow = "none",
   animate = "none",
   corners = false,
@@ -158,7 +161,7 @@ export function Card({
         borderStyle === "dashed" && "border-dashed",
         Tag === "button" && cn("w-full text-left cursor-pointer", focusRing),
         interactive &&
-          "transition-colors hover:border-accent/40 hover:bg-raised",
+          "transition-all duration-150 hover:border-accent/35 hover:bg-elevated hover:shadow-card",
         selected && "border-accent bg-raised shadow-[0_0_0_1px_var(--color-accent-dim)]",
       )}
       ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}

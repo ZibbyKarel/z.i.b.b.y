@@ -8,13 +8,15 @@ describe("StatusDot", () => {
     expect(screen.getByTestId(StatusDotTestId.Root).style.width).toBe("12px")
   })
 
-  it("adds a pulse ring when pulse is set", () => {
-    render(<StatusDot pulse tone="ok" />)
-    expect(screen.queryByTestId(StatusDotTestId.Pulse)).not.toBeNull()
+  it("pulses and glows when live", () => {
+    render(<StatusDot pulse tone="run" />)
+    expect(screen.getByTestId(StatusDotTestId.Dot).className).toContain("animate-live")
   })
 
-  it("omits the pulse ring by default", () => {
-    render(<StatusDot tone="faint" />)
-    expect(screen.queryByTestId(StatusDotTestId.Pulse)).toBeNull()
+  it("stays matte by default — no pulse, no glow", () => {
+    render(<StatusDot tone="ok" />)
+    const dot = screen.getByTestId(StatusDotTestId.Dot)
+    expect(dot.className).not.toContain("animate-live")
+    expect(dot.className).not.toContain("shadow")
   })
 })

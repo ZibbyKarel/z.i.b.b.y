@@ -9,11 +9,12 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     intent: {
       control: "select",
-      options: ["run", "solid", "ghost", "outline", "approve", "reject"],
+      options: ["primary", "ghost", "danger"],
     },
-    size: { control: "select", options: ["xs", "sm", "md", "lg"] },
+    tone: { control: "select", options: ["accent", "ok", "warn", "bad"] },
+    size: { control: "select", options: ["sm", "md"] },
   },
-  args: { children: "Spustit", intent: "run", size: "md" },
+  args: { children: "Spustit", intent: "primary", size: "md" },
 };
 export default meta;
 
@@ -23,46 +24,42 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Typography mono type="subtitle" variant="tertiary">
-          intents
-        </Typography>
+        <Typography type="label">variants</Typography>
         <div className="flex flex-wrap gap-3">
-          <Button icon="play" intent="run">
-            Spustit
-          </Button>
-          <Button icon="play" intent="solid">
+          <Button icon="play" intent="primary">
             Spustit
           </Button>
           <Button icon="edit" intent="ghost">
             Edit raw
           </Button>
-          <Button icon="mic" intent="outline" size="xs">
-            Voice
-          </Button>
-          <Button icon="check" intent="approve">
-            Schválit
-          </Button>
-          <Button icon="x" intent="reject">
+          <Button icon="x" intent="danger">
             Zamítnout
+          </Button>
+          <Button icon="check" intent="primary" tone="ok">
+            Schválit
           </Button>
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography mono type="subtitle" variant="tertiary">
-          sizes
-        </Typography>
+        <Typography type="label">sizes</Typography>
         <div className="flex flex-wrap items-center gap-3">
-          <Button icon="play" intent="run" size="xs">
-            xs
-          </Button>
-          <Button icon="play" intent="run" size="sm">
+          <Button icon="play" size="sm">
             sm
           </Button>
-          <Button icon="play" intent="run" size="md">
+          <Button icon="play" size="md">
             md
           </Button>
-          <Button icon="play" intent="run" size="lg">
-            lg
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">states</Typography>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button disabled icon="play">
+            Disabled
+          </Button>
+          <Button loading>Spouštím…</Button>
+          <Button loading intent="ghost">
+            Načítám…
           </Button>
         </div>
       </div>
