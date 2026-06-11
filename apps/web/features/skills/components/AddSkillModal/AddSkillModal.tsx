@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Container,
   Dialog,
   DropZoneField,
   Grid,
@@ -17,6 +16,7 @@ import {
   Tabs,
   Typography,
 } from "@zibby/design-system";
+import { DialogTitle } from "../../../../components/DialogTitle/DialogTitle";
 import {
   FormMarkdownEditor,
   FormSelect,
@@ -88,20 +88,6 @@ export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSki
     setContentTab("editor");
   };
 
-  const title = (
-    <Stack align="center" direction="row" gap="150">
-      <IconTile glyph={glyph} size="md" />
-      <Container grow minW0>
-        <Typography mono size="xl" type="note" weight="bold">
-          {t("title")}
-        </Typography>
-        <Typography mono size="xs" type="note" variant="tertiary">
-          {t("subtitle")}
-        </Typography>
-      </Container>
-    </Stack>
-  );
-
   return renderForm(
     <Dialog
       open
@@ -118,7 +104,7 @@ export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSki
       ariaLabel={t("title")}
       closeLabel={tk("common.close")}
       onClose={onClose}
-      title={title}
+      title={<DialogTitle glyph={glyph} subtitle={t("subtitle")} title={t("title")} />}
       width="2xl"
     >
       <Grid align="start" cols={1} gap="300" md={2}>

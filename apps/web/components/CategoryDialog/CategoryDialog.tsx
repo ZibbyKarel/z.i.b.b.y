@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Container,
   Dialog,
   type IconName,
   IconTile,
@@ -12,6 +11,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { AGENT_GLYPHS } from "../../state/config";
+import { DialogTitle } from "../DialogTitle/DialogTitle";
 import { FormTextInput, useFormControls, zodResolver } from "@zibby/forms";
 import { z } from "zod";
 
@@ -67,20 +67,6 @@ export function CategoryDialog({
   const duplicate = rawName.length > 0 && existing.includes(rawName);
   const canSubmit = form.formState.isValid && !duplicate && !pending;
 
-  const title = (
-    <Stack align="center" direction="row" gap="150">
-      <IconTile glyph={glyph} size="md" />
-      <Container grow minW0>
-        <Typography mono size="xl" type="note" weight="bold">
-          {labels.title}
-        </Typography>
-        <Typography mono size="xs" type="note" variant="tertiary">
-          {labels.subtitle}
-        </Typography>
-      </Container>
-    </Stack>
-  );
-
   return renderForm(
     <Dialog
       open
@@ -97,7 +83,7 @@ export function CategoryDialog({
       ariaLabel={labels.title}
       closeLabel={tk("common.close")}
       onClose={onClose}
-      title={title}
+      title={<DialogTitle glyph={glyph} subtitle={labels.subtitle} title={labels.title} />}
       width="sm"
     >
       <Stack gap="200">

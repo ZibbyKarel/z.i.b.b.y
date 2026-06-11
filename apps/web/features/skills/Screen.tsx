@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Container,
+  Grid,
   Icon,
   type IconName,
   Stack,
@@ -14,7 +15,6 @@ import {
 import type { Skill } from "../../domain";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { CardGrid } from "../../components/CardGrid/CardGrid";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
@@ -83,11 +83,11 @@ export function Screen() {
             </Container>
           </Card>
         ) : (
-          <CardGrid>
+          <Grid cols={1} gap="150" lg={3} sm={2}>
             {items.map((s) => (
               <SkillTile key={s.id} skill={s} />
             ))}
-          </CardGrid>
+          </Grid>
         )}
       </Container>
     );

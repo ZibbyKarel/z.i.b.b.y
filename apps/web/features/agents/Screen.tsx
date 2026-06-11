@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Container,
+  Grid,
   Icon,
   type IconName,
   Stack,
@@ -13,12 +14,11 @@ import {
 } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { CardGrid } from "../../components/CardGrid/CardGrid";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
-import { CategoryDialog } from "./components/CategoryDialog";
 import { RunModal } from "../skills/components/RunModal/RunModal";
 import { slug } from "../../utils/slug";
 import { newAgentDraft } from "./agentDraft";
@@ -112,7 +112,7 @@ export function Screen() {
             </Container>
           </Card>
         ) : (
-          <CardGrid>
+          <Grid cols={1} gap="150" lg={3} sm={2}>
             {items.map((a) => (
               <AgentCard
                 agent={a}
@@ -122,7 +122,7 @@ export function Screen() {
                 pipelineCount={pipelineCount(a)}
               />
             ))}
-          </CardGrid>
+          </Grid>
         )}
       </Container>
     );
@@ -211,6 +211,15 @@ export function Screen() {
       {addingCategory && (
         <CategoryDialog
           existing={categories.map((c) => c.name)}
+          labels={{
+            title: ta("categoryDialog.title"),
+            subtitle: ta("categoryDialog.subtitle"),
+            nameLabel: ta("categoryDialog.nameLabel"),
+            namePlaceholder: ta("categoryDialog.namePlaceholder"),
+            glyphLabel: ta("categoryDialog.glyphLabel"),
+            submit: ta("addCategory"),
+            duplicate: (name) => ta("categoryDialog.duplicate", { name }),
+          }}
           onClose={() => setAddingCategory(false)}
           onSubmit={(category) =>
             createCategory.mutate({ body: category }, { onSuccess: () => setAddingCategory(false) })
