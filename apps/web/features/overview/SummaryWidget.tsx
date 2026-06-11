@@ -8,7 +8,6 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system";
-import { MessageKey } from "apps/web/i18n/keys";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useCatalog } from "../../state/store";
@@ -16,6 +15,7 @@ import { useAgentsQuery } from "../agents/queries";
 import { useHealthQuery } from "../health/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useSkillsQuery } from "../skills/queries";
+import { deriveHealthPresentation } from "./healthPresentation";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -26,22 +26,18 @@ export function SummaryWidget() {
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
 
-  const { isFetching, isFetched, isSuccess } = useHealthQuery();
-  const isConnecting = isFetching && !isFetched;
-  const isOnline = isSuccess;
-
-  const healthTone = isConnecting ? "warn" : isOnline ? "ok" : "bad";
-  // Dot = state: connecting maps to the amber waiting state; pulse only while live.
-  const healthDotTone = isConnecting ? "wait" : isOnline ? "ok" : "bad";
-  const healthLabel: MessageKey = isConnecting
-    ? "overview.systemConnecting"
-    : isOnline
-      ? "overview.systemNominal"
-      : "overview.systemOffline";
-
-  const healthDetail: MessageKey = isOnline
-    ? "overview.daemonReady"
-    : "overview.apiUnreachable";
+  const { data: health, isFetching, isFetched, isSuccess } = useHealthQuery();
+  const {
+    tone: healthTone,
+    dotTone: healthDotTone,
+    pulse: healthPulse,
+    label: healthLabel,
+    detail: healthDetail,
+  } = deriveHealthPresentation({
+    isConnecting: isFetching && !isFetched,
+    isOnline: isSuccess,
+    isDegraded: health?.status === "degraded",
+  });
 
   const ctxSkills = skills.length;
   const ctxPipelines = pipelines.length;
@@ -58,7 +54,7 @@ export function SummaryWidget() {
           <Container minW0>
             <Stack gap="150">
               <Stack wrap align="center" direction="row" gap="100">
-                <StatusDot pulse={isConnecting} tone={healthDotTone} />
+                <StatusDot pulse={healthPulse} tone={healthDotTone} />
                 <Typography
                   mono
                   uppercase

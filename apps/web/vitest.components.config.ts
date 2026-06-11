@@ -25,6 +25,8 @@ export default defineConfig({
     include: [
       "components/**/*.test.{ts,tsx}",
       "features/**/components/**/*.test.{ts,tsx}",
+      // Feature-root unit tests (pure view-model/presentation helpers).
+      "features/*/*.test.{ts,tsx}",
     ],
   },
 })

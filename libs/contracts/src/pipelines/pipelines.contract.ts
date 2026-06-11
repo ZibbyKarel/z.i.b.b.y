@@ -64,7 +64,8 @@ export const pipelineRunsContract = c.router(
       path: "/pipelines/:id/run",
       pathParams: PipelineIdParam,
       body: StartPipelineRunSchema,
-      responses: { 201: PipelineRunSchema, 404: ErrorSchema },
+      // 503: the Claude CLI preflight refused the start (claude mode only).
+      responses: { 201: PipelineRunSchema, 404: ErrorSchema, 503: ErrorSchema },
       summary: "Start a run of a pipeline",
     },
     listPipelineRuns: {

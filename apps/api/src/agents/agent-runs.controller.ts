@@ -1,6 +1,7 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { agentRunsContract } from "@zibby/contracts"
+import { ClaudeUnavailableError } from "../runner/claude-preflight.service"
 import { AgentNotFoundError, InvalidAgentIdError } from "./agents.errors"
 import { AgentRunnerService, RunNotFoundError } from "./agent-runner.service"
 
@@ -29,6 +30,9 @@ export class AgentRunsController {
         } catch (error) {
           if (isMissing(error)) {
             return { status: 404, body: { message: `Agent "${id}" not found` } }
+          }
+          if (error instanceof ClaudeUnavailableError) {
+            return { status: 503, body: { message: error.message } }
           }
           throw error
         }

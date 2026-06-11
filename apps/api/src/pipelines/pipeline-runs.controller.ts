@@ -1,6 +1,7 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { pipelineRunsContract } from "@zibby/contracts"
+import { ClaudeUnavailableError } from "../runner/claude-preflight.service"
 import { InvalidPipelineIdError, PipelineNotFoundError } from "./pipelines.errors"
 import {
   PipelineRunNotFoundError,
@@ -26,6 +27,9 @@ export class PipelineRunsController {
         } catch (error) {
           if (isMissingPipeline(error)) {
             return { status: 404, body: { message: `Pipeline "${id}" not found` } }
+          }
+          if (error instanceof ClaudeUnavailableError) {
+            return { status: 503, body: { message: error.message } }
           }
           throw error
         }

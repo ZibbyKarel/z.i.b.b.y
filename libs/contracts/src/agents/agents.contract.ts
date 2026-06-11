@@ -112,6 +112,8 @@ export const agentRunsContract = c.router(
       responses: {
         201: AgentRunSchema,
         404: ErrorSchema,
+        // Claude CLI preflight refused the start (missing/broken CLI).
+        503: ErrorSchema,
       },
       summary: "Start a run of an agent",
     },

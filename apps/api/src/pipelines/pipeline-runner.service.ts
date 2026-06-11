@@ -12,6 +12,7 @@ import {
   type StageRun,
 } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
+import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
@@ -69,6 +70,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly pipelines: PipelinesStorageService,
     private readonly agents: AgentsStorageService,
     private readonly claude: ClaudeRunCommandService,
+    private readonly preflight: ClaudePreflightService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -102,6 +104,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   async start(pipelineId: string): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId)
+
+    // Claude-mode stages spawn real `claude -p` sessions — refuse the whole run
+    // up front when the CLI can't start one (→ 503). Demo pipelines keep working.
+    if (process.env.AGENT_RUNNER_MODE === "claude") {
+      await this.preflight.assertAvailable()
+    }
 
     const startedMs = Date.now()
     const pipelineRunId = `${pipelineId}_${startedMs}`

@@ -10,26 +10,42 @@ describe("healthContract", () => {
 })
 
 describe("health schema", () => {
-  it("accepts a well-formed health payload", () => {
+  it("accepts a well-formed ok payload with the claude preflight verdict", () => {
     const parsed = HealthSchema.safeParse({
       status: "ok",
       uptime: 12.3,
       timestamp: new Date().toISOString(),
+      claude: { ok: true, version: "1.2.3 (Claude Code)" },
     })
     expect(parsed.success).toBe(true)
   })
 
-  it("rejects a non-ok status, a negative uptime, or a non-ISO timestamp", () => {
+  it("accepts a degraded payload carrying the failure reason", () => {
+    const parsed = HealthSchema.safeParse({
+      status: "degraded",
+      uptime: 12.3,
+      timestamp: new Date().toISOString(),
+      claude: { ok: false, reason: "missing" },
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it("rejects an unknown status, a negative uptime, a non-ISO timestamp, or a missing claude", () => {
+    const claude = { ok: true }
     expect(
-      HealthSchema.safeParse({ status: "down", uptime: 1, timestamp: new Date().toISOString() })
+      HealthSchema.safeParse({ status: "down", uptime: 1, timestamp: new Date().toISOString(), claude })
         .success,
     ).toBe(false)
     expect(
-      HealthSchema.safeParse({ status: "ok", uptime: -1, timestamp: new Date().toISOString() })
+      HealthSchema.safeParse({ status: "ok", uptime: -1, timestamp: new Date().toISOString(), claude })
         .success,
     ).toBe(false)
     expect(
-      HealthSchema.safeParse({ status: "ok", uptime: 1, timestamp: "not-a-date" }).success,
+      HealthSchema.safeParse({ status: "ok", uptime: 1, timestamp: "not-a-date", claude }).success,
+    ).toBe(false)
+    expect(
+      HealthSchema.safeParse({ status: "ok", uptime: 1, timestamp: new Date().toISOString() })
+        .success,
     ).toBe(false)
   })
 })

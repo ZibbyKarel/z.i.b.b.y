@@ -21,6 +21,13 @@ import path from "node:path"
 const cwd = process.cwd()
 const argv = process.argv.slice(2)
 
+// Preflight seam: `claude --version` must answer before the main flow, or every
+// run-starting e2e would execute the full fake session just to pass preflight.
+if (argv.includes("--version")) {
+  process.stdout.write("9.9.9 (fake-claude)\n")
+  process.exit(0)
+}
+
 /** Collect every `--add-dir <dir>` value the runner passed. */
 function grantDirs() {
   const dirs = []

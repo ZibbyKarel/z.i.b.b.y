@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service"
 import { dataDir } from "../shared/data-dir"
 import { SKILLS_DIR, SkillsStorageService } from "../skills/skills.storage.service"
+import { ClaudePreflightService } from "./claude-preflight.service"
 import { ClaudeRunCommandService } from "./claude-run-command.service"
 
 /**
@@ -19,7 +20,8 @@ import { ClaudeRunCommandService } from "./claude-run-command.service"
     AgentsStorageService,
     SkillsStorageService,
     ClaudeRunCommandService,
+    ClaudePreflightService,
   ],
-  exports: [ClaudeRunCommandService],
+  exports: [ClaudeRunCommandService, ClaudePreflightService],
 })
 export class ClaudeRunModule {}

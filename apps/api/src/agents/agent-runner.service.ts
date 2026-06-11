@@ -8,6 +8,7 @@ import { AgentsStorageService } from "./agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
+import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { formatClaudeStreamLine } from "../runner/claude-stream-format"
 import { RunnerCore } from "../runner/runner-core"
@@ -52,6 +53,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
     private readonly claude: ClaudeRunCommandService,
+    private readonly preflight: ClaudePreflightService,
     private readonly limits: LimitsService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
@@ -133,6 +135,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     title: string,
   ): Promise<AgentRun> {
     const agentId = agent.id
+    // Agent runs are always claude-shaped — refuse up front when the CLI can't
+    // start a session, so no dead run record is ever created (→ 503 / failed task).
+    await this.preflight.assertAvailable()
     this.log.info("starting agent run", { agentId, project, files: files.length })
 
     const startedMs = Date.now()

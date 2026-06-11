@@ -39,7 +39,7 @@ builder is final).
 
 ---
 
-1.1 Claude preflight
+1.1 Claude preflight — ✅ HOTOVO
 
 New ClaudePreflightService — apps/api/src/runner/claude-preflight.service.ts,
 provided + exported by the runner module so Health/Agents/Pipelines can inject it. ↓
