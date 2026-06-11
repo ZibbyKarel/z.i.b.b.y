@@ -1,17 +1,16 @@
-import { useTranslations } from "next-intl";
+import type { AgentRun } from "@zibby/contracts";
+import type { DotTone } from "@zibby/design-system";
 import {
   Container,
   Divider,
   Icon,
   IconTile,
   Pressable,
-  Progress,
   Stack,
   StatusDot,
   Typography,
 } from "@zibby/design-system";
-import type { DotTone, ProgressTone } from "@zibby/design-system";
-import type { AgentRun } from "@zibby/contracts";
+import { useTranslations } from "next-intl";
 
 export interface AgentRowProps {
   run: AgentRun;
@@ -31,21 +30,18 @@ const statusDotTone: Record<AgentRun["status"], DotTone> = {
   "awaiting-approval": "wait",
 };
 
-const statusBarTone: Record<AgentRun["status"], ProgressTone> = {
-  running: "run",
-  done: "ok",
-  error: "bad",
-  interrupted: "warn",
-  "awaiting-approval": "warn",
-};
-
 /** Live states — the only ones that pulse. */
 const liveStatuses: ReadonlySet<AgentRun["status"]> = new Set([
   "running",
   "awaiting-approval",
 ]);
 
-export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps) {
+export function AgentRow({
+  run,
+  onOpen,
+  onStop,
+  divider = true,
+}: AgentRowProps) {
   const t = useTranslations("agents");
   const name = run.agentId;
 
@@ -64,19 +60,6 @@ export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps)
       <Typography truncate size="caption" type="note" variant="secondary">
         {run.prompt}
       </Typography>
-      <Stack align="center" direction="row" gap="100">
-        <Container grow minW0>
-          <Progress
-            height="50"
-            label={t("progressAria", { skill: name })}
-            tone={statusBarTone[run.status]}
-            value={run.pct}
-          />
-        </Container>
-        <Typography mono size="sm" tone="accent" type="note" weight="semibold">
-          {run.pct}%
-        </Typography>
-      </Stack>
     </Stack>
   );
 
@@ -84,11 +67,17 @@ export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps)
     <>
       <Container padding={["150", "0"]}>
         <Stack align="center" direction="row" gap="150">
-          <StatusDot pulse={liveStatuses.has(run.status)} tone={statusDotTone[run.status]} />
+          <StatusDot
+            pulse={liveStatuses.has(run.status)}
+            tone={statusDotTone[run.status]}
+          />
           <Container grow minW0>
             {onOpen ? (
               <Stack>
-                <Pressable aria-label={t("openAria", { name })} onClick={() => onOpen(run)}>
+                <Pressable
+                  aria-label={t("openAria", { name })}
+                  onClick={() => onOpen(run)}
+                >
                   <Container textAlign="left">{body}</Container>
                 </Pressable>
               </Stack>

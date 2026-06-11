@@ -1,4 +1,11 @@
-import { Card, Container, Icon, type IconName, Progress, Stack, Typography } from "@zibby/design-system";
+import {
+  Card,
+  Container,
+  Icon,
+  type IconName,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 
@@ -23,7 +30,6 @@ export function RunCard({
   onSelect,
 }: RunCardProps) {
   const live = run.status === "running" || run.status === "awaiting-approval";
-  const showBar = run.pct !== null && live;
   return (
     <Card
       as="button"
@@ -50,18 +56,12 @@ export function RunCard({
               {run.prompt}
             </Typography>
           )}
-          {showBar && (
-            <Stack align="center" direction="row" gap="100">
-              <Container grow>
-                <Progress tone={run.status === "awaiting-approval" ? "warn" : "accent"} value={run.pct ?? 0} />
-              </Container>
-              <Typography mono size="2xs" tone={run.status === "awaiting-approval" ? "warn" : "accent"} type="note" weight="semibold">
-                {run.pct}%
-              </Typography>
-            </Stack>
-          )}
           <Stack align="center" direction="row" gap="100" justify="between">
-            <RunStateBadge canonTitle={run.status} label={stateLabel} status={run.status} />
+            <RunStateBadge
+              canonTitle={run.status}
+              label={stateLabel}
+              status={run.status}
+            />
             <Typography mono size="2xs" type="note" variant="tertiary">
               {run.project ? `${run.project} · ` : ""}
               {startedLabel}

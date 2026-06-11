@@ -11,10 +11,15 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
+import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
 import { useCreateTaskMutation } from "../mutations";
-import { type SchedulePreset, extractPaths, resolveScheduledAt, whenLabel } from "../task";
+import {
+  type SchedulePreset,
+  extractPaths,
+  resolveScheduledAt,
+  whenLabel,
+} from "../task";
 import { ScheduleField } from "./ScheduleField";
 import { TaskComposer } from "./TaskComposer";
 
@@ -35,7 +40,7 @@ const CONFIRM_LINGER_MS = 1600;
 export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
   const router = useRouter();
-  const createTask = useCreateTaskMutation();
+  const { mutate: createTask, isPending } = useCreateTaskMutation();
   const { data: limits } = useLimitsQuery();
 
   const [title, setTitle] = useState("");
@@ -53,13 +58,13 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
     () => extractPaths(text).filter((p) => !removedPaths.has(p)),
     [text, removedPaths],
   );
-  const busy = createTask.isPending;
+  const busy = isPending;
   const canSubmit = text.trim().length > 2;
   const scheduledAt = resolveScheduledAt(preset, now, resetsAt);
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit || busy) return;
-    createTask.mutate(
+    createTask(
       {
         body: {
           title: title.trim() || undefined,
@@ -83,7 +88,19 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
         },
       },
     );
-  }, [canSubmit, busy, createTask, title, text, paths, preset, now, resetsAt, router, onClose]);
+  }, [
+    canSubmit,
+    busy,
+    createTask,
+    title,
+    text,
+    paths,
+    preset,
+    now,
+    resetsAt,
+    router,
+    onClose,
+  ]);
 
   const handleRemovePath = useCallback((path: string) => {
     setRemovedPaths((prev) => new Set(prev).add(path));
@@ -127,7 +144,8 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   }
 
   // A deferred choice runs later — relabel the submit so it reads "Schedule".
-  const submitLabel = scheduledAt !== null ? t("schedule.submit") : t("classifyRun");
+  const submitLabel =
+    scheduledAt !== null ? t("schedule.submit") : t("classifyRun");
 
   const actions = (
     <Stack grow align="center" direction="row" gap="100" justify="end">
@@ -172,7 +190,12 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
           value={text}
         />
 
-        <ScheduleField now={now} onChange={setPreset} resetsAt={resetsAt} value={preset} />
+        <ScheduleField
+          now={now}
+          onChange={setPreset}
+          resetsAt={resetsAt}
+          value={preset}
+        />
       </Stack>
     </Dialog>
   );
