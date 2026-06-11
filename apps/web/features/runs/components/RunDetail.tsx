@@ -15,7 +15,7 @@ import { relativeTime } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
-import { type RunView, runTitle } from "../run";
+import { type RunView, approvalForRun, runTitle } from "../run";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunLogStream } from "./RunLogStream";
@@ -55,10 +55,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
   const tApprovals = useTranslations("approvals");
   const router = useRouter();
   const { data: queue = [] } = useApprovalsQuery();
-  const approval =
-    run.status === "awaiting-approval"
-      ? queue.find((a) => a.runId === run.runId)
-      : undefined;
+  const approval = approvalForRun(queue, run);
 
   const tone: "accent" | "ok" | "warn" | "bad" | undefined =
     run.status === "running"

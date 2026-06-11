@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import {
+  type IntendedAction,
   type Pipeline,
   type PipelinePhase,
   type PipelineRun,
@@ -12,6 +13,8 @@ import {
   type StageRun,
 } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
+import { ApprovalsService } from "../approvals/approvals.service"
+import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
@@ -71,6 +74,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly agents: AgentsStorageService,
     private readonly claude: ClaudeRunCommandService,
     private readonly preflight: ClaudePreflightService,
+    private readonly approvals: ApprovalsService,
+    private readonly gates: GateEvaluatorService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -78,16 +83,45 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     this.log = logger.child(PipelineRunnerService.name)
     // One listener per open SSE connection; lift the default cap of 10.
     this.events.setMaxListeners(0)
+    // Variant B for stages: a live claude stage announcing a destructive action
+    // (via the hook's intent-request.json) routes through the gate evaluator.
     this.core = new RunnerCore(
       this.dir,
       pipelineStageStrategy,
       undefined,
-      undefined,
+      (stageRunId, action) => this.onStageIntent(stageRunId, action),
       logger.child("RunnerCore:pipeline"),
     )
   }
 
   async onModuleInit(): Promise<void> {
+    // Approval decisions on a parked stage route back here: approve releases the
+    // blocked child (the same live process continues), reject aborts it — the
+    // stage lands `interrupted` and the driver takes its normal failure path.
+    this.approvals.register("pipeline-stage", {
+      resume: async (stageRunId) => {
+        try {
+          await this.core.resume(stageRunId)
+          await this.setAggregateStatus(stageRunId, "running")
+        } catch (error) {
+          // The run may have been deleted while its approval sat in the queue.
+          this.log.warn("pipeline-stage resume skipped (run not found)", {
+            stageRunId,
+            err: error instanceof Error ? error.message : String(error),
+          })
+        }
+      },
+      cancel: (stageRunId) => {
+        try {
+          this.core.cancel(stageRunId)
+        } catch (error) {
+          this.log.warn("pipeline-stage cancel skipped (run not found)", {
+            stageRunId,
+            err: error instanceof Error ? error.message : String(error),
+          })
+        }
+      },
+    })
     await this.core.init()
     await this.reconstruct()
   }
@@ -239,6 +273,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
       this.log.info("pipeline phase starting", { phase: phase.id, agent: phase.agent, attempt })
       const stageRun = await this.runStage(run, pipeline, phase, stageCwd, attempt)
+      // A rejected approval lands here with the aggregate still "parked" (the
+      // cancel path flips only the stage) — un-park before recording the outcome.
+      if (run.status === "parked") run.status = "running"
       run.stageRuns.push(stageRun)
       await this.writeAggregate(run)
 
@@ -315,13 +352,99 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     return { phaseId: phase.id, runId: rec.runId, attempt, status }
   }
 
-  /** Poll the core until the stage's child leaves the `running` state. */
-  private async waitForStage(runId: string): Promise<StageRun["status"]> {
+  /**
+   * Poll the core until the stage's child reaches a TERMINAL state. A stage held
+   * at `awaiting-approval` (a gated mid-run intent) still has its live child
+   * blocking on the decision file — returning there would misread the pause as
+   * stage completion, so the wait rides through it and the same phase continues
+   * after the approval releases the child.
+   */
+  private async waitForStage(runId: string): Promise<"done" | "error" | "interrupted"> {
     for (;;) {
       const status = this.core.get(runId).status
-      if (status !== "running") return status
+      if (status !== "running" && status !== "awaiting-approval") return status
       await new Promise((r) => setTimeout(r, 25))
     }
+  }
+
+  /**
+   * Variant B gate for pipeline stages. A live stage announced an external-effect
+   * action and is blocking on its decision file: evaluate it against the phase
+   * agent's rules (plus the locked floor) and steer the child. `ask` parks the
+   * whole pipeline run (the driver's await rides through the pause) and raises a
+   * `pipeline-stage` approval keyed by the STAGE run id. Failures fail safe to deny.
+   */
+  private onStageIntent(stageRunId: string, action: IntendedAction): Promise<void> {
+    const traceId = this.trace.getTraceId() ?? randomUUID()
+    return this.trace.run({ traceId, runId: stageRunId }, () =>
+      this.evaluateStageIntent(stageRunId, action),
+    )
+  }
+
+  private async evaluateStageIntent(stageRunId: string, action: IntendedAction): Promise<void> {
+    try {
+      const rec = this.core.get(stageRunId)
+      const run = this.runs.get(rec.pipelineRunId)
+      if (!run) throw new PipelineRunNotFoundError(rec.pipelineRunId)
+      const pipeline = await this.pipelines.get(run.pipelineId)
+      const phase = pipeline.phases.find((p) => p.id === rec.phaseId)
+      if (!phase) throw new Error(`Phase "${rec.phaseId}" not found in "${run.pipelineId}"`)
+      const agent = await this.agents.get(phase.agent)
+      const rules = await this.gates.rulesForAgent({
+        gates: agent.gates,
+        requires_approval: agent.requires_approval,
+      })
+      const evaluation = this.gates.evaluate(rules, action)
+      this.log.info("evaluating mid-run stage intent", {
+        pipelineRunId: run.pipelineRunId,
+        phaseId: rec.phaseId,
+        action: action.action,
+        decision: evaluation.decision,
+        ruleId: evaluation.ruleId,
+      })
+
+      if (evaluation.decision === "deny") {
+        await this.core.denyIntent(stageRunId)
+        return
+      }
+      if (evaluation.decision === "ask") {
+        // Hold the stage (its child keeps blocking) and park the aggregate — the
+        // web maps parked → awaiting-approval and refetches the approvals queue.
+        await this.core.holdForApproval(stageRunId)
+        run.status = "parked"
+        await this.writeAggregate(run)
+        await this.approvals.requestApproval({
+          runId: stageRunId,
+          kind: "pipeline-stage",
+          skill: agent.name ?? agent.id,
+          action: action.action,
+          detail: action.context ?? `Pipeline "${run.pipelineId}", fáze "${rec.phaseId}"`,
+          risk: agent.risk ?? "medium",
+        })
+        return
+      }
+      // allow / notify: let the action proceed immediately.
+      await this.core.allowIntent(stageRunId)
+    } catch (error) {
+      // Unknown phase/agent or evaluation failure → fail safe: refuse the action.
+      this.log.error("stage intent evaluation failed; failing safe to deny", {
+        stageRunId,
+        err: error instanceof Error ? error.message : String(error),
+      })
+      await this.core.denyIntent(stageRunId).catch(() => {})
+    }
+  }
+
+  /** Flip the aggregate that owns `stageRunId` to `status` and persist it. */
+  private async setAggregateStatus(
+    stageRunId: string,
+    status: PipelineRun["status"],
+  ): Promise<void> {
+    const rec = this.core.get(stageRunId)
+    const run = this.runs.get(rec.pipelineRunId)
+    if (!run) return
+    run.status = status
+    await this.writeAggregate(run)
   }
 
   /** Copy the handoff source (if any) into this stage's `consumes` path. */
@@ -444,7 +567,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const parsed = PipelineRunSchema.safeParse(data)
       if (!parsed.success) continue
       let run = parsed.data
-      if (run.status === "running") {
+      // A run left "running" lost its mid-flight child with the previous backend.
+      // A "parked" run is the same situation: its blocking child died with the
+      // API, so honest reconciliation is `failed` (visibility, not resumption).
+      if (run.status === "running" || run.status === "parked") {
         run = { ...run, status: "failed", currentStage: null }
         await this.writeAggregate(run)
       }

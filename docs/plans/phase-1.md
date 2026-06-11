@@ -76,7 +76,7 @@ Tests: unit (mocked spawn: missing/error/ok/timeout + cache TTL); e2e: health de
 (CLAUDE_BIN=/nonexistent) and ok (fake-claude) shapes + one 503 refusal on run start;
 web-components test for the degraded banner. ↓
 
-1.2 Pipeline stage gates + resume ↓
+1.2 Pipeline stage gates + resume — ✅ HOTOVO ↓
 
 All in apps/api/src/pipelines/pipeline-runner.service.ts (pattern donor: ↓
 agent-runner.service.ts:178–245); PipelinesModule imports GatesModule + ApprovalsModule.

@@ -1,5 +1,6 @@
 import {
   type AgentRun,
+  type Approval,
   ORCHESTRATOR_ID,
   type PipelineRun,
   type RunStatus,
@@ -41,6 +42,24 @@ export interface RunView {
 /** Task-first display name: explicit title, else the task text, else the target. */
 export function runTitle(run: RunView): string {
   return run.title || run.prompt || run.owner;
+}
+
+/**
+ * The pending approval that belongs to a run waiting on the gate. Agent runs
+ * match exactly; a pipeline run's approval is keyed by the STAGE run id
+ * (`${pipelineRunId}.${phaseId}_…`), so pipeline rows match on the prefix.
+ * Generic so the enriched `DashboardApproval` view flows through unchanged.
+ */
+export function approvalForRun<A extends Pick<Approval, "runId">>(
+  queue: readonly A[],
+  run: Pick<RunView, "runId" | "kind" | "status">,
+): A | undefined {
+  if (run.status !== "awaiting-approval") return undefined;
+  return queue.find(
+    (a) =>
+      a.runId === run.runId ||
+      (run.kind === "pipeline" && a.runId.startsWith(`${run.runId}.`)),
+  );
 }
 
 export function agentRunToView(r: AgentRun): RunView {

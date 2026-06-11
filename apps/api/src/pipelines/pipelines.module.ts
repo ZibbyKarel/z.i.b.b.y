@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
+import { ApprovalsModule } from "../approvals/approvals.module"
+import { GatesModule } from "../gates/gates.module"
 import { ClaudeRunModule } from "../runner/claude-run.module"
 import { dataDir } from "../shared/data-dir"
 import { PIPELINE_RUNS_DIR, PipelineRunnerService } from "./pipeline-runner.service"
@@ -19,8 +21,9 @@ export function resolvePipelineRunsDir(): string {
 
 @Module({
   // AgentsModule exports AgentsStorageService (a stage loads its phase's agent);
-  // ClaudeRunModule the `claude -p` command builder.
-  imports: [AgentsModule, ClaudeRunModule],
+  // ClaudeRunModule the `claude -p` command builder; Gates + Approvals back the
+  // mid-run stage gate (intent evaluation → parked aggregate → approval card).
+  imports: [AgentsModule, ClaudeRunModule, GatesModule, ApprovalsModule],
   // PipelineRunsController is declared before PipelinesController so its static
   // routes (`/pipelines/runs`, `/pipelines/runs/:id`) register ahead of
   // `/pipelines/:id`, which would otherwise capture "runs" as a pipeline id.

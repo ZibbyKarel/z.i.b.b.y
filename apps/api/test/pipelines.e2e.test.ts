@@ -1,11 +1,15 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { fileURLToPath } from "node:url"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+
+/** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 async function until<T>(fn: () => Promise<T>, timeoutMs = 10000): Promise<T> {
@@ -161,6 +165,180 @@ describe("Pipelines API (e2e)", () => {
         pipelineId: "release",
         status: "running",
         currentStage: "a",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    )
+
+    const app2 = await boot()
+    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
+    expect(res.body.status).toBe("failed")
+    expect(res.body.currentStage).toBeNull()
+    await app2.close()
+  })
+})
+
+describe("Pipeline stage gates (claude mode, e2e)", () => {
+  let app: INestApplication
+  let dirs: string[]
+
+  /** An INTENT the gated agent's `ask` rule matches. */
+  const DELETE_INTENT = JSON.stringify({ action: "delete" })
+
+  async function boot(): Promise<INestApplication> {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
+    const fresh = moduleRef.createNestApplication()
+    await fresh.init()
+    return fresh
+  }
+
+  beforeAll(async () => {
+    const make = (label: string) => fs.mkdtemp(path.join(os.tmpdir(), `pipe-gate-${label}-`))
+    const [pipelinesDir, runsDir, agentsDir, agentRunsDir, approvalsDir, policyDir] =
+      await Promise.all([make("p"), make("r"), make("a"), make("ar"), make("appr"), make("pol")])
+    dirs = [pipelinesDir, runsDir, agentsDir, agentRunsDir, approvalsDir, policyDir]
+    process.env.PIPELINES_DIR = pipelinesDir
+    process.env.PIPELINE_RUNS_DIR = runsDir
+    process.env.AGENTS_DIR = agentsDir
+    process.env.AGENT_RUNS_DIR = agentRunsDir
+    process.env.APPROVALS_DIR = approvalsDir
+    process.env.POLICY_DIR = policyDir
+    // Exercise the production claude stage branch with the token-free stub; its
+    // intent-request.json is the real Variant B trigger the core watches for.
+    process.env.AGENT_RUNNER_MODE = "claude"
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "4"
+    process.env.FAKE_CLAUDE_DELAY_MS = "40"
+    process.env.FAKE_CLAUDE_INTENT = DELETE_INTENT
+    app = await boot()
+
+    // The phase agent: deletes pause for a human; everything else is free.
+    await request(app.getHttpServer())
+      .post("/api/agents")
+      .send({
+        id: "gated-writer",
+        name: "Gated writer",
+        instructions: "writes, deletes behind the gate",
+        risk: "high",
+        gates: [
+          {
+            match: [{ type: "action", action: "delete" }],
+            decision: "ask",
+            resolve: { type: "human" },
+          },
+        ],
+      })
+      .expect(201)
+
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "gated",
+        phases: [
+          {
+            id: "write",
+            agent: "gated-writer",
+            consumes: "task.md",
+            produces: "out.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+        ],
+        instructions: "gated pipeline",
+      })
+      .expect(201)
+  })
+
+  afterAll(async () => {
+    await app.close()
+    for (const d of dirs) await fs.rm(d, { recursive: true, force: true })
+    for (const k of [
+      "PIPELINES_DIR",
+      "PIPELINE_RUNS_DIR",
+      "AGENTS_DIR",
+      "AGENT_RUNS_DIR",
+      "APPROVALS_DIR",
+      "POLICY_DIR",
+      "AGENT_RUNNER_MODE",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_INTENT",
+    ]) {
+      delete process.env[k]
+    }
+  })
+
+  const runStatus = async (pipelineRunId: string) =>
+    (await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`).expect(200))
+      .body as { status: string; stageRuns: { status: string }[] }
+
+  const pendingStageApproval = async (pipelineRunId: string) => {
+    const res = await request(app.getHttpServer())
+      .get("/api/approvals")
+      .query({ status: "pending" })
+      .expect(200)
+    return res.body.find(
+      (a: { runId: string; kind: string }) =>
+        a.kind === "pipeline-stage" && a.runId.startsWith(`${pipelineRunId}.`),
+    ) as { id: string; runId: string } | undefined
+  }
+
+  it("parks on a gated stage intent, then approve releases the SAME child to done", async () => {
+    const start = await request(app.getHttpServer())
+      .post("/api/pipelines/gated/run")
+      .send({})
+      .expect(201)
+    const { pipelineRunId } = start.body as { pipelineRunId: string }
+
+    // The stage announces the delete → aggregate parks + a stage approval appears.
+    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
+    const approval = await until(() => pendingStageApproval(pipelineRunId))
+
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200)
+
+    // The blocked child proceeds (no respawn) and the run finishes.
+    const final = await until(async () => {
+      const run = await runStatus(pipelineRunId)
+      return run.status !== "running" && run.status !== "parked" ? run : null
+    })
+    expect(final.status).toBe("done")
+    expect(final.stageRuns.map((s) => s.status)).toEqual(["done"])
+  })
+
+  it("reject aborts the gated stage and fails the run", async () => {
+    const start = await request(app.getHttpServer())
+      .post("/api/pipelines/gated/run")
+      .send({})
+      .expect(201)
+    const { pipelineRunId } = start.body as { pipelineRunId: string }
+
+    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
+    const approval = await until(() => pendingStageApproval(pipelineRunId))
+
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200)
+
+    const final = await until(async () => {
+      const run = await runStatus(pipelineRunId)
+      return run.status !== "running" && run.status !== "parked" ? run : null
+    })
+    expect(final.status).toBe("failed")
+    expect(final.stageRuns.map((s) => s.status)).toEqual(["interrupted"])
+  })
+
+  it("reconciles a run left 'parked' at restart to 'failed' (its child died with the API)", async () => {
+    const runId = "gated_1780000000001"
+    const root = path.join(process.env.PIPELINE_RUNS_DIR as string, runId)
+    await fs.mkdir(root, { recursive: true })
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: runId,
+        pipelineId: "gated",
+        status: "parked",
+        currentStage: "write",
         stageRuns: [],
         startedAt: new Date().toISOString(),
         cwd: root,
