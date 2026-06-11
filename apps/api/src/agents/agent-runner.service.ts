@@ -102,6 +102,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     prompt: string,
     project: string,
     files: string[] = [],
+    title = "",
   ): Promise<AgentRun> {
     this.log.info("starting agent run", { agentId, project, files: files.length })
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
@@ -123,7 +124,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // The originating request's traceId rides along in the persisted record, so
       // a later mid-run gate (fired from child output, outside any request — even
       // after an API restart) can re-link its logs to that origin.
-      extra: { agentId, prompt, project, files, traceId: this.trace.getTraceId() },
+      extra: { agentId, title, prompt, project, files, traceId: this.trace.getTraceId() },
     }
 
     // Variant B: the run spawns immediately. Gating happens mid-run — when the

@@ -18,7 +18,13 @@ export class AgentRunsController {
     return tsRestHandler(agentRunsContract, {
       startRun: async ({ params: { id }, body }) => {
         try {
-          const run = await this.runner.start(id, body.prompt, body.project ?? "", body.files ?? [])
+          const run = await this.runner.start(
+            id,
+            body.prompt,
+            body.project ?? "",
+            body.files ?? [],
+            body.title ?? "",
+          )
           return { status: 201, body: run }
         } catch (error) {
           if (isMissing(error)) {

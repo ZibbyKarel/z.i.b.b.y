@@ -41,6 +41,22 @@
     "dialogSubtitle": "Describe the task — ZIBBY classifies it and hands it to an agent",
     "cancel": "Cancel",
     "classifyRun": "Run",
+    "title": {
+      "label": "Title (optional)",
+      "placeholder": "Short task name…"
+    },
+    "schedule": {
+      "label": "Delayed start",
+      "now": "Now",
+      "in1h": "In 1 h",
+      "limitReset": "When limits reset · {time}",
+      "willRun": "Runs at {when}",
+      "submit": "Schedule"
+    },
+    "confirm": {
+      "accepted": "Task accepted",
+      "scheduled": "Scheduled — runs at {when}"
+    },
     "composer": {
       "label": "Task",
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",

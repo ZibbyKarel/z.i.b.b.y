@@ -1,28 +1,16 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NewTaskDialog } from "./NewTaskDialog";
 
 /**
- * The classifier and run endpoints are mocked so the dialog's flow is exercised
- * end-to-end without a backend: the classify mock resolves a canned routing and
- * the run mocks resolve immediately. The point under test is the auto-run flow —
- * one "Spustit" click classifies, dispatches AND redirects to the new run's
- * detail on the runs page, with no intermediate screen and no confirm step.
+ * The create-task endpoint and limits query are mocked so the dialog's flow is
+ * exercised end-to-end without a backend. `createTask` echoes the contract's
+ * discriminated result: a body with a future `scheduledAt` resolves to `scheduled`
+ * (the dialog confirms and stays put), everything else to `dispatched` (the dialog
+ * redirects to the new run). The limits mock advertises a reset time so the
+ * "when limits reset" preset is offered.
  */
-const CANNED_ROUTING = {
-  status: 200,
-  body: {
-    target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" },
-    confidence: 0.55,
-    reason: "Routed to ZIBBY.",
-    matchedTerms: [],
-    candidates: [{ kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" }],
-  },
-};
-
-const CANNED_RUN = { status: 201, body: { runId: "zibby_123_42" } };
-
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
@@ -30,28 +18,61 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const startAgentRun = vi.fn(
-  (_vars: unknown, opts?: { onSuccess?: (res: typeof CANNED_RUN) => void }) =>
-    opts?.onSuccess?.(CANNED_RUN),
-);
+type CreateVars = { body: { text: string; scheduledAt?: number | null } };
+type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
+
+const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
+  const { scheduledAt, text } = vars.body;
+  if (scheduledAt) {
+    opts?.onSuccess?.({
+      status: 201,
+      body: {
+        outcome: "scheduled",
+        task: {
+          id: "task_1",
+          title: "",
+          text,
+          paths: [],
+          scheduledAt,
+          status: "scheduled",
+          createdAt: new Date(0).toISOString(),
+        },
+      },
+    });
+  } else {
+    opts?.onSuccess?.({
+      status: 201,
+      body: {
+        outcome: "dispatched",
+        runRef: "zibby_123_42",
+        target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" },
+      },
+    });
+  }
+});
 
 vi.mock("../mutations", () => ({
-  useClassifyTaskMutation: () => ({
-    mutate: (_vars: unknown, opts?: { onSuccess?: (res: typeof CANNED_ROUTING) => void }) =>
-      opts?.onSuccess?.(CANNED_ROUTING),
-    isPending: false,
+  useCreateTaskMutation: () => ({ mutate: createTask, isPending: false }),
+}));
+
+const RESET_AT = Date.now() + 3 * 60 * 60 * 1000;
+vi.mock("../../limits/queries/useLimitsQuery", () => ({
+  useLimitsQuery: () => ({
+    data: {
+      rolling: { usedPct: 10, resetsAt: RESET_AT },
+      weekly: { usedPct: 5, resetsAt: null },
+      capturedAt: Date.now(),
+      stale: false,
+    },
   }),
 }));
 
-vi.mock("../../agents/mutations", () => ({
-  useStartAgentRunMutation: () => ({ mutate: startAgentRun, isPending: false }),
-}));
-
-vi.mock("../../pipelines/mutations", () => ({
-  useStartPipelineRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
-}));
-
 describe("NewTaskDialog", () => {
+  beforeEach(() => {
+    push.mockClear();
+    createTask.mockClear();
+  });
+
   it("renders as a labelled modal dialog with the composer", () => {
     render(<NewTaskDialog onClose={() => {}} />);
     expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
@@ -74,21 +95,42 @@ describe("NewTaskDialog", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("auto-runs: one Spustit click dispatches and redirects to the run detail", async () => {
+  it("auto-runs an immediate task: one click dispatches and redirects to the run", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
     await userEvent.click(screen.getByRole("button", { name: /Spustit/ }));
 
-    expect(startAgentRun).toHaveBeenCalledTimes(1);
+    expect(createTask).toHaveBeenCalledTimes(1);
+    expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
     expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("schedules a delayed task: picking a preset parks it and confirms, no redirect", async () => {
+    const onClose = vi.fn();
+    render(<NewTaskDialog onClose={onClose} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+
+    // Choose "In 1 h" — the submit relabels to "Schedule".
+    await userEvent.click(screen.getByRole("button", { name: /Za 1 h/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Naplánovat/ }));
+
+    expect(createTask).toHaveBeenCalled();
+    const last = createTask.mock.calls.at(-1)?.[0];
+    expect(last?.body.scheduledAt).toBeGreaterThan(Date.now());
+    // No run yet → no redirect; the dialog confirms the schedule instead.
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByText(/Task přijat/)).toBeInTheDocument();
   });
 
   it("closes via the cancel action", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);
-    await userEvent.click(screen.getByRole("button", { name: /Zrušit/ }));
+    // Two affordances share the "Zrušit" label — the header close (X) and the
+    // footer Cancel button; the footer one is the explicit cancel action.
+    const cancels = screen.getAllByRole("button", { name: /Zrušit/ });
+    await userEvent.click(cancels[cancels.length - 1] as HTMLElement);
     expect(onClose).toHaveBeenCalled();
   });
 });

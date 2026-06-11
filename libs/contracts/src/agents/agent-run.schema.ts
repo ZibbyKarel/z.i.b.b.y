@@ -33,6 +33,11 @@ export const AgentRunSchema = z.object({
   status: AgentRunStatusSchema,
   /** Progress 0–100, parsed from `PROGRESS <n>` lines the run emits. */
   pct: z.number().min(0).max(100),
+  /**
+   * Optional short human name for the run, carried from the New Task dialog's title
+   * field (presentation only). Defaulted so sidecars written before it existed parse.
+   */
+  title: z.string().default(""),
   prompt: z.string(),
   /** Human-chosen target project label (presentation only). */
   project: z.string(),
@@ -58,6 +63,8 @@ export const StartRunSchema = z.object({
   project: z.string().optional(),
   /** Folder-relative paths when the run targets a directory rather than a project. */
   files: z.array(z.string()).optional(),
+  /** Optional short human name for the run (from the New Task dialog's title field). */
+  title: z.string().max(200).optional(),
 })
 export type StartRunInput = z.infer<typeof StartRunSchema>
 

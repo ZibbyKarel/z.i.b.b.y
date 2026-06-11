@@ -88,3 +88,51 @@ export function confidenceBand(confidence: number): ConfidenceBand {
 export function isLowConfidence(confidence: number): boolean {
   return confidenceBand(confidence) === "low";
 }
+
+// ── Delayed start ──────────────────────────────────────────────────────────
+
+/** The delayed-start presets the New Task dialog offers (custom time is out of scope). */
+export type SchedulePreset = "now" | "in-1h" | "limit-reset";
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Resolve a preset to an absolute `scheduledAt` epoch ms — or `null` for "run now".
+ * "limit-reset" needs the limits' reset time (`resetsAt`); when that is unknown or
+ * already past it falls back to running now, so a stale limits read never strands a
+ * task in the future.
+ */
+export function resolveScheduledAt(
+  preset: SchedulePreset,
+  now: number,
+  resetsAt: number | null,
+): number | null {
+  switch (preset) {
+    case "now":
+      return null;
+    case "in-1h":
+      return now + ONE_HOUR_MS;
+    case "limit-reset":
+      return resetsAt !== null && resetsAt > now ? resetsAt : null;
+  }
+}
+
+/** A zero-padded `HH:MM` clock for a timestamp (local time). */
+export function clockLabel(ts: number): string {
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * A short human "when" for a scheduled time: just `HH:MM` if it's today, else
+ * `DD.MM. HH:MM`. Wrapped by the dialog's "runs at {when}" copy.
+ */
+export function whenLabel(ts: number, now: number): string {
+  const d = new Date(ts);
+  const sameDay = d.toDateString() === new Date(now).toDateString();
+  const time = clockLabel(ts);
+  if (sameDay) return time;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}. ${time}`;
+}

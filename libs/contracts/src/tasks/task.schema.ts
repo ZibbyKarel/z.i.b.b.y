@@ -45,3 +45,79 @@ export const TaskRoutingSchema = z.object({
   candidates: z.array(TaskTargetSchema).min(1),
 })
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>
+
+/**
+ * The three delayed-start presets the New Task dialog offers. The wire format is
+ * always the *resolved* absolute `scheduledAt` epoch ms (the client turns a preset
+ * into a timestamp — `now` → null), so the backend never has to know preset
+ * semantics; this enum is shared only so both ends name the choices the same way.
+ */
+export const SchedulePresetSchema = z.enum(["now", "in-1h", "limit-reset"])
+export type SchedulePreset = z.infer<typeof SchedulePresetSchema>
+
+/**
+ * Lifecycle of a deferred task. It waits at `scheduled` until its `scheduledAt`,
+ * when the scheduler classifies and dispatches it — to `dispatched` (carrying the
+ * started run's `runRef`) or `failed` (carrying a short reason). A user may
+ * `cancel` it while it is still waiting.
+ */
+export const ScheduledTaskStatusSchema = z.enum([
+  "scheduled",
+  "dispatched",
+  "cancelled",
+  "failed",
+])
+export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>
+
+/**
+ * A task whose dispatch was deferred to a future `scheduledAt`. Persisted as one
+ * JSON file per id; the scheduler tick fires it when due (classify → start a run).
+ */
+export const ScheduledTaskSchema = z.object({
+  id: z.string().min(1),
+  /** Optional short human name; `""` when the user left it blank. */
+  title: z.string().default(""),
+  text: z.string().min(1).max(8000),
+  paths: z.array(z.string()).default([]),
+  /** Absolute epoch ms the task should fire at. */
+  scheduledAt: z.number().int().positive(),
+  status: ScheduledTaskStatusSchema,
+  createdAt: z.string().datetime(),
+  /** Set once dispatched: the classifier's chosen target. */
+  target: TaskTargetSchema.optional(),
+  /** Set once dispatched: the started agent-run / pipeline-run id. */
+  runRef: z.string().optional(),
+  /** Set on `failed`: a short reason. */
+  error: z.string().optional(),
+})
+export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>
+
+/**
+ * Request body for creating a task. `title` is an optional short name. A future
+ * `scheduledAt` (absolute epoch ms) defers the task; a null/absent (or past) value
+ * dispatches it immediately.
+ */
+export const CreateTaskInputSchema = z.object({
+  title: z.string().max(200).optional(),
+  text: z.string().min(1).max(8000),
+  paths: z.array(z.string()).max(64).optional(),
+  scheduledAt: z.number().int().positive().nullish(),
+})
+export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>
+
+/**
+ * Outcome of `createTask`: either the task was dispatched right away (→ a live run
+ * the client can open) or parked for later (→ the persisted scheduled task).
+ */
+export const CreateTaskResultSchema = z.discriminatedUnion("outcome", [
+  z.object({
+    outcome: z.literal("dispatched"),
+    runRef: z.string().min(1),
+    target: TaskTargetSchema,
+  }),
+  z.object({
+    outcome: z.literal("scheduled"),
+    task: ScheduledTaskSchema,
+  }),
+])
+export type CreateTaskResult = z.infer<typeof CreateTaskResultSchema>

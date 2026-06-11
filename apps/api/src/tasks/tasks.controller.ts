@@ -1,17 +1,32 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import { tasksContract } from "@zibby/contracts"
+import { makeErrorMapper } from "../shared/http/error-mapping"
+import {
+  InvalidScheduledTaskIdError,
+  ScheduledTaskNotFoundError,
+  ScheduledTasksStorageService,
+} from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service"
+import { EmptyCatalogError, TaskSchedulerService } from "./task-scheduler.service"
+
+const errors = makeErrorMapper("Scheduled task", {
+  missing: [ScheduledTaskNotFoundError, InvalidScheduledTaskIdError],
+})
 
 /**
- * Implements `tasksContract`. The single endpoint classifies a task and returns
- * the routing verdict — it never starts a run (approval-first; dispatch is a
- * separate explicit call to the agent/pipeline run endpoints). A `null` verdict
- * means the catalog is empty, which surfaces as a 422.
+ * Implements `tasksContract`. `classifyTask` is the side-effect-free verdict;
+ * `createTask` is the action behind the New Task dialog — it classifies and
+ * dispatches immediately, or (for a future `scheduledAt`) parks the task for the
+ * {@link TaskSchedulerService} to fire later. An empty catalog surfaces as a 422.
  */
 @Controller()
 export class TasksController {
-  constructor(private readonly classifier: TaskClassifierService) {}
+  constructor(
+    private readonly classifier: TaskClassifierService,
+    private readonly scheduler: TaskSchedulerService,
+    private readonly storage: ScheduledTasksStorageService,
+  ) {}
 
   @TsRestHandler(tasksContract)
   handler() {
@@ -26,6 +41,22 @@ export class TasksController {
         }
         return { status: 200, body: routing }
       },
+
+      createTask: async ({ body }) => {
+        try {
+          return { status: 201, body: await this.scheduler.createTask(body) }
+        } catch (error) {
+          if (error instanceof EmptyCatalogError) {
+            return { status: 422, body: { message: error.message } }
+          }
+          throw error
+        }
+      },
+
+      listScheduledTasks: async () => ({ status: 200, body: await this.storage.list() }),
+
+      cancelScheduledTask: ({ params: { id } }) =>
+        errors.or404(id, () => this.scheduler.cancel(id)),
     })
   }
 }

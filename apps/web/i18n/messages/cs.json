@@ -41,6 +41,22 @@
     "dialogSubtitle": "Popiš zadání — ZIBBY ho zařadí a předá agentovi",
     "cancel": "Zrušit",
     "classifyRun": "Spustit",
+    "title": {
+      "label": "Název (volitelný)",
+      "placeholder": "Krátký název tasku…"
+    },
+    "schedule": {
+      "label": "Odložený start",
+      "now": "Hned",
+      "in1h": "Za 1 h",
+      "limitReset": "Po resetu limitů · {time}",
+      "willRun": "Spustí se v {when}",
+      "submit": "Naplánovat"
+    },
+    "confirm": {
+      "accepted": "Task přijat",
+      "scheduled": "Naplánováno — spustí se v {when}"
+    },
     "composer": {
       "label": "Zadání",
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
