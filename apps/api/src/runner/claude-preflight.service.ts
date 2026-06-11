@@ -70,11 +70,39 @@ export class ClaudePreflightService {
   }
 
   /** Spawn `claude --version`; resolves (never rejects) with the verdict. */
-  private versionProbe(): Promise<ClaudePreflight> {
+  private async versionProbe(): Promise<ClaudePreflight> {
+    const probe = await this.capture(["--version"], "version probe")
+    if (!probe.ok) return probe
+    return { ok: true, version: probe.stdout.trim() }
+  }
+
+  /**
+   * Auth probe — pinned by the Phase 1.4 smoke audit: `claude auth status`
+   * prints a JSON object with `loggedIn` and exits 0. A binary that exists but
+   * has no session would accept every run only to fail it at spawn; this turns
+   * that into an up-front refusal.
+   */
+  private async authProbe(versionResult: ClaudePreflight): Promise<ClaudePreflight> {
+    const probe = await this.capture(["auth", "status"], "auth probe")
+    if (!probe.ok) return probe
+    try {
+      const status = JSON.parse(probe.stdout) as { loggedIn?: boolean }
+      if (status.loggedIn === true) return versionResult
+      return { ok: false, reason: "not logged in" }
+    } catch {
+      return { ok: false, reason: "auth probe returned unparseable output" }
+    }
+  }
+
+  /** Spawn the CLI with `args`; capture stdout; never rejects. */
+  private capture(
+    args: string[],
+    label: string,
+  ): Promise<{ ok: true; stdout: string } | { ok: false; reason: string }> {
     return new Promise((resolve) => {
       const bin = process.env.CLAUDE_BIN ?? "claude"
       let settled = false
-      const settle = (result: ClaudePreflight) => {
+      const settle = (result: { ok: true; stdout: string } | { ok: false; reason: string }) => {
         if (settled) return
         settled = true
         clearTimeout(timer)
@@ -83,7 +111,7 @@ export class ClaudePreflightService {
 
       let child: ReturnType<typeof spawn>
       try {
-        child = spawn(bin, ["--version"], { stdio: ["ignore", "pipe", "pipe"] })
+        child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] })
       } catch (error) {
         settle({ ok: false, reason: error instanceof Error ? error.message : String(error) })
         return
@@ -91,7 +119,7 @@ export class ClaudePreflightService {
 
       const timer = setTimeout(() => {
         child.kill()
-        settle({ ok: false, reason: "version probe timed out" })
+        settle({ ok: false, reason: `${label} timed out` })
       }, PROBE_TIMEOUT_MS)
       timer.unref?.()
 
@@ -103,18 +131,9 @@ export class ClaudePreflightService {
         settle({ ok: false, reason: error.code === "ENOENT" ? "missing" : error.message })
       })
       child.on("exit", (code) => {
-        if (code === 0) settle({ ok: true, version: out.trim() })
-        else settle({ ok: false, reason: `version probe exited with code ${code}` })
+        if (code === 0) settle({ ok: true, stdout: out })
+        else settle({ ok: false, reason: `${label} exited with code ${code}` })
       })
     })
-  }
-
-  /**
-   * Auth probe seam. A version check proves the binary exists, not that it can
-   * start a session; the exact auth mechanism is pinned during the Phase 1.4
-   * smoke audit — until then this passes the version verdict through.
-   */
-  private authProbe(versionResult: ClaudePreflight): Promise<ClaudePreflight> {
-    return Promise.resolve(versionResult)
   }
 }

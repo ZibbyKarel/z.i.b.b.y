@@ -72,6 +72,39 @@ Override the port with `PORT=<n>`.
 
 ---
 
+## Real mode runbook
+
+Agent runs always spawn a real `claude -p` session. Pipelines additionally support a
+deterministic **demo mode** (the default), which is the test/e2e seam — stages run a
+token-free demo script instead of claude. Real mode for pipelines:
+
+```bash
+AGENT_RUNNER_MODE=claude pnpm api:dev
+```
+
+- **CLAUDE_BIN resolution** — runs spawn `${CLAUDE_BIN ?? "claude"}`. Production uses
+  the real CLI from `PATH`; tests point `CLAUDE_BIN` at
+  `apps/api/test/fixtures/fake-claude.mjs` (it answers `--version` and
+  `auth status`, so preflight passes without burning tokens).
+- **Preflight semantics** — before any claude-shaped run starts, the API probes
+  `claude --version` + `claude auth status` (cached 30s ok / 5s failure). A failing
+  probe degrades `GET /api/health` to `status: "degraded"` (the dashboard shows a
+  warning) and refuses run starts with **503 + reason** — no dead run records.
+  Scheduler-fired tasks are marked `failed` with the same readable reason.
+- **Smoke ritual** — after a CLI update (or when runs misbehave), run
+
+  ```bash
+  pnpm api:smoke
+  ```
+
+  It probes preflight, replays the full run flag matrix (one trivial haiku call per
+  cumulative flag group) and pins the context rule (the target project's `CLAUDE.md`
+  loads from the spawn cwd; `--add-dir` grants file access but loads no context).
+  A red row means CLI drift — fix `claude-run-command.service.ts` and extend its
+  flag-matrix tests. Not part of CI (it spends real tokens).
+
+---
+
 ## Environment variables
 
 Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` → `apps/web/.env` before first run.

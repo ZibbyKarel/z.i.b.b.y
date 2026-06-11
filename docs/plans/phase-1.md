@@ -147,7 +147,7 @@ parked-at-restart → failed. Leave the 2 quarantined flaky pipeline tests alone
   (immediate task with fake-claude → run finishes → task record holds outcome.status: "done" + ↓
   summary; failed-run variant); extend TaskCard.test.tsx for the outcome badge.
   ↓
-  1.4 Real-mode pipelines as the supported path
+  1.4 Real-mode pipelines as the supported path — ✅ HOTOVO (smoke audit 10/10 na tomto stroji; auth mechanismus = `claude auth status` → loggedIn)
   ↓
 - Smoke script apps/api/scripts/claude-smoke.mjs (standalone Node, no Nest boot):
   (1) preflight probes (--version + auth — this is where the 1.1 auth seam gets its real ↓

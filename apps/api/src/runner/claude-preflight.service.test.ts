@@ -31,6 +31,28 @@ function nextSpawn(script: (child: FakeChild) => void): void {
   })
 }
 
+/** Queue a passing `--version` spawn. */
+function versionSpawn(version: string): void {
+  nextSpawn((child) => {
+    child.stdout.emit("data", Buffer.from(`${version}\n`))
+    child.emit("exit", 0)
+  })
+}
+
+/** Queue an `auth status` spawn (the second probe of a healthy preflight). */
+function authSpawn(loggedIn: boolean): void {
+  nextSpawn((child) => {
+    child.stdout.emit("data", Buffer.from(`${JSON.stringify({ loggedIn })}\n`))
+    child.emit("exit", 0)
+  })
+}
+
+/** Queue the version + auth pair of a fully healthy probe. */
+function okSpawnPair(version: string): void {
+  versionSpawn(version)
+  authSpawn(true)
+}
+
 describe("ClaudePreflightService", () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -45,32 +67,27 @@ describe("ClaudePreflightService", () => {
 
   async function probe(service: ClaudePreflightService, opts?: { force?: boolean }) {
     const promise = service.probe(opts)
-    // Let the queued spawn script (and the 5s timeout, when relevant) fire.
+    // Let the queued spawn scripts (and the 5s timeout, when relevant) fire.
     await vi.advanceTimersByTimeAsync(6_000)
     return promise
   }
 
-  it("reports ok with the printed version on exit 0", async () => {
-    nextSpawn((child) => {
-      child.stdout.emit("data", Buffer.from("1.2.3 (Claude Code)\n"))
-      child.emit("exit", 0)
-    })
+  it("reports ok with the printed version when version + auth both pass", async () => {
+    okSpawnPair("1.2.3 (Claude Code)")
     const result = await probe(new ClaudePreflightService())
     expect(result).toEqual({ ok: true, version: "1.2.3 (Claude Code)" })
+    expect(spawnMock).toHaveBeenNthCalledWith(1, "claude", ["--version"], expect.anything())
+    expect(spawnMock).toHaveBeenNthCalledWith(2, "claude", ["auth", "status"], expect.anything())
   })
 
   it("probes ${CLAUDE_BIN} when set", async () => {
     process.env.CLAUDE_BIN = "/opt/custom/claude"
-    nextSpawn((child) => child.emit("exit", 0))
+    okSpawnPair("1.0.0")
     await probe(new ClaudePreflightService())
-    expect(spawnMock).toHaveBeenCalledWith(
-      "/opt/custom/claude",
-      ["--version"],
-      expect.anything(),
-    )
+    expect(spawnMock).toHaveBeenCalledWith("/opt/custom/claude", ["--version"], expect.anything())
   })
 
-  it("maps ENOENT to the reason 'missing'", async () => {
+  it("maps ENOENT to the reason 'missing' (auth never probed)", async () => {
     nextSpawn((child) => {
       const err = new Error("spawn claude ENOENT") as NodeJS.ErrnoException
       err.code = "ENOENT"
@@ -78,13 +95,32 @@ describe("ClaudePreflightService", () => {
     })
     const result = await probe(new ClaudePreflightService())
     expect(result).toEqual({ ok: false, reason: "missing" })
+    expect(spawnMock).toHaveBeenCalledTimes(1)
   })
 
-  it("reports a non-zero exit as a failure with the code", async () => {
+  it("reports a non-zero version exit as a failure with the code", async () => {
     nextSpawn((child) => child.emit("exit", 7))
     const result = await probe(new ClaudePreflightService())
     expect(result.ok).toBe(false)
     expect(result.reason).toContain("7")
+  })
+
+  it("fails when the CLI is not logged in", async () => {
+    versionSpawn("1.0.0")
+    authSpawn(false)
+    const result = await probe(new ClaudePreflightService())
+    expect(result).toEqual({ ok: false, reason: "not logged in" })
+  })
+
+  it("fails when auth status prints unparseable output", async () => {
+    versionSpawn("1.0.0")
+    nextSpawn((child) => {
+      child.stdout.emit("data", Buffer.from("definitely not json\n"))
+      child.emit("exit", 0)
+    })
+    const result = await probe(new ClaudePreflightService())
+    expect(result.ok).toBe(false)
+    expect(result.reason).toContain("unparseable")
   })
 
   it("times out a hung probe and kills the child", async () => {
@@ -104,25 +140,19 @@ describe("ClaudePreflightService", () => {
 
   it("caches an ok verdict for 30s and re-probes after the TTL", async () => {
     const service = new ClaudePreflightService()
-    nextSpawn((child) => {
-      child.stdout.emit("data", Buffer.from("1.0.0\n"))
-      child.emit("exit", 0)
-    })
+    okSpawnPair("1.0.0")
     expect((await probe(service)).version).toBe("1.0.0")
-    expect(spawnMock).toHaveBeenCalledTimes(1)
+    expect(spawnMock).toHaveBeenCalledTimes(2)
 
     // Within the TTL: served from cache, no new spawn.
     expect((await service.probe()).version).toBe("1.0.0")
-    expect(spawnMock).toHaveBeenCalledTimes(1)
+    expect(spawnMock).toHaveBeenCalledTimes(2)
 
     // Past the 30s TTL (the probe helper already advanced 6s): probes again.
     await vi.advanceTimersByTimeAsync(31_000)
-    nextSpawn((child) => {
-      child.stdout.emit("data", Buffer.from("2.0.0\n"))
-      child.emit("exit", 0)
-    })
+    okSpawnPair("2.0.0")
     expect((await probe(service)).version).toBe("2.0.0")
-    expect(spawnMock).toHaveBeenCalledTimes(2)
+    expect(spawnMock).toHaveBeenCalledTimes(4)
   })
 
   it("caches a failure for only 5s", async () => {
@@ -132,19 +162,19 @@ describe("ClaudePreflightService", () => {
     expect(spawnMock).toHaveBeenCalledTimes(1)
 
     // The probe helper advanced 6s — past the 5s failure TTL, so it re-probes.
-    nextSpawn((child) => child.emit("exit", 0))
+    okSpawnPair("1.0.0")
     expect((await probe(service)).ok).toBe(true)
-    expect(spawnMock).toHaveBeenCalledTimes(2)
+    expect(spawnMock).toHaveBeenCalledTimes(3)
   })
 
   it("force re-probes through a fresh cache", async () => {
     const service = new ClaudePreflightService()
-    nextSpawn((child) => child.emit("exit", 0))
+    okSpawnPair("1.0.0")
     await probe(service)
     nextSpawn((child) => child.emit("exit", 1))
     const result = await probe(service, { force: true })
     expect(result.ok).toBe(false)
-    expect(spawnMock).toHaveBeenCalledTimes(2)
+    expect(spawnMock).toHaveBeenCalledTimes(3)
   })
 
   it("assertAvailable throws ClaudeUnavailableError carrying the reason", async () => {
