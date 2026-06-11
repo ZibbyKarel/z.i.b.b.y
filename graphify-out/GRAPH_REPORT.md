@@ -1,7 +1,7 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-11)
 
 ## Corpus Check
-- 691 files · ~498,566 words
+- 691 files · ~505,360 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -3898,11 +3898,11 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `filter()` connect `Community 3` to `Community 0`, `Community 1`, `Community 4`, `Community 5`, `Community 6`, `Community 9`, `Community 10`, `Community 12`, `Community 14`, `Community 20`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Why does `useVoiceData()` connect `Community 4` to `Community 3`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
-- **Why does `RunnerCore` connect `Community 1` to `Community 9`, `Community 2`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Why does `writeFile()` connect `Community 6` to `Community 1`, `Community 2`, `Community 11`, `Community 5`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Are the 25 inferred relationships involving `filter()` (e.g. with `DesignSystemProvider()` and `t()`) actually correct?**
   _`filter()` has 25 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 13 inferred relationships involving `writeFile()` (e.g. with `globalSetup()` and `seedTarget()`) actually correct?**
