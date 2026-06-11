@@ -1,4 +1,3 @@
-import { Fragment, type ReactNode } from "react";
 import {
   Card,
   Container,
@@ -9,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { Fragment, type ReactNode } from "react";
 
 export interface HudCardProps {
   /** Mono title shown next to the glyph. Truncated to a single line. */
@@ -27,7 +27,7 @@ export interface HudCardProps {
    */
   badges?: ReactNode[][];
   /** When set, the body becomes a clickable target (opens / inspects). */
-  onOpen?: () => void;
+  onClick?: () => void;
   /** Accessible label for the open target. */
   openLabel?: string;
   /** Footer content (typically buttons), rendered under a divider. */
@@ -46,7 +46,7 @@ export function HudCard({
   description,
   aside,
   badges,
-  onOpen,
+  onClick,
   openLabel,
   actions,
 }: HudCardProps) {
@@ -63,7 +63,13 @@ export function HudCard({
                 {title}
               </Typography>
               {subtitle != null && subtitle !== "" && (
-                <Typography mono truncate size="caption" type="note" variant="tertiary">
+                <Typography
+                  mono
+                  truncate
+                  size="caption"
+                  type="note"
+                  variant="tertiary"
+                >
                   {subtitle}
                 </Typography>
               )}
@@ -72,7 +78,12 @@ export function HudCard({
                   {/* 2-line clamp: -webkit-line-clamp has no DS equivalent. */}
                   {/* eslint-disable-next-line react/forbid-dom-props */}
                   <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    <Typography leading="snug" size="caption" type="note" variant="secondary">
+                    <Typography
+                      leading="snug"
+                      size="caption"
+                      type="note"
+                      variant="secondary"
+                    >
                       {description}
                     </Typography>
                   </div>
@@ -99,8 +110,8 @@ export function HudCard({
     <Card interactive>
       <Container padding="150" position="relative">
         <Stack gap="150">
-          {onOpen ? (
-            <Pressable aria-label={openLabel} onClick={onOpen}>
+          {onClick ? (
+            <Pressable aria-label={openLabel} onClick={onClick}>
               {body}
             </Pressable>
           ) : (

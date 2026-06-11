@@ -117,8 +117,7 @@ export function Screen() {
               <AgentCard
                 agent={a}
                 key={a.id}
-                onOpen={(x) => setOpenId(x.id)}
-                onRun={(x) => setRunAgent(x)}
+                onClick={(x) => setOpenId(x.id)}
                 pipelineCount={pipelineCount(a)}
               />
             ))}

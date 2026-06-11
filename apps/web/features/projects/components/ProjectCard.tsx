@@ -1,6 +1,6 @@
-import { useTranslations } from "next-intl";
-import { Tag } from "@zibby/design-system";
 import type { Project } from "@zibby/contracts";
+import { Tag } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
 import { HudCard } from "../../../components/HudCard/HudCard";
 
 export interface ProjectCardProps {
@@ -20,11 +20,19 @@ export function ProjectCard({ project, onOpen }: ProjectCardProps) {
   return (
     <HudCard
       badges={
-        project.category ? [[<Tag key="cat" tone="neutral">{project.category}</Tag>]] : undefined
+        project.category
+          ? [
+              [
+                <Tag key="cat" tone="neutral">
+                  {project.category}
+                </Tag>,
+              ],
+            ]
+          : undefined
       }
       description={project.desc}
       glyph="code"
-      onOpen={() => onOpen?.(project)}
+      onClick={() => onOpen?.(project)}
       openLabel={t("openAria", { name: project.name })}
       subtitle={project.path}
       title={project.name}
