@@ -69,14 +69,37 @@ export class PolicyStorageService implements OnModuleInit {
   }
 }
 
-/** A conservative default floor: money/destructive/outbound actions need a human. */
-const DEFAULT_FLOOR: GateRule[] = (
-  ["purchase", "payment", "git.force_push", "send_email", "delete"] as const
-).map((action) => ({
-  id: `floor-${action}`,
-  source: "system" as const,
-  locked: true,
-  match: [{ type: "action" as const, action }],
-  decision: "ask" as const,
-  resolve: { type: "human" as const },
-}))
+/**
+ * A conservative default floor (the seed + fallback): money / destructive /
+ * outbound / git-publish actions need a human. Most are `ask:human`; `pr.merge` is
+ * a locked `deny` — merging is "Never" in the autonomy contract, not merely gated,
+ * so it can't be unlocked by an agent rule (deny is the max decision rank). Kept in
+ * lockstep with `data/POLICY.md` + `data-test/POLICY.md` (Phase 3.2).
+ */
+const ASK_FLOOR_ACTIONS = [
+  "purchase",
+  "payment",
+  "git.force_push",
+  "git.push",
+  "pr.open",
+  "send_email",
+  "delete",
+] as const
+
+const DEFAULT_FLOOR: GateRule[] = [
+  ...ASK_FLOOR_ACTIONS.map((action) => ({
+    id: `floor-${action}`,
+    source: "system" as const,
+    locked: true,
+    match: [{ type: "action" as const, action }],
+    decision: "ask" as const,
+    resolve: { type: "human" as const },
+  })),
+  {
+    id: "floor-pr.merge",
+    source: "system" as const,
+    locked: true,
+    match: [{ type: "action" as const, action: "pr.merge" }],
+    decision: "deny" as const,
+  },
+]

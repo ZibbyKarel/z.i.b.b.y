@@ -68,6 +68,19 @@ describe("GateEvaluatorService", () => {
     it("defaults to allow when nothing matches", () => {
       expect(evaluator.evaluate([], { action: "anything" }).decision).toBe("allow")
     })
+
+    it("an action rule with no branch (or `*`) matches any branch; a per-branch rule is exact", () => {
+      const anyBranch = rule({ id: "any", match: [{ type: "action", action: "git.push" }], decision: "ask", resolve: { type: "human" } })
+      const starBranch = rule({ id: "star", match: [{ type: "action", action: "git.push", branch: "*" }], decision: "ask", resolve: { type: "human" } })
+      const mainOnly = rule({ id: "main", match: [{ type: "action", action: "git.push", branch: "main" }], decision: "deny" })
+
+      // No-branch / `*` rules fire regardless of the action's branch.
+      expect(evaluator.evaluate([anyBranch], { action: "git.push", branch: "feature/x" }).ruleId).toBe("any")
+      expect(evaluator.evaluate([starBranch], { action: "git.push" }).ruleId).toBe("star")
+      // A per-branch rule matches only its branch (operators can harden one branch).
+      expect(evaluator.evaluate([mainOnly], { action: "git.push", branch: "main" }).decision).toBe("deny")
+      expect(evaluator.evaluate([mainOnly], { action: "git.push", branch: "dev" }).decision).toBe("allow")
+    })
   })
 
   describe("agent rules + legacy desugar", () => {

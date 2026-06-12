@@ -22,6 +22,10 @@ review/verify smyčky (ocas logu + případná poznámka operátora). Výstup:
 2. Když je vstupem kontext selhání: oprav PŘESNĚ to, co selhalo. Poznámka
    operátora (sekce „Operator note") má nejvyšší prioritu.
 3. Po změnách spusť relevantní kontroly lokálně (lint/testy), pokud jsou levné.
+4. **Zacommituj svou práci** na aktuální větev (`git add -A && git commit`).
+   Běžíš na vyhrazené větvi `zibby/*` — commit je lokální a vratný, takže ho
+   review/verify uvidí jako hotové změny. **Nikdy nepushuj** — push a otevření PR
+   je závěrečná, schvalovaná fáze pipeline, ne tvoje.
 
 ## Kontrakt výstupu (`implementation.md`)
 

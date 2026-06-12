@@ -92,6 +92,15 @@ async function makeHarness(dir: string): Promise<Harness> {
     approvals as never,
     gates as never,
     { get: vi.fn(async () => null), list: vi.fn(async () => []) } as never,
+    // Workspace double: non-git by default, so the test path keeps the Phase 2
+    // direct-checkout behavior (no worktree). Phase 3.1 worktree wiring is covered
+    // by workspace.service.test.ts + the git-fixture e2e.
+    {
+      isGitRepo: vi.fn(async () => false),
+      createWorktree: vi.fn(),
+      removeWorktree: vi.fn(async () => {}),
+      diffstat: vi.fn(async () => ""),
+    } as never,
     fakeLogger as never,
     fakeTrace as never,
   )

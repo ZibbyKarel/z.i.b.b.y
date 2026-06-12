@@ -17,6 +17,23 @@ const c = initContract()
 
 const PipelineIdParam = z.object({ id: z.string().min(1) })
 
+/** The names a run artifact may have — the allowlist the artifact endpoint enforces. */
+export const PIPELINE_RUN_ARTIFACTS = [
+  "pr-draft.md",
+  "diffstat.txt",
+  "plan.md",
+  "implementation.md",
+  "review.md",
+  "docs.md",
+] as const
+
+/** One whitelisted pipeline run artifact: its name and its text content. */
+export const PipelineRunArtifactSchema = z.object({
+  name: z.enum(PIPELINE_RUN_ARTIFACTS),
+  content: z.string(),
+})
+export type PipelineRunArtifact = z.infer<typeof PipelineRunArtifactSchema>
+
 /** CRUD over pipeline definitions (`.pipeline.md` files). Mirrors `agentsContract`. */
 export const pipelinesContract = c.router(
   {
@@ -108,6 +125,16 @@ export const pipelineRunsContract = c.router(
       query: z.object({ offset: z.coerce.number().int().nonnegative().optional() }),
       responses: { 200: RunLogChunkSchema, 404: ErrorSchema },
       summary: "Read a pipeline stage's log from a byte offset",
+    },
+    getPipelineRunArtifact: {
+      method: "GET",
+      path: "/pipelines/runs/:pipelineRunId/artifacts/:name",
+      pathParams: z.object({ pipelineRunId: z.string(), name: z.string() }),
+      // The PR-gate decision surface (3.3): the pr draft + diffstat, plus the
+      // handoff set. `name` is matched against a fixed allowlist server-side — there
+      // is no generic file browser; the allowlist IS the API. 404 when absent.
+      responses: { 200: PipelineRunArtifactSchema, 404: ErrorSchema },
+      summary: "Read a whitelisted pipeline run artifact (PR draft, diffstat, handoffs)",
     },
     deletePipelineRun: {
       method: "DELETE",

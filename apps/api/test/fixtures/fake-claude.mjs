@@ -14,12 +14,20 @@
 //                          (default payment-done.txt)
 //   FAKE_CLAUDE_DELETE     comma-separated filenames (relative to the --add-dir grant)
 //                          to delete behind a `delete` gate, mimicking the Cleaner
+//   FAKE_CLAUDE_COMMIT     when set, make a file + `git add -A && git commit` in cwd
+//                          (Phase 3.1: a run lands commits on its own zibby/* branch)
+import { execFileSync } from "node:child_process"
 import { promises as fs } from "node:fs"
 import { existsSync, readFileSync, rmSync } from "node:fs"
 import path from "node:path"
 
 const cwd = process.cwd()
 const argv = process.argv.slice(2)
+
+// The gate coordinates through RunnerCore's sandbox (pinned via ZIBBY_INTENT_DIR),
+// NOT the child's cwd — which, once a worktree exists, is the worktree (spawnCwd),
+// a directory the core never watches. Mirror the real hook: honour the env first.
+const intentDir = process.env.ZIBBY_INTENT_DIR || cwd
 
 // Preflight seam: `claude --version` and `claude auth status` must answer before
 // the main flow, or every run-starting e2e would execute the full fake session
@@ -46,7 +54,7 @@ const log = (s) => process.stdout.write(`${s}\n`)
 
 /** Block on the decision RunnerCore writes (mirrors the real hook). */
 async function waitForDecision() {
-  const file = path.join(cwd, "intent-decision.json")
+  const file = path.join(intentDir, "intent-decision.json")
   const deadline = Date.now() + 60_000
   for (;;) {
     if (existsSync(file)) {
@@ -65,9 +73,21 @@ async function waitForDecision() {
 }
 
 async function announce(action) {
-  await fs.writeFile(path.join(cwd, "intent-request.json"), JSON.stringify(action), "utf8")
+  await fs.writeFile(path.join(intentDir, "intent-request.json"), JSON.stringify(action), "utf8")
   log("Waiting for approval…")
   return waitForDecision()
+}
+
+/** Make a commit in cwd so a run lands work on its own zibby/* branch (Phase 3.1). */
+function gitCommit() {
+  const file = process.env.FAKE_CLAUDE_COMMIT_FILE ?? "feature.txt"
+  execFileSync("git", ["add", "-A"], { cwd, stdio: "ignore" })
+  // -c flags so the commit works even on a worktree without a configured identity.
+  execFileSync(
+    "git",
+    ["-c", "user.email=fake@zibby.local", "-c", "user.name=Fake Claude", "commit", "-m", `feat: ${file}`],
+    { cwd, stdio: "ignore" },
+  )
 }
 
 async function main() {
@@ -84,6 +104,27 @@ async function main() {
   if (process.env.FAKE_CLAUDE_FAIL) {
     log("Simulated failure.")
     process.exit(1)
+  }
+
+  // Phase 3.1: land a commit on the run's branch (cwd is the worktree when one
+  // exists). Ungated — a local commit is reversible, like koder's real commit.
+  if (process.env.FAKE_CLAUDE_COMMIT) {
+    const file = process.env.FAKE_CLAUDE_COMMIT_FILE ?? "feature.txt"
+    await fs.writeFile(path.join(cwd, file), `work at ${new Date().toISOString()}\n`, "utf8")
+    gitCommit()
+    log(`Committed ${file}.`)
+  }
+
+  // Phase 3.3: write the stage's `produces` artifact (e.g. pr-draft.md) into the
+  // sandbox the artifact endpoint reads from — that is the intent/coordination dir
+  // (the stage's cwd), NOT the worktree spawn cwd. The PR draft must exist BEFORE
+  // the gated chain is attempted (the card needs something to show).
+  if (process.env.FAKE_CLAUDE_PRODUCE) {
+    await fs.writeFile(
+      path.join(intentDir, process.env.FAKE_CLAUDE_PRODUCE),
+      process.env.FAKE_CLAUDE_PRODUCE_BODY ?? `# Draft\n\nGenerated at ${new Date().toISOString()}\n`,
+      "utf8",
+    )
   }
 
   const steps = Number(process.env.FAKE_CLAUDE_STEPS) || 2
@@ -106,6 +147,17 @@ async function main() {
       `done at ${new Date().toISOString()}\n`,
       "utf8",
     )
+    // Phase 3.3: only AFTER an allow, execute the gated chain the gate just cleared
+    // (push + `gh pr create`) — the held-child-is-the-executor model. A `gh` shim on
+    // a prepended PATH records the invocation; nothing here runs before the allow.
+    if (process.env.FAKE_CLAUDE_EXEC_CMD) {
+      const env = { ...process.env }
+      if (process.env.FAKE_CLAUDE_PATH_PREPEND) {
+        env.PATH = `${process.env.FAKE_CLAUDE_PATH_PREPEND}${path.delimiter}${process.env.PATH ?? ""}`
+      }
+      execFileSync("/bin/sh", ["-c", process.env.FAKE_CLAUDE_EXEC_CMD], { cwd, env, stdio: "ignore" })
+      log("Executed the approved command.")
+    }
   }
 
   // Gate B: a delete action over the granted directory (Cleaner test).

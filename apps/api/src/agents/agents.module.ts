@@ -6,7 +6,9 @@ import { ApprovalsModule } from "../approvals/approvals.module"
 import { GatesController } from "../gates/gates.controller"
 import { GatesModule } from "../gates/gates.module"
 import { LimitsModule } from "../limits/limits.module"
+import { ProjectsModule } from "../projects/projects.module"
 import { ClaudeRunModule } from "../runner/claude-run.module"
+import { WorkspaceModule } from "../workspace/workspace.module"
 import { dataDir } from "../shared/data-dir"
 import { AgentsController } from "./agents.controller"
 import { AGENTS_DIR, AgentsStorageService } from "./agents.storage.service"
@@ -31,7 +33,7 @@ export function resolveRunsDir(): string {
 }
 
 @Module({
-  imports: [ApprovalsModule, GatesModule, ClaudeRunModule, LimitsModule],
+  imports: [ApprovalsModule, GatesModule, ClaudeRunModule, LimitsModule, ProjectsModule, WorkspaceModule],
   // CategoriesController, AgentRunsController and GatesController are declared
   // before AgentsController so their static / more-specific routes
   // (`GET /agents/categories`, `GET /agents/running`, `GET /agents/:id/gates`) are

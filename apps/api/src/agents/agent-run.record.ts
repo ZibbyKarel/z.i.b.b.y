@@ -1,4 +1,4 @@
-import { AgentIdSchema, type AgentRun, AgentRunSchema } from "@zibby/contracts"
+import { AgentIdSchema, type AgentRun, AgentRunSchema, WorkspaceSchema } from "@zibby/contracts"
 import { z } from "zod"
 import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types"
 
@@ -23,6 +23,13 @@ export const AgentRunRecordSchema = AgentRunSchema.extend({
 
 export type AgentRunRecord = z.infer<typeof AgentRunRecordSchema> & BaseRun
 
+/** Read the optional workspace off `spec.extra` (set only for git-project agent runs). */
+function workspaceFromExtra(extra: RunSpec["extra"]): AgentRunRecord["workspace"] {
+  const ws = extra.workspace
+  const parsed = WorkspaceSchema.safeParse(ws)
+  return parsed.success ? parsed.data : undefined
+}
+
 /** Project a runner record down to the contract `AgentRun` (drops `kind`/`pgid`). */
 export function toAgentRun(rec: AgentRunRecord): AgentRun {
   return AgentRunSchema.parse(rec)
@@ -42,6 +49,7 @@ export const agentStrategy: KindStrategy<AgentRunRecord> = {
       files: Array.isArray(spec.extra.files) ? spec.extra.files.map(String) : [],
       ...(spec.extra.taskId ? { taskId: String(spec.extra.taskId) } : {}),
       ...(spec.extra.traceId ? { traceId: String(spec.extra.traceId) } : {}),
+      ...(workspaceFromExtra(spec.extra) ? { workspace: workspaceFromExtra(spec.extra) } : {}),
     }
   },
 }

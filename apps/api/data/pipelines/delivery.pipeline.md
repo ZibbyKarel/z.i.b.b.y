@@ -49,6 +49,13 @@ phases:
     produces: docs.md
     model: sonnet
     thinking: low
+  - id: pr-autor
+    type: agent
+    agent: pr-autor
+    consumes: docs.md
+    produces: pr-draft.md
+    model: sonnet
+    thinking: medium
 ---
 
 # Delivery
@@ -68,6 +75,10 @@ hlavou o zeď zaparkuje pro lidskou poznámku.
    v checkoutu; červená vrací práci Kodérovi, vyčerpání → park. Tester JE tahle
    fáze — žádný LLM, jen exit kódy.
 5. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
+6. **pr-autor** — `docs.md` → `pr-draft.md`: složí titulek + tělo PR, pak se
+   pokusí o jediný gated řetězec `git push -u origin <branch> && gh pr create …`.
+   Push i otevření PR jsou Tier-3: hook ohlásí `pr.open`, běh zaparkuje na
+   schválení. **PR je brána** — vše před ním se už stalo na větvi `zibby/*`.
 
 Handoff je vždy jeden soubor; selhání předává ocas logu jako kontext dalšímu
 pokusu (plus případnou poznámku operátora po resume).

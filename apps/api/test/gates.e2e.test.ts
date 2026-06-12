@@ -90,4 +90,32 @@ describe("Gates API (e2e)", () => {
     expect(Array.isArray(res.body.inherited)).toBe(true)
     expect(res.body.inherited.length).toBeGreaterThan(0)
   })
+
+  it("exposes the Phase 3.2 git-publish floor (git.push ask, pr.merge deny)", async () => {
+    const res = await request(app.getHttpServer()).get("/api/gates/policy").expect(200)
+    const byAction = new Map<string, string>(
+      res.body.rules.map((r: { match: { action?: string }[]; decision: string }) => [
+        r.match[0]?.action ?? "",
+        r.decision,
+      ]),
+    )
+    expect(byAction.get("git.push")).toBe("ask")
+    expect(byAction.get("pr.open")).toBe("ask")
+    expect(byAction.get("pr.merge")).toBe("deny")
+  })
+
+  it("refuses an agent rule that weakens the locked pr.merge deny (422)", async () => {
+    const res = await request(app.getHttpServer())
+      .put("/api/agents/shopper/gates")
+      .send({ gates: [{ match: [{ type: "action", action: "pr.merge" }], decision: "allow" }] })
+      .expect(422)
+    expect(res.body.ruleIndex).toBe(0)
+
+    // The floor still denies a pr.merge for this agent.
+    const evalRes = await request(app.getHttpServer())
+      .post("/api/gates/evaluate")
+      .send({ agentId: "shopper", action: { action: "pr.merge" } })
+      .expect(200)
+    expect(evalRes.body.decision).toBe("deny")
+  })
 })

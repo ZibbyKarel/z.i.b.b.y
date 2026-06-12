@@ -19,6 +19,7 @@ import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { type RunView, approvalForRun, runTitle } from "../run";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunParkedPanel } from "./RunParkedPanel";
+import { RunPrGatePanel } from "./RunPrGatePanel";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunLogStream } from "./RunLogStream";
 
@@ -202,6 +203,12 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
 
       {approval ? (
         <>
+          {/* A pipeline run parked on the PR gate shows what's about to be published
+              (the draft + diffstat) above the generic confirm/discard panel. */}
+          {run.kind === "pipeline" &&
+            (approval.action === "pr.open" || approval.action === "git.push") && (
+              <RunPrGatePanel pipelineRunId={run.runId} />
+            )}
           <RunApprovalGate approval={approval} deleting={deleting} onDelete={onDelete} />
           <Accordion>
             <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>

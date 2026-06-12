@@ -31,3 +31,18 @@ export type RunStatus = z.infer<typeof RunStatusSchema>
  */
 export const RiskSchema = z.enum(["low", "medium", "high"])
 export type Risk = z.infer<typeof RiskSchema>
+
+/**
+ * The git worktree a run owns (Phase 3.1). A project-targeted run works on its own
+ * branch in a dedicated worktree under the run dir, never the operator's main
+ * checkout: `branch` is `zibby/<runId>-<slug>`, `path` the worktree directory, and
+ * `baseRef` the HEAD it was cut from (the diff base for the PR-gate diffstat).
+ * Optional on the run records — a non-git (or projectless) run carries none and
+ * falls back to the Phase 2 direct-checkout cwd.
+ */
+export const WorkspaceSchema = z.object({
+  branch: z.string().min(1),
+  path: z.string().min(1),
+  baseRef: z.string().min(1),
+})
+export type Workspace = z.infer<typeof WorkspaceSchema>

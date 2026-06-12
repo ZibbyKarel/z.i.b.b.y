@@ -579,7 +579,10 @@
     "parkedSummary": "phase {phase} · {attempts} attempts exhausted",
     "resumeNote": "Note for the next attempt",
     "resumeNotePlaceholder": "What the agent should do differently next time…",
-    "resumeWithNote": "Resume with note"
+    "resumeWithNote": "Resume with note",
+    "prGate": "PR preparation",
+    "prDraft": "PR draft (pr-draft.md)",
+    "prDiffstat": "Branch changes (diffstat)"
   },
   "gates": {
     "title": "Approval rules",

@@ -2,18 +2,20 @@ import { randomUUID } from "node:crypto"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
-import type { Agent, AgentRun } from "@zibby/contracts"
+import type { Agent, AgentRun, Project, Workspace } from "@zibby/contracts"
 import type { IntendedAction } from "@zibby/contracts"
 import { AgentsStorageService } from "./agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
+import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { formatClaudeStreamLine } from "../runner/claude-stream-format"
 import { RunnerCore } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { ORCHESTRATOR_ID } from "@zibby/contracts"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
 import { ORCHESTRATOR_AGENT } from "./orchestrator.agent"
@@ -55,6 +57,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly claude: ClaudeRunCommandService,
     private readonly preflight: ClaudePreflightService,
     private readonly limits: LimitsService,
+    private readonly projects: ProjectsStorageService,
+    private readonly workspace: WorkspaceService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -163,17 +167,47 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
     const grantDirs = await this.resolveGrantDirs(files)
     const { command, args } = await this.buildCommand(agent, prompt, grantDirs)
+
+    // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
+    // sandbox; the session spawns there (its first `spawnCwd` ever) so its commits
+    // land on the run's own `zibby/*` branch. The sandbox stays the intent/artifact
+    // home (ZIBBY_INTENT_DIR is still `cwd`). An unresolvable project string, a
+    // non-git project, or a worktree-setup failure → today's behavior (sandbox-only).
+    let workspace: Workspace | undefined
+    let spawnCwd: string | undefined
+    const resolved = await this.resolveProject(project)
+    if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
+      await fs.mkdir(cwd, { recursive: true })
+      try {
+        workspace = await this.workspace.createWorktree({
+          projectPath: resolved.path,
+          runId: `${agentId}_${startedMs}`,
+          slug: title || agentId,
+          dir: path.join(cwd, "worktree"),
+        })
+        spawnCwd = workspace.path
+      } catch (error) {
+        if (!(error instanceof WorkspaceSetupError)) throw error
+        this.log.warn("agent worktree setup failed; running sandbox-only", {
+          agentId,
+          projectPath: resolved.path,
+          err: error.message,
+        })
+      }
+    }
+
     const spec = {
       kind: "agent" as const,
       ownerId: agentId,
       command,
       args,
       cwd,
+      ...(spawnCwd ? { spawnCwd } : {}),
       startedMs,
       // The originating request's traceId rides along in the persisted record, so
       // a later mid-run gate (fired from child output, outside any request — even
       // after an API restart) can re-link its logs to that origin.
-      extra: { agentId, title, prompt, project, files, taskId, traceId: this.trace.getTraceId() },
+      extra: { agentId, title, prompt, project, files, taskId, traceId: this.trace.getTraceId(), workspace },
     }
 
     // Variant B: the run spawns immediately. Gating happens mid-run — when the
@@ -181,6 +215,21 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // core routes it to {@link onIntent} below for evaluation.
     const rec = await this.core.start(spec)
     return toAgentRun(rec)
+  }
+
+  /**
+   * Resolve a run's free-form `project` reference against the registry — by id
+   * first, then by exact name (same rule as the pipeline runner). Unknown / absent
+   * → null (the run is sandbox-only, no worktree); never throws.
+   */
+  private async resolveProject(projectRef: string): Promise<Project | null> {
+    if (!projectRef) return null
+    try {
+      return await this.projects.get(projectRef)
+    } catch {
+      const all = await this.projects.list().catch((): Project[] => [])
+      return all.find((p) => p.name === projectRef) ?? null
+    }
   }
 
   /**
@@ -290,6 +339,24 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /** Permanently delete a run and all its artifacts (sidecar, log, sandbox). */
   async delete(runId: string): Promise<void> {
+    // Phase 3.1: drop the git worktree BEFORE the sandbox rm (rm-first strands
+    // `.git/worktrees/*` metadata in the project repo). The worktree lives under
+    // the sandbox; its main repo is re-resolved from the run's `project` label.
+    // Best-effort and tolerant — a swept/unknown run simply skips this.
+    let rec: AgentRunRecord | undefined
+    try {
+      rec = this.core.get(runId)
+    } catch {
+      rec = undefined
+    }
+    if (rec?.workspace && rec.project) {
+      const resolved = await this.resolveProject(rec.project)
+      if (resolved) {
+        await this.workspace
+          .removeWorktree({ projectPath: resolved.path, worktreePath: rec.workspace.path })
+          .catch(() => {})
+      }
+    }
     await this.core.delete(runId)
     // A run deleted while paused on the gate leaves its approval pending forever —
     // resolve it here (no runner round-trip; the run is already gone).

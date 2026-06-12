@@ -1,7 +1,9 @@
+import { execFile } from "node:child_process"
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
+import { promisify } from "node:util"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
@@ -10,6 +12,10 @@ import { AppModule } from "../src/app.module"
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
+
+const execFileAsync = promisify(execFile)
+const git = async (cwd: string, ...args: string[]) =>
+  (await execFileAsync("git", args, { cwd })).stdout.trim()
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -138,6 +144,107 @@ describe("Agent runs API (e2e)", () => {
     // Guard the route-ordering trick: `running` must not be captured by `:id`.
     const res = await request(app.getHttpServer()).get("/api/agents/running").expect(200)
     expect(Array.isArray(res.body)).toBe(true)
+  })
+})
+
+describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", () => {
+  let app: INestApplication
+  let agentsDir: string
+  let runsDir: string
+  let projectsDir: string
+  let repo: string
+
+  async function boot(): Promise<INestApplication> {
+    process.env.AGENTS_DIR = agentsDir
+    process.env.AGENT_RUNS_DIR = runsDir
+    process.env.PROJECTS_DIR = projectsDir
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
+    const fresh = moduleRef.createNestApplication()
+    await fresh.init()
+    return fresh
+  }
+
+  beforeAll(async () => {
+    agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "git-agents-"))
+    runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "git-runs-"))
+    projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "git-projects-"))
+    repo = await fs.mkdtemp(path.join(os.tmpdir(), "git-repo-"))
+    // A git fixture project with one commit so HEAD resolves.
+    await git(repo, "init", "-b", "main")
+    await git(repo, "config", "user.email", "t@zibby.local")
+    await git(repo, "config", "user.name", "T")
+    await fs.writeFile(path.join(repo, "README.md"), "# fixture\n", "utf8")
+    await git(repo, "add", "-A")
+    await git(repo, "commit", "-m", "initial")
+
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "2"
+    process.env.FAKE_CLAUDE_DELAY_MS = "20"
+    process.env.FAKE_CLAUDE_COMMIT = "1"
+    app = await boot()
+
+    await request(app.getHttpServer())
+      .post("/api/agents")
+      .send({ id: "builder", name: "Builder", instructions: "builds" })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "fixture-proj", name: "Fixture", path: repo })
+      .expect(201)
+  })
+
+  afterAll(async () => {
+    await app.close()
+    for (const d of [agentsDir, runsDir, projectsDir, repo]) {
+      await fs.rm(d, { recursive: true, force: true })
+    }
+    for (const k of [
+      "AGENTS_DIR",
+      "AGENT_RUNS_DIR",
+      "PROJECTS_DIR",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_COMMIT",
+    ]) {
+      delete process.env[k]
+    }
+  })
+
+  it("creates a worktree, lands the commit on its branch, leaves main untouched, and prunes on delete", async () => {
+    const mainBefore = await git(repo, "rev-parse", "HEAD")
+
+    const start = await request(app.getHttpServer())
+      .post("/api/agents/builder/run")
+      .send({ prompt: "do the thing", project: "fixture-proj" })
+      .expect(201)
+    const { runId, workspace } = start.body as {
+      runId: string
+      workspace?: { branch: string; path: string; baseRef: string }
+    }
+    expect(workspace).toBeTruthy()
+    expect(workspace?.branch).toBe(`zibby/${runId.split("_").slice(0, 2).join("_")}-builder`)
+    expect(workspace?.baseRef).toBe(mainBefore)
+
+    await until(async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/agents/runs/${runId}/logs`)
+        .query({ offset: 0 })
+      return res.body.done ? res.body : null
+    })
+
+    // The commit landed on the run's branch — not on main.
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(mainBefore)
+    const branchHead = await git(repo, "rev-parse", workspace!.branch)
+    expect(branchHead).not.toBe(mainBefore)
+    // The worktree exists and is checked out on the branch.
+    expect(await git(workspace!.path, "rev-parse", "--abbrev-ref", "HEAD")).toBe(workspace!.branch)
+
+    // Delete prunes the worktree but keeps the branch (it may carry a PR).
+    await request(app.getHttpServer()).delete(`/api/agents/runs/${runId}`).expect(200)
+    const worktrees = await git(repo, "worktree", "list")
+    expect(worktrees).not.toContain(workspace!.path)
+    expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch)
   })
 })
 

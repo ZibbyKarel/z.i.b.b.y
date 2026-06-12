@@ -579,7 +579,10 @@
     "parkedSummary": "fáze {phase} · {attempts} pokusů vyčerpáno",
     "resumeNote": "Poznámka pro další pokus",
     "resumeNotePlaceholder": "Co má agent příště udělat jinak…",
-    "resumeWithNote": "Pokračovat s poznámkou"
+    "resumeWithNote": "Pokračovat s poznámkou",
+    "prGate": "Příprava PR",
+    "prDraft": "Návrh PR (pr-draft.md)",
+    "prDiffstat": "Změny na větvi (diffstat)"
   },
   "gates": {
     "title": "Pravidla schvalování",

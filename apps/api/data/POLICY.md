@@ -27,6 +27,31 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-git.push
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: git.push
+    decision: ask
+    resolve:
+      type: human
+  - id: floor-pr.open
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: pr.open
+    decision: ask
+    resolve:
+      type: human
+  - id: floor-pr.merge
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: pr.merge
+    decision: deny
   - id: floor-send_email
     source: system
     locked: true

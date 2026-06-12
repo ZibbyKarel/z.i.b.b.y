@@ -4,6 +4,10 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
+// The hook is a dependency-free `.mjs` with no `.d.ts` sibling; `classify` is a pure
+// `(command: string) => { action, branch?, … } | null`. Imported for unit coverage.
+// @ts-expect-error — untyped .mjs module (implicit any), intentional for this seam.
+import { classify } from "./claude-approval-hook.mjs"
 
 /**
  * Direct coverage for the PreToolUse approval hook's destructive-command detector.
@@ -193,5 +197,75 @@ describe("claude approval hook — destructive-command gate", () => {
     await preApprove()
     const res = await run
     expect(res.stdout).toContain('"permissionDecision":"allow"')
+  })
+})
+
+describe("claude approval hook — classify (push / PR / chains)", () => {
+  it("classifies a plain push as git.push and extracts the branch", () => {
+    const c = classify("git push origin main")
+    expect(c?.action).toBe("git.push")
+    expect(c?.branch).toBe("main")
+    expect(c?.riskType).toBe("push")
+    expect(c?.preview).toMatchObject({ kind: "command", shell: "bash", cmd: "git push origin main" })
+  })
+
+  it("honours git global options before the subcommand", () => {
+    expect(classify("git -C /repo push origin feature/x")).toMatchObject({
+      action: "git.push",
+      branch: "feature/x",
+    })
+    expect(classify("git --git-dir=/r/.git push origin dev")).toMatchObject({
+      action: "git.push",
+      branch: "dev",
+    })
+    expect(classify("git -c user.name=x push origin trunk")).toMatchObject({ action: "git.push" })
+  })
+
+  it("takes the destination of a src:dst refspec as the branch", () => {
+    expect(classify("git push origin HEAD:release")).toMatchObject({
+      action: "git.push",
+      branch: "release",
+    })
+  })
+
+  it("reclassifies force variants as git.force_push", () => {
+    expect(classify("git push --force origin main")?.action).toBe("git.force_push")
+    expect(classify("git push -f origin main")?.action).toBe("git.force_push")
+    expect(classify("git push --force-with-lease origin main")?.action).toBe("git.force_push")
+    expect(classify("git push origin +main")?.action).toBe("git.force_push")
+  })
+
+  it("classifies gh pr create → pr.open and gh pr merge → pr.merge", () => {
+    expect(classify("gh pr create --title x --body-file b.md")?.action).toBe("pr.open")
+    expect(classify("gh -R owner/repo pr merge 42 --squash")?.action).toBe("pr.merge")
+  })
+
+  it("a push+PR chain announces the single most severe action (pr.open over git.push)", () => {
+    const c = classify("git push -u origin feat && gh pr create --title x --body-file b.md")
+    expect(c?.action).toBe("pr.open")
+    // The preview shows the whole chain, not just the announced segment.
+    expect(c?.preview.cmd).toContain("git push")
+    expect(c?.preview.cmd).toContain("gh pr create")
+  })
+
+  it("pr.merge outranks every other action in a chain", () => {
+    const c = classify("git push --force origin main && gh pr merge 1")
+    expect(c?.action).toBe("pr.merge")
+  })
+
+  it("detects a push nested in command substitution", () => {
+    expect(classify("$(git push origin main)")?.action).toBe("git.push")
+  })
+
+  it("does not match lookalikes or quoted text", () => {
+    expect(classify("git pushover origin main")).toBeNull()
+    expect(classify('echo "git push origin main"')).toBeNull()
+    expect(classify("ls -la && cat report.txt")).toBeNull()
+  })
+
+  it("still classifies the destructive corpus as delete", () => {
+    expect(classify("rm -rf scratch.tmp")?.action).toBe("delete")
+    expect(classify("find . -name .DS_Store -delete")?.action).toBe("delete")
+    expect(classify("git clean -fdx")?.action).toBe("delete")
   })
 })

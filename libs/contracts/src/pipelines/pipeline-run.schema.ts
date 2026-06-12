@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { AgentIdSchema } from "../agents/agent.schema"
+import { WorkspaceSchema } from "../common.schema"
 
 /**
  * Status of a single stage's underlying run. The runner's full set, including
@@ -78,6 +79,12 @@ export const PipelineRunSchema = z.object({
    * restart/parking keep it.
    */
   projectPath: z.string().optional(),
+  /**
+   * The dedicated git worktree this run works in (Phase 3.1), when the target
+   * project is a git repo. Absent for non-git / projectless runs (direct-checkout
+   * fallback). Persisted so resume/restart and the PR-gate diffstat keep it.
+   */
+  workspace: WorkspaceSchema.optional(),
   /** Present while status is `parked` — which parking machine holds the run. */
   parkedReason: ParkedReasonSchema.optional(),
   /** Present while retries-parked: the surface the operator resumes from. */

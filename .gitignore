@@ -8,8 +8,9 @@ out/
 
 # Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
 apps/api/data-test/
-apps/api/data
 apps/api/data/**/runs
+apps/api/data/approvals
+apps/api/data/tasks
 
 !apps/api/data/agents
 !apps/api/data/automations

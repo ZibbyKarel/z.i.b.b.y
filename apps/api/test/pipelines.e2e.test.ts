@@ -1,7 +1,9 @@
+import { execFile } from "node:child_process"
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { fileURLToPath } from "node:url"
+import { promisify } from "node:util"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
@@ -258,6 +260,55 @@ describe("Pipelines API (e2e)", () => {
       .post(`/api/pipelines/runs/${pipelineRunId}/resume`)
       .send({})
       .expect(409)
+  })
+
+  it("a git project gets a worktree on a zibby/* branch; delete prunes it, keeps the branch", async () => {
+    const { execFile } = await import("node:child_process")
+    const { promisify } = await import("node:util")
+    const exec = promisify(execFile)
+    const git = async (cwd: string, ...args: string[]) => (await exec("git", args, { cwd })).stdout.trim()
+
+    const repo = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-git-repo-"))
+    await git(repo, "init", "-b", "main")
+    await git(repo, "config", "user.email", "t@zibby.local")
+    await git(repo, "config", "user.name", "T")
+    await fs.writeFile(path.join(repo, "README.md"), "# fixture\n", "utf8")
+    await git(repo, "add", "-A")
+    await git(repo, "commit", "-m", "initial")
+    const mainBefore = await git(repo, "rev-parse", "HEAD")
+
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "git-proj", name: "Git project", path: repo, checks: ["true"] })
+      .expect(201)
+
+    const start = await request(app.getHttpServer())
+      .post("/api/pipelines/release/run")
+      .send({ project: "git-proj" })
+      .expect(201)
+    const { pipelineRunId, workspace } = start.body as {
+      pipelineRunId: string
+      workspace?: { branch: string; path: string; baseRef: string }
+    }
+    expect(workspace?.branch).toBe(`zibby/${pipelineRunId}-release`)
+    expect(workspace?.baseRef).toBe(mainBefore)
+    // The branch + worktree exist; the operator's main HEAD is untouched.
+    expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch)
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(mainBefore)
+
+    const final = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+      return res.body.status !== "running" ? res.body : null
+    })
+    expect(final.status).toBe("done")
+    expect(final.workspace.branch).toBe(workspace!.branch)
+
+    // Delete prunes the worktree but keeps the branch.
+    await request(app.getHttpServer()).delete(`/api/pipelines/runs/${pipelineRunId}`).expect(200)
+    expect(await git(repo, "worktree", "list")).not.toContain(workspace!.path)
+    expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch)
+
+    await fs.rm(repo, { recursive: true, force: true })
   })
 
   it("a retries-parked run survives a restart still parked (and resumable)", async () => {
@@ -556,5 +607,193 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
     expect(res.body.status).toBe("failed")
     expect(res.body.currentStage).toBeNull()
     await app2.close()
+  })
+})
+
+describe("PR gate on a git project (claude mode, e2e)", () => {
+  const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/bin")
+  let app: INestApplication
+  let dirs: string[]
+  let repo: string
+  let bare: string
+  let ghLog: string
+
+  async function boot(): Promise<INestApplication> {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
+    const fresh = moduleRef.createNestApplication()
+    await fresh.init()
+    return fresh
+  }
+
+  const exec = promisify(execFile)
+  const git = async (cwd: string, ...args: string[]) => (await exec("git", args, { cwd })).stdout.trim()
+
+  beforeAll(async () => {
+    const make = (l: string) => fs.mkdtemp(path.join(os.tmpdir(), `prgate-${l}-`))
+    const [p, r, a, ar, appr, pol, proj] = await Promise.all([
+      make("p"), make("r"), make("a"), make("ar"), make("appr"), make("pol"), make("proj"),
+    ])
+    dirs = [p, r, a, ar, appr, pol, proj]
+    repo = await make("repo")
+    bare = await make("bare")
+    ghLog = path.join(await make("gh"), "gh-invocations.json")
+
+    // A git fixture project with a bare `origin` so `git push` succeeds locally.
+    await git(repo, "init", "-b", "main")
+    await git(repo, "config", "user.email", "t@zibby.local")
+    await git(repo, "config", "user.name", "T")
+    await fs.writeFile(path.join(repo, "README.md"), "# fixture\n", "utf8")
+    await git(repo, "add", "-A")
+    await git(repo, "commit", "-m", "initial")
+    await exec("git", ["init", "--bare", bare])
+    await git(repo, "remote", "add", "origin", bare)
+
+    process.env.PIPELINES_DIR = p
+    process.env.PIPELINE_RUNS_DIR = r
+    process.env.AGENTS_DIR = a
+    process.env.AGENT_RUNS_DIR = ar
+    process.env.APPROVALS_DIR = appr
+    process.env.POLICY_DIR = pol
+    process.env.PROJECTS_DIR = proj
+    process.env.AGENT_RUNNER_MODE = "claude"
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "4"
+    process.env.FAKE_CLAUDE_DELAY_MS = "30"
+    // Land a commit on the branch (so the diffstat has content), write the PR draft
+    // into the stage sandbox, announce pr.open, and on allow run the gated chain
+    // (push to the bare origin + the `gh` shim, which records the invocation).
+    process.env.FAKE_CLAUDE_COMMIT = "1"
+    process.env.FAKE_CLAUDE_PRODUCE = "pr-draft.md"
+    process.env.FAKE_CLAUDE_PRODUCE_BODY = "# Add feature\n\n## Změny\n- feature.txt\n"
+    process.env.FAKE_CLAUDE_INTENT = JSON.stringify({ action: "pr.open" })
+    process.env.FAKE_CLAUDE_PATH_PREPEND = BIN
+    process.env.GH_INVOCATIONS_FILE = ghLog
+    process.env.FAKE_CLAUDE_EXEC_CMD =
+      'git push -u origin "$(git branch --show-current)" && gh pr create --title "Add feature" --body-file pr-draft.md'
+
+    app = await boot()
+
+    await request(app.getHttpServer())
+      .post("/api/agents")
+      .send({ id: "pr-writer", name: "PR writer", instructions: "opens PRs", risk: "medium" })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "pr-proj", name: "PR project", path: repo, checks: ["true"] })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "prgate",
+        phases: [
+          { id: "write", agent: "pr-writer", consumes: "task.md", produces: "pr-draft.md", model: "sonnet", thinking: "medium" },
+        ],
+        instructions: "single PR-gate phase",
+      })
+      .expect(201)
+  })
+
+  afterAll(async () => {
+    await app.close()
+    for (const d of [...dirs, repo, bare, path.dirname(ghLog)]) {
+      await fs.rm(d, { recursive: true, force: true })
+    }
+    for (const k of [
+      "PIPELINES_DIR", "PIPELINE_RUNS_DIR", "AGENTS_DIR", "AGENT_RUNS_DIR", "APPROVALS_DIR",
+      "POLICY_DIR", "PROJECTS_DIR", "AGENT_RUNNER_MODE", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS", "FAKE_CLAUDE_COMMIT", "FAKE_CLAUDE_PRODUCE", "FAKE_CLAUDE_PRODUCE_BODY",
+      "FAKE_CLAUDE_INTENT", "FAKE_CLAUDE_PATH_PREPEND", "GH_INVOCATIONS_FILE", "FAKE_CLAUDE_EXEC_CMD",
+    ]) {
+      delete process.env[k]
+    }
+  })
+
+  const runStatus = async (id: string) =>
+    (await request(app.getHttpServer()).get(`/api/pipelines/runs/${id}`).expect(200)).body as {
+      status: string
+    }
+  const pendingStageApproval = async (id: string) => {
+    const res = await request(app.getHttpServer()).get("/api/approvals").query({ status: "pending" }).expect(200)
+    return res.body.find(
+      (a: { runId: string; kind: string }) => a.kind === "pipeline-stage" && a.runId.startsWith(`${id}.`),
+    ) as { id: string; action: string } | undefined
+  }
+  const ghInvocations = async () => {
+    const raw = await fs.readFile(ghLog, "utf8").catch(() => "")
+    return raw.split("\n").filter(Boolean).map((l) => JSON.parse(l) as string[])
+  }
+
+  it("parks on pr.open with a diffstat + draft, runs nothing before approval, then executes push + gh", async () => {
+    const start = await request(app.getHttpServer()).post("/api/pipelines/prgate/run").send({ project: "pr-proj" }).expect(201)
+    const { pipelineRunId } = start.body as { pipelineRunId: string }
+
+    // The stage announces pr.open → the run parks and a stage approval appears.
+    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
+    const approval = await until(() => pendingStageApproval(pipelineRunId))
+    expect(approval.action).toBe("pr.open")
+
+    // The decision surface is assembled at park time: diffstat (the branch's commit)
+    // + the PR draft, both served by the allowlisted artifact endpoint.
+    const diff = await request(app.getHttpServer())
+      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/diffstat.txt`)
+      .expect(200)
+    expect(diff.body.content).toContain("feature.txt")
+    const draft = await request(app.getHttpServer())
+      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/pr-draft.md`)
+      .expect(200)
+    expect(draft.body.content).toContain("Add feature")
+
+    // NOTHING reached the remote before approval.
+    expect(await ghInvocations()).toEqual([])
+    expect(await git(bare, "branch", "--list")).toBe("")
+
+    // Approve → the held child executes the push + gh pr create.
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200)
+    const final = await until(async () => {
+      const s = (await runStatus(pipelineRunId)).status
+      return s !== "running" && s !== "parked" ? s : null
+    })
+    expect(final).toBe("done")
+
+    // The exact `gh pr create` invocation landed, and the branch reached origin.
+    const calls = await ghInvocations()
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toEqual(["pr", "create", "--title", "Add feature", "--body-file", "pr-draft.md"])
+    expect(await git(bare, "branch", "--list")).toContain("zibby/")
+  })
+
+  it("rejecting the PR gate records no gh invocation and fails the run", async () => {
+    await fs.rm(ghLog, { force: true })
+    const start = await request(app.getHttpServer()).post("/api/pipelines/prgate/run").send({ project: "pr-proj" }).expect(201)
+    const { pipelineRunId } = start.body as { pipelineRunId: string }
+
+    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
+    const approval = await until(() => pendingStageApproval(pipelineRunId))
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200)
+
+    const final = await until(async () => {
+      const s = (await runStatus(pipelineRunId)).status
+      return s !== "running" && s !== "parked" ? s : null
+    })
+    expect(final).toBe("failed")
+    expect(await ghInvocations()).toEqual([])
+  })
+
+  it("404s an artifact not on the allowlist (no generic file browser)", async () => {
+    const start = await request(app.getHttpServer()).post("/api/pipelines/prgate/run").send({ project: "pr-proj" }).expect(201)
+    const { pipelineRunId } = start.body as { pipelineRunId: string }
+    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
+
+    await request(app.getHttpServer())
+      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/secrets.env`)
+      .expect(404)
+    // A traversal attempt is just an off-allowlist name → 404, never escapes.
+    await request(app.getHttpServer())
+      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/${encodeURIComponent("../../run.json")}`)
+      .expect(404)
+
+    // Clean up the still-parked run.
+    const approval = await pendingStageApproval(pipelineRunId)
+    if (approval) await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200)
   })
 })

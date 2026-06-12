@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Core Development",
+    "glyph": "code"
+  },
+  {
+    "name": "Language Specialists",
+    "glyph": "code"
+  },
+  {
+    "name": "Infrastructure",
+    "glyph": "server"
+  },
+  {
+    "name": "Quality & Security",
+    "glyph": "shield"
+  },
+  {
+    "name": "Data & AI",
+    "glyph": "brain"
+  },
+  {
+    "name": "Developer Experience",
+    "glyph": "gear"
+  },
+  {
+    "name": "Specialized Domains",
+    "glyph": "spark"
+  },
+  {
+    "name": "Business & Product",
+    "glyph": "cart"
+  },
+  {
+    "name": "Meta & Orchestration",
+    "glyph": "flow"
+  },
+  {
+    "name": "Research & Analysis",
+    "glyph": "search"
+  }
+]

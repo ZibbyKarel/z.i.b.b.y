@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { AgentIdSchema } from "./agent.schema"
-import { RunStatusSchema } from "../common.schema"
+import { RunStatusSchema, WorkspaceSchema } from "../common.schema"
 
 /**
  * A single execution of an agent. The backend keeps these in an in-memory
@@ -53,6 +53,12 @@ export const AgentRunSchema = z.object({
   files: z.array(z.string()).default([]),
   /** Absolute working directory the process ran in (its sandbox folder). */
   cwd: z.string(),
+  /**
+   * The dedicated git worktree this run worked in (Phase 3.1), when it targeted a
+   * git project. Absent for non-git / projectless runs (the run spawns in its
+   * sandbox as before). Persisted so deletion can prune the worktree.
+   */
+  workspace: WorkspaceSchema.optional(),
   startedAt: z.string().datetime(),
   pid: z.number().int(),
   logFile: z.string(),

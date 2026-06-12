@@ -6,10 +6,12 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 import {
   DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
+  PIPELINE_RUN_ARTIFACTS,
   type PhaseEscalation,
   type Pipeline,
   type PipelinePhase,
   type PipelineRun,
+  type PipelineRunArtifact,
   PipelineRunSchema,
   type Project,
   type RunLogChunk,
@@ -24,6 +26,7 @@ import { RunnerCore } from "../runner/runner-core"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { PipelinesStorageService } from "./pipelines.storage.service"
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
 
@@ -93,6 +96,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
     private readonly projects: ProjectsStorageService,
+    private readonly workspace: WorkspaceService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -186,11 +190,41 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     this.runs.set(pipelineRunId, run)
     await this.writeAggregate(run)
 
+    // Phase 3.1: a git project gets a dedicated worktree under the run dir so every
+    // stage works on the run's own `zibby/*` branch (the operator's checkout is
+    // never touched). A non-git project keeps the Phase 2 direct-checkout cwd. A
+    // *git* project whose worktree creation fails must NOT silently fall back onto
+    // the main checkout — that is exactly what 3.1 prevents — so the run is born
+    // failed (no driver) with the reason logged.
+    if (project && (await this.workspace.isGitRepo(project.path))) {
+      try {
+        run.workspace = await this.workspace.createWorktree({
+          projectPath: project.path,
+          runId: pipelineRunId,
+          slug: pipelineId,
+          dir: path.join(root, "worktree"),
+        })
+        await this.writeAggregate(run)
+      } catch (error) {
+        if (!(error instanceof WorkspaceSetupError)) throw error
+        run.status = "failed"
+        run.currentStage = null
+        await this.writeAggregate(run)
+        this.log.error("pipeline run failed: worktree setup", {
+          pipelineRunId,
+          projectPath: project.path,
+          err: error.message,
+        })
+        return run
+      }
+    }
+
     this.log.info("starting pipeline run", {
       pipelineId,
       pipelineRunId,
       phases: pipeline.phases.length,
       projectPath: project?.path,
+      branch: run.workspace?.branch,
     })
 
     // Fire-and-forget driver; the FE polls getRun for progress. The driver runs
@@ -357,6 +391,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       await this.core.delete(stage.runId).catch(() => {})
     }
     this.runs.delete(pipelineRunId)
+    // Phase 3.1: drop the git worktree (and prune its metadata) BEFORE the folder
+    // rm — rm-first would strand stale `.git/worktrees/*` in the project repo. The
+    // branch is left intact (it may carry the PR). Best-effort; tolerant of a
+    // worktree that's already gone.
+    if (run.workspace && run.projectPath) {
+      await this.workspace
+        .removeWorktree({ projectPath: run.projectPath, worktreePath: run.workspace.path })
+        .catch(() => {})
+    }
     const root = this.resolveRunDir(pipelineRunId)
     if (root) await fs.rm(root, { recursive: true, force: true }).catch(() => {})
   }
@@ -368,6 +411,43 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const stage = [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId)
     if (!stage) throw new PipelineRunNotFoundError(`${pipelineRunId}/${phaseId}`)
     return this.core.readLog(stage.runId, offset)
+  }
+
+  /**
+   * Read one whitelisted run artifact (Phase 3.3) by name. `name` must be on the
+   * allowlist ({@link PIPELINE_RUN_ARTIFACTS}) — anything else (incl. any traversal
+   * attempt) returns null → 404; there is no generic file browser. The diffstat
+   * lives in the run root; every other artifact is a phase's `produces`, found in
+   * its stage sandbox. Returns null when the run is unknown or the file is absent.
+   */
+  async readArtifact(
+    pipelineRunId: string,
+    name: string,
+  ): Promise<{ name: PipelineRunArtifact["name"]; content: string } | null> {
+    if (!(PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name)) return null
+    const allowed = name as PipelineRunArtifact["name"]
+    const root = this.resolveRunDir(pipelineRunId)
+    if (!root) return null
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+    // Candidate dirs: the run root (diffstat.txt) + the phase sandboxes. The
+    // currently-executing phase is included too — a run parked on the PR gate has
+    // already written its `produces` (pr-draft.md) but is not yet in `stageRuns`
+    // (that append happens only when the stage reaches a terminal state).
+    // Traversal-guarded again via resolveInside, though the allowlist already rules
+    // out separators.
+    const phaseDirs = new Set<string>()
+    if (run) {
+      if (run.currentStage) phaseDirs.add(run.currentStage)
+      for (const s of run.stageRuns) phaseDirs.add(s.phaseId)
+    }
+    const dirs = [root, ...[...phaseDirs].map((id) => path.join(root, id))]
+    for (const dir of dirs) {
+      const file = this.resolveInside(dir, allowed)
+      if (!file) continue
+      const content = await fs.readFile(file, "utf8").catch(() => null)
+      if (content !== null) return { name: allowed, content }
+    }
+    return null
   }
 
   /**
@@ -512,6 +592,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       stageCwd,
       project,
       escalation,
+      run.workspace?.path,
     )
     const rec = await this.core.start({
       kind: "pipeline-stage",
@@ -590,6 +671,17 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         await this.core.holdForApproval(stageRunId)
         run.status = "parked"
         run.parkedReason = "approval"
+        // Phase 3.3: the PR gate's Tier-3 decision surface is assembled HERE, at
+        // park time (not on demand) — for a push/PR gate on a worktree run, write
+        // the branch-vs-base diffstat next to the run so the card can show it.
+        if ((action.action === "pr.open" || action.action === "git.push") && run.workspace) {
+          const diff = await this.workspace
+            .diffstat({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
+            .catch(() => "")
+          if (diff) {
+            await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {})
+          }
+        }
         await this.writeAggregate(run)
         await this.approvals.requestApproval({
           runId: stageRunId,
@@ -670,16 +762,23 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     cwd: string,
     project: Project | null,
     escalation: PhaseEscalation | null = null,
+    /**
+     * The run's worktree path (Phase 3.1) when the git project got one — every
+     * stage spawns there so verify checks koder's *committed* changes and review
+     * sees them. Falls back to the project checkout (non-git / projectless: Phase 2).
+     */
+    worktreePath?: string,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
+    const spawnCwd = worktreePath ?? project?.path
     // Verify phases are deterministic shell checks — identical in demo and
     // claude mode (no model, no tokens, no intents, no preflight). They run in
-    // the project checkout when one was resolved, else in the stage sandbox.
+    // the run's worktree (or project checkout) when one was resolved, else the sandbox.
     if (phase.type === "verify") {
       const commands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS]
       return {
         command: "/bin/sh",
         args: ["-c", commands.join(" && ")],
-        ...(project ? { spawnCwd: project.path } : {}),
+        ...(spawnCwd ? { spawnCwd } : {}),
       }
     }
     if (process.env.AGENT_RUNNER_MODE === "claude") {
@@ -707,11 +806,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // Escalation rung (a retry's harder model/thinking) > phase > agent.
         model: escalation?.model ?? phase.model ?? agent.model,
         thinking: escalation?.thinking ?? phase.thinking ?? agent.thinking,
-        // The sandbox holds the handoff files; with cwd in the project the
+        // The sandbox holds the handoff files; with cwd in the worktree/project the
         // session still needs write access to it (reverse grant).
-        ...(project ? { grantDirs: [cwd] } : {}),
+        ...(spawnCwd ? { grantDirs: [cwd] } : {}),
       })
-      return project ? { ...built, spawnCwd: project.path } : built
+      return spawnCwd ? { ...built, spawnCwd } : built
     }
     const script =
       process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs")

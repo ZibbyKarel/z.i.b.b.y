@@ -202,6 +202,32 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     // No approval was ever raised — the policy refused it outright.
     expect(await pendingFor(runId)).toBeUndefined()
   })
+
+  it("the floor gates a git.push (no agent rule) — parks, approve releases it", async () => {
+    // The gateless `free` agent: only the locked floor applies. git.push → ask.
+    process.env.FAKE_CLAUDE_INTENT = JSON.stringify({ action: "git.push", branch: "main" })
+    const { runId, cwd } = await startRun("free", "push my branch")
+
+    await until(async () => ((await runStatus(runId)) === "awaiting-approval" ? true : null))
+    const approval = await until(async () => (await pendingFor(runId)) ?? null)
+    expect(approval.action).toBe("git.push")
+    // The push hasn't happened yet (the receipt is the gated effect).
+    expect(await paymentDone(cwd)).toBe(false)
+
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).send({}).expect(200)
+    await until(async () => ((await runStatus(runId)) === "done" ? true : null))
+    expect(await paymentDone(cwd)).toBe(true)
+  })
+
+  it("the floor denies pr.merge outright — interrupted, no approval, no effect", async () => {
+    // pr.merge is a locked `deny` on the floor: refused with no human in the loop.
+    process.env.FAKE_CLAUDE_INTENT = JSON.stringify({ action: "pr.merge" })
+    const { runId, cwd } = await startRun("free", "merge it")
+
+    await until(async () => ((await runStatus(runId)) === "interrupted" ? true : null))
+    expect(await paymentDone(cwd)).toBe(false)
+    expect(await pendingFor(runId)).toBeUndefined()
+  })
 })
 
 describe("Mid-run pause is not durable across restart (e2e)", () => {

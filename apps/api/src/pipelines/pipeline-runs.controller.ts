@@ -70,6 +70,14 @@ export class PipelineRunsController {
         }
       },
 
+      getPipelineRunArtifact: async ({ params: { pipelineRunId, name } }) => {
+        const artifact = await this.runner.readArtifact(pipelineRunId, name)
+        if (!artifact) {
+          return { status: 404, body: { message: `Artifact "${name}" not found for run "${pipelineRunId}"` } }
+        }
+        return { status: 200, body: artifact }
+      },
+
       deletePipelineRun: async ({ params: { pipelineRunId } }) => {
         try {
           await this.runner.delete(pipelineRunId)
