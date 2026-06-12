@@ -1,12 +1,12 @@
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
-import { cn } from "../../utils/cn";
 import { type Spacing, spacingToPx } from "../../tokens";
+import { cn } from "../../utils/cn";
 
 export enum GridTestId {
   Root = "grid-root",
 }
 
-export type GridCols = 1 | 2 | 3 | 4;
+export type GridCols = 1 | 2 | 3 | 4 | 5;
 export type GridAlign = "start" | "center" | "end" | "stretch";
 
 const baseCols: Record<GridCols, string> = {
@@ -14,24 +14,28 @@ const baseCols: Record<GridCols, string> = {
   2: "grid-cols-2",
   3: "grid-cols-3",
   4: "grid-cols-4",
+  5: "grid-cols-5",
 };
 const smCols: Record<GridCols, string> = {
   1: "sm:grid-cols-1",
   2: "sm:grid-cols-2",
   3: "sm:grid-cols-3",
   4: "sm:grid-cols-4",
+  5: "sm:grid-cols-5",
 };
 const mdCols: Record<GridCols, string> = {
   1: "md:grid-cols-1",
   2: "md:grid-cols-2",
   3: "md:grid-cols-3",
   4: "md:grid-cols-4",
+  5: "md:grid-cols-5",
 };
 const lgCols: Record<GridCols, string> = {
   1: "lg:grid-cols-1",
   2: "lg:grid-cols-2",
   3: "lg:grid-cols-3",
   4: "lg:grid-cols-4",
+  5: "lg:grid-cols-5",
 };
 
 const alignClass: Record<GridAlign, string> = {
@@ -41,7 +45,10 @@ const alignClass: Record<GridAlign, string> = {
   stretch: "items-stretch",
 };
 
-export interface GridProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
+export interface GridProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "className"
+> {
   cols?: GridCols;
   sm?: GridCols;
   md?: GridCols;

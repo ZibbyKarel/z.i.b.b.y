@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import {
+  ButtonGroup,
+  Container,
+  Divider,
+  Icon,
+  Stack,
+  StatusDot,
+  Toggle,
+  Typography,
+} from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { ButtonGroup, Container, Divider, Icon, Stack, StatusDot, Toggle, Typography } from "@zibby/design-system";
+import { useState } from "react";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useHealthQuery } from "../health/queries";
-import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { useVoice } from "../voice";
-import { SettingsSubnav } from "./components/SettingsSubnav";
+import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { MandateSection } from "./components/MandateSection";
+import { SettingsSubnav } from "./components/SettingsSubnav";
 
 type Locale = "cs" | "en";
 
@@ -42,7 +51,13 @@ function SettingRow({
             {label}
           </Typography>
           {hint && (
-            <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+            <Typography
+              mono
+              leading="snug"
+              size="2xs"
+              type="note"
+              variant="tertiary"
+            >
               {hint}
             </Typography>
           )}
@@ -54,7 +69,15 @@ function SettingRow({
 }
 
 /** A mono key/value info row for the system panel. */
-function InfoRow({ label, value, tone }: { label: string; value: string; tone?: "ok" }) {
+function InfoRow({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "ok";
+}) {
   return (
     <Stack align="center" direction="row" gap="150" justify="between">
       <Typography mono size="sm" type="note" variant="tertiary">
@@ -85,11 +108,14 @@ export function Screen() {
   const { shortcut, setShortcut } = useVoice();
 
   const [caffeinate, setCaffeinate] = useState(() =>
-    typeof window === "undefined" ? true : localStorage.getItem(CAFFEINATE_KEY) !== "false",
+    typeof window === "undefined"
+      ? true
+      : localStorage.getItem(CAFFEINATE_KEY) !== "false",
   );
   const setCaffeinateValue = (next: boolean) => {
     setCaffeinate(next);
-    if (typeof window !== "undefined") localStorage.setItem(CAFFEINATE_KEY, String(next));
+    if (typeof window !== "undefined")
+      localStorage.setItem(CAFFEINATE_KEY, String(next));
   };
 
   const setLocale = (value: Locale) => {
@@ -98,9 +124,12 @@ export function Screen() {
   };
 
   return (
-    <PageContainer maxWidth="880px">
+    <PageContainer>
       <Stack gap="250">
-        <PageHeader subtitle={`${DAEMON} · ${t("daemonOn")} ${HOST}`} title={t("title")} />
+        <PageHeader
+          subtitle={`${DAEMON} · ${t("daemonOn")} ${HOST}`}
+          title={t("title")}
+        />
 
         <SettingsSubnav />
 
@@ -123,13 +152,21 @@ export function Screen() {
             />
             <Divider />
             <SettingRow
-              control={<Toggle checked={caffeinate} label={t("caffeinate")} onChange={setCaffeinateValue} />}
+              control={
+                <Toggle
+                  checked={caffeinate}
+                  label={t("caffeinate")}
+                  onChange={setCaffeinateValue}
+                />
+              }
               hint={t("caffeinateHint")}
               label={t("caffeinate")}
             />
             <Divider />
             <SettingRow
-              control={<ShortcutCapture onChange={setShortcut} value={shortcut} />}
+              control={
+                <ShortcutCapture onChange={setShortcut} value={shortcut} />
+              }
               hint={t("voiceShortcutHint")}
               label={t("voiceShortcut")}
             />
@@ -144,7 +181,10 @@ export function Screen() {
             <Divider />
             <InfoRow label={t("host")} value={HOST} />
             <Divider />
-            <InfoRow label={t("uptime")} value={health ? formatUptime(health.uptime) : "—"} />
+            <InfoRow
+              label={t("uptime")}
+              value={health ? formatUptime(health.uptime) : "—"}
+            />
             <Divider />
             <InfoRow
               label={t("status")}

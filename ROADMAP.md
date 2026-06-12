@@ -386,39 +386,103 @@ shows the North Star's example briefing shape, every line traceable to a file.
 
 *Independent of Phases 3–6; pull forward whenever the operator wants it.*
 
+**Cost constraint (binding): voice is 100% free and browser-native.** STT via
+`SpeechRecognition`, TTS via `speechSynthesis` — both W3C Web Speech API,
+already in the browser. No paid voice services, no third-party model
+subscriptions (no ElevenLabs, no hosted Whisper, no cloud STT keys). Primary
+target is Chromium (Chrome/Edge — the operator's browser); Safari best-effort;
+Firefox has STT off by default and degrades to the text-input fallback. Full
+research (support matrix, error catalogue, bug workarounds, code patterns):
+`docs/research/phase7-voice-web-speech.md`.
+
 ### 7.1 Real voice in/out (A1–A3)
 
-- `useSpeechRecognition` (Web Speech API, locale from cookie, interim
-  transcript, error states `mic-denied|unsupported|network`),
-  `useSpeech` (TTS with `voiceschanged` handling), extended `VoiceSession`
-  interface; demo hook kept behind `mode: "live" | "demo"`.
-- **Tests:** hook tests with a mocked Speech API object (final result →
-  state transitions).
+- `useSpeechRecognition`: wraps `window.SpeechRecognition ??
+  webkitSpeechRecognition`; `lang` from the locale cookie (`cs-CZ`/`en-US`),
+  `continuous` + `interimResults`, interim surfaced as ghost text, utterance
+  dispatched only on `isFinal`. Error mapping to a closed union `mic-denied |
+  unsupported | network | service-denied` (`not-allowed`/`audio-capture` →
+  mic-denied; missing API → unsupported; `no-speech`/`aborted` suppressed —
+  they're normal session noise).
+- **Reconnect strategy** (the hard part): Chrome silently drops continuous
+  sessions after ~60 s of silence, firing a plain `onend` with no error.
+  Restart only while an `active` flag says the session should be live;
+  exponential backoff `min(200·2ⁿ, 5000)` ms, max 5 retries, counter reset on
+  every successful result. `not-allowed`/`audio-capture` kill the retry loop
+  permanently.
+- Chrome 139+ opt-ins, strictly feature-detected (no hard dependency):
+  `processLocally: true` (on-device STT — offline, audio never leaves the
+  machine; `available()`/`install()` for the language pack) and
+  `SpeechRecognitionPhrase` contextual biasing boosting the 7.2 command
+  grammar (`schválit`, `odmítnout`, `approve`, `reject`… boost ~8).
+- `useSpeech` (TTS): voices resolved via the `voiceschanged` event
+  (`getVoices()` is `[]` on first call — promise with `{ once: true }`
+  listener, inside `useEffect`); voice selection: exact locale match
+  preferring `localService` → lang-prefix fallback (`cs-*`) → browser
+  default. Known-bug hardening: hold the utterance in a ref until `onend`
+  (GC kills the callback otherwise); `speak()` only after a user gesture
+  (autoplay policy) — queue early utterances, flush on first interaction;
+  always set `utterance.lang`.
+- Extended `VoiceSession` interface (`mode, isListening, isSpeaking,
+  isSupported, error, transcript, startListening, stopListening, speak,
+  stop`); the existing demo transcript hook stays behind
+  `mode: "live" | "demo"` — Playwright/CI remain deterministic on demo.
+- SSR guards (`typeof window !== "undefined"`) on every API touch — Next.js
+  renders these components on the server first.
+- **Tests:** jsdom has neither API — vitest setup installs a
+  `MockSpeechRecognition` (EventTarget subclass with
+  `simulateFinalResult`/`simulateError` helpers) and a `speechSynthesis` stub
+  with fixture voices. Hook tests: start/stop transitions, error → closed
+  union mapping, silent-drop reconnect with fake timers (backoff + retry cap),
+  `voiceschanged` voice resolution, gesture-queue flush.
 
 ### 7.2 Speech → action bridge (A4–A5, A7)
 
-- `dispatchUtterance.ts`: pure `parseUtterance` grammar (cs/en, diacritics
-  normalization) → `approveLatest | rejectLatest | stopActive | navigate |
-  closeOverlay | createTask(text)`; wired to the real mutations; text-input
-  fallback when speech is unavailable; full i18n keys.
-- Voice reads run outcomes (depends on 1.3) and pending approvals aloud.
+- `parseUtterance` pure grammar (cs/en): normalize before matching —
+  lowercase + NFD + strip combining marks (`"Schválit"` → `"schvalit"`);
+  Chrome returns proper diacritics on final results but interim may lack
+  them, so matching is diacritics-insensitive while `createTask` keeps the
+  raw utterance (diacritics intact) as the task text. Grammar rows:
+  `schválit/approve → approveLatest`, `odmítnout/reject|deny → rejectLatest`,
+  `zastavit|stop/stop → stopActive`, `jdi na X/navigate to X → navigate(page)`,
+  `zavřít/close → closeOverlay`, anything else → `createTask(text)` — a
+  spoken task is never a silent no-op, same rule as typed ones.
+- `dispatchUtterance.ts` wires actions to the real mutations; text-input
+  fallback rendered automatically when `isSupported` is false (Firefox path);
+  full i18n keys.
+- Voice reads run outcomes (depends on 1.3) and pending approvals aloud via
+  `useSpeech`.
 - **Tests:** `dispatchUtterance.test.ts` covering every grammar row in both
-  languages + fallback-to-task; overlay test: final "schval" calls
-  `approveLatest`.
+  languages, diacritics-present and -stripped inputs, + fallback-to-task;
+  overlay test: final "schval" calls `approveLatest`.
 
-### 7.3 UX polish (Fáze C + known stubs)
+### 7.3 UX polish + optional wake word (Fáze C + known stubs)
 
-- Interactive approval/active panels in the voice overlay (shared
-  `VoiceActions` handlers); Settings → Voice (live/demo, recognition
-  language, TTS voice, wake-word toggle); overlay a11y (focus trap,
-  `aria-live`).
+- Voice overlay a11y: native `<dialog>` (built-in focus trap + Escape),
+  interim transcript in `role="status" aria-live="polite"`, errors in
+  `role="alert"`, focus restored to the trigger on close; interactive
+  approval/active panels (shared `VoiceActions` handlers).
+- Settings → Voice: live/demo mode, recognition language, TTS voice picker
+  (populated from `getVoices()`), wake-word toggle.
+- **Activation default is push-to-talk / hotkey — zero dependencies.**
+  Hands-free wake word is an optional last step, two free options:
+  - `@picovoice/porcupine-web` — real "Zibby" keyword spotting, on-device
+    WASM; free tier (≤3 active users/month — fine for a single operator) but
+    needs a free-account `AccessKey` env var and license phone-home; custom
+    `.ppn` trained free in their console.
+  - `@ricky0123/vad-web` — MIT, fully OSS, no key; VAD only ("any speech
+    activates"), not keyword spotting.
+  - openWakeWord rejected: Python-only in practice, non-commercial model
+    licenses. Either option needs `copy-webpack-plugin` wiring for
+    WASM/worklet assets in `next.config.ts`.
 - Sweep the known dead UI: skill edit/delete, global search wired to the
   existing search endpoints, light theme tokens (`light.ts` is a stub).
 - **Tests:** web-components tests per surface as built; Playwright: keyboard
   task creation → approval → done happy path stays green.
 
 **Phase exit criterion (FINISH DoD):** spoken task → run → spoken approval →
-run completes → spoken result; text fallback works everywhere.
+run completes → spoken result; text fallback works everywhere; total voice
+spend: 0 Kč.
 
 ---
 
@@ -463,6 +527,98 @@ machine that rebooted once, and the morning briefing accounts for everything.
 
 ---
 
+## Phase 9 — Limit resilience: pause, checkpoint, auto-resume
+
+*Goal: a subscription-limit outage is a **pause, not a failure**. A long
+pipeline that exhausts the Claude 5h/weekly window halts cleanly, waits for
+the window to reset, and continues from its last checkpoint — finished work
+is committed and marked in the handoff docs, so nothing is ever
+re-implemented from zero.*
+
+What exists today (verified 2026-06-12): `detect-limit.ts` already scans run
+output for usage-limit signals and extracts the reset epoch, but its only
+consumer (`onLimitHit`, `runner-core.ts:707`) just busts the LimitsService
+cache; `LimitsService` reads the statusline capture
+(`~/.claude/rate-limits.json`) with 5h/weekly windows + reset timestamps;
+task `held`/`queued` states and pipeline `parked` exist with restart
+survival — but every resume is manual or approval-driven. Missing entirely:
+limit-classified run failures, automatic resume on window reset, checkpoint
+commits/progress markers.
+
+### 9.1 Limit-aware halt
+
+- Classify the failure: when a run/stage dies **and** a limit signal was
+  detected in its output (or LimitsService shows the window exhausted), the
+  terminal status is a new `paused-limit` — not `error`, and not `parked`
+  (it must not burn the loop's retry budget). Persist `resumeAt` in the run
+  sidecar + aggregate `run.json` (priority: `resetsAt` from `detectLimit` →
+  LimitsService window reset → conservative fallback backoff); survives API
+  restart like every other persisted state.
+- Pre-dispatch guard: `TaskSchedulerService` consults LimitsService before
+  dispatching; an exhausted window queues the task with `resumeAt` instead
+  of spawning a run that dies on its first request. The pipeline stage
+  driver does the same check **between** stages — prefer halting at a phase
+  boundary over mid-phase.
+- Web: `paused-limit` badge in the runs feed + `RunDetail` shows a reset
+  countdown ("resumes ~04:30").
+- **Tests:** unit for the failure classifier (limit-shaped output vs
+  ordinary error, resetsAt extraction priority); e2e (demo runner emits a
+  fixture limit line): run → `paused-limit` with `resumeAt`; restart → state
+  survives.
+
+### 9.2 Auto-resume on window reset
+
+- `LimitResumeService` on the existing scheduled-task tick: scan
+  `paused-limit` runs and limit-queued tasks; when `now >= resumeAt` **and**
+  LimitsService confirms actual headroom (the file may lag), resume —
+  pipelines continue at the halted stage via the 1.2 stage-resume machinery
+  (continue, never restart the pipeline), tasks re-enter the normal dispatch
+  guards (budget → concurrency), so 8.1 caps still apply after the limit
+  comes back.
+- Bounded: max N auto-resume cycles per run, then `parked` for the operator
+  — a flapping limit must not thrash forever (same philosophy as the
+  delivery loop's finite retries).
+- Tier 1 silent + recorded: activity-log entries for both pause and resume;
+  the next briefing reads "pipeline X paused 2 h on the usage limit,
+  resumed 04:30, finished" (Phase 6 wiring).
+- **Tests:** unit for the resume scan against a fake clock + fake limits
+  (not yet reset / reset-but-still-exhausted / reset-with-headroom /
+  resume-cap exhausted → parked); e2e: `paused-limit` run + simulated reset
+  → run continues from the same stage to `done`, activity log holds the
+  pause/resume pair.
+
+### 9.3 Checkpointed delivery — commit + mark progress
+
+- The delivery pipeline commits as it goes, on its own run branch
+  (`zibby/<runId>-…` worktree from 3.1): a checkpoint commit after each
+  completed phase, and inside Kodér after each green verify pass —
+  `zibby-checkpoint(<phase>): <summary>`. Local commits to ZIBBY's own
+  branch are Tier 1 (nothing reaches the remote); the 3.2 push/PR gates are
+  untouched.
+- Progress markers in the handoff files: Architekt authors `plan.md` as a
+  checkbox work plan; each phase ticks items off (`- [x]`) as they land,
+  and the run dir keeps a `PROGRESS.md` (done / in-progress / next, linked
+  to checkpoint commits). Updating these is part of "done" for every step
+  in the agent prompts — files are the source of truth, so any future run
+  can ground itself in what's already finished.
+- Resume context injection: every resumed or retried phase — limit resume
+  (9.2), parked resume-with-note (2.3), loop back-edge — gets a prefix
+  assembled from `PROGRESS.md` + the checkpoint `git log`: "items 1–4 done
+  and committed, continue with item 5, do not re-implement." Continuation,
+  not restart.
+- **Tests:** unit for checkpoint-commit assembly and `PROGRESS.md`
+  round-trip/tick parsing; e2e on a fixture repo: kill a delivery run
+  mid-pipeline after one checkpoint → resume → branch history shows the
+  checkpoints, the resumed phase received the progress prefix, and no item
+  was implemented twice.
+
+**Phase exit criterion:** a seeded long pipeline halts on a simulated usage
+limit, the operator does nothing, the window resets, and the run finishes —
+the branch shows checkpoint commits, `plan.md` is fully ticked, and the
+morning briefing accounts for the pause.
+
+---
+
 ## Sequencing and dependencies
 
 ```
@@ -473,7 +629,10 @@ Phase 1 (core reliability)
   └─→ Phase 7 (voice)                   — only needs 1.3 for outcomes
 Phase 5 (channels)   — needs 1 + 2 (tasks it dispatches must deliver) + 3 for bug-fix-to-PR
 Phase 6 (briefing)   — needs 5 for channel sections; log/feed parts can start after 1
-Phase 8 (scale)      — last; needs 3 (worktrees) + 6 (per-engagement briefing)
+Phase 8 (scale)      — needs 3 (worktrees) + 6 (per-engagement briefing)
+Phase 9 (limit resilience) — needs 1.2 (stage resume), 3.1 (worktrees → checkpoint
+                       commits), 8.1 (limits/budget plumbing); 9.1+9.2 can land
+                       before 9.3 (task/pipeline pause-resume without checkpoints)
 ```
 
 **Standing rules for every phase** (the test constraint, made concrete):

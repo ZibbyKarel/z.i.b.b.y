@@ -1,8 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import {
   Button,
   Container,
@@ -12,18 +9,20 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import type { Pipeline } from "../../domain";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
+import type { Pipeline } from "../../domain";
+import { useAgentsQuery } from "../agents/queries";
 import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
 import { PhaseChain, attemptsFromStageRuns } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineDialog } from "./components/PipelineDialog/PipelineDialog";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
-import { useAgentsQuery } from "../agents/queries";
-import { usePipelineRunsQuery, usePipelinesQuery } from "./queries";
 import {
   duplicatePipelineBody,
   useCreatePipelineMutation,
@@ -31,6 +30,7 @@ import {
   useStartPipelineRunMutation,
   useUpdatePipelineMutation,
 } from "./mutations";
+import { usePipelineRunsQuery, usePipelinesQuery } from "./queries";
 
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
@@ -51,7 +51,8 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const router = useRouter();
 
   const list = pipelines;
-  const selected = (routeId ? list.find((p) => p.id === routeId) : null) ?? list[0];
+  const selected =
+    (routeId ? list.find((p) => p.id === routeId) : null) ?? list[0];
 
   // Attempt counters on the chain while the selected pipeline has a live run
   // (newest one wins — the list is newest-first).
@@ -59,7 +60,9 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const currentRun = selected
     ? liveRuns.find((r) => r.pipelineId === selected.id)
     : undefined;
-  const attempts = currentRun ? attemptsFromStageRuns(currentRun.stageRuns) : undefined;
+  const attempts = currentRun
+    ? attemptsFromStageRuns(currentRun.stageRuns)
+    : undefined;
 
   const addModal = adding && (
     <NewPipelineDialog
@@ -116,13 +119,24 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
         <Stack gap="250">
           <HudPanel padding="250">
             <Stack gap="200">
-              <Stack wrap align="start" direction="row" gap="200" justify="between">
+              <Stack
+                wrap
+                align="start"
+                direction="row"
+                gap="200"
+                justify="between"
+              >
                 <Container minW0>
                   <Stack gap="100">
                     <Typography size="3xl" type="title" weight="semibold">
                       {selected.name}
                     </Typography>
-                    <Typography mono size="caption" type="note" variant="secondary">
+                    <Typography
+                      mono
+                      size="caption"
+                      type="note"
+                      variant="secondary"
+                    >
                       {selected.desc}
                     </Typography>
                     <Stack align="center" direction="row" gap="75">
@@ -153,14 +167,20 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                       );
                       duplicatePipeline.mutate(
                         { body },
-                        { onSuccess: () => router.push(`/pipelines/${body.id}`) },
+                        {
+                          onSuccess: () => router.push(`/pipelines/${body.id}`),
+                        },
                       );
                     }}
                     size="sm"
                   >
                     {t("common.duplicate")}
                   </Button>
-                  <Button icon="play" intent="primary" onClick={() => setRunPipeline(selected)}>
+                  <Button
+                    icon="play"
+                    intent="primary"
+                    onClick={() => setRunPipeline(selected)}
+                  >
                     {t("pipelines.runPipeline")}
                   </Button>
                 </Stack>
@@ -176,7 +196,11 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           </HudPanel>
 
           <HudPanel padding="250" title={t("pipelines.chainTitle")}>
-            <PhaseChain agents={agents} attempts={attempts} pipeline={selected} />
+            <PhaseChain
+              agents={agents}
+              attempts={attempts}
+              pipeline={selected}
+            />
           </HudPanel>
         </Stack>
       )}
@@ -203,7 +227,10 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           key={runPipeline.id}
           onClose={() => setRunPipeline(null)}
           onLaunch={({ project }) =>
-            startRun.mutate({ params: { id: runPipeline.id }, body: { project } })
+            startRun.mutate({
+              params: { id: runPipeline.id },
+              body: { project },
+            })
           }
           pipeline={runPipeline}
           projects={[]}

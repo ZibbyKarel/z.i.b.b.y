@@ -10,9 +10,9 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../agents/queries";
 import { useIntegrationsQuery } from "../integrations/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
@@ -45,59 +45,61 @@ export function Screen() {
 
   return (
     <PageContainer>
-      <SummaryWidget />
+      <Stack direction="col" gap="200">
+        <SummaryWidget />
 
-      <BriefingCard />
+        <BriefingCard />
 
-      {activity.length > 0 && (
-        <HudPanel title={t("overview.activity")}>
-          <ActivityFeed items={activity} limit={8} />
-        </HudPanel>
-      )}
+        {activity.length > 0 && (
+          <HudPanel title={t("overview.activity")}>
+            <ActivityFeed items={activity} limit={8} />
+          </HudPanel>
+        )}
 
-      {isFresh && (
-        <HudPanel title={t("overview.starterTitle")}>
-          <Grid cols={1} gap="100" sm={2}>
-            {STARTERS.map((s) => (
-              <Pressable
-                key={s.id}
-                onClick={() => {
-                  /* navigation handled by links */
-                }}
-              >
-                <Card interactive background="background" radius="default">
-                  <Container padding={["100", "150"]}>
-                    <Stack align="center" direction="row" gap="150">
-                      <IconTile glyph={s.glyph} size="sm" />
-                      <Container grow minW0>
-                        <Typography
-                          align="left"
-                          size="base"
-                          type="note"
-                          weight="medium"
-                        >
-                          {t(`overview.starters.${s.id}.label`)}
-                        </Typography>
-                        <Typography
-                          mono
-                          truncate
-                          align="left"
-                          size="sm"
-                          type="note"
-                          variant="tertiary"
-                        >
-                          {t(`overview.starters.${s.id}.sub`)}
-                        </Typography>
-                      </Container>
-                      <Icon name="plus" size="sm" tone="faint" />
-                    </Stack>
-                  </Container>
-                </Card>
-              </Pressable>
-            ))}
-          </Grid>
-        </HudPanel>
-      )}
+        {isFresh && (
+          <HudPanel title={t("overview.starterTitle")}>
+            <Grid cols={1} gap="100" sm={2}>
+              {STARTERS.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onClick={() => {
+                    /* navigation handled by links */
+                  }}
+                >
+                  <Card interactive background="background" radius="default">
+                    <Container padding={["100", "150"]}>
+                      <Stack align="center" direction="row" gap="150">
+                        <IconTile glyph={s.glyph} size="sm" />
+                        <Container grow minW0>
+                          <Typography
+                            align="left"
+                            size="base"
+                            type="note"
+                            weight="medium"
+                          >
+                            {t(`overview.starters.${s.id}.label`)}
+                          </Typography>
+                          <Typography
+                            mono
+                            truncate
+                            align="left"
+                            size="sm"
+                            type="note"
+                            variant="tertiary"
+                          >
+                            {t(`overview.starters.${s.id}.sub`)}
+                          </Typography>
+                        </Container>
+                        <Icon name="plus" size="sm" tone="faint" />
+                      </Stack>
+                    </Container>
+                  </Card>
+                </Pressable>
+              ))}
+            </Grid>
+          </HudPanel>
+        )}
+      </Stack>
     </PageContainer>
   );
 }

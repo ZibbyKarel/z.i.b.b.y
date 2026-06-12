@@ -122,9 +122,17 @@ form/
 ├── TextInput/
 ├── Textarea/
 ├── Select/
+├── SegmentPicker/  (segmentovaný přepínač)
+├── SchedulePicker/ (opakování + dny v týdnu / den v měsíci + čas → Schedule; cron v appce)
 ├── Toggle/       (checkbox/switch)
+├── FilePicker/
 └── DropZone/
 ```
+
+`SchedulePicker` / `ScheduleField` jsou formátově neutrální — emitují strukturovaný
+`Schedule` (`repeat: "weekly" | "monthly"` + `time` + `weekdays: number[]` (multi-select,
+0 = neděle) + `monthDay`); překlad na cron drží appka
+(`apps/web/features/automations/schedule.ts`: `scheduleToCron` / `cronToSchedule`).
 
 ### Feedback
 

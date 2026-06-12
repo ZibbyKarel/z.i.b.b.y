@@ -1,22 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
   Container,
-  Dialog,
-  SegmentPickerField,
+  Divider,
+  Icon,
+  type IconName,
   Stack,
-  StatusDot,
-  TextInputField,
   Typography,
 } from "@zibby/design-system";
-import type { Automation, Target } from "@zibby/contracts";
+import type { Automation } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
+import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
-import { slug } from "../../utils/slug";
+import { useAgentsQuery } from "../agents/queries";
+import { usePipelinesQuery } from "../pipelines/queries";
+import { AutomationCard } from "./components/AutomationCard";
+import { AutomationFormDialog } from "./components/AutomationFormDialog";
 import { useAutomationsQuery } from "./queries";
 import {
   useCreateAutomationMutation,
@@ -24,168 +27,149 @@ import {
   useUpdateAutomationMutation,
 } from "./mutations";
 
-type TargetType = Target["type"];
+/** Which automation the form dialog is open for: "new", an entity, or closed. */
+type Editing = "new" | Automation | null;
 
 export function Screen() {
+  const t = useTranslations("automations");
   const { data: automations = [] } = useAutomationsQuery();
+  const { data: agents = [] } = useAgentsQuery();
+  const { data: pipelines = [] } = usePipelinesQuery();
   const create = useCreateAutomationMutation();
   const update = useUpdateAutomationMutation();
   const trigger = useTriggerAutomationMutation();
-  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Editing>(null);
+
+  /** Resolve a target id to its display name + glyph for the card. */
+  const resolveTarget = (automation: Automation): { name?: string; glyph?: IconName } => {
+    const { target } = automation;
+    if (target.type === "agent") {
+      const agent = agents.find((a) => a.id === target.agentId);
+      return { name: agent?.name ?? target.agentId, glyph: (agent?.glyph as IconName) ?? "bot" };
+    }
+    if (target.type === "pipeline") {
+      const pipeline = pipelines.find((p) => p.id === target.pipelineId);
+      return { name: pipeline?.name ?? target.pipelineId, glyph: "flow" };
+    }
+    return { glyph: "spark" };
+  };
+
+  const onSubmit = (body: Omit<Automation, "lastFiredAt">) => {
+    if (editing === "new") {
+      create.mutate({ body }, { onSuccess: () => setEditing(null) });
+    } else if (editing) {
+      update.mutate(
+        {
+          params: { id: editing.id },
+          body: {
+            name: body.name,
+            trigger: body.trigger,
+            target: body.target,
+            enabled: body.enabled,
+          },
+        },
+        { onSuccess: () => setEditing(null) },
+      );
+    }
+  };
+
+  const renderCard = (automation: Automation) => {
+    const { name, glyph } = resolveTarget(automation);
+    return (
+      <AutomationCard
+        automation={automation}
+        key={automation.id}
+        onEdit={() => setEditing(automation)}
+        onToggle={() =>
+          update.mutate({ params: { id: automation.id }, body: { enabled: !automation.enabled } })
+        }
+        onTrigger={() => trigger.mutate({ params: { id: automation.id }, body: {} })}
+        targetGlyph={glyph}
+        targetName={name}
+        triggering={trigger.isPending}
+      />
+    );
+  };
+
+  const cronAutomations = automations.filter((a) => a.trigger.type === "cron");
+  const eventAutomations = automations.filter((a) => a.trigger.type === "event");
+  const activeCount = automations.filter((a) => a.enabled).length;
 
   return (
     <PageContainer>
-      <SectionToolbar addLabel="Add automation" label="Automations" onAdd={() => setAdding(true)} />
+      <Stack gap="250">
+        <Card corners background="panel" data-testid="automations-header" tone="accent">
+          <Container padding="250">
+            <Stack gap="200">
+              <Stack wrap align="start" direction="row" gap="200" justify="between">
+                <Container minW0>
+                  <Typography size="2xl" type="title" weight="semibold">
+                    {t("title")}
+                  </Typography>
+                  <Container>
+                    <Typography mono size="sm" type="note" variant="tertiary">
+                      {t("summary", { active: activeCount, total: automations.length })}
+                    </Typography>
+                  </Container>
+                </Container>
+                <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+                  {t("addAutomation")}
+                </Button>
+              </Stack>
+              <Divider />
+              <Stack align="center" direction="row" gap="100">
+                <Icon name="shield" size="sm" tone="warn" />
+                <Typography mono size="2xs" type="micro" variant="tertiary">
+                  {t("autonomyNote")}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Container>
+        </Card>
 
-      {automations.length === 0 ? (
-        <EmptyState
-          actionLabel="Add automation"
-          description="Cron and event triggers run pipelines and agents unprompted — overnight work, morning briefings. Every external-effect action still passes the approval gate."
-          glyph="clock"
-          onAction={() => setAdding(true)}
-          title="No automations yet"
-        />
-      ) : (
-        <Stack gap="150">
-          {automations.map((a) => (
-            <AutomationRow
-              automation={a}
-              key={a.id}
-              onToggle={() =>
-                update.mutate({ params: { id: a.id }, body: { enabled: !a.enabled } })
-              }
-              onTrigger={() => trigger.mutate({ params: { id: a.id }, body: {} })}
-            />
-          ))}
-        </Stack>
-      )}
+        {automations.length === 0 ? (
+          <EmptyState
+            actionLabel={t("addAutomation")}
+            description={t("emptyDescription")}
+            glyph="clock"
+            onAction={() => setEditing("new")}
+            title={t("emptyTitle")}
+          />
+        ) : (
+          <Stack gap="250">
+            {cronAutomations.length > 0 && (
+              <Container>
+                <SectionLabel>
+                  <Stack inline align="center" direction="row" gap="50">
+                    <Icon name="clock" size="sm" tone="accent" /> {t("cronSection")}
+                  </Stack>
+                </SectionLabel>
+                <Stack gap="150">{cronAutomations.map(renderCard)}</Stack>
+              </Container>
+            )}
+            {eventAutomations.length > 0 && (
+              <Container>
+                <SectionLabel>
+                  <Stack inline align="center" direction="row" gap="50">
+                    <Icon name="bolt" size="sm" tone="accent" /> {t("eventSection")}
+                  </Stack>
+                </SectionLabel>
+                <Stack gap="150">{eventAutomations.map(renderCard)}</Stack>
+              </Container>
+            )}
+          </Stack>
+        )}
+      </Stack>
 
-      {adding && (
-        <CreateDialog
-          onClose={() => setAdding(false)}
-          onCreate={(body) => create.mutate({ body }, { onSuccess: () => setAdding(false) })}
+      {editing !== null && (
+        <AutomationFormDialog
+          agents={agents}
+          automation={editing === "new" ? undefined : editing}
+          onClose={() => setEditing(null)}
+          onSubmit={onSubmit}
+          pipelines={pipelines}
         />
       )}
     </PageContainer>
-  );
-}
-
-function AutomationRow({
-  automation,
-  onToggle,
-  onTrigger,
-}: {
-  automation: Automation;
-  onToggle: () => void;
-  onTrigger: () => void;
-}) {
-  const triggerText =
-    automation.trigger.type === "cron" ? `cron · ${automation.trigger.expr}` : `event · ${automation.trigger.event}`;
-  const targetText =
-    automation.target.type === "pipeline"
-      ? `pipeline:${automation.target.pipelineId}`
-      : automation.target.type === "agent"
-        ? `agent:${automation.target.agentId}`
-        : "briefing";
-
-  return (
-    <Card background="background" radius="default">
-      <Container padding={["150", "200"]}>
-        <Stack align="center" direction="row" gap="200" justify="between">
-          <Stack align="center" direction="row" gap="150">
-            <StatusDot tone={automation.enabled ? "ok" : "wait"} />
-            <Container minW0>
-              <Typography size="base" type="note" weight="semibold">
-                {automation.name ?? automation.id}
-              </Typography>
-              <Typography mono size="sm" type="note" variant="tertiary">
-                {triggerText} → {targetText}
-              </Typography>
-            </Container>
-          </Stack>
-          <Stack align="center" direction="row" gap="100">
-            <Button icon="play" intent="ghost" onClick={onTrigger} size="sm">
-              Run now
-            </Button>
-            <Button intent="ghost" onClick={onToggle} size="sm">
-              {automation.enabled ? "Disable" : "Enable"}
-            </Button>
-          </Stack>
-        </Stack>
-      </Container>
-    </Card>
-  );
-}
-
-function CreateDialog({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (body: Omit<Automation, "lastFiredAt">) => void;
-}) {
-  const [name, setName] = useState("");
-  const [expr, setExpr] = useState("0 7 * * *");
-  const [targetType, setTargetType] = useState<TargetType>("pipeline");
-  const [targetId, setTargetId] = useState("");
-
-  const target: Target =
-    targetType === "pipeline"
-      ? { type: "pipeline", pipelineId: targetId }
-      : targetType === "agent"
-        ? { type: "agent", agentId: targetId }
-        : { type: "briefing" };
-
-  const submit = () =>
-    onCreate({
-      id: slug(name, "novy"),
-      name: name.trim() || slug(name, "novy"),
-      trigger: { type: "cron", expr },
-      target,
-      enabled: true,
-    });
-
-  return (
-    <Dialog
-      open
-      actions={
-        <Stack grow align="center" direction="row" justify="end">
-          <Button intent="primary" onClick={submit}>
-            Create
-          </Button>
-        </Stack>
-      }
-      ariaLabel="Create automation"
-      closeLabel="Close"
-      onClose={onClose}
-      title="New automation"
-      width="md"
-    >
-      <Stack gap="200">
-        <TextInputField label="Name" onChange={(e) => setName(e.target.value)} value={name} />
-        <TextInputField
-          label="Cron (Europe/Prague)"
-          onChange={(e) => setExpr(e.target.value)}
-          value={expr}
-        />
-        <SegmentPickerField
-          label="Target"
-          onValueChange={(v) => setTargetType(v as TargetType)}
-          options={[
-            { value: "pipeline", label: "Pipeline" },
-            { value: "agent", label: "Agent" },
-            { value: "briefing", label: "Briefing" },
-          ]}
-          value={targetType}
-        />
-        {targetType !== "briefing" && (
-          <TextInputField
-            label="Target id"
-            onChange={(e) => setTargetId(e.target.value)}
-            value={targetId}
-          />
-        )}
-      </Stack>
-    </Dialog>
   );
 }

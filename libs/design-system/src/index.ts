@@ -228,6 +228,20 @@ export {
 export type { SegmentPickerFieldProps } from "./components/form/SegmentPickerField/SegmentPickerField";
 
 export {
+  SchedulePicker,
+  SchedulePickerTestId,
+} from "./components/form/SchedulePicker/SchedulePicker";
+export type {
+  Schedule,
+  ScheduleRepeat,
+  SchedulePickerLabels,
+  SchedulePickerProps,
+} from "./components/form/SchedulePicker/SchedulePicker";
+
+export { ScheduleField } from "./components/form/ScheduleField/ScheduleField";
+export type { ScheduleFieldProps } from "./components/form/ScheduleField/ScheduleField";
+
+export {
   ToggleField,
   ToggleFieldTestId,
 } from "./components/form/ToggleField/ToggleField";

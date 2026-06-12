@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
 import {
   Button,
   Chip,
@@ -12,13 +10,19 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
-import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
 import { type TierFilter, filterGraphByTier } from "./filterGraph";
-import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "./queries";
+import {
+  useMemoryGraphQuery,
+  useMemorySearchQuery,
+  useNoteQuery,
+} from "./queries";
 
 const TIER_FILTERS: TierFilter[] = ["all", "memory", "daily", "knowledge"];
 
@@ -34,7 +38,9 @@ export function Screen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tier, setTier] = useState<TierFilter>("all");
   const [search, setSearch] = useState("");
-  const [editor, setEditor] = useState<{ mode: "create" | "edit" } | null>(null);
+  const [editor, setEditor] = useState<{ mode: "create" | "edit" } | null>(
+    null,
+  );
 
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
@@ -44,7 +50,10 @@ export function Screen() {
     [graph, tier],
   );
   const hits = useMemo(
-    () => (searchHits?.results ?? []).filter((h) => tier === "all" || h.tier === tier),
+    () =>
+      (searchHits?.results ?? []).filter(
+        (h) => tier === "all" || h.tier === tier,
+      ),
     [searchHits, tier],
   );
   const dailyNodes = useMemo(
@@ -63,7 +72,9 @@ export function Screen() {
           key={value}
           onClick={() => setTier(value)}
         >
-          <Chip tone={tier === value ? "accent" : "idle"}>{t(`tier.${value}`)}</Chip>
+          <Chip tone={tier === value ? "accent" : "idle"}>
+            {t(`tier.${value}`)}
+          </Chip>
         </Pressable>
       ))}
     </Stack>
@@ -81,7 +92,11 @@ export function Screen() {
         />
       </Container>
       {tierChips}
-      <Button data-testid="memory-note-new" icon="plus" onClick={() => setEditor({ mode: "create" })}>
+      <Button
+        data-testid="memory-note-new"
+        icon="plus"
+        onClick={() => setEditor({ mode: "create" })}
+      >
         {t("newNote")}
       </Button>
     </Stack>
@@ -100,8 +115,16 @@ export function Screen() {
     return (
       <PageContainer>
         <Stack align="center" gap="200">
-          <EmptyState description={t("emptyDescription")} glyph="brain" title={t("emptyTitle")} />
-          <Button data-testid="memory-note-new" icon="plus" onClick={() => setEditor({ mode: "create" })}>
+          <EmptyState
+            description={t("emptyDescription")}
+            glyph="brain"
+            title={t("emptyTitle")}
+          />
+          <Button
+            data-testid="memory-note-new"
+            icon="plus"
+            onClick={() => setEditor({ mode: "create" })}
+          >
             {t("newNote")}
           </Button>
         </Stack>
@@ -148,7 +171,11 @@ export function Screen() {
           <Stack gap="250">
             <HudPanel padding="200" title={t("knowledgeGraph")}>
               {filteredGraph ? (
-                <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
+                <MemoryGraph
+                  graph={filteredGraph}
+                  onSelect={setSelected}
+                  selectedId={selected}
+                />
               ) : (
                 <Typography mono size="sm" type="note" variant="secondary">
                   {t("loadingGraph")}
@@ -180,8 +207,18 @@ export function Screen() {
           <HudPanel padding="250" title={note?.title ?? t("noteFallback")}>
             {note ? (
               <Stack gap="150">
-                <Stack align="center" direction="row" gap="150" justify="between">
-                  <Typography mono size="caption" type="note" variant="tertiary">
+                <Stack
+                  align="center"
+                  direction="row"
+                  gap="150"
+                  justify="between"
+                >
+                  <Typography
+                    mono
+                    size="caption"
+                    type="note"
+                    variant="tertiary"
+                  >
                     {note.path} · {note.tier}
                   </Typography>
                   <Button

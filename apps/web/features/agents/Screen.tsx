@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+import type { Agent } from "@zibby/contracts";
 import {
   Button,
   Card,
@@ -12,17 +11,19 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
+import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
-import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
+import { slug } from "../../utils/slug";
+import { usePipelinesQuery } from "../pipelines/queries";
+import { RunModal } from "../skills/components/RunModal/RunModal";
+import { newAgentDraft } from "./agentDraft";
 import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
-import { RunModal } from "../skills/components/RunModal/RunModal";
-import { slug } from "../../utils/slug";
-import { newAgentDraft } from "./agentDraft";
-import { useAgentsQuery, useCategoriesQuery } from "./queries";
 import {
   useCreateAgentMutation,
   useCreateCategoryMutation,
@@ -31,8 +32,7 @@ import {
   useStartAgentRunMutation,
   useUpdateAgentMutation,
 } from "./mutations";
-import { usePipelinesQuery } from "../pipelines/queries";
-import type { Agent } from "@zibby/contracts";
+import { useAgentsQuery, useCategoriesQuery } from "./queries";
 
 export function Screen() {
   const ta = useTranslations("agents");
@@ -55,17 +55,24 @@ export function Screen() {
   // Agents whose category was deleted (or never set) must not vanish: surface
   // them in a trailing fallback section instead of dropping them from the catalog.
   const knownNames = new Set(categories.map((c) => c.name));
-  const uncategorized = list.filter((a) => !a.category || !knownNames.has(a.category));
+  const uncategorized = list.filter(
+    (a) => !a.category || !knownNames.has(a.category),
+  );
 
   const pipelineCount = (a: Agent) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
 
-  const openAgent = openId ? (agents.find((a) => a.id === openId) ?? null) : null;
+  const openAgent = openId
+    ? (agents.find((a) => a.id === openId) ?? null)
+    : null;
 
   const save = (d: Agent, isNew: boolean) => {
     if (isNew) {
       const id = slug(d.name ?? "") || `agent-${Date.now()}`;
-      createAgent.mutate({ body: { ...d, id } }, { onSuccess: () => setOpenId(id) });
+      createAgent.mutate(
+        { body: { ...d, id } },
+        { onSuccess: () => setOpenId(id) },
+      );
       setDraft(null);
     } else {
       const { id, ...body } = d;
@@ -73,7 +80,12 @@ export function Screen() {
     }
   };
 
-  const renderSection = (key: string, label: string, glyph: IconName, items: Agent[]) => {
+  const renderSection = (
+    key: string,
+    label: string,
+    glyph: IconName,
+    items: Agent[],
+  ) => {
     const empty = items.length === 0;
     return (
       <Container key={key}>
@@ -88,7 +100,9 @@ export function Screen() {
                   aria-label={ta("deleteEmptyCategoryAria", { name: label })}
                   icon="x"
                   intent="danger"
-                  onClick={() => deleteCategory.mutate({ params: { name: label } })}
+                  onClick={() =>
+                    deleteCategory.mutate({ params: { name: label } })
+                  }
                   size="sm"
                 >
                   {ta("deleteEmptyCategory")}
@@ -112,7 +126,7 @@ export function Screen() {
             </Container>
           </Card>
         ) : (
-          <Grid cols={1} gap="150" lg={3} sm={2}>
+          <Grid cols={1} gap="150" lg={5} sm={3}>
             {items.map((a) => (
               <AgentCard
                 agent={a}
@@ -133,7 +147,11 @@ export function Screen() {
         <PageHeader
           actions={
             <>
-              <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
+              <Button
+                icon="plus"
+                intent="ghost"
+                onClick={() => setAddingCategory(true)}
+              >
                 {ta("addCategory")}
               </Button>
               <Button
@@ -169,7 +187,12 @@ export function Screen() {
               ),
             )}
             {uncategorized.length > 0 &&
-              renderSection("__uncategorized", ta("uncategorized"), "bot", uncategorized)}
+              renderSection(
+                "__uncategorized",
+                ta("uncategorized"),
+                "bot",
+                uncategorized,
+              )}
           </>
         )}
       </Stack>
@@ -182,7 +205,10 @@ export function Screen() {
           mode="view"
           onClose={() => setOpenId(null)}
           onDelete={(id) => {
-            deleteAgent.mutate({ params: { id } }, { onSuccess: () => setOpenId(null) });
+            deleteAgent.mutate(
+              { params: { id } },
+              { onSuccess: () => setOpenId(null) },
+            );
           }}
           onRun={(a) => {
             setRunAgent(a);
@@ -221,7 +247,10 @@ export function Screen() {
           }}
           onClose={() => setAddingCategory(false)}
           onSubmit={(category) =>
-            createCategory.mutate({ body: category }, { onSuccess: () => setAddingCategory(false) })
+            createCategory.mutate(
+              { body: category },
+              { onSuccess: () => setAddingCategory(false) },
+            )
           }
           pending={createCategory.isPending}
         />
@@ -233,7 +262,10 @@ export function Screen() {
           key={runAgent.id}
           onClose={() => setRunAgent(null)}
           onLaunch={({ agent, prompt, files }) =>
-            startAgentRun.mutate({ params: { id: agent.id }, body: { prompt, project: "", files } })
+            startAgentRun.mutate({
+              params: { id: agent.id },
+              body: { prompt, project: "", files },
+            })
           }
         />
       )}

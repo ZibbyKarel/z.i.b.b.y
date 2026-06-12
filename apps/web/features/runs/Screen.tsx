@@ -1,8 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import {
   ButtonGroup,
   Container,
@@ -11,20 +8,23 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { useCancelScheduledTaskMutation } from "../tasks/mutations";
-import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
-import { type FeedStatus, type RunView, runGlyph } from "./run";
-import { TaskCard } from "./components/TaskCard";
 import { RunDetail } from "./components/RunDetail";
+import { TaskCard } from "./components/TaskCard";
 import {
   useDeleteAgentRunMutation,
   useDeletePipelineRunMutation,
   useStopAgentMutation,
 } from "./mutations";
+import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
+import { type FeedStatus, type RunView, runGlyph } from "./run";
 
 type Filter = "all" | FeedStatus;
 const FILTERS: Filter[] = [
@@ -70,8 +70,7 @@ export function Screen() {
   // Keep the detail in sync with the filtered list: a selection only counts when
   // it's actually visible, and we fall back to the first row of the *current*
   // filter — never to runs[0], which would show an out-of-filter run's detail.
-  const selected =
-    list.find((r) => r.runId === selId) ?? list[0] ?? null;
+  const selected = list.find((r) => r.runId === selId) ?? list[0] ?? null;
 
   const count = (f: Filter) =>
     f === "all" ? runs.length : runs.filter((r) => r.status === f).length;
@@ -118,7 +117,7 @@ export function Screen() {
               onChange={(v) => setFilter(v as Filter)}
               options={FILTERS.map((f) => ({
                 id: f,
-                label: f === "all" ? t("filterAll") : t(`state.${f}`),
+                label: f === "all" ? t("filterAll") : t(`state.${f}`) + " ",
                 trailing: count(f),
               }))}
               value={filter}

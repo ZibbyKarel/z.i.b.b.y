@@ -1,6 +1,6 @@
 import { CodeBlock, Icon, Panel, Typography } from "@zibby/design-system";
-import { useRunLog } from "../useRunLog";
 import type { RunView } from "../run";
+import { useRunLog } from "../useRunLog";
 
 export interface RunLogStreamProps {
   run: RunView;
@@ -10,7 +10,12 @@ export interface RunLogStreamProps {
 }
 
 /** Live, offset-polled log tail for a run — appends as the backend file grows. */
-export function RunLogStream({ run, liveLabel, logLabel, linesLabel }: RunLogStreamProps) {
+export function RunLogStream({
+  run,
+  liveLabel,
+  logLabel,
+  linesLabel,
+}: RunLogStreamProps) {
   const { text, done } = useRunLog(run.runId, run.logBase);
   const live = run.status === "running";
   const lineCount = text ? text.replace(/\n$/, "").split("\n").length : 0;
@@ -20,7 +25,14 @@ export function RunLogStream({ run, liveLabel, logLabel, linesLabel }: RunLogStr
       header={
         <>
           <Icon name="pulse" size="sm" tone={live ? "accent" : "faint"} />
-          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="secondary">
+          <Typography
+            mono
+            uppercase
+            size="2xs"
+            tracking="wide"
+            type="note"
+            variant="secondary"
+          >
             {live ? liveLabel : logLabel}
           </Typography>
         </>
@@ -34,7 +46,7 @@ export function RunLogStream({ run, liveLabel, logLabel, linesLabel }: RunLogStr
       <CodeBlock
         followTail
         caret={live && !done}
-        maxHeight="md"
+        maxHeight="viewport"
         placeholder={`${liveLabel}…`}
         scrollKey={text}
         text={text.replace(/\n$/, "")}

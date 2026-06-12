@@ -1,5 +1,8 @@
-import { Fragment } from "react";
-import { useTranslations } from "next-intl";
+import {
+  type Agent,
+  AgentThinking,
+  DEFAULT_VERIFY_CHECKS,
+} from "@zibby/contracts";
 import {
   Card,
   Container,
@@ -8,32 +11,55 @@ import {
   IconTile,
   Stack,
   Tag,
+  TagProps,
   Typography,
 } from "@zibby/design-system";
-import { type Agent, DEFAULT_VERIFY_CHECKS } from "@zibby/contracts";
-import { type Pipeline, type PipelinePhase, glyphForPhase } from "../../../domain";
+import { useTranslations } from "next-intl";
+import { Fragment } from "react";
+import {
+  type Pipeline,
+  type PipelinePhase,
+  glyphForPhase,
+} from "../../../domain";
 
 /** Per-run model badge (opus / sonnet / haiku). */
 export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
   const t = useTranslations("phase");
   return (
-    <Tag title={t("modelTitle")} tone="neutral">
+    <Tag title={t("modelTitle")} tone="accent">
       {model}
     </Tag>
   );
 }
 
+const AgentThinking_TagTone = (
+  level: AgentThinking = "low",
+): TagProps["tone"] =>
+  ({
+    high: "ok" as TagProps["tone"],
+    medium: "warn" as TagProps["tone"],
+    low: "neutral" as TagProps["tone"],
+  })[level];
+
 /** Thinking-level badge (high / medium / low). */
 export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
   const t = useTranslations("phase");
   return (
-    <Tag title={t("thinkTitle")} tone="neutral">
+    <Tag title={t("thinkTitle")} tone={AgentThinking_TagTone(level)}>
       ◇ {level}
     </Tag>
   );
 }
 
-function IoRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function IoRow({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
     <Stack align="center" direction="row" gap="75">
       <Container shrink={false} width="30px">
@@ -86,14 +112,23 @@ function PhaseNode({
   const t = useTranslations("phase");
   const isVerify = phase.type === "verify";
   return (
-
-    <Card radius="default" selected={active} style={{ flex: "1 1 0%", minWidth: 0 }}>
+    <Card
+      radius="default"
+      selected={active}
+      style={{ flex: "1 1 0%", minWidth: 0 }}
+    >
       <Container padding="150">
         <Stack gap="100">
           <Stack align="center" direction="row" gap="100">
             <IconTile glyph={glyphForPhase(phase, agents)} size="sm" />
             <Container minW0>
-              <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
+              <Typography
+                mono
+                size="2xs"
+                tracking="wider"
+                type="note"
+                variant="tertiary"
+              >
                 {t("phaseLabel", { n: idx + 1 })}
               </Typography>
               <Typography mono nowrap size="base" type="note" weight="semibold">
@@ -129,7 +164,11 @@ function PhaseNode({
               <Divider />
               <Stack gap="75">
                 <IoRow label={t("input")} value={phase.consumes ?? ""} />
-                <IoRow accent label={t("output")} value={phase.produces ?? ""} />
+                <IoRow
+                  accent
+                  label={t("output")}
+                  value={phase.produces ?? ""}
+                />
               </Stack>
             </>
           )}
@@ -159,7 +198,13 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
             aria-hidden
             preserveAspectRatio="none"
             // eslint-disable-next-line react/forbid-dom-props
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              overflow: "visible",
+            }}
             viewBox="0 0 100 34"
           >
             <path
@@ -172,8 +217,13 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
             />
             <path d="M37 30 l 2.6 -5 l -5.2 0 z" fill="var(--color-bad)" />
           </svg>
-          { }
-          <Container left="49.5%" position="absolute" style={{ transform: "translateX(-50%)" }} top="0">
+          {}
+          <Container
+            left="49.5%"
+            position="absolute"
+            style={{ transform: "translateX(-50%)" }}
+            top="0"
+          >
             <Stack align="center" direction="row" gap="75">
               <Icon name="retry" size="xs" tone="bad" />
               <Typography mono size="xs" tone="bad" type="note">
@@ -194,7 +244,6 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
               phase={ph}
             />
             {i < phases.length - 1 && (
-               
               <Stack
                 align="center"
                 justify="center"
@@ -203,7 +252,13 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
               >
                 <Container padding={["0", "50"]}>
                   <Stack align="center" gap="50">
-                    <Typography mono nowrap size="2xs" type="note" variant="tertiary">
+                    <Typography
+                      mono
+                      nowrap
+                      size="2xs"
+                      type="note"
+                      variant="tertiary"
+                    >
                       {phases[i + 1]!.consumes ?? ""}
                     </Typography>
                     <Icon name="arrow" size="md" tone="faint" />
