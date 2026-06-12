@@ -18,10 +18,12 @@ import type { DotTone, IconName, TagTone } from "@zibby/design-system";
  */
 export type RunKind = "agent" | "pipeline" | "scheduled";
 
-/** Feed status: the shared run states plus the not-yet-fired `scheduled` and the
+/** Feed status: the shared run states plus the not-yet-fired `scheduled`, the
  * retries-parked `parked` (approval-parked pipelines keep reading as
- * `awaiting-approval` — that mapping is load-bearing for the approvals gate). */
-export type FeedStatus = RunStatus | "scheduled" | "parked";
+ * `awaiting-approval` — that mapping is load-bearing for the approvals gate), and
+ * Phase 8's pre-dispatch budget holds `held` (over a cap, behind an approval) and
+ * `queued` (waiting for a concurrency slot). */
+export type FeedStatus = RunStatus | "scheduled" | "parked" | "held" | "queued";
 
 export interface RunView {
   runId: string;
@@ -47,6 +49,12 @@ export interface RunView {
   taskOutcome?: "done" | "error";
   /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
   parked?: PipelineRun["parked"];
+  /** The engagement a task is attributed to (Phase 8) — drives the queued caption. */
+  projectId?: string;
+  /** Held tasks: why the budget guard parked it. */
+  heldReason?: string;
+  /** Held tasks: the spend-past-cap approval gating the override. */
+  approvalId?: string;
 }
 
 /** Task-first display name: explicit title, else the task text, else the target. */
@@ -159,9 +167,13 @@ export function scheduledTaskToView(t: ScheduledTask): RunView | null {
   const status: FeedStatus =
     t.status === "scheduled"
       ? "scheduled"
-      : t.status === "cancelled"
-        ? "interrupted"
-        : "error";
+      : t.status === "queued"
+        ? "queued"
+        : t.status === "held"
+          ? "held"
+          : t.status === "cancelled"
+            ? "interrupted"
+            : "error";
   return {
     runId: t.id,
     kind: "scheduled",
@@ -173,6 +185,9 @@ export function scheduledTaskToView(t: ScheduledTask): RunView | null {
     project: "",
     startedAt: new Date(t.scheduledAt).toISOString(),
     logBase: null,
+    projectId: t.projectId,
+    heldReason: t.heldReason,
+    approvalId: t.approvalId,
   };
 }
 
@@ -227,6 +242,20 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
     badge: "warn",
     dot: "wait",
     glyph: "wait",
+    pulse: false,
+  },
+  held: {
+    key: "held",
+    badge: "warn",
+    dot: "wait",
+    glyph: "pause",
+    pulse: false,
+  },
+  queued: {
+    key: "queued",
+    badge: "neutral",
+    dot: "idle",
+    glyph: "clock",
     pulse: false,
   },
 };

@@ -20,7 +20,7 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { ProjectCard } from "./components/ProjectCard";
 import { ProjectModal } from "./components/ProjectModal";
-import { useProjectCategoriesQuery, useProjectsQuery } from "./queries";
+import { useBudgetQuery, useProjectCategoriesQuery, useProjectsQuery } from "./queries";
 import {
   useCreateProjectCategoryMutation,
   useCreateProjectMutation,
@@ -38,6 +38,8 @@ export function Screen() {
   const t = useTranslations("projects");
   const { data: projects = [] } = useProjectsQuery();
   const { data: categories = [] } = useProjectCategoriesQuery();
+  const { data: budget } = useBudgetQuery();
+  const budgetByProject = new Map((budget?.projects ?? []).map((p) => [p.projectId, p]));
   const createProject = useCreateProjectMutation();
   const updateProject = useUpdateProjectMutation();
   const deleteProject = useDeleteProjectMutation();
@@ -106,7 +108,12 @@ export function Screen() {
         ) : (
           <Grid cols={1} gap="150" lg={3} sm={2}>
             {items.map((p) => (
-              <ProjectCard key={p.id} onOpen={(x) => setOpenId(x.id)} project={p} />
+              <ProjectCard
+                budget={budgetByProject.get(p.id)}
+                key={p.id}
+                onOpen={(x) => setOpenId(x.id)}
+                project={p}
+              />
             ))}
           </Grid>
         )}

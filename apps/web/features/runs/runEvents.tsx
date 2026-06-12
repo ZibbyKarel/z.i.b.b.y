@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/useRunningAgentsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
+import { getBudgetQueryKey } from "../projects/queries/useBudgetQuery";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
 import { getBriefingQueryKey } from "../overview/queries/useBriefingQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
@@ -68,12 +69,16 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
       if (parsed.scope === "agent-runs") {
         void qc.invalidateQueries({ queryKey: getRunningAgentsQueryKey() });
         void qc.invalidateQueries({ queryKey: allAgentRunsKey });
+        // A run starting/ending changes a project's running count + may drain the
+        // queue (held → dispatched), so the budget readout must refresh too.
+        void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
         if (parsed.status === "awaiting-approval") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
       } else if (parsed.scope === "pipeline-runs" && parsed.runId) {
         void qc.invalidateQueries({ queryKey: allPipelineRunsKey });
         void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
+        void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }

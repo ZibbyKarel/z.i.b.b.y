@@ -630,6 +630,8 @@
     "metaAgent": "agent",
     "metaKind": "typ",
     "metaTask": "úkol",
+    "heldCaption": "Pozdrženo — {reason}. Schval překročení rozpočtu pro odeslání.",
+    "queuedCaption": "Čeká na volný slot v {project}.",
     "taskOutcome": {
       "done": "úspěch",
       "error": "selhání"
@@ -646,6 +648,8 @@
       "running": "běží",
       "awaiting-approval": "čeká na tebe",
       "scheduled": "naplánováno",
+      "held": "pozdrženo",
+      "queued": "ve frontě",
       "done": "hotovo",
       "error": "chyba",
       "interrupted": "přerušeno",
@@ -778,6 +782,11 @@
     "deleteTitle": "Smazat projekt?",
     "deleteBody": "Opravdu smazat projekt {name}? Soubory na disku zůstanou, odebere se jen záznam z velínu.",
     "modalSubtitle": "název · cesta · kategorie · popis",
+    "budgetDaily": "denně",
+    "budgetWeekly": "týdně",
+    "budgetRunning": "běží",
+    "budgetQueued": "ve frontě",
+    "budgetHeld": "pozdrženo",
     "fields": {
       "name": "Název projektu",
       "namePlaceholder": "media-vault",
@@ -786,7 +795,12 @@
       "pathPlaceholder": "~/Projects/media-vault",
       "category": "Kategorie",
       "desc": "Popis",
-      "descPlaceholder": "Čím se projekt zabývá"
+      "descPlaceholder": "Čím se projekt zabývá",
+      "budget": "Rozpočet a souběh",
+      "budgetHint": "Limity počtu běhů na okno (Europe/Prague). Při překročení se nové úkoly pozdrží za schválením. Prázdné = bez limitu.",
+      "budgetDailyRuns": "běhů / den",
+      "budgetWeeklyRuns": "běhů / týden",
+      "budgetMaxConcurrent": "max paralelně"
     },
     "categoryDialog": {
       "title": "Nová kategorie",

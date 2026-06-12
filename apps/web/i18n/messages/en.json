@@ -630,6 +630,8 @@
     "metaAgent": "agent",
     "metaKind": "type",
     "metaTask": "task",
+    "heldCaption": "Held — {reason}. Approve the budget override to dispatch.",
+    "queuedCaption": "Waiting for a slot in {project}.",
     "taskOutcome": {
       "done": "succeeded",
       "error": "failed"
@@ -646,6 +648,8 @@
       "running": "running",
       "awaiting-approval": "awaiting you",
       "scheduled": "scheduled",
+      "held": "held",
+      "queued": "queued",
       "done": "done",
       "error": "error",
       "interrupted": "interrupted",
@@ -778,6 +782,11 @@
     "deleteTitle": "Delete project?",
     "deleteBody": "Delete project {name}? The files on disk stay; only the registry record is removed.",
     "modalSubtitle": "name · path · category · description",
+    "budgetDaily": "daily",
+    "budgetWeekly": "weekly",
+    "budgetRunning": "running",
+    "budgetQueued": "queued",
+    "budgetHeld": "held",
     "fields": {
       "name": "Project name",
       "namePlaceholder": "media-vault",
@@ -786,7 +795,12 @@
       "pathPlaceholder": "~/Projects/media-vault",
       "category": "Category",
       "desc": "Description",
-      "descPlaceholder": "What the project is about"
+      "descPlaceholder": "What the project is about",
+      "budget": "Budget & concurrency",
+      "budgetHint": "Run-count caps per window (Europe/Prague). Over a cap, new tasks are held behind an approval. Leave blank for unlimited.",
+      "budgetDailyRuns": "runs / day",
+      "budgetWeeklyRuns": "runs / week",
+      "budgetMaxConcurrent": "max parallel"
     },
     "categoryDialog": {
       "title": "New category",

@@ -39,6 +39,14 @@ export function TaskCard({
   // The task-origin line is only worth a row when it adds something the
   // headline doesn't already say.
   const taskLine = run.taskTitle && run.taskTitle !== headline ? run.taskTitle : "";
+  // Phase 8 budget holds: a held task points at its approval; a queued task says
+  // which engagement it's waiting on a slot for.
+  const budgetCaption =
+    run.status === "held"
+      ? t("heldCaption", { reason: run.heldReason ?? "" })
+      : run.status === "queued"
+        ? t("queuedCaption", { project: run.projectId ?? "" })
+        : "";
   return (
     <Card
       as="button"
@@ -60,6 +68,17 @@ export function TaskCard({
           {taskLine && (
             <Typography mono truncate size="2xs" type="note" variant="tertiary">
               {t("metaTask")} · {taskLine}
+            </Typography>
+          )}
+          {budgetCaption && (
+            <Typography
+              truncate
+              size="2xs"
+              tone={run.status === "held" ? "warn" : undefined}
+              type="note"
+              variant={run.status === "held" ? undefined : "tertiary"}
+            >
+              {budgetCaption}
             </Typography>
           )}
           <Stack align="center" direction="row" gap="100" justify="between">

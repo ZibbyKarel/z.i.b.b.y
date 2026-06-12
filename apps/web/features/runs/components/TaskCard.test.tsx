@@ -90,6 +90,34 @@ describe("TaskCard", () => {
     expect(screen.getByText(/úkol → selhání/)).toBeInTheDocument();
   });
 
+  it("renders a held task's reason caption (Phase 8)", () => {
+    render(
+      <TaskCard
+        glyph="bot"
+        onSelect={() => {}}
+        run={{ ...run, status: "held", heldReason: "daily run cap reached (1/1)", projectId: "alpha" }}
+        selected={false}
+        startedLabel="teď"
+        stateLabel="pozdrženo"
+      />,
+    );
+    expect(screen.getByText(/daily run cap reached/)).toBeInTheDocument();
+  });
+
+  it("renders a queued task's waiting-for-slot caption with the project (Phase 8)", () => {
+    render(
+      <TaskCard
+        glyph="bot"
+        onSelect={() => {}}
+        run={{ ...run, status: "queued", projectId: "alpha" }}
+        selected={false}
+        startedLabel="teď"
+        stateLabel="ve frontě"
+      />,
+    );
+    expect(screen.getByText(/alpha/)).toBeInTheDocument();
+  });
+
   it("selects on click", async () => {
     const onSelect = vi.fn();
     render(
@@ -144,5 +172,20 @@ describe("scheduledTaskToView", () => {
     expect(scheduledTaskToView({ ...task, status: "failed" })?.status).toBe(
       "error",
     );
+  });
+
+  it("maps held/queued tasks, carrying projectId + heldReason (Phase 8)", () => {
+    const held = scheduledTaskToView({
+      ...task,
+      status: "held",
+      projectId: "alpha",
+      heldReason: "weekly run cap reached (5/5)",
+      approvalId: "task-1_ab",
+    });
+    expect(held).toMatchObject({ status: "held", projectId: "alpha", approvalId: "task-1_ab" });
+    expect(scheduledTaskToView({ ...task, status: "queued", projectId: "alpha" })).toMatchObject({
+      status: "queued",
+      projectId: "alpha",
+    });
   });
 });

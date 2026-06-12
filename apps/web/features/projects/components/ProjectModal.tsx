@@ -29,7 +29,16 @@ type ProjectEditValues = {
   path: string;
   desc: string;
   category: string;
+  budgetDailyRuns: string;
+  budgetWeeklyRuns: string;
+  budgetMaxConcurrent: string;
 };
+
+/** Parse a budget field: a positive integer, or undefined when blank/invalid. */
+function toPositiveInt(raw: string): number | undefined {
+  const n = Number.parseInt(raw.trim(), 10);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
 
 function ChipToggle({
   active,
@@ -70,8 +79,23 @@ export function ProjectModal({
       path: project.path ?? "~/Projects/",
       desc: project.desc ?? "",
       category: project.category ?? categories[0]?.name ?? "",
+      budgetDailyRuns: project.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
+      budgetWeeklyRuns: project.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
+      budgetMaxConcurrent:
+        project.budget?.maxConcurrent != null ? String(project.budget.maxConcurrent) : "",
     },
     onSubmit: (values) => {
+      const dailyRuns = toPositiveInt(values.budgetDailyRuns);
+      const weeklyRuns = toPositiveInt(values.budgetWeeklyRuns);
+      const maxConcurrent = toPositiveInt(values.budgetMaxConcurrent);
+      const budget =
+        dailyRuns != null || weeklyRuns != null || maxConcurrent != null
+          ? {
+              ...(dailyRuns != null ? { dailyRuns } : {}),
+              ...(weeklyRuns != null ? { weeklyRuns } : {}),
+              ...(maxConcurrent != null ? { maxConcurrent } : {}),
+            }
+          : undefined;
       onSave(
         {
           ...project,
@@ -79,6 +103,7 @@ export function ProjectModal({
           path: values.path.trim(),
           desc: values.desc.trim() || undefined,
           category: values.category || undefined,
+          budget,
         },
         isNew,
       );
@@ -177,6 +202,35 @@ export function ProjectModal({
             name="desc"
             placeholder={t("fields.descPlaceholder")}
           />
+
+          <Stack gap="75">
+            <Typography mono size="sm" type="note" variant="secondary">
+              {t("fields.budget")}
+            </Typography>
+            <Typography size="xs" type="note" variant="tertiary">
+              {t("fields.budgetHint")}
+            </Typography>
+            <Stack direction="row" gap="150">
+              <FormTextInput<ProjectEditValues>
+                inputMode="numeric"
+                label={t("fields.budgetDailyRuns")}
+                name="budgetDailyRuns"
+                placeholder="—"
+              />
+              <FormTextInput<ProjectEditValues>
+                inputMode="numeric"
+                label={t("fields.budgetWeeklyRuns")}
+                name="budgetWeeklyRuns"
+                placeholder="—"
+              />
+              <FormTextInput<ProjectEditValues>
+                inputMode="numeric"
+                label={t("fields.budgetMaxConcurrent")}
+                name="budgetMaxConcurrent"
+                placeholder="—"
+              />
+            </Stack>
+          </Stack>
         </Stack>
       </Dialog>
 
