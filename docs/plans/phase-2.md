@@ -183,7 +183,7 @@ counter + injects note; reason-aware reconcile); e2e: retries exhaust with
 and run completes; restart while retries-parked → still parked; web-components:
 parked queue rendering + resume-with-note fires the mutation.
 
-2.2 Loop-aware pipeline authoring UI
+2.2 Loop-aware pipeline authoring UI — ✅ HOTOVO
 
 All in apps/web/features/pipelines/:
 

@@ -26,6 +26,37 @@ const pipeline: Pipeline = {
   ],
 };
 
+describe("PhaseChain — attempt counts", () => {
+  const looped: Pipeline = {
+    ...pipeline,
+    phases: [
+      { ...pipeline.phases[0]!, id: "koder" },
+      {
+        ...pipeline.phases[1]!,
+        id: "verify",
+        loop: { to: "koder", maxRetries: 2, escalate: true, then: "park" },
+      },
+    ],
+  };
+
+  it("shows 'attempt n/m' on the looped node when a current run is supplied", () => {
+    render(
+      <PhaseChain
+        agents={[]}
+        attempts={{ koder: 2, verify: 2 }}
+        pipeline={looped}
+      />,
+    );
+    // Only the looped node renders the counter (max = maxRetries + 1).
+    expect(screen.getByText("pokus 2/3")).toBeInTheDocument();
+  });
+
+  it("renders no counter without a current run", () => {
+    render(<PhaseChain agents={[]} pipeline={looped} />);
+    expect(screen.queryByText(/pokus/)).not.toBeInTheDocument();
+  });
+});
+
 describe("PhaseChain — verify node", () => {
   it("renders a verify phase with the checks list instead of agent badges", () => {
     render(<PhaseChain agents={[]} pipeline={pipeline} />);

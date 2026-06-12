@@ -106,7 +106,9 @@ describe("NewPipelineDialog", () => {
     );
 
     const input = onCreate.mock.calls[0]?.[0] as CreatePipelineInput;
-    expect(input.phases.map((p) => p.id)).toEqual(["phase-1", "phase-2"]);
+    // Ids are key-stable (not positional) so loop targets survive removals —
+    // the removed middle phase's id is gone, not recycled.
+    expect(input.phases.map((p) => p.id)).toEqual(["phase-1", "phase-3"]);
     expect(input.phases[1]?.consumes).toBe(input.phases[0]?.produces);
   });
 

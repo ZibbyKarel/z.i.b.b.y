@@ -18,12 +18,19 @@ import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
-import { PhaseChain } from "./components/PhaseChain";
+import { PhaseChain, attemptsFromStageRuns } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
+import { PipelineDialog } from "./components/PipelineDialog/PipelineDialog";
 import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
 import { useAgentsQuery } from "../agents/queries";
-import { usePipelinesQuery } from "./queries";
-import { useCreatePipelineMutation, useStartPipelineRunMutation } from "./mutations";
+import { usePipelineRunsQuery, usePipelinesQuery } from "./queries";
+import {
+  duplicatePipelineBody,
+  useCreatePipelineMutation,
+  useDuplicatePipelineMutation,
+  useStartPipelineRunMutation,
+  useUpdatePipelineMutation,
+} from "./mutations";
 
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
@@ -34,14 +41,25 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
   const { data: pipelines = [] } = usePipelinesQuery();
   const createPipeline = useCreatePipelineMutation();
+  const updatePipeline = useUpdatePipelineMutation();
+  const duplicatePipeline = useDuplicatePipelineMutation();
   const startRun = useStartPipelineRunMutation();
   const { data: agents = [] } = useAgentsQuery();
   const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Pipeline | null>(null);
   const router = useRouter();
 
   const list = pipelines;
   const selected = (routeId ? list.find((p) => p.id === routeId) : null) ?? list[0];
+
+  // Attempt counters on the chain while the selected pipeline has a live run
+  // (newest one wins — the list is newest-first).
+  const { data: liveRuns = [] } = usePipelineRunsQuery();
+  const currentRun = selected
+    ? liveRuns.find((r) => r.pipelineId === selected.id)
+    : undefined;
+  const attempts = currentRun ? attemptsFromStageRuns(currentRun.stageRuns) : undefined;
 
   const addModal = adding && (
     <NewPipelineDialog
@@ -116,8 +134,32 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                   </Stack>
                 </Container>
                 <Stack align="center" direction="row" gap="100">
-                  <Button icon="edit" intent="ghost" size="sm">{t("common.edit")}</Button>
-                  <Button icon="link" intent="ghost" size="sm">{t("common.duplicate")}</Button>
+                  <Button
+                    icon="edit"
+                    intent="ghost"
+                    onClick={() => setEditing(selected)}
+                    size="sm"
+                  >
+                    {t("common.edit")}
+                  </Button>
+                  <Button
+                    disabled={duplicatePipeline.isPending}
+                    icon="link"
+                    intent="ghost"
+                    onClick={() => {
+                      const body = duplicatePipelineBody(
+                        selected,
+                        list.map((p) => p.id),
+                      );
+                      duplicatePipeline.mutate(
+                        { body },
+                        { onSuccess: () => router.push(`/pipelines/${body.id}`) },
+                      );
+                    }}
+                    size="sm"
+                  >
+                    {t("common.duplicate")}
+                  </Button>
                   <Button icon="play" intent="primary" onClick={() => setRunPipeline(selected)}>
                     {t("pipelines.runPipeline")}
                   </Button>
@@ -134,11 +176,27 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           </HudPanel>
 
           <HudPanel padding="250" title={t("pipelines.chainTitle")}>
-            <PhaseChain agents={agents} pipeline={selected} />
+            <PhaseChain agents={agents} attempts={attempts} pipeline={selected} />
           </HudPanel>
         </Stack>
       )}
 
+      {editing && (
+        <PipelineDialog
+          agents={agents}
+          initial={editing}
+          isPending={updatePipeline.isPending}
+          key={editing.id}
+          mode="edit"
+          onClose={() => setEditing(null)}
+          onSave={(id, patch) =>
+            updatePipeline.mutate(
+              { params: { id }, body: patch },
+              { onSuccess: () => setEditing(null) },
+            )
+          }
+        />
+      )}
       {runPipeline && (
         <PipelineRunModal
           agents={agents}

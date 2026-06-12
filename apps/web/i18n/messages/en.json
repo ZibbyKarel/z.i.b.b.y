@@ -282,7 +282,9 @@
     "retry": "retry · max {n}",
     "verifyLabel": "verify",
     "checksLabel": "checks",
-    "checksTitle": "deterministic checks (no model)"
+    "checksTitle": "deterministic checks (no model)",
+    "attempt": "attempt {n}/{max}",
+    "attemptTitle": "current attempt / maximum"
   },
   "approval": {
     "waiting": "Waiting for your approval",
@@ -401,7 +403,26 @@
       "handoffNote": "next agent's assignment",
       "addStep": "Add agent",
       "removeStepAria": "Remove phase {n}",
-      "noAgents": "Create an agent first — the chain needs at least one."
+      "noAgents": "Create an agent first — the chain needs at least one.",
+      "editTitle": "Edit pipeline",
+      "saveLabel": "Save changes",
+      "typeLabel": "Phase type",
+      "typeAgent": "agent",
+      "typeVerify": "verify (checks)",
+      "commandsLabel": "Check commands",
+      "commandsHint": "One command per line; empty = project checks / defaults.",
+      "loopToggle": "Loop on failure (back-edge)",
+      "loopToLabel": "On failure jump back to phase",
+      "loopMaxRetriesLabel": "Max retries",
+      "loopEscalateLabel": "Escalate after exhaustion",
+      "loopThenLabel": "After retries exhausted",
+      "thenFail": "fail",
+      "thenPark": "park",
+      "escalationTitle": "escalation ladder · retry n",
+      "escalationModelLabel": "Model · retry {n}",
+      "escalationThinkLabel": "Thinking · retry {n}",
+      "removeRungAria": "Remove rung {n}",
+      "addRung": "Add rung"
     }
   },
   "defaults": {

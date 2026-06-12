@@ -55,14 +55,23 @@ export interface AgentSdkCredit {
   trend: number[];
 }
 
+export interface PhaseEscalation {
+  model?: AgentModel;
+  thinking?: AgentThinking;
+}
+
 export interface PhaseLoop {
   to: string;
   maxRetries: number;
   escalate: boolean;
   then: string;
+  /** Per-retry model/thinking ladder (rung n → retry n; clamps to the last rung). */
+  escalation?: PhaseEscalation[];
 }
 
 export interface PipelinePhase {
+  /** Phase id from the definition (loop targets reference it); editing needs it. */
+  id?: string;
   /** What the phase executes: an agent session, or deterministic verify checks. */
   type: "agent" | "verify";
   agent?: string;

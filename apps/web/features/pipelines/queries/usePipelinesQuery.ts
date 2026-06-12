@@ -22,6 +22,7 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
     desc: p.desc ?? "",
     file: `~/zibby/pipelines/${p.id}.pipeline.md`,
     phases: p.phases.map((ph) => ({
+      id: ph.id,
       type: ph.type,
       agent: ph.agent,
       consumes: ph.consumes,

@@ -282,7 +282,9 @@
     "retry": "retry · max {n}",
     "verifyLabel": "verify",
     "checksLabel": "kontroly",
-    "checksTitle": "deterministické kontroly (bez modelu)"
+    "checksTitle": "deterministické kontroly (bez modelu)",
+    "attempt": "pokus {n}/{max}",
+    "attemptTitle": "aktuální pokus / maximum"
   },
   "approval": {
     "waiting": "Čeká na tvé schválení",
@@ -401,7 +403,26 @@
       "handoffNote": "zadání pro dalšího agenta",
       "addStep": "Přidat agenta",
       "removeStepAria": "Odebrat fázi {n}",
-      "noAgents": "Nejdřív vytvoř agenta — řetěz potřebuje aspoň jednoho."
+      "noAgents": "Nejdřív vytvoř agenta — řetěz potřebuje aspoň jednoho.",
+      "editTitle": "Upravit pipeline",
+      "saveLabel": "Uložit změny",
+      "typeLabel": "Typ fáze",
+      "typeAgent": "agent",
+      "typeVerify": "verify (kontroly)",
+      "commandsLabel": "Kontrolní příkazy",
+      "commandsHint": "Jeden příkaz na řádek; prázdné = kontroly projektu / výchozí.",
+      "loopToggle": "Smyčka při selhání (back-edge)",
+      "loopToLabel": "Při selhání skoč zpět na fázi",
+      "loopMaxRetriesLabel": "Max. opakování",
+      "loopEscalateLabel": "Eskalovat po vyčerpání",
+      "loopThenLabel": "Po vyčerpání pokusů",
+      "thenFail": "selhat (fail)",
+      "thenPark": "zaparkovat (park)",
+      "escalationTitle": "eskalační žebřík · pokus n",
+      "escalationModelLabel": "Model · pokus {n}",
+      "escalationThinkLabel": "Thinking · pokus {n}",
+      "removeRungAria": "Odebrat příčku {n}",
+      "addRung": "Přidat příčku"
     }
   },
   "defaults": {

@@ -57,7 +57,32 @@ function IoRow({ label, value, accent }: { label: string; value: string; accent?
   );
 }
 
-function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agents: Agent[]; idx: number; active: boolean }) {
+/** Stage-run tally per phase id (escalation markers excluded) for "attempt n/m". */
+export function attemptsFromStageRuns(
+  stageRuns: ReadonlyArray<{ phaseId: string; runId: string }>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const s of stageRuns) {
+    if (s.runId.endsWith(".escalated")) continue;
+    out[s.phaseId] = (out[s.phaseId] ?? 0) + 1;
+  }
+  return out;
+}
+
+function PhaseNode({
+  phase,
+  agents,
+  idx,
+  active,
+  attempt,
+}: {
+  phase: PipelinePhase;
+  agents: Agent[];
+  idx: number;
+  active: boolean;
+  /** Current attempt count from a live run, when one is supplied. */
+  attempt?: number;
+}) {
   const t = useTranslations("phase");
   const isVerify = phase.type === "verify";
   return (
@@ -75,6 +100,11 @@ function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agent
                 {isVerify ? t("verifyLabel") : phase.agent}
               </Typography>
             </Container>
+            {phase.loop && attempt !== undefined && (
+              <Tag title={t("attemptTitle")} tone="warn">
+                {t("attempt", { n: attempt, max: phase.loop.maxRetries + 1 })}
+              </Tag>
+            )}
           </Stack>
           {isVerify ? (
             <>
@@ -112,9 +142,11 @@ function PhaseNode({ phase, agents, idx, active }: { phase: PipelinePhase; agent
 export interface PhaseChainProps {
   pipeline: Pipeline;
   agents: Agent[];
+  /** Per-phase attempt counts from a current run (phase id → count). */
+  attempts?: Record<string, number>;
 }
 
-export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
+export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
   const t = useTranslations("phase");
   const { phases } = pipeline;
   const loopPhase = phases.find((p) => p.loop);
@@ -154,7 +186,13 @@ export function PhaseChain({ pipeline, agents }: PhaseChainProps) {
       <Stack align="stretch" direction="row" gap="25">
         {phases.map((ph, i) => (
           <Fragment key={`${ph.agent ?? ph.type}-${i}`}>
-            <PhaseNode active={Boolean(ph.loop)} agents={agents} idx={i} phase={ph} />
+            <PhaseNode
+              active={Boolean(ph.loop)}
+              agents={agents}
+              attempt={ph.id ? attempts?.[ph.id] : undefined}
+              idx={i}
+              phase={ph}
+            />
             {i < phases.length - 1 && (
                
               <Stack
