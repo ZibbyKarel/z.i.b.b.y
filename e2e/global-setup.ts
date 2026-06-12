@@ -67,8 +67,11 @@ export default async function globalSetup(): Promise<void> {
     .post("/api/agents/gated-agent/run", { data: { prompt: "do something risky", project: "zibby-core" } })
     .catch(() => {});
 
-  // A small wiki-linked vault for the memory graph.
+  // A small wiki-linked vault for the memory graph. Reset it first so notes a
+  // previous run created through the UI (e.g. the create-note spec) don't linger
+  // and turn a re-create into a 409 — the fixtures must be deterministic.
   const vault = path.join(E2E_DATA, "vault");
+  await fs.rm(vault, { recursive: true, force: true });
   await fs.mkdir(path.join(vault, "knowledge"), { recursive: true });
   await fs.mkdir(path.join(vault, "daily"), { recursive: true });
   await fs.writeFile(path.join(vault, "MEMORY.md"), "---\ntitle: Memory\n---\nSee [[rohlik]] and [[zibby]].\n");

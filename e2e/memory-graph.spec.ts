@@ -29,7 +29,9 @@ test("memory search opens a matching note", async ({ page }) => {
   await page.getByTestId("memory-search-input").fill("orchestrator");
   // zibby's body contains "orchestrator" → its hit appears and opens the note.
   await page.getByTestId("memory-search-hit-zibby").click();
-  await expect(page.getByText("The orchestrator note.")).toBeVisible();
+  // The note viewer's path caption is unique to the open note (the hit snippet
+  // would also contain the body text, so assert on the path instead).
+  await expect(page.getByText("knowledge/zibby.md · knowledge")).toBeVisible();
 });
 
 test("the knowledge tier filter hides the memory-tier node", async ({ page }) => {
