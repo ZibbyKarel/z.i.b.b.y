@@ -5,6 +5,7 @@ import { type WriteStream, createWriteStream } from "node:fs"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts"
+import { writeFileAtomic } from "../shared/file-storage"
 import type { ScopedLogger } from "../shared/logging/logger.service"
 import { detectLimit } from "./detect-limit"
 import type {
@@ -805,11 +806,16 @@ export class RunnerCore<R extends BaseRun> {
     }
   }
 
-  /** Persist a run's metadata next to its log so it survives a backend restart. */
+  /**
+   * Persist a run's metadata next to its log so it survives a backend restart.
+   * Atomic (temp + rename): a torn `<runId>.json` would break restart reconciliation
+   * (the registry is rebuilt from these sidecars) — that, not interleaving, is the
+   * real failure mode (Phase 8.2).
+   */
   private async writeSidecar(run: R): Promise<void> {
-    await fs
-      .writeFile(path.join(this.dir, `${run.runId}.json`), JSON.stringify(run), "utf8")
-      .catch(() => {})
+    await writeFileAtomic(path.join(this.dir, `${run.runId}.json`), JSON.stringify(run)).catch(
+      () => {},
+    )
   }
 
   /** Write the decision a Variant B child is polling for, into its sandbox `cwd`. */
@@ -820,9 +826,11 @@ export class RunnerCore<R extends BaseRun> {
   }
 
   private async writePendingSpec(runId: string, spec: RunSpec): Promise<void> {
-    await fs
-      .writeFile(path.join(this.dir, `${runId}.pending.json`), JSON.stringify(spec), "utf8")
-      .catch(() => {})
+    // Atomic for the same reason as the sidecar — a torn pending spec strands an
+    // approval-parked run that can't be resumed after a restart.
+    await writeFileAtomic(path.join(this.dir, `${runId}.pending.json`), JSON.stringify(spec)).catch(
+      () => {},
+    )
   }
 
   private async readPendingSpec(runId: string): Promise<RunSpec | undefined> {

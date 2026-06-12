@@ -12,6 +12,8 @@ export const BriefingNeedsYouItemSchema = z.object({
   summary: z.string(),
   at: z.string().datetime(),
   refs: ActivityRefsSchema,
+  /** The engagement this item belongs to (Phase 8.2) — drives the card grouping. */
+  projectId: z.string().optional(),
 })
 export type BriefingNeedsYouItem = z.infer<typeof BriefingNeedsYouItemSchema>
 
@@ -20,8 +22,26 @@ export const BriefingDidItemSchema = z.object({
   kind: ActivityKindSchema,
   summary: z.string(),
   at: z.string().datetime(),
+  /** The engagement this item belongs to (Phase 8.2), when the activity carried one. */
+  projectId: z.string().optional(),
 })
 export type BriefingDidItem = z.infer<typeof BriefingDidItemSchema>
+
+/**
+ * One engagement's slice of the briefing (Phase 8.2): how many things need the
+ * operator, how many ZIBBY handled, and how many tasks are waiting (queued) or held
+ * over budget. The card groups its flat lists by `projectId`; this is the per-group
+ * headline. Sorted needsYou-desc, then name.
+ */
+export const BriefingEngagementSchema = z.object({
+  projectId: z.string(),
+  name: z.string(),
+  needsYou: z.number().int().nonnegative(),
+  didForYou: z.number().int().nonnegative(),
+  queued: z.number().int().nonnegative(),
+  held: z.number().int().nonnegative(),
+})
+export type BriefingEngagement = z.infer<typeof BriefingEngagementSchema>
 
 /** A channel ZIBBY is watching, with the count of new items in the window. */
 export const BriefingWatchItemSchema = z.object({
@@ -56,6 +76,8 @@ export const BriefingSchema = z.object({
   needsYou: z.array(BriefingNeedsYouItemSchema),
   didForYou: z.array(BriefingDidItemSchema),
   watching: z.array(BriefingWatchItemSchema),
+  /** Per-engagement rollup (Phase 8.2) — empty when nothing is project-attributed. */
+  engagements: z.array(BriefingEngagementSchema),
   counts: BriefingCountsSchema,
 })
 export type Briefing = z.infer<typeof BriefingSchema>

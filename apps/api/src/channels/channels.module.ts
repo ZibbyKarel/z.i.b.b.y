@@ -4,6 +4,7 @@ import { GateRulesModule } from "../gate-rules/gate-rules.module"
 import { GatesModule } from "../gates/gates.module"
 import { IntegrationsModule } from "../integrations/integrations.module"
 import { MandateModule } from "../mandate/mandate.module"
+import { ProjectsModule } from "../projects/projects.module"
 import { dataDir } from "../shared/data-dir"
 import { TasksModule } from "../tasks/tasks.module"
 import { CHANNELS_DIR, ChannelItemStore } from "./channel-item.store"
@@ -36,6 +37,7 @@ export function resolveChannelsDir(): string {
     GatesModule,
     GateRulesModule,
     ApprovalsModule,
+    ProjectsModule,
   ],
   controllers: [ChannelsController],
   providers: [

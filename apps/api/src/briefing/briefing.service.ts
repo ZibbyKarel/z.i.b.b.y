@@ -7,6 +7,8 @@ import { ApprovalsService } from "../approvals/approvals.service"
 import { ChannelItemStore } from "../channels/channel-item.store"
 import { DuplicateNoteError, VaultService } from "../memory/vault.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
+import { ProjectsStorageService } from "../projects/projects.storage.service"
+import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service"
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { assembleBriefing, renderBriefingMarkdown } from "./briefing-assembly"
@@ -40,6 +42,8 @@ export class BriefingService {
     private readonly activity: ActivityLogService,
     private readonly briefer: ClaudeCliBriefer,
     private readonly vault: VaultService,
+    private readonly tasks: ScheduledTasksStorageService,
+    private readonly projects: ProjectsStorageService,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -49,15 +53,29 @@ export class BriefingService {
   /** Assemble the current briefing from the record — pure, no persistence. */
   async assemble(now: Date = new Date()): Promise<Briefing> {
     const since = await this.readCursor(now)
-    const [approvals, allRuns, channelItems, activity] = await Promise.all([
+    const [approvals, allRuns, channelItems, activity, allTasks, projects] = await Promise.all([
       this.approvals.list("pending"),
       this.pipelines.listAll(),
       this.channels.list(),
       this.activity.readSince(since, now),
+      this.tasks.list().catch(() => []),
+      this.projects.list().catch(() => []),
     ])
     const parkedRuns = allRuns.filter((r) => r.status === "parked")
     const inFlight = channelItems.filter((i) => i.state === "new" || i.state === "triaged")
-    return assembleBriefing({ now, since, approvals, parkedRuns, channelItems: inFlight, activity })
+    // Only the still-waiting tasks feed the engagement rollup (queued / held).
+    const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
+    const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
+    return assembleBriefing({
+      now,
+      since,
+      approvals,
+      parkedRuns,
+      channelItems: inFlight,
+      activity,
+      tasks,
+      projectNames,
+    })
   }
 
   /**

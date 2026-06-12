@@ -14,6 +14,8 @@ import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.servic
 import { CredentialsStore } from "../integrations/credentials.store"
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service"
 import { MandateStorageService } from "../mandate/mandate.storage.service"
+import { matchProject } from "../projects/project-matcher"
+import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TaskSchedulerService } from "../tasks/task-scheduler.service"
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service"
@@ -61,6 +63,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     private readonly gates: GateEvaluatorService,
     private readonly gateRules: GateRulesStorageService,
     private readonly integrations: IntegrationsStorageService,
+    private readonly projects: ProjectsStorageService,
     private readonly credentials: CredentialsStore,
     private readonly registry: AdapterRegistry,
     private readonly store: ChannelItemStore,
@@ -80,11 +83,28 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
   async handle(item: ChannelItem): Promise<ChannelItem> {
     const mandate = await this.mandate.read()
     const verdict = await this.triage.triage(item.text, this.mandateSummary(mandate, item.integrationId))
-    const triaged: ChannelItem = { ...item, triage: verdict }
+    // Phase 8.2: attribute the item to an engagement over the SANITIZED text + the
+    // integration name (read-only classification, never authorization — Law 4: a
+    // crafted message naming a project gains nothing but a grouping label).
+    const integration = await this.integrations.get(item.integrationId).catch(() => null)
+    const projects = await this.projects.list().catch(() => [])
+    const matched = matchProject(projects, {
+      text: `${item.text} ${integration?.name ?? item.integrationId}`,
+    })
+    const triaged: ChannelItem = {
+      ...item,
+      triage: verdict,
+      ...(matched ? { projectId: matched.id } : {}),
+    }
     void this.activity.record({
       kind: "channel-triage",
       summary: `triaged ${verdict.category} (tier ${verdict.tier}) from ${item.integrationId}`,
-      refs: { itemId: item.id, integrationId: item.integrationId, status: verdict.category },
+      refs: {
+        itemId: item.id,
+        integrationId: item.integrationId,
+        status: verdict.category,
+        ...(matched ? { projectId: matched.id } : {}),
+      },
     })
 
     const dispatchAllowed = this.allowed(mandate, item.integrationId, "dispatch")
@@ -116,9 +136,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     const title = `Channel: ${verdict.category} from ${label}`
 
     try {
-      const result = await this.tasks.createTask({ text, title })
+      // The engagement was matched server-side in handle(); pass it as the trusted
+      // projectId so the task is born attributed (no re-match over the enveloped text).
+      const result = await this.tasks.createTask({ text, title }, undefined, item.projectId)
       const taskId = result.task.id
-      const handled: ChannelItem = { ...item, state: "handled", taskId }
+      const handled: ChannelItem = { ...item, state: "handled", taskId, projectId: item.projectId }
       await this.store.update(handled)
       this.log.info("channel item dispatched (tier 1)", { itemId: item.id, taskId })
       return handled

@@ -151,9 +151,23 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * surface to the client as a parked task (`outcome: "scheduled"`). Throws
    * {@link EmptyCatalogError} when an immediate dispatch has nothing to route to.
    */
-  async createTask(input: CreateTaskInput, now: number = Date.now()): Promise<CreateTaskResult> {
-    const projects = await this.projects.list().catch((): Project[] => [])
-    const project = matchProject(projects, { text: input.text, paths: input.paths })
+  /**
+   * @param trustedProjectId set ONLY by server-side callers (the channel triage flow,
+   * which already matched the engagement over sanitized text). It bypasses the
+   * matcher; the public contract never accepts it from a client (Law 4 — attribution
+   * is server-derived, never client-asserted).
+   */
+  async createTask(
+    input: CreateTaskInput,
+    now: number = Date.now(),
+    trustedProjectId?: string,
+  ): Promise<CreateTaskResult> {
+    const project = trustedProjectId
+      ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
+      : matchProject(await this.projects.list().catch((): Project[] => []), {
+          text: input.text,
+          paths: input.paths,
+        })
 
     if (input.scheduledAt != null && input.scheduledAt > now) {
       const task = await this.storage.create(

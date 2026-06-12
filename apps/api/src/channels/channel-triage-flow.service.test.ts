@@ -45,6 +45,7 @@ describe("ChannelTriageFlowService", () => {
     mandate?: Mandate
     decision?: "allow" | "notify" | "ask" | "deny"
     taskOutcome?: ChannelItem["outcome"]
+    projects?: Array<{ id: string; name: string; path: string }>
   }) {
     createTask = vi.fn(async () => ({ outcome: "dispatched", task: { id: "task_1" }, runRef: "r1", target: {} }))
     requestApproval = vi.fn(async () => ({ id: "appr_1" }))
@@ -58,6 +59,7 @@ describe("ChannelTriageFlowService", () => {
     const gates = { floor: async () => [], evaluate: () => ({ decision: opts.decision ?? "notify" }) }
     const gateRules = { list: async () => [] }
     const integrations = { get: async () => integration }
+    const projects = { list: async () => opts.projects ?? [] }
     const credentials = { read: async () => ({ token: "xoxb-1" }) }
     const registry = { resolve: () => ({ send }) }
     const approvals = { register, requestApproval }
@@ -70,6 +72,7 @@ describe("ChannelTriageFlowService", () => {
       gates as never,
       gateRules as never,
       integrations as never,
+      projects as never,
       credentials as never,
       registry as never,
       store,
@@ -102,6 +105,21 @@ describe("ChannelTriageFlowService", () => {
     // Law 4: the raw text is enveloped, not bare; the title carries no body.
     expect(text).toContain("untrusted")
     expect(createTask.mock.calls[0]![0].title).not.toContain("secret-payload")
+  })
+
+  it("tags the item + task with the matched engagement (Phase 8.2)", async () => {
+    const flow = makeFlow({ verdict: bug, projects: [{ id: "alpha", name: "Alpha", path: "/work/alpha" }] })
+    const out = await flow.handle(item({ text: "the Alpha login is broken" }))
+    expect(out.projectId).toBe("alpha")
+    // The trusted projectId rides into createTask as the third arg (server-derived).
+    expect(createTask.mock.calls[0]![2]).toBe("alpha")
+  })
+
+  it("leaves projectId undefined when nothing matches", async () => {
+    const flow = makeFlow({ verdict: bug, projects: [{ id: "alpha", name: "Alpha", path: "/work/alpha" }] })
+    const out = await flow.handle(item({ text: "something generic and unrelated" }))
+    expect(out.projectId).toBeUndefined()
+    expect(createTask.mock.calls[0]![2]).toBeUndefined()
   })
 
   it("Tier 2 + reply mandate + gate notify: sends the draft and persists the reply", async () => {

@@ -19,11 +19,20 @@ describe("BriefingSchema", () => {
     needsYou: [],
     didForYou: [],
     watching: [],
+    engagements: [],
     counts: { runsFinished: 0, runsFailed: 0, parked: 0, approvalsPending: 0, channelItemsNew: 0 },
   }
 
   it("accepts the calm, nothing-needs-you output as first-class", () => {
     expect(BriefingSchema.safeParse(base).success).toBe(true)
+  })
+
+  it("accepts a per-engagement rollup (Phase 8.2)", () => {
+    const withEngagements = {
+      ...base,
+      engagements: [{ projectId: "alpha", name: "Alpha", needsYou: 2, didForYou: 3, queued: 1, held: 1 }],
+    }
+    expect(BriefingSchema.safeParse(withEngagements).success).toBe(true)
   })
 
   it("accepts a needs-you item with refs", () => {

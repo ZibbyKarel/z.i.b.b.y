@@ -60,6 +60,12 @@ export const ChannelItemSchema = z.object({
   raw: z.unknown(),
   state: ChannelItemStateSchema,
   triage: TriageVerdictSchema.optional(),
+  /**
+   * The engagement this item was attributed to (Phase 8.2), matched server-side over
+   * the sanitized text + integration name. Attribution only, never authorization —
+   * it rides into the dispatched task's projectId and the inbox Tag, nothing more.
+   */
+  projectId: z.string().optional(),
   /** Set when a Tier-1 task was dispatched for this item. */
   taskId: z.string().optional(),
   /** Set when a Tier-3 reply was parked as an approval. */

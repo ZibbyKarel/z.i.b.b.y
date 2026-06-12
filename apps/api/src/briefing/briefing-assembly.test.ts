@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { ActivityEntry, Approval, ChannelItem, PipelineRun } from "@zibby/contracts"
-import { assembleBriefing, deterministicHeadline, renderBriefingMarkdown } from "./briefing-assembly"
+import type { ActivityEntry, Approval, ChannelItem, PipelineRun, ScheduledTask } from "@zibby/contracts"
+import { assembleBriefing, buildEngagements, deterministicHeadline, renderBriefingMarkdown } from "./briefing-assembly"
 
 const NOW = new Date("2026-06-12T07:00:00.000Z")
 const SINCE = "2026-06-11T07:00:00.000Z"
@@ -95,6 +95,51 @@ describe("assembleBriefing", () => {
     expect(briefing.nothingNeedsYou).toBe(true)
     expect(briefing.needsYou).toHaveLength(0)
     expect(briefing.headline).toBe("Nothing needs you.")
+  })
+})
+
+describe("buildEngagements (Phase 8.2)", () => {
+  const task = (over: Partial<ScheduledTask>): ScheduledTask =>
+    ({
+      id: "t",
+      title: "",
+      text: "do",
+      paths: [],
+      scheduledAt: 1,
+      status: "queued",
+      createdAt: "2026-06-12T06:00:00.000Z",
+      ...over,
+    }) as ScheduledTask
+
+  it("groups queued/held tasks + attributed activity by project, sorted needsYou desc", () => {
+    const engagements = buildEngagements(
+      [
+        task({ id: "t1", status: "queued", projectId: "alpha" }),
+        task({ id: "t2", status: "held", projectId: "alpha" }),
+        task({ id: "t3", status: "queued", projectId: "beta" }),
+        task({ id: "t4", status: "scheduled", projectId: "beta" }), // not waiting → ignored
+        task({ id: "t5", status: "queued" }), // unattributed → ignored
+      ],
+      [
+        { kind: "task-outcome", summary: "alpha done", at: "x", projectId: "alpha" },
+        { kind: "run-finished", summary: "no project", at: "x" },
+      ],
+      [],
+      { alpha: "Alpha", beta: "Beta" },
+    )
+    expect(engagements).toEqual([
+      { projectId: "alpha", name: "Alpha", needsYou: 1, didForYou: 1, queued: 1, held: 1 },
+      { projectId: "beta", name: "Beta", needsYou: 0, didForYou: 0, queued: 1, held: 0 },
+    ])
+  })
+
+  it("is empty when nothing carries a projectId", () => {
+    expect(buildEngagements([task({ status: "queued" })], [], [], {})).toEqual([])
+  })
+
+  it("falls back to the projectId as the name when none is supplied", () => {
+    const [row] = buildEngagements([task({ status: "held", projectId: "gamma" })], [], [], {})
+    expect(row).toMatchObject({ projectId: "gamma", name: "gamma", held: 1, needsYou: 1 })
   })
 })
 

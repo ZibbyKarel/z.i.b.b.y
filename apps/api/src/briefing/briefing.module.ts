@@ -3,6 +3,8 @@ import { ApprovalsModule } from "../approvals/approvals.module"
 import { ChannelsModule } from "../channels/channels.module"
 import { MemoryModule } from "../memory/memory.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
+import { ProjectsModule } from "../projects/projects.module"
+import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module"
 import { BriefingController } from "./briefing.controller"
 import { BriefingService } from "./briefing.service"
 import { ClaudeCliBriefer } from "./claude-cli-briefer"
@@ -15,7 +17,14 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer"
  * target, so the reverse edge would be a cycle.
  */
 @Module({
-  imports: [ApprovalsModule, PipelinesModule, ChannelsModule, MemoryModule],
+  imports: [
+    ApprovalsModule,
+    PipelinesModule,
+    ChannelsModule,
+    MemoryModule,
+    ProjectsModule,
+    ScheduledTasksStorageModule,
+  ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],
   exports: [BriefingService],

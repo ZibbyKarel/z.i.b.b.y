@@ -12,6 +12,7 @@ export enum BriefingCardTestId {
   Root = "briefing-card",
   Headline = "briefing-headline",
   NeedsYouItem = "briefing-needs-you-item",
+  Engagement = "briefing-engagement",
   Generate = "briefing-generate",
   Ready = "briefing-ready",
 }
@@ -78,6 +79,33 @@ export function BriefingCard() {
             <Stack gap="75">
               {b.needsYou.map((item) => (
                 <NeedsYouRow item={item} key={item.id} />
+              ))}
+            </Stack>
+          )}
+
+          {b.engagements.length > 0 && (
+            <Stack gap="50">
+              {b.engagements.map((e) => (
+                <Stack
+                  align="center"
+                  data-testid={BriefingCardTestId.Engagement}
+                  direction="row"
+                  gap="100"
+                  justify="between"
+                  key={e.projectId}
+                >
+                  <Typography mono truncate size="xs" type="note" variant="secondary">
+                    {e.name}
+                  </Typography>
+                  <Typography mono size="2xs" type="note" variant="tertiary">
+                    {t("overview.briefingEngagement", {
+                      needs: e.needsYou,
+                      did: e.didForYou,
+                      queued: e.queued,
+                      held: e.held,
+                    })}
+                  </Typography>
+                </Stack>
               ))}
             </Stack>
           )}

@@ -31,6 +31,7 @@ function InboxRow({ item }: { item: ChannelItem }) {
       <Stack align="center" direction="row" gap="100">
         <Tag tone={STATE_TONE[item.state]}>{t(`inbox.state.${item.state}`)}</Tag>
         {item.triage && <Tag tone="neutral">{t(`inbox.category.${item.triage.category}`)}</Tag>}
+        {item.projectId && <Tag tone="accent">{item.projectId}</Tag>}
         <Container minW0 maxWidth="320px">
           <Typography truncate size="sm" type="note" variant="secondary">
             {item.text}

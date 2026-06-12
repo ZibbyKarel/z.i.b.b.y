@@ -3,10 +3,12 @@ import type {
   Approval,
   Briefing,
   BriefingDidItem,
+  BriefingEngagement,
   BriefingNeedsYouItem,
   BriefingWatchItem,
   ChannelItem,
   PipelineRun,
+  ScheduledTask,
 } from "@zibby/contracts"
 
 /** The raw inputs the briefing is assembled from — all gathered before this runs. */
@@ -21,6 +23,10 @@ export interface BriefingInput {
   channelItems: ChannelItem[]
   /** Activity entries recorded since the cursor (newest-first is fine; we sort). */
   activity: ActivityEntry[]
+  /** Queued + held tasks (Phase 8.2) — the engagement rollup's waiting work. */
+  tasks?: ScheduledTask[]
+  /** projectId → display name, so the rollup reads in the operator's terms. */
+  projectNames?: Record<string, string>
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -45,6 +51,12 @@ export function assembleBriefing(input: BriefingInput): Briefing {
   const needsYou = buildNeedsYou(input.approvals, input.parkedRuns)
   const didForYou = buildDidForYou(input.activity)
   const watching = buildWatching(input.channelItems)
+  const engagements = buildEngagements(
+    input.tasks ?? [],
+    didForYou,
+    needsYou,
+    input.projectNames ?? {},
+  )
   const counts = {
     runsFinished: input.activity.filter((e) => isFinished(e) && !isFailed(e)).length,
     runsFailed: input.activity.filter(isFailed).length,
@@ -61,8 +73,45 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     needsYou,
     didForYou,
     watching,
+    engagements,
     counts,
   }
+}
+
+/**
+ * Roll the briefing up by engagement (Phase 8.2): one row per project that has
+ * waiting tasks (queued/held) or attributable activity. `held` tasks count toward
+ * `needsYou` (each is a Tier-3 budget decision); `didForYou` counts the attributable
+ * activity lines. Pure — sorted needsYou desc, then name. Empty when nothing carries
+ * a projectId, so a single-engagement operator sees no rollup noise.
+ */
+export function buildEngagements(
+  tasks: ScheduledTask[],
+  didForYou: BriefingDidItem[],
+  needsYou: BriefingNeedsYouItem[],
+  projectNames: Record<string, string>,
+): BriefingEngagement[] {
+  const rows = new Map<string, BriefingEngagement>()
+  const row = (projectId: string): BriefingEngagement => {
+    let r = rows.get(projectId)
+    if (!r) {
+      r = { projectId, name: projectNames[projectId] ?? projectId, needsYou: 0, didForYou: 0, queued: 0, held: 0 }
+      rows.set(projectId, r)
+    }
+    return r
+  }
+  for (const task of tasks) {
+    if (!task.projectId) continue
+    if (task.status === "queued") row(task.projectId).queued += 1
+    else if (task.status === "held") {
+      const r = row(task.projectId)
+      r.held += 1
+      r.needsYou += 1
+    }
+  }
+  for (const item of didForYou) if (item.projectId) row(item.projectId).didForYou += 1
+  for (const item of needsYou) if (item.projectId) row(item.projectId).needsYou += 1
+  return [...rows.values()].sort((a, b) => b.needsYou - a.needsYou || a.name.localeCompare(b.name))
 }
 
 function buildNeedsYou(approvals: Approval[], parkedRuns: PipelineRun[]): BriefingNeedsYouItem[] {
@@ -89,7 +138,7 @@ function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {
     .filter((e) => DID_KINDS.has(e.kind))
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, DID_LIMIT)
-    .map((e) => ({ kind: e.kind, summary: e.summary, at: e.at }))
+    .map((e) => ({ kind: e.kind, summary: e.summary, at: e.at, ...(e.refs.projectId ? { projectId: e.refs.projectId } : {}) }))
 }
 
 function buildWatching(channelItems: ChannelItem[]): BriefingWatchItem[] {

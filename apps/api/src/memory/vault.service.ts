@@ -12,6 +12,7 @@ import type {
 } from "@zibby/contracts"
 import matter from "gray-matter"
 import { resolveSafeFile, writeFileAtomic } from "../shared/file-storage/file-utils"
+import { withPathLock } from "../shared/file-storage/file-lock"
 
 /** DI token carrying the absolute path of the Obsidian vault directory. */
 export const VAULT_DIR = "VAULT_DIR"
@@ -234,36 +235,41 @@ export class VaultService implements OnModuleInit {
    * replaced in place (label refresh); otherwise the line is appended.
    */
   async updateIndex(mocId: string, target: string, label?: string): Promise<Note> {
-    let moc = (await this.scan()).find((n) => n.id === mocId)
-    if (!moc) {
-      await this.createNote({
-        id: mocId,
-        tier: "knowledge",
-        title: humanizeId(mocId),
-        body: `Index for ${humanizeId(mocId)}.\n`,
-      })
-      moc = (await this.scan()).find((n) => n.id === mocId)
-      if (!moc) throw new NoteNotFoundError(mocId)
-    }
-    const abs = path.join(this.dir, moc.path)
-    const parsed = matter(await fs.readFile(abs, "utf8"))
-    const desired = label ? `- [[${target}]] — ${label}` : `- [[${target}]]`
-    // Match a wiki-link to `target`: `[[target]]`, `[[target|alias]]`, `[[target#x]]`.
-    const linkRe = new RegExp(`\\[\\[${escapeRegExp(target)}(\\]\\]|\\||#)`)
-    const lines = parsed.content.split("\n")
-    const idx = lines.findIndex((l) => linkRe.test(l))
-    let newLines: string[]
-    if (idx >= 0) {
-      newLines = [...lines]
-      newLines[idx] = desired
-    } else {
-      newLines = [...lines]
-      while (newLines.length > 0 && newLines[newLines.length - 1]?.trim() === "") newLines.pop()
-      newLines.push(desired)
-    }
-    await writeFileAtomic(abs, matter.stringify(`${newLines.join("\n")}\n`, parsed.data))
-    this.cache = null
-    return this.note(mocId)
+    // Serialize per-MOC: this is a read-modify-write on one file, and two runs
+    // finishing on the same project would otherwise race the same MOC line and one
+    // link would be lost (Phase 8.2). Different MOCs still run concurrently.
+    return withPathLock(`moc:${mocId}`, async () => {
+      let moc = (await this.scan()).find((n) => n.id === mocId)
+      if (!moc) {
+        await this.createNote({
+          id: mocId,
+          tier: "knowledge",
+          title: humanizeId(mocId),
+          body: `Index for ${humanizeId(mocId)}.\n`,
+        })
+        moc = (await this.scan()).find((n) => n.id === mocId)
+        if (!moc) throw new NoteNotFoundError(mocId)
+      }
+      const abs = path.join(this.dir, moc.path)
+      const parsed = matter(await fs.readFile(abs, "utf8"))
+      const desired = label ? `- [[${target}]] — ${label}` : `- [[${target}]]`
+      // Match a wiki-link to `target`: `[[target]]`, `[[target|alias]]`, `[[target#x]]`.
+      const linkRe = new RegExp(`\\[\\[${escapeRegExp(target)}(\\]\\]|\\||#)`)
+      const lines = parsed.content.split("\n")
+      const idx = lines.findIndex((l) => linkRe.test(l))
+      let newLines: string[]
+      if (idx >= 0) {
+        newLines = [...lines]
+        newLines[idx] = desired
+      } else {
+        newLines = [...lines]
+        while (newLines.length > 0 && newLines[newLines.length - 1]?.trim() === "") newLines.pop()
+        newLines.push(desired)
+      }
+      await writeFileAtomic(abs, matter.stringify(`${newLines.join("\n")}\n`, parsed.data))
+      this.cache = null
+      return this.note(mocId)
+    })
   }
 
   /** Scan the vault for `.md` files, parsed and cached briefly. */
