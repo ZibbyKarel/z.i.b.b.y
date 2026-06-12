@@ -1,12 +1,26 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { fileURLToPath } from "node:url"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
 import { ChannelWatcherService } from "../src/channels/channel-watcher.service"
+
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+async function until<T>(fn: () => Promise<T | null | undefined>, timeoutMs = 8000): Promise<T> {
+  const start = Date.now()
+  for (;;) {
+    const result = await fn()
+    if (result) return result
+    if (Date.now() - start > timeoutMs) throw new Error("until: timed out")
+    await sleep(40)
+  }
+}
 
 /** Seed a fixture message under the fake dir for an integration. */
 async function seed(fakeDir: string, integrationId: string, name: string, text: string) {
@@ -22,81 +36,156 @@ async function boot() {
   return app
 }
 
-describe("Channels ingestion (e2e)", () => {
+describe("Channels triage throughline (e2e)", () => {
   let app: INestApplication
   let root: string
   let fakeDir: string
 
   beforeAll(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), "channels-e2e-"))
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "channels-flow-e2e-"))
     fakeDir = path.join(root, "fake")
-    process.env.INTEGRATIONS_DIR = path.join(root, "integrations")
-    process.env.CREDENTIALS_DIR = path.join(root, "credentials")
-    process.env.CHANNELS_DIR = path.join(root, "channels")
+    // One data root isolates every store (integrations, credentials, channels,
+    // approvals, tasks, agents, mandate, policy floor).
+    process.env.ZIBBY_DATA_DIR = root
     process.env.CHANNEL_FAKE_DIR = fakeDir
     process.env.CHANNEL_ADAPTER_MODE = "fake"
     process.env.CHANNEL_TICK_MS = "0"
     process.env.AUTOMATION_TICK_MS = "0"
     process.env.TASK_TICK_MS = "0"
+    process.env.CLAUDE_BIN = FAKE_CLAUDE
+    process.env.FAKE_CLAUDE_STEPS = "2"
+    process.env.FAKE_CLAUDE_DELAY_MS = "20"
 
     app = await boot()
+    // A non-empty catalog so a Tier-1 task dispatches instead of failing.
     await request(app.getHttpServer())
-      .post("/api/integrations")
-      .send({ id: "team-slack", kind: "slack", config: { kind: "slack", channels: ["C1"] } })
+      .post("/api/agents")
+      .send({ id: "fixer", name: "Fixer", description: "fixes reported bugs", instructions: "Fix bugs." })
       .expect(201)
     await request(app.getHttpServer())
-      .put("/api/integrations/team-slack/credentials")
-      .send({ token: "xoxb-1" })
-      .expect(200)
+      .post("/api/integrations")
+      .send({ id: "team", kind: "slack", name: "Team", config: { kind: "slack", channels: ["C1"] } })
+      .expect(201)
+    await request(app.getHttpServer()).put("/api/integrations/team/credentials").send({ token: "xoxb-1" }).expect(200)
   })
 
   afterAll(async () => {
     await app.close()
     await fs.rm(root, { recursive: true, force: true })
     for (const k of [
-      "INTEGRATIONS_DIR",
-      "CREDENTIALS_DIR",
-      "CHANNELS_DIR",
+      "ZIBBY_DATA_DIR",
       "CHANNEL_FAKE_DIR",
       "CHANNEL_ADAPTER_MODE",
       "CHANNEL_TICK_MS",
       "AUTOMATION_TICK_MS",
       "TASK_TICK_MS",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
     ]) {
       delete process.env[k]
     }
   })
 
-  it("a tick ingests fixture messages as normalized `new` items", async () => {
-    await seed(fakeDir, "team-slack", "001.json", "the app crashes on login")
-    await seed(fakeDir, "team-slack", "002.json", "can you share a status?")
+  const items = () => request(app.getHttpServer()).get("/api/channels/items").expect(200)
+  const findItem = async (pred: (i: { text: string }) => boolean) =>
+    (await items()).body.find(pred)
 
-    const watcher = app.get(ChannelWatcherService)
-    const ids = await watcher.tick()
-    expect(ids.length).toBe(2)
-
-    const items = await request(app.getHttpServer())
-      .get("/api/channels/items?integrationId=team-slack")
-      .expect(200)
-    expect(items.body.map((i: { text: string }) => i.text)).toContain("the app crashes on login")
-    expect(items.body.every((i: { state: string }) => i.state === "new")).toBe(true)
-
-    // get-by-id resolves through the two-level store.
-    const one = items.body[0]
-    await request(app.getHttpServer()).get(`/api/channels/items/${one.id}`).expect(200)
-  })
-
-  it("a restart over the same data dir does not duplicate (dedup + cursor)", async () => {
-    await app.close()
-    app = await boot()
-
+  it("Tier 1 bug report → task dispatched, item handled, outcome reconciled", async () => {
+    await seed(fakeDir, "team", "001.json", "The app crashes on login with a stack trace")
     const watcher = app.get(ChannelWatcherService)
     await watcher.tick()
 
-    const items = await request(app.getHttpServer())
-      .get("/api/channels/items?integrationId=team-slack")
+    const handled = await findItem((i) => i.text.includes("crashes on login"))
+    expect(handled.state).toBe("handled")
+    expect(handled.taskId).toBeTruthy()
+    expect(handled.triage.tier).toBe(1)
+
+    // Once the dispatched run finishes, a later tick sweeps the outcome onto the item.
+    const withOutcome = await until(async () => {
+      await watcher.tick()
+      const found = (await items()).body.find((i: { id: string }) => i.id === handled.id)
+      return found?.outcome ? found : null
+    })
+    expect(["done", "error"]).toContain(withOutcome.outcome.status)
+  })
+
+  it("Tier 2 question with reply mandate ON → reply sent (recorded by the fake adapter)", async () => {
+    // Opt the channel into autonomous replies.
+    await request(app.getHttpServer())
+      .put("/api/mandate")
+      .send({ defaults: { dispatch: true, reply: true }, channels: {} })
       .expect(200)
-    // Still exactly one item per fixture — cursor honored AND id-dedup as the net.
-    expect(items.body.length).toBe(2)
+
+    await seed(fakeDir, "team", "002.json", "Can you share the latest status?")
+    await app.get(ChannelWatcherService).tick()
+
+    const item = await findItem((i) => i.text.includes("share the latest status"))
+    expect(item.triage.tier).toBe(2)
+    expect(item.state).toBe("handled")
+    expect(item.reply?.text).toBeTruthy()
+
+    // The fake adapter recorded the outbound reply.
+    const sent = await fs.readdir(path.join(fakeDir, "sent"))
+    expect(sent.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it("PUT /api/mandate rejects unknown keys (422)", async () => {
+    await request(app.getHttpServer())
+      .put("/api/mandate")
+      .send({ defaults: { dispatch: true, reply: true }, channels: {}, sneaky: true })
+      .expect(422)
+  })
+
+  it("Tier 3 scope request → channel approval pending → approve → reply sent + item handled", async () => {
+    await seed(fakeDir, "team", "003.json", "Tady je nabídka a smlouva s deadline")
+    await app.get(ChannelWatcherService).tick()
+
+    const triaged = await findItem((i) => i.text.includes("nabídka"))
+    expect(triaged.triage.tier).toBe(3)
+    expect(triaged.state).toBe("triaged")
+    expect(triaged.approvalId).toBeTruthy()
+
+    // A kind-"channel" approval is pending.
+    const pending = await request(app.getHttpServer()).get("/api/approvals?status=pending").expect(200)
+    const approval = pending.body.find((a: { kind: string }) => a.kind === "channel")
+    expect(approval).toBeTruthy()
+
+    const sentBefore = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200)
+
+    // Approving routes back to the channel runner → draft sent, item handled.
+    await until(async () => {
+      const found = (await items()).body.find((i: { id: string }) => i.id === triaged.id)
+      return found?.state === "handled" ? found : null
+    })
+    const sentAfter = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length
+    expect(sentAfter).toBe(sentBefore + 1)
+  })
+
+  it("rejecting a channel approval ignores the item", async () => {
+    await seed(fakeDir, "team", "004.json", "Another nabídka with a smlouva")
+    await app.get(ChannelWatcherService).tick()
+    const triaged = await findItem((i) => i.text.includes("Another nabídka"))
+
+    const pending = await request(app.getHttpServer()).get("/api/approvals?status=pending").expect(200)
+    const approval = pending.body.find(
+      (a: { kind: string; runId: string }) => a.kind === "channel" && a.runId === `team/${triaged.id}`,
+    )
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200)
+
+    await until(async () => {
+      const found = (await items()).body.find((i: { id: string }) => i.id === triaged.id)
+      return found?.state === "ignored" ? found : null
+    })
+  })
+
+  it("a restart over the same data dir does not re-ingest (dedup + cursor)", async () => {
+    const before = (await items()).body.length
+    await app.close()
+    app = await boot()
+    await app.get(ChannelWatcherService).tick()
+    const after = (await items()).body.length
+    expect(after).toBe(before)
   })
 })

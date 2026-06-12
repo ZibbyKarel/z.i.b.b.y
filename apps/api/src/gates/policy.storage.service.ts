@@ -102,4 +102,14 @@ const DEFAULT_FLOOR: GateRule[] = [
     match: [{ type: "action" as const, action: "pr.merge" }],
     decision: "deny" as const,
   },
+  {
+    // Phase 5.3: a channel reply notifies by default (rank 1, below `ask`), so a
+    // per-channel agent rule can HARDEN it to `ask` (validateHardenOnly permits
+    // only that direction). Email replies additionally hit the `send_email` floor.
+    id: "floor-channel-reply",
+    source: "system" as const,
+    locked: true,
+    match: [{ type: "action" as const, action: "channel-reply" }],
+    decision: "notify" as const,
+  },
 ]

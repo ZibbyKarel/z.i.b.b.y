@@ -104,6 +104,38 @@ describe("Gates API (e2e)", () => {
     expect(byAction.get("pr.merge")).toBe("deny")
   })
 
+  it("exposes the Phase 5.3 channel-reply floor at notify", async () => {
+    const res = await request(app.getHttpServer()).get("/api/gates/policy").expect(200)
+    const rule = res.body.rules.find(
+      (r: { match: { action?: string }[] }) => r.match[0]?.action === "channel-reply",
+    )
+    expect(rule?.decision).toBe("notify")
+  })
+
+  it("honors an agent rule hardening channel-reply to ask", async () => {
+    await request(app.getHttpServer())
+      .put("/api/agents/shopper/gates")
+      .send({
+        gates: [
+          { match: [{ type: "action", action: "channel-reply" }], decision: "ask", resolve: { type: "human" } },
+        ],
+      })
+      .expect(200)
+    const evalRes = await request(app.getHttpServer())
+      .post("/api/gates/evaluate")
+      .send({ agentId: "shopper", action: { action: "channel-reply" } })
+      .expect(200)
+    expect(evalRes.body.decision).toBe("ask")
+  })
+
+  it("rejects an agent rule weakening channel-reply to allow (422)", async () => {
+    const res = await request(app.getHttpServer())
+      .put("/api/agents/shopper/gates")
+      .send({ gates: [{ match: [{ type: "action", action: "channel-reply" }], decision: "allow" }] })
+      .expect(422)
+    expect(res.body.ruleIndex).toBe(0)
+  })
+
   it("refuses an agent rule that weakens the locked pr.merge deny (422)", async () => {
     const res = await request(app.getHttpServer())
       .put("/api/agents/shopper/gates")

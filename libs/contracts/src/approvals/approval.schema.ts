@@ -1,8 +1,12 @@
 import { z } from "zod"
 import { RiskSchema } from "../common.schema"
 
-/** Which run kind an approval gates — so a decision can be routed to the right runner. */
-export const ApprovalRunKindSchema = z.enum(["agent", "pipeline-stage"])
+/**
+ * Which run kind an approval gates — so a decision can be routed to the right
+ * runner. `channel` (Phase 5.3) gates a drafted reply to an inbound channel item;
+ * the runId is a compound `<integrationId>/<itemId>` ref.
+ */
+export const ApprovalRunKindSchema = z.enum(["agent", "pipeline-stage", "channel"])
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>
 
 /** Lifecycle of an approval: created `pending`, then a human decides. */

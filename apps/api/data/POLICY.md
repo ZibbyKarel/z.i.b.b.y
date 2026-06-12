@@ -70,6 +70,13 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-channel-reply
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: channel-reply
+    decision: notify
 ---
 
 System policy floor. Agents may only harden these rules.

@@ -32,5 +32,8 @@ export function resolveTasksDir(): string {
     KeywordScorer,
     { provide: TASK_ROUTER, useClass: ClaudeCliRouter },
   ],
+  // Exported so the channel triage flow (Phase 5.3) can dispatch a task and read
+  // its outcome back onto the channel item.
+  exports: [TaskSchedulerService, ScheduledTasksStorageService],
 })
 export class TasksModule {}

@@ -6,6 +6,7 @@ import { gateRulesContract } from "./gates/gate-rules.contract"
 import { automationsContract } from "./automations/automations.contract"
 import { channelsContract } from "./channels/channels.contract"
 import { integrationsContract } from "./integrations/integrations.contract"
+import { mandateContract } from "./mandate/mandate.contract"
 import { memoryContract } from "./memory/memory.contract"
 import {
   categoriesContract,
@@ -45,6 +46,7 @@ export const appContract = c.router({
   automations: automationsContract,
   integrations: integrationsContract,
   channels: channelsContract,
+  mandate: mandateContract,
   health: healthContract,
   limits: limitsContract,
   tasks: tasksContract,
