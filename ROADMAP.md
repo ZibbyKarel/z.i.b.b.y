@@ -619,6 +619,123 @@ morning briefing accounts for the pause.
 
 ---
 
+## Phase 10 — Loop engine: goals, verifier, work discovery
+
+*Goal: promote ZIBBY from an "agent and pipeline launcher" into a **loop
+engine** — it discovers work itself, proposes it through the gate, iterates a
+maker against a separate verifier, persists every iteration to disk, and
+parks when bounded effort is exhausted. The outer loop sitting above a single
+run's inner loop — the capstone, not a new subsystem.*
+
+**Context.** "Loop engineering" (Osmani / Cherny / Steinberger, June 2026)
+names the standard blocks — and ZIBBY already shipped nearly all of them:
+
+| Loop-engineering block | Where it lives here |
+|---|---|
+| Automations (heartbeat) | core cron tick + Phase 5 triage |
+| Worktrees | Phase 3.1 (+ 8.2 parallelism, verified) |
+| Skills | core (`data/skills/`) |
+| Connectors | Phase 5.1 integrations |
+| Sub-agents (maker/checker) | Phase 2 delivery loop (`verify` stage, back-edges, escalation, parking) |
+| Memory on disk | Phase 4 vault lifecycle |
+| Budget / cost | Phase 8.1 `BudgetService` + `held` tasks |
+| **"Hand off to you"** | **approval gate + Tier 3 — ZIBBY's differentiator** |
+
+What's missing is the connective tissue: the outer loop itself. Phase 10 is
+therefore deliberately **thin glue over delivered machinery** — anything below
+that smells like re-implementation of 2.x/3.x/6.1/8.1 is a design error.
+
+### 10.1 `goal` task target + `GoalRun`
+
+- Extend `TaskTargetSchema` (`libs/contracts/src/tasks/task.schema.ts`) with a
+  fourth kind alongside `agent` / `pipeline` / `orchestrator`:
+  `{ kind: "goal", id, … }`. New `goal.schema.ts` + `goal.contract.ts`
+  following the pipeline pattern: a stored goal definition (objective, maker
+  ref, verifier spec, `maxIterations`, budget) and a `GoalRunSchema` holding
+  `iterations[]` (each: maker run ref, verifier verdict, tokens/cost),
+  accumulated cost, and a `sessionId` for resumability.
+- The maker step is an **existing executor** — a stored agent *or* a full
+  pipeline (the union nests); the goal runner dispatches it per iteration
+  through the same runner seams, so demo mode stays the deterministic e2e
+  seam and the mid-run approval gate applies unchanged inside every
+  iteration.
+- YAML frontmatter serialization extended with the goal/verifier definition
+  (same file-backed conventions as agents/pipelines).
+- **Tests:** contract/schema unit tests (union round-trip, frontmatter
+  parse); e2e: create goal → dispatch → `GoalRun` file appears with
+  iteration records (demo maker).
+
+### 10.2 Verifier as a first-class stop condition
+
+- Generalizes the 2.1 `verify` stage beyond a fixed pipeline: a verifier is a
+  **verifiable predicate** — the deterministic project checks (reuse the
+  verify-stage command assembly: lint/tsc/test, per-project override) and/or
+  a separate claude pass on a cheaper model (reuse the per-phase
+  model-override mechanism from 2.3; the verifier never shares the maker's
+  session).
+- Stop = verifier returns `satisfied` **or** `maxIterations` / budget (8.1
+  `BudgetService`) exhausted. On exhaustion → `parked`, into the existing
+  2.3 operator queue with the last verifier output as failure context;
+  resume-with-note works unchanged. Failed verification feeds the next
+  iteration as context — the Tester→Kodér feedback shape, generalized.
+- **Tests:** unit for the stop-condition matrix (satisfied / iterations
+  exhausted / budget exhausted / both) and verifier-context assembly; e2e:
+  scripted verifier fails twice then passes → run is `done` with 3
+  iterations; never-passes → `parked` with context.
+
+### 10.3 Discovery triage — work finds itself
+
+- A scheduled automation (existing automations tick — same pattern as the
+  Phase 6 morning briefing) runs a `triage.skill.md` discovery skill: scan
+  `git log`, failing tests, `daily/`, and open items in `MEMORY.md` → emit
+  task **candidates**. *Proposed ≠ dispatched* — discovery never starts a
+  run.
+- Proposals land in the **approvals queue** as a new `kind:
+  "proposed-task"` (the 5.3 `kind: "channel"` pattern) — the gate *is* the
+  inbox; no parallel surface, no new approval flow. Approving dispatches via
+  the existing `createTask` path, so budget guard (8.1), concurrency queue
+  (8.2) and outcome write-back (1.3) all apply for free.
+- Discovery output is validated against a closed Zod schema, and scanned
+  repo/vault content is data, not commands (Law 4) — a candidate can never
+  carry gate overrides or raise its own tier.
+- **Tests:** triage-skill unit tests on a fixture repo/vault (failing test →
+  candidate, clean tree → none, injection-shaped commit message stays inert);
+  e2e: automation tick → proposal in approvals queue, **no run started**;
+  approve → task dispatched through the budget guard.
+
+### 10.4 Loop run-log + resume + goal UI
+
+- Per-iteration record on disk in the goal run dir (action, verifier
+  verdict, tokens, cost) + activity-log entries (6.1) for dispatch/verdict/
+  park — the accountable record stays append-only JSONL, the run dir holds
+  the detail.
+- `GoalRun` survives API restart via the existing reconciliation pattern;
+  `sessionId` resumes the maker conversation instead of restarting —
+  Phase 9.3's continuation-not-restart principle applied to the outer loop.
+  A goal iteration that dies on a usage limit goes `paused-limit` (9.1)
+  **without burning an iteration** of the goal's budget.
+- Web: **goal task detail view** — polymorphic render alongside agent/
+  pipeline in `/runs` + `RunDetail` (iteration timeline, verifier verdicts,
+  cost bar vs. budget), TanStack Query per project conventions.
+- **Tests:** unit for iteration-record round-trip and restart
+  reconciliation; e2e: kill the API mid-goal → restart → run continues at
+  the same iteration; web-components tests for the iteration timeline;
+  Playwright: discovery proposal → approve → goal runs to done (demo mode).
+
+**Hard invariants (restated, not new):** no auto-push, no auto-merge — ever
+(3.2 locked floor, untouched); every proposed task and every transactional
+action passes the approval gate; concurrent goals isolate via 3.1 worktrees
+and respect 8.1 caps. Out of scope permanently: continual-learning /
+self-optimizing evals ("agent slop" risk), concurrency beyond the budget cap.
+
+**Phase exit criterion:** the discovery automation proposes a task from a
+seeded failing test; the operator approves it from the queue; the goal
+iterates maker → verifier, survives an API restart mid-loop, and either
+finishes verifier-green or parks with its full iteration log — and nothing
+reached the remote.
+
+---
+
 ## Sequencing and dependencies
 
 ```
@@ -633,6 +750,12 @@ Phase 8 (scale)      — needs 3 (worktrees) + 6 (per-engagement briefing)
 Phase 9 (limit resilience) — needs 1.2 (stage resume), 3.1 (worktrees → checkpoint
                        commits), 8.1 (limits/budget plumbing); 9.1+9.2 can land
                        before 9.3 (task/pipeline pause-resume without checkpoints)
+Phase 10 (loop engine) — needs 2 (verify stage, parking, escalation), 3.1+3.2
+                       (worktrees, gated push), 4 (vault for discovery), 5.3
+                       (approval-queue kind pattern), 6.1 (activity log),
+                       8.1 (budget). Phase 9 is complementary, not blocking —
+                       but 9.1 should land first so a limit hit inside a goal
+                       iteration pauses instead of burning the iteration budget
 ```
 
 **Standing rules for every phase** (the test constraint, made concrete):
