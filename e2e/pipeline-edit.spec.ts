@@ -10,7 +10,10 @@ import { expect, test } from "@playwright/test";
 test("edit a pipeline: add a loop and see the retry arc", async ({ page }) => {
   await page.goto("/pipelines");
 
-  await expect(page.getByText("Demo Pipe").first()).toBeVisible();
+  // Select Demo Pipe explicitly — the detail panel defaults to the first
+  // pipeline in the list, which need not be the seeded one.
+  await page.getByText("Demo Pipe").first().click();
+  await expect(page).toHaveURL(/\/pipelines\/demo-pipe/);
 
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.getByRole("dialog", { name: "Edit pipeline" })).toBeVisible();
