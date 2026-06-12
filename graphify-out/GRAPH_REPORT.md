@@ -1,7 +1,7 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-12)
 
 ## Corpus Check
-- 855 files · ~662,399 words
+- 855 files · ~673,609 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -4594,9 +4594,9 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `filter()` connect `Community 4` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 19`, `Community 24`, `Community 26`, `Community 28`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **Why does `resolveDataRoot()` connect `Community 10` to `Community 3`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 50 inferred relationships involving `filter()` (e.g. with `DesignSystemProvider()` and `t()`) actually correct?**
   _`filter()` has 50 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 28 inferred relationships involving `writeEntity()` (e.g. with `.create()` and `.createHeld()`) actually correct?**

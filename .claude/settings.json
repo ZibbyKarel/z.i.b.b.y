@@ -10,6 +10,23 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); echo \"$file\" | grep -qvE '(docs/|\\.md$|\\.json$|node_modules)' && /Users/zibby/.local/bin/graphify update . > /dev/null 2>&1 || true",
+            "async": true,
+            "statusMessage": "Updating knowledge graph..."
+          },
+          {
+            "type": "command",
+            "command": "file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); echo \"$file\" | grep -qE '(apps/|libs/)' && echo \"$file\" | grep -qvE '(docs/|\\.spec\\.|\\.test\\.|\\.e2e\\.)' && printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"DOCS-HINT: Code file changed: %s — if this modifies API contracts, new modules, config, or behaviour covered in docs/, update the relevant docs/api/, docs/libs/, docs/web/, or docs/ops/ file.\"}}\\n' \"$file\" || true"
+          }
+        ]
+      }
     ]
   }
 }
