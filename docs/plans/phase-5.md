@@ -498,7 +498,20 @@ Tests:
 
 ---
 
-Verification
+Verification  ✅ COMPLETE
+
+Phase-exit results (2026-06-12):
+- pnpm test (all projects): 997 pass, 2 fail — the 2 pre-existing flaky
+  TaskSchedulerService tests (verified failing on clean HEAD 919abe2), the
+  documented quarantine. Zero new failures.
+- Typecheck: apps/web → 0 errors; tsconfig.base.json → 18 errors, the unchanged
+  pre-existing baseline (none in Phase-5 files; the api tsconfig's rootDir/
+  import.meta noise is why pnpm test/SWC is the real gate).
+- pnpm lint: clean (1 pre-existing warning in AgentDetailModal, untouched).
+- Playwright: e2e/channels.spec green (seeded fixture → triaged inbox item +
+  pending channel approval → approve → handled). The documented reds
+  (pipeline-run timeout) + the self-documented approval.spec timing flake stay
+  quarantined; memory-graph passed this run.
 
 After each sub-item: pnpm lint → npx tsc -p apps/web/tsconfig.json --noEmit
 (rtk typecheck lies — memory: project_rtk_typecheck_masking) → pnpm test →
