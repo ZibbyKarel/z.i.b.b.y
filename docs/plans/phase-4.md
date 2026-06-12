@@ -225,7 +225,7 @@ Tests: ↓
   ↓
   4.2 Run lifecycle: ground → work → record
   ↓
-  Grounding:
+  Grounding:  — ✅ DONE (commit "phase 4.2: grounding")
   ↓
 - NEW apps/api/src/memory/grounding.service.ts (provided + exported by
   MemoryModule). compose({ task, projectId?, matchedTerms? }): Promise<string>: ↓

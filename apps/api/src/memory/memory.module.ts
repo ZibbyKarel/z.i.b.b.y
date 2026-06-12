@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { dataDir } from "../shared/data-dir"
+import { GroundingService } from "./grounding.service"
 import { MemoryController } from "./memory.controller"
 import { VAULT_DIR, VaultService } from "./vault.service"
 
@@ -14,7 +15,7 @@ export function resolveVaultDir(): string {
 
 @Module({
   controllers: [MemoryController],
-  providers: [{ provide: VAULT_DIR, useFactory: resolveVaultDir }, VaultService],
-  exports: [VaultService],
+  providers: [{ provide: VAULT_DIR, useFactory: resolveVaultDir }, VaultService, GroundingService],
+  exports: [VaultService, GroundingService],
 })
 export class MemoryModule {}

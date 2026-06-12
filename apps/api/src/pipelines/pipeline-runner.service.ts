@@ -20,6 +20,7 @@ import {
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
+import { GroundingService } from "../memory/grounding.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
@@ -97,6 +98,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly gates: GateEvaluatorService,
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
+    private readonly grounding: GroundingService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -158,7 +160,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * its `checks` the verify fallback. Unresolvable → sandbox-only (deterministic
    * for demo/e2e).
    */
-  async start(pipelineId: string, taskId?: string, projectRef?: string): Promise<PipelineRun> {
+  async start(
+    pipelineId: string,
+    taskId?: string,
+    projectRef?: string,
+    matchedTerms?: string[],
+  ): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId)
 
@@ -186,6 +193,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       cwd: root,
       ...(taskId ? { taskId } : {}),
       ...(project ? { projectPath: project.path } : {}),
+      // Persisted so a parked/resumed run re-grounds each stage identically after
+      // a restart (Phase 4) — the classifier's matched terms drive MOC selection.
+      ...(matchedTerms?.length ? { matchedTerms } : {}),
     }
     this.runs.set(pipelineRunId, run)
     await this.writeAggregate(run)
@@ -593,6 +603,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       project,
       escalation,
       run.workspace?.path,
+      run.matchedTerms,
     )
     const rec = await this.core.start({
       kind: "pipeline-stage",
@@ -768,6 +779,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
      * sees them. Falls back to the project checkout (non-git / projectless: Phase 2).
      */
     worktreePath?: string,
+    /** Persisted classifier terms (Phase 4) — drive memory-grounding MOC selection. */
+    matchedTerms?: string[],
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path
     // Verify phases are deterministic shell checks — identical in demo and
@@ -799,6 +812,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       ]
         .filter(Boolean)
         .join(" ")
+      // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
+      // Star + relevant MOCs + the project note. Fail-open ("" on any error).
+      const grounding = await this.grounding.compose({
+        task,
+        projectId: project?.id,
+        matchedTerms,
+      })
       const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,
@@ -806,6 +826,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // Escalation rung (a retry's harder model/thinking) > phase > agent.
         model: escalation?.model ?? phase.model ?? agent.model,
         thinking: escalation?.thinking ?? phase.thinking ?? agent.thinking,
+        grounding,
         // The sandbox holds the handoff files; with cwd in the worktree/project the
         // session still needs write access to it (reverse grant).
         ...(spawnCwd ? { grantDirs: [cwd] } : {}),

@@ -101,6 +101,7 @@ async function makeHarness(dir: string): Promise<Harness> {
       removeWorktree: vi.fn(async () => {}),
       diffstat: vi.fn(async () => ""),
     } as never,
+    { compose: vi.fn(async () => "") } as never,
     fakeLogger as never,
     fakeTrace as never,
   )

@@ -3,7 +3,7 @@ import type { ClassifyTaskInput, TaskRouting } from "@zibby/contracts"
 import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router"
 
 /** Lowercased word/number tokens, diacritics preserved. */
-function tokenize(text: string): string[] {
+export function tokenize(text: string): string[] {
   return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
 }
 

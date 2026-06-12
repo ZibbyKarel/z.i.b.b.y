@@ -8,6 +8,7 @@ import { AgentsStorageService } from "./agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
+import { GroundingService } from "../memory/grounding.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
@@ -59,6 +60,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly limits: LimitsService,
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
+    private readonly grounding: GroundingService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -122,10 +124,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     files: string[] = [],
     title = "",
     taskId?: string,
+    matchedTerms?: string[],
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId)
-    return this.launch(agent, prompt, project, files, title, taskId)
+    return this.launch(agent, prompt, project, files, title, taskId, matchedTerms)
   }
 
   /**
@@ -142,8 +145,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     files: string[] = [],
     title = "",
     taskId?: string,
+    matchedTerms?: string[],
   ): Promise<AgentRun> {
-    return this.launch(ORCHESTRATOR_AGENT, prompt, "", files, title, taskId)
+    return this.launch(ORCHESTRATOR_AGENT, prompt, "", files, title, taskId, matchedTerms)
   }
 
   /** Shared spawn path: build the command for `agent` and hand it to the core. */
@@ -154,6 +158,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     files: string[],
     title: string,
     taskId?: string,
+    matchedTerms?: string[],
   ): Promise<AgentRun> {
     const agentId = agent.id
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
@@ -166,7 +171,19 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // operates on are passed separately as `--add-dir` grants, never as the cwd.
     const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
     const grantDirs = await this.resolveGrantDirs(files)
-    const { command, args } = await this.buildCommand(agent, prompt, grantDirs)
+
+    // Resolve the project first so memory grounding can include the project note;
+    // the same resolution then drives the Phase 3.1 worktree below.
+    const resolved = await this.resolveProject(project)
+    // Memory grounding (Phase 4): North Star + relevant MOCs + the project note,
+    // composed from the vault. Fail-open inside the service ("" on any error) so a
+    // vault hiccup never blocks the run.
+    const grounding = await this.grounding.compose({
+      task: prompt,
+      projectId: resolved?.id,
+      matchedTerms,
+    })
+    const { command, args } = await this.buildCommand(agent, prompt, grantDirs, grounding)
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
     // sandbox; the session spawns there (its first `spawnCwd` ever) so its commits
@@ -175,7 +192,6 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // non-git project, or a worktree-setup failure → today's behavior (sandbox-only).
     let workspace: Workspace | undefined
     let spawnCwd: string | undefined
-    const resolved = await this.resolveProject(project)
     if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
       await fs.mkdir(cwd, { recursive: true })
       try {
@@ -402,6 +418,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     agent: Agent,
     prompt: string,
     grantDirs: string[],
+    grounding?: string,
   ): Promise<{ command: string; args: string[] }> {
     const task = grantDirs.length
       ? `${prompt}\n\nOperate on this directory: ${grantDirs[0]}`.trim()
@@ -413,6 +430,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       model: agent.model,
       thinking: agent.thinking,
       grantDirs,
+      grounding,
       // Capture the full transcript so the run log shows every step, not just the
       // final summary (the core flattens the stream-json events back to text).
       streamTranscript: true,

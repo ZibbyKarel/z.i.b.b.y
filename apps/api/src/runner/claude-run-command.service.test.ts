@@ -73,6 +73,42 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(prompt).toMatch(/NEVER ask for confirmation/)
   })
 
+  it("omits the grounding block when none is supplied (contract directly precedes the body)", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({ instructions: CODER.instructions, task: "x" })
+    // No grounding → the prompt is exactly contract + body, unchanged from before Phase 4.
+    expect(flagValue(args, "--append-system-prompt")).toBe(`${OPERATING_CONTRACT}Jsi Kodér.`)
+  })
+
+  it("inserts grounding between the operating contract and the agent body, in order", async () => {
+    const svc = makeService([CODER], [])
+    const grounding = "## Grounding (vault)\n\n### North Star\nMission text."
+    const { args } = await svc.buildClaudeCommand({
+      instructions: CODER.instructions,
+      task: "x",
+      grounding,
+    })
+    const prompt = flagValue(args, "--append-system-prompt") ?? ""
+    // Order: contract frames the run, grounding gives durable context, body is last.
+    expect(prompt.startsWith(OPERATING_CONTRACT)).toBe(true)
+    expect(prompt.endsWith("Jsi Kodér.")).toBe(true)
+    const contractEnd = OPERATING_CONTRACT.length
+    const groundingAt = prompt.indexOf(grounding)
+    const bodyAt = prompt.indexOf("Jsi Kodér.")
+    expect(groundingAt).toBeGreaterThanOrEqual(contractEnd)
+    expect(groundingAt).toBeLessThan(bodyAt)
+  })
+
+  it("treats whitespace-only grounding as empty (no block inserted)", async () => {
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: CODER.instructions,
+      task: "x",
+      grounding: "   \n  ",
+    })
+    expect(flagValue(args, "--append-system-prompt")).toBe(`${OPERATING_CONTRACT}Jsi Kodér.`)
+  })
+
   it("omits stream-json output unless streamTranscript is set (default text mode)", async () => {
     const svc = makeService([CODER], [])
     const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })

@@ -32,6 +32,14 @@ export interface ClaudeRunOptions {
    * every tool call, tool results — not just its closing summary.
    */
   streamTranscript?: boolean;
+  /**
+   * Memory grounding block (Phase 4): North Star + relevant MOCs + the project
+   * note, composed by the GroundingService from the vault. Inserted between the
+   * operating contract and the agent body in `--append-system-prompt`. Always a
+   * plain string (`""` when the vault yields nothing) — this service stays
+   * vault-agnostic; the caller composes it.
+   */
+  grounding?: string;
 }
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
@@ -109,9 +117,15 @@ export const EXECUTION_DIRECTIVE =
   " intercepted and I approve it on a card before it runs, so executing the command is how you" +
   " ask. Asking in text reaches no one and just ends the run.)";
 
-/** Prefix an agent/skill body with the operating contract that frames every run. */
-function withOperatingContract(instructions: string): string {
-  return `${OPERATING_CONTRACT}${instructions}`;
+/**
+ * Frame an agent/skill body with the operating contract, then the optional memory
+ * grounding block, then the body. Order matters: the contract frames the run, the
+ * grounding gives durable context, and the body (highest recency in the system
+ * prompt) is the agent's own instructions. Empty grounding is omitted cleanly.
+ */
+function withOperatingContract(instructions: string, grounding?: string): string {
+  const block = grounding && grounding.trim() ? `${grounding.trim()}\n\n---\n\n` : "";
+  return `${OPERATING_CONTRACT}${block}${instructions}`;
 }
 
 /** Append the execution directive so the user turn ends with "act, don't ask". */
@@ -202,7 +216,7 @@ export class ClaudeRunCommandService {
       "--allowedTools",
       ...allowedTools,
       "--append-system-prompt",
-      withOperatingContract(opts.instructions),
+      withOperatingContract(opts.instructions, opts.grounding),
       "--agents",
       JSON.stringify(catalog),
       // Mid-run approval gate: a PreToolUse hook intercepts destructive Bash and

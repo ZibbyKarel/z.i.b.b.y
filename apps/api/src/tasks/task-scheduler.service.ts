@@ -189,17 +189,20 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const routing = await this.classifier.classify({ text, paths })
     if (!routing) return null
     const target = routing.target
+    // The classifier's matched terms ride into the run so memory grounding selects
+    // the same MOCs the routing keyed on (Phase 4).
+    const { matchedTerms } = routing
     if (target.kind === "agent") {
-      const run = await this.agentRunner.start(target.id, text, "", paths, title, taskId)
+      const run = await this.agentRunner.start(target.id, text, "", paths, title, taskId, matchedTerms)
       return { runRef: run.runId, target }
     }
     if (target.kind === "pipeline") {
-      const run = await this.pipelineRunner.start(target.id, taskId)
+      const run = await this.pipelineRunner.start(target.id, taskId, undefined, matchedTerms)
       return { runRef: run.pipelineRunId, target }
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
     // subagent(s) or does the task directly — a task never no-ops.
-    const run = await this.agentRunner.startOrchestrator(text, paths, title, taskId)
+    const run = await this.agentRunner.startOrchestrator(text, paths, title, taskId, matchedTerms)
     return { runRef: run.runId, target }
   }
 

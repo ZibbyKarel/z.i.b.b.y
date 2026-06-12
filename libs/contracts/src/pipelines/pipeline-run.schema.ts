@@ -91,6 +91,12 @@ export const PipelineRunSchema = z.object({
   parked: ParkedDetailSchema.optional(),
   /** Persisted per-phase retry counters, so a parked run resumes accurately. */
   retries: z.record(z.string(), z.number()).optional(),
+  /**
+   * Classifier terms (Phase 4) that routed the originating task here, persisted so
+   * a parked/resumed run re-grounds each stage identically after a restart. They
+   * drive memory-grounding MOC selection; absent for UI-started runs.
+   */
+  matchedTerms: z.array(z.string()).optional(),
 })
 export type PipelineRun = z.infer<typeof PipelineRunSchema>
 
