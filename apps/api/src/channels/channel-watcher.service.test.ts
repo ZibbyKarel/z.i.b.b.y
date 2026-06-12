@@ -68,6 +68,7 @@ describe("ChannelWatcherService", () => {
       events,
       fakeLogger as never,
       fakeTrace as never,
+      { record: async () => {} } as never,
     )
   }
 

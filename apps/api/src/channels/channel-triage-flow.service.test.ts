@@ -75,6 +75,7 @@ describe("ChannelTriageFlowService", () => {
       store,
       approvals as never,
       fakeLogger as never,
+      { record: async () => {} } as never,
     )
   }
 

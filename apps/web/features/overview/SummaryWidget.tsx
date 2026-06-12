@@ -12,8 +12,10 @@ import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useIntegrationsQuery } from "../integrations/queries";
 import { useAgentsQuery } from "../agents/queries";
+import { useApprovalsQuery } from "../approvals/queries/useApprovalsQuery";
 import { useHealthQuery } from "../health/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
+import { useRunsQuery } from "../runs/queries/useRunsQuery";
 import { useSkillsQuery } from "../skills/queries";
 import { deriveHealthPresentation } from "./healthPresentation";
 
@@ -25,6 +27,13 @@ export function SummaryWidget() {
   const { data: skills = [] } = useSkillsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
+  const { runs } = useRunsQuery();
+  const { data: approvals = [] } = useApprovalsQuery();
+
+  // "Always accountable" shouldn't ship over fake zeros: derive the two live
+  // stats from the queries already mounted on this page.
+  const runningAgents = runs.filter((r) => r.status === "running").length;
+  const pendingApprovals = approvals.length;
 
   const { data: health, isFetching, isFetched, isSuccess } = useHealthQuery();
   const {
@@ -96,13 +105,13 @@ export function SummaryWidget() {
             icon="pulse"
             label={t("overview.statRunningAgents")}
             tone="accent"
-            value="00"
+            value={pad2(runningAgents)}
           />
           <Stat
             icon="shield"
             label={t("overview.statApprovals")}
-            tone="neutral"
-            value="00"
+            tone={pendingApprovals > 0 ? "accent" : "neutral"}
+            value={pad2(pendingApprovals)}
           />
           <Stat
             icon="flow"

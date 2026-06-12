@@ -10,13 +10,15 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { PageContainer } from "apps/web/components/PageContainer/PageContainer";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useAgentsQuery } from "../agents/queries";
 import { useIntegrationsQuery } from "../integrations/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useSkillsQuery } from "../skills/queries";
+import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
+import { useActivityQuery } from "./queries";
 import { SummaryWidget } from "./SummaryWidget";
 
 const STARTERS = [
@@ -32,6 +34,7 @@ export function Screen() {
   const { data: skills = [] } = useSkillsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
+  const { data: activity = [] } = useActivityQuery();
 
   const isFresh =
     skills.length === 0 &&
@@ -42,6 +45,12 @@ export function Screen() {
   return (
     <PageContainer>
       <SummaryWidget />
+
+      {activity.length > 0 && (
+        <HudPanel title={t("overview.activity")}>
+          <ActivityFeed items={activity} limit={8} />
+        </HudPanel>
+      )}
 
       {isFresh && (
         <HudPanel title={t("overview.starterTitle")}>

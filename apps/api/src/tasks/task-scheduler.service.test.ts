@@ -110,6 +110,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       pipelineRunner as never,
       fakeLogger as never,
       fakeTrace as never,
+      { record: async () => {} } as never,
     )
     service.onModuleInit()
   })

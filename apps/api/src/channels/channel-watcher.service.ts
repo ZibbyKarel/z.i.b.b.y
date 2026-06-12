@@ -6,6 +6,7 @@ import {
   Optional,
 } from "@nestjs/common"
 import type { ChannelItem, CredentialsInput, Integration } from "@zibby/contracts"
+import { ActivityLogService } from "../activity/activity-log.service"
 import { CredentialsStore } from "../integrations/credentials.store"
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
@@ -52,6 +53,7 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
     private readonly events: ChannelEventsService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
+    private readonly activity: ActivityLogService,
     @Optional() @Inject(CHANNEL_TRIAGE_FLOW) private readonly flow?: ChannelTriageFlow,
   ) {
     this.log = logger.child(ChannelWatcherService.name)
@@ -124,6 +126,13 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
       if (isNew) {
         this.events.emit({ itemId: stored.id, state: stored.state })
         ingested.push(stored.id)
+        // A genuinely new inbound item — record once, here at the source (NOT on
+        // every empty poll: noise discipline starts where the item is born).
+        void this.activity.record({
+          kind: "channel-item",
+          summary: `inbound ${integration.kind} item from ${integration.id}`,
+          refs: { itemId: stored.id, integrationId: integration.id },
+        })
         if (this.flow) {
           const acted = await this.flow.handle(stored).catch((err) => {
             // A triage failure leaves the item `new` to retry next tick (at-least-once).

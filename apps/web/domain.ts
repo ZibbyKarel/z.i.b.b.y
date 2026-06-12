@@ -33,16 +33,6 @@ export interface Approval {
   risk: string;
 }
 
-export type ActivityIcon = "run" | "wait" | "ok" | "edit";
-
-export interface ActivityEvent {
-  id: string;
-  t: string;
-  icon: ActivityIcon;
-  text: string;
-  sub: string;
-}
-
 export interface AgentSdkCredit {
   label: MessageKey;
   total: number;

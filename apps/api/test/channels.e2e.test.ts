@@ -161,6 +161,17 @@ describe("Channels triage throughline (e2e)", () => {
     })
     const sentAfter = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length
     expect(sentAfter).toBe(sentBefore + 1)
+
+    // Phase 6.1: the channel throughline left a traceable activity record —
+    // ingestion (channel-item), the triage verdict, and the parked approval.
+    const log = (await request(app.getHttpServer()).get("/api/activity").query({ limit: 500 }).expect(200)).body as Array<{
+      kind: string
+      refs: { itemId?: string }
+    }>
+    const forItem = log.filter((e) => e.refs.itemId === triaged.id).map((e) => e.kind)
+    expect(forItem).toContain("channel-item")
+    expect(forItem).toContain("channel-triage")
+    expect(forItem).toContain("channel-approval")
   })
 
   it("rejecting a channel approval ignores the item", async () => {

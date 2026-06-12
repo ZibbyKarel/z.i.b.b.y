@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
+import { ActivityLogModule } from "./activity/activity-log.module"
+import { ActivityRecorderModule } from "./activity/activity-recorder.module"
 import { AgentsModule } from "./agents/agents.module"
 import { ApprovalsModule } from "./approvals/approvals.module"
 import { AutomationsModule } from "./automations/automations.module"
@@ -22,6 +24,7 @@ import { TasksModule } from "./tasks/tasks.module"
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggingModule,
+    ActivityLogModule,
     AgentsModule,
     SkillsModule,
     ProjectsModule,
@@ -30,6 +33,7 @@ import { TasksModule } from "./tasks/tasks.module"
     GateRulesModule,
     MemoryModule,
     RunRecorderModule,
+    ActivityRecorderModule,
     AutomationsModule,
     IntegrationsModule,
     MandateModule,

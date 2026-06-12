@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { Approval, ApprovalRunKind } from "@zibby/contracts"
+import { ActivityLogService } from "../activity/activity-log.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { ApprovalAlreadyDecidedError } from "./approvals.errors"
 import { ApprovalsStorageService } from "./approvals.storage.service"
@@ -43,6 +44,8 @@ export class ApprovalsService {
     // Optional so unit tests can `new ApprovalsService(storage)`; in the running
     // app the global LoggingModule always supplies it.
     @Optional() logger?: LoggerService,
+    // Optional for the same reason; the global ActivityLogModule supplies it live.
+    @Optional() private readonly activity?: ActivityLogService,
   ) {
     this.log = logger?.child(ApprovalsService.name)
   }
@@ -72,6 +75,16 @@ export class ApprovalsService {
       kind: approval.kind,
       action: approval.action,
       risk: approval.risk,
+    })
+    void this.activity?.record({
+      kind: "approval-requested",
+      summary: `approval needed: ${approval.skill} wants to ${approval.action}`,
+      refs: {
+        approvalId: approval.id,
+        runRef: approval.runId,
+        action: approval.action,
+        status: approval.kind,
+      },
     })
     return this.storage.create(approval)
   }
@@ -126,6 +139,11 @@ export class ApprovalsService {
     const approval = await this.storage.get(id)
     if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id)
     const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() }
+    void this.activity?.record({
+      kind: status === "approved" ? "approval-approved" : "approval-rejected",
+      summary: `approval ${status}: ${approval.skill} · ${approval.action}`,
+      refs: { approvalId: id, runRef: approval.runId, decision: status, status: approval.kind },
+    })
     return this.storage.update(decided)
   }
 }

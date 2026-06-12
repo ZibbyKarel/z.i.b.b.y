@@ -7,6 +7,7 @@ import type {
   Mandate,
   TriageVerdict,
 } from "@zibby/contracts"
+import { ActivityLogService } from "../activity/activity-log.service"
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service"
@@ -65,6 +66,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     private readonly store: ChannelItemStore,
     private readonly approvals: ApprovalsService,
     logger: LoggerService,
+    private readonly activity: ActivityLogService,
   ) {
     this.log = logger.child(ChannelTriageFlowService.name)
   }
@@ -79,6 +81,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     const mandate = await this.mandate.read()
     const verdict = await this.triage.triage(item.text, this.mandateSummary(mandate, item.integrationId))
     const triaged: ChannelItem = { ...item, triage: verdict }
+    void this.activity.record({
+      kind: "channel-triage",
+      summary: `triaged ${verdict.category} (tier ${verdict.tier}) from ${item.integrationId}`,
+      refs: { itemId: item.id, integrationId: item.integrationId, status: verdict.category },
+    })
 
     const dispatchAllowed = this.allowed(mandate, item.integrationId, "dispatch")
     const replyAllowed = this.allowed(mandate, item.integrationId, "reply")
@@ -172,6 +179,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     }
     await this.store.update(parked)
     this.log.info("channel item parked for approval (tier 3)", { itemId: item.id, approvalId: approval.id })
+    void this.activity.record({
+      kind: "channel-approval",
+      summary: `reply to ${item.integrationId} parked for approval`,
+      refs: { itemId: item.id, integrationId: item.integrationId, approvalId: approval.id },
+    })
     return parked
   }
 
@@ -196,6 +208,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     }
     await this.store.update({ ...item, state: "ignored" })
     this.log.info("channel item ignored (rejected)", { itemId: item.id })
+    void this.activity.record({
+      kind: "channel-ignored",
+      summary: `reply to ${item.integrationId} rejected — item ignored`,
+      refs: { itemId: item.id, integrationId: item.integrationId },
+    })
   }
 
   // ---- Outcome reconciliation (the sweepOutcomes pattern) ---------------------
@@ -228,6 +245,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     }
     await this.store.update(handled)
     this.log.info("channel reply sent", { itemId: item.id })
+    void this.activity.record({
+      kind: "channel-reply",
+      summary: `replied to ${item.integrationId}`,
+      refs: { itemId: item.id, integrationId: item.integrationId },
+    })
     return handled
   }
 

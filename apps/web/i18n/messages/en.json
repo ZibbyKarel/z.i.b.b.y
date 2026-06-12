@@ -165,6 +165,7 @@
     "statSdkCredit": "agent sdk credit",
     "statPipelines": "pipelines",
     "statSkills": "skills",
+    "activity": "Recent activity",
     "starterTitle": "start here · build the dashboard",
     "approvalsQueue": "approvals queue",
     "noApprovals": "nothing is waiting · ZIBBY never orders on its own",

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/useRunningAgentsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
+import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getPipelineRunQueryKey } from "../pipelines/queries/usePipelineRunQuery";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
@@ -17,9 +18,11 @@ import { allAgentRunsKey, allPipelineRunsKey } from "./queries/useRunsQuery";
  * ignored, so the channel scope was safe to add to the server merge.
  */
 interface RunStatusEvent {
-  scope: "agent-runs" | "pipeline-runs" | "channel-items";
+  scope: "agent-runs" | "pipeline-runs" | "channel-items" | "activity";
   runId?: string;
   status?: string;
+  /** Activity-scope only: the recorded kind (drives the briefing refetch). */
+  kind?: string;
 }
 
 /**
@@ -78,6 +81,9 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // approvals queue (a Tier-3 reply lands as a pending channel approval).
         void qc.invalidateQueries({ queryKey: getChannelItemsQueryKey() });
         void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+      } else if (parsed.scope === "activity") {
+        // A new activity entry was recorded — refresh the overview feed.
+        void qc.invalidateQueries({ queryKey: getActivityQueryKey() });
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh
       // the deferred queue so the waiting card swaps for its run instead of doubling.

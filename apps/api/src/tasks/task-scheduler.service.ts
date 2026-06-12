@@ -14,6 +14,7 @@ import type {
   TaskOutcome,
   TaskTarget,
 } from "@zibby/contracts"
+import { ActivityLogService } from "../activity/activity-log.service"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
@@ -60,6 +61,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
+    private readonly activity: ActivityLogService,
   ) {
     this.log = logger.child(TaskSchedulerService.name)
   }
@@ -117,6 +119,11 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         new Date(now).toISOString(),
       )
       this.log.info("task scheduled", { id: task.id, scheduledAt: task.scheduledAt })
+      void this.activity.record({
+        kind: "task-created",
+        summary: `task scheduled${task.title ? `: ${task.title}` : ""}`,
+        refs: { taskId: task.id, status: "scheduled" },
+      })
       return { outcome: "scheduled", task }
     }
 
@@ -131,6 +138,21 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       dispatched.target,
       now,
     )
+    void this.activity.record({
+      kind: "task-created",
+      summary: `task created${task.title ? `: ${task.title}` : ""}`,
+      refs: { taskId: task.id },
+    })
+    void this.activity.record({
+      kind: "task-dispatched",
+      summary: `dispatched to ${dispatched.target.kind} ${targetIdOf(dispatched.target)}`,
+      refs: {
+        taskId: task.id,
+        runRef: dispatched.runRef,
+        status: dispatched.target.kind,
+        ...refForTarget(dispatched.target),
+      },
+    })
     // The run may have finished before its task record hit disk (fast failures);
     // reconcile once now so the fast-path write it raced isn't lost.
     void this.reconcileOutcome(task)
@@ -166,6 +188,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           void this.reconcileOutcome(updated)
           fired.push(task.id)
           this.log.info("scheduled task dispatched", { id: task.id, runRef: dispatched.runRef })
+          void this.activity.record({
+            kind: "task-dispatched",
+            summary: `scheduled task fired → ${dispatched.target.kind} ${targetIdOf(dispatched.target)}`,
+            refs: {
+              taskId: task.id,
+              runRef: dispatched.runRef,
+              status: dispatched.target.kind,
+              ...refForTarget(dispatched.target),
+            },
+          })
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err)
           await this.storage.markFailed(task.id, message)
@@ -233,12 +265,18 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     if (run.status !== "done" && run.status !== "error" && run.status !== "interrupted") return
     try {
       const summary = await this.agentRunSummary(run.runId)
+      const status = run.status === "done" ? "done" : "error"
       await this.storage.writeOutcome(taskId, {
-        status: run.status === "done" ? "done" : "error",
+        status,
         summary,
         finishedAt: new Date().toISOString(),
       })
       this.log.info("task outcome written", { taskId, runRef: run.runId, status: run.status })
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `task ${status}${summary ? `: ${summary}` : ""}`,
+        refs: { taskId, runRef: run.runId, status },
+      })
     } catch (error) {
       // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
       this.log.debug("task outcome write skipped", {
@@ -258,6 +296,11 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     try {
       await this.storage.writeOutcome(taskId, outcome)
       this.log.info("task outcome written", { taskId, runRef: run.pipelineRunId, status: run.status })
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `task ${outcome.status}: ${outcome.summary}`,
+        refs: { taskId, runRef: run.pipelineRunId, status: outcome.status },
+      })
     } catch (error) {
       this.log.debug("task outcome write skipped", {
         taskId,
@@ -274,4 +317,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const last = lines[lines.length - 1] ?? ""
     return last.length > SUMMARY_MAX_CHARS ? `${last.slice(0, SUMMARY_MAX_CHARS - 1)}…` : last
   }
+}
+
+/** Display id of a routing target (the orchestrator is synthetic, with no id). */
+function targetIdOf(target: TaskTarget): string {
+  return target.kind === "orchestrator" ? "orchestrator" : target.id
+}
+
+/** The activity ref the target contributes (agentId / pipelineId), if any. */
+function refForTarget(target: TaskTarget): { agentId?: string; pipelineId?: string } {
+  if (target.kind === "agent") return { agentId: target.id }
+  if (target.kind === "pipeline") return { pipelineId: target.id }
+  return {}
 }

@@ -8,6 +8,7 @@ import type {
   MatchCondition,
   PolicyViolation,
 } from "@zibby/contracts"
+import { ActivityLogService } from "../activity/activity-log.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { PolicyStorageService } from "./policy.storage.service"
 
@@ -39,6 +40,8 @@ export class GateEvaluatorService {
     private readonly policy: PolicyStorageService,
     // Optional so the unit test can `new GateEvaluatorService(policy)`.
     @Optional() logger?: LoggerService,
+    // Optional for the same reason; the global ActivityLogModule supplies it live.
+    @Optional() private readonly activity?: ActivityLogService,
   ) {
     this.log = logger?.child(GateEvaluatorService.name)
   }
@@ -93,6 +96,17 @@ export class GateEvaluatorService {
       decision: evaluation.decision,
       ruleId: evaluation.ruleId,
     })
+    // Record only when a rule actually FIRED (a real decision) — a no-match
+    // default-allow is silent, so the feed stays free of gate-check noise. The
+    // run scope is inherited from the active ALS store (the runner re-enters it
+    // before evaluating), so the entry links back to its run for free.
+    if (evaluation.ruleId !== undefined) {
+      void this.activity?.record({
+        kind: "gate-decision",
+        summary: `gate ${evaluation.decision} on ${action.action}`,
+        refs: { action: action.action, decision: evaluation.decision, status: evaluation.ruleId },
+      })
+    }
     return evaluation
   }
 

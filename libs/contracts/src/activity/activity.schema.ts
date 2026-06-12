@@ -1,0 +1,87 @@
+import { z } from "zod"
+
+/**
+ * The closed vocabulary of recordable activity (Phase 6.1). One kind per real,
+ * operator-relevant event in the autonomy machinery — the roadmap's list
+ * (dispatch, gate decision, channel action, run transitions, briefing) and nothing
+ * more. A noisy feed destroys 6.3's meaning, so this enum is the WHOLE alphabet:
+ * a new kind is added here explicitly, never smuggled through a free-form field.
+ */
+export const ActivityKindSchema = z.enum([
+  "task-created",
+  "task-dispatched",
+  "task-outcome",
+  "run-started",
+  "run-finished",
+  "pipeline-started",
+  "pipeline-finished",
+  "pipeline-parked",
+  "approval-requested",
+  "approval-approved",
+  "approval-rejected",
+  "gate-decision",
+  "channel-item",
+  "channel-triage",
+  "channel-reply",
+  "channel-approval",
+  "channel-ignored",
+  "briefing-generated",
+])
+export type ActivityKind = z.infer<typeof ActivityKindSchema>
+
+/**
+ * The structured links an activity entry may carry — every field an OPTIONAL
+ * string, the object `.strict()` (Law 4 hygiene applied to the record itself): an
+ * entry can never smuggle a gate/approval/tier side channel through a free-form
+ * payload. If a new kind needs a new ref, this schema grows on purpose.
+ */
+export const ActivityRefsSchema = z
+  .object({
+    taskId: z.string().optional(),
+    runRef: z.string().optional(),
+    pipelineId: z.string().optional(),
+    agentId: z.string().optional(),
+    approvalId: z.string().optional(),
+    integrationId: z.string().optional(),
+    itemId: z.string().optional(),
+    action: z.string().optional(),
+    decision: z.string().optional(),
+    status: z.string().optional(),
+    noteId: z.string().optional(),
+  })
+  .strict()
+export type ActivityRefs = z.infer<typeof ActivityRefsSchema>
+
+/**
+ * One append-only line of the accountability record. `summary` is the single
+ * human-readable sentence the feed renders verbatim; `traceId`/`runId` are stamped
+ * from the active trace scope so every entry is correlated for free (the same
+ * AsyncLocalStorage the logger reads). Born only inside the API process — there is
+ * no client write path, so the record can never be forged.
+ */
+export const ActivityEntrySchema = z.object({
+  id: z.string().min(1),
+  at: z.string().datetime(),
+  kind: ActivityKindSchema,
+  summary: z.string(),
+  traceId: z.string().optional(),
+  runId: z.string().optional(),
+  refs: ActivityRefsSchema,
+})
+export type ActivityEntry = z.infer<typeof ActivityEntrySchema>
+
+/** The accepted `date` shape — validated in the handler so a bad value is a 422. */
+export const ACTIVITY_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Query for `GET /api/activity`. `date` defaults to today (server-side); `kinds`
+ * is a comma-separated allow-list of {@link ActivityKind}; `limit` is clamped to
+ * [1, 500]. `date` is a plain string here (not regex-gated) so a malformed value
+ * reaches the handler and maps to a 422 rather than ts-rest's generic 400.
+ */
+export const ActivityQuerySchema = z.object({
+  date: z.string().optional(),
+  kinds: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+})
+export type ActivityQuery = z.infer<typeof ActivityQuerySchema>

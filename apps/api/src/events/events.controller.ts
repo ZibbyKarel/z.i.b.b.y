@@ -1,6 +1,7 @@
 import { Controller, type MessageEvent, Sse } from "@nestjs/common"
 import type { AgentRun, PipelineRun } from "@zibby/contracts"
 import { type Observable, map, merge } from "rxjs"
+import { ActivityEventsService } from "../activity/activity-events.service"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { ChannelEventsService } from "../channels/channel-events.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
@@ -21,6 +22,7 @@ export class EventsController {
     private readonly agents: AgentRunnerService,
     private readonly pipelines: PipelineRunnerService,
     private readonly channels: ChannelEventsService,
+    private readonly activity: ActivityEventsService,
   ) {}
 
   @Sse("api/events")
@@ -42,6 +44,16 @@ export class EventsController {
         map(
           (e): MessageEvent => ({
             data: JSON.stringify({ scope: "channel-items", itemId: e.itemId, state: e.state }),
+          }),
+        ),
+      ),
+      // Additive `"activity"` scope — same unknown-scope tolerance (decision 7).
+      // The feed/briefing card refetch off `{ kind, at }`; the activity log module
+      // is global, so EventsModule needs no new import.
+      this.activity.stream().pipe(
+        map(
+          (e): MessageEvent => ({
+            data: JSON.stringify({ scope: "activity", kind: e.kind, at: e.at }),
           }),
         ),
       ),
