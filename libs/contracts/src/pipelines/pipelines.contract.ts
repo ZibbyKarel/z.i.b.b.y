@@ -25,6 +25,10 @@ export const PIPELINE_RUN_ARTIFACTS = [
   "implementation.md",
   "review.md",
   "docs.md",
+  // The dokumentator's durable project/domain learnings (Phase 4): the memory
+  // recorder files this as a knowledge note on a successful delivery, and the
+  // web artifact endpoint serves it like any other.
+  "learned.md",
 ] as const
 
 /** One whitelisted pipeline run artifact: its name and its text content. */

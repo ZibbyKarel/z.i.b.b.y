@@ -41,11 +41,13 @@ describe("Pipelines API (e2e)", () => {
   let pipelinesDir: string
   let runsDir: string
   let projectsDir: string
+  let vaultDir: string
 
   async function boot(): Promise<INestApplication> {
     process.env.PIPELINES_DIR = pipelinesDir
     process.env.PIPELINE_RUNS_DIR = runsDir
     process.env.PROJECTS_DIR = projectsDir
+    process.env.VAULT_DIR = vaultDir
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     const fresh = moduleRef.createNestApplication()
     await fresh.init()
@@ -56,6 +58,8 @@ describe("Pipelines API (e2e)", () => {
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipelines-e2e-"))
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-runs-e2e-"))
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-projects-e2e-"))
+    // Isolate the vault so the run recorder (Phase 4) writes here, not the dev vault.
+    vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-vault-e2e-"))
     process.env.AGENT_DEMO_STEPS = "2"
     process.env.AGENT_DEMO_DELAY_MS = "30"
     app = await boot()
@@ -66,7 +70,8 @@ describe("Pipelines API (e2e)", () => {
     await fs.rm(pipelinesDir, { recursive: true, force: true })
     await fs.rm(runsDir, { recursive: true, force: true })
     await fs.rm(projectsDir, { recursive: true, force: true })
-    for (const k of ["PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "PIPELINE_DEMO_FAIL_PHASES"]) {
+    await fs.rm(vaultDir, { recursive: true, force: true })
+    for (const k of ["PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR", "VAULT_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "PIPELINE_DEMO_FAIL_PHASES", "PIPELINE_DEMO_EMIT_LEARNED"]) {
       delete process.env[k]
     }
   })
@@ -122,6 +127,75 @@ describe("Pipelines API (e2e)", () => {
     // The handoff: A's produces (a.out) was copied into B's cwd as B's consumes (b.in).
     const handoff = await fs.readFile(path.join(final.cwd, "b", "b.in"), "utf8")
     expect(handoff).toContain("output of a")
+  })
+
+  it("records a delivery's learned.md as a knowledge note linked from the project MOC (Phase 4)", async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const project = await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({
+        id: "learn-proj",
+        name: "Learn project",
+        path: await fs.mkdtemp(path.join(os.tmpdir(), "learn-proj-")),
+      })
+      .expect(201)
+    const projectId: string = project.body.id
+
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({ id: "learnpipe", phases: [phase("doc")], instructions: "deliver" })
+      .expect(201)
+
+    process.env.PIPELINE_DEMO_EMIT_LEARNED = "doc"
+    let pipelineRunId: string
+    try {
+      const start = await request(app.getHttpServer())
+        .post("/api/pipelines/learnpipe/run")
+        .send({ project: projectId })
+        .expect(201)
+      pipelineRunId = start.body.pipelineRunId
+      await until(async () => {
+        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+        return res.body.status === "done" ? res.body : null
+      })
+    } finally {
+      delete process.env.PIPELINE_DEMO_EMIT_LEARNED
+    }
+
+    const learnedId = `learned-${pipelineRunId}`
+    // The recorder runs async on terminal status — wait for the daily line.
+    const daily = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/memory/note/${today}`)
+      if (res.status !== 200) return null
+      return res.body.body?.includes(pipelineRunId) ? res.body : null
+    })
+    expect(daily.body).toContain(`[[${learnedId}]]`)
+    expect(daily.body).toContain(`[[${projectId}]]`)
+
+    // The learned note is filed in knowledge/ and the project MOC links it.
+    const learned = await request(app.getHttpServer()).get(`/api/memory/note/${learnedId}`).expect(200)
+    expect(learned.body.tier).toBe("knowledge")
+    expect(learned.body.frontmatter.source).toBe(pipelineRunId)
+    const moc = await request(app.getHttpServer()).get(`/api/memory/note/${projectId}`).expect(200)
+    expect(moc.body.links).toContain(learnedId)
+
+    // The graph gained the note + the MOC→learned edge.
+    const graph = await request(app.getHttpServer()).get("/api/memory/graph").expect(200)
+    expect(graph.body.nodes.map((n: { id: string }) => n.id)).toContain(learnedId)
+    expect(graph.body.edges).toContainEqual({ from: projectId, to: learnedId })
+
+    // Restart-shaped dedup: a fresh app over the same data dir sweeps terminal runs
+    // on bootstrap, but the marker means it never writes a second daily line.
+    const app2 = await boot()
+    try {
+      const after = await request(app2.getHttpServer()).get(`/api/memory/note/${today}`).expect(200)
+      // Count the daily-line prefix (the runId also appears inside [[learned-…]], so
+      // a naive runId count would be 2 per line — match the line start instead).
+      const lines = after.body.body.split(`pipeline ${pipelineRunId} (`).length - 1
+      expect(lines).toBe(1)
+    } finally {
+      await app2.close()
+    }
   })
 
   it("respects the maxRetries fuse: B fails, loops back to A, then fails the run", async () => {

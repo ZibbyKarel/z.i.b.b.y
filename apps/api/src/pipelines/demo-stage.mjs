@@ -6,7 +6,9 @@
 //
 // Usage: node demo-stage.mjs <cwd> <phaseId> <producesRel> [consumesRel]
 // Tunables: AGENT_DEMO_STEPS, AGENT_DEMO_DELAY_MS,
-//           PIPELINE_DEMO_FAIL_PHASES (comma-separated phase ids that exit 1).
+//           PIPELINE_DEMO_FAIL_PHASES (comma-separated phase ids that exit 1),
+//           PIPELINE_DEMO_EMIT_LEARNED (phase id that also writes learned.md, so
+//           the memory recorder's delivery trace is exercisable without an LLM).
 
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import * as path from "node:path"
@@ -40,6 +42,18 @@ async function main() {
     await mkdir(path.dirname(out), { recursive: true })
     await writeFile(out, `output of ${phaseId} @ ${new Date().toISOString()}\n`, "utf8")
     console.log(`Stage ${phaseId} produced ${producesRel}`)
+  }
+
+  // Phase 4: the designated stage also emits a deterministic learned.md so the
+  // recorder can file it as a knowledge note (no LLM, no clock-dependent body).
+  if (process.env.PIPELINE_DEMO_EMIT_LEARNED && process.env.PIPELINE_DEMO_EMIT_LEARNED === phaseId) {
+    const learned = path.join(cwd, "learned.md")
+    await writeFile(
+      learned,
+      `# Learned\n\n- Demo learning from stage ${phaseId}: the delivery loop runs end to end.\n`,
+      "utf8",
+    )
+    console.log(`Stage ${phaseId} produced learned.md`)
   }
 
   if (failPhases.includes(phaseId)) {

@@ -8,6 +8,7 @@ import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { HealthModule } from "./health/health.module"
 import { LimitsModule } from "./limits/limits.module"
 import { MemoryModule } from "./memory/memory.module"
+import { RunRecorderModule } from "./memory/run-recorder.module"
 import { PipelinesModule } from "./pipelines/pipelines.module"
 import { ProjectsModule } from "./projects/projects.module"
 import { LoggingModule } from "./shared/logging/logging.module"
@@ -25,6 +26,7 @@ import { TasksModule } from "./tasks/tasks.module"
     ApprovalsModule,
     GateRulesModule,
     MemoryModule,
+    RunRecorderModule,
     AutomationsModule,
     HealthModule,
     LimitsModule,

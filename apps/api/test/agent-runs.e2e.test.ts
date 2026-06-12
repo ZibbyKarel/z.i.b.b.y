@@ -30,16 +30,23 @@ async function until<T>(fn: () => Promise<T>, timeoutMs = 8000): Promise<T> {
   }
 }
 
+/** Today's date, the basename of the daily note the recorder appends to. */
+const TODAY = new Date().toISOString().slice(0, 10)
+
 describe("Agent runs API (e2e)", () => {
   let app: INestApplication
   let agentsDir: string
   let runsDir: string
+  let vaultDir: string
 
   beforeAll(async () => {
     agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "runs-e2e-agents-"))
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "runs-e2e-runs-"))
+    vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), "runs-e2e-vault-"))
     process.env.AGENTS_DIR = agentsDir
     process.env.AGENT_RUNS_DIR = runsDir
+    // Isolate the vault so the run recorder (Phase 4) writes here, not the dev vault.
+    process.env.VAULT_DIR = vaultDir
     // Run the stub instead of the real claude CLI; keep it fast for CI.
     process.env.CLAUDE_BIN = FAKE_CLAUDE
     process.env.FAKE_CLAUDE_STEPS = "3"
@@ -54,17 +61,25 @@ describe("Agent runs API (e2e)", () => {
       .post("/api/agents")
       .send({ id: "agent-007", name: "Agent 007", instructions: "test agent" })
       .expect(201)
+    // Seed a North Star so grounding has something to inject.
+    await request(app.getHttpServer())
+      .post("/api/memory/notes")
+      .send({ id: "north-star", tier: "memory", title: "North Star", body: "The mission of ZIBBY." })
+      .expect(201)
   })
 
   afterAll(async () => {
     await app.close()
     await fs.rm(agentsDir, { recursive: true, force: true })
     await fs.rm(runsDir, { recursive: true, force: true })
+    await fs.rm(vaultDir, { recursive: true, force: true })
     delete process.env.AGENTS_DIR
     delete process.env.AGENT_RUNS_DIR
+    delete process.env.VAULT_DIR
     delete process.env.CLAUDE_BIN
     delete process.env.FAKE_CLAUDE_STEPS
     delete process.env.FAKE_CLAUDE_DELAY_MS
+    delete process.env.FAKE_CLAUDE_DUMP_ARGS_FILE
   })
 
   it("runs an agent end to end: start → running → logs → finishes, leaving a marker + durable log", async () => {
@@ -108,6 +123,46 @@ describe("Agent runs API (e2e)", () => {
     const onDisk = await fs.readFile(logFile, "utf8")
     expect(onDisk).toContain("PROGRESS 100")
     expect(path.dirname(logFile)).toBe(path.resolve(runsDir))
+  })
+
+  it("records a finished run into today's daily note (Phase 4)", async () => {
+    const start = await request(app.getHttpServer())
+      .post("/api/agents/agent-007/run")
+      .send({ prompt: "record me", project: "" })
+      .expect(201)
+    const { runId } = start.body
+
+    // The recorder appends a daily line on terminal status (async, after finish).
+    const daily = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/memory/note/${TODAY}`)
+      if (res.status !== 200) return null
+      return typeof res.body.body === "string" && res.body.body.includes(runId) ? res.body : null
+    })
+    expect(daily.tier).toBe("daily")
+    expect(daily.body).toContain("(agent-007)")
+  })
+
+  it("injects the vault grounding into --append-system-prompt (Phase 4)", async () => {
+    const dump = path.join(runsDir, "argv-dump.json")
+    process.env.FAKE_CLAUDE_DUMP_ARGS_FILE = dump
+    try {
+      await request(app.getHttpServer())
+        .post("/api/agents/agent-007/run")
+        .send({ prompt: "grounded run", project: "" })
+        .expect(201)
+      const argv = await until<string[] | null>(async () => {
+        const raw = await fs.readFile(dump, "utf8").catch(() => null)
+        return raw ? (JSON.parse(raw) as string[]) : null
+      })
+      if (!argv) throw new Error("argv dump never appeared")
+      const i = argv.indexOf("--append-system-prompt")
+      expect(i).toBeGreaterThanOrEqual(0)
+      const prompt = argv[i + 1] ?? ""
+      expect(prompt).toContain("## Grounding (vault)")
+      expect(prompt).toContain("North Star")
+    } finally {
+      delete process.env.FAKE_CLAUDE_DUMP_ARGS_FILE
+    }
   })
 
   it("stops a running agent", async () => {

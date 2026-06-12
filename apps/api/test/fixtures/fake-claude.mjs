@@ -16,6 +16,9 @@
 //                          to delete behind a `delete` gate, mimicking the Cleaner
 //   FAKE_CLAUDE_COMMIT     when set, make a file + `git add -A && git commit` in cwd
 //                          (Phase 3.1: a run lands commits on its own zibby/* branch)
+//   FAKE_CLAUDE_DUMP_ARGS_FILE  absolute path; dump the session's argv as JSON there
+//                          (Phase 4: lets an e2e assert grounding reached
+//                          --append-system-prompt)
 import { execFileSync } from "node:child_process"
 import { promises as fs } from "node:fs"
 import { existsSync, readFileSync, rmSync } from "node:fs"
@@ -40,6 +43,16 @@ if (argv[0] === "auth" && argv[1] === "status") {
   const loggedIn = !process.env.FAKE_CLAUDE_LOGGED_OUT
   process.stdout.write(`${JSON.stringify({ loggedIn, subscriptionType: "max" })}\n`)
   process.exit(0)
+}
+
+// Phase 4: dump the real session's argv so an e2e can assert what reached the CLI
+// (e.g. that the grounding block landed in --append-system-prompt). Best-effort.
+if (process.env.FAKE_CLAUDE_DUMP_ARGS_FILE) {
+  try {
+    await fs.writeFile(process.env.FAKE_CLAUDE_DUMP_ARGS_FILE, JSON.stringify(argv), "utf8")
+  } catch {
+    // never block the run on a dump failure
+  }
 }
 
 /** Collect every `--add-dir <dir>` value the runner passed. */

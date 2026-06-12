@@ -223,7 +223,7 @@ Tests: ↓
   preserved frontmatter; append; updateIndex twice → idempotent + MOC ↓
   auto-created; 409 / 422 / 404 paths.
   ↓
-  4.2 Run lifecycle: ground → work → record
+  4.2 Run lifecycle: ground → work → record  — ✅ DONE (grounding + recorder)
   ↓
   Grounding:  — ✅ DONE (commit "phase 4.2: grounding")
   ↓
@@ -254,7 +254,7 @@ Tests: ↓
 - task-scheduler.service.ts dispatch() (:189–204): pass routing.matchedTerms
   to all three start calls. ↓
 
-Recorder: ↓
+Recorder:  — ✅ DONE (commit "phase 4.2: recorder") ↓
 
 - NEW apps/api/src/memory/run-recorder.service.ts + run-recorder.module.ts ↓
   (imports MemoryModule, AgentsModule, PipelinesModule, ProjectsModule); register
