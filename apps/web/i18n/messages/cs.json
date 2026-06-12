@@ -13,6 +13,33 @@
     "settings": "Nastavení systému",
     "projects": "Projekty"
   },
+  "memory": {
+    "knowledgeGraph": "Graf znalostí",
+    "loadingGraph": "Načítám graf…",
+    "noteFallback": "Poznámka",
+    "selectNode": "Vyber uzel a přečti si jeho poznámku.",
+    "searchLabel": "Hledat ve vaultu",
+    "searchPlaceholder": "Hledat poznámky…",
+    "searchResults": "Výsledky hledání",
+    "noResults": "Žádná odpovídající poznámka.",
+    "newNote": "Nová poznámka",
+    "editNote": "Editovat",
+    "save": "Uložit",
+    "dailyTimeline": "Denní záznamy",
+    "idLabel": "Id",
+    "idHint": "Unikátní v rámci vaultu; doplní se z názvu.",
+    "titleLabel": "Název",
+    "bodyLabel": "Obsah",
+    "tierLabel": "Vrstva",
+    "tier": {
+      "all": "Vše",
+      "memory": "Paměť",
+      "daily": "Denní",
+      "knowledge": "Znalosti"
+    },
+    "emptyTitle": "Paměť je prázdná",
+    "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první."
+  },
   "common": {
     "stop": "Zastavit",
     "edit": "Editovat",

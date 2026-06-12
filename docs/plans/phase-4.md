@@ -310,7 +310,7 @@ Tests: ↓
   --append-system-prompt contains the North Star title; empty vault → no
   grounding header. ↓
 
-  4.3 Memory UI write surfaces ↓
+  4.3 Memory UI write surfaces  — ✅ DONE (commit "phase 4.3: memory UI") ↓
 
 - queries: NEW useMemorySearchQuery(q) (["memory","search",q], enabled on ↓
   non-blank, selectApiResponseBody) beside the existing two; export query keys.

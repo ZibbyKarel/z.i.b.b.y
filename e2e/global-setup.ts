@@ -70,9 +70,14 @@ export default async function globalSetup(): Promise<void> {
   // A small wiki-linked vault for the memory graph.
   const vault = path.join(E2E_DATA, "vault");
   await fs.mkdir(path.join(vault, "knowledge"), { recursive: true });
+  await fs.mkdir(path.join(vault, "daily"), { recursive: true });
   await fs.writeFile(path.join(vault, "MEMORY.md"), "---\ntitle: Memory\n---\nSee [[rohlik]] and [[zibby]].\n");
+  await fs.writeFile(path.join(vault, "north-star.md"), "---\ntitle: North Star\n---\nThe mission of ZIBBY.\n");
   await fs.writeFile(path.join(vault, "knowledge", "rohlik.md"), "---\ntitle: Rohlik\n---\nGroceries [[zibby]].\n");
   await fs.writeFile(path.join(vault, "knowledge", "zibby.md"), "---\ntitle: Zibby\n---\nThe orchestrator note.\n");
+  // A daily note (id = today's date) so the memory screen's daily timeline has a row.
+  const today = new Date().toISOString().slice(0, 10);
+  await fs.writeFile(path.join(vault, "daily", `${today}.md`), `---\ntitle: ${today}\n---\n- 09:00 seeded daily entry\n`);
 
   await ctx.dispose();
 }

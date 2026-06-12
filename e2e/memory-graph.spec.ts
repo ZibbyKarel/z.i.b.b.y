@@ -19,3 +19,43 @@ test("memory graph renders and a node opens its note", async ({ page }) => {
   // The note viewer shows the selected note's body.
   await expect(page.getByText("The orchestrator note.")).toBeVisible();
 });
+
+/**
+ * Phase 4 write surfaces: search opens a note, the tier filter prunes the graph,
+ * the daily timeline lists today's note, and creating a note adds a graph node.
+ */
+test("memory search opens a matching note", async ({ page }) => {
+  await page.goto("/memory");
+  await page.getByTestId("memory-search-input").fill("orchestrator");
+  // zibby's body contains "orchestrator" → its hit appears and opens the note.
+  await page.getByTestId("memory-search-hit-zibby").click();
+  await expect(page.getByText("The orchestrator note.")).toBeVisible();
+});
+
+test("the knowledge tier filter hides the memory-tier node", async ({ page }) => {
+  await page.goto("/memory");
+  await expect(page.getByTestId("memory-node-MEMORY")).toBeVisible();
+  await page.getByTestId("memory-tier-knowledge").click();
+  await expect(page.getByTestId("memory-node-MEMORY")).toHaveCount(0);
+  // knowledge-tier nodes survive.
+  await expect(page.getByTestId("memory-node-rohlik")).toBeVisible();
+});
+
+test("the daily timeline lists today's daily note", async ({ page }) => {
+  await page.goto("/memory");
+  const today = new Date().toISOString().slice(0, 10);
+  await expect(page.getByTestId(`memory-daily-${today}`)).toBeVisible();
+});
+
+test("creating a note via the dialog adds a graph node", async ({ page }) => {
+  await page.goto("/memory");
+  await page.getByTestId("memory-note-new").click();
+  await expect(page.getByTestId("note-editor-dialog")).toBeVisible();
+
+  // The title auto-slugs the id; save creates the note and the graph gains its node.
+  await page.getByTestId("note-editor-title").fill("Spec Created Note");
+  await page.getByTestId("note-editor-save").click();
+
+  await expect(page.getByTestId("note-editor-dialog")).toHaveCount(0);
+  await expect(page.getByTestId("memory-node-spec-created-note")).toBeVisible();
+});

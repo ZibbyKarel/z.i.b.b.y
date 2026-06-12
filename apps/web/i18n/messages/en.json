@@ -13,6 +13,33 @@
     "settings": "System settings",
     "projects": "Projects"
   },
+  "memory": {
+    "knowledgeGraph": "Knowledge graph",
+    "loadingGraph": "Loading graph…",
+    "noteFallback": "Note",
+    "selectNode": "Select a node to read its note.",
+    "searchLabel": "Search the vault",
+    "searchPlaceholder": "Search notes…",
+    "searchResults": "Search results",
+    "noResults": "No matching notes.",
+    "newNote": "New note",
+    "editNote": "Edit",
+    "save": "Save",
+    "dailyTimeline": "Daily timeline",
+    "idLabel": "Id",
+    "idHint": "Unique across the vault; auto-filled from the title.",
+    "titleLabel": "Title",
+    "bodyLabel": "Body",
+    "tierLabel": "Tier",
+    "tier": {
+      "all": "All",
+      "memory": "Memory",
+      "daily": "Daily",
+      "knowledge": "Knowledge"
+    },
+    "emptyTitle": "Memory is empty",
+    "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one."
+  },
   "common": {
     "stop": "Stop",
     "edit": "Edit",
