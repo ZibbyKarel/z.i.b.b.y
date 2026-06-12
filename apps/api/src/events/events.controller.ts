@@ -1,7 +1,8 @@
 import { Controller, type MessageEvent, Sse } from "@nestjs/common"
 import type { AgentRun, PipelineRun } from "@zibby/contracts"
-import { type Observable, merge } from "rxjs"
+import { type Observable, map, merge } from "rxjs"
 import { AgentRunnerService } from "../agents/agent-runner.service"
+import { ChannelEventsService } from "../channels/channel-events.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { fromRunStatus, heartbeats } from "../shared/sse/sse"
 
@@ -19,6 +20,7 @@ export class EventsController {
   constructor(
     private readonly agents: AgentRunnerService,
     private readonly pipelines: PipelineRunnerService,
+    private readonly channels: ChannelEventsService,
   ) {}
 
   @Sse("api/events")
@@ -33,6 +35,15 @@ export class EventsController {
         "pipeline-runs",
         (listener) => this.pipelines.onRunStatus(listener),
         (run) => ({ runId: run.pipelineRunId, status: run.status }),
+      ),
+      // Additive `"channel-items"` scope — the web RunEventsProvider ignores
+      // scopes it doesn't know, so this is safe to merge in (decision 15).
+      this.channels.stream().pipe(
+        map(
+          (e): MessageEvent => ({
+            data: JSON.stringify({ scope: "channel-items", itemId: e.itemId, state: e.state }),
+          }),
+        ),
       ),
       heartbeats(),
     )

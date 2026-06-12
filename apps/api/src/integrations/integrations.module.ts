@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
+import { AdapterRegistry } from "../channels/adapters/adapter-registry"
 import { dataDir } from "../shared/data-dir"
-import { CONNECTION_TESTER, StubConnectionTester } from "./connection-tester"
+import { CONNECTION_TESTER } from "./connection-tester"
 import { CREDENTIALS_DIR, CredentialsStore } from "./credentials.store"
 import { IntegrationsController } from "./integrations.controller"
 import { INTEGRATIONS_DIR, IntegrationsStorageService } from "./integrations.storage.service"
@@ -17,9 +18,9 @@ export function resolveCredentialsDir(): string {
 
 /**
  * Integrations (Phase 5.1): the configured inbound channels plus their separate,
- * gitignored credentials store. The connection tester is a stub here; the 5.2
- * commit rebinds {@link CONNECTION_TESTER} to the adapter registry. The storage
- * service is exported so the channels watcher (5.2) can stamp sync health on it.
+ * gitignored credentials store. {@link CONNECTION_TESTER} is bound to the channels
+ * {@link AdapterRegistry} (the real probe). The storage service + credentials store
+ * + registry are exported so the channels watcher (5.2) reuses them.
  */
 @Module({
   controllers: [IntegrationsController],
@@ -28,8 +29,9 @@ export function resolveCredentialsDir(): string {
     { provide: CREDENTIALS_DIR, useFactory: resolveCredentialsDir },
     IntegrationsStorageService,
     CredentialsStore,
-    { provide: CONNECTION_TESTER, useClass: StubConnectionTester },
+    AdapterRegistry,
+    { provide: CONNECTION_TESTER, useExisting: AdapterRegistry },
   ],
-  exports: [IntegrationsStorageService, CredentialsStore],
+  exports: [IntegrationsStorageService, CredentialsStore, AdapterRegistry],
 })
 export class IntegrationsModule {}

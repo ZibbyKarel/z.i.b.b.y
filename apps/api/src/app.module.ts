@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config"
 import { AgentsModule } from "./agents/agents.module"
 import { ApprovalsModule } from "./approvals/approvals.module"
 import { AutomationsModule } from "./automations/automations.module"
+import { ChannelsModule } from "./channels/channels.module"
 import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { HealthModule } from "./health/health.module"
@@ -30,6 +31,7 @@ import { TasksModule } from "./tasks/tasks.module"
     RunRecorderModule,
     AutomationsModule,
     IntegrationsModule,
+    ChannelsModule,
     HealthModule,
     LimitsModule,
     EventsModule,

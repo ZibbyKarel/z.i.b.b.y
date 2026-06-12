@@ -356,7 +356,7 @@ Tests:
   separately from create; test-connection button calls mutation and renders
   ok/error detail.
 
-5.2 Channel ingestion (Slack first)
+5.2 Channel ingestion (Slack first)  ✅ DONE
 
 Contracts (NEW libs/contracts/src/channels/channel.schema.ts +
 channels.contract.ts): ChannelItemSchema + state enum + externalRef (decision

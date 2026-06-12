@@ -1,15 +1,16 @@
 import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
+import { ChannelsModule } from "../channels/channels.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { EventsController } from "./events.controller"
 
 /**
  * Hosts the unified `/api/events` SSE channel. It pulls the agent and pipeline
- * runner services from their owning modules (both already export them) and merges
- * their status streams into one push channel for the dashboard.
+ * runner services and the channel events service from their owning modules (all
+ * exported) and merges their streams into one push channel for the dashboard.
  */
 @Module({
-  imports: [AgentsModule, PipelinesModule],
+  imports: [AgentsModule, PipelinesModule, ChannelsModule],
   controllers: [EventsController],
 })
 export class EventsModule {}
