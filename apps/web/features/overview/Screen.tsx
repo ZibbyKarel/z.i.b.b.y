@@ -13,8 +13,8 @@ import {
 import { PageContainer } from "apps/web/components/PageContainer/PageContainer";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { useCatalog } from "../../state/store";
 import { useAgentsQuery } from "../agents/queries";
+import { useIntegrationsQuery } from "../integrations/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useSkillsQuery } from "../skills/queries";
 import { SummaryWidget } from "./SummaryWidget";
@@ -28,7 +28,7 @@ const STARTERS = [
 
 export function Screen() {
   const t = useTranslations();
-  const { integrations } = useCatalog();
+  const { data: integrations = [] } = useIntegrationsQuery();
   const { data: skills = [] } = useSkillsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();

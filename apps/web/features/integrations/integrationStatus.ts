@@ -1,5 +1,5 @@
+import type { IntegrationStatus } from "@zibby/contracts";
 import type { DotTone } from "@zibby/design-system";
-import type { IntegrationStatus } from "../../domain";
 
 /**
  * Display mapping for an integration's connection status — the single source

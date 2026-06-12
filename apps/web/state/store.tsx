@@ -8,27 +8,25 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { Integration, Pipeline, Skill } from "../domain";
+import type { Pipeline, Skill } from "../domain";
 import { slug } from "../utils/slug";
 import type { EntityFormValues } from "../components/EntityFormModal/EntityFormModal";
 
 /**
- * In-memory catalog store for the entities that have no backend yet — skills,
- * integrations and pipelines. The system starts completely empty; the user
- * creates each one through the UI and these actions append to client state so
- * the dashboard stays interactive. Agents are NOT here: they are persisted by
- * the API and read through `features/agents/queries.ts` (the TanStack cache is
+ * In-memory catalog store for the entities that have no backend yet — skills and
+ * pipelines. The system starts completely empty; the user creates each one through
+ * the UI and these actions append to client state so the dashboard stays
+ * interactive. Agents and integrations are NOT here: both are persisted by the API
+ * and read through their `features/<domain>/queries` hooks (the TanStack cache is
  * their shared source of truth).
  */
 interface CatalogState {
   skills: Skill[];
-  integrations: Integration[];
   pipelines: Pipeline[];
 }
 
 interface CatalogStore extends CatalogState {
   addSkill: (values: EntityFormValues, fallbackDesc: string) => void;
-  addIntegration: (values: EntityFormValues, fallbackDesc: string) => void;
   addPipeline: (values: EntityFormValues, fallbackDesc: string) => void;
 }
 
@@ -36,7 +34,6 @@ const CatalogContext = createContext<CatalogStore | null>(null);
 
 const EMPTY: CatalogState = {
   skills: [],
-  integrations: [],
   pipelines: [],
 };
 
@@ -55,24 +52,6 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           glyph: "spark",
           desc: values.desc?.trim() || fallbackDesc,
           file: `~/zibby/skills/${id}/SKILL.md`,
-        },
-      ],
-    }));
-  }, []);
-
-  const addIntegration = useCallback((values: EntityFormValues, fallbackDesc: string) => {
-    const id = slug(values.name ?? "", "novy");
-    setState((s) => ({
-      ...s,
-      integrations: [
-        ...s.integrations,
-        {
-          id: `${id}-${s.integrations.length}`,
-          name: values.name?.trim() || id,
-          glyph: "plug",
-          desc: values.desc?.trim() || fallbackDesc,
-          status: "disconnected",
-          file: `~/zibby/integrations/${id}.json`,
         },
       ],
     }));
@@ -110,10 +89,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       addSkill,
-      addIntegration,
       addPipeline,
     }),
-    [state, addSkill, addIntegration, addPipeline],
+    [state, addSkill, addPipeline],
   );
 
   return (

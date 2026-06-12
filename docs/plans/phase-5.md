@@ -300,7 +300,7 @@ abstraction. Each sub-item lands with its tests, per the standing rules.)
 
 ---
 
-5.1 Integrations become real
+5.1 Integrations become real  ✅ DONE
 
 Contracts (NEW libs/contracts/src/integrations/integration.schema.ts +
 integrations.contract.ts + integration.contract.test.ts):

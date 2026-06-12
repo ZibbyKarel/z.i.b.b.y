@@ -8,8 +8,8 @@ import { useAgentsSearchQuery } from "../../../features/agents/queries";
 import { useSkillsSearchQuery } from "../../../features/skills/queries";
 import { useProjectsSearchQuery } from "../../../features/projects/queries";
 import { useAutomationsSearchQuery } from "../../../features/automations/queries";
+import { useIntegrationsQuery } from "../../../features/integrations/queries";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { useCatalog } from "../../../state/store";
 
 /** Section ids double as the navigation target for a chosen result. */
 const ROUTES = {
@@ -42,16 +42,16 @@ export function GlobalSearch() {
   const projects = useProjectsSearchQuery(query);
   const automations = useAutomationsSearchQuery(query);
 
-  // Integrations have no backend yet — they live only in the in-memory catalog,
-  // so they are filtered client-side rather than through a search endpoint.
-  const { integrations } = useCatalog();
+  // Integrations have no dedicated search endpoint, so the full list is fetched
+  // and filtered client-side (a small, bounded catalog).
+  const { data: integrations = [] } = useIntegrationsQuery();
   const needle = query.trim().toLowerCase();
   const integrationHits = useMemo(
     () =>
       needle === ""
         ? []
         : integrations.filter((i) =>
-            [i.id, i.name, i.desc].some((f) => f?.toLowerCase().includes(needle)),
+            [i.id, i.name, i.kind].some((f) => f?.toLowerCase().includes(needle)),
           ),
     [integrations, needle],
   );
@@ -93,8 +93,8 @@ export function GlobalSearch() {
         label: t("integrations"),
         items: integrationHits.map((i) => ({
           id: i.id,
-          title: i.name,
-          subtitle: i.desc,
+          title: i.name ?? i.id,
+          subtitle: i.kind,
           glyph: "plug",
         })),
       },

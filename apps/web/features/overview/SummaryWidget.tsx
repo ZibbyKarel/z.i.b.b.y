@@ -10,7 +10,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { useCatalog } from "../../state/store";
+import { useIntegrationsQuery } from "../integrations/queries";
 import { useAgentsQuery } from "../agents/queries";
 import { useHealthQuery } from "../health/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
@@ -21,7 +21,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function SummaryWidget() {
   const t = useTranslations();
-  const { integrations } = useCatalog();
+  const { data: integrations = [] } = useIntegrationsQuery();
   const { data: skills = [] } = useSkillsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();

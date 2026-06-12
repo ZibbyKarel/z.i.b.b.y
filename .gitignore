@@ -12,6 +12,8 @@ apps/api/data/**/runs
 apps/api/data/approvals
 apps/api/data/tasks
 apps/api/data/vault/daily
+apps/api/data/credentials
+apps/api/data/channels
 
 !apps/api/data/agents
 !apps/api/data/automations

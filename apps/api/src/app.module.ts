@@ -6,6 +6,7 @@ import { AutomationsModule } from "./automations/automations.module"
 import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { HealthModule } from "./health/health.module"
+import { IntegrationsModule } from "./integrations/integrations.module"
 import { LimitsModule } from "./limits/limits.module"
 import { MemoryModule } from "./memory/memory.module"
 import { RunRecorderModule } from "./memory/run-recorder.module"
@@ -28,6 +29,7 @@ import { TasksModule } from "./tasks/tasks.module"
     MemoryModule,
     RunRecorderModule,
     AutomationsModule,
+    IntegrationsModule,
     HealthModule,
     LimitsModule,
     EventsModule,
