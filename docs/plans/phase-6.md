@@ -577,3 +577,35 @@ Critical files
   domain.ts (ActivityEvent removal), i18n/messages/{cs,en}.json
 - apps/api/test/{activity,briefing}.e2e.test.ts (NEW) + the ACTIVITY_DIR env
   sweep across existing suites; e2e/briefing.spec.ts (or extended spec)
+
+---
+
+Verification — COMPLETE (2026-06-12)
+
+All three sub-items delivered: 6.1 activity log + real overview feed, 6.2 briefing
+generator + morning automation, 6.3 notification discipline.
+
+- `pnpm test` (all projects): 1048 passed; the only reds are the two documented
+  pre-existing baselines (pipelines.e2e flaky pair + the task-scheduler matchedTerms
+  pair), confirmed identical on a clean tree before the phase.
+- `npx tsc -p tsconfig.base.json` / `apps/web/tsconfig.json`: no new errors (the 18
+  base errors are the documented pre-existing test-file baseline; web is clean).
+- `pnpm lint`: clean (only the pre-existing AgentDetailModal unused-var warning).
+- Playwright: `e2e/briefing.spec.ts` stable (2/2). On fresh servers the suite's only
+  consistent red is the documented `pipeline-run` baseline; `approval`/`channels`/
+  `memory-graph` are cold-start/reused-server timing flakes (pass on fresh boots,
+  none touch Phase-6 code paths) — the documented quarantine.
+- ACTIVITY_DIR leak closed via a per-file temp dir in apps/api/vitest.setup.ts (no
+  suite writes into the repo's real data/activity).
+- "Always answerable" proven by activity.e2e: a task's full lifecycle
+  (task-created → dispatched → run-started → run-finished → task-outcome) shares the
+  originating traceId and the run's runRef; a gated intent records gate-decision +
+  approval-requested + approval-approved.
+
+Implementation deltas from the plan worth noting:
+- Deterministic headline + activity summaries are English (consistent with the
+  existing log/file conventions and the activity record the briefing reads), not cs.
+- gate-decision is recorded only when a rule actually FIRED (ruleId present), so a
+  no-match default-allow stays silent — the firehose discipline.
+- The briefing GET is a live assembly, so the card's query is invalidated on ANY
+  activity event (not only briefing-generated) to avoid a stale needsYou.
