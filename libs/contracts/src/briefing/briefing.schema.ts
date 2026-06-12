@@ -1,0 +1,68 @@
+import { z } from "zod"
+import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema"
+
+/**
+ * One thing that needs the operator (Law 5 "surface and wait"): a pending approval
+ * or a retries-parked run. `refs` carries the trace links so the card can deep-link
+ * to /runs or the approval.
+ */
+export const BriefingNeedsYouItemSchema = z.object({
+  kind: z.enum(["approval", "parked"]),
+  id: z.string(),
+  summary: z.string(),
+  at: z.string().datetime(),
+  refs: ActivityRefsSchema,
+})
+export type BriefingNeedsYouItem = z.infer<typeof BriefingNeedsYouItemSchema>
+
+/** One thing ZIBBY did for the operator (from the activity record since the cursor). */
+export const BriefingDidItemSchema = z.object({
+  kind: ActivityKindSchema,
+  summary: z.string(),
+  at: z.string().datetime(),
+})
+export type BriefingDidItem = z.infer<typeof BriefingDidItemSchema>
+
+/** A channel ZIBBY is watching, with the count of new items in the window. */
+export const BriefingWatchItemSchema = z.object({
+  integrationId: z.string(),
+  newItems: z.number().int().nonnegative(),
+  lastReceivedAt: z.string().datetime().optional(),
+})
+export type BriefingWatchItem = z.infer<typeof BriefingWatchItemSchema>
+
+/** The headline tallies — the deterministic spine the butler-voice headline summarises. */
+export const BriefingCountsSchema = z.object({
+  runsFinished: z.number().int().nonnegative(),
+  runsFailed: z.number().int().nonnegative(),
+  parked: z.number().int().nonnegative(),
+  approvalsPending: z.number().int().nonnegative(),
+  channelItemsNew: z.number().int().nonnegative(),
+})
+export type BriefingCounts = z.infer<typeof BriefingCountsSchema>
+
+/**
+ * The butler's briefing (Phase 6.2) — "what's happening / what happened", assembled
+ * deterministically from the record. `nothingNeedsYou` (empty `needsYou`) is a
+ * valid, first-class output: quiet competence is the goal. The whole object is a
+ * pure function of pending approvals + parked runs + new channel items + the
+ * activity entries since the last briefing, so assembly is snapshot-testable.
+ */
+export const BriefingSchema = z.object({
+  generatedAt: z.string().datetime(),
+  since: z.string().datetime(),
+  headline: z.string(),
+  nothingNeedsYou: z.boolean(),
+  needsYou: z.array(BriefingNeedsYouItemSchema),
+  didForYou: z.array(BriefingDidItemSchema),
+  watching: z.array(BriefingWatchItemSchema),
+  counts: BriefingCountsSchema,
+})
+export type Briefing = z.infer<typeof BriefingSchema>
+
+/** Result of `POST /api/briefing/generate`: the briefing + the persisted vault note id. */
+export const GenerateBriefingResultSchema = z.object({
+  briefing: BriefingSchema,
+  noteId: z.string(),
+})
+export type GenerateBriefingResult = z.infer<typeof GenerateBriefingResultSchema>

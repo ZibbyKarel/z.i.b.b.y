@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
+import { BriefingModule } from "../briefing/briefing.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { dataDir } from "../shared/data-dir"
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service"
@@ -17,7 +18,7 @@ export function resolveAutomationsDir(): string {
  * services). No cycle — the runner modules don't depend on this one.
  */
 @Module({
-  imports: [AgentsModule, PipelinesModule],
+  imports: [AgentsModule, PipelinesModule, BriefingModule],
   controllers: [AutomationsController],
   providers: [
     { provide: AUTOMATIONS_DIR, useFactory: resolveAutomationsDir },

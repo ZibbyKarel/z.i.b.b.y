@@ -10,11 +10,15 @@ export type Trigger = z.infer<typeof TriggerSchema>
 
 /**
  * What an automation runs when it fires. A skill can't be a target: it isn't an
- * autonomous executable — only agents and pipelines are real runners.
+ * autonomous executable — only agents and pipelines are real runners. The
+ * `briefing` target (Phase 6.2) is deterministic assembly, not a claude run:
+ * routing it through a runner would burn tokens to produce worse output, so the
+ * scheduler dispatches it straight to the briefing service.
  */
 export const TargetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pipeline"), pipelineId: AgentIdSchema }),
   z.object({ type: z.literal("agent"), agentId: AgentIdSchema, prompt: z.string().optional() }),
+  z.object({ type: z.literal("briefing") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

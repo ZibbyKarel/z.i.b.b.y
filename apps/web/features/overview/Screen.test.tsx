@@ -14,7 +14,14 @@ vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }))
 const activity: ActivityEntry[] = [
   { id: "a1", at: "2026-06-12T07:00:00.000Z", kind: "run-started", summary: "agent writer started", refs: { runRef: "r1" } },
 ]
-vi.mock("./queries", () => ({ useActivityQuery: () => ({ data: activity }) }))
+vi.mock("./queries", () => ({
+  useActivityQuery: () => ({ data: activity }),
+  // The mounted BriefingCard reads this; undefined → it renders null (out of scope here).
+  useBriefingQuery: () => ({ data: undefined }),
+}))
+vi.mock("./mutations", () => ({
+  useGenerateBriefingMutation: () => ({ mutate: vi.fn(), isPending: false, isSuccess: false }),
+}))
 
 describe("Overview Screen", () => {
   it("mounts the activity feed with the query data", () => {

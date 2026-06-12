@@ -5,6 +5,7 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from "
 import { getRunningAgentsQueryKey } from "../agents/queries/useRunningAgentsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
+import { getBriefingQueryKey } from "../overview/queries/useBriefingQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getPipelineRunQueryKey } from "../pipelines/queries/usePipelineRunQuery";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
@@ -82,8 +83,12 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         void qc.invalidateQueries({ queryKey: getChannelItemsQueryKey() });
         void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
       } else if (parsed.scope === "activity") {
-        // A new activity entry was recorded — refresh the overview feed.
+        // A new activity entry was recorded — refresh the overview feed, and the
+        // briefing card too when a briefing was just generated.
         void qc.invalidateQueries({ queryKey: getActivityQueryKey() });
+        if (parsed.kind === "briefing-generated") {
+          void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
+        }
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh
       // the deferred queue so the waiting card swaps for its run instead of doubling.

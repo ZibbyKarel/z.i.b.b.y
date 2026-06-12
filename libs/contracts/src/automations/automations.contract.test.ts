@@ -36,6 +36,17 @@ describe("automation schema", () => {
     ).toBe(true)
   })
 
+  it("accepts a briefing target (no agent/pipeline picker)", () => {
+    expect(
+      AutomationSchema.safeParse({
+        id: "morning-briefing",
+        trigger: { type: "cron", expr: "0 7 * * *" },
+        target: { type: "briefing" },
+        enabled: true,
+      }).success,
+    ).toBe(true)
+  })
+
   it("rejects an unknown trigger or target type", () => {
     expect(
       AutomationSchema.safeParse({

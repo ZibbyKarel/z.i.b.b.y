@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core"
 import { activityContract } from "./activity/activity.contract"
 import { agentRunsContract, agentsContract } from "./agents/agents.contract"
+import { briefingContract } from "./briefing/briefing.contract"
 import { approvalsContract } from "./approvals/approvals.contract"
 import { gatesContract } from "./gates/gate.contract"
 import { gateRulesContract } from "./gates/gate-rules.contract"
@@ -52,6 +53,7 @@ export const appContract = c.router({
   limits: limitsContract,
   tasks: tasksContract,
   activity: activityContract,
+  briefing: briefingContract,
 })
 
 export type AppContract = typeof appContract

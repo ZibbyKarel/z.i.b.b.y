@@ -84,7 +84,9 @@ function AutomationRow({
   const targetText =
     automation.target.type === "pipeline"
       ? `pipeline:${automation.target.pipelineId}`
-      : `agent:${automation.target.agentId}`;
+      : automation.target.type === "agent"
+        ? `agent:${automation.target.agentId}`
+        : "briefing";
 
   return (
     <Card background="background" radius="default">
@@ -130,7 +132,9 @@ function CreateDialog({
   const target: Target =
     targetType === "pipeline"
       ? { type: "pipeline", pipelineId: targetId }
-      : { type: "agent", agentId: targetId };
+      : targetType === "agent"
+        ? { type: "agent", agentId: targetId }
+        : { type: "briefing" };
 
   const submit = () =>
     onCreate({
@@ -170,14 +174,17 @@ function CreateDialog({
           options={[
             { value: "pipeline", label: "Pipeline" },
             { value: "agent", label: "Agent" },
+            { value: "briefing", label: "Briefing" },
           ]}
           value={targetType}
         />
-        <TextInputField
-          label="Target id"
-          onChange={(e) => setTargetId(e.target.value)}
-          value={targetId}
-        />
+        {targetType !== "briefing" && (
+          <TextInputField
+            label="Target id"
+            onChange={(e) => setTargetId(e.target.value)}
+            value={targetId}
+          />
+        )}
       </Stack>
     </Dialog>
   );

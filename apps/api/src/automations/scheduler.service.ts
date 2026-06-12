@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import type { Automation } from "@zibby/contracts"
 import { AgentRunnerService } from "../agents/agent-runner.service"
+import { BriefingService } from "../briefing/briefing.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -27,6 +28,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
+    private readonly briefing: BriefingService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -93,6 +95,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       case "pipeline": {
         const run = await this.pipelineRunner.start(target.pipelineId)
         return run.pipelineRunId
+      }
+      case "briefing": {
+        // Deterministic assembly, not a claude run — dispatch straight to the
+        // briefing service and return the vault note id as the run ref.
+        const { noteId } = await this.briefing.generate()
+        return noteId
       }
     }
   }

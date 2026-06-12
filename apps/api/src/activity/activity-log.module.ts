@@ -25,6 +25,8 @@ export function resolveActivityDir(): string {
     ActivityLogService,
     ActivityEventsService,
   ],
-  exports: [ActivityLogService, ActivityEventsService],
+  // ACTIVITY_DIR is exported so the briefing service can keep its cursor file
+  // (`last-briefing.json`) alongside the activity logs (decision 11).
+  exports: [ACTIVITY_DIR, ActivityLogService, ActivityEventsService],
 })
 export class ActivityLogModule {}

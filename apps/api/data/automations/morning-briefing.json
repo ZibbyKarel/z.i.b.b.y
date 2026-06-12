@@ -1,0 +1,7 @@
+{
+  "id": "morning-briefing",
+  "name": "Morning briefing",
+  "trigger": { "type": "cron", "expr": "0 7 * * *" },
+  "target": { "type": "briefing" },
+  "enabled": true
+}

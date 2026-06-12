@@ -18,6 +18,7 @@ import { useIntegrationsQuery } from "../integrations/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useSkillsQuery } from "../skills/queries";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
+import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { useActivityQuery } from "./queries";
 import { SummaryWidget } from "./SummaryWidget";
 
@@ -45,6 +46,8 @@ export function Screen() {
   return (
     <PageContainer>
       <SummaryWidget />
+
+      <BriefingCard />
 
       {activity.length > 0 && (
         <HudPanel title={t("overview.activity")}>
