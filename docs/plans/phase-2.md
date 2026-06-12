@@ -215,7 +215,7 @@ Playwright (extend e2e/pipeline-run.spec.ts or new pipeline-edit.spec.ts, demo
 mode): edit a pipeline, add a loop, run it with PIPELINE_DEMO_FAIL_PHASES forcing
 one failure, assert the retry visualization (attempt count on the node).
 
-2.4 The delivery pipeline, seeded
+2.4 The delivery pipeline, seeded — ✅ HOTOVO
 
 - Seed apps/api/data/pipelines/delivery.pipeline.md (and a copy in
   apps/api/data-test/pipelines/ for deterministic e2e):

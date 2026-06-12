@@ -290,6 +290,75 @@ describe("Pipelines API (e2e)", () => {
     await app2.close()
   })
 
+  describe("seeded delivery pipeline", () => {
+    const DELIVERY_SEED = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../data/pipelines/delivery.pipeline.md",
+    )
+
+    beforeAll(async () => {
+      await fs.copyFile(DELIVERY_SEED, path.join(pipelinesDir, "delivery.pipeline.md"))
+    })
+
+    it("red verify loops back to koder, then finishes green with all handoffs", async () => {
+      const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"))
+      const marker = path.join(projectDir, "fixed.marker")
+      const check = `${JSON.stringify(process.execPath)} ${JSON.stringify(FLAKY_CHECK)} ${JSON.stringify(marker)}`
+      await request(app.getHttpServer())
+        .post("/api/projects")
+        .send({ id: "delivery-proj", name: "Delivery project", path: projectDir, checks: [check] })
+        .expect(201)
+
+      const start = await request(app.getHttpServer())
+        .post("/api/pipelines/delivery/run")
+        .send({ project: "delivery-proj" })
+        .expect(201)
+      const { pipelineRunId } = start.body as { pipelineRunId: string }
+
+      const final = await until(async () => {
+        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+        return res.body.status !== "running" ? res.body : null
+      })
+      expect(final.status).toBe("done")
+
+      // Attempt counts: the red verify sent koder (and review) around once more.
+      const tally = (phaseId: string) =>
+        final.stageRuns.filter((s: { phaseId: string }) => s.phaseId === phaseId).length
+      expect(tally("architekt")).toBe(1)
+      expect(tally("koder")).toBe(2)
+      expect(tally("verify")).toBe(2)
+      expect(tally("dokumentator")).toBe(1)
+
+      // The full handoff chain exists in the run tree.
+      for (const [phase, file] of [
+        ["architekt", "plan.md"],
+        ["koder", "implementation.md"],
+        ["review", "review.md"],
+        ["dokumentator", "docs.md"],
+      ] as const) {
+        await fs.access(path.join(final.cwd, phase, file))
+      }
+
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }, 15_000)
+
+    it("a persistently failing review exhausts its retries and parks", async () => {
+      process.env.PIPELINE_DEMO_FAIL_PHASES = "review"
+      const start = await request(app.getHttpServer())
+        .post("/api/pipelines/delivery/run")
+        .send({})
+        .expect(201)
+      const { pipelineRunId } = start.body as { pipelineRunId: string }
+
+      const parked = await until(async () => {
+        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+        return res.body.status === "parked" ? res.body : null
+      })
+      expect(parked.parkedReason).toBe("retries")
+      expect(parked.parked).toMatchObject({ phaseId: "review", attempts: 4 })
+    }, 15_000)
+  })
+
   it("reconciles a pipeline run left 'running' at restart to 'failed'", async () => {
     const runId = "ghost_1780000000000"
     const root = path.join(runsDir, runId)

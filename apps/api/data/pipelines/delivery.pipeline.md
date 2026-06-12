@@ -1,0 +1,73 @@
+---
+name: Delivery
+desc: 'Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
+  implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,
+  rozbitý test, failing test.'
+phases:
+  - id: architekt
+    type: agent
+    agent: architekt
+    consumes: task.md
+    produces: plan.md
+    model: opus
+    thinking: high
+  - id: koder
+    type: agent
+    agent: koder
+    consumes: plan.md
+    produces: implementation.md
+    model: sonnet
+    thinking: medium
+  - id: review
+    type: agent
+    agent: code-review
+    consumes: implementation.md
+    produces: review.md
+    model: opus
+    thinking: high
+    loop:
+      to: koder
+      maxRetries: 3
+      escalate: true
+      then: park
+      escalation:
+        - model: sonnet
+          thinking: high
+        - model: opus
+          thinking: high
+  - id: verify
+    type: verify
+    loop:
+      to: koder
+      maxRetries: 3
+      escalate: true
+      then: park
+  - id: dokumentator
+    type: agent
+    agent: dokumentator
+    consumes: review.md
+    produces: docs.md
+    model: sonnet
+    thinking: low
+---
+
+# Delivery
+
+Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review → verify (Tester) →
+Dokumentátor**. Ohraničený stavový automat — opakuje s eskalací, a místo mlácení
+hlavou o zeď zaparkuje pro lidskou poznámku.
+
+## Fáze
+
+1. **architekt** — `task.md` → `plan.md`: rozpad zadání na kroky a kontrakt změn.
+2. **koder** — `plan.md` → `implementation.md`: provede změny v cílovém projektu,
+   sepíše shrnutí změn (soubory, rozhodnutí, jak testovat).
+3. **review** — `implementation.md` → `review.md`: oponentura; selhání vrací práci
+   Kodérovi s kontextem, eskalace zvedá model/thinking, vyčerpání → park.
+4. **verify** — deterministické kontroly projektu (lint, typecheck, testy) přímo
+   v checkoutu; červená vrací práci Kodérovi, vyčerpání → park. Tester JE tahle
+   fáze — žádný LLM, jen exit kódy.
+5. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
+
+Handoff je vždy jeden soubor; selhání předává ocas logu jako kontext dalšímu
+pokusu (plus případnou poznámku operátora po resume).

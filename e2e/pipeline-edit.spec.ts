@@ -16,9 +16,10 @@ test("edit a pipeline: add a loop and see the retry arc", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Edit pipeline" })).toBeVisible();
 
   // Turn the loop on for the LAST phase; the editor defaults to a back-edge to
-  // phase 1 with maxRetries 3 and then:'park'.
-  const toggles = page.getByLabel("Loop on failure (back-edge)");
-  await toggles.last().click();
+  // phase 1 with maxRetries 3 and then:'park'. Idempotent: a re-run against a
+  // reused server finds the loop already on and must not toggle it off.
+  const toggle = page.getByLabel("Loop on failure (back-edge)").last();
+  if ((await toggle.getAttribute("aria-checked")) !== "true") await toggle.click();
   await expect(page.getByLabel("Max retries").last()).toHaveValue("3");
 
   await page.getByRole("button", { name: "Save changes" }).click();

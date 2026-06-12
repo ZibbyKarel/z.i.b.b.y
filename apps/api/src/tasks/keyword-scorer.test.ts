@@ -26,6 +26,15 @@ const candidates: RoutableTarget[] = [
     glyph: "flow",
     search: "Build Feature build-feature Spec implementace testy a docs",
   },
+  {
+    kind: "pipeline",
+    id: "delivery",
+    name: "Delivery",
+    glyph: "flow",
+    // The seeded delivery pipeline's desc — the routable signal in both languages.
+    search:
+      "Delivery delivery Postav, oprav nebo implementuj feature či bug v projektu — build, fix, implement a feature or bug; deliver, postavit, opravit, implementovat, dodat, rozbitý test, failing test.",
+  },
 ]
 
 const scorer = new KeywordScorer()
@@ -49,10 +58,18 @@ describe("KeywordScorer", () => {
 
   it("returns every candidate for manual override, stripped to the wire shape", () => {
     const r = scorer.score({ text: "cokoliv" }, candidates)
-    expect(r?.candidates).toHaveLength(3)
+    expect(r?.candidates).toHaveLength(4)
     expect(r?.candidates.some((c) => c.kind === "pipeline")).toBe(true)
     // The internal `search` blob must not leak onto the wire.
     expect(r?.candidates[0]).not.toHaveProperty("search")
+  })
+
+  it("routes delivery-shaped tasks to the delivery pipeline ahead of single agents", () => {
+    const en = scorer.score({ text: "fix the failing test in project X" }, candidates)
+    expect(en?.target).toMatchObject({ kind: "pipeline", id: "delivery" })
+
+    const cs = scorer.score({ text: "oprav rozbitý test v projektu" }, candidates)
+    expect(cs?.target).toMatchObject({ kind: "pipeline", id: "delivery" })
   })
 
   it("flags low confidence when nothing matches", () => {
