@@ -11,6 +11,7 @@ import { useHealthQuery } from "../health/queries";
 import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { useVoice } from "../voice";
 import { SettingsSubnav } from "./components/SettingsSubnav";
+import { MandateSection } from "./components/MandateSection";
 
 type Locale = "cs" | "en";
 
@@ -134,6 +135,8 @@ export function Screen() {
             />
           </Stack>
         </HudPanel>
+
+        <MandateSection />
 
         <HudPanel padding="300" title={t("system")}>
           <Stack gap="150">

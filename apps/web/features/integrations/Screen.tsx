@@ -9,6 +9,7 @@ import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
 import { Collection } from "../../components/Collection/Collection";
 import { IntegrationCard } from "./components/IntegrationCard";
 import { type IntegrationDraft, IntegrationFormDialog } from "./components/IntegrationFormDialog";
+import { InboxPanel } from "./components/InboxPanel";
 import { useIntegrationsQuery } from "./queries";
 import {
   useCreateIntegrationMutation,
@@ -109,6 +110,8 @@ export function Screen() {
           />
         )}
       />
+
+      <InboxPanel />
 
       {editing !== null && (
         <IntegrationFormDialog

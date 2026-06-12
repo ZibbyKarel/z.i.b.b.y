@@ -31,6 +31,16 @@ const apiEnv: Record<string, string> = {
   VAULT_DIR: dir("vault"),
   AUTOMATIONS_DIR: dir("automations"),
   AUTOMATION_TICK_MS: "0",
+  INTEGRATIONS_DIR: dir("integrations"),
+  CREDENTIALS_DIR: dir("credentials"),
+  CHANNELS_DIR: dir("channels"),
+  CHANNEL_FAKE_DIR: dir("channel-fake"),
+  MANDATE_FILE: path.join(E2E_DATA, "mandate.json"),
+  // Fake adapter + a modest live tick so the channels throughline runs unprompted
+  // without adding constant load to the shared single-process dev server.
+  CHANNEL_ADAPTER_MODE: "fake",
+  CHANNEL_TICK_MS: "1000",
+  TASK_TICK_MS: "0",
   AGENT_DEMO_STEPS: "3",
   AGENT_DEMO_DELAY_MS: "80",
   PORT: "3333",

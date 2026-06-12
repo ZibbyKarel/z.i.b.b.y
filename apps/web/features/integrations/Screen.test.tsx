@@ -29,6 +29,7 @@ let listData: Integration[] = [];
 
 vi.mock("./queries", () => ({
   useIntegrationsQuery: () => ({ data: listData }),
+  useChannelItemsQuery: () => ({ data: [] }),
 }));
 
 vi.mock("./mutations", () => ({

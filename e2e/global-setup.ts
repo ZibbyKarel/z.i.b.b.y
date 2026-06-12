@@ -67,6 +67,24 @@ export default async function globalSetup(): Promise<void> {
     .post("/api/agents/gated-agent/run", { data: { prompt: "do something risky", project: "zibby-core" } })
     .catch(() => {});
 
+  // A channel integration + credentials + a Tier-3 fixture message, so the watcher
+  // (CHANNEL_TICK_MS small) triages it into a pending channel approval unprompted.
+  // Reset the fake dir first so a re-run's cursor/items don't linger.
+  const fakeDir = path.join(E2E_DATA, "channel-fake");
+  await fs.rm(fakeDir, { recursive: true, force: true });
+  await fs.rm(path.join(E2E_DATA, "channels"), { recursive: true, force: true });
+  await ctx
+    .post("/api/integrations", {
+      data: { id: "team-slack", kind: "slack", name: "Team Slack", config: { kind: "slack", channels: ["C1"] } },
+    })
+    .catch(() => {});
+  await ctx.put("/api/integrations/team-slack/credentials", { data: { token: "xoxb-e2e" } }).catch(() => {});
+  await fs.mkdir(path.join(fakeDir, "team-slack"), { recursive: true });
+  await fs.writeFile(
+    path.join(fakeDir, "team-slack", "001.json"),
+    JSON.stringify({ text: "Tady je nabídka a smlouva s deadline na příští týden", receivedAt: new Date().toISOString() }),
+  );
+
   // A small wiki-linked vault for the memory graph. Reset it first so notes a
   // previous run created through the UI (e.g. the create-note spec) don't linger
   // and turn a re-create into a 409 — the fixtures must be deterministic.

@@ -4,16 +4,22 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/useRunningAgentsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
+import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getPipelineRunQueryKey } from "../pipelines/queries/usePipelineRunQuery";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { API_URL } from "../../state/api";
 import { allAgentRunsKey, allPipelineRunsKey } from "./queries/useRunsQuery";
 
-/** Payload mirror of the API's `RunStatusEvent` (see apps/api/src/shared/sse/sse.ts). */
+/**
+ * Payload mirror of the API's events (see apps/api/src/shared/sse/sse.ts and the
+ * channels SSE merge). Run events carry `{ scope, runId, status }`; channel-item
+ * events carry `{ scope: "channel-items", itemId, state }`. Unknown scopes are
+ * ignored, so the channel scope was safe to add to the server merge.
+ */
 interface RunStatusEvent {
-  scope: "agent-runs" | "pipeline-runs";
-  runId: string;
-  status: string;
+  scope: "agent-runs" | "pipeline-runs" | "channel-items";
+  runId?: string;
+  status?: string;
 }
 
 /**
@@ -61,12 +67,17 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.status === "awaiting-approval") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
-      } else if (parsed.scope === "pipeline-runs") {
+      } else if (parsed.scope === "pipeline-runs" && parsed.runId) {
         void qc.invalidateQueries({ queryKey: allPipelineRunsKey });
         void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
+      } else if (parsed.scope === "channel-items") {
+        // Triage filed/transitioned an inbound item — refresh the inbox and the
+        // approvals queue (a Tier-3 reply lands as a pending channel approval).
+        void qc.invalidateQueries({ queryKey: getChannelItemsQueryKey() });
+        void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh
       // the deferred queue so the waiting card swaps for its run instead of doubling.

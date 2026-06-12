@@ -405,7 +405,7 @@ Tests:
   the app over the same data dir → tick → still exactly one item per fixture
   (dedup), cursor honored.
 
-5.3 Triage to tiers + mandate
+5.3 Triage to tiers + mandate  ✅ DONE
 
 API:
 

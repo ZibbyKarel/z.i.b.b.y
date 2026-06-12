@@ -307,6 +307,22 @@
     "enabledLabel": "Enabled",
     "create": "Create"
   },
+  "inbox": {
+    "title": "Inbox",
+    "needsApproval": "needs approval",
+    "state": {
+      "new": "new",
+      "triaged": "triaged",
+      "handled": "handled",
+      "ignored": "ignored"
+    },
+    "category": {
+      "bug": "bug",
+      "question": "question",
+      "request": "request",
+      "other": "other"
+    }
+  },
   "pipelines": {
     "addPipeline": "Add pipeline",
     "verify": "verify",
@@ -517,6 +533,13 @@
   "settings": {
     "title": "System settings",
     "daemonOn": "daemon on",
+    "mandate": {
+      "title": "Autonomy mandate",
+      "hint": "What ZIBBY may do unprompted. Conservative by default: dispatch on, replies off — a reply only goes out after you opt in per channel.",
+      "defaults": "Defaults",
+      "dispatch": "Dispatch",
+      "reply": "Reply"
+    },
     "preferences": "Preferences",
     "language": "Interface language",
     "languageHint": "Full interface translation is rolling out gradually — Czech and English are available for now.",

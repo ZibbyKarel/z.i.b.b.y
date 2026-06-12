@@ -307,6 +307,22 @@
     "enabledLabel": "Aktivní",
     "create": "Vytvořit"
   },
+  "inbox": {
+    "title": "Příchozí zprávy",
+    "needsApproval": "čeká na schválení",
+    "state": {
+      "new": "nové",
+      "triaged": "roztříděno",
+      "handled": "vyřízeno",
+      "ignored": "ignorováno"
+    },
+    "category": {
+      "bug": "chyba",
+      "question": "dotaz",
+      "request": "požadavek",
+      "other": "jiné"
+    }
+  },
   "pipelines": {
     "addPipeline": "Přidat pipeline",
     "verify": "verify",
@@ -517,6 +533,13 @@
   "settings": {
     "title": "Nastavení systému",
     "daemonOn": "démon na",
+    "mandate": {
+      "title": "Mandát autonomie",
+      "hint": "Co smí ZIBBY dělat bez vyzvání. Konzervativně: dispatch zapnutý, odpovědi vypnuté — odpověď odešle až po tvém svolení na daném kanálu.",
+      "defaults": "Výchozí",
+      "dispatch": "Dispatch",
+      "reply": "Odpověď"
+    },
     "preferences": "Předvolby",
     "language": "Jazyk rozhraní",
     "languageHint": "Plný překlad rozhraní se postupně dopisuje — zatím je dostupná čeština a angličtina.",
