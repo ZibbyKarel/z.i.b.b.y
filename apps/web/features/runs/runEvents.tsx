@@ -83,12 +83,12 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         void qc.invalidateQueries({ queryKey: getChannelItemsQueryKey() });
         void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
       } else if (parsed.scope === "activity") {
-        // A new activity entry was recorded — refresh the overview feed, and the
-        // briefing card too when a briefing was just generated.
+        // A new activity entry was recorded — refresh the overview feed AND the
+        // briefing card: the GET briefing is a live assembly of pending approvals,
+        // parked runs and channel items, all of which emit activity entries, so any
+        // recorded action can change what the card should show.
         void qc.invalidateQueries({ queryKey: getActivityQueryKey() });
-        if (parsed.kind === "briefing-generated") {
-          void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
-        }
+        void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh
       // the deferred queue so the waiting card swaps for its run instead of doubling.
