@@ -352,7 +352,25 @@ Tests: ↓
 
 ---
 
-Verification ↓
+Verification — ✅ DONE
+  - Per sub-item: pnpm lint clean (only pre-existing AgentDetailModal warning),
+    tsc clean for all touched code (the 3 pre-existing pipeline *.test.ts tsc
+    errors are unrelated), web-components 115/115, api unit + memory/grounding/
+    recorder/contract tests green.
+  - pnpm test: my Phase-4 tests all pass. The only failures (3) are the documented
+    pre-existing flaky pipeline e2e tests (ECONNRESET / demo timeout under load),
+    green in isolation.
+  - pnpm e2e: memory-graph.spec 5/5 green (search, tier filter, daily timeline,
+    create→node, node→note). The 2 suite failures are pre-existing & unrelated:
+    approval.spec (self-documented timing flake on main; found+clicked Approve with
+    fresh servers) and pipeline-run.spec (documented pre-existing red).
+  - Exit criterion proven programmatically by pipelines.e2e "records a delivery's
+    learned.md…": a delivery run writes daily/<date>.md with the run + outcome +
+    [[project]]/[[learned-…]] links, files knowledge/learned-<runId>.md, links it
+    from the project MOC, and the graph gains the node+edge — answered from vault
+    files, and dedup-safe across a restart.
+
+Verification (original) ↓
 
 After each sub-item: pnpm lint → npx tsc -p apps/web/tsconfig.json --noEmit ↓
 (rtk typecheck lies) → pnpm test → pnpm exec vitest run --project web-components.
