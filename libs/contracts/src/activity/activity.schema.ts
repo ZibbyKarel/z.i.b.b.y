@@ -11,6 +11,8 @@ export const ActivityKindSchema = z.enum([
   "task-created",
   "task-dispatched",
   "task-outcome",
+  "task-held",
+  "task-queued",
   "run-started",
   "run-finished",
   "pipeline-started",
@@ -41,6 +43,8 @@ export const ActivityRefsSchema = z
     runRef: z.string().optional(),
     pipelineId: z.string().optional(),
     agentId: z.string().optional(),
+    /** The engagement an entry is attributed to (Phase 8) — grouping, not authz. */
+    projectId: z.string().optional(),
     approvalId: z.string().optional(),
     integrationId: z.string().optional(),
     itemId: z.string().optional(),

@@ -57,4 +57,26 @@ describe("project schema", () => {
       ProjectSchema.safeParse({ id: "a/b", name: "x", path: "~/x" }).success,
     ).toBe(false)
   })
+
+  it("accepts a per-engagement budget (Phase 8.1)", () => {
+    expect(
+      ProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/Projects/alpha",
+        budget: { dailyRuns: 2, weeklyRuns: 10, maxConcurrent: 1 },
+      }).success,
+    ).toBe(true)
+  })
+
+  it("rejects an unknown budget knob (strict)", () => {
+    expect(
+      ProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/x",
+        budget: { dailyTokens: 1000 },
+      }).success,
+    ).toBe(false)
+  })
 })

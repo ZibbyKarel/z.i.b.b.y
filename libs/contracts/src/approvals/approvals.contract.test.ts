@@ -36,4 +36,10 @@ describe("approval schema", () => {
     expect(ApprovalSchema.safeParse({ ...base, kind: "wizard" }).success).toBe(false)
     expect(ApprovalSchema.safeParse({ ...base, risk: "extreme" }).success).toBe(false)
   })
+
+  it("accepts the budget-override kind 'task' (Phase 8.1)", () => {
+    expect(
+      ApprovalSchema.safeParse({ ...base, kind: "task", action: "spend-past-cap" }).success,
+    ).toBe(true)
+  })
 })

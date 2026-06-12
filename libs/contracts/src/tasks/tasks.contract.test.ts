@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { TaskRoutingSchema, tasksContract } from "../index"
+import { ScheduledTaskSchema, ScheduledTaskStatusSchema, TaskRoutingSchema, tasksContract } from "../index"
 
 describe("tasksContract", () => {
   it("exposes a POST /api/tasks/classify route returning 200 and 422", () => {
@@ -49,5 +49,38 @@ describe("TaskRoutingSchema", () => {
   it("rejects an agent target without an id", () => {
     const routing = { ...valid, target: { kind: "agent", name: "Kurátor" } }
     expect(TaskRoutingSchema.safeParse(routing).success).toBe(false)
+  })
+})
+
+describe("ScheduledTask budget statuses (Phase 8)", () => {
+  it("includes held + queued in the lifecycle enum", () => {
+    expect(ScheduledTaskStatusSchema.options).toContain("held")
+    expect(ScheduledTaskStatusSchema.options).toContain("queued")
+  })
+
+  const base = {
+    id: "task_1",
+    title: "",
+    text: "fix the bug",
+    paths: [],
+    scheduledAt: 1_700_000_000_000,
+    status: "queued" as const,
+    createdAt: new Date().toISOString(),
+  }
+
+  it("accepts a queued task attributed to a project", () => {
+    expect(ScheduledTaskSchema.safeParse({ ...base, projectId: "alpha" }).success).toBe(true)
+  })
+
+  it("accepts a held task carrying its approval + reason", () => {
+    expect(
+      ScheduledTaskSchema.safeParse({
+        ...base,
+        status: "held",
+        projectId: "alpha",
+        heldReason: "project-daily cap reached",
+        approvalId: "task_1_ab",
+      }).success,
+    ).toBe(true)
   })
 })

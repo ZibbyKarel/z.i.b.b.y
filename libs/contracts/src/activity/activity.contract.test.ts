@@ -21,6 +21,10 @@ describe("ActivityRefsSchema (Law 4: closed)", () => {
     expect(ActivityRefsSchema.safeParse({ forceApprove: "yes" }).success).toBe(false)
     expect(ActivityRefsSchema.safeParse({ tier: "1" }).success).toBe(false)
   })
+
+  it("accepts the Phase 8 projectId ref (attribution, not authz)", () => {
+    expect(ActivityRefsSchema.safeParse({ projectId: "alpha" }).success).toBe(true)
+  })
 })
 
 describe("ActivityEntrySchema", () => {
@@ -44,5 +48,7 @@ describe("ActivityEntrySchema", () => {
     expect(ActivityKindSchema.options).toContain("gate-decision")
     expect(ActivityKindSchema.options).toContain("briefing-generated")
     expect(ActivityKindSchema.options).toContain("channel-reply")
+    expect(ActivityKindSchema.options).toContain("task-held")
+    expect(ActivityKindSchema.options).toContain("task-queued")
   })
 })

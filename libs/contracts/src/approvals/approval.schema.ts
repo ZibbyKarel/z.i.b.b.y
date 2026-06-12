@@ -4,9 +4,11 @@ import { RiskSchema } from "../common.schema"
 /**
  * Which run kind an approval gates — so a decision can be routed to the right
  * runner. `channel` (Phase 5.3) gates a drafted reply to an inbound channel item;
- * the runId is a compound `<integrationId>/<itemId>` ref.
+ * the runId is a compound `<integrationId>/<itemId>` ref. `task` (Phase 8.1) gates
+ * a budget overage: a task held over a per-engagement cap, where the runId is the
+ * task id and approving it dispatches the task once, past the cap.
  */
-export const ApprovalRunKindSchema = z.enum(["agent", "pipeline-stage", "channel"])
+export const ApprovalRunKindSchema = z.enum(["agent", "pipeline-stage", "channel", "task"])
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>
 
 /** Lifecycle of an approval: created `pending`, then a human decides. */

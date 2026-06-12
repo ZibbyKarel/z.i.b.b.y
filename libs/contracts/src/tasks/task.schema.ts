@@ -109,9 +109,16 @@ export type SchedulePreset = z.infer<typeof SchedulePresetSchema>
  * when the scheduler classifies and dispatches it — to `dispatched` (carrying the
  * started run's `runRef`) or `failed` (carrying a short reason). A user may
  * `cancel` it while it is still waiting.
+ *
+ * Phase 8 adds two pre-dispatch holds for the per-engagement budget guard:
+ * `held` (over a budget cap — parked behind a Tier-3 `spend-past-cap` approval)
+ * and `queued` (at a project's `maxConcurrent` — FIFO bookkeeping, no approval).
+ * Both release into `dispatched` once cleared; both are cancellable.
  */
 export const ScheduledTaskStatusSchema = z.enum([
   "scheduled",
+  "queued",
+  "held",
   "dispatched",
   "cancelled",
   "failed",
@@ -143,6 +150,18 @@ export const ScheduledTaskSchema = z.object({
   scheduledAt: z.number().int().positive(),
   status: ScheduledTaskStatusSchema,
   createdAt: z.string().datetime(),
+  /**
+   * The engagement this task was attributed to (Phase 8), resolved
+   * deterministically by `matchProject` before dispatch. Drives the budget guard,
+   * the concurrency queue, briefing grouping and triage tagging. Attribution only,
+   * never authorization (Law 4) — a matched project gains the task a label, nothing
+   * more.
+   */
+  projectId: z.string().optional(),
+  /** Set on `held`: why the budget guard parked it (e.g. "project-daily cap reached"). */
+  heldReason: z.string().optional(),
+  /** Set on `held`: the `spend-past-cap` approval gating the override. */
+  approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */
   target: TaskTargetSchema.optional(),
   /** Set once dispatched: the started agent-run / pipeline-run id. */

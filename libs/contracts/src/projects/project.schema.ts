@@ -10,6 +10,24 @@ import { AgentIdSchema } from "../agents/agent.schema"
 export const ProjectIdSchema = AgentIdSchema
 
 /**
+ * Per-engagement budget (Phase 8.1). The unit is **run-count per window**, not
+ * tokens: a run carries no usage data and `LimitsService` is account-level, so a
+ * per-project token cap would be a lie in the UI. `maxConcurrent` is the
+ * parallelism cap (8.2) — at capacity new dispatches QUEUE, they are not rejected.
+ * Every field optional (absent = unlimited on that axis); `.strict()` so an unknown
+ * key can never smuggle a fourth knob in. Windows are calendar day / ISO week in
+ * Europe/Prague (the scheduler's cron timezone).
+ */
+export const ProjectBudgetSchema = z
+  .object({
+    dailyRuns: z.number().int().positive().optional(),
+    weeklyRuns: z.number().int().positive().optional(),
+    maxConcurrent: z.number().int().positive().optional(),
+  })
+  .strict()
+export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>
+
+/**
  * A target directory agents and skills can run against — the catalog of run
  * destinations the RunModal offers (instead of a hard-coded list). Projects live
  * in a registry the backend owns (`_projects.json`), not as files on disk, so
@@ -28,6 +46,8 @@ export const ProjectSchema = z.object({
    * `path`), joined with `&&`. Absent → the shared default checks apply.
    */
   checks: z.array(z.string().min(1)).optional(),
+  /** Per-engagement run-count budget + concurrency cap (Phase 8.1). */
+  budget: ProjectBudgetSchema.optional(),
 })
 export type Project = z.infer<typeof ProjectSchema>
 
