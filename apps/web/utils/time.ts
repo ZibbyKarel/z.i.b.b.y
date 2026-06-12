@@ -24,3 +24,29 @@ export function relativeTime(
 /** Compact relative time ("now" / "3m" / "2h") for dense panels. */
 export const compactAgo = (iso: string, now: number): string =>
   relativeTime(iso, now, (n, unit) => (n === 0 ? "now" : `${n}${unit}`));
+
+/**
+ * Phase 9 — render a limit-pause resume time (epoch ms). Within 24 h it reads as an
+ * absolute wall-clock "~HH:MM" (the operator thinks "resumes around 04:30"); further
+ * out it falls back to a coarse relative "~Nd". Locale drives the HH:MM formatting;
+ * `now` is passed so the choice is deterministic and testable. An already-past or
+ * absent reset reads "soon".
+ */
+export function resumeEta(
+  resumeAt: number | null | undefined,
+  now: number,
+  locale: string,
+): string {
+  if (resumeAt == null) return "soon";
+  const diff = resumeAt - now;
+  if (diff <= 0) return "soon";
+  if (diff < DAY_MS) {
+    const hhmm = new Date(resumeAt).toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `~${hhmm}`;
+  }
+  const days = Math.round(diff / DAY_MS);
+  return `~${days}d`;
+}

@@ -3,6 +3,7 @@ import { AgentsModule } from "../agents/agents.module"
 import { ApprovalsModule } from "../approvals/approvals.module"
 import { BudgetModule } from "../budget/budget.module"
 import { GatesModule } from "../gates/gates.module"
+import { LimitsModule } from "../limits/limits.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { ProjectsModule } from "../projects/projects.module"
 import { ClaudeCliRouter } from "./claude-cli-router"
@@ -30,6 +31,7 @@ import { TasksController } from "./tasks.controller"
     BudgetModule,
     ApprovalsModule,
     GatesModule,
+    LimitsModule,
     ScheduledTasksStorageModule,
   ],
   controllers: [TasksController],

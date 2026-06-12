@@ -13,6 +13,9 @@ export const StageRunStatusSchema = z.enum([
   "error",
   "interrupted",
   "awaiting-approval",
+  // Phase 9: the stage child died on a usage limit — a pause, not a failure.
+  // Stashes a spawn spec (restart survival) and auto-resumes when the window resets.
+  "paused-limit",
 ])
 export type StageRunStatus = z.infer<typeof StageRunStatusSchema>
 
@@ -21,7 +24,16 @@ export type StageRunStatus = z.infer<typeof StageRunStatusSchema>
  * `running` while executing, `done`/`failed` at the end, `parked` while a stage
  * waits on an approval (Phase 3).
  */
-export const PipelineStateSchema = z.enum(["done", "parked", "failed", "running"])
+export const PipelineStateSchema = z.enum([
+  "done",
+  "parked",
+  "failed",
+  "running",
+  // Phase 9: a stage paused on the usage limit (mid-stage) or the run halted at a
+  // phase boundary because the window is exhausted. Auto-resumes on window reset;
+  // unlike `parked` it is not an operator decision and burns no loop retries.
+  "paused-limit",
+])
 export type PipelineState = z.infer<typeof PipelineStateSchema>
 
 /**
@@ -38,13 +50,16 @@ export const StageRunSchema = z.object({
 export type StageRun = z.infer<typeof StageRunSchema>
 
 /**
- * Why a run is `parked` — the two parkings are different machines:
+ * Why a run is `parked` — the parkings are different machines:
  * - `approval`: a live stage child is blocking on a gate decision; it does NOT
  *   survive a restart (the child dies with the API → reconciled to failed).
  * - `retries`: a loop exhausted its retries with `then: "park"`; no live child,
  *   durable, resumable with an operator note.
+ * - `limit` (Phase 9): the usage-limit auto-resume flapped past `LIMIT_RESUME_MAX`;
+ *   no live child, durable, resumable (re-enters at the parked phase, not the loop
+ *   back-edge, and does NOT reset the loop retry map).
  */
-export const ParkedReasonSchema = z.enum(["approval", "retries"])
+export const ParkedReasonSchema = z.enum(["approval", "retries", "limit"])
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>
 
 /** Detail of a retries-parking: which phase, how many attempts, the failure file. */
@@ -85,6 +100,18 @@ export const PipelineRunSchema = z.object({
    * fallback). Persisted so resume/restart and the PR-gate diffstat keep it.
    */
   workspace: WorkspaceSchema.optional(),
+  /**
+   * Phase 9: when `status` is `paused-limit`, the epoch ms the usage window is
+   * expected to reset. Copied up from the paused stage (mid-stage pause) or set
+   * from the earliest window reset (boundary pause). Drives the auto-resume tick
+   * and the UI countdown. Null/absent on every non-paused run.
+   */
+  resumeAt: z.number().int().nullable().optional(),
+  /**
+   * Phase 9: how many times this run has been auto-resumed off a usage-limit
+   * pause. Past `LIMIT_RESUME_MAX` the run is parked (`parkedReason: "limit"`).
+   */
+  limitResumeCycles: z.number().int().nonnegative().optional(),
   /** Present while status is `parked` — which parking machine holds the run. */
   parkedReason: ParkedReasonSchema.optional(),
   /** Present while retries-parked: the surface the operator resumes from. */

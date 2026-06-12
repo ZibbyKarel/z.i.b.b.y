@@ -20,6 +20,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service"
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service"
 import { BudgetService } from "../budget/budget.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
+import { LimitsService } from "../limits/limits.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { matchProject } from "../projects/project-matcher"
@@ -91,6 +92,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly budget: BudgetService,
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
+    private readonly limits: LimitsService,
   ) {
     this.log = logger.child(TaskSchedulerService.name)
   }
@@ -243,6 +245,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     now: number,
   ): Promise<CreateTaskResult> {
     const projectId = project?.id
+    // Phase 9: the limit guard runs FIRST (decision 4) — an exhausted usage window
+    // means nothing can run, so deferring to the window reset is the right shape
+    // (not holding for approval or queueing). Fail-open: a stale/headroom reading
+    // falls through to the budget + concurrency guards exactly as before.
+    const deferral = await this.limitDeferral(now)
+    if (deferral) {
+      const task = await this.storage.createDeferredLimit(taskId, input, projectId, deferral.resumeAt, now)
+      this.recordDeferredLimit(task)
+      return { outcome: "scheduled", task }
+    }
     const check = await this.budget.check(projectId, new Date(now))
     if (!check.ok) {
       const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now)
@@ -272,8 +284,17 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     project: Project | null,
     now: number | Date,
     opts: { skipBudget: boolean },
-  ): Promise<"dispatched" | "queued" | "held" | "failed"> {
+  ): Promise<"dispatched" | "queued" | "held" | "failed" | "deferred"> {
     const at = typeof now === "number" ? new Date(now) : now
+    // Phase 9: limit guard first — even an operator-approved overage (`skipBudget`)
+    // can't run with the window exhausted, so re-defer to the reset. The existing
+    // tick re-fires the now-`scheduled` task; still exhausted → re-defer again.
+    const deferral = await this.limitDeferral(at.getTime())
+    if (deferral) {
+      const deferred = await this.storage.markDeferredLimit(task.id, deferral.resumeAt)
+      this.recordDeferredLimit(deferred)
+      return "deferred"
+    }
     if (!opts.skipBudget) {
       const check = await this.budget.check(task.projectId, at)
       if (!check.ok) {
@@ -497,6 +518,36 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       refs: { taskId: task.id, ...(task.projectId ? { projectId: task.projectId } : {}) },
     })
     this.log.info("task queued", { id: task.id, projectId: task.projectId })
+  }
+
+  /**
+   * Phase 9 limit guard: when is the usage window exhausted enough to defer a
+   * dispatch? Returns the resume epoch (the reset, or a conservative fallback) when
+   * over-limit, else null. Fail-open — {@link LimitsService.windowExhausted} returns
+   * `false` on a stale/unreadable snapshot, so deferring never blocks all work on a
+   * lagging capture file (decision 5).
+   */
+  private async limitDeferral(now: number): Promise<{ resumeAt: number } | null> {
+    const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
+      exhausted: false,
+      resumeAt: null,
+    }))
+    if (!exhausted) return null
+    return { resumeAt: resumeAt ?? (await this.limits.resolveResumeAt(null, now)) }
+  }
+
+  /** Record a window-deferred task (Tier 1 — silent, recorded; the briefing reads it). */
+  private recordDeferredLimit(task: ScheduledTask): void {
+    void this.activity.record({
+      kind: "task-deferred-limit",
+      summary: "task deferred — waiting for the usage window to reset",
+      refs: { taskId: task.id, status: "scheduled", ...(task.projectId ? { projectId: task.projectId } : {}) },
+    })
+    this.log.info("task deferred on usage limit", {
+      id: task.id,
+      scheduledAt: task.scheduledAt,
+      deferrals: task.limitDeferrals,
+    })
   }
 
   /** Sweep every dispatched-without-outcome task against its runner once. */

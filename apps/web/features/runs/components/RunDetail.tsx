@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   Accordion,
@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { relativeTime } from "../../../utils/time";
+import { relativeTime, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
@@ -56,6 +56,7 @@ function MetaCell({ label, value, tone }: { label: string; value: string; tone?:
 export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deleting }: RunDetailProps) {
   const t = useTranslations("runs");
   const tApprovals = useTranslations("approvals");
+  const locale = useLocale();
   const router = useRouter();
   const { data: queue = [] } = useApprovalsQuery();
   const approval = approvalForRun(queue, run);
@@ -217,6 +218,30 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
       ) : run.status === "parked" && run.kind === "pipeline" ? (
         <>
           <RunParkedPanel run={run} />
+          <Accordion>
+            <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
+          </Accordion>
+        </>
+      ) : run.status === "paused-limit" ? (
+        <>
+          <HudPanel padding="300" tone="warn">
+            <Stack align="start" direction="row" gap="150">
+              <IconTile glyph="pause" size="md" />
+              <Stack gap="50">
+                <Typography type="note" weight="semibold">
+                  {t("limitPausedTitle")}
+                </Typography>
+                <Typography leading="snug" size="sm" type="text" variant="secondary">
+                  {t("limitPausedBody", { eta: resumeEta(run.resumeAt, now, locale) })}
+                </Typography>
+                {run.limitResumeCycles != null && run.limitResumeCycles > 0 && (
+                  <Typography mono size="2xs" type="note" variant="tertiary">
+                    {t("limitResumeCycles", { n: run.limitResumeCycles })}
+                  </Typography>
+                )}
+              </Stack>
+            </Stack>
+          </HudPanel>
           <Accordion>
             <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
           </Accordion>

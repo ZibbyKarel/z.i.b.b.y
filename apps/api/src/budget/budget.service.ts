@@ -108,10 +108,13 @@ export class BudgetService {
 
   /**
    * Top-level runs currently consuming a concurrency slot for `projectId`. Counts
-   * agent runs (running / awaiting-approval) labelled with the project and pipeline
-   * runs (running) whose `projectPath` is the project's path — pipeline STAGE runs
-   * live in the pipeline runner's own core and never reach these registries, so they
-   * are not double-counted (the watch-out).
+   * agent runs (running / awaiting-approval / paused-limit) labelled with the project
+   * and pipeline runs (running / paused-limit) whose `projectPath` is the project's
+   * path — pipeline STAGE runs live in the pipeline runner's own core and never reach
+   * these registries, so they are not double-counted (the watch-out).
+   *
+   * Phase 9: a `paused-limit` run still owns its slot — releasing it would let the
+   * queued task AND the auto-resumed run both start at window reset (double-dispatch).
    */
   async countRunning(projectId: string): Promise<number> {
     const project = await this.projects.get(projectId).catch(() => null)
@@ -119,10 +122,13 @@ export class BudgetService {
     const labels = new Set([project.id, project.name, project.path])
     let n = 0
     for (const run of this.agentRunner.listRunning()) {
-      if ((run.status === "running" || run.status === "awaiting-approval") && labels.has(run.project)) n += 1
+      const active =
+        run.status === "running" || run.status === "awaiting-approval" || run.status === "paused-limit"
+      if (active && labels.has(run.project)) n += 1
     }
     for (const run of this.pipelineRunner.list()) {
-      if (run.status === "running" && run.projectPath === project.path) n += 1
+      const active = run.status === "running" || run.status === "paused-limit"
+      if (active && run.projectPath === project.path) n += 1
     }
     return n
   }

@@ -28,6 +28,7 @@ const statusDotTone: Record<AgentRun["status"], DotTone> = {
   error: "bad",
   interrupted: "idle",
   "awaiting-approval": "wait",
+  "paused-limit": "wait",
 };
 
 /** Live states — the only ones that pulse. */

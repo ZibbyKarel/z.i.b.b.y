@@ -18,6 +18,13 @@ export const ActivityKindSchema = z.enum([
   "pipeline-started",
   "pipeline-finished",
   "pipeline-parked",
+  // Phase 9 (limit resilience, Tier 1 — silent + recorded). A run halted on the
+  // subscription usage limit, auto-resumed when the window reset, or a task was
+  // re-deferred because the window was exhausted at dispatch. None notify; the
+  // briefing reads the pause/resume off the live run state + the eventual finish.
+  "run-paused-limit",
+  "run-resumed-limit",
+  "task-deferred-limit",
   "approval-requested",
   "approval-approved",
   "approval-rejected",

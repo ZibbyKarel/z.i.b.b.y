@@ -633,6 +633,11 @@
     "metaTask": "úkol",
     "heldCaption": "Pozdrženo — {reason}. Schval překročení rozpočtu pro odeslání.",
     "queuedCaption": "Čeká na volný slot v {project}.",
+    "pausedLimitCaption": "Pauza na limitu — obnoví se {eta}.",
+    "deferredLimitCaption": "Čeká na reset limitu ({eta}).",
+    "limitPausedTitle": "Pozastaveno na limitu využití",
+    "limitPausedBody": "Předplatné narazilo na limit — běh se sám obnoví, až se okno resetuje (~{eta}). Nemusíš nic dělat.",
+    "limitResumeCycles": "auto-obnova ×{n}",
     "taskOutcome": {
       "done": "úspěch",
       "error": "selhání"
@@ -654,7 +659,8 @@
       "done": "hotovo",
       "error": "chyba",
       "interrupted": "přerušeno",
-      "parked": "zaparkováno"
+      "parked": "zaparkováno",
+      "paused-limit": "pauza na limitu"
     },
     "kind": {
       "agent": "agent",

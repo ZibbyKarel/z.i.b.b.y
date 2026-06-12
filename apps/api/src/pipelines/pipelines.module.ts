@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
 import { ApprovalsModule } from "../approvals/approvals.module"
 import { GatesModule } from "../gates/gates.module"
+import { LimitsModule } from "../limits/limits.module"
 import { MemoryModule } from "../memory/memory.module"
 import { ProjectsModule } from "../projects/projects.module"
 import { ClaudeRunModule } from "../runner/claude-run.module"
@@ -31,6 +32,7 @@ export function resolvePipelineRunsDir(): string {
     ClaudeRunModule,
     GatesModule,
     ApprovalsModule,
+    LimitsModule,
     MemoryModule,
     ProjectsModule,
     WorkspaceModule,

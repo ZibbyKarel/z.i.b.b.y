@@ -633,6 +633,11 @@
     "metaTask": "task",
     "heldCaption": "Held — {reason}. Approve the budget override to dispatch.",
     "queuedCaption": "Waiting for a slot in {project}.",
+    "pausedLimitCaption": "Paused on the usage limit — resumes {eta}.",
+    "deferredLimitCaption": "Waiting for the usage window ({eta}).",
+    "limitPausedTitle": "Paused on the usage limit",
+    "limitPausedBody": "The subscription hit its usage limit — this run auto-resumes when the window resets (~{eta}). Nothing for you to do.",
+    "limitResumeCycles": "auto-resumed ×{n}",
     "taskOutcome": {
       "done": "succeeded",
       "error": "failed"
@@ -654,7 +659,8 @@
       "done": "done",
       "error": "error",
       "interrupted": "interrupted",
-      "parked": "parked"
+      "parked": "parked",
+      "paused-limit": "paused (limit)"
     },
     "kind": {
       "agent": "agent",

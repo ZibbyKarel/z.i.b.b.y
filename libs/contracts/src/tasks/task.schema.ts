@@ -160,6 +160,16 @@ export const ScheduledTaskSchema = z.object({
   projectId: z.string().optional(),
   /** Set on `held`: why the budget guard parked it (e.g. "project-daily cap reached"). */
   heldReason: z.string().optional(),
+  /**
+   * Phase 9: set when the pre-dispatch limit guard re-deferred this task because the
+   * usage window was exhausted. The task is re-persisted as `scheduled` with
+   * `scheduledAt = resumeAt`, so the existing tick re-fires it when the window
+   * resets — no new status. `"limit"` is the only value; absent on operator-scheduled
+   * tasks, so the briefing/feed can tell "waiting on the window" from a chosen time.
+   */
+  deferredReason: z.enum(["limit"]).optional(),
+  /** Phase 9: how many times the limit guard has re-deferred this task (diagnostic). */
+  limitDeferrals: z.number().int().nonnegative().optional(),
   /** Set on `held`: the `spend-past-cap` approval gating the override. */
   approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */

@@ -79,6 +79,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       (runId, action) => this.onIntent(runId, action),
       logger.child("RunnerCore:agent"),
       formatClaudeStreamLine,
+      // Phase 9: resolve a limit-paused run's resume epoch (detected reset → live
+      // window reset → conservative fallback), so the core can stamp `resumeAt`.
+      (detected) => this.limits.resolveResumeAt(detected),
     )
   }
 
@@ -98,8 +101,15 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // approvable entry whose run can no longer act on the decision (approving it
     // later would no-op: the run is no longer `awaiting-approval`).
     this.core.onStatus((rec) => {
+      // Phase 9 (secondary limit classification): a run that just errored with the
+      // usage window exhausted (a fresh, non-stale snapshot at ≥ 100 %) is a pause,
+      // not a failure — even if no limit line was printed. Reclassify before the
+      // error is treated as terminal anywhere downstream.
+      if (rec.status === "error") void this.maybePauseOnExhaustedWindow(rec.runId)
       const terminal =
         rec.status === "done" || rec.status === "error" || rec.status === "interrupted"
+      // `paused-limit` is deliberately NOT terminal: its approvals (none in practice)
+      // stay, and the run is owed an auto-resume.
       if (terminal) void this.approvals.cancelPendingForRun(rec.runId)
     })
     await this.core.init()
@@ -339,6 +349,47 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   /** Running runs, plus any finished within the retention window; newest first. */
   listRunning(): AgentRun[] {
     return this.core.list().map(toAgentRun)
+  }
+
+  /**
+   * Phase 9: the agent runs currently paused on the usage limit (each carries its
+   * `resumeAt` + `limitResumeCycles`). The {@link LimitResumeService} scans this on a
+   * tick and resumes the due ones.
+   */
+  listLimitPaused(): AgentRun[] {
+    return this.core
+      .list()
+      .filter((rec) => rec.status === "paused-limit")
+      .map(toAgentRun)
+  }
+
+  /** Phase 9: resume a limit-paused agent run — respawn from its stashed spawn spec. */
+  async resumeLimitPaused(runId: string): Promise<AgentRun> {
+    return toAgentRun(await this.core.resume(runId))
+  }
+
+  /**
+   * Phase 9: fail a limit-paused agent run that flapped past the resume cap. Agent
+   * runs have no parked state, so the honest terminal is `error` with a readable
+   * reason rather than a respawn-forever loop.
+   */
+  async failLimitFlapped(runId: string, reason: string): Promise<void> {
+    await this.core.failLimit(runId, reason)
+  }
+
+  /**
+   * Phase 9 secondary classifier: relabel a just-errored run to `paused-limit` when
+   * the usage window is exhausted (fresh, non-stale snapshot ≥ 100 %). No-op when the
+   * window has headroom or the reading is stale (fail-open — a wrongly-kept error is
+   * preferable to pausing a genuine failure on a lagging capture).
+   */
+  private async maybePauseOnExhaustedWindow(runId: string): Promise<void> {
+    const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
+      exhausted: false,
+      resumeAt: null,
+    }))
+    if (!exhausted) return
+    await this.core.reclassifyErrorAsPausedLimit(runId, resumeAt).catch(() => {})
   }
 
   /** The full run history (on disk + in memory), newest first; no age cutoff. */

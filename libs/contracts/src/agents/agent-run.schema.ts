@@ -54,6 +54,20 @@ export const AgentRunSchema = z.object({
   /** Absolute working directory the process ran in (its sandbox folder). */
   cwd: z.string(),
   /**
+   * Phase 9: when `status` is `paused-limit`, the epoch ms the usage window is
+   * expected to reset (resolved from the run's limit line → LimitsService → a
+   * conservative fallback). The auto-resume tick waits for it; the UI counts down
+   * to it. Null/absent on every non-paused run.
+   */
+  resumeAt: z.number().int().nullable().optional(),
+  /**
+   * Phase 9: how many times this run has been auto-resumed off a usage-limit
+   * pause. Bounded (`LIMIT_RESUME_MAX`); past the cap the run is failed with a
+   * "usage limit flapped" reason rather than respawned forever. Absent until the
+   * first resume.
+   */
+  limitResumeCycles: z.number().int().nonnegative().optional(),
+  /**
    * The dedicated git worktree this run worked in (Phase 3.1), when it targeted a
    * git project. Absent for non-git / projectless runs (the run spawns in its
    * sandbox as before). Persisted so deletion can prune the worktree.

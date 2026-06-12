@@ -13,13 +13,15 @@ import type { BaseRun, KindStrategy } from "./runner-core.types"
 const TestRecordSchema = z.object({
   runId: z.string(),
   kind: z.literal("agent").default("agent"),
-  status: z.enum(["running", "done", "error", "interrupted", "awaiting-approval"]),
+  status: z.enum(["running", "done", "error", "interrupted", "awaiting-approval", "paused-limit"]),
   pct: z.number(),
   cwd: z.string(),
   startedAt: z.string(),
   pid: z.number(),
   logFile: z.string(),
   pgid: z.number().int().optional(),
+  resumeAt: z.number().int().nullable().optional(),
+  limitResumeCycles: z.number().int().nonnegative().optional(),
   label: z.string().default(""),
 })
 type TestRecord = z.infer<typeof TestRecordSchema> & BaseRun
@@ -648,5 +650,226 @@ describe("RunnerCore", () => {
     core.cancel(run.runId)
     await waitForStatus(core, run.runId, "interrupted")
     expect(core.get(run.runId).status).toBe("interrupted")
+  })
+
+  // ─── Phase 9: usage-limit pause / resume ──────────────────────────────────
+
+  /** A child that prints the real usage-limit line (with a reset epoch) then exits 1. */
+  function limitScript(epochSeconds: number): string[] {
+    return ["-e", `console.log("Claude AI usage limit reached|${epochSeconds}"); process.exit(1)`]
+  }
+
+  /** Marker-based: limit-then-exit-1 on the FIRST run, PROGRESS 100 + exit 0 after. */
+  function limitOnceScript(cwd: string, epochSeconds: number): string[] {
+    const marker = JSON.stringify(path.join(cwd, ".limit-marker"))
+    const body = `const fs=require("node:fs");if(!fs.existsSync(${marker})){fs.writeFileSync(${marker},"1");console.log("Claude AI usage limit reached|${epochSeconds}");process.exit(1)}console.log("PROGRESS 100");process.exit(0)`
+    return ["-e", body]
+  }
+
+  /** A child that prints a limit line, then hangs — so a test can cancel it mid-run. */
+  function limitThenHangScript(epochSeconds: number): string[] {
+    return [
+      "-e",
+      `console.log("Claude AI usage limit reached|${epochSeconds}");setInterval(()=>{},1000)`,
+    ]
+  }
+
+  /** Poll until the run's `resumeAt` is populated (set async after the status flips). */
+  async function waitForResumeAt(
+    core: RunnerCore<TestRecord>,
+    runId: string,
+    timeoutMs = 5000,
+  ): Promise<number> {
+    const start = Date.now()
+    for (;;) {
+      const at = core.get(runId).resumeAt
+      if (at != null) return at
+      if (Date.now() - start > timeoutMs) throw new Error(`resumeAt never set for ${runId}`)
+      await sleep(20)
+    }
+  }
+
+  it("classifies a child that dies on a usage limit as paused-limit with resumeAt + a pending spec", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 3600
+    // resolveResumeAt echoes the detected reset (else a fallback) — the priority chain.
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (detected) => detected ?? 1,
+    )
+    await core.init()
+    const cwd = path.join(dir, "limit_classify")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "lim",
+      command: NODE,
+      args: limitScript(epoch),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "paused-limit")
+    const resumeAt = await waitForResumeAt(core, run.runId)
+    expect(resumeAt).toBe(epoch * 1000)
+    expect(core.get(run.runId).limitResumeCycles).toBe(0)
+    // The spawn spec is stashed so restart + respawn come free.
+    const pending = JSON.parse(
+      await fs.readFile(path.join(dir, `${run.runId}.pending.json`), "utf8"),
+    )
+    expect(pending.ownerId).toBe("lim")
+    // A paused-limit run still streams its log, and is NOT marked done.
+    expect((await core.readLog(run.runId, 0)).done).toBe(false)
+  })
+
+  it("falls back through resolveResumeAt when the limit line carries no reset epoch", async () => {
+    const fallback = Date.now() + 1_800_000
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (detected) => detected ?? fallback,
+    )
+    await core.init()
+    const cwd = path.join(dir, "limit_nofallback")
+    // No `|epoch` → detectLimit returns resetsAt null → resolveResumeAt fallback.
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "lim2",
+      command: NODE,
+      args: ["-e", `console.log("Claude AI usage limit reached"); process.exit(1)`],
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "paused-limit")
+    expect(await waitForResumeAt(core, run.runId)).toBe(fallback)
+  })
+
+  it("an operator cancel during a limit-struck run lands interrupted, never paused-limit", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 3600
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (d) => d ?? 1,
+    )
+    await core.init()
+    const cwd = path.join(dir, "limit_cancel")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "limc",
+      command: NODE,
+      args: limitThenHangScript(epoch),
+      cwd,
+      extra: { label: "x" },
+    })
+    // Let the limit line be read, then cancel while still running.
+    await sleep(150)
+    core.cancel(run.runId)
+    await waitForStatus(core, run.runId, "interrupted")
+    expect(core.get(run.runId).status).toBe("interrupted")
+  })
+
+  it("resume() respawns a paused-limit run from its stashed spec and it can finish", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 2
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (d) => d ?? 1,
+    )
+    await core.init()
+    const cwd = path.join(dir, "limit_resume")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "limr",
+      command: NODE,
+      args: limitOnceScript(cwd, epoch),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "paused-limit")
+    // The marker now exists, so the respawn succeeds → done.
+    await core.resume(run.runId)
+    await waitForStatus(core, run.runId, "done")
+    expect(core.get(run.runId).status).toBe("done")
+    // The pending spec is cleared once resumed.
+    await expect(
+      fs.readFile(path.join(dir, `${run.runId}.pending.json`), "utf8"),
+    ).rejects.toThrow()
+  })
+
+  it("a paused-limit run with a pending spec survives a restart (init)", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 3600
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (d) => d ?? 1,
+    )
+    await core.init()
+    const cwd = path.join(dir, "limit_restart")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "limx",
+      command: NODE,
+      args: limitScript(epoch),
+      cwd,
+      extra: { label: "x" },
+    })
+    await waitForStatus(core, run.runId, "paused-limit")
+    await waitForResumeAt(core, run.runId)
+
+    // A fresh core over the same dir rebuilds the registry from disk.
+    const core2 = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (d) => d ?? 1,
+    )
+    await core2.init()
+    const restored = core2.get(run.runId)
+    expect(restored.status).toBe("paused-limit")
+    expect(restored.resumeAt).toBe(epoch * 1000)
+  })
+
+  it("a paused-limit sidecar WITHOUT a pending spec is reconciled to interrupted on restart", async () => {
+    // Hand-write a paused-limit sidecar with no `.pending.json` (a real orphan).
+    const runId = "orphan_1_1"
+    const cwd = path.join(dir, "orphan_sandbox")
+    await fs.mkdir(cwd, { recursive: true })
+    const sidecar = {
+      runId,
+      kind: "agent",
+      status: "paused-limit",
+      pct: 0,
+      cwd,
+      startedAt: new Date().toISOString(),
+      pid: 0,
+      logFile: path.join(dir, `${runId}.log`),
+      resumeAt: Date.now() + 1000,
+      label: "x",
+    }
+    await fs.writeFile(path.join(dir, `${runId}.json`), JSON.stringify(sidecar), "utf8")
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    expect(core.get(runId).status).toBe("interrupted")
   })
 })

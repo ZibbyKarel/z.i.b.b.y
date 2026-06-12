@@ -63,7 +63,14 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     get: ReturnType<typeof vi.fn>
   }
   let classifier: { classify: ReturnType<typeof vi.fn> }
+  let fakeLimits: {
+    windowExhausted: ReturnType<typeof vi.fn>
+    resolveResumeAt: ReturnType<typeof vi.fn>
+  }
   let service: TaskSchedulerService
+
+  /** A fixed near-future window-reset epoch the limit guard defers to. */
+  const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z")
 
   beforeEach(async () => {
     process.env.TASK_TICK_MS = "0"
@@ -115,6 +122,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       reject: async () => {},
     }
     const fakeGates = { floor: async () => [], evaluate: () => ({ decision: "allow" }) }
+    // Limits double (Phase 9): headroom by default; a test flips windowExhausted to
+    // exercise the limit guard. resolveResumeAt echoes a fixed near-future reset.
+    fakeLimits = {
+      windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
+      resolveResumeAt: vi.fn(async () => RESET_AT),
+    }
 
     service = new TaskSchedulerService(
       storage,
@@ -128,6 +141,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeBudget as never,
       fakeApprovals as never,
       fakeGates as never,
+      fakeLimits as never,
     )
     service.onModuleInit()
   })
@@ -268,5 +282,55 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(task.outcome?.summary.length).toBeLessThanOrEqual(200)
       expect(task.outcome?.summary.endsWith("…")).toBe(true)
     })
+  })
+
+  // ─── Phase 9: pre-dispatch limit guard (decision 4/5) ─────────────────────
+
+  it("defers an immediate create to the window reset when the usage window is exhausted", async () => {
+    fakeLimits.windowExhausted.mockResolvedValue({ exhausted: true, resumeAt: RESET_AT })
+    const result = await service.createTask({ text: "do the thing", title: "Thing" })
+    // The task parks as a scheduled (window-deferred) task — never dispatched.
+    expect(result.outcome).toBe("scheduled")
+    if (result.outcome !== "scheduled") return
+    expect(result.task.status).toBe("scheduled")
+    expect(result.task.scheduledAt).toBe(RESET_AT)
+    expect(result.task.deferredReason).toBe("limit")
+    expect(result.task.limitDeferrals).toBe(1)
+    expect(agentRunner.start).not.toHaveBeenCalled()
+  })
+
+  it("a stale/headroom reading does NOT defer — the dispatch proceeds (fail-open)", async () => {
+    fakeLimits.windowExhausted.mockResolvedValue({ exhausted: false, resumeAt: null })
+    const result = await service.createTask({ text: "do the thing" })
+    expect(result.outcome).toBe("dispatched")
+    expect(agentRunner.start).toHaveBeenCalled()
+  })
+
+  it("the limit guard runs BEFORE the budget guard — over-cap + exhausted defers, not holds", async () => {
+    // Force both over-budget AND exhausted: the limit guard wins (decision 4), so the
+    // task defers (scheduled) rather than holding behind a spend-past-cap approval.
+    fakeLimits.windowExhausted.mockResolvedValue({ exhausted: true, resumeAt: RESET_AT })
+    const result = await service.createTask({ text: "do" })
+    expect(result.outcome).toBe("scheduled")
+    if (result.outcome !== "scheduled") return
+    expect(result.task.deferredReason).toBe("limit")
+    expect(result.task.heldReason).toBeUndefined()
+  })
+
+  it("re-defers a fired scheduled task that is still window-exhausted at tick time", async () => {
+    // A previously window-deferred task comes due; the tick re-runs the guard.
+    fakeLimits.windowExhausted.mockResolvedValue({ exhausted: true, resumeAt: RESET_AT })
+    const created = await service.createTask({ text: "do" })
+    if (created.outcome !== "scheduled") throw new Error("expected scheduled")
+    const id = created.task.id
+    // Make it due, then tick — still exhausted → re-deferred with a bumped counter.
+    const nextReset = RESET_AT + 3_600_000
+    fakeLimits.windowExhausted.mockResolvedValue({ exhausted: true, resumeAt: nextReset })
+    await service.tick(new Date(RESET_AT + 1000))
+    const task = await storage.get(id)
+    expect(task.status).toBe("scheduled")
+    expect(task.scheduledAt).toBe(nextReset)
+    expect(task.limitDeferrals).toBe(2)
+    expect(agentRunner.start).not.toHaveBeenCalled()
   })
 })

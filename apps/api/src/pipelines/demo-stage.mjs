@@ -20,6 +20,13 @@ const failPhases = (process.env.PIPELINE_DEMO_FAIL_PHASES || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean)
+// Phase 9: phases that emit the usage-limit line + exit 1 on the FIRST attempt only
+// (marker-file in the stage cwd, which is stable across the respawn), so the
+// auto-resumed stage succeeds — exercising the pause → resume → finish loop.
+const limitPhases = (process.env.PIPELINE_DEMO_LIMIT_PHASES || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -30,6 +37,20 @@ async function main() {
   if (consumesRel) {
     const input = await readFile(path.join(cwd, consumesRel), "utf8").catch(() => null)
     if (input !== null) console.log(`Stage ${phaseId} consumed ${consumesRel} (${input.length} bytes)`)
+  }
+
+  // Phase 9: fire the usage-limit line + exit 1 once, BEFORE producing anything (so
+  // the work product is never created twice). The marker lives in the stage cwd,
+  // which the resume path reuses, so the second attempt skips this and succeeds.
+  if (limitPhases.includes(phaseId)) {
+    const marker = path.join(cwd, `.limit-fired-${phaseId}`)
+    const already = await readFile(marker, "utf8").catch(() => null)
+    if (already === null) {
+      await writeFile(marker, "1", "utf8")
+      const reset = Math.floor(Date.now() / 1000) + 2
+      console.error(`Claude AI usage limit reached|${reset}`)
+      process.exit(1)
+    }
   }
 
   for (let i = 1; i <= steps; i++) {

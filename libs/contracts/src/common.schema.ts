@@ -11,10 +11,14 @@ export type ErrorBody = z.infer<typeof ErrorSchema>
 
 /**
  * The shared lifecycle states a run can be in, across every run kind (agent,
- * skill, pipeline stage). `awaiting-approval` (Phase 3) is a *safe paused state
- * with no live child*: the runner created an approval and will not perform the
- * gated action until a decision arrives — so, unlike `running`, it survives a
- * restart unchanged rather than being reconciled to `interrupted`.
+ * skill, pipeline stage). Two *safe paused states with no live child* — each
+ * survives a restart unchanged rather than being reconciled to `interrupted`:
+ * - `awaiting-approval` (Phase 3): the runner created an approval and will not
+ *   perform the gated action until a decision arrives.
+ * - `paused-limit` (Phase 9): the run's child died on a subscription usage limit;
+ *   it is a *pause, not a failure* — it does not burn retry budget, carries a
+ *   persisted `resumeAt`, and auto-resumes when the window resets. Modeled on
+ *   `awaiting-approval` (a stashed spawn spec gives restart survival + respawn).
  */
 export const RunStatusSchema = z.enum([
   "running",
@@ -22,6 +26,7 @@ export const RunStatusSchema = z.enum([
   "error",
   "interrupted",
   "awaiting-approval",
+  "paused-limit",
 ])
 export type RunStatus = z.infer<typeof RunStatusSchema>
 

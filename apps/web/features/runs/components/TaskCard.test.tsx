@@ -18,11 +18,15 @@ const run: RunView = {
   logBase: "agents",
 };
 
+/** A render-stable "now" so the limit-pause countdown is deterministic. */
+const NOW = Date.parse("2026-06-11T10:05:00.000Z");
+
 describe("TaskCard", () => {
   it("is task-first: the task title is the headline, the target only meta", () => {
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={() => {}}
         run={run}
         selected={false}
@@ -42,6 +46,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={() => {}}
         run={{ ...run, title: "" }}
         selected={false}
@@ -59,6 +64,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={() => {}}
         run={{
           ...run,
@@ -80,6 +86,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={() => {}}
         run={{ ...run, status: "error", taskId: "task-9", taskOutcome: "error" }}
         selected={false}
@@ -94,6 +101,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={() => {}}
         run={{ ...run, status: "held", heldReason: "daily run cap reached (1/1)", projectId: "alpha" }}
         selected={false}
@@ -108,6 +116,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={() => {}}
         run={{ ...run, status: "queued", projectId: "alpha" }}
         selected={false}
@@ -118,11 +127,28 @@ describe("TaskCard", () => {
     expect(screen.getByText(/alpha/)).toBeInTheDocument();
   });
 
+  it("renders a limit-pause caption that counts down to the window reset (Phase 9)", () => {
+    render(
+      <TaskCard
+        glyph="bot"
+        now={NOW}
+        onSelect={() => {}}
+        run={{ ...run, status: "paused-limit", resumeAt: NOW + 90 * 60 * 1000 }}
+        selected={false}
+        startedLabel="teď"
+        stateLabel="pauza na limitu"
+      />,
+    );
+    // The caption names the pause and a resume time (absolute ~HH:MM within 24 h).
+    expect(screen.getByText(/Pauza na limitu/)).toBeInTheDocument();
+  });
+
   it("selects on click", async () => {
     const onSelect = vi.fn();
     render(
       <TaskCard
         glyph="bot"
+        now={NOW}
         onSelect={onSelect}
         run={run}
         selected={false}

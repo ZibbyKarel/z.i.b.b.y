@@ -121,6 +121,52 @@ export class ScheduledTasksStorageService
     return task
   }
 
+  /**
+   * Phase 9: persist a freshly-created task that hit an exhausted usage window as a
+   * `scheduled` task due at the window reset. The existing tick re-fires it; the
+   * `deferredReason`/`limitDeferrals` mark it as window-deferred (not operator-timed).
+   */
+  async createDeferredLimit(
+    id: string,
+    input: CreateTaskInput,
+    projectId: string | undefined,
+    resumeAt: number,
+    now: number,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      scheduledAt: resumeAt,
+      status: "scheduled",
+      createdAt: new Date(now).toISOString(),
+      deferredReason: "limit",
+      limitDeferrals: 1,
+      ...(projectId ? { projectId } : {}),
+    }
+    await this.writeEntity(task)
+    return task
+  }
+
+  /**
+   * Phase 9: re-defer an existing task whose dispatch hit an exhausted window — back
+   * to `scheduled`, due at the new `resumeAt`, incrementing the deferral counter.
+   * Deferral is cheap (no spawn, no token), so this is unbounded.
+   */
+  async markDeferredLimit(id: string, resumeAt: number): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = {
+      ...existing,
+      status: "scheduled",
+      scheduledAt: resumeAt,
+      deferredReason: "limit",
+      limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
+    }
+    await this.writeEntity(merged)
+    return merged
+  }
+
   /** Move an existing task to `held` with a reason (the tick fire path). */
   async markHeld(id: string, heldReason: string): Promise<ScheduledTask> {
     const existing = await this.get(id)

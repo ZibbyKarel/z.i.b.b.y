@@ -24,6 +24,7 @@ import { GroundingService } from "../memory/grounding.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { RunnerCore } from "../runner/runner-core"
+import { LimitsService } from "../limits/limits.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -99,6 +100,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
     private readonly grounding: GroundingService,
+    private readonly limits: LimitsService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -111,9 +113,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     this.core = new RunnerCore(
       this.dir,
       pipelineStageStrategy,
-      undefined,
+      // Phase 9: a stage's usage-limit line busts the limits cache (previously the
+      // pipeline runner dropped the signal entirely — undefined here).
+      (resetsAt) => this.limits.noteLimitHit(resetsAt),
       (stageRunId, action) => this.onStageIntent(stageRunId, action),
       logger.child("RunnerCore:pipeline"),
+      undefined,
+      // Phase 9: resolve a limit-paused stage's resume epoch so the core stamps it on
+      // the stage record (the aggregate copies it up).
+      (detected) => this.limits.resolveResumeAt(detected),
     )
   }
 
@@ -345,8 +353,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const out: PipelineRun[] = []
     for (const [id, run] of this.runs) {
       // Parked runs stay in memory regardless of age: a retries-parked run may
-      // sit for days and must remain resumable without a restart round-trip.
-      const finished = run.status !== "running" && run.status !== "parked"
+      // sit for days and must remain resumable without a restart round-trip. A
+      // `paused-limit` run (Phase 9) is the same — it must stay resumable by the tick.
+      const finished =
+        run.status !== "running" && run.status !== "parked" && run.status !== "paused-limit"
       if (finished && Date.parse(run.startedAt) < cutoff) {
         this.runs.delete(id)
         continue
@@ -482,6 +492,25 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       if (!phase) break // defensive; superRefine guarantees targets exist
       run.currentStage = phase.id
 
+      // Phase 9 (boundary pause, decision 3b): before spending a stage, halt if the
+      // usage window is exhausted — persist the aggregate `paused-limit` with the
+      // earliest reset as `resumeAt` and return without spawning. Auto-resume re-drives
+      // from this same cursor. Fail-open: a stale/headroom reading just proceeds, and a
+      // wrongly-dispatched stage that dies on a limit is caught by the mid-stage path.
+      const boundary = await this.limits.windowExhausted()
+      if (boundary.exhausted) {
+        run.status = "paused-limit"
+        run.resumeAt = boundary.resumeAt ?? (await this.limits.resolveResumeAt(null))
+        run.limitResumeCycles = run.limitResumeCycles ?? 0
+        run.retries = Object.fromEntries(retries)
+        await this.writeAggregate(run)
+        this.log.warn("pipeline run paused on usage limit (phase boundary)", {
+          phase: phase.id,
+          resumeAt: run.resumeAt,
+        })
+        return
+      }
+
       const attempt = (retries.get(phase.id) ?? 0) + 1
       const stageCwd = path.join(run.cwd, phase.id)
       await fs.mkdir(stageCwd, { recursive: true })
@@ -494,6 +523,27 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         attempt,
       })
       const stageRun = await this.runStage(run, phase, stageCwd, attempt, project)
+
+      // Phase 9 (mid-stage pause, decision 3a): the stage child died on a usage limit.
+      // The aggregate pauses WITHOUT touching the retry map — loop budget and the
+      // escalation ladder are left exactly where they were, so the pause costs nothing.
+      // `resumeAt` is copied up from the paused stage record. The driver returns; the
+      // auto-resume path re-enters at this same phase (with resume-context, Phase 9.3).
+      if (stageRun.status === "paused-limit") {
+        run.stageRuns.push(stageRun)
+        run.status = "paused-limit"
+        run.currentStage = phase.id
+        const stageRec = this.core.get(stageRun.runId)
+        run.resumeAt = stageRec.resumeAt ?? (await this.limits.resolveResumeAt(null))
+        run.limitResumeCycles = run.limitResumeCycles ?? 0
+        run.retries = Object.fromEntries(retries)
+        await this.writeAggregate(run)
+        this.log.warn("pipeline run paused on usage limit (mid-stage)", {
+          phase: phase.id,
+          resumeAt: run.resumeAt,
+        })
+        return
+      }
       // A rejected approval lands here with the aggregate still "parked" (the
       // cancel path flips only the stage) — un-park before recording the outcome.
       if (run.status === "parked") {
@@ -625,9 +675,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * stage completion, so the wait rides through it and the same phase continues
    * after the approval releases the child.
    */
-  private async waitForStage(runId: string): Promise<"done" | "error" | "interrupted"> {
+  private async waitForStage(
+    runId: string,
+  ): Promise<"done" | "error" | "interrupted" | "paused-limit"> {
     for (;;) {
       const status = this.core.get(runId).status
+      // `awaiting-approval` rides through (the live child still blocks on its
+      // decision); every other non-running state is terminal for this wait —
+      // `paused-limit` (Phase 9) included, so the driver can pause the aggregate.
       if (status !== "running" && status !== "awaiting-approval") return status
       await new Promise((r) => setTimeout(r, 25))
     }
@@ -903,7 +958,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // A run left "running" lost its mid-flight child with the previous backend.
       // An APPROVAL-parked run is the same situation (its blocking child died
       // with the API) → honest reconciliation is `failed`. A RETRIES-parked run
-      // has no child at all — it is durable and stays parked, resumable.
+      // has no child at all — it is durable and stays parked, resumable. A
+      // `paused-limit` aggregate (Phase 9) is likewise durable: a mid-stage pause's
+      // stage record (with its stashed spec) is rebuilt by core.init above, and a
+      // boundary pause has no child at all — both survive by status alone, so they
+      // fall through and stay resumable by the auto-resume tick.
       const approvalParked = run.status === "parked" && run.parkedReason !== "retries"
       if (run.status === "running" || approvalParked) {
         run = {

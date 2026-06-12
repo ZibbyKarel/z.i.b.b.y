@@ -31,6 +31,7 @@ const FILTERS: Filter[] = [
   "all",
   "running",
   "awaiting-approval",
+  "paused-limit",
   "parked",
   "held",
   "queued",
@@ -141,6 +142,7 @@ export function Screen() {
                   <TaskCard
                     glyph={runGlyph(r, glyphById)}
                     key={r.runId}
+                    now={now}
                     onSelect={setSelId}
                     run={r}
                     selected={selected?.runId === r.runId}

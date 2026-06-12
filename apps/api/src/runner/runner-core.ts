@@ -52,6 +52,14 @@ const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/
 /** Finished runs stay in the list (and in memory) for this long after they start. */
 const RETENTION_MS = 30 * 60 * 1000
 
+/**
+ * Conservative fallback for a limit pause's `resumeAt` when neither the run's
+ * output nor LimitsService named a window reset (Phase 9). Half an hour out: long
+ * enough that a same-window retry won't instantly re-exhaust, short enough that an
+ * idle operator's run still finishes itself.
+ */
+const RESUME_FALLBACK_MS = 30 * 60 * 1000
+
 /** Hard cap on how many runs the list returns, newest first. */
 const MAX_LISTED = 50
 
@@ -71,6 +79,12 @@ interface RunHandle<R extends BaseRun> {
   log?: WriteStream
   /** For an `awaiting-approval` run: the spec to spawn once it is approved. */
   pendingSpec?: RunSpec
+  /**
+   * The spec this run was spawned from, kept on the live handle (Phase 9). When the
+   * child dies on a usage limit, classification stashes it as a `pendingSpec` so the
+   * existing spawn-boundary machinery gives restart survival + respawn for free.
+   */
+  spec?: RunSpec
   /**
    * Set when a run is being torn down on purpose (a denied / rejected mid-run
    * intent). The child exits non-zero in response, but its terminal state is
@@ -152,6 +166,14 @@ export class RunnerCore<R extends BaseRun> {
      * (`PROGRESS` / `INTENT`) — still parsed from the *raw* line — stay intact.
      */
     private readonly formatLine?: (raw: string) => string | null,
+    /**
+     * Phase 9: resolve the epoch ms a limit-paused run should auto-resume at, from
+     * the reset the run's output named (or null when it named none). Wrappers back
+     * this with LimitsService (detected → earliest live window reset → conservative
+     * fallback); omitted in tests/runners that don't pause (the core then uses the
+     * detected value or {@link RESUME_FALLBACK_MS}).
+     */
+    private readonly resolveResumeAt?: (detected: number | null) => Promise<number>,
   ) {
     this.dir = path.resolve(dir)
     // One listener pair is added per open SSE connection; with many concurrent
@@ -248,6 +270,25 @@ export class RunnerCore<R extends BaseRun> {
             to: "interrupted",
           })
         }
+      } else if (run.status === "paused-limit") {
+        // Phase 9: a limit pause stashes its spawn spec exactly like an approval
+        // pause, so it survives a restart and the resume tick can respawn it. A
+        // paused-limit record WITHOUT a spec is a real orphan (its child died
+        // unclassified mid-write) → reconcile to interrupted, same as a spec-less
+        // approval pause.
+        const pendingSpec = await this.readPendingSpec(run.runId)
+        if (pendingSpec) {
+          this.runs.set(run.runId, { run, pendingSpec, spec: pendingSpec })
+        } else {
+          run = { ...run, status: "interrupted", resumeAt: null }
+          await this.writeSidecar(run)
+          this.runs.set(run.runId, { run })
+          this.logger?.warn("run reconciled after restart", {
+            runId: run.runId,
+            from: "paused-limit",
+            to: "interrupted",
+          })
+        }
       } else {
         this.runs.set(run.runId, { run })
       }
@@ -302,7 +343,7 @@ export class RunnerCore<R extends BaseRun> {
     const base = this.baseRun(spec, runId, startedMs, pid, logFile)
     base.pgid = pid
     const run = this.strategy.assemble(base, spec)
-    const handle: RunHandle<R> = { run, child, log }
+    const handle: RunHandle<R> = { run, child, log, spec }
     this.runs.set(runId, handle)
     await this.writeSidecar(run)
     this.wire(handle)
@@ -348,7 +389,12 @@ export class RunnerCore<R extends BaseRun> {
   async resume(runId: string): Promise<R> {
     const handle = this.runs.get(runId)
     if (!handle) throw new RunNotFoundError(runId)
-    if (handle.run.status !== "awaiting-approval") return handle.run
+    // Phase 9: `paused-limit` resumes the same way an approval-parked run does —
+    // its child died (no live process), so it always takes the stashed-spec respawn
+    // path below, never the Variant-B "release the blocked child" branch.
+    if (handle.run.status !== "awaiting-approval" && handle.run.status !== "paused-limit") {
+      return handle.run
+    }
 
     if (handle.child) {
       // Variant B: release the blocked child.
@@ -376,9 +422,12 @@ export class RunnerCore<R extends BaseRun> {
     })
     handle.child = child
     handle.log = createWriteStream(handle.run.logFile, { flags: "a" })
+    handle.spec = spec
     handle.run.pid = child.pid ?? 0
     handle.run.pgid = child.pid ?? 0
     handle.run.status = "running"
+    // A respawn clears any prior limit-pause marker; a fresh pause re-stamps it.
+    handle.run.resumeAt = null
     await this.writeSidecar(handle.run)
     this.wire(handle)
     this.emitStatus(handle.run)
@@ -414,7 +463,11 @@ export class RunnerCore<R extends BaseRun> {
       void this.writeSidecar(handle.run)
       this.emitStatus(handle.run)
     } else if (handle.child && handle.run.status === "running") {
-      // The kill's `exit` lands in `finalize`, which emits the terminal status.
+      // The kill's `exit` lands in `finalize`. Flag it as a deliberate teardown so the
+      // non-zero exit reconciles to `interrupted` (operator intent), not `error` — and,
+      // Phase 9, so a run that printed a usage-limit line before the operator killed it
+      // is NOT reclassified as `paused-limit` and auto-respawned (the watch-out).
+      handle.interrupting = true
       handle.child.kill()
     }
     this.logger?.info("run cancelled", { runId, status: handle.run.status })
@@ -459,6 +512,86 @@ export class RunnerCore<R extends BaseRun> {
     handle.run.status = "awaiting-approval"
     await this.writeSidecar(handle.run)
     this.emitStatus(handle.run)
+  }
+
+  /**
+   * Phase 9 — the async tail of a limit pause (kicked off from {@link wire}'s
+   * finalize). Resolve the window-reset epoch the run should auto-resume at, stash
+   * the spawn spec as a `pendingSpec` (so restart survival + respawn come free, like
+   * an approval pause), persist, and emit the paused status *with* its `resumeAt` —
+   * so a subscriber never sees a `paused-limit` run that lacks its resume time.
+   */
+  private async completeLimitPause(handle: RunHandle<R>, detected: number | null): Promise<void> {
+    const { run } = handle
+    let resumeAt: number
+    try {
+      resumeAt = this.resolveResumeAt
+        ? await this.resolveResumeAt(detected)
+        : (detected ?? Date.now() + RESUME_FALLBACK_MS)
+    } catch {
+      resumeAt = detected ?? Date.now() + RESUME_FALLBACK_MS
+    }
+    run.resumeAt = resumeAt
+    run.limitResumeCycles = run.limitResumeCycles ?? 0
+    if (handle.spec) {
+      handle.pendingSpec = handle.spec
+      await this.writePendingSpec(run.runId, handle.spec)
+    }
+    await this.writeSidecar(run)
+    this.emitStatus(run)
+  }
+
+  /**
+   * Phase 9 (secondary classification, owner-driven). Flip a run that just landed
+   * `error` to `paused-limit` when the owner's fresh LimitsService snapshot shows the
+   * window exhausted even though no limit line was printed. No-op unless the run is
+   * still `error` (idempotent against repeated status emissions).
+   */
+  async reclassifyErrorAsPausedLimit(runId: string, detected: number | null): Promise<R | undefined> {
+    const handle = this.runs.get(runId)
+    if (!handle || handle.run.status !== "error") return undefined
+    handle.run.status = "paused-limit"
+    handle.child = undefined
+    await this.completeLimitPause(handle, detected)
+    this.logger?.warn("run reclassified to paused-limit (window exhausted)", { runId })
+    return handle.run
+  }
+
+  /**
+   * Phase 9 — drop a stale `paused-limit` run to `interrupted` without respawning:
+   * used when a higher-level resume path re-drives the work fresh (a pipeline
+   * re-enters its phase with resume-context), so the old paused record must not be
+   * re-detected by the resume scan or resurrected after a restart. Clears the stashed
+   * spec; leaves the sandbox (its handoff/marker files) untouched.
+   */
+  async discardPausedLimit(runId: string): Promise<void> {
+    const handle = this.runs.get(runId)
+    if (!handle || handle.run.status !== "paused-limit") return
+    handle.run.status = "interrupted"
+    handle.run.resumeAt = null
+    handle.pendingSpec = undefined
+    await this.clearPendingSpec(runId)
+    await this.writeSidecar(handle.run)
+    this.emitStatus(handle.run)
+  }
+
+  /**
+   * Phase 9 — fail a `paused-limit` run that flapped past its resume cap (agent runs
+   * have no parked state, so the honest terminal is `error` with a readable reason).
+   * Appends the reason to the log and clears the stashed spec.
+   */
+  async failLimit(runId: string, reason: string): Promise<R | undefined> {
+    const handle = this.runs.get(runId)
+    if (!handle || handle.run.status !== "paused-limit") return undefined
+    handle.run.status = "error"
+    handle.run.resumeAt = null
+    handle.pendingSpec = undefined
+    await this.clearPendingSpec(runId)
+    await fs.appendFile(handle.run.logFile, `\n${reason}\n`, "utf8").catch(() => {})
+    await this.writeSidecar(handle.run)
+    this.emitStatus(handle.run)
+    this.logger?.warn("run failed after usage-limit flap", { runId, reason })
+    return handle.run
   }
 
   has(runId: string): boolean {
@@ -656,6 +789,8 @@ export class RunnerCore<R extends BaseRun> {
     if (!child || !log) return
 
     let limitSeen = false
+    // The reset epoch (ms) the first limit line named, stashed for classification.
+    let limitResetsAt: number | null = null
     // Buffer partial lines across chunks: a control line (PROGRESS / INTENT) split
     // over a chunk boundary must still be parsed whole — a missed INTENT would
     // strand the child blocking on its decision file indefinitely.
@@ -702,12 +837,16 @@ export class RunnerCore<R extends BaseRun> {
           }
         }
       }
-      // Layer 2: a usage-limit signal in the output busts the limits cache (once).
-      if (!limitSeen && this.onLimitHit) {
+      // Layer 2: a usage-limit signal in the output busts the limits cache (once) and
+      // — Phase 9 — is stashed so {@link finalize} can classify a child that dies on
+      // it as `paused-limit` rather than `error`. Run detection whenever either
+      // consumer is wired (the pipeline runner now wires onLimitHit too).
+      if (!limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
         const { hit, resetsAt } = detectLimit(text)
         if (hit) {
           limitSeen = true
-          this.onLimitHit(resetsAt)
+          limitResetsAt = resetsAt
+          this.onLimitHit?.(resetsAt)
         }
       }
       // Nudge any open log stream to read the freshly-appended bytes.
@@ -722,21 +861,43 @@ export class RunnerCore<R extends BaseRun> {
     // path so both demo and real runs route through the same {@link IntentHandler}.
     this.watchIntentRequest(handle)
 
-    const finalize = (status: RunnerRunStatus) => {
-      // A child that exits while the run is still `awaiting-approval` ended without
-      // the gate ever being decided (e.g. its blocking hook died) — that must never
-      // surface as `done`, which would read as "completed as if approved".
-      if (run.status === "awaiting-approval") status = "interrupted"
-      run.status = status
-      if (status === "done") run.pct = 100
-      this.stopIntentWatch(handle)
-      // Flush a final line the child emitted without a trailing newline (only the
-      // formatted path buffers it; the raw path already wrote it as part of the chunk).
+    // Flush a final line the child emitted without a trailing newline (only the
+    // formatted path buffers it; the raw path already wrote it as part of the chunk).
+    const flushResidual = () => {
       if (this.formatLine && residual) {
         const formatted = this.formatLine(residual)
         if (formatted !== null) log.write(`${formatted}\n`)
         residual = ""
       }
+    }
+
+    const finalize = (status: RunnerRunStatus) => {
+      // A child that exits while the run is still `awaiting-approval` ended without
+      // the gate ever being decided (e.g. its blocking hook died) — that must never
+      // surface as `done`, which would read as "completed as if approved".
+      if (run.status === "awaiting-approval") status = "interrupted"
+      // Phase 9: a child that died on the error path AND saw a usage-limit line is a
+      // *pause*, not a failure. An operator cancel routes here as `interrupted`
+      // (handle.interrupting) and is left untouched above — intent wins over a limit.
+      // A run that finished `done` despite a transient 429 line also stays done (only
+      // the error path reclassifies). The async tail resolves `resumeAt`, stashes the
+      // spawn spec (restart survival + respawn), and emits the paused status.
+      if (status === "error" && limitSeen) {
+        run.status = "paused-limit"
+        this.stopIntentWatch(handle)
+        flushResidual()
+        log.end(() => this.emitLog(run.runId))
+        // The child is dead; clear it so {@link resume} respawns from the stashed spec
+        // (the Variant-B "release a live blocked child" branch must not fire here).
+        handle.child = undefined
+        void this.completeLimitPause(handle, limitResetsAt)
+        this.logger?.warn("run paused on usage limit", { runId: run.runId })
+        return
+      }
+      run.status = status
+      if (status === "done") run.pct = 100
+      this.stopIntentWatch(handle)
+      flushResidual()
       // Signal the final log read only once the stream has flushed and closed, so a
       // tail the child emitted right before exit can't be lost to the done event
       // racing the buffered write to disk.

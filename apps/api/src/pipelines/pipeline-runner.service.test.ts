@@ -102,6 +102,13 @@ async function makeHarness(dir: string): Promise<Harness> {
       diffstat: vi.fn(async () => ""),
     } as never,
     { compose: vi.fn(async () => "") } as never,
+    // Limits double (Phase 9): headroom by default so the boundary/mid-stage limit
+    // guards stay out of the way of the gate/resume tests; windowExhausted → false.
+    {
+      noteLimitHit: vi.fn(),
+      resolveResumeAt: vi.fn(async () => Date.now() + 1_000),
+      windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
+    } as never,
     fakeLogger as never,
     fakeTrace as never,
   )

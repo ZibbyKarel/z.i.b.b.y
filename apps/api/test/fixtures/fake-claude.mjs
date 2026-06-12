@@ -119,6 +119,16 @@ async function main() {
     process.exit(1)
   }
 
+  // Phase 9: print the real usage-limit line + exit non-zero, so the run flows
+  // through the production detectLimit/finalize path → `paused-limit`. The value is
+  // the reset epoch (seconds), or "auto" → now + 2s (a near reset for fast e2e).
+  if (process.env.FAKE_CLAUDE_LIMIT) {
+    const raw = process.env.FAKE_CLAUDE_LIMIT
+    const reset = raw === "auto" ? Math.floor(Date.now() / 1000) + 2 : Number(raw)
+    log(`Claude AI usage limit reached|${reset}`)
+    process.exit(1)
+  }
+
   // Phase 3.1: land a commit on the run's branch (cwd is the worktree when one
   // exists). Ungated — a local commit is reversible, like koder's real commit.
   if (process.env.FAKE_CLAUDE_COMMIT) {

@@ -10,11 +10,17 @@ export type RunKind = "agent" | "skill" | "pipeline-stage"
 
 /**
  * The lifecycle states a run can be in. Mirrors the agent-run contract enum;
- * Phase 3 widens this with `awaiting-approval` (the runner pauses without a live
- * child). Kept as a local type so the runner package does not depend on a
- * particular resource's schema.
+ * Phase 3 widens this with `awaiting-approval` and Phase 9 with `paused-limit`
+ * (both: the runner pauses without a live child). Kept as a local type so the
+ * runner package does not depend on a particular resource's schema.
  */
-export type RunnerRunStatus = "running" | "done" | "error" | "interrupted" | "awaiting-approval"
+export type RunnerRunStatus =
+  | "running"
+  | "done"
+  | "error"
+  | "interrupted"
+  | "awaiting-approval"
+  | "paused-limit"
 
 /**
  * The kind-agnostic fields every run record carries on disk and in memory. A
@@ -34,6 +40,15 @@ export interface BaseRun {
   logFile: string
   /** Phase 6: process-group id for liveness probing; absent until then. */
   pgid?: number
+  /**
+   * Phase 9: when `status` is `paused-limit`, the epoch ms the usage window is
+   * expected to reset (null when unknown). The core sets it at classification time
+   * so a wrapper's record carries it through to the contract; the resume tick reads
+   * it. Absent on every non-paused run.
+   */
+  resumeAt?: number | null
+  /** Phase 9: how many times this run has been auto-resumed off a limit pause. */
+  limitResumeCycles?: number
 }
 
 /** Everything a wrapper must hand the core to spawn one run. */

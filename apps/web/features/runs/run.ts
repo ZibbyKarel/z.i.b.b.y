@@ -55,6 +55,12 @@ export interface RunView {
   heldReason?: string;
   /** Held tasks: the spend-past-cap approval gating the override. */
   approvalId?: string;
+  /** Phase 9: when `paused-limit`, the epoch ms the usage window resets (countdown). */
+  resumeAt?: number | null;
+  /** Phase 9: how many auto-resume cycles a limit-paused run has used ("2/3"). */
+  limitResumeCycles?: number;
+  /** Phase 9: a window-deferred scheduled task (`deferredReason === "limit"`). */
+  deferredLimit?: boolean;
 }
 
 /** Task-first display name: explicit title, else the task text, else the target. */
@@ -93,6 +99,8 @@ export function agentRunToView(r: AgentRun): RunView {
     startedAt: r.startedAt,
     logBase: "agents",
     taskId: r.taskId,
+    resumeAt: r.resumeAt,
+    limitResumeCycles: r.limitResumeCycles,
   };
 }
 
@@ -104,15 +112,17 @@ export function agentRunToView(r: AgentRun): RunView {
  */
 export function pipelineRunToView(r: PipelineRun): RunView {
   const status: FeedStatus =
-    r.status === "parked"
-      ? r.parkedReason === "retries"
-        ? "parked"
-        : "awaiting-approval"
-      : r.status === "failed"
-        ? "error"
-        : r.status === "done"
-          ? "done"
-          : "running";
+    r.status === "paused-limit"
+      ? "paused-limit"
+      : r.status === "parked"
+        ? r.parkedReason === "retries" || r.parkedReason === "limit"
+          ? "parked"
+          : "awaiting-approval"
+        : r.status === "failed"
+          ? "error"
+          : r.status === "done"
+            ? "done"
+            : "running";
   return {
     runId: r.pipelineRunId,
     kind: "pipeline",
@@ -126,6 +136,8 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     logBase: null,
     taskId: r.taskId,
     parked: r.parked,
+    resumeAt: r.resumeAt,
+    limitResumeCycles: r.limitResumeCycles,
   };
 }
 
@@ -188,6 +200,7 @@ export function scheduledTaskToView(t: ScheduledTask): RunView | null {
     projectId: t.projectId,
     heldReason: t.heldReason,
     approvalId: t.approvalId,
+    deferredLimit: t.deferredReason === "limit",
   };
 }
 
@@ -242,6 +255,13 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
     badge: "warn",
     dot: "wait",
     glyph: "wait",
+    pulse: false,
+  },
+  "paused-limit": {
+    key: "paused-limit",
+    badge: "neutral",
+    dot: "wait",
+    glyph: "pause",
     pulse: false,
   },
   held: {

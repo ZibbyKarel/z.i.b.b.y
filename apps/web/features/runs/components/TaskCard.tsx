@@ -6,7 +6,8 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { resumeEta } from "../../../utils/time";
 import { type RunView, runTitle } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 
@@ -17,6 +18,8 @@ export interface TaskCardProps {
   selected: boolean;
   stateLabel: string;
   startedLabel: string;
+  /** Render-stable now (epoch ms) for the limit-pause / deferral countdown. */
+  now: number;
   onSelect: (id: string) => void;
 }
 
@@ -31,22 +34,31 @@ export function TaskCard({
   selected,
   stateLabel,
   startedLabel,
+  now,
   onSelect,
 }: TaskCardProps) {
   const t = useTranslations("runs");
+  const locale = useLocale();
   const live = run.status === "running" || run.status === "awaiting-approval";
   const headline = runTitle(run);
   // The task-origin line is only worth a row when it adds something the
   // headline doesn't already say.
   const taskLine = run.taskTitle && run.taskTitle !== headline ? run.taskTitle : "";
-  // Phase 8 budget holds: a held task points at its approval; a queued task says
-  // which engagement it's waiting on a slot for.
-  const budgetCaption =
+  // Phase 8 budget holds + Phase 9 limit pauses: a held task points at its approval;
+  // a queued task says which engagement it's waiting on a slot for; a limit-paused run
+  // (or a window-deferred scheduled task) counts down to the window reset.
+  const caption =
     run.status === "held"
       ? t("heldCaption", { reason: run.heldReason ?? "" })
       : run.status === "queued"
         ? t("queuedCaption", { project: run.projectId ?? "" })
-        : "";
+        : run.status === "paused-limit"
+          ? t("pausedLimitCaption", { eta: resumeEta(run.resumeAt, now, locale) })
+          : run.status === "scheduled" && run.deferredLimit
+            ? t("deferredLimitCaption", {
+                eta: resumeEta(Date.parse(run.startedAt), now, locale),
+              })
+            : "";
   return (
     <Card
       as="button"
@@ -70,7 +82,7 @@ export function TaskCard({
               {t("metaTask")} · {taskLine}
             </Typography>
           )}
-          {budgetCaption && (
+          {caption && (
             <Typography
               truncate
               size="2xs"
@@ -78,7 +90,7 @@ export function TaskCard({
               type="note"
               variant={run.status === "held" ? undefined : "tertiary"}
             >
-              {budgetCaption}
+              {caption}
             </Typography>
           )}
           <Stack align="center" direction="row" gap="100" justify="between">

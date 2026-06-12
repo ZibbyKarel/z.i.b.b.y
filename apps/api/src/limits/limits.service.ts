@@ -23,6 +23,13 @@ export function buildLimits(snapshot: RateLimitSnapshot): Limits {
 export const CACHE_TTL_MS = 5 * 60 * 1000
 
 /**
+ * Conservative fallback for a limit pause's `resumeAt` (Phase 9) when neither the
+ * run's output nor any live window named a reset. Half an hour out — long enough a
+ * same-window retry won't instantly re-exhaust, short enough an idle run finishes.
+ */
+export const RESUME_FALLBACK_MS = 30 * 60 * 1000
+
+/**
  * Computes the interactive-limits readout backing the dashboard panel.
  *
  * Layer 1: {@link UsageFetcher} reads the authoritative 5h/weekly utilization
@@ -58,6 +65,43 @@ export class LimitsService {
   /** Drop the cached reading so the next request fetches a fresh one. */
   noteLimitHit(): void {
     this.cache = null
+  }
+
+  /**
+   * Phase 9: the epoch ms a limit-paused run should auto-resume at. Priority order
+   * (the roadmap's, verbatim): the reset the run's output named (when still future)
+   * → the earliest *live* window reset from the snapshot → a conservative
+   * `now + {@link RESUME_FALLBACK_MS}`. Never throws (a snapshot read failure falls
+   * straight through to the fallback).
+   */
+  async resolveResumeAt(detected: number | null, now: number = this.now()): Promise<number> {
+    if (detected != null && detected > now) return detected
+    const snap = await this.snapshot().catch(() => null)
+    const resets = snap
+      ? [snap.rolling.resetsAt, snap.weekly.resetsAt].filter(
+          (r): r is number => typeof r === "number" && r > now,
+        )
+      : []
+    if (resets.length > 0) return Math.min(...resets)
+    return now + RESUME_FALLBACK_MS
+  }
+
+  /**
+   * Phase 9: is a usage window exhausted *right now* with a trustworthy reading?
+   * Fail-closed on the freshness axis — a stale capture returns `false` so the
+   * secondary classifier and the resume scan never act on lagging numbers. `true`
+   * only when a non-stale snapshot shows either window at ≥ 100 %.
+   */
+  async windowExhausted(): Promise<{ exhausted: boolean; resumeAt: number | null }> {
+    const snap = await this.snapshot().catch(() => null)
+    if (!snap || snap.stale) return { exhausted: false, resumeAt: null }
+    const exhausted = snap.rolling.usedPct >= 100 || snap.weekly.usedPct >= 100
+    if (!exhausted) return { exhausted: false, resumeAt: null }
+    const now = this.now()
+    const resets = [snap.rolling.resetsAt, snap.weekly.resetsAt].filter(
+      (r): r is number => typeof r === "number" && r > now,
+    )
+    return { exhausted: true, resumeAt: resets.length > 0 ? Math.min(...resets) : null }
   }
 
   /** The current snapshot — cached, in-flight-deduped, or freshly fetched. */
