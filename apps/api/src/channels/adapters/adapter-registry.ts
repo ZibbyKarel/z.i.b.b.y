@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { CredentialsInput, Integration, TestResult } from "@zibby/contracts"
 import type { ConnectionTester } from "../../integrations/connection-tester"
 import type { ChannelAdapter } from "./adapter"
+import { EmailChannelAdapter } from "./email.adapter"
 import { FakeChannelAdapter } from "./fake.adapter"
 import { SlackChannelAdapter } from "./slack.adapter"
 
@@ -16,6 +17,7 @@ import { SlackChannelAdapter } from "./slack.adapter"
 @Injectable()
 export class AdapterRegistry implements ConnectionTester {
   private readonly slack = new SlackChannelAdapter()
+  private readonly email = new EmailChannelAdapter()
   private readonly fake = new FakeChannelAdapter()
 
   private fakeMode(): boolean {
@@ -29,8 +31,7 @@ export class AdapterRegistry implements ConnectionTester {
       case "slack":
         return this.slack
       case "email":
-        // The email adapter lands in 5.4; until then real-mode email has no driver.
-        throw new Error("email adapter not available (CHANNEL_ADAPTER_MODE=fake for tests)")
+        return this.email
     }
   }
 

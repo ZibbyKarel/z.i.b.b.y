@@ -180,6 +180,48 @@ describe("Channels triage throughline (e2e)", () => {
     })
   })
 
+  // The fake adapter is kind-agnostic, so re-running the ingest+triage+reply flow
+  // against an EMAIL integration proves the abstraction — and exercises the one
+  // email-specific rule: a reply is also a `send_email`, so it's structurally
+  // approval-gated (Law 3) even with reply mandate on.
+  it("email Tier 2 reply is structurally approval-gated (send_email floor), then approve → sent", async () => {
+    await request(app.getHttpServer())
+      .post("/api/integrations")
+      .send({
+        id: "support",
+        kind: "email",
+        name: "Support Mail",
+        config: { kind: "email", imapHost: "imap.x", imapPort: 993, smtpHost: "smtp.x", smtpPort: 465, user: "bot@x.com" },
+      })
+      .expect(201)
+    await request(app.getHttpServer()).put("/api/integrations/support/credentials").send({ password: "pw" }).expect(200)
+    // mandate.reply is already true from the slack Tier-2 test above.
+
+    await seed(fakeDir, "support", "001.json", "Can you share the latest status please?")
+    await app.get(ChannelWatcherService).tick()
+
+    const item = await findItem((i) => i.text.includes("share the latest status please"))
+    expect(item.triage.tier).toBe(2)
+    // NOT sent despite reply mandate on — the send_email ask-floor parks it.
+    expect(item.state).toBe("triaged")
+    expect(item.reply).toBeFalsy()
+
+    const pending = await request(app.getHttpServer()).get("/api/approvals?status=pending").expect(200)
+    const approval = pending.body.find(
+      (a: { kind: string; runId: string }) => a.kind === "channel" && a.runId === `support/${item.id}`,
+    )
+    expect(approval).toBeTruthy()
+
+    const sentBefore = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200)
+    await until(async () => {
+      const found = (await items()).body.find((i: { id: string }) => i.id === item.id)
+      return found?.state === "handled" ? found : null
+    })
+    const sentAfter = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length
+    expect(sentAfter).toBe(sentBefore + 1)
+  })
+
   it("a restart over the same data dir does not re-ingest (dedup + cursor)", async () => {
     const before = (await items()).body.length
     await app.close()

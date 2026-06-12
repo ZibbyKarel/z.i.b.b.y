@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
-import type { CredentialsInput, ExternalRef, Integration, TestResult } from "@zibby/contracts"
+import type { ChannelItem, CredentialsInput, Integration, TestResult } from "@zibby/contracts"
 import { safeJson } from "../../shared/file-storage"
 import type { ChannelAdapter, InboundMessage, PollResult } from "./adapter"
 
@@ -68,7 +68,7 @@ export class FakeChannelAdapter implements ChannelAdapter {
   async send(
     integration: Integration,
     _creds: CredentialsInput,
-    ref: ExternalRef,
+    item: ChannelItem,
     text: string,
   ): Promise<void> {
     const sentDir = path.join(this.dir(), "sent")
@@ -79,7 +79,7 @@ export class FakeChannelAdapter implements ChannelAdapter {
     const file = path.join(sentDir, `${existing.length}.json`)
     await fs.writeFile(
       file,
-      JSON.stringify({ integrationId: integration.id, ref, text }),
+      JSON.stringify({ integrationId: integration.id, itemId: item.id, ref: item.externalRef, text }),
       "utf8",
     )
   }

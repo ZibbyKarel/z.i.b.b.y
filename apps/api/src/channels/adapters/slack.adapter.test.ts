@@ -61,15 +61,25 @@ describe("SlackChannelAdapter", () => {
   })
 
   it("send posts to the thread and rejects on a slack error", async () => {
+    const item = {
+      id: "C123-1-2",
+      integrationId: "team-slack",
+      kind: "slack" as const,
+      externalRef: { channel: "C123", ts: "1.2" },
+      receivedAt: "2026-06-12T00:00:00.000Z",
+      text: "hi",
+      raw: {},
+      state: "triaged" as const,
+    }
     const fetchImpl = jsonFetch({ ok: true })
     const adapter = new SlackChannelAdapter(fetchImpl)
-    await adapter.send(slack, { token: "xoxb-1" }, { channel: "C123", ts: "1.2" }, "on it")
+    await adapter.send(slack, { token: "xoxb-1" }, item, "on it")
     const init = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1] as RequestInit
     expect(JSON.parse(init.body as string)).toMatchObject({ channel: "C123", thread_ts: "1.2", text: "on it" })
 
     const failing = new SlackChannelAdapter(jsonFetch({ ok: false, error: "channel_not_found" }))
     await expect(
-      failing.send(slack, { token: "xoxb-1" }, { channel: "C9", ts: "1.2" }, "hi"),
+      failing.send(slack, { token: "xoxb-1" }, { ...item, externalRef: { channel: "C9", ts: "1.2" } }, "hi"),
     ).rejects.toThrow(/channel_not_found/)
   })
 })

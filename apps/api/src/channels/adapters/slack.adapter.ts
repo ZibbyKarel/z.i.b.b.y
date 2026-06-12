@@ -1,4 +1,4 @@
-import type { CredentialsInput, ExternalRef, Integration, TestResult } from "@zibby/contracts"
+import type { ChannelItem, CredentialsInput, ExternalRef, Integration, TestResult } from "@zibby/contracts"
 import type { ChannelAdapter, InboundMessage, PollResult } from "./adapter"
 
 /** Slack Web API base; overridable for unit tests that inject a fake fetch. */
@@ -104,11 +104,12 @@ export class SlackChannelAdapter implements ChannelAdapter {
   async send(
     integration: Integration,
     creds: CredentialsInput,
-    ref: ExternalRef,
+    item: ChannelItem,
     text: string,
   ): Promise<void> {
     const token = tokenOf(creds)
     if (!token) throw new Error("no slack token configured")
+    const ref: ExternalRef = item.externalRef
     const res = await this.fetchImpl(`${SLACK_API}/chat.postMessage`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },

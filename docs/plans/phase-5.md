@@ -476,7 +476,7 @@ Tests:
   pre-existing-failure baseline first (memory:
   project_playwright_e2e_preexisting_failures).
 
-5.4 Email adapter
+5.4 Email adapter  ✅ DONE
 
 - email.adapter.ts implementing the same interface: poll = imapflow client
   (UNSEEN since cursor UID, normalize from/subject/text, mark seen only

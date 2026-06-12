@@ -1,4 +1,4 @@
-import type { CredentialsInput, ExternalRef, Integration, TestResult } from "@zibby/contracts"
+import type { ChannelItem, CredentialsInput, ExternalRef, Integration, TestResult } from "@zibby/contracts"
 
 /**
  * A normalized inbound message as an adapter yields it, BEFORE it becomes a
@@ -39,6 +39,10 @@ export interface ChannelAdapter {
   test(integration: Integration, creds: CredentialsInput): Promise<TestResult>
   /** Fetch messages newer than `cursor`; return them + the advanced cursor. */
   poll(integration: Integration, creds: CredentialsInput, cursor: string | undefined): Promise<PollResult>
-  /** Send a reply addressed by the item's `externalRef`. */
-  send(integration: Integration, creds: CredentialsInput, ref: ExternalRef, text: string): Promise<void>
+  /**
+   * Send a reply to an item. Takes the whole item (not just its `externalRef`) so
+   * an adapter can address the reply however its channel needs — Slack threads on
+   * `externalRef`, email replies to the item's `from` with the original Message-ID.
+   */
+  send(integration: Integration, creds: CredentialsInput, item: ChannelItem, text: string): Promise<void>
 }

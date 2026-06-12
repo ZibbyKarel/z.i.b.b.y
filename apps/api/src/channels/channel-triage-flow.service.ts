@@ -1,5 +1,12 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common"
-import type { ChannelItem, GateRule, GlobalGateRule, Mandate, TriageVerdict } from "@zibby/contracts"
+import type {
+  ChannelItem,
+  Decision,
+  GateRule,
+  GlobalGateRule,
+  Mandate,
+  TriageVerdict,
+} from "@zibby/contracts"
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service"
@@ -17,6 +24,9 @@ import { TriageService } from "./triage/triage.service"
 
 /** The action a channel reply is gated on (added to the policy floor at `notify`). */
 const CHANNEL_REPLY_ACTION = "channel-reply"
+
+/** Strength ordering, mirroring the gate evaluator — a higher rank is stricter. */
+const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, deny: 3 }
 
 /** A default draft when triage produced none (kept generic; never echoes raw text into a prompt). */
 const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly."
@@ -124,7 +134,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
   ): Promise<ChannelItem> {
     if (!replyAllowed) return this.parkForApproval(item, verdict)
 
-    const decision = await this.evaluateReply(item.integrationId)
+    const decision = await this.evaluateReply(item.integrationId, item.kind)
     if (decision === "deny") {
       const ignored: ChannelItem = { ...item, state: "ignored" }
       await this.store.update(ignored)
@@ -210,7 +220,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     const creds = await this.credentials.read(item.integrationId)
     if (!creds) throw new Error(`no credentials for ${item.integrationId}`)
     const adapter = this.registry.resolve(integration.kind)
-    await adapter.send(integration, creds, item.externalRef, text)
+    await adapter.send(integration, creds, item, text)
     const handled: ChannelItem = {
       ...item,
       state: "handled",
@@ -221,15 +231,26 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     return handled
   }
 
-  /** Evaluate the channel-reply action against the operator gate rules + the floor. */
-  private async evaluateReply(integrationId: string): Promise<"allow" | "notify" | "ask" | "deny"> {
+  /**
+   * Evaluate the reply against the operator gate rules + the floor. An email reply
+   * is BOTH a `channel-reply` AND a `send_email` — it hits the `send_email`
+   * ask-floor too — so it evaluates both actions and takes the STRICTER decision
+   * (decision 14). With `send_email` at `ask` on the locked floor (and
+   * validateHardenOnly forbidding softening it), email replies are *structurally*
+   * approval-gated: Law 3 applied to outbound mail.
+   */
+  private async evaluateReply(
+    integrationId: string,
+    kind: ChannelItem["kind"],
+  ): Promise<Decision> {
     const floor = await this.gates.floor()
-    const channelRules = (await this.gateRules.list()).map(toGateRule)
-    const evaluation = this.gates.evaluate([...channelRules, ...floor], {
-      action: CHANNEL_REPLY_ACTION,
-      context: integrationId,
-    })
-    return evaluation.decision
+    const rules = [...(await this.gateRules.list()).map(toGateRule), ...floor]
+    const actions = kind === "email" ? [CHANNEL_REPLY_ACTION, "send_email"] : [CHANNEL_REPLY_ACTION]
+    const decisions = actions.map(
+      (action) => this.gates.evaluate(rules, { action, context: integrationId }).decision,
+    )
+    // Stricter (higher rank) wins.
+    return decisions.reduce((a, b) => (DECISION_RANK[b] > DECISION_RANK[a] ? b : a))
   }
 
   private async itemFromRef(runId: string): Promise<ChannelItem | null> {
