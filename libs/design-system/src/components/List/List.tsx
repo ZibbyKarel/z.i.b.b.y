@@ -23,6 +23,8 @@ export interface NavItem {
   label: string;
   glyph: IconName;
   badge?: number;
+  /** Accessible label for the badge (e.g. "3 items need attention"). */
+  badgeLabel?: string;
   href?: string;
 }
 

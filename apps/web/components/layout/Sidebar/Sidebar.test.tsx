@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { NavItem } from "@zibby/design-system"
+import { ListTestId, type NavItem } from "@zibby/design-system"
 import { renderWithProviders, screen } from "../../../test/render"
 import { Sidebar } from "./Sidebar"
 
@@ -33,5 +33,26 @@ describe("Sidebar", () => {
       />,
     )
     expect(screen.getByText("Nastavení")).toBeInTheDocument()
+  })
+
+  it("renders a badge with its count and accessible label when present", () => {
+    renderWithProviders(
+      <Sidebar
+        activeNav="overview"
+        navItems={[
+          { id: "runs", glyph: "pulse", href: "/runs", label: "Běhy", badge: 3, badgeLabel: "3 items need attention" },
+        ]}
+      />,
+    )
+    const badge = screen.getByTestId(ListTestId.Badge)
+    expect(badge).toHaveTextContent("3")
+    expect(badge).toHaveAccessibleName("3 items need attention")
+  })
+
+  it("hides the badge at zero (no badge prop)", () => {
+    renderWithProviders(
+      <Sidebar activeNav="overview" navItems={navItems} />,
+    )
+    expect(screen.queryByTestId(ListTestId.Badge)).not.toBeInTheDocument()
   })
 })

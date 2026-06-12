@@ -13,6 +13,9 @@
     "settings": "System settings",
     "projects": "Projects"
   },
+  "notifications": {
+    "attention": "{count} items need attention"
+  },
   "memory": {
     "knowledgeGraph": "Knowledge graph",
     "loadingGraph": "Loading graph…",

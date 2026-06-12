@@ -33,7 +33,9 @@ export function Sidebar({ navItems, activeNav, footerItem }: SidebarProps) {
             <ListItem active={item.id === activeNav}>
               <ListItemIcon glyph={item.glyph} />
               <ListItemText>{item.label}</ListItemText>
-              {item.badge ? <ListItemBadge>{item.badge}</ListItemBadge> : null}
+              {item.badge ? (
+                <ListItemBadge aria-label={item.badgeLabel}>{item.badge}</ListItemBadge>
+              ) : null}
             </ListItem>
           </Link>
         ))}

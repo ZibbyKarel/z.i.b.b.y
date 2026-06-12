@@ -13,6 +13,9 @@
     "settings": "Nastavení systému",
     "projects": "Projekty"
   },
+  "notifications": {
+    "attention": "{count} položek vyžaduje pozornost"
+  },
   "memory": {
     "knowledgeGraph": "Graf znalostí",
     "loadingGraph": "Načítám graf…",

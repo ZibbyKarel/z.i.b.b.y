@@ -11,6 +11,7 @@ import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../..
 import { CatalogProvider } from "../../../state/store";
 import { VoiceButton, VoiceProvider } from "../../../features/voice";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
+import { navBadgeCount, useNotifications } from "../../../features/notifications";
 
 const NAV_IDS = new Set<NavId>([
   ...NAV_ITEMS.map((n) => n.id),
@@ -25,12 +26,20 @@ function pathnameToNavId(pathname: string): NavId {
 
 function AppShellInner({ children }: { children: ReactNode }) {
   const t = useTranslations("nav");
+  const tRoot = useTranslations();
   const pathname = usePathname();
   const activeNav = pathnameToNavId(pathname);
+
+  // Notification discipline (Phase 6.3): the runs nav badge is a pure function of
+  // pending approvals + retries-parked runs — no store, no read/unread state.
+  const badge = navBadgeCount(useNotifications());
 
   const navItems: NavItem[] = NAV_ITEMS.map((item) => ({
     ...item,
     label: t(item.id),
+    ...(item.id === "runs" && badge > 0
+      ? { badge, badgeLabel: tRoot("notifications.attention", { count: badge }) }
+      : {}),
   }));
 
   const footerItem: NavItem = {
