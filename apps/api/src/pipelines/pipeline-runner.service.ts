@@ -301,13 +301,22 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       this.runs.set(pipelineRunId, fromDisk)
       run = fromDisk
     }
-    if (run.status !== "parked" || run.parkedReason !== "retries" || !run.parked) {
+    // Phase 9 widens the resumable parkings from `retries`-only to `retries | limit`.
+    const isLimit = run.parkedReason === "limit"
+    if (
+      run.status !== "parked" ||
+      (run.parkedReason !== "retries" && !isLimit) ||
+      !run.parked
+    ) {
       throw new RunNotRetriesParkedError(pipelineRunId)
     }
     const pipeline = await this.pipelines.get(run.pipelineId)
     const parked = run.parked
     const phase = pipeline.phases.find((p) => p.id === parked.phaseId)
-    if (!phase?.loop) throw new RunNotRetriesParkedError(pipelineRunId)
+    // A retries-parking re-enters the loop back-edge (needs a loop); a limit-parking
+    // re-runs the parked phase itself, so it only needs the phase to still exist.
+    if (!phase) throw new RunNotRetriesParkedError(pipelineRunId)
+    if (!isLimit && !phase.loop) throw new RunNotRetriesParkedError(pipelineRunId)
 
     const trimmed = note?.trim()
     if (trimmed) {
@@ -320,32 +329,135 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     }
 
     const retries = new Map(Object.entries(run.retries ?? {}))
-    retries.set(parked.phaseId, 0)
+    // A limit-parking does NOT reset the loop retry map (the pause never consumed it);
+    // a retries-parking resets the parked phase's counter so the loop gets a fresh run.
+    if (!isLimit) retries.set(parked.phaseId, 0)
+
+    // Limit: re-run the parked phase in place; retries: take the loop back-edge.
+    const cursor = isLimit ? parked.phaseId : (phase.loop as NonNullable<typeof phase.loop>).to
+    // Limit: the failure file is just a flap note — feed the real upstream handoff;
+    // retries: the failure context IS the handoff the retried phase consumes.
+    const handoffSource = isLimit
+      ? this.recomputeHandoff(run, pipeline, cursor)
+      : parked.failureFile
 
     run.status = "running"
     delete run.parkedReason
     delete run.parked
     run.retries = Object.fromEntries(retries)
-    run.currentStage = phase.loop.to
+    run.currentStage = cursor
     await this.writeAggregate(run)
     this.log.info("parked pipeline run resumed", {
       pipelineRunId,
       phase: parked.phaseId,
-      retryTo: phase.loop.to,
+      reason: isLimit ? "limit" : "retries",
+      resumeTo: cursor,
       withNote: Boolean(trimmed),
     })
 
     const project = await this.projectForRun(run)
-    const cursor = phase.loop.to
     const traceId = this.trace.getTraceId() ?? randomUUID()
     void this.trace.run({ traceId, runId: pipelineRunId }, () =>
-      this.drive(run, pipeline, project, {
-        cursor,
-        handoffSource: parked.failureFile,
-        retries,
-      }),
+      this.drive(run, pipeline, project, { cursor, handoffSource, retries }),
     )
     return run
+  }
+
+  /**
+   * Phase 9: the pipeline runs currently paused on the usage limit (each carries its
+   * `resumeAt` + `limitResumeCycles`). The {@link LimitResumeService} scans this on a
+   * tick and resumes the due ones.
+   */
+  listLimitPaused(): PipelineRun[] {
+    return this.list().filter((r) => r.status === "paused-limit")
+  }
+
+  /**
+   * Phase 9: auto-resume a limit-paused pipeline run. Bumps the resume-cycle counter,
+   * discards any mid-stage paused stage record (so the resume scan / a restart can't
+   * re-detect it), and re-drives from the current phase — re-running it fresh (with
+   * resume-context once 9.3 lands). If the window is still exhausted the driver's
+   * boundary check re-pauses it immediately (cheap, no token), burning one cycle.
+   */
+  async resumeLimitPaused(pipelineRunId: string): Promise<PipelineRun> {
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    this.runs.set(pipelineRunId, run)
+    if (run.status !== "paused-limit") return run
+    const pipeline = await this.pipelines.get(run.pipelineId)
+    for (const s of run.stageRuns) {
+      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {})
+    }
+    run.limitResumeCycles = (run.limitResumeCycles ?? 0) + 1
+    run.status = "running"
+    run.resumeAt = null
+    await this.writeAggregate(run)
+    const project = await this.projectForRun(run)
+    const cursor = run.currentStage ?? pipeline.phases[0]?.id ?? null
+    const retries = new Map(Object.entries(run.retries ?? {}))
+    this.log.info("auto-resumed limit-paused pipeline run", {
+      pipelineRunId,
+      phase: cursor,
+      cycle: run.limitResumeCycles,
+    })
+    if (cursor) {
+      const handoffSource = this.recomputeHandoff(run, pipeline, cursor)
+      const traceId = this.trace.getTraceId() ?? randomUUID()
+      void this.trace.run({ traceId, runId: pipelineRunId }, () =>
+        this.drive(run, pipeline, project, { cursor, handoffSource, retries }),
+      )
+    }
+    return run
+  }
+
+  /**
+   * Phase 9: park a limit-paused pipeline run that flapped past `LIMIT_RESUME_MAX`.
+   * Durable, operator-resumable (`parkedReason: "limit"`, re-enters at the parked
+   * phase). Writes a short flap note as the parked surface and discards any stale
+   * paused stage record.
+   */
+  async parkLimitFlapped(pipelineRunId: string): Promise<PipelineRun> {
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    this.runs.set(pipelineRunId, run)
+    const phaseId =
+      run.currentStage ?? run.stageRuns[run.stageRuns.length - 1]?.phaseId ?? "?"
+    const cycles = run.limitResumeCycles ?? 0
+    const failureFile = path.join(run.cwd, `${phaseId}.limit.txt`)
+    await fs
+      .writeFile(
+        failureFile,
+        `Pipeline "${run.pipelineId}" paused on the usage limit; auto-resume flapped ${cycles} time(s) and was parked for review.\n`,
+        "utf8",
+      )
+      .catch(() => {})
+    for (const s of run.stageRuns) {
+      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {})
+    }
+    run.status = "parked"
+    run.parkedReason = "limit"
+    run.parked = { phaseId, attempts: Math.max(1, cycles), failureFile }
+    run.resumeAt = null
+    run.currentStage = phaseId
+    await this.writeAggregate(run)
+    this.log.warn("pipeline run parked after usage-limit flap", { pipelineRunId, phaseId, cycles })
+    return run
+  }
+
+  /**
+   * Phase 9: the absolute handoff a re-driven phase should consume — the `produces`
+   * file of the nearest *upstream* phase that emits one. Used by limit-resume and the
+   * limit-parking resume, which re-enter mid-pipeline without the original drive's
+   * in-memory `handoffSource`. Null when no upstream phase produces anything.
+   */
+  private recomputeHandoff(run: PipelineRun, pipeline: Pipeline, cursor: string): string | null {
+    const order = pipeline.phases
+    const idx = order.findIndex((p) => p.id === cursor)
+    for (let i = idx - 1; i >= 0; i--) {
+      const ph = order[i]
+      if (ph?.produces) return path.join(run.cwd, ph.id, ph.produces)
+    }
+    return null
   }
 
   list(): PipelineRun[] {

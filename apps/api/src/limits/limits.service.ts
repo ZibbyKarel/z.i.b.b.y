@@ -87,6 +87,18 @@ export class LimitsService {
   }
 
   /**
+   * Phase 9 (auto-resume scan). Is it safe to resume a limit-paused run right now?
+   * Fail-CLOSED on freshness (decision 5): a `stale` reading returns
+   * `{ stale: true, hasHeadroom: false }` so the resume tick never acts on a lagging
+   * capture. `hasHeadroom` is true only on a fresh reading with both windows < 100 %.
+   */
+  async resumeReadiness(): Promise<{ stale: boolean; hasHeadroom: boolean }> {
+    const snap = await this.snapshot().catch(() => null)
+    if (!snap || snap.stale) return { stale: true, hasHeadroom: false }
+    return { stale: false, hasHeadroom: snap.rolling.usedPct < 100 && snap.weekly.usedPct < 100 }
+  }
+
+  /**
    * Phase 9: is a usage window exhausted *right now* with a trustworthy reading?
    * Fail-closed on the freshness axis — a stale capture returns `false` so the
    * secondary classifier and the resume scan never act on lagging numbers. `true`

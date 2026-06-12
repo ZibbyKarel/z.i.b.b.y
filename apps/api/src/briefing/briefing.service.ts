@@ -62,6 +62,9 @@ export class BriefingService {
       this.projects.list().catch(() => []),
     ])
     const parkedRuns = allRuns.filter((r) => r.status === "parked")
+    // Phase 9: runs paused on the usage limit feed the "watching" line (Tier 1 — they
+    // auto-resume, so they don't go in "needs you").
+    const pausedLimitRuns = allRuns.filter((r) => r.status === "paused-limit")
     const inFlight = channelItems.filter((i) => i.state === "new" || i.state === "triaged")
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
@@ -71,6 +74,7 @@ export class BriefingService {
       since,
       approvals,
       parkedRuns,
+      pausedLimitRuns,
       channelItems: inFlight,
       activity,
       tasks,

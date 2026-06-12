@@ -12,6 +12,7 @@ import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { HealthModule } from "./health/health.module"
 import { IntegrationsModule } from "./integrations/integrations.module"
+import { LimitResumeModule } from "./limits-resume/limit-resume.module"
 import { LimitsModule } from "./limits/limits.module"
 import { MandateModule } from "./mandate/mandate.module"
 import { MemoryModule } from "./memory/memory.module"
@@ -43,6 +44,7 @@ import { TasksModule } from "./tasks/tasks.module"
     ChannelsModule,
     HealthModule,
     LimitsModule,
+    LimitResumeModule,
     EventsModule,
     BudgetModule,
     TasksModule,

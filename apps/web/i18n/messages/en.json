@@ -174,6 +174,7 @@
     "briefingReady": "ready",
     "briefingDid": "{count} handled",
     "briefingWatching": "watching {count} channels",
+    "briefingPausedLimit": "{count} paused on the limit",
     "briefingEngagement": "{needs} need · {did} done · {queued} queued · {held} held",
     "starterTitle": "start here · build the dashboard",
     "approvalsQueue": "approvals queue",

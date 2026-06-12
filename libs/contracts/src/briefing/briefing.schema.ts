@@ -43,11 +43,23 @@ export const BriefingEngagementSchema = z.object({
 })
 export type BriefingEngagement = z.infer<typeof BriefingEngagementSchema>
 
-/** A channel ZIBBY is watching, with the count of new items in the window. */
+/**
+ * Something ZIBBY is keeping an eye on. Two shapes share the array:
+ * - a watched **channel** (`integrationId` + `newItems`), the Phase 6 shape; and
+ * - a run **paused on the usage limit** (Phase 9): `runRef` + a human `summary` +
+ *   the `resumeAt` epoch it will auto-resume at. No operator action is needed (it is
+ *   Tier 1), so it sits in "watching", not "needs you".
+ * The channel fields are optional so a run-pause entry can omit them; a channel entry
+ * always carries `integrationId`.
+ */
 export const BriefingWatchItemSchema = z.object({
-  integrationId: z.string(),
-  newItems: z.number().int().nonnegative(),
+  integrationId: z.string().optional(),
+  newItems: z.number().int().nonnegative().optional(),
   lastReceivedAt: z.string().datetime().optional(),
+  /** Phase 9 run-pause watch: the paused run, a butler-voice line, and its resume epoch. */
+  runRef: z.string().optional(),
+  summary: z.string().optional(),
+  resumeAt: z.number().int().nullable().optional(),
 })
 export type BriefingWatchItem = z.infer<typeof BriefingWatchItemSchema>
 

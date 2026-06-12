@@ -88,6 +88,32 @@ describe("assembleBriefing", () => {
     expect(briefing.needsYou[0]!.id).toBe("ap2")
   })
 
+  it("Phase 9: a paused-limit run joins watching (not needsYou) with its resume epoch", () => {
+    const resumeAt = Date.parse("2026-06-12T08:30:00.000Z")
+    const briefing = assembleBriefing({
+      now: NOW,
+      since: SINCE,
+      approvals: [],
+      parkedRuns: [],
+      pausedLimitRuns: [
+        parked({ pipelineRunId: "p9", pipelineId: "delivery", status: "paused-limit", resumeAt }),
+      ],
+      channelItems: [channelItem({})],
+      activity: [],
+    })
+    // A pause is Tier 1 — it watches, it does not need the operator.
+    expect(briefing.needsYou).toHaveLength(0)
+    // The channel watch item AND the run-pause watch item share the array.
+    expect(briefing.watching).toContainEqual({
+      runRef: "p9",
+      summary: "pipeline delivery paused on the usage limit",
+      resumeAt,
+    })
+    // The markdown surfaces the pause line with its resume time.
+    const md = renderBriefingMarkdown(briefing)
+    expect(md).toContain("pipeline delivery paused on the usage limit, resumes")
+  })
+
   it("emits a calm nothing-needs-you output when nothing is pending", () => {
     const briefing = assembleBriefing({
       now: NOW, since: SINCE, approvals: [], parkedRuns: [], channelItems: [], activity: [],

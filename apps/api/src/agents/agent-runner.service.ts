@@ -363,8 +363,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       .map(toAgentRun)
   }
 
-  /** Phase 9: resume a limit-paused agent run — respawn from its stashed spawn spec. */
+  /**
+   * Phase 9: resume a limit-paused agent run — bump its auto-resume cycle counter
+   * (so a re-pause carries it forward), then respawn from its stashed spawn spec.
+   */
   async resumeLimitPaused(runId: string): Promise<AgentRun> {
+    await this.core.markResumeCycle(runId)
     return toAgentRun(await this.core.resume(runId))
   }
 

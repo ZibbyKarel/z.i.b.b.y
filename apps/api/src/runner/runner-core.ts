@@ -558,6 +558,19 @@ export class RunnerCore<R extends BaseRun> {
   }
 
   /**
+   * Phase 9 — increment a run's auto-resume cycle counter (persisted), returning the
+   * new count. Called by the owner right before {@link resume} so the count survives a
+   * re-pause (the re-pause's {@link completeLimitPause} preserves the existing value).
+   */
+  async markResumeCycle(runId: string): Promise<number> {
+    const handle = this.runs.get(runId)
+    if (!handle) return 0
+    handle.run.limitResumeCycles = (handle.run.limitResumeCycles ?? 0) + 1
+    await this.writeSidecar(handle.run)
+    return handle.run.limitResumeCycles
+  }
+
+  /**
    * Phase 9 — drop a stale `paused-limit` run to `interrupted` without respawning:
    * used when a higher-level resume path re-drives the work fresh (a pipeline
    * re-enters its phase with resume-context), so the old paused record must not be

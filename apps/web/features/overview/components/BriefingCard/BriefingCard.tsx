@@ -48,6 +48,10 @@ export function BriefingCard() {
   if (!briefing) return null;
   const b: Briefing = briefing;
   const accent = !b.nothingNeedsYou;
+  // Phase 9: the watching array mixes watched channels (integrationId) with runs
+  // paused on the usage limit (summary) — count them separately so each line is honest.
+  const watchingChannels = b.watching.filter((w) => w.integrationId).length;
+  const pausedLimitRuns = b.watching.filter((w) => w.summary).length;
 
   return (
     <Container data-testid={BriefingCardTestId.Root}>
@@ -114,9 +118,14 @@ export function BriefingCard() {
             <Typography mono size="xs" type="note" variant="tertiary">
               {t("overview.briefingDid", { count: b.didForYou.length })}
             </Typography>
-            {b.watching.length > 0 && (
+            {watchingChannels > 0 && (
               <Typography mono size="xs" type="note" variant="tertiary">
-                {t("overview.briefingWatching", { count: b.watching.length })}
+                {t("overview.briefingWatching", { count: watchingChannels })}
+              </Typography>
+            )}
+            {pausedLimitRuns > 0 && (
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {t("overview.briefingPausedLimit", { count: pausedLimitRuns })}
               </Typography>
             )}
           </Stack>

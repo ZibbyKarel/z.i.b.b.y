@@ -19,6 +19,8 @@ export interface BriefingInput {
   approvals: Approval[]
   /** Parked pipeline runs (status === "parked"). */
   parkedRuns: PipelineRun[]
+  /** Phase 9: pipeline runs currently paused on the usage limit (status "paused-limit"). */
+  pausedLimitRuns?: PipelineRun[]
   /** Channel items still in flight (state new or triaged). */
   channelItems: ChannelItem[]
   /** Activity entries recorded since the cursor (newest-first is fine; we sort). */
@@ -50,7 +52,7 @@ const DID_LIMIT = 10
 export function assembleBriefing(input: BriefingInput): Briefing {
   const needsYou = buildNeedsYou(input.approvals, input.parkedRuns)
   const didForYou = buildDidForYou(input.activity)
-  const watching = buildWatching(input.channelItems)
+  const watching = buildWatching(input.channelItems, input.pausedLimitRuns ?? [])
   const engagements = buildEngagements(
     input.tasks ?? [],
     didForYou,
@@ -141,7 +143,10 @@ function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {
     .map((e) => ({ kind: e.kind, summary: e.summary, at: e.at, ...(e.refs.projectId ? { projectId: e.refs.projectId } : {}) }))
 }
 
-function buildWatching(channelItems: ChannelItem[]): BriefingWatchItem[] {
+function buildWatching(
+  channelItems: ChannelItem[],
+  pausedLimitRuns: PipelineRun[],
+): BriefingWatchItem[] {
   const byIntegration = new Map<string, { newItems: number; lastReceivedAt?: string }>()
   for (const item of channelItems) {
     const cur = byIntegration.get(item.integrationId) ?? { newItems: 0 }
@@ -149,9 +154,19 @@ function buildWatching(channelItems: ChannelItem[]): BriefingWatchItem[] {
     if (!cur.lastReceivedAt || item.receivedAt > cur.lastReceivedAt) cur.lastReceivedAt = item.receivedAt
     byIntegration.set(item.integrationId, cur)
   }
-  return [...byIntegration.entries()]
+  const channels: BriefingWatchItem[] = [...byIntegration.entries()]
     .map(([integrationId, v]) => ({ integrationId, newItems: v.newItems, ...(v.lastReceivedAt ? { lastReceivedAt: v.lastReceivedAt } : {}) }))
     .sort((a, b) => a.integrationId.localeCompare(b.integrationId))
+  // Phase 9: a run paused on the usage limit is something ZIBBY is watching, not
+  // something that needs the operator — it auto-resumes. Sorted by soonest resume.
+  const paused: BriefingWatchItem[] = pausedLimitRuns
+    .map((r) => ({
+      runRef: r.pipelineRunId,
+      summary: `pipeline ${r.pipelineId} paused on the usage limit`,
+      resumeAt: r.resumeAt ?? null,
+    }))
+    .sort((a, b) => (a.resumeAt ?? Infinity) - (b.resumeAt ?? Infinity))
+  return [...channels, ...paused]
 }
 
 function isFinished(e: ActivityEntry): boolean {
@@ -207,7 +222,14 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
 
   if (briefing.watching.length > 0) {
     lines.push("## Watching")
-    for (const w of briefing.watching) lines.push(`- ${w.integrationId}: ${w.newItems} new`)
+    for (const w of briefing.watching) {
+      if (w.summary) {
+        const eta = w.resumeAt ? `, resumes ${new Date(w.resumeAt).toISOString()}` : ""
+        lines.push(`- ${w.summary}${eta}`)
+      } else {
+        lines.push(`- ${w.integrationId}: ${w.newItems ?? 0} new`)
+      }
+    }
     lines.push("")
   }
 

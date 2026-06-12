@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
-import type { AgentRun, PipelineRun } from "@zibby/contracts"
+import type { ActivityEntry, AgentRun, PipelineRun } from "@zibby/contracts"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ActivityLogService } from "./activity-log.service"
@@ -40,36 +40,49 @@ export class ActivityRecorderService implements OnModuleInit, OnModuleDestroy {
   }
 
   private onAgent(run: AgentRun): void {
-    const kind = run.status === "running" ? "run-started" : isTerminalAgent(run.status) ? "run-finished" : null
+    // Phase 9: a `paused-limit` transition records the pause; the following
+    // `running` transition (an auto-resume) records the resume — distinguished from a
+    // fresh start by the previously-seen kind. Both stay out of DID_KINDS in the
+    // briefing (the eventual run-finished already accounts for the completion).
+    const prev = this.seen.get(run.runId)
+    const kind: ActivityEntry["kind"] | null =
+      run.status === "paused-limit"
+        ? "run-paused-limit"
+        : run.status === "running"
+          ? prev === "run-paused-limit"
+            ? "run-resumed-limit"
+            : "run-started"
+          : isTerminalAgent(run.status)
+            ? "run-finished"
+            : null
     if (!kind || !this.changed(run.runId, kind)) return
     const title = run.title ? ` ${run.title}` : ""
     void this.activity.record({
       kind,
-      summary:
-        kind === "run-started"
-          ? `agent ${run.agentId} started${title}`
-          : `agent ${run.agentId}${title} → ${run.status}`,
+      summary: summaryFor(kind, `agent ${run.agentId}${title}`, run.status),
       refs: { runRef: run.runId, agentId: run.agentId, status: run.status },
     })
   }
 
   private onPipeline(run: PipelineRun): void {
-    const kind =
-      run.status === "running"
-        ? "pipeline-started"
-        : run.status === "parked"
-          ? "pipeline-parked"
-          : isTerminalPipeline(run.status)
-            ? "pipeline-finished"
-            : null
+    const prev = this.seen.get(run.pipelineRunId)
+    const kind: ActivityEntry["kind"] | null =
+      run.status === "paused-limit"
+        ? "run-paused-limit"
+        : run.status === "running"
+          ? prev === "run-paused-limit"
+            ? "run-resumed-limit"
+            : "pipeline-started"
+          : run.status === "parked"
+            ? "pipeline-parked"
+            : isTerminalPipeline(run.status)
+              ? "pipeline-finished"
+              : null
     if (!kind || !this.changed(run.pipelineRunId, kind)) return
     const tail = run.status === "parked" && run.parkedReason ? ` (${run.parkedReason})` : ""
     void this.activity.record({
       kind,
-      summary:
-        kind === "pipeline-started"
-          ? `pipeline ${run.pipelineId} started`
-          : `pipeline ${run.pipelineId} → ${run.status}${tail}`,
+      summary: summaryFor(kind, `pipeline ${run.pipelineId}`, `${run.status}${tail}`),
       refs: { runRef: run.pipelineRunId, pipelineId: run.pipelineId, status: run.status },
     })
   }
@@ -79,6 +92,21 @@ export class ActivityRecorderService implements OnModuleInit, OnModuleDestroy {
     if (this.seen.get(runRef) === kind) return false
     this.seen.set(runRef, kind)
     return true
+  }
+}
+
+/** The single human sentence each recorded kind renders (subject = "agent X" / "pipeline Y"). */
+function summaryFor(kind: ActivityEntry["kind"], subject: string, status: string): string {
+  switch (kind) {
+    case "run-started":
+    case "pipeline-started":
+      return `${subject} started`
+    case "run-paused-limit":
+      return `${subject} paused on the usage limit`
+    case "run-resumed-limit":
+      return `${subject} resumed after the usage limit`
+    default:
+      return `${subject} → ${status}`
   }
 }
 
