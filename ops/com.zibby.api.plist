@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZIBBY API — launchd service (Phase 8.3).
+
+  The API is the butler: it must keep running so overnight engagements progress and
+  the morning briefing accounts for everything. KeepAlive restarts it on crash; the
+  crash-restart reconciliation sweeps (RunnerCore.init, RunRecorder, the task
+  scheduler's bootstrap drain) make that safe. launchd never double-starts a label,
+  so this is also the "one instance per data root" guarantee (withPathLock is
+  in-process only — see docs/ops.md).
+
+  EDIT BEFORE INSTALL (machine-specific, marked ⟨…⟩):
+    - WorkingDirectory: absolute repo root
+    - ProgramArguments[0]: absolute pnpm path (`which pnpm`)
+    - PATH: must include the dir holding the `claude` binary + node/pnpm
+    - StandardOut/ErrorPath: created on first run; rotated by zibby.newsyslog.conf
+
+  Install:   launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.api.plist
+  Uninstall: launchctl bootout  gui/$UID/com.zibby.api
+  Restart:   launchctl kickstart -k gui/$UID/com.zibby.api
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.zibby.api</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>⟨/opt/homebrew/bin/pnpm⟩</string>
+    <string>api:start</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>⟨/Users/you/Workspace/z.i.b.b.y⟩</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PORT</key>
+    <string>3333</string>
+    <key>LOG_LEVEL</key>
+    <string>info</string>
+    <key>CORS_ORIGIN</key>
+    <string>http://localhost:3000</string>
+    <!-- PATH must include node/pnpm AND the dir holding the `claude` binary. -->
+    <key>PATH</key>
+    <string>⟨/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin⟩</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Don't hammer respawn if it crash-loops; back off 10s between restarts. -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>⟨/Users/you⟩/Library/Logs/zibby/api.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>⟨/Users/you⟩/Library/Logs/zibby/api.err.log</string>
+</dict>
+</plist>

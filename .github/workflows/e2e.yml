@@ -67,3 +67,31 @@ jobs:
           path: playwright-report/
           retention-days: 7
           if-no-files-found: ignore
+
+  # Phase 8.3: the operator's own macOS machine runs the suite on push to main only.
+  # NEVER on pull_request — self-hosted + untrusted fork PRs is the classic foot-gun,
+  # and guarding a single-operator repo costs nothing. CI=1 turns off
+  # reuseExistingServer so the config boots fresh, isolated servers. The suite is
+  # token-free (demo knobs in playwright.config.ts apiEnv); prove it locally with
+  # CLAUDE_BIN unset before relying on it. Runner registration: docs/ops.md.
+  playwright-selfhosted:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: [self-hosted, macOS, zibby]
+    timeout-minutes: 30
+    env:
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium
+      - name: Run e2e
+        run: pnpm exec playwright test
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-selfhosted
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

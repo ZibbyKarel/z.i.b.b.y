@@ -60,7 +60,9 @@ async function bootstrap(): Promise<void> {
   )
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(document))
 
-  const port = Number(process.env.PORT)
+  // Default to 3333 (Phase 8.3) so the launchd plist can omit PORT and dev keeps
+  // working — `Number(undefined)` was NaN. An explicit PORT (or a .env value) wins.
+  const port = Number(process.env.PORT ?? 3333)
   await app.listen(port)
   Logger.log(`api listening on http://localhost:${port} (docs at /docs)`, "Bootstrap")
 }

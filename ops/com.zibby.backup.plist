@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZIBBY backup — launchd scheduled job (Phase 8.3).
+
+  Runs apps/api/scripts/backup.sh once a day (03:30). The script commits the vault
+  (markdown → git, NO push — Law 3) and rsyncs the runtime data dirs to a local /
+  mounted target with 7 rotating day-of-week subdirs. Credentials are excluded by
+  default (pass --include-credentials to backup.sh to opt in; see docs/ops.md).
+
+  EDIT BEFORE INSTALL (⟨…⟩):
+    - ProgramArguments: absolute repo path to scripts/backup.sh
+    - ZIBBY_BACKUP_DIR: the rsync destination root
+    - VAULT_DIR: the vault to git-commit (defaults to apps/api/data/vault)
+
+  Install:   launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.backup.plist
+  Run once:  launchctl kickstart -k gui/$UID/com.zibby.backup
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.zibby.backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>⟨/Users/you/Workspace/z.i.b.b.y⟩/apps/api/scripts/backup.sh</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>ZIBBY_DATA_DIR</key>
+    <string>⟨/Users/you/Workspace/z.i.b.b.y⟩/apps/api/data</string>
+    <key>ZIBBY_BACKUP_DIR</key>
+    <string>⟨/Users/you/zibby-backups⟩</string>
+    <key>PATH</key>
+    <string>⟨/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin⟩</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>⟨/Users/you⟩/Library/Logs/zibby/backup.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>⟨/Users/you⟩/Library/Logs/zibby/backup.err.log</string>
+</dict>
+</plist>

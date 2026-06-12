@@ -105,6 +105,15 @@ AGENT_RUNNER_MODE=claude pnpm api:dev
 
 ---
 
+## Ops (self-hosted service)
+
+Running ZIBBY durably — launchd service + crash-restart reconciliation, log
+rotation, and the vault-git / data-rsync backup — is documented in
+**[`docs/ops.md`](docs/ops.md)**. The launchd plists, newsyslog template and
+`backup.sh` live under [`ops/`](ops/) and `apps/api/scripts/`.
+
+---
+
 ## Environment variables
 
 Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` → `apps/web/.env` before first run.
