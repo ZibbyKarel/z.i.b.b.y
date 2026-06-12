@@ -146,8 +146,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     title = "",
     taskId?: string,
     matchedTerms?: string[],
+    project = "",
   ): Promise<AgentRun> {
-    return this.launch(ORCHESTRATOR_AGENT, prompt, "", files, title, taskId, matchedTerms)
+    return this.launch(ORCHESTRATOR_AGENT, prompt, project, files, title, taskId, matchedTerms)
   }
 
   /** Shared spawn path: build the command for `agent` and hand it to the core. */

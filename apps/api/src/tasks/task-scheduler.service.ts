@@ -23,6 +23,7 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { matchProject } from "../projects/project-matcher"
+import { withPathLock } from "../shared/file-storage"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
@@ -365,31 +366,37 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * full guard (budget first — it can become held if the budget filled meanwhile); a
    * released (budget-approved) task skips only the budget check.
    */
-  private async drainQueues(): Promise<void> {
-    const queued = (await this.storage.list().catch((): ScheduledTask[] => []))
-      .filter((t) => t.status === "queued" && t.projectId)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)) // FIFO
-    if (queued.length === 0) return
-    const byProject = new Map<string, ScheduledTask[]>()
-    for (const task of queued) {
-      const list = byProject.get(task.projectId as string) ?? []
-      list.push(task)
-      byProject.set(task.projectId as string, list)
-    }
-    for (const [projectId, list] of byProject) {
-      const project = await this.projects.get(projectId).catch((): Project | null => null)
-      for (const task of list) {
-        if (await this.atCapacity(project)) break // no slot free for this project
-        // Re-read: a concurrent drain/cancel may have moved it on already.
-        const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null)
-        if (!fresh || fresh.status !== "queued") continue
-        await this.trace.run({ traceId: randomUUID() }, () =>
-          this.attemptDispatch(fresh, project, Date.now(), {
-            skipBudget: this.budgetApproved.has(fresh.id),
-          }),
-        )
+  private drainQueues(): Promise<void> {
+    // Serialize all drains: many terminal events fire near-simultaneously, and two
+    // overlapping drains would both read the same task as `queued` and dispatch it
+    // twice (a TOCTOU double-dispatch). The lock makes each drain see the prior
+    // drain's markDispatched, so a queued task is dispatched exactly once.
+    return withPathLock("scheduler:drain", async () => {
+      const queued = (await this.storage.list().catch((): ScheduledTask[] => []))
+        .filter((t) => t.status === "queued" && t.projectId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)) // FIFO
+      if (queued.length === 0) return
+      const byProject = new Map<string, ScheduledTask[]>()
+      for (const task of queued) {
+        const list = byProject.get(task.projectId as string) ?? []
+        list.push(task)
+        byProject.set(task.projectId as string, list)
       }
-    }
+      for (const [projectId, list] of byProject) {
+        const project = await this.projects.get(projectId).catch((): Project | null => null)
+        for (const task of list) {
+          if (await this.atCapacity(project)) break // no slot free for this project
+          // Re-read: a concurrent cancel may have moved it on already.
+          const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null)
+          if (!fresh || fresh.status !== "queued") continue
+          await this.trace.run({ traceId: randomUUID() }, () =>
+            this.attemptDispatch(fresh, project, Date.now(), {
+              skipBudget: this.budgetApproved.has(fresh.id),
+            }),
+          )
+        }
+      }
+    })
   }
 
   /**
@@ -419,8 +426,9 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       return { runRef: run.pipelineRunId, target }
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
-    // subagent(s) or does the task directly — a task never no-ops.
-    const run = await this.agentRunner.startOrchestrator(text, paths, title, taskId, matchedTerms)
+    // subagent(s) or does the task directly — a task never no-ops. It carries the
+    // projectId too so an orchestrator-dispatched task counts toward concurrency.
+    const run = await this.agentRunner.startOrchestrator(text, paths, title, taskId, matchedTerms, projectId ?? "")
     return { runRef: run.runId, target }
   }
 
