@@ -79,4 +79,78 @@ describe("Memory API (e2e)", () => {
     expect(res.body.tier).toBe("daily")
     expect(res.body.body).toContain("ran the morning briefing")
   })
+
+  it("creates a note, re-reads it, and the graph gains a node + edge", async () => {
+    const created = await request(app.getHttpServer())
+      .post("/api/memory/notes")
+      .send({ id: "feature-x", tier: "knowledge", title: "Feature X", body: "Relates to [[zibby]]." })
+      .expect(201)
+    expect(created.body.id).toBe("feature-x")
+
+    const read = await request(app.getHttpServer()).get("/api/memory/note/feature-x").expect(200)
+    expect(read.body.title).toBe("Feature X")
+    expect(read.body.links).toContain("zibby")
+
+    const graph = await request(app.getHttpServer()).get("/api/memory/graph").expect(200)
+    expect(graph.body.nodes.map((n: { id: string }) => n.id)).toContain("feature-x")
+    expect(graph.body.edges).toContainEqual({ from: "feature-x", to: "zibby" })
+  })
+
+  it("patches a note: changes body, preserves frontmatter", async () => {
+    await request(app.getHttpServer())
+      .post("/api/memory/notes")
+      .send({ id: "patchme", tier: "knowledge", title: "Patch Me", body: "before", frontmatter: { keep: 1 } })
+      .expect(201)
+    const patched = await request(app.getHttpServer())
+      .patch("/api/memory/notes/patchme")
+      .send({ body: "after" })
+      .expect(200)
+    expect(patched.body.body).toContain("after")
+    expect(patched.body.frontmatter.keep).toBe(1)
+    expect(patched.body.title).toBe("Patch Me")
+  })
+
+  it("appends to an existing note", async () => {
+    await request(app.getHttpServer())
+      .post("/api/memory/notes")
+      .send({ id: "appendme", tier: "knowledge", body: "one" })
+      .expect(201)
+    const after = await request(app.getHttpServer())
+      .post("/api/memory/notes/appendme/append")
+      .send({ text: "two" })
+      .expect(200)
+    expect(after.body.body).toContain("one")
+    expect(after.body.body).toContain("two")
+  })
+
+  it("updateIndex is idempotent and auto-creates a missing MOC", async () => {
+    await request(app.getHttpServer())
+      .post("/api/memory/index/auto-moc/links")
+      .send({ target: "feature-x", label: "Feature X" })
+      .expect(200)
+    const moc = await request(app.getHttpServer())
+      .post("/api/memory/index/auto-moc/links")
+      .send({ target: "feature-x", label: "Feature X" })
+      .expect(200)
+    expect(moc.body.id).toBe("auto-moc")
+    expect(moc.body.links).toContain("feature-x")
+    const occurrences = (moc.body.body.match(/\[\[feature-x\]\]/g) ?? []).length
+    expect(occurrences).toBe(1)
+  })
+
+  it("rejects a duplicate id (409); 404 on unknown patch; 422 on a bad MOC id", async () => {
+    await request(app.getHttpServer())
+      .post("/api/memory/notes")
+      .send({ id: "zibby", tier: "memory", body: "dup" })
+      .expect(409)
+    await request(app.getHttpServer())
+      .patch("/api/memory/notes/ghost")
+      .send({ body: "x" })
+      .expect(404)
+    // `.hidden` is a valid URL segment but fails the note-id guard → 422.
+    await request(app.getHttpServer())
+      .post("/api/memory/index/.hidden/links")
+      .send({ target: "zibby" })
+      .expect(422)
+  })
 })

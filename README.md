@@ -145,6 +145,16 @@ Individual store directories default to the corresponding subfolder of `ZIBBY_DA
 | `POLICY_DIR` | `.` (holds `POLICY.md`) |
 | `VAULT_DIR` | `vault` |
 
+#### Obsidian vault
+
+The memory layer reads and writes a plain-markdown Obsidian vault. The dev default
+`apps/api/data/vault` is committed with seed notes (`north-star.md`, a starter MOC in
+`knowledge/`); the episodic `daily/` subdir is gitignored. For real operation, point
+`VAULT_DIR` at your actual Obsidian vault — ZIBBY grounds each run in the North Star,
+relevant MOCs, and the project note, and records what every run did back into
+`daily/<date>.md` and the project's `knowledge/` MOC. Curated edits stay yours;
+ZIBBY only appends episodic lines and links learned notes.
+
 ### Runner / demo mode
 
 | Variable | Default | Values / Description |
@@ -155,6 +165,7 @@ Individual store directories default to the corresponding subfolder of `ZIBBY_DA
 | `AGENT_DEMO_SCRIPT` | *(bundled `demo-task.mjs`)* | Path to a custom demo-task script used for agent and skill runs. |
 | `PIPELINE_DEMO_STAGE_SCRIPT` | *(bundled `demo-stage.mjs`)* | Path to a custom demo-stage script used for pipeline runs. |
 | `PIPELINE_DEMO_FAIL_PHASES` | *(empty)* | Comma-separated phase IDs that should fail during demo runs — useful for testing failure paths. |
+| `PIPELINE_DEMO_EMIT_LEARNED` | *(empty)* | Phase ID whose demo stage also writes a deterministic `learned.md` next to its produces file — exercises the memory recorder's delivery trace. |
 
 ### Scheduler
 

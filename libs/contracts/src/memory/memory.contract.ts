@@ -3,10 +3,14 @@ import { z } from "zod"
 import { ErrorSchema } from "../common.schema"
 import {
   AppendDailySchema,
+  AppendNoteSchema,
+  CreateNoteSchema,
   IndexEntrySchema,
   MemoryGraphSchema,
   NoteSchema,
   SearchHitSchema,
+  UpdateIndexLinkSchema,
+  UpdateNoteSchema,
 } from "./memory.schema"
 
 const c = initContract()
@@ -51,6 +55,37 @@ export const memoryContract = c.router(
       body: AppendDailySchema,
       responses: { 201: NoteSchema },
       summary: "Append an episodic entry to today's daily note (safe write)",
+    },
+    createNote: {
+      method: "POST",
+      path: "/memory/notes",
+      body: CreateNoteSchema,
+      responses: { 201: NoteSchema, 409: ErrorSchema, 422: ErrorSchema },
+      summary: "Create a note in a tier (id unique across the vault)",
+    },
+    updateNote: {
+      method: "PATCH",
+      path: "/memory/notes/:id",
+      pathParams: z.object({ id: z.string() }),
+      body: UpdateNoteSchema,
+      responses: { 200: NoteSchema, 404: ErrorSchema, 422: ErrorSchema },
+      summary: "Patch a note's title/body/frontmatter (frontmatter merges)",
+    },
+    appendToNote: {
+      method: "POST",
+      path: "/memory/notes/:id/append",
+      pathParams: z.object({ id: z.string() }),
+      body: AppendNoteSchema,
+      responses: { 200: NoteSchema, 404: ErrorSchema, 422: ErrorSchema },
+      summary: "Append text to an existing note (atomic)",
+    },
+    updateIndex: {
+      method: "POST",
+      path: "/memory/index/:id/links",
+      pathParams: z.object({ id: z.string() }),
+      body: UpdateIndexLinkSchema,
+      responses: { 200: NoteSchema, 422: ErrorSchema },
+      summary: "Ensure a [[target]] wiki-link exists in a MOC (auto-creates it)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

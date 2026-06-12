@@ -11,6 +11,7 @@ apps/api/data-test/
 apps/api/data/**/runs
 apps/api/data/approvals
 apps/api/data/tasks
+apps/api/data/vault/daily
 
 !apps/api/data/agents
 !apps/api/data/automations

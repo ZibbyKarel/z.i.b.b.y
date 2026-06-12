@@ -48,3 +48,43 @@ export type SearchHit = z.infer<typeof SearchHitSchema>
 /** Body accepted by the safe `daily/` append. */
 export const AppendDailySchema = z.object({ text: z.string().min(1) })
 export type AppendDailyInput = z.infer<typeof AppendDailySchema>
+
+/**
+ * A note id usable as a filesystem basename: starts alphanumeric, then up to 119
+ * of `[a-zA-Z0-9._ -]` — no path separators or leading dot, so it can never
+ * traverse out of its tier dir. Covers existing ids (`MEMORY`, `2026-06-12`,
+ * `zibby-index`, `learned-<runId>`). Ids are unique across the *whole* vault.
+ */
+export const NoteIdSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,119}$/, "Invalid note id")
+export type NoteId = z.infer<typeof NoteIdSchema>
+
+/** Create a note in a chosen tier. The API assembles frontmatter from these fields. */
+export const CreateNoteSchema = z.object({
+  id: NoteIdSchema,
+  tier: MemoryTierSchema,
+  title: z.string().optional(),
+  body: z.string(),
+  frontmatter: z.record(z.string(), z.unknown()).optional(),
+})
+export type CreateNoteInput = z.infer<typeof CreateNoteSchema>
+
+/** Patch a note: any subset of title/body/frontmatter (frontmatter merges per key). */
+export const UpdateNoteSchema = z.object({
+  title: z.string().optional(),
+  body: z.string().optional(),
+  frontmatter: z.record(z.string(), z.unknown()).optional(),
+})
+export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>
+
+/** Append free text to an existing note (atomic read-modify-write). */
+export const AppendNoteSchema = z.object({ text: z.string().min(1) })
+export type AppendNoteInput = z.infer<typeof AppendNoteSchema>
+
+/** Ensure a `[[target]]` wiki-link line exists in a MOC (the MOC is auto-created if absent). */
+export const UpdateIndexLinkSchema = z.object({
+  target: NoteIdSchema,
+  label: z.string().optional(),
+})
+export type UpdateIndexLinkInput = z.infer<typeof UpdateIndexLinkSchema>

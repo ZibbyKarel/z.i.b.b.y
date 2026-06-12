@@ -1,8 +1,17 @@
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
-import type { IndexEntry, MemoryGraph, MemoryTier, Note, SearchHit } from "@zibby/contracts"
+import type {
+  CreateNoteInput,
+  IndexEntry,
+  MemoryGraph,
+  MemoryTier,
+  Note,
+  SearchHit,
+  UpdateNoteInput,
+} from "@zibby/contracts"
 import matter from "gray-matter"
+import { resolveSafeFile, writeFileAtomic } from "../shared/file-storage/file-utils"
 
 /** DI token carrying the absolute path of the Obsidian vault directory. */
 export const VAULT_DIR = "VAULT_DIR"
@@ -15,8 +24,45 @@ export class NoteNotFoundError extends Error {
   }
 }
 
+/** Raised when a write-path id fails the basename/containment guard (→ 422). */
+export class InvalidNoteIdError extends Error {
+  constructor(public readonly id: string) {
+    super(`Invalid note id "${id}"`)
+    this.name = "InvalidNoteIdError"
+  }
+}
+
+/** Raised when creating a note whose id already exists in any tier (→ 409). */
+export class DuplicateNoteError extends Error {
+  constructor(public readonly id: string) {
+    super(`Note "${id}" already exists`)
+    this.name = "DuplicateNoteError"
+  }
+}
+
 const WIKILINK = /\[\[([^\]]+)\]\]/g
 const TIERS: MemoryTier[] = ["memory", "daily", "knowledge"]
+
+/**
+ * The same shape as `NoteIdSchema` in the contract: a filesystem-safe basename
+ * (no separators, no leading dot). Mirrored here so `resolveSafeFile`'s guard
+ * matches the contract's accept-set without importing zod into the service.
+ */
+const NOTE_ID = /^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,119}$/
+
+/** Escape a string for safe interpolation into a `RegExp`. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/** Turn an id (`zibby-index`) into a readable title (`Zibby Index`). */
+function humanizeId(id: string): string {
+  return id
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
 interface RawNote {
   id: string
@@ -114,6 +160,110 @@ export class VaultService implements OnModuleInit {
     await fs.appendFile(file, `\n- ${stamp} ${text}\n`, "utf8")
     this.cache = null
     return this.note(date)
+  }
+
+  /** Absolute dir for a tier: `memory` is the vault root; the others are subdirs. */
+  private tierDir(tier: MemoryTier): string {
+    return tier === "memory" ? this.dir : path.join(this.dir, tier)
+  }
+
+  /**
+   * Resolve `{tier, id}` to an absolute `.md` path inside that tier's (flat) dir,
+   * guarded by the `NOTE_ID` regex + containment check. Throws on a bad id so the
+   * controller can map it to 422. Always resolves against the tier dir — never the
+   * vault root — so the flat-dir containment check in `resolveSafeFile` holds.
+   */
+  private resolveNoteFile(tier: MemoryTier, id: string): string {
+    const file = resolveSafeFile(this.tierDir(tier), id, ".md", NOTE_ID)
+    if (file === null) throw new InvalidNoteIdError(id)
+    return file
+  }
+
+  /**
+   * Create a note in `tier`. Ids are unique across the *whole* vault, so a
+   * collision in any tier is a 409 — a per-dir check would shadow notes that
+   * `note(id)` could never reach.
+   */
+  async createNote(input: CreateNoteInput): Promise<Note> {
+    const file = this.resolveNoteFile(input.tier, input.id)
+    const existing = (await this.scan()).find((n) => n.id === input.id)
+    if (existing) throw new DuplicateNoteError(input.id)
+    const data: Record<string, unknown> = { ...(input.frontmatter ?? {}) }
+    if (input.title !== undefined) data.title = input.title
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    await writeFileAtomic(file, matter.stringify(input.body, data))
+    this.cache = null
+    return this.note(input.id)
+  }
+
+  /**
+   * Patch a note in place. Frontmatter merges per key (patch wins; unknown
+   * operator keys are preserved — never normalize a real Obsidian note's
+   * metadata); `body` is replaced only when provided. tier/id are immutable.
+   */
+  async updateNote(id: string, patch: UpdateNoteInput): Promise<Note> {
+    const found = (await this.scan()).find((n) => n.id === id)
+    if (!found) throw new NoteNotFoundError(id)
+    const abs = path.join(this.dir, found.path)
+    const parsed = matter(await fs.readFile(abs, "utf8"))
+    const data: Record<string, unknown> = { ...(parsed.data as Record<string, unknown>) }
+    if (patch.frontmatter) Object.assign(data, patch.frontmatter)
+    if (patch.title !== undefined) data.title = patch.title
+    const body = patch.body !== undefined ? patch.body : parsed.content
+    await writeFileAtomic(abs, matter.stringify(body, data))
+    this.cache = null
+    return this.note(id)
+  }
+
+  /** Append `text` to an existing note (atomic, frontmatter preserved). */
+  async appendToNote(id: string, text: string): Promise<Note> {
+    const found = (await this.scan()).find((n) => n.id === id)
+    if (!found) throw new NoteNotFoundError(id)
+    const abs = path.join(this.dir, found.path)
+    const parsed = matter(await fs.readFile(abs, "utf8"))
+    const body = `${parsed.content.replace(/\s+$/, "")}\n\n${text}\n`
+    await writeFileAtomic(abs, matter.stringify(body, parsed.data))
+    this.cache = null
+    return this.note(id)
+  }
+
+  /**
+   * Idempotently ensure a `- [[target]]` list line exists in MOC `mocId`. A
+   * missing MOC is auto-created in `knowledge/` (the recorder links learned notes
+   * from project MOCs that may not exist yet). An existing line for `target` is
+   * replaced in place (label refresh); otherwise the line is appended.
+   */
+  async updateIndex(mocId: string, target: string, label?: string): Promise<Note> {
+    let moc = (await this.scan()).find((n) => n.id === mocId)
+    if (!moc) {
+      await this.createNote({
+        id: mocId,
+        tier: "knowledge",
+        title: humanizeId(mocId),
+        body: `Index for ${humanizeId(mocId)}.\n`,
+      })
+      moc = (await this.scan()).find((n) => n.id === mocId)
+      if (!moc) throw new NoteNotFoundError(mocId)
+    }
+    const abs = path.join(this.dir, moc.path)
+    const parsed = matter(await fs.readFile(abs, "utf8"))
+    const desired = label ? `- [[${target}]] — ${label}` : `- [[${target}]]`
+    // Match a wiki-link to `target`: `[[target]]`, `[[target|alias]]`, `[[target#x]]`.
+    const linkRe = new RegExp(`\\[\\[${escapeRegExp(target)}(\\]\\]|\\||#)`)
+    const lines = parsed.content.split("\n")
+    const idx = lines.findIndex((l) => linkRe.test(l))
+    let newLines: string[]
+    if (idx >= 0) {
+      newLines = [...lines]
+      newLines[idx] = desired
+    } else {
+      newLines = [...lines]
+      while (newLines.length > 0 && newLines[newLines.length - 1]?.trim() === "") newLines.pop()
+      newLines.push(desired)
+    }
+    await writeFileAtomic(abs, matter.stringify(`${newLines.join("\n")}\n`, parsed.data))
+    this.cache = null
+    return this.note(mocId)
   }
 
   /** Scan the vault for `.md` files, parsed and cached briefly. */
