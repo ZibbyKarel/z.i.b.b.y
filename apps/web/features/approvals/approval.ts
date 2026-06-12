@@ -103,7 +103,7 @@ interface RiskMeta {
   cssVar: string;
 }
 
-/** Semantic risk-type presentation. There is no `trash` glyph, so delete uses `x`. */
+/** Semantic risk-type presentation. */
 export const RISK_META: Record<RiskType, RiskMeta> = {
   platba: {
     label: "platba",
@@ -114,7 +114,7 @@ export const RISK_META: Record<RiskType, RiskMeta> = {
   },
   mazani: {
     label: "mazání",
-    glyph: "x",
+    glyph: "trash",
     tone: "bad",
     uiTone: "bad",
     cssVar: "var(--color-bad)",

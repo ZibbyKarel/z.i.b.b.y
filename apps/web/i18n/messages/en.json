@@ -545,6 +545,7 @@
     "metaStarted": "started",
     "metaScheduled": "fires",
     "metaTarget": "target",
+    "metaAgent": "agent",
     "metaKind": "type",
     "metaTask": "task",
     "taskOutcome": {

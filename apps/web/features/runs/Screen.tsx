@@ -65,8 +65,11 @@ export function Screen() {
 
   const list =
     filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  // Keep the detail in sync with the filtered list: a selection only counts when
+  // it's actually visible, and we fall back to the first row of the *current*
+  // filter — never to runs[0], which would show an out-of-filter run's detail.
   const selected =
-    runs.find((r) => r.runId === selId) ?? list[0] ?? runs[0] ?? null;
+    list.find((r) => r.runId === selId) ?? list[0] ?? null;
 
   const count = (f: Filter) =>
     f === "all" ? runs.length : runs.filter((r) => r.status === f).length;

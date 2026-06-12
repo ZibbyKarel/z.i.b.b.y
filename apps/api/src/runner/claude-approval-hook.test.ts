@@ -20,9 +20,14 @@ interface HookResult {
 }
 
 /** Run the hook with `event` on stdin, in `cwd`; resolve once it exits. */
-function runHook(cwd: string, event: unknown, env?: Record<string, string>): Promise<HookResult> {
+function runHook(
+  cwd: string,
+  event: unknown,
+  env?: Record<string, string>,
+  args: string[] = [],
+): Promise<HookResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [HOOK], { cwd, env: { ...process.env, ...env } })
+    const child = spawn(process.execPath, [HOOK, ...args], { cwd, env: { ...process.env, ...env } })
     let stdout = ""
     child.stdout.on("data", (b: Buffer) => {
       stdout += b.toString()
@@ -83,6 +88,35 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(res.stdout).toContain('"permissionDecision":"allow"')
   })
 
+  it("keeps a backslash-escaped, spaced filename as one target (unescaped)", async () => {
+    await preApprove()
+    const res = await runHook(cwd, bashEvent("rm -rf zibby-ascii\\ 2.txt", cwd))
+    const ctx = JSON.parse((await readRequest()).context)
+    expect(ctx.preview.targets).toEqual(["zibby-ascii 2.txt"])
+    expect(res.stdout).toContain('"permissionDecision":"allow"')
+  })
+
+  it("emits a dashboard-shaped delete enrichment (canonical riskType + command preview)", async () => {
+    await preApprove()
+    await runHook(cwd, bashEvent('rm "a.txt"', cwd))
+    const ctx = JSON.parse((await readRequest()).context)
+    // `mazani` is a canonical gate risk type — anything else degrades to the cart icon.
+    expect(ctx.riskType).toBe("mazani")
+    // The UI's command preview reads `shell` + `cmd`; a bare `command` shows "undefined".
+    expect(ctx.preview.kind).toBe("command")
+    expect(ctx.preview.shell).toBeTruthy()
+    expect(ctx.preview.cmd).toBe('rm "a.txt"')
+    expect(ctx.preview.command).toBeUndefined()
+  })
+
+  it("collects only the file targets from a chained rm command (no operator/binary tokens)", async () => {
+    await preApprove()
+    await runHook(cwd, bashEvent('rm a.txt && rm "b c.txt" && rmdir d', cwd))
+    const ctx = JSON.parse((await readRequest()).context)
+    expect(ctx.preview.targets).toEqual(["a.txt", "b c.txt", "d"])
+    expect(ctx.summary).toBe("Smazat 3 položek")
+  })
+
   it("gates `find … -delete` (the .DS_Store sweep that previously slipped the gate)", async () => {
     await preApprove()
     await runHook(cwd, bashEvent("find . -name .DS_Store -delete", cwd))
@@ -90,7 +124,7 @@ describe("claude approval hook — destructive-command gate", () => {
     const ctx = JSON.parse((await readRequest()).context)
     // No enumerable positional targets — the command string is the source of truth.
     expect(ctx.preview.targets).toEqual([])
-    expect(ctx.summary).toBe("Delete files matched by the command")
+    expect(ctx.summary).toBe("Smazat soubory odpovídající příkazu")
   })
 
   it("gates `git clean -fdx` but not a commit whose message merely says 'clean'", async () => {
@@ -137,5 +171,27 @@ describe("claude approval hook — destructive-command gate", () => {
     )
     const res = await runHook(cwd, bashEvent("rm -rf scratch.tmp", cwd))
     expect(res.stdout).toContain('"permissionDecision":"deny"')
+  })
+
+  it("denies fail-closed when the approval deadline elapses with no decision", async () => {
+    // The production incident: Claude Code kills a hook at its configured timeout
+    // and treats the kill as a NON-decision — under dontAsk the gated `rm` then
+    // executes as if approved. The hook must therefore deny on its own, shorter
+    // deadline (argv[2], in seconds) instead of blocking until it is killed.
+    const res = await runHook(cwd, bashEvent("rm -rf scratch.tmp", cwd), undefined, ["1"])
+    expect(res.code).toBe(0)
+    expect(res.stdout).toContain('"permissionDecision":"deny"')
+    expect(res.stdout).toContain("Approval window elapsed")
+    // The unconsumed request is tidied away so it can't strand a stale gate entry.
+    expect(await present(requestFile())).toBe(false)
+  })
+
+  it("still allows within the deadline when a decision arrives late but in time", async () => {
+    const run = runHook(cwd, bashEvent("rm -rf scratch.tmp", cwd), undefined, ["10"])
+    // Decision lands after the hook started polling, well inside the window.
+    await new Promise((r) => setTimeout(r, 500))
+    await preApprove()
+    const res = await run
+    expect(res.stdout).toContain('"permissionDecision":"allow"')
   })
 })

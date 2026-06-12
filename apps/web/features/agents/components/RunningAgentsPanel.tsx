@@ -1,27 +1,33 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { AgentRun } from "@zibby/contracts";
+import { Stack, StatusDot, Typography } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useRunningAgentsQuery } from "../queries";
 import { useStopAgentRunMutation } from "../mutations";
+import { useRunningAgentsQuery } from "../queries";
 import { AgentRow } from "./AgentRow";
 import { RunLogModal } from "./RunLogModal";
 
 /**
  * The Overview right-rail "running agents" panel. Polls `GET /api/agents/running`
- * and lists each live (or just-finished) run; clicking a row opens its log viewer.
+ * and lists each currently-running run; clicking a row opens its log viewer.
+ * The endpoint keeps just-finished runs around for a retention window, so we
+ * filter to `status: "running"` here — the panel only ever shows live agents.
  * Falls back to the original empty stub when nothing is running.
  */
 export function RunningAgentsPanel() {
   const t = useTranslations();
-  const { data: runs = [] } = useRunningAgentsQuery();
+  const { data: allRuns = [] } = useRunningAgentsQuery();
   const stopAgentRun = useStopAgentRunMutation();
   const [openRunId, setOpenRunId] = useState<string | null>(null);
 
-  const openRun = openRunId ? (runs.find((r) => r.runId === openRunId) ?? null) : null;
+  const runs = allRuns.filter((r) => r.status === "running");
+
+  const openRun = openRunId
+    ? (runs.find((r) => r.runId === openRunId) ?? null)
+    : null;
 
   return (
     <HudPanel title={t("overview.runningAgents")}>
@@ -39,7 +45,9 @@ export function RunningAgentsPanel() {
               divider={i < runs.length - 1}
               key={run.runId}
               onOpen={(r) => setOpenRunId(r.runId)}
-              onStop={(r) => stopAgentRun.mutate({ params: { runId: r.runId }, body: {} })}
+              onStop={(r) =>
+                stopAgentRun.mutate({ params: { runId: r.runId }, body: {} })
+              }
               run={run}
             />
           ))}
@@ -47,7 +55,11 @@ export function RunningAgentsPanel() {
       )}
 
       {openRun && (
-        <RunLogModal key={openRun.runId} onClose={() => setOpenRunId(null)} run={openRun} />
+        <RunLogModal
+          key={openRun.runId}
+          onClose={() => setOpenRunId(null)}
+          run={openRun}
+        />
       )}
     </HudPanel>
   );

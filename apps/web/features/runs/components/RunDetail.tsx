@@ -5,6 +5,7 @@ import {
   AccordionItem,
   Button,
   Container,
+  Icon,
   type IconName,
   IconTile,
   Stack,
@@ -57,6 +58,10 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
   const router = useRouter();
   const { data: queue = [] } = useApprovalsQuery();
   const approval = approvalForRun(queue, run);
+  // Who is doing the work: an agent run's `owner` is its agent id; the approval
+  // (when present) carries the nicer display name. Surfaced in the header so a
+  // paused task makes plain which agent is asking.
+  const agentName = run.kind === "agent" ? approval?.skill ?? run.owner : undefined;
 
   const tone: "accent" | "ok" | "warn" | "bad" | undefined =
     run.status === "running"
@@ -117,6 +122,14 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
                       {headline}
                     </Typography>
                     <RunStateBadge canonTitle={run.status} label={t(`state.${run.status}`)} size="md" status={run.status} />
+                    {agentName && (
+                      <Stack align="center" direction="row" gap="50" title={t("metaAgent")}>
+                        <Icon name="bot" size="xs" tone="accent" />
+                        <Typography mono size="xs" type="note" variant="secondary">
+                          {agentName}
+                        </Typography>
+                      </Stack>
+                    )}
                   </Stack>
                   {run.prompt && run.prompt !== headline && (
                     <Typography leading="snug" size="sm" type="text" variant="secondary">
@@ -164,7 +177,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
               label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
               value={startedValue}
             />
-            {run.owner && <MetaCell label={t("metaTarget")} value={run.owner} />}
+            {run.owner && run.kind !== "agent" && <MetaCell label={t("metaTarget")} value={run.owner} />}
             <MetaCell label={t("metaKind")} value={t(`kind.${run.kind}`)} />
             {run.taskTitle && (
               <MetaCell

@@ -545,6 +545,7 @@
     "metaStarted": "spuštěno",
     "metaScheduled": "spustí se",
     "metaTarget": "cíl",
+    "metaAgent": "agent",
     "metaKind": "typ",
     "metaTask": "úkol",
     "taskOutcome": {

@@ -5,6 +5,7 @@ import type { SkillsStorageService } from "../skills/skills.storage.service"
 import {
   ClaudeRunCommandService,
   EXECUTION_DIRECTIVE,
+  GATE_DEADLINE_S,
   OPERATING_CONTRACT,
 } from "./claude-run-command.service"
 
@@ -203,6 +204,21 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(entry.matcher).toBe("Bash")
     expect(entry.hooks[0].type).toBe("command")
     expect(entry.hooks[0].command).toContain("claude-approval-hook.mjs")
+  })
+
+  it("orders the gate timeouts fail-closed: hook denies before Claude Code can kill it", async () => {
+    // A hook killed at the CLI timeout is a NON-decision — under dontAsk the gated
+    // command then runs as if approved. The hook must get its (shorter) deadline as
+    // argv and the registered timeout must sit strictly above it.
+    const svc = makeService([CODER], [])
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    const settings = JSON.parse(flagValue(args, "--settings") ?? "{}")
+    const hook = settings.hooks.PreToolUse[0].hooks[0]
+    expect(hook.command.endsWith(` ${GATE_DEADLINE_S}`)).toBe(true)
+    expect(hook.timeout).toBeGreaterThan(GATE_DEADLINE_S)
+    // …and below the 2^31−1 ms timer cap: a timeout past it can overflow to an
+    // IMMEDIATE hook kill, which under dontAsk means instant auto-approve.
+    expect(hook.timeout * 1000).toBeLessThan(2 ** 31)
   })
 
   it("grants each target directory with --add-dir", async () => {

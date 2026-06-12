@@ -86,6 +86,16 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         this.core.cancel(runId)
       },
     })
+    // A run that reaches a terminal state while its approval is still pending was
+    // never decided — the gate hook's fail-closed deadline denied it, or the child
+    // died waiting. Resolve the card as rejected so the queue doesn't keep an
+    // approvable entry whose run can no longer act on the decision (approving it
+    // later would no-op: the run is no longer `awaiting-approval`).
+    this.core.onStatus((rec) => {
+      const terminal =
+        rec.status === "done" || rec.status === "error" || rec.status === "interrupted"
+      if (terminal) void this.approvals.cancelPendingForRun(rec.runId)
+    })
     await this.core.init()
     this.log.debug("agent runner initialized")
   }
@@ -241,7 +251,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           // approval-enrichment JSON) is what the card should show; fall back to the
           // run's prompt when the action carried no detail of its own.
           detail: action.context ?? rec.prompt,
-          risk: agent.risk ?? "medium",
+          // A destructive delete is irreversible — always the highest severity,
+          // regardless of the agent's configured default. Losing files is never
+          // "medium". (The hook tags these with `action: "delete"`.)
+          risk: action.action === "delete" ? "high" : agent.risk ?? "medium",
         })
         return
       }

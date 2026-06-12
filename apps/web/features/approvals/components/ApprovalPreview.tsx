@@ -11,8 +11,6 @@ import {
 import type { ReactNode } from "react";
 import type { ApprovalPreview as Preview } from "../approval";
 
-const MONO = "var(--font-mono, ui-monospace, monospace)";
-
 /** Framed preview surface with a header bar — the shell every preview kind shares. */
 function PreviewShell({
   icon,
@@ -49,9 +47,9 @@ function PreviewShell({
 }
 
 const DIFF_KIND = {
-  add: { color: "var(--color-ok)", bg: "rgba(127,217,138,0.09)", sign: "+" },
-  del: { color: "var(--color-bad)", bg: "rgba(255,107,107,0.09)", sign: "−" },
-  ctx: { color: "var(--color-foreground-dim)", bg: "transparent", sign: " " },
+  add: { tone: "ok", bg: "rgba(127,217,138,0.09)", sign: "+" },
+  del: { tone: "bad", bg: "rgba(255,107,107,0.09)", sign: "−" },
+  ctx: { tone: undefined, bg: "transparent", sign: " " },
 } as const;
 
 export interface ApprovalPreviewProps {
@@ -114,14 +112,20 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
       <PreviewShell icon="branch" label={preview.file} meta={preview.meta}>
         {preview.hunks.map((hunk, hi) => (
           <div key={hi}>
-            {}
             {/* eslint-disable-next-line react/forbid-dom-props */}
-            <div style={{ fontFamily: MONO, fontSize: 11, color: "var(--color-accent)", background: "var(--color-accent-dim)" }}>
-              <Container padding={["75", "150"]}>{hunk.h}</Container>
+            <div style={{ background: "var(--color-accent-dim)" }}>
+              <Container padding={["75", "150"]}>
+                <Typography mono as="span" size="2xs" tone="accent" type="note">
+                  {hunk.h}
+                </Typography>
+              </Container>
             </div>
             <Divider />
             {hunk.lines.map(([kind, text], i) => {
               const m = DIFF_KIND[kind];
+              const toneProps = m.tone
+                ? { tone: m.tone }
+                : ({ variant: "secondary" } as const);
               return (
                 // eslint-disable-next-line react/forbid-dom-props
                 <div key={i} style={{ background: m.bg }}>
@@ -132,17 +136,29 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
                       userSelect="none"
                       width="22px"
                     >
-                      {}
-                      {/* eslint-disable-next-line react/forbid-dom-props */}
-                      <span style={{ fontFamily: MONO, fontSize: 11.5, lineHeight: 1.7, color: m.color, opacity: 0.7 }}>
+                      <Typography
+                        mono
+                        as="span"
+                        leading="relaxed"
+                        size="2xs"
+                        style={{ opacity: 0.7 }}
+                        type="note"
+                        {...toneProps}
+                      >
                         {m.sign}
-                      </span>
+                      </Typography>
                     </Container>
-                    {}
-                    {/* eslint-disable-next-line react/forbid-dom-props */}
-                    <span style={{ fontFamily: MONO, fontSize: 11.5, lineHeight: 1.7, color: kind === "ctx" ? "var(--color-foreground-dim)" : m.color, whiteSpace: "pre", paddingRight: "0.8rem" }}>
+                    <Typography
+                      mono
+                      as="span"
+                      leading="relaxed"
+                      size="2xs"
+                      style={{ whiteSpace: "pre", paddingRight: "0.8rem" }}
+                      type="note"
+                      {...toneProps}
+                    >
                       {text || " "}
-                    </span>
+                    </Typography>
                   </Stack>
                 </div>
               );
@@ -170,7 +186,7 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
             <Stack direction="col" gap="50">
               {preview.targets.map((t, i) => (
                 <Stack align="center" direction="row" gap="100" key={i}>
-                  <Icon name="x" size="xs" tone="bad" />
+                  <Icon name="trash" size="xs" tone="bad" />
                   <Typography
                     mono
                     size="xs"
