@@ -70,6 +70,15 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-spend-past-cap
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: spend-past-cap
+    decision: ask
+    resolve:
+      type: human
   - id: floor-channel-reply
     source: system
     locked: true

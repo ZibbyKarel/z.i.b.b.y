@@ -13,6 +13,9 @@ export const TASKS_DIR = "TASKS_DIR"
 /** Filename-safe ids (the path-containment guard is applied on top). */
 const TASK_ID_REGEX = /^[a-zA-Z0-9._-]+$/
 
+/** Statuses a task can still be cancelled from — it never dispatched (Phase 8). */
+const CANCELLABLE = new Set<ScheduledTask["status"]>(["scheduled", "queued", "held"])
+
 export class ScheduledTaskNotFoundError extends Error {
   constructor(public readonly id: string) {
     super(`Scheduled task "${id}" not found`)
@@ -54,7 +57,11 @@ export class ScheduledTasksStorageService
   }
 
   /** Persist a fresh `scheduled` task built from the create input. */
-  async create(input: CreateTaskInput & { scheduledAt: number }, createdAt: string): Promise<ScheduledTask> {
+  async create(
+    input: CreateTaskInput & { scheduledAt: number },
+    createdAt: string,
+    projectId?: string,
+  ): Promise<ScheduledTask> {
     const task: ScheduledTask = {
       id: this.newId(),
       title: input.title ?? "",
@@ -63,9 +70,79 @@ export class ScheduledTasksStorageService
       scheduledAt: input.scheduledAt,
       status: "scheduled",
       createdAt,
+      ...(projectId ? { projectId } : {}),
     }
     await this.writeEntity(task)
     return task
+  }
+
+  /** Shared base for a pre-dispatch hold (`held` / `queued`): a task with no run yet. */
+  private parkedTask(
+    id: string,
+    input: CreateTaskInput,
+    status: "held" | "queued",
+    projectId: string | undefined,
+    now: number,
+  ): ScheduledTask {
+    return {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      scheduledAt: now,
+      status,
+      createdAt: new Date(now).toISOString(),
+      ...(projectId ? { projectId } : {}),
+    }
+  }
+
+  /** Persist a task held over a budget cap (Phase 8.1), carrying the reason. */
+  async createHeld(
+    id: string,
+    input: CreateTaskInput,
+    projectId: string | undefined,
+    heldReason: string,
+    now: number,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = { ...this.parkedTask(id, input, "held", projectId, now), heldReason }
+    await this.writeEntity(task)
+    return task
+  }
+
+  /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
+  async createQueued(
+    id: string,
+    input: CreateTaskInput,
+    projectId: string | undefined,
+    now: number,
+  ): Promise<ScheduledTask> {
+    const task = this.parkedTask(id, input, "queued", projectId, now)
+    await this.writeEntity(task)
+    return task
+  }
+
+  /** Move an existing task to `held` with a reason (the tick fire path). */
+  async markHeld(id: string, heldReason: string): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = { ...existing, status: "held", heldReason }
+    await this.writeEntity(merged)
+    return merged
+  }
+
+  /** Move an existing task to `queued` (the tick / release-at-capacity paths). */
+  async markQueued(id: string): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = { ...existing, status: "queued" }
+    await this.writeEntity(merged)
+    return merged
+  }
+
+  /** Stamp the `spend-past-cap` approval onto a held task. */
+  async setApproval(id: string, approvalId: string): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = { ...existing, approvalId }
+    await this.writeEntity(merged)
+    return merged
   }
 
   /**
@@ -79,6 +156,7 @@ export class ScheduledTasksStorageService
     runRef: string,
     target: TaskTarget,
     now: number,
+    projectId?: string,
   ): Promise<ScheduledTask> {
     const task: ScheduledTask = {
       id,
@@ -90,6 +168,7 @@ export class ScheduledTasksStorageService
       createdAt: new Date(now).toISOString(),
       runRef,
       target,
+      ...(projectId ? { projectId } : {}),
     }
     await this.writeEntity(task)
     return task
@@ -123,10 +202,16 @@ export class ScheduledTasksStorageService
     return merged
   }
 
-  /** Mark a still-waiting task cancelled; a non-`scheduled` task is returned as-is. */
+  /**
+   * Mark a still-waiting task cancelled. Phase 8 widens "waiting" from `scheduled`
+   * to also cover `queued` and `held` (a task that never dispatched); a task that
+   * already dispatched/failed/cancelled is returned as-is. Cancelling a HELD task's
+   * approval is routed through the approvals service by the caller (single source of
+   * truth) — this only flips the record.
+   */
   async cancel(id: string): Promise<ScheduledTask> {
     const existing = await this.get(id)
-    if (existing.status !== "scheduled") return existing
+    if (!CANCELLABLE.has(existing.status)) return existing
     const merged: ScheduledTask = { ...existing, status: "cancelled" }
     await this.writeEntity(merged)
     return merged

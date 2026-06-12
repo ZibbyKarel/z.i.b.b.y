@@ -15,6 +15,7 @@ apps/api/data/vault/daily
 apps/api/data/credentials
 apps/api/data/channels
 apps/api/data/activity
+apps/api/data/budget-ledger
 
 !apps/api/data/agents
 !apps/api/data/automations

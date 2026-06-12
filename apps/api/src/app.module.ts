@@ -6,6 +6,7 @@ import { AgentsModule } from "./agents/agents.module"
 import { ApprovalsModule } from "./approvals/approvals.module"
 import { AutomationsModule } from "./automations/automations.module"
 import { BriefingModule } from "./briefing/briefing.module"
+import { BudgetModule } from "./budget/budget.module"
 import { ChannelsModule } from "./channels/channels.module"
 import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
@@ -43,6 +44,7 @@ import { TasksModule } from "./tasks/tasks.module"
     HealthModule,
     LimitsModule,
     EventsModule,
+    BudgetModule,
     TasksModule,
   ],
 })

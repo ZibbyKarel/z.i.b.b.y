@@ -103,6 +103,19 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       })),
     }
 
+    const fakeProjects = { list: async () => [], get: async () => { throw new Error("no project") } }
+    const fakeBudget = {
+      check: async () => ({ ok: true }),
+      countRunning: async () => 0,
+      recordDispatch: async () => {},
+    }
+    const fakeApprovals = {
+      register: vi.fn(),
+      requestApproval: async () => ({ id: "appr_1" }),
+      reject: async () => {},
+    }
+    const fakeGates = { floor: async () => [], evaluate: () => ({ decision: "allow" }) }
+
     service = new TaskSchedulerService(
       storage,
       classifier as never,
@@ -111,6 +124,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeLogger as never,
       fakeTrace as never,
       { record: async () => {} } as never,
+      fakeProjects as never,
+      fakeBudget as never,
+      fakeApprovals as never,
+      fakeGates as never,
     )
     service.onModuleInit()
   })
@@ -128,7 +145,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
 
     expect(result.task.status).toBe("dispatched")
     expect(result.task.runRef).toBe("writer_1_1")
-    // The taskId travelled into the runner BEFORE dispatch.
+    // The taskId travelled into the runner BEFORE dispatch (projectId "" when
+    // unattributed; matchedTerms ride along for memory grounding).
     expect(agentRunner.start).toHaveBeenCalledWith(
       "writer",
       "do the thing",
@@ -136,6 +154,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       [],
       "Thing",
       result.task.id,
+      [],
     )
     const persisted = await storage.get(result.task.id)
     expect(persisted.status).toBe("dispatched")
@@ -174,7 +193,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     })
     const result = await service.createTask({ text: "ship it" })
     if (result.outcome !== "dispatched") throw new Error("expected dispatched")
-    expect(pipelineRunner.start).toHaveBeenCalledWith("release", result.task.id)
+    expect(pipelineRunner.start).toHaveBeenCalledWith("release", result.task.id, undefined, [])
 
     pipelineListener?.(
       pipelineRun({
