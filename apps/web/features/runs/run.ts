@@ -61,6 +61,8 @@ export interface RunView {
   limitResumeCycles?: number;
   /** Phase 9: a window-deferred scheduled task (`deferredReason === "limit"`). */
   deferredLimit?: boolean;
+  /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
+  checkpoints?: PipelineRun["checkpoints"];
 }
 
 /** Task-first display name: explicit title, else the task text, else the target. */
@@ -138,6 +140,7 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     parked: r.parked,
     resumeAt: r.resumeAt,
     limitResumeCycles: r.limitResumeCycles,
+    checkpoints: r.checkpoints,
   };
 }
 

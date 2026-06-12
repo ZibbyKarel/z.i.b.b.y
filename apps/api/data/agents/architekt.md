@@ -23,7 +23,10 @@ Vstup: `task.md` (volné zadání operátora). Výstup: `plan.md`.
 ## Kontrakt výstupu (`plan.md`)
 
 - `## Cíl` — jedna věta, co bude po dokončení pravda.
-- `## Kroky` — číslovaný seznam; každý krok = změna + soubor(y) + jak ji ověřit.
+- `## Kroky` — **checkbox seznam práce**: každý krok je řádek `- [ ] …` (změna +
+  soubor(y) + jak ji ověřit). Piš je tak, aby šly odškrtávat jeden po druhém —
+  Kodér i další fáze označují hotové kroky `- [x]` a pipeline se podle nich umí
+  vrátit přesně tam, kde skončila (po pauze na limitu, retry nebo zaparkování).
 - `## Rizika` — co hlídat; co je mimo rozsah.
 
 Plán je pro Kodéra jediný zdroj pravdy — piš ho tak, aby se podle něj dalo

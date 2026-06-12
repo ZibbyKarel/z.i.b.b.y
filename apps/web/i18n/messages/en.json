@@ -676,7 +676,8 @@
     "resumeWithNote": "Resume with note",
     "prGate": "PR preparation",
     "prDraft": "PR draft (pr-draft.md)",
-    "prDiffstat": "Branch changes (diffstat)"
+    "prDiffstat": "Branch changes (diffstat)",
+    "checkpoints": "Checkpoints (branch commits)"
   },
   "gates": {
     "title": "Approval rules",

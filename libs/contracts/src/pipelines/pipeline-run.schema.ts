@@ -62,6 +62,20 @@ export type StageRun = z.infer<typeof StageRunSchema>
 export const ParkedReasonSchema = z.enum(["approval", "retries", "limit"])
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>
 
+/**
+ * A checkpoint commit (Phase 9.3) the runner made on the run's `zibby/*` branch after
+ * a phase landed `done` with a clean green tree. Durable across worktree cleanup (the
+ * branch is never deleted), so the operator can see — and a resumed run continue from —
+ * exactly what was committed when. Local commits only; the push/PR gate is untouched.
+ */
+export const PipelineCheckpointSchema = z.object({
+  phaseId: z.string().min(1),
+  /** Abbreviated commit sha on the run branch. */
+  sha: z.string().min(1),
+  at: z.string().datetime(),
+})
+export type PipelineCheckpoint = z.infer<typeof PipelineCheckpointSchema>
+
 /** Detail of a retries-parking: which phase, how many attempts, the failure file. */
 export const ParkedDetailSchema = z.object({
   phaseId: z.string().min(1),
@@ -118,6 +132,12 @@ export const PipelineRunSchema = z.object({
   parked: ParkedDetailSchema.optional(),
   /** Persisted per-phase retry counters, so a parked run resumes accurately. */
   retries: z.record(z.string(), z.number()).optional(),
+  /**
+   * Phase 9.3: the checkpoint commits the runner made on the run branch after each
+   * green phase. Append-only; surfaces in the run detail and feeds the resume-context
+   * a resumed/retried phase is prefixed with ("items 1–4 done and committed").
+   */
+  checkpoints: z.array(PipelineCheckpointSchema).optional(),
   /**
    * Classifier terms (Phase 4) that routed the originating task here, persisted so
    * a parked/resumed run re-grounds each stage identically after a restart. They

@@ -251,6 +251,24 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
           {logPanel}
         </HudPanel>
       )}
+
+      {run.checkpoints && run.checkpoints.length > 0 && (
+        <HudPanel padding="250" title={t("checkpoints")}>
+          <Stack gap="50">
+            {run.checkpoints.map((c) => (
+              <Typography
+                mono
+                key={`${c.phaseId}-${c.sha}`}
+                size="2xs"
+                type="note"
+                variant="tertiary"
+              >
+                {c.phaseId} · {c.sha}
+              </Typography>
+            ))}
+          </Stack>
+        </HudPanel>
+      )}
     </Stack>
   );
 }

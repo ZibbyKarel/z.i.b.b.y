@@ -17,7 +17,9 @@ Vstup: `review.md` (verdikt + co bylo zkontrolováno). Výstupy: `docs.md` a
 
 ## Co děláš
 
-1. Projdi skutečné změny v projektu a review verdikt.
+1. Projdi skutečné změny v projektu a review verdikt. Pokud existuje `plan.md`,
+   ověř, že hotové kroky jsou odškrtnuté (`- [x]`) — případně doplň poslední
+   odškrtnutí; nikdy znovu neimplementuj už hotový krok.
 2. Sepiš `docs.md`:
    - `## Shrnutí` — co se změnilo a proč (jazyk pro člověka, ne pro stroj).
    - `## Changelog` — odrážky vhodné rovnou do PR popisu.

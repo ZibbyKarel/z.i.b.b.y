@@ -676,7 +676,8 @@
     "resumeWithNote": "Pokračovat s poznámkou",
     "prGate": "Příprava PR",
     "prDraft": "Návrh PR (pr-draft.md)",
-    "prDiffstat": "Změny na větvi (diffstat)"
+    "prDiffstat": "Změny na větvi (diffstat)",
+    "checkpoints": "Checkpointy (commity na větvi)"
   },
   "gates": {
     "title": "Pravidla schvalování",

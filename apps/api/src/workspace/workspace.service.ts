@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process"
+import { promises as fs } from "node:fs"
+import * as path from "node:path"
 import { promisify } from "node:util"
 import { Injectable, Optional } from "@nestjs/common"
 import type { Workspace } from "@zibby/contracts"
@@ -118,6 +120,73 @@ export class WorkspaceService {
       cwd: opts.projectPath,
       timeout: GIT_TIMEOUT_MS,
     }).catch(() => {})
+  }
+
+  /**
+   * Phase 9.3 — commit a checkpoint on the run's branch after a phase landed green.
+   * `git add -A && git commit` IN THE WORKTREE ONLY: refuses (logs + null) unless
+   * `worktreePath` carries a `.git` worktree marker, so it can never fall back to the
+   * operator's main checkout and commit their dirty tree (a Law-1 violation in spirit).
+   * A clean tree → null (nothing to checkpoint). Tolerant of a deleted worktree / any
+   * git failure (logs + null) so it never crashes the driver. NEVER pushes — the
+   * push/PR gate (3.2/3.3) is untouched. Returns the short sha on success.
+   */
+  async checkpoint(opts: {
+    worktreePath: string
+    phaseId: string
+    summary: string
+  }): Promise<{ sha: string } | null> {
+    // A git worktree has a `.git` marker (a file pointing at the main repo). Its
+    // absence means this is not a worktree → refuse rather than risk the main checkout.
+    const marker = await fs.stat(path.join(opts.worktreePath, ".git")).catch(() => null)
+    if (!marker) {
+      this.log?.debug("checkpoint skipped — not a worktree", { worktreePath: opts.worktreePath })
+      return null
+    }
+    try {
+      const status = await exec("git", ["status", "--porcelain"], {
+        cwd: opts.worktreePath,
+        timeout: GIT_TIMEOUT_MS,
+      })
+      if (!status.stdout.trim()) return null // clean tree — nothing to checkpoint
+      await exec("git", ["add", "-A"], { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS })
+      const message = `zibby-checkpoint(${opts.phaseId}): ${opts.summary}`
+      // -c identity so the commit works on a worktree with no configured user.
+      await exec(
+        "git",
+        ["-c", "user.email=zibby@local", "-c", "user.name=ZIBBY", "commit", "-m", message],
+        { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS },
+      )
+      const head = await exec("git", ["rev-parse", "--short", "HEAD"], {
+        cwd: opts.worktreePath,
+        timeout: GIT_TIMEOUT_MS,
+      })
+      const sha = head.stdout.trim()
+      this.log?.info("checkpoint committed", { worktreePath: opts.worktreePath, phaseId: opts.phaseId, sha })
+      return { sha }
+    } catch (error) {
+      this.log?.warn("checkpoint failed (soft)", {
+        worktreePath: opts.worktreePath,
+        phaseId: opts.phaseId,
+        err: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
+
+  /**
+   * Phase 9.3 — `git log --oneline <baseRef>..HEAD` on the run branch: the commits
+   * (koder's incremental work + the zibby-checkpoints) made since the branch was cut.
+   * Feeds the resume-context block a resumed/retried phase is prefixed with. Best-effort
+   * (a missing/cleaned worktree → "").
+   */
+  async commitLog(opts: { worktreePath: string; baseRef: string }): Promise<string> {
+    return exec("git", ["log", "--oneline", `${opts.baseRef}..HEAD`], {
+      cwd: opts.worktreePath,
+      timeout: GIT_TIMEOUT_MS,
+    })
+      .then((r) => r.stdout.trim())
+      .catch(() => "")
   }
 
   /**

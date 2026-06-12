@@ -104,6 +104,51 @@ describe("WorkspaceService", () => {
     expect(out).toContain("feature.txt")
   })
 
+  it("checkpoint commits a dirty worktree, returns the sha, and never touches main", async () => {
+    const dir = path.join(runDir, "worktree")
+    const ws = await svc.createWorktree({ projectPath: repo, runId: "r-cp", slug: "s", dir })
+    const headBefore = await git(repo, "rev-parse", "HEAD")
+    await fs.writeFile(path.join(dir, "feature.txt"), "work\n", "utf8")
+
+    const result = await svc.checkpoint({ worktreePath: dir, phaseId: "koder", summary: "did the thing" })
+    expect(result).not.toBeNull()
+    // The branch advanced with a zibby-checkpoint commit; the main checkout did not.
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(headBefore)
+    const log = await git(dir, "log", "--oneline", "-1")
+    expect(log).toContain("zibby-checkpoint(koder): did the thing")
+    expect(log).toContain(result!.sha)
+    // The branch still exists; the worktree tree is now clean.
+    expect(await git(repo, "branch", "--list", ws.branch)).toContain(ws.branch)
+  })
+
+  it("checkpoint returns null on a clean tree (nothing to commit)", async () => {
+    const dir = path.join(runDir, "worktree")
+    await svc.createWorktree({ projectPath: repo, runId: "r-clean", slug: "s", dir })
+    const result = await svc.checkpoint({ worktreePath: dir, phaseId: "verify", summary: "noop" })
+    expect(result).toBeNull()
+  })
+
+  it("checkpoint refuses a non-worktree directory (never the operator's main checkout)", async () => {
+    // The main repo checkout has a `.git` DIR, but the guard runs git in-place only on
+    // a real worktree marker; a plain non-git dir is refused outright.
+    const plain = await fs.mkdtemp(path.join(os.tmpdir(), "ws-plain-cp-"))
+    try {
+      await fs.writeFile(path.join(plain, "dirty.txt"), "x", "utf8")
+      expect(await svc.checkpoint({ worktreePath: plain, phaseId: "x", summary: "y" })).toBeNull()
+    } finally {
+      await fs.rm(plain, { recursive: true, force: true })
+    }
+  })
+
+  it("commitLog lists the branch commits since the base ref", async () => {
+    const dir = path.join(runDir, "worktree")
+    const ws = await svc.createWorktree({ projectPath: repo, runId: "r-log", slug: "s", dir })
+    await fs.writeFile(path.join(dir, "a.txt"), "a\n", "utf8")
+    await svc.checkpoint({ worktreePath: dir, phaseId: "koder", summary: "first" })
+    const out = await svc.commitLog({ worktreePath: dir, baseRef: ws.baseRef })
+    expect(out).toContain("zibby-checkpoint(koder): first")
+  })
+
   it("removes the worktree and prunes its metadata, leaving the branch intact", async () => {
     const dir = path.join(runDir, "worktree")
     const ws = await svc.createWorktree({ projectPath: repo, runId: "r2", slug: "s", dir })

@@ -40,6 +40,12 @@ export interface ClaudeRunOptions {
    * vault-agnostic; the caller composes it.
    */
   grounding?: string;
+  /**
+   * Resume-context block (Phase 9.3): "you are continuing, not restarting — these
+   * items are done and committed". Set only on a resumed/retried stage; inserted into
+   * `--append-system-prompt` after grounding, before the agent body. Omitted when "".
+   */
+  resumeContext?: string;
 }
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
@@ -123,9 +129,16 @@ export const EXECUTION_DIRECTIVE =
  * grounding gives durable context, and the body (highest recency in the system
  * prompt) is the agent's own instructions. Empty grounding is omitted cleanly.
  */
-function withOperatingContract(instructions: string, grounding?: string): string {
+function withOperatingContract(
+  instructions: string,
+  grounding?: string,
+  resumeContext?: string,
+): string {
   const block = grounding && grounding.trim() ? `${grounding.trim()}\n\n---\n\n` : "";
-  return `${OPERATING_CONTRACT}${block}${instructions}`;
+  // Phase 9.3: the resume-context rides the same channel, after grounding so the
+  // "continue, don't restart" framing is durable context, before the agent body.
+  const resume = resumeContext && resumeContext.trim() ? `${resumeContext.trim()}\n\n---\n\n` : "";
+  return `${OPERATING_CONTRACT}${block}${resume}${instructions}`;
 }
 
 /** Append the execution directive so the user turn ends with "act, don't ask". */
@@ -216,7 +229,7 @@ export class ClaudeRunCommandService {
       "--allowedTools",
       ...allowedTools,
       "--append-system-prompt",
-      withOperatingContract(opts.instructions, opts.grounding),
+      withOperatingContract(opts.instructions, opts.grounding, opts.resumeContext),
       "--agents",
       JSON.stringify(catalog),
       // Mid-run approval gate: a PreToolUse hook intercepts destructive Bash and

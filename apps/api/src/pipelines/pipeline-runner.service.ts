@@ -31,6 +31,8 @@ import { TraceContextService } from "../shared/logging/trace-context.service"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { PipelinesStorageService } from "./pipelines.storage.service"
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
+import { renderProgress } from "./progress"
+import { buildResumeContext } from "./resume-context"
 
 /** DI token carrying the absolute path of the directory that holds pipeline run artifacts. */
 export const PIPELINE_RUNS_DIR = "PIPELINE_RUNS_DIR"
@@ -356,9 +358,20 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     })
 
     const project = await this.projectForRun(run)
+    // Phase 9.3: the retried/resumed phase carries the resume-context (progress +
+    // committed checkpoints + the operator note, when given). A retries-parking also
+    // carries its failure context; a limit-parking's "flap note" file isn't a failure.
+    const failureTail = isLimit
+      ? undefined
+      : await fs.readFile(parked.failureFile, "utf8").catch(() => undefined)
+    const resumeContext = await this.composeResumeContext(
+      run,
+      pipeline.phases.map((p) => p.id),
+      { note: trimmed, failureTail },
+    )
     const traceId = this.trace.getTraceId() ?? randomUUID()
     void this.trace.run({ traceId, runId: pipelineRunId }, () =>
-      this.drive(run, pipeline, project, { cursor, handoffSource, retries }),
+      this.drive(run, pipeline, project, { cursor, handoffSource, retries, resumeContext }),
     )
     return run
   }
@@ -402,9 +415,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     })
     if (cursor) {
       const handoffSource = this.recomputeHandoff(run, pipeline, cursor)
+      // Phase 9.3: the resumed phase is a continuation — prefix it with what's already
+      // done + committed so it doesn't re-implement completed work.
+      const resumeContext = await this.composeResumeContext(run, pipeline.phases.map((p) => p.id), {})
       const traceId = this.trace.getTraceId() ?? randomUUID()
       void this.trace.run({ traceId, runId: pipelineRunId }, () =>
-        this.drive(run, pipeline, project, { cursor, handoffSource, retries }),
+        this.drive(run, pipeline, project, { cursor, handoffSource, retries, resumeContext }),
       )
     }
     return run
@@ -590,14 +606,24 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     run: PipelineRun,
     pipeline: Pipeline,
     project: Project | null = null,
-    resume?: { cursor: string; handoffSource: string | null; retries: Map<string, number> },
+    resume?: {
+      cursor: string
+      handoffSource: string | null
+      retries: Map<string, number>
+      /** Phase 9.3: resume-context for the FIRST re-driven phase (limit/parked resume). */
+      resumeContext?: string
+    },
   ): Promise<void> {
     const byId = new Map(pipeline.phases.map((p) => [p.id, p]))
     const order = pipeline.phases
+    const phaseIds = order.map((p) => p.id)
     const retries = resume?.retries ?? new Map<string, number>()
     // Absolute path of the file to feed into the next phase's `consumes` input.
     let handoffSource: string | null = resume?.handoffSource ?? null
     let cursor: string | null = resume?.cursor ?? order[0]?.id ?? null
+    // Phase 9.3: a continuation prefix for the next phase to run — set on a re-driven
+    // resume (limit/parked) and on a loop back-edge; consumed once, then cleared.
+    let pendingResumeContext: string | null = resume?.resumeContext ?? null
 
     while (cursor) {
       const phase = byId.get(cursor)
@@ -616,6 +642,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         run.limitResumeCycles = run.limitResumeCycles ?? 0
         run.retries = Object.fromEntries(retries)
         await this.writeAggregate(run)
+        await this.writeProgress(run, phaseIds)
         this.log.warn("pipeline run paused on usage limit (phase boundary)", {
           phase: phase.id,
           resumeAt: run.resumeAt,
@@ -634,7 +661,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         agent: phase.agent,
         attempt,
       })
-      const stageRun = await this.runStage(run, phase, stageCwd, attempt, project)
+      const stageResumeContext = pendingResumeContext ?? undefined
+      pendingResumeContext = null // consumed by this phase only
+      const stageRun = await this.runStage(run, phase, stageCwd, attempt, project, stageResumeContext)
 
       // Phase 9 (mid-stage pause, decision 3a): the stage child died on a usage limit.
       // The aggregate pauses WITHOUT touching the retry map — loop budget and the
@@ -650,6 +679,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         run.limitResumeCycles = run.limitResumeCycles ?? 0
         run.retries = Object.fromEntries(retries)
         await this.writeAggregate(run)
+        await this.writeProgress(run, phaseIds)
         this.log.warn("pipeline run paused on usage limit (mid-stage)", {
           phase: phase.id,
           resumeAt: run.resumeAt,
@@ -667,11 +697,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
       if (stageRun.status === "done") {
         this.log.info("pipeline phase done", { phase: phase.id, attempt })
+        // Phase 9.3: checkpoint the green phase on the run branch (worktree only;
+        // a clean tree / non-git run → no-op). Records the sha on the aggregate.
+        await this.checkpointPhase(run, phase, stageCwd, attempt)
         // A verify phase transforms nothing: it leaves the handoff untouched, so
         // the next phase consumes the last *producing* phase's output.
         if (phase.produces) handoffSource = path.join(stageCwd, phase.produces)
         const idx = order.findIndex((p) => p.id === phase.id)
         cursor = order[idx + 1]?.id ?? null
+        await this.writeProgress(run, phaseIds)
         continue
       }
 
@@ -686,7 +720,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           retryTo: loop.to,
         })
         handoffSource = await this.writeFailureContext(run, phase, stageRun)
+        // Phase 9.3: the retried phase is a continuation — prefix it with the
+        // resume-context (what's committed so far + this attempt's failure tail).
+        pendingResumeContext = await this.composeResumeContext(run, phaseIds, {
+          failureTail: await this.tailLog(stageRun.runId),
+        })
         cursor = loop.to
+        await this.writeProgress(run, phaseIds)
         continue
       }
 
@@ -701,6 +741,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         run.retries = Object.fromEntries(retries)
         run.currentStage = phase.id
         await this.writeAggregate(run)
+        await this.writeProgress(run, phaseIds)
         this.log.warn("pipeline run parked (retries exhausted)", {
           phase: phase.id,
           attempts: attempt,
@@ -734,7 +775,76 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     if (run.status === "running") run.status = "done"
     run.currentStage = null
     await this.writeAggregate(run)
+    await this.writeProgress(run, phaseIds)
     this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
+  }
+
+  /**
+   * Phase 9.3 — checkpoint a green phase on the run branch (worktree only). Skips
+   * cleanly when there is no worktree or the tree is clean; on success records the sha
+   * on `run.checkpoints`. The commit message summary is the first line of the phase's
+   * `produces` file when present, else "attempt N". NEVER pushes.
+   */
+  private async checkpointPhase(
+    run: PipelineRun,
+    phase: PipelinePhase,
+    stageCwd: string,
+    attempt: number,
+  ): Promise<void> {
+    if (!run.workspace) return
+    let summary = `attempt ${attempt}`
+    if (phase.produces) {
+      const body = await fs.readFile(path.join(stageCwd, phase.produces), "utf8").catch(() => "")
+      const firstLine = body.split(/\r?\n/).find((l) => l.trim().length > 0)?.trim()
+      if (firstLine) summary = firstLine.slice(0, 100)
+    }
+    const result = await this.workspace
+      .checkpoint({ worktreePath: run.workspace.path, phaseId: phase.id, summary })
+      .catch(() => null)
+    if (!result) return
+    run.checkpoints = [
+      ...(run.checkpoints ?? []),
+      { phaseId: phase.id, sha: result.sha, at: new Date().toISOString() },
+    ]
+    await this.writeAggregate(run)
+  }
+
+  /** Rewrite `<run cwd>/PROGRESS.md` from the aggregate (pure {@link renderProgress}). */
+  private async writeProgress(run: PipelineRun, phaseIds: readonly string[]): Promise<void> {
+    await fs
+      .writeFile(path.join(run.cwd, "PROGRESS.md"), renderProgress(run, phaseIds), "utf8")
+      .catch(() => {
+        // Best-effort: a failed PROGRESS write degrades the surface, not the run.
+      })
+  }
+
+  /** The tail of a stage's log (the failure context the resume-context summarizes). */
+  private async tailLog(stageRunId: string, maxChars = 2000): Promise<string> {
+    const log = await this.core.readLog(stageRunId, 0).catch(() => null)
+    const content = log?.content ?? ""
+    return content.length > maxChars ? content.slice(content.length - maxChars) : content
+  }
+
+  /**
+   * Phase 9.3 — assemble the resume-context block for a continuation phase from the
+   * current `PROGRESS.md`, the branch's checkpoint log, and an optional note / failure
+   * tail. Pure-input gathering around the pure {@link buildResumeContext} builder.
+   */
+  private async composeResumeContext(
+    run: PipelineRun,
+    phaseIds: readonly string[],
+    extra: { note?: string; failureTail?: string },
+  ): Promise<string> {
+    const progressMd =
+      (await fs.readFile(path.join(run.cwd, "PROGRESS.md"), "utf8").catch(() => "")) ||
+      renderProgress(run, phaseIds)
+    const checkpointLog = run.workspace
+      ? await this.workspace.commitLog({
+          worktreePath: run.workspace.path,
+          baseRef: run.workspace.baseRef,
+        })
+      : ""
+    return buildResumeContext({ progressMd, checkpointLog, note: extra.note, failureTail: extra.failureTail })
   }
 
   /**
@@ -754,6 +864,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     stageCwd: string,
     attempt: number,
     project: Project | null,
+    resumeContext?: string,
   ): Promise<StageRun> {
     const escalation = this.escalationFor(phase, attempt)
     if (escalation) {
@@ -766,6 +877,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       escalation,
       run.workspace?.path,
       run.matchedTerms,
+      resumeContext,
     )
     const rec = await this.core.start({
       kind: "pipeline-stage",
@@ -948,6 +1060,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     worktreePath?: string,
     /** Persisted classifier terms (Phase 4) — drive memory-grounding MOC selection. */
     matchedTerms?: string[],
+    /** Phase 9.3: resume-context prefix for a continuation phase (limit/parked/loop). */
+    resumeContext?: string,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path
     // Verify phases are deterministic shell checks — identical in demo and
@@ -994,6 +1108,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         model: escalation?.model ?? phase.model ?? agent.model,
         thinking: escalation?.thinking ?? phase.thinking ?? agent.thinking,
         grounding,
+        // Phase 9.3: a continuation phase gets the resume-context in its system prompt.
+        ...(resumeContext ? { resumeContext } : {}),
         // The sandbox holds the handoff files; with cwd in the worktree/project the
         // session still needs write access to it (reverse grant).
         ...(spawnCwd ? { grantDirs: [cwd] } : {}),

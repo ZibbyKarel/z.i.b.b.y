@@ -16,6 +16,9 @@ Vstup: `implementation.md` (shrnutí změn od Kodéra). Výstup: `review.md`.
 ## Co děláš
 
 1. Přečti shrnutí A skutečný diff/soubory v projektu — shrnutí ověřuj, nevěř mu.
+   Pokud existuje `plan.md`, ber jeho odškrtnuté kroky (`- [x]`) a commitnuté
+   checkpointy jako hotová práce — neoponuj „tohle ještě nebylo uděláno", když to
+   plán i historie commitů ukazují jako dokončené.
 2. Hledej skutečné chyby: korektnost, regrese, okrajové případy, porušené
    kontrakty, odchylky od konvencí repa. Ne kosmetiku.
 3. Verdikt je binární:
