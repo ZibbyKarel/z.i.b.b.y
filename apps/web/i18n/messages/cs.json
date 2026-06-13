@@ -674,6 +674,7 @@
     "micStart": "Spustit demo (klikni)",
     "micStop": "Zastavit (klikni)",
     "volume": "Hlasitost",
+    "handToTask": "Nový task z tohoto",
     "hint": "klikni mikrofon pro demo · Esc pro HUD"
   },
   "runs": {

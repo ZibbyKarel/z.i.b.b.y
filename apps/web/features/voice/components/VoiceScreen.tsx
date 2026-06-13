@@ -10,6 +10,7 @@ import { Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { RUN_STATE } from "../../runs/run";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, compactAgo } from "../../../utils/time";
+import { useNewTask } from "../../tasks";
 import { useVoiceData } from "../hooks/useVoiceData";
 import { useVoiceDemoSequence } from "../hooks/useVoiceDemoSequence";
 import { VoiceOrb } from "./VoiceOrb";
@@ -35,6 +36,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
 
   const { state, revealed, isActive, toggleMic } = useVoiceDemoSequence();
   const { approvals, liveRuns, recent, skills } = useVoiceData();
+  const { open: openNewTask } = useNewTask();
   // A render-stable "now" for the relative times, ticked once a minute.
   const now = useNow(MINUTE_MS);
 
@@ -45,6 +47,18 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     { role: "zibby", text: t("demo.zibby2") },
   ];
   const messages = revealed ? demoMessages : demoMessages.slice(0, 2);
+
+  // Phase 11.4 seam: hand the spoken utterance to the unified composer. The real
+  // (Phase-7) recognition hook will call this with the live transcript; today it
+  // routes the demo's last user utterance so the seam is exercised deterministically.
+  // The composer infers single vs loop and the operator confirms behind the gate
+  // (live STT/TTS is deferred to Phase 7).
+  const lastUserUtterance =
+    [...demoMessages].reverse().find((m) => m.role === "user")?.text ?? "";
+  const handToTask = () => {
+    onExit();
+    openNewTask(lastUserUtterance);
+  };
 
   // Esc exits voice mode.
   useEffect(() => {
@@ -304,6 +318,16 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
           type="button"
         >
           <SpeakerGlyph size={16} />
+        </button>
+
+        <button
+          className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
+          onClick={handToTask}
+          title={t("handToTask")}
+          type="button"
+        >
+          <Icon name="plus" size="xs" />
+          {t("handToTask")}
         </button>
 
         <Typography mono size="2xs" style={{ letterSpacing: "0.08em" }} type="note" variant="tertiary">

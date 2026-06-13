@@ -276,6 +276,14 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     });
   });
 
+  it("seeds the description from initialText (voice transcript) and infers a loop", async () => {
+    render(<NewTaskDialog initialText="keep retrying the deploy until it passes" onClose={() => {}} />);
+    // The one field is pre-filled — Phase 11.4 voice fills it, no spoken form-filling.
+    expect(screen.getByLabelText(/Zadání/)).toHaveValue("keep retrying the deploy until it passes");
+    // The seeded text classifies on mount → the loop preview appears with no extra input.
+    expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
+  });
+
   it("closes via the cancel action", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);

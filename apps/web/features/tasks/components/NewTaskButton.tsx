@@ -19,7 +19,7 @@ export function NewTaskButton() {
       aria-label={t("triggerAria")}
       icon="plus"
       intent="ghost"
-      onClick={open}
+      onClick={() => open()}
       size="sm"
       title={`${t("triggerTitle")} (${NEW_TASK_SHORTCUT.toUpperCase()})`}
     >

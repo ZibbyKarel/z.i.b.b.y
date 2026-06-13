@@ -674,6 +674,7 @@
     "micStart": "Start demo (click)",
     "micStop": "Stop (click)",
     "volume": "Volume",
+    "handToTask": "New task from this",
     "hint": "click the mic for a demo · Esc for HUD"
   },
   "runs": {

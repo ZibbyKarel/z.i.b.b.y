@@ -68,13 +68,15 @@ function AppShellInner({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
-      <VoiceProvider>
-        <NewTaskProvider>
+      {/* NewTaskProvider is the OUTER provider so the voice takeover (rendered by
+          VoiceProvider) can reach `useNewTask().open(transcript)` — Phase 11.4. */}
+      <NewTaskProvider>
+        <VoiceProvider>
           <Suspense>
             <AppShellInner>{children}</AppShellInner>
           </Suspense>
-        </NewTaskProvider>
-      </VoiceProvider>
+        </VoiceProvider>
+      </NewTaskProvider>
     </CatalogProvider>
   );
 }

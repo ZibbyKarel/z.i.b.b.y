@@ -17,7 +17,12 @@ export const NEW_TASK_SHORTCUT = "n";
 interface TaskStore {
   /** Whether the New Task dialog is showing. */
   isOpen: boolean;
-  open: () => void;
+  /**
+   * Open the New Task dialog. An optional `initialText` seeds the description field
+   * — Phase 11.4: a voice transcript (or any external trigger) fills the one field,
+   * then the operator confirms the inferred plan behind the same gate.
+   */
+  open: (initialText?: string) => void;
   close: () => void;
 }
 
@@ -30,8 +35,15 @@ const TaskContext = createContext<TaskStore | null>(null);
  */
 export function NewTaskProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const [initialText, setInitialText] = useState<string | undefined>(undefined);
+  const open = useCallback((text?: string) => {
+    setInitialText(text);
+    setIsOpen(true);
+  }, []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setInitialText(undefined);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -41,6 +53,8 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === NEW_TASK_SHORTCUT) {
         e.preventDefault();
+        // The keyboard entry opens a blank composer (no seed text).
+        setInitialText(undefined);
         setIsOpen((v) => !v);
       }
     };
@@ -53,7 +67,11 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
   return (
     <TaskContext.Provider value={value}>
       {children}
-      {isOpen && <NewTaskDialog onClose={close} />}
+      {/* Keyed on the seed so re-opening with a new transcript re-seeds the field
+          (the composer's `text` initializes from `initialText` on mount). */}
+      {isOpen && (
+        <NewTaskDialog initialText={initialText} key={initialText ?? ""} onClose={close} />
+      )}
     </TaskContext.Provider>
   );
 }
