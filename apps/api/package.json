@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -P tsconfig.json src/main.ts",
     "serve": "ts-node -P tsconfig.json src/main.ts",
+    "lint": "pnpm -w run lint",
     "test": "vitest run --project api"
   },
   "dependencies": {
