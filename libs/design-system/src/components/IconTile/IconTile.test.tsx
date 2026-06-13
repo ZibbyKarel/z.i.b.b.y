@@ -19,14 +19,16 @@ describe("IconTile", () => {
         <span>X</span>
       </IconTile>,
     )
-    expect(screen.getByText("X")).toBeInTheDocument()
+    expect(screen.getByTestId(IconTileTestId.Root)).toHaveTextContent("X")
     expect(screen.queryByTestId(IconTestId.Root)).toBeNull()
   })
 
   it("acts as a button and fires onClick when interactive", async () => {
     const onClick = vi.fn()
     render(<IconTile interactive as="button" glyph="edit" onClick={onClick} />)
-    await userEvent.click(screen.getByRole("button"))
+    const el = screen.getByTestId(IconTileTestId.Root)
+    expect(el).toHaveRole("button")
+    await userEvent.click(el)
     expect(onClick).toHaveBeenCalledOnce()
   })
 })

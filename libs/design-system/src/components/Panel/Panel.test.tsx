@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Panel, PanelTestId } from "./Panel";
 
@@ -20,8 +20,8 @@ describe("Panel", () => {
       </Panel>,
     );
     const header = screen.getByTestId(PanelTestId.Header);
-    expect(within(header).getByText("Title")).toBeInTheDocument();
-    expect(within(header).getByText("42 lines")).toBeInTheDocument();
+    expect(header).toHaveTextContent("Title");
+    expect(header).toHaveTextContent("42 lines");
   });
 
   it("lets a consumer override the test-id (spread after the default)", () => {

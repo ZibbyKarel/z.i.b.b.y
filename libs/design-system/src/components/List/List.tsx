@@ -15,6 +15,7 @@ export enum ListTestId {
   Root = "list-root",
   Item = "list-item",
   Badge = "list-item-badge",
+  Icon = "list-item-icon",
 }
 
 /** Navigation item data shape — used by app-level nav config arrays. */
@@ -44,6 +45,7 @@ export function ListItemIcon({ glyph }: ListItemIconProps) {
   return (
     <span
       className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
+      data-testid={ListTestId.Icon}
     >
       <Icon name={glyph} size="md" />
     </span>

@@ -14,9 +14,9 @@ describe("Surface", () => {
 
   it("renders no decorative overlay elements", () => {
     render(<Surface background="scene">x</Surface>)
-    expect(
-      screen.getByTestId(SurfaceTestId.Root).querySelectorAll('[aria-hidden="true"]'),
-    ).toHaveLength(0)
+    const root = screen.getByTestId(SurfaceTestId.Root)
+    expect(root.children).toHaveLength(1)
+    expect(root.children[0]).toBe(screen.getByTestId(SurfaceTestId.Content))
   })
 
   it("paints the scene gradient for the app shell", () => {

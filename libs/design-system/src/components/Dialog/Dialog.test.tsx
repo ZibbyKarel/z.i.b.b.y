@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
@@ -24,7 +24,7 @@ describe("Dialog", () => {
   it("renders actions slot", () => {
     render(<Dialog open actions={<button>OK</button>}>x</Dialog>);
     const footer = screen.getByTestId(DialogTestId.Footer);
-    expect(within(footer).getByRole("button", { name: "OK" })).toBeInTheDocument();
+    expect(footer).toHaveTextContent("OK");
   });
 
   it("calls onClose on Escape", async () => {

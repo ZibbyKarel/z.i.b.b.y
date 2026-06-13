@@ -91,9 +91,8 @@ describe("ListItemIcon", () => {
         <ListItemText>Přehled</ListItemText>
       </ListItem>,
     );
-    // Icon wrapper should carry text-accent class
-    const icon = screen.getByTestId(ListTestId.Item).querySelector(".text-accent");
-    expect(icon).not.toBeNull();
+    const icon = screen.getByTestId(ListTestId.Icon);
+    expect(icon).toHaveClass("text-accent");
   });
 
   it("renders icon with faint color when inactive", () => {
@@ -103,9 +102,7 @@ describe("ListItemIcon", () => {
         <ListItemText>Přehled</ListItemText>
       </ListItem>,
     );
-    const icon = screen
-      .getByTestId(ListTestId.Item)
-      .querySelector(".text-foreground-faint");
-    expect(icon).not.toBeNull();
+    const icon = screen.getByTestId(ListTestId.Icon);
+    expect(icon).toHaveClass("text-foreground-faint");
   });
 });

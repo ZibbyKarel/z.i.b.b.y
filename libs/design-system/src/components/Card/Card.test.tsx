@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
 import { Card, CardActions, CardContent, CardFooter, CardHeader, CardTestId } from "./Card";
@@ -56,6 +56,6 @@ describe("Card", () => {
   it("CardActions renders its children via CardFooter", () => {
     render(<Card><CardActions><button>OK</button></CardActions></Card>);
     const footer = screen.getByTestId(CardTestId.Footer);
-    expect(within(footer).getByRole("button", { name: "OK" })).toBeInTheDocument();
+    expect(footer).toHaveTextContent("OK");
   });
 });
