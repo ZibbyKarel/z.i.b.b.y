@@ -60,6 +60,12 @@ async function bootstrap(): Promise<void> {
   )
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(document))
 
+  // Phase 12.3: arm NestJS shutdown hooks so every service's `onModuleDestroy`
+  // (the run/verifier reapers) actually fires on SIGTERM — under `ts-node-dev
+  // --respawn` and launchd a restart is a signal, not an `app.close()`, and
+  // detached children would otherwise orphan and accumulate RAM.
+  app.enableShutdownHooks()
+
   // Default to 3333 (Phase 8.3) so the launchd plist can omit PORT and dev keeps
   // working — `Number(undefined)` was NaN. An explicit PORT (or a .env value) wins.
   const port = Number(process.env.PORT ?? 3333)

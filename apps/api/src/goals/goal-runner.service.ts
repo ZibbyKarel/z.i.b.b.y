@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process"
+import { type ChildProcess, spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { EventEmitter } from "node:events"
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import {
   GOAL_RUN_ARTIFACTS,
   type Goal,
@@ -23,6 +23,7 @@ import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { buildResumeContext } from "../pipelines/resume-context"
 import { buildVerifyCommand } from "../pipelines/verify-command"
+import { isAlive, killGroup } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
@@ -85,6 +86,21 @@ const MAX_LISTED = 50
 const AGGREGATE_FILE = "run.json"
 
 /**
+ * Phase 12.3 — resource governance for the deterministic `checks` verifier shell.
+ * A hung command (a runaway suite, a watcher that never exits) must not wedge the
+ * outer loop or accumulate RAM forever, and a kill/respawn must reap it.
+ */
+/** Hard wall-clock deadline for one verifier shell; override with `GOAL_VERIFY_TIMEOUT_MS`. */
+const DEFAULT_SHELL_TIMEOUT_MS = 10 * 60 * 1000
+/** Grace after SIGTERM before escalating the process group to SIGKILL. */
+const SHELL_KILL_GRACE_MS = 5000
+/** Cap the captured output (rolling tail); the verdict keeps only {@link VERDICT_MAX_CHARS} anyway. */
+const SHELL_OUTPUT_CAP = 1_000_000
+
+/** Exit code recorded for a verifier shell killed by the {@link DEFAULT_SHELL_TIMEOUT_MS} deadline. */
+const SHELL_TIMEOUT_CODE = 124
+
+/**
  * The outer loop engine. A goal run iterates a *maker* (an existing agent or
  * pipeline, dispatched through its own runner untouched) against a *verifier*
  * (Phase 10.2), persisting every iteration to disk and parking when bounded
@@ -98,12 +114,14 @@ const AGGREGATE_FILE = "run.json"
  * {@link PipelineRunnerService} pattern with `iterations[]` replacing `stageRuns[]`.
  */
 @Injectable()
-export class GoalRunnerService implements OnModuleInit {
+export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string
   private readonly runs = new Map<string, GoalRun>()
   /** The base prompt for each live run's maker (not persisted — recomputed from objective on restart). */
   private readonly prompts = new Map<string, string>()
   private readonly events = new EventEmitter()
+  /** In-flight verifier shells (Phase 12.3) — tracked so `onModuleDestroy` reaps them. */
+  private readonly liveShells = new Set<ChildProcess>()
   private readonly log: ScopedLogger
 
   constructor(
@@ -126,6 +144,18 @@ export class GoalRunnerService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true }).catch(() => {})
     await this.reconstruct()
+  }
+
+  /**
+   * Phase 12.3 — reap every in-flight verifier shell on shutdown (mirror of
+   * {@link RunnerCore.shutdown}). GoalRunnerService was the only background service
+   * without this hook, so a `checks` verifier child was orphaned on kill/respawn —
+   * exactly the meta-circular RAM accumulation the phase exists to close. (Requires
+   * `app.enableShutdownHooks()` so it also fires on SIGTERM, not just `app.close()`.)
+   */
+  onModuleDestroy(): void {
+    for (const child of this.liveShells) killGroup(child.pid ?? 0)
+    this.liveShells.clear()
   }
 
   /**
@@ -485,7 +515,23 @@ export class GoalRunnerService implements OnModuleInit {
     return { kind: "claude", runRef: r.runId, satisfied: status === "done", output: tailOf(log?.content ?? "") }
   }
 
-  /** Run a shell command, capturing combined stdout/stderr and the exit code. */
+  /** The verifier shell deadline (env-overridable so tests can use a short one). */
+  private shellTimeoutMs(): number {
+    const raw = Number(process.env.GOAL_VERIFY_TIMEOUT_MS)
+    return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SHELL_TIMEOUT_MS
+  }
+
+  /**
+   * Run a verifier shell, capturing combined stdout/stderr and the exit code, under
+   * Phase 12.3 resource governance:
+   * - `detached` → the child leads its own process group, so a kill reaps the whole
+   *   tree (the suite + everything it spawned), not just the `/bin/sh` parent.
+   * - tracked in {@link liveShells} for `onModuleDestroy` reaping; removed on settle.
+   * - a wall-clock deadline ({@link shellTimeoutMs}) SIGTERMs the group, then escalates
+   *   to SIGKILL after {@link SHELL_KILL_GRACE_MS} if it ignores the term — a hung
+   *   suite must never wedge `drive()` forever.
+   * - the output accumulator is capped to a rolling {@link SHELL_OUTPUT_CAP}-char tail.
+   */
   private runShell(
     command: string,
     args: string[],
@@ -493,11 +539,45 @@ export class GoalRunnerService implements OnModuleInit {
   ): Promise<{ code: number; output: string }> {
     return new Promise((resolve) => {
       let output = ""
-      const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] })
-      child.stdout.on("data", (d) => (output += d.toString()))
-      child.stderr.on("data", (d) => (output += d.toString()))
-      child.on("error", (err) => resolve({ code: 1, output: `${output}\n${err.message}` }))
-      child.on("close", (code) => resolve({ code: code ?? 1, output }))
+      let settled = false
+      const child = spawn(command, args, { cwd, detached: true, stdio: ["ignore", "pipe", "pipe"] })
+      const pgid = child.pid ?? 0
+      this.liveShells.add(child)
+
+      const append = (d: Buffer): void => {
+        output += d.toString()
+        if (output.length > SHELL_OUTPUT_CAP) output = output.slice(output.length - SHELL_OUTPUT_CAP)
+      }
+
+      const finish = (code: number, extra = ""): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        this.liveShells.delete(child)
+        resolve({ code, output: extra ? `${output}\n${extra}` : output })
+      }
+
+      const timer = setTimeout(() => {
+        const ms = this.shellTimeoutMs()
+        killGroup(pgid)
+        // Escalate to SIGKILL on the group if SIGTERM was trapped/ignored.
+        setTimeout(() => {
+          if (isAlive(pgid)) {
+            try {
+              process.kill(-pgid, "SIGKILL")
+            } catch {
+              // already gone
+            }
+          }
+        }, SHELL_KILL_GRACE_MS).unref?.()
+        finish(SHELL_TIMEOUT_CODE, `[verifier timed out after ${ms}ms — process group killed]`)
+      }, this.shellTimeoutMs())
+      timer.unref?.()
+
+      child.stdout.on("data", append)
+      child.stderr.on("data", append)
+      child.on("error", (err) => finish(1, err.message))
+      child.on("close", (code) => finish(code ?? 1))
     })
   }
 

@@ -1069,7 +1069,7 @@ function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
 }
 
 /** Is a process (group leader) still alive? `kill(pid, 0)` probes without signalling. */
-function isAlive(pid: number): boolean {
+export function isAlive(pid: number): boolean {
   if (!pid || pid <= 1) return false
   try {
     process.kill(pid, 0)
@@ -1081,7 +1081,7 @@ function isAlive(pid: number): boolean {
 }
 
 /** Terminate a whole detached process group (negative pid targets the group). */
-function killGroup(pgid: number): void {
+export function killGroup(pgid: number): void {
   if (!pgid || pgid <= 1) return
   try {
     process.kill(-pgid, "SIGTERM")

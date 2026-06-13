@@ -20,7 +20,17 @@ Progress (loop tracking)
       enforced by a `drive()` pre-flight park (before any maker spawns) + a `runVerifier`
       floor. New `verifier-scope` GoalParkedReason. Unit + 2 e2e (no-scope parks; scoped
       but no-project parks; iterations[] empty, suite never spawned). 651/651 api green.
-- [ ] 12.3 — Resource governance in runShell + shutdown hook
+- [x] 12.3 — Resource governance in runShell + shutdown hook (DONE 2026-06-14).
+      runShell now spawns `detached` (own process group), tracks the child in a
+      `liveShells` set, enforces a wall-clock deadline (`GOAL_VERIFY_TIMEOUT_MS`,
+      default 10min) that SIGTERMs the group then escalates to SIGKILL after a 5s
+      grace, and caps the output accumulator to a 1MB rolling tail. New
+      `onModuleDestroy` reaps tracked children (mirrors RunnerCore.shutdown; reuses
+      exported `killGroup`/`isAlive`). `main.ts` now calls `app.enableShutdownHooks()`
+      so every service's reaper fires on SIGTERM, not just `app.close()`. Unit: hung
+      command times out+killed, output cap holds, onModuleDestroy reaps. NOTE: the
+      pipelines/agent-runs `ENOTEMPTY` flake is RunnerCore-side (kill-then-rm race +
+      in-tree worktree), addressed by 12.7 — NOT this item.
 - [ ] 12.4 — Gate reconstruct() re-dispatch (Law 3)
 - [ ] 12.6 — Eliminate double verification
 - [ ] 12.7 — Worktrees outside the repo
