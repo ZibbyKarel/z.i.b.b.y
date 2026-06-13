@@ -30,15 +30,15 @@
 
 **Gaps vs. North Star:**
 
-| North Star claim | Reality |
-|---|---|
-| Delivery loop with Kodér ⇄ Review ⇄ Tester retries | Backend `loop` back-edges exist but pipeline runs default to `demo-stage.mjs`; stage-level gates/resume missing; UI only builds linear chains |
-| "The PR is the gate" | No git/branch/PR workflow at all |
-| Second brain with run lifecycle (ground → work → record) | Vault is read-only + daily append; no grounding, no learned-memory writes, no MOC updates |
-| Autonomous mode watching Slack/email | Nothing exists; Integrations screen is a client-side mock (`CatalogProvider`) |
-| Butler's briefing, always answerable | ActivityFeed is demo data; no activity log, no briefing |
-| Voice operator interface | Demo transcript only (`useVoiceDemoSequence`) |
-| Multiple parallel engagements with budget caps | Limits are read-only display; no caps, no per-project budgets |
+| North Star claim                                         | Reality                                                                                                                                       |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Delivery loop with Kodér ⇄ Review ⇄ Tester retries       | Backend `loop` back-edges exist but pipeline runs default to `demo-stage.mjs`; stage-level gates/resume missing; UI only builds linear chains |
+| "The PR is the gate"                                     | No git/branch/PR workflow at all                                                                                                              |
+| Second brain with run lifecycle (ground → work → record) | Vault is read-only + daily append; no grounding, no learned-memory writes, no MOC updates                                                     |
+| Autonomous mode watching Slack/email                     | Nothing exists; Integrations screen is a client-side mock (`CatalogProvider`)                                                                 |
+| Butler's briefing, always answerable                     | ActivityFeed is demo data; no activity log, no briefing                                                                                       |
+| Voice operator interface                                 | Demo transcript only (`useVoiceDemoSequence`)                                                                                                 |
+| Multiple parallel engagements with budget caps           | Limits are read-only display; no caps, no per-project budgets                                                                                 |
 
 FINISH.md Fáze A–C are incorporated below: B1–B3 → Phase 1, B4 → Phase 2,
 A + C → Phase 7. Phase 7 has no dependency on Phases 3–6 and can be pulled
@@ -48,9 +48,9 @@ forward any time.
 
 ## Phase 1 — Trustworthy autonomous core
 
-*Goal: one task, typed into NewTaskDialog, runs a **real** multi-phase pipeline
+_Goal: one task, typed into NewTaskDialog, runs a **real** multi-phase pipeline
 end-to-end — pauses on approval, resumes after it, and reports its outcome.
-Nothing downstream is worth building until this is boringly reliable.*
+Nothing downstream is worth building until this is boringly reliable._
 
 ### 1.1 Claude preflight (FINISH B3)
 
@@ -69,7 +69,7 @@ Nothing downstream is worth building until this is boringly reliable.*
 - `pipeline-runner.service.ts`: wire `onIntent` into the stage driver (pattern:
   `agent-runner.service.ts:151`) and implement `resume()` (pattern:
   `runner-core.ts:345`) so `ApprovalsService` resume for `kind:
-  "pipeline-stage"` is no longer a no-op. After approval the **current phase
+"pipeline-stage"` is no longer a no-op. After approval the **current phase
   continues**, not restarts.
 - Persist `awaiting-approval` in the stage record + aggregate `run.json` so a
   parked pipeline survives API restart.
@@ -113,9 +113,9 @@ under `pnpm test` + `pnpm e2e`.
 
 ## Phase 2 — The delivery loop
 
-*Goal: the Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor cycle as a
+_Goal: the Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor cycle as a
 bounded state machine that parks instead of thrashing — "delivering working
-code, not generating code."*
+code, not generating code."_
 
 ### 2.1 Deterministic verification phase (FINISH B4)
 
@@ -184,8 +184,8 @@ with context.
 
 ## Phase 3 — Git and the PR gate
 
-*Goal: Law 3 made structural — ZIBBY works on its own branch, prepares the PR
-completely, and stops. Push/merge are gated actions, not conventions.*
+_Goal: Law 3 made structural — ZIBBY works on its own branch, prepares the PR
+completely, and stops. Push/merge are gated actions, not conventions._
 
 ### 3.1 Workspace manager
 
@@ -235,8 +235,8 @@ draft and a single pending approval; nothing reached the remote before it.
 
 ## Phase 4 — Second brain: memory lifecycle
 
-*Goal: every run grounds itself at start and leaves a durable trace at end;
-memory compounds instead of being a read-only graph viewer.*
+_Goal: every run grounds itself at start and leaves a durable trace at end;
+memory compounds instead of being a read-only graph viewer._
 
 ### 4.1 Vault write API
 
@@ -280,8 +280,8 @@ not from chat context.
 
 ## Phase 5 — Channels and autonomous mode
 
-*Goal: ZIBBY watches Slack (then email) on a heartbeat, triages by tier, acts
-within mandate, and inbound content can never raise privileges (Law 4).*
+_Goal: ZIBBY watches Slack (then email) on a heartbeat, triages by tier, acts
+within mandate, and inbound content can never raise privileges (Law 4)._
 
 ### 5.1 Integrations become real
 
@@ -344,8 +344,8 @@ drafts a reply pending approval — with zero operator prompting.
 
 ## Phase 6 — Accountability: activity log and the butler's briefing
 
-*Goal: "what's happening / what happened" answered from the record, and the
-default report is a briefing, not a firehose (Law 5).*
+_Goal: "what's happening / what happened" answered from the record, and the
+default report is a briefing, not a firehose (Law 5)._
 
 ### 6.1 Activity log on disk
 
@@ -384,7 +384,7 @@ shows the North Star's example briefing shape, every line traceable to a file.
 
 ## Phase 7 — Voice and operator UX (FINISH Fáze A + C)
 
-*Independent of Phases 3–6; pull forward whenever the operator wants it.*
+_Independent of Phases 3–6; pull forward whenever the operator wants it._
 
 **Cost constraint (binding): voice is 100% free and browser-native.** STT via
 `SpeechRecognition`, TTS via `speechSynthesis` — both W3C Web Speech API,
@@ -398,10 +398,10 @@ research (support matrix, error catalogue, bug workarounds, code patterns):
 ### 7.1 Real voice in/out (A1–A3)
 
 - `useSpeechRecognition`: wraps `window.SpeechRecognition ??
-  webkitSpeechRecognition`; `lang` from the locale cookie (`cs-CZ`/`en-US`),
+webkitSpeechRecognition`; `lang` from the locale cookie (`cs-CZ`/`en-US`),
   `continuous` + `interimResults`, interim surfaced as ghost text, utterance
   dispatched only on `isFinal`. Error mapping to a closed union `mic-denied |
-  unsupported | network | service-denied` (`not-allowed`/`audio-capture` →
+unsupported | network | service-denied` (`not-allowed`/`audio-capture` →
   mic-denied; missing API → unsupported; `no-speech`/`aborted` suppressed —
   they're normal session noise).
 - **Reconnect strategy** (the hard part): Chrome silently drops continuous
@@ -424,8 +424,8 @@ research (support matrix, error catalogue, bug workarounds, code patterns):
   (autoplay policy) — queue early utterances, flush on first interaction;
   always set `utterance.lang`.
 - Extended `VoiceSession` interface (`mode, isListening, isSpeaking,
-  isSupported, error, transcript, startListening, stopListening, speak,
-  stop`); the existing demo transcript hook stays behind
+isSupported, error, transcript, startListening, stopListening, speak,
+stop`); the existing demo transcript hook stays behind
   `mode: "live" | "demo"` — Playwright/CI remain deterministic on demo.
 - SSR guards (`typeof window !== "undefined"`) on every API touch — Next.js
   renders these components on the server first.
@@ -488,8 +488,8 @@ spend: 0 Kč.
 
 ## Phase 8 — Multi-engagement scale
 
-*Goal: the long-term purpose — several delivery engagements in parallel, the
-operator only at the decision points.*
+_Goal: the long-term purpose — several delivery engagements in parallel, the
+operator only at the decision points._
 
 ### 8.1 Budgets and caps
 
@@ -529,11 +529,11 @@ machine that rebooted once, and the morning briefing accounts for everything.
 
 ## Phase 9 — Limit resilience: pause, checkpoint, auto-resume
 
-*Goal: a subscription-limit outage is a **pause, not a failure**. A long
+_Goal: a subscription-limit outage is a **pause, not a failure**. A long
 pipeline that exhausts the Claude 5h/weekly window halts cleanly, waits for
 the window to reset, and continues from its last checkpoint — finished work
 is committed and marked in the handoff docs, so nothing is ever
-re-implemented from zero.*
+re-implemented from zero._
 
 What exists today (verified 2026-06-12): `detect-limit.ts` already scans run
 output for usage-limit signals and extracts the reset epoch, but its only
@@ -621,25 +621,25 @@ morning briefing accounts for the pause.
 
 ## Phase 10 — Loop engine: goals, verifier, work discovery
 
-*Goal: promote ZIBBY from an "agent and pipeline launcher" into a **loop
+_Goal: promote ZIBBY from an "agent and pipeline launcher" into a **loop
 engine** — it discovers work itself, proposes it through the gate, iterates a
 maker against a separate verifier, persists every iteration to disk, and
 parks when bounded effort is exhausted. The outer loop sitting above a single
-run's inner loop — the capstone, not a new subsystem.*
+run's inner loop — the capstone, not a new subsystem._
 
 **Context.** "Loop engineering" (Osmani / Cherny / Steinberger, June 2026)
 names the standard blocks — and ZIBBY already shipped nearly all of them:
 
-| Loop-engineering block | Where it lives here |
-|---|---|
-| Automations (heartbeat) | core cron tick + Phase 5 triage |
-| Worktrees | Phase 3.1 (+ 8.2 parallelism, verified) |
-| Skills | core (`data/skills/`) |
-| Connectors | Phase 5.1 integrations |
+| Loop-engineering block     | Where it lives here                                                     |
+| -------------------------- | ----------------------------------------------------------------------- |
+| Automations (heartbeat)    | core cron tick + Phase 5 triage                                         |
+| Worktrees                  | Phase 3.1 (+ 8.2 parallelism, verified)                                 |
+| Skills                     | core (`data/skills/`)                                                   |
+| Connectors                 | Phase 5.1 integrations                                                  |
 | Sub-agents (maker/checker) | Phase 2 delivery loop (`verify` stage, back-edges, escalation, parking) |
-| Memory on disk | Phase 4 vault lifecycle |
-| Budget / cost | Phase 8.1 `BudgetService` + `held` tasks |
-| **"Hand off to you"** | **approval gate + Tier 3 — ZIBBY's differentiator** |
+| Memory on disk             | Phase 4 vault lifecycle                                                 |
+| Budget / cost              | Phase 8.1 `BudgetService` + `held` tasks                                |
+| **"Hand off to you"**      | **approval gate + Tier 3 — ZIBBY's differentiator**                     |
 
 What's missing is the connective tissue: the outer loop itself. Phase 10 is
 therefore deliberately **thin glue over delivered machinery** — anything below
@@ -654,7 +654,7 @@ that smells like re-implementation of 2.x/3.x/6.1/8.1 is a design error.
   ref, verifier spec, `maxIterations`, budget) and a `GoalRunSchema` holding
   `iterations[]` (each: maker run ref, verifier verdict, tokens/cost),
   accumulated cost, and a `sessionId` for resumability.
-- The maker step is an **existing executor** — a stored agent *or* a full
+- The maker step is an **existing executor** — a stored agent _or_ a full
   pipeline (the union nests); the goal runner dispatches it per iteration
   through the same runner seams, so demo mode stays the deterministic e2e
   seam and the mid-run approval gate applies unchanged inside every
@@ -688,10 +688,10 @@ that smells like re-implementation of 2.x/3.x/6.1/8.1 is a design error.
 - A scheduled automation (existing automations tick — same pattern as the
   Phase 6 morning briefing) runs a `triage.skill.md` discovery skill: scan
   `git log`, failing tests, `daily/`, and open items in `MEMORY.md` → emit
-  task **candidates**. *Proposed ≠ dispatched* — discovery never starts a
+  task **candidates**. _Proposed ≠ dispatched_ — discovery never starts a
   run.
 - Proposals land in the **approvals queue** as a new `kind:
-  "proposed-task"` (the 5.3 `kind: "channel"` pattern) — the gate *is* the
+"proposed-task"` (the 5.3 `kind: "channel"` pattern) — the gate _is_ the
   inbox; no parallel surface, no new approval flow. Approving dispatches via
   the existing `createTask` path, so budget guard (8.1), concurrency queue
   (8.2) and outcome write-back (1.3) all apply for free.
@@ -738,16 +738,16 @@ reached the remote.
 
 ## Phase 11 — Unified task UX: one input, any execution
 
-*Goal: collapse task entry to a **single described intent**. The operator says
+_Goal: collapse task entry to a **single described intent**. The operator says
 what they want; ZIBBY decides whether that runs as an agent, a pipeline, or a
 loop — the "how" becomes a preview behind the gate, never a form. Like Phase 10,
 this is **thin glue over delivered machinery** (classifier, goal engine, gate,
-projects), not a new subsystem.*
+projects), not a new subsystem._
 
 **Context.** Standard task entry already does the right thing — describe →
 `TaskClassifierService` routes → dispatch. But loops are stranded in a separate
 manual tab (`LoopComposer`: maker / verifier / reviewer / iterations /
-instructions) because the classifier *deliberately* never routes to a goal
+instructions) because the classifier _deliberately_ never routes to a goal
 (`isCoherent`: `kind === "goal"` → reject). And detected paths (`extractPaths`)
 end as removable keyword chips — they never become a folder grant. Phase 11
 removes the second tab and turns paths into scoped permissions.
@@ -787,20 +787,12 @@ Full step-by-step plan, file map, and tests: **`plans/ux-simplification.md`**.
 - **Tests:** in-project path → badge; outside → grant action; grant
   creates/extends scope; run uses it as `cwd`; no auto-grant without the gate.
 
-### 11.4 Voice fills the one input
-
-- Wire `VoicePanel` transcript → the unified composer / `createTask`; ZIBBY
-  reads the inferred plan back and waits at risky steps. Machine-inferred mode
-  removes the need to dictate form fields (impossible today for loops).
-- **Tests:** transcript → prefilled composer; confirm → dispatch; spoken
-  loop-shaped utterance → goal; risky action still gated.
-
 **Hard invariants (restated):** the gate is unchanged — unification touches
-*entry*, not approval; advanced control survives in the disclosure;
+_entry_, not approval; advanced control survives in the disclosure;
 synthesized goals are normal `<id>.goal.md` files; input is data, never
 commands (Law 4).
 
-**Phase exit criterion:** typing *or speaking* "fix the failing test in
+**Phase exit criterion:** typing _or speaking_ "fix the failing test in
 project X and keep going until it's green" into one field classifies as a loop,
 shows the plan preview, offers the detected path as a folder grant, and — after
 one confirmation — runs the goal, with zero hand-filled form fields and nothing
@@ -829,8 +821,8 @@ Phase 10 (loop engine) — needs 2 (verify stage, parking, escalation), 3.1+3.2
                        but 9.1 should land first so a limit hit inside a goal
                        iteration pauses instead of burning the iteration budget
 Phase 11 (unified UX) — needs 10.1/10.2 (goal engine) for 11.1-11.2; 3.1
-                       (workspace manager) for 11.3; Phase 7 (voice) for 11.4.
-                       11.1+11.2 deliver the core simplification and can ship alone
+                       (workspace manager) for 11.3; 11.1+11.2 deliver the core
+                       simplification and can ship alone
 ```
 
 **Standing rules for every phase** (the test constraint, made concrete):
