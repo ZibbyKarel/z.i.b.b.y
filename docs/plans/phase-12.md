@@ -1,5 +1,30 @@
 Phase 12 — Self-development safety: resource governance + meta-circular isolation
 
+Progress (loop tracking)
+
+- [x] 12.5 — Global e2e data-dir + runner-mode isolation (DONE 2026-06-14). vitest.setup.ts
+      now pins a fresh temp ZIBBY_DATA_DIR (seeded from real data, volatile/runtime
+      subtrees filtered out), AGENT_RUNNER_MODE=demo, and a fake CLAUDE_BIN before any
+      AppModule boots. data-dir.ts has a VITEST tripwire that refuses the live
+      apps/api/data anchor without an override (+ unit test). Result: full `pnpm test`
+      leaves apps/api/data untouched and never spawns real claude; 643/643 deterministic
+      api tests green; the cross-suite contamination failures (briefing.e2e + 2 uncollected)
+      are gone. Incidental: aligned a stray apps/web PageContainer test to the refactored
+      `stretch` prop (pre-existing TS2322 from commit 98796a0, unrelated to Phase 12).
+- [ ] 12.1 — Scope/forbid the heavy default verifier
+- [ ] 12.2 — Never run checks from inside the repo
+- [ ] 12.3 — Resource governance in runShell + shutdown hook
+- [ ] 12.4 — Gate reconstruct() re-dispatch (Law 3)
+- [ ] 12.6 — Eliminate double verification
+- [ ] 12.7 — Worktrees outside the repo
+- [ ] 12.8 — Durable self-development posture
+
+Parked / known: two claude-mode worktree e2e suites (pipelines.e2e PR-gate, agent-runs.e2e)
+flake at `afterAll` cleanup with `ENOTEMPTY` on their own temp run dirs — an unreaped-child /
+in-tree-worktree race, pre-existing (baseline) and exactly the 12.3 (reaping) + 12.7
+(worktree location) targets. NOT a 12.5 regression; all individual tests pass. Do not paper
+over with retry-rm — the production reaping fix is the real resolution.
+
 Context
 
 ROADMAP.md Phase 12: make ZIBBY a safe target for its own loop engine. The "MEMORY BOMB"

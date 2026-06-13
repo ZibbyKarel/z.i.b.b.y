@@ -13,8 +13,8 @@ describe("PageContainer", () => {
     expect(screen.getByText("x")).toHaveStyle({ maxWidth: "1400px" })
   })
 
-  it("honors a custom max width", () => {
-    render(<PageContainer maxWidth="960px">y</PageContainer>)
-    expect(screen.getByText("y")).toHaveStyle({ maxWidth: "960px" })
+  it("stretches to full width when stretch is set", () => {
+    render(<PageContainer stretch>y</PageContainer>)
+    expect(screen.getByText("y")).toHaveStyle({ width: "100%" })
   })
 })

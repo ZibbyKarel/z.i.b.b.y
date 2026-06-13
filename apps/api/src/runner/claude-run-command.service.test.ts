@@ -1,5 +1,5 @@
 import type { Agent, Skill } from "@zibby/contracts"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { AgentsStorageService } from "../agents/agents.storage.service"
 import type { SkillsStorageService } from "../skills/skills.storage.service"
 import {
@@ -40,6 +40,18 @@ const WRITER_SKILL: Skill = {
 }
 
 describe("ClaudeRunCommandService.buildClaudeCommand", () => {
+  // The default binary is "claude"; the global test setup (Phase 12.5) pins
+  // CLAUDE_BIN to the token-free fake, so clear it here to assert the real
+  // default. The CLAUDE_BIN-seam test below sets it explicitly.
+  const savedClaudeBin = process.env.CLAUDE_BIN
+  beforeEach(() => {
+    delete process.env.CLAUDE_BIN
+  })
+  afterEach(() => {
+    if (savedClaudeBin === undefined) delete process.env.CLAUDE_BIN
+    else process.env.CLAUDE_BIN = savedClaudeBin
+  })
+
   it("spawns claude in dontAsk mode with the task as the bare -p arg", async () => {
     const svc = makeService([CODER], [])
     const { command, args } = await svc.buildClaudeCommand({

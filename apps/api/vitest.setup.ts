@@ -1,26 +1,95 @@
-import { mkdtempSync, rmSync } from "node:fs"
+import { cpSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, relative, sep } from "node:path"
 import "reflect-metadata"
 
 /**
+ * Phase 12.5 — global e2e isolation barrier (the meta-circular safety net).
+ *
+ * 26 of 28 e2e suites boot the full `AppModule`; only a couple isolate their
+ * goal/data dirs. Without a global data-root override every un-isolated suite
+ * reads and writes the repo's REAL `apps/api/data` — so one suite's pipeline/goal
+ * run is `reconstruct()`ed by the next suite that boots (the cross-suite flake),
+ * and the committed-`.env` `AGENT_RUNNER_MODE=claude` would drive a REAL `claude`
+ * from inside the test run. That is exactly the "target IS ZIBBY" collapse the
+ * Phase 12 RCA names. This setup runs once per forked test FILE (vitest forks
+ * each file into its own process), before any `AppModule` boots, and hard-isolates
+ * three things — each with `??=` so a suite that already chose its own value wins:
+ *
+ *   1. `ZIBBY_DATA_DIR` → a fresh temp root (every `*_DIR` fallback follows it).
+ *   2. `AGENT_RUNNER_MODE` → `demo` (neutralises the local `.env` claude leak;
+ *      `dotenv`/`ConfigModule` never overrides an already-set process.env var).
+ *   3. `CLAUDE_BIN` → the token-free fake (the agent runner has no demo mode, so a
+ *      reconstructed agent-maker goal must never reach real claude).
+ *
+ * The temp data root is SEEDED from the real data dir (agents, pipelines, skills,
+ * projects, vault, gate-rules/mandate/budget/POLICY) so suites that read seeds
+ * keep passing — but every volatile/runtime subtree (`runs/`, `goals`, `tasks`,
+ * `activity`, `approvals`, `channels`, `proposals`, `credentials`, `budget-ledger`)
+ * is filtered out, so nothing reconstructible is ever copied in.
+ */
+
+/** Runtime/volatile path segments never copied into the seeded test data root. */
+const VOLATILE_SEGMENTS = new Set([
+  "runs",
+  "goals",
+  "tasks",
+  "activity",
+  "approvals",
+  "channels",
+  "proposals",
+  "credentials",
+  "budget-ledger",
+])
+
+const cleanups: Array<() => void> = []
+
+if (!process.env.ZIBBY_DATA_DIR) {
+  const realData = join(__dirname, "data")
+  const tempData = mkdtempSync(join(tmpdir(), "zibby-data-"))
+  try {
+    cpSync(realData, tempData, {
+      recursive: true,
+      filter: (src) => {
+        const rel = relative(realData, src)
+        if (!rel) return true
+        return !rel.split(sep).some((segment) => VOLATILE_SEGMENTS.has(segment))
+      },
+    })
+  } catch {
+    // No real data dir (or a partial copy) is fine — suites that need a seed
+    // set their own *_DIR; the isolation (an empty temp root) is what matters.
+  }
+  process.env.ZIBBY_DATA_DIR = tempData
+  cleanups.push(() => rmSync(tempData, { recursive: true, force: true }))
+}
+
+// Neutralise the committed `.env` `AGENT_RUNNER_MODE=claude` leak: tests run on
+// the deterministic demo seam unless a suite explicitly opts into another mode.
+process.env.AGENT_RUNNER_MODE ??= "demo"
+
+// The agent runner always spawns real `claude` (no demo mode); pin the token-free
+// fake so a reconstructed agent-maker can never reach the real binary.
+process.env.CLAUDE_BIN ??= join(__dirname, "test", "fixtures", "fake-claude.mjs")
+
+/**
  * Isolate the activity log per test FILE (Phase 6.1). `ActivityLogService` is
- * `@Global` and fires on every dispatch / approval / gate evaluation, so any e2e
- * suite that boots `AppModule` without a data-root override would otherwise append
- * into the repo's real `apps/api/data/activity` — and suites sharing one "today"
- * file would corrupt each other's activity assertions. Vitest runs each test file
- * in its own forked, isolated process (so this setup re-runs per file); pointing
- * `ACTIVITY_DIR` at a fresh temp dir here gives every suite its own log, unless the
- * suite has already chosen one explicitly.
+ * `@Global` and fires on every dispatch / approval / gate evaluation; pointing
+ * `ACTIVITY_DIR` at its own fresh temp dir keeps each suite's log clean even
+ * before the data-root override above (and stays independent of it).
  */
 if (!process.env.ACTIVITY_DIR) {
   const dir = mkdtempSync(join(tmpdir(), "zibby-activity-"))
   process.env.ACTIVITY_DIR = dir
-  process.on("exit", () => {
-    try {
-      rmSync(dir, { recursive: true, force: true })
-    } catch {
-      // best-effort cleanup of the temp log dir
-    }
-  })
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
 }
+
+process.on("exit", () => {
+  for (const cleanup of cleanups) {
+    try {
+      cleanup()
+    } catch {
+      // best-effort cleanup of the temp dirs
+    }
+  }
+})
