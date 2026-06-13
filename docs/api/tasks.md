@@ -31,6 +31,9 @@ Body: {
   paths?: string[]           # soubory / adresáře
   scheduledAt?: number       # epoch ms; pokud chybí nebo v minulosti → okamžitý dispatch
   projectId?: string         # explicitní přiřazení projektu (přeskočí matchování)
+  target?: TaskTarget        # Phase 11: předem zvolený cíl, který přeskočí klasifikaci
+                             # (naplánovaný loop nese { kind: "goal", id }; scheduler ho
+                             # při ticku znovu nasadí na tento cíl místo re-klasifikace)
 }
 ```
 
@@ -117,6 +120,38 @@ DELETE /api/tasks/:id                 zrušení (jen scheduled | queued | held)
 POST   /api/tasks/:id/approve-override   odemkni held úlohu (spend-past-cap)
 POST   /api/tasks/classify            klasifikuj text bez vytvoření úlohy
 ```
+
+## Phase 11 — sjednocené zadání (loop shape + path scoping)
+
+Klasifikace zůstává **bez vedlejších efektů** a katalog dál routuje jen na
+agent/pipeline/orchestrator (`isCoherent` cíl `goal` nadále vylučuje). `TaskRouting`
+ale nese tři přídavná, zpětně kompatibilní pole (starý klient je ignoruje):
+
+```typescript
+{
+  // …target, confidence, reason, matchedTerms, candidates…
+  mode: "single" | "loop"            // default "single"
+  proposedGoal: ProposedGoal | null  // syntéza goalu, když mode === "loop"
+  paths: ResolvedPath[]              // detekované cesty přiřazené k projektům
+}
+```
+
+- **Loop detekce (dvě nohy).** LLM router smí vrátit `loop: true` (anotace na svém
+  agent/pipeline výběru), nebo deterministický `detectLoopCue(text)` (cs+en, fold
+  diakritiky) najde cue typu „dokud", „keep retrying", „until it passes". Když platí
+  kterákoli a existuje konkrétní maker, klasifikátor sestaví `proposedGoal`
+  (`synthesizeGoal`): `objective`/`instructions` = surový text úlohy (Law 4 — data,
+  ne příkaz), `maker` = zvolený agent/pipeline (orchestrator → první pipeline z
+  katalogu, jinak `mode` zpět na `single`), `verifier: { kind: "checks" }` (výchozí
+  kontroly projektu), `maxIterations = DEFAULT_GOAL_ITERATIONS`. **Nic se nezapisuje**
+  — `.goal.md` vznikne až při submitu z webu (createGoal → startGoalRun, u
+  naplánovaného loopu createGoal → createTask s `target: goal`).
+
+- **Path scoping.** Klasifikátor přes `matchProject` přiřadí každou `paths[]` cestu k
+  projektu (read-only atribuce). Web vykreslí „v projektu <name>", nebo u cesty mimo
+  projekt nabídne **povolit přístup** — operátorský confirm zavolá `createProject`
+  (registruje složku jako workspace root). Žádný autonomní tok grant nevolá (Law 1).
+  Negitová udělená složka běží přímo jako cwd (bez worktree, bez `WorkspaceSetupError`).
 
 ## Activity záznamy
 
