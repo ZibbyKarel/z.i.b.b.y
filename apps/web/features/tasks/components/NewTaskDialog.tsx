@@ -5,6 +5,10 @@ import {
   Dialog,
   IconTile,
   Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
   TextInputField,
   Typography,
 } from "@zibby/design-system";
@@ -12,7 +16,18 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
+import {
+  useCreateGoalMutation,
+  useStartGoalMutation,
+} from "../../goals/mutations";
 import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
+import {
+  INITIAL_LOOP_STATE,
+  type LoopFormState,
+  buildCreateGoalBody,
+  canSubmitLoop,
+  makeGoalId,
+} from "../loop";
 import { useCreateTaskMutation } from "../mutations";
 import {
   type SchedulePreset,
@@ -20,6 +35,7 @@ import {
   resolveScheduledAt,
   whenLabel,
 } from "../task";
+import { LoopComposer } from "./LoopComposer";
 import { ScheduleField } from "./ScheduleField";
 import { TaskComposer } from "./TaskComposer";
 
@@ -30,27 +46,40 @@ export interface NewTaskDialogProps {
 /** How long the scheduled confirmation lingers before the dialog closes itself. */
 const CONFIRM_LINGER_MS = 1600;
 
+type TaskMode = "standard" | "loop";
+
 /**
- * The whole New Task flow in one modal — name (optional) → describe → choose when →
- * one click. An immediate task classifies in the background, hands straight to the
- * routed agent or pipeline, and redirects to the new run's detail. A delayed task
- * (In 1 h / When limits reset) is parked server-side; the dialog confirms when it
- * will fire, then closes. Risky actions are still caught later by the approval gate.
+ * The whole New Task flow in one modal, split into two modes:
+ *
+ * - **Standard** — name (optional) → describe → choose when → one click. An immediate
+ *   task classifies in the background, hands to the routed agent or pipeline, and
+ *   redirects to the new run. A delayed task is parked server-side.
+ * - **Loop** — hand ZIBBY a goal, a maker (agent/pipeline), and a verifier. Submitting
+ *   creates a goal definition and starts its run: the maker ⇄ verifier loop that
+ *   re-attempts until the verifier is satisfied or the iteration fuse parks it.
+ *
+ * Risky actions are still caught later by the approval gate.
  */
 export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
   const router = useRouter();
-  const { mutate: createTask, isPending } = useCreateTaskMutation();
+  const { mutate: createTask, isPending: creatingTask } =
+    useCreateTaskMutation();
+  const { mutate: createGoal, isPending: creatingGoal } =
+    useCreateGoalMutation();
+  const { mutate: startGoal, isPending: startingGoal } = useStartGoalMutation();
   const { data: limits } = useLimitsQuery();
 
+  const [mode, setMode] = useState<TaskMode>("standard");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [removedPaths, setRemovedPaths] = useState<Set<string>>(new Set());
   const [preset, setPreset] = useState<SchedulePreset>("now");
   const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
+  const [loop, setLoop] = useState<LoopFormState>(INITIAL_LOOP_STATE);
 
-  // A stable "now" for the dialog's lifetime: presets resolve against it and the
-  // limit-reset option gates on it, so display and submit agree.
+  // A stable "now" for the dialog's lifetime: presets resolve against it, the
+  // limit-reset option gates on it, and the goal id's uniqueness suffix uses it.
   const [now] = useState(() => Date.now());
   const resetsAt = limits?.rolling.resetsAt ?? null;
 
@@ -58,12 +87,19 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
     () => extractPaths(text).filter((p) => !removedPaths.has(p)),
     [text, removedPaths],
   );
-  const busy = isPending;
-  const canSubmit = text.trim().length > 2;
+  const busy = creatingTask || creatingGoal || startingGoal;
   const scheduledAt = resolveScheduledAt(preset, now, resetsAt);
 
+  const canSubmit =
+    mode === "loop" ? canSubmitLoop(loop) : text.trim().length > 2;
+
+  const patchLoop = useCallback(
+    (patch: Partial<LoopFormState>) => setLoop((prev) => ({ ...prev, ...patch })),
+    [],
+  );
+
   const handleSubmit = useCallback(() => {
-    if (!canSubmit || busy) return;
+    if (text.trim().length <= 2 || busy) return;
     createTask(
       {
         body: {
@@ -88,19 +124,37 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
         },
       },
     );
-  }, [
-    canSubmit,
-    busy,
-    createTask,
-    title,
-    text,
-    paths,
-    preset,
-    now,
-    resetsAt,
-    router,
-    onClose,
-  ]);
+  }, [busy, createTask, title, text, paths, preset, now, resetsAt, router, onClose]);
+
+  const handleLoopSubmit = useCallback(() => {
+    if (!canSubmitLoop(loop) || busy) return;
+    const goalId = makeGoalId(title.trim() || loop.objective, now);
+    const files = extractPaths(loop.objective);
+    createGoal(
+      { body: buildCreateGoalBody(loop, goalId, title) },
+      {
+        onSuccess: () => {
+          // The goal definition exists — start its run (the outer loop).
+          startGoal(
+            {
+              params: { id: goalId },
+              body: {
+                title: title.trim() || undefined,
+                files: files.length > 0 ? files : undefined,
+              },
+            },
+            {
+              onSuccess: (res) => {
+                const run = selectApiResponseBody(res);
+                router.push(`/runs?run=${encodeURIComponent(run.goalRunId)}`);
+                onClose();
+              },
+            },
+          );
+        },
+      },
+    );
+  }, [loop, busy, title, now, createGoal, startGoal, router, onClose]);
 
   const handleRemovePath = useCallback((path: string) => {
     setRemovedPaths((prev) => new Set(prev).add(path));
@@ -143,9 +197,21 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
     );
   }
 
-  // A deferred choice runs later — relabel the submit so it reads "Schedule".
-  const submitLabel =
-    scheduledAt !== null ? t("schedule.submit") : t("classifyRun");
+  const onSubmit = mode === "loop" ? handleLoopSubmit : handleSubmit;
+
+  // The submit label/icon track the active mode (and, for standard, deferral).
+  let submitLabel: string;
+  let submitIcon: "play" | "clock" | "retry";
+  if (mode === "loop") {
+    submitLabel = t("loop.submit");
+    submitIcon = "retry";
+  } else if (scheduledAt !== null) {
+    submitLabel = t("schedule.submit");
+    submitIcon = "clock";
+  } else {
+    submitLabel = t("classifyRun");
+    submitIcon = "play";
+  }
 
   const actions = (
     <Stack grow align="center" direction="row" gap="100" justify="end">
@@ -154,10 +220,10 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
       </Button>
       <Button
         disabled={!canSubmit}
-        icon={scheduledAt !== null ? "clock" : "play"}
+        icon={submitIcon}
         intent="primary"
         loading={busy}
-        onClick={handleSubmit}
+        onClick={onSubmit}
       >
         {submitLabel}
       </Button>
@@ -174,29 +240,51 @@ export function NewTaskDialog({ onClose }: NewTaskDialogProps) {
       title={header}
       width="lg"
     >
-      <Stack gap="150">
-        <TextInputField
-          label={t("title.label")}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("title.placeholder")}
-          value={title}
-        />
+      <Tabs onValueChange={(v) => setMode(v as TaskMode)} value={mode}>
+        <TabList>
+          <Tab value="standard">{t("tabs.standard")}</Tab>
+          <Tab value="loop">{t("tabs.loop")}</Tab>
+        </TabList>
 
-        <TaskComposer
-          onChange={setText}
-          onRemovePath={handleRemovePath}
-          onSubmit={handleSubmit}
-          paths={paths}
-          value={text}
-        />
+        <TabPanel value="standard">
+          <Stack gap="150">
+            <TextInputField
+              label={t("title.label")}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={t("title.placeholder")}
+              value={title}
+            />
 
-        <ScheduleField
-          now={now}
-          onChange={setPreset}
-          resetsAt={resetsAt}
-          value={preset}
-        />
-      </Stack>
+            <TaskComposer
+              onChange={setText}
+              onRemovePath={handleRemovePath}
+              onSubmit={handleSubmit}
+              paths={paths}
+              value={text}
+            />
+
+            <ScheduleField
+              now={now}
+              onChange={setPreset}
+              resetsAt={resetsAt}
+              value={preset}
+            />
+          </Stack>
+        </TabPanel>
+
+        <TabPanel value="loop">
+          <Stack gap="150">
+            <TextInputField
+              label={t("title.label")}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={t("title.placeholder")}
+              value={title}
+            />
+
+            <LoopComposer onChange={patchLoop} state={loop} />
+          </Stack>
+        </TabPanel>
+      </Tabs>
     </Dialog>
   );
 }

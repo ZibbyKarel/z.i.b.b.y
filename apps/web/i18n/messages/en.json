@@ -72,6 +72,10 @@
     "dialogSubtitle": "Describe the task — ZIBBY classifies it and hands it to an agent",
     "cancel": "Cancel",
     "classifyRun": "Run",
+    "tabs": {
+      "standard": "Standard task",
+      "loop": "Loop"
+    },
     "title": {
       "label": "Title (optional)",
       "placeholder": "Short task name…"
@@ -94,6 +98,47 @@
       "pathsTitle": "Detected paths · added to context",
       "removePathAria": "Remove path {path}",
       "submitHint": "⌘↩ to classify"
+    },
+    "loop": {
+      "submit": "Start loop",
+      "objective": {
+        "label": "Objective",
+        "hint": "The outcome the loop drives toward — not the steps, the state that should hold.",
+        "placeholder": "What the loop should achieve… e.g.: All e2e tests in apps/api pass green"
+      },
+      "makerKind": {
+        "agent": "agent",
+        "pipeline": "pipeline"
+      },
+      "maker": {
+        "label": "Maker",
+        "hint": "The agent or pipeline that does the work each iteration.",
+        "placeholder": "Pick an agent or pipeline…"
+      },
+      "verifier": {
+        "label": "Verifier",
+        "hint": "How each iteration is judged satisfied.",
+        "checks": "Commands / tests",
+        "claude": "Claude reviews"
+      },
+      "commands": {
+        "label": "Verify commands",
+        "hint": "One command per line; non-zero exit = not satisfied. Empty → the project's default verify.",
+        "placeholder": "pnpm test\npnpm typecheck"
+      },
+      "reviewer": {
+        "label": "Reviewer agent",
+        "hint": "The agent that decides after each iteration whether the objective is met.",
+        "placeholder": "Pick an agent…"
+      },
+      "maxIterations": {
+        "label": "Max iterations"
+      },
+      "instructions": {
+        "label": "Extra instructions (optional)",
+        "hint": "Standing instructions handed to the maker each iteration. Empty → the objective is used.",
+        "placeholder": "e.g.: Follow CLAUDE.md conventions, don't change the public API"
+      }
     }
   },
   "search": {

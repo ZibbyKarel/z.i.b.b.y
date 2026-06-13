@@ -103,6 +103,7 @@ features/
 ├── approvals/      Fronta schválení
 ├── automations/    Cron/event triggery
 ├── gates/          Katalog gate pravidel
+├── goals/          Loop engine — goal definice + běhy (maker ⇄ verifier)
 ├── health/         Systémový zdravotní stav
 ├── integrations/   Kanálové adaptery (email, Slack)
 ├── limits/         Budget zobrazení
@@ -114,7 +115,7 @@ features/
 ├── runs/           Historie runů + log viewer
 ├── settings/       Nastavení workspace
 ├── skills/         Inventář skills
-├── tasks/          Plánovač úloh
+├── tasks/          Nový task dialog (taby: Standardní task / Loop) + plánovač
 └── voice/          Voice interaction (hooks)
 ```
 

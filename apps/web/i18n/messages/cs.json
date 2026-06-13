@@ -72,6 +72,10 @@
     "dialogSubtitle": "Popiš zadání — ZIBBY ho zařadí a předá agentovi",
     "cancel": "Zrušit",
     "classifyRun": "Spustit",
+    "tabs": {
+      "standard": "Standardní task",
+      "loop": "Loop"
+    },
     "title": {
       "label": "Název (volitelný)",
       "placeholder": "Krátký název tasku…"
@@ -94,6 +98,47 @@
       "pathsTitle": "Detekované cesty · přidány do kontextu",
       "removePathAria": "Odebrat cestu {path}",
       "submitHint": "⌘↩ zařadit"
+    },
+    "loop": {
+      "submit": "Spustit loop",
+      "objective": {
+        "label": "Cíl",
+        "hint": "Výsledek, ke kterému loop směřuje — ne postup, ale stav, který má nastat.",
+        "placeholder": "Čeho má loop dosáhnout… Např.: Všechny e2e testy v apps/api procházejí zeleně"
+      },
+      "makerKind": {
+        "agent": "agent",
+        "pipeline": "pipeline"
+      },
+      "maker": {
+        "label": "Vykonavatel",
+        "hint": "Agent nebo pipeline, která v každé iteraci odvádí práci.",
+        "placeholder": "Vyber agenta nebo pipeline…"
+      },
+      "verifier": {
+        "label": "Ověření",
+        "hint": "Jak se v každé iteraci pozná, že je cíl splněn.",
+        "checks": "Příkazy / testy",
+        "claude": "Posoudí Claude"
+      },
+      "commands": {
+        "label": "Ověřovací příkazy",
+        "hint": "Jeden příkaz na řádek; nenulový exit = nesplněno. Prázdné → použije se výchozí ověření projektu.",
+        "placeholder": "pnpm test\npnpm typecheck"
+      },
+      "reviewer": {
+        "label": "Posuzující agent",
+        "hint": "Agent, který po každé iteraci rozhodne, zda je cíl splněn.",
+        "placeholder": "Vyber agenta…"
+      },
+      "maxIterations": {
+        "label": "Max. iterací"
+      },
+      "instructions": {
+        "label": "Doplňující instrukce (volitelné)",
+        "hint": "Stálé pokyny předané vykonavateli v každé iteraci. Prázdné → použije se Cíl.",
+        "placeholder": "Např.: Drž se konvencí v CLAUDE.md, neměň veřejné API"
+      }
     }
   },
   "search": {
