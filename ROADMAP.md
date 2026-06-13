@@ -800,6 +800,109 @@ bypassing the gate.
 
 ---
 
+## Phase 12 — Self-development safety: resource governance + meta-circular isolation
+
+_Goal: make ZIBBY a safe target for its **own** loop engine. The "MEMORY BOMB"
+(commit 96d1294, HEAD) — a Phase 10 goal loop pointed at the ZIBBY monorepo on
+the dev server — exhausted machine RAM. The cause was not an infinite cycle or a
+leaking buffer (both refuted) but **structurally unbounded heavy work with zero
+resource governance, run against the very system that drives it**: when the
+target IS ZIBBY, three identities collapse — process (the verifier's `pnpm test`
+boots a second AppModule that `reconstruct()`s and re-dispatches the same goal),
+filesystem (worktree + artifacts live inside the watched/tested tree), and
+resources (no timeout/kill/cap/reaping). This phase restores that separation and
+wires a resource floor under every run. **Prerequisite for safely pointing
+Phase 10's loop engine at this repo.** Full verified RCA (file:line):
+`docs/plans/phase-12.md`._
+
+### 12.1 Scope/forbid the heavy default verifier
+
+- A `{kind:"checks"}` goal verifier with no `commands` and no project `checks`
+  falls through to `DEFAULT_VERIFY_CHECKS = ["pnpm lint","npx tsc --noEmit","pnpm
+test"]` (`pipeline.schema.ts:45`, chain `verify-command.ts:23`) — the full
+  monorepo suite, unscoped. Refuse the heavy default for goals: require explicit
+  scope or park with a readable reason (`goal-runner.service.ts:390-396`).
+- **Tests:** unit for the resolution change; e2e: no-scope checks-verifier parks,
+  never runs full `pnpm test`.
+
+### 12.2 Never run checks from inside the repo
+
+- With no project/worktree, the verifier cwd falls back to `run.cwd` =
+  `apps/api/data/goals/runs/<id>` (inside the repo), so `pnpm test` climbs to the
+  root (`goal-runner.service.ts:394-396`). Skip/guard the checks verifier when
+  `run.workspace`/project is absent instead of falling back to `run.cwd`.
+- **Tests:** unit: no-project run never resolves cwd inside the repo; e2e: no
+  in-repo suite spawned.
+
+### 12.3 Resource governance in `runShell` + shutdown hook
+
+- `runShell` spawns with no `detached`/`signal`/`timeout`, never stores or kills
+  the child, output uncapped (`goal-runner.service.ts:419-433`); GoalRunnerService
+  is the only background service without `onModuleDestroy` (`:71`). Add a per-call
+  timeout, detached process-group spawn, child tracking, and a shutdown hook that
+  `killGroup`s in-flight children — mirroring `RunnerCore.shutdown()`/`killGroup()`
+  (`runner-core.ts:298-311,1083-1095`). Cap the output accumulator.
+- **Tests:** unit: hung shell times out + is killed; shutdown reaps tracked
+  children; output cap holds.
+
+### 12.4 Gate `reconstruct()` re-dispatch (Law 3)
+
+- `onModuleInit → reconstruct()` auto-re-dispatches every `running`/`paused-limit`
+  goal on each boot/respawn (`:96-99,760-767`); under `ts-node-dev --respawn`
+  (`package.json:6`) + `.env` `AGENT_RUNNER_MODE=claude` (`.env:4`) a restart alone
+  spawns real claude. That is an autonomous action without approval — it violates
+  Law 3 / Tier 3. Always rehydrate the registry; re-drive only behind explicit
+  operator opt-in. Wrap fire-and-forget `drive()` in `.catch` (`:177,808-810`).
+- **Tests:** unit: boot rehydrates but does not re-drive; opt-in resume drives; no
+  unhandled rejection on dispatch throw.
+
+### 12.5 Global e2e data-dir + runner-mode isolation
+
+- 26 of 28 e2e suites boot AppModule (`app.module.ts:14,37`) but don't isolate
+  `GOAL_RUNS_DIR`; `vitest.setup.ts` isolates only `ACTIVITY_DIR` (`:16-26`); the
+  committed `.env` `AGENT_RUNNER_MODE=claude` leaks in (`limit-pause.e2e.test.ts:
+70-73`). Extend the global setup to force a temp `ZIBBY_DATA_DIR`,
+  `AGENT_RUNNER_MODE=demo`, and a fake `CLAUDE_BIN` before any boot — closing the
+  meta-circular vector and the standing `pipelines.e2e` flake. Move runner mode out
+  of the committed `.env`.
+- **Tests:** the suite itself — full `pnpm test` never touches `apps/api/data`,
+  never spawns real claude.
+
+### 12.6 Eliminate double verification
+
+- The delivery pipeline already verifies (`delivery.pipeline.md:38-44`, up to 4×
+  per run), then `drive()` runs the goal verifier unconditionally
+  (`goal-runner.service.ts:248`). Skip the second pass when the maker pipeline
+  already passed an equivalent verify phase.
+- **Tests:** unit: pipeline-maker that passed verify → goal verifier skipped;
+  checks-maker → still verified.
+
+### 12.7 Worktrees outside the repo
+
+- Worktrees are cut at `path.join(root,"worktree")` under `GOAL_RUNS_DIR` — inside
+  the watched/tested tree (`goal-runner.service.ts:151`). Relocate to
+  `os.tmpdir()`/`ZIBBY_WORKTREE_ROOT`; keep only forensic artifacts in `data/`.
+- **Tests:** unit: worktree path resolves outside the repo; cleanup removes it.
+
+### 12.8 Durable self-development posture
+
+- Builder ≠ subject: the orchestrator runs from a pinned build, not `ts-node-dev`
+  on the tree it edits. OS-level sandbox (container/cgroup memory+cpu cap) for the
+  subject's verifier. Add a resource-governance dimension to the autonomy contract —
+  per-run/per-goal compute + token budget wired into the floor like approval-first
+  (composes with 8.1). Self-development runbook.
+- **Tests:** documented runbook; budget-cap e2e (reuse 8.1); smoke that a goal
+  targeting a sibling checkout never touches the builder's own tree.
+
+**Phase exit criterion:** a goal targeting the ZIBBY repo itself runs to
+completion or parks without ever (a) running the full monorepo suite from inside
+the repo, (b) leaving an orphaned child after an API kill, (c) re-dispatching
+itself on restart, or (d) exhausting RAM — and `pnpm test` is fully isolated from
+live data and real claude. The blast-radius set 12.1–12.4 must be green before any
+loop is pointed at this repo again.
+
+---
+
 ## Sequencing and dependencies
 
 ```
@@ -823,6 +926,11 @@ Phase 10 (loop engine) — needs 2 (verify stage, parking, escalation), 3.1+3.2
 Phase 11 (unified UX) — needs 10.1/10.2 (goal engine) for 11.1-11.2; 3.1
                        (workspace manager) for 11.3; 11.1+11.2 deliver the core
                        simplification and can ship alone
+Phase 12 (self-development safety) — hardens 9.x/10.x machinery; depends on the
+                       goal loop (10) existing. 12.1–12.4 are the blast-radius
+                       fixes and a PREREQUISITE for pointing the Phase 10 loop
+                       engine at the ZIBBY repo itself; 12.5 also fixes the
+                       standing pipelines.e2e flake and can land immediately
 ```
 
 **Standing rules for every phase** (the test constraint, made concrete):
