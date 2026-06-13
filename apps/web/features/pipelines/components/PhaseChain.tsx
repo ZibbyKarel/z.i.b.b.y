@@ -1,3 +1,5 @@
+"use client";
+
 import {
   type Agent,
   AgentThinking,
@@ -15,7 +17,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { Fragment } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   type Pipeline,
   type PipelinePhase,
@@ -115,7 +117,9 @@ function PhaseNode({
     <Card
       radius="default"
       selected={active}
-      style={{ flex: "1 1 0%", minWidth: 0 }}
+      // Grow to fill when the chain fits; never shrink below a readable width —
+      // long chains overflow into the horizontal scroller instead of squishing.
+      style={{ flex: "1 0 158px", minWidth: "158px" }}
     >
       <Container padding="150">
         <Stack gap="100">
@@ -188,87 +192,192 @@ export interface PhaseChainProps {
 export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
   const t = useTranslations("phase");
   const { phases } = pipeline;
-  const loopPhase = phases.find((p) => p.loop);
+  const n = phases.length;
+
+  // Back-edge geometry, generalised so the loop arc tracks the real node centres
+  // (node i centre ≈ ((i + 0.5) / n) of the chain width) for any phase count.
+  const loopIdx = phases.findIndex((p) => p.loop);
+  const loopPhase = loopIdx >= 0 ? phases[loopIdx] : undefined;
+  const cx = (i: number) => ((i + 0.5) / Math.max(n, 1)) * 100;
+  let targetIdx = loopPhase?.loop
+    ? phases.findIndex((p) => p.id === loopPhase.loop!.to)
+    : -1;
+  if (loopPhase && targetIdx < 0) targetIdx = Math.max(loopIdx - 1, 0);
+  const x1 = cx(loopIdx);
+  const x2 = cx(targetIdx);
+
+  // Hidden-content affordance: detect clipped chain on either side of the
+  // horizontal scroller and fade that edge in/out as it scrolls or resizes.
+  const scrollRef = useRef<HTMLElement | null>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  const checkEdges = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const left = el.scrollLeft > 2;
+    const right = el.scrollLeft < max - 2;
+    setEdge((prev) =>
+      prev.left === left && prev.right === right ? prev : { left, right },
+    );
+  }, []);
+  useEffect(() => {
+    checkEdges();
+    const el = scrollRef.current;
+    if (!el) return;
+    let ro: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(checkEdges);
+      ro.observe(el);
+    }
+    window.addEventListener("resize", checkEdges);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", checkEdges);
+    };
+  }, [checkEdges, n]);
 
   return (
-    <Stack>
-      {loopPhase?.loop && (
-        <Container height="34px" position="relative">
-          <svg
-            aria-hidden
-            preserveAspectRatio="none"
-            // eslint-disable-next-line react/forbid-dom-props
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              overflow: "visible",
-            }}
-            viewBox="0 0 100 34"
-          >
-            <path
-              d="M62 30 C 62 6, 37 6, 37 30"
-              fill="none"
-              stroke="var(--color-bad)"
-              strokeDasharray="3 3"
-              strokeWidth="1.2"
-              vectorEffect="non-scaling-stroke"
-            />
-            <path d="M37 30 l 2.6 -5 l -5.2 0 z" fill="var(--color-bad)" />
-          </svg>
-          {}
-          <Container
-            left="49.5%"
-            position="absolute"
-            style={{ transform: "translateX(-50%)" }}
-            top="0"
-          >
-            <Stack align="center" direction="row" gap="75">
-              <Icon name="retry" size="xs" tone="bad" />
-              <Typography mono size="xs" tone="bad" type="note">
-                {t("retry", { n: loopPhase.loop.maxRetries })}
-              </Typography>
-            </Stack>
-          </Container>
-        </Container>
-      )}
-      <Stack align="stretch" direction="row" gap="25">
-        {phases.map((ph, i) => (
-          <Fragment key={`${ph.agent ?? ph.type}-${i}`}>
-            <PhaseNode
-              active={Boolean(ph.loop)}
-              agents={agents}
-              attempt={ph.id ? attempts?.[ph.id] : undefined}
-              idx={i}
-              phase={ph}
-            />
-            {i < phases.length - 1 && (
-              <Stack
-                align="center"
-                justify="center"
-                shrink={false}
-                style={{ alignSelf: "center" }}
+    <Container position="relative">
+      <Container
+        data-testid="phase-chain-scroll"
+        onScroll={checkEdges}
+        overflowX="auto"
+        overflowY="hidden"
+        ref={scrollRef}
+        style={{ paddingBottom: 2 }}
+      >
+        <Container minWidth="fit-content">
+          {loopPhase?.loop && (
+            <Container height="34px" position="relative">
+              <svg
+                aria-hidden
+                preserveAspectRatio="none"
+                // eslint-disable-next-line react/forbid-dom-props
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  overflow: "visible",
+                }}
+                viewBox="0 0 100 34"
               >
-                <Container padding={["0", "50"]}>
-                  <Stack align="center" gap="50">
-                    <Typography
-                      mono
-                      nowrap
-                      size="2xs"
-                      type="note"
-                      variant="tertiary"
-                    >
-                      {phases[i + 1]!.consumes ?? ""}
-                    </Typography>
-                    <Icon name="arrow" size="md" tone="faint" />
+                <path
+                  d={`M${x1} 30 C ${x1} 6, ${x2} 6, ${x2} 30`}
+                  fill="none"
+                  stroke="var(--color-bad)"
+                  strokeDasharray="3 3"
+                  strokeWidth="1.2"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <path d={`M${x2} 30 l 2.6 -5 l -5.2 0 z`} fill="var(--color-bad)" />
+              </svg>
+              <Container
+                left={`${(x1 + x2) / 2}%`}
+                position="absolute"
+                style={{ transform: "translateX(-50%)" }}
+                top="0"
+              >
+                <Stack align="center" direction="row" gap="75">
+                  <Icon name="retry" size="xs" tone="bad" />
+                  <Typography mono nowrap size="xs" tone="bad" type="note">
+                    {t("retry", { n: loopPhase.loop.maxRetries })}
+                  </Typography>
+                </Stack>
+              </Container>
+            </Container>
+          )}
+          <Stack align="stretch" direction="row" gap="25">
+            {phases.map((ph, i) => (
+              <Fragment key={`${ph.agent ?? ph.type}-${i}`}>
+                <PhaseNode
+                  active={Boolean(ph.loop)}
+                  agents={agents}
+                  attempt={ph.id ? attempts?.[ph.id] : undefined}
+                  idx={i}
+                  phase={ph}
+                />
+                {i < phases.length - 1 && (
+                  <Stack
+                    align="center"
+                    justify="center"
+                    shrink={false}
+                    style={{ alignSelf: "center" }}
+                  >
+                    <Container padding={["0", "50"]}>
+                      <Stack align="center" gap="50">
+                        <Typography
+                          mono
+                          nowrap
+                          size="2xs"
+                          type="note"
+                          variant="tertiary"
+                        >
+                          {phases[i + 1]!.consumes ?? ""}
+                        </Typography>
+                        <Icon name="arrow" size="md" tone="faint" />
+                      </Stack>
+                    </Container>
                   </Stack>
-                </Container>
-              </Stack>
-            )}
-          </Fragment>
-        ))}
-      </Stack>
-    </Stack>
+                )}
+              </Fragment>
+            ))}
+          </Stack>
+        </Container>
+      </Container>
+
+      {/* left fade — appears once the chain is scrolled off its start */}
+      <Container
+        bottom="0"
+        left="0"
+        pointerEvents="none"
+        position="absolute"
+        style={{
+          opacity: edge.left ? 1 : 0,
+          transition: "opacity .15s",
+          background:
+            "linear-gradient(to right, var(--color-surface), transparent)",
+        }}
+        top="0"
+        width="56px"
+        zIndex={3}
+      />
+      {/* right fade + chevron — signals more phases beyond the right edge */}
+      <Container
+        bottom="0"
+        pointerEvents="none"
+        position="absolute"
+        right="0"
+        style={{
+          opacity: edge.right ? 1 : 0,
+          transition: "opacity .15s",
+          background:
+            "linear-gradient(to left, var(--color-surface), transparent)",
+        }}
+        top="0"
+        width="56px"
+        zIndex={3}
+      >
+        <Stack
+          align="center"
+          justify="end"
+          style={{ height: "100%", paddingRight: 4 }}
+        >
+          <Container
+            height="22px"
+            style={{
+              display: "grid",
+              placeItems: "center",
+              borderRadius: "50%",
+              background: "var(--color-accent-dim)",
+              border: "1px solid var(--color-accent-glow)",
+            }}
+            width="22px"
+          >
+            <Icon name="arrow" size="sm" tone="accent" />
+          </Container>
+        </Stack>
+      </Container>
+    </Container>
   );
 }
