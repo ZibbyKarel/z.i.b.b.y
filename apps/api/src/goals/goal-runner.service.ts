@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { EventEmitter } from "node:events"
 import { promises as fs } from "node:fs"
@@ -8,19 +9,42 @@ import {
   type Goal,
   type GoalIteration,
   type GoalIterationStatus,
+  type GoalParkedReason,
   type GoalRun,
   type GoalRunArtifact,
   GoalRunSchema,
   type Project,
+  type VerifierSpec,
 } from "@zibby/contracts"
 import { AgentRunnerService } from "../agents/agent-runner.service"
+import { BudgetService } from "../budget/budget.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
+import { buildResumeContext } from "../pipelines/resume-context"
+import { buildVerifyCommand } from "../pipelines/verify-command"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { GoalsStorageService } from "./goals.storage.service"
+import { decideStop, renderGoalProgress } from "./goal-stop"
 import { GoalRunNotFoundError, GoalRunNotParkedError } from "./goals.errors"
+
+/** Max chars of a verifier's output captured into the verdict file / resume-context. */
+const VERDICT_MAX_CHARS = 4000
+
+/** One verifier run's verdict — its satisfied flag and the output that feeds the next iteration. */
+interface VerifierVerdict {
+  kind: VerifierSpec["kind"]
+  runRef?: string
+  satisfied: boolean
+  output: string
+}
+
+/** Keep the last {@link VERDICT_MAX_CHARS} of verifier output (the failing tail). */
+function tailOf(text: string): string {
+  const trimmed = text.trimEnd()
+  return trimmed.length > VERDICT_MAX_CHARS ? trimmed.slice(trimmed.length - VERDICT_MAX_CHARS) : trimmed
+}
 
 /** DI token carrying the absolute path of the directory that holds goal run artifacts. */
 export const GOAL_RUNS_DIR = "GOAL_RUNS_DIR"
@@ -58,6 +82,7 @@ export class GoalRunnerService implements OnModuleInit {
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
+    private readonly budget: BudgetService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -154,64 +179,237 @@ export class GoalRunnerService implements OnModuleInit {
   }
 
   /**
-   * The outer loop. Phase 10.1 scaffold: dispatch the maker for the current
-   * iteration, wait for it to reach a terminal state, record the iteration, and
-   * stop after one (no verifier yet — Phase 10.2 replaces this body with the real
-   * maker → verifier → decideStop loop).
+   * The outer loop (Phase 10.2). The cursor is an iteration index, not a phase id:
+   *
+   *   loop:
+   *     budget.check → over-cap? park (budget)                       [8.1]
+   *     dispatch maker (agent|pipeline .start, cwd = worktree)       [inner loop]
+   *     wait for maker terminal                                      [9.1 shape in 10.4]
+   *     run verifier (deterministic checks ± claude pass)            [10.2]
+   *     decideStop:
+   *       satisfied → checkpoint commit, status done, return         [9.3]
+   *       park-iterations → park, return                             [10.2]
+   *       continue → compose resume-context from verdict, next       [9.3]
+   *
+   * `resume` re-enters at a given index with a resume-context prefix (resume-with-note
+   * / 10.4 limit auto-resume). The maker dispatch reuses the inner runners verbatim.
    */
   private async drive(
     run: GoalRun,
     goal: Goal,
     project: Project | null,
     files: string[],
+    resume?: { startIndex: number; resumeContext?: string },
   ): Promise<void> {
-    const index = run.currentIteration ?? 0
-    const status = await this.runIteration(run, goal, project, files, index)
+    let index = resume?.startIndex ?? run.currentIteration ?? 0
+    let resumeContext = resume?.resumeContext
 
-    run.status = status === "done" ? "done" : status === "paused-limit" ? "paused-limit" : "failed"
-    if (run.status !== "paused-limit") run.currentIteration = null
+    for (;;) {
+      // Per-iteration budget guard (decision 6): the maker counts as one run against
+      // the project's daily/weekly cap. Over-cap → park (budget) before spending it.
+      const budgetOk = await this.budgetOk(project)
+      if (!budgetOk) {
+        await this.parkGoal(run, "budget", index)
+        return
+      }
+
+      const iteration: GoalIteration = {
+        index,
+        makerKind: goal.maker.kind,
+        verifier: { kind: goal.verifier.kind, satisfied: false, output: "" },
+        startedAt: new Date().toISOString(),
+        status: "running",
+      }
+      run.iterations.push(iteration)
+      run.currentIteration = index
+      await this.writeAggregate(run)
+
+      const makerRunRef = await this.dispatchMaker(run, goal, project, files, resumeContext)
+      iteration.makerRunRef = makerRunRef
+      await this.writeAggregate(run)
+      await this.recordDispatch(run, project, makerRunRef)
+
+      const makerStatus = await this.waitForMaker(goal.maker.kind, makerRunRef)
+      iteration.status = makerStatus
+
+      // Run the verifier and capture its verdict (it feeds the next iteration).
+      const verdict = await this.runVerifier(run, goal, project, index)
+      iteration.verifier = {
+        kind: verdict.kind,
+        ...(verdict.runRef ? { runRef: verdict.runRef } : {}),
+        satisfied: verdict.satisfied,
+        output: verdict.output,
+      }
+      iteration.endedAt = new Date().toISOString()
+      const verdictFile = path.join(run.cwd, `iteration-${index}.verdict.txt`)
+      await fs.writeFile(verdictFile, verdict.output || "(no verifier output)\n", "utf8").catch(() => {})
+      await this.writeAggregate(run)
+      this.log.info("goal iteration verified", {
+        goalRunId: run.goalRunId,
+        index,
+        makerStatus,
+        satisfied: verdict.satisfied,
+      })
+
+      const stop = decideStop({
+        satisfied: verdict.satisfied,
+        index,
+        maxIterations: goal.maxIterations,
+        budgetOk: true,
+      })
+      if (stop === "satisfied") {
+        await this.checkpoint(run, goal, index)
+        run.status = "done"
+        run.currentIteration = null
+        await this.writeAggregate(run)
+        this.log.info("goal run done (verifier satisfied)", { goalRunId: run.goalRunId, iterations: index + 1 })
+        return
+      }
+      if (stop === "park-iterations") {
+        await this.parkGoal(run, "iterations", index, verdictFile)
+        return
+      }
+      // Continue: the verifier output becomes the next iteration's resume-context.
+      resumeContext = await this.composeResumeContext(run, goal, verdict.output)
+      index += 1
+    }
+  }
+
+  /** True when the project (if any) is under its budget cap; fail-closed via BudgetService. */
+  private async budgetOk(project: Project | null): Promise<boolean> {
+    const check = await this.budget.check(project?.id, new Date()).catch(() => ({ ok: true }))
+    return check.ok
+  }
+
+  /** Count this iteration's maker run against the project ledger (decision 6). */
+  private async recordDispatch(run: GoalRun, project: Project | null, runRef: string): Promise<void> {
+    await this.budget
+      .recordDispatch(
+        {
+          at: new Date().toISOString(),
+          ...(project ? { projectId: project.id } : {}),
+          ...(run.taskId ? { taskId: run.taskId } : {}),
+          runRef,
+          kind: "goal",
+        },
+        new Date(),
+      )
+      .catch(() => {})
+  }
+
+  /** Park the goal for the operator — durable, resumable with a note (decision 4). */
+  private async parkGoal(
+    run: GoalRun,
+    reason: GoalParkedReason,
+    index: number,
+    verdictFile?: string,
+  ): Promise<void> {
+    run.status = "parked"
+    run.parkedReason = reason
+    run.parked = {
+      iteration: index,
+      attempts: index + 1,
+      verdictFile: verdictFile ?? path.join(run.cwd, `iteration-${index}.verdict.txt`),
+    }
+    run.currentIteration = index
     await this.writeAggregate(run)
-    this.log.info("goal run finished (scaffold)", { goalRunId: run.goalRunId, status: run.status })
+    this.log.warn("goal run parked", { goalRunId: run.goalRunId, reason, iteration: index })
   }
 
   /**
-   * Run one iteration: dispatch the maker into the goal's worktree, wait for it to
-   * finish, and append the iteration record. Returns the maker's mapped terminal
-   * status. The verifier is layered on in Phase 10.2.
+   * Phase 9b: checkpoint the satisfied iteration on the goal's branch (worktree only;
+   * a clean tree / non-git run → no-op). Local, Tier-1, ungated — NEVER pushes.
    */
-  protected async runIteration(
+  private async checkpoint(run: GoalRun, goal: Goal, index: number): Promise<void> {
+    if (!run.workspace) return
+    const summary = goal.objective.slice(0, 100)
+    await this.workspace
+      .checkpoint({ worktreePath: run.workspace.path, phaseId: `goal-iter-${index}`, summary })
+      .catch(() => null)
+  }
+
+  /**
+   * Run the goal's verifier for iteration `index`. A `checks` verifier runs the
+   * deterministic shell command (shared {@link buildVerifyCommand}) in the worktree
+   * and is satisfied on exit 0. A `claude` verifier is a FRESH agent run on its own
+   * (cheaper) model — a separate spawn with no shared session (decision 3/8) —
+   * satisfied when that run completes. Either way the captured output (the failing
+   * tail / the verdict text) feeds the next iteration's resume-context.
+   */
+  protected async runVerifier(
     run: GoalRun,
     goal: Goal,
     project: Project | null,
-    files: string[],
     index: number,
-  ): Promise<GoalIterationStatus> {
-    const iteration: GoalIteration = {
-      index,
-      makerKind: goal.maker.kind,
-      verifier: { kind: goal.verifier.kind, satisfied: false, output: "" },
-      startedAt: new Date().toISOString(),
-      status: "running",
+  ): Promise<VerifierVerdict> {
+    const spec = goal.verifier
+    if (spec.kind === "checks") {
+      const { command, args, spawnCwd } = buildVerifyCommand({
+        commands: spec.commands,
+        projectChecks: project?.checks,
+        spawnCwd: run.workspace?.path ?? project?.path,
+      })
+      const { code, output } = await this.runShell(command, args, spawnCwd ?? run.cwd)
+      return { kind: "checks", satisfied: code === 0, output: tailOf(output) }
     }
-    run.iterations.push(iteration)
-    run.currentIteration = index
-    await this.writeAggregate(run)
+    // claude verifier: a fresh agent run handed the goal + iteration context.
+    const prompt = [
+      `Verify whether this goal is satisfied: ${goal.objective}`,
+      `This is verification iteration ${index + 1}. Inspect the working tree and report PASS or FAIL with a short reason.`,
+    ].join("\n\n")
+    const r = await this.agentRunner.start(
+      spec.agent,
+      prompt,
+      project?.id ?? "",
+      [],
+      `verify:${goal.id}`,
+      undefined,
+      run.matchedTerms,
+      run.workspace,
+    )
+    const status = await this.waitForMaker("agent", r.runId)
+    const log = await this.agentRunner.readLog(r.runId, 0).catch(() => null)
+    return { kind: "claude", runRef: r.runId, satisfied: status === "done", output: tailOf(log?.content ?? "") }
+  }
 
-    const makerRunRef = await this.dispatchMaker(run, goal, project, files)
-    iteration.makerRunRef = makerRunRef
-    await this.writeAggregate(run)
-
-    const status = await this.waitForMaker(goal.maker.kind, makerRunRef)
-    iteration.status = status
-    iteration.endedAt = new Date().toISOString()
-    await this.writeAggregate(run)
-    this.log.info("goal iteration maker finished", {
-      goalRunId: run.goalRunId,
-      index,
-      makerRunRef,
-      status,
+  /** Run a shell command, capturing combined stdout/stderr and the exit code. */
+  private runShell(
+    command: string,
+    args: string[],
+    cwd: string,
+  ): Promise<{ code: number; output: string }> {
+    return new Promise((resolve) => {
+      let output = ""
+      const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] })
+      child.stdout.on("data", (d) => (output += d.toString()))
+      child.stderr.on("data", (d) => (output += d.toString()))
+      child.on("error", (err) => resolve({ code: 1, output: `${output}\n${err.message}` }))
+      child.on("close", (code) => resolve({ code: code ?? 1, output }))
     })
-    return status
+  }
+
+  /**
+   * Assemble the resume-context for the next/resumed iteration: the goal progress,
+   * the branch's checkpoint commits, the last verifier output (as `failureTail`),
+   * and an optional operator note. Reuses the pipeline's pure {@link buildResumeContext}.
+   */
+  private async composeResumeContext(
+    run: GoalRun,
+    goal: Goal,
+    verdictOutput: string,
+    note?: string,
+  ): Promise<string> {
+    const checkpointLog = run.workspace
+      ? await this.workspace
+          .commitLog({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
+          .catch(() => "")
+      : ""
+    return buildResumeContext({
+      progressMd: renderGoalProgress(run, goal.objective, goal.maxIterations),
+      checkpointLog,
+      note,
+      failureTail: verdictOutput,
+    })
   }
 
   /** Dispatch the maker through its own runner (with the goal's worktree); return its run ref. */
@@ -220,8 +418,9 @@ export class GoalRunnerService implements OnModuleInit {
     goal: Goal,
     project: Project | null,
     files: string[],
+    resumeContext?: string,
   ): Promise<string> {
-    const prompt = this.makerPrompt(run, goal)
+    const prompt = this.makerPrompt(run, goal, resumeContext)
     const projectRef = project?.id ?? ""
     if (goal.maker.kind === "agent") {
       const r = await this.agentRunner.start(
@@ -246,10 +445,19 @@ export class GoalRunnerService implements OnModuleInit {
     return r.pipelineRunId
   }
 
-  /** The prompt handed to an agent maker (pipeline makers run their own phases). */
-  protected makerPrompt(run: GoalRun, goal: Goal): string {
+  /**
+   * The prompt handed to an agent maker (pipeline makers run their own phases). A
+   * continuation iteration prepends the resume-context so the maker knows what the
+   * verifier flagged last time — the Tester→Kodér feedback shape, generalized.
+   */
+  protected makerPrompt(run: GoalRun, goal: Goal, resumeContext?: string): string {
     const base = this.prompts.get(run.goalRunId) ?? goal.objective
-    return [`Goal: ${goal.objective}`, base === goal.objective ? "" : base, goal.instructions]
+    return [
+      resumeContext?.trim() ? resumeContext.trim() : "",
+      `Goal: ${goal.objective}`,
+      base === goal.objective ? "" : base,
+      goal.instructions,
+    ]
       .filter(Boolean)
       .join("\n\n")
   }
@@ -299,21 +507,54 @@ export class GoalRunnerService implements OnModuleInit {
   }
 
   /**
-   * Resume a parked goal run with an operator note. Phase 10.1 enforces the 409
-   * guard (the run must be parked); the note injection + re-entry into `drive()`
-   * at `currentIteration` is implemented in Phase 10.2 once the real loop exists.
-   * Throws {@link GoalRunNotParkedError} (→ 409) for any non-parked state.
+   * Resume a parked goal run with an operator note (decision 4). Re-enters `drive()`
+   * at the parked iteration index with a resume-context composed from the parked
+   * verdict + the note (the same operator surface as a pipeline park — identical UX,
+   * distinct endpoint because the run types differ). Throws
+   * {@link GoalRunNotParkedError} (→ 409) for any non-parked state.
    */
   async resumeParked(goalRunId: string, note?: string): Promise<GoalRun> {
     const run = this.runs.get(goalRunId) ?? (await this.readAggregate(goalRunId))
     if (!run) throw new GoalRunNotFoundError(goalRunId)
     this.runs.set(goalRunId, run)
     if (run.status !== "parked" || !run.parked) throw new GoalRunNotParkedError(goalRunId)
-    this.log.info("goal resume requested (re-drive lands in 10.2)", {
-      goalRunId,
-      withNote: Boolean(note?.trim()),
-    })
+
+    const goal = await this.goals.get(run.goalId)
+    const project = await this.projectForRun(run)
+    const index = run.currentIteration ?? run.parked.iteration
+    const verdictTail = await fs.readFile(run.parked.verdictFile, "utf8").catch(() => "")
+    const trimmed = note?.trim()
+
+    run.status = "running"
+    delete run.parkedReason
+    delete run.parked
+    run.currentIteration = index
+    await this.writeAggregate(run)
+    this.log.info("parked goal run resumed", { goalRunId, index, withNote: Boolean(trimmed) })
+
+    const resumeContext = await this.composeResumeContext(run, goal, verdictTail, trimmed)
+    const traceId = this.trace.getTraceId() ?? randomUUID()
+    void this.trace.run({ traceId, runId: goalRunId }, () =>
+      this.drive(run, goal, project, [], { startIndex: index, resumeContext }),
+    )
     return run
+  }
+
+  /**
+   * Re-resolve a run's project from its persisted `projectPath` (resume / restart).
+   * A registry record deleted meanwhile degrades to a synthetic project carrying
+   * just the path — the worktree cwd still applies.
+   */
+  private async projectForRun(run: GoalRun): Promise<Project | null> {
+    if (!run.projectPath) return null
+    const all = await this.projects.list().catch((): Project[] => [])
+    return (
+      all.find((p) => p.path === run.projectPath) ?? {
+        id: "unregistered",
+        name: "unregistered",
+        path: run.projectPath,
+      }
+    )
   }
 
   list(): GoalRun[] {

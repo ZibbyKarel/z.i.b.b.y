@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
+import { BudgetModule } from "../budget/budget.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { ProjectsModule } from "../projects/projects.module"
 import { WorkspaceModule } from "../workspace/workspace.module"
@@ -23,7 +24,7 @@ export function resolveGoalRunsDir(): string {
   // AgentsModule + PipelinesModule export their runners — the goal's maker is one
   // of them, dispatched verbatim (the inner loop). Workspace backs the per-run
   // worktree; Projects resolves the target project for cwd + budget attribution.
-  imports: [AgentsModule, PipelinesModule, ProjectsModule, WorkspaceModule],
+  imports: [AgentsModule, PipelinesModule, ProjectsModule, WorkspaceModule, BudgetModule],
   // GoalRunsController is declared before GoalsController so its static routes
   // (`/goals/runs`, `/goals/runs/:id`) register ahead of `/goals/:id`, which would
   // otherwise capture "runs" as a goal id.

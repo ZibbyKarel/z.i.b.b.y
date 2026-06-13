@@ -4,7 +4,6 @@ import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import {
-  DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
   PIPELINE_RUN_ARTIFACTS,
   type PhaseEscalation,
@@ -34,6 +33,7 @@ import { PipelinesStorageService } from "./pipelines.storage.service"
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
 import { renderProgress } from "./progress"
 import { buildResumeContext } from "./resume-context"
+import { buildVerifyCommand } from "./verify-command"
 
 /** DI token carrying the absolute path of the directory that holds pipeline run artifacts. */
 export const PIPELINE_RUNS_DIR = "PIPELINE_RUNS_DIR"
@@ -1079,12 +1079,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // claude mode (no model, no tokens, no intents, no preflight). They run in
     // the run's worktree (or project checkout) when one was resolved, else the sandbox.
     if (phase.type === "verify") {
-      const commands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS]
-      return {
-        command: "/bin/sh",
-        args: ["-c", commands.join(" && ")],
-        ...(spawnCwd ? { spawnCwd } : {}),
-      }
+      // Phase 10.2: the verify-command assembly is lifted into a shared helper so the
+      // pipeline verify stage and the goal `checks` verifier resolve checks identically.
+      return buildVerifyCommand({
+        commands: phase.commands,
+        projectChecks: project?.checks,
+        spawnCwd,
+      })
     }
     if (process.env.AGENT_RUNNER_MODE === "claude") {
       // The phase's agent drives the stage: its instructions become the session
