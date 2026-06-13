@@ -1,5 +1,6 @@
 import { Stack, TextAreaField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import type { ResolvedPath } from "../task";
 import { PathChips } from "./PathChips";
 
 export interface TaskComposerProps {
@@ -9,6 +10,10 @@ export interface TaskComposerProps {
   onSubmit: () => void;
   paths: string[];
   onRemovePath: (path: string) => void;
+  /** Phase 11.3: backend-resolved attribution for the detected paths. */
+  resolved?: ResolvedPath[];
+  /** Phase 11.3: grant access to an out-of-project path (registers a workspace root). */
+  onGrant?: (path: string) => void;
 }
 
 /**
@@ -22,6 +27,8 @@ export function TaskComposer({
   onSubmit,
   paths,
   onRemovePath,
+  resolved,
+  onGrant,
 }: TaskComposerProps) {
   const t = useTranslations("tasks.composer");
   return (
@@ -46,7 +53,12 @@ export function TaskComposer({
           <Typography mono size="2xs" tracking="wide" type="note" variant="tertiary">
             {t("pathsTitle")}
           </Typography>
-          <PathChips onRemove={onRemovePath} paths={paths} />
+          <PathChips
+            onGrant={onGrant}
+            onRemove={onRemovePath}
+            paths={paths}
+            resolved={resolved}
+          />
         </Stack>
       )}
 

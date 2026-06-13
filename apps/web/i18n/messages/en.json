@@ -89,6 +89,14 @@
       "hint": "Override the routed destination.",
       "auto": "ZIBBY's pick (automatic)"
     },
+    "paths": {
+      "scopedTo": "scoped to {project}",
+      "grant": "grant access",
+      "grantAria": "Grant ZIBBY access to {path}",
+      "grantConfirm": "Give ZIBBY access to {folder} as a workspace root?",
+      "grantConfirmYes": "Grant access",
+      "grantCancel": "Cancel"
+    },
     "title": {
       "label": "Title (optional)",
       "placeholder": "Short task name…"

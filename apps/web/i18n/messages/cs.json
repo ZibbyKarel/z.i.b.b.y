@@ -89,6 +89,14 @@
       "hint": "Přepiš zvolený cíl.",
       "auto": "Výběr ZIBBY (automaticky)"
     },
+    "paths": {
+      "scopedTo": "v projektu {project}",
+      "grant": "povolit přístup",
+      "grantAria": "Povolit ZIBBY přístup k {path}",
+      "grantConfirm": "Povolit ZIBBY přístup k {folder} jako pracovnímu adresáři?",
+      "grantConfirmYes": "Povolit přístup",
+      "grantCancel": "Zrušit"
+    },
     "title": {
       "label": "Název (volitelný)",
       "placeholder": "Krátký název tasku…"

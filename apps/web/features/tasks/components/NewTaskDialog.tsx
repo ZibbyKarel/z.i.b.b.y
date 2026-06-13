@@ -6,6 +6,7 @@ import {
   Container,
   Dialog,
   IconTile,
+  Panel,
   SelectField,
   Stack,
   TextInputField,
@@ -20,6 +21,7 @@ import {
   useStartGoalMutation,
 } from "../../goals/mutations";
 import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
+import { useCreateProjectMutation } from "../../projects/mutations";
 import {
   INITIAL_LOOP_STATE,
   type LoopFormState,
@@ -27,12 +29,14 @@ import {
   canSubmitLoop,
   makeGoalId,
   proposedGoalToLoopState,
+  slugify,
 } from "../loop";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
 import {
   type SchedulePreset,
   type TaskRouting,
   type TaskTarget,
+  basename,
   extractPaths,
   resolveScheduledAt,
   toClientRouting,
@@ -86,6 +90,7 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const { mutate: classify } = useClassifyTaskMutation();
   const { mutate: createGoal, isPending: creatingGoal } = useCreateGoalMutation();
   const { mutate: startGoal, isPending: startingGoal } = useStartGoalMutation();
+  const { mutate: createProject, isPending: granting } = useCreateProjectMutation();
   const { data: limits } = useLimitsQuery();
 
   const [title, setTitle] = useState("");
@@ -100,6 +105,8 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const [seededKey, setSeededKey] = useState<string | null>(null);
   /** Manual single-mode override: an index into `routing.candidates`, or null. */
   const [overrideIndex, setOverrideIndex] = useState<string>("");
+  /** Phase 11.3: the out-of-project path awaiting an explicit "grant access" confirm. */
+  const [pendingGrant, setPendingGrant] = useState<string | null>(null);
 
   // A stable "now" for the dialog's lifetime: presets resolve against it, the
   // limit-reset option gates on it, and the goal id's uniqueness suffix uses it.
@@ -110,7 +117,7 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     () => extractPaths(text).filter((p) => !removedPaths.has(p)),
     [text, removedPaths],
   );
-  const busy = creatingTask || creatingGoal || startingGoal;
+  const busy = creatingTask || creatingGoal || startingGoal || granting;
   const scheduledAt = resolveScheduledAt(preset, now, resetsAt);
   // Gate the preview on a long-enough query so a stale verdict never lingers after
   // the field is cleared (no setState-in-effect needed to reset it).
@@ -118,20 +125,21 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const activeRouting = hasQuery ? routing : null;
   const isLoop = activeRouting?.mode === "loop";
 
+  // The side-effect-free verdict (the backend never starts a run here). Reused by the
+  // debounce below and by the grant flow (re-resolve a path once it's a project).
+  const runClassify = useCallback(() => {
+    classify(
+      { body: { text, paths } },
+      { onSuccess: (res) => setRouting(toClientRouting(selectApiResponseBody(res))) },
+    );
+  }, [classify, text, paths]);
+
   // ── Live classify preview ───────────────────────────────────────────────
-  // Debounced, side-effect-free verdict (the backend never starts a run here).
   useEffect(() => {
     if (text.trim().length <= 2) return;
-    const handle = setTimeout(() => {
-      classify(
-        { body: { text, paths } },
-        {
-          onSuccess: (res) => setRouting(toClientRouting(selectApiResponseBody(res))),
-        },
-      );
-    }, CLASSIFY_DEBOUNCE_MS);
+    const handle = setTimeout(runClassify, CLASSIFY_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [text, paths, classify]);
+  }, [text, runClassify]);
 
   // Seed the Loop form from a fresh proposal during render (the React-sanctioned
   // "adjust state on prop change" pattern, guarded against re-running) — unless the
@@ -248,6 +256,26 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     setRemovedPaths((prev) => new Set(prev).add(path));
   }, []);
 
+  // ── Grant a folder (Phase 11.3, Law 1) ───────────────────────────────────
+  // The "grant access" chip surfaces the path; the operator's CONFIRM is the act
+  // that registers it as a workspace root (createProject). No autonomous surface can
+  // reach this — the run simply has no folder scope until the operator grants it.
+  const confirmGrant = useCallback(() => {
+    if (pendingGrant === null) return;
+    const path = pendingGrant;
+    const name = basename(path) || path;
+    createProject(
+      { body: { id: slugify(name) || "workspace", name, path } },
+      {
+        onSuccess: () => {
+          setPendingGrant(null);
+          // Re-resolve so the chip flips from "grant access" to "scoped to <name>".
+          runClassify();
+        },
+      },
+    );
+  }, [pendingGrant, createProject, runClassify]);
+
   const canSubmit = isLoop ? canSubmitLoop(loop) : text.trim().length > 2;
 
   const header = (
@@ -345,11 +373,36 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
 
         <TaskComposer
           onChange={setText}
+          onGrant={setPendingGrant}
           onRemovePath={handleRemovePath}
           onSubmit={handleSubmit}
           paths={paths}
+          resolved={activeRouting?.paths}
           value={text}
         />
+
+        {pendingGrant !== null && (
+          <Panel padding="100">
+            <Stack gap="100">
+              <Typography size="sm" type="text">
+                {t("paths.grantConfirm", { folder: basename(pendingGrant) || pendingGrant })}
+              </Typography>
+              <Stack align="center" direction="row" gap="100" justify="end">
+                <Button icon="x" intent="ghost" onClick={() => setPendingGrant(null)}>
+                  {t("paths.grantCancel")}
+                </Button>
+                <Button
+                  icon="shield"
+                  intent="primary"
+                  loading={granting}
+                  onClick={confirmGrant}
+                >
+                  {t("paths.grantConfirmYes")}
+                </Button>
+              </Stack>
+            </Stack>
+          </Panel>
+        )}
 
         {activeRouting && <PlanPreview routing={activeRouting} />}
 

@@ -234,6 +234,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           err: error.message,
         })
       }
+    } else if (resolved) {
+      // Phase 11.3: a resolved but NON-git project (e.g. a freshly granted plain
+      // folder) gets no worktree — but it still scopes the run: spawn directly in the
+      // folder (the pre-3.1 posture). No createWorktree call, so no WorkspaceSetupError.
+      spawnCwd = resolved.path
     }
 
     const spec = {

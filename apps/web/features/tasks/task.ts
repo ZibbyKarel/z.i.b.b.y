@@ -23,6 +23,17 @@ export function extractPaths(text: string): string[] {
   return [...new Set(matches)];
 }
 
+/**
+ * The trailing segment of a path — the folder/file name used to derive a granted
+ * project's `name`/`id` (Phase 11.3). Strips a trailing slash; "~/Projects/alpha"
+ * → "alpha", "/var/log/app" → "app".
+ */
+export function basename(path: string): string {
+  const trimmed = path.replace(/\/+$/, "");
+  const slash = trimmed.lastIndexOf("/");
+  return slash >= 0 ? trimmed.slice(slash + 1) : trimmed;
+}
+
 /** A destination for a task — an agent, a pipeline, a goal, or the orchestrator fallback. */
 export type TaskTargetKind = "agent" | "pipeline" | "goal" | "orchestrator";
 

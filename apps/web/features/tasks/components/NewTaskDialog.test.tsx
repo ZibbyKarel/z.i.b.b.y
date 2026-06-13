@@ -22,7 +22,15 @@ const CANDIDATES = [
   { kind: "pipeline", id: "delivery", name: "Delivery" },
 ];
 
-function apiRouting(text: string, loop: boolean, low: boolean) {
+function resolvePaths(paths: string[] | undefined) {
+  return (paths ?? []).map((path) =>
+    /alpha/.test(path)
+      ? { path, project: { id: "alpha", name: "Alpha" } }
+      : { path, project: null },
+  );
+}
+
+function apiRouting(text: string, loop: boolean, low: boolean, paths?: string[]) {
   if (loop) {
     return {
       target: CANDIDATES[1],
@@ -38,7 +46,7 @@ function apiRouting(text: string, loop: boolean, low: boolean) {
         maxIterations: 6,
         instructions: text,
       },
-      paths: [],
+      paths: resolvePaths(paths),
     };
   }
   return {
@@ -49,18 +57,28 @@ function apiRouting(text: string, loop: boolean, low: boolean) {
     candidates: CANDIDATES,
     mode: "single",
     proposedGoal: null,
-    paths: [],
+    paths: resolvePaths(paths),
   };
 }
 
 const classify = vi.fn(
-  (vars: { body: { text: string } }, opts?: { onSuccess?: (r: unknown) => void }) => {
-    const { text } = vars.body;
+  (
+    vars: { body: { text: string; paths?: string[] } },
+    opts?: { onSuccess?: (r: unknown) => void },
+  ) => {
+    const { text, paths } = vars.body;
     const loop = /until|loop|dokud/i.test(text);
     const low = /vague/i.test(text);
-    opts?.onSuccess?.({ status: 200, body: apiRouting(text, loop, low) });
+    opts?.onSuccess?.({ status: 200, body: apiRouting(text, loop, low, paths) });
   },
 );
+
+const createProject = vi.fn((_vars: { body: unknown }, opts?: { onSuccess?: () => void }) =>
+  opts?.onSuccess?.(),
+);
+vi.mock("../../projects/mutations", () => ({
+  useCreateProjectMutation: () => ({ mutate: createProject, isPending: false }),
+}));
 
 type CreateVars = { body: { text: string; scheduledAt?: number | null; target?: { kind: string; id?: string } } };
 type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
@@ -126,6 +144,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     createTask.mockClear();
     createGoal.mockClear();
     startGoal.mockClear();
+    createProject.mockClear();
   });
 
   it("renders one description field, no mode tabs", () => {
@@ -223,6 +242,38 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     const taskBody = createTask.mock.calls.at(-1)?.[0].body;
     expect(taskBody?.target?.kind).toBe("goal");
     expect(taskBody?.scheduledAt).toBeGreaterThan(Date.now());
+  });
+
+  it("shows a scoped badge for an in-project path and a grant action for an out-of-project one", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(
+      screen.getByLabelText(/Zadání/),
+      "touch ~/Projects/alpha/x and /tmp/scratch/y",
+    );
+    // In-project path → "scoped to Alpha"; out-of-project path → "grant access".
+    expect(await screen.findByText(/v projektu Alpha/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Povolit ZIBBY přístup k /tmp/scratch/y" }),
+    ).toBeInTheDocument();
+  });
+
+  it("grants access via an explicit confirm → createProject with the slugified folder", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "work in /tmp/scratch/widget");
+    const grant = await screen.findByRole("button", {
+      name: "Povolit ZIBBY přístup k /tmp/scratch/widget",
+    });
+    await userEvent.click(grant);
+    // The confirm is the operator's act (Law 1) — nothing registers before it.
+    expect(createProject).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Povolit přístup" }));
+
+    expect(createProject).toHaveBeenCalledTimes(1);
+    expect(createProject.mock.calls[0]?.[0].body).toEqual({
+      id: "widget",
+      name: "widget",
+      path: "/tmp/scratch/widget",
+    });
   });
 
   it("closes via the cancel action", async () => {

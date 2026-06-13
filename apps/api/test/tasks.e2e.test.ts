@@ -27,16 +27,19 @@ describe("Tasks API (e2e)", () => {
   let pipelinesDir: string
   let runsDir: string
   let tasksDir: string
+  let projectsDir: string
 
   beforeAll(async () => {
     agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-agents-e2e-"))
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-pipelines-e2e-"))
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-runs-e2e-"))
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-scheduled-e2e-"))
+    projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-projects-e2e-"))
     process.env.AGENTS_DIR = agentsDir
     process.env.PIPELINES_DIR = pipelinesDir
     process.env.AGENT_RUNS_DIR = runsDir
     process.env.TASKS_DIR = tasksDir
+    process.env.PROJECTS_DIR = projectsDir
     process.env.TASK_TICK_MS = "0" // disable the background loop; drive tick() directly
     // A dispatch spawns a run; use the stub instead of the real claude CLI.
     process.env.CLAUDE_BIN = FAKE_CLAUDE
@@ -49,7 +52,7 @@ describe("Tasks API (e2e)", () => {
   })
 
   afterEach(async () => {
-    for (const dir of [agentsDir, pipelinesDir, tasksDir]) {
+    for (const dir of [agentsDir, pipelinesDir, tasksDir, projectsDir]) {
       for (const entry of await fs.readdir(dir)) {
         await fs.rm(path.join(dir, entry), { force: true })
       }
@@ -58,7 +61,7 @@ describe("Tasks API (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
-    for (const dir of [agentsDir, pipelinesDir, runsDir, tasksDir]) {
+    for (const dir of [agentsDir, pipelinesDir, runsDir, tasksDir, projectsDir]) {
       await fs.rm(dir, { recursive: true, force: true })
     }
     for (const k of [
@@ -66,6 +69,7 @@ describe("Tasks API (e2e)", () => {
       "PIPELINES_DIR",
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
+      "PROJECTS_DIR",
       "TASK_TICK_MS",
       "CLAUDE_BIN",
       "FAKE_CLAUDE_STEPS",
@@ -304,6 +308,84 @@ describe("Tasks API (e2e)", () => {
     } finally {
       delete process.env.FAKE_CLAUDE_FAIL
     }
+  })
+
+  // ── Phase 11 ────────────────────────────────────────────────────────────
+  describe("Phase 11 — loop synthesis + path scoping", () => {
+    it("classifies a loop-cued task to mode:loop with a checks verifier proposal", async () => {
+      await seedCatalog()
+      const res = await request(app.getHttpServer())
+        .post(CLASSIFY)
+        .send({ text: "implementuj feature a opakuj, dokud testy neprojdou" })
+
+      expect(res.status).toBe(200)
+      expect(res.body.mode).toBe("loop")
+      expect(res.body.proposedGoal).toBeTruthy()
+      expect(res.body.proposedGoal.verifier).toEqual({ kind: "checks" })
+      expect(["agent", "pipeline"]).toContain(res.body.proposedGoal.maker.kind)
+      // The target stays the maker — never a synthesized goal target (Decision 1).
+      expect(res.body.target.kind).not.toBe("goal")
+    })
+
+    it("classify writes no goal files (side-effect-free preview)", async () => {
+      await seedCatalog()
+      const goalsBefore = await request(app.getHttpServer()).get("/api/goals").expect(200)
+      await request(app.getHttpServer())
+        .post(CLASSIFY)
+        .send({ text: "fix the build and keep retrying until it passes" })
+        .expect(200)
+      const goalsAfter = await request(app.getHttpServer()).get("/api/goals").expect(200)
+      expect(goalsAfter.body.length).toBe(goalsBefore.body.length)
+    })
+
+    it("resolves a granted folder's path to its project on a later classify", async () => {
+      await seedCatalog()
+      const folder = await fs.mkdtemp(path.join(os.tmpdir(), "granted-"))
+
+      // Before the grant the path is unattributed.
+      const before = await request(app.getHttpServer())
+        .post(CLASSIFY)
+        .send({ text: `tweak something`, paths: [`${folder}/src/x.ts`] })
+        .expect(200)
+      expect(before.body.paths[0].project).toBeNull()
+
+      // The operator grants access (createProject) → the path now resolves.
+      await request(app.getHttpServer())
+        .post("/api/projects")
+        .send({ id: "granted", name: "Granted", path: folder })
+        .expect(201)
+      const after = await request(app.getHttpServer())
+        .post(CLASSIFY)
+        .send({ text: `tweak something`, paths: [`${folder}/src/x.ts`] })
+        .expect(200)
+      expect(after.body.paths[0].project).toEqual({ id: "granted", name: "Granted" })
+
+      await fs.rm(folder, { recursive: true, force: true })
+    })
+
+    it("dispatches a task against a non-git granted folder without a worktree error", async () => {
+      await seedCatalog()
+      const folder = await fs.mkdtemp(path.join(os.tmpdir(), "granted-nongit-"))
+      await request(app.getHttpServer())
+        .post("/api/projects")
+        .send({ id: "nongit", name: "NonGit", path: folder })
+        .expect(201)
+
+      // A task whose path lands in the (non-git) granted folder must still run.
+      const res = await request(app.getHttpServer())
+        .post(CREATE)
+        .send({ text: "Implementuj funkce podle zadání", paths: [`${folder}/feature.ts`] })
+
+      expect(res.status).toBe(201)
+      expect(res.body.outcome).toBe("dispatched")
+      expect(typeof res.body.runRef).toBe("string")
+      const run = await request(app.getHttpServer()).get(`/api/agents/runs/${res.body.runRef}`)
+      expect(run.status).toBe(200)
+      // The run is attributed to the granted project (no WorkspaceSetupError thrown).
+      expect(run.body.project).toBe("nongit")
+
+      await fs.rm(folder, { recursive: true, force: true })
+    })
   })
 })
 
