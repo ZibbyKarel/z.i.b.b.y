@@ -8,6 +8,7 @@ import { AutomationsModule } from "./automations/automations.module"
 import { BriefingModule } from "./briefing/briefing.module"
 import { BudgetModule } from "./budget/budget.module"
 import { ChannelsModule } from "./channels/channels.module"
+import { DiscoveryModule } from "./discovery/discovery.module"
 import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { GoalsModule } from "./goals/goals.module"
@@ -44,6 +45,7 @@ import { TasksModule } from "./tasks/tasks.module"
     IntegrationsModule,
     MandateModule,
     ChannelsModule,
+    DiscoveryModule,
     HealthModule,
     LimitsModule,
     LimitResumeModule,

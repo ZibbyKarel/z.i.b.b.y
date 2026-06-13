@@ -27,10 +27,12 @@ export enum AutomationCardTestId {
 }
 
 const TRIGGER_GLYPH = { cron: "clock", event: "bolt" } as const satisfies Record<string, IconName>;
-const TARGET_GLYPH = { agent: "bot", pipeline: "flow", briefing: "spark" } as const satisfies Record<
-  Target["type"],
-  IconName
->;
+const TARGET_GLYPH = {
+  agent: "bot",
+  pipeline: "flow",
+  briefing: "spark",
+  discovery: "search",
+} as const satisfies Record<Target["type"], IconName>;
 
 export interface AutomationCardProps {
   automation: Automation;
@@ -84,7 +86,12 @@ export function AutomationCard({
         ? t("nextRun", { when: relativeLabel(next.getTime(), now, locale) })
         : "—";
 
-  const targetText = target.type === "briefing" ? t("targetBriefing") : (targetName ?? targetIdOf(target));
+  const targetText =
+    target.type === "briefing"
+      ? t("targetBriefing")
+      : target.type === "discovery"
+        ? t("targetDiscovery")
+        : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>

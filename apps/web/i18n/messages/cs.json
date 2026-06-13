@@ -858,6 +858,8 @@
     "targetAgent": "agent",
     "targetPipeline": "pipeline",
     "targetBriefing": "briefing",
+    "targetDiscovery": "discovery",
+    "discoveryNote": "Trigger prohledá práci a navrhne tasky za schvalovací bránou. Nic se nespustí, dokud neschválíš.",
     "formCreateTitle": "Nová automatizace",
     "formEditTitle": "Upravit automatizaci",
     "nameLabel": "Název",

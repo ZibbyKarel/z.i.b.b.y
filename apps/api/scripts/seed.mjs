@@ -280,11 +280,48 @@ const AUTOMATIONS = [
   { id: "au-nakup", name: "Nedělní nákup", trigger: { type: "cron", expr: "0 18 * * 0" }, target: { type: "agent", agentId: "steward" }, enabled: true, lastFiredAt: iso(2 * MIN) },
   { id: "au-backup", name: "Záloha vaultu", trigger: { type: "cron", expr: "0 4 * * *" }, target: { type: "agent", agentId: "steward" }, enabled: true, lastFiredAt: iso(6 * 60 * MIN) },
   { id: "au-pr", name: "Hlídač PR", trigger: { type: "event", event: "pr.opened" }, target: { type: "pipeline", pipelineId: "pr-guard" }, enabled: false },
+  // Phase 10.3: discovery triage — scans for work and proposes tasks behind the gate.
+  // Shipped DISABLED: default-on would propose work before the operator has set up
+  // projects / a mandate. Turned on from Settings, same posture as any autonomous surface.
+  { id: "discovery-triage", name: "Discovery triage", trigger: { type: "cron", expr: "0 * * * *" }, target: { type: "discovery" }, enabled: false },
 ]
 
 async function seedAutomations() {
   for (const a of AUTOMATIONS) await writeFile(dir("automations", `${a.id}.json`), JSON.stringify(a, null, 2))
   return AUTOMATIONS.length
+}
+
+// --------------------------------------------------------------- goals ----
+// Phase 10: a goal definition — the outer loop's recipe. The maker is an existing
+// agent/pipeline; the verifier here is the project's deterministic checks. Stored
+// as `<id>.goal.md` (frontmatter carries maker/verifier/maxIterations).
+const GOALS = [
+  {
+    id: "ship-auth-feature",
+    name: "Ship the auth feature green",
+    desc: "Iterate the build-feature pipeline until the auth-svc checks pass.",
+    objective: "Implement the new login flow in auth-svc and get all checks green.",
+    maker: { kind: "pipeline", id: "build-feature" },
+    verifier: { kind: "checks" },
+    maxIterations: 5,
+    instructions:
+      "Drive the build-feature pipeline toward green checks. Each iteration, address what the verifier flagged last time; do not re-do already-committed work.",
+  },
+]
+
+async function seedGoals() {
+  for (const g of GOALS) {
+    const fm = {
+      name: g.name,
+      objective: g.objective,
+      maker: g.maker,
+      verifier: g.verifier,
+      maxIterations: g.maxIterations,
+      desc: g.desc,
+    }
+    await writeFile(dir("goals", `${g.id}.goal.md`), md(g.instructions, fm))
+  }
+  return GOALS.length
 }
 
 // ----------------------------------------------------------------- vault ----
@@ -433,6 +470,7 @@ async function main() {
   const agents = await seedAgents()
   const projects = await seedProjects()
   const pipelines = await seedPipelines()
+  const goals = await seedGoals()
   const automations = await seedAutomations()
   const notes = await seedVault()
   const { approvals, runs } = await seedRunsAndApprovals()
@@ -442,6 +480,7 @@ async function main() {
   console.log(`  agents        ${agents} (incl. agent-007) + 7 categories`)
   console.log(`  projects      ${projects} + 3 categories`)
   console.log(`  pipelines     ${pipelines}`)
+  console.log(`  goals         ${goals}`)
   console.log(`  automations   ${automations}`)
   console.log(`  vault notes   ${notes}`)
   console.log(`  approvals     ${approvals} (pending)`)

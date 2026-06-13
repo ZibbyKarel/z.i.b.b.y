@@ -19,6 +19,10 @@ export const TargetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pipeline"), pipelineId: AgentIdSchema }),
   z.object({ type: z.literal("agent"), agentId: AgentIdSchema, prompt: z.string().optional() }),
   z.object({ type: z.literal("briefing") }),
+  // Phase 10.3: scan git/tests/vault for work and emit task CANDIDATES into the
+  // approvals queue (a `proposed-task` per candidate). Deterministic assembly, not
+  // a claude run — the scheduler dispatches it straight to the discovery service.
+  z.object({ type: z.literal("discovery") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

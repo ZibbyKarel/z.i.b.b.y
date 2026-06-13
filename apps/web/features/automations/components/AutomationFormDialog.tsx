@@ -104,7 +104,8 @@ export function AutomationFormDialog({
     schedule.time.trim().length > 0 &&
     (schedule.repeat === "monthly" || schedule.weekdays.length > 0);
   const triggerOk = triggerType === "cron" ? scheduleOk : event.trim().length > 0;
-  const targetOk = targetType === "briefing" || targetValue.length > 0;
+  const targetOk =
+    targetType === "briefing" || targetType === "discovery" || targetValue.length > 0;
   const canSave = name.trim().length > 0 && triggerOk && targetOk;
 
   // Friendly-picker strings, localized. Weekday names come from the cron helper
@@ -135,7 +136,9 @@ export function AutomationFormDialog({
         ? { type: "agent", agentId: targetValue, ...(prompt.trim() ? { prompt: prompt.trim() } : {}) }
         : targetType === "pipeline"
           ? { type: "pipeline", pipelineId: targetValue }
-          : { type: "briefing" };
+          : targetType === "discovery"
+            ? { type: "discovery" }
+            : { type: "briefing" };
     onSubmit({
       id: automation?.id ?? slug(name, "automation"),
       name: name.trim(),
@@ -216,17 +219,18 @@ export function AutomationFormDialog({
             { value: "agent", label: t("targetAgent") },
             { value: "pipeline", label: t("targetPipeline") },
             { value: "briefing", label: t("targetBriefing") },
+            { value: "discovery", label: t("targetDiscovery") },
           ]}
           value={targetType}
         />
 
-        {targetType === "briefing" ? (
+        {targetType === "briefing" || targetType === "discovery" ? (
           <Card background="background" radius="default">
             <Container padding="150">
               <Stack align="start" direction="row" gap="100">
-                <Icon name="spark" size="sm" tone="accent" />
+                <Icon name={targetType === "discovery" ? "search" : "spark"} size="sm" tone="accent" />
                 <Typography leading="snug" size="caption" type="note" variant="secondary">
-                  {t("briefingNote")}
+                  {targetType === "discovery" ? t("discoveryNote") : t("briefingNote")}
                 </Typography>
               </Stack>
             </Container>

@@ -858,6 +858,8 @@
     "targetAgent": "agent",
     "targetPipeline": "pipeline",
     "targetBriefing": "briefing",
+    "targetDiscovery": "discovery",
+    "discoveryNote": "The trigger scans for work and proposes tasks behind the approval gate. Nothing runs until you approve.",
     "formCreateTitle": "New automation",
     "formEditTitle": "Edit automation",
     "nameLabel": "Name",

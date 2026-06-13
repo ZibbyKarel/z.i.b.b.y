@@ -3,6 +3,7 @@ import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/com
 import type { Automation } from "@zibby/contracts"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { BriefingService } from "../briefing/briefing.service"
+import { DiscoveryTriageService } from "../discovery/discovery-triage.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -29,6 +30,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly briefing: BriefingService,
+    private readonly discovery: DiscoveryTriageService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -101,6 +103,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // briefing service and return the vault note id as the run ref.
         const { noteId } = await this.briefing.generate()
         return noteId
+      }
+      case "discovery": {
+        // Phase 10.3: deterministic scan → task candidates parked behind the gate.
+        // *Proposed ≠ dispatched* — discovery never starts a run; the ref is a count.
+        const parked = await this.discovery.run()
+        return `discovery:${parked.length}`
       }
     }
   }
