@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { ScheduledTaskSchema, ScheduledTaskStatusSchema, TaskRoutingSchema, tasksContract } from "../index"
+import {
+  CreateTaskInputSchema,
+  ProposedGoalSchema,
+  ResolvedPathSchema,
+  ScheduledTaskSchema,
+  ScheduledTaskStatusSchema,
+  TaskRoutingSchema,
+  tasksContract,
+} from "../index"
 
 describe("tasksContract", () => {
   it("exposes a POST /api/tasks/classify route returning 200 and 422", () => {
@@ -49,6 +57,92 @@ describe("TaskRoutingSchema", () => {
   it("rejects an agent target without an id", () => {
     const routing = { ...valid, target: { kind: "agent", name: "Kurátor" } }
     expect(TaskRoutingSchema.safeParse(routing).success).toBe(false)
+  })
+
+  // ── Phase 11: mode / proposedGoal / paths (additive, back-compatible) ──────
+  it("applies defaults to an old-shaped response (single / null / [])", () => {
+    const parsed = TaskRoutingSchema.safeParse(valid)
+    expect(parsed.success).toBe(true)
+    if (!parsed.success) return
+    expect(parsed.data.mode).toBe("single")
+    expect(parsed.data.proposedGoal).toBeNull()
+    expect(parsed.data.paths).toEqual([])
+  })
+
+  it("round-trips a loop verdict carrying a synthesized proposedGoal + resolved paths", () => {
+    const loop = {
+      ...valid,
+      mode: "loop" as const,
+      proposedGoal: {
+        objective: "fix the failing test until it's green",
+        maker: { kind: "pipeline", id: "delivery" },
+        verifier: { kind: "checks" },
+        maxIterations: 6,
+        instructions: "fix the failing test until it's green",
+      },
+      paths: [
+        { path: "~/Projects/alpha", project: { id: "alpha", name: "Alpha" } },
+        { path: "/tmp/scratch", project: null },
+      ],
+    }
+    const parsed = TaskRoutingSchema.safeParse(loop)
+    expect(parsed.success).toBe(true)
+    if (!parsed.success) return
+    expect(parsed.data.mode).toBe("loop")
+    expect(parsed.data.proposedGoal?.maker).toEqual({ kind: "pipeline", id: "delivery" })
+    expect(parsed.data.paths[0]?.project?.name).toBe("Alpha")
+    expect(parsed.data.paths[1]?.project).toBeNull()
+  })
+})
+
+describe("ProposedGoalSchema (Phase 11)", () => {
+  const valid = {
+    objective: "keep going until tests pass",
+    maker: { kind: "agent" as const, id: "coder" },
+    verifier: { kind: "checks" as const },
+    maxIterations: 6,
+    instructions: "keep going until tests pass",
+  }
+
+  it("validates a synthesized goal proposal", () => {
+    expect(ProposedGoalSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it("rejects a non-positive maxIterations", () => {
+    expect(ProposedGoalSchema.safeParse({ ...valid, maxIterations: 0 }).success).toBe(false)
+  })
+
+  it("rejects an empty objective", () => {
+    expect(ProposedGoalSchema.safeParse({ ...valid, objective: "" }).success).toBe(false)
+  })
+})
+
+describe("ResolvedPathSchema (Phase 11)", () => {
+  it("round-trips a path scoped to a project", () => {
+    const parsed = ResolvedPathSchema.safeParse({
+      path: "~/Projects/alpha/src",
+      project: { id: "alpha", name: "Alpha" },
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it("round-trips an unscoped (null-project) path", () => {
+    const parsed = ResolvedPathSchema.safeParse({ path: "/tmp/x", project: null })
+    expect(parsed.success).toBe(true)
+  })
+})
+
+describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
+  it("accepts an optional goal target (scheduled-loop dispatch)", () => {
+    const parsed = CreateTaskInputSchema.safeParse({
+      text: "loop it",
+      target: { kind: "goal", id: "my-goal", name: "My Goal" },
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it("stays valid with no target (the default path)", () => {
+    expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true)
   })
 })
 

@@ -1,8 +1,13 @@
 import type {
   TaskRouting as ApiTaskRouting,
   TaskTarget as ApiTaskTarget,
+  ProposedGoal,
+  ResolvedPath,
+  TaskMode,
 } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
+
+export type { ProposedGoal, ResolvedPath, TaskMode };
 
 /**
  * Detects file/folder references inside a free-text task description so they can
@@ -52,6 +57,12 @@ export interface TaskRouting {
   /** Catalog terms that matched the description — the routing rationale. */
   matchedTerms: string[];
   candidates: TaskTarget[];
+  /** Phase 11: execute as a one-shot dispatch (`single`) or a synthesized `loop`. */
+  mode: TaskMode;
+  /** Phase 11: the synthesized goal proposal when `mode === "loop"`, else `null`. */
+  proposedGoal: ProposedGoal | null;
+  /** Phase 11: detected paths resolved against the project registry (scoped vs grant). */
+  paths: ResolvedPath[];
 }
 
 /**
@@ -85,6 +96,9 @@ export function toClientRouting(body: ApiTaskRouting): TaskRouting {
     reason: body.reason,
     matchedTerms: body.matchedTerms,
     candidates: body.candidates.map(toClientTarget),
+    mode: body.mode,
+    proposedGoal: body.proposedGoal,
+    paths: body.paths,
   };
 }
 

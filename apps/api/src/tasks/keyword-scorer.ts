@@ -7,6 +7,52 @@ export function tokenize(text: string): string[] {
   return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
 }
 
+/** Lowercase + strip diacritics so "dokud nepro­jde" matches unaccented interim text. */
+function fold(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+}
+
+/**
+ * Phase 11 loop cues (cs + en), diacritics-folded. Each is a substring probe over
+ * the folded task text — a deterministic signal that the operator asked to
+ * iterate-until-satisfied, so the classifier proposes a loop (a goal) rather than a
+ * one-shot dispatch. This is the always-available leg behind the LLM router's own
+ * `loop` annotation; either firing flips the verdict to `mode: "loop"`.
+ */
+const LOOP_CUES: readonly string[] = [
+  // Czech
+  "dokud", // "until" — the canonical cs cue ("dokud neprojde/nebude zelená")
+  "opakuj", // "repeat"
+  "znovu a znovu", // "again and again"
+  // English
+  "until it passes",
+  "until it's green",
+  "until its green",
+  "until green",
+  "until tests pass",
+  "until the tests pass",
+  "until it succeeds",
+  "until it works",
+  "keep going until",
+  "keep trying until",
+  "keep retrying",
+  "retry until",
+]
+
+/**
+ * True when the task text carries a loop cue — the deterministic loop leg. Pure
+ * string work (fold + substring), no I/O or randomness, so the classifier stays
+ * reproducible and the e2e suite never depends on the LLM router. Treats the input
+ * as data (Law 4): a cue only flips the execution shape, it never names an action.
+ */
+export function detectLoopCue(text: string): boolean {
+  const folded = fold(text)
+  return LOOP_CUES.some((cue) => folded.includes(cue))
+}
+
 /** Distinct keyword tokens (length ≥ 3) drawn from a target's catalog blob. */
 function keywordsOf(text: string): string[] {
   return [...new Set(tokenize(text).filter((token) => token.length >= 3))]
@@ -75,6 +121,11 @@ export class KeywordScorer implements TaskRouter {
       reason,
       matchedTerms: best.matched,
       candidates: wire,
+      // Phase 11: the scorer ranks the maker only; mode + proposedGoal + paths are
+      // overlaid by the classifier (it owns the loop-cue check and path resolution).
+      mode: "single",
+      proposedGoal: null,
+      paths: [],
     }
   }
 }

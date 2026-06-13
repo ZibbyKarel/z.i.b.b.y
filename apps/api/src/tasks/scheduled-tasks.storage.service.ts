@@ -71,6 +71,9 @@ export class ScheduledTasksStorageService
       status: "scheduled",
       createdAt,
       ...(projectId ? { projectId } : {}),
+      // Phase 11: a scheduled loop carries its `{ kind: "goal", id }` target so the
+      // tick re-dispatches to it instead of re-classifying (goals are never routed).
+      ...(input.target ? { target: input.target } : {}),
     }
     await this.writeEntity(task)
     return task

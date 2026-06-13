@@ -1,5 +1,7 @@
 import { z } from "zod"
 import { AgentIdSchema } from "../agents/agent.schema"
+import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema"
+import { ProjectIdSchema } from "../projects/project.schema"
 
 /**
  * Display fields every routing target carries. `glyph` is a free-form string
@@ -92,9 +94,56 @@ export const ClassifyTaskInputSchema = z.object({
 export type ClassifyTaskInput = z.infer<typeof ClassifyTaskInputSchema>
 
 /**
+ * Phase 11: how a classified task should EXECUTE. `single` is the default
+ * agent/pipeline/orchestrator dispatch; `loop` means the task asked to
+ * iterate-until-satisfied and the classifier synthesized a goal proposal. `mode`
+ * is an orthogonal overlay on the routing — the `target` always stays the maker
+ * (agent/pipeline/orchestrator); a synthesized loop has no stored goal id yet, so
+ * it is NEVER a `target.kind: "goal"` at classify time (goal targets require a
+ * persisted `.goal.md`). Persistence happens only on submit.
+ */
+export const TaskModeSchema = z.enum(["single", "loop"])
+export type TaskMode = z.infer<typeof TaskModeSchema>
+
+/**
+ * Phase 11: a synthesized (un-persisted) goal definition the classifier proposes
+ * when it detects a loop. It is the {@link CreateGoalInput} shape minus a committed
+ * `id` — editable in the dialog's "Edit" disclosure before submit, then turned into
+ * a real `<id>.goal.md` only when the operator confirms. The classifier writes
+ * nothing; this is an in-memory proposal carried on the verdict.
+ */
+export const ProposedGoalSchema = z.object({
+  objective: z.string().min(1),
+  maker: MakerRefSchema,
+  verifier: VerifierSpecSchema,
+  maxIterations: z.number().int().positive(),
+  instructions: z.string().min(1),
+})
+export type ProposedGoal = z.infer<typeof ProposedGoalSchema>
+
+/**
+ * Phase 11: one of the task's detected paths resolved against the project registry
+ * by the backend `matchProject` (Law 4 — read-only attribution). `project` is set
+ * when the path lives inside a registered workspace root (→ the web shows
+ * "scoped to <name>"); `null` when it is outside any project (→ the web offers a
+ * gated "grant access" action that registers the folder). Resolution is
+ * backend-only so the web never reimplements the diacritics-folded matcher.
+ */
+export const ResolvedPathSchema = z.object({
+  path: z.string(),
+  project: z.object({ id: ProjectIdSchema, name: z.string() }).nullable(),
+})
+export type ResolvedPath = z.infer<typeof ResolvedPathSchema>
+
+/**
  * The router verdict the approval gate renders: the chosen target, a 0–1
  * confidence, a short human reason, the catalog terms that matched, and the full
  * candidate list so the user can override the destination.
+ *
+ * Phase 11 adds three additive/optional fields (an old-shaped response still
+ * parses, defaults applied): `mode` (`single` vs a synthesized `loop`),
+ * `proposedGoal` (the loop's editable goal proposal, `null` for single mode), and
+ * `paths` (each detected path resolved to a project or `null`).
  */
 export const TaskRoutingSchema = z.object({
   target: TaskTargetSchema,
@@ -105,6 +154,12 @@ export const TaskRoutingSchema = z.object({
   /** Catalog terms that justified the match. */
   matchedTerms: z.array(z.string()),
   candidates: z.array(TaskTargetSchema).min(1),
+  /** Phase 11: execute as a one-shot dispatch (`single`) or a synthesized loop. */
+  mode: TaskModeSchema.default("single"),
+  /** Phase 11: the synthesized goal proposal when `mode === "loop"`, else `null`. */
+  proposedGoal: ProposedGoalSchema.nullable().default(null),
+  /** Phase 11: detected paths resolved against the project registry. */
+  paths: z.array(ResolvedPathSchema).default([]),
 })
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>
 
@@ -211,6 +266,16 @@ export const CreateTaskInputSchema = z.object({
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).max(64).optional(),
   scheduledAt: z.number().int().positive().nullish(),
+  /**
+   * Phase 11: a pre-chosen dispatch target that bypasses classification — used by
+   * the unified composer for a SCHEDULED loop, where the goal is created up front
+   * and the task carries its `{ kind: "goal", id }` target so the scheduler's
+   * defer/limit/budget machinery owns it (an immediate loop starts the goal run
+   * directly instead). The scheduler already accepts an `explicitTarget`; this
+   * threads it from the wire. Attribution stays server-derived (Law 4) — this is a
+   * dispatch destination, not a project assertion.
+   */
+  target: TaskTargetSchema.optional(),
 })
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>
 

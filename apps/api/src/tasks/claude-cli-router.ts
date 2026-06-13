@@ -19,12 +19,15 @@ const ROUTER_SYSTEM_PROMPT = [
   "of available agents and pipelines, choose the SINGLE best target to handle it.",
   "",
   "Reply with ONLY a JSON object, no prose and no code fences:",
-  '{"targetKind":"agent"|"pipeline","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[]}',
+  '{"targetKind":"agent"|"pipeline","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string}',
   "",
   "- targetId MUST be one of the ids in the catalog — never invent one.",
   "- confidence is your calibrated 0..1 belief the choice is correct.",
   "- reason is one short sentence a human can read.",
   "- matchedTerms are the catalog/task words that justify the choice.",
+  '- loop is true ONLY when the task asks to iterate until a condition holds (e.g. "keep going until the tests pass"); otherwise false.',
+  "- objective: when loop is true, a one-line statement of the outcome to drive toward; else an empty string.",
+  "- Always still pick an agent/pipeline targetKind+targetId — loop is an annotation on that pick, NOT a new target kind.",
 ].join("\n")
 
 interface RouterVerdict {
@@ -33,6 +36,10 @@ interface RouterVerdict {
   confidence: number
   reason: string
   matchedTerms: string[]
+  /** Phase 11: the model's iterate-until-satisfied signal (annotation on the maker pick). */
+  loop?: boolean
+  /** Phase 11: a one-line objective the model offers when `loop` is true (tolerated, optional). */
+  objective?: string
 }
 
 /**
@@ -84,6 +91,11 @@ export class ClaudeCliRouter implements TaskRouter {
       reason: verdict.reason.trim() || "Routed by the classifier.",
       matchedTerms: verdict.matchedTerms.filter((t) => typeof t === "string"),
       candidates: candidates.map(toTaskTarget),
+      // Phase 11: carry the model's loop annotation through as the mode overlay. The
+      // target stays the maker; the classifier synthesizes the goal proposal + paths.
+      mode: verdict.loop ? "loop" : "single",
+      proposedGoal: null,
+      paths: [],
     }
   }
 
@@ -168,6 +180,9 @@ export class ClaudeCliRouter implements TaskRouter {
       confidence: typeof obj.confidence === "number" ? obj.confidence : 0.5,
       reason: typeof obj.reason === "string" ? obj.reason : "",
       matchedTerms: Array.isArray(obj.matchedTerms) ? (obj.matchedTerms as string[]) : [],
+      // Phase 11: tolerate both new fields' absence (old prompts / partial replies).
+      loop: obj.loop === true,
+      objective: typeof obj.objective === "string" ? obj.objective : undefined,
     }
   }
 

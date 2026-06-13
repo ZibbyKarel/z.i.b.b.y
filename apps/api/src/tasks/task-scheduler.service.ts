@@ -180,6 +180,10 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      */
     explicitTarget?: TaskTarget,
   ): Promise<CreateTaskResult> {
+    // Phase 11: the unified composer carries a pre-chosen target on the wire (a
+    // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
+    // resume) still wins when both are present.
+    const target = explicitTarget ?? input.target
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
       : matchProject(await this.projects.list().catch((): Project[] => []), {
@@ -209,7 +213,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       summary: `task created${input.title ? `: ${input.title}` : ""}`,
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     })
-    return this.attemptCreate(taskId, input, project, now, explicitTarget)
+    return this.attemptCreate(taskId, input, project, now, target)
   }
 
   /** Cancel a still-waiting task. A held task's approval is rejected (single source of truth). */

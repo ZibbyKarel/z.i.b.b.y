@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { KeywordScorer } from "./keyword-scorer"
+import { KeywordScorer, detectLoopCue } from "./keyword-scorer"
 import type { RoutableTarget } from "./task-router"
 
 const candidates: RoutableTarget[] = [
@@ -86,5 +86,33 @@ describe("KeywordScorer", () => {
     const b = scorer.score({ text: "Implementuj podle design.md" }, candidates)
     expect(a).toEqual(b)
     expect(a?.target).toMatchObject({ kind: "agent", id: "coder" })
+  })
+})
+
+describe("detectLoopCue (Phase 11)", () => {
+  it.each([
+    "fix the failing test and keep going until it's green",
+    "retry until the tests pass",
+    "keep retrying the build",
+    "run it again until it works",
+    "oprav test, dokud neprojde",
+    "oprav rozbitý test dokud nebude zelená",
+    "opakuj to, dokud nebudou testy zelené",
+  ])("flags loop cue: %s", (text) => {
+    expect(detectLoopCue(text)).toBe(true)
+  })
+
+  it.each([
+    "rename the Button component",
+    "ship the auth feature",
+    "srovnej média v knihovně",
+    "implementuj podle design.md",
+  ])("does not flag one-shot text: %s", (text) => {
+    expect(detectLoopCue(text)).toBe(false)
+  })
+
+  it("matches diacritics-stripped interim text (STT may drop accents)", () => {
+    // "dokud neprojde" with accents removed, as a speech-to-text pass might emit it.
+    expect(detectLoopCue("oprav test dokud neprojde")).toBe(true)
   })
 })

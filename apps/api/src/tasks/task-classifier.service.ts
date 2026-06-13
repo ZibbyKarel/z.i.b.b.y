@@ -1,14 +1,20 @@
 import { Inject, Injectable } from "@nestjs/common"
 import {
   type ClassifyTaskInput,
+  type MakerRef,
   ORCHESTRATOR_TARGET,
+  type ProposedGoal,
+  type ResolvedPath,
   type TaskRouting,
   TaskRoutingSchema,
+  type TaskTarget,
 } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
+import { matchProject } from "../projects/project-matcher"
+import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { KeywordScorer } from "./keyword-scorer"
+import { KeywordScorer, detectLoopCue } from "./keyword-scorer"
 import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from "./task-router"
 
 /**
@@ -18,6 +24,13 @@ import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from 
  * term, so 0.5 separates "guessed the top catalog entry" from "actually matched".
  */
 export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5
+
+/**
+ * Phase 11: the iteration fuse a synthesized loop proposes by default. The operator
+ * can edit it in the dialog's "Edit" disclosure before submit; it only ever caps a
+ * proposal, never an existing goal.
+ */
+export const DEFAULT_GOAL_ITERATIONS = 6
 
 /**
  * Classifies a free-text task to a stored agent or pipeline. It builds the
@@ -45,6 +58,7 @@ export class TaskClassifierService {
     private readonly pipelines: PipelinesStorageService,
     @Inject(TASK_ROUTER) private readonly router: TaskRouter,
     private readonly fallback: KeywordScorer,
+    private readonly projects: ProjectsStorageService,
     logger: LoggerService,
   ) {
     this.log = logger.child(TaskClassifierService.name)
@@ -54,6 +68,19 @@ export class TaskClassifierService {
     const candidates = await this.buildCandidates()
     if (candidates.length === 0) return null
 
+    const base = await this.route(input, candidates)
+    return this.enrich(base, input, candidates)
+  }
+
+  /**
+   * Resolve the base verdict (the maker pick): the LLM router when coherent, else
+   * the keyword scorer, else the orchestrator terminal rule. This is the pre-Phase-11
+   * routing — `mode`/`proposedGoal`/`paths` are overlaid by {@link enrich}.
+   */
+  private async route(
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+  ): Promise<TaskRouting> {
     try {
       const routed = await this.router.route(input, candidates)
       if (routed && this.isCoherent(routed, candidates)) return routed
@@ -76,7 +103,80 @@ export class TaskClassifierService {
       reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
       matchedTerms: scored?.matchedTerms ?? [],
       candidates: candidates.map(toTaskTarget),
+      mode: "single",
+      proposedGoal: null,
+      paths: [],
     }
+  }
+
+  /**
+   * Phase 11 overlay (side-effect-free, Decision 1/3): detect the loop shape (the
+   * router's `loop` annotation OR a deterministic loop cue), synthesize an in-memory
+   * goal proposal when looped AND a concrete maker is resolvable, and resolve each
+   * input path against the project registry. NOTHING is persisted — the `.goal.md`
+   * is written only on submit. `target` stays the maker; a synthesized loop is never
+   * a `target.kind: "goal"` (those require a stored id).
+   */
+  private async enrich(
+    base: TaskRouting,
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+  ): Promise<TaskRouting> {
+    const looped = base.mode === "loop" || detectLoopCue(input.text)
+    const proposedGoal = looped ? this.synthesizeGoal(base.target, input, candidates) : null
+    const paths = await this.resolvePaths(input.paths ?? [])
+    return { ...base, mode: proposedGoal ? "loop" : "single", proposedGoal, paths }
+  }
+
+  /**
+   * Build an in-memory goal proposal from the routed maker + the raw task text. The
+   * verifier defaults to project `checks` (no `commands` → the goal runner resolves
+   * the project's checks then `DEFAULT_VERIFY_CHECKS`); objective/instructions are
+   * the operator's text verbatim (Law 4 — data, never a command). Returns `null` when
+   * no concrete maker can be resolved (an orchestrator pick with no pipeline to
+   * iterate), so the caller falls back to `mode: "single"` rather than minting a
+   * bogus maker.
+   */
+  private synthesizeGoal(
+    target: TaskTarget,
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+  ): ProposedGoal | null {
+    const maker = this.resolveMaker(target, candidates)
+    if (!maker) return null
+    return {
+      objective: input.text,
+      maker,
+      verifier: { kind: "checks" },
+      maxIterations: DEFAULT_GOAL_ITERATIONS,
+      instructions: input.text,
+    }
+  }
+
+  /**
+   * A loop needs a concrete agent/pipeline maker. A routed agent/pipeline target is
+   * used directly; an orchestrator pick (no stored id) falls back to a pipeline from
+   * the catalog — the maker the delivery loop would iterate — preferring one whose
+   * id/name reads as "delivery". No pipeline → `null` (no loop).
+   */
+  private resolveMaker(target: TaskTarget, candidates: RoutableTarget[]): MakerRef | null {
+    if (target.kind === "agent" || target.kind === "pipeline") {
+      return { kind: target.kind, id: target.id }
+    }
+    const pipelines = candidates.filter((c) => c.kind === "pipeline")
+    const preferred =
+      pipelines.find((p) => /deliver/i.test(`${p.id} ${p.name}`)) ?? pipelines[0]
+    return preferred ? { kind: "pipeline", id: preferred.id } : null
+  }
+
+  /** Resolve each detected path to its containing project (read-only attribution, Law 4). */
+  private async resolvePaths(paths: string[]): Promise<ResolvedPath[]> {
+    if (paths.length === 0) return []
+    const projects = await this.projects.list().catch(() => [])
+    return paths.map((path) => {
+      const project = matchProject(projects, { paths: [path] })
+      return { path, project: project ? { id: project.id, name: project.name } : null }
+    })
   }
 
   /** Build the rankable candidate catalog from both stores (tolerant of listing failures). */
