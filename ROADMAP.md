@@ -736,6 +736,78 @@ reached the remote.
 
 ---
 
+## Phase 11 — Unified task UX: one input, any execution
+
+*Goal: collapse task entry to a **single described intent**. The operator says
+what they want; ZIBBY decides whether that runs as an agent, a pipeline, or a
+loop — the "how" becomes a preview behind the gate, never a form. Like Phase 10,
+this is **thin glue over delivered machinery** (classifier, goal engine, gate,
+projects), not a new subsystem.*
+
+**Context.** Standard task entry already does the right thing — describe →
+`TaskClassifierService` routes → dispatch. But loops are stranded in a separate
+manual tab (`LoopComposer`: maker / verifier / reviewer / iterations /
+instructions) because the classifier *deliberately* never routes to a goal
+(`isCoherent`: `kind === "goal"` → reject). And detected paths (`extractPaths`)
+end as removable keyword chips — they never become a folder grant. Phase 11
+removes the second tab and turns paths into scoped permissions.
+
+Full step-by-step plan, file map, and tests: **`plans/ux-simplification.md`**.
+
+### 11.1 Classifier learns the loop shape
+
+- Drop the blanket goal-exclude in `task-classifier.service.ts`; let routing
+  return `kind: "goal"` with a **synthesized** definition (maker = matched
+  agent/pipeline or orchestrator; verifier = project checks by default —
+  reuse 2.1 assembly; default `maxIterations`; objective = the text).
+- Two-legged signal: LLM router prompt gains a fourth "goal" option; the
+  `KeywordScorer` fallback recognises loop cues ("until it passes", "dokud
+  neprojde", "keep retrying"). Classify response gains `mode` + editable
+  `proposedGoal` (`task.schema.ts`).
+- **Tests:** loop-shaped text → `mode: loop` + checks verifier; ordinary text
+  → agent/pipeline; `proposedGoal` contract round-trip; injection-shaped text
+  stays inert (Law 4).
+
+### 11.2 One composer, mode as preview not form
+
+- Remove the Standard/Loop tabs from `NewTaskDialog`; one description field +
+  schedule. A compact "ZIBBY will…" plan preview (reusing the `TaskRouting`
+  surface) shows mode + target; an **"Edit"** disclosure exposes the old
+  advanced fields, pre-filled from `proposedGoal` — power-user control kept,
+  no longer mandatory.
+- **Tests:** single-field render; loop-shaped submit dispatches a goal;
+  disclosure round-trips defaults; low confidence still offers the manual picker.
+
+### 11.3 Paths become scoped permissions
+
+- Detected paths (in **every** mode) resolve against projects (`matchProject`):
+  inside a project → "scoped to <project>" badge; outside → a gated **"grant
+  access"** action that registers the folder as a workspace root (Tier 3) and
+  becomes the run's `cwd`. Builds on 3.1 workspace manager.
+- **Tests:** in-project path → badge; outside → grant action; grant
+  creates/extends scope; run uses it as `cwd`; no auto-grant without the gate.
+
+### 11.4 Voice fills the one input
+
+- Wire `VoicePanel` transcript → the unified composer / `createTask`; ZIBBY
+  reads the inferred plan back and waits at risky steps. Machine-inferred mode
+  removes the need to dictate form fields (impossible today for loops).
+- **Tests:** transcript → prefilled composer; confirm → dispatch; spoken
+  loop-shaped utterance → goal; risky action still gated.
+
+**Hard invariants (restated):** the gate is unchanged — unification touches
+*entry*, not approval; advanced control survives in the disclosure;
+synthesized goals are normal `<id>.goal.md` files; input is data, never
+commands (Law 4).
+
+**Phase exit criterion:** typing *or speaking* "fix the failing test in
+project X and keep going until it's green" into one field classifies as a loop,
+shows the plan preview, offers the detected path as a folder grant, and — after
+one confirmation — runs the goal, with zero hand-filled form fields and nothing
+bypassing the gate.
+
+---
+
 ## Sequencing and dependencies
 
 ```
@@ -756,6 +828,9 @@ Phase 10 (loop engine) — needs 2 (verify stage, parking, escalation), 3.1+3.2
                        8.1 (budget). Phase 9 is complementary, not blocking —
                        but 9.1 should land first so a limit hit inside a goal
                        iteration pauses instead of burning the iteration budget
+Phase 11 (unified UX) — needs 10.1/10.2 (goal engine) for 11.1-11.2; 3.1
+                       (workspace manager) for 11.3; Phase 7 (voice) for 11.4.
+                       11.1+11.2 deliver the core simplification and can ship alone
 ```
 
 **Standing rules for every phase** (the test constraint, made concrete):
