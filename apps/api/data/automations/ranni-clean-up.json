@@ -1,1 +1,1 @@
-{"id":"ranni-clean-up","name":"Ranní Clean-Up","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"agent","agentId":"cleaner","prompt":"Ukliď ve složce /Users/zibby/test"},"enabled":true}
+{"id":"ranni-clean-up","name":"Ranní Clean-Up","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"agent","agentId":"cleaner","prompt":"Ukliď ve složce /Users/zibby/test"},"enabled":true,"lastFiredAt":"2026-06-13T05:00:54.127Z"}
