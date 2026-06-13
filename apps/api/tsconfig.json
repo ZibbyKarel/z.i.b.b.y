@@ -5,5 +5,12 @@
     "types": ["node", "reflect-metadata"],
     "jsx": "preserve"
   },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "CommonJS",
+      "moduleResolution": "node"
+    }
+  },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }
