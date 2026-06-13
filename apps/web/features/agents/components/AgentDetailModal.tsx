@@ -72,7 +72,6 @@ export function AgentDetailModal({
   onClose,
   onSave,
   onDelete,
-  onRun,
 }: AgentDetailModalProps) {
   const t = useTranslations("agents");
   const tk = useTranslations();

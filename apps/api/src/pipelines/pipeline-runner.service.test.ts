@@ -540,7 +540,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
 
       // The driver re-entered the machine at loop.to with the failure handoff.
       await vi.waitFor(() => expect(drive).toHaveBeenCalled())
-      const resume = drive.mock.calls[0]?.[3] as {
+      const resume = (drive.mock.calls[0] as unknown as unknown[])?.[3] as {
         cursor: string
         handoffSource: string
         retries: Map<string, number>

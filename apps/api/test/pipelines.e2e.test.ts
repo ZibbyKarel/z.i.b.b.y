@@ -16,11 +16,11 @@ const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const FLAKY_CHECK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/flaky-check.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-async function until<T>(fn: () => Promise<T>, timeoutMs = 10000): Promise<T> {
+async function until<T>(fn: () => Promise<T>, timeoutMs = 10000): Promise<NonNullable<T>> {
   const start = Date.now()
   for (;;) {
     const result = await fn()
-    if (result) return result
+    if (result) return result as NonNullable<T>
     if (Date.now() - start > timeoutMs) throw new Error("until: timed out")
     await sleep(40)
   }

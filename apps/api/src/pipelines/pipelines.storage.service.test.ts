@@ -13,6 +13,7 @@ import { PipelinesStorageService } from "./pipelines.storage.service"
 
 const phase = (id: string, extra: Record<string, unknown> = {}) => ({
   id,
+  type: "agent" as const,
   agent: "writer",
   consumes: "in.md",
   produces: "out.md",

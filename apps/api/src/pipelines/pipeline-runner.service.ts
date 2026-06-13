@@ -118,7 +118,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       pipelineStageStrategy,
       // Phase 9: a stage's usage-limit line busts the limits cache (previously the
       // pipeline runner dropped the signal entirely — undefined here).
-      (resetsAt) => this.limits.noteLimitHit(resetsAt),
+      () => this.limits.noteLimitHit(),
       (stageRunId, action) => this.onStageIntent(stageRunId, action),
       logger.child("RunnerCore:pipeline"),
       undefined,
