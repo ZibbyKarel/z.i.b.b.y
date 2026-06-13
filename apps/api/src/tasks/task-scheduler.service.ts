@@ -9,6 +9,7 @@ import type {
   AgentRun,
   CreateTaskInput,
   CreateTaskResult,
+  GoalRun,
   PipelineRun,
   Project,
   ScheduledTask,
@@ -21,6 +22,7 @@ import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.s
 import { BudgetService } from "../budget/budget.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
+import { GoalRunnerService } from "../goals/goal-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { matchProject } from "../projects/project-matcher"
@@ -48,6 +50,8 @@ const SPEND_PAST_CAP = "spend-past-cap"
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"])
 /** Pipeline run statuses that free a concurrency slot. */
 const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"])
+/** Goal run statuses that free a concurrency slot (Phase 10). */
+const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"])
 
 /**
  * The deferred-task daemon. {@link createTask} is the single action behind the New
@@ -85,6 +89,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly classifier: TaskClassifierService,
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
+    private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
@@ -109,6 +114,10 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       this.pipelineRunner.onRunStatus((run) => {
         if (run.taskId) void this.writePipelineOutcome(run.taskId, run)
         if (TERMINAL_PIPELINE.has(run.status)) void this.drainQueues()
+      }),
+      this.goalRunner.onRunStatus((run) => {
+        if (run.taskId) void this.writeGoalOutcome(run.taskId, run)
+        if (TERMINAL_GOAL.has(run.status)) void this.drainQueues()
       }),
     )
 
@@ -164,6 +173,12 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     input: CreateTaskInput,
     now: number = Date.now(),
     trustedProjectId?: string,
+    /**
+     * Phase 10: a pre-chosen target that bypasses classification (an approved
+     * proposed-task whose suggested target is a goal/agent/pipeline). The immediate
+     * dispatch path routes straight to it; absent → classify as before.
+     */
+    explicitTarget?: TaskTarget,
   ): Promise<CreateTaskResult> {
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
@@ -194,7 +209,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       summary: `task created${input.title ? `: ${input.title}` : ""}`,
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     })
-    return this.attemptCreate(taskId, input, project, now)
+    return this.attemptCreate(taskId, input, project, now, explicitTarget)
   }
 
   /** Cancel a still-waiting task. A held task's approval is rejected (single source of truth). */
@@ -243,6 +258,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     input: CreateTaskInput,
     project: Project | null,
     now: number,
+    explicitTarget?: TaskTarget,
   ): Promise<CreateTaskResult> {
     const projectId = project?.id
     // Phase 9: the limit guard runs FIRST (decision 4) — an exhausted usage window
@@ -266,7 +282,14 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       this.recordQueued(task, project)
       return { outcome: "scheduled", task }
     }
-    const dispatched = await this.dispatch(input.text, input.paths ?? [], input.title ?? "", taskId, projectId)
+    const dispatched = await this.dispatch(
+      input.text,
+      input.paths ?? [],
+      input.title ?? "",
+      taskId,
+      projectId,
+      explicitTarget,
+    )
     if (!dispatched) throw new EmptyCatalogError()
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now)
     void this.reconcileOutcome(task)
@@ -308,7 +331,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       this.recordQueued(task, project)
       return "queued"
     }
-    const dispatched = await this.dispatch(task.text, task.paths, task.title, task.id, task.projectId)
+    // Phase 10: a task that already carries a target (e.g. a goal, never classifiable)
+    // re-dispatches to it; otherwise classify as before.
+    const dispatched = await this.dispatch(
+      task.text,
+      task.paths,
+      task.title,
+      task.id,
+      task.projectId,
+      task.target,
+    )
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or pipelines available to route to")
       this.log.warn("task failed: empty catalog", { id: task.id })
@@ -431,13 +463,26 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     title: string,
     taskId: string,
     projectId: string | undefined,
+    /**
+     * Phase 10: a pre-chosen target that BYPASSES classification — a goal is never
+     * auto-classified, so a goal-targeted task (the goals contract / an approved
+     * proposed-task) carries its target explicitly. Absent → classify as before.
+     */
+    explicitTarget?: TaskTarget,
   ): Promise<{ runRef: string; target: TaskTarget } | null> {
-    const routing = await this.classifier.classify({ text, paths })
-    if (!routing) return null
-    const target = routing.target
-    // The classifier's matched terms ride into the run so memory grounding selects
-    // the same MOCs the routing keyed on (Phase 4).
-    const { matchedTerms } = routing
+    let target: TaskTarget
+    let matchedTerms: string[]
+    if (explicitTarget) {
+      target = explicitTarget
+      matchedTerms = []
+    } else {
+      const routing = await this.classifier.classify({ text, paths })
+      if (!routing) return null
+      target = routing.target
+      // The classifier's matched terms ride into the run so memory grounding selects
+      // the same MOCs the routing keyed on (Phase 4).
+      matchedTerms = routing.matchedTerms
+    }
     if (target.kind === "agent") {
       const run = await this.agentRunner.start(target.id, text, projectId ?? "", paths, title, taskId, matchedTerms)
       return { runRef: run.runId, target }
@@ -445,6 +490,21 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     if (target.kind === "pipeline") {
       const run = await this.pipelineRunner.start(target.id, taskId, projectId, matchedTerms)
       return { runRef: run.pipelineRunId, target }
+    }
+    if (target.kind === "goal") {
+      // Phase 10: route a goal-targeted task through the outer-loop runner. It flows
+      // the projectId/taskId through so the goal counts toward concurrency + writes
+      // its outcome back exactly like any other dispatched run.
+      const run = await this.goalRunner.start(
+        target.id,
+        text,
+        projectId ?? "",
+        paths,
+        title,
+        taskId,
+        matchedTerms,
+      )
+      return { runRef: run.goalRunId, target }
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
     // subagent(s) or does the task directly — a task never no-ops. It carries the
@@ -565,6 +625,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     try {
       if (task.target?.kind === "pipeline") {
         await this.writePipelineOutcome(task.id, this.pipelineRunner.get(task.runRef))
+      } else if (task.target?.kind === "goal") {
+        await this.writeGoalOutcome(task.id, this.goalRunner.get(task.runRef))
       } else {
         await this.writeAgentOutcome(task.id, this.agentRunner.get(task.runRef))
       }
@@ -614,6 +676,35 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         refs: {
           taskId,
           runRef: run.pipelineRunId,
+          status: outcome.status,
+          ...(task.projectId ? { projectId: task.projectId } : {}),
+        },
+      })
+    } catch (error) {
+      this.log.debug("task outcome write skipped", {
+        taskId,
+        err: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  private async writeGoalOutcome(taskId: string, run: GoalRun): Promise<void> {
+    if (run.status !== "done" && run.status !== "failed") return
+    const verified = run.iterations.filter((i) => i.verifier.satisfied).length
+    const outcome: TaskOutcome = {
+      status: run.status === "done" ? "done" : "error",
+      summary: `${run.iterations.length} iterations, ${run.status}${verified ? `, verified` : ""}`,
+      finishedAt: new Date().toISOString(),
+    }
+    try {
+      const task = await this.storage.writeOutcome(taskId, outcome)
+      this.log.info("task outcome written", { taskId, runRef: run.goalRunId, status: run.status })
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `task ${outcome.status}: ${outcome.summary}`,
+        refs: {
+          taskId,
+          runRef: run.goalRunId,
           status: outcome.status,
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },

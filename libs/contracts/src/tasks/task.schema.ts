@@ -29,6 +29,18 @@ export const PipelineTaskTargetSchema = z.object({
 })
 
 /**
+ * A stored goal as a routing destination (Phase 10). Like a pipeline it references
+ * a stored definition (`id`), but it is NEVER auto-classified — the classifier only
+ * routes to agent/pipeline/orchestrator. A goal-targeted task is created explicitly
+ * (the goals contract) or by approving a `proposed-task`.
+ */
+export const GoalTaskTargetSchema = z.object({
+  kind: z.literal("goal"),
+  id: AgentIdSchema,
+  ...taskTargetDisplayShape,
+})
+
+/**
  * The terminal routing fallback: a single orchestrator session that has every
  * stored agent available as a delegatable subagent and can also do the task
  * directly — so a task always executes. It is synthetic (no stored definition),
@@ -46,6 +58,7 @@ export const OrchestratorTaskTargetSchema = z.object({
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
+  GoalTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ])
 export type TaskTarget = z.infer<typeof TaskTargetSchema>

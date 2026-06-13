@@ -10,6 +10,7 @@ import { BudgetModule } from "./budget/budget.module"
 import { ChannelsModule } from "./channels/channels.module"
 import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
+import { GoalsModule } from "./goals/goals.module"
 import { HealthModule } from "./health/health.module"
 import { IntegrationsModule } from "./integrations/integrations.module"
 import { LimitResumeModule } from "./limits-resume/limit-resume.module"
@@ -32,6 +33,7 @@ import { TasksModule } from "./tasks/tasks.module"
     SkillsModule,
     ProjectsModule,
     PipelinesModule,
+    GoalsModule,
     ApprovalsModule,
     GateRulesModule,
     MemoryModule,

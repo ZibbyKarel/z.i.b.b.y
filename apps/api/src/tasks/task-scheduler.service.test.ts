@@ -62,6 +62,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     onRunStatus: ReturnType<typeof vi.fn>
     get: ReturnType<typeof vi.fn>
   }
+  let goalRunner: {
+    start: ReturnType<typeof vi.fn>
+    onRunStatus: ReturnType<typeof vi.fn>
+    get: ReturnType<typeof vi.fn>
+  }
   let classifier: { classify: ReturnType<typeof vi.fn> }
   let fakeLimits: {
     windowExhausted: ReturnType<typeof vi.fn>
@@ -100,6 +105,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       }),
       get: vi.fn(() => pipelineRun({})),
     }
+    goalRunner = {
+      start: vi.fn(async () => ({ goalRunId: "goal_1" })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => ({ goalRunId: "goal_1", status: "done", iterations: [] })),
+    }
     classifier = {
       classify: vi.fn(async () => ({
         target: { kind: "agent", id: "writer", name: "Writer" },
@@ -134,6 +144,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       classifier as never,
       agentRunner as never,
       pipelineRunner as never,
+      goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
       { record: async () => {} } as never,

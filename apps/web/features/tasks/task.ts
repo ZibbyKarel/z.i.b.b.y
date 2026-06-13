@@ -18,8 +18,8 @@ export function extractPaths(text: string): string[] {
   return [...new Set(matches)];
 }
 
-/** A destination for a task — an agent, a pipeline, or the orchestrator fallback. */
-export type TaskTargetKind = "agent" | "pipeline" | "orchestrator";
+/** A destination for a task — an agent, a pipeline, a goal, or the orchestrator fallback. */
+export type TaskTargetKind = "agent" | "pipeline" | "goal" | "orchestrator";
 
 interface TaskTargetDisplay {
   /** Display name. */
@@ -35,7 +35,7 @@ interface TaskTargetDisplay {
  * (no stored definition, no id) and exists in the UI purely as a name + glyph.
  */
 export type TaskTarget =
-  | (TaskTargetDisplay & { kind: "agent" | "pipeline"; id: string })
+  | (TaskTargetDisplay & { kind: "agent" | "pipeline" | "goal"; id: string })
   | (TaskTargetDisplay & { kind: "orchestrator" });
 
 /**
@@ -63,6 +63,7 @@ export interface TaskRouting {
 const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
+  goal: "retry",
   orchestrator: "compass",
 };
 

@@ -16,6 +16,7 @@ import {
   type Project,
   type RunLogChunk,
   type StageRun,
+  type Workspace,
 } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
@@ -175,6 +176,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     taskId?: string,
     projectRef?: string,
     matchedTerms?: string[],
+    /**
+     * Phase 10: a goal supplies its per-run worktree so every stage of this maker
+     * iteration spawns on the goal's branch. When present the runner skips
+     * self-creating a worktree. Absent for every existing caller (no behaviour change).
+     */
+    externalWorkspace?: Workspace,
   ): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId)
@@ -216,7 +223,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // *git* project whose worktree creation fails must NOT silently fall back onto
     // the main checkout — that is exactly what 3.1 prevents — so the run is born
     // failed (no driver) with the reason logged.
-    if (project && (await this.workspace.isGitRepo(project.path))) {
+    if (externalWorkspace) {
+      // Phase 10: spawn every stage on the goal's branch; the goal owns the worktree.
+      run.workspace = externalWorkspace
+      await this.writeAggregate(run)
+    } else if (project && (await this.workspace.isGitRepo(project.path))) {
       try {
         run.workspace = await this.workspace.createWorktree({
           projectPath: project.path,

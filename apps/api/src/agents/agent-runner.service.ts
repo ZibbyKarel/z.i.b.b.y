@@ -135,10 +135,17 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     title = "",
     taskId?: string,
     matchedTerms?: string[],
+    /**
+     * Phase 10: a goal supplies its per-run worktree so the maker iteration spawns
+     * on the goal's branch. When present the runner skips self-creating a worktree
+     * and spawns with `cwd = workspace.path`; the goal owns the worktree's lifecycle
+     * (this run never prunes it). Absent for every existing caller (no behaviour change).
+     */
+    workspace?: Workspace,
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId)
-    return this.launch(agent, prompt, project, files, title, taskId, matchedTerms)
+    return this.launch(agent, prompt, project, files, title, taskId, matchedTerms, workspace)
   }
 
   /**
@@ -170,6 +177,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     title: string,
     taskId?: string,
     matchedTerms?: string[],
+    externalWorkspace?: Workspace,
   ): Promise<AgentRun> {
     const agentId = agent.id
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
@@ -203,7 +211,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // non-git project, or a worktree-setup failure → today's behavior (sandbox-only).
     let workspace: Workspace | undefined
     let spawnCwd: string | undefined
-    if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
+    // Phase 10: a goal-supplied worktree only changes the spawn cwd — this run does
+    // NOT record or prune it (the goal owns its lifecycle), keeping the maker run's
+    // artifact/sidecar layout identical to a normal run.
+    if (externalWorkspace) {
+      spawnCwd = externalWorkspace.path
+    } else if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
       await fs.mkdir(cwd, { recursive: true })
       try {
         workspace = await this.workspace.createWorktree({

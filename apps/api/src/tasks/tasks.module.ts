@@ -3,6 +3,7 @@ import { AgentsModule } from "../agents/agents.module"
 import { ApprovalsModule } from "../approvals/approvals.module"
 import { BudgetModule } from "../budget/budget.module"
 import { GatesModule } from "../gates/gates.module"
+import { GoalsModule } from "../goals/goals.module"
 import { LimitsModule } from "../limits/limits.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { ProjectsModule } from "../projects/projects.module"
@@ -27,6 +28,7 @@ import { TasksController } from "./tasks.controller"
   imports: [
     AgentsModule,
     PipelinesModule,
+    GoalsModule,
     ProjectsModule,
     BudgetModule,
     ApprovalsModule,

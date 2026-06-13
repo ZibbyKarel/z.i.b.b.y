@@ -19,6 +19,7 @@ import {
 import { healthContract } from "./health/health.contract"
 import { limitsContract } from "./limits/limits.contract"
 import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract"
+import { goalRunsContract, goalsContract } from "./goals/goals.contract"
 import { projectsContract } from "./projects/projects.contract"
 import { skillsContract } from "./skills/skills.contract"
 import { tasksContract } from "./tasks/tasks.contract"
@@ -42,6 +43,8 @@ export const appContract = c.router({
   projectCategories: projectCategoriesContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract,
+  goals: goalsContract,
+  goalRuns: goalRunsContract,
   approvals: approvalsContract,
   gates: gatesContract,
   gateRules: gateRulesContract,
