@@ -24,9 +24,20 @@ export type GoalState = z.infer<typeof GoalStateSchema>
  *   refused rather than running the full-repo default suite or running inside the
  *   repo. A misconfiguration the operator fixes (add commands / a project), not a
  *   retryable failure.
+ * - `awaiting-resume` (Phase 12.4): on API restart a `running`/`paused-limit` goal is
+ *   rehydrated but NOT auto-re-dispatched (Law 3 / Tier 3 — a respawn must not spawn
+ *   a maker without approval). It is surfaced here as a pending operator resume
+ *   decision; `resumeParked` continues it. The `GOAL_AUTO_RESUME=1` daemon flag
+ *   restores the old auto-reconcile.
  * All are durable, no-live-child parks, resumable with an operator note.
  */
-export const GoalParkedReasonSchema = z.enum(["iterations", "budget", "limit", "verifier-scope"])
+export const GoalParkedReasonSchema = z.enum([
+  "iterations",
+  "budget",
+  "limit",
+  "verifier-scope",
+  "awaiting-resume",
+])
 export type GoalParkedReason = z.infer<typeof GoalParkedReasonSchema>
 
 /** Status of one iteration's maker+verifier cycle. */

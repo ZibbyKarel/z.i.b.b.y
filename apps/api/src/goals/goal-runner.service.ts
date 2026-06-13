@@ -234,7 +234,9 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     })
 
     const traceId = this.trace.getTraceId() ?? randomUUID()
-    void this.trace.run({ traceId, runId: goalRunId }, () => this.drive(run, goal, resolved, files))
+    void this.trace
+      .run({ traceId, runId: goalRunId }, () => this.drive(run, goal, resolved, files))
+      .catch((err) => this.onDriveError(run, err))
     return run
   }
 
@@ -762,9 +764,11 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
 
     const resumeContext = await this.composeResumeContext(run, goal, verdictTail, trimmed)
     const traceId = this.trace.getTraceId() ?? randomUUID()
-    void this.trace.run({ traceId, runId: goalRunId }, () =>
-      this.drive(run, goal, project, [], { startIndex: index, resumeContext }),
-    )
+    void this.trace
+      .run({ traceId, runId: goalRunId }, () =>
+        this.drive(run, goal, project, [], { startIndex: index, resumeContext }),
+      )
+      .catch((err) => this.onDriveError(run, err))
     return run
   }
 
@@ -907,12 +911,40 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
    *   resume-context (the worktree + checkpoints survive on disk).
    */
   private async reconstruct(): Promise<void> {
+    // Phase 12.4 (Law 3): registry rehydration ALWAYS happens so live runs are
+    // visible/answerable; re-driving is GATED. By default a `running`/`paused-limit`
+    // goal is NOT auto-re-dispatched on boot — under `ts-node-dev --respawn` + claude
+    // mode a restart alone would spawn a real `claude` with no operator approval
+    // (Tier 3). Instead it is parked `awaiting-resume` and surfaced for an explicit
+    // operator resume. `GOAL_AUTO_RESUME=1` restores auto-reconcile for the eventual
+    // headless launchd daemon (Phase 8.3).
+    const autoResume = process.env.GOAL_AUTO_RESUME === "1"
     for (const run of await this.readAllAggregates()) {
       this.runs.set(run.goalRunId, run)
-      if (run.status === "running" || run.status === "paused-limit") {
-        void this.reconcileGoal(run)
+      if (run.status !== "running" && run.status !== "paused-limit") continue
+      if (autoResume) {
+        void this.reconcileGoal(run).catch((err) => this.onDriveError(run, err))
+      } else {
+        await this.parkGoal(run, "awaiting-resume", run.currentIteration ?? 0)
+        this.log.info("goal rehydrated, awaiting operator resume (Law 3 boot gate)", {
+          goalRunId: run.goalRunId,
+        })
       }
     }
+  }
+
+  /**
+   * A fire-and-forget `drive()` rejected (e.g. a dispatch-time PipelineNotFoundError):
+   * mark the run failed and log, so it never becomes an unhandled promise rejection.
+   */
+  private async onDriveError(run: GoalRun, err: unknown): Promise<void> {
+    this.log.error("goal drive threw — failing run", {
+      goalRunId: run.goalRunId,
+      err: err instanceof Error ? err.message : String(err),
+    })
+    run.status = "failed"
+    run.currentIteration = null
+    await this.writeAggregate(run).catch(() => {})
   }
 
   private async reconcileGoal(run: GoalRun): Promise<void> {
@@ -937,9 +969,11 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
         index,
         makerStatus,
       })
-      void this.trace.run({ traceId, runId: run.goalRunId }, () =>
-        this.drive(run, goal, project, [], { startIndex: index, attachRunRef: makerRunRef }),
-      )
+      void this.trace
+        .run({ traceId, runId: run.goalRunId }, () =>
+          this.drive(run, goal, project, [], { startIndex: index, attachRunRef: makerRunRef }),
+        )
+        .catch((err) => this.onDriveError(run, err))
       return
     }
 
@@ -954,9 +988,11 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.writeAggregate(run)
     const lastVerdict = iteration?.verifier.output ?? ""
     const resumeContext = await this.composeResumeContext(run, goal, lastVerdict)
-    void this.trace.run({ traceId, runId: run.goalRunId }, () =>
-      this.drive(run, goal, project, [], { startIndex: index, resumeContext }),
-    )
+    void this.trace
+      .run({ traceId, runId: run.goalRunId }, () =>
+        this.drive(run, goal, project, [], { startIndex: index, resumeContext }),
+      )
+      .catch((err) => this.onDriveError(run, err))
   }
 
   /** Emit a never-throws goal activity entry (Tier 1, silent + recorded). */

@@ -15,14 +15,15 @@ Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 | 12.1 Scope/forbid heavy default verifier | ✅ done (2026-06-14) | goal `checks` verifier with no commands + no project checks parks `verifier-scope`, never runs full-repo `DEFAULT_VERIFY_CHECKS` |
 | 12.2 Never run checks from inside the repo | ✅ done (2026-06-14) | verifier `spawnCwd` never falls back to `run.cwd`; no worktree/project → park `verifier-scope`. Pure `checksVerifierBlocker` + `drive()` pre-flight park + `runVerifier` floor |
 | 12.3 Resource governance in `runShell` + shutdown hook | ✅ done (2026-06-14) | detached pgid spawn + wall-clock timeout (SIGTERM→SIGKILL) + `liveShells` tracking + `onModuleDestroy` reaping + output cap; `main.ts` now `enableShutdownHooks()` so reapers fire on SIGTERM |
-| 12.4 Gate `reconstruct()` re-dispatch (Law 3) | ⬜ | rehydrate always, re-drive only on explicit opt-in |
+| 12.4 Gate `reconstruct()` re-dispatch (Law 3) | ✅ done (2026-06-14) | rehydrate always; boot parks live goals `awaiting-resume` (no auto-dispatch) unless `GOAL_AUTO_RESUME=1`; all `drive()` sites `.catch(onDriveError)` |
 | 12.6 Eliminate double verification | ⬜ | skip goal verifier when maker pipeline already verified |
-| 12.7 Worktrees outside the repo | ⬜ | relocate to `ZIBBY_WORKTREE_ROOT`/`os.tmpdir()` |
+| 12.7 Worktrees outside the repo | ⬜ next | relocate to `ZIBBY_WORKTREE_ROOT`/`os.tmpdir()` — also kills the `ENOTEMPTY` flake |
 | 12.8 Durable self-development posture | ⬜ | builder ≠ subject, OS sandbox, budget-as-contract |
 
 **Blast-radius prerequisite** (must be green before pointing the loop at this repo):
-12.1–12.4. 12.5 ✅ landed first as the safety foundation (it protects every
-subsequent `pnpm test` from re-arming the bomb).
+12.1–12.4 — ✅ **COMPLETE** (2026-06-14). 12.5 landed first as the safety foundation
+(it protects every subsequent `pnpm test` from re-arming the bomb). Remaining 12.6–12.8
+are waste/blast-radius reduction + durable posture, not prerequisites.
 
 ### Parked / known flakes
 
@@ -34,18 +35,15 @@ subsequent `pnpm test` from re-arming the bomb).
 
 ## Next iteration
 
-**Phase 12.4 — gate `reconstruct()` re-dispatch (Law 3) — the last blast-radius
-item.** `onModuleInit → reconstruct()` auto-re-drives every `running`/`paused-limit`
-goal on each boot (`goal-runner.service.ts` ~:780-820); under `ts-node-dev --respawn`
-+ `.env AGENT_RUNNER_MODE=claude` a restart alone spawns real claude — an autonomous
-action without approval (Law 3 / Tier 3 violation). Split `reconstruct()` into
-**(a) registry rehydration (always)** and **(b) re-driving (gated)**: by default
-rehydrate but do NOT `reconcileGoal`/`drive` live runs; surface them as a pending
-resume decision. `GOAL_AUTO_RESUME=1` env escape hatch for the eventual launchd
-daemon (Phase 8.3). Also wrap the fire-and-forget `void this.trace.run(...drive...)`
-calls in `.catch` so a dispatch throw can't become an unhandled rejection. **Watch-out:**
-the goal-loop restart e2e currently ASSERTS auto-resume (`survives an API restart
-mid-loop`) — it must be updated to drive the resume explicitly (or set
-`GOAL_AUTO_RESUME=1`). After 12.4 the blast-radius set (12.1–12.4) is complete; then
-12.6 (double-verify), 12.7 (worktrees out of repo — also kills the `ENOTEMPTY` flake),
-12.8 (durable posture).
+**Phase 12.7 — worktrees outside the repo** (pulled ahead of 12.6 because it also
+kills the standing `pipelines.e2e`/`agent-runs.e2e` `ENOTEMPTY` flake). Goal worktrees
+are cut at `path.join(root, "worktree")` under `GOAL_RUNS_DIR` — inside the
+watched/tested tree (`goal-runner.service.ts` ~:175). Relocate to a dedicated
+`ZIBBY_WORKTREE_ROOT` (default `os.tmpdir()/zibby-worktrees`), keep only forensic
+artifacts (logs/sidecars/handoffs) under `data/goals/runs`; the worktree-root provider
+must NOT derive from `resolveDataRoot` (`shared/data-dir.ts`). Ensure cleanup removes
+the out-of-repo worktree on run delete (`workspace.service.ts`). **Investigate** whether
+the pipeline/agent RunnerCore worktrees (the actual ENOTEMPTY source) move too, or
+whether the flake needs a kill-then-await in the test cleanup — confirm the root cause
+before claiming the flake fixed. Then 12.6 (double-verify skip) and 12.8 (durable
+posture: builder ≠ subject, OS sandbox, budget-as-contract).

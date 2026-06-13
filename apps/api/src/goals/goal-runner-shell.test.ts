@@ -10,7 +10,8 @@ import { GoalRunnerService } from "./goal-runner.service"
  * only `this.liveShells` + `this.shellTimeoutMs()`, so a minimal instance suffices.
  */
 function makeService(): GoalRunnerService {
-  const logger = { child: () => ({}) } as unknown as LoggerService
+  const noop = () => {}
+  const logger = { child: () => ({ info: noop, warn: noop, error: noop }) } as unknown as LoggerService
   return new GoalRunnerService(
     "/tmp/goal-runner-shell-test",
     null as never, // goals
@@ -74,6 +75,19 @@ describe("GoalRunnerService verifier shell governance (12.3)", () => {
     expect(result.code).toBe(0)
     expect(result.output.length).toBeLessThanOrEqual(1_000_000)
     expect(result.output.length).toBeGreaterThan(900_000)
+  })
+
+  it("onDriveError marks the run failed without throwing (no unhandled rejection)", async () => {
+    const svc = makeService()
+    const run = { goalRunId: "g_1", status: "running", currentIteration: 2 } as never as {
+      status: string
+      currentIteration: number | null
+    }
+    await (
+      svc as unknown as { onDriveError: (r: unknown, e: unknown) => Promise<void> }
+    ).onDriveError(run, new Error("PipelineNotFoundError"))
+    expect(run.status).toBe("failed")
+    expect(run.currentIteration).toBeNull()
   })
 
   it("onModuleDestroy reaps tracked in-flight children", async () => {

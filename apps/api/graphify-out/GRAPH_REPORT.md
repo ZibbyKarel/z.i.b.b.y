@@ -1,12 +1,12 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y/apps/api  (2026-06-14)
 
 ## Corpus Check
-- 252 files · ~440,935 words
+- 253 files · ~441,807 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1482 nodes · 2755 edges · 142 communities detected
-- Extraction: 65% EXTRACTED · 35% INFERRED · 0% AMBIGUOUS · INFERRED: 967 edges (avg confidence: 0.8)
+- 1487 nodes · 2765 edges · 147 communities detected
+- Extraction: 65% EXTRACTED · 35% INFERRED · 0% AMBIGUOUS · INFERRED: 971 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -152,11 +152,16 @@
 - [[_COMMUNITY_Community 139|Community 139]]
 - [[_COMMUNITY_Community 140|Community 140]]
 - [[_COMMUNITY_Community 141|Community 141]]
+- [[_COMMUNITY_Community 142|Community 142]]
+- [[_COMMUNITY_Community 143|Community 143]]
+- [[_COMMUNITY_Community 144|Community 144]]
+- [[_COMMUNITY_Community 145|Community 145]]
+- [[_COMMUNITY_Community 146|Community 146]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `RunnerCore` - 41 edges
-2. `PipelineRunnerService` - 38 edges
-3. `GoalRunnerService` - 37 edges
+2. `GoalRunnerService` - 38 edges
+3. `PipelineRunnerService` - 38 edges
 4. `writeEntity()` - 37 edges
 5. `writeFile()` - 34 edges
 6. `TaskSchedulerService` - 27 edges
@@ -170,8 +175,8 @@
   /Users/zibby/Workspace/z.i.b.b.y/apps/api/test/channels.e2e.test.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/api/scripts/seed.mjs
 - `writeFile()` --calls--> `preApprove()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/apps/api/scripts/seed.mjs → /Users/zibby/Workspace/z.i.b.b.y/apps/api/src/runner/claude-approval-hook.test.ts
-- `taskById()` --calls--> `request()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/api/test/budget-restart.e2e.test.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/api/src/approvals/approvals.service.test.ts
+- `items()` --calls--> `request()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/api/test/channels.e2e.test.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/api/src/approvals/approvals.service.test.ts
 - `writeLimits()` --calls--> `writeFile()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/apps/api/test/limit-pause.e2e.test.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/api/scripts/seed.mjs
 - `seedTarget()` --calls--> `writeFile()`  [INFERRED]
@@ -180,108 +185,108 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.02
-Nodes (27): ApprovalsStorageService, AutomationConflictError, AutomationNotFoundError, AutomationsStorageService, InvalidAutomationIdError, corruptError(), delete(), ensureDir() (+19 more)
+Cohesion: 0.04
+Nodes (21): readLines(), exists(), main(), sleep(), GateEvaluatorService, checksVerifierBlocker(), GoalRunnerService, tailOf() (+13 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.03
-Nodes (16): AllExceptionsFilter, ApprovalsService, ChannelTriageFlowService, ChannelWatcherService, DiscoveryTriageService, GateEvaluatorService, KeywordTriager, LoggerService (+8 more)
+Cohesion: 0.02
+Nodes (24): AgentsStorageService, ApprovalsStorageService, AutomationsStorageService, ChannelItemStore, corruptError(), delete(), ensureDir(), fileExists() (+16 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (20): readLines(), exists(), checksVerifierBlocker(), GoalRunnerService, tailOf(), decideStop(), renderGoalProgress(), PipelineRunnerService (+12 more)
+Nodes (14): ActivityRecorderService, isTerminalAgent(), isTerminalPipeline(), summaryFor(), ApprovalsService, ChannelTriageFlowService, GatesController, ProposedTaskFlowService (+6 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.03
-Nodes (61): activity(), sleep(), until(), benignMarker(), boot(), fileExists(), paymentDone(), pendingFor() (+53 more)
+Nodes (18): AdapterRegistry, AllExceptionsFilter, ChannelWatcherService, ClaudeCliRouter, DiscoveryTriageService, constructor(), detectLoopCue(), fold() (+10 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.04
-Nodes (32): classify(), classifyGh(), classifyGit(), classifySegment(), decide(), enrich(), isDestructive(), main() (+24 more)
+Cohesion: 0.05
+Nodes (19): assembleBriefing(), buildDidForYou(), buildEngagements(), buildNeedsYou(), buildWatching(), deterministicHeadline(), isFailed(), isFinished() (+11 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.05
-Nodes (17): AgentsStorageService, assembleBriefing(), buildDidForYou(), buildEngagements(), buildNeedsYou(), buildWatching(), deterministicHeadline(), isFailed() (+9 more)
+Cohesion: 0.04
+Nodes (43): activity(), sleep(), until(), benignMarker(), boot(), fileExists(), paymentDone(), pendingFor() (+35 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.07
-Nodes (14): boot(), bootApp(), sleep(), until(), boot(), reboot(), server(), taskById() (+6 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.04
 Nodes (41): ActivityLogModule, resolveActivityDir(), AgentsModule, resolveAgentsDir(), resolveRunsDir(), ApprovalsModule, resolveApprovalsDir(), AutomationsModule (+33 more)
 
-### Community 8 - "Community 8"
+### Community 7 - "Community 7"
 Cohesion: 0.08
-Nodes (41): makeRunner(), setup(), seed(), approvalSettings(), contextProbe(), flagGroups(), flagMatrix(), preflight() (+33 more)
+Nodes (10): boot(), bootApp(), sleep(), until(), boot(), isAlive(), isErrnoException(), killGroup() (+2 more)
+
+### Community 8 - "Community 8"
+Cohesion: 0.05
+Nodes (27): sleep(), until(), boot(), findItem(), items(), seed(), sleep(), until() (+19 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.07
-Nodes (9): AdapterRegistry, ChannelItemStore, constructor(), FakeChannelAdapter, withPathLock(), resolveSafeFile(), MandateStorageService, envelopeInbound() (+1 more)
+Cohesion: 0.06
+Nodes (22): BudgetConfigStore, classify(), classifyGh(), classifyGit(), classifySegment(), decide(), enrich(), isDestructive() (+14 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (7): toAgentRun(), AgentRunnerService, ClaudePreflightService, ClaudeUnavailableError, GroundingService, selectIndexes(), truncate()
 
 ### Community 11 - "Community 11"
-Cohesion: 0.08
-Nodes (13): CategoryConflictError, CategoryNotFoundError, constructor(), create(), delete(), list(), writeAtomic(), CredentialKindViolation (+5 more)
+Cohesion: 0.14
+Nodes (33): approvalSettings(), contextProbe(), flagGroups(), flagMatrix(), preflight(), record(), run(), announce() (+25 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.1
-Nodes (9): ActivityLogService, YYYY_MM_DD(), BudgetConfigStore, BudgetService, over(), BudgetLedgerStore, isoWeekDates(), LedgerUnreadableError (+1 more)
+Nodes (9): ActivityLogService, YYYY_MM_DD(), BudgetService, over(), BudgetLedgerStore, isoWeekDates(), LedgerUnreadableError, pragueDate() (+1 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.16
-Nodes (7): ClaudeCliRouter, detectLoopCue(), fold(), KeywordScorer, keywordsOf(), tokenize(), toTaskTarget()
+Cohesion: 0.11
+Nodes (13): bodyText(), defaultImap(), defaultTransport(), EmailChannelAdapter, emailItemId(), passwordOf(), clampPct(), parseRateLimits() (+5 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.13
-Nodes (7): CorruptGoalFileError, GoalConflictError, GoalNotFoundError, GoalRunNotFoundError, GoalRunNotParkedError, InvalidGoalError, InvalidGoalIdError
+Cohesion: 0.14
+Nodes (9): CategoryConflictError, CategoryNotFoundError, constructor(), create(), delete(), list(), writeAtomic(), limitResumeMax() (+1 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.14
-Nodes (6): AgentRunLogsController, ChannelEventsService, EventsController, fromRunStatus(), heartbeats(), streamRunLog()
-
-### Community 16 - "Community 16"
-Cohesion: 0.15
 Nodes (3): serialize(), tryParse(), SkillsStorageService
 
+### Community 16 - "Community 16"
+Cohesion: 0.13
+Nodes (7): CorruptGoalFileError, GoalConflictError, GoalNotFoundError, GoalRunNotFoundError, GoalRunNotParkedError, InvalidGoalError, InvalidGoalIdError
+
 ### Community 17 - "Community 17"
-Cohesion: 0.2
-Nodes (4): matchesCron(), matchField(), zonedParts(), SchedulerService
+Cohesion: 0.14
+Nodes (6): AgentRunLogsController, ChannelEventsService, EventsController, fromRunStatus(), heartbeats(), streamRunLog()
 
 ### Community 18 - "Community 18"
+Cohesion: 0.18
+Nodes (4): matchesCron(), matchField(), zonedParts(), SchedulerService
+
+### Community 19 - "Community 19"
 Cohesion: 0.14
 Nodes (4): CategoriesController, makeCategoryHandlers(), ProjectCategoriesController, SkillCategoriesController
 
-### Community 19 - "Community 19"
-Cohesion: 0.23
-Nodes (4): ActivityRecorderService, isTerminalAgent(), isTerminalPipeline(), summaryFor()
-
 ### Community 20 - "Community 20"
+Cohesion: 0.17
+Nodes (5): makeRunner(), setup(), seed(), makeVault(), seedFull()
+
+### Community 21 - "Community 21"
 Cohesion: 0.26
 Nodes (8): approvalSettings(), ClaudeRunCommandService, withExecutionDirective(), withOperatingContract(), mapToken(), mapTools(), toAllowedTools(), toSubagentTools()
 
-### Community 21 - "Community 21"
+### Community 22 - "Community 22"
 Cohesion: 0.42
 Nodes (10): extractText(), formatClaudeStreamLine(), formatMessage(), formatResult(), formatSystem(), isRecord(), renderAssistantBlock(), renderToolUse() (+2 more)
 
-### Community 22 - "Community 22"
+### Community 23 - "Community 23"
 Cohesion: 0.18
 Nodes (5): CorruptPipelineFileError, InvalidPipelineError, InvalidPipelineIdError, PipelineConflictError, PipelineNotFoundError
 
-### Community 23 - "Community 23"
-Cohesion: 0.22
-Nodes (3): DuplicateNoteError, InvalidNoteIdError, NoteNotFoundError
-
 ### Community 24 - "Community 24"
-Cohesion: 0.42
-Nodes (8): containsWord(), fold(), isUnder(), isWordChar(), matchByPath(), matchByText(), matchProject(), normalizePath()
+Cohesion: 0.2
+Nodes (4): CredentialKindViolation, ImmutableKindViolation, IntegrationsController, NoCredentialsViolation
 
 ### Community 25 - "Community 25"
-Cohesion: 0.31
-Nodes (5): hasKeys(), isNoisyBodyRoute(), LoggingInterceptor, preview(), safeStringify()
+Cohesion: 0.42
+Nodes (8): containsWord(), fold(), isUnder(), isWordChar(), matchByPath(), matchByText(), matchProject(), normalizePath()
 
 ### Community 26 - "Community 26"
 Cohesion: 0.22
@@ -297,7 +302,7 @@ Nodes (4): CorruptSkillFileError, InvalidSkillIdError, SkillConflictError, Skill
 
 ### Community 29 - "Community 29"
 Cohesion: 0.43
-Nodes (2): SlackChannelAdapter, tokenOf()
+Nodes (1): FakeChannelAdapter
 
 ### Community 30 - "Community 30"
 Cohesion: 0.48
@@ -313,159 +318,159 @@ Nodes (4): Conflict, InvalidId, NotFound, Unrelated
 
 ### Community 33 - "Community 33"
 Cohesion: 0.29
-Nodes (3): ApprovalAlreadyDecidedError, ApprovalNotFoundError, InvalidApprovalIdError
+Nodes (3): AutomationConflictError, AutomationNotFoundError, InvalidAutomationIdError
 
 ### Community 34 - "Community 34"
-Cohesion: 0.33
-Nodes (1): GoalRunsController
+Cohesion: 0.29
+Nodes (3): ApprovalAlreadyDecidedError, ApprovalNotFoundError, InvalidApprovalIdError
 
 ### Community 35 - "Community 35"
-Cohesion: 0.33
-Nodes (1): AgentRunsController
+Cohesion: 0.43
+Nodes (2): SlackChannelAdapter, tokenOf()
 
 ### Community 36 - "Community 36"
 Cohesion: 0.33
-Nodes (2): LoggingModule, createTraceMiddleware()
+Nodes (1): readDaily()
 
 ### Community 37 - "Community 37"
 Cohesion: 0.33
-Nodes (0): 
+Nodes (1): GoalRunsController
 
 ### Community 38 - "Community 38"
 Cohesion: 0.33
-Nodes (0): 
+Nodes (1): AgentRunsController
 
 ### Community 39 - "Community 39"
-Cohesion: 0.4
-Nodes (0): 
+Cohesion: 0.33
+Nodes (2): LoggingModule, createTraceMiddleware()
 
 ### Community 40 - "Community 40"
-Cohesion: 0.4
-Nodes (1): GoalsController
+Cohesion: 0.33
+Nodes (0): 
 
 ### Community 41 - "Community 41"
-Cohesion: 0.4
-Nodes (1): ActivityController
+Cohesion: 0.33
+Nodes (0): 
 
 ### Community 42 - "Community 42"
 Cohesion: 0.4
-Nodes (2): ProjectConflictError, ProjectNotFoundError
+Nodes (2): InvalidScheduledTaskIdError, ScheduledTaskNotFoundError
 
 ### Community 43 - "Community 43"
 Cohesion: 0.4
-Nodes (2): GateRuleNotFoundError, InvalidGateRuleIdError
+Nodes (0): 
 
 ### Community 44 - "Community 44"
 Cohesion: 0.4
-Nodes (1): PipelinesController
+Nodes (1): GoalsController
 
 ### Community 45 - "Community 45"
 Cohesion: 0.4
-Nodes (2): PipelineRunNotFoundError, RunNotRetriesParkedError
+Nodes (1): ActivityController
 
 ### Community 46 - "Community 46"
 Cohesion: 0.4
-Nodes (0): 
+Nodes (2): ProjectConflictError, ProjectNotFoundError
 
 ### Community 47 - "Community 47"
 Cohesion: 0.4
-Nodes (1): ApprovalsController
+Nodes (2): GateRuleNotFoundError, InvalidGateRuleIdError
 
 ### Community 48 - "Community 48"
-Cohesion: 0.5
-Nodes (1): TasksController
+Cohesion: 0.4
+Nodes (1): PipelinesController
 
 ### Community 49 - "Community 49"
-Cohesion: 0.5
-Nodes (1): MemoryController
+Cohesion: 0.4
+Nodes (2): PipelineRunNotFoundError, RunNotRetriesParkedError
 
 ### Community 50 - "Community 50"
-Cohesion: 0.5
-Nodes (1): ActivityEventsService
+Cohesion: 0.4
+Nodes (0): 
 
 ### Community 51 - "Community 51"
-Cohesion: 0.5
-Nodes (0): 
+Cohesion: 0.4
+Nodes (1): ApprovalsController
 
 ### Community 52 - "Community 52"
 Cohesion: 0.5
-Nodes (1): ProjectsController
+Nodes (1): TasksController
 
 ### Community 53 - "Community 53"
 Cohesion: 0.5
-Nodes (1): HealthController
+Nodes (1): MemoryController
 
 ### Community 54 - "Community 54"
 Cohesion: 0.5
-Nodes (1): GateRulesController
+Nodes (0): 
 
 ### Community 55 - "Community 55"
 Cohesion: 0.5
-Nodes (1): DiscoveryController
+Nodes (1): ActivityEventsService
 
 ### Community 56 - "Community 56"
 Cohesion: 0.5
-Nodes (1): LimitsController
+Nodes (0): 
 
 ### Community 57 - "Community 57"
 Cohesion: 0.5
-Nodes (1): AgentsController
+Nodes (1): ProjectsController
 
 ### Community 58 - "Community 58"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (1): HealthController
 
 ### Community 59 - "Community 59"
 Cohesion: 0.5
-Nodes (1): MandateController
+Nodes (1): GateRulesController
 
 ### Community 60 - "Community 60"
 Cohesion: 0.5
-Nodes (1): BriefingController
+Nodes (1): DiscoveryController
 
 ### Community 61 - "Community 61"
 Cohesion: 0.5
-Nodes (1): AutomationsController
+Nodes (1): LimitsController
 
 ### Community 62 - "Community 62"
 Cohesion: 0.5
-Nodes (1): SkillsController
+Nodes (1): AgentsController
 
 ### Community 63 - "Community 63"
 Cohesion: 0.5
-Nodes (1): ChannelsController
+Nodes (0): 
 
 ### Community 64 - "Community 64"
 Cohesion: 0.5
-Nodes (1): BudgetController
+Nodes (1): MandateController
 
 ### Community 65 - "Community 65"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 0.5
+Nodes (1): BriefingController
 
 ### Community 66 - "Community 66"
-Cohesion: 0.67
-Nodes (1): ProjectCategoriesStorageService
+Cohesion: 0.5
+Nodes (1): AutomationsController
 
 ### Community 67 - "Community 67"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 0.5
+Nodes (1): SkillsController
 
 ### Community 68 - "Community 68"
-Cohesion: 0.67
-Nodes (1): CategoriesStorageService
+Cohesion: 0.5
+Nodes (1): ChannelsController
 
 ### Community 69 - "Community 69"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 0.5
+Nodes (1): BudgetController
 
 ### Community 70 - "Community 70"
 Cohesion: 0.67
-Nodes (1): SkillCategoriesStorageService
+Nodes (0): 
 
 ### Community 71 - "Community 71"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): ProjectCategoriesStorageService
 
 ### Community 72 - "Community 72"
 Cohesion: 0.67
@@ -473,27 +478,27 @@ Nodes (0):
 
 ### Community 73 - "Community 73"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): CategoriesStorageService
 
 ### Community 74 - "Community 74"
-Cohesion: 1.0
+Cohesion: 0.67
 Nodes (0): 
 
 ### Community 75 - "Community 75"
-Cohesion: 1.0
-Nodes (1): AppModule
+Cohesion: 0.67
+Nodes (1): SkillCategoriesStorageService
 
 ### Community 76 - "Community 76"
-Cohesion: 1.0
+Cohesion: 0.67
 Nodes (0): 
 
 ### Community 77 - "Community 77"
-Cohesion: 1.0
-Nodes (1): TasksModule
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 78 - "Community 78"
-Cohesion: 1.0
-Nodes (1): RunRecorderModule
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 79 - "Community 79"
 Cohesion: 1.0
@@ -501,23 +506,23 @@ Nodes (0):
 
 ### Community 80 - "Community 80"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): AppModule
 
 ### Community 81 - "Community 81"
 Cohesion: 1.0
-Nodes (1): ActivityRecorderModule
+Nodes (0): 
 
 ### Community 82 - "Community 82"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): TasksModule
 
 ### Community 83 - "Community 83"
 Cohesion: 1.0
-Nodes (1): LimitResumeModule
+Nodes (1): RunRecorderModule
 
 ### Community 84 - "Community 84"
 Cohesion: 1.0
-Nodes (1): ClaudeRunModule
+Nodes (0): 
 
 ### Community 85 - "Community 85"
 Cohesion: 1.0
@@ -525,7 +530,7 @@ Nodes (0):
 
 ### Community 86 - "Community 86"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): ActivityRecorderModule
 
 ### Community 87 - "Community 87"
 Cohesion: 1.0
@@ -533,11 +538,11 @@ Nodes (0):
 
 ### Community 88 - "Community 88"
 Cohesion: 1.0
-Nodes (1): HealthModule
+Nodes (1): LimitResumeModule
 
 ### Community 89 - "Community 89"
 Cohesion: 1.0
-Nodes (1): WorkspaceModule
+Nodes (1): ClaudeRunModule
 
 ### Community 90 - "Community 90"
 Cohesion: 1.0
@@ -549,15 +554,15 @@ Nodes (0):
 
 ### Community 92 - "Community 92"
 Cohesion: 1.0
-Nodes (1): LimitsModule
+Nodes (0): 
 
 ### Community 93 - "Community 93"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): HealthModule
 
 ### Community 94 - "Community 94"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): WorkspaceModule
 
 ### Community 95 - "Community 95"
 Cohesion: 1.0
@@ -569,11 +574,11 @@ Nodes (0):
 
 ### Community 97 - "Community 97"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): LimitsModule
 
 ### Community 98 - "Community 98"
 Cohesion: 1.0
-Nodes (1): BriefingModule
+Nodes (0): 
 
 ### Community 99 - "Community 99"
 Cohesion: 1.0
@@ -585,7 +590,7 @@ Nodes (0):
 
 ### Community 101 - "Community 101"
 Cohesion: 1.0
-Nodes (1): EventsModule
+Nodes (0): 
 
 ### Community 102 - "Community 102"
 Cohesion: 1.0
@@ -593,7 +598,7 @@ Nodes (0):
 
 ### Community 103 - "Community 103"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): BriefingModule
 
 ### Community 104 - "Community 104"
 Cohesion: 1.0
@@ -605,7 +610,7 @@ Nodes (0):
 
 ### Community 106 - "Community 106"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): EventsModule
 
 ### Community 107 - "Community 107"
 Cohesion: 1.0
@@ -747,153 +752,173 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
+### Community 142 - "Community 142"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 143 - "Community 143"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 144 - "Community 144"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 145 - "Community 145"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 146 - "Community 146"
+Cohesion: 1.0
+Nodes (0): 
+
 ## Knowledge Gaps
 - **34 isolated node(s):** `AppModule`, `GatesModule`, `ScheduledTasksStorageModule`, `TasksModule`, `MemoryModule` (+29 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 74`** (2 nodes): `server()`, `gate-rules.e2e.test.ts`
+- **Thin community `Community 79`** (2 nodes): `server()`, `gate-rules.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (2 nodes): `AppModule`, `app.module.ts`
+- **Thin community `Community 80`** (2 nodes): `AppModule`, `app.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (2 nodes): `rule()`, `gate-evaluator.service.test.ts`
+- **Thin community `Community 81`** (2 nodes): `rule()`, `gate-evaluator.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (2 nodes): `TasksModule`, `tasks.module.ts`
+- **Thin community `Community 82`** (2 nodes): `TasksModule`, `tasks.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (2 nodes): `RunRecorderModule`, `run-recorder.module.ts`
+- **Thin community `Community 83`** (2 nodes): `RunRecorderModule`, `run-recorder.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (2 nodes): `run()`, `goal-stop.test.ts`
+- **Thin community `Community 84`** (2 nodes): `run()`, `goal-stop.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (2 nodes): `fileFor()`, `goals.storage.service.test.ts`
+- **Thin community `Community 85`** (2 nodes): `fileFor()`, `goals.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (2 nodes): `ActivityRecorderModule`, `activity-recorder.module.ts`
+- **Thin community `Community 86`** (2 nodes): `ActivityRecorderModule`, `activity-recorder.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (2 nodes): `makeService()`, `limit-resume.service.test.ts`
+- **Thin community `Community 87`** (2 nodes): `makeService()`, `limit-resume.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (2 nodes): `LimitResumeModule`, `limit-resume.module.ts`
+- **Thin community `Community 88`** (2 nodes): `LimitResumeModule`, `limit-resume.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (2 nodes): `ClaudeRunModule`, `claude-run.module.ts`
+- **Thin community `Community 89`** (2 nodes): `ClaudeRunModule`, `claude-run.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (2 nodes): `detectLimit()`, `detect-limit.ts`
+- **Thin community `Community 90`** (2 nodes): `detectLimit()`, `detect-limit.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (2 nodes): `line()`, `claude-stream-format.test.ts`
+- **Thin community `Community 91`** (2 nodes): `line()`, `claude-stream-format.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (2 nodes): `project()`, `project-matcher.test.ts`
+- **Thin community `Community 92`** (2 nodes): `project()`, `project-matcher.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (2 nodes): `HealthModule`, `health.module.ts`
+- **Thin community `Community 93`** (2 nodes): `HealthModule`, `health.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (2 nodes): `workspace.module.ts`, `WorkspaceModule`
+- **Thin community `Community 94`** (2 nodes): `workspace.module.ts`, `WorkspaceModule`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (2 nodes): `capture()`, `rate-limits.reader.test.ts`
+- **Thin community `Community 95`** (2 nodes): `capture()`, `rate-limits.reader.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (2 nodes): `bag()`, `usage-fetcher.test.ts`
+- **Thin community `Community 96`** (2 nodes): `bag()`, `usage-fetcher.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (2 nodes): `LimitsModule`, `limits.module.ts`
+- **Thin community `Community 97`** (2 nodes): `LimitsModule`, `limits.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (2 nodes): `fileFor()`, `agents.storage.service.test.ts`
+- **Thin community `Community 98`** (2 nodes): `fileFor()`, `agents.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (2 nodes): `run()`, `progress.test.ts`
+- **Thin community `Community 99`** (2 nodes): `run()`, `progress.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (2 nodes): `makeErrorMapper()`, `error-mapping.ts`
+- **Thin community `Community 100`** (2 nodes): `makeErrorMapper()`, `error-mapping.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (2 nodes): `fileFor()`, `integrations.storage.service.test.ts`
+- **Thin community `Community 101`** (2 nodes): `fileFor()`, `integrations.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (2 nodes): `makeVault()`, `briefing.service.test.ts`
+- **Thin community `Community 102`** (2 nodes): `makeVault()`, `briefing.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (2 nodes): `BriefingModule`, `briefing.module.ts`
+- **Thin community `Community 103`** (2 nodes): `BriefingModule`, `briefing.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (2 nodes): `fileFor()`, `automations.storage.service.test.ts`
+- **Thin community `Community 104`** (2 nodes): `fileFor()`, `automations.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (2 nodes): `fileFor()`, `skills.storage.service.test.ts`
+- **Thin community `Community 105`** (2 nodes): `fileFor()`, `skills.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 101`** (2 nodes): `EventsModule`, `events.module.ts`
+- **Thin community `Community 106`** (2 nodes): `EventsModule`, `events.module.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 102`** (2 nodes): `item()`, `channel-item.store.test.ts`
+- **Thin community `Community 107`** (2 nodes): `item()`, `channel-item.store.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (2 nodes): `jsonFetch()`, `slack.adapter.test.ts`
+- **Thin community `Community 108`** (2 nodes): `jsonFetch()`, `slack.adapter.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (1 nodes): `vitest.config.ts`
+- **Thin community `Community 109`** (1 nodes): `vitest.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 105`** (1 nodes): `vitest.setup.ts`
+- **Thin community `Community 110`** (1 nodes): `vitest.setup.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (1 nodes): `automations.e2e.test.ts`
+- **Thin community `Community 111`** (1 nodes): `automations.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (1 nodes): `integrations.e2e.test.ts`
+- **Thin community `Community 112`** (1 nodes): `integrations.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 108`** (1 nodes): `agents.e2e.test.ts`
+- **Thin community `Community 113`** (1 nodes): `agents.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 109`** (1 nodes): `mandate.e2e.test.ts`
+- **Thin community `Community 114`** (1 nodes): `mandate.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (1 nodes): `limits.e2e.test.ts`
+- **Thin community `Community 115`** (1 nodes): `limits.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 111`** (1 nodes): `gates.e2e.test.ts`
+- **Thin community `Community 116`** (1 nodes): `gates.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 112`** (1 nodes): `projects.e2e.test.ts`
+- **Thin community `Community 117`** (1 nodes): `projects.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (1 nodes): `observability.e2e.test.ts`
+- **Thin community `Community 118`** (1 nodes): `observability.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 114`** (1 nodes): `categories.e2e.test.ts`
+- **Thin community `Community 119`** (1 nodes): `categories.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 115`** (1 nodes): `memory.e2e.test.ts`
+- **Thin community `Community 120`** (1 nodes): `memory.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 116`** (1 nodes): `skill-categories.e2e.test.ts`
+- **Thin community `Community 121`** (1 nodes): `skill-categories.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 117`** (1 nodes): `skills.e2e.test.ts`
+- **Thin community `Community 122`** (1 nodes): `skills.e2e.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (1 nodes): `flaky-check.mjs`
+- **Thin community `Community 123`** (1 nodes): `flaky-check.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 119`** (1 nodes): `counting-check.mjs`
+- **Thin community `Community 124`** (1 nodes): `counting-check.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (1 nodes): `keyword-scorer.test.ts`
+- **Thin community `Community 125`** (1 nodes): `keyword-scorer.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `vault.service.test.ts`
+- **Thin community `Community 126`** (1 nodes): `vault.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `goal-verifier-scope.test.ts`
+- **Thin community `Community 127`** (1 nodes): `goal-verifier-scope.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `runner-core.types.ts`
+- **Thin community `Community 128`** (1 nodes): `runner-core.types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `claude-tools.test.ts`
+- **Thin community `Community 129`** (1 nodes): `claude-tools.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `detect-limit.test.ts`
+- **Thin community `Community 130`** (1 nodes): `detect-limit.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `projects.storage.service.test.ts`
+- **Thin community `Community 131`** (1 nodes): `projects.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (1 nodes): `gate-rules.storage.service.test.ts`
+- **Thin community `Community 132`** (1 nodes): `gate-rules.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `categories.storage.service.test.ts`
+- **Thin community `Community 133`** (1 nodes): `categories.storage.service.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `orchestrator.agent.ts`
+- **Thin community `Community 134`** (1 nodes): `orchestrator.agent.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (1 nodes): `verify-command.test.ts`
+- **Thin community `Community 135`** (1 nodes): `verify-command.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (1 nodes): `pipeline-stage.record.ts`
+- **Thin community `Community 136`** (1 nodes): `pipeline-stage.record.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 132`** (1 nodes): `resume-context.test.ts`
+- **Thin community `Community 137`** (1 nodes): `resume-context.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (1 nodes): `data-dir.test.ts`
+- **Thin community `Community 138`** (1 nodes): `data-dir.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (1 nodes): `index.ts`
+- **Thin community `Community 139`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (1 nodes): `connection-tester.ts`
+- **Thin community `Community 140`** (1 nodes): `connection-tester.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (1 nodes): `cron.test.ts`
+- **Thin community `Community 141`** (1 nodes): `cron.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `sanitize.test.ts`
+- **Thin community `Community 142`** (1 nodes): `sanitize.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `triage-router.ts`
+- **Thin community `Community 143`** (1 nodes): `triage-router.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (1 nodes): `keyword-triager.test.ts`
+- **Thin community `Community 144`** (1 nodes): `keyword-triager.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `adapter.ts`
+- **Thin community `Community 145`** (1 nodes): `adapter.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (1 nodes): `ledger.store.test.ts`
+- **Thin community `Community 146`** (1 nodes): `ledger.store.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `resolveDataRoot()` connect `Community 7` to `Community 9`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `writeEntity()` connect `Community 0` to `Community 17`, `Community 5`, `Community 1`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `resolveDataRoot()` connect `Community 6` to `Community 3`?**
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+- **Why does `writeEntity()` connect `Community 1` to `Community 2`, `Community 18`, `Community 4`, `Community 15`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
 - **Are the 34 inferred relationships involving `writeEntity()` (e.g. with `.create()` and `.createHeld()`) actually correct?**
   _`writeEntity()` has 34 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 24 inferred relationships involving `writeFile()` (e.g. with `seed()` and `writeLimits()`) actually correct?**
@@ -901,6 +926,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `AppModule`, `GatesModule`, `ScheduledTasksStorageModule` to the rest of the system?**
   _34 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02 - nodes in this community are weakly interconnected._

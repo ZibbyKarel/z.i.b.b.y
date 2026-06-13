@@ -31,7 +31,16 @@ Progress (loop tracking)
       command times out+killed, output cap holds, onModuleDestroy reaps. NOTE: the
       pipelines/agent-runs `ENOTEMPTY` flake is RunnerCore-side (kill-then-rm race +
       in-tree worktree), addressed by 12.7 — NOT this item.
-- [ ] 12.4 — Gate reconstruct() re-dispatch (Law 3)
+- [x] 12.4 — Gate reconstruct() re-dispatch (Law 3) (DONE 2026-06-14). `reconstruct()`
+      split into always-rehydrate + gated re-drive: by default a `running`/`paused-limit`
+      goal on boot is parked `awaiting-resume` (new GoalParkedReason) and surfaced via the
+      existing parked queue / `resumeParked` endpoint instead of auto-re-dispatching a
+      maker (no silent real-claude spawn on `--respawn`). `GOAL_AUTO_RESUME=1` restores
+      auto-reconcile for the eventual launchd daemon. All 4 fire-and-forget `drive()` sites
+      wrapped in `.catch(onDriveError)` (dispatch throw → run failed, no unhandled rejection).
+      Tests: onDriveError unit; e2e default-gate (restart → parked awaiting-resume → resume →
+      done) + daemon-mode restart (GOAL_AUTO_RESUME=1 → auto-continues). **12.1–12.4
+      blast-radius set COMPLETE.**
 - [ ] 12.6 — Eliminate double verification
 - [ ] 12.7 — Worktrees outside the repo
 - [ ] 12.8 — Durable self-development posture

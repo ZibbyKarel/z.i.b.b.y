@@ -86,7 +86,11 @@ describe("Goal loop API (e2e, demo maker)", () => {
     return request(app.getHttpServer()).get(`/api/goals/runs/${goalRunId}`).expect(200)
   }
 
-  async function boot(): Promise<INestApplication> {
+  async function boot(autoResume = false): Promise<INestApplication> {
+    // Phase 12.4: by default the boot gate parks live goals `awaiting-resume`
+    // instead of auto-re-dispatching; `GOAL_AUTO_RESUME=1` restores auto-reconcile.
+    if (autoResume) process.env.GOAL_AUTO_RESUME = "1"
+    else delete process.env.GOAL_AUTO_RESUME
     process.env.GOALS_DIR = goalsDir
     process.env.GOAL_RUNS_DIR = goalRunsDir
     process.env.PIPELINES_DIR = pipelinesDir
@@ -138,7 +142,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
     for (const k of [
       "GOALS_DIR", "GOAL_RUNS_DIR", "PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR",
       "TASKS_DIR", "VAULT_DIR", "TASK_TICK_MS", "AUTOMATION_TICK_MS", "AGENT_DEMO_STEPS",
-      "AGENT_DEMO_DELAY_MS", "AGENT_RUNNER_MODE",
+      "AGENT_DEMO_DELAY_MS", "AGENT_RUNNER_MODE", "GOAL_AUTO_RESUME",
     ]) {
       delete process.env[k]
     }
@@ -294,15 +298,42 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(["done", "error"]).toContain(outcome?.status)
   })
 
-  it("survives an API restart mid-loop — reconstruct continues to done", async () => {
+  it("default boot gate (Law 3): restart parks the goal awaiting-resume — no auto-dispatch", async () => {
+    // A looping goal (fails 5×, 10 iterations) is reliably still running when we kill
+    // the API right after dispatch. On default reboot the boot gate must rehydrate it
+    // and park it `awaiting-resume` — NOT silently re-dispatch a maker (Tier 3).
+    await makeGoal("gated", 5, 10)
+    const goalRunId = await runGoal("gated")
+    await app.close()
+    app = await boot() // default: gate ON
+
+    const parked = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status === "parked" ? res.body : null
+    })
+    expect(parked.parkedReason).toBe("awaiting-resume")
+
+    // The operator resumes explicitly → it continues to done (continuation, not restart).
+    await request(app.getHttpServer())
+      .post(`/api/goals/runs/${goalRunId}/resume`)
+      .send({ note: "ok, continue" })
+      .expect(200)
+    const done = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status !== "parked" && res.body.status !== "running" ? res.body : null
+    })
+    expect(done.status).toBe("done")
+  })
+
+  it("survives an API restart mid-loop with GOAL_AUTO_RESUME=1 — reconstruct continues to done", async () => {
     await makeGoal("restartgoal", 0, 3)
     const goalRunId = await runGoal("restartgoal")
 
     // Kill the API while the maker iteration is in flight; its child dies with it.
     await app.close()
-    // Re-boot against the same dirs: reconstruct sees a `running` goal whose maker
+    // Re-boot in headless-daemon mode: reconstruct sees a `running` goal whose maker
     // reconciled to a dead state and re-dispatches the iteration (continuation).
-    app = await boot()
+    app = await boot(true)
 
     const final = await until(async () => {
       const res = await getRun(goalRunId)
