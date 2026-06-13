@@ -666,6 +666,7 @@
     "kind": {
       "agent": "agent",
       "pipeline": "pipeline",
+      "goal": "cíl",
       "scheduled": "naplánovaný task"
     },
     "parkedQueue": "zaparkované běhy",
@@ -677,7 +678,21 @@
     "prGate": "Příprava PR",
     "prDraft": "Návrh PR (pr-draft.md)",
     "prDiffstat": "Změny na větvi (diffstat)",
-    "checkpoints": "Checkpointy (commity na větvi)"
+    "checkpoints": "Checkpointy (commity na větvi)",
+    "goalCost": "Využité iterace",
+    "goalIterations": "{used} / {max} iterací",
+    "goalTimeline": "Časová osa iterací",
+    "goalNoIterations": "Zatím žádné iterace.",
+    "goalIteration": "Iterace {n}",
+    "goalVerifierPass": "verifikace prošla",
+    "goalVerifierFail": "verifikace neprošla",
+    "goalParkedSummary": "zaparkováno ({reason}) · {attempts} pokusů",
+    "goalMakerStatus": {
+      "running": "běží",
+      "done": "maker hotov",
+      "failed": "maker selhal",
+      "paused-limit": "pozastaveno (limit)"
+    }
   },
   "gates": {
     "title": "Pravidla schvalování",

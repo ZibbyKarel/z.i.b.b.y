@@ -1,6 +1,7 @@
 import {
   type AgentRun,
   type Approval,
+  type GoalRun,
   ORCHESTRATOR_ID,
   type PipelineRun,
   type RunStatus,
@@ -16,7 +17,7 @@ import type { DotTone, IconName, TagTone } from "@zibby/design-system";
  * (agent runs + pipeline runs + still-waiting scheduled tasks), deriving the
  * missing display fields (see DESIGN_VS_API_NOTES.md).
  */
-export type RunKind = "agent" | "pipeline" | "scheduled";
+export type RunKind = "agent" | "pipeline" | "goal" | "scheduled";
 
 /** Feed status: the shared run states plus the not-yet-fired `scheduled`, the
  * retries-parked `parked` (approval-parked pipelines keep reading as
@@ -63,6 +64,14 @@ export interface RunView {
   deferredLimit?: boolean;
   /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
   checkpoints?: PipelineRun["checkpoints"];
+  /** Phase 10 (goal runs): the goal definition id, for the detail view's maxIterations lookup. */
+  goalId?: string;
+  /** Phase 10 (goal runs): the per-iteration maker→verifier log for the timeline. */
+  iterations?: GoalRun["iterations"];
+  /** Phase 10 (goal runs): the parked surface (iteration, attempts, verdict file). */
+  goalParked?: GoalRun["parked"];
+  /** Phase 10 (goal runs): why the goal parked (iterations / budget / limit). */
+  goalParkedReason?: GoalRun["parkedReason"];
 }
 
 /** Task-first display name: explicit title, else the task text, else the target. */
@@ -141,6 +150,45 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     resumeAt: r.resumeAt,
     limitResumeCycles: r.limitResumeCycles,
     checkpoints: r.checkpoints,
+  };
+}
+
+/**
+ * Goal run → view (Phase 10). Maps the goal lifecycle onto the feed states (the
+ * same set pipelines use, so RUN_STATE already covers every status): `failed` →
+ * `error`, `parked` → first-class `parked` (the resume-with-note queue), all parks
+ * are operator-resumable so there is no approval-vs-retries split. `pct` is null
+ * (the cost is iterations-used / maxIterations, shown in the detail view).
+ */
+export function goalRunToView(r: GoalRun): RunView {
+  const status: FeedStatus =
+    r.status === "paused-limit"
+      ? "paused-limit"
+      : r.status === "parked"
+        ? "parked"
+        : r.status === "failed"
+          ? "error"
+          : r.status === "done"
+            ? "done"
+            : "running";
+  return {
+    runId: r.goalRunId,
+    kind: "goal",
+    owner: r.goalId,
+    status,
+    pct: null,
+    title: "",
+    prompt: r.currentIteration != null ? `iterace ${r.currentIteration + 1}` : "",
+    project: r.cwd.split("/").pop() ?? "",
+    startedAt: r.startedAt,
+    logBase: null,
+    taskId: r.taskId,
+    resumeAt: r.resumeAt,
+    limitResumeCycles: r.limitResumeCycles,
+    goalId: r.goalId,
+    iterations: r.iterations,
+    goalParked: r.parked,
+    goalParkedReason: r.parkedReason,
   };
 }
 
@@ -286,6 +334,7 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
 const KIND_GLYPH: Record<RunKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
+  goal: "retry",
   scheduled: "clock",
 };
 

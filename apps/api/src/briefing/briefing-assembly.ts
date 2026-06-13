@@ -7,6 +7,7 @@ import type {
   BriefingNeedsYouItem,
   BriefingWatchItem,
   ChannelItem,
+  GoalRun,
   PipelineRun,
   ScheduledTask,
 } from "@zibby/contracts"
@@ -21,6 +22,8 @@ export interface BriefingInput {
   parkedRuns: PipelineRun[]
   /** Phase 9: pipeline runs currently paused on the usage limit (status "paused-limit"). */
   pausedLimitRuns?: PipelineRun[]
+  /** Phase 10: goal runs in flight (running / paused-limit) and parked (needs-you). */
+  goalRuns?: GoalRun[]
   /** Channel items still in flight (state new or triaged). */
   channelItems: ChannelItem[]
   /** Activity entries recorded since the cursor (newest-first is fine; we sort). */
@@ -50,9 +53,10 @@ const DID_LIMIT = 10
  * first-class output.
  */
 export function assembleBriefing(input: BriefingInput): Briefing {
-  const needsYou = buildNeedsYou(input.approvals, input.parkedRuns)
+  const goalRuns = input.goalRuns ?? []
+  const needsYou = buildNeedsYou(input.approvals, input.parkedRuns, goalRuns)
   const didForYou = buildDidForYou(input.activity)
-  const watching = buildWatching(input.channelItems, input.pausedLimitRuns ?? [])
+  const watching = buildWatching(input.channelItems, input.pausedLimitRuns ?? [], goalRuns)
   const engagements = buildEngagements(
     input.tasks ?? [],
     didForYou,
@@ -116,7 +120,11 @@ export function buildEngagements(
   return [...rows.values()].sort((a, b) => b.needsYou - a.needsYou || a.name.localeCompare(b.name))
 }
 
-function buildNeedsYou(approvals: Approval[], parkedRuns: PipelineRun[]): BriefingNeedsYouItem[] {
+function buildNeedsYou(
+  approvals: Approval[],
+  parkedRuns: PipelineRun[],
+  goalRuns: GoalRun[],
+): BriefingNeedsYouItem[] {
   const fromApprovals: BriefingNeedsYouItem[] = approvals.map((a) => ({
     kind: "approval",
     id: a.id,
@@ -131,8 +139,19 @@ function buildNeedsYou(approvals: Approval[], parkedRuns: PipelineRun[]): Briefi
     at: r.startedAt,
     refs: { runRef: r.pipelineRunId, pipelineId: r.pipelineId, status: "parked" },
   }))
+  // Phase 10: a parked goal (bounded effort exhausted) is a Tier-3 decision too —
+  // it rides the same `parked` notification, no new kind (decision 11).
+  const fromParkedGoals: BriefingNeedsYouItem[] = goalRuns
+    .filter((g) => g.status === "parked")
+    .map((g) => ({
+      kind: "parked",
+      id: g.goalRunId,
+      summary: `goal ${g.goalId} parked${g.parkedReason ? ` (${g.parkedReason})` : ""}`,
+      at: g.startedAt,
+      refs: { runRef: g.goalRunId, goalId: g.goalId, status: "parked" },
+    }))
   // Newest first so the most recent decision tops the list.
-  return [...fromApprovals, ...fromParked].sort((a, b) => b.at.localeCompare(a.at))
+  return [...fromApprovals, ...fromParked, ...fromParkedGoals].sort((a, b) => b.at.localeCompare(a.at))
 }
 
 function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {
@@ -146,6 +165,7 @@ function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {
 function buildWatching(
   channelItems: ChannelItem[],
   pausedLimitRuns: PipelineRun[],
+  goalRuns: GoalRun[],
 ): BriefingWatchItem[] {
   const byIntegration = new Map<string, { newItems: number; lastReceivedAt?: string }>()
   for (const item of channelItems) {
@@ -166,7 +186,20 @@ function buildWatching(
       resumeAt: r.resumeAt ?? null,
     }))
     .sort((a, b) => (a.resumeAt ?? Infinity) - (b.resumeAt ?? Infinity))
-  return [...channels, ...paused]
+  // Phase 10: an in-flight goal (running) or a goal reflecting a maker pause are
+  // things ZIBBY is working on, not decisions — surface them in "watching".
+  const goals: BriefingWatchItem[] = goalRuns
+    .filter((g) => g.status === "running" || g.status === "paused-limit")
+    .map((g) => ({
+      runRef: g.goalRunId,
+      summary:
+        g.status === "paused-limit"
+          ? `goal ${g.goalId} paused on the usage limit`
+          : `goal ${g.goalId} iterating (${(g.currentIteration ?? 0) + 1})`,
+      resumeAt: g.resumeAt ?? null,
+    }))
+    .sort((a, b) => (a.resumeAt ?? Infinity) - (b.resumeAt ?? Infinity))
+  return [...channels, ...paused, ...goals]
 }
 
 function isFinished(e: ActivityEntry): boolean {

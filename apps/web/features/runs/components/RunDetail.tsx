@@ -17,6 +17,7 @@ import { useApprovalsQuery } from "../../approvals/queries";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { type RunView, approvalForRun, runTitle } from "../run";
+import { GoalDetailPanel } from "./GoalDetailPanel";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunParkedPanel } from "./RunParkedPanel";
 import { RunPrGatePanel } from "./RunPrGatePanel";
@@ -214,6 +215,27 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
           <Accordion>
             <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
           </Accordion>
+        </>
+      ) : run.kind === "goal" ? (
+        // Phase 10: a goal run's surface IS its iteration timeline + cost bar (and,
+        // when parked, the resume-with-note panel) — there is no per-run log.
+        <>
+          {run.status === "paused-limit" && (
+            <HudPanel padding="300" tone="warn">
+              <Stack align="start" direction="row" gap="150">
+                <IconTile glyph="pause" size="md" />
+                <Stack gap="50">
+                  <Typography type="note" weight="semibold">
+                    {t("limitPausedTitle")}
+                  </Typography>
+                  <Typography leading="snug" size="sm" type="text" variant="secondary">
+                    {t("limitPausedBody", { eta: resumeEta(run.resumeAt, now, locale) })}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </HudPanel>
+          )}
+          <GoalDetailPanel run={run} />
         </>
       ) : run.status === "parked" && run.kind === "pipeline" ? (
         <>

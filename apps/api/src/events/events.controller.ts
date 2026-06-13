@@ -1,9 +1,10 @@
 import { Controller, type MessageEvent, Sse } from "@nestjs/common"
-import type { AgentRun, PipelineRun } from "@zibby/contracts"
+import type { AgentRun, GoalRun, PipelineRun } from "@zibby/contracts"
 import { type Observable, map, merge } from "rxjs"
 import { ActivityEventsService } from "../activity/activity-events.service"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { ChannelEventsService } from "../channels/channel-events.service"
+import { GoalRunnerService } from "../goals/goal-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { fromRunStatus, heartbeats } from "../shared/sse/sse"
 
@@ -21,6 +22,7 @@ export class EventsController {
   constructor(
     private readonly agents: AgentRunnerService,
     private readonly pipelines: PipelineRunnerService,
+    private readonly goals: GoalRunnerService,
     private readonly channels: ChannelEventsService,
     private readonly activity: ActivityEventsService,
   ) {}
@@ -37,6 +39,13 @@ export class EventsController {
         "pipeline-runs",
         (listener) => this.pipelines.onRunStatus(listener),
         (run) => ({ runId: run.pipelineRunId, status: run.status }),
+      ),
+      // Phase 10: goal-run transitions — the web feed invalidates the goal-runs
+      // query off this scope (unknown-scope tolerant, like the others).
+      fromRunStatus<GoalRun>(
+        "goal-runs",
+        (listener) => this.goals.onRunStatus(listener),
+        (run) => ({ runId: run.goalRunId, status: run.status }),
       ),
       // Additive `"channel-items"` scope — the web RunEventsProvider ignores
       // scopes it doesn't know, so this is safe to merge in (decision 15).

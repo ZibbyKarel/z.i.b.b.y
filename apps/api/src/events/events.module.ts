@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { AgentsModule } from "../agents/agents.module"
 import { ChannelsModule } from "../channels/channels.module"
+import { GoalsModule } from "../goals/goals.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { EventsController } from "./events.controller"
 
@@ -10,7 +11,7 @@ import { EventsController } from "./events.controller"
  * exported) and merges their streams into one push channel for the dashboard.
  */
 @Module({
-  imports: [AgentsModule, PipelinesModule, ChannelsModule],
+  imports: [AgentsModule, PipelinesModule, GoalsModule, ChannelsModule],
   controllers: [EventsController],
 })
 export class EventsModule {}

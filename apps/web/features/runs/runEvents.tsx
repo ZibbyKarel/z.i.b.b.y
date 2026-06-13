@@ -11,7 +11,7 @@ import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItems
 import { getPipelineRunQueryKey } from "../pipelines/queries/usePipelineRunQuery";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { API_URL } from "../../state/api";
-import { allAgentRunsKey, allPipelineRunsKey } from "./queries/useRunsQuery";
+import { allAgentRunsKey, allGoalRunsKey, allPipelineRunsKey } from "./queries/useRunsQuery";
 
 /**
  * Payload mirror of the API's events (see apps/api/src/shared/sse/sse.ts and the
@@ -20,7 +20,7 @@ import { allAgentRunsKey, allPipelineRunsKey } from "./queries/useRunsQuery";
  * ignored, so the channel scope was safe to add to the server merge.
  */
 interface RunStatusEvent {
-  scope: "agent-runs" | "pipeline-runs" | "channel-items" | "activity";
+  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "channel-items" | "activity";
   runId?: string;
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
@@ -81,6 +81,14 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+        }
+      } else if (parsed.scope === "goal-runs") {
+        // Phase 10: a goal transition refreshes the feed; a parked goal is a Tier-3
+        // decision, so refresh the approvals/briefing surfaces it rides too.
+        void qc.invalidateQueries({ queryKey: allGoalRunsKey });
+        void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
+        if (parsed.status === "parked") {
+          void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
         }
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the

@@ -100,7 +100,7 @@ export function streamRunLog(
 /** The shape every run-status event carries on the unified `/api/events` channel. */
 export interface RunStatusEvent {
   /** Which client query family to refetch. */
-  scope: "agent-runs" | "pipeline-runs"
+  scope: "agent-runs" | "pipeline-runs" | "goal-runs"
   runId: string
   status: string
 }

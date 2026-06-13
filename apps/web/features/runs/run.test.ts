@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Approval } from "@zibby/contracts";
-import { approvalForRun } from "./run";
+import type { Approval, GoalRun } from "@zibby/contracts";
+import { approvalForRun, goalRunToView } from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -48,5 +48,66 @@ describe("approvalForRun", () => {
   it("returns undefined unless the run is awaiting approval", () => {
     const queue = [approval("writer_123_42", "agent")];
     expect(approvalForRun(queue, run({ status: "running" }))).toBeUndefined();
+  });
+});
+
+const baseGoalRun = (over: Partial<GoalRun>): GoalRun => ({
+  goalRunId: "ship_1",
+  goalId: "ship",
+  status: "running",
+  currentIteration: 0,
+  iterations: [],
+  startedAt: "2026-06-13T10:00:00.000Z",
+  cwd: "/tmp/goals/runs/ship_1",
+  ...over,
+});
+
+describe("goalRunToView", () => {
+  it("maps a running goal onto the feed view (kind goal, no pct/log)", () => {
+    const v = goalRunToView(baseGoalRun({ currentIteration: 1 }));
+    expect(v.kind).toBe("goal");
+    expect(v.owner).toBe("ship");
+    expect(v.status).toBe("running");
+    expect(v.pct).toBeNull();
+    expect(v.logBase).toBeNull();
+    expect(v.goalId).toBe("ship");
+    expect(v.prompt).toContain("2"); // currentIteration 1 → "iterace 2"
+  });
+
+  it("maps failed → error and done → done", () => {
+    expect(goalRunToView(baseGoalRun({ status: "failed" })).status).toBe("error");
+    expect(goalRunToView(baseGoalRun({ status: "done" })).status).toBe("done");
+  });
+
+  it("carries parked detail + reason for the resume panel", () => {
+    const v = goalRunToView(
+      baseGoalRun({
+        status: "parked",
+        parkedReason: "iterations",
+        parked: { iteration: 1, attempts: 2, verdictFile: "/tmp/iteration-1.verdict.txt" },
+      }),
+    );
+    expect(v.status).toBe("parked");
+    expect(v.goalParkedReason).toBe("iterations");
+    expect(v.goalParked?.attempts).toBe(2);
+  });
+
+  it("reflects a paused-limit goal with its resumeAt for the countdown", () => {
+    const v = goalRunToView(baseGoalRun({ status: "paused-limit", resumeAt: 1_800_000_000_000 }));
+    expect(v.status).toBe("paused-limit");
+    expect(v.resumeAt).toBe(1_800_000_000_000);
+  });
+
+  it("preserves the iteration log for the timeline", () => {
+    const iterations: GoalRun["iterations"] = [
+      {
+        index: 0,
+        makerKind: "pipeline",
+        verifier: { kind: "checks", satisfied: false, output: "red" },
+        startedAt: "2026-06-13T10:00:00.000Z",
+        status: "failed",
+      },
+    ];
+    expect(goalRunToView(baseGoalRun({ iterations })).iterations).toHaveLength(1);
   });
 });

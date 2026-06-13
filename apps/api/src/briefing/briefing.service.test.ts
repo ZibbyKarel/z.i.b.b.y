@@ -45,6 +45,7 @@ describe("BriefingService", () => {
 
     const approvals = { list: vi.fn().mockResolvedValue([]) }
     const pipelines = { listAll: vi.fn().mockResolvedValue([]) }
+    const goals = { listAll: vi.fn().mockResolvedValue([]) }
     const channels = { list: vi.fn().mockResolvedValue([]) }
     const activity = { readSince: vi.fn().mockResolvedValue([]), record }
     const tasks = { list: vi.fn().mockResolvedValue([]) }
@@ -53,6 +54,7 @@ describe("BriefingService", () => {
     service = new BriefingService(
       approvals as never,
       pipelines as never,
+      goals as never,
       channels as never,
       activity as never,
       briefer as never,

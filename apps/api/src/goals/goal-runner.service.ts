@@ -16,6 +16,7 @@ import {
   type Project,
   type VerifierSpec,
 } from "@zibby/contracts"
+import { ActivityLogService } from "../activity/activity-log.service"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { BudgetService } from "../budget/budget.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
@@ -83,6 +84,7 @@ export class GoalRunnerService implements OnModuleInit {
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
     private readonly budget: BudgetService,
+    private readonly activity: ActivityLogService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
@@ -93,9 +95,7 @@ export class GoalRunnerService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true }).catch(() => {})
-    // Restart reconciliation lands in Phase 10.4; for now rebuild the registry so
-    // a just-finished run survives a quick reload for the feed.
-    await this.rehydrate()
+    await this.reconstruct()
   }
 
   /**
@@ -199,10 +199,13 @@ export class GoalRunnerService implements OnModuleInit {
     goal: Goal,
     project: Project | null,
     files: string[],
-    resume?: { startIndex: number; resumeContext?: string },
+    resume?: { startIndex: number; resumeContext?: string; attachRunRef?: string },
   ): Promise<void> {
     let index = resume?.startIndex ?? run.currentIteration ?? 0
     let resumeContext = resume?.resumeContext
+    // Restart re-attach: the FIRST turn waits on an existing in-flight maker run
+    // instead of dispatching a fresh one (continuation, not restart).
+    let attachRunRef = resume?.attachRunRef
 
     for (;;) {
       // Per-iteration budget guard (decision 6): the maker counts as one run against
@@ -213,23 +216,32 @@ export class GoalRunnerService implements OnModuleInit {
         return
       }
 
-      const iteration: GoalIteration = {
-        index,
-        makerKind: goal.maker.kind,
-        verifier: { kind: goal.verifier.kind, satisfied: false, output: "" },
-        startedAt: new Date().toISOString(),
-        status: "running",
-      }
-      run.iterations.push(iteration)
+      // Reuse the record at this index when re-driving (resume / limit re-dispatch),
+      // so a re-run iteration never duplicates a record — else create a new one.
+      const iteration = this.iterationAt(run, goal, index)
       run.currentIteration = index
       await this.writeAggregate(run)
 
-      const makerRunRef = await this.dispatchMaker(run, goal, project, files, resumeContext)
-      iteration.makerRunRef = makerRunRef
-      await this.writeAggregate(run)
-      await this.recordDispatch(run, project, makerRunRef)
+      let makerRunRef: string
+      if (attachRunRef) {
+        makerRunRef = attachRunRef
+        attachRunRef = undefined
+        iteration.makerRunRef = makerRunRef
+        await this.writeAggregate(run)
+      } else {
+        makerRunRef = await this.dispatchMaker(run, goal, project, files, resumeContext)
+        iteration.makerRunRef = makerRunRef
+        await this.writeAggregate(run)
+        await this.recordDispatch(run, project, makerRunRef)
+        this.recordActivity(
+          run,
+          "goal-dispatched",
+          `dispatched ${goal.maker.kind} maker for iteration ${index + 1}/${goal.maxIterations}`,
+          makerRunRef,
+        )
+      }
 
-      const makerStatus = await this.waitForMaker(goal.maker.kind, makerRunRef)
+      const makerStatus = await this.waitForMaker(run, goal.maker.kind, makerRunRef)
       iteration.status = makerStatus
 
       // Run the verifier and capture its verdict (it feeds the next iteration).
@@ -244,6 +256,12 @@ export class GoalRunnerService implements OnModuleInit {
       const verdictFile = path.join(run.cwd, `iteration-${index}.verdict.txt`)
       await fs.writeFile(verdictFile, verdict.output || "(no verifier output)\n", "utf8").catch(() => {})
       await this.writeAggregate(run)
+      this.recordActivity(
+        run,
+        "goal-verdict",
+        `iteration ${index + 1} verifier ${verdict.satisfied ? "satisfied" : "not satisfied"}`,
+        verdict.runRef,
+      )
       this.log.info("goal iteration verified", {
         goalRunId: run.goalRunId,
         index,
@@ -273,6 +291,31 @@ export class GoalRunnerService implements OnModuleInit {
       resumeContext = await this.composeResumeContext(run, goal, verdict.output)
       index += 1
     }
+  }
+
+  /**
+   * The iteration record for `index` — reused when re-driving (resume / restart /
+   * limit re-dispatch) so a re-run never duplicates a record, reset to a fresh
+   * `running` state; created + appended otherwise.
+   */
+  private iterationAt(run: GoalRun, goal: Goal, index: number): GoalIteration {
+    const existing = run.iterations.find((i) => i.index === index)
+    if (existing) {
+      existing.status = "running"
+      existing.verifier = { kind: goal.verifier.kind, satisfied: false, output: "" }
+      existing.startedAt = new Date().toISOString()
+      existing.endedAt = undefined
+      return existing
+    }
+    const iteration: GoalIteration = {
+      index,
+      makerKind: goal.maker.kind,
+      verifier: { kind: goal.verifier.kind, satisfied: false, output: "" },
+      startedAt: new Date().toISOString(),
+      status: "running",
+    }
+    run.iterations.push(iteration)
+    return iteration
   }
 
   /** True when the project (if any) is under its budget cap; fail-closed via BudgetService. */
@@ -313,6 +356,7 @@ export class GoalRunnerService implements OnModuleInit {
     }
     run.currentIteration = index
     await this.writeAggregate(run)
+    this.recordActivity(run, "goal-parked", `goal parked (${reason}) after ${index + 1} iteration(s)`)
     this.log.warn("goal run parked", { goalRunId: run.goalRunId, reason, iteration: index })
   }
 
@@ -367,7 +411,7 @@ export class GoalRunnerService implements OnModuleInit {
       run.matchedTerms,
       run.workspace,
     )
-    const status = await this.waitForMaker("agent", r.runId)
+    const status = await this.waitForMaker(run, "agent", r.runId)
     const log = await this.agentRunner.readLog(r.runId, 0).catch(() => null)
     return { kind: "claude", runRef: r.runId, satisfied: status === "done", output: tailOf(log?.content ?? "") }
   }
@@ -463,24 +507,49 @@ export class GoalRunnerService implements OnModuleInit {
   }
 
   /**
-   * Poll the maker's own runner until its run reaches a terminal state, then map it
-   * to a {@link GoalIterationStatus}: `done` → done, `paused-limit` → paused-limit,
-   * everything else (error/interrupted/failed/parked/missing) → failed. Rides
-   * through `running` and `awaiting-approval` (the inner mid-run gate is live).
+   * Poll the maker run until it reaches a TERMINAL state, mapping it to a
+   * {@link GoalIterationStatus} (`done` → done; else → failed). Rides through
+   * `running`/`awaiting-approval` (the inner mid-run gate is live).
+   *
+   * Decision 9: a maker that pauses on the usage limit does NOT burn the iteration.
+   * The goal REFLECTS the pause — `run.status = "paused-limit"` with the maker's
+   * `resumeAt` for visibility — and keeps polling. The maker's own Phase 9.2
+   * auto-resume (its agent/pipeline registry is already scanned) respawns it; when
+   * it resumes the goal flips back to `running` and the SAME iteration completes.
+   * No re-dispatch here, so there is no double-spawn with the maker's own resume.
    */
   protected async waitForMaker(
+    run: GoalRun,
     kind: "agent" | "pipeline",
     runRef: string,
   ): Promise<GoalIterationStatus> {
+    let reflectingPause = false
     for (;;) {
       const raw = this.makerStatus(kind, runRef)
       if (raw === null) return "failed"
-      if (raw !== "running" && raw !== "awaiting-approval") {
-        if (raw === "done") return "done"
-        if (raw === "paused-limit") return "paused-limit"
-        return "failed"
+      if (raw === "paused-limit") {
+        if (!reflectingPause) {
+          reflectingPause = true
+          run.status = "paused-limit"
+          run.resumeAt = this.makerResumeAt(kind, runRef)
+          run.limitResumeCycles = run.limitResumeCycles ?? 0
+          await this.writeAggregate(run)
+          this.log.warn("goal reflecting maker paused-limit", { goalRunId: run.goalRunId, runRef })
+        }
+        await new Promise((r) => setTimeout(r, 40))
+        continue
       }
-      await new Promise((r) => setTimeout(r, 40))
+      if (raw === "running" || raw === "awaiting-approval") {
+        if (reflectingPause) {
+          reflectingPause = false
+          run.status = "running"
+          run.resumeAt = null
+          await this.writeAggregate(run)
+        }
+        await new Promise((r) => setTimeout(r, 40))
+        continue
+      }
+      return raw === "done" ? "done" : "failed"
     }
   }
 
@@ -490,6 +559,16 @@ export class GoalRunnerService implements OnModuleInit {
       return kind === "agent"
         ? this.agentRunner.get(runRef).status
         : this.pipelineRunner.get(runRef).status
+    } catch {
+      return null
+    }
+  }
+
+  /** The maker run's `resumeAt` (the usage-window reset epoch), copied up for the goal. */
+  private makerResumeAt(kind: "agent" | "pipeline", runRef: string): number | null {
+    try {
+      const run = kind === "agent" ? this.agentRunner.get(runRef) : this.pipelineRunner.get(runRef)
+      return run.resumeAt ?? null
     } catch {
       return null
     }
@@ -665,8 +744,83 @@ export class GoalRunnerService implements OnModuleInit {
     return out
   }
 
-  /** Rebuild the in-memory registry from disk on boot (full reconciliation in 10.4). */
-  private async rehydrate(): Promise<void> {
-    for (const run of await this.readAllAggregates()) this.runs.set(run.goalRunId, run)
+  /**
+   * Rebuild the registry from disk and reconcile mid-flight runs (decision 10,
+   * run-ref-aware). The inner runners' registries are already rebuilt (GoalsModule
+   * imports them, so they init first), so an iteration's maker run reflects its
+   * reconciled status:
+   * - terminal (`done`/`failed`) or `parked` → durable, left as-is.
+   * - `running`/`paused-limit` goal whose maker is still alive/durable
+   *   (`running`/`paused-limit`) → re-ATTACH the wait (continuation, no re-dispatch),
+   *   so the maker's own Phase 9.2 auto-resume owns a paused maker.
+   * - `running`/`paused-limit` goal whose maker died with the API
+   *   (`interrupted`/`failed`/missing) → re-DISPATCH that iteration fresh with
+   *   resume-context (the worktree + checkpoints survive on disk).
+   */
+  private async reconstruct(): Promise<void> {
+    for (const run of await this.readAllAggregates()) {
+      this.runs.set(run.goalRunId, run)
+      if (run.status === "running" || run.status === "paused-limit") {
+        void this.reconcileGoal(run)
+      }
+    }
+  }
+
+  private async reconcileGoal(run: GoalRun): Promise<void> {
+    const goal = await this.goals.get(run.goalId).catch(() => null)
+    if (!goal) {
+      run.status = "failed"
+      run.currentIteration = null
+      await this.writeAggregate(run)
+      return
+    }
+    const project = await this.projectForRun(run)
+    const index = run.currentIteration ?? 0
+    const iteration = run.iterations.find((i) => i.index === index)
+    const makerRunRef = iteration?.makerRunRef
+    const makerStatus = makerRunRef ? this.makerStatus(goal.maker.kind, makerRunRef) : null
+    const traceId = randomUUID()
+
+    if (makerRunRef && (makerStatus === "running" || makerStatus === "paused-limit")) {
+      // The maker survived — re-attach the wait; its own 9.2 owns a paused maker.
+      this.log.info("goal reconcile: re-attaching to in-flight maker", {
+        goalRunId: run.goalRunId,
+        index,
+        makerStatus,
+      })
+      void this.trace.run({ traceId, runId: run.goalRunId }, () =>
+        this.drive(run, goal, project, [], { startIndex: index, attachRunRef: makerRunRef }),
+      )
+      return
+    }
+
+    // The maker died with the API → re-dispatch this iteration fresh (continuation).
+    this.log.info("goal reconcile: re-dispatching dead maker iteration", {
+      goalRunId: run.goalRunId,
+      index,
+      makerStatus,
+    })
+    run.status = "running"
+    run.resumeAt = null
+    await this.writeAggregate(run)
+    const lastVerdict = iteration?.verifier.output ?? ""
+    const resumeContext = await this.composeResumeContext(run, goal, lastVerdict)
+    void this.trace.run({ traceId, runId: run.goalRunId }, () =>
+      this.drive(run, goal, project, [], { startIndex: index, resumeContext }),
+    )
+  }
+
+  /** Emit a never-throws goal activity entry (Tier 1, silent + recorded). */
+  private recordActivity(
+    run: GoalRun,
+    kind: "goal-dispatched" | "goal-verdict" | "goal-parked",
+    summary: string,
+    runRef?: string,
+  ): void {
+    void this.activity.record({
+      kind,
+      summary,
+      refs: { goalRunId: run.goalRunId, goalId: run.goalId, ...(runRef ? { runRef } : {}) },
+    })
   }
 }

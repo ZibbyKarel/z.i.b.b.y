@@ -6,6 +6,7 @@ import { ACTIVITY_DIR, ActivityLogService } from "../activity/activity-log.servi
 import { ApprovalsService } from "../approvals/approvals.service"
 import { ChannelItemStore } from "../channels/channel-item.store"
 import { DuplicateNoteError, VaultService } from "../memory/vault.service"
+import { GoalRunnerService } from "../goals/goal-runner.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service"
@@ -38,6 +39,7 @@ export class BriefingService {
   constructor(
     private readonly approvals: ApprovalsService,
     private readonly pipelines: PipelineRunnerService,
+    private readonly goals: GoalRunnerService,
     private readonly channels: ChannelItemStore,
     private readonly activity: ActivityLogService,
     private readonly briefer: ClaudeCliBriefer,
@@ -53,14 +55,19 @@ export class BriefingService {
   /** Assemble the current briefing from the record — pure, no persistence. */
   async assemble(now: Date = new Date()): Promise<Briefing> {
     const since = await this.readCursor(now)
-    const [approvals, allRuns, channelItems, activity, allTasks, projects] = await Promise.all([
+    const [approvals, allRuns, allGoalRuns, channelItems, activity, allTasks, projects] = await Promise.all([
       this.approvals.list("pending"),
       this.pipelines.listAll(),
+      this.goals.listAll(),
       this.channels.list(),
       this.activity.readSince(since, now),
       this.tasks.list().catch(() => []),
       this.projects.list().catch(() => []),
     ])
+    // Phase 10: in-flight (running/paused) goals feed "watching"; parked goals "needs you".
+    const goalRuns = allGoalRuns.filter(
+      (g) => g.status === "running" || g.status === "paused-limit" || g.status === "parked",
+    )
     const parkedRuns = allRuns.filter((r) => r.status === "parked")
     // Phase 9: runs paused on the usage limit feed the "watching" line (Tier 1 — they
     // auto-resume, so they don't go in "needs you").
@@ -75,6 +82,7 @@ export class BriefingService {
       approvals,
       parkedRuns,
       pausedLimitRuns,
+      goalRuns,
       channelItems: inFlight,
       activity,
       tasks,

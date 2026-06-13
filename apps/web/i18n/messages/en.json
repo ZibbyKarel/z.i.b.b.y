@@ -666,6 +666,7 @@
     "kind": {
       "agent": "agent",
       "pipeline": "pipeline",
+      "goal": "goal",
       "scheduled": "scheduled task"
     },
     "parkedQueue": "parked runs",
@@ -677,7 +678,21 @@
     "prGate": "PR preparation",
     "prDraft": "PR draft (pr-draft.md)",
     "prDiffstat": "Branch changes (diffstat)",
-    "checkpoints": "Checkpoints (branch commits)"
+    "checkpoints": "Checkpoints (branch commits)",
+    "goalCost": "Iterations used",
+    "goalIterations": "{used} / {max} iterations",
+    "goalTimeline": "Iteration timeline",
+    "goalNoIterations": "No iterations yet.",
+    "goalIteration": "Iteration {n}",
+    "goalVerifierPass": "verifier satisfied",
+    "goalVerifierFail": "verifier not satisfied",
+    "goalParkedSummary": "parked ({reason}) · {attempts} attempts",
+    "goalMakerStatus": {
+      "running": "running",
+      "done": "maker done",
+      "failed": "maker failed",
+      "paused-limit": "paused (limit)"
+    }
   },
   "gates": {
     "title": "Approval rules",

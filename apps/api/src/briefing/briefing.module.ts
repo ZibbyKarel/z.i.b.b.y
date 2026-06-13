@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ApprovalsModule } from "../approvals/approvals.module"
 import { ChannelsModule } from "../channels/channels.module"
+import { GoalsModule } from "../goals/goals.module"
 import { MemoryModule } from "../memory/memory.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { ProjectsModule } from "../projects/projects.module"
@@ -20,6 +21,7 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer"
   imports: [
     ApprovalsModule,
     PipelinesModule,
+    GoalsModule,
     ChannelsModule,
     MemoryModule,
     ProjectsModule,

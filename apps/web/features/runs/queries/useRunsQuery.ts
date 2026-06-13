@@ -11,6 +11,7 @@ import {
   type RunView,
   agentRunToView,
   enrichRunWithTask,
+  goalRunToView,
   pipelineRunToView,
   scheduledTaskToView,
 } from "../run";
@@ -21,6 +22,7 @@ const POLL_MS = 2_000;
  * can invalidate exactly what this feed reads. */
 export const allAgentRunsKey = ["agentRuns", "all"] as const;
 export const allPipelineRunsKey = ["pipelineRuns", "all"] as const;
+export const allGoalRunsKey = ["goalRuns", "all"] as const;
 
 /** A run state that is still progressing (across every kind: agents/skills use
  * `awaiting-approval`, pipelines use `parked`). */
@@ -72,6 +74,13 @@ export function useRunsQuery(): { runs: RunView[] } {
     retry: false,
     select: selectApiResponseBody,
   });
+  const goals = apiClient.goalRuns.listAllGoalRuns.useQuery({
+    queryKey: allGoalRunsKey,
+    refetchInterval: fallbackPoll,
+    refetchIntervalInBackground: true,
+    retry: false,
+    select: selectApiResponseBody,
+  });
   // Deferred tasks join the feed too (the scheduler fires them into real runs);
   // `scheduledTaskToView` drops `dispatched` ones so a fired task isn't doubled.
   // Its poll gates on its own data: while any task still waits, its due time can
@@ -91,10 +100,11 @@ export function useRunsQuery(): { runs: RunView[] } {
     const merged: RunView[] = [
       ...(agents.data ?? []).map((r) => enrichRunWithTask(agentRunToView(r), tasksById)),
       ...(pipelines.data ?? []).map((r) => enrichRunWithTask(pipelineRunToView(r), tasksById)),
+      ...(goals.data ?? []).map((r) => enrichRunWithTask(goalRunToView(r), tasksById)),
       ...(scheduled.data ?? []).flatMap((t) => scheduledTaskToView(t) ?? []),
     ];
     return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-  }, [agents.data, pipelines.data, scheduled.data]);
+  }, [agents.data, pipelines.data, goals.data, scheduled.data]);
 
   // The 2s runs poll is the freshest signal that a run has paused at a gate, so
   // when one *enters* `awaiting-approval` we refetch the pending-approval queue

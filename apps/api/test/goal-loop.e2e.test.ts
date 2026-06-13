@@ -237,4 +237,21 @@ describe("Goal loop API (e2e, demo maker)", () => {
     })
     expect(["done", "error"]).toContain(outcome?.status)
   })
+
+  it("survives an API restart mid-loop — reconstruct continues to done", async () => {
+    await makeGoal("restartgoal", 0, 3)
+    const goalRunId = await runGoal("restartgoal")
+
+    // Kill the API while the maker iteration is in flight; its child dies with it.
+    await app.close()
+    // Re-boot against the same dirs: reconstruct sees a `running` goal whose maker
+    // reconciled to a dead state and re-dispatches the iteration (continuation).
+    app = await boot()
+
+    const final = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status !== "running" ? res.body : null
+    })
+    expect(final.status).toBe("done")
+  })
 })
