@@ -76,6 +76,19 @@
       "standard": "Standardní task",
       "loop": "Loop"
     },
+    "preview": {
+      "single": "ZIBBY to předá: {target}",
+      "loopSummary": "Loop · vykonavatel {maker} · ověření: kontroly projektu · až {n} iterací",
+      "lowConfidence": "nízká jistota"
+    },
+    "edit": {
+      "label": "Upravit"
+    },
+    "override": {
+      "label": "Předat",
+      "hint": "Přepiš zvolený cíl.",
+      "auto": "Výběr ZIBBY (automaticky)"
+    },
     "title": {
       "label": "Název (volitelný)",
       "placeholder": "Krátký název tasku…"

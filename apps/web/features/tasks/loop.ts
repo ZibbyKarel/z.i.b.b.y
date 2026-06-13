@@ -1,4 +1,4 @@
-import type { CreateGoalInput } from "@zibby/contracts";
+import type { CreateGoalInput, ProposedGoal } from "@zibby/contracts";
 
 /** The two kinds of work a loop iteration can run — an agent or a whole pipeline. */
 export type MakerKind = "agent" | "pipeline";
@@ -33,6 +33,26 @@ export const INITIAL_LOOP_STATE: LoopFormState = {
   maxIterations: "5",
   instructions: "",
 };
+
+/**
+ * Phase 11: seed the Loop form (the "Edit" disclosure) from the classifier's
+ * synthesized {@link ProposedGoal}. Lossless with {@link buildCreateGoalBody}: an
+ * unedited submit reproduces the same goal the preview implied — encode the maker,
+ * map the verifier kind, stringify the iteration cap. The dialog re-seeds this
+ * whenever a fresh proposal arrives and the operator hasn't manually edited it.
+ */
+export function proposedGoalToLoopState(goal: ProposedGoal): LoopFormState {
+  return {
+    objective: goal.objective,
+    maker: encodeMaker(goal.maker.kind, goal.maker.id),
+    verifierKind: goal.verifier.kind,
+    commands:
+      goal.verifier.kind === "checks" ? (goal.verifier.commands ?? []).join("\n") : "",
+    reviewer: goal.verifier.kind === "claude" ? goal.verifier.agent : "",
+    maxIterations: String(goal.maxIterations),
+    instructions: goal.instructions,
+  };
+}
 
 const MAKER_SEP = ":";
 

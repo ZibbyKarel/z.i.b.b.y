@@ -76,6 +76,19 @@
       "standard": "Standard task",
       "loop": "Loop"
     },
+    "preview": {
+      "single": "ZIBBY will hand this to {target}",
+      "loopSummary": "Loop · maker {maker} · verifier: project checks · up to {n} iterations",
+      "lowConfidence": "low confidence"
+    },
+    "edit": {
+      "label": "Edit"
+    },
+    "override": {
+      "label": "Hand it to",
+      "hint": "Override the routed destination.",
+      "auto": "ZIBBY's pick (automatic)"
+    },
     "title": {
       "label": "Title (optional)",
       "placeholder": "Short task name…"

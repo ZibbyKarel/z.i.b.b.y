@@ -1,15 +1,14 @@
-import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders as render, screen } from "../../../test/render";
 import { NewTaskDialog } from "./NewTaskDialog";
 
 /**
- * The create-task endpoint and limits query are mocked so the dialog's flow is
- * exercised end-to-end without a backend. `createTask` echoes the contract's
- * discriminated result: a body with a future `scheduledAt` resolves to `scheduled`
- * (the dialog confirms and stays put), everything else to `dispatched` (the dialog
- * redirects to the new run). The limits mock advertises a reset time so the
- * "when limits reset" preset is offered.
+ * Phase 11 unified composer. The create-task + classify mutations and the limits
+ * query are mocked so the one-field → live-preview → dispatch flow runs without a
+ * backend. `classify` echoes a {@link TaskRouting} derived from the typed text
+ * (loop-shaped text → `mode: "loop"` carrying a synthesized `proposedGoal`); the
+ * dialog renders the preview and branches submit on the inferred mode.
  */
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -18,9 +17,53 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-type CreateVars = { body: { text: string; scheduledAt?: number | null } };
-type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
+const CANDIDATES = [
+  { kind: "agent", id: "koder", name: "Kodér" },
+  { kind: "pipeline", id: "delivery", name: "Delivery" },
+];
 
+function apiRouting(text: string, loop: boolean, low: boolean) {
+  if (loop) {
+    return {
+      target: CANDIDATES[1],
+      confidence: 0.85,
+      reason: "loop reason",
+      matchedTerms: [],
+      candidates: CANDIDATES,
+      mode: "loop",
+      proposedGoal: {
+        objective: text,
+        maker: { kind: "pipeline", id: "delivery" },
+        verifier: { kind: "checks" },
+        maxIterations: 6,
+        instructions: text,
+      },
+      paths: [],
+    };
+  }
+  return {
+    target: CANDIDATES[0],
+    confidence: low ? 0.2 : 0.85,
+    reason: "single reason",
+    matchedTerms: [],
+    candidates: CANDIDATES,
+    mode: "single",
+    proposedGoal: null,
+    paths: [],
+  };
+}
+
+const classify = vi.fn(
+  (vars: { body: { text: string } }, opts?: { onSuccess?: (r: unknown) => void }) => {
+    const { text } = vars.body;
+    const loop = /until|loop|dokud/i.test(text);
+    const low = /vague/i.test(text);
+    opts?.onSuccess?.({ status: 200, body: apiRouting(text, loop, low) });
+  },
+);
+
+type CreateVars = { body: { text: string; scheduledAt?: number | null; target?: { kind: string; id?: string } } };
+type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
 const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
   const { scheduledAt, text } = vars.body;
   if (scheduledAt) {
@@ -28,35 +71,22 @@ const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
       status: 201,
       body: {
         outcome: "scheduled",
-        task: {
-          id: "task_1",
-          title: "",
-          text,
-          paths: [],
-          scheduledAt,
-          status: "scheduled",
-          createdAt: new Date(0).toISOString(),
-        },
+        task: { id: "task_1", title: "", text, paths: [], scheduledAt, status: "scheduled", createdAt: new Date(0).toISOString() },
       },
     });
   } else {
     opts?.onSuccess?.({
       status: 201,
-      body: {
-        outcome: "dispatched",
-        runRef: "zibby_123_42",
-        target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" },
-      },
+      body: { outcome: "dispatched", runRef: "zibby_123_42", target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" } },
     });
   }
 });
 
 vi.mock("../mutations", () => ({
+  useClassifyTaskMutation: () => ({ mutate: classify, isPending: false }),
   useCreateTaskMutation: () => ({ mutate: createTask, isPending: false }),
 }));
 
-// The Loop tab creates a goal then starts its run. Both mutations echo a 201 and
-// fire onSuccess synchronously so the create → start → redirect chain runs to the end.
 type GoalVars = { params?: { id: string }; body: Record<string, unknown> };
 type GoalOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
 const createGoal = vi.fn((_vars: GoalVars, opts?: GoalOpts) =>
@@ -70,12 +100,11 @@ vi.mock("../../goals/mutations", () => ({
   useStartGoalMutation: () => ({ mutate: startGoal, isPending: false }),
 }));
 
-// The Loop tab's maker/reviewer dropdowns read these catalogs.
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "koder", name: "Kodér", instructions: "x" }] }),
 }));
 vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({ data: [] }),
+  usePipelinesQuery: () => ({ data: [{ id: "delivery", name: "Delivery" }] }),
 }));
 
 const RESET_AT = Date.now() + 3 * 60 * 60 * 1000;
@@ -90,41 +119,38 @@ vi.mock("../../limits/queries/useLimitsQuery", () => ({
   }),
 }));
 
-describe("NewTaskDialog", () => {
+describe("NewTaskDialog (Phase 11 unified composer)", () => {
   beforeEach(() => {
     push.mockClear();
+    classify.mockClear();
     createTask.mockClear();
     createGoal.mockClear();
     startGoal.mockClear();
   });
 
-  it("renders as a labelled modal dialog with the composer", () => {
+  it("renders one description field, no mode tabs", () => {
     render(<NewTaskDialog onClose={() => {}} />);
     expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Spustit/ })).toBeInTheDocument();
+    // The Standard/Loop tabs are gone — the mode is inferred, not chosen.
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Zadání/)).toBeInTheDocument();
   });
 
   it("surfaces detected paths as removable context chips", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(
-      screen.getByLabelText(/Zadání/),
-      "Srovnej média v ~/Projects/media-vault",
-    );
-    const remove = screen.getByRole("button", {
-      name: "Odebrat cestu ~/Projects/media-vault",
-    });
-    expect(remove).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Zadání/), "Srovnej média v ~/Projects/media-vault");
+    const remove = await screen.findByRole("button", { name: "Odebrat cestu ~/Projects/media-vault" });
     await userEvent.click(remove);
-    expect(
-      screen.queryByRole("button", { name: /Odebrat cestu/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Odebrat cestu/ })).not.toBeInTheDocument();
   });
 
-  it("auto-runs an immediate task: one click dispatches and redirects to the run", async () => {
+  it("classifies a one-shot task and dispatches on one click", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
-    await userEvent.click(screen.getByRole("button", { name: /Spustit/ }));
+    // Live preview appears for the single verdict.
+    expect(await screen.findByText(/ZIBBY to předá/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
 
     expect(createTask).toHaveBeenCalledTimes(1);
     expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
@@ -132,61 +158,76 @@ describe("NewTaskDialog", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("schedules a delayed task: picking a preset parks it and confirms, no redirect", async () => {
+  it("infers a loop and dispatches a goal (createGoal + startGoalRun) on one click", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
-
-    // Choose "In 1 h" — the submit relabels to "Schedule".
-    await userEvent.click(screen.getByRole("button", { name: /Za 1 h/ }));
-    await userEvent.click(screen.getByRole("button", { name: /Naplánovat/ }));
-
-    expect(createTask).toHaveBeenCalled();
-    const last = createTask.mock.calls.at(-1)?.[0];
-    expect(last?.body.scheduledAt).toBeGreaterThan(Date.now());
-    // No run yet → no redirect; the dialog confirms the schedule instead.
-    expect(push).not.toHaveBeenCalled();
-    expect(screen.getByText(/Task přijat/)).toBeInTheDocument();
-  });
-
-  it("Loop tab creates a goal, starts its run, and redirects to the goal run", async () => {
-    const onClose = vi.fn();
-    render(<NewTaskDialog onClose={onClose} />);
-
-    // Switch to the Loop tab — the standard composer gives way to the goal form.
-    await userEvent.click(screen.getByRole("tab", { name: "Loop" }));
     await userEvent.type(
-      screen.getByLabelText(/Cíl/),
-      "Všechny e2e testy procházejí",
+      screen.getByLabelText(/Zadání/),
+      "fix the failing test and keep going until it's green",
     );
-
-    // Pick the maker from the agents/pipelines dropdown. Options are
-    // [placeholder, "Kodér"]; the second is the mocked agent.
-    await userEvent.click(screen.getByLabelText(/Vykonavatel/));
-    const options = screen.getAllByTestId("dropdown-option");
-    await userEvent.click(options[1] as HTMLElement);
+    // The loop preview summarizes maker + checks verifier + iteration cap.
+    expect(await screen.findByText(/Loop · vykonavatel Delivery/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Spustit loop/ }));
 
     expect(createGoal).toHaveBeenCalledTimes(1);
     const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
-    expect(goalBody.objective).toBe("Všechny e2e testy procházejí");
-    expect(goalBody.maker).toEqual({ kind: "agent", id: "koder" });
+    expect(goalBody.maker).toEqual({ kind: "pipeline", id: "delivery" });
     expect(goalBody.verifier).toEqual({ kind: "checks" });
-    expect(goalBody.maxIterations).toBe(5);
+    expect(goalBody.maxIterations).toBe(6);
 
-    // The run is started against the just-created goal, then deep-linked on /runs.
     expect(startGoal).toHaveBeenCalledTimes(1);
-    expect(startGoal.mock.calls[0]?.[0].params).toEqual({ id: goalBody.id });
     expect(push).toHaveBeenCalledWith("/runs?run=goal_run_1");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Edit disclosure pre-fills from the proposal and carries an edited maxIterations", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "retry the build until it works");
+    expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
+
+    // Open "Edit" → the LoopComposer is pre-filled; bump the iteration cap.
+    await userEvent.click(screen.getByRole("button", { name: /Upravit/ }));
+    const iterations = screen.getByLabelText(/Max\. iterací/);
+    await userEvent.clear(iterations);
+    await userEvent.type(iterations, "9");
+
+    await userEvent.click(screen.getByRole("button", { name: /Spustit loop/ }));
+    const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
+    expect(goalBody.maxIterations).toBe(9);
+    // Unedited fields round-trip losslessly from the proposal.
+    expect(goalBody.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(goalBody.verifier).toEqual({ kind: "checks" });
+  });
+
+  it("offers a manual target picker for a low-confidence single verdict", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "vague request");
+    expect(await screen.findByText(/nízká jistota/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Upravit/ }));
+    // The override picker is offered (the candidate list is reachable).
+    expect(screen.getByLabelText(/Předat/)).toBeInTheDocument();
+  });
+
+  it("defers a scheduled loop through createTask with a goal target (not startGoalRun)", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "keep retrying the deploy until it passes");
+    expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Za 1 h/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Naplánovat/ }));
+
+    expect(createGoal).toHaveBeenCalledTimes(1);
+    expect(startGoal).not.toHaveBeenCalled();
+    const taskBody = createTask.mock.calls.at(-1)?.[0].body;
+    expect(taskBody?.target?.kind).toBe("goal");
+    expect(taskBody?.scheduledAt).toBeGreaterThan(Date.now());
   });
 
   it("closes via the cancel action", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);
-    // Two affordances share the "Zrušit" label — the header close (X) and the
-    // footer Cancel button; the footer one is the explicit cancel action.
     const cancels = screen.getAllByRole("button", { name: /Zrušit/ });
     await userEvent.click(cancels[cancels.length - 1] as HTMLElement);
     expect(onClose).toHaveBeenCalled();
