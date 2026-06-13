@@ -17,8 +17,11 @@ export type MakerRef = z.infer<typeof MakerRefSchema>
  * How a goal's verifier decides "satisfied" — a spec, not a new engine:
  * - `checks`: deterministic shell commands (the Phase 2.1 verify-stage assembly,
  *   lifted into `buildVerifyCommand`). `commands` overrides; absent falls back to
- *   the project's `checks` then `DEFAULT_VERIFY_CHECKS`. Exit 0 → satisfied. No
- *   model, no tokens.
+ *   the project's `checks`. Exit 0 → satisfied. No model, no tokens. NOTE: for
+ *   GOALS the runner refuses to fall through to the full-repo `DEFAULT_VERIFY_CHECKS`
+ *   and to run with cwd inside the repo — a `checks` verifier with neither commands
+ *   nor a project's checks (or no worktree/project to run in) parks the goal with
+ *   `verifier-scope` (Phase 12.1/12.2). The pipeline verify stage is unaffected.
  * - `claude`: a fresh agent run on its own (cheaper) model, handed the maker's
  *   diff/output, that returns a verdict. A separate spawn with no shared session
  *   (no session resume exists — decision 8).

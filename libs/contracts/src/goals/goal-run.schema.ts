@@ -19,9 +19,14 @@ export type GoalState = z.infer<typeof GoalStateSchema>
  * - `iterations`: the maxIterations fuse blew (the loop ran out of attempts).
  * - `budget`: a per-iteration budget check went over-cap mid-goal.
  * - `limit` (Phase 9.2): the usage-limit auto-resume flapped past the cap.
- * All three are durable, no-live-child parks, resumable with an operator note.
+ * - `verifier-scope` (Phase 12.1/12.2): a `checks` verifier had no resolvable
+ *   scope (no commands, no project checks) or no safe cwd (no worktree/project) —
+ *   refused rather than running the full-repo default suite or running inside the
+ *   repo. A misconfiguration the operator fixes (add commands / a project), not a
+ *   retryable failure.
+ * All are durable, no-live-child parks, resumable with an operator note.
  */
-export const GoalParkedReasonSchema = z.enum(["iterations", "budget", "limit"])
+export const GoalParkedReasonSchema = z.enum(["iterations", "budget", "limit", "verifier-scope"])
 export type GoalParkedReason = z.infer<typeof GoalParkedReasonSchema>
 
 /** Status of one iteration's maker+verifier cycle. */

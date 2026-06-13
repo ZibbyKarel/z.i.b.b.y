@@ -47,6 +47,36 @@ function tailOf(text: string): string {
   return trimmed.length > VERDICT_MAX_CHARS ? trimmed.slice(trimmed.length - VERDICT_MAX_CHARS) : trimmed
 }
 
+/**
+ * Phase 12.1/12.2 — decide whether a goal `checks` verifier is safe to run, the
+ * single predicate shared by the `drive()` pre-flight park and the `runVerifier`
+ * floor. Returns a readable refusal reason, or `null` when it is safe to run.
+ *
+ * - 12.1 (no scope): neither explicit `commands` nor the project's own `checks` →
+ *   the shared {@link buildVerifyCommand} would fall through to the full-monorepo
+ *   `DEFAULT_VERIFY_CHECKS` (`pnpm lint && tsc && pnpm test`). Refuse it for goals.
+ * - 12.2 (no safe cwd): no worktree and no project path → the only fallback is
+ *   `run.cwd` (inside this repo), from which `pnpm test` climbs to the monorepo
+ *   root. Refuse rather than run checks inside the repo.
+ *
+ * Scope is checked first so the bombed case (no scope AND no cwd) reports the root
+ * misconfiguration. A scoped command with no cwd still refuses (12.2).
+ */
+export function checksVerifierBlocker(
+  commands: string[] | undefined,
+  projectChecks: string[] | undefined,
+  spawnCwd: string | undefined,
+): string | null {
+  const hasScope = (commands?.length ?? 0) > 0 || (projectChecks?.length ?? 0) > 0
+  if (!hasScope) {
+    return "no verifier scope — set goal.verifier.commands or a project's checks (refusing the full-repo default suite)"
+  }
+  if (!spawnCwd) {
+    return "no workspace or project — refusing to run checks with cwd inside the repo"
+  }
+  return null
+}
+
 /** DI token carrying the absolute path of the directory that holds goal run artifacts. */
 export const GOAL_RUNS_DIR = "GOAL_RUNS_DIR"
 
@@ -207,6 +237,22 @@ export class GoalRunnerService implements OnModuleInit {
     // instead of dispatching a fresh one (continuation, not restart).
     let attachRunRef = resume?.attachRunRef
 
+    // Phase 12.1/12.2: a `checks` verifier that can never run safely (no scope, or
+    // no worktree/project to run it in) makes the goal structurally unsatisfiable —
+    // refuse and park BEFORE spending a single maker iteration, rather than spawning
+    // makers whose work could never be verified (and never the full-repo suite).
+    if (goal.verifier.kind === "checks") {
+      const blocker = checksVerifierBlocker(
+        goal.verifier.commands,
+        project?.checks,
+        run.workspace?.path ?? project?.path,
+      )
+      if (blocker) {
+        await this.parkVerifierScope(run, blocker, index)
+        return
+      }
+    }
+
     for (;;) {
       // Per-iteration budget guard (decision 6): the maker counts as one run against
       // the project's daily/weekly cap. Over-cap → park (budget) before spending it.
@@ -340,6 +386,18 @@ export class GoalRunnerService implements OnModuleInit {
       .catch(() => {})
   }
 
+  /**
+   * Phase 12.1/12.2: park a goal whose `checks` verifier has no resolvable scope or
+   * no safe cwd. Writes the readable reason as the iteration verdict so the operator
+   * sees WHY in `RunDetail`, then parks with `verifier-scope` — a misconfiguration to
+   * fix (add commands / a project), not a retryable failure.
+   */
+  private async parkVerifierScope(run: GoalRun, reason: string, index: number): Promise<void> {
+    const verdictFile = path.join(run.cwd, `iteration-${index}.verdict.txt`)
+    await fs.writeFile(verdictFile, `checks verifier refused: ${reason}\n`, "utf8").catch(() => {})
+    await this.parkGoal(run, "verifier-scope", index, verdictFile)
+  }
+
   /** Park the goal for the operator — durable, resumable with a note (decision 4). */
   private async parkGoal(
     run: GoalRun,
@@ -388,12 +446,23 @@ export class GoalRunnerService implements OnModuleInit {
   ): Promise<VerifierVerdict> {
     const spec = goal.verifier
     if (spec.kind === "checks") {
-      const { command, args, spawnCwd } = buildVerifyCommand({
+      // Phase 12.1/12.2 floor: never run the full-repo DEFAULT_VERIFY_CHECKS for a
+      // goal, and never run checks with cwd inside this repo (run.cwd is
+      // apps/api/data/goals/runs/<id>, which climbs to the monorepo root). `drive()`
+      // pre-empts both with a `verifier-scope` park before any maker spawns; this is
+      // the defense-in-depth floor for any direct caller. A resolvable scope =
+      // explicit commands OR the project's own checks; a safe cwd = a worktree or
+      // the project checkout — NOT run.cwd.
+      const spawnCwd = run.workspace?.path ?? project?.path
+      const blocker = checksVerifierBlocker(spec.commands, project?.checks, spawnCwd)
+      if (blocker) return { kind: "checks", satisfied: false, output: `checks verifier refused: ${blocker}` }
+
+      const { command, args } = buildVerifyCommand({
         commands: spec.commands,
         projectChecks: project?.checks,
-        spawnCwd: run.workspace?.path ?? project?.path,
+        spawnCwd,
       })
-      const { code, output } = await this.runShell(command, args, spawnCwd ?? run.cwd)
+      const { code, output } = await this.runShell(command, args, spawnCwd as string)
       return { kind: "checks", satisfied: code === 0, output: tailOf(output) }
     }
     // claude verifier: a fresh agent run handed the goal + iteration context.

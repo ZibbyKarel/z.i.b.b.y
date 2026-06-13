@@ -11,8 +11,15 @@ Progress (loop tracking)
       api tests green; the cross-suite contamination failures (briefing.e2e + 2 uncollected)
       are gone. Incidental: aligned a stray apps/web PageContainer test to the refactored
       `stretch` prop (pre-existing TS2322 from commit 98796a0, unrelated to Phase 12).
-- [ ] 12.1 — Scope/forbid the heavy default verifier
-- [ ] 12.2 — Never run checks from inside the repo
+- [x] 12.1 — Scope/forbid the heavy default verifier (DONE 2026-06-14). Goal `checks`
+      verifier with neither `commands` nor project `checks` now parks `verifier-scope`
+      instead of falling through to the full-repo `DEFAULT_VERIFY_CHECKS`.
+- [x] 12.2 — Never run checks from inside the repo (DONE 2026-06-14). Verifier `spawnCwd`
+      never falls back to `run.cwd` (inside the repo); no worktree/project → park
+      `verifier-scope`. Both guards live in the pure `checksVerifierBlocker` predicate,
+      enforced by a `drive()` pre-flight park (before any maker spawns) + a `runVerifier`
+      floor. New `verifier-scope` GoalParkedReason. Unit + 2 e2e (no-scope parks; scoped
+      but no-project parks; iterations[] empty, suite never spawned). 651/651 api green.
 - [ ] 12.3 — Resource governance in runShell + shutdown hook
 - [ ] 12.4 — Gate reconstruct() re-dispatch (Law 3)
 - [ ] 12.6 — Eliminate double verification

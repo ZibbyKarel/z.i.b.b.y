@@ -202,6 +202,62 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(done.status).toBe("done")
   })
 
+  it("refuses an unscoped checks verifier — parks (verifier-scope), spawns no maker (12.1)", async () => {
+    // A `{kind:"checks"}` verifier with NO commands, run against a project that has
+    // NO checks of its own → would fall through to the full-repo DEFAULT_VERIFY_CHECKS.
+    // The runner must refuse BEFORE dispatching any maker iteration.
+    await request(app.getHttpServer())
+      .post("/api/goals")
+      .send({
+        id: "noscope",
+        objective: "Satisfy noscope",
+        maker: { kind: "pipeline", id: "delivery" },
+        verifier: { kind: "checks" },
+        maxIterations: 3,
+        instructions: "Should never run — no verifier scope.",
+      })
+      .expect(201)
+    const goalRunId = await runGoal("noscope")
+
+    const parked = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status === "parked" ? res.body : null
+    })
+    expect(parked.parkedReason).toBe("verifier-scope")
+    // Parked before the loop → no maker iteration was ever dispatched.
+    expect(parked.iterations).toHaveLength(0)
+    const verdict = await fs.readFile(parked.parked.verdictFile, "utf8")
+    expect(verdict).toMatch(/no verifier scope/)
+  })
+
+  it("refuses a scoped checks verifier with no project/worktree — parks (verifier-scope) (12.2)", async () => {
+    // Explicit commands, but run with NO project → no worktree, no project path →
+    // the only cwd would be run.cwd (inside the repo). Refuse rather than climb to root.
+    await request(app.getHttpServer())
+      .post("/api/goals")
+      .send({
+        id: "nocwd",
+        objective: "Satisfy nocwd",
+        maker: { kind: "pipeline", id: "delivery" },
+        verifier: { kind: "checks", commands: ["true"] },
+        maxIterations: 3,
+        instructions: "Scoped, but nowhere safe to run.",
+      })
+      .expect(201)
+    // Run WITHOUT a project (project is optional on the run endpoint).
+    const start = await request(app.getHttpServer()).post("/api/goals/nocwd/run").send({}).expect(201)
+    const goalRunId = start.body.goalRunId
+
+    const parked = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status === "parked" ? res.body : null
+    })
+    expect(parked.parkedReason).toBe("verifier-scope")
+    expect(parked.iterations).toHaveLength(0)
+    const verdict = await fs.readFile(parked.parked.verdictFile, "utf8")
+    expect(verdict).toMatch(/no workspace or project/)
+  })
+
   it("rejects resuming a non-parked run with 409", async () => {
     await makeGoal("notparked", 0, 3)
     const goalRunId = await runGoal("notparked")
