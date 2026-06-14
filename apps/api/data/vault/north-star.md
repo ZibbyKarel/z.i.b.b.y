@@ -16,10 +16,21 @@ It is a butler and a **second brain** in one: it does the work, and it remembers
 across your professional and personal life alike. Files are the source of truth;
 every surface — HUD and Voice alike — is a view onto them.
 
-The conversation is real-time. Claude runs behind the voice channel: it listens,
-dispatches the same `/tasks` layer the HUD drives — spawning agents, running
-pipelines, querying memory — and narrates as it goes. The butler talks back while
-the work happens, not only after.
+Voice is a conversation, not a command line. You talk; ZIBBY talks back; what you
+want is resolved in the dialogue itself, turn by turn. There is no command grammar
+to learn and no "new task" form to confirm — when ZIBBY understands the intent, it
+dispatches to the same `/tasks` layer the HUD drives, on its own, and tells you it
+has while the work runs. Claude runs behind the voice channel the whole time:
+listening, spawning agents, running pipelines, querying memory, narrating as it
+goes. The butler talks back while the work happens, not only after.
+
+The only thing that ever interrupts that flow is the gate, and only for the
+actions the gate exists for. Read it, find it, draft it, build it in a scratch
+workspace — these just run; ZIBBY narrates. Delete it, buy it, send it, push it to
+the outside world — these stop at the gate and wait for an explicit yes, spoken or
+tapped. So two kinds of "are you sure" must never be confused: confirming that
+ZIBBY understood you is the conversation's job and is never a modal; confirming a
+transactional or destructive action is the gate's job and is never skipped.
 
 The long-term purpose: let one operator run **multiple software-delivery
 engagements in parallel** — ZIBBY does the building and the routine
@@ -28,9 +39,11 @@ actually needed, whether they give that judgment by tap or by voice.
 
 Guiding laws:
 
-- Approval-first is structural — no autonomous commit to the outside world.
-  Voice is an input, never an exception: a transactional action still stops at
-  the gate and waits for an explicit confirmation, spoken or tapped.
+- Approval-first is structural, but it lives only at the gate — dispatching a
+  task is not an approval step. Safe work runs the moment ZIBBY understands it;
+  only actions the gate marks `ask` or `deny` (delete, buy, send, external
+  writes) stop for explicit confirmation, spoken or tapped. Voice is an input,
+  never an exception to this.
 - Voice and HUD are one system — a single task dispatch, a single gate, a single
   source of truth behind two surfaces. Neither can do what the other cannot.
 - Files are the source of truth, including memory (index-first markdown).
