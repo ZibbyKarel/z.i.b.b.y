@@ -71,6 +71,14 @@ export interface RunSpec {
    */
   spawnCwd?: string
   /**
+   * Extra environment variables merged into the child's `env` at spawn (on top of
+   * `process.env` + the intent-dir pin). Carries per-project env/secrets (and any
+   * future per-run config) into the `claude -p` process. ZIBBY-owned keys
+   * (`ZIBBY_INTENT_DIR`) are applied AFTER this map, so a project env can never
+   * override them. Absent for runs that need no extra env (today's default).
+   */
+  env?: Record<string, string>
+  /**
    * Timestamp used for both the run id's middle segment and `startedAt`. Pass it
    * so a wrapper's sandbox-folder name and the resulting run id agree; defaults to
    * `Date.now()` when omitted.

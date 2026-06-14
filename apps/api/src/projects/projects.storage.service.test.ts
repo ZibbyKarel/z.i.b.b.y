@@ -35,6 +35,12 @@ describe("ProjectsStorageService", () => {
     expect(await service.get("media-vault")).toEqual(base)
   })
 
+  it("does not persist the computed hasSecrets onto the manifest", async () => {
+    await service.create(base)
+    const raw = await fs.readFile(path.join(dir, "_projects.json"), "utf8")
+    expect(raw).not.toContain("hasSecrets")
+  })
+
   it("rejects a duplicate id (conflict)", async () => {
     await service.create(base)
     await expect(service.create(base)).rejects.toBeInstanceOf(ProjectConflictError)

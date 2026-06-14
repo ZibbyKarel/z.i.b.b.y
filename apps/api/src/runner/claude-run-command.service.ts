@@ -1,7 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import type { Agent, Skill } from "@zibby/contracts";
+import type { Agent, Hook, McpServer, Skill } from "@zibby/contracts";
 import * as path from "node:path";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { HooksStorageService } from "../hooks/hooks.storage.service";
+import { McpCredentialsStore } from "../mcp/mcp-credentials.store";
+import { McpServersStorageService } from "../mcp/mcp.storage.service";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { mapTools, toSubagentTools } from "./claude-tools";
 
@@ -146,33 +149,75 @@ function withExecutionDirective(task: string): string {
   return `${task}${EXECUTION_DIRECTIVE}`;
 }
 
+/** A single hook command entry in Claude Code's `--settings` JSON. */
+interface HookCommandEntry {
+  type: "command";
+  command: string;
+  timeout?: number;
+}
+
+/** A matcher group: the hooks that run for tools/events matching `matcher`. */
+interface HookMatcherGroup {
+  matcher?: string;
+  hooks: HookCommandEntry[];
+}
+
 /**
- * Settings JSON registering the approval hook on every Bash tool call. The hook
- * gates only destructive commands (it self-filters and otherwise allows), so
- * attaching it unconditionally is cheap. `command` is shell-quoted so a node or
- * hook path with spaces still resolves.
+ * The locked approval hook group — always the FIRST `PreToolUse` group so a
+ * destructive Bash command hits the fail-closed gate before any custom hook can
+ * allow it. `command` is shell-quoted so a node or hook path with spaces still
+ * resolves; argv[2] is the hook's fail-closed deadline (the `timeout` stays a
+ * margin above it so the hook always denies before the CLI can kill it — a killed
+ * hook is a non-decision → the command would auto-run under dontAsk).
  */
-function approvalSettings(): string {
-  // argv[2] = the hook's fail-closed approval deadline; `timeout` stays a margin
-  // above it so the hook always denies before the CLI can kill it (a killed hook
-  // is a non-decision → the command would auto-run under dontAsk).
+function approvalGroup(): HookMatcherGroup {
   const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
-  return JSON.stringify({
-    hooks: {
-      PreToolUse: [
-        {
-          matcher: "Bash",
-          hooks: [
-            {
-              type: "command",
-              command,
-              timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S,
-            },
-          ],
-        },
+  return {
+    matcher: "Bash",
+    hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
+  };
+}
+
+/**
+ * Would a custom hook collide with the locked approval gate's responsibility? A
+ * `PreToolUse` hook whose matcher catches `Bash` (explicitly, or by being empty /
+ * `*` = "match every tool") could `allow` a destructive Bash command the approval
+ * hook is meant to gate. Such hooks are DROPPED at merge time, so a stored hook can
+ * never weaken the gate (Law 1). The check is deliberately conservative — any
+ * matcher token that is empty, `*`, or contains the `Bash` tool name counts as a
+ * collision, even at the cost of refusing an over-broad benign hook.
+ */
+function collidesWithApprovalGate(hook: Hook): boolean {
+  if (hook.event !== "PreToolUse") return false;
+  const matcher = hook.matcher?.trim();
+  if (!matcher || matcher === "*") return true;
+  return matcher
+    .split("|")
+    .map((token) => token.trim())
+    .some((token) => token === "" || token === "*" || token.includes("Bash"));
+}
+
+/**
+ * Build the `--settings` JSON for a run: the locked approval hook plus every
+ * enabled custom hook, grouped by event. The approval group is always present and
+ * FIRST in `PreToolUse`, and any custom hook that could weaken the Bash gate is
+ * filtered out (see {@link collidesWithApprovalGate}) — these two guarantees make
+ * the approval gate structural (Law 1), regardless of what is stored.
+ */
+function buildSettings(customHooks: readonly Hook[]): string {
+  const byEvent: Record<string, HookMatcherGroup[]> = { PreToolUse: [approvalGroup()] };
+  for (const hook of customHooks) {
+    if (collidesWithApprovalGate(hook)) continue;
+    const matcher = hook.matcher?.trim();
+    const group: HookMatcherGroup = {
+      ...(matcher ? { matcher } : {}),
+      hooks: [
+        { type: "command", command: hook.command, ...(hook.timeout ? { timeout: hook.timeout } : {}) },
       ],
-    },
-  });
+    };
+    (byEvent[hook.event] ??= []).push(group);
+  }
+  return JSON.stringify({ hooks: byEvent });
 }
 
 /** A single subagent in the `--agents` catalog JSON. */
@@ -215,12 +260,28 @@ export class ClaudeRunCommandService {
   constructor(
     private readonly agents: AgentsStorageService,
     private readonly skills: SkillsStorageService,
+    private readonly hooks: HooksStorageService,
+    private readonly mcp: McpServersStorageService,
+    private readonly mcpCredentials: McpCredentialsStore,
   ) {}
 
   async buildClaudeCommand(
     opts: ClaudeRunOptions,
   ): Promise<{ command: string; args: string[] }> {
-    const { catalog, allowedTools } = await this.buildCatalog(opts.tools);
+    // Enabled MCP servers are injected into every run: their tools widen the
+    // session allow-list (see buildCatalog) and their connection config rides
+    // `--mcp-config`. A listing failure degrades to no MCP (never blocks the run).
+    const mcpServers = (await this.mcp.list().catch((): McpServer[] => [])).filter(
+      (server) => server.enabled,
+    );
+    const { catalog, allowedTools } = await this.buildCatalog(opts.tools, mcpServers);
+    // Custom hooks merge into `--settings` alongside the locked approval hook; a
+    // listing failure simply yields the approval-only settings (fail-open to the
+    // safe floor, never blocking the run).
+    const customHooks = (await this.hooks.list().catch((): Hook[] => [])).filter(
+      (hook) => hook.enabled,
+    );
+    const mcpConfig = await this.buildMcpConfig(mcpServers);
     const args = [
       "-p",
       withExecutionDirective(opts.task.trim() ? opts.task : KICKOFF_FALLBACK),
@@ -232,11 +293,15 @@ export class ClaudeRunCommandService {
       withOperatingContract(opts.instructions, opts.grounding, opts.resumeContext),
       "--agents",
       JSON.stringify(catalog),
-      // Mid-run approval gate: a PreToolUse hook intercepts destructive Bash and
-      // blocks on a decision RunnerCore writes (see claude-approval-hook.mjs).
+      // Mid-run approval gate (+ any enabled custom hooks): a PreToolUse hook
+      // intercepts destructive Bash and blocks on a decision RunnerCore writes (see
+      // claude-approval-hook.mjs). The approval hook always stays first/authoritative.
       "--settings",
-      approvalSettings(),
+      buildSettings(customHooks),
     ];
+    // Connected MCP servers (UI-managed; the repo-root .mcp.json is NOT wired to
+    // runs). Passed as inline JSON so no temp file is needed; omitted when none.
+    if (mcpConfig) args.push("--mcp-config", JSON.stringify(mcpConfig));
     // Full-transcript logging: stream every step as JSON (the runner flattens it back
     // to readable log lines). `stream-json` requires `--verbose` in print mode.
     if (opts.streamTranscript)
@@ -265,6 +330,7 @@ export class ClaudeRunCommandService {
    */
   private async buildCatalog(
     primaryTools: readonly string[] | undefined,
+    mcpServers: readonly McpServer[] = [],
   ): Promise<{
     catalog: Record<string, CatalogEntry>;
     allowedTools: string[];
@@ -274,7 +340,14 @@ export class ClaudeRunCommandService {
       this.skills.list().catch((): Skill[] => []),
     ]);
 
-    const allowed = new Set<string>(["Agent", ...mapTools(primaryTools)]);
+    // `Agent` lets the run delegate; `Skill` lets it invoke skills and the
+    // materialized custom commands (`/<id>`) downloaded bundles depend on — both
+    // would be denied under `dontAsk` otherwise.
+    const allowed = new Set<string>(["Agent", "Skill", ...mapTools(primaryTools)]);
+    // Each enabled MCP server contributes its whole tool namespace to the
+    // session allow-list. Under `dontAsk` an `mcp__<id>__<tool>` call is denied
+    // unless `mcp__<id>__*` is allowed (the bare `mcp__<id>` does not match).
+    for (const server of mcpServers) allowed.add(`mcp__${server.id}__*`);
     const catalog: Record<string, CatalogEntry> = {};
 
     for (const agent of agents) {
@@ -299,5 +372,43 @@ export class ClaudeRunCommandService {
       };
     }
     return { catalog, allowedTools: [...allowed] };
+  }
+
+  /**
+   * Assemble the `--mcp-config` payload from the enabled servers, merging each
+   * server's secret (from the gitignored credentials store) into its config: a
+   * stdio server gets its secret `env`; an http/sse server gets its secret
+   * `headers` (plus an `authToken` folded into an `Authorization: Bearer` header).
+   * Returns `null` when no servers are enabled so the caller omits the flag.
+   * Secrets are read here and never logged.
+   */
+  private async buildMcpConfig(
+    servers: readonly McpServer[],
+  ): Promise<{ mcpServers: Record<string, Record<string, unknown>> } | null> {
+    if (servers.length === 0) return null;
+    const mcpServers: Record<string, Record<string, unknown>> = {};
+    for (const server of servers) {
+      const creds = await this.mcpCredentials.read(server.id).catch(() => null);
+      if (server.type === "stdio") {
+        mcpServers[server.id] = {
+          type: "stdio",
+          ...(server.command ? { command: server.command } : {}),
+          ...(server.args ? { args: server.args } : {}),
+          ...(creds?.env ? { env: creds.env } : {}),
+        };
+      } else {
+        const headers = {
+          ...(server.headers ?? {}),
+          ...(creds?.headers ?? {}),
+          ...(creds?.authToken ? { Authorization: `Bearer ${creds.authToken}` } : {}),
+        };
+        mcpServers[server.id] = {
+          type: server.type,
+          ...(server.url ? { url: server.url } : {}),
+          ...(Object.keys(headers).length > 0 ? { headers } : {}),
+        };
+      }
+    }
+    return { mcpServers };
   }
 }

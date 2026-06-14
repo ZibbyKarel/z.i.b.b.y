@@ -90,6 +90,13 @@ export class ProjectsStorageService {
   /** Write via a temp file + atomic rename so a crash can't leave a torn manifest. */
   private async writeAtomic(projects: Project[]): Promise<void> {
     await ensureDir(this.dir)
-    await writeFileAtomic(this.file, `${JSON.stringify(projects, null, 2)}\n`)
+    // `hasSecrets` is computed at read time from the separate secrets store — never
+    // persist it on the registry entity (mirrors integrations' `hasCredentials`).
+    const persisted = projects.map((project) => {
+      const copy = { ...project }
+      delete copy.hasSecrets
+      return copy
+    })
+    await writeFileAtomic(this.file, `${JSON.stringify(persisted, null, 2)}\n`)
   }
 }

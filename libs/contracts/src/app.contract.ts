@@ -9,8 +9,10 @@ import { gatesContract } from "./gates/gate.contract"
 import { gateRulesContract } from "./gates/gate-rules.contract"
 import { automationsContract } from "./automations/automations.contract"
 import { channelsContract } from "./channels/channels.contract"
+import { commandsContract } from "./commands/commands.contract"
 import { integrationsContract } from "./integrations/integrations.contract"
 import { mandateContract } from "./mandate/mandate.contract"
+import { mcpContract } from "./mcp/mcp.contract"
 import { memoryContract } from "./memory/memory.contract"
 import {
   categoriesContract,
@@ -18,6 +20,7 @@ import {
   skillCategoriesContract,
 } from "./categories/categories.contract"
 import { healthContract } from "./health/health.contract"
+import { hooksContract } from "./hooks/hooks.contract"
 import { limitsContract } from "./limits/limits.contract"
 import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract"
 import { goalRunsContract, goalsContract } from "./goals/goals.contract"
@@ -40,6 +43,8 @@ export const appContract = c.router({
   categories: categoriesContract,
   skills: skillsContract,
   skillCategories: skillCategoriesContract,
+  hooks: hooksContract,
+  commands: commandsContract,
   projects: projectsContract,
   projectCategories: projectCategoriesContract,
   pipelines: pipelinesContract,
@@ -53,6 +58,7 @@ export const appContract = c.router({
   memory: memoryContract,
   automations: automationsContract,
   integrations: integrationsContract,
+  mcpServers: mcpContract,
   channels: channelsContract,
   mandate: mandateContract,
   health: healthContract,

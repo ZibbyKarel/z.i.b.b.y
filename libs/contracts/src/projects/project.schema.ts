@@ -48,13 +48,33 @@ export const ProjectSchema = z.object({
   checks: z.array(z.string().min(1)).optional(),
   /** Per-engagement run-count budget + concurrency cap (Phase 8.1). */
   budget: ProjectBudgetSchema.optional(),
+  /**
+   * Non-secret environment variables injected into this project's runs (the
+   * `claude -p` process). For values that ARE secret (API keys, DB URLs), use the
+   * separate write-only secrets store — they never live on the committed entity.
+   */
+  env: z.record(z.string(), z.string()).optional(),
+  /**
+   * Computed at read time: whether a secrets file exists. Optional (not defaulted)
+   * so the many synthetic `Project` literals across the codebase need not set it;
+   * the controller always layers the real value onto wire responses.
+   */
+  hasSecrets: z.boolean().optional(),
 })
 export type Project = z.infer<typeof ProjectSchema>
 
 /** Body accepted by `createProject` — the full entity (`id` + `name` + `path` required). */
-export const CreateProjectSchema = ProjectSchema
+export const CreateProjectSchema = ProjectSchema.omit({ hasSecrets: true })
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>
 
-/** Body accepted by `updateProject` — every field optional (partial update), id excluded. */
-export const UpdateProjectSchema = ProjectSchema.omit({ id: true }).partial()
+/** Body accepted by `updateProject` — every field optional (partial update), id + hasSecrets excluded. */
+export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true }).partial()
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>
+
+/**
+ * Write-only secrets body — secret environment variables injected into this
+ * project's runs. A flat string map; never readable over HTTP (no read endpoint;
+ * the entity exposes only `hasSecrets`).
+ */
+export const ProjectSecretsInputSchema = z.record(z.string(), z.string())
+export type ProjectSecretsInput = z.infer<typeof ProjectSecretsInputSchema>

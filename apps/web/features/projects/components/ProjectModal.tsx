@@ -9,11 +9,13 @@ import {
   IconTile,
   Pressable,
   Stack,
+  StatusDot,
   Tag,
   Typography,
 } from "@zibby/design-system";
 import type { Category, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
+import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
 
 export interface ProjectModalProps {
   project: Project;
@@ -22,6 +24,25 @@ export interface ProjectModalProps {
   onClose: () => void;
   onSave: (project: Project, isNew: boolean) => void;
   onDelete: (id: string) => void;
+  /** Persist write-only run secrets for an existing project. */
+  onSetSecrets?: (id: string, secrets: Record<string, string>) => void;
+  /** Remove an existing project's stored run secrets. */
+  onDeleteSecrets?: (id: string) => void;
+  /** Secrets mutation in flight (disables the secrets controls). */
+  settingSecrets?: boolean;
+}
+
+/** Build an ordered env row list from the entity's record (kept stable for inputs). */
+function toRows(record: Record<string, string> | undefined): KeyValueRow[] {
+  return Object.entries(record ?? {}).map(([key, value]) => ({ key, value }));
+}
+
+/** Collapse env rows back to a record, dropping blank keys (last wins on collision). */
+function fromRows(rows: KeyValueRow[]): Record<string, string> | undefined {
+  const entries = rows
+    .map((r): [string, string] => [r.key.trim(), r.value])
+    .filter(([key]) => key.length > 0);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 type ProjectEditValues = {
@@ -68,10 +89,15 @@ export function ProjectModal({
   onClose,
   onSave,
   onDelete,
+  onSetSecrets,
+  onDeleteSecrets,
+  settingSecrets,
 }: ProjectModalProps) {
   const t = useTranslations("projects");
   const tk = useTranslations();
   const [confirm, setConfirm] = useState(false);
+  const [envRows, setEnvRows] = useState<KeyValueRow[]>(toRows(project.env));
+  const [secretRows, setSecretRows] = useState<KeyValueRow[]>([]);
 
   const { renderForm, submit, form } = useFormControls<ProjectEditValues>({
     defaultValues: {
@@ -104,6 +130,7 @@ export function ProjectModal({
           desc: values.desc.trim() || undefined,
           category: values.category || undefined,
           budget,
+          env: fromRows(envRows),
         },
         isNew,
       );
@@ -231,6 +258,83 @@ export function ProjectModal({
               />
             </Stack>
           </Stack>
+
+          <Stack gap="75">
+            <Typography mono size="sm" type="note" variant="secondary">
+              {t("fields.env")}
+            </Typography>
+            <Typography size="xs" type="note" variant="tertiary">
+              {t("fields.envHint")}
+            </Typography>
+            <KeyValueEditor
+              addLabel={t("fields.envAdd")}
+              keyLabel={t("fields.envKey")}
+              keyPlaceholder="NODE_ENV"
+              onChange={setEnvRows}
+              removeLabel={t("fields.envRemove")}
+              rows={envRows}
+              testIdPrefix="project-env"
+              valueLabel={t("fields.envValue")}
+              valuePlaceholder="production"
+            />
+          </Stack>
+
+          {!isNew && onSetSecrets && (
+            <Stack gap="75">
+              <Stack align="center" direction="row" gap="100">
+                <Typography mono size="sm" type="note" variant="secondary">
+                  {t("fields.secrets")}
+                </Typography>
+                <Tag tone={project.hasSecrets ? "accent" : "neutral"}>
+                  <StatusDot size="75" tone={project.hasSecrets ? "ok" : "idle"} />
+                  {project.hasSecrets ? t("fields.secretsStored") : t("fields.secretsNone")}
+                </Tag>
+              </Stack>
+              <Typography size="xs" type="note" variant="tertiary">
+                {t("fields.secretsHint")}
+              </Typography>
+              <KeyValueEditor
+                secret
+                addLabel={t("fields.secretsAdd")}
+                keyLabel={t("fields.secretsKey")}
+                keyPlaceholder="OPENAI_API_KEY"
+                onChange={setSecretRows}
+                removeLabel={t("fields.secretsRemove")}
+                rows={secretRows}
+                testIdPrefix="project-secret"
+                valueLabel={t("fields.secretsValue")}
+                valuePlaceholder="sk-…"
+              />
+              <Stack align="center" direction="row" gap="100">
+                <Button
+                  data-testid="project-secrets-save"
+                  disabled={settingSecrets || fromRows(secretRows) === undefined}
+                  icon="check"
+                  intent="ghost"
+                  onClick={() => {
+                    const secrets = fromRows(secretRows);
+                    if (!secrets) return;
+                    onSetSecrets(project.id, secrets);
+                    setSecretRows([]);
+                  }}
+                  size="sm"
+                >
+                  {t("fields.secretsSave")}
+                </Button>
+                {project.hasSecrets && onDeleteSecrets && (
+                  <Button
+                    disabled={settingSecrets}
+                    icon="trash"
+                    intent="danger"
+                    onClick={() => onDeleteSecrets(project.id)}
+                    size="sm"
+                  >
+                    {t("fields.secretsClear")}
+                  </Button>
+                )}
+              </Stack>
+            </Stack>
+          )}
         </Stack>
       </Dialog>
 

@@ -23,6 +23,7 @@ a vykoná práci — od "postav tuhle webovou aplikaci" po "sleduj moje kanály 
 - [Activity log & briefing](./api/activity.md) — audit log, briefing systém
 - [Approval systém](./api/approvals.md) — druhy schválení, lifecycle
 - [Automatizace](./api/automations.md) — cron/event triggery, targets
+- [Rozšiřitelnost runů](./api/extensibility.md) — commands, MCP servery, hooks, projekt env/secrets vkládané do `claude -p`
 
 ### Frontend (apps/web)
 - [Přehled webu](./web/overview.md) — Next.js App Router, layout, routing

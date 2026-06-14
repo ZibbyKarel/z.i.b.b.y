@@ -8,15 +8,18 @@ import { AutomationsModule } from "./automations/automations.module"
 import { BriefingModule } from "./briefing/briefing.module"
 import { BudgetModule } from "./budget/budget.module"
 import { ChannelsModule } from "./channels/channels.module"
+import { CommandsModule } from "./commands/commands.module"
 import { DiscoveryModule } from "./discovery/discovery.module"
 import { EventsModule } from "./events/events.module"
 import { GateRulesModule } from "./gate-rules/gate-rules.module"
 import { GoalsModule } from "./goals/goals.module"
 import { HealthModule } from "./health/health.module"
+import { HooksModule } from "./hooks/hooks.module"
 import { IntegrationsModule } from "./integrations/integrations.module"
 import { LimitResumeModule } from "./limits-resume/limit-resume.module"
 import { LimitsModule } from "./limits/limits.module"
 import { MandateModule } from "./mandate/mandate.module"
+import { McpModule } from "./mcp/mcp.module"
 import { MemoryModule } from "./memory/memory.module"
 import { RunRecorderModule } from "./memory/run-recorder.module"
 import { PipelinesModule } from "./pipelines/pipelines.module"
@@ -43,6 +46,9 @@ import { TasksModule } from "./tasks/tasks.module"
     BriefingModule,
     AutomationsModule,
     IntegrationsModule,
+    HooksModule,
+    McpModule,
+    CommandsModule,
     MandateModule,
     ChannelsModule,
     DiscoveryModule,

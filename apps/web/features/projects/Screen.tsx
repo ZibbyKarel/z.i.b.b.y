@@ -28,6 +28,8 @@ import {
   useCreateProjectMutation,
   useDeleteProjectCategoryMutation,
   useDeleteProjectMutation,
+  useDeleteProjectSecretsMutation,
+  useSetProjectSecretsMutation,
   useUpdateProjectMutation,
 } from "./mutations";
 import { slug } from "../../utils/slug";
@@ -48,6 +50,8 @@ export function Screen() {
   const deleteProject = useDeleteProjectMutation();
   const createCategory = useCreateProjectCategoryMutation();
   const deleteCategory = useDeleteProjectCategoryMutation();
+  const setSecrets = useSetProjectSecretsMutation();
+  const deleteSecrets = useDeleteProjectSecretsMutation();
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Project | null>(null);
@@ -61,12 +65,24 @@ export function Screen() {
   const openProject = openId ? (projects.find((p) => p.id === openId) ?? null) : null;
 
   const save = (p: Project, isNew: boolean) => {
+    // `hasSecrets` is a computed read-only field — never part of a create/update body.
+    const body = {
+      name: p.name,
+      path: p.path,
+      desc: p.desc,
+      category: p.category,
+      checks: p.checks,
+      budget: p.budget,
+      env: p.env,
+    };
     if (isNew) {
       const id = slug(p.name) || `project-${Date.now()}`;
-      createProject.mutate({ body: { ...p, id } }, { onSuccess: () => setDraft(null) });
+      createProject.mutate({ body: { ...body, id } }, { onSuccess: () => setDraft(null) });
     } else {
-      const { id, ...body } = p;
-      updateProject.mutate({ params: { id }, body }, { onSuccess: () => setOpenId(null) });
+      updateProject.mutate(
+        { params: { id: p.id }, body },
+        { onSuccess: () => setOpenId(null) },
+      );
     }
   };
 
@@ -184,8 +200,11 @@ export function Screen() {
           onDelete={(id) =>
             deleteProject.mutate({ params: { id } }, { onSuccess: () => setOpenId(null) })
           }
+          onDeleteSecrets={(id) => deleteSecrets.mutate({ params: { id } })}
           onSave={save}
+          onSetSecrets={(id, secrets) => setSecrets.mutate({ params: { id }, body: secrets })}
           project={openProject}
+          settingSecrets={setSecrets.isPending || deleteSecrets.isPending}
         />
       )}
 

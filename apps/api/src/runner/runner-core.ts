@@ -373,10 +373,11 @@ export class RunnerCore<R extends BaseRun> {
       // A project-targeted stage spawns inside the project checkout (context
       // loads from cwd); everything else spawns in its sandbox.
       cwd: spec.spawnCwd ?? spec.cwd,
-      // Pin the gate's coordination dir to the sandbox so the hook writes its
-      // request where {@link watchIntentRequest} watches — not into whatever
-      // `--add-dir` target (or project spawn cwd) the destructive command runs in.
-      env: { ...process.env, [INTENT_DIR_ENV]: spec.cwd },
+      // Per-run env (project env/secrets) layered over process.env; the gate's
+      // coordination-dir pin is applied AFTER spec.env so a project can never
+      // override it (the hook must write its request where {@link watchIntentRequest}
+      // watches — not into whatever `--add-dir` target the destructive command runs in).
+      env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     })
@@ -460,8 +461,8 @@ export class RunnerCore<R extends BaseRun> {
     await fs.mkdir(spec.cwd, { recursive: true })
     const child = spawn(spec.command, spec.args, {
       cwd: spec.spawnCwd ?? spec.cwd,
-      // Same coordination-dir pin as the initial spawn (see {@link start}).
-      env: { ...process.env, [INTENT_DIR_ENV]: spec.cwd },
+      // Same per-run env + coordination-dir pin as the initial spawn (see {@link start}).
+      env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     })

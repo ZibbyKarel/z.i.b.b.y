@@ -134,6 +134,57 @@ describe("RunnerCore", () => {
     expect(core.get(run.runId).pct).toBe(100)
   })
 
+  it("spreads spec.env into the child process (per-project env/secrets seam)", async () => {
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "agent-env",
+      command: NODE,
+      args: ["-e", "console.log('ENV ' + process.env.ZIBBY_TEST_SECRET); process.exit(0)"],
+      cwd: path.join(dir, "agent-env_sandbox"),
+      env: { ZIBBY_TEST_SECRET: "from-project" },
+      extra: { label: "env" },
+    })
+    let offset = 0
+    let log = ""
+    for (let i = 0; i < 100; i++) {
+      const chunk = await core.readLog(run.runId, offset)
+      log += chunk.content
+      offset = chunk.nextOffset
+      if (chunk.done) break
+      await sleep(20)
+    }
+    expect(log).toContain("ENV from-project")
+  })
+
+  it("never lets spec.env override the ZIBBY-owned intent-dir pin", async () => {
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    const sandbox = path.join(dir, "agent-pin_sandbox")
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "agent-pin",
+      command: NODE,
+      args: ["-e", `console.log('PIN ' + process.env.${INTENT_DIR_ENV}); process.exit(0)`],
+      cwd: sandbox,
+      // A hostile/clumsy project env must NOT be able to repoint the gate dir.
+      env: { [INTENT_DIR_ENV]: "/tmp/evil" },
+      extra: { label: "pin" },
+    })
+    let offset = 0
+    let log = ""
+    for (let i = 0; i < 100; i++) {
+      const chunk = await core.readLog(run.runId, offset)
+      log += chunk.content
+      offset = chunk.nextOffset
+      if (chunk.done) break
+      await sleep(20)
+    }
+    expect(log).toContain(`PIN ${sandbox}`)
+    expect(log).not.toContain("/tmp/evil")
+  })
+
   it("shutdown() kills a live child, awaits its exit + log flush, and resolves (12.9)", async () => {
     const core = new RunnerCore(dir, strategy)
     await core.init()

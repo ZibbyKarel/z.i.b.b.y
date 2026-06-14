@@ -88,6 +88,7 @@ async function makeHarness(dir: string): Promise<Harness> {
     pipelines as never,
     agents as never,
     { buildClaudeCommand: vi.fn() } as never,
+    { materialize: vi.fn(async () => {}) } as never,
     { assertAvailable: vi.fn(), probe: vi.fn() } as never,
     approvals as never,
     gates as never,
@@ -111,6 +112,7 @@ async function makeHarness(dir: string): Promise<Harness> {
     } as never,
     fakeLogger as never,
     fakeTrace as never,
+    { read: vi.fn(async () => null), has: vi.fn(async () => false) } as never,
   )
 
   // Swap the real core (which spawns processes) for a scriptable double.

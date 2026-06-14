@@ -9,9 +9,11 @@ import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { LimitsService } from "../limits/limits.service"
 import { GroundingService } from "../memory/grounding.service"
+import { ProjectSecretsStore } from "../projects/project-secrets.store"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
+import { CommandMaterializerService } from "../runner/command-materializer.service"
 import { formatClaudeStreamLine } from "../runner/claude-stream-format"
 import { RunnerCore } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
@@ -57,9 +59,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
     private readonly claude: ClaudeRunCommandService,
+    private readonly commandMaterializer: CommandMaterializerService,
     private readonly preflight: ClaudePreflightService,
     private readonly limits: LimitsService,
     private readonly projects: ProjectsStorageService,
+    private readonly projectSecrets: ProjectSecretsStore,
     private readonly workspace: WorkspaceService,
     private readonly grounding: GroundingService,
     private readonly logger: LoggerService,
@@ -243,6 +247,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       spawnCwd = resolved.path
     }
 
+    // Materialize the enabled custom commands into the run's working tree so a
+    // skill/agent that depends on `/<id>` can resolve it. Writes into the spawn cwd
+    // (the worktree for a project run, else the sandbox); best-effort/fail-open.
+    await this.commandMaterializer.materialize(spawnCwd ?? cwd)
+    // Per-project env + secrets injected into this run's process (Phase D).
+    const env = await this.resolveProjectEnv(resolved)
+
     const spec = {
       kind: "agent" as const,
       ownerId: agentId,
@@ -250,6 +261,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       args,
       cwd,
       ...(spawnCwd ? { spawnCwd } : {}),
+      ...(env ? { env } : {}),
       startedMs,
       // The originating request's traceId rides along in the persisted record, so
       // a later mid-run gate (fired from child output, outside any request — even
@@ -277,6 +289,22 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       const all = await this.projects.list().catch((): Project[] => [])
       return all.find((p) => p.name === projectRef) ?? null
     }
+  }
+
+  /**
+   * Phase D: the env vars to inject into this run — the project's non-secret `env`
+   * overlaid with its write-only secrets (secrets win on a key clash). Returns
+   * undefined when the project is unresolved or carries neither (no `env` on the
+   * spec). Secrets are read here and never logged. The runner core applies the
+   * ZIBBY-owned intent-dir pin AFTER this map, so a project can't override it.
+   */
+  private async resolveProjectEnv(
+    project: Project | null,
+  ): Promise<Record<string, string> | undefined> {
+    if (!project) return undefined
+    const secrets = await this.projectSecrets.read(project.id).catch(() => null)
+    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) }
+    return Object.keys(merged).length > 0 ? merged : undefined
   }
 
   /**

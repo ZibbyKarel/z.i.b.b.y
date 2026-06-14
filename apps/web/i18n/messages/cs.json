@@ -11,7 +11,10 @@
     "memory": "Paměť",
     "runs": "Běhy & aktivita",
     "settings": "Nastavení systému",
-    "projects": "Projekty"
+    "projects": "Projekty",
+    "mcp": "MCP servery",
+    "commands": "Příkazy",
+    "hooks": "Hooky"
   },
   "notifications": {
     "attention": "{count} položek vyžaduje pozornost"
@@ -582,13 +585,37 @@
       "escalationThinkLabel": "Thinking · pokus {n}",
       "removeRungAria": "Odebrat příčku {n}",
       "addRung": "Přidat příčku"
+    },
+    "command": {
+      "title": "Nový příkaz",
+      "subtitle": "vytvoří .md soubor na disku",
+      "editTitle": "Upravit příkaz",
+      "editSubtitle": "přepíše .md soubor na disku",
+      "submitLabel": "Vytvořit příkaz",
+      "idLabel": "Identifikátor",
+      "idHint": "Slouží jako /<id> — v editaci zamčeno",
+      "descLabel": "Popis",
+      "descHint": "uloží se jako description ve frontmatteru",
+      "descPlaceholder": "Co příkaz dělá…",
+      "argumentHintLabel": "Nápověda k argumentům",
+      "argumentHintHint": "Zobrazí se operátorovi/agentovi",
+      "allowedToolsLabel": "Povolené tools",
+      "allowedToolsHint": "Oddělené čárkou",
+      "modelLabel": "Model",
+      "modelHint": "Volitelný override (např. opus)",
+      "disableInvocationLabel": "Zakázat model invocation",
+      "disableInvocationHint": "Spustí jen člověk přes /<id>",
+      "enabledLabel": "Aktivní",
+      "instructionsLabel": "Instrukce",
+      "instructionsPlaceholder": "Markdown tělo příkazu (podpora $ARGUMENTS)…"
     }
   },
   "defaults": {
     "skill": "Nový skill",
     "integration": "Nová integrace",
     "agent": "Nový agent",
-    "pipeline": "Nová pipeline"
+    "pipeline": "Nová pipeline",
+    "command": "Nový příkaz"
   },
   "runLog": {
     "aria": "Log běhu {agent}",
@@ -982,7 +1009,23 @@
       "budgetHint": "Limity počtu běhů na okno (Europe/Prague). Při překročení se nové úkoly pozdrží za schválením. Prázdné = bez limitu.",
       "budgetDailyRuns": "běhů / den",
       "budgetWeeklyRuns": "běhů / týden",
-      "budgetMaxConcurrent": "max paralelně"
+      "budgetMaxConcurrent": "max paralelně",
+      "env": "Proměnné prostředí",
+      "envHint": "Ne-tajné env proměnné vkládané do běhů projektu.",
+      "envAdd": "Přidat proměnnou",
+      "envRemove": "Odebrat proměnnou",
+      "secrets": "Secrets",
+      "secretsHint": "Write-only — hodnoty se nikdy nezobrazí zpět.",
+      "secretsStored": "uloženo",
+      "secretsNone": "žádné",
+      "secretsAdd": "Přidat secret",
+      "secretsRemove": "Odebrat secret",
+      "secretsSave": "Uložit secrets",
+      "secretsClear": "Smazat secrets",
+      "envKey": "Klíč",
+      "envValue": "Hodnota",
+      "secretsKey": "Klíč",
+      "secretsValue": "Hodnota"
     },
     "categoryDialog": {
       "title": "Nová kategorie",
@@ -1060,5 +1103,59 @@
       "days": "{days} v {time}",
       "monthly": "Měsíčně {day}. v {time}"
     }
+  },
+  "hooks": {
+    "sectionLabel": "Hooky",
+    "addHook": "Přidat hook",
+    "create": "Vytvořit",
+    "enabledShort": "aktivní",
+    "disabledShort": "vypnuto",
+    "emptyTitle": "Zatím žádné hooky",
+    "emptyDescription": "Hooky jsou shellové příkazy, které Claude Code spustí v určitém bodě sezení. Schvalovací hook je vždy uzamčen jako první — tento katalog umí jen přidávat.",
+    "emptyHint": "// vytvoří ~/zibby/hooks/'<id>'.json",
+    "idLabel": "Identifikátor",
+    "nameLabel": "Název",
+    "eventLabel": "Událost",
+    "matcherLabel": "Matcher nástroje",
+    "matcherHint": "Jen pro PreToolUse/PostToolUse (např. Bash nebo Edit|Write)",
+    "commandLabel": "Příkaz",
+    "commandHint": "Shellový příkaz, který se spustí",
+    "timeoutLabel": "Timeout (s)",
+    "timeoutHint": "Tvrdý limit v sekundách",
+    "enabledLabel": "Aktivní"
+  },
+  "mcp": {
+    "sectionLabel": "MCP servery",
+    "addServer": "Přidat MCP server",
+    "create": "Vytvořit",
+    "emptyTitle": "Zatím žádné MCP servery",
+    "emptyDescription": "MCP servery rozšiřují běhy o nástroje. Secrets (tokeny, env, hlavičky) žijí v odděleném úložišti — tady je jen konfigurace.",
+    "emptyHint": "// vytvoří ~/zibby/mcp-servers/'<id>'.json",
+    "typeLabel": "Transport",
+    "typeStdio": "stdio",
+    "typeHttp": "HTTP",
+    "typeSse": "SSE",
+    "idLabel": "Identifikátor",
+    "nameLabel": "Název",
+    "commandLabel": "Příkaz",
+    "argsLabel": "Argumenty",
+    "argsHint": "Oddělené čárkou",
+    "urlLabel": "URL",
+    "headersLabel": "Hlavičky",
+    "headersHint": "Po řádcích, formát Klíč: Hodnota (jen ne-tajné)",
+    "authTokenLabel": "Auth token",
+    "authTokenHint": "Write-only — uloží se do odděleného úložiště",
+    "credentialsStored": "Secret je uložen — zadej nový pro výměnu",
+    "credentialsNone": "Zatím bez secretu",
+    "enabledLabel": "Aktivní"
+  },
+  "commands": {
+    "title": "Příkazy",
+    "addCommand": "Přidat příkaz",
+    "editCommandAria": "Upravit příkaz {name}",
+    "countSummary": "{count, plural, one {# příkaz} few {# příkazy} other {# příkazů}}",
+    "emptyTitle": "Zatím žádné příkazy",
+    "emptyDescription": "Příkazy jsou vlastní slash-příkazy (/<id>) s Markdown tělem. Při každém běhu se materializují do .claude/commands/.",
+    "emptyHint": "// vytvoří ~/zibby/commands/'<id>'.md"
   }
 }

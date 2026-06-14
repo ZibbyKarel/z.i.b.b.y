@@ -16,10 +16,15 @@ apps/api/data/credentials
 apps/api/data/channels
 apps/api/data/activity
 apps/api/data/budget-ledger
+apps/api/data/mcp-credentials
+apps/api/data/project-secrets
 
 !apps/api/data/agents
 !apps/api/data/automations
 !apps/api/data/skills
+!apps/api/data/hooks
+!apps/api/data/commands
+!apps/api/data/mcp-servers
 
 
 # Env / secrets — never commit

@@ -24,8 +24,10 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { GroundingService } from "../memory/grounding.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
+import { CommandMaterializerService } from "../runner/command-materializer.service"
 import { RunnerCore } from "../runner/runner-core"
 import { LimitsService } from "../limits/limits.service"
+import { ProjectSecretsStore } from "../projects/project-secrets.store"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -99,6 +101,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly pipelines: PipelinesStorageService,
     private readonly agents: AgentsStorageService,
     private readonly claude: ClaudeRunCommandService,
+    private readonly commandMaterializer: CommandMaterializerService,
     private readonly preflight: ClaudePreflightService,
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
@@ -108,6 +111,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly limits: LimitsService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
+    private readonly projectSecrets: ProjectSecretsStore,
   ) {
     this.dir = path.resolve(dir)
     this.log = logger.child(PipelineRunnerService.name)
@@ -877,6 +881,21 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     return ladder[Math.min(attempt - 2, ladder.length - 1)] ?? null
   }
 
+  /**
+   * Phase D: the env vars to inject into a stage — the project's non-secret `env`
+   * overlaid with its write-only secrets (secrets win on a key clash). Returns
+   * undefined when the project is unresolved or carries neither. Secrets are read
+   * here and never logged; the core applies the ZIBBY-owned intent-dir pin after.
+   */
+  private async resolveProjectEnv(
+    project: Project | null,
+  ): Promise<Record<string, string> | undefined> {
+    if (!project) return undefined
+    const secrets = await this.projectSecrets.read(project.id).catch(() => null)
+    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) }
+    return Object.keys(merged).length > 0 ? merged : undefined
+  }
+
   /** Spawn one stage child and wait for it to finish; return its StageRun. */
   private async runStage(
     run: PipelineRun,
@@ -899,6 +918,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.matchedTerms,
       resumeContext,
     )
+    // Materialize enabled custom commands into the stage's working tree (worktree
+    // for a project run, else the sandbox) so commands resolve; best-effort.
+    await this.commandMaterializer.materialize(spawnCwd ?? stageCwd)
+    // Per-project env + secrets injected into this stage's process (Phase D).
+    const env = await this.resolveProjectEnv(project)
     const rec = await this.core.start({
       kind: "pipeline-stage",
       ownerId: `${run.pipelineRunId}.${phase.id}`,
@@ -906,6 +930,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       args,
       cwd: stageCwd,
       ...(spawnCwd ? { spawnCwd } : {}),
+      ...(env ? { env } : {}),
       extra: { pipelineRunId: run.pipelineRunId, phaseId: phase.id, attempt },
     })
     const status = await this.waitForStage(rec.runId)

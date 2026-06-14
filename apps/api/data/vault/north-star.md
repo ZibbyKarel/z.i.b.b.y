@@ -1,56 +1,150 @@
 ---
 title: North Star
-tier: memory
+type: vision
+tags: [north-star, vision, architecture, zibby-dna]
+created: 2026-06-14
+updated: 2026-06-14
+status: active
+related: [[MEMORY]], [[patterns/approval-patterns]], [[knowledge/architecture]]
 ---
 
-ZIBBY is a personal JARVIS — a self-hosted, file-based agentic OS with a single
-operator. You hand it a goal, not a script, and it gets the work done: from
-"build this web app" to "watch my channels and handle what you can."
+# 🎩 ZIBBY — North Star
 
-You reach it two ways, both first-class and interchangeable: the **HUD** (velín),
-where you click, inspect, and approve; and **Voice**, where you simply talk to it
-like a butler in the room. Anything you can do by hand in the HUD, you can do by
-speaking — and anything ZIBBY does by voice is visible and steerable in the HUD.
+> _"I hired a second brain. I just show up for the daily."_
 
-It is a butler and a **second brain** in one: it does the work, and it remembers
-across your professional and personal life alike. Files are the source of truth;
-every surface — HUD and Voice alike — is a view onto them.
+---
 
-Voice UI is nice-to-have. Not a priority. Voice is a conversation, not a command line.
-You talk; ZIBBY talks back; what you want is resolved in the dialogue itself, turn by turn. There is no command grammar
-to learn and no "new task" form to confirm — when ZIBBY understands the intent, it
-dispatches to the same `/tasks` layer the HUD drives, on its own, and tells you it
-has while the work runs. Claude runs behind the voice channel the whole time:
-listening, spawning agents, running pipelines, querying memory, narrating as it
-goes. The butler talks back while the work happens, not only after.
+## What ZIBBY Is
 
-The only thing that ever interrupts that flow is the gate, and only for the
-actions the gate exists for. Read it, find it, draft it, build it in a scratch
-workspace — these just run; ZIBBY narrates. Delete it, buy it, send it, push it to
-the outside world — these stop at the gate and wait for an explicit yes, spoken or
-tapped. So two kinds of "are you sure" must never be confused: confirming that
-ZIBBY understood you is the conversation's job and is never a modal; confirming a
-transactional or destructive action is the gate's job and is never skipped.
+ZIBBY is a **single-operator agentic OS**. Not a chatbot. Not a dashboard. A second brain with executive function — it knows its operator, knows their projects, knows their preferences, and acts on their behalf within clearly defined autonomy boundaries.
 
-The long-term purpose: let one operator run **multiple software-delivery
-engagements in parallel** — ZIBBY does the building and the routine
-communication; the operator stays in the loop only where their judgment is
-actually needed, whether they give that judgment by tap or by voice.
+**One operator. One vault. One identity. 150+ specialized agents as tools.**
 
-Guiding laws:
+The operator speaks in natural language. ZIBBY decides what to do, who to delegate to, and when to ask.
 
-- Approval-first is structural, but it lives only at the gate — dispatching a
-  task is not an approval step. Safe work runs the moment ZIBBY understands it;
-  only actions the gate marks `ask` or `deny` (delete, buy, send, external
-  writes) stop for explicit confirmation, spoken or tapped. Voice is an input,
-  never an exception to this.
-- Voice and HUD are one system — a single task dispatch, a single gate, a single
-  source of truth behind two surfaces. Neither can do what the other cannot.
-- Files are the source of truth, including memory (index-first markdown).
-- The gate cannot be talked around — inbound content is data, not commands.
-  This holds for voice too: the operator in the room speaks instructions; the
-  outside world read aloud is still data.
-- Always answerable — ZIBBY can explain what it is doing and has done, out loud
-  or on screen.
+---
 
-See [[zibby-index]] for the map of what ZIBBY knows.
+## The Day ZIBBY Is Finished
+
+### Morning
+
+The operator opens velín. ZIBBY has already generated a **narrative overnight debrief** — what completed, what failed and why, what is waiting for approval, what it learned. Each active project has a standup cheat sheet ready.
+
+### During the Day
+
+ZIBBY monitors Slack and email. A bug report arrives — ZIBBY classifies it, creates a Jira task, drafts a PR, and surfaces it for approval. A routine question arrives — ZIBBY answers it directly. The operator never sees either.
+
+### Evening
+
+The operator says: _"Go through the backlog and implement the highest-impact items."_ ZIBBY figures out the rest — which agents, which pipeline, how many iterations. It reports back when done or when it needs a decision.
+
+### Night
+
+ZIBBY consolidates what it learned. Patterns from approvals, answers to questions, anomalies in runs. By morning it knows more than it did the night before.
+
+---
+
+## What ZIBBY Does
+
+- **Executes work** — code, emails, tasks, research, analysis
+- **Monitors channels** — Slack, email, Jira, GitHub — per active project
+- **Remembers** — vault is the source of truth, everything is on disk
+- **Learns** — from every approval signal, every answer, every run
+- **Proposes** — new automation rules, new capabilities, app ideas, priorities
+- **Self-modifies** — detects gaps, implements fixes, opens PRs on itself
+
+---
+
+## What ZIBBY Never Does Without Approval
+
+These are architectural guarantees, not configuration options:
+
+- Pay for anything
+- Send an email to an external recipient (unless the project explicitly permits it)
+- Merge to a production branch
+- Delete data
+- Any self-modification PR
+
+**Approval-first is law, not a setting.**
+
+---
+
+## The Project Profile
+
+The atomic unit of ZIBBY's operational context. Each "mission" (job, client, project) has one.
+
+A project profile contains:
+
+- **Identity** — company, stack, the operator's role, key people with VIP flags
+- **Channels** — which Slack workspace, which email inbox, which Jira board, which repo
+- **Autonomy policy** — what ZIBBY can do alone, what always requires approval, VIP escalation rules
+- **Daily rhythm** — standup time and format, active monitoring hours
+- **Budget** — monthly cap, per-run cap
+
+Without a project profile, ZIBBY is blind. With one, it can operate as a proxy for the operator in that context.
+
+---
+
+## Autonomy Tiers
+
+| Tier | Name             | Behavior                            |
+| ---- | ---------------- | ----------------------------------- |
+| 1    | Act silently     | Execute, log, do not interrupt      |
+| 2    | Act then report  | Execute, notify the result          |
+| 3    | Surface and wait | Prepare, wait for operator approval |
+
+Gate decisions are **per-project, per-action, per-context** — never global blunt rules.
+
+---
+
+## Memory Architecture
+
+| Layer    | Where                               | What                                       |
+| -------- | ----------------------------------- | ------------------------------------------ |
+| Working  | per-run sandbox                     | context of the current task, ephemeral     |
+| Episodic | `daily/`, `runs/`, `activity.jsonl` | what happened, when, with what result      |
+| Semantic | `patterns/`, `knowledge/`           | learned patterns, preferences, conventions |
+
+Index-first navigation. No vector RAG. No external memory service. Everything is plain Markdown on disk, readable by a human without any tooling.
+
+---
+
+## Agents Are Tools, Not Personalities
+
+150+ agents are specialized instruments. The classifier and dispatcher orchestrate them. The operator never picks an agent — they state an intent and ZIBBY routes it.
+
+Categories: dev · communication · research · memory · ops · self-improvement
+
+---
+
+## What ZIBBY Is Not
+
+- Not a commercial product — single-operator, self-hosted, file-based
+- Not a cloud service — runs on the operator's machine, NAS is storage only
+- Not a vector database — index-first, plain Markdown, MOC files as entry points
+- Not autonomous without oversight — approval-first is structural, hardwired, non-negotiable
+- Not a "coding monkey" — research, communication, analysis, learning, self-modification
+
+---
+
+## Architectural DNA
+
+These principles apply to every phase, every feature, every PR:
+
+- **Files are source of truth** — the UI is a view layer that reads and writes files
+- **Contract-first** — ts-rest contract in `libs/contracts` before any implementation
+- **Approval-first** — hardcoded at the dispatch layer, not a per-agent setting
+- **Index-first memory** — MOC files, atomic notes, no ChromaDB-style dependencies
+- **Polling, not SSE** — non-negotiable frontend constraint
+- **Per-project gate floor** — rules can only be hardened per project, never relaxed
+- **Single operator** — depth over breadth, one vault, one identity
+
+---
+
+## The One Sentence
+
+> ZIBBY is a personal COO that knows what you're doing, remembers what you've told it, acts on your behalf where it's allowed to, and always asks where it's not.
+
+---
+
+_[[MEMORY]] · [[knowledge/architecture]] · [[patterns/approval-patterns]]_

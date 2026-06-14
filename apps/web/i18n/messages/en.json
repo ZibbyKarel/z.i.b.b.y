@@ -11,7 +11,10 @@
     "memory": "Memory",
     "runs": "Runs & activity",
     "settings": "System settings",
-    "projects": "Projects"
+    "projects": "Projects",
+    "mcp": "MCP servers",
+    "commands": "Commands",
+    "hooks": "Hooks"
   },
   "notifications": {
     "attention": "{count} items need attention"
@@ -582,13 +585,37 @@
       "escalationThinkLabel": "Thinking · retry {n}",
       "removeRungAria": "Remove rung {n}",
       "addRung": "Add rung"
+    },
+    "command": {
+      "title": "New command",
+      "subtitle": "creates a .md file on disk",
+      "editTitle": "Edit command",
+      "editSubtitle": "overwrites the .md file on disk",
+      "submitLabel": "Create command",
+      "idLabel": "Identifier",
+      "idHint": "Used as /<id> — locked in edit mode",
+      "descLabel": "Description",
+      "descHint": "saved as description in the frontmatter",
+      "descPlaceholder": "What the command does…",
+      "argumentHintLabel": "Argument hint",
+      "argumentHintHint": "Shown to the operator/agent",
+      "allowedToolsLabel": "Allowed tools",
+      "allowedToolsHint": "Comma-separated",
+      "modelLabel": "Model",
+      "modelHint": "Optional override (e.g. opus)",
+      "disableInvocationLabel": "Disable model invocation",
+      "disableInvocationHint": "Only a human can run it via /<id>",
+      "enabledLabel": "Enabled",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "Markdown command body ($ARGUMENTS supported)…"
     }
   },
   "defaults": {
     "skill": "New skill",
     "integration": "New integration",
     "agent": "New agent",
-    "pipeline": "New pipeline"
+    "pipeline": "New pipeline",
+    "command": "New command"
   },
   "runLog": {
     "aria": "Run log for {agent}",
@@ -982,7 +1009,23 @@
       "budgetHint": "Run-count caps per window (Europe/Prague). Over a cap, new tasks are held behind an approval. Leave blank for unlimited.",
       "budgetDailyRuns": "runs / day",
       "budgetWeeklyRuns": "runs / week",
-      "budgetMaxConcurrent": "max parallel"
+      "budgetMaxConcurrent": "max parallel",
+      "env": "Environment variables",
+      "envHint": "Non-secret env vars injected into the project’s runs.",
+      "envAdd": "Add variable",
+      "envRemove": "Remove variable",
+      "secrets": "Secrets",
+      "secretsHint": "Write-only — values are never shown back.",
+      "secretsStored": "stored",
+      "secretsNone": "none",
+      "secretsAdd": "Add secret",
+      "secretsRemove": "Remove secret",
+      "secretsSave": "Save secrets",
+      "secretsClear": "Clear secrets",
+      "envKey": "Key",
+      "envValue": "Value",
+      "secretsKey": "Key",
+      "secretsValue": "Value"
     },
     "categoryDialog": {
       "title": "New category",
@@ -1060,5 +1103,59 @@
       "days": "{days} at {time}",
       "monthly": "Monthly on day {day} at {time}"
     }
+  },
+  "hooks": {
+    "sectionLabel": "Hooks",
+    "addHook": "Add hook",
+    "create": "Create",
+    "enabledShort": "enabled",
+    "disabledShort": "disabled",
+    "emptyTitle": "No hooks yet",
+    "emptyDescription": "Hooks are shell commands Claude Code runs at a point in a session. The approval hook is always locked first — this catalog can only add hooks.",
+    "emptyHint": "// creates ~/zibby/hooks/'<id>'.json",
+    "idLabel": "Identifier",
+    "nameLabel": "Name",
+    "eventLabel": "Event",
+    "matcherLabel": "Tool matcher",
+    "matcherHint": "PreToolUse/PostToolUse only (e.g. Bash or Edit|Write)",
+    "commandLabel": "Command",
+    "commandHint": "Shell command that runs",
+    "timeoutLabel": "Timeout (s)",
+    "timeoutHint": "Hard limit in seconds",
+    "enabledLabel": "Enabled"
+  },
+  "mcp": {
+    "sectionLabel": "MCP servers",
+    "addServer": "Add MCP server",
+    "create": "Create",
+    "emptyTitle": "No MCP servers yet",
+    "emptyDescription": "MCP servers extend runs with tools. Secrets (tokens, env, headers) live in a separate store — this is just configuration.",
+    "emptyHint": "// creates ~/zibby/mcp-servers/'<id>'.json",
+    "typeLabel": "Transport",
+    "typeStdio": "stdio",
+    "typeHttp": "HTTP",
+    "typeSse": "SSE",
+    "idLabel": "Identifier",
+    "nameLabel": "Name",
+    "commandLabel": "Command",
+    "argsLabel": "Arguments",
+    "argsHint": "Comma-separated",
+    "urlLabel": "URL",
+    "headersLabel": "Headers",
+    "headersHint": "One per line, Key: Value (non-secret only)",
+    "authTokenLabel": "Auth token",
+    "authTokenHint": "Write-only — stored in a separate vault",
+    "credentialsStored": "A secret is stored — enter a new one to replace it",
+    "credentialsNone": "No secret yet",
+    "enabledLabel": "Enabled"
+  },
+  "commands": {
+    "title": "Commands",
+    "addCommand": "Add command",
+    "editCommandAria": "Edit command {name}",
+    "countSummary": "{count, plural, one {# command} other {# commands}}",
+    "emptyTitle": "No commands yet",
+    "emptyDescription": "Commands are custom slash commands (/<id>) with a Markdown body. They materialize into each run’s .claude/commands/.",
+    "emptyHint": "// creates ~/zibby/commands/'<id>'.md"
   }
 }

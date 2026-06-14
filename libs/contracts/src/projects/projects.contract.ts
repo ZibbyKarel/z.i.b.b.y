@@ -5,6 +5,7 @@ import {
   CreateProjectSchema,
   ProjectIdSchema,
   ProjectSchema,
+  ProjectSecretsInputSchema,
   UpdateProjectSchema,
 } from "./project.schema"
 
@@ -63,6 +64,21 @@ export const projectsContract = c.router(
       pathParams: z.object({ id: ProjectIdSchema }),
       responses: { 200: z.object({ id: ProjectIdSchema }), 404: ErrorSchema },
       summary: "Delete a project (removes only the registry record; files on disk are untouched)",
+    },
+    setProjectSecrets: {
+      method: "PUT",
+      path: "/projects/:id/secrets",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      body: ProjectSecretsInputSchema,
+      responses: { 200: ProjectSchema, 404: ErrorSchema },
+      summary: "Set a project's run secrets (write-only; never read back)",
+    },
+    deleteProjectSecrets: {
+      method: "DELETE",
+      path: "/projects/:id/secrets",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      responses: { 200: ProjectSchema, 404: ErrorSchema },
+      summary: "Remove a project's stored run secrets",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

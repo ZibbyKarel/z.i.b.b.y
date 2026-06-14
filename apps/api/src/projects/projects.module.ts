@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { dataDir } from "../shared/data-dir"
+import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store"
 import { ProjectCategoriesController } from "./project-categories.controller"
 import { ProjectCategoriesStorageService } from "./project-categories.storage.service"
 import { ProjectsController } from "./projects.controller"
@@ -15,6 +16,11 @@ export function resolveProjectsDir(): string {
   return process.env.PROJECTS_DIR ?? dataDir("projects")
 }
 
+/** Default project-secrets dir (gitignored), anchored to `apps/api/data/project-secrets`. */
+export function resolveProjectSecretsDir(): string {
+  return process.env.PROJECT_SECRETS_DIR ?? dataDir("project-secrets")
+}
+
 @Module({
   // ProjectCategoriesController is declared before ProjectsController so its
   // static route (`GET /projects/categories`) registers ahead of `/projects/:id`,
@@ -22,9 +28,11 @@ export function resolveProjectsDir(): string {
   controllers: [ProjectCategoriesController, ProjectsController],
   providers: [
     { provide: PROJECTS_DIR, useFactory: resolveProjectsDir },
+    { provide: PROJECT_SECRETS_DIR, useFactory: resolveProjectSecretsDir },
     ProjectsStorageService,
     ProjectCategoriesStorageService,
+    ProjectSecretsStore,
   ],
-  exports: [ProjectsStorageService, ProjectCategoriesStorageService],
+  exports: [ProjectsStorageService, ProjectCategoriesStorageService, ProjectSecretsStore],
 })
 export class ProjectsModule {}
