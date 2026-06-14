@@ -1,16 +1,19 @@
 name: E2E
 
 # Playwright is the only browser-driven layer and is deliberately separate from the
-# fast CI checks: it cold-starts both dev servers (reuseExistingServer: !CI), runs
-# serially (workers: 1), and carries the usual browser-flake surface. Keep it OUT of
-# required branch-protection checks until it's proven stable, then promote it.
+# fast CI checks: it cold-starts both dev servers (reuseExistingServer: !CI — GitHub
+# Actions sets CI=true on every runner, so servers always boot fresh), runs serially
+# (workers: 1), and carries the usual browser-flake surface. Keep it OUT of required
+# branch-protection checks until it has a green CI track record, then promote it.
 #
-# DISABLED IN CI: the suite is not yet stable in GitHub Actions (the approval
-# throughline needs the `claude` binary, which isn't installed on the runner, and
-# the cold-start dev-server path is flaky). The job is gated to manual runs only so
-# push/PR show it as *skipped*, not failed. The specs still run locally via
-# `pnpm exec playwright test`. To re-enable automatic runs, drop the job-level `if:`
-# below (and trim this note).
+# Phase 15 (2026-06-14): the ubuntu `playwright` job is ENABLED on pull_request +
+# workflow_dispatch (not push — the self-hosted macOS job below covers push to main,
+# so there's no double-run). Phase 14.3 removed the two original blockers: the suite is
+# now token-free (playwright.config.ts apiEnv points CLAUDE_BIN at the committed
+# fake-claude.mjs stub — no real `claude` on the runner), and the cold-start path is
+# deterministic (global-setup drains + presence-gates the approvals queue). The cold
+# `CI=true pnpm e2e` path was proven green 3/3 locally before flipping the gate. Guard:
+# apps/api/test/e2e-workflow.test.ts.
 
 on:
   push:
@@ -28,8 +31,9 @@ permissions:
 
 jobs:
   playwright:
-    # Skipped on push/PR (see DISABLED note above); runs only on manual dispatch.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    # Runs on pull_request + workflow_dispatch (NOT push — the self-hosted macOS job
+    # covers push to main). Token-free + cold-start-deterministic since Phase 14.3.
+    if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

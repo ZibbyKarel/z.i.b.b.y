@@ -10858,6 +10858,15 @@
       "norm_label": "ofkind()"
     },
     {
+      "label": "e2e-workflow.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/e2e-workflow.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_e2e_workflow_test_ts",
+      "community": 701,
+      "norm_label": "e2e-workflow.test.ts"
+    },
+    {
       "label": "channels.e2e.test.ts",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/channels.e2e.test.ts",
@@ -11043,7 +11052,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/integrations.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_integrations_e2e_test_ts",
-      "community": 701,
+      "community": 702,
       "norm_label": "integrations.e2e.test.ts"
     },
     {
@@ -11097,7 +11106,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/agents.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_agents_e2e_test_ts",
-      "community": 702,
+      "community": 703,
       "norm_label": "agents.e2e.test.ts"
     },
     {
@@ -11142,7 +11151,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/mandate.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_mandate_e2e_test_ts",
-      "community": 703,
+      "community": 704,
       "norm_label": "mandate.e2e.test.ts"
     },
     {
@@ -11151,7 +11160,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/limits.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_limits_e2e_test_ts",
-      "community": 704,
+      "community": 705,
       "norm_label": "limits.e2e.test.ts"
     },
     {
@@ -11385,7 +11394,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/gates.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_gates_e2e_test_ts",
-      "community": 705,
+      "community": 706,
       "norm_label": "gates.e2e.test.ts"
     },
     {
@@ -11430,7 +11439,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/projects.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_projects_e2e_test_ts",
-      "community": 706,
+      "community": 707,
       "norm_label": "projects.e2e.test.ts"
     },
     {
@@ -11439,7 +11448,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/observability.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_observability_e2e_test_ts",
-      "community": 707,
+      "community": 708,
       "norm_label": "observability.e2e.test.ts"
     },
     {
@@ -11448,7 +11457,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/categories.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_categories_e2e_test_ts",
-      "community": 708,
+      "community": 709,
       "norm_label": "categories.e2e.test.ts"
     },
     {
@@ -11457,7 +11466,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/memory.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_memory_e2e_test_ts",
-      "community": 709,
+      "community": 710,
       "norm_label": "memory.e2e.test.ts"
     },
     {
@@ -11547,7 +11556,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/skill-categories.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_skill_categories_e2e_test_ts",
-      "community": 710,
+      "community": 711,
       "norm_label": "skill-categories.e2e.test.ts"
     },
     {
@@ -11583,7 +11592,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/skills.e2e.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_skills_e2e_test_ts",
-      "community": 711,
+      "community": 712,
       "norm_label": "skills.e2e.test.ts"
     },
     {
@@ -11592,7 +11601,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/fixtures/flaky-check.mjs",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_fixtures_flaky_check_mjs",
-      "community": 712,
+      "community": 713,
       "norm_label": "flaky-check.mjs"
     },
     {
@@ -11673,7 +11682,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/test/fixtures/counting-check.mjs",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_test_fixtures_counting_check_mjs",
-      "community": 713,
+      "community": 714,
       "norm_label": "counting-check.mjs"
     },
     {
@@ -12744,7 +12753,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/tasks/keyword-scorer.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_tasks_keyword_scorer_test_ts",
-      "community": 714,
+      "community": 715,
       "norm_label": "keyword-scorer.test.ts"
     },
     {
@@ -13761,7 +13770,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/memory/vault.service.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_memory_vault_service_test_ts",
-      "community": 715,
+      "community": 716,
       "norm_label": "vault.service.test.ts"
     },
     {
@@ -14589,7 +14598,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/goals/goal-verifier-scope.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_goals_goal_verifier_scope_test_ts",
-      "community": 716,
+      "community": 717,
       "norm_label": "goal-verifier-scope.test.ts"
     },
     {
@@ -15498,7 +15507,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/runner/runner-core.types.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_runner_runner_core_types_ts",
-      "community": 717,
+      "community": 718,
       "norm_label": "runner-core.types.ts"
     },
     {
@@ -16290,7 +16299,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/runner/claude-tools.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_runner_claude_tools_test_ts",
-      "community": 718,
+      "community": 719,
       "norm_label": "claude-tools.test.ts"
     },
     {
@@ -16299,7 +16308,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/runner/detect-limit.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_runner_detect_limit_test_ts",
-      "community": 719,
+      "community": 720,
       "norm_label": "detect-limit.test.ts"
     },
     {
@@ -16551,7 +16560,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/projects/projects.storage.service.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_projects_projects_storage_service_test_ts",
-      "community": 720,
+      "community": 721,
       "norm_label": "projects.storage.service.test.ts"
     },
     {
@@ -17064,7 +17073,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/gate-rules/gate-rules.storage.service.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_gate_rules_gate_rules_storage_service_test_ts",
-      "community": 721,
+      "community": 722,
       "norm_label": "gate-rules.storage.service.test.ts"
     },
     {
@@ -18225,7 +18234,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/categories.storage.service.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_categories_storage_service_test_ts",
-      "community": 722,
+      "community": 723,
       "norm_label": "categories.storage.service.test.ts"
     },
     {
@@ -18585,7 +18594,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/agents/orchestrator.agent.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_agents_orchestrator_agent_ts",
-      "community": 723,
+      "community": 724,
       "norm_label": "orchestrator.agent.ts"
     },
     {
@@ -18810,7 +18819,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/pipelines/verify-command.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_pipelines_verify_command_test_ts",
-      "community": 724,
+      "community": 725,
       "norm_label": "verify-command.test.ts"
     },
     {
@@ -19242,7 +19251,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/pipelines/pipeline-stage.record.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_pipelines_pipeline_stage_record_ts",
-      "community": 725,
+      "community": 726,
       "norm_label": "pipeline-stage.record.ts"
     },
     {
@@ -19377,7 +19386,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/pipelines/resume-context.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_pipelines_resume_context_test_ts",
-      "community": 726,
+      "community": 727,
       "norm_label": "resume-context.test.ts"
     },
     {
@@ -19728,7 +19737,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/worktree-root.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_worktree_root_test_ts",
-      "community": 727,
+      "community": 728,
       "norm_label": "worktree-root.test.ts"
     },
     {
@@ -19737,7 +19746,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/self-development.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_self_development_test_ts",
-      "community": 728,
+      "community": 729,
       "norm_label": "self-development.test.ts"
     },
     {
@@ -19746,7 +19755,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/data-dir.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_data_dir_test_ts",
-      "community": 729,
+      "community": 730,
       "norm_label": "data-dir.test.ts"
     },
     {
@@ -19944,7 +19953,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/file-storage/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_file_storage_index_ts",
-      "community": 730,
+      "community": 731,
       "norm_label": "index.ts"
     },
     {
@@ -20889,7 +20898,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/integrations/connection-tester.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_integrations_connection_tester_ts",
-      "community": 731,
+      "community": 732,
       "norm_label": "connection-tester.ts"
     },
     {
@@ -21501,7 +21510,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/automations/cron.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_automations_cron_test_ts",
-      "community": 732,
+      "community": 733,
       "norm_label": "cron.test.ts"
     },
     {
@@ -22734,7 +22743,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/sanitize.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_sanitize_test_ts",
-      "community": 733,
+      "community": 734,
       "norm_label": "sanitize.test.ts"
     },
     {
@@ -23220,7 +23229,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/triage/triage-router.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_triage_triage_router_ts",
-      "community": 734,
+      "community": 735,
       "norm_label": "triage-router.ts"
     },
     {
@@ -23301,7 +23310,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/triage/keyword-triager.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_triage_keyword_triager_test_ts",
-      "community": 735,
+      "community": 736,
       "norm_label": "keyword-triager.test.ts"
     },
     {
@@ -23634,7 +23643,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/adapters/adapter.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_adapters_adapter_ts",
-      "community": 736,
+      "community": 737,
       "norm_label": "adapter.ts"
     },
     {
@@ -23913,7 +23922,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/budget/ledger.store.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_budget_ledger_store_test_ts",
-      "community": 737,
+      "community": 738,
       "norm_label": "ledger.store.test.ts"
     },
     {

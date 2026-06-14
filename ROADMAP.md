@@ -1034,6 +1034,42 @@ roadmap header reflects reality and `pnpm e2e` is green (14.3).
 
 ---
 
+## Phase 15 — Re-enable the Playwright e2e job in CI
+
+_The `e2e.yml` ubuntu `playwright` job has been gated to `workflow_dispatch`-only since
+Phase 8.3, DISABLED for two stated reasons: (a) "the approval throughline needs the
+`claude` binary, which isn't installed on the runner" and (b) "the cold-start dev-server
+path is flaky". **Phase 14.3 removed both.** The suite is now token-free (`playwright.config.ts`
+apiEnv points `CLAUDE_BIN` at the committed `fake-claude.mjs` stub) and cold-start-deterministic
+(global-setup drains + presence-gates the approvals queue; the gated agent approval is a
+deterministic stub intent). So the e2e gate can finally run on every PR. Thin CI glue — no
+runtime code changes._
+
+### 15.1 Prove the cold-server path, then re-enable the job (done 2026-06-14)
+
+- **Proof first.** `CI=true pnpm e2e` forces `reuseExistingServer: false`, so Playwright
+  boots its OWN fresh api+web servers and tears them down — the exact path a CI runner
+  takes (GitHub Actions sets `CI=true` by default). Verified **3/3 green (~50s)** on the
+  cold path locally; this also closes the 14.3 caveat that the isolation was only proven on
+  a *reused* dev server.
+- **Re-enable.** Drop the `if: workflow_dispatch`-only gate on the ubuntu `playwright` job
+  so it runs on `pull_request` (the gate's feedback loop) + `workflow_dispatch`, while the
+  existing self-hosted macOS job keeps push-to-`main` coverage — no double-run on push.
+  Refresh the DISABLED note to record that 14.3 unblocked it; keep the job OUT of required
+  branch-protection until it has a CI track record (the existing philosophy).
+- **Guard test** (`apps/api/test/e2e-workflow.test.ts`, mirrors `launchd-plist.test.ts`):
+  static assertions that the playwright job is no longer dispatch-only / runs on PR, caches
+  `~/.cache/ms-playwright` keyed on the Playwright version, runs the suite, and uploads the
+  report; plus that `playwright.config.ts` pins the fake-claude `CLAUDE_BIN` (the token-free
+  guarantee the CI runner depends on). A trimmed workflow or a dropped stub would silently
+  re-break CI overnight — guard the load-bearing shape, not the runner.
+
+**Phase exit criterion:** the ubuntu e2e job runs on PRs (proven green on the `CI=true`
+cold path locally), token-free, with browser caching and report upload; the guard test
+pins the workflow + stub shape; nothing pushed (the PR is the gate).
+
+---
+
 ## Sequencing and dependencies
 
 ```

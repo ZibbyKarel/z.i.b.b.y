@@ -29,6 +29,17 @@ Plan: [docs/plans/phase-14.md](docs/plans/phase-14.md).
 | 14.2 Roadmap ground-truth refresh + Playwright audit | ✅ done (2026-06-14) | rewrote stale "Where we are today" (all gaps closed); ran `pnpm e2e` → fixed real `pipeline-run.spec` label drift (verified green); parked approval/channels cross-spec contamination → 14.3 |
 | 14.3 Playwright cross-spec isolation | ✅ done (2026-06-14) | three compounding defects: text-soup selection (greedy `.first()` "Approve" approved the wrong card → approval/channels seesaw), `.e2e-data` approvals never drained (piled up across runs), and real `claude` for the gated run (non-deterministic). Fixed: kind-scoped `data-testid=approval-card-{kind}`, global-setup drains+gates the queue, `CLAUDE_BIN`→`fake-claude.mjs`+benign intent (token-free, `requires_approval`→catch-all `ask`), durable-outcome asserts. **`pnpm e2e` 10/10 across 3 runs (~48s); web-components 211/211. CLOSES PHASE 14.** |
 
+## Phase 15: re-enable the Playwright e2e job in CI — ✅ COMPLETE (2026-06-14)
+
+14.3 made the e2e suite token-free + cold-start-deterministic, removing the two reasons
+the ubuntu `playwright` job in `e2e.yml` was DISABLED (`workflow_dispatch`-only). Phase 15
+flipped that gate back on for PRs — thin CI glue, no runtime code. Plan:
+[docs/plans/phase-15.md](docs/plans/phase-15.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 15.1 Prove cold path + re-enable ubuntu e2e job + guard test | ✅ done (2026-06-14) | proved the CI path locally first — `CI=true pnpm e2e` (forces `reuseExistingServer:false` → fresh boot, GHA's path) **3/3 green ~50s** (also closes the 14.3 "reused-server only" caveat); flipped the ubuntu `playwright` job gate `workflow_dispatch`-only → `if: github.event_name != 'push'` (PR + dispatch; self-hosted macOS keeps push-to-main, no double-run); refreshed the DISABLED note; guard test `apps/api/test/e2e-workflow.test.ts` pins the job shape + the fake-claude `CLAUDE_BIN`. api 688/688, lint+typecheck clean. **CLOSES PHASE 15.** |
+
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 13.1 Enforce the per-goal budget | ✅ done (2026-06-14) | `GoalSchema.budget` was dead schema; now `goalBudgetExceeded()` (windowed run-count from `iterations[].startedAt`) parks `budget` at the iteration boundary. Composes with the 8.1 project cap. 679/679 green |
@@ -73,18 +84,20 @@ repeated local runs, and ~2× faster now that the gated agent run is a token-fre
 
 ## Next iteration
 
-**Proposed Phase 15 — e2e in CI (fresh-server proof + Playwright on GitHub Actions).**
-14.3 made `pnpm e2e` deterministic *locally* (reused dev server). The remaining gap is
-proving it on a COLD server in CI: `reuseExistingServer: !CI` means CI boots fresh api+web
-every run, which exercises a different state path (disk-loaded approvals, no warm watcher).
-The existing GitHub Actions workflow runs `lint`/`typecheck`/`test` on Node 20 but **not**
-`pnpm e2e`. Phase 15 would: install the Chromium browser in CI, add an `e2e` job (boot the
-two dev servers via the Playwright `webServer` config, `CI=true`), upload the HTML
-report/traces on failure, and confirm the 14.3 isolation work holds on a cold server. Small,
-self-contained, and closes the "deterministic locally but unproven in CI" loop. Candidate
-follow-on if CI cost is a concern: gate the e2e job to PRs touching `apps/web`/`e2e`/contracts.
+**Proposed Phase 16 — CI e2e flake safety net (retries + trace-on-retry).** Phase 15 turned
+the ubuntu Playwright job on for PRs, but `playwright.config.ts` still has `retries: 0`, so
+its `trace: "on-first-retry"` never fires and a single browser hiccup on a CI runner reds a
+PR with no diagnostic. The 2026 best practice for a freshly-CI'd suite is a bounded safety
+net: `retries: process.env.CI ? 2 : 0` (retry only in CI, never mask flakes locally) so a
+real one-off retries while a genuine failure still fails twice, plus trace/screenshot/video
+captured on the retry for the Trace Viewer. Small, self-contained, locally verifiable
+(`CI=true` run still green; a deliberately-flaky fixture proves the retry path), and it
+directly hardens the job Phase 15 shipped. Optional follow-on: a non-blocking `@flaky`
+annotation lane (run-but-don't-block) as a backlog surface, per the research. Sharding is
+**not** warranted yet (10 specs, ~50s) — revisit only as the suite grows.
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
-`agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated). The
+`agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen
+once this iteration in a 688-test run, green on clean re-run). The
 [self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven
 engagement.
