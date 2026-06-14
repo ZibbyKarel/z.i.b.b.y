@@ -59,6 +59,7 @@
     "loadErrorTitle": "Nepodařilo se načíst",
     "loadErrorDescription": "Spojení s API selhalo — tvoje data jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
     "retry": "Zkusit znovu",
+    "mutationError": "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.",
     "targetProject": "Cílový projekt"
   },
   "topbar": {

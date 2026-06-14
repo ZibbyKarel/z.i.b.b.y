@@ -59,6 +59,7 @@
     "loadErrorTitle": "Couldn't load",
     "loadErrorDescription": "The API connection failed — your data is fine, it's just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
+    "mutationError": "That didn't go through — your change wasn't saved. Please try again.",
     "targetProject": "Target project"
   },
   "topbar": {

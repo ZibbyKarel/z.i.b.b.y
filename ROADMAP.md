@@ -1181,6 +1181,29 @@ integrations).
 
 ---
 
+## Phase 43 — Surface silent mutation failures (a global error toaster) — ✅ delivered 2026-06-14
+
+_The write-side twin of the honest-load sweep. The `QueryClient` had only `defaultOptions.queries`
+(no `mutationCache`), and there was **no toast/notification surface** in the app — so a failed write
+(delete / create / toggle / approve / reject) showed the operator **nothing**: click "Delete", the API
+is down, the item silently stays, and they assume it worked. North Star "always answerable" applies to
+writes too. (Verified: `@ts-rest/react-query` + `validateResponse` **throws** on network/unknown-status
+/ schema-drift failures → react-query `onError` fires; known in-contract 4xx resolve to the call site —
+the toaster covers the silent network/server case, the most common one.)_
+
+- New module pub/sub `apps/web/components/Toaster/toastBus.ts` (counter-keyed, no `Date.now`/`Math.random`)
+  + a `Toaster` that subscribes, renders DS `Alert`s in a fixed overlay, auto-dismisses, and dismisses
+  on close. Mounted once in `Providers`.
+- `Providers`' `QueryClient` gained a `MutationCache({ onError: () => toastBus.emit() })` — **one wiring
+  point catches every mutation error app-wide**. The localized copy lives in the `Toaster`
+  (`common.mutationError`), so the non-React cache callback stays i18n-free.
+- i18n `common.mutationError` (cs+en).
+
+**Tests:** `toastBus.test` (subscribe receives emits; unsubscribe stops them) + `Toaster.test`
+(renders the localized error on emit; close dismisses). web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
