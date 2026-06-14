@@ -15,6 +15,27 @@ if (!("ResizeObserver" in globalThis)) {
     ResizeObserver as unknown as typeof globalThis.ResizeObserver;
 }
 
+// Node 25 exposes an experimental global `localStorage` that throws without a
+// `--localstorage-file`, shadowing jsdom's working Storage. Install a minimal
+// in-memory Storage so client preferences (caffeinate, voice) are testable.
+if (typeof window.localStorage?.setItem !== "function") {
+  const store = new Map<string, string>();
+  const memoryStorage: Storage = {
+    get length() {
+      return store.size;
+    },
+    clear: () => store.clear(),
+    getItem: (k) => (store.has(k) ? (store.get(k) ?? null) : null),
+    key: (i) => Array.from(store.keys())[i] ?? null,
+    removeItem: (k) => void store.delete(k),
+    setItem: (k, v) => void store.set(k, String(v)),
+  };
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: memoryStorage,
+  });
+}
+
 // The App-Router hooks have no runtime outside Next. Stub the navigation surface
 // so client components that read the router/pathname render in isolation.
 vi.mock("next/navigation", () => ({

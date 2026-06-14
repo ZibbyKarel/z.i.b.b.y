@@ -5,6 +5,7 @@ import {
   installMockSpeechSynthesis,
   uninstallSpeechSynthesis,
 } from "../../../test/speechSynthesisMock";
+import { setPreferredVoiceURI } from "../voicePreference";
 import { useSpeech } from "./useSpeech";
 
 describe("useSpeech", () => {
@@ -15,6 +16,7 @@ describe("useSpeech", () => {
   });
   afterEach(() => {
     uninstallSpeechSynthesis();
+    window.localStorage.clear();
   });
 
   it("reports support when speechSynthesis exists", () => {
@@ -75,5 +77,21 @@ describe("useSpeech", () => {
     const { result } = renderHook(() => useSpeech());
     act(() => result.current.speak("   ", "cs-CZ"));
     expect(synth.spoken).toHaveLength(0);
+  });
+
+  it("uses the operator's preferred voice over the locale match", () => {
+    setPreferredVoiceURI("en-remote"); // an en-US voice, despite a cs-CZ utterance
+    const { result } = renderHook(() => useSpeech());
+    act(() => synth.emitVoicesChanged());
+    act(() => result.current.speak("Schváleno.", "cs-CZ"));
+    expect(synth.latest().voice?.voiceURI).toBe("en-remote");
+  });
+
+  it("falls back to the locale voice when the preference is unavailable", () => {
+    setPreferredVoiceURI("does-not-exist");
+    const { result } = renderHook(() => useSpeech());
+    act(() => synth.emitVoicesChanged());
+    act(() => result.current.speak("Schváleno.", "cs-CZ"));
+    expect(synth.latest().voice?.voiceURI).toBe("cs-local");
   });
 });

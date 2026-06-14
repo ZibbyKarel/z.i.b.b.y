@@ -21,6 +21,7 @@ import { useVoice } from "../voice";
 import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { MandateSection } from "./components/MandateSection";
 import { SettingsSubnav } from "./components/SettingsSubnav";
+import { VoiceVoiceSetting } from "./components/VoiceVoiceSetting";
 
 type Locale = "cs" | "en";
 
@@ -169,6 +170,12 @@ export function Screen() {
               }
               hint={t("voiceShortcutHint")}
               label={t("voiceShortcut")}
+            />
+            <Divider />
+            <SettingRow
+              control={<VoiceVoiceSetting lang={locale === "cs" ? "cs-CZ" : "en-US"} />}
+              hint={t("voiceVoiceHint")}
+              label={t("voiceVoice")}
             />
           </Stack>
         </HudPanel>

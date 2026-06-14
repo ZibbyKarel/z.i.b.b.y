@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getPreferredVoiceURI } from "../voicePreference";
 
 /** The two locales the voice interface speaks (BCP-47), from the locale cookie. */
 export type SpeechLang = "cs-CZ" | "en-US";
@@ -94,7 +95,13 @@ export function useSpeech(): SpeechSession {
 
       const utt = new SpeechSynthesisUtterance(spoken);
       utteranceRef.current = utt; // prevent GC before onend
-      utt.voice = selectVoice(voicesRef.current, lang);
+      // The operator's chosen voice wins when it's available; otherwise fall back
+      // to the best locale match. Read at speak-time so a Settings change is live.
+      const preferred = getPreferredVoiceURI();
+      const chosen = preferred
+        ? voicesRef.current.find((v) => v.voiceURI === preferred)
+        : undefined;
+      utt.voice = chosen ?? selectVoice(voicesRef.current, lang);
       utt.lang = lang; // always set — Android won't pick a voice otherwise
       utt.rate = 1.05;
       utt.onstart = () => setIsSpeaking(true);
