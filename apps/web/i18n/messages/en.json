@@ -676,6 +676,8 @@
     "micStartLive": "Start listening",
     "micStopLive": "Stop listening",
     "volume": "Volume",
+    "mute": "Mute ZIBBY's voice",
+    "unmute": "Unmute ZIBBY's voice",
     "handToTask": "New task from this",
     "hint": "click the mic for a demo · Esc for HUD",
     "hintLive": "click the mic and speak · Esc for HUD",

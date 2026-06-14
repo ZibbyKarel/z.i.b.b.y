@@ -543,6 +543,51 @@ Settings → Voice, wake word.
 
 ---
 
+## Phase 19 — TTS read-back (`useSpeech`) — ✅ delivered 2026-06-14
+
+_Delivers the **second half of ROADMAP §7.1**: ZIBBY speaks. The command bridge
+(Phase 18) showed acks as text; now they're read aloud over free, browser-native
+`speechSynthesis` — the "spoken result" the North-Star voice DoD requires, at zero
+spend (the §7 cost constraint)._
+
+### 19.1 `useSpeech` — SSR-safe TTS hook
+
+- `features/voice/hooks/useSpeech.ts`: wraps `window.speechSynthesis`. Returns
+  `{ isSupported, isSpeaking, voices, speak(text, lang?), stop }`. Voices resolved
+  via the `voiceschanged` event inside a `useEffect` (`getVoices()` is `[]` on the
+  first call); voice selection = exact locale → on-device `localService` → language
+  prefix → browser default. Hardened against the documented TTS bugs from
+  `docs/research/phase7-voice-web-speech.md`: the utterance is **held in a ref**
+  until `onend` (GC otherwise kills the callback), `cancel()` precedes every
+  `speak()`, `utterance.lang` is always set, and SSR is guarded on every API touch.
+  The overlay only mounts after a user gesture, so the autoplay policy is satisfied.
+
+### 19.2 `VoiceScreen` speaks acks + a mute control + speaking state
+
+- Each new command acknowledgement is spoken once (a `ref` debounces re-renders),
+  in the locale's BCP-47 tag. The previously-dead speaker button is now a **mute
+  toggle** (`aria-pressed`, struck-through glyph when muted; muting also cuts
+  in-flight speech). The orb + status line gain a `speaking` state (`isSpeaking`
+  outranks listen/idle), so the JARVIS HUD animates while ZIBBY talks.
+- i18n `voice.mute` / `voice.unmute` (cs + en).
+
+### Tests
+
+- `useSpeech.test.tsx` (+ a `test/speechSynthesisMock.ts` stub — jsdom has no TTS):
+  support detection, `voiceschanged` voice resolution, `cancel()`-then-`speak()`
+  with the locale set, local exact-locale voice selection, `isSpeaking` toggling on
+  `onstart`/`onend`, `stop()` cancelling, empty-utterance no-op.
+- `VoiceScreen.test.tsx`: an ack is spoken aloud (`speak("Schváleno.","cs-CZ")`); the
+  speaker button mutes (`aria-pressed` flips, `stop()` called). Existing assertions
+  stay green (the speech hook is mocked).
+
+**Out of scope (→ next phases):** speak run outcomes/pending approvals aloud beyond
+the command ack; reconnect backoff ladder; Chrome on-device opt-ins; Settings →
+Voice (mode/language/voice picker); wake word. After this, the only voice work left
+is the optional wake word + Settings surface.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

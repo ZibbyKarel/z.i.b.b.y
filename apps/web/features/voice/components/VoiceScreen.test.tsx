@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import type { VoiceSession } from "../hooks/useVoiceSession";
@@ -16,6 +17,15 @@ const dispatchMock = vi.hoisted(() => ({
   dispatch: vi.fn(),
   ack: null as { key: string } | null,
 }));
+// TTS is unit-tested separately (useSpeech.test); here we mock it to assert the
+// screen speaks acknowledgements aloud.
+const speechMock = vi.hoisted(() => ({
+  speak: vi.fn(),
+  stop: vi.fn(),
+  isSpeaking: false,
+  isSupported: true,
+  voices: [],
+}));
 
 vi.mock("../hooks/useVoiceSession", () => ({
   useVoiceSession: () => mockSession.current,
@@ -25,6 +35,9 @@ vi.mock("../hooks/useVoiceData", () => ({
 }));
 vi.mock("../hooks/useUtteranceDispatch", () => ({
   useUtteranceDispatch: () => dispatchMock,
+}));
+vi.mock("../hooks/useSpeech", () => ({
+  useSpeech: () => speechMock,
 }));
 vi.mock("../../tasks", () => ({ useNewTask: () => ({ open: openSpy }) }));
 vi.mock("next/image", () => ({
@@ -51,6 +64,9 @@ describe("VoiceScreen", () => {
   beforeEach(() => {
     dispatchMock.dispatch.mockClear();
     dispatchMock.ack = null;
+    speechMock.speak.mockClear();
+    speechMock.stop.mockClear();
+    speechMock.isSpeaking = false;
   });
 
   it("dispatches a finalized live utterance to the command bridge", () => {
@@ -64,6 +80,26 @@ describe("VoiceScreen", () => {
     mockSession.current = liveSession({ transcript: "schválit" });
     render(<VoiceScreen onExit={vi.fn()} />);
     expect(screen.getByText("Schváleno.")).toBeInTheDocument();
+  });
+
+  it("speaks the acknowledgement aloud (cs locale)", () => {
+    dispatchMock.ack = { key: "approved" };
+    mockSession.current = liveSession({ transcript: "schválit" });
+    render(<VoiceScreen onExit={vi.fn()} />);
+    expect(speechMock.speak).toHaveBeenCalledWith("Schváleno.", "cs-CZ");
+  });
+
+  it("the speaker button mutes ZIBBY's voice", () => {
+    mockSession.current = liveSession();
+    render(<VoiceScreen onExit={vi.fn()} />);
+    const muteBtn = screen.getByTitle("Ztlumit hlas ZIBBYho");
+    expect(muteBtn).toHaveAttribute("aria-pressed", "false");
+    act(() => muteBtn.click());
+    expect(speechMock.stop).toHaveBeenCalled();
+    expect(screen.getByTitle("Zapnout hlas ZIBBYho")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("renders the live spoken transcript", () => {

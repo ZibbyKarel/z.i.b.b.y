@@ -676,6 +676,8 @@
     "micStartLive": "Začni poslouchat",
     "micStopLive": "Přestaň poslouchat",
     "volume": "Hlasitost",
+    "mute": "Ztlumit hlas ZIBBYho",
+    "unmute": "Zapnout hlas ZIBBYho",
     "handToTask": "Nový task z tohoto",
     "hint": "klikni mikrofon pro demo · Esc pro HUD",
     "hintLive": "klikni mikrofon a mluv · Esc pro HUD",

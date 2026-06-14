@@ -4,7 +4,7 @@
    no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { RUN_STATE } from "../../runs/run";
@@ -14,6 +14,7 @@ import { useNewTask } from "../../tasks";
 import { useVoiceData } from "../hooks/useVoiceData";
 import { useVoiceSession } from "../hooks/useVoiceSession";
 import { useUtteranceDispatch } from "../hooks/useUtteranceDispatch";
+import { type SpeechLang, useSpeech } from "../hooks/useSpeech";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoicePanel } from "./VoicePanel";
 import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
@@ -92,6 +93,28 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     dispatch(spoken);
   }, [mode, transcript, dispatch]);
 
+  // Phase 19: ZIBBY speaks back. Each command acknowledgement is read aloud (unless
+  // muted) via free browser TTS — the "spoken result" half of the North-Star voice
+  // loop. The speaker button mutes; muting also cuts any in-flight speech.
+  const { speak, stop: stopSpeech, isSpeaking } = useSpeech();
+  const [muted, setMuted] = useState(false);
+  const speechLang = lang as SpeechLang;
+  const spokenAck = useRef<typeof ack>(null);
+  useEffect(() => {
+    if (mode !== "live" || muted || !ack || ack === spokenAck.current) return;
+    spokenAck.current = ack;
+    speak(t(`ack.${ack.key}`), speechLang);
+  }, [ack, mode, muted, speak, t, speechLang]);
+  const toggleMute = () => {
+    setMuted((m) => {
+      if (!m) stopSpeech();
+      return !m;
+    });
+  };
+  // The orb/status reflect speech: `speaking` outranks the listen/idle state.
+  const displayState = isSpeaking ? "speaking" : state;
+  const active = isActive || isSpeaking;
+
   // The manual "new task from this" button: the live transcript, else the demo's
   // last user line so the seam stays exercised deterministically.
   const lastUserUtterance =
@@ -153,8 +176,8 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
           <span
             className="ml-1 inline-block h-1.5 w-1.5 rounded-full transition-all"
             style={{
-              background: isActive ? "var(--color-ok)" : ACCENT,
-              boxShadow: `0 0 8px ${isActive ? "var(--color-ok)" : ACCENT}`,
+              background: active ? "var(--color-ok)" : ACCENT,
+              boxShadow: `0 0 8px ${active ? "var(--color-ok)" : ACCENT}`,
             }}
           />
         </Stack>
@@ -295,22 +318,22 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         {/* ── Center column ─────────────────────────────────────────── */}
         <Stack align="center" gap="300">
           <VoiceTranscript messages={messages} userTag={t("tag.user")} zibbyTag={t("tag.zibby")} />
-          <VoiceOrb state={state} />
+          <VoiceOrb state={displayState} />
 
           {/* Status line */}
           <div className="min-h-[46px] text-center">
             <div
               style={{
                 fontSize: 15.5,
-                fontWeight: isActive ? 500 : 400,
-                color: isActive ? "var(--color-foreground)" : "var(--color-foreground-faint)",
+                fontWeight: active ? 500 : 400,
+                color: active ? "var(--color-foreground)" : "var(--color-foreground-faint)",
                 letterSpacing: "0.01em",
                 transition: "color 0.4s",
               }}
             >
-              {t(`state.${state}`)}
+              {t(`state.${displayState}`)}
             </div>
-            {state === "thinking" && (
+            {displayState === "thinking" && (
               <div className="mt-2 flex items-center justify-center gap-[5px]">
                 {[0, 1, 2].map((i) => (
                   <span
@@ -321,7 +344,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
                 ))}
               </div>
             )}
-            {state === "listening" && !interim && (
+            {displayState === "listening" && !interim && (
               <Typography
                 mono
                 size="2xs"
@@ -395,11 +418,17 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         </button>
 
         <button
-          className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full border border-border bg-transparent text-foreground-dim transition-colors hover:border-accent hover:text-accent"
-          title={t("volume")}
+          aria-pressed={muted}
+          className={`flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full border bg-transparent transition-colors ${
+            muted
+              ? "border-border text-foreground-faint hover:text-foreground-dim"
+              : "border-border text-foreground-dim hover:border-accent hover:text-accent"
+          }`}
+          onClick={toggleMute}
+          title={muted ? t("unmute") : t("mute")}
           type="button"
         >
-          <SpeakerGlyph size={16} />
+          <SpeakerGlyph muted={muted} size={16} />
         </button>
 
         <button
@@ -447,8 +476,9 @@ function MicGlyph({ size }: { size: number }) {
   );
 }
 
-/** Speaker SVG — likewise not in the DS icon set. */
-function SpeakerGlyph({ size }: { size: number }) {
+/** Speaker SVG — likewise not in the DS icon set. Muted draws the sound waves
+ * struck through (so the control reads as mute at a glance). */
+function SpeakerGlyph({ size, muted = false }: { size: number; muted?: boolean }) {
   return (
     <svg
       aria-hidden="true"
@@ -461,7 +491,11 @@ function SpeakerGlyph({ size }: { size: number }) {
       width={size}
     >
       <path d="M11 5L6 9H2v6h4l5 4V5z" />
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
+      {muted ? (
+        <path d="M23 9l-6 6M17 9l6 6" />
+      ) : (
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
+      )}
     </svg>
   );
 }
