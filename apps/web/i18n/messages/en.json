@@ -304,6 +304,9 @@
   },
   "agents": {
     "addAgent": "Add agent",
+    "loadErrorTitle": "Couldn't load agents",
+    "loadErrorDescription": "The API connection failed — your agents are fine, they're just not reachable right now. Check the connection and try again.",
+    "retry": "Try again",
     "sectionLabel": "Agents",
     "editRaw": "Edit raw .agent.md",
     "stopAria": "Stop {skill}",

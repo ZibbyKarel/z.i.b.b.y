@@ -1115,6 +1115,31 @@ level. The existing `PhaseChain.test` (now importing the badges) stays green. we
 
 ---
 
+## Phase 40 — Honest "couldn't load" state: an API error no longer reads as an empty workspace — ✅ delivered 2026-06-14
+
+_The Phase-40 cross-feature coupling sweep found no real smells (the remaining `runs → approvals`,
+`agents → gates`, `settings → voice` imports are legitimate domain composition — a surface reusing the
+component of the domain it displays — not generic-component misplacement), so per the "don't invent
+refactors" guard the loop pivoted to a real functional gap it surfaced: every catalog Screen does
+`const { data = [] } = useXQuery()`, so when the API is **unreachable** the query errors → `data` is
+`[]` → the screen shows its **empty state** ("no agents yet — create your first…"). An outage reads as
+an empty workspace — dishonest status (North Star "always answerable / honest"), and it could nudge the
+operator to recreate entities that already exist. 8 catalog screens share this; only 2 referenced an
+error at all._
+
+- New shared `apps/web/components/LoadError/LoadError.tsx` (mirrors `EmptyState`: i18n-agnostic string
+  props, DS `Card`/`IconTile glyph="warn"`/`Button icon="retry"`) — a warn "couldn't load" card with an
+  optional **retry**. Reusable across every catalog screen.
+- The **agents** Screen (the canonical runner catalog) now distinguishes error from empty: when
+  `useAgentsQuery().isError`, it renders `<LoadError onRetry={refetch}>` instead of the create-first
+  empty state. i18n `agents.loadErrorTitle`/`loadErrorDescription`/`retry` (cs+en).
+
+**Tests:** new `LoadError.test.tsx` — renders title/description; the retry button calls `onRetry`; no
+button without `onRetry`. web/DS green. **Follow-up:** propagate `LoadError` to the other catalog
+screens (skills / pipelines / projects / gates / integrations / memory) in subsequent phases.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

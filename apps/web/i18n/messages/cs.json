@@ -304,6 +304,9 @@
   },
   "agents": {
     "addAgent": "Přidat agenta",
+    "loadErrorTitle": "Nepodařilo se načíst agenty",
+    "loadErrorDescription": "Spojení s API selhalo — tvoji agenti jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
+    "retry": "Zkusit znovu",
     "sectionLabel": "Agenti",
     "editRaw": "Edit raw .agent.md",
     "stopAria": "Zastavit {skill}",

@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { LoadError } from "../../components/LoadError/LoadError";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
@@ -36,7 +37,8 @@ import { useAgentsQuery, useCategoriesQuery } from "./queries";
 
 export function Screen() {
   const ta = useTranslations("agents");
-  const { data: agents = [] } = useAgentsQuery();
+  const agentsQuery = useAgentsQuery();
+  const agents = agentsQuery.data ?? [];
   const { data: categories = [] } = useCategoriesQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const createAgent = useCreateAgentMutation();
@@ -167,7 +169,16 @@ export function Screen() {
           title={ta("title")}
         />
 
-        {categories.length === 0 && list.length === 0 ? (
+        {agentsQuery.isError ? (
+          // Honest status: a failed load must not read as an empty workspace (which would
+          // say "create your first agent" — and could nudge re-creating ones that exist).
+          <LoadError
+            description={ta("loadErrorDescription")}
+            onRetry={() => void agentsQuery.refetch()}
+            retryLabel={ta("retry")}
+            title={ta("loadErrorTitle")}
+          />
+        ) : categories.length === 0 && list.length === 0 ? (
           <EmptyState
             actionLabel={ta("addAgent")}
             description={ta("emptyDescription")}
