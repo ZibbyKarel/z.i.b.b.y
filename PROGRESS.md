@@ -158,18 +158,34 @@ global search + skill-category CRUD were already wired; only per-skill edit/dele
 `AddSkillModal` edit mode (prefill + Save + Delete), `SkillTile` clickable → editor. web/DS+api
 **1464/1464**, tsc + lint clean.
 
+## Phase 22: Settings → Voice TTS voice picker — ✅ COMPLETE (2026-06-14)
+
+Closed the §7.3 voice-picker item. Verified FIRST that pipeline edit/duplicate (the prior
+candidate) is already fully wired — roadmap 2.2 "stub" text was stale. Delivered `voicePreference`
+(localStorage voiceURI), `useSpeech` honours it at speak-time, `VoiceVoiceSetting` (DS Dropdown of
+voices + Test button) in Settings. Test-env fix: in-memory localStorage in vitest.setup (Node 25's
+experimental global Storage shadows jsdom's). web/DS+api **1472/1472**, tsc + lint clean.
+
 ## Next iteration
 
-**Proposed Phase 22 — pipeline edit/duplicate dialog (verify against code FIRST).** Roadmap 2.2
-flagged the edit/duplicate buttons on `features/pipelines/Screen.tsx` as stubs, and the
-`updatePipeline`/`duplicatePipeline` contract endpoints exist — the same shape as the skill gap
-just closed (Phase 21), and pipelines are core to the delivery loop, so high operator value.
-**Critical watch-out:** the §7.3/2.2 roadmap text is stale-prone — Phase 21 found "global search"
-already done. So GROUND by grepping the real code first: are the pipeline edit/duplicate buttons
-actually still stubs, and do `useUpdatePipelineMutation`/`useDuplicatePipelineMutation` already
-exist? If already wired, pivot to the next real gap (the `light.ts` theme stub — design/UX — or
-the optional voice wake word / Settings → Voice). Whatever's chosen, it's a contained mock→real
-slice with its own web-components test (+ e2e only if a new endpoint).
+**Functional North-Star gaps are essentially exhausted.** Voice is complete (listen → command →
+speak → brief + voice picker + shortcut); all CRUD (agents/pipelines/skills/projects/categories),
+channels, briefing, budgets, goals, memory are wired; the §7.3 dead-UI list is closed (global
+search, skill edit/delete, pipeline edit/duplicate all verified done). Remaining items are
+**lower-priority or risky**: light theme (trap — bespoke surfaces hardcode dark), wake word
+(optional, dependency-heavy).
+
+**Proposed Phase 23 — shift to priority-2 DESIGN/UX or priority-3 simplification (per LOOP.md).**
+Concrete candidates, GROUND each against real code first:
+- **Simplification (3):** the voice module grew across 6 phases (17–22) — audit for duplication
+  (e.g. the `locale → cs-CZ|en-US` derivation is repeated in VoiceScreen + Settings; extract a
+  shared `voiceLang(locale)` util) and any dead code, without functional regression.
+- **DESIGN/UX (2):** a velín polish pass on a specific screen's empty/loading/error states for
+  JARVIS readability — pick one screen, make it concrete and testable.
+- **Minor functional:** live/demo voice-mode toggle + mute persistence in Settings (small).
+
+Lean toward the simplification audit (concrete, testable, reduces the 6-phase voice debt) unless
+a design/UX gap stands out on inspection.
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen

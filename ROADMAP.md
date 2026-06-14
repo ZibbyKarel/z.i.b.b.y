@@ -650,6 +650,33 @@ so the existing skills API e2e covers the backend. web/DS+api 1464/1464.
 
 ---
 
+## Phase 22 — Settings → Voice: TTS voice picker — ✅ delivered 2026-06-14
+
+_Closes the §7.3 "Settings → Voice ... TTS voice picker (populated from getVoices())"
+item. Voice config previously exposed only the push-to-talk shortcut; now the
+operator chooses which voice ZIBBY speaks in. (Verified first that the prior
+candidate — pipeline edit/duplicate — is already fully wired; the roadmap 2.2 "stub"
+text was stale.)_
+
+- **`voicePreference.ts`** — localStorage-backed preferred `voiceURI` (device-
+  specific, never sent to the server), SSR-safe; empty/`null` = auto.
+- **`useSpeech`** — `speak()` prefers the chosen voice when present, else the locale
+  match; read at speak-time so a Settings change is live (no cross-component sync).
+- **`VoiceVoiceSetting`** — a self-contained DS `Dropdown` of `speechSynthesis`
+  voices + a "Test" button (speaks a sample); degrades to a note when TTS is
+  unsupported. Wired into the Settings preferences panel.
+- i18n `settings.voice{Voice,VoiceHint,VoiceAuto,VoiceUnsupported}`, `voiceTest`,
+  `voiceTestSample` (cs + en).
+- Test seam: `vitest.setup` installs an in-memory `localStorage` (Node 25's
+  experimental global Storage throws without `--localstorage-file`, shadowing
+  jsdom's — production is unaffected: real browser / SSR-guarded).
+
+**Tests:** `voicePreference` round-trip; `useSpeech` preferred-voice override +
+fallback; `VoiceVoiceSetting` (persist on select, test-speak, unsupported note).
+web/DS+api 1472/1472.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
