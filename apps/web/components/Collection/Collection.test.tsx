@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { GridTestId } from "@zibby/design-system"
 import { Collection } from "./Collection"
+import { LoadErrorTestId } from "../LoadError/LoadError"
 
 const empty = {
   glyph: "spark",
@@ -33,5 +34,19 @@ describe("Collection", () => {
     )
     expect(screen.queryByTestId(GridTestId.Root)).toBeNull()
     expect(screen.getByText("Zatím žádné skilly")).toBeInTheDocument()
+  })
+
+  it("renders the load error (over the empty state) when error is set", () => {
+    render(
+      <Collection
+        empty={empty}
+        error={{ title: "Couldn't load", description: "API down", retryLabel: "Retry", onRetry: () => {} }}
+        items={[]}
+        renderItem={(name: string) => <div key={name}>{name}</div>}
+      />,
+    )
+    expect(screen.getByTestId(LoadErrorTestId.Root)).toBeInTheDocument()
+    // The empty state must NOT show during an outage.
+    expect(screen.queryByText("Zatím žádné skilly")).toBeNull()
   })
 })

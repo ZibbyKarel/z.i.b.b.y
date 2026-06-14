@@ -1162,6 +1162,25 @@ error state to finish the sweep.
 
 ---
 
+## Phase 42 — `Collection` error state finishes the honest-load sweep — ✅ delivered 2026-06-14
+
+_The last screen on the empty-on-error bug: `/integrations` renders through the shared `Collection`
+(which had an `empty` prop but no error state), so an API outage there still read as "no integrations
+yet — connect your first."_
+
+- `Collection` gained an optional `error?: LoadErrorProps` prop (symmetric with `empty:
+  EmptyStateProps`, so the component stays i18n-agnostic): when set it renders `<LoadError>` — **error
+  takes precedence over empty**, then items.
+- `integrations/Screen` keeps the query object and passes
+  `error={integrationsQuery.isError ? {…common.loadError* / refetch} : undefined}`.
+
+**Tests:** `Collection.test` — the load error renders over the empty state when `error` is set
+(existing items/empty cases unchanged). web/DS green (full workspace 1544/1544). **The honest-load
+sweep is now complete across every catalog surface** (agents + skills/pipelines/projects/gates/memory +
+integrations).
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

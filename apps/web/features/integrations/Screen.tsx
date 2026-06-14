@@ -23,7 +23,8 @@ type Editing = "new" | Integration | null;
 
 export function Screen() {
   const t = useTranslations();
-  const { data: integrations = [] } = useIntegrationsQuery();
+  const integrationsQuery = useIntegrationsQuery();
+  const integrations = integrationsQuery.data ?? [];
   const [editing, setEditing] = useState<Editing>(null);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; detail: string } | null>(null);
 
@@ -99,6 +100,16 @@ export function Screen() {
           hint: t("integrations.emptyHint"),
           onAction: () => setEditing("new"),
         }}
+        error={
+          integrationsQuery.isError
+            ? {
+                title: t("common.loadErrorTitle"),
+                description: t("common.loadErrorDescription"),
+                retryLabel: t("common.retry"),
+                onRetry: () => void integrationsQuery.refetch(),
+              }
+            : undefined
+        }
         items={integrations}
         renderItem={(i) => (
           <IntegrationCard
