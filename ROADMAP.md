@@ -1026,6 +1026,29 @@ inbox row showed only state + category + a Tier-3 "needs approval" marker. The o
 
 ---
 
+## Phase 36 — A budget-held task can be released from its own detail — ✅ delivered 2026-06-14
+
+_Audit of the `/projects` (engagements) surface. It's solid — real projects + categories + per-project
+budget bars (used vs daily/weekly cap, tinted by usage) + running/queued/held stats + CRUD — and the
+runs feed already captions a `held` task with its reason. The gap was the connection between them: a
+Phase-8 budget-`held` dispatch carries `approvalId` (its spend-past-cap override, already pending in
+the approvals queue), but `approvalForRun` only matched `awaiting-approval` runs, so clicking the held
+task in `/runs` showed its detail with **no decision panel** — the operator had to hunt for the
+override in the queue to release it._
+
+- `approvalForRun` (`run.ts`): a `held` run now resolves its override approval by `approvalId`
+  (`queue.find(a => a.id === run.approvalId)`). No new server semantics — it's the **same** approval
+  the queue's `ApprovalCard` already approves/rejects; the held task's detail just surfaces it too.
+- No `RunDetail` change needed: its existing approval branch now fires for held tasks, rendering the
+  `RunApprovalGate` (approve releases past the cap; reject denies the override). The PR-gate sub-panel
+  stays pipeline-only, so a held (scheduled-kind) task shows just the clean decision.
+
+**Tests:** `run.test.ts` — `approvalForRun` resolves a held task's override by `approvalId`; returns
+undefined for a held task with none; the existing agent/pipeline/awaiting-approval matches unchanged.
+web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

@@ -85,12 +85,20 @@ export function runTitle(run: RunView): string {
  * The pending approval that belongs to a run waiting on the gate. Agent runs
  * match exactly; a pipeline run's approval is keyed by the STAGE run id
  * (`${pipelineRunId}.${phaseId}_…`), so pipeline rows match on the prefix.
+ * A Phase-8 budget-`held` task names its spend-past-cap override approval directly
+ * (`approvalId`), so the held task's detail can surface — and decide — the same
+ * override that lives in the approvals queue, rather than the operator hunting for it.
  * Generic so the enriched `DashboardApproval` view flows through unchanged.
  */
-export function approvalForRun<A extends Pick<Approval, "runId">>(
+export function approvalForRun<A extends Pick<Approval, "id" | "runId">>(
   queue: readonly A[],
-  run: Pick<RunView, "runId" | "kind" | "status">,
+  run: Pick<RunView, "runId" | "kind" | "status" | "approvalId">,
 ): A | undefined {
+  // A held dispatch points at its override approval by id (it is not "awaiting-approval"
+  // — it hasn't run yet — but the gate decision is the same one queued elsewhere).
+  if (run.status === "held") {
+    return run.approvalId ? queue.find((a) => a.id === run.approvalId) : undefined;
+  }
   if (run.status !== "awaiting-approval") return undefined;
   return queue.find(
     (a) =>

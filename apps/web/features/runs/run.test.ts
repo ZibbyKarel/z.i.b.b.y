@@ -54,6 +54,23 @@ describe("approvalForRun", () => {
     const queue = [approval("writer_123_42", "agent")];
     expect(approvalForRun(queue, run({ status: "running" }))).toBeUndefined();
   });
+
+  it("resolves a budget-held task's spend-past-cap override by approvalId", () => {
+    // A held dispatch isn't "awaiting-approval" (it hasn't run) but names its override.
+    const queue = [approval("spend_cap_1", "task")];
+    const found = approvalForRun(
+      queue,
+      run({ runId: "task_9", kind: "scheduled", status: "held", approvalId: "appr-spend_cap_1" }),
+    );
+    expect(found?.id).toBe("appr-spend_cap_1");
+  });
+
+  it("returns undefined for a held task with no override approval", () => {
+    const queue = [approval("spend_cap_1", "task")];
+    expect(
+      approvalForRun(queue, run({ runId: "task_9", kind: "scheduled", status: "held" })),
+    ).toBeUndefined();
+  });
 });
 
 const baseGoalRun = (over: Partial<GoalRun>): GoalRun => ({
