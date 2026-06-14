@@ -262,6 +262,34 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(verdict).toMatch(/no workspace or project/)
   })
 
+  it("parks (reason budget) when the goal's own dailyRuns budget is reached (13.1)", async () => {
+    // Always-failing verifier (would loop to maxIterations), but budget.dailyRuns: 1 caps
+    // it: iteration 0 runs (fails), then the budget guard parks before iteration 1.
+    const marker = path.join(markersDir, "budgeted.marker")
+    await request(app.getHttpServer())
+      .post("/api/goals")
+      .send({
+        id: "budgeted",
+        objective: "Satisfy budgeted",
+        maker: { kind: "pipeline", id: "delivery" },
+        verifier: { kind: "checks", commands: [`node ${COUNTING_CHECK} ${marker} 9`] },
+        maxIterations: 5,
+        budget: { dailyRuns: 1 },
+        instructions: "iterate",
+      })
+      .expect(201)
+    const goalRunId = await runGoal("budgeted")
+
+    const parked = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status === "parked" ? res.body : null
+    })
+    expect(parked.parkedReason).toBe("budget")
+    // Exactly one iteration ran before the windowed cap tripped.
+    expect(parked.iterations).toHaveLength(1)
+    expect(parked.iterations[0].verifier.satisfied).toBe(false)
+  })
+
   it("rejects resuming a non-parked run with 409", async () => {
     await makeGoal("notparked", 0, 3)
     const goalRunId = await runGoal("notparked")

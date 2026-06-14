@@ -14,6 +14,7 @@ import {
   type GoalRunArtifact,
   GoalRunSchema,
   type Project,
+  type ProjectBudget,
   type VerifierSpec,
 } from "@zibby/contracts"
 import { ActivityLogService } from "../activity/activity-log.service"
@@ -77,6 +78,27 @@ export function checksVerifierBlocker(
     return "no workspace or project — refusing to run checks with cwd inside the repo"
   }
   return null
+}
+
+/**
+ * Phase 13.1 — has the goal's OWN budget (a windowed run-count) been reached? A goal
+ * iteration IS one maker run, so the iteration records are the run ledger — count those
+ * whose `startedAt` falls in the rolling daily / weekly window. No budget or no caps →
+ * never exceeded. This is distinct from `maxIterations` (the total fuse): a per-window
+ * ceiling that composes with the Phase 8.1 project cap (both checked; either parks).
+ */
+export function goalBudgetExceeded(
+  budget: ProjectBudget | undefined,
+  iterations: ReadonlyArray<{ startedAt: string }>,
+  now: Date,
+): boolean {
+  if (!budget) return false
+  const DAY = 24 * 60 * 60 * 1000
+  const countWithin = (ms: number): number =>
+    iterations.filter((i) => now.getTime() - new Date(i.startedAt).getTime() < ms).length
+  if (budget.dailyRuns !== undefined && countWithin(DAY) >= budget.dailyRuns) return true
+  if (budget.weeklyRuns !== undefined && countWithin(7 * DAY) >= budget.weeklyRuns) return true
+  return false
 }
 
 /** DI token carrying the absolute path of the directory that holds goal run artifacts. */
@@ -293,6 +315,12 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       // the project's daily/weekly cap. Over-cap → park (budget) before spending it.
       const budgetOk = await this.budgetOk(project)
       if (!budgetOk) {
+        await this.parkGoal(run, "budget", index)
+        return
+      }
+      // Phase 13.1: the goal's OWN windowed budget, independent of the project cap above.
+      if (goalBudgetExceeded(goal.budget, run.iterations, new Date())) {
+        this.log.info("goal parked: own budget reached", { goalRunId: run.goalRunId, index })
         await this.parkGoal(run, "budget", index)
         return
       }

@@ -11,6 +11,17 @@ Make ZIBBY a safe target for its own loop engine (the "MEMORY BOMB" RCA).
 its own repo under the [self-development runbook](docs/ops/self-development.md).
 Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 
+## Phase 13: self-development payoff — in progress
+
+The payoff of Phase 12: enforce the last governance piece + prove it end-to-end.
+Plan: [docs/plans/phase-13.md](docs/plans/phase-13.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 13.1 Enforce the per-goal budget | ✅ done (2026-06-14) | `GoalSchema.budget` was dead schema; now `goalBudgetExceeded()` (windowed run-count from `iterations[].startedAt`) parks `budget` at the iteration boundary. Composes with the 8.1 project cap. 679/679 green |
+| 13.2 Self-development exit demonstration | ⬜ next | sibling-checkout smoke: builder tree untouched, worktree under `ZIBBY_WORKTREE_ROOT`, no full-repo suite, no orphan |
+| 13.3 launchd daemon + `GOAL_AUTO_RESUME` | ⬜ | unattended builder resumes across reboots |
+
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 12.5 Global e2e data-dir + runner-mode isolation | ✅ done (2026-06-14) | temp `ZIBBY_DATA_DIR` (seeded, volatile filtered) + `AGENT_RUNNER_MODE=demo` + fake `CLAUDE_BIN` in `vitest.setup.ts`; `data-dir.ts` VITEST tripwire. Full `pnpm test` no longer touches `apps/api/data` or spawns real claude. 643/643 api tests green. |
@@ -39,29 +50,22 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
 - `categories.e2e` "rejects a duplicate" — flakes only under full-suite load; passes
   6/6 in isolation. Pre-existing under-load timing flake.
 
-## Next iteration — Phase 12 is closed; propose Phase 13
+## Next iteration
 
-**Phase 13 — self-development exit demonstration + spend governance (proposed).** Phase
-12 made the repo *safe* to target; Phase 13 is the *payoff* — prove it end-to-end and
-wire the one resource-governance piece 12.8 documented but didn't enforce:
-
-- **13.1 Per-goal compute budget enforced (not just documented).** 12.8 named
-  resource-governance as a contract dimension but the per-goal token/compute cap is still
-  only the interim 12.3 timeout + 8.1 per-project budget. Add a `budget` ceiling on the
-  goal itself (the `GoalSchema.budget` field exists — wire it into the iteration loop:
-  over-cap → park `budget`, the existing reason). e2e: a goal with a tiny budget parks
-  after N iterations. Reuses 8.1 `BudgetService` + the existing `decideStop` budget arm.
-- **13.2 Self-development smoke (the Phase 12 exit demonstration).** A demo-mode e2e that
-  registers a *sibling fixture checkout* as a project, points a goal (delivery-pipeline
-  maker + scoped verifier) at it, runs to done, and asserts: the builder's own tree is
-  untouched (git status clean on the runner repo), the worktree lived under
-  `ZIBBY_WORKTREE_ROOT`, no full-repo suite ran, no orphan child. Codifies the Phase 12
-  exit criterion as an executable test, not just a checklist.
-- **13.3 (stretch) launchd daemon + `GOAL_AUTO_RESUME`** wiring (Phase 8.3 territory) so
-  an unattended builder can resume across reboots — the only place auto-resume is
-  legitimate.
-
-Pick 13.1 first (smallest, enforces the last governance gap); 13.2 is the capstone demo.
-Alternatively, if the operator wants to *actually* self-develop now, the
-[runbook](docs/ops/self-development.md) is ready — that's an operator action, not a loop
-iteration.
+**Phase 13.2 — self-development exit demonstration (sibling-checkout smoke).** The Phase
+12 exit criterion as an EXECUTABLE test, not a checklist. A demo-mode e2e (likely a new
+`apps/api/test/self-development.e2e.test.ts`) that: inits a **sibling fixture git repo**
+(a tiny project, NOT the ZIBBY repo) with explicit scoped `checks: ["true"]`, registers
+it as a project, points a goal (delivery-pipeline maker + checks verifier) at it, runs to
+done in demo mode, then asserts the Phase 12 invariants end-to-end:
+- the goal's worktree lived under `ZIBBY_WORKTREE_ROOT` (the vitest temp), NOT inside the
+  fixture repo nor `apps/api/data` (12.7);
+- the fixture repo's main checkout is untouched / clean except the goal's own `zibby/*`
+  branch (3.1 / 12.7);
+- no full-monorepo suite spawned (the scoped `["true"]` verifier ran, 12.1/12.2);
+- after `app.close()` no orphan child remains (12.3/12.9) — assert via the run dir / a
+  liveness probe on the recorded pgid.
+Reuses `initGitRepo` + the demo runner; keep cleanup with `fs.rm maxRetries/retryDelay`.
+Then 13.3 (launchd + `GOAL_AUTO_RESUME`) as the unattended-builder closer. If the operator
+wants to *actually* self-develop now, the [runbook](docs/ops/self-development.md) is ready
+— that's an operator action, not a loop iteration.
