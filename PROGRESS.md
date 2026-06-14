@@ -139,20 +139,29 @@ orb/status gain a `speaking` state. `test/speechSynthesisMock.ts` stub (jsdom ha
 web/DS+api **1452/1452**, apps/web tsc + lint clean. The voice loop is now bidirectional:
 spoken task → run → spoken command result.
 
+## Phase 20: spoken butler's briefing + run-outcome announce — ✅ COMPLETE (2026-06-14)
+
+Finishes §7.2's "voice reads outcomes/approvals aloud". `briefing.ts` (pure):
+`summarizeBriefing` → facts (running agents, pending approvals + top, recent done/error, quiet)
++ `pickNewlyFinished(announced, recent)`. `VoiceScreen`: a "Brief me" button speaks a template-
+first cs/en summary (explicit → speaks through mute); an effect announces runs reaching a
+terminal state *while voice is open* (seeded from first feed so history isn't replayed). web/DS+
+api **1459/1459**, tsc + lint clean. The core voice loop is complete: **listen → command →
+speak → brief**.
+
 ## Next iteration
 
-**Proposed Phase 20 — spoken briefing: read outcomes + pending approvals aloud.** This finishes
-the §7.2 line "voice reads run outcomes and pending approvals aloud" and makes ZIBBY a genuine
-voice **butler** ("Two bugs came in overnight — both fixed, PRs up; one approval needs you").
-Reuse the delivered machinery: `useVoiceData` already loads pending approvals + recent runs +
-run outcomes (1.3 write-back shipped); `useSpeech` (19) speaks. Add a one-tap "brief me" action
-(or speak on voice-mode entry, unmuted) that assembles a short cs/en template from the HUD data
-and speaks it; speak a run's outcome line when it transitions to done/failed while voice is
-open. New i18n `voice.speak.*` template keys with ICU plurals. **Watch-out:** keep it template-
-first + deterministic (no claude call in the browser), mute-respecting, and `live|demo`-safe so
-CI stays silent. Alternative if voice is judged "enough": the known dead-UI sweep from §7.3
-(skill edit/delete, global search wired to the search endpoint, `light.ts` theme stub) — real
-user-facing stubs, priority #1 mock→real.
+**Proposed Phase 21 — dead-UI sweep (§7.3): wire the stub operator surfaces.** With voice
+functionally complete, the next priority-#1 (mock→real) gap is the small set of dead UI the
+roadmap §7.3 flagged: **skill edit/delete** (buttons exist, no mutation), **global search**
+(the top-bar search box isn't wired to the existing `/api/memory/search` + entity queries), and
+the **`light.ts` theme stub** (light mode is a placeholder; the app forces dark). Pick the one
+with the most operator value — likely **global search** (a butler you can't search is half-
+blind), or skill edit/delete (CRUD parity with agents/pipelines, which already have it). Each is
+a contained mock→real slice with its own web-components test (+ contract/e2e if a new endpoint).
+**Watch-out:** check whether the search/skill endpoints already exist (memory.search does) — if
+so it's pure web wiring, no API change. Alternative: the optional voice wake word / Settings →
+Voice surface if the operator wants hands-free.
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen

@@ -588,6 +588,44 @@ is the optional wake word + Settings surface.
 
 ---
 
+## Phase 20 — Spoken butler's briefing + run-outcome announce — ✅ delivered 2026-06-14
+
+_Finishes ROADMAP §7.2's "voice reads run outcomes and pending approvals aloud" —
+the spoken counterpart of the Phase 6 written briefing. ZIBBY now tells you, aloud,
+what's running and what needs you, and calls out runs as they finish while you watch._
+
+### 20.1 `briefing.ts` — pure summarizer + new-completion detector
+
+- `summarizeBriefing(data)` reduces `useVoiceData` (pending approvals, running
+  agents, recent runs) to deterministic `BriefingFacts` (counts + top approval +
+  `quiet` flag) — template-first, no claude in the browser (same posture as the
+  Phase 6 briefing). `pickNewlyFinished(announced, recent)` returns the terminal
+  (`done`/`error`) runs not yet announced. Both pure, both unit-tested.
+
+### 20.2 `VoiceScreen` — "Brief me" + outcome announce
+
+- A **"Brief me"** button speaks the assembled cs/en summary; as an explicit
+  request it speaks even when auto-speech is muted. An effect announces runs that
+  reach a terminal state **while voice is open** — seeded from the first feed so the
+  history already on screen is never replayed, and gated on mute. Both reuse the
+  Phase-19 `useSpeech`.
+- i18n `voice.briefMe` + `voice.speak.{briefing,topApproval,recent,nothing,
+  outcomeDone,outcomeFailed,outcomeMany}` (cs + en).
+
+### Tests
+
+- `briefing.test.ts`: `summarizeBriefing` counts + `quiet`; `pickNewlyFinished`
+  filters terminal-and-unannounced.
+- `VoiceScreen.test.tsx`: "Brief me" speaks the assembled summary; a run that
+  finishes after open is announced while the pre-open history is not (rerender test).
+
+**Out of scope (→ remaining voice work):** wake word (`@picovoice/porcupine-web` or
+`@ricky0123/vad-web`) and a Settings → Voice surface (live/demo, language, voice
+picker) — the last two §7.3 items; both optional. The core voice loop (listen →
+command → speak → brief) is complete.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
