@@ -290,6 +290,66 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(parked.iterations[0].verifier.satisfied).toBe(false)
   })
 
+  it("self-development exit demonstration: a goal on a sibling checkout never touches the builder tree (13.2)", async () => {
+    // The Phase 12 exit criterion as an executable test. The "subject" is a sibling git
+    // repo (NOT the ZIBBY builder repo) with a SCOPED trivially-passing check.
+    const subject = await fs.mkdtemp(path.join(os.tmpdir(), "selfdev-subject-"))
+    await initGitRepo(subject)
+    await fs.writeFile(path.join(subject, "README.md"), "# subject\n", "utf8")
+    await exec("git", ["-c", "user.email=t@t", "-c", "user.name=t", "add", "-A"], { cwd: subject })
+    await exec("git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "seed"], { cwd: subject })
+    const subjectHeadBefore = (await exec("git", ["rev-parse", "HEAD"], { cwd: subject })).stdout.trim()
+
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "subject", name: "subject", path: subject, checks: ["true"] })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post("/api/goals")
+      .send({
+        id: "selfdev",
+        objective: "Improve the subject repo",
+        maker: { kind: "pipeline", id: "delivery" },
+        verifier: { kind: "checks" }, // no commands → scoped to subject.checks = ["true"]
+        maxIterations: 2,
+        instructions: "iterate",
+      })
+      .expect(201)
+
+    const start = await request(app.getHttpServer())
+      .post("/api/goals/selfdev/run")
+      .send({ project: "subject" })
+      .expect(201)
+    const goalRunId = start.body.goalRunId
+    const final = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status !== "running" ? res.body : null
+    })
+
+    // (scope) the scoped ["true"] verifier passed — a full-repo suite would have failed
+    // (the subject has no package.json), so reaching done proves no full-monorepo run.
+    expect(final.status).toBe("done")
+
+    // (12.7) the worktree lived OUTSIDE the subject repo AND outside apps/api/data —
+    // under the test's ZIBBY_WORKTREE_ROOT temp.
+    const wt: string = final.workspace.path
+    expect(wt.startsWith(process.env.ZIBBY_WORKTREE_ROOT as string)).toBe(true)
+    expect(wt.startsWith(subject)).toBe(false)
+    expect(wt.includes(`${path.sep}apps${path.sep}api${path.sep}data${path.sep}`)).toBe(false)
+    expect(final.workspace.branch).toMatch(/^zibby\//)
+
+    // (3.1) the subject's main checkout is untouched: HEAD unmoved, working tree clean.
+    // The goal's commits live on its own zibby/* branch (in the worktree), never on HEAD.
+    const subjectHeadAfter = (await exec("git", ["rev-parse", "HEAD"], { cwd: subject })).stdout.trim()
+    expect(subjectHeadAfter).toBe(subjectHeadBefore)
+    const dirty = (await exec("git", ["status", "--porcelain"], { cwd: subject })).stdout.trim()
+    expect(dirty).toBe("")
+    const branches = (await exec("git", ["branch", "--list", "zibby/*"], { cwd: subject })).stdout.trim()
+    expect(branches).toMatch(/zibby\//)
+
+    await fs.rm(subject, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+  })
+
   it("rejects resuming a non-parked run with 409", async () => {
     await makeGoal("notparked", 0, 3)
     const goalRunId = await runGoal("notparked")

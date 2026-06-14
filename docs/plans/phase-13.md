@@ -9,8 +9,17 @@ prove the whole posture end-to-end. Thin glue over delivered machinery — no ne
 Progress (loop tracking)
 
 - [x] 13.1 — Enforce the per-goal budget (DONE 2026-06-14)
-- [ ] 13.2 — Self-development exit demonstration (sibling-checkout smoke)
+- [x] 13.2 — Self-development exit demonstration (DONE 2026-06-14). e2e in
+      `goal-loop.e2e.test.ts`: a goal on a sibling fixture checkout finishes `done`;
+      worktree under `ZIBBY_WORKTREE_ROOT` (not in repo/data); subject HEAD unmoved +
+      tree clean + a `zibby/*` branch present (commits on the branch, never HEAD);
+      scoped `["true"]` verifier passed (a full-repo suite would have failed — no
+      package.json — so `done` proves no full-monorepo run). Orphan-reaping invariant
+      is already unit-covered (runner-core.test.ts shutdown + goal-runner-shell.test.ts
+      onModuleDestroy). Also hardened `briefing.e2e` ENOTEMPTY (12.9 idiom).
 - [ ] 13.3 — launchd daemon + GOAL_AUTO_RESUME (Phase 8.3 territory)
+- [ ] 13.4 — Test stability under concurrent load (NEW — full-suite under-load assertion
+      flakiness; not a cleanup race)
 
 ---
 

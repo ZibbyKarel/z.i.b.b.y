@@ -70,7 +70,9 @@ describe("Briefing (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
-    await fs.rm(root, { recursive: true, force: true })
+    // A run child may still be flushing its `.log` into `root` when cleanup runs
+    // (same transient as runner-core.test.ts:90-96); retry the rm on ENOTEMPTY.
+    await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     for (const k of [
       "ZIBBY_DATA_DIR", "CHANNEL_FAKE_DIR", "CHANNEL_ADAPTER_MODE", "CHANNEL_TICK_MS",
       "AUTOMATION_TICK_MS", "TASK_TICK_MS", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS", "FAKE_CLAUDE_INTENT",

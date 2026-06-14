@@ -19,8 +19,9 @@ Plan: [docs/plans/phase-13.md](docs/plans/phase-13.md).
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 13.1 Enforce the per-goal budget | ✅ done (2026-06-14) | `GoalSchema.budget` was dead schema; now `goalBudgetExceeded()` (windowed run-count from `iterations[].startedAt`) parks `budget` at the iteration boundary. Composes with the 8.1 project cap. 679/679 green |
-| 13.2 Self-development exit demonstration | ⬜ next | sibling-checkout smoke: builder tree untouched, worktree under `ZIBBY_WORKTREE_ROOT`, no full-repo suite, no orphan |
+| 13.2 Self-development exit demonstration | ✅ done (2026-06-14) | e2e in `goal-loop.e2e`: a goal on a sibling fixture checkout finishes `done` with the worktree under `ZIBBY_WORKTREE_ROOT` (not in the repo/data), the subject's HEAD unmoved + tree clean + a `zibby/*` branch present, scoped `["true"]` verifier (no full-repo suite). Also hardened `briefing.e2e` ENOTEMPTY (12.9 idiom). 680/680 green |
 | 13.3 launchd daemon + `GOAL_AUTO_RESUME` | ⬜ | unattended builder resumes across reboots |
+| 13.4 Test stability under concurrent load (NEW) | ⬜ next | full-suite intermittently reds ~1 assertion/run (categories/projects/memory — each passes 10/10 isolated); concurrency-timing flake, not a cleanup race |
 
 | Item | Status | Notes |
 | ---- | ------ | ----- |
@@ -47,25 +48,31 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
   finishes green" — intermittent demo-timeout assertion flake (the documented
   `project_api_flaky_pipeline_e2e`); passed 6/7 recent runs. Demo-runner timing, NOT a
   cleanup race. Separate from the ENOTEMPTY work.
-- `categories.e2e` "rejects a duplicate" — flakes only under full-suite load; passes
-  6/6 in isolation. Pre-existing under-load timing flake.
+- **Under-load assertion flakiness (→ proposed 13.4):** the full 90-file concurrent
+  suite intermittently reds ~1 assertion per run, a DIFFERENT suite each time
+  (`categories.e2e` "rejects a duplicate", `projects.e2e` "category 409", `memory.e2e`
+  "patches a note" all observed) — each passes 10/10 in isolation. Concurrency/timing
+  contention, NOT a cleanup race (no ENOTEMPTY). A full run CAN be fully green
+  (680/680 seen). Candidate fixes: lower vitest concurrency for e2e, or find the shared
+  contention (the 12.5 per-file data seeding copy?).
 
 ## Next iteration
 
-**Phase 13.2 — self-development exit demonstration (sibling-checkout smoke).** The Phase
-12 exit criterion as an EXECUTABLE test, not a checklist. A demo-mode e2e (likely a new
-`apps/api/test/self-development.e2e.test.ts`) that: inits a **sibling fixture git repo**
-(a tiny project, NOT the ZIBBY repo) with explicit scoped `checks: ["true"]`, registers
-it as a project, points a goal (delivery-pipeline maker + checks verifier) at it, runs to
-done in demo mode, then asserts the Phase 12 invariants end-to-end:
-- the goal's worktree lived under `ZIBBY_WORKTREE_ROOT` (the vitest temp), NOT inside the
-  fixture repo nor `apps/api/data` (12.7);
-- the fixture repo's main checkout is untouched / clean except the goal's own `zibby/*`
-  branch (3.1 / 12.7);
-- no full-monorepo suite spawned (the scoped `["true"]` verifier ran, 12.1/12.2);
-- after `app.close()` no orphan child remains (12.3/12.9) — assert via the run dir / a
-  liveness probe on the recorded pgid.
-Reuses `initGitRepo` + the demo runner; keep cleanup with `fs.rm maxRetries/retryDelay`.
-Then 13.3 (launchd + `GOAL_AUTO_RESUME`) as the unattended-builder closer. If the operator
-wants to *actually* self-develop now, the [runbook](docs/ops/self-development.md) is ready
-— that's an operator action, not a loop iteration.
+**Phase 13.4 — test stability under concurrent load.** The full 90-file e2e suite is
+intermittently red (~1 assertion/run, a different suite each time: categories/projects/
+memory, all green in isolation). It's NOT a cleanup race (the ENOTEMPTY ones are fixed in
+12.9 + briefing) — it's concurrency/timing contention. Investigate + fix so a full
+`pnpm test` is reliably green:
+- First, characterize: run the full suite ~5× capturing which assertion fails each time;
+  look for a shared-resource pattern (the 12.5 per-file `cpSync` data seeding under load?
+  a shared temp? CPU-bound timing assertions with tight polls?).
+- Likely fixes (cheapest first): bump tight `until()`/poll timeouts in the flaky
+  assertions; OR cap vitest e2e concurrency (`poolOptions`/`maxConcurrency`) so 90 forked
+  AppModule boots don't thrash the box; OR make the 12.5 seeding lazy/cached so each forked
+  file isn't copying ~177 files under contention.
+- Exit: full `pnpm test` green across 5 consecutive runs.
+
+Alternatively, **13.3 (launchd + `GOAL_AUTO_RESUME`)** closes the unattended-builder story.
+Pick 13.4 first — a reliably-green suite is the foundation the loop's own `pnpm test` gate
+depends on. If the operator wants to *actually* self-develop now, the
+[runbook](docs/ops/self-development.md) is ready — an operator action, not a loop iteration.
