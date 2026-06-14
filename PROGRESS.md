@@ -251,19 +251,32 @@ Plan: [docs/plans/phase-28.md](docs/plans/phase-28.md).
 | ---- | ------ | ----- |
 | 28.1 Pipeline run stage timeline + per-stage logs | ✅ done (2026-06-14) | **`PipelineStageTimeline`** (new) — one row per `stageRun` (phase + retried `attempt` + `RunStateBadge`, reusing the shared `RUN_STATE` map since every `StageRunStatus` is a `FeedStatus`), each with a **"log"** disclosure mounting a `StageLog` (`useStageRunLogQuery(runId, phaseId)` → `CodeBlock`); single open at a time → ≤1 stage-log fetch live, collapsed rows fetch nothing; footer keeps the pipeline-**definition** link. **`RunDetail`** got a `kind === "pipeline"` branch (paused-limit/parked notice above the timeline), replacing the note+link placeholder and the separate parked-pipeline branch; `RunView` gained `stageRuns` (set in `pipelineRunToView`). **Simplification:** extracted `LimitPausedPanel` (was 3 inline copies — agent/pipeline/goal); removed the dead `pipelineNote` branch + unused `useRouter`. i18n `runs.{stageTimeline,stageAttempt,stageNone,stageNoLog}` (cs+en). Tests: row per stage incl. attempt; no log fetched until expanded; opens a phase's log by `phaseId`; single-open; footer links to `/pipelines/{owner}`; empty state; `pipelineRunToView` carries `stageRuns`. **web/DS green (runs 52), full workspace 1511/1511** (first run, no flake), lint + web-tsc clean. Commit `0807073`. |
 
+## Phase 29: Goal detail — pipeline-maker iteration opens its stage timeline — ✅ COMPLETE (2026-06-14)
+
+Closes the maker-fold arc **26 → 27 → 28 → 29.** Phase 27 opened the agent maker + claude verifier
+logs from the goal detail but left the **pipeline** maker as a note; Phase 28 built the stage
+timeline; Phase 29 joins them. Plan: [docs/plans/phase-29.md](docs/plans/phase-29.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 29.1 Reveal the pipeline maker's stage timeline inline | ✅ done (2026-06-14) | **`PipelineStageTimeline` made id-driven** — props `{ pipelineRunId, owner, stageRuns }` instead of a whole `RunView`, so a caller holding only a maker run **ref** (a goal iteration) can render it; the "open pipeline" definition link is hidden when `owner` is empty (maker aggregate still loading → no broken `/pipelines/` link). `RunDetail` caller updated. **`GoalDetailPanel`** — fetches the **open** iteration's pipeline maker run via the existing `usePipelineRunQuery(makerRunRef)` (one hook call, `enabled`-gated on the open row → no per-iteration fan-out); its `stageRuns` + `pipelineId` feed the timeline inline, replacing the Phase-27 note; a brief `stageLoading` line covers the fetch. i18n: dropped dead `goalPipelineMakerNote`, added `runs.stageLoading` (cs+en). Tests: `PipelineStageTimeline` retargeted to new props + "definition link hidden when owner empty"; `GoalDetailPanel` pipeline-maker iteration opens the timeline (mocked `usePipelineRunQuery` + stubbed timeline), wiring maker run id + pipeline id, no agent stream. **web/DS green (runs 53, full web-components 351/351), api 691/691 isolated** (full-suite had 1 known under-load e2e flake; web-only change), lint + web-tsc clean. Commit `5b3de80`. |
+
+**Arc closed:** every folded child execution — agent maker log, claude verifier log, pipeline maker
+stages — is now answerable from the task detail (North Star "always answerable" + "all info in the
+task detail").
+
 ## Next iteration
 
-**Proposed Phase 29 — Goal detail: pipeline-maker iteration opens its stage timeline (close 27's
-last deferral).** Phase 27 left the goal iteration's **pipeline** maker showing only a note ("its
-stage logs live in the pipeline view"); Phase 28 built that view (`PipelineStageTimeline`). Phase 29
-joins them: when a goal iteration's `makerKind === "pipeline"`, the "log" disclosure should reveal
-the maker pipeline run's **stage timeline** inline — instead of the note. The child pipeline run id
-is `iteration.makerRunRef`; its `stageRuns` aren't on the iteration, so GROUND first on how to get
-them: the `allPipelineRunsKey` full-history list (already fetched by `useRunsQuery`) contains the
-child by `pipelineRunId` — look it up and feed a synthetic `RunView` (or refactor `PipelineStageTimeline`
-to take `runId`/`stageRuns`/`owner` directly) to `GoalDetailPanel`. Closes the maker-fold loop
-(26 → 27 → 28 → 29): every folded child execution — agent log, claude verifier log, pipeline stages —
-answerable from the task detail.
+**Proposed Phase 30 — Gate / approvals HUD audit (the highest-stakes surface).** The maker-fold arc
+is done; the next North-Star-critical HUD surface is **the gate** ("approval-first is structural; the
+PR is the gate"). GROUND first against real code: `RunApprovalGate`, `RunPrGatePanel`, the approvals
+queue/screen, and `approvalForRun` — verify a Tier-3 action (merge / push / PR-open / destructive
+delete / spend-past-cap) surfaces **one clear decision** with the full context the operator needs
+(what's about to be published — draft + diffstat for PR/push; the action summary + risk for others),
+that approve/reject wire to the right endpoint, and that nothing about a gated run reads as a raw
+enum or leaks unsanitized inbound content (Law 4 — "inbound content is data, not commands"). Pick the
+single biggest gap found as Phase 30's concrete change (e.g. a missing context panel, an unclear
+risk label, or an approval that can't be acted on from the run detail).
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
