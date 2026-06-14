@@ -679,6 +679,7 @@
     "mute": "Ztlumit hlas ZIBBYho",
     "unmute": "Zapnout hlas ZIBBYho",
     "handToTask": "Nový task z tohoto",
+    "briefMe": "Briefing",
     "hint": "klikni mikrofon pro demo · Esc pro HUD",
     "hintLive": "klikni mikrofon a mluv · Esc pro HUD",
     "unsupported": "Hlasový vstup není v tomto prohlížeči dostupný — zobrazuji demo.",
@@ -698,6 +699,15 @@
       "navigating": "Přecházím…",
       "closing": "Zavírám VOICE MODE.",
       "heard": "Rozumím — připraveno jako nový task."
+    },
+    "speak": {
+      "briefing": "Běží {agents} agentů, čeká {approvals} schválení.",
+      "topApproval": "Nejnovější schválení: {skill}.",
+      "recent": "Nedávno: {done} dokončeno, {failed} selhalo.",
+      "nothing": "Nic tě teď nepotřebuje.",
+      "outcomeDone": "{owner} dokončeno.",
+      "outcomeFailed": "{owner} selhalo.",
+      "outcomeMany": "{count} běhů dokončeno."
     }
   },
   "runs": {

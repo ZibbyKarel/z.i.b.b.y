@@ -15,6 +15,7 @@ import { useVoiceData } from "../hooks/useVoiceData";
 import { useVoiceSession } from "../hooks/useVoiceSession";
 import { useUtteranceDispatch } from "../hooks/useUtteranceDispatch";
 import { type SpeechLang, useSpeech } from "../hooks/useSpeech";
+import { pickNewlyFinished, summarizeBriefing } from "../briefing";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoicePanel } from "./VoicePanel";
 import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
@@ -96,7 +97,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
   // Phase 19: ZIBBY speaks back. Each command acknowledgement is read aloud (unless
   // muted) via free browser TTS — the "spoken result" half of the North-Star voice
   // loop. The speaker button mutes; muting also cuts any in-flight speech.
-  const { speak, stop: stopSpeech, isSpeaking } = useSpeech();
+  const { speak, stop: stopSpeech, isSpeaking, isSupported: canSpeak } = useSpeech();
   const [muted, setMuted] = useState(false);
   const speechLang = lang as SpeechLang;
   const spokenAck = useRef<typeof ack>(null);
@@ -114,6 +115,53 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
   // The orb/status reflect speech: `speaking` outranks the listen/idle state.
   const displayState = isSpeaking ? "speaking" : state;
   const active = isActive || isSpeaking;
+
+  // Phase 20: the spoken butler's briefing — what's running and what needs you,
+  // assembled template-first from the live HUD data (no claude in the browser).
+  const briefingText = useCallback((): string => {
+    const facts = summarizeBriefing({ approvals, liveRuns, recent });
+    if (facts.quiet) return t("speak.nothing");
+    const parts = [
+      t("speak.briefing", { agents: facts.agents, approvals: facts.approvals }),
+    ];
+    if (facts.topApprovalSkill) {
+      parts.push(t("speak.topApproval", { skill: facts.topApprovalSkill }));
+    }
+    if (facts.done || facts.failed) {
+      parts.push(t("speak.recent", { done: facts.done, failed: facts.failed }));
+    }
+    return parts.join(" ");
+  }, [approvals, liveRuns, recent, t]);
+  // "Brief me" is an explicit request — it speaks even when auto-speech is muted.
+  const speakBriefing = () => speak(briefingText(), speechLang);
+
+  // Announce runs that finish *while voice is open* — not the history already on
+  // screen when it opened. Seed from the first non-empty feed, then read only the
+  // new completions aloud (unless muted). The set persists across renders.
+  const announced = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (mode !== "live") return;
+    if (announced.current === null) {
+      if (recent.length === 0) return; // wait for the first data
+      announced.current = new Set(
+        pickNewlyFinished(new Set(), recent).map((r) => r.runId),
+      );
+      return;
+    }
+    const fresh = pickNewlyFinished(announced.current, recent);
+    if (fresh.length === 0) return;
+    for (const r of fresh) announced.current.add(r.runId);
+    if (muted) return;
+    const first = fresh[0];
+    if (!first) return;
+    const text =
+      fresh.length === 1
+        ? t(`speak.${first.status === "done" ? "outcomeDone" : "outcomeFailed"}`, {
+            owner: first.owner,
+          })
+        : t("speak.outcomeMany", { count: fresh.length });
+    speak(text, speechLang);
+  }, [recent, mode, muted, speak, t, speechLang]);
 
   // The manual "new task from this" button: the live transcript, else the demo's
   // last user line so the seam stays exercised deterministically.
@@ -429,6 +477,17 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
           type="button"
         >
           <SpeakerGlyph muted={muted} size={16} />
+        </button>
+
+        <button
+          className="flex items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors enabled:cursor-pointer enabled:hover:border-accent enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canSpeak}
+          onClick={speakBriefing}
+          title={t("briefMe")}
+          type="button"
+        >
+          <Icon name="pulse" size="xs" />
+          {t("briefMe")}
         </button>
 
         <button

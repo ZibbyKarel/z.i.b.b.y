@@ -30,8 +30,16 @@ const speechMock = vi.hoisted(() => ({
 vi.mock("../hooks/useVoiceSession", () => ({
   useVoiceSession: () => mockSession.current,
 }));
+const voiceDataMock = vi.hoisted(() => ({
+  current: { approvals: [], liveRuns: [], recent: [], skills: [] } as {
+    approvals: { id: string; skill: string; detail?: string }[];
+    liveRuns: { runId: string }[];
+    recent: { runId: string; owner: string; status: string }[];
+    skills: unknown[];
+  },
+}));
 vi.mock("../hooks/useVoiceData", () => ({
-  useVoiceData: () => ({ approvals: [], liveRuns: [], recent: [], skills: [] }),
+  useVoiceData: () => voiceDataMock.current,
 }));
 vi.mock("../hooks/useUtteranceDispatch", () => ({
   useUtteranceDispatch: () => dispatchMock,
@@ -67,6 +75,7 @@ describe("VoiceScreen", () => {
     speechMock.speak.mockClear();
     speechMock.stop.mockClear();
     speechMock.isSpeaking = false;
+    voiceDataMock.current = { approvals: [], liveRuns: [], recent: [], skills: [] };
   });
 
   it("dispatches a finalized live utterance to the command bridge", () => {
@@ -100,6 +109,53 @@ describe("VoiceScreen", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  it("speaks the briefing on demand (brief me)", () => {
+    voiceDataMock.current = {
+      approvals: [{ id: "a1", skill: "Kodér", detail: "deploy" }],
+      liveRuns: [{ runId: "r1" }],
+      recent: [],
+      skills: [],
+    };
+    mockSession.current = liveSession();
+    render(<VoiceScreen onExit={vi.fn()} />);
+    act(() => screen.getByText("Briefing").click());
+    expect(speechMock.speak).toHaveBeenCalledTimes(1);
+    const [text, lang] = speechMock.speak.mock.calls[0] as [string, string];
+    expect(text).toContain("1 agentů");
+    expect(text).toContain("Kodér");
+    expect(lang).toBe("cs-CZ");
+  });
+
+  it("announces a run that finishes while voice is open (not the history)", () => {
+    // Open with one already-done run (history) and one still running.
+    voiceDataMock.current = {
+      approvals: [],
+      liveRuns: [{ runId: "r9" }],
+      recent: [
+        { runId: "r8", owner: "Doku", status: "done" },
+        { runId: "r9", owner: "Tester", status: "running" },
+      ],
+      skills: [],
+    };
+    mockSession.current = liveSession();
+    const { rerender } = render(<VoiceScreen onExit={vi.fn()} />);
+    // The already-done r8 is NOT replayed on open.
+    expect(speechMock.speak).not.toHaveBeenCalled();
+
+    // r9 transitions to done while voice is open → announced.
+    voiceDataMock.current = {
+      approvals: [],
+      liveRuns: [],
+      recent: [
+        { runId: "r8", owner: "Doku", status: "done" },
+        { runId: "r9", owner: "Tester", status: "done" },
+      ],
+      skills: [],
+    };
+    act(() => rerender(<VoiceScreen onExit={vi.fn()} />));
+    expect(speechMock.speak).toHaveBeenCalledWith("Tester dokončeno.", "cs-CZ");
   });
 
   it("renders the live spoken transcript", () => {

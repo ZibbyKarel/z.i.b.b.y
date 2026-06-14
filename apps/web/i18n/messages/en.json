@@ -679,6 +679,7 @@
     "mute": "Mute ZIBBY's voice",
     "unmute": "Unmute ZIBBY's voice",
     "handToTask": "New task from this",
+    "briefMe": "Brief me",
     "hint": "click the mic for a demo · Esc for HUD",
     "hintLive": "click the mic and speak · Esc for HUD",
     "unsupported": "Live voice isn't available in this browser — showing the demo.",
@@ -698,6 +699,15 @@
       "navigating": "Navigating…",
       "closing": "Closing VOICE MODE.",
       "heard": "Got it — staged as a new task."
+    },
+    "speak": {
+      "briefing": "{agents} agents running, {approvals} approvals waiting.",
+      "topApproval": "Latest approval: {skill}.",
+      "recent": "Recently: {done} done, {failed} failed.",
+      "nothing": "Nothing needs you right now.",
+      "outcomeDone": "{owner} finished.",
+      "outcomeFailed": "{owner} failed.",
+      "outcomeMany": "{count} runs finished."
     }
   },
   "runs": {
