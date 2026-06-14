@@ -348,17 +348,25 @@ discovery were all found solid; this iteration's fix was a smaller honesty bug. 
 improved so far: runs feed/detail, the gate (decision + floor), overview, memory, integrations inbox,
 projects/held, automations.
 
+## Phase 39: Decouple the shared runtime badges from the pipelines feature — ✅ COMPLETE (2026-06-14)
+
+Agents detail/editor audited & found solid → simplification (LOOP #3). Plan: [docs/plans/phase-39.md](docs/plans/phase-39.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 39.1 Extract ModelBadge/ThinkBadge to a neutral shared module | ✅ done (2026-06-14) | Agents detail/editor is solid (real RHF editor name/whenToUse/category/model/thinking/glyph/tools + Markdown body; `AgentRulesSection` floor+linked+own; `AgentViewDetails`). No functional gap → simplification. `ModelBadge`/`ThinkBadge` (generic model/thinking tags) lived in the **pipelines** `PhaseChain` but the **agents** feature imported them across (agents → pipelines coupling, pulling the big PhaseChain in for two tags). Extracted them (+ thinking→tone helper) into neutral `apps/web/components/RuntimeBadges/RuntimeBadges.tsx`, retyped against `Agent["model"]`/`Agent["thinking"]` (no PipelinePhase dep); all 5 call sites (`AgentCard`, `AgentViewDetails`, `PhaseChain`, `PipelineRunModal`, `PipelineDialog`) import from the shared module; `PhaseChain` dropped the now-unused `TagProps`/`AgentThinking` imports + tone helper (kept `Tag` — still used in its body). No behaviour change. Tests: new `RuntimeBadges.test`; existing PhaseChain+agents stay green. **web/DS green, full workspace 1538/1538** (first run, no flake), lint + web-tsc clean. Commit `9e4e303`. GOTCHA: `Tag` was still used in PhaseChain's body (not only the badges) — removing it from imports broke tsc; re-added. |
+
 ## Next iteration
 
-**Proposed Phase 39 — Audit the agents detail / editor surface (core runner config).** Agents are the
-real runners; their detail/editor (`AgentViewDetails` / the agent edit flow + `AgentRulesSection`) wires
-the agent's prompt, linked skills, and **gate rules** (inherited floor + linked catalog + own rules —
-Phase 37 territory). GROUND first against real code: the agents feature dir + view/edit components +
-query/mutation hooks + `AgentSchema` — verify the editor shows/saves the **real** agent (prompt, model,
-glyph, linked skills, gate-rule links) against real endpoints, that the inherited-floor + linked-rules
-hierarchy is legible and honest, and that nothing reads as a mock/dead control. Pick the single biggest
-gap as Phase 39's concrete change. **If agents is also solid, pivot to a DESIGN/UX or SIMPLIFICATION
-improvement** (LOOP priority #2/#3) rather than forcing a micro-bug — the functional gaps are thinning.
+**Proposed Phase 40 — Cross-feature coupling sweep (continue the simplification).** Phase 39 fixed one
+features-importing-another-feature's-internals coupling (agents → pipelines `PhaseChain`). GROUND first:
+grep `apps/web/features` for imports of the shape `from "../../<other-feature>/components/…"` (one
+feature reaching into another feature's component internals, vs. importing from `apps/web/components`,
+`@zibby/design-system`, or a domain barrel) — list them, and for the clearest 1–2 smells extract the
+shared piece into `apps/web/components/` (like RuntimeBadges) so neither feature owns the other's UI.
+Keep each move behaviour-preserving + tested. **If no further real couplings exist, switch back to a
+functional/bug target** — don't invent refactors. (Audit signal: obvious HUD gaps are largely
+exhausted after 13 phases; the highest-value next input would be the operator naming a concrete bug.)
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
