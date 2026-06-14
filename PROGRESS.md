@@ -388,24 +388,35 @@ Write-side twin of the honest-load sweep. Plan: [docs/plans/phase-43.md](docs/pl
 | ---- | ------ | ----- |
 | 43.1 Global mutation-error toaster | ✅ done (2026-06-14) | QueryClient had no `mutationCache` + no toast surface → a failed write (delete/create/toggle/approve/reject) was **silent**. ts-rest+`validateResponse` **throws** on network/unknown-status/schema-drift → react-query `onError` fires (covers the common "silent delete failed" case; in-contract 4xx resolve to the call site). Fix: module pub/sub `toastBus` (counter-keyed) + `Toaster` (subscribes, DS `Alert`s in a fixed `Container` overlay — `position` prop + `style` passthrough, no forbid-dom-props; auto-dismiss + close) mounted in `Providers`; QueryClient gained `MutationCache({ onError: () => toastBus.emit() })` — **one wiring point catches every mutation error app-wide**; copy localized in Toaster (`common.mutationError`). Tests: `toastBus.test` + `Toaster.test`. **web/DS green, full workspace 1549/1549** (first run, no flake), lint + web-tsc clean. Commit `c79fda2`. GOTCHA: eslint --fix kept stripping an inline `// eslint-disable-next-line` in JSX-expression position → use a DS `Container` (`style` passthrough on a component, no DOM-props rule) instead of a raw `<div>`. |
 
+## Phase 44: A loading state, not a flash of "create your first" — ✅ COMPLETE (2026-06-14)
+
+Completes the honest load-state trio (loading → error → content). Plan: [docs/plans/phase-44.md](docs/plans/phase-44.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 44.1 Shared LoadingState/QueryLoading + isPending guards | ✅ done (2026-06-14) | Catalog screens did `data = []` with no `isPending` guard → cold query flashed the empty state ("create your first…"). Verified `BootSplash` does NOT mask it (its `isReady` is a 600ms timer, not a data gate; never replays on SPA nav) → first in-session visit to each screen flashes "empty workspace." Fix: shared `LoadingState` (mirrors EmptyState/LoadError) + `QueryLoading` wrapper (`common.loading`); agents/skills/pipelines/projects/gates/memory render it when the primary list query `isPending` (**loading → error → empty → content**; cheap — query objects kept by 40–42); `Collection` gained `loading?: LoadingStateProps`, integrations passes it. Tests: `LoadingState`/`QueryLoading`/`Collection`. **web/DS green, full workspace 1552/1552** (first run, no flake), lint + web-tsc clean. Commit `107affd`. **Honest load-state arc complete: loading (44) → error (40–43) → content.** |
+
 ## Next iteration
 
-**Proposed Phase 44 — Loading state, not a flash of "create your first" (empty-vs-loading).** Spotted
-during the Phase-43 work: every catalog screen does `const { data = [] } = useXQuery()` with **no
-`isPending`/`isLoading` guard**, so on a cold cache the first render shows `data = []` → the **empty
-state** ("no agents yet — create your first…") flashes for a beat before the data arrives and the
-content replaces it. A flash of "your workspace is empty" on every cold load is misleading (same family
-as the Phase-40 error-vs-empty bug, but for the loading moment). GROUND first: **does `BootSplash`
-(wrapped around all children in `Providers`) already gate the app on initial load and mask this?** —
-if it holds until first data/health resolves, this may be a non-gap (record + pick next). If not, add
-a loading state (a shared skeleton/spinner, reusing the `LoadError`/`EmptyState` component family) shown
-when the primary list query `isPending` (and the cache is cold) — before the empty/content decision.
-Pick the cleanest shared approach; keep it tested. **If BootSplash already masks it, the honest-status
-arc (load-error 40–42, mutation-error 43, loading-state 44) is complete and the loop should idle/await
-operator direction rather than manufacture low-value work — 18 phases done, obvious gaps exhausted.**
+**Proposed Phase 45 — Accessibility / keyboard-nav audit (a genuinely untouched quality lens).** The
+HUD's data states are now honest end-to-end; one real quality dimension I have **not** audited is
+**a11y / keyboard operability** — the velín must be usable, not just correct. GROUND first against real
+code (don't assume): clickable `Card as="button"` rows (runs `TaskCard`, skill/agent tiles) — do they
+expose an accessible name + keyboard activation? icon-only `Button`s (stop/delete/edit/run) — do they
+all carry an `aria-label`/title? do modals/dialogs (`AgentDetailModal`, `RuleModal`, `NewTaskDialog`,
+`IntegrationFormDialog`) trap focus + restore it + close on Esc, or is that the DS `Dialog`'s job
+(verify it's wired)? are the `Pressable`-wrapped chips/links (memory tiers, search hits, gate decision
+tabs) reachable + operable by keyboard? Consider a focused `@axe-core` smoke or manual ARIA assertions
+on the highest-traffic surfaces. Pick the single biggest **real** a11y gap (an unlabeled control, a
+keyboard-trap, a non-focusable interactive element) as Phase 45's concrete fix. **If the DS already
+handles a11y soundly (likely — components carry roles/aria/testids) and no real gap exists, record that
+and idle/await operator direction — don't manufacture low-value work.** (19 phases done; the
+highest-value next input is the operator naming a concrete bug.)
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
-at concrete HUD bugs as they spot them — the highest-value next input would be a named bug.
+at concrete HUD bugs as they spot them — each becomes the next phase.
+
+---
 
 Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
 per-project — api 691/691 isolated). The
