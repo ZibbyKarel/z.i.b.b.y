@@ -168,24 +168,39 @@ experimental global Storage shadows jsdom's). web/DS+api **1472/1472**, tsc + li
 
 ## Next iteration
 
-**Functional North-Star gaps are essentially exhausted.** Voice is complete (listen → command →
-speak → brief + voice picker + shortcut); all CRUD (agents/pipelines/skills/projects/categories),
-channels, briefing, budgets, goals, memory are wired; the §7.3 dead-UI list is closed (global
-search, skill edit/delete, pipeline edit/duplicate all verified done). Remaining items are
-**lower-priority or risky**: light theme (trap — bespoke surfaces hardcode dark), wake word
-(optional, dependency-heavy).
+**⚠️ NORTH STAR CHANGED (operator edit, 2026-06-14) — re-opens functional work.** The operator
+rewrote `apps/api/data/vault/north-star.md` to make **Voice a co-equal, conversational surface**,
+which the current voice implementation (Phases 17–22) does NOT yet match. RE-GROUND against the
+new north-star.md; the "functional gaps exhausted" note below is now obsolete for voice.
 
-**Proposed Phase 23 — shift to priority-2 DESIGN/UX or priority-3 simplification (per LOOP.md).**
-Concrete candidates, GROUND each against real code first:
-- **Simplification (3):** the voice module grew across 6 phases (17–22) — audit for duplication
-  (e.g. the `locale → cs-CZ|en-US` derivation is repeated in VoiceScreen + Settings; extract a
-  shared `voiceLang(locale)` util) and any dead code, without functional regression.
-- **DESIGN/UX (2):** a velín polish pass on a specific screen's empty/loading/error states for
-  JARVIS readability — pick one screen, make it concrete and testable.
-- **Minor functional:** live/demo voice-mode toggle + mute persistence in Settings (small).
+What the new North Star demands (and where today's code conflicts):
 
-Lean toward the simplification audit (concrete, testable, reduces the 6-phase voice debt) unless
-a design/UX gap stands out on inspection.
+1. **Voice is a conversation, "no command grammar to learn."** Today's `parseUtterance`
+   (`features/voice/parseUtterance.ts`, Phase 18) is a hardcoded approve/reject/stop/navigate/close
+   grammar — the exact thing the North Star now rejects. Intent should be understood
+   conversationally (Claude behind the channel), not regex-matched.
+2. **"No 'new task' form to confirm" — ZIBBY dispatches to `/tasks` on its own when it understands.**
+   Today the voice `createTask` path calls `openNewTask(text)` → the NewTask composer (a confirm
+   modal). The North Star explicitly forbids conflating "did I understand you" (conversation's job,
+   never a modal) with the gate. Voice should dispatch directly to the same `/tasks`/`createTask`
+   layer the HUD drives, no composer.
+3. **Narrate WHILE work runs** ("talks back while the work happens, not only after"; "Claude runs
+   behind the voice channel the whole time… narrating as it goes"). Today's TTS (Phases 19/20)
+   only speaks one-line acks/briefing after the fact.
+4. **Gate is the only interruption; spoken approval answers the gate** (never skipped). This part
+   already holds — keep it; only the *understanding* path changes.
+
+**Proposed Phase 23 — Conversational voice dispatch (first realignment slice).** Make a spoken
+intent dispatch directly to the tasks layer with spoken narration, replacing the composer-confirm
+seam. Concretely: the finalized utterance → `createTask` (the backend classifier already routes
+agent/pipeline/goal, Phase 11) → ZIBBY narrates "starting that — <summary>" via `useSpeech` and the
+HUD transcript, **without** opening `NewTaskDialog`. The gate stays untouched (transactional
+actions still stop; spoken yes/no answers it). Keep `live|demo` deterministic for CI; web-
+components tests for the new dispatch-not-modal behavior. GROUND first: re-read the voice seam
+(`VoiceScreen` `handOff`/`useUtteranceDispatch`, the Phase-11.4 `openNewTask` seam) and decide how
+much of `parseUtterance` survives (gate yes/no may stay; the navigate/command grammar yields to
+conversation). Later phases: turn-by-turn clarification dialogue, live run-event narration
+streaming, full "Claude behind the channel."
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen
