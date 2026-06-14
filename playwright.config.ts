@@ -69,13 +69,21 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // Phase 16: retry only in CI (GHA sets CI=true; the self-hosted job sets CI=1). A genuine
+  // one-off browser hiccup retries and passes; a real failure still fails on every attempt.
+  // Locally `0` — flakes stay loud during development, never silently retried (a retry is a
+  // CI safety net + flake detector, not a fix for a real flake).
+  retries: process.env.CI ? 2 : 0,
   globalSetup: "./e2e/global-setup.ts",
   reporter: [["list"]],
   use: {
     baseURL: "http://localhost:3000",
     storageState: "e2e/.auth/state.json",
+    // Diagnostic bundle on the retry/failure so a CI flake is debuggable in the Trace Viewer
+    // (the trace is dead config without retries — see `retries` above).
     trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
     ...(launchOptions ? { launchOptions } : {}),
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

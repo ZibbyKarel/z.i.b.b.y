@@ -32,6 +32,10 @@ describe("e2e.yml playwright job (15)", () => {
     expect(E2E_WORKFLOW).toContain("upload-artifact")
     expect(E2E_WORKFLOW).toContain("playwright-report")
   })
+
+  it("uploads test-results/ so an on-retry trace bundle is retrievable (15→16)", () => {
+    expect(E2E_WORKFLOW).toContain("test-results/")
+  })
 })
 
 describe("playwright.config token-free guarantee (15)", () => {
@@ -40,5 +44,19 @@ describe("playwright.config token-free guarantee (15)", () => {
     // approval throughline would spawn real `claude`, which no CI runner has.
     expect(PW_CONFIG).toContain("CLAUDE_BIN")
     expect(PW_CONFIG).toContain("fake-claude.mjs")
+  })
+})
+
+describe("playwright.config CI flake safety net (16)", () => {
+  it("retries only in CI, never locally", () => {
+    // A silent revert to `retries: 0` re-arms the no-diagnostic-flake foot-gun; a blanket
+    // local retry would hide exactly the cross-spec flakes 14.3 fixed.
+    expect(PW_CONFIG).toMatch(/retries:\s*process\.env\.CI\s*\?\s*2\s*:\s*0/)
+  })
+
+  it("captures a trace + screenshot + video on the retry/failure", () => {
+    expect(PW_CONFIG).toContain('trace: "on-first-retry"')
+    expect(PW_CONFIG).toContain('screenshot: "only-on-failure"')
+    expect(PW_CONFIG).toContain('video: "retain-on-failure"')
   })
 })

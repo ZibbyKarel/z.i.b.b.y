@@ -68,7 +68,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          # Phase 16: also upload test-results/ — that's where the trace .zip / video /
+          # screenshot land on a retry/failure, so a CI flake is debuggable, not just summarized.
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7
           if-no-files-found: ignore
 
@@ -96,6 +100,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-selfhosted
-          path: playwright-report/
+          # Phase 16: include test-results/ for the on-retry trace/video/screenshot bundle.
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7
           if-no-files-found: ignore

@@ -1,7 +1,7 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-14)
 
 ## Corpus Check
-- 944 files · ~1,007,178 words
+- 944 files · ~1,008,489 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -4964,9 +4964,11 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `filter()` connect `Community 5` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 11`, `Community 12`, `Community 18`, `Community 19`, `Community 24`, `Community 26`, `Community 28`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
-- **Why does `resolveDataRoot()` connect `Community 10` to `Community 7`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `useVoiceData()` connect `Community 8` to `Community 5`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `t()` connect `Community 5` to `Community 8`, `Community 13`, `Community 22`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Are the 65 inferred relationships involving `filter()` (e.g. with `DesignSystemProvider()` and `toggleWeekday()`) actually correct?**
   _`filter()` has 65 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 27 inferred relationships involving `writeFile()` (e.g. with `globalSetup()` and `seed()`) actually correct?**
@@ -4975,5 +4977,3 @@ _Questions this graph is uniquely positioned to answer:_
   _34 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.02 - nodes in this community are weakly interconnected._

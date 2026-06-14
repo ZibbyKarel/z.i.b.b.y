@@ -1070,6 +1070,40 @@ pins the workflow + stub shape; nothing pushed (the PR is the gate).
 
 ---
 
+## Phase 16 — CI e2e flake safety net (retries + trace-on-retry)
+
+_Phase 15 turned the ubuntu Playwright job on for PRs, but `playwright.config.ts` still has
+`retries: 0`, so its `trace: "on-first-retry"` can never fire — a single browser hiccup on a
+CI runner reds a PR with zero diagnostic. The 2026 standard for a freshly-CI'd suite is a
+bounded safety net: retry only in CI (never mask flakes locally), and capture a trace +
+screenshot + video on the retry so the Trace Viewer has something to open. Thin config + CI
+glue, no runtime code._
+
+### 16.1 Retry-in-CI + diagnostic artifacts (done 2026-06-14)
+
+- `playwright.config.ts`: `retries: process.env.CI ? 2 : 0` (a genuine one-off retries and
+  passes; a real failure still fails on every attempt; local runs keep `0` so flakes surface
+  loud, never silently retried). Add `screenshot: "only-on-failure"` + `video:
+  "retain-on-failure"` alongside the existing `trace: "on-first-retry"` so the retry leaves a
+  full diagnostic bundle in `test-results/`.
+- `e2e.yml`: both jobs already upload `playwright-report/`; also upload `test-results/`
+  (where the trace `.zip` / video / screenshot land) so the diagnostic is actually
+  retrievable from the CI run, not just the HTML summary. `if: ${{ !cancelled() }}` and
+  `if-no-files-found: ignore` keep it green when there's nothing to upload (the happy path).
+- **Proof:** a throwaway spec that fails on attempt 0 and passes on `testInfo.retry > 0`,
+  run under `CI=true`, confirms the retry path actually retries-then-passes (then deleted —
+  not committed). The real suite stays green locally (`retries: 0` → behaviour unchanged).
+- **Guard test** (extend `apps/api/test/e2e-workflow.test.ts`): assert `playwright.config`
+  carries `retries: process.env.CI ? 2 : 0` and the failure-artifact settings, and that
+  `e2e.yml` uploads `test-results/`. Static-content guard — a silent revert to `retries: 0`
+  would quietly re-arm the no-diagnostic-flake foot-gun.
+
+**Phase exit criterion:** a CI e2e run retries a flaky test up to twice and uploads a trace
+on the retry; local `pnpm e2e` behaviour is unchanged (no retries); the guard test pins the
+retry + artifact shape; nothing pushed.
+
+---
+
 ## Sequencing and dependencies
 
 ```

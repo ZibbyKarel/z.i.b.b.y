@@ -40,6 +40,16 @@ flipped that gate back on for PRs — thin CI glue, no runtime code. Plan:
 | ---- | ------ | ----- |
 | 15.1 Prove cold path + re-enable ubuntu e2e job + guard test | ✅ done (2026-06-14) | proved the CI path locally first — `CI=true pnpm e2e` (forces `reuseExistingServer:false` → fresh boot, GHA's path) **3/3 green ~50s** (also closes the 14.3 "reused-server only" caveat); flipped the ubuntu `playwright` job gate `workflow_dispatch`-only → `if: github.event_name != 'push'` (PR + dispatch; self-hosted macOS keeps push-to-main, no double-run); refreshed the DISABLED note; guard test `apps/api/test/e2e-workflow.test.ts` pins the job shape + the fake-claude `CLAUDE_BIN`. api 688/688, lint+typecheck clean. **CLOSES PHASE 15.** |
 
+## Phase 16: CI e2e flake safety net — ✅ COMPLETE (2026-06-14)
+
+Phase 15's CI e2e job ran with `retries: 0`, so its `trace: "on-first-retry"` was dead
+config — a single browser hiccup reds a PR with no diagnostic. Phase 16 adds the bounded
+retry-in-CI safety net + on-retry artifacts. Plan: [docs/plans/phase-16.md](docs/plans/phase-16.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 16.1 Retry-in-CI + diagnostic artifacts + guard | ✅ done (2026-06-14) | `playwright.config`: `retries: process.env.CI ? 2 : 0` (CI-only; local stays loud) + `trace:"on-first-retry"` / `screenshot:"only-on-failure"` / `video:"retain-on-failure"`; `e2e.yml` both jobs also upload `test-results/`. **Proved the retry path** with a throwaway spec (`expect(testInfo.retry).toBeGreaterThan(0)`) under `CI=true` → Playwright reported "1 flaky" (failed attempt 0, passed retry); deleted, not committed. Real suite `CI=true pnpm e2e` 10/10 (no spurious flaky); guard test extended (api 691/691); lint+typecheck clean. **CLOSES PHASE 16.** |
+
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 13.1 Enforce the per-goal budget | ✅ done (2026-06-14) | `GoalSchema.budget` was dead schema; now `goalBudgetExceeded()` (windowed run-count from `iterations[].startedAt`) parks `budget` at the iteration boundary. Composes with the 8.1 project cap. 679/679 green |
@@ -84,20 +94,20 @@ repeated local runs, and ~2× faster now that the gated agent run is a token-fre
 
 ## Next iteration
 
-**Proposed Phase 16 — CI e2e flake safety net (retries + trace-on-retry).** Phase 15 turned
-the ubuntu Playwright job on for PRs, but `playwright.config.ts` still has `retries: 0`, so
-its `trace: "on-first-retry"` never fires and a single browser hiccup on a CI runner reds a
-PR with no diagnostic. The 2026 best practice for a freshly-CI'd suite is a bounded safety
-net: `retries: process.env.CI ? 2 : 0` (retry only in CI, never mask flakes locally) so a
-real one-off retries while a genuine failure still fails twice, plus trace/screenshot/video
-captured on the retry for the Trace Viewer. Small, self-contained, locally verifiable
-(`CI=true` run still green; a deliberately-flaky fixture proves the retry path), and it
-directly hardens the job Phase 15 shipped. Optional follow-on: a non-blocking `@flaky`
-annotation lane (run-but-don't-block) as a backlog surface, per the research. Sharding is
-**not** warranted yet (10 specs, ~50s) — revisit only as the suite grows.
+**Proposed Phase 17 — accessibility smoke (`@axe-core/playwright`).** The CI e2e infra
+(15/16) is now the place to add a continuous a11y gate, and the DS already takes a11y
+seriously (testid + role/ARIA assertions per CLAUDE.md) — but nothing scans the *composed*
+pages for WCAG violations. Add Deque's official `@axe-core/playwright`, write one smoke spec
+that loads the key dashboard routes (`/overview`, `/runs`, `/memory`, `/integrations`, …) in
+the existing seeded state and asserts **no critical/serious** WCAG 2.2 AA violations. Runs in
+the same job 15 enabled, deterministic, locally verifiable. **Key watch-out (scope control):**
+axe will likely surface pre-existing violations — keep the phase completable by gating only on
+`critical`+`serious` impact (or baseline the current set to a JSON snapshot and assert "no new"),
+and fix the few real ones found rather than chasing all ~30% machine-testable WCAG rows at once.
+Automated axe covers ~30% of WCAG; this is a regression fence, not a substitute for manual a11y.
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen
-once this iteration in a 688-test run, green on clean re-run). The
+once last iteration in a 688-test run, green on clean re-run). The
 [self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven
 engagement.
