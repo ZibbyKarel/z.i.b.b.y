@@ -325,8 +325,12 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       const makerStatus = await this.waitForMaker(run, goal.maker.kind, makerRunRef)
       iteration.status = makerStatus
 
-      // Run the verifier and capture its verdict (it feeds the next iteration).
-      const verdict = await this.runVerifier(run, goal, project, index)
+      // Phase 12.6: a pipeline maker that passed its OWN deterministic verify phase
+      // already ran the very checks the goal's checks verifier would — skip the
+      // redundant second suite. Otherwise verify normally.
+      const verdict =
+        this.makerAlreadyVerified(goal, project, makerStatus, makerRunRef) ??
+        (await this.runVerifier(run, goal, project, index))
       iteration.verifier = {
         kind: verdict.kind,
         ...(verdict.runRef ? { runRef: verdict.runRef } : {}),
@@ -463,6 +467,44 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.workspace
       .checkpoint({ worktreePath: run.workspace.path, phaseId: `goal-iter-${index}`, summary })
       .catch(() => null)
+  }
+
+  /**
+   * Phase 12.6 — eliminate double verification. The delivery pipeline maker already
+   * runs its OWN `verify` phase (the runner records the exact commands it executed on
+   * the pipeline run's `verifyCommands` — a real-execution marker, never an agent
+   * claim). When the goal's verifier is a `checks` verifier that would resolve to the
+   * SAME commands, re-running them is pure waste — return a synthesized satisfied
+   * verdict instead. Anything not provably identical (a `claude` verifier, different
+   * commands, a maker with no passed verify) → `null`, so `drive()` verifies normally.
+   */
+  private makerAlreadyVerified(
+    goal: Goal,
+    project: Project | null,
+    makerStatus: GoalIterationStatus,
+    makerRunRef: string,
+  ): VerifierVerdict | null {
+    if (goal.maker.kind !== "pipeline" || makerStatus !== "done") return null
+    if (goal.verifier.kind !== "checks") return null
+    let verifiedWith: string[] | undefined
+    try {
+      verifiedWith = this.pipelineRunner.get(makerRunRef).verifyCommands
+    } catch {
+      return null // maker run already pruned — verify normally
+    }
+    if (!verifiedWith?.length) return null
+    const goalChecks = goal.verifier.commands ?? project?.checks
+    if (!goalChecks?.length) return null
+    if (JSON.stringify(goalChecks) !== JSON.stringify(verifiedWith)) return null
+    this.log.info("goal verifier skipped — maker pipeline already verified (12.6)", {
+      goalId: goal.id,
+      commands: verifiedWith,
+    })
+    return {
+      kind: "checks",
+      satisfied: true,
+      output: "satisfied by the maker pipeline's own verify phase (12.6: skipped a redundant re-run)",
+    }
   }
 
   /**

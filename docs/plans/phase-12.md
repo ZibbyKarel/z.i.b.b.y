@@ -41,7 +41,17 @@ Progress (loop tracking)
       Tests: onDriveError unit; e2e default-gate (restart → parked awaiting-resume → resume →
       done) + daemon-mode restart (GOAL_AUTO_RESUME=1 → auto-continues). **12.1–12.4
       blast-radius set COMPLETE.**
-- [ ] 12.6 — Eliminate double verification
+- [x] 12.6 — Eliminate double verification (DONE 2026-06-14). New `PipelineRun.
+      verifyCommands` marker — set by the pipeline runner from the ACTUAL resolved
+      commands of a passed `verify` phase (real execution, never an agent claim,
+      per the research guardrail). Goal runner `makerAlreadyVerified()` returns a
+      synthesized satisfied verdict (skipping `runVerifier`) ONLY when: maker is a
+      pipeline, finished `done`, the goal verifier is `checks`, and its resolved
+      commands EQUAL the maker's `verifyCommands`. Anything not provably identical
+      (claude verifier, different commands, no verify phase, agent maker) → verify
+      normally. Unit: 8 cases on the decision; e2e: a verify-pipeline-maker goal
+      finishes in 1 iteration with the synthesized "skipped a redundant re-run"
+      verdict. 669/669 api green.
 - [x] 12.7 — Worktrees outside the repo (DONE 2026-06-14). New shared
       `src/shared/worktree-root.ts` (`resolveWorktreeRoot` + `prepareWorktreeDir`),
       NOT derived from `resolveDataRoot`; default `os.tmpdir()/zibby-worktrees`,

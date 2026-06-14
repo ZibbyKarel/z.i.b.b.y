@@ -144,6 +144,14 @@ export const PipelineRunSchema = z.object({
    * drive memory-grounding MOC selection; absent for UI-started runs.
    */
   matchedTerms: z.array(z.string()).optional(),
+  /**
+   * Phase 12.6: the resolved check commands of the last `verify` phase that passed
+   * in this run (runner-set from actual deterministic execution, never an agent
+   * claim). Lets a goal whose maker IS this pipeline skip a second, identical
+   * verification when its own checks verifier would run the same commands. Absent
+   * if the pipeline has no verify phase or none passed.
+   */
+  verifyCommands: z.array(z.string()).optional(),
 })
 export type PipelineRun = z.infer<typeof PipelineRunSchema>
 

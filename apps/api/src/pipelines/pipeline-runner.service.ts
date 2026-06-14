@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
 import {
+  DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
   PIPELINE_RUN_ARTIFACTS,
   type PhaseEscalation,
@@ -710,6 +711,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
       if (stageRun.status === "done") {
         this.log.info("pipeline phase done", { phase: phase.id, attempt })
+        // Phase 12.6: a `verify` phase passed → record the commands it ran (runner-set
+        // from real execution, not an agent claim) so a goal maker can skip an identical
+        // second verification (goal-runner.makerAlreadyVerified).
+        if (phase.type === "verify") {
+          run.verifyCommands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS]
+        }
         // Phase 9.3: checkpoint the green phase on the run branch (worktree only;
         // a clean tree / non-git run → no-op). Records the sha on the aggregate.
         await this.checkpointPhase(run, phase, stageCwd, attempt)

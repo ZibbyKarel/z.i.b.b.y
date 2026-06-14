@@ -298,6 +298,54 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(["done", "error"]).toContain(outcome?.status)
   })
 
+  it("skips the goal verifier when the pipeline maker already passed an equivalent verify phase (12.6)", async () => {
+    // A project whose checks trivially pass; a pipeline maker = agent → verify(project
+    // checks); a goal whose checks verifier (no commands) would run the SAME checks.
+    const vproj = await fs.mkdtemp(path.join(os.tmpdir(), "goal-vproj-"))
+    await initGitRepo(vproj)
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "vproj", name: "vproj", path: vproj, checks: ["true"] })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "vpipe",
+        phases: [agentPhase("build"), { id: "v", type: "verify" }],
+        instructions: "build then verify",
+      })
+      .expect(201)
+    await request(app.getHttpServer())
+      .post("/api/goals")
+      .send({
+        id: "doubleverify",
+        objective: "Satisfy doubleverify",
+        maker: { kind: "pipeline", id: "vpipe" },
+        verifier: { kind: "checks" }, // no commands → resolves to vproj.checks = ["true"]
+        maxIterations: 2,
+        instructions: "iterate",
+      })
+      .expect(201)
+
+    const start = await request(app.getHttpServer())
+      .post("/api/goals/doubleverify/run")
+      .send({ project: "vproj" })
+      .expect(201)
+    const goalRunId = start.body.goalRunId
+
+    const final = await until(async () => {
+      const res = await getRun(goalRunId)
+      return res.body.status !== "running" ? res.body : null
+    })
+    expect(final.status).toBe("done")
+    expect(final.iterations).toHaveLength(1) // satisfied on iteration 0, no second pass
+    expect(final.iterations[0].verifier.satisfied).toBe(true)
+    // The synthesized verdict proves the goal verifier was SKIPPED, not re-run.
+    expect(final.iterations[0].verifier.output).toMatch(/skipped a redundant re-run/)
+
+    await fs.rm(vproj, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+  })
+
   it("default boot gate (Law 3): restart parks the goal awaiting-resume — no auto-dispatch", async () => {
     // A looping goal (fails 5×, 10 iterations) is reliably still running when we kill
     // the API right after dispatch. On default reboot the boot gate must rehydrate it

@@ -16,7 +16,7 @@ Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 | 12.2 Never run checks from inside the repo | ✅ done (2026-06-14) | verifier `spawnCwd` never falls back to `run.cwd`; no worktree/project → park `verifier-scope`. Pure `checksVerifierBlocker` + `drive()` pre-flight park + `runVerifier` floor |
 | 12.3 Resource governance in `runShell` + shutdown hook | ✅ done (2026-06-14) | detached pgid spawn + wall-clock timeout (SIGTERM→SIGKILL) + `liveShells` tracking + `onModuleDestroy` reaping + output cap; `main.ts` now `enableShutdownHooks()` so reapers fire on SIGTERM |
 | 12.4 Gate `reconstruct()` re-dispatch (Law 3) | ✅ done (2026-06-14) | rehydrate always; boot parks live goals `awaiting-resume` (no auto-dispatch) unless `GOAL_AUTO_RESUME=1`; all `drive()` sites `.catch(onDriveError)` |
-| 12.6 Eliminate double verification | ⬜ | skip goal verifier when maker pipeline already verified |
+| 12.6 Eliminate double verification | ✅ done (2026-06-14) | `PipelineRun.verifyCommands` marker (runner-set from real execution); goal `makerAlreadyVerified()` skips `runVerifier` only when resolved commands provably equal. 669/669 api green |
 | 12.7 Worktrees outside the repo | ✅ done (2026-06-14) | shared `worktree-root.ts` (not from data root); all 3 runners cut worktrees in `ZIBBY_WORKTREE_ROOT`/`os.tmpdir()`. Does NOT fix the `ENOTEMPTY` flake (that's the RunnerCore shutdown-await race → 12.9) |
 | 12.9 Synchronous reaping on shutdown | ✅ done (2026-06-14) | `RunnerCore.shutdown()` async, awaits child exit + log flush (SIGTERM→SIGKILL); e2e cleanups use `fs.rm` `maxRetries/retryDelay` (the real flake fix). `ENOTEMPTY` gone across 6 runs; suite hit 660/660 |
 | 12.8 Durable self-development posture | ⬜ | builder ≠ subject, OS sandbox, budget-as-contract |
@@ -39,15 +39,20 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
 
 ## Next iteration
 
-**Phase 12.6 — eliminate double verification.** The delivery pipeline already verifies
-internally (`delivery.pipeline.md` verify phase, up to 4× per run), then the goal
-runner's `drive()` runs the goal verifier UNCONDITIONALLY afterward
-(`goal-runner.service.ts` ~:248) — wasteful re-run of an equivalent suite. When
-`goal.maker.kind === "pipeline"`, the maker pipeline has a `type:"verify"` phase, and
-the maker run finished `done` (its own verify passed), skip the goal's second
-verification. To detect "already verified" reliably, surface a marker from the pipeline
-runner when a verify phase passes (`pipeline-runner.service.ts` ~:709) — e.g.
-`verified: true` on the StageRun/aggregate — so the goal runner compares and skips an
-identical pass. Tests: pipeline-maker that passed verify → goal verifier skipped;
-checks-maker / failed-verify → still verified. Then 12.8 (durable posture: builder ≠
-subject runbook, OS sandbox, budget-as-contract) closes Phase 12.
+**Phase 12.8 — durable self-development posture (the LAST Phase 12 item — closes it).**
+Architecture + policy + docs, not a single patch:
+- **Builder ≠ subject runbook** (`docs/ops/`): the orchestrator that drives
+  self-development must run from a pinned/built artifact, NOT `ts-node-dev` on the tree
+  it edits (`apps/api/package.json:6`). Document: build ZIBBY, run that build as the
+  builder, point the goal at a fresh checkout/worktree of the repo as the subject.
+- **Resource-governance as a contract dimension:** a short note in ROADMAP/POLICY that
+  the autonomy contract now governs autonomy of EXECUTION (per-run/per-goal compute +
+  token budget) alongside autonomy of judgment (tiers/gates) — composes with Phase 8.1
+  `BudgetService`; the 12.3 timeout + 12.1/12.2 scoping are the interim ceiling.
+- **OS-level sandbox** note: run the subject's verifier under a real resource ceiling
+  (container/cgroup mem+cpu) so a runaway is bounded by the OS, not just bookkeeping.
+- Tests: a documented runbook; a smoke that a goal targeting a sibling checkout never
+  touches the builder's own tree (reuse the worktree-root isolation from 12.7). Keep it
+  thin — this is mostly docs + a guard test, since the enforcement pieces (12.1–12.5,
+  12.9) already landed. After 12.8, **Phase 12 is COMPLETE** — the repo is a safe loop
+  target; consider a real self-development smoke as the Phase 12 exit demonstration.
