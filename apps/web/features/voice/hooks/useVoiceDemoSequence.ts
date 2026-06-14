@@ -11,11 +11,11 @@ interface DemoStep {
 }
 
 /**
- * What the voice UI needs from a session: the orb state, whether the full
- * transcript is revealed, and a mic toggle. A future real speech-recognition
- * hook replaces this one by returning the same shape.
+ * The scripted demo's slice of the session: orb state, whether the full
+ * transcript is revealed, and a mic toggle. {@link useVoiceSession} projects
+ * this (or a real recognition session) onto the unified `VoiceSession`.
  */
-export interface VoiceSession {
+export interface DemoVoiceSession {
   state: VoiceState;
   /** True once the conversation's second half has been "spoken". */
   revealed: boolean;
@@ -30,7 +30,7 @@ export interface VoiceSession {
  * wired in): the mic drives a timed idle → listening → thinking → speaking →
  * idle cycle, revealing the rest of the demo transcript at the speaking step.
  */
-export function useVoiceDemoSequence(): VoiceSession {
+export function useVoiceDemoSequence(): DemoVoiceSession {
   const [state, setState] = useState<VoiceState>("idle");
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

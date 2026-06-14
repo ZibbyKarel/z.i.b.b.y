@@ -4,6 +4,25 @@
 > slice, design → implement → verify → checkpoint → record. Full roadmap:
 > [ROADMAP.md](ROADMAP.md); per-phase plans in [docs/plans/](docs/plans/).
 
+## Phase 17: real voice input (live STT) — ✅ COMPLETE (2026-06-14)
+
+The first **functional** slice since Phase 13 (14–16 were test-infra/CI, which
+LOOP.md disqualifies as phases). A code-level gap analysis found the only real
+user-facing mock left: the **voice operator interface** — a North-Star JARVIS
+capability the roadmap wrongly marked ✅ done. The styled takeover shipped early,
+but the session under it (`useVoiceDemoSequence`) was a `setTimeout` script
+replaying a hardcoded `demo.*` conversation; no `phase-7` commit ever landed.
+Plan: [docs/plans/phase-17.md](docs/plans/phase-17.md). Delivers the STT half of
+ROADMAP **§7.1**.
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 17.1 Real `SpeechRecognition` behind a live/demo seam | ✅ done (2026-06-14) | `useSpeechRecognition` (SSR-guarded ctor resolve, `continuous`+`interimResults`, closed-union error mapping, bounded silent-drop restart) + `useVoiceSession` (one `VoiceSession` shape over live STT *or* the scripted demo; `mode`=live when supported else demo). `VoiceScreen` now shows the real utterance + interim ghost, hands the **real** transcript to the Phase-11.4 composer seam, surfaces recognition errors (`role="alert"`) + an unsupported note. jsdom `MockSpeechRecognition` test helper; hooks-glob added to `vitest.components.config.ts`. **web-components 228/228, full `pnpm test` 1389/1389, lint+web-tsc clean.** Demo stays the deterministic fallback (unsupported browsers + CI). |
+
+**Out of scope (→ next):** TTS (`useSpeech` — speak outcomes/approvals aloud),
+`parseUtterance` action grammar (approve/reject/stop/navigate cs+en), reconnect
+backoff ladder, Chrome on-device opt-ins, Settings → Voice, wake word.
+
 ## Phase 12: self-development safety — ✅ COMPLETE (2026-06-14)
 
 Make ZIBBY a safe target for its own loop engine (the "MEMORY BOMB" RCA).

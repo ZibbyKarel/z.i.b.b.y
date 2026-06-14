@@ -673,9 +673,19 @@
     },
     "micStart": "Spustit demo (klikni)",
     "micStop": "Zastavit (klikni)",
+    "micStartLive": "Začni poslouchat",
+    "micStopLive": "Přestaň poslouchat",
     "volume": "Hlasitost",
     "handToTask": "Nový task z tohoto",
-    "hint": "klikni mikrofon pro demo · Esc pro HUD"
+    "hint": "klikni mikrofon pro demo · Esc pro HUD",
+    "hintLive": "klikni mikrofon a mluv · Esc pro HUD",
+    "unsupported": "Hlasový vstup není v tomto prohlížeči dostupný — zobrazuji demo.",
+    "error": {
+      "mic-denied": "Přístup k mikrofonu byl odepřen.",
+      "network": "Hlasová služba není dostupná — zkontroluj připojení.",
+      "service-denied": "Hlasová služba odmítla požadavek.",
+      "unsupported": "Hlasový vstup není v tomto prohlížeči dostupný."
+    }
   },
   "runs": {
     "title": "Běhy & aktivita",

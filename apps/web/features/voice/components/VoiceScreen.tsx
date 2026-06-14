@@ -5,14 +5,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { RUN_STATE } from "../../runs/run";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, compactAgo } from "../../../utils/time";
 import { useNewTask } from "../../tasks";
 import { useVoiceData } from "../hooks/useVoiceData";
-import { useVoiceDemoSequence } from "../hooks/useVoiceDemoSequence";
+import { useVoiceSession } from "../hooks/useVoiceSession";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoicePanel } from "./VoicePanel";
 import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
@@ -33,8 +33,11 @@ export interface VoiceScreenProps {
  */
 export function VoiceScreen({ onExit }: VoiceScreenProps) {
   const t = useTranslations("voice");
+  const locale = useLocale();
+  const lang = locale === "cs" ? "cs-CZ" : "en-US";
 
-  const { state, revealed, isActive, toggleMic } = useVoiceDemoSequence();
+  const { mode, state, revealed, isActive, transcript, interim, isSupported, error, toggleMic } =
+    useVoiceSession({ lang });
   const { approvals, liveRuns, recent, skills } = useVoiceData();
   const { open: openNewTask } = useNewTask();
   // A render-stable "now" for the relative times, ticked once a minute.
@@ -46,16 +49,29 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     { role: "user", text: t("demo.user2") },
     { role: "zibby", text: t("demo.zibby2") },
   ];
-  const messages = revealed ? demoMessages : demoMessages.slice(0, 2);
 
-  // Phase 11.4 seam: hand the spoken utterance to the unified composer. The real
-  // (Phase-7) recognition hook will call this with the live transcript; today it
-  // routes the demo's last user utterance so the seam is exercised deterministically.
-  // The composer infers single vs loop and the operator confirms behind the gate
-  // (live STT/TTS is deferred to Phase 7).
+  // Live mode renders the real spoken utterance; demo replays the scripted
+  // conversation. (ZIBBY's spoken reply arrives with TTS in a later phase.)
+  const messages: VoiceMessage[] =
+    mode === "live"
+      ? transcript
+        ? [{ role: "user", text: transcript }]
+        : []
+      : revealed
+        ? demoMessages
+        : demoMessages.slice(0, 2);
+
+  // Phase 11.4 seam: hand the spoken utterance to the unified composer — the
+  // real live transcript when recognition is available, else the demo's last
+  // user line so the seam stays exercised deterministically. The composer infers
+  // single vs loop and the operator confirms behind the gate.
   const lastUserUtterance =
-    [...demoMessages].reverse().find((m) => m.role === "user")?.text ?? "";
+    mode === "live"
+      ? transcript
+      : ([...demoMessages].reverse().find((m) => m.role === "user")?.text ?? "");
+  const canHandToTask = lastUserUtterance.trim().length > 0;
   const handToTask = () => {
+    if (!canHandToTask) return;
     onExit();
     openNewTask(lastUserUtterance);
   };
@@ -280,7 +296,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
                 ))}
               </div>
             )}
-            {state === "listening" && (
+            {state === "listening" && !interim && (
               <Typography
                 mono
                 size="2xs"
@@ -291,7 +307,33 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
                 {t("speakNow")}
               </Typography>
             )}
+            {/* Live interim words as ghost text while the utterance is forming. */}
+            {mode === "live" && interim && (
+              <Typography
+                aria-live="polite"
+                size="sm"
+                style={{ marginTop: 6, display: "block", opacity: 0.55, fontStyle: "italic" }}
+                type="note"
+                variant="secondary"
+              >
+                {interim}
+              </Typography>
+            )}
           </div>
+
+          {/* Live recognition errors — surfaced assertively, not silently swallowed. */}
+          {mode === "live" && error && (
+            <Typography mono role="alert" size="2xs" tone="bad" type="note">
+              {t(`error.${error}`)}
+            </Typography>
+          )}
+
+          {/* No live recognition in this browser — the demo is shown instead. */}
+          {!isSupported && (
+            <Typography mono size="2xs" type="note" variant="tertiary">
+              {t("unsupported")}
+            </Typography>
+          )}
         </Stack>
       </div>
 
@@ -306,7 +348,15 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
             color: isActive ? "var(--color-background)" : ACCENT,
             boxShadow: isActive ? "0 0 30px rgba(91,141,239,0.38), 0 0 60px rgba(91,141,239,0.13)" : "none",
           }}
-          title={isActive ? t("micStop") : t("micStart")}
+          title={
+            mode === "live"
+              ? isActive
+                ? t("micStopLive")
+                : t("micStartLive")
+              : isActive
+                ? t("micStop")
+                : t("micStart")
+          }
           type="button"
         >
           <MicGlyph size={22} />
@@ -321,7 +371,8 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         </button>
 
         <button
-          className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
+          className="flex items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors enabled:cursor-pointer enabled:hover:border-accent enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canHandToTask}
           onClick={handToTask}
           title={t("handToTask")}
           type="button"
@@ -331,7 +382,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         </button>
 
         <Typography mono size="2xs" style={{ letterSpacing: "0.08em" }} type="note" variant="tertiary">
-          {t("hint")}
+          {mode === "live" ? t("hintLive") : t("hint")}
         </Typography>
       </div>
     </div>

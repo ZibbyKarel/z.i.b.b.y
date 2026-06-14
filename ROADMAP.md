@@ -19,7 +19,7 @@ per-phase plan under `docs/plans/`.
 | Second brain with run lifecycle (ground → work → record) | ✅ vault write API, grounding block, run recorder + learned-memory, MOC links (**Phase 4**)        |
 | Autonomous mode watching Slack/email                     | ✅ real integrations + credentials, Slack/email `ChannelWatcher`, sanitizer, tiered triage + mandate (**Phase 5**) |
 | Butler's briefing, always answerable                     | ✅ append-only activity JSONL, `GET /api/briefing` + morning automation, notification discipline (**Phase 6**) |
-| Voice operator interface                                 | ✅ browser-native STT/TTS, utterance→action grammar, overlay a11y, free wake word (**Phase 7**)    |
+| Voice operator interface                                 | 🚧 styled JARVIS takeover + utterance→composer seam shipped; **live STT now real (Phase 17)**; TTS + action grammar + wake word still pending (**Phase 7** plan; was wrongly marked done) |
 | Multiple parallel engagements with budget caps           | ✅ per-project + per-goal budgets, concurrency isolation, ops hardening (**Phase 8**, **13.1**)    |
 
 **Built on top of the North Star (Phases 9–14):**
@@ -1101,6 +1101,43 @@ glue, no runtime code._
 **Phase exit criterion:** a CI e2e run retries a flaky test up to twice and uploads a trace
 on the retry; local `pnpm e2e` behaviour is unchanged (no retries); the guard test pins the
 retry + artifact shape; nothing pushed.
+
+---
+
+## Phase 17 — Real voice input (live speech-to-text)
+
+_Delivers the STT half of **§7.1**. The voice screen has shipped as a styled
+JARVIS takeover from the start, but the session under it (`useVoiceDemoSequence`)
+is a scripted timer — the mic cycles a hardcoded `demo.*` conversation; nothing
+captures audio. A code-level gap analysis (not roadmap claims) found this the
+**only** real user-facing mock left, and the highest-priority functional gap
+under LOOP.md (a North-Star JARVIS capability, mock → real). No `phase-7` commit
+ever landed. Full plan: `docs/plans/phase-17.md`._
+
+### 17.1 Real `SpeechRecognition` behind a live/demo seam
+
+- `useSpeechRecognition` wraps `window.SpeechRecognition ?? webkitSpeechRecognition`
+  (SSR-guarded, resolved once): `continuous` + `interimResults`,
+  `{ isSupported, isListening, transcript, interim, error, start, stop }`, error
+  mapped to a closed union (`mic-denied | unsupported | network |
+  service-denied`; `no-speech`/`aborted` suppressed), bounded silent-drop restart
+  (Chrome drops continuous sessions after ~60 s — restart while active, capped at
+  5, reset on each real result).
+- `useVoiceSession` is the single seam the screen consumes (extended
+  `VoiceSession`: `mode`, `state`, `transcript`, `interim`, `isSupported`,
+  `error`, `toggleMic`); `mode` = `live` when supported else `demo`, demo path
+  delegates to the existing scripted sequence unchanged. `VoiceScreen` shows the
+  real utterance + interim ghost text and hands the **real** transcript to the
+  Phase-11.4 composer seam (`createTask`); unsupported → fallback note.
+- **Tests:** a jsdom `MockSpeechRecognition` (`vitest.setup.tsx`) + hook unit
+  tests (start/stop, final/interim, error→union mapping, silent-drop restart cap)
+  + a `VoiceScreen` live/unsupported render test. Include glob extended to cover
+  `features/*/hooks/**`.
+
+**Phase exit criterion:** in a supporting browser the mic captures a spoken
+utterance and routes the real transcript to the composer; unsupported browsers
+and CI fall back to the deterministic demo; `pnpm test` green, nothing pushed.
+**Next (→ Phase 18):** TTS (`useSpeech`) — speak outcomes/approvals aloud.
 
 ---
 
