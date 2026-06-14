@@ -281,18 +281,27 @@ Second gap from the Phase-30 gate audit — guardrail parity. Plan: [docs/plans/
 | ---- | ------ | ----- |
 | 31.1 HoldButton on Confirm for payment/deletion | ✅ done (2026-06-14) | `ApprovalCard` (queue) gated payment/deletion behind a 0.9s `HoldButton`, but `RunApprovalGate` (run-detail decision panel) approved **every** risk with a plain one-click Button → the highest-consequence actions were *easier* to confirm on the bigger surface. Fix: canonical `HIGH_RISK_TYPES = {platba, mazani}` in `features/approvals/approval.ts` (taxonomy home; mirrors `ApprovalCard`'s `highRisk` set, no fork); `RunApprovalGate`'s Confirm becomes a DS `HoldButton` when `approval.riskType` is high-risk (`tone="bad"` deletion / `"warn"` payment; 0.9s hold → `approve.mutate`), else single-click Confirm. **Reject stays single-click** (safe direction never gated). Unenriched approvals (no `riskType`) degrade to the plain button. i18n `approvals.holdToApprove`/`holdDone` (cs+en). Tests: deletion/payment → `HoldButton` (`hold-button-root`) + no plain Confirm; non-high-risk keeps plain Confirm; reject single-click. **web/DS green (runs 60, full web-components 357/357), api 691/691 isolated** (full-suite 2 known under-load e2e flakes; web-only change), lint + web-tsc clean. Commit `b903d54`. |
 
+## Phase 32: Overview starter cards actually navigate (dead-affordance fix) — ✅ COMPLETE (2026-06-14)
+
+The proposed "surface the briefing" was re-checked against real code and found a **non-gap**
+(`SummaryWidget` + `BriefingCard` already read the real `GET /api/briefing`; `ActivityFeed` shows live
+activity). Gap analysis instead found a dead interactive element. Plan: [docs/plans/phase-32.md](docs/plans/phase-32.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 32.1 Starter cards navigate (no-op → Link) | ✅ done (2026-06-14) | The fresh-workspace **starter cards** (Skills/Integrations/Agents/Pipelines) on `/overview` were wrapped in a `Pressable` whose `onClick` was an empty no-op with the comment "navigation handled by links" — but there were **no links**. Clicking a starter did nothing — a dead end on the first screen a new operator sees (the only no-op `onClick` in the web app, swept). Fix: each starter `Card` wrapped in a `next/link` `<Link href={`/${id}`}>` (the `STARTERS` ids ARE their route segments), mirroring `BriefingCard`'s `NeedsYouRow`; no-op `Pressable` gone. Tests: a fresh (empty) workspace renders the four starters as links to `/skills`/`/integrations`/`/agents`/`/pipelines` (mutable integrations mock forces `isFresh`). **web/DS green (overview 16, full web-components 358/358), full workspace 1519/1519** (first run, no flake), lint + web-tsc clean. Commit `65a9b1a`. |
+
 ## Next iteration
 
-**Proposed Phase 32 — "Always answerable": surface the butler's briefing in the HUD.** The gate is
-now well-covered (reject-not-delete + hold-to-confirm). The next North-Star pillar is _"Always
-answerable — ZIBBY can explain what it is doing and has done"_ + the butler's-briefing default report.
-The backend has `GET /api/briefing` (Phase 6) and an append-only activity JSONL; GROUND first whether
-the HUD actually **surfaces the briefing** anywhere (overview screen? a "what happened" panel?) or
-whether the operator can only see raw run cards. If the briefing is unsurfaced or mock in the HUD,
-Phase 32 adds a real briefing view (the morning report: "N bugs came in, both fixed, PRs up; X asked
-about Y, I answered; nothing else needs you") on `/overview`, reading the real endpoint, with the
-notification-discipline tone (notify only when relevant). GROUND: `app/(dashboard)/overview`, any
-existing briefing/activity query hooks, the `GET /api/briefing` contract shape, and the activity feed.
+**Proposed Phase 33 — Audit the /memory (second-brain) HUD surface.** Five phases of runs/gate/overview
+polish done; the other North-Star pillar barely audited is the **second brain** — _"accumulates durable
+memory… an Obsidian vault as plain markdown: a North Star, Memories, and indexes / Maps of Content…
+index-first, not vector RAG."_ GROUND first against real code: the `/memory` dashboard segment, its
+feature dir + query hooks, and the vault API (Phase 4 added vault write/read) — verify the screen reads
+the **real vault** (North Star, MOCs, memory notes) and isn't a mock/placeholder, that index-first
+navigation (MOC → note via wikilinks) actually works in the HUD, and that any write surfaces hit the
+real endpoint. Pick the single biggest gap found (a mock list, an unwired link, a missing note view,
+raw frontmatter leaking) as Phase 33's concrete change.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
