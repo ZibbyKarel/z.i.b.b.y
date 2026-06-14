@@ -291,17 +291,27 @@ activity). Gap analysis instead found a dead interactive element. Plan: [docs/pl
 | ---- | ------ | ----- |
 | 32.1 Starter cards navigate (no-op → Link) | ✅ done (2026-06-14) | The fresh-workspace **starter cards** (Skills/Integrations/Agents/Pipelines) on `/overview` were wrapped in a `Pressable` whose `onClick` was an empty no-op with the comment "navigation handled by links" — but there were **no links**. Clicking a starter did nothing — a dead end on the first screen a new operator sees (the only no-op `onClick` in the web app, swept). Fix: each starter `Card` wrapped in a `next/link` `<Link href={`/${id}`}>` (the `STARTERS` ids ARE their route segments), mirroring `BriefingCard`'s `NeedsYouRow`; no-op `Pressable` gone. Tests: a fresh (empty) workspace renders the four starters as links to `/skills`/`/integrations`/`/agents`/`/pipelines` (mutable integrations mock forces `isFresh`). **web/DS green (overview 16, full web-components 358/358), full workspace 1519/1519** (first run, no flake), lint + web-tsc clean. Commit `65a9b1a`. |
 
+## Phase 33: Memory note viewer — navigable wiki-links + backlinks — ✅ COMPLETE (2026-06-14)
+
+Audit of the second-brain `/memory` surface. It reads the **real vault** (graph + search + note +
+daily + editor) — solid — but the note viewer broke index-first navigation. Plan: [docs/plans/phase-33.md](docs/plans/phase-33.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 33.1 Navigable links + backlinks in the note viewer | ✅ done (2026-06-14) | The note **body** rendered as raw text (`[[wikilinks]]` inert), **backlinks** were plain `← a, b, c` text, and the note's resolved outbound **`links`** weren't shown at all — yet `NoteSchema` already carries `links` (resolved `[[wiki-link]]` targets) + `backlinks` as note-id arrays. So from an open MOC you couldn't click through to a linked note (only the graph let you traverse) — broke "MOCs are the way in… notes joined by wiki-links." Fix: extracted a testable **`NoteView`** composite rendering, below the body, two **navigable** rows — outbound `links` (→) + inbound `backlinks` (←), each a clickable `Chip` (`Pressable`) → `onSelect(id)`. `Screen` uses it (`onSelect=setSelected`). i18n `memory.noteLinks`/`noteBacklinks` (cs+en). Tests: `NoteView.test.tsx` — body renders; clicking a link/backlink chip calls `onSelect` with that id; both rows for a MOC-style note; no-note fallback. **web/DS green (memory 15, full web-components 363/363), full workspace 1524/1524** (first run, no flake), lint + web-tsc clean. Commit `f6ffc04`. Deferred: full markdown body rendering (inline `[[…]]` clickable, headings/lists). |
+
 ## Next iteration
 
-**Proposed Phase 33 — Audit the /memory (second-brain) HUD surface.** Five phases of runs/gate/overview
-polish done; the other North-Star pillar barely audited is the **second brain** — _"accumulates durable
-memory… an Obsidian vault as plain markdown: a North Star, Memories, and indexes / Maps of Content…
-index-first, not vector RAG."_ GROUND first against real code: the `/memory` dashboard segment, its
-feature dir + query hooks, and the vault API (Phase 4 added vault write/read) — verify the screen reads
-the **real vault** (North Star, MOCs, memory notes) and isn't a mock/placeholder, that index-first
-navigation (MOC → note via wikilinks) actually works in the HUD, and that any write surfaces hit the
-real endpoint. Pick the single biggest gap found (a mock list, an unwired link, a missing note view,
-raw frontmatter leaking) as Phase 33's concrete change.
+**Proposed Phase 34 — Render the memory note body as markdown (readability).** The deferred half of
+Phase 33: the note body is plain markdown from the vault but renders as a single raw `Typography` —
+a wall of `#`, `-`, `**`, `[[…]]` text. The second brain is "plain markdown… human-readable"; reading
+a note in the HUD should show rendered markdown (headings, lists, emphasis, code) and ideally make
+inline `[[wikilinks]]` clickable (reusing Phase-33's `onSelect`). GROUND first: whether a markdown
+**renderer** already exists in the app or DS (the forms lib has a `FormMarkdownEditor` — does it ship a
+viewer? is `react-markdown`/`marked` already a dep?), and how `[[…]]` should map to `onSelect`. Pick
+the lightest approach (a small renderer or an existing dep) — keep it dependency-frugal. If a renderer
+would be heavy/new-dep, fall back to a minimal one (headings + lists + inline wikilinks) rather than
+pulling a large library.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
