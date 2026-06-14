@@ -184,32 +184,37 @@ spoken gate, endorsed by the North Star; stop/navigate/close = control affordanc
 unchanged — a later "Claude behind the channel" phase subsumes it. Voice-driven loop/goal
 synthesis and live run-event *streaming* narration are deferred.
 
+## Phase 24: voice status is pull, not push (operator feedback) — ✅ COMPLETE (2026-06-14)
+
+Operator mid-loop: _"Logy běhu hlásit nechci ve voice UI. Co se děje bych měl dostat jen v
+případě že se zeptám. Dát prostě briefing místo čtení logů."_ — **voice must not push run
+logs/status; status is given only when asked, as a briefing.** This redirected my originally
+proposed "live run-event narration" Phase 24 (correctly killed — it would have been exactly the
+unwanted log narration) and refines North-Star conflict #3: "narration" = the Phase-23 dispatch
+acks, NOT a play-by-play. Plan: [docs/plans/phase-24.md](docs/plans/phase-24.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 24.1 Stop pushing status; pull-by-ask briefing | ✅ done (2026-06-14) | Removed the Phase-20 auto-announce of runs finishing while voice is open (an unasked push) — `VoiceScreen` reordered so `useSpeech` + briefing callbacks sit above `useUtteranceDispatch`. Added an **ask-by-voice** path: `parseUtterance` `briefing` action (cs/en exact-phrase set: "co se děje", "status", "shrnutí", "what's happening", "brief me"…; a longer "co se děje s buildem" stays a task), `runVoiceAction` routes it to a `brief()` handler that speaks the existing `summarizeBriefing` template — spoken question + the "Brief me" button are the two pull paths; the `briefing` ack is visual-only (TTS suppressed, `brief()` already spoke). Deleted dead `pickNewlyFinished`/`FinishedRun` from `briefing.ts`. i18n `voice.ack.briefing` (cs+en). Tests: parse briefing phrases + longer-stays-task; run brief(); dispatch onBrief-not-createTask; VoiceScreen does-NOT-auto-announce; briefing.test drops pickNewlyFinished. **Full workspace 1490/1490**, lint + web-tsc clean. |
+
+**Principle captured** ([[feedback_voice_status_pull_not_push]]): ZIBBY's voice surface is **quiet
+competence, pull over push** — never stream status/logs unprompted; summarize when asked. Echoes
+CLAUDE.md "notify only when genuinely relevant."
+
 ## Next iteration
 
-**Proposed Phase 24 — Live run-event narration ("narrating as it goes").** North-Star conflict
-#3 (the last open voice gap): "Claude runs behind the voice channel the whole time… narrating as
-it goes. The butler talks back while the work happens, not only after." Today's TTS (Phases 19/20)
-speaks acks/briefing and announces runs *finishing*; it does NOT narrate a run's **progress while
-it executes**. Phase 24: while the voice overlay is open and a dispatched run is live, subscribe to
-the run-event stream (`RunEventsProvider` already exists) and speak **milestone** transitions —
-phase changes (Architekt → Kodér → Tester), a gate opening, completion — *not* every log line.
-Research (2026-06-14, sources below) is explicit: long-running tasks want **sparse, context-aware**
-voice updates + visual detail in the HUD, never continuous per-event narration (over-speaking
-destroys trust). Design: a pure `pickRunMilestones(prevState, events)` selector (testable,
-dedup-by-phase like Phase 20's `pickNewlyFinished`) feeding the existing `useSpeech`; respects mute;
-seeds from the first event so in-flight history isn't replayed. GROUND first: read
-`RunEventsProvider`/`useRunEvents` and the run-event shape, and `VoiceScreen`'s Phase-20
-finish-announce effect (the same seed-from-first-feed idiom applies).
-
-Candidate after that — **Phase 25: turn-by-turn clarification** — when the classifier is
-low-confidence, ZIBBY asks a spoken follow-up instead of dispatching blind (still no modal),
-realizing "resolved in the dialogue itself, turn by turn."
+**Proposed Phase 25 — Turn-by-turn clarification (conversational, still no modal).** The next
+North-Star slice: "what you want is resolved in the dialogue itself, turn by turn." Today a spoken
+task dispatches immediately (Phase 23) even when the classifier is **low-confidence**
+(`isLowConfidence`, `task.ts` — confidence < 0.4). Phase 25: when a dispatched utterance comes back
+low-confidence, instead of dispatching blind, ZIBBY asks a **spoken** follow-up ("Chceš to pustit
+přes Kodér, nebo jako pipeline?") and the operator's next utterance resolves it — a real two-turn
+voice dialogue, no `NewTaskDialog`. GROUND first: the classify path is read-only
+(`useClassifyTaskMutation`) and already returns `confidence`/`candidates`/`reason`; decide whether
+to classify-then-confirm-by-voice for low-confidence only (keep high-confidence one-shot). Keep the
+gate untouched; keep `live|demo` deterministic. This is the last conversational gap before "full
+Claude behind the channel" (which needs a backend reasoning call — defer; voice STT/TTS stays free).
 
 Also still open (fold into a hardening pass if it recurs): the api `agent-runs.e2e` git-fixture
 transient under full-suite load (rare; passes isolated). The
 [self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven engagement.
-
-_Research sources (Phase 24 narration UX):_
-[Aufait UX — VUI best practices](https://www.aufaitux.com/blog/voice-user-interface-design-best-practices/) ·
-[Eleken — Voice UI design 2026](https://www.eleken.co/blog-posts/voice-ui-design) ·
-[Rime — TTS voice best practices](https://rime.ai/resources/tts-voice-best-practices)
