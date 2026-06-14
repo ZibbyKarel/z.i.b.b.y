@@ -207,7 +207,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       projectId: resolved?.id,
       matchedTerms,
     })
-    const { command, args } = await this.buildCommand(agent, prompt, grantDirs, grounding)
+    const { command, args } = await this.buildCommand(agent, prompt, grantDirs, grounding, cwd)
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
     // sandbox; the session spawns there (its first `spawnCwd` ever) so its commits
@@ -523,6 +523,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     prompt: string,
     grantDirs: string[],
     grounding?: string,
+    sandboxCwd?: string,
   ): Promise<{ command: string; args: string[] }> {
     const task = grantDirs.length
       ? `${prompt}\n\nOperate on this directory: ${grantDirs[0]}`.trim()
@@ -538,6 +539,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // Capture the full transcript so the run log shows every step, not just the
       // final summary (the core flattens the stream-json events back to text).
       streamTranscript: true,
+      // Spill the system prompt into the run's sandbox so it rides
+      // --append-system-prompt-file, keeping argv off the OS limit (spawn E2BIG). A
+      // standalone agent run passes no `delegates`, so its catalog folds down to
+      // ZIBBY's operational core (see selectCatalogAgents) — never the whole library.
+      ...(sandboxCwd ? { systemPromptDir: sandboxCwd } : {}),
     })
   }
 

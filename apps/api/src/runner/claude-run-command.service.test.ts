@@ -1,4 +1,7 @@
 import type { Agent, Hook, McpCredentialsInput, McpServer, Skill } from "@zibby/contracts"
+import * as fs from "node:fs/promises"
+import * as os from "node:os"
+import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { AgentsStorageService } from "../agents/agents.storage.service"
 import type { HooksStorageService } from "../hooks/hooks.storage.service"
@@ -6,10 +9,13 @@ import type { McpCredentialsStore } from "../mcp/mcp-credentials.store"
 import type { McpServersStorageService } from "../mcp/mcp.storage.service"
 import type { SkillsStorageService } from "../skills/skills.storage.service"
 import {
+  CORE_DELEGATE_IDS,
   ClaudeRunCommandService,
   EXECUTION_DIRECTIVE,
   GATE_DEADLINE_S,
+  MAX_CATALOG_AGENTS,
   OPERATING_CONTRACT,
+  SYSTEM_PROMPT_FILE,
 } from "./claude-run-command.service"
 
 interface ServiceOpts {
@@ -237,6 +243,79 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
       prompt: "Jsi spec writer.",
       tools: "Read, Write, Edit",
     })
+  })
+
+  it("passes a small agent library through unchanged (no curation under the cap)", async () => {
+    // The whole-library overflow only bites at scale; a handful of agents and no
+    // explicit delegates must keep today's full catalog.
+    const many = Array.from({ length: 5 }, (_, i) => ({ id: `a${i}`, instructions: `body ${i}` }))
+    const svc = makeService(many, [])
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}")
+    expect(Object.keys(catalog).sort()).toEqual(["a0", "a1", "a2", "a3", "a4"])
+  })
+
+  it("curates a large library down to the caller's delegates + ZIBBY's core, capped", async () => {
+    // A library bigger than the cap would overflow `--agents` (spawn E2BIG). The
+    // catalog must narrow to the relevant delegates plus the operational core, never
+    // the whole library, and never exceed the cap.
+    const library: Agent[] = [
+      { id: "architekt", instructions: "Architekt." },
+      { id: "koder", instructions: "Kodér." },
+      { id: "dokumentator", instructions: "Dokumentátor." },
+      { id: "research-analyst", instructions: "Relevant delegate." },
+      ...Array.from({ length: 200 }, (_, i): Agent => ({ id: `lib-${i}`, instructions: `lib ${i}` })),
+    ]
+    const svc = makeService(library, [])
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      delegates: ["research-analyst"],
+    })
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}")
+    const ids = Object.keys(catalog)
+    expect(ids.length).toBeLessThanOrEqual(MAX_CATALOG_AGENTS)
+    // The explicit delegate is present…
+    expect(ids).toContain("research-analyst")
+    // …plus ZIBBY's operational core that exists in the library…
+    expect(ids).toEqual(expect.arrayContaining(["architekt", "koder", "dokumentator"]))
+    // …and none of the irrelevant specialist library leaked in.
+    expect(ids.some((id) => id.startsWith("lib-"))).toBe(false)
+  })
+
+  it("folds in only the core ids that exist (no hard dependency on seed data)", async () => {
+    const svc = makeService(
+      Array.from({ length: 30 }, (_, i): Agent => ({ id: `x-${i}`, instructions: `x ${i}` })),
+      [],
+    )
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" })
+    const ids = Object.keys(JSON.parse(flagValue(args, "--agents") ?? "{}"))
+    // None of the core ids are in this library, so the curated catalog is empty — the
+    // run still spawns (vs. a 30-entry catalog that the cap was meant to bound).
+    expect(ids).toEqual([])
+    expect(CORE_DELEGATE_IDS.length).toBeGreaterThan(0)
+  })
+
+  it("spills the system prompt to a file under systemPromptDir (off argv)", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-sysprompt-"))
+    try {
+      const svc = makeService([CODER], [])
+      const { args } = await svc.buildClaudeCommand({
+        instructions: CODER.instructions,
+        task: "t",
+        systemPromptDir: dir,
+      })
+      // The inline flag is gone; the file variant carries the path instead.
+      expect(args).not.toContain("--append-system-prompt")
+      const file = flagValue(args, "--append-system-prompt-file")
+      expect(file).toBe(path.join(dir, SYSTEM_PROMPT_FILE))
+      // …and the file holds the assembled prompt (contract + body), so claude reads
+      // the same content it used to receive inline.
+      const written = await fs.readFile(file as string, "utf8")
+      expect(written).toBe(`${OPERATING_CONTRACT}Jsi Kodér.`)
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
   })
 
   it("lets an agent win over a skill that shares its id", async () => {

@@ -155,11 +155,21 @@ describe("Agent runs API (e2e)", () => {
         return raw ? (JSON.parse(raw) as string[]) : null
       })
       if (!argv) throw new Error("argv dump never appeared")
-      const i = argv.indexOf("--append-system-prompt")
-      expect(i).toBeGreaterThanOrEqual(0)
-      const prompt = argv[i + 1] ?? ""
-      expect(prompt).toContain("## Grounding (vault)")
-      expect(prompt).toContain("North Star")
+      // The system prompt now rides --append-system-prompt-file (spilled to the
+      // sandbox so it stays off argv as the prompt grows). Fall back to the
+      // inline flag so the assertion covers both code paths.
+      const fileIdx = argv.indexOf("--append-system-prompt-file")
+      let promptText: string
+      if (fileIdx >= 0) {
+        const filePath = argv[fileIdx + 1] ?? ""
+        promptText = await fs.readFile(filePath, "utf8")
+      } else {
+        const inlineIdx = argv.indexOf("--append-system-prompt")
+        expect(inlineIdx).toBeGreaterThanOrEqual(0)
+        promptText = argv[inlineIdx + 1] ?? ""
+      }
+      expect(promptText).toContain("## Grounding (vault)")
+      expect(promptText).toContain("North Star")
     } finally {
       delete process.env.FAKE_CLAUDE_DUMP_ARGS_FILE
     }

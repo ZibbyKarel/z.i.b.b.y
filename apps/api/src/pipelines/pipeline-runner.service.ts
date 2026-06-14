@@ -635,6 +635,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const byId = new Map(pipeline.phases.map((p) => [p.id, p]))
     const order = pipeline.phases
     const phaseIds = order.map((p) => p.id)
+    // The curated delegation catalog for every stage of this run: the agents THIS
+    // pipeline actually uses. Passing the whole agent library into `--agents` would
+    // overflow the OS argv limit (spawn E2BIG); a stage may still delegate within its
+    // own pipeline's roster (plus ZIBBY's operational core, folded in downstream).
+    const delegates = order.map((p) => p.agent).filter((a): a is string => Boolean(a))
     const retries = resume?.retries ?? new Map<string, number>()
     // Absolute path of the file to feed into the next phase's `consumes` input.
     let handoffSource: string | null = resume?.handoffSource ?? null
@@ -681,7 +686,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       })
       const stageResumeContext = pendingResumeContext ?? undefined
       pendingResumeContext = null // consumed by this phase only
-      const stageRun = await this.runStage(run, phase, stageCwd, attempt, project, stageResumeContext)
+      const stageRun = await this.runStage(
+        run,
+        phase,
+        stageCwd,
+        attempt,
+        project,
+        stageResumeContext,
+        delegates,
+      )
 
       // Phase 9 (mid-stage pause, decision 3a): the stage child died on a usage limit.
       // The aggregate pauses WITHOUT touching the retry map — loop budget and the
@@ -904,6 +917,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     attempt: number,
     project: Project | null,
     resumeContext?: string,
+    delegates?: readonly string[],
   ): Promise<StageRun> {
     const escalation = this.escalationFor(phase, attempt)
     if (escalation) {
@@ -917,6 +931,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.workspace?.path,
       run.matchedTerms,
       resumeContext,
+      delegates,
     )
     // Materialize enabled custom commands into the stage's working tree (worktree
     // for a project run, else the sandbox) so commands resolve; best-effort.
@@ -1107,6 +1122,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     matchedTerms?: string[],
     /** Phase 9.3: resume-context prefix for a continuation phase (limit/parked/loop). */
     resumeContext?: string,
+    /** Curated `--agents` delegation roster (this pipeline's stage agents) — keeps the
+     *  whole agent library off argv (spawn E2BIG). */
+    delegates?: readonly string[],
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path
     // Verify phases are deterministic shell checks — identical in demo and
@@ -1159,6 +1177,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // The sandbox holds the handoff files; with cwd in the worktree/project the
         // session still needs write access to it (reverse grant).
         ...(spawnCwd ? { grantDirs: [cwd] } : {}),
+        // Curated delegation roster + system prompt spilled to the sandbox: both keep
+        // the run's argv under the OS limit (spawn E2BIG) as the agent library grows.
+        ...(delegates ? { delegates } : {}),
+        systemPromptDir: cwd,
       })
       return spawnCwd ? { ...built, spawnCwd } : built
     }

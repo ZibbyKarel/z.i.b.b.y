@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { Agent, Hook, McpServer, Skill } from "@zibby/contracts";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { HooksStorageService } from "../hooks/hooks.storage.service";
@@ -49,6 +50,27 @@ export interface ClaudeRunOptions {
    * `--append-system-prompt` after grounding, before the agent body. Omitted when "".
    */
   resumeContext?: string;
+  /**
+   * Agent ids that should populate the delegation catalog (`--agents`). The catalog
+   * inlines every entry's full instruction body into a SINGLE argv string, so passing
+   * the whole agent LIBRARY (every stored agent) overflows the OS argv limit once the
+   * library grows past a few hundred KB — the run dies with `spawn E2BIG` before
+   * `claude` ever starts. The caller curates the relevant set (a pipeline passes its
+   * own stage agents); ZIBBY's operational core ({@link CORE_DELEGATE_IDS}) is always
+   * folded in, and the result is capped at {@link MAX_CATALOG_AGENTS}. Omit it for a
+   * small/standalone run — a library at or under the cap is passed through unchanged.
+   */
+  delegates?: readonly string[];
+  /**
+   * Writable directory (the run's sandbox cwd) to spill the assembled system prompt
+   * into, so it rides `--append-system-prompt-file` instead of an inline
+   * `--append-system-prompt` argv string. Instructions + grounding + resume-context
+   * can be large, and every byte on argv counts toward the same OS limit that
+   * `--agents` can blow (`spawn E2BIG`); a file keeps argv small as they grow. The
+   * file persists in the sandbox, so an approval→resume that replays the same args
+   * still resolves it. Omit it (tests, callers without a sandbox) → inline prompt.
+   */
+  systemPromptDir?: string;
 }
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
@@ -229,6 +251,58 @@ interface CatalogEntry {
 }
 
 /**
+ * Hard ceiling on delegation-catalog agents. The catalog inlines every entry's full
+ * instruction body into one `--agents` argv string; an unbounded library (ZIBBY ships
+ * 160+ seeded specialists) serializes to >1 MB and overflows the OS argv+env limit
+ * (`spawn E2BIG`) before `claude` starts. The cap also bounds tokens — a single
+ * session never needs dozens of delegatable subagents.
+ */
+export const MAX_CATALOG_AGENTS = 16;
+
+/**
+ * Filename the assembled system prompt is spilled to inside the run's sandbox when a
+ * `systemPromptDir` is given (see {@link ClaudeRunOptions.systemPromptDir}).
+ */
+export const SYSTEM_PROMPT_FILE = ".zibby-system-prompt.md";
+
+/**
+ * ZIBBY's operational delivery/orchestration agents — always folded into a curated
+ * catalog so the delivery loop can delegate even when the caller passes a narrow set
+ * (or none). These are ZIBBY-native roles, distinct from the seeded specialist
+ * library; a missing id is simply skipped (no hard dependency on seed data).
+ */
+export const CORE_DELEGATE_IDS: readonly string[] = [
+  "architekt",
+  "koder",
+  "code-review",
+  "code-reviewer",
+  "tester",
+  "dokumentator",
+  "orchestrator",
+  "cleaner",
+];
+
+/**
+ * Curate the delegation catalog down to a bounded, relevant set. A small library
+ * (≤ {@link MAX_CATALOG_AGENTS}) with no explicit curation is returned UNCHANGED — so
+ * standalone agent runs and tests keep today's full-catalog behaviour. Otherwise the
+ * caller's `delegates` (relevance) come first, then ZIBBY's {@link CORE_DELEGATE_IDS},
+ * deduped and capped — never the whole library on argv.
+ */
+function selectCatalogAgents(all: Agent[], delegates?: readonly string[]): Agent[] {
+  if ((!delegates || delegates.length === 0) && all.length <= MAX_CATALOG_AGENTS) return all;
+  const byId = new Map(all.map((agent) => [agent.id, agent]));
+  const picked = new Map<string, Agent>();
+  const add = (id: string): void => {
+    const agent = byId.get(id);
+    if (agent && !picked.has(id) && picked.size < MAX_CATALOG_AGENTS) picked.set(id, agent);
+  };
+  for (const id of delegates ?? []) add(id);
+  for (const id of CORE_DELEGATE_IDS) add(id);
+  return [...picked.values()];
+}
+
+/**
  * Kickoff prompt used when a run is launched with a blank task. `claude --print`
  * rejects an empty prompt ("Input must be provided …"), and a run started from the
  * UI may carry no prompt at all (the agent's body in `--append-system-prompt`
@@ -245,10 +319,12 @@ const THINKING_TO_EFFORT: Record<NonNullable<Agent["thinking"]>, string> = {
 };
 
 /**
- * Builds the `claude -p` command for a run. The mechanism is flags-only — no
- * sandbox files: the selected entity's body goes in via `--append-system-prompt`,
- * the full agent+skill catalog via `--agents` JSON (each delegatable through the
- * Agent tool with its own prompt/tools/model), and permissions via
+ * Builds the `claude -p` command for a run. The selected entity's body goes in via
+ * `--append-system-prompt` (or `--append-system-prompt-file` when a sandbox dir is
+ * given — large prompts must stay off argv), a CURATED agent+skill catalog via
+ * `--agents` JSON (each delegatable through the Agent tool with its own
+ * prompt/tools/model — bounded by {@link MAX_CATALOG_AGENTS} so the whole library
+ * never overflows the OS argv limit, spawn E2BIG), and permissions via
  * `--permission-mode dontAsk` + `--allowedTools` mapped from the entity's `tools`.
  * This runs under the Max subscription with no extra API/classifier cost.
  *
@@ -274,7 +350,11 @@ export class ClaudeRunCommandService {
     const mcpServers = (await this.mcp.list().catch((): McpServer[] => [])).filter(
       (server) => server.enabled,
     );
-    const { catalog, allowedTools } = await this.buildCatalog(opts.tools, mcpServers);
+    const { catalog, allowedTools } = await this.buildCatalog(
+      opts.tools,
+      mcpServers,
+      opts.delegates,
+    );
     // Custom hooks merge into `--settings` alongside the locked approval hook; a
     // listing failure simply yields the approval-only settings (fail-open to the
     // safe floor, never blocking the run).
@@ -282,6 +362,15 @@ export class ClaudeRunCommandService {
       (hook) => hook.enabled,
     );
     const mcpConfig = await this.buildMcpConfig(mcpServers);
+    // The assembled system prompt (contract + grounding + resume + body) can be large.
+    // When a sandbox dir is given, spill it to a file and pass it by path — keeping it
+    // off argv, where it counts toward the same OS limit `--agents` can blow (E2BIG).
+    const systemPrompt = withOperatingContract(
+      opts.instructions,
+      opts.grounding,
+      opts.resumeContext,
+    );
+    const systemPromptArgs = await this.buildSystemPromptArgs(systemPrompt, opts.systemPromptDir);
     const args = [
       "-p",
       withExecutionDirective(opts.task.trim() ? opts.task : KICKOFF_FALLBACK),
@@ -289,8 +378,7 @@ export class ClaudeRunCommandService {
       "dontAsk",
       "--allowedTools",
       ...allowedTools,
-      "--append-system-prompt",
-      withOperatingContract(opts.instructions, opts.grounding, opts.resumeContext),
+      ...systemPromptArgs,
       "--agents",
       JSON.stringify(catalog),
       // Mid-run approval gate (+ any enabled custom hooks): a PreToolUse hook
@@ -319,6 +407,24 @@ export class ClaudeRunCommandService {
   }
 
   /**
+   * The argv pair carrying the system prompt: `--append-system-prompt-file <path>`
+   * when a sandbox dir is given (the prompt is written there first, so it stays off
+   * argv and survives an approval→resume that replays the same args), else an inline
+   * `--append-system-prompt <text>`. The dir is created if absent — at build time the
+   * run's sandbox may not exist yet (the core mkdirs it on spawn).
+   */
+  private async buildSystemPromptArgs(
+    systemPrompt: string,
+    systemPromptDir?: string,
+  ): Promise<string[]> {
+    if (!systemPromptDir) return ["--append-system-prompt", systemPrompt];
+    await fs.mkdir(systemPromptDir, { recursive: true });
+    const file = path.join(systemPromptDir, SYSTEM_PROMPT_FILE);
+    await fs.writeFile(file, systemPrompt, "utf8");
+    return ["--append-system-prompt-file", file];
+  }
+
+  /**
    * Every agent and skill as the delegatable subagent catalog, plus the session
    * `--allowedTools` allow-list. Agents win on an id collision (richer entry:
    * tools + model). Tolerant — a failed listing yields an empty catalog.
@@ -331,14 +437,19 @@ export class ClaudeRunCommandService {
   private async buildCatalog(
     primaryTools: readonly string[] | undefined,
     mcpServers: readonly McpServer[] = [],
+    delegates?: readonly string[],
   ): Promise<{
     catalog: Record<string, CatalogEntry>;
     allowedTools: string[];
   }> {
-    const [agents, skills] = await Promise.all([
+    const [allAgents, skills] = await Promise.all([
       this.agents.list().catch((): Agent[] => []),
       this.skills.list().catch((): Skill[] => []),
     ]);
+    // Curate down to a bounded, relevant set — the whole library inlined into
+    // `--agents` overflows the OS argv limit (spawn E2BIG). `allowedTools` narrows to
+    // this subset's tools, which is correct: a dropped agent can't be delegated to.
+    const agents = selectCatalogAgents(allAgents, delegates);
 
     // `Agent` lets the run delegate; `Skill` lets it invoke skills and the
     // materialized custom commands (`/<id>`) downloaded bundles depend on — both

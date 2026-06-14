@@ -153,6 +153,23 @@ claude -p "<prompt>" \
 Flags jsou řešeny typově — `dontAsk` + `--agents catalog` + `--append-system-prompt`
 (ověřeno spike testem, viz `project_claude_runner_flags.md`).
 
+### Limity argv (spawn E2BIG)
+
+`--agents` i `--append-system-prompt` jdou na argv, jehož celková velikost
+(argv + env) je omezená OS limitem (`ARG_MAX`). Dvě pojistky drží runy pod ním:
+
+- **Kurátorovaný katalog.** Do `--agents` se neserializuje celá knihovna agentů
+  (ZIBBY jich má 160+ jako seed — to samo přeteče `ARG_MAX` → `spawn E2BIG`).
+  `buildCatalog` vybírá relevantní podmnožinu: `delegates` od volajícího (pipeline
+  posílá agenty svých fází) + operační jádro ZIBBY (`CORE_DELEGATE_IDS`), deduplikované
+  a omezené na `MAX_CATALOG_AGENTS` (16). Malá knihovna (≤ cap, bez `delegates`)
+  projde beze změny. `--allowedTools` se tím zúží na tools této podmnožiny (správně —
+  na vypuštěného agenta stejně nejde delegovat).
+- **System prompt do souboru.** Když runner dostane `systemPromptDir` (sandbox cwd),
+  složený system prompt se zapíše do `<sandbox>/.zibby-system-prompt.md` a předá se
+  přes `--append-system-prompt-file` místo inline `--append-system-prompt`. Soubor
+  přežije v sandboxu, takže approval→resume (přehrání stejných args) ho stále najde.
+
 ## Orchestrator agent
 
 Syntetický fallback agent — nemá uloženou definici v `data/agents/`.
