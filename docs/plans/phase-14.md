@@ -10,7 +10,14 @@ gap — thin web glue over delivered contracts.
 Progress (loop tracking)
 
 - [x] 14.1 — Surface goal park reasons + budget in the web UI (DONE 2026-06-14)
-- [ ] 14.2 — Refresh roadmap ground-truth + Playwright `pnpm e2e` audit
+- [x] 14.2 — Refresh roadmap ground-truth + Playwright audit (DONE 2026-06-14). Rewrote the
+      stale "Where we are today" block/gap table (all gaps delivered; 7 specs not 3). Ran
+      `pnpm e2e` — fixed a REAL `pipeline-run.spec` failure (`/Run · max/` → dialog-scoped
+      "Run pipeline" launch; the label drifted to `pipelineRun.launch`). 8 deterministic
+      specs stable; `approval`/`channels` flake via shared-approvals-queue cross-spec
+      contamination → parked as 14.3.
+- [ ] 14.3 — Playwright cross-spec isolation (NEW; approval/channels share the dev-server
+      approvals queue with no per-spec reset → flaky)
 
 ---
 

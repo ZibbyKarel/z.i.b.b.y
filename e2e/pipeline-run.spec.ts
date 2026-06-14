@@ -14,9 +14,10 @@ test("open a pipeline, see its phase chain, and launch a run", async ({ page }) 
   // The detail panel shows the phase chain for the selected pipeline.
   await expect(page.getByText(/phase chain/)).toBeVisible();
 
-  // Launch a run via the run modal.
-  await page.getByRole("button", { name: "Run pipeline" }).click();
-  await page.getByRole("button", { name: /Run · max/ }).click();
+  // Launch a run via the run modal. The trigger and the modal's launch button share
+  // the "Run pipeline" label (pipelineRun.launch), so scope the launch to the dialog.
+  await page.getByRole("button", { name: "Run pipeline" }).first().click();
+  await page.getByRole("dialog").getByRole("button", { name: "Run pipeline" }).click();
 
   await expect(page.getByText("Pipeline launched in the background")).toBeVisible();
 });

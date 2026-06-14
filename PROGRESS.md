@@ -25,7 +25,8 @@ Plan: [docs/plans/phase-14.md](docs/plans/phase-14.md).
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 14.1 Surface goal park reasons + budget (web) | ✅ done (2026-06-14) | friendly cs/en labels for `verifier-scope`/`awaiting-resume`/`budget`/… + next-step hints + a goal-budget bar (windowed runs vs `goal.budget`); raw enum no longer shown. web-components 211/211 |
-| 14.2 Roadmap ground-truth refresh + Playwright audit | ⬜ next | "Where we are today" is a month stale; run/repair `pnpm e2e` for goal/loop/self-dev surfaces |
+| 14.2 Roadmap ground-truth refresh + Playwright audit | ✅ done (2026-06-14) | rewrote stale "Where we are today" (all gaps closed); ran `pnpm e2e` → fixed real `pipeline-run.spec` label drift (verified green); parked approval/channels cross-spec contamination → 14.3 |
+| 14.3 Playwright cross-spec isolation (NEW) | ⬜ next | approval/channels share the dev server's approvals queue with no per-spec reset → flaky; isolate per spec so `pnpm e2e` is reliably green |
 
 | Item | Status | Notes |
 | ---- | ------ | ----- |
@@ -65,22 +66,23 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
 
 ## Next iteration
 
-**Phase 14.2 — roadmap ground-truth refresh + Playwright `pnpm e2e` audit.** The roadmap's
-"Where we are today (verified 2026-06-11)" block + North-Star gap table are a month stale —
-Phases 1–13 closed nearly every listed gap. Re-verify against current reality and rewrite
-that section so the roadmap reflects what's shipped (delivery loop, PR gate, second brain,
-channels, briefing, voice, budgets, goal loop, self-development safety — all done). THEN
-run `pnpm e2e` (Playwright): the loop has exercised api unit/e2e + web-components throughout
-but never the browser operator-throughline. Characterize the 3 existing specs' state on the
-current tree (they may have drifted), repair any breakage, and add a thin goal/park-state
-spec if cheap (the 14.1 GoalDetailPanel surfaces). Heavier (browser + web app boot), so
-budget for setup; demo-mode keeps it deterministic. Exit: `pnpm e2e` green + an accurate
-roadmap header.
+**Phase 14.3 — Playwright cross-spec isolation.** `pnpm e2e` is 8/10 stable but
+`approval.spec` + `channels.spec` flake intermittently: all 10 specs run against ONE
+long-lived dev server (`workers:1`) sharing the `data-test` approvals queue, with no
+per-spec reset — so accumulated/ordered state from earlier specs interferes (and a reused
+server's channel watcher dedups a re-seeded same-id fixture). It is NOT latency (a 45s
+timeout bump didn't help). Make each spec self-isolating:
+- `approval.spec` / `channels.spec`: in a `beforeEach`, reset the relevant slice via the
+  API (delete pending approvals, re-create the channel integration + a UNIQUE-id Tier-3
+  fixture) so the spec doesn't depend on global-setup-once state surviving prior specs;
+- consider per-spec unique fixture ids so the channel watcher can't dedup across a reused
+  server; or set `reuseExistingServer: false` for these (slower but clean).
+- Exit: `pnpm e2e` green across 3 repeated local runs (not just a cold first run).
 
-Note: the api `agent-runs.e2e` git-fixture test still flakes ~rarely under full-suite load
-(passes isolated) — a residual git-timing transient, candidate to fold into a future test-
-hardening pass if it recurs. If the operator wants to self-develop now, the
-[runbook](docs/ops/self-development.md) is ready (operator action, not a loop iteration).
+Then Phase 14 is complete. Also still open from earlier: the api `agent-runs.e2e`
+git-fixture transient under full-suite load (rare; passes isolated) — fold into a test-
+hardening pass if it recurs. The [self-development runbook](docs/ops/self-development.md)
+is ready for a real operator-driven engagement.
 - Document the resume semantics: with `GOAL_AUTO_RESUME=1` a restart re-drives
   `running`/`paused-limit` goals (12.4 `reconstruct`); without it they park
   `awaiting-resume`. Cross-reference Phase 8.3 (ops hardening) — this is its goal-loop
