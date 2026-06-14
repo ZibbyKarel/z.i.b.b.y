@@ -27,6 +27,8 @@
     "noResults": "No matching notes.",
     "newNote": "New note",
     "editNote": "Edit",
+    "noteLinks": "Links",
+    "noteBacklinks": "Backlinks",
     "save": "Save",
     "dailyTimeline": "Daily timeline",
     "idLabel": "Id",

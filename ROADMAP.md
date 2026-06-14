@@ -953,6 +953,34 @@ as links pointing at `/skills`, `/integrations`, `/agents`, `/pipelines`. web/DS
 
 ---
 
+## Phase 33 — Memory note viewer: navigable wiki-links + backlinks (index-first nav) — ✅ delivered 2026-06-14
+
+_Audit of the second-brain `/memory` surface. It reads the **real vault** (graph + search + note +
+daily timeline + editor), so most of it is solid — but the note viewer broke the North Star's core
+index-first navigation: the note **body** rendered as raw text (`[[wikilinks]]` inert), **backlinks**
+showed as plain `← a, b, c` text, and the note's resolved outbound **`links`** weren't shown at all.
+The `Note` already carries `links` (resolved `[[wiki-link]]` targets) + `backlinks` as note-id arrays
+— the data was there, just not navigable. So from an open MOC you could not click through to a linked
+note; only the force-directed graph let you traverse._
+
+- Extracted the note panel into a testable `NoteView` composite. It now renders, below the body, two
+  **navigable** link rows: outbound `note.links` (→) and inbound `note.backlinks` (←), each a
+  clickable `Chip` (`Pressable`) that selects that note — so the note viewer is a real index-first
+  navigator (open MOC → click a `[[link]]` chip → traverse → click a backlink to come back), matching
+  "MOCs and descriptive filenames are the way in… notes joined by wiki-links."
+- `memory/Screen.tsx` uses `NoteView` (passes `onSelect={setSelected}` / `onEdit`).
+- i18n `memory.noteLinks` / `memory.noteBacklinks` (cs+en).
+
+**Tests:** new `NoteView.test.tsx` — a note with links + backlinks renders both rows; clicking a link
+chip / a backlink chip calls `onSelect` with that note id; no note → the "select a node" fallback.
+web/DS green.
+
+**Deferred (noted):** full markdown rendering of the note body (so inline `[[…]]` in prose is also
+clickable, headings/lists render) — a larger task; the structured `links`/`backlinks` rows give the
+index-first navigation now.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

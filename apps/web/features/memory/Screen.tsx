@@ -17,6 +17,7 @@ import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
+import { NoteView } from "./components/NoteView";
 import { type TierFilter, filterGraphByTier } from "./filterGraph";
 import {
   useMemoryGraphQuery,
@@ -204,48 +205,11 @@ export function Screen() {
         </Container>
 
         <Container minW0>
-          <HudPanel padding="250" title={note?.title ?? t("noteFallback")}>
-            {note ? (
-              <Stack gap="150">
-                <Stack
-                  align="center"
-                  direction="row"
-                  gap="150"
-                  justify="between"
-                >
-                  <Typography
-                    mono
-                    size="caption"
-                    type="note"
-                    variant="tertiary"
-                  >
-                    {note.path} · {note.tier}
-                  </Typography>
-                  <Button
-                    data-testid="memory-note-edit"
-                    icon="edit"
-                    intent="ghost"
-                    onClick={() => setEditor({ mode: "edit" })}
-                    size="sm"
-                  >
-                    {t("editNote")}
-                  </Button>
-                </Stack>
-                <Typography size="base" type="note" variant="secondary">
-                  {note.body ?? ""}
-                </Typography>
-                {note.backlinks && note.backlinks.length > 0 && (
-                  <Typography mono size="sm" type="note" variant="tertiary">
-                    ← {note.backlinks.join(", ")}
-                  </Typography>
-                )}
-              </Stack>
-            ) : (
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("selectNode")}
-              </Typography>
-            )}
-          </HudPanel>
+          <NoteView
+            note={note}
+            onEdit={() => setEditor({ mode: "edit" })}
+            onSelect={setSelected}
+          />
         </Container>
       </Grid>
 
