@@ -1,5 +1,4 @@
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import {
   Accordion,
   AccordionItem,
@@ -18,6 +17,7 @@ import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { type RunView, approvalForRun, runTitle } from "../run";
 import { GoalDetailPanel } from "./GoalDetailPanel";
+import { PipelineStageTimeline } from "./PipelineStageTimeline";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunParkedPanel } from "./RunParkedPanel";
 import { RunPrGatePanel } from "./RunPrGatePanel";
@@ -32,6 +32,36 @@ export interface RunDetailProps {
   stopping: boolean;
   onDelete: () => void;
   deleting: boolean;
+}
+
+/**
+ * The "paused on a usage limit" notice — a pause, not a failure (Phase 9). Shared by
+ * agent, pipeline, and goal runs (it was three inline copies); shows the reset ETA and,
+ * when present, how many auto-resume cycles have been spent.
+ */
+function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
+  const t = useTranslations("runs");
+  const locale = useLocale();
+  return (
+    <HudPanel padding="300" tone="warn">
+      <Stack align="start" direction="row" gap="150">
+        <IconTile glyph="pause" size="md" />
+        <Stack gap="50">
+          <Typography type="note" weight="semibold">
+            {t("limitPausedTitle")}
+          </Typography>
+          <Typography leading="snug" size="sm" type="text" variant="secondary">
+            {t("limitPausedBody", { eta: resumeEta(run.resumeAt, now, locale) })}
+          </Typography>
+          {run.limitResumeCycles != null && run.limitResumeCycles > 0 && (
+            <Typography mono size="2xs" type="note" variant="tertiary">
+              {t("limitResumeCycles", { n: run.limitResumeCycles })}
+            </Typography>
+          )}
+        </Stack>
+      </Stack>
+    </HudPanel>
+  );
 }
 
 function MetaCell({ label, value, tone }: { label: string; value: string; tone?: "accent" }) {
@@ -57,8 +87,6 @@ function MetaCell({ label, value, tone }: { label: string; value: string; tone?:
 export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deleting }: RunDetailProps) {
   const t = useTranslations("runs");
   const tApprovals = useTranslations("approvals");
-  const locale = useLocale();
-  const router = useRouter();
   const { data: queue = [] } = useApprovalsQuery();
   const approval = approvalForRun(queue, run);
   // Who is doing the work: an agent run's `owner` is its agent id; the approval
@@ -89,6 +117,8 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
 
   const headline = runTitle(run);
 
+  // Pipeline runs render their own stage timeline (below); this is the log for the
+  // kinds that have a single one (agent/skill) or a scheduled task's note.
   const logPanel = run.logBase ? (
     <RunLogStream
       linesLabel={(n) => t("lines", { n })}
@@ -98,15 +128,6 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
       logLabel={t("log")}
       runId={run.runId}
     />
-  ) : run.kind === "pipeline" ? (
-    <Stack align="center" direction="row" gap="100" justify="between">
-      <Typography mono size="sm" type="note" variant="secondary">
-        {t("pipelineNote")}
-      </Typography>
-      <Button icon="flow" intent="ghost" onClick={() => router.push(`/pipelines/${run.owner}`)} size="sm">
-        {t("openPipeline")}
-      </Button>
-    </Stack>
   ) : (
     <Typography mono size="sm" type="note" variant="secondary">
       {t("scheduledNote")}
@@ -222,50 +243,20 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
         // Phase 10: a goal run's surface IS its iteration timeline + cost bar (and,
         // when parked, the resume-with-note panel) — there is no per-run log.
         <>
-          {run.status === "paused-limit" && (
-            <HudPanel padding="300" tone="warn">
-              <Stack align="start" direction="row" gap="150">
-                <IconTile glyph="pause" size="md" />
-                <Stack gap="50">
-                  <Typography type="note" weight="semibold">
-                    {t("limitPausedTitle")}
-                  </Typography>
-                  <Typography leading="snug" size="sm" type="text" variant="secondary">
-                    {t("limitPausedBody", { eta: resumeEta(run.resumeAt, now, locale) })}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </HudPanel>
-          )}
+          {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
           <GoalDetailPanel run={run} />
         </>
-      ) : run.status === "parked" && run.kind === "pipeline" ? (
+      ) : run.kind === "pipeline" ? (
+        // Phase 28: a pipeline run's surface IS its stage timeline (each phase's log is
+        // openable). A paused-limit / retries-parked run shows its notice above it.
         <>
-          <RunParkedPanel run={run} />
-          <Accordion>
-            <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
-          </Accordion>
+          {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
+          {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
+          <PipelineStageTimeline run={run} />
         </>
       ) : run.status === "paused-limit" ? (
         <>
-          <HudPanel padding="300" tone="warn">
-            <Stack align="start" direction="row" gap="150">
-              <IconTile glyph="pause" size="md" />
-              <Stack gap="50">
-                <Typography type="note" weight="semibold">
-                  {t("limitPausedTitle")}
-                </Typography>
-                <Typography leading="snug" size="sm" type="text" variant="secondary">
-                  {t("limitPausedBody", { eta: resumeEta(run.resumeAt, now, locale) })}
-                </Typography>
-                {run.limitResumeCycles != null && run.limitResumeCycles > 0 && (
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {t("limitResumeCycles", { n: run.limitResumeCycles })}
-                  </Typography>
-                )}
-              </Stack>
-            </Stack>
-          </HudPanel>
+          <LimitPausedPanel now={now} run={run} />
           <Accordion>
             <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
           </Accordion>

@@ -5,7 +5,7 @@ import type {
   GoalRun,
   PipelineRun,
 } from "@zibby/contracts";
-import { approvalForRun, goalRunToView, mergeRunFeed } from "./run";
+import { approvalForRun, goalRunToView, mergeRunFeed, pipelineRunToView } from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -224,5 +224,22 @@ describe("mergeRunFeed (one card per task — fold a loop's child runs)", () => 
       [],
     );
     expect(feed.map((r) => r.runId)).toEqual(["new", "old"]);
+  });
+});
+
+describe("pipelineRunToView (28 — stage timeline source)", () => {
+  it("carries the per-phase stage runs onto the view for the detail timeline", () => {
+    const v = pipelineRunToView(
+      pipelineRun({
+        stageRuns: [
+          { phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "done" },
+          { phaseId: "verify", runId: "delivery_1.verify_2", attempt: 2, status: "running" },
+        ],
+      }),
+    );
+    expect(v.kind).toBe("pipeline");
+    expect(v.stageRuns).toHaveLength(2);
+    expect(v.stageRuns?.[1]?.attempt).toBe(2);
+    expect(v.stageRuns?.[1]?.phaseId).toBe("verify");
   });
 });

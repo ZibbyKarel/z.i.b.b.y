@@ -64,6 +64,8 @@ export interface RunView {
   deferredLimit?: boolean;
   /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
   checkpoints?: PipelineRun["checkpoints"];
+  /** Phase 28 (pipeline runs): the per-phase stage runs, for the detail's stage timeline. */
+  stageRuns?: PipelineRun["stageRuns"];
   /** Phase 10 (goal runs): the goal definition id, for the detail view's maxIterations lookup. */
   goalId?: string;
   /** Phase 10 (goal runs): the per-iteration maker→verifier log for the timeline. */
@@ -150,6 +152,7 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     resumeAt: r.resumeAt,
     limitResumeCycles: r.limitResumeCycles,
     checkpoints: r.checkpoints,
+    stageRuns: r.stageRuns,
   };
 }
 

@@ -832,7 +832,11 @@
     "goalMakerLog": "log makera",
     "goalVerifierLog": "log verifieru",
     "goalVerifierVerdict": "verdikt",
-    "goalPipelineMakerNote": "Maker běžel jako pipeline — logy jednotlivých fází najdeš v detailu pipeline."
+    "goalPipelineMakerNote": "Maker běžel jako pipeline — logy jednotlivých fází najdeš v detailu pipeline.",
+    "stageTimeline": "Fáze běhu",
+    "stageAttempt": "pokus {n}",
+    "stageNoLog": "Tato fáze zatím nemá žádný log.",
+    "stageNone": "Tento běh zatím nemá žádné fáze."
   },
   "gates": {
     "title": "Pravidla schvalování",

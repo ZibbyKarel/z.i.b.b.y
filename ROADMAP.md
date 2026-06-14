@@ -828,6 +828,39 @@ folded feed) → inline render is the right call, not navigation.
 
 ---
 
+## Phase 28 — Pipeline run detail: stage timeline + per-stage logs — ✅ delivered 2026-06-14
+
+_Sibling of Phase 27 (the case it deferred) + North-Star law "Always answerable." A pipeline run in
+`/runs` showed, in `RunDetail`, only a note + an **"open pipeline"** button that linked to the
+pipeline **definition** (`/pipelines/{id}`) — never what *this run* actually did. The data was
+already on the run: `PipelineRun.stageRuns[]` (`{ phaseId, runId, attempt, status }` — "so its log is
+pollable per phase") and the per-phase log endpoint the parked panel already reads._
+
+- **`PipelineStageTimeline`** (new) — a pipeline run's detail surface IS its stage timeline (mirrors
+  `GoalDetailPanel`): one row per `stageRun` (phase + retried `attempt` + `RunStateBadge` reusing the
+  shared `RUN_STATE` map, since every `StageRunStatus` is a `FeedStatus`), each with a **"log"**
+  disclosure that mounts a `StageLog` reading `useStageRunLogQuery(runId, phaseId)` into a `CodeBlock`.
+  Single open at a time → at most one stage-log fetch in flight; collapsed rows fetch nothing. A
+  footer keeps the link to the pipeline **definition** (a different surface — the template).
+- **`RunDetail`** — new `kind === "pipeline"` branch renders the timeline (with the paused-limit /
+  retries-parked notice above it), replacing the old "note + link" placeholder and the separate
+  parked-pipeline branch. `RunView` gained `stageRuns` (set in `pipelineRunToView`).
+- **Simplification** — the paused-limit notice was three inline copies (agent / pipeline / goal);
+  extracted one `LimitPausedPanel`. The dead `pipelineNote` log branch + its `useRouter` import were
+  removed from `RunDetail`.
+- i18n `runs.{stageTimeline,stageAttempt,stageNone,stageNoLog}` (cs+en); reused `goalOpenLog` /
+  `openPipeline`.
+
+**Tests:** `PipelineStageTimeline.test.tsx` — a row per stage (+ retried attempt); no stage log
+fetched until expanded; expanding opens that phase's log by `phaseId`; single-open invariant; the
+footer links to `/pipelines/{owner}`; empty-stages empty-state. `run.test.ts` — `pipelineRunToView`
+carries `stageRuns`. web/DS green (runs 52), full workspace 1511/1511.
+
+**Unlocks:** Phase 27's deferred pipeline-maker case — a goal's pipeline maker child can now reuse
+this stage view.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
