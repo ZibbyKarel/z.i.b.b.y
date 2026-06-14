@@ -708,6 +708,7 @@
       "nothingToStop": "No running agent to stop.",
       "navigating": "Navigating…",
       "closing": "Closing VOICE MODE.",
+      "briefing": "Briefing.",
       "dispatching": "On it — starting that: {task}",
       "started": "It's running — watch it in the HUD.",
       "dispatchFailed": "I couldn't start that.",

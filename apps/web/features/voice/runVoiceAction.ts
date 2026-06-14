@@ -20,6 +20,9 @@ export type VoiceAckKey =
   | "nothingToStop"
   | "navigating"
   | "closing"
+  // A spoken status request — the briefing is spoken by the `brief` handler; this ack
+  // is a visual-only label (its own TTS is suppressed to avoid double-speaking).
+  | "briefing"
   // A spoken task: `dispatching` is the optimistic "starting that — <task>" ack the
   // moment it's understood; `started`/`dispatchFailed` are set by the hook once the
   // backend dispatch resolves. `heard` is the empty-utterance no-op (nothing to do).
@@ -43,6 +46,8 @@ export interface VoiceActionDeps {
   stop: (runId: string) => void;
   navigate: (route: string) => void;
   dispatchTask: (text: string) => void;
+  /** Speak the on-demand status briefing (status is pull, never pushed). */
+  brief: () => void;
   close: () => void;
 }
 
@@ -84,6 +89,9 @@ export function runVoiceAction(
     case "closeOverlay":
       deps.close();
       return { key: "closing" };
+    case "briefing":
+      deps.brief();
+      return { key: "briefing" };
     case "createTask": {
       const text = action.text.trim();
       if (!text) return { key: "heard" };

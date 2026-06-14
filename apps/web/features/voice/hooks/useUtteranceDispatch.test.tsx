@@ -54,7 +54,7 @@ describe("useUtteranceDispatch", () => {
   it("dispatches a spoken task straight to the tasks layer (no modal, no navigation)", async () => {
     const onExit = vi.fn();
     const { result } = renderHook(() =>
-      useUtteranceDispatch({ approvals: [], liveRuns: [], onExit }),
+      useUtteranceDispatch({ approvals: [], liveRuns: [], onExit, onBrief: vi.fn() }),
     );
 
     act(() => {
@@ -79,7 +79,12 @@ describe("useUtteranceDispatch", () => {
 
   it("forwards detected paths with the task text", () => {
     const { result } = renderHook(() =>
-      useUtteranceDispatch({ approvals: [], liveRuns: [], onExit: vi.fn() }),
+      useUtteranceDispatch({
+        approvals: [],
+        liveRuns: [],
+        onExit: vi.fn(),
+        onBrief: vi.fn(),
+      }),
     );
     act(() => {
       result.current.dispatch("refactor ~/proj/app and tidy it");
@@ -95,7 +100,12 @@ describe("useUtteranceDispatch", () => {
       Promise.resolve().then(() => opts?.onError?.(new Error("boom")));
     });
     const { result } = renderHook(() =>
-      useUtteranceDispatch({ approvals: [], liveRuns: [], onExit: vi.fn() }),
+      useUtteranceDispatch({
+        approvals: [],
+        liveRuns: [],
+        onExit: vi.fn(),
+        onBrief: vi.fn(),
+      }),
     );
     act(() => {
       result.current.dispatch("deploy it");
@@ -111,6 +121,7 @@ describe("useUtteranceDispatch", () => {
         approvals: [{ id: "appr-1" }],
         liveRuns: [],
         onExit: vi.fn(),
+        onBrief: vi.fn(),
       }),
     );
     act(() => {
@@ -121,9 +132,27 @@ describe("useUtteranceDispatch", () => {
     expect(result.current.ack).toEqual({ key: "approved" });
   });
 
+  it("a spoken status question speaks the briefing — it does not create a task", () => {
+    const onBrief = vi.fn();
+    const { result } = renderHook(() =>
+      useUtteranceDispatch({ approvals: [], liveRuns: [], onExit: vi.fn(), onBrief }),
+    );
+    act(() => {
+      result.current.dispatch("co se děje");
+    });
+    expect(onBrief).toHaveBeenCalled();
+    expect(createTask).not.toHaveBeenCalled();
+    expect(result.current.ack).toEqual({ key: "briefing" });
+  });
+
   it("an empty utterance dispatches nothing", () => {
     const { result } = renderHook(() =>
-      useUtteranceDispatch({ approvals: [], liveRuns: [], onExit: vi.fn() }),
+      useUtteranceDispatch({
+        approvals: [],
+        liveRuns: [],
+        onExit: vi.fn(),
+        onBrief: vi.fn(),
+      }),
     );
     act(() => {
       result.current.dispatch("   ");

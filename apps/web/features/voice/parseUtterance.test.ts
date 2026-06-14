@@ -91,6 +91,31 @@ describe("parseUtterance", () => {
     });
   });
 
+  describe("briefing (pull status)", () => {
+    it.each([
+      "co se děje",
+      "Co se děje?",
+      "co je nového",
+      "status",
+      "Status",
+      "shrnutí",
+      "briefing",
+      "what's happening",
+      "what's up",
+      "brief me",
+      "give me a briefing",
+    ])("%s → briefing", (text) => {
+      expect(parseUtterance(text)).toEqual({ kind: "briefing" });
+    });
+
+    it("a longer status-shaped sentence stays a task (exact phrase only)", () => {
+      expect(parseUtterance("co se děje s buildem auth")).toEqual({
+        kind: "createTask",
+        text: "co se děje s buildem auth",
+      });
+    });
+  });
+
   describe("createTask fallback", () => {
     it("keeps the raw utterance with diacritics intact", () => {
       expect(parseUtterance("Naplánuj poradu na pondělí")).toEqual({

@@ -8,6 +8,7 @@ function makeDeps(over: Partial<VoiceActionDeps> = {}): VoiceActionDeps {
     stop: vi.fn(),
     navigate: vi.fn(),
     dispatchTask: vi.fn(),
+    brief: vi.fn(),
     close: vi.fn(),
     ...over,
   };
@@ -76,6 +77,14 @@ describe("runVoiceAction", () => {
       key: "closing",
     });
     expect(deps.close).toHaveBeenCalled();
+  });
+
+  it("speaks the briefing on a status request (pull, not push)", () => {
+    const deps = makeDeps();
+    expect(runVoiceAction({ kind: "briefing" }, deps)).toEqual({
+      key: "briefing",
+    });
+    expect(deps.brief).toHaveBeenCalled();
   });
 
   it("dispatches plain speech straight to the tasks layer (no modal)", () => {

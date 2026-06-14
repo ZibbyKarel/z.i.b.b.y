@@ -126,34 +126,27 @@ describe("VoiceScreen", () => {
     expect(lang).toBe("cs-CZ");
   });
 
-  it("announces a run that finishes while voice is open (not the history)", () => {
-    // Open with one already-done run (history) and one still running.
+  it("does NOT auto-announce a run finishing while voice is open (status is pull)", () => {
+    // Open with a still-running run; nothing should be spoken unprompted.
     voiceDataMock.current = {
       approvals: [],
       liveRuns: [{ runId: "r9" }],
-      recent: [
-        { runId: "r8", owner: "Doku", status: "done" },
-        { runId: "r9", owner: "Tester", status: "running" },
-      ],
+      recent: [{ runId: "r9", owner: "Tester", status: "running" }],
       skills: [],
     };
     mockSession.current = liveSession();
     const { rerender } = render(<VoiceScreen onExit={vi.fn()} />);
-    // The already-done r8 is NOT replayed on open.
     expect(speechMock.speak).not.toHaveBeenCalled();
 
-    // r9 transitions to done while voice is open → announced.
+    // r9 transitions to done while voice is open → the operator is NOT pushed a log.
     voiceDataMock.current = {
       approvals: [],
       liveRuns: [],
-      recent: [
-        { runId: "r8", owner: "Doku", status: "done" },
-        { runId: "r9", owner: "Tester", status: "done" },
-      ],
+      recent: [{ runId: "r9", owner: "Tester", status: "done" }],
       skills: [],
     };
     act(() => rerender(<VoiceScreen onExit={vi.fn()} />));
-    expect(speechMock.speak).toHaveBeenCalledWith("Tester dokončeno.", "cs-CZ");
+    expect(speechMock.speak).not.toHaveBeenCalled();
   });
 
   it("renders the live spoken transcript", () => {

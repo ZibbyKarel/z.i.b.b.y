@@ -1,9 +1,6 @@
 import type { DashboardApproval } from "../approvals/approval";
 import type { RunView } from "../runs/run";
 
-/** A run is "finished" for announce purposes when it reached a terminal outcome. */
-const FINISHED: ReadonlySet<string> = new Set(["done", "error"]);
-
 /** The slice of {@link useVoiceData} the spoken briefing reads. */
 export interface BriefingInput {
   approvals: Pick<DashboardApproval, "skill">[];
@@ -45,29 +42,4 @@ export function summarizeBriefing(data: BriefingInput): BriefingFacts {
     failed,
     quiet: agents === 0 && approvals === 0 && done === 0 && failed === 0,
   };
-}
-
-/** A run that just reached a terminal outcome and has not been announced yet. */
-export interface FinishedRun {
-  runId: string;
-  owner: string;
-  status: "done" | "error";
-}
-
-/**
- * The terminal runs in `recent` whose ids are not in `announced` — the new
- * completions to read aloud since the last check. Pure, so the announce effect can
- * be unit-tested without a clock or React.
- */
-export function pickNewlyFinished(
-  announced: ReadonlySet<string>,
-  recent: Pick<RunView, "runId" | "owner" | "status">[],
-): FinishedRun[] {
-  return recent
-    .filter((r) => FINISHED.has(r.status) && !announced.has(r.runId))
-    .map((r) => ({
-      runId: r.runId,
-      owner: r.owner,
-      status: r.status as "done" | "error",
-    }));
 }

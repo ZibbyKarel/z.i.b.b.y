@@ -8,6 +8,7 @@ export type VoiceAction =
   | { kind: "rejectLatest" }
   | { kind: "stopActive" }
   | { kind: "closeOverlay" }
+  | { kind: "briefing" }
   | { kind: "navigate"; route: string; page: NavPage }
   | { kind: "createTask"; text: string };
 
@@ -84,6 +85,35 @@ const CLOSE = new Set([
 
 /** Max words for a bare command — keeps "approve" / "stop the agent" in, dictation out. */
 const MAX_COMMAND_WORDS = 3;
+
+/**
+ * Whole-utterance phrases (already normalized) that **ask** for a status briefing —
+ * status is pull, never pushed (operator feedback). Matched exactly, so a longer
+ * "co se děje s buildem" stays a dispatched task rather than a status request.
+ */
+const BRIEFING_PHRASES = new Set([
+  // cs
+  "co se deje",
+  "co je noveho",
+  "co je novyho",
+  "co mas noveho",
+  "jak to jde",
+  "status",
+  "briefing",
+  "shrnuti",
+  "souhrn",
+  "co delas",
+  // en
+  "what s happening",
+  "whats happening",
+  "what s up",
+  "what s the status",
+  "what s new",
+  "brief me",
+  "give me a briefing",
+  "how s it going",
+  "summary",
+]);
 
 // Navigate verbs (normalized), longest first so multi-word prefixes win.
 const NAV_VERBS = [
@@ -168,6 +198,9 @@ export function parseUtterance(raw: string): VoiceAction {
 
   const nav = matchNavigate(norm);
   if (nav) return nav;
+
+  // Asking for status (pull) — a briefing, not a dispatched task.
+  if (BRIEFING_PHRASES.has(norm)) return { kind: "briefing" };
 
   const words = norm.split(" ");
   if (words.length <= MAX_COMMAND_WORDS) {

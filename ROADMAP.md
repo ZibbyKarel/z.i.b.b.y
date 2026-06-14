@@ -717,6 +717,32 @@ exiting; speaks the dispatch ack). web/DS+api green.
 
 ---
 
+## Phase 24 — Voice status is pull, not push (operator feedback) — ✅ delivered 2026-06-14
+
+_Operator feedback mid-loop: "Logy běhu hlásit nechci ve voice UI. Co se děje bych měl
+dostat jen v případě že se zeptám. Dát prostě briefing místo čtení logů." — **voice must not
+push run logs/status; status is given only when asked, as a briefing, never read logs.** This
+refines the North Star's "narrating as it goes" (#3): narration = high-level dispatch acks
+(Phase 23), NOT a play-by-play of run events. It also **retires** Phase 20's unsolicited
+auto-announce of runs finishing while voice is open (that is an unasked status push)._
+
+- **`VoiceScreen`** — removed the auto-announce-finishing effect (the `pickNewlyFinished`
+  push). The butler stays quiet unless asked.
+- **Ask-by-voice → briefing** — `parseUtterance` gains a `briefing` action (cs/en phrase set:
+  "co se děje", "status", "shrnutí", "what's happening", "brief me"…); `runVoiceAction` routes
+  it to a `brief()` handler that speaks the existing `summarizeBriefing` template (Phase 20),
+  so a spoken question and the "Brief me" button are the two pull paths. No logs, ever.
+- **`briefing.ts`** — deleted the now-dead `pickNewlyFinished`/`FinishedRun` (no caller after
+  the push is gone); `summarizeBriefing` stays.
+- i18n `voice.ack.briefing` (cs+en).
+
+**Tests:** `parseUtterance` briefing phrases (+ a longer "co se děje s buildem" stays a task);
+`runVoiceAction` briefing → `brief()`; `useUtteranceDispatch` spoken briefing calls `onBrief`,
+not `createTask`; `VoiceScreen` a finishing run is **not** auto-announced; `briefing.test` drops
+the `pickNewlyFinished` suite. web/DS+api green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

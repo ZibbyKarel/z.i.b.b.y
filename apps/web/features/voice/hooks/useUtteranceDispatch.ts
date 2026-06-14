@@ -18,6 +18,8 @@ export interface UseUtteranceDispatchOptions {
   liveRuns: Pick<RunView, "runId" | "kind" | "status">[];
   /** Leaves voice mode (navigate / close). */
   onExit: () => void;
+  /** Speaks the on-demand status briefing (a spoken "co se děje" / "status"). */
+  onBrief: () => void;
 }
 
 export interface UtteranceDispatch {
@@ -43,7 +45,7 @@ export interface UtteranceDispatch {
 export function useUtteranceDispatch(
   options: UseUtteranceDispatchOptions,
 ): UtteranceDispatch {
-  const { approvals, liveRuns, onExit } = options;
+  const { approvals, liveRuns, onExit, onBrief } = options;
   const router = useRouter();
   const approve = useApproveMutation();
   const reject = useRejectMutation();
@@ -79,6 +81,7 @@ export function useUtteranceDispatch(
         stop: (runId) => stop.mutate({ params: { runId }, body: {} }),
         navigate: (route) => router.push(route),
         dispatchTask,
+        brief: onBrief,
         close: onExit,
       });
       setAck(result);
@@ -92,6 +95,7 @@ export function useUtteranceDispatch(
       stop,
       router,
       onExit,
+      onBrief,
       dispatchTask,
     ],
   );

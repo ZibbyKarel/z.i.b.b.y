@@ -708,6 +708,7 @@
       "nothingToStop": "Žádný běžící agent k zastavení.",
       "navigating": "Přecházím…",
       "closing": "Zavírám VOICE MODE.",
+      "briefing": "Briefing.",
       "dispatching": "Rozumím — spouštím to: {task}",
       "started": "Běží to. Sleduj v HUD.",
       "dispatchFailed": "Nepodařilo se to spustit.",

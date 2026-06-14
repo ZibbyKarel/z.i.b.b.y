@@ -14,7 +14,7 @@ import { useVoiceData } from "../hooks/useVoiceData";
 import { useVoiceSession } from "../hooks/useVoiceSession";
 import { useUtteranceDispatch } from "../hooks/useUtteranceDispatch";
 import { type SpeechLang, useSpeech } from "../hooks/useSpeech";
-import { pickNewlyFinished, summarizeBriefing } from "../briefing";
+import { summarizeBriefing } from "../briefing";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoicePanel } from "./VoicePanel";
 import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
@@ -62,45 +62,22 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         ? demoMessages
         : demoMessages.slice(0, 2);
 
-  // Phase 23: dispatch every finalized utterance — gate answers (approve/reject) and
-  // control verbs (stop/navigate/close) act on the real mutations; anything else is a
-  // spoken **task** that dispatches straight to the `/tasks` layer (no composer modal —
-  // confirming understanding is the conversation's job). The ack is surfaced in an
-  // aria-live region and spoken via TTS below.
-  const { dispatch, ack } = useUtteranceDispatch({ approvals, liveRuns, onExit });
-  const lastDispatched = useRef("");
-  useEffect(() => {
-    if (mode !== "live") return;
-    const spoken = transcript.trim();
-    if (!spoken || spoken === lastDispatched.current) return;
-    lastDispatched.current = spoken;
-    dispatch(spoken);
-  }, [mode, transcript, dispatch]);
-
-  // Phase 19: ZIBBY speaks back. Each command acknowledgement is read aloud (unless
-  // muted) via free browser TTS — the "spoken result" half of the North-Star voice
-  // loop. The speaker button mutes; muting also cuts any in-flight speech.
+  // Phase 19/20: ZIBBY speaks back via free browser TTS — command acks and the
+  // on-demand briefing. The speaker button mutes; muting also cuts in-flight speech.
   const { speak, stop: stopSpeech, isSpeaking, isSupported: canSpeak } = useSpeech();
   const [muted, setMuted] = useState(false);
   const speechLang = lang as SpeechLang;
-  const spokenAck = useRef<typeof ack>(null);
-  useEffect(() => {
-    if (mode !== "live" || muted || !ack || ack === spokenAck.current) return;
-    spokenAck.current = ack;
-    speak(t(`ack.${ack.key}`, ack.values), speechLang);
-  }, [ack, mode, muted, speak, t, speechLang]);
   const toggleMute = () => {
     setMuted((m) => {
       if (!m) stopSpeech();
       return !m;
     });
   };
-  // The orb/status reflect speech: `speaking` outranks the listen/idle state.
-  const displayState = isSpeaking ? "speaking" : state;
-  const active = isActive || isSpeaking;
 
-  // Phase 20: the spoken butler's briefing — what's running and what needs you,
-  // assembled template-first from the live HUD data (no claude in the browser).
+  // The spoken butler's briefing — what's running and what needs you, assembled
+  // template-first from the live HUD data (no claude in the browser). Status is
+  // **pull, never pushed** (operator feedback): spoken via the "Brief me" button or
+  // a spoken "co se děje" / "status" question — ZIBBY never reads run logs unprompted.
   const briefingText = useCallback((): string => {
     const facts = summarizeBriefing({ approvals, liveRuns, recent });
     if (facts.quiet) return t("speak.nothing");
@@ -115,36 +92,46 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     }
     return parts.join(" ");
   }, [approvals, liveRuns, recent, t]);
-  // "Brief me" is an explicit request — it speaks even when auto-speech is muted.
-  const speakBriefing = () => speak(briefingText(), speechLang);
+  // An explicit request — speaks even when auto-speech is muted. Memoized so it is a
+  // stable `onBrief` for the dispatch hook.
+  const speakBriefing = useCallback(
+    () => speak(briefingText(), speechLang),
+    [speak, briefingText, speechLang],
+  );
 
-  // Announce runs that finish *while voice is open* — not the history already on
-  // screen when it opened. Seed from the first non-empty feed, then read only the
-  // new completions aloud (unless muted). The set persists across renders.
-  const announced = useRef<Set<string> | null>(null);
+  // Phase 23/24: dispatch every finalized utterance — gate answers (approve/reject)
+  // and control verbs (stop/navigate/close) act on the real mutations; a status
+  // question ("co se děje" / "status") speaks the briefing (pull); anything else is a
+  // spoken **task** dispatched straight to the `/tasks` layer (no composer modal). The
+  // ack is surfaced in an aria-live region and spoken via TTS below.
+  const { dispatch, ack } = useUtteranceDispatch({
+    approvals,
+    liveRuns,
+    onExit,
+    onBrief: speakBriefing,
+  });
+  const lastDispatched = useRef("");
   useEffect(() => {
     if (mode !== "live") return;
-    if (announced.current === null) {
-      if (recent.length === 0) return; // wait for the first data
-      announced.current = new Set(
-        pickNewlyFinished(new Set(), recent).map((r) => r.runId),
-      );
-      return;
-    }
-    const fresh = pickNewlyFinished(announced.current, recent);
-    if (fresh.length === 0) return;
-    for (const r of fresh) announced.current.add(r.runId);
-    if (muted) return;
-    const first = fresh[0];
-    if (!first) return;
-    const text =
-      fresh.length === 1
-        ? t(`speak.${first.status === "done" ? "outcomeDone" : "outcomeFailed"}`, {
-            owner: first.owner,
-          })
-        : t("speak.outcomeMany", { count: fresh.length });
-    speak(text, speechLang);
-  }, [recent, mode, muted, speak, t, speechLang]);
+    const spoken = transcript.trim();
+    if (!spoken || spoken === lastDispatched.current) return;
+    lastDispatched.current = spoken;
+    dispatch(spoken);
+  }, [mode, transcript, dispatch]);
+
+  // Each command ack is read aloud once (unless muted). The `briefing` ack is
+  // visual-only — its summary was already spoken by `onBrief`, so skip its TTS.
+  const spokenAck = useRef<typeof ack>(null);
+  useEffect(() => {
+    if (mode !== "live" || muted || !ack || ack === spokenAck.current) return;
+    spokenAck.current = ack;
+    if (ack.key === "briefing") return;
+    speak(t(`ack.${ack.key}`, ack.values), speechLang);
+  }, [ack, mode, muted, speak, t, speechLang]);
+
+  // The orb/status reflect speech: `speaking` outranks the listen/idle state.
+  const displayState = isSpeaking ? "speaking" : state;
+  const active = isActive || isSpeaking;
 
   // The manual "Send" button dispatches the last utterance straight to the tasks
   // layer (same path as the auto-dispatch) — the live transcript, else the demo's
