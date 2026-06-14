@@ -326,18 +326,26 @@ Plan: [docs/plans/phase-36.md](docs/plans/phase-36.md).
 | ---- | ------ | ----- |
 | 36.1 Held task detail surfaces its spend-past-cap override | ✅ done (2026-06-14) | `/projects` is solid (real projects + categories + per-project budget bars used-vs-cap tinted + running/queued/held stats + CRUD); the runs feed already captions a `held` task with its reason. Gap = the connection: a budget-`held` dispatch carries `approvalId` (its spend-past-cap override, already pending in the queue) but `approvalForRun` only matched `awaiting-approval` runs → clicking a held task in `/runs` showed a detail with **no decision panel** (operator had to hunt for the override in the queue). Fix: `approvalForRun` resolves a held run's override by `approvalId` (`queue.find(a => a.id === run.approvalId)`); widened bound to `Pick<Approval,"id"\|"runId">`. **No `RunDetail` change** — its existing approval branch now fires for held tasks → `RunApprovalGate` (approve releases past the cap; reject denies). **No new server semantics** — same approval the queue already decides. Tests: `run.test` — held override resolved by approvalId; undefined when none; existing matches unchanged. **web/DS green (runs 18, full web-components 367/367), api 691/691 isolated** (full-suite 1 known under-load flake; web-only), lint + web-tsc clean. Commit `996e5e3`. |
 
+## Phase 37: /gates shows the locked system floor (POLICY.md) above the catalog — ✅ COMPLETE (2026-06-14)
+
+Audit of `/gates` (approval-rules catalog) — rich and real, but the floor was invisible on the page.
+Plan: [docs/plans/phase-37.md](docs/plans/phase-37.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 37.1 Surface the locked POLICY.md floor on /gates | ✅ done (2026-06-14) | `/gates` is real (catalog matcher→decision, filter tabs, reorder=first-match order, CRUD via RuleModal). Gap: `useSystemPolicyQuery` (`GET /api/gates/policy` → locked POLICY.md rules) existed + was wired into the **agent** rules editor (`AgentRulesSection`, read-only inherited) but the main `/gates` Screen showed **only the editable catalog** — the floor (deny/ask rules an agent can only harden, never weaken — Law 1; never talked around — Law 4) was invisible on the primary gate page despite the hierarchy note claiming "floor → catalog → agent/skill". Fix: new `SystemFloorPanel` reuses `useSystemPolicyQuery` + `RuleCard locked` (same read-only treatment the agent editor uses) — a warn panel above the catalog listing the floor rules locked (shield, no edit/delete); hidden when empty. No new i18n (reuses `gates.inheritedTitle`/`inheritedNote`/`and`/`you`/`notifyHint`/`decision_.*`). Tests: `SystemFloorPanel.test` — floor rule → title + deny decision + no edit/delete; empty floor → nothing. **web/DS green (gates 2), full workspace 1534/1534** (first run, no flake), lint + web-tsc clean. Commit `05af645`. |
+
 ## Next iteration
 
-**Proposed Phase 37 — Audit the /gates (approval-rules catalog) HUD surface.** The gate is the
-North-Star structural floor ("approval-first is structural… wired into the system floor, not a setting
-an agent's config can weaken"). Phases 30/31/36 polished the *decision* surfaces; the *rules* surface
-(`/gates`) defines what triggers a gate. GROUND first against real code: the `/gates` segment + feature
-dir + query/mutation hooks + the gate-rules contract — verify the HUD shows the **real** rule catalog
-(matcher → decision, evaluated top-down, first match wins), makes the **hierarchy** legible (system
-floor `POLICY.md` → this catalog → agent/skill rules) so the operator sees the immutable floor can't be
-weakened, and that add/edit/delete/reorder of a rule hits the real endpoint. Pick the single biggest
-gap (a mock list, an unwired editor, the floor not shown as locked, no order/priority cue, a rule whose
-decision/matcher isn't legible) as Phase 37's concrete change.
+**Proposed Phase 38 — Audit the /automations (heartbeat / scheduled tasks) HUD surface.** The autonomous
+pillar runs on a **heartbeat**: _"watches inbound channels… on a heartbeat"_ + the morning-briefing
+automation (Phase 6). GROUND first against real code: the `/automations` segment + feature dir +
+query/mutation hooks + the automation/schedule contract — verify the HUD shows the **real** configured
+automations (cron/cadence, what each does, enabled/disabled, last-fired/next-fire), that toggling
+enable/disable + create/edit hit the real endpoint, and that the heartbeat status (is the watcher
+actually running?) is honestly shown (not a faked "on"). Pick the single biggest gap (a mock list, an
+unwired toggle, no last-fired/next-fire, a cadence that isn't legible, a dead "run now") as Phase 38's
+concrete change.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
