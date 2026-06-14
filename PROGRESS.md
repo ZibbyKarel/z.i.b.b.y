@@ -201,20 +201,34 @@ acks, NOT a play-by-play. Plan: [docs/plans/phase-24.md](docs/plans/phase-24.md)
 competence, pull over push** — never stream status/logs unprompted; summarize when asked. Echoes
 CLAUDE.md "notify only when genuinely relevant."
 
+## Phase 25: turn-by-turn voice clarification — ✅ COMPLETE (2026-06-14)
+
+North Star: "what you want is resolved in the dialogue itself, turn by turn." Phase 23 dispatched a
+spoken task immediately; when the classifier is **low-confidence** that routed blind. Phase 25 adds
+the missing turn: ambiguous → ask, the answer resolves it. Plan:
+[docs/plans/phase-25.md](docs/plans/phase-25.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 25.1 Classify-first + bounded clarification | ✅ done (2026-06-14) | `useUtteranceDispatch` now runs the read-only `classifyTask` before dispatching: high/medium confidence → `createTask` (as before); **low** (`isLowConfidence` < 0.4) → set `pendingClarify` + a `clarify` ack reading back the top candidate names ("Nejsem si jistý — můžeš upřesnit? Třeba: Kodér, Delivery."). The **next** utterance combines with the original and dispatches **regardless** of confidence (bounded — one round, never a second ask → always terminates). The optimistic `dispatching` ack is now **visual-only** ("Slyším: {task}"); ZIBBY speaks only the *outcome* (clarify / started / failed). `runVoiceAction` + `clarify`/`clarifyGeneric` keys + `values.options`; `VoiceScreen` `SILENT_ACKS` skip-set. i18n reworded `dispatching` + added clarify keys (cs+en). Gate untouched; `live|demo` deterministic; STT/TTS stays free (classifier is the Phase-11 deterministic router, no model call). Tests: low-conf→clarify (no createTask); clarification answer→combined dispatch, no re-classify; high-conf one-shot; gate answers never classify. **web/DS green (voice 113), api 691/691 in isolation.** The full-`pnpm test` reds were the known under-load api e2e flakes (all 6 vitest projects contending → e2e timeouts; web-only change, count varies run-to-run 3→1; each passes isolated). |
+
 ## Next iteration
 
-**Proposed Phase 25 — Turn-by-turn clarification (conversational, still no modal).** The next
-North-Star slice: "what you want is resolved in the dialogue itself, turn by turn." Today a spoken
-task dispatches immediately (Phase 23) even when the classifier is **low-confidence**
-(`isLowConfidence`, `task.ts` — confidence < 0.4). Phase 25: when a dispatched utterance comes back
-low-confidence, instead of dispatching blind, ZIBBY asks a **spoken** follow-up ("Chceš to pustit
-přes Kodér, nebo jako pipeline?") and the operator's next utterance resolves it — a real two-turn
-voice dialogue, no `NewTaskDialog`. GROUND first: the classify path is read-only
-(`useClassifyTaskMutation`) and already returns `confidence`/`candidates`/`reason`; decide whether
-to classify-then-confirm-by-voice for low-confidence only (keep high-confidence one-shot). Keep the
-gate untouched; keep `live|demo` deterministic. This is the last conversational gap before "full
-Claude behind the channel" (which needs a backend reasoning call — defer; voice STT/TTS stays free).
+**Proposed Phase 26 — Voice text-input fallback (make the surface usable everywhere).** The North
+Star makes Voice and HUD **co-equal, interchangeable** surfaces — but on a browser without
+`SpeechRecognition` (Firefox default-off, Safari best-effort) the voice overlay today only shows the
+demo + an "unsupported" note; the operator **cannot actually enter an utterance** (the "Send" button
+falls back to the scripted demo line). ROADMAP §7.2 calls for "text-input fallback rendered
+automatically when `isSupported` is false." Phase 26: when STT is unavailable, render a small text
+field in the overlay; submitting it runs the **same** `dispatch` pipeline (clarify / brief / gate /
+task) — so voice dispatch, clarification and briefing work on every browser, still 100% free. GROUND
+first: `VoiceScreen`'s `mode`/`isSupported`/`lastUserUtterance` seam and the demo-vs-live branch;
+the field replaces the mic affordance only in the unsupported path (live STT keeps push-to-talk).
 
-Also still open (fold into a hardening pass if it recurs): the api `agent-runs.e2e` git-fixture
-transient under full-suite load (rare; passes isolated). The
+Deferred (needs spend or heavy deps, not free-envelope): **full "Claude behind the channel"** (open
+reasoning over the utterance — a backend model call); **wake word** (`@picovoice/porcupine-web` /
+`@ricky0123/vad-web` — dependency-heavy, optional).
+
+Also still open (hardening, fold in if it recurs): the api e2e under full-suite contention can flake
+on timeouts (passes per-project — api 691/691 isolated). The
 [self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven engagement.
