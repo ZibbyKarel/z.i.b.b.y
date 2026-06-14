@@ -50,6 +50,7 @@
     "configure": "Configure",
     "test": "Test",
     "save": "Save",
+    "delete": "Delete",
     "close": "Close",
     "cancel": "Cancel",
     "loading": "Loading…",
@@ -275,6 +276,7 @@
   },
   "skills": {
     "addSkill": "Add skill",
+    "editSkillAria": "Edit skill {name}",
     "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card. Agents invoke skills from their catalog.",
@@ -484,6 +486,8 @@
     "skill": {
       "title": "New skill",
       "subtitle": "creates SKILL.md on disk",
+      "editTitle": "Edit skill",
+      "editSubtitle": "overwrites SKILL.md on disk",
       "submitLabel": "Create skill",
       "nameLabel": "Skill name",
       "namePlaceholder": "e.g. rohlik",

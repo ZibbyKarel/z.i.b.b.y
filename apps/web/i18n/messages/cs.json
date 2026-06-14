@@ -50,6 +50,7 @@
     "configure": "Konfigurovat",
     "test": "Test",
     "save": "Uložit",
+    "delete": "Smazat",
     "close": "Zavřít",
     "cancel": "Zrušit",
     "loading": "Načítání…",
@@ -275,6 +276,7 @@
   },
   "skills": {
     "addSkill": "Přidat skill",
+    "editSkillAria": "Upravit skill {name}",
     "sectionLabel": "Skilly",
     "emptyTitle": "Zatím žádné skilly",
     "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta. Skilly volají agenti ze svého katalogu.",
@@ -484,6 +486,8 @@
     "skill": {
       "title": "Nový skill",
       "subtitle": "vytvoří SKILL.md na disku",
+      "editTitle": "Upravit skill",
+      "editSubtitle": "přepíše SKILL.md na disku",
       "submitLabel": "Vytvořit skill",
       "nameLabel": "Název skillu",
       "namePlaceholder": "např. rohlik",

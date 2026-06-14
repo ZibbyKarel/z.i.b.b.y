@@ -47,23 +47,49 @@ export interface AddSkillSubmit {
   instructions: string;
 }
 
+/** Pre-fill for edit mode — the full skill (incl. its `instructions` body). */
+export interface AddSkillInitial {
+  name: string;
+  desc: string;
+  category?: string;
+  glyph: IconName;
+  instructions: string;
+}
+
 export interface AddSkillModalProps {
   /** Category names offered in the picker; the picker is hidden when empty. */
   categories: string[];
   pending?: boolean;
+  /** When set the modal is in **edit** mode: pre-filled, "Save" + "Delete". */
+  initial?: AddSkillInitial;
   onClose: () => void;
   onSubmit: (values: AddSkillSubmit) => void;
+  /** Edit mode only: delete this skill (its id is owned by the caller). */
+  onDelete?: () => void;
 }
 
-export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSkillModalProps) {
+export function AddSkillModal({
+  categories,
+  pending,
+  initial,
+  onClose,
+  onSubmit,
+  onDelete,
+}: AddSkillModalProps) {
   const t = useTranslations("forms.skill");
   const tk = useTranslations();
-  const [glyph, setGlyph] = useState<IconName>("spark");
-  const [contentTab, setContentTab] = useState("directory");
+  const isEdit = initial !== undefined;
+  const [glyph, setGlyph] = useState<IconName>(initial?.glyph ?? "spark");
+  const [contentTab, setContentTab] = useState(isEdit ? "editor" : "directory");
   const { files, selectedCount, handleDrop, toggleFile, mergeSelected } = useSkillFileList();
 
   const { renderForm, submit, form } = useFormControls<AddSkillFormValues>({
-    defaultValues: { name: "", desc: "", category: "", instructions: "" },
+    defaultValues: {
+      name: initial?.name ?? "",
+      desc: initial?.desc ?? "",
+      category: initial?.category ?? "",
+      instructions: initial?.instructions ?? "",
+    },
     resolver: zodResolver(schema),
     mode: "onChange",
     onSubmit: (values) => {
@@ -93,18 +119,34 @@ export function AddSkillModal({ categories, pending, onClose, onSubmit }: AddSki
       open
       actions={
         <>
+          {isEdit && onDelete && (
+            <Button icon="trash" intent="danger" onClick={onDelete}>
+              {tk("common.delete")}
+            </Button>
+          )}
           <Button intent="ghost" onClick={onClose}>
             {tk("common.cancel")}
           </Button>
-          <Button disabled={!canSubmit} icon="plus" intent="primary" onClick={() => void submit()}>
-            {t("submitLabel")}
+          <Button
+            disabled={!canSubmit}
+            icon={isEdit ? "check" : "plus"}
+            intent="primary"
+            onClick={() => void submit()}
+          >
+            {isEdit ? tk("common.save") : t("submitLabel")}
           </Button>
         </>
       }
-      ariaLabel={t("title")}
+      ariaLabel={isEdit ? t("editTitle") : t("title")}
       closeLabel={tk("common.close")}
       onClose={onClose}
-      title={<DialogTitle glyph={glyph} subtitle={t("subtitle")} title={t("title")} />}
+      title={
+        <DialogTitle
+          glyph={glyph}
+          subtitle={isEdit ? t("editSubtitle") : t("subtitle")}
+          title={isEdit ? t("editTitle") : t("title")}
+        />
+      }
       width="2xl"
     >
       <Grid align="start" cols={1} gap="300" md={2}>
