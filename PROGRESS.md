@@ -308,19 +308,26 @@ The deferred half of Phase 33 (readability). Plan: [docs/plans/phase-34.md](docs
 | ---- | ------ | ----- |
 | 34.1 Markdown-render the note body | ✅ done (2026-06-14) | The vault is "plain markdown… human-readable" but the note viewer rendered the body as one raw `Typography` (a wall of `#`/`-`/`**`/`[[…]]`). **Dependency-frugal fix:** `@uiw/react-md-editor` is already a dep (DS `MarkdownEditor` wraps it) and ships `MDEditor.Markdown` — no new dep, no hand-rolled parser. New DS **`Markdown`** viewer wraps it with the same GitHub-primer→token theme vars (dark, transparent bg); exported from DS index. `NoteView` body → `<Markdown source={note.body} />` (headings/lists/emphasis/code/links render); Phase-33 links/backlinks chip rows stay the index-first nav (inline `[[…]]` stays literal — deferred). Tests: DS `Markdown.test` (`# Hello`→h1, `- item`→listitems, `**bold**`→strong, testid); `NoteView.test` still finds the rendered body. **DS+web green, full workspace 1528/1528** (first run, no flake), lint + apps/web-tsc + ds-tsc clean. Commit `9c84d66`. |
 
+## Phase 35: Inbox shows the autonomy tier + what ZIBBY did — ✅ COMPLETE (2026-06-14)
+
+Audit of the `/integrations` (channels / autonomous mode) surface — real, but the inbox under-surfaced
+the autonomy contract. Plan: [docs/plans/phase-35.md](docs/plans/phase-35.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 35.1 Tier + handling action on each inbox row | ✅ done (2026-06-14) | `/integrations` is real (integrations CRUD + write-only credentials + connection test + `ChannelItem` inbox on the live query). But `InboxPanel` showed only state + category + a Tier-3 needs-approval marker — while `ChannelItem.triage` carries the autonomy **`tier`** (1 act-silently / 2 act-then-report / 3 surface-and-wait) and the item carries the action taken (`taskId` dispatched, `reply` sent, `approvalId` parked). The operator couldn't see at what tier an item was handled or what ZIBBY did — core of "always accountable". Fix: each triaged row shows a **tier chip** (Tier 1/2/3, tone ok→accent→warn) + **handling markers** (`taskId`→"dispatched", `reply`→"replied") beside the existing needs-approval. Inbound `text` stays a truncated preview (Law 4 unchanged). i18n `inbox.tier`/`dispatched`/`replied` (cs+en). Tests: Tier-3 shows "Tier 3"; Tier-1+taskId shows "dispatched"; reply shows "replied". **web/DS green (integrations 8), full workspace 1530/1530** (first run, no flake), lint + web-tsc clean. Commit `63fe425`. |
+
 ## Next iteration
 
-**Proposed Phase 35 — Audit the /integrations (channels / autonomous mode) HUD surface.** A major
-North-Star pillar not yet audited: _"Autonomous mode watching Slack/email on a heartbeat… when
-something actionable arrives it acts within its mandate."_ Phase 5 shipped real integrations +
-credentials + a `ChannelWatcher` + tiered triage + a two-level item store. GROUND first against real
-code: the `/integrations` segment + feature dir + query/mutation hooks + the contract — verify the HUD
-shows the **real** connected channels and their **inbound triage items** (the InboxPanel referenced in
-Phase-32's briefing grep), that connect/disconnect + credential entry hit the real endpoints (NOT a
-mock list), that the autonomy **tier/mandate** of a handled item is visible, and that inbound content
-is shown as **data, not commands** (Law 4 — no unsanitized passthrough that could read as an
-instruction). Pick the single biggest gap (a mock channel list, an unwired connect button, triage
-items with no tier/decision shown, raw inbound leaking) as Phase 35's concrete change.
+**Proposed Phase 36 — Audit the /projects (engagements) HUD surface.** The North-Star long-term purpose
+is _"run multiple software-delivery engagements in parallel… with budget caps."_ Phase 8 shipped
+per-project budgets (daily/weekly token-or-run caps), a `BudgetService`, spend-past-cap gating, and
+"budget bars on /projects, cap-hit state in the runs feed." GROUND first against real code: the
+`/projects` segment + feature dir + query/mutation hooks + `ProjectSchema` — verify the HUD shows
+**real** projects with their **budget bars** (used vs cap, windowed), surfaces the **cap-hit / held**
+state honestly, and that the engagement attribution (which runs/items belong to a project) is visible.
+Pick the single biggest gap (a mock list, a missing/!wired budget bar, cap-hit not shown, no
+attribution) as Phase 36's concrete change.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
