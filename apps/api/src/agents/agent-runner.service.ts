@@ -117,9 +117,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     this.log.debug("agent runner initialized")
   }
 
-  /** Kill any still-live children on shutdown so we don't leak zombies. */
-  onModuleDestroy(): void {
-    this.core.shutdown()
+  /** Kill any still-live children on shutdown so we don't leak zombies (Phase 12.9: await reaping). */
+  async onModuleDestroy(): Promise<void> {
+    await this.core.shutdown()
   }
 
   /**

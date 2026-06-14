@@ -60,6 +60,9 @@ const RETENTION_MS = 30 * 60 * 1000
  */
 const RESUME_FALLBACK_MS = 30 * 60 * 1000
 
+/** Phase 12.9: grace after SIGTERM before a shutdown reap escalates a child to SIGKILL. */
+const SHUTDOWN_GRACE_MS = 5000
+
 /** Hard cap on how many runs the list returns, newest first. */
 const MAX_LISTED = 50
 
@@ -295,19 +298,61 @@ export class RunnerCore<R extends BaseRun> {
     }
   }
 
-  /** Kill any still-live children (whole process group) on shutdown. */
-  shutdown(): void {
-    for (const handle of this.runs.values()) {
-      // A run held at `awaiting-approval` (Variant B) still has a live child blocking
-      // on its decision file — kill it too so we don't orphan a node process.
-      const live = handle.run.status === "running" || handle.run.status === "awaiting-approval"
-      if (handle.child && live) {
-        // We are stopping the run, not failing it: flag it so the kill's non-zero
-        // exit reconciles to `interrupted`, not `error`.
-        handle.interrupting = true
-        killGroup(handle.run.pgid ?? handle.run.pid)
+  /**
+   * Kill any still-live children (whole process group) on shutdown and AWAIT their
+   * exit + log flush (Phase 12.9). The old fire-and-forget `void` returned before a
+   * SIGTERM'd child had stopped writing its `.log`, so on a real signal the process
+   * could exit mid-flush (and an e2e `fs.rm` after `app.close()` raced the write).
+   * Each child gets a {@link SHUTDOWN_GRACE_MS} grace, then SIGKILL; the await never
+   * hangs shutdown.
+   */
+  async shutdown(): Promise<void> {
+    await Promise.all([...this.runs.values()].map((handle) => this.reapOnShutdown(handle)))
+  }
+
+  /** Kill one live run's process group and await its exit + log flush (Phase 12.9). */
+  private reapOnShutdown(handle: RunHandle<R>): Promise<void> {
+    // A run held at `awaiting-approval` (Variant B) still has a live child blocking
+    // on its decision file — kill it too so we don't orphan a node process.
+    const live = handle.run.status === "running" || handle.run.status === "awaiting-approval"
+    const child = handle.child
+    if (!child || !live) return Promise.resolve()
+    // We are stopping the run, not failing it: flag it so the kill's non-zero exit
+    // reconciles to `interrupted`, not `error`.
+    handle.interrupting = true
+    const pgid = handle.run.pgid ?? handle.run.pid
+    killGroup(pgid)
+
+    return new Promise<void>((resolve) => {
+      let settled = false
+      const settle = () => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve()
       }
-    }
+      // On the child's `exit` the run's `finalize` (wired earlier) has already called
+      // `log.end()`; wait for the log stream's `finish` so the `.log` is fully flushed
+      // to disk before we return (then a teardown `fs.rm` can't race the write).
+      const afterExit = () => {
+        const log = handle.log
+        if (!log || log.writableFinished) return settle()
+        log.once("finish", settle)
+        if (log.writableFinished) settle()
+      }
+      if (child.exitCode !== null || child.signalCode !== null) afterExit()
+      else child.once("exit", afterExit)
+      // SIGTERM ignored past the grace → SIGKILL the group and resolve (never hang).
+      const timer = setTimeout(() => {
+        try {
+          process.kill(-pgid, "SIGKILL")
+        } catch {
+          // already gone
+        }
+        settle()
+      }, SHUTDOWN_GRACE_MS)
+      timer.unref?.()
+    })
   }
 
   /**

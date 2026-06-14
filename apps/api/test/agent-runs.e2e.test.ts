@@ -70,9 +70,9 @@ describe("Agent runs API (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
-    await fs.rm(agentsDir, { recursive: true, force: true })
-    await fs.rm(runsDir, { recursive: true, force: true })
-    await fs.rm(vaultDir, { recursive: true, force: true })
+    await fs.rm(agentsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+    await fs.rm(runsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+    await fs.rm(vaultDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     delete process.env.AGENTS_DIR
     delete process.env.AGENT_RUNS_DIR
     delete process.env.VAULT_DIR
@@ -251,7 +251,7 @@ describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", 
   afterAll(async () => {
     await app.close()
     for (const d of [agentsDir, runsDir, projectsDir, repo]) {
-      await fs.rm(d, { recursive: true, force: true })
+      await fs.rm(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     }
     for (const k of [
       "AGENTS_DIR",
@@ -332,8 +332,8 @@ describe("Agent runs persistence across restart (e2e)", () => {
   })
 
   afterAll(async () => {
-    await fs.rm(agentsDir, { recursive: true, force: true })
-    await fs.rm(runsDir, { recursive: true, force: true })
+    await fs.rm(agentsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+    await fs.rm(runsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     delete process.env.AGENTS_DIR
     delete process.env.AGENT_RUNS_DIR
     delete process.env.CLAUDE_BIN

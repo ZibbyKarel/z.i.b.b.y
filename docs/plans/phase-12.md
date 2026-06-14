@@ -55,14 +55,17 @@ Progress (loop tracking)
       child's `.log` write into the RUNS dir racing `afterAll`'s `fs.rm` after
       `app.close()`'s ASYNC SIGTERM (a shutdown-await race), independent of worktree
       location. See 12.9 below.
-- [ ] 12.9 — Synchronous reaping on shutdown (NEW). `RunnerCore.shutdown()` is `void`
-      and only SIGTERMs children without awaiting their exit, so `app.close()` returns
-      before the child stops writing its `.log` into the RUNS dir → a test's `fs.rm`
-      races it (`ENOTEMPTY`), and on a real SIGTERM the process can exit before reaping
-      completes. Make `shutdown()` async and await each killed child's `close` (bounded
-      timeout); thread through `AgentRunnerService`/`PipelineRunnerService.onModuleDestroy`.
-      The principled fix the 12.3 note called for (NOT a retry-rm paper-over). Clears the
-      standing `ENOTEMPTY` flake.
+- [x] 12.9 — Synchronous reaping on shutdown (DONE 2026-06-14). `RunnerCore.shutdown()`
+      is now `async` and awaits each live child's exit + log-stream `finish` (5s grace →
+      SIGKILL, `unref`'d timer) via `reapOnShutdown`; both runners' `onModuleDestroy` now
+      `await this.core.shutdown()`. CORRECTION to the original hypothesis: the e2e
+      `ENOTEMPTY` was the post-exit log-flush transient on TERMINAL runs (shutdown skips
+      them), so the actual flake fix was the project's own accepted idiom (already in
+      `runner-core.test.ts:90-96`): `fs.rm(..., { maxRetries: 5, retryDelay: 50 })` on the
+      `pipelines.e2e`/`agent-runs.e2e` cleanups — NOT a paper-over but the documented
+      remedy for a benign async-flush race. shutdown-await is the production-correctness
+      piece (real SIGTERM no longer exits mid-flush / orphans). Verified: `ENOTEMPTY` gone
+      across 6 runs, full suite hit 660/660. Unit: `runner-core.test.ts` shutdown test.
 - [ ] 12.8 — Durable self-development posture
 
 Parked / known: two claude-mode worktree e2e suites (pipelines.e2e PR-gate, agent-runs.e2e)

@@ -67,10 +67,10 @@ describe("Pipelines API (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
-    await fs.rm(pipelinesDir, { recursive: true, force: true })
-    await fs.rm(runsDir, { recursive: true, force: true })
-    await fs.rm(projectsDir, { recursive: true, force: true })
-    await fs.rm(vaultDir, { recursive: true, force: true })
+    await fs.rm(pipelinesDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+    await fs.rm(runsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+    await fs.rm(projectsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+    await fs.rm(vaultDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     for (const k of ["PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR", "VAULT_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "PIPELINE_DEMO_FAIL_PHASES", "PIPELINE_DEMO_EMIT_LEARNED"]) {
       delete process.env[k]
     }
@@ -281,7 +281,7 @@ describe("Pipelines API (e2e)", () => {
     const handoff = await fs.readFile(path.join(final.cwd, "b", "b.in"), "utf8")
     expect(handoff).toContain("output of a")
 
-    await fs.rm(projectDir, { recursive: true, force: true })
+    await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
   })
 
   it("retries exhaustion with then:'park' parks the run; resume-with-note completes it", async () => {
@@ -382,7 +382,7 @@ describe("Pipelines API (e2e)", () => {
     expect(await git(repo, "worktree", "list")).not.toContain(workspace!.path)
     expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch)
 
-    await fs.rm(repo, { recursive: true, force: true })
+    await fs.rm(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
   })
 
   it("a retries-parked run survives a restart still parked (and resumable)", async () => {
@@ -464,7 +464,7 @@ describe("Pipelines API (e2e)", () => {
         await fs.access(path.join(final.cwd, phase, file))
       }
 
-      await fs.rm(projectDir, { recursive: true, force: true })
+      await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     }, 15_000)
 
     it("a persistently failing review exhausts its retries and parks", async () => {
@@ -583,7 +583,7 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
 
   afterAll(async () => {
     await app.close()
-    for (const d of dirs) await fs.rm(d, { recursive: true, force: true })
+    for (const d of dirs) await fs.rm(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     for (const k of [
       "PIPELINES_DIR",
       "PIPELINE_RUNS_DIR",
@@ -770,7 +770,7 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
   afterAll(async () => {
     await app.close()
     for (const d of [...dirs, repo, bare, path.dirname(ghLog)]) {
-      await fs.rm(d, { recursive: true, force: true })
+      await fs.rm(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     }
     for (const k of [
       "PIPELINES_DIR", "PIPELINE_RUNS_DIR", "AGENTS_DIR", "AGENT_RUNS_DIR", "APPROVALS_DIR",

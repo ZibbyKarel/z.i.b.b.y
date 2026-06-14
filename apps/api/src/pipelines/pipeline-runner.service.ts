@@ -161,8 +161,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.reconstruct()
   }
 
-  onModuleDestroy(): void {
-    this.core.shutdown()
+  async onModuleDestroy(): Promise<void> {
+    await this.core.shutdown()
   }
 
   /**

@@ -36,6 +36,16 @@ const strategy: KindStrategy<TestRecord> = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const NODE = process.execPath
 
+/** `process.kill(pid, 0)` probes liveness without signalling. */
+function isProcAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** A tiny inline child that prints a PROGRESS line then exits 0. */
 function progressScript(pct: number): string[] {
   return ["-e", `console.log("PROGRESS ${pct}"); process.exit(0)`]
@@ -122,6 +132,31 @@ describe("RunnerCore", () => {
     expect(log).toContain("PROGRESS 55")
     expect(core.get(run.runId).status).toBe("done")
     expect(core.get(run.runId).pct).toBe(100)
+  })
+
+  it("shutdown() kills a live child, awaits its exit + log flush, and resolves (12.9)", async () => {
+    const core = new RunnerCore(dir, strategy)
+    await core.init()
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "agent-longrun",
+      command: NODE,
+      // Print a line (so the log has content to flush) then run forever.
+      args: ["-e", "console.log('PROGRESS 1'); setInterval(() => {}, 1000)"],
+      cwd: path.join(dir, "agent-longrun_sandbox"),
+      extra: { label: "long" },
+    })
+    await waitForStatus(core, run.runId, "running")
+    const { pid } = core.get(run.runId)
+    expect(isProcAlive(pid)).toBe(true)
+
+    const before = Date.now()
+    await core.shutdown()
+    // Resolves promptly — well under the 5s grace, since a plain node child dies on SIGTERM.
+    expect(Date.now() - before).toBeLessThan(4000)
+    // The child is reaped and the run reconciled to `interrupted` (deliberate teardown).
+    expect(isProcAlive(pid)).toBe(false)
+    expect(core.get(run.runId).status).toBe("interrupted")
   })
 
   it("emits status transitions and log-append signals to subscribers (SSE push)", async () => {
