@@ -23,7 +23,7 @@ nebo upravuje unit + integration testy pokrývající právě tu funkcionalitu, 
 
 ═══ ITERACE ═══
 
-1. GROUND — přečti CLAUDE.md (North Star), @ROADMAP.md, poslední phase plan a
+1. GROUND — přečti CLAUDE.md, north-start.md, @ROADMAP.md, poslední phase plan a
    PROGRESS.md / relevantní index ve vaultu. Z git logu zjisti, kde jsi skončil minule.
    Udělej GAP-ANALÝZU proti reálnému kódu (ne proti mockům): porovnej aktuální stav repa
    vs. North Star a vypiš největší díry seřazené podle prioritní osy výše.
