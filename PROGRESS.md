@@ -111,19 +111,38 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
 ground truth is current (14.2); and `pnpm e2e` is reliably green (14.3 — 10/10 across 3
 repeated local runs, and ~2× faster now that the gated agent run is a token-free stub).
 
+## Phase 17: live STT voice input — ✅ COMPLETE (2026-06-14)
+
+The voice screen's scripted demo timer is replaced by real `SpeechRecognition` behind a
+`live | demo` seam (`useSpeechRecognition` + `useVoiceSession`); a real transcript flows to
+the unified composer. (The earlier "a11y smoke" proposal was dropped — it's test-infra, not a
+valid LOOP.md phase; voice was the real functional gap.)
+
+## Phase 18: voice command bridge (speech → action) — ✅ COMPLETE (2026-06-14)
+
+ROADMAP §7.2 minus TTS. Spoken commands now **act**: `parseUtterance` (pure, cs/en,
+diacritics-insensitive) maps an utterance to a closed `VoiceAction` union
+(approve/reject/stop/navigate/close/createTask); `runVoiceAction` (pure executor) +
+`useUtteranceDispatch` wire it to the real approve/reject/stop mutations + Next router;
+`VoiceScreen` dispatches each finalized utterance once and announces the ack in an aria-live
+region. Concise-word guard keeps dictated "approve the budget…" a task, not a gate decision.
+Nothing bypasses the gate. web/DS 1442/1442; apps/web tsc clean; api 690/691 (the 1 = the
+known `pipelines.e2e` demo-timeout flake, passes isolated).
+
 ## Next iteration
 
-**Proposed Phase 17 — accessibility smoke (`@axe-core/playwright`).** The CI e2e infra
-(15/16) is now the place to add a continuous a11y gate, and the DS already takes a11y
-seriously (testid + role/ARIA assertions per CLAUDE.md) — but nothing scans the *composed*
-pages for WCAG violations. Add Deque's official `@axe-core/playwright`, write one smoke spec
-that loads the key dashboard routes (`/overview`, `/runs`, `/memory`, `/integrations`, …) in
-the existing seeded state and asserts **no critical/serious** WCAG 2.2 AA violations. Runs in
-the same job 15 enabled, deterministic, locally verifiable. **Key watch-out (scope control):**
-axe will likely surface pre-existing violations — keep the phase completable by gating only on
-`critical`+`serious` impact (or baseline the current set to a JSON snapshot and assert "no new"),
-and fix the few real ones found rather than chasing all ~30% machine-testable WCAG rows at once.
-Automated axe covers ~30% of WCAG; this is a regression fence, not a substitute for manual a11y.
+**Proposed Phase 19 — TTS read-back (`useSpeech`, ROADMAP §7.1 second half).** The bridge now
+shows acks as text; the JARVIS loop closes when ZIBBY *speaks* — the North Star DoD is
+"spoken task → run → spoken approval → spoken result". Add `useSpeech` over the free,
+browser-native `speechSynthesis` (zero spend, the §7 cost constraint): voices resolved via the
+`voiceschanged` event (`getVoices()` is `[]` on first call), locale-matched voice selection,
+and the known-bug hardening from `docs/research/phase7-voice-web-speech.md` — hold the
+utterance in a ref until `onend` (GC kills the callback otherwise), `speak()` only after a user
+gesture (autoplay policy → queue early utterances, flush on first interaction), always set
+`utterance.lang`. Wire it to speak the Phase-18 ack and (depends on 1.3 outcome write-back) run
+outcomes/pending approvals aloud. Deterministic test seam: a `speechSynthesis` stub with
+fixture voices (jsdom has neither API). **Watch-out:** keep `live | demo` so CI stays silent
+and deterministic; SSR-guard every API touch.
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen
