@@ -149,19 +149,27 @@ terminal state *while voice is open* (seeded from first feed so history isn't re
 api **1459/1459**, tsc + lint clean. The core voice loop is complete: **listen → command →
 speak → brief**.
 
+## Phase 21: skill edit + delete in the UI — ✅ COMPLETE (2026-06-14)
+
+Closed the §7.3 "skill edit/delete" gap. Code-level gap analysis (not roadmap claims) found
+global search + skill-category CRUD were already wired; only per-skill edit/delete was missing
+— and the contract + API already supported it (`updateSkill`/`deleteSkill`). Pure web wiring:
+`useSkillQuery` (single, fetches the body the list omits) + update/delete mutations,
+`AddSkillModal` edit mode (prefill + Save + Delete), `SkillTile` clickable → editor. web/DS+api
+**1464/1464**, tsc + lint clean.
+
 ## Next iteration
 
-**Proposed Phase 21 — dead-UI sweep (§7.3): wire the stub operator surfaces.** With voice
-functionally complete, the next priority-#1 (mock→real) gap is the small set of dead UI the
-roadmap §7.3 flagged: **skill edit/delete** (buttons exist, no mutation), **global search**
-(the top-bar search box isn't wired to the existing `/api/memory/search` + entity queries), and
-the **`light.ts` theme stub** (light mode is a placeholder; the app forces dark). Pick the one
-with the most operator value — likely **global search** (a butler you can't search is half-
-blind), or skill edit/delete (CRUD parity with agents/pipelines, which already have it). Each is
-a contained mock→real slice with its own web-components test (+ contract/e2e if a new endpoint).
-**Watch-out:** check whether the search/skill endpoints already exist (memory.search does) — if
-so it's pure web wiring, no API change. Alternative: the optional voice wake word / Settings →
-Voice surface if the operator wants hands-free.
+**Proposed Phase 22 — pipeline edit/duplicate dialog (verify against code FIRST).** Roadmap 2.2
+flagged the edit/duplicate buttons on `features/pipelines/Screen.tsx` as stubs, and the
+`updatePipeline`/`duplicatePipeline` contract endpoints exist — the same shape as the skill gap
+just closed (Phase 21), and pipelines are core to the delivery loop, so high operator value.
+**Critical watch-out:** the §7.3/2.2 roadmap text is stale-prone — Phase 21 found "global search"
+already done. So GROUND by grepping the real code first: are the pipeline edit/duplicate buttons
+actually still stubs, and do `useUpdatePipelineMutation`/`useDuplicatePipelineMutation` already
+exist? If already wired, pivot to the next real gap (the `light.ts` theme stub — design/UX — or
+the optional voice wake word / Settings → Voice). Whatever's chosen, it's a contained mock→real
+slice with its own web-components test (+ e2e only if a new endpoint).
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen

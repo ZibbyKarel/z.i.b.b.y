@@ -626,6 +626,30 @@ command → speak → brief) is complete.
 
 ---
 
+## Phase 21 — Skill edit + delete in the UI — ✅ delivered 2026-06-14
+
+_Closes the §7.3 "skill edit/delete" dead-UI gap. The skills **contract + API
+already implemented** `updateSkill` (PATCH) and `deleteSkill` (DELETE); only the web
+layer was missing — skills could be created but never edited or deleted. (Global
+search and skill-category CRUD, the other §7.3 items, were already wired in earlier
+work — confirmed by code-level gap analysis, not roadmap claims.)_
+
+- **Mutations/query (web):** `useSkillQuery` (single — fetches the `instructions`
+  body the list query omits), `useUpdateSkillMutation`, `useDeleteSkillMutation`
+  (invalidate the list + the single skill).
+- **`AddSkillModal` edit mode:** an `initial` prop pre-fills name/desc/category/
+  glyph/instructions, "Save" replaces "Create", and an edit-only "Delete" button
+  calls `onDelete`. The id is immutable (it's the filename), so it isn't editable.
+- **`SkillTile`** becomes a clickable button (`as="button"` + accessible label) that
+  opens the editor; `Screen` wires tile → lazy fetch → edit modal → update/delete.
+- i18n `common.delete`, `forms.skill.edit{Title,Subtitle}`, `skills.editSkillAria`.
+
+**Tests:** `SkillTile` (opens on click / static without `onSelect`); `AddSkillModal`
+edit mode (prefill, edit title, Delete button, no Delete in create). Pure web wiring,
+so the existing skills API e2e covers the backend. web/DS+api 1464/1464.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
