@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { QueryError } from "../../components/LoadError/QueryError";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
@@ -46,7 +47,8 @@ function moved(ids: string[], id: string, delta: -1 | 1): string[] | null {
 
 export function Screen() {
   const t = useTranslations("gates");
-  const { data: rules = [] } = useGateRulesQuery();
+  const rulesQuery = useGateRulesQuery();
+  const rules = rulesQuery.data ?? [];
   const { data: agents = [] } = useAgentsQuery();
   const { data: skills = [] } = useSkillsQuery();
 
@@ -152,7 +154,9 @@ export function Screen() {
             editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
         <SystemFloorPanel />
 
-        {shown.length === 0 ? (
+        {rulesQuery.isError ? (
+          <QueryError onRetry={() => void rulesQuery.refetch()} />
+        ) : shown.length === 0 ? (
           <EmptyState
             description={filter ? t("emptyFilteredDesc") : t("emptyDesc")}
             glyph="shield"

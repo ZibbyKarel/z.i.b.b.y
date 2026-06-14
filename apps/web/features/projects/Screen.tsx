@@ -17,6 +17,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { QueryError } from "../../components/LoadError/QueryError";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { ProjectCard } from "./components/ProjectCard";
 import { ProjectModal } from "./components/ProjectModal";
@@ -36,7 +37,8 @@ function newProjectDraft(category?: string): Project {
 
 export function Screen() {
   const t = useTranslations("projects");
-  const { data: projects = [] } = useProjectsQuery();
+  const projectsQuery = useProjectsQuery();
+  const projects = projectsQuery.data ?? [];
   const { data: categories = [] } = useProjectCategoriesQuery();
   const { data: budget } = useBudgetQuery();
   const budgetByProject = new Map((budget?.projects ?? []).map((p) => [p.projectId, p]));
@@ -143,7 +145,9 @@ export function Screen() {
           title={t("title")}
         />
 
-        {categories.length === 0 && projects.length === 0 ? (
+        {projectsQuery.isError ? (
+          <QueryError onRetry={() => void projectsQuery.refetch()} />
+        ) : categories.length === 0 && projects.length === 0 ? (
           <EmptyState
             actionLabel={t("addProject")}
             description={t("emptyDescription")}

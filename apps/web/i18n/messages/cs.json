@@ -56,6 +56,9 @@
     "close": "Zavřít",
     "cancel": "Zrušit",
     "loading": "Načítání…",
+    "loadErrorTitle": "Nepodařilo se načíst",
+    "loadErrorDescription": "Spojení s API selhalo — tvoje data jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
+    "retry": "Zkusit znovu",
     "targetProject": "Cílový projekt"
   },
   "topbar": {

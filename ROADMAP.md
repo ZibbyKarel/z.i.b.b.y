@@ -1140,6 +1140,28 @@ screens (skills / pipelines / projects / gates / integrations / memory) in subse
 
 ---
 
+## Phase 41 — Propagate the honest "couldn't load" state to the catalog screens — ✅ delivered 2026-06-14
+
+_Phase 40 built the shared `LoadError` + wired the agents screen; the same `data = []`-on-error bug
+(an API outage reads as an empty workspace — "create your first…") lived in every other catalog screen.
+This closes it across the velín._
+
+- New thin **`QueryError`** wrapper — `LoadError` pre-wired with shared `common.loadError*` strings, so
+  each screen is a one-liner (`<QueryError onRetry={refetch} />`), no per-feature i18n duplication.
+- **skills / pipelines / projects / gates / memory** Screens render `<QueryError onRetry={refetch}>`
+  when their primary list query `isError` (error precedes empty); each query destructure changed to
+  keep the query object. `pipelines` + `memory` use an error early-return mirroring their existing
+  empty early-return.
+- i18n `common.loadErrorTitle` / `loadErrorDescription` / `retry` (cs+en).
+
+**Tests:** new `QueryError.test.tsx` (renders the shared title; retry calls `onRetry`); existing
+`LoadError` + all screen tests stay green. web/DS green (full web-components 378/378), api 691/691.
+
+**Follow-up:** integrations uses the shared `Collection` (not `EmptyState`) — give `Collection` an
+error state to finish the sweep.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

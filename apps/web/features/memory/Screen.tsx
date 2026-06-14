@@ -13,6 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { QueryError } from "../../components/LoadError/QueryError";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { MemoryGraph } from "./components/MemoryGraph";
@@ -35,7 +36,8 @@ const TIER_FILTERS: TierFilter[] = ["all", "memory", "daily", "knowledge"];
  */
 export function Screen() {
   const t = useTranslations("memory");
-  const { data: graph } = useMemoryGraphQuery();
+  const graphQuery = useMemoryGraphQuery();
+  const graph = graphQuery.data;
   const [selected, setSelected] = useState<string | null>(null);
   const [tier, setTier] = useState<TierFilter>("all");
   const [search, setSearch] = useState("");
@@ -111,6 +113,15 @@ export function Screen() {
       onSaved={(id) => setSelected(id)}
     />
   );
+
+  if (graphQuery.isError) {
+    return (
+      <PageContainer>
+        <QueryError onRetry={() => void graphQuery.refetch()} />
+        {editorDialog}
+      </PageContainer>
+    );
+  }
 
   if (graph && graph.nodes.length === 0) {
     return (

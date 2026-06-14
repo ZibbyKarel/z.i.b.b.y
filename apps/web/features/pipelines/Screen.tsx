@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { QueryError } from "../../components/LoadError/QueryError";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
@@ -39,7 +40,8 @@ export interface ScreenProps {
 
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
-  const { data: pipelines = [] } = usePipelinesQuery();
+  const pipelinesQuery = usePipelinesQuery();
+  const pipelines = pipelinesQuery.data ?? [];
   const createPipeline = useCreatePipelineMutation();
   const updatePipeline = useUpdatePipelineMutation();
   const duplicatePipeline = useDuplicatePipelineMutation();
@@ -82,6 +84,16 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
       onAdd={() => setAdding(true)}
     />
   );
+
+  if (pipelinesQuery.isError) {
+    return (
+      <PageContainer>
+        {toolbar}
+        <QueryError onRetry={() => void pipelinesQuery.refetch()} />
+        {addModal}
+      </PageContainer>
+    );
+  }
 
   if (list.length === 0) {
     return (

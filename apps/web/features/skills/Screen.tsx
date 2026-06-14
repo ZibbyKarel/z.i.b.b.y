@@ -17,6 +17,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { QueryError } from "../../components/LoadError/QueryError";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { AddSkillModal } from "./components/AddSkillModal/AddSkillModal";
 import { SkillTile } from "./components/SkillTile";
@@ -33,7 +34,8 @@ import { slug } from "../../utils/slug";
 export function Screen() {
   const t = useTranslations("skills");
   const tk = useTranslations();
-  const { data: skills = [] } = useSkillsQuery();
+  const skillsQuery = useSkillsQuery();
+  const skills = skillsQuery.data ?? [];
   const { data: categories = [] } = useSkillCategoriesQuery();
   const createSkill = useCreateSkillMutation();
   const updateSkill = useUpdateSkillMutation();
@@ -123,7 +125,9 @@ export function Screen() {
           title={t("title")}
         />
 
-        {categories.length === 0 && skills.length === 0 ? (
+        {skillsQuery.isError ? (
+          <QueryError onRetry={() => void skillsQuery.refetch()} />
+        ) : categories.length === 0 && skills.length === 0 ? (
           <EmptyState
             actionLabel={t("addSkill")}
             description={t("emptyDescription")}
