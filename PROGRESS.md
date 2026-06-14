@@ -356,21 +356,30 @@ Agents detail/editor audited & found solid → simplification (LOOP #3). Plan: [
 | ---- | ------ | ----- |
 | 39.1 Extract ModelBadge/ThinkBadge to a neutral shared module | ✅ done (2026-06-14) | Agents detail/editor is solid (real RHF editor name/whenToUse/category/model/thinking/glyph/tools + Markdown body; `AgentRulesSection` floor+linked+own; `AgentViewDetails`). No functional gap → simplification. `ModelBadge`/`ThinkBadge` (generic model/thinking tags) lived in the **pipelines** `PhaseChain` but the **agents** feature imported them across (agents → pipelines coupling, pulling the big PhaseChain in for two tags). Extracted them (+ thinking→tone helper) into neutral `apps/web/components/RuntimeBadges/RuntimeBadges.tsx`, retyped against `Agent["model"]`/`Agent["thinking"]` (no PipelinePhase dep); all 5 call sites (`AgentCard`, `AgentViewDetails`, `PhaseChain`, `PipelineRunModal`, `PipelineDialog`) import from the shared module; `PhaseChain` dropped the now-unused `TagProps`/`AgentThinking` imports + tone helper (kept `Tag` — still used in its body). No behaviour change. Tests: new `RuntimeBadges.test`; existing PhaseChain+agents stay green. **web/DS green, full workspace 1538/1538** (first run, no flake), lint + web-tsc clean. Commit `9e4e303`. GOTCHA: `Tag` was still used in PhaseChain's body (not only the badges) — removing it from imports broke tsc; re-added. |
 
+## Phase 40: Honest "couldn't load" state (an API error is not an empty workspace) — ✅ COMPLETE (2026-06-14)
+
+The coupling sweep found no real smells → pivoted to a real honest-status gap. Plan: [docs/plans/phase-40.md](docs/plans/phase-40.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 40.1 Shared `LoadError` + agents-screen error state | ✅ done (2026-06-14) | The cross-feature coupling sweep found the remaining imports (`runs→approvals`, `agents→gates`, `settings→voice`) are **legitimate domain composition**, not generic-component misplacement → no refactor (per the "don't invent refactors" guard). Real gap surfaced instead: every catalog Screen does `const { data = [] } = useXQuery()`, so an **unreachable API** errors → `data` is `[]` → the screen shows its **empty** state ("no agents yet — create your first…"). An outage reads as an empty workspace (dishonest status; could nudge re-creating existing entities). 8 screens; only 2 referenced an error. Fix: new shared `apps/web/components/LoadError/LoadError.tsx` (error twin of `EmptyState`: i18n-agnostic props, DS `Card` + warn `Icon` + optional retry `Button`); **agents** Screen renders `<LoadError onRetry={refetch}>` when `useAgentsQuery().isError` (error precedes empty). i18n `agents.loadError*`/`retry` (cs+en). GOTCHA: `IconTileTone` is only accent\|neutral (no warn) → used `Icon name="warn" tone="warn"` not `IconTile`. Tests: `LoadError.test` (title/desc; retry calls onRetry; no button without onRetry). **web/DS green, full workspace 1541/1541** (first run, no flake), lint + web-tsc clean. Commit `25c8712`. |
+
 ## Next iteration
 
-**Proposed Phase 40 — Cross-feature coupling sweep (continue the simplification).** Phase 39 fixed one
-features-importing-another-feature's-internals coupling (agents → pipelines `PhaseChain`). GROUND first:
-grep `apps/web/features` for imports of the shape `from "../../<other-feature>/components/…"` (one
-feature reaching into another feature's component internals, vs. importing from `apps/web/components`,
-`@zibby/design-system`, or a domain barrel) — list them, and for the clearest 1–2 smells extract the
-shared piece into `apps/web/components/` (like RuntimeBadges) so neither feature owns the other's UI.
-Keep each move behaviour-preserving + tested. **If no further real couplings exist, switch back to a
-functional/bug target** — don't invent refactors. (Audit signal: obvious HUD gaps are largely
-exhausted after 13 phases; the highest-value next input would be the operator naming a concrete bug.)
+**Proposed Phase 41 — Propagate `LoadError` to the remaining catalog screens.** Phase 40 built the
+shared honest-error component + wired the **agents** screen; the same `data = []`-on-error bug lives in
+the other catalog screens. GROUND first (confirm each still has the empty-on-error shape + that its
+query exposes `isError`/`refetch`): **skills**, **pipelines**, **projects**, **gates**, **memory**,
+and **integrations** (integrations already references an error — verify it's honest). For each, swap the
+empty-vs-error decision to show `<LoadError onRetry={refetch}>` when the primary list query errors;
+add the per-feature i18n `loadError*` strings (reuse the agents wording). Batch the near-identical
+small edits (they share the pattern) into one completable phase, each with the `isError` guard. This
+closes the honest-status gap across the whole velín.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
-feed/detail states for similar double-counting or raw-data leaks.
+feed/detail states for similar double-counting or raw-data leaks. (Audit signal after 14 phases:
+obvious gaps are exhausted — the highest-value next input would be the operator naming a concrete bug.)
 
 Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
 per-project — api 691/691 isolated). The
