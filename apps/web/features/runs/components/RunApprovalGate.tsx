@@ -6,25 +6,28 @@ import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import type { DashboardApproval } from "../../approvals/approval";
 import { SEVERITY } from "../../approvals/approval";
 import { ApprovalPreview } from "../../approvals/components/ApprovalPreview";
-import { useApproveMutation } from "../../approvals/mutations";
+import { useApproveMutation, useRejectMutation } from "../../approvals/mutations";
 
 export interface RunApprovalGateProps {
   approval: DashboardApproval;
-  /** Deletes the whole run (the reject path of this footer). */
-  onDelete: () => void;
-  deleting: boolean;
 }
 
 /**
  * The decision panel for a run paused on `awaiting-approval`: a summary of what
  * exactly happens after confirming (the action, its structured preview and its
- * consequence) with a Potvrdit / Smazat footer. Run identity lives in the run
- * header above — this panel never repeats it. Confirming resumes the paused run;
- * the runs feed then flips the status and this panel disappears.
+ * consequence) with a Potvrdit / Zamítnout footer. Run identity lives in the run
+ * header above — this panel never repeats it.
+ *
+ * The two outcomes are the gate's, not a destructive edit: **confirm** resumes the
+ * paused run; **reject** goes through the reject endpoint — it records the denial
+ * (`approval-rejected`) and terminates the run *without erasing it*, so the rejected
+ * run stays in the feed and remains answerable. (Deleting a run is a separate action
+ * on the run header, available once it is no longer gated — never the gate's "no".)
  */
-export function RunApprovalGate({ approval, onDelete, deleting }: RunApprovalGateProps) {
+export function RunApprovalGate({ approval }: RunApprovalGateProps) {
   const t = useTranslations("approvals");
   const approve = useApproveMutation();
+  const reject = useRejectMutation();
   const sev = SEVERITY[approval.risk];
 
   return (
@@ -95,7 +98,7 @@ export function RunApprovalGate({ approval, onDelete, deleting }: RunApprovalGat
         <Stack direction="row" gap="100">
           <Button
             block
-            disabled={deleting}
+            disabled={reject.isPending}
             icon="check"
             intent="primary"
             loading={approve.isPending}
@@ -106,12 +109,13 @@ export function RunApprovalGate({ approval, onDelete, deleting }: RunApprovalGat
           </Button>
           <Button
             block
-            disabled={approve.isPending || deleting}
+            disabled={approve.isPending}
             icon="x"
             intent="danger"
-            onClick={onDelete}
+            loading={reject.isPending}
+            onClick={() => reject.mutate({ params: { id: approval.id }, body: {} })}
           >
-            {t("discard")}
+            {t("reject")}
           </Button>
         </Stack>
 

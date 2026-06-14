@@ -234,7 +234,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
             (approval.action === "pr.open" || approval.action === "git.push") && (
               <RunPrGatePanel pipelineRunId={run.runId} />
             )}
-          <RunApprovalGate approval={approval} deleting={deleting} onDelete={onDelete} />
+          <RunApprovalGate approval={approval} />
           <Accordion>
             <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
           </Accordion>

@@ -885,6 +885,32 @@ agent-log stream. web/DS green (runs 53), full workspace 1511 web + api 691/691 
 
 ---
 
+## Phase 30 — The gate's "no" rejects, it doesn't delete the run — ✅ delivered 2026-06-14
+
+_HUD audit of the highest-stakes surface (Laws: "the PR is the gate", "always answerable", "files are
+the source of truth"). The run-detail decision panel `RunApprovalGate` wired its negative button
+("Smazat"/Delete) to `onDelete` — which **deletes the whole run and erases its on-disk artifacts** —
+instead of the gate's **reject** endpoint. So rejecting a gated action (PR-open, push, destructive
+delete, spend-past-cap) from the run detail destroyed the run record and never recorded a gate
+decision (`approval-rejected` activity), while the approvals-queue card (`ApprovalCard` in the right
+rail) correctly used `useRejectMutation`. A structural inconsistency on the one surface that must be
+auditable._
+
+- `RunApprovalGate` now calls **`useRejectMutation`** for the negative decision
+  (`reject.mutate({ params: { id }, body: {} })`) — the backend marks the approval `rejected`,
+  records the `approval-rejected` activity event, and terminates the run **without erasing it**, so
+  the rejected run stays in the feed and remains answerable. Button relabelled `discard`→`reject`
+  ("Zamítnout"/"Reject"), `intent="danger"`. The `onDelete`/`deleting` props are gone — deleting a
+  run is a separate action on the header (available once a run is no longer gated), never the gate's
+  "no". `RunDetail` caller simplified.
+- i18n: dropped `approvals.discard`, added `approvals.reject` (cs+en).
+
+**Tests (new `RunApprovalGate.test.tsx`):** the negative button calls the **reject** mutation with the
+approval id (never a delete); the positive button calls **approve**; both pending states disable the
+pair. web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
