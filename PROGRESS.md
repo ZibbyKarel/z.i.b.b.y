@@ -273,15 +273,26 @@ Gate/approvals HUD audit (highest-stakes surface). Plan: [docs/plans/phase-30.md
 | ---- | ------ | ----- |
 | 30.1 RunApprovalGate rejects, not deletes | ✅ done (2026-06-14) | **Bug:** the run-detail decision panel `RunApprovalGate` wired its negative button ("Smazat"/Delete) to `onDelete` → `Screen.tsx` **deletes the whole run + erases on-disk artifacts**, instead of the gate's **reject** endpoint. So rejecting a gated action (PR-open/push/destructive-delete/spend-past-cap) from the run detail destroyed the run record and recorded **no** gate decision (`approval-rejected` activity), while the approvals-queue card (`ApprovalCard`) already used `useRejectMutation`. Violated Laws "the PR is the gate" / "always answerable" / "files are the source of truth". **Fix:** `RunApprovalGate` now calls `useRejectMutation` for the negative decision (backend marks approval `rejected`, records `approval-rejected`, terminates the run **without erasing it** → stays answerable); button relabelled `discard`→`reject` ("Zamítnout"/"Reject"); `onDelete`/`deleting` props removed (deleting a run is a separate header action, never the gate's "no"); `RunDetail` simplified. i18n: dropped `approvals.discard`, added `approvals.reject` (cs+en). Verified reject semantics against `approvals.service.ts` (`decide(id,"rejected")` + activity event + run cancel, no erase). Tests: new `RunApprovalGate.test.tsx` — negative button calls **reject** with the approval id (never delete); positive calls **approve**; skill+action render. **web/DS green (runs 56, full web-components 354/354), api 691/691** (full-suite 1 known under-load e2e flake; web-only change), lint + web-tsc clean. Commit `66af534`. |
 
+## Phase 31: Hold-to-confirm on the run-detail gate for high-risk approvals — ✅ COMPLETE (2026-06-14)
+
+Second gap from the Phase-30 gate audit — guardrail parity. Plan: [docs/plans/phase-31.md](docs/plans/phase-31.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 31.1 HoldButton on Confirm for payment/deletion | ✅ done (2026-06-14) | `ApprovalCard` (queue) gated payment/deletion behind a 0.9s `HoldButton`, but `RunApprovalGate` (run-detail decision panel) approved **every** risk with a plain one-click Button → the highest-consequence actions were *easier* to confirm on the bigger surface. Fix: canonical `HIGH_RISK_TYPES = {platba, mazani}` in `features/approvals/approval.ts` (taxonomy home; mirrors `ApprovalCard`'s `highRisk` set, no fork); `RunApprovalGate`'s Confirm becomes a DS `HoldButton` when `approval.riskType` is high-risk (`tone="bad"` deletion / `"warn"` payment; 0.9s hold → `approve.mutate`), else single-click Confirm. **Reject stays single-click** (safe direction never gated). Unenriched approvals (no `riskType`) degrade to the plain button. i18n `approvals.holdToApprove`/`holdDone` (cs+en). Tests: deletion/payment → `HoldButton` (`hold-button-root`) + no plain Confirm; non-high-risk keeps plain Confirm; reject single-click. **web/DS green (runs 60, full web-components 357/357), api 691/691 isolated** (full-suite 2 known under-load e2e flakes; web-only change), lint + web-tsc clean. Commit `b903d54`. |
+
 ## Next iteration
 
-**Proposed Phase 31 — Hold-to-confirm on the run-detail gate for high-risk approvals.** Found during
-the Phase-30 audit: the approvals-queue card (`ApprovalCard`) gates **payment/deletion** approvals
-behind a 0.9s `HoldButton` (the deliberate-confirmation guardrail), but `RunApprovalGate` (the
-run-detail decision panel) approves **every** risk with a plain Button — so the highest-consequence
-actions are *easier* to confirm on the bigger surface. Bring the same guardrail to the run-detail
-gate: when the approval's semantic risk type is `platba`/`mazani` (or severity `high`), the Confirm
-control becomes a hold-to-confirm. GROUND first: DS `HoldButton` API, `RunApprovalGate`'s `approval.riskType`/`risk`, and `ApprovalCard`'s `highRisk` set + `riskKind` map (reuse the same taxonomy, don't fork it).
+**Proposed Phase 32 — "Always answerable": surface the butler's briefing in the HUD.** The gate is
+now well-covered (reject-not-delete + hold-to-confirm). The next North-Star pillar is _"Always
+answerable — ZIBBY can explain what it is doing and has done"_ + the butler's-briefing default report.
+The backend has `GET /api/briefing` (Phase 6) and an append-only activity JSONL; GROUND first whether
+the HUD actually **surfaces the briefing** anywhere (overview screen? a "what happened" panel?) or
+whether the operator can only see raw run cards. If the briefing is unsurfaced or mock in the HUD,
+Phase 32 adds a real briefing view (the morning report: "N bugs came in, both fixed, PRs up; X asked
+about Y, I answered; nothing else needs you") on `/overview`, reading the real endpoint, with the
+notification-discipline tone (notify only when relevant). GROUND: `app/(dashboard)/overview`, any
+existing briefing/activity query hooks, the `GET /api/briefing` contract shape, and the activity feed.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
