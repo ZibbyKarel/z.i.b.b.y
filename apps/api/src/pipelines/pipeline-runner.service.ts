@@ -574,6 +574,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   readStageLog(pipelineRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
     const run = this.runs.get(pipelineRunId)
     if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    // The in-flight stage isn't in `stageRuns` yet (that append is terminal-only),
+    // so while this phase is the one executing, tail it by the live
+    // `currentStageRunId` — that is the running attempt, not a stale earlier one.
+    if (run.currentStage === phaseId && run.currentStageRunId) {
+      return this.core.readLog(run.currentStageRunId, offset)
+    }
     const stage = [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId)
     if (!stage) throw new PipelineRunNotFoundError(`${pipelineRunId}/${phaseId}`)
     return this.core.readLog(stage.runId, offset)
@@ -695,6 +701,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         stageResumeContext,
         delegates,
       )
+      // The stage has reached a terminal/paused state and (when terminal) is about
+      // to be appended to `stageRuns` — its log is readable from there now, so drop
+      // the live pointer the running attempt used.
+      run.currentStageRunId = undefined
 
       // Phase 9 (mid-stage pause, decision 3a): the stage child died on a usage limit.
       // The aggregate pauses WITHOUT touching the retry map — loop budget and the
@@ -948,6 +958,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       ...(env ? { env } : {}),
       extra: { pipelineRunId: run.pipelineRunId, phaseId: phase.id, attempt },
     })
+    // Expose the in-flight child so the detail timeline can tail its log live,
+    // before this attempt lands in `stageRuns` (terminal-only). In-memory mutation
+    // is enough for the live UI (it polls the aggregate); the driver clears it once
+    // the stage goes terminal.
+    run.currentStageRunId = rec.runId
     const status = await this.waitForStage(rec.runId)
     return { phaseId: phase.id, runId: rec.runId, attempt, status }
   }

@@ -5,7 +5,13 @@ import type {
   GoalRun,
   PipelineRun,
 } from "@zibby/contracts";
-import { approvalForRun, goalRunToView, mergeRunFeed, pipelineRunToView } from "./run";
+import {
+  approvalForRun,
+  goalRunToView,
+  mergeRunFeed,
+  pipelineRunToView,
+  runTitle,
+} from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -258,5 +264,25 @@ describe("pipelineRunToView (28 — stage timeline source)", () => {
     expect(v.stageRuns).toHaveLength(2);
     expect(v.stageRuns?.[1]?.attempt).toBe(2);
     expect(v.stageRuns?.[1]?.phaseId).toBe("verify");
+  });
+
+  it("carries the currently-executing phase onto the view for the live stage row", () => {
+    const v = pipelineRunToView(pipelineRun({ currentStage: "verify" }));
+    expect(v.currentStage).toBe("verify");
+  });
+});
+
+describe("runTitle (task name, not the phase)", () => {
+  it("titles a task-dispatched pipeline run with the task name, not 'fáze: X'", () => {
+    // A pipeline run's prompt is the "fáze: X" progress string; once enriched with
+    // its originating task, the headline must be the task's own name.
+    const v = pipelineRunToView(pipelineRun({ taskId: "t1", currentStage: "write" }));
+    expect(v.prompt).toBe("fáze: write");
+    expect(runTitle({ ...v, taskTitle: "Fix the login bug" })).toBe("Fix the login bug");
+  });
+
+  it("falls a task-less pipeline run back to its pipeline id, never the phase", () => {
+    const v = pipelineRunToView(pipelineRun({ currentStage: "write" }));
+    expect(runTitle(v)).toBe("delivery");
   });
 });

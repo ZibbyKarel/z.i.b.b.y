@@ -184,6 +184,8 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                         // child run was folded out of the feed in Phase 26).
                         makerPipeline ? (
                           <PipelineStageTimeline
+                            currentStage={makerPipeline.currentStage}
+                            live={makerPipeline.status === "running"}
                             owner={makerPipeline.pipelineId}
                             pipelineRunId={it.makerRunRef}
                             stageRuns={makerPipeline.stageRuns}

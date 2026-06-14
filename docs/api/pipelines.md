@@ -92,7 +92,17 @@ running → done       (všechny fáze prošly)
 ```
 GET /api/pipelines/:id/runs/:runId              stav runu
 GET /api/pipelines/:id/runs/:runId/log?offset=  chunk logu
+GET /api/pipelines/runs/:pipelineRunId/stages/:phaseId/logs?offset=
+                                                log jedné fáze (po fázích)
 ```
+
+**Živý log běžící fáze.** Stage se do `stageRuns` zapíše až ve chvíli, kdy dosáhne
+terminálního stavu, takže běžící fázi v něm nelze najít. Po dobu jejího běhu ji
+runner vystavuje přes `currentStageRunId` (RunnerCore run id právě běžícího dítěte)
+a `readStageLog` nejprve zkusí tuhle živou stopu — frontend tak může tailovat log
+běžící fáze, jak roste, místo aby ho viděl až po jejím doběhnutí. Při retry to vrací
+log _aktuálního_ pokusu, ne staršího terminálního. `currentStageRunId` se vyčistí,
+jakmile fáze skončí (log už je dosažitelný ze `stageRuns`).
 
 ## PipelineRunnerService
 

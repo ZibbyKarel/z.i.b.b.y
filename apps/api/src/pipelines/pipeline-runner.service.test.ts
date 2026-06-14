@@ -249,6 +249,41 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     expect(i).toBeGreaterThanOrEqual(4)
   })
 
+  describe("readStageLog (live in-flight stage)", () => {
+    it("tails the running phase by its live currentStageRunId (not yet in stageRuns)", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)!
+      // The build phase is executing — recorded only as `currentStage` +
+      // `currentStageRunId`, with nothing in `stageRuns` yet.
+      run.currentStage = "build"
+      run.currentStageRunId = "release_100.build_live"
+      run.stageRuns = []
+      await h.service.readStageLog(PIPELINE_RUN_ID, "build", 0)
+      expect(h.core.readLog).toHaveBeenCalledWith("release_100.build_live", 0)
+    })
+
+    it("prefers the live attempt over an earlier terminal attempt of the same phase", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)!
+      run.currentStage = "build"
+      run.currentStageRunId = "release_100.build_2"
+      run.stageRuns = [
+        { phaseId: "build", runId: "release_100.build_1", attempt: 1, status: "error" },
+      ]
+      await h.service.readStageLog(PIPELINE_RUN_ID, "build", 0)
+      expect(h.core.readLog).toHaveBeenCalledWith("release_100.build_2", 0)
+    })
+
+    it("reads a terminal phase from its recorded stageRuns entry", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)!
+      run.currentStage = "verify"
+      run.currentStageRunId = "release_100.verify_1"
+      run.stageRuns = [
+        { phaseId: "build", runId: "release_100.build_1", attempt: 1, status: "done" },
+      ]
+      await h.service.readStageLog(PIPELINE_RUN_ID, "build", 5)
+      expect(h.core.readLog).toHaveBeenCalledWith("release_100.build_1", 5)
+    })
+  })
+
   describe("buildStageCommand", () => {
     const PROJECT: Project = {
       id: "demo-proj",

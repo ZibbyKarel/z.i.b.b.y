@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Accordion,
@@ -7,6 +8,7 @@ import {
   Icon,
   type IconName,
   IconTile,
+  Pressable,
   Stack,
   Typography,
 } from "@zibby/design-system";
@@ -64,6 +66,36 @@ function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
   );
 }
 
+/** How many characters of the task description show before "show more". */
+const DESCRIPTION_PREVIEW = 180;
+
+/**
+ * The task's free-text description, truncated to a preview with a "show more /
+ * show less" toggle (classic collapse). Shown in the run header for runs born from
+ * a task whose description carries more than the headline — most visibly pipeline
+ * runs, whose `prompt` is only the current-phase string, not the task text.
+ */
+function TaskDescription({ text }: { text: string }) {
+  const t = useTranslations("runs");
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > DESCRIPTION_PREVIEW;
+  const shown = !isLong || expanded ? text : `${text.slice(0, DESCRIPTION_PREVIEW).trimEnd()}…`;
+  return (
+    <Stack align="start" gap="25">
+      <Typography leading="snug" size="sm" type="text" variant="secondary">
+        {shown}
+      </Typography>
+      {isLong && (
+        <Pressable onClick={() => setExpanded((v) => !v)}>
+          <Typography size="xs" tone="accent" type="note" weight="semibold">
+            {expanded ? t("showLess") : t("showMore")}
+          </Typography>
+        </Pressable>
+      )}
+    </Stack>
+  );
+}
+
 function MetaCell({ label, value, tone }: { label: string; value: string; tone?: "accent" }) {
   return (
     <Stack gap="25">
@@ -117,6 +149,15 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
 
   const headline = runTitle(run);
 
+  // A pipeline run's `prompt` is only the "fáze: X" progress string, which the stage
+  // timeline below already shows — so the header subtitle is the prompt for the other
+  // kinds (an agent's prompt), suppressed for pipelines.
+  const subtitle = run.kind === "pipeline" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
+  // The task's free-text description, shown (collapsed) only when it adds something
+  // beyond the headline and the subtitle — so the task name isn't repeated.
+  const descriptionText =
+    run.taskText && run.taskText !== headline && run.taskText !== subtitle ? run.taskText : "";
+
   // Pipeline runs render their own stage timeline (below); this is the log for the
   // kinds that have a single one (agent/skill) or a scheduled task's note.
   const logPanel = run.logBase ? (
@@ -157,11 +198,12 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
                       </Stack>
                     )}
                   </Stack>
-                  {run.prompt && run.prompt !== headline && (
+                  {subtitle && (
                     <Typography leading="snug" size="sm" type="text" variant="secondary">
-                      {run.prompt}
+                      {subtitle}
                     </Typography>
                   )}
+                  {descriptionText && <TaskDescription text={descriptionText} />}
                   <Typography mono size="2xs" type="note" variant="tertiary">
                     {run.runId} · {t(`kind.${run.kind}`)} · {run.status}
                   </Typography>
@@ -203,9 +245,16 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
               label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
               value={startedValue}
             />
-            {run.owner && run.kind !== "agent" && <MetaCell label={t("metaTarget")} value={run.owner} />}
-            <MetaCell label={t("metaKind")} value={t(`kind.${run.kind}`)} />
-            {run.taskTitle && (
+            {run.owner && run.kind !== "agent" && (
+              <MetaCell
+                label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
+                tone={run.kind === "pipeline" ? "accent" : undefined}
+                value={run.owner}
+              />
+            )}
+            {/* The task name is already the headline — only repeat it here when it
+                differs, and then carry the written-back outcome it uniquely holds. */}
+            {run.taskTitle && run.taskTitle !== headline && (
               <MetaCell
                 label={t("metaTask")}
                 value={
@@ -252,7 +301,13 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
         <>
           {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
           {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
-          <PipelineStageTimeline owner={run.owner} pipelineRunId={run.runId} stageRuns={run.stageRuns} />
+          <PipelineStageTimeline
+            currentStage={run.currentStage}
+            live={run.status === "running"}
+            owner={run.owner}
+            pipelineRunId={run.runId}
+            stageRuns={run.stageRuns}
+          />
         </>
       ) : run.status === "paused-limit" ? (
         <>

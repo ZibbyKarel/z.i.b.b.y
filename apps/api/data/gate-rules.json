@@ -1,19 +1,5 @@
 [
   {
-    "name": "Smazání",
-    "match": [
-      {
-        "type": "tool",
-        "tool": "rm"
-      }
-    ],
-    "decision": "ask",
-    "resolve": {
-      "type": "human"
-    },
-    "id": "gr_1781007585329_772ab7"
-  },
-  {
     "name": "Push do main",
     "desc": "Přímý push do hlavní větve vždy projde tvým schválením.",
     "match": [

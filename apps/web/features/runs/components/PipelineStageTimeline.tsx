@@ -16,17 +16,31 @@ export interface PipelineStageTimelineProps {
   owner: string;
   /** The per-phase stage runs (may be undefined while the run aggregate is loading). */
   stageRuns: RunView["stageRuns"];
+  /** The phase currently executing — surfaced as a live row when the run is running. */
+  currentStage?: string | null;
+  /** Whether the run is still executing (drives the synthetic live stage row + live log). */
+  live?: boolean;
 }
 
 /**
  * One pipeline stage's log — read on demand from the per-phase endpoint
  * (`GET /api/pipelines/runs/:id/stages/:phaseId/logs`), the same source the parked
  * panel uses for the failing-phase tail. Mounted only while the row is expanded, so
- * a collapsed stage costs nothing.
+ * a collapsed stage costs nothing. A `live` (still-running) phase re-reads on an
+ * interval and follows the tail, so the log grows in place instead of appearing only
+ * once the phase finishes.
  */
-function StageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phaseId: string }) {
+function StageLog({
+  pipelineRunId,
+  phaseId,
+  live,
+}: {
+  pipelineRunId: string;
+  phaseId: string;
+  live: boolean;
+}) {
   const t = useTranslations("runs");
-  const { data, isPending } = useStageRunLogQuery(pipelineRunId, phaseId);
+  const { data, isPending } = useStageRunLogQuery(pipelineRunId, phaseId, live);
   const text = (data?.content ?? "").replace(/\n$/, "");
   if (isPending) {
     return (
@@ -36,10 +50,10 @@ function StageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phaseId: 
     );
   }
   return text ? (
-    <CodeBlock maxHeight="viewport" text={text} />
+    <CodeBlock followTail caret={live} maxHeight="viewport" scrollKey={text} text={text} />
   ) : (
     <Typography mono size="2xs" type="note" variant="tertiary">
-      {t("stageNoLog")}
+      {live ? `${t("liveLog")}…` : t("stageNoLog")}
     </Typography>
   );
 }
@@ -56,13 +70,33 @@ export function PipelineStageTimeline({
   pipelineRunId,
   owner,
   stageRuns,
+  currentStage,
+  live = false,
 }: PipelineStageTimelineProps) {
   const t = useTranslations("runs");
   const router = useRouter();
-  const stages = stageRuns ?? [];
+  const terminalStages = stageRuns ?? [];
+  // The phase executing right now isn't in `stageRuns` yet (that append is
+  // terminal-only), so synthesize a live row for it — its attempt is one past the
+  // terminal attempts already recorded for that phase. Without this the running
+  // phase (and its growing log) would be invisible until it finished.
+  const liveRow =
+    live && currentStage
+      ? {
+          phaseId: currentStage,
+          runId: "",
+          attempt: terminalStages.filter((s) => s.phaseId === currentStage).length + 1,
+          status: "running" as const,
+        }
+      : null;
+  const stages = liveRow ? [...terminalStages, liveRow] : terminalStages;
   // Which stage's log is expanded (`"${phaseId}#${attempt}"`), or null. Single open ⇒
   // at most one stage-log fetch live.
   const [openLog, setOpenLog] = useState<string | null>(null);
+  // The live phase opens by default so its log streams without a click; an explicit
+  // toggle takes over from there (collapsing it falls back to the live phase again).
+  const liveKey = liveRow ? `${liveRow.phaseId}#${liveRow.attempt}` : null;
+  const openKey = openLog ?? liveKey;
 
   // Link to the pipeline *definition* (a different surface than this run). Hidden when
   // the owner id isn't known yet (e.g. a goal's maker run aggregate still loading).
@@ -92,7 +126,8 @@ export function PipelineStageTimeline({
         <Stack gap="100">
           {stages.map((s) => {
             const key = `${s.phaseId}#${s.attempt}`;
-            const isOpen = openLog === key;
+            const isOpen = openKey === key;
+            const rowLive = s.status === "running";
             return (
               <Stack gap="50" key={key}>
                 <Stack align="center" direction="row" gap="100" justify="between">
@@ -122,7 +157,9 @@ export function PipelineStageTimeline({
                     </Button>
                   </Stack>
                 </Stack>
-                {isOpen && <StageLog phaseId={s.phaseId} pipelineRunId={pipelineRunId} />}
+                {isOpen && (
+                  <StageLog live={rowLive} phaseId={s.phaseId} pipelineRunId={pipelineRunId} />
+                )}
               </Stack>
             );
           })}

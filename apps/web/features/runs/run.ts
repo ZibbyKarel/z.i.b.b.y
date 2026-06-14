@@ -46,6 +46,8 @@ export interface RunView {
   taskId?: string;
   /** Enriched from the task record: its display title (or text). */
   taskTitle?: string;
+  /** Enriched from the task record: its full free-text description (the task's `text`). */
+  taskText?: string;
   /** Enriched from the task record: the written-back run outcome. */
   taskOutcome?: "done" | "error";
   /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
@@ -66,6 +68,8 @@ export interface RunView {
   checkpoints?: PipelineRun["checkpoints"];
   /** Phase 28 (pipeline runs): the per-phase stage runs, for the detail's stage timeline. */
   stageRuns?: PipelineRun["stageRuns"];
+  /** Pipeline runs: the phase currently executing, for the timeline's live (running) stage row. */
+  currentStage?: string | null;
   /** Phase 10 (goal runs): the goal definition id, for the detail view's maxIterations lookup. */
   goalId?: string;
   /** Phase 10 (goal runs): the per-iteration maker→verifier log for the timeline. */
@@ -76,9 +80,16 @@ export interface RunView {
   goalParkedReason?: GoalRun["parkedReason"];
 }
 
-/** Task-first display name: explicit title, else the task text, else the target. */
+/**
+ * Task-first display name: the explicit task title, else (for runs born from a
+ * task) the task's own name, else the run's prompt, else the routed target id.
+ * A pipeline run's `prompt` is the "fáze: X" progress string — a subtitle, never
+ * a headline — so a pipeline falls straight to its pipeline id when it has no
+ * task name, rather than showing the current phase where the task name belongs.
+ */
 export function runTitle(run: RunView): string {
-  return run.title || run.prompt || run.owner;
+  if (run.kind === "pipeline") return run.title || run.taskTitle || run.owner;
+  return run.title || run.taskTitle || run.prompt || run.owner;
 }
 
 /**
@@ -161,6 +172,7 @@ export function pipelineRunToView(r: PipelineRun): RunView {
     limitResumeCycles: r.limitResumeCycles,
     checkpoints: r.checkpoints,
     stageRuns: r.stageRuns,
+    currentStage: r.currentStage,
   };
 }
 
@@ -219,6 +231,7 @@ export function enrichRunWithTask(
   return {
     ...run,
     taskTitle: task.title || task.text,
+    taskText: task.text,
     taskOutcome: task.outcome?.status,
   };
 }

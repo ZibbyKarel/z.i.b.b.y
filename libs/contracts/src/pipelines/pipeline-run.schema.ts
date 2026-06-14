@@ -98,6 +98,13 @@ export const PipelineRunSchema = z.object({
   taskId: z.string().optional(),
   /** Phase id currently executing, or null once the run has finished. */
   currentStage: z.string().nullable(),
+  /**
+   * The RunnerCore run id of the stage currently executing — set when a stage
+   * spawns, cleared when it goes terminal (or the run ends). Lets the detail's
+   * stage timeline tail the in-flight phase's log live, before that attempt
+   * lands in `stageRuns` (which holds only terminal attempts).
+   */
+  currentStageRunId: z.string().optional(),
   stageRuns: z.array(StageRunSchema),
   startedAt: z.string().datetime(),
   /** Absolute shared root dir holding the per-phase sandboxes for this run. */
