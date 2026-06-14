@@ -79,6 +79,12 @@ describe("GoalDetailPanel (14.1)", () => {
     expect(screen.getByText("2 / 2 dnes")).toBeInTheDocument();
   });
 
+  it("shows each iteration's maker kind in the timeline (kind lives in the detail)", () => {
+    render(<GoalDetailPanel run={parkedGoal("iterations")} />);
+    // Both iterations are pipeline makers → the kind label appears per row.
+    expect(screen.getAllByText("pipeline").length).toBe(2);
+  });
+
   it("renders no budget bar when no matching goal/budget is found", () => {
     // goalId "absent" → no goal matched → no budget → no bar.
     render(<GoalDetailPanel run={{ ...parkedGoal("iterations"), goalId: "absent" }} />);

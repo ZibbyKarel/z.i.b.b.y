@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Approval, GoalRun } from "@zibby/contracts";
-import { approvalForRun, goalRunToView } from "./run";
+import type {
+  AgentRun,
+  Approval,
+  GoalRun,
+  PipelineRun,
+} from "@zibby/contracts";
+import { approvalForRun, goalRunToView, mergeRunFeed } from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -109,5 +114,115 @@ describe("goalRunToView", () => {
       },
     ];
     expect(goalRunToView(baseGoalRun({ iterations })).iterations).toHaveLength(1);
+  });
+});
+
+const agentRun = (over: Partial<AgentRun> = {}): AgentRun => ({
+  runId: "writer_1",
+  agentId: "writer",
+  status: "running",
+  pct: 0,
+  title: "",
+  prompt: "do it",
+  project: "proj",
+  files: [],
+  cwd: "/tmp/runs/writer_1",
+  startedAt: "2026-06-13T10:00:00.000Z",
+  pid: 1,
+  logFile: "/tmp/runs/writer_1.log",
+  ...over,
+});
+
+const pipelineRun = (over: Partial<PipelineRun> = {}): PipelineRun => ({
+  pipelineRunId: "delivery_1",
+  pipelineId: "delivery",
+  status: "running",
+  currentStage: "write",
+  stageRuns: [],
+  startedAt: "2026-06-13T10:00:00.000Z",
+  cwd: "/tmp/runs/delivery_1",
+  ...over,
+});
+
+/** A goal whose single iteration dispatched `makerRunRef` (and, optionally, a claude verifier run). */
+const goalWithChildren = (
+  makerRunRef: string,
+  makerKind: "agent" | "pipeline",
+  verifierRunRef?: string,
+): GoalRun =>
+  baseGoalRun({
+    goalRunId: "ship_1",
+    iterations: [
+      {
+        index: 0,
+        makerKind,
+        makerRunRef,
+        verifier: {
+          kind: "claude",
+          satisfied: false,
+          output: "",
+          ...(verifierRunRef ? { runRef: verifierRunRef } : {}),
+        },
+        startedAt: "2026-06-13T10:00:05.000Z",
+        status: "running",
+      },
+    ],
+  });
+
+describe("mergeRunFeed (one card per task — fold a loop's child runs)", () => {
+  it("folds a goal's child agent run — the loop is ONE card, not two", () => {
+    const feed = mergeRunFeed(
+      [agentRun({ runId: "writer_child" })],
+      [],
+      [goalWithChildren("writer_child", "agent")],
+      [],
+    );
+    expect(feed).toHaveLength(1);
+    expect(feed[0]?.kind).toBe("goal");
+  });
+
+  it("folds a goal's child pipeline run", () => {
+    const feed = mergeRunFeed(
+      [],
+      [pipelineRun({ pipelineRunId: "delivery_child" })],
+      [goalWithChildren("delivery_child", "pipeline")],
+      [],
+    );
+    expect(feed).toHaveLength(1);
+    expect(feed[0]?.kind).toBe("goal");
+  });
+
+  it("folds the goal's claude verifier run too", () => {
+    const feed = mergeRunFeed(
+      [agentRun({ runId: "verify_child" })],
+      [],
+      [goalWithChildren("maker_x", "agent", "verify_child")],
+      [],
+    );
+    expect(feed.map((r) => r.kind)).toEqual(["goal"]);
+  });
+
+  it("keeps a standalone agent run that is not any goal's child", () => {
+    const feed = mergeRunFeed(
+      [agentRun({ runId: "solo" })],
+      [],
+      [goalWithChildren("other_child", "agent")],
+      [],
+    );
+    expect(feed).toHaveLength(2);
+    expect(feed.map((r) => r.kind).sort()).toEqual(["agent", "goal"]);
+  });
+
+  it("sorts the feed newest-first", () => {
+    const feed = mergeRunFeed(
+      [
+        agentRun({ runId: "old", startedAt: "2026-06-13T09:00:00.000Z" }),
+        agentRun({ runId: "new", startedAt: "2026-06-13T12:00:00.000Z" }),
+      ],
+      [],
+      [],
+      [],
+    );
+    expect(feed.map((r) => r.runId)).toEqual(["new", "old"]);
   });
 });

@@ -823,6 +823,10 @@
       "done": "maker done",
       "failed": "maker failed",
       "paused-limit": "paused (limit)"
+    },
+    "goalMakerKind": {
+      "agent": "agent",
+      "pipeline": "pipeline"
     }
   },
   "gates": {

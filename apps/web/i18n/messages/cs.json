@@ -823,6 +823,10 @@
       "done": "maker hotov",
       "failed": "maker selhal",
       "paused-limit": "pozastaveno (limit)"
+    },
+    "goalMakerKind": {
+      "agent": "agent",
+      "pipeline": "pipeline"
     }
   },
   "gates": {

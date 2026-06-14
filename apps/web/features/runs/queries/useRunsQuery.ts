@@ -7,14 +7,7 @@ import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import { getScheduledTasksQueryKey } from "../../tasks/queries/useScheduledTasksQuery";
 import { useRunEventsConnected } from "../runEvents";
-import {
-  type RunView,
-  agentRunToView,
-  enrichRunWithTask,
-  goalRunToView,
-  pipelineRunToView,
-  scheduledTaskToView,
-} from "../run";
+import { type RunView, mergeRunFeed } from "../run";
 
 const POLL_MS = 2_000;
 
@@ -93,18 +86,16 @@ export function useRunsQuery(): { runs: RunView[] } {
     select: selectApiResponseBody,
   });
 
-  const runs = useMemo<RunView[]>(() => {
-    // Task lookup for run enrichment (origin title + written-back outcome);
-    // dispatched tasks stay out of the feed — their run row is the canonical card.
-    const tasksById = new Map((scheduled.data ?? []).map((t) => [t.id, t]));
-    const merged: RunView[] = [
-      ...(agents.data ?? []).map((r) => enrichRunWithTask(agentRunToView(r), tasksById)),
-      ...(pipelines.data ?? []).map((r) => enrichRunWithTask(pipelineRunToView(r), tasksById)),
-      ...(goals.data ?? []).map((r) => enrichRunWithTask(goalRunToView(r), tasksById)),
-      ...(scheduled.data ?? []).flatMap((t) => scheduledTaskToView(t) ?? []),
-    ];
-    return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-  }, [agents.data, pipelines.data, goals.data, scheduled.data]);
+  const runs = useMemo<RunView[]>(
+    () =>
+      mergeRunFeed(
+        agents.data ?? [],
+        pipelines.data ?? [],
+        goals.data ?? [],
+        scheduled.data ?? [],
+      ),
+    [agents.data, pipelines.data, goals.data, scheduled.data],
+  );
 
   // The 2s runs poll is the freshest signal that a run has paused at a gate, so
   // when one *enters* `awaiting-approval` we refetch the pending-approval queue

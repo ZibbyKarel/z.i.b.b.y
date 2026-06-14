@@ -769,6 +769,33 @@ gate answers never classify. `VoiceScreen` speaks the clarify question. web/DS+a
 
 ---
 
+## Phase 26 — HUD runs feed: one card per task (fold a loop's child runs) — ✅ delivered 2026-06-14
+
+_Operator (2026-06-14): stop Voice work (nice-to-have), polish the HUD — real bugs remain. First
+one: when a **loop** (goal) runs, the **Běhy a aktivita** (`/runs`) feed shows TWO cards — the loop
+**and** the child agent run it is currently executing. The feed must show **one card per task**
+(running / stopped / awaiting-approval / finished); whether it runs as agent/pipeline/loop is detail
+that belongs **inside the task**, not a second card._
+
+Root cause: `useRunsQuery` merges the three per-kind history lists (agent + pipeline + goal) with
+**no dedup**, and a goal's maker dispatches a child agent/pipeline run (`iteration.makerRunRef`) —
+both the goal and its child surface as peer feed cards.
+
+- **`mergeRunFeed` (pure, in `run.ts`)** — extracted the inline merge out of the hook and added the
+  fold: collect every goal's child run ids (`iteration.makerRunRef` + the claude verifier's
+  `verifier.runRef`) and drop the agent/pipeline runs that are a goal's children. One loop → one
+  card; standalone agent/pipeline runs are untouched. `useRunsQuery` now just calls it.
+- **Kind lives in the detail** — `GoalDetailPanel`'s iteration timeline now shows each iteration's
+  **maker kind** (agent/pipeline glyph + label), so "what it runs as" is answerable from the task
+  detail (where the folded child run's execution surfaces).
+- i18n `runs.goalMakerKind.{agent,pipeline}` (cs+en).
+
+**Tests:** `run.test.ts` `mergeRunFeed` — a goal + its child agent/pipeline run → one card (child
+folded); the claude verifier run folded; a standalone agent run kept; newest-first sort.
+`GoalDetailPanel.test.tsx` — the maker kind is shown per iteration. web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

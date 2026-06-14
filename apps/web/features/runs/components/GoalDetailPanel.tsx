@@ -106,6 +106,18 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                   <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
                     {t("goalIteration", { n: it.index + 1 })}
                   </Typography>
+                  {/* The execution kind of this iteration's maker (agent vs pipeline)
+                      — "what it runs as" lives in the task detail, not a 2nd feed card. */}
+                  <Stack align="center" direction="row" gap="50">
+                    <Icon
+                      name={it.makerKind === "agent" ? "bot" : "flow"}
+                      size="xs"
+                      tone="accent"
+                    />
+                    <Typography mono size="2xs" type="note" variant="tertiary">
+                      {t(`goalMakerKind.${it.makerKind}`)}
+                    </Typography>
+                  </Stack>
                   <Typography mono size="2xs" type="note" variant="tertiary">
                     {t(`goalMakerStatus.${it.status}`)}
                   </Typography>

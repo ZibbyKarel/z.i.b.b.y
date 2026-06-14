@@ -255,6 +255,44 @@ export function scheduledTaskToView(t: ScheduledTask): RunView | null {
   };
 }
 
+/**
+ * The unified runs feed: merge the per-kind history lists into one task feed,
+ * newest-first. **One card per task** — a loop (goal) dispatches its maker as a
+ * child agent/pipeline run (`iteration.makerRunRef`) and its claude verifier as
+ * another (`verifier.runRef`); those are internal execution detail of the goal
+ * task, so they are folded **out** of the feed (their data surfaces inside the
+ * goal's detail). Standalone agent/pipeline runs are untouched. Pure, so the
+ * dedup is unit-tested without rendering the hook.
+ */
+export function mergeRunFeed(
+  agents: readonly AgentRun[],
+  pipelines: readonly PipelineRun[],
+  goals: readonly GoalRun[],
+  scheduled: readonly ScheduledTask[],
+): RunView[] {
+  const tasksById = new Map(scheduled.map((t) => [t.id, t]));
+  // Every run a goal spawned (maker + claude verifier) — these are the goal's
+  // children, not peers of it in the feed.
+  const childRunIds = new Set<string>();
+  for (const g of goals) {
+    for (const it of g.iterations) {
+      if (it.makerRunRef) childRunIds.add(it.makerRunRef);
+      if (it.verifier.runRef) childRunIds.add(it.verifier.runRef);
+    }
+  }
+  const merged: RunView[] = [
+    ...agents
+      .filter((r) => !childRunIds.has(r.runId))
+      .map((r) => enrichRunWithTask(agentRunToView(r), tasksById)),
+    ...pipelines
+      .filter((r) => !childRunIds.has(r.pipelineRunId))
+      .map((r) => enrichRunWithTask(pipelineRunToView(r), tasksById)),
+    ...goals.map((r) => enrichRunWithTask(goalRunToView(r), tasksById)),
+    ...scheduled.flatMap((t) => scheduledTaskToView(t) ?? []),
+  ];
+  return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
 export interface RunStateMeta {
   /** i18n key suffix under `runs.state.*`. */
   key: FeedStatus;
