@@ -4,9 +4,11 @@
 > slice, design → implement → verify → checkpoint → record. Full roadmap:
 > [ROADMAP.md](ROADMAP.md); per-phase plans in [docs/plans/](docs/plans/).
 
-## Current focus — Phase 12: self-development safety
+## Phase 12: self-development safety — ✅ COMPLETE (2026-06-14)
 
 Make ZIBBY a safe target for its own loop engine (the "MEMORY BOMB" RCA).
+**All items 12.1–12.9 done; full suite 672/672 green.** ZIBBY may now be pointed at
+its own repo under the [self-development runbook](docs/ops/self-development.md).
 Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 
 | Item | Status | Notes |
@@ -19,7 +21,7 @@ Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 | 12.6 Eliminate double verification | ✅ done (2026-06-14) | `PipelineRun.verifyCommands` marker (runner-set from real execution); goal `makerAlreadyVerified()` skips `runVerifier` only when resolved commands provably equal. 669/669 api green |
 | 12.7 Worktrees outside the repo | ✅ done (2026-06-14) | shared `worktree-root.ts` (not from data root); all 3 runners cut worktrees in `ZIBBY_WORKTREE_ROOT`/`os.tmpdir()`. Does NOT fix the `ENOTEMPTY` flake (that's the RunnerCore shutdown-await race → 12.9) |
 | 12.9 Synchronous reaping on shutdown | ✅ done (2026-06-14) | `RunnerCore.shutdown()` async, awaits child exit + log flush (SIGTERM→SIGKILL); e2e cleanups use `fs.rm` `maxRetries/retryDelay` (the real flake fix). `ENOTEMPTY` gone across 6 runs; suite hit 660/660 |
-| 12.8 Durable self-development posture | ⬜ | builder ≠ subject, OS sandbox, budget-as-contract |
+| 12.8 Durable self-development posture | ✅ done (2026-06-14) | `docs/ops/self-development.md` runbook (builder ≠ subject, OS sandbox, defense-in-depth, resource-gov-as-contract) + env knobs doc + guard test (subject worktree never under builder tree). **CLOSES PHASE 12** |
 
 **Blast-radius prerequisite** (must be green before pointing the loop at this repo):
 12.1–12.4 — ✅ **COMPLETE** (2026-06-14). 12.5 landed first as the safety foundation
@@ -37,22 +39,29 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
 - `categories.e2e` "rejects a duplicate" — flakes only under full-suite load; passes
   6/6 in isolation. Pre-existing under-load timing flake.
 
-## Next iteration
+## Next iteration — Phase 12 is closed; propose Phase 13
 
-**Phase 12.8 — durable self-development posture (the LAST Phase 12 item — closes it).**
-Architecture + policy + docs, not a single patch:
-- **Builder ≠ subject runbook** (`docs/ops/`): the orchestrator that drives
-  self-development must run from a pinned/built artifact, NOT `ts-node-dev` on the tree
-  it edits (`apps/api/package.json:6`). Document: build ZIBBY, run that build as the
-  builder, point the goal at a fresh checkout/worktree of the repo as the subject.
-- **Resource-governance as a contract dimension:** a short note in ROADMAP/POLICY that
-  the autonomy contract now governs autonomy of EXECUTION (per-run/per-goal compute +
-  token budget) alongside autonomy of judgment (tiers/gates) — composes with Phase 8.1
-  `BudgetService`; the 12.3 timeout + 12.1/12.2 scoping are the interim ceiling.
-- **OS-level sandbox** note: run the subject's verifier under a real resource ceiling
-  (container/cgroup mem+cpu) so a runaway is bounded by the OS, not just bookkeeping.
-- Tests: a documented runbook; a smoke that a goal targeting a sibling checkout never
-  touches the builder's own tree (reuse the worktree-root isolation from 12.7). Keep it
-  thin — this is mostly docs + a guard test, since the enforcement pieces (12.1–12.5,
-  12.9) already landed. After 12.8, **Phase 12 is COMPLETE** — the repo is a safe loop
-  target; consider a real self-development smoke as the Phase 12 exit demonstration.
+**Phase 13 — self-development exit demonstration + spend governance (proposed).** Phase
+12 made the repo *safe* to target; Phase 13 is the *payoff* — prove it end-to-end and
+wire the one resource-governance piece 12.8 documented but didn't enforce:
+
+- **13.1 Per-goal compute budget enforced (not just documented).** 12.8 named
+  resource-governance as a contract dimension but the per-goal token/compute cap is still
+  only the interim 12.3 timeout + 8.1 per-project budget. Add a `budget` ceiling on the
+  goal itself (the `GoalSchema.budget` field exists — wire it into the iteration loop:
+  over-cap → park `budget`, the existing reason). e2e: a goal with a tiny budget parks
+  after N iterations. Reuses 8.1 `BudgetService` + the existing `decideStop` budget arm.
+- **13.2 Self-development smoke (the Phase 12 exit demonstration).** A demo-mode e2e that
+  registers a *sibling fixture checkout* as a project, points a goal (delivery-pipeline
+  maker + scoped verifier) at it, runs to done, and asserts: the builder's own tree is
+  untouched (git status clean on the runner repo), the worktree lived under
+  `ZIBBY_WORKTREE_ROOT`, no full-repo suite ran, no orphan child. Codifies the Phase 12
+  exit criterion as an executable test, not just a checklist.
+- **13.3 (stretch) launchd daemon + `GOAL_AUTO_RESUME`** wiring (Phase 8.3 territory) so
+  an unattended builder can resume across reboots — the only place auto-resume is
+  legitimate.
+
+Pick 13.1 first (smallest, enforces the last governance gap); 13.2 is the capstone demo.
+Alternatively, if the operator wants to *actually* self-develop now, the
+[runbook](docs/ops/self-development.md) is ready — that's an operator action, not a loop
+iteration.

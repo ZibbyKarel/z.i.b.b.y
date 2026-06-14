@@ -76,7 +76,18 @@ Progress (loop tracking)
       remedy for a benign async-flush race. shutdown-await is the production-correctness
       piece (real SIGTERM no longer exits mid-flush / orphans). Verified: `ENOTEMPTY` gone
       across 6 runs, full suite hit 660/660. Unit: `runner-core.test.ts` shutdown test.
-- [ ] 12.8 — Durable self-development posture
+- [x] 12.8 — Durable self-development posture (DONE 2026-06-14). **Closes Phase 12.**
+      New `docs/ops/self-development.md` runbook (builder ≠ subject: run the orchestrator
+      from a pinned `serve` build NOT `ts-node-dev --respawn`, point the goal at a fresh
+      sibling checkout; the three-identity table; defense-in-depth layers already shipped;
+      OS-level ceiling — cgroup/container, microVM/gVisor for true isolation; the exit
+      checklist). Resource-governance documented as a contract dimension (autonomy of
+      execution alongside judgment). Phase 12 env knobs added to `docs/ops/environment.md`
+      (`ZIBBY_WORKTREE_ROOT`, `GOAL_VERIFY_TIMEOUT_MS`, `GOAL_AUTO_RESUME`,
+      `AGENT_RUNNER_MODE`, `CLAUDE_BIN`). Guard test
+      `apps/api/src/shared/self-development.test.ts`: the subject's worktree never resolves
+      under the builder tree even when `ZIBBY_DATA_DIR` lives inside a repo (worktree root
+      decoupled from data root). **PHASE 12 COMPLETE — repo is a safe loop target.**
 
 Parked / known: two claude-mode worktree e2e suites (pipelines.e2e PR-gate, agent-runs.e2e)
 flake at `afterAll` cleanup with `ENOTEMPTY` on their own temp run dirs — an unreaped-child /

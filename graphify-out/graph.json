@@ -19633,12 +19633,21 @@
       "norm_label": "worktree-root.test.ts"
     },
     {
+      "label": "self-development.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/self-development.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_self_development_test_ts",
+      "community": 724,
+      "norm_label": "self-development.test.ts"
+    },
+    {
       "label": "data-dir.test.ts",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/data-dir.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_data_dir_test_ts",
-      "community": 724,
+      "community": 725,
       "norm_label": "data-dir.test.ts"
     },
     {
@@ -19836,7 +19845,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/file-storage/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_shared_file_storage_index_ts",
-      "community": 725,
+      "community": 726,
       "norm_label": "index.ts"
     },
     {
@@ -20781,7 +20790,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/integrations/connection-tester.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_integrations_connection_tester_ts",
-      "community": 726,
+      "community": 727,
       "norm_label": "connection-tester.ts"
     },
     {
@@ -21393,7 +21402,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/automations/cron.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_automations_cron_test_ts",
-      "community": 727,
+      "community": 728,
       "norm_label": "cron.test.ts"
     },
     {
@@ -22626,7 +22635,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/sanitize.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_sanitize_test_ts",
-      "community": 728,
+      "community": 729,
       "norm_label": "sanitize.test.ts"
     },
     {
@@ -23112,7 +23121,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/triage/triage-router.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_triage_triage_router_ts",
-      "community": 729,
+      "community": 730,
       "norm_label": "triage-router.ts"
     },
     {
@@ -23193,7 +23202,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/triage/keyword-triager.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_triage_keyword_triager_test_ts",
-      "community": 730,
+      "community": 731,
       "norm_label": "keyword-triager.test.ts"
     },
     {
@@ -23526,7 +23535,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/channels/adapters/adapter.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_channels_adapters_adapter_ts",
-      "community": 731,
+      "community": 732,
       "norm_label": "adapter.ts"
     },
     {
@@ -23805,7 +23814,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/api/src/budget/ledger.store.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_api_src_budget_ledger_store_test_ts",
-      "community": 732,
+      "community": 733,
       "norm_label": "ledger.store.test.ts"
     },
     {

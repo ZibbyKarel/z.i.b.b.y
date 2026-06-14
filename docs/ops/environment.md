@@ -13,6 +13,11 @@
 | `CHANNEL_TICK_MS` | `30000` | Interval heartbeatu pro channel watcher (0 = disabled) |
 | `TASK_TICK_MS` | `60000` | Interval task scheduler ticku (0 = disabled pro testy) |
 | `AUTOMATION_TICK_MS` | `60000` | Interval automations scheduler ticku (0 = disabled) |
+| `AGENT_RUNNER_MODE` | `claude` | `claude` = reálný `claude -p`; `demo` = deterministický stand-in (testy/CI). Patří do **untracked** `.env`, ne do `.env.example` (tam `demo`) |
+| `CLAUDE_BIN` | `claude` | Cesta k `claude` binárce — test seam (fake binárka v e2e) |
+| `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees` | **Phase 12.7** — root pro run worktrees, **mimo** repo/data strom. NEodvozuje se z `ZIBBY_DATA_DIR` (záměrně) |
+| `GOAL_VERIFY_TIMEOUT_MS` | `600000` (10 min) | **Phase 12.3** — wall-clock deadline pro deterministický `checks` verifier shell (pak SIGTERM→SIGKILL) |
+| `GOAL_AUTO_RESUME` | _unset_ | **Phase 12.4** — `1` = na bootu auto-re-drive `running`/`paused-limit` goalů (jen headless launchd démon). Default: rehydrace + park `awaiting-resume` (Law 3) |
 
 Načítání přes `@nestjs/config` (ConfigModule.forRoot, isGlobal: true).
 
