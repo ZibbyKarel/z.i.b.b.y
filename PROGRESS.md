@@ -223,22 +223,41 @@ hunts HUD bugs + JARVIS/butler polish. First bug fixed here. Plan:
 | ---- | ------ | ----- |
 | 26.1 One card per task in `/runs` (Běhy a aktivita) | ✅ done (2026-06-14) | A running **loop** (goal) showed TWO feed cards — the loop AND the child agent it was executing — because `useRunsQuery` merged the agent/pipeline/goal history lists with **no dedup** (a goal's maker dispatches a child agent/pipeline run = `iteration.makerRunRef`). Fix: extracted a pure `mergeRunFeed(agents, pipelines, goals, scheduled)` into `run.ts` that collects every goal's child run ids (`makerRunRef` + the claude verifier's `verifier.runRef`) and **folds those agent/pipeline runs out** of the feed; standalone runs untouched. `useRunsQuery` now just calls it. Execution kind moved into the task detail: `GoalDetailPanel`'s iteration timeline shows each iteration's **maker kind** (agent/pipeline glyph + label) + i18n `runs.goalMakerKind.{agent,pipeline}`. Bonus: the voice "Active agents" panel + briefing read the same deduped feed, so they no longer double-count either. Tests: `mergeRunFeed` folds child agent/pipeline + claude-verifier runs, keeps standalone, sorts newest-first; `GoalDetailPanel` shows maker kind. **web/DS green (runs 40), full workspace 1499/1499** (one transient red = known under-load api e2e flake, green on re-run; web-only change), lint + web-tsc clean. |
 
+## Phase 27: Goal detail — open the maker / verifier run log (complete the fold) — ✅ COMPLETE (2026-06-14)
+
+Direct follow-up to Phase 26 + North-Star law _"Always answerable."_ Folding a loop's child runs out
+of the feed (26) removed the only place their **actual log** was reachable; the goal's own detail
+showed the iteration timeline but stopped at status glyphs. The iteration schema already keeps the
+refs _"so its log is pollable"_ (`makerRunRef`, `verifier.runRef`) — Phase 27 wires the HUD to them.
+Plan: [docs/plans/phase-27.md](docs/plans/phase-27.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 27.1 Drill into the folded child log from the goal detail | ✅ done (2026-06-14) | `RunLogStream` made **ref-driven** — props changed from a whole `RunView` to the three values it reads (`runId`/`logBase`/`live`), so a goal iteration holding a bare runRef can mount it; `RunDetail` caller updated. `GoalDetailPanel` gained a per-iteration **"log" toggle** (single open at a time → at most one live poller); expanding reveals the **agent maker log** (`RunLogStream` on the agents endpoint by `makerRunRef`), the **claude verifier log** (`verifier.runRef`), and the **verifier verdict** (`verifier.output`, always present) in a `CodeBlock`. Collapsed rows mount no stream. Pipeline makers show a note (their per-stage logs live in the pipeline view — deferred, see Phase 28). i18n `runs.goal{OpenLog,MakerLog,VerifierLog,VerifierVerdict,PipelineMakerNote}` (cs+en). Tests: agent maker log opens by `makerRunRef`; claude verifier log + verdict revealed; pipeline-maker note (no stream); single-open invariant; nothing mounted while collapsed. **web/DS green (runs 45), full workspace 1504/1504** (first run, no flake), lint + web-tsc clean. Commit `19f6553`. |
+
+**Decision (recorded):** render the child log **inline** in the goal detail, not deep-link — the runs
+`Screen` selects the detail run from the **folded** `list` only (`list.find(...) ?? list[0]`), so a
+folded child id can't be navigated to (`?run={childId}` would fall back to the first feed row).
+
 ## Next iteration
 
-**Proposed Phase 27 — Goal detail: open the maker/verifier run log (complete the fold).** Phase 26
-folds a loop's child runs out of the feed and shows the maker *kind* in the goal detail — but the
-child run's **actual log** is no longer reachable from the UI (its feed card is gone). North Star
-"always answerable" + the operator's "all info in the task detail" → the goal iteration timeline
-should let the operator **drill into** each iteration's maker run (and the claude verifier run): an
-"open log" affordance on the iteration row that opens the folded child's log (agent → `RunLogStream`
-via the agents log endpoint; pipeline → its stage detail). GROUND first: `GoalDetailPanel` (has
-`iteration.makerRunRef`/`verifier.runRef`), `RunDetail`/`RunLogStream`, and how the runs Screen
-selects a run for the detail panel — decide whether to render the child log inline in the goal
-detail or deep-link to the run by id.
+**Proposed Phase 28 — Pipeline run detail: stage timeline + per-stage logs (always answerable).**
+The sibling gap Phase 27 deferred. A pipeline run in `/runs` currently shows, in `RunDetail`, only a
+note + an **"open pipeline"** button that links to the pipeline **definition** (`/pipelines/{id}`) —
+not what *this run* actually did. The data is already there: `PipelineRun.stageRuns[]` carries
+`{ phaseId, runId, attempt, status }` (_"so its log is pollable per phase"_) and the endpoint
+`GET /api/pipelines/runs/:id/stages/:phaseId/logs` + `useStageRunLogQuery` exist (the parked panel
+already uses them for the failing phase). Phase 28: give a pipeline run its own **stage timeline** in
+`RunDetail` (mirror `GoalDetailPanel`'s iteration timeline) — each stage row shows phase + attempt +
+status and a "log" disclosure mounting `RunLogStream` (ref-driven after 27) on that stage's `runId`.
+This closes "always answerable" for pipelines **and** unlocks Phase 27's deferred pipeline-maker case
+(the goal's pipeline maker child can reuse the same stage view). GROUND first: `RunDetail` pipeline
+branch, `RunParkedPanel` (already reads a stage log), `StageRunSchema`, and the agents-vs-pipeline
+log endpoint base for `RunLogStream`.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
-at concrete HUD bugs as they spot them (this one came that way) — each becomes the next phase; in
-between, the loop audits feed/detail states for similar double-counting or raw-data leaks.
+at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
+feed/detail states for similar double-counting or raw-data leaks.
 
 Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
 per-project — api 691/691 isolated). The
