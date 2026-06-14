@@ -129,20 +129,30 @@ region. Concise-word guard keeps dictated "approve the budget…" a task, not a 
 Nothing bypasses the gate. web/DS 1442/1442; apps/web tsc clean; api 690/691 (the 1 = the
 known `pipelines.e2e` demo-timeout flake, passes isolated).
 
+## Phase 19: TTS read-back (`useSpeech`) — ✅ COMPLETE (2026-06-14)
+
+ROADMAP §7.1 second half — ZIBBY speaks. `useSpeech` (SSR-safe `speechSynthesis`: voices via
+`voiceschanged`, exact-locale→localService→prefix→default voice selection, utterance held in
+ref until onend, cancel-before-speak, always set lang). `VoiceScreen` speaks each command ack
+once (ref-debounced), the dead speaker button is now a mute toggle (aria-pressed, struck glyph),
+orb/status gain a `speaking` state. `test/speechSynthesisMock.ts` stub (jsdom has no TTS).
+web/DS+api **1452/1452**, apps/web tsc + lint clean. The voice loop is now bidirectional:
+spoken task → run → spoken command result.
+
 ## Next iteration
 
-**Proposed Phase 19 — TTS read-back (`useSpeech`, ROADMAP §7.1 second half).** The bridge now
-shows acks as text; the JARVIS loop closes when ZIBBY *speaks* — the North Star DoD is
-"spoken task → run → spoken approval → spoken result". Add `useSpeech` over the free,
-browser-native `speechSynthesis` (zero spend, the §7 cost constraint): voices resolved via the
-`voiceschanged` event (`getVoices()` is `[]` on first call), locale-matched voice selection,
-and the known-bug hardening from `docs/research/phase7-voice-web-speech.md` — hold the
-utterance in a ref until `onend` (GC kills the callback otherwise), `speak()` only after a user
-gesture (autoplay policy → queue early utterances, flush on first interaction), always set
-`utterance.lang`. Wire it to speak the Phase-18 ack and (depends on 1.3 outcome write-back) run
-outcomes/pending approvals aloud. Deterministic test seam: a `speechSynthesis` stub with
-fixture voices (jsdom has neither API). **Watch-out:** keep `live | demo` so CI stays silent
-and deterministic; SSR-guard every API touch.
+**Proposed Phase 20 — spoken briefing: read outcomes + pending approvals aloud.** This finishes
+the §7.2 line "voice reads run outcomes and pending approvals aloud" and makes ZIBBY a genuine
+voice **butler** ("Two bugs came in overnight — both fixed, PRs up; one approval needs you").
+Reuse the delivered machinery: `useVoiceData` already loads pending approvals + recent runs +
+run outcomes (1.3 write-back shipped); `useSpeech` (19) speaks. Add a one-tap "brief me" action
+(or speak on voice-mode entry, unmuted) that assembles a short cs/en template from the HUD data
+and speaks it; speak a run's outcome line when it transitions to done/failed while voice is
+open. New i18n `voice.speak.*` template keys with ICU plurals. **Watch-out:** keep it template-
+first + deterministic (no claude call in the browser), mute-respecting, and `live|demo`-safe so
+CI stays silent. Alternative if voice is judged "enough": the known dead-UI sweep from §7.3
+(skill edit/delete, global search wired to the search endpoint, `light.ts` theme stub) — real
+user-facing stubs, priority #1 mock→real.
 
 Also still open from earlier (fold into a hardening pass if it recurs): the api
 `agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen
