@@ -16,8 +16,8 @@ It is a butler and a **second brain** in one: it does the work, and it remembers
 across your professional and personal life alike. Files are the source of truth;
 every surface — HUD and Voice alike — is a view onto them.
 
-Voice is a conversation, not a command line. You talk; ZIBBY talks back; what you
-want is resolved in the dialogue itself, turn by turn. There is no command grammar
+Voice UI is nice-to-have. Not a priority. Voice is a conversation, not a command line.
+You talk; ZIBBY talks back; what you want is resolved in the dialogue itself, turn by turn. There is no command grammar
 to learn and no "new task" form to confirm — when ZIBBY understands the intent, it
 dispatches to the same `/tasks` layer the HUD drives, on its own, and tells you it
 has while the work runs. Claude runs behind the voice channel the whole time:
