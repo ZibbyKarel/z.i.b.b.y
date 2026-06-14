@@ -18,6 +18,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { AddSkillModal } from "./components/AddSkillModal/AddSkillModal";
 import { SkillTile } from "./components/SkillTile";
@@ -125,7 +126,9 @@ export function Screen() {
           title={t("title")}
         />
 
-        {skillsQuery.isError ? (
+        {skillsQuery.isPending ? (
+          <QueryLoading />
+        ) : skillsQuery.isError ? (
           <QueryError onRetry={() => void skillsQuery.refetch()} />
         ) : categories.length === 0 && skills.length === 0 ? (
           <EmptyState

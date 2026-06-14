@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { MemoryGraph } from "./components/MemoryGraph";
@@ -113,6 +114,15 @@ export function Screen() {
       onSaved={(id) => setSelected(id)}
     />
   );
+
+  if (graphQuery.isPending) {
+    return (
+      <PageContainer>
+        <QueryLoading />
+        {editorDialog}
+      </PageContainer>
+    );
+  }
 
   if (graphQuery.isError) {
     return (

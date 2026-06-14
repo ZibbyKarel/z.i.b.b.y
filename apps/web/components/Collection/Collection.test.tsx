@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { GridTestId } from "@zibby/design-system"
 import { Collection } from "./Collection"
 import { LoadErrorTestId } from "../LoadError/LoadError"
+import { LoadingStateTestId } from "../LoadingState/LoadingState"
 
 const empty = {
   glyph: "spark",
@@ -47,6 +48,21 @@ describe("Collection", () => {
     )
     expect(screen.getByTestId(LoadErrorTestId.Root)).toBeInTheDocument()
     // The empty state must NOT show during an outage.
+    expect(screen.queryByText("Zatím žádné skilly")).toBeNull()
+  })
+
+  it("renders the loading state (over error and empty) while loading", () => {
+    render(
+      <Collection
+        empty={empty}
+        error={{ title: "Couldn't load", description: "x", onRetry: () => {} }}
+        items={[]}
+        loading={{ label: "Načítání…" }}
+        renderItem={(name: string) => <div key={name}>{name}</div>}
+      />,
+    )
+    expect(screen.getByTestId(LoadingStateTestId.Root)).toBeInTheDocument()
+    expect(screen.queryByTestId(LoadErrorTestId.Root)).toBeNull()
     expect(screen.queryByText("Zatím žádné skilly")).toBeNull()
   })
 })

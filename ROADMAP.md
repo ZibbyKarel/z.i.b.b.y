@@ -1204,6 +1204,29 @@ the toaster covers the silent network/server case, the most common one.)_
 
 ---
 
+## Phase 44 — A loading state, not a flash of "create your first" — ✅ delivered 2026-06-14
+
+_Completes the load-state trio (loading / error / content). Every catalog screen does `const { data =
+[] } = useXQuery()` with no `isPending` guard, so on a **cold** query the first render shows the
+**empty state** ("no agents yet — create your first…") for a beat before the data arrives. `BootSplash`
+only masks the first ~1.2s of a **full reload** and never replays on **SPA navigation** — so the first
+in-session visit to each screen flashes "your workspace is empty." Same family as the Phase-40
+error-vs-empty bug, for the loading moment._
+
+- New shared `apps/web/components/LoadingState/LoadingState.tsx` (mirrors `EmptyState`/`LoadError`:
+  glass/dashed `Card`, a faint pulse `Icon`, a quiet label) + a `QueryLoading` wrapper pre-wired with
+  `common.loading` (one-liner per screen, like `QueryError`).
+- Catalog screens (agents / skills / pipelines / projects / gates / memory / integrations) now render
+  `<QueryLoading>` when the primary list query `isPending` — **loading precedes error precedes empty**.
+  Cheap to add because Phases 40–42 already kept the query object on each screen. `integrations` passes
+  a `loading` prop through `Collection` (symmetric with its `error`/`empty`).
+- `Collection` gained an optional `loading?: boolean` (renders `LoadingState` first).
+
+**Tests:** `LoadingState.test` (renders the label) + `Collection.test` (loading precedes error/empty).
+web/DS green. **The honest load-state arc is complete: loading (44) → error (40–43) → content.**
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

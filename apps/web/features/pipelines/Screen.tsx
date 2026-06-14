@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
@@ -84,6 +85,16 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
       onAdd={() => setAdding(true)}
     />
   );
+
+  if (pipelinesQuery.isPending) {
+    return (
+      <PageContainer>
+        {toolbar}
+        <QueryLoading />
+        {addModal}
+      </PageContainer>
+    );
+  }
 
   if (pipelinesQuery.isError) {
     return (

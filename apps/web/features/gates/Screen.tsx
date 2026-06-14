@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
@@ -154,7 +155,9 @@ export function Screen() {
             editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
         <SystemFloorPanel />
 
-        {rulesQuery.isError ? (
+        {rulesQuery.isPending ? (
+          <QueryLoading />
+        ) : rulesQuery.isError ? (
           <QueryError onRetry={() => void rulesQuery.refetch()} />
         ) : shown.length === 0 ? (
           <EmptyState

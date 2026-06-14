@@ -16,6 +16,7 @@ import { useState } from "react";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { LoadError } from "../../components/LoadError/LoadError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
@@ -169,7 +170,9 @@ export function Screen() {
           title={ta("title")}
         />
 
-        {agentsQuery.isError ? (
+        {agentsQuery.isPending ? (
+          <QueryLoading />
+        ) : agentsQuery.isError ? (
           // Honest status: a failed load must not read as an empty workspace (which would
           // say "create your first agent" — and could nudge re-creating ones that exist).
           <LoadError

@@ -111,6 +111,7 @@ export function Screen() {
             : undefined
         }
         items={integrations}
+        loading={integrationsQuery.isPending ? { label: t("common.loading") } : undefined}
         renderItem={(i) => (
           <IntegrationCard
             integration={i}
