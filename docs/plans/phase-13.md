@@ -17,9 +17,13 @@ Progress (loop tracking)
       package.json — so `done` proves no full-monorepo run). Orphan-reaping invariant
       is already unit-covered (runner-core.test.ts shutdown + goal-runner-shell.test.ts
       onModuleDestroy). Also hardened `briefing.e2e` ENOTEMPTY (12.9 idiom).
+- [x] 13.4 — Test stability under concurrent load (DONE 2026-06-14). `apps/api/
+      vitest.config.ts`: cap forks to `max(2, cpus/2)` (was ~cpus-1 → 90 AppModule boots
+      thrashed CPU/IO) + `testTimeout 30s`/`hookTimeout 30s`; `pipelines.e2e` `until`
+      default 10s→25s (demo-timing). Result: 5/5 consecutive full runs green (680/680),
+      ~11.5s wall. The under-load assertion class (categories/projects/memory) AND the
+      pipelines demo-timeout flake are both gone.
 - [ ] 13.3 — launchd daemon + GOAL_AUTO_RESUME (Phase 8.3 territory)
-- [ ] 13.4 — Test stability under concurrent load (NEW — full-suite under-load assertion
-      flakiness; not a cleanup race)
 
 ---
 

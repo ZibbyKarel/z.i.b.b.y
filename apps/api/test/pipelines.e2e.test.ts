@@ -16,7 +16,10 @@ const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const FLAKY_CHECK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/flaky-check.mjs")
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-async function until<T>(fn: () => Promise<T>, timeoutMs = 10000): Promise<NonNullable<T>> {
+// Generous default (Phase 13.4): demo pipeline runs are timing-sensitive, and under
+// full-suite CPU load a run that normally finishes in <1s can be starved for seconds —
+// a tight poll window is the demo-timeout flake. Stays under the 30s testTimeout.
+async function until<T>(fn: () => Promise<T>, timeoutMs = 25000): Promise<NonNullable<T>> {
   const start = Date.now()
   for (;;) {
     const result = await fn()
