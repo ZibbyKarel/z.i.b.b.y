@@ -1073,6 +1073,25 @@ decision (deny) and **no** edit/delete controls (locked); an empty floor renders
 
 ---
 
+## Phase 38 — A disabled automation no longer shows a phantom next-run (honest status) — ✅ delivered 2026-06-14
+
+_Audit of the `/automations` (heartbeat / scheduled tasks) surface. It's excellent — real automations
+query, cron/event sections, enable toggle + run-now (real mutations), CRUD via a friendly schedule
+picker with a live cron-label preview, per-card last-fired ("never run" when absent) and a computed
+next-run. One honesty bug: the `AutomationCard` computed `nextLabel` **without checking `enabled`**, so
+a **disabled** cron automation still displayed "next run in 2h" — a phantom future fire for something
+that will never run. North Star: status must be honest ("always accountable")._
+
+- `AutomationCard`: when `!enabled`, the next-run footer now reads a dedicated "off — won't run" label
+  instead of a misleading future time (for both cron and event triggers). Enabled cards are unchanged
+  (next-run time / "on event" / "—").
+- i18n `automations.nextOff` (cs+en).
+
+**Tests:** new `AutomationCard.test.tsx` — an **enabled** cron automation shows the "next run" label; a
+**disabled** one shows the "off — won't run" label and **not** a next-run time. web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

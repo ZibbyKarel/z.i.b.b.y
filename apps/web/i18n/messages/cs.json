@@ -1002,6 +1002,7 @@
     "lastRun": "poslední {ago}",
     "neverRun": "zatím neběželo",
     "nextRun": "příště {when}",
+    "nextOff": "vypnuto · nepoběží",
     "onEvent": "na událost",
     "toggleLabel": "Zapnout {name}",
     "triggerCron": "cron",

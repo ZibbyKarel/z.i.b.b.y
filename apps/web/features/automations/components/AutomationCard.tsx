@@ -79,8 +79,11 @@ export function AutomationCard({
   const lastLabel = automation.lastFiredAt
     ? t("lastRun", { ago: relativeLabel(Date.parse(automation.lastFiredAt), now, locale) })
     : t("neverRun");
-  const nextLabel =
-    trigger.type === "event"
+  // A disabled automation won't fire, so it must not advertise a phantom next-run —
+  // honest status (North Star "always accountable").
+  const nextLabel = !enabled
+    ? t("nextOff")
+    : trigger.type === "event"
       ? t("onEvent")
       : next
         ? t("nextRun", { when: relativeLabel(next.getTime(), now, locale) })

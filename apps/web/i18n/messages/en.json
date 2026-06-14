@@ -1002,6 +1002,7 @@
     "lastRun": "last run {ago}",
     "neverRun": "never run",
     "nextRun": "next {when}",
+    "nextOff": "off · won't run",
     "onEvent": "on event",
     "toggleLabel": "Enable {name}",
     "triggerCron": "cron",
