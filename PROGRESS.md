@@ -317,17 +317,27 @@ the autonomy contract. Plan: [docs/plans/phase-35.md](docs/plans/phase-35.md).
 | ---- | ------ | ----- |
 | 35.1 Tier + handling action on each inbox row | ✅ done (2026-06-14) | `/integrations` is real (integrations CRUD + write-only credentials + connection test + `ChannelItem` inbox on the live query). But `InboxPanel` showed only state + category + a Tier-3 needs-approval marker — while `ChannelItem.triage` carries the autonomy **`tier`** (1 act-silently / 2 act-then-report / 3 surface-and-wait) and the item carries the action taken (`taskId` dispatched, `reply` sent, `approvalId` parked). The operator couldn't see at what tier an item was handled or what ZIBBY did — core of "always accountable". Fix: each triaged row shows a **tier chip** (Tier 1/2/3, tone ok→accent→warn) + **handling markers** (`taskId`→"dispatched", `reply`→"replied") beside the existing needs-approval. Inbound `text` stays a truncated preview (Law 4 unchanged). i18n `inbox.tier`/`dispatched`/`replied` (cs+en). Tests: Tier-3 shows "Tier 3"; Tier-1+taskId shows "dispatched"; reply shows "replied". **web/DS green (integrations 8), full workspace 1530/1530** (first run, no flake), lint + web-tsc clean. Commit `63fe425`. |
 
+## Phase 36: A budget-held task can be released from its own detail — ✅ COMPLETE (2026-06-14)
+
+Audit of `/projects` (engagements) — solid; the gap was the connection to the held-task detail.
+Plan: [docs/plans/phase-36.md](docs/plans/phase-36.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 36.1 Held task detail surfaces its spend-past-cap override | ✅ done (2026-06-14) | `/projects` is solid (real projects + categories + per-project budget bars used-vs-cap tinted + running/queued/held stats + CRUD); the runs feed already captions a `held` task with its reason. Gap = the connection: a budget-`held` dispatch carries `approvalId` (its spend-past-cap override, already pending in the queue) but `approvalForRun` only matched `awaiting-approval` runs → clicking a held task in `/runs` showed a detail with **no decision panel** (operator had to hunt for the override in the queue). Fix: `approvalForRun` resolves a held run's override by `approvalId` (`queue.find(a => a.id === run.approvalId)`); widened bound to `Pick<Approval,"id"\|"runId">`. **No `RunDetail` change** — its existing approval branch now fires for held tasks → `RunApprovalGate` (approve releases past the cap; reject denies). **No new server semantics** — same approval the queue already decides. Tests: `run.test` — held override resolved by approvalId; undefined when none; existing matches unchanged. **web/DS green (runs 18, full web-components 367/367), api 691/691 isolated** (full-suite 1 known under-load flake; web-only), lint + web-tsc clean. Commit `996e5e3`. |
+
 ## Next iteration
 
-**Proposed Phase 36 — Audit the /projects (engagements) HUD surface.** The North-Star long-term purpose
-is _"run multiple software-delivery engagements in parallel… with budget caps."_ Phase 8 shipped
-per-project budgets (daily/weekly token-or-run caps), a `BudgetService`, spend-past-cap gating, and
-"budget bars on /projects, cap-hit state in the runs feed." GROUND first against real code: the
-`/projects` segment + feature dir + query/mutation hooks + `ProjectSchema` — verify the HUD shows
-**real** projects with their **budget bars** (used vs cap, windowed), surfaces the **cap-hit / held**
-state honestly, and that the engagement attribution (which runs/items belong to a project) is visible.
-Pick the single biggest gap (a mock list, a missing/!wired budget bar, cap-hit not shown, no
-attribution) as Phase 36's concrete change.
+**Proposed Phase 37 — Audit the /gates (approval-rules catalog) HUD surface.** The gate is the
+North-Star structural floor ("approval-first is structural… wired into the system floor, not a setting
+an agent's config can weaken"). Phases 30/31/36 polished the *decision* surfaces; the *rules* surface
+(`/gates`) defines what triggers a gate. GROUND first against real code: the `/gates` segment + feature
+dir + query/mutation hooks + the gate-rules contract — verify the HUD shows the **real** rule catalog
+(matcher → decision, evaluated top-down, first match wins), makes the **hierarchy** legible (system
+floor `POLICY.md` → this catalog → agent/skill rules) so the operator sees the immutable floor can't be
+weakened, and that add/edit/delete/reorder of a rule hits the real endpoint. Pick the single biggest
+gap (a mock list, an unwired editor, the floor not shown as locked, no order/priority cue, a rule whose
+decision/matcher isn't legible) as Phase 37's concrete change.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
