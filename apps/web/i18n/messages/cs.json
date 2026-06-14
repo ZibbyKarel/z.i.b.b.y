@@ -685,6 +685,17 @@
       "network": "Hlasová služba není dostupná — zkontroluj připojení.",
       "service-denied": "Hlasová služba odmítla požadavek.",
       "unsupported": "Hlasový vstup není v tomto prohlížeči dostupný."
+    },
+    "ack": {
+      "approved": "Schváleno.",
+      "nothingToApprove": "Nic nečeká na schválení.",
+      "rejected": "Odmítnuto.",
+      "nothingToReject": "Nic nečeká na schválení.",
+      "stopped": "Zastavuji běh.",
+      "nothingToStop": "Žádný běžící agent k zastavení.",
+      "navigating": "Přecházím…",
+      "closing": "Zavírám VOICE MODE.",
+      "heard": "Rozumím — připraveno jako nový task."
     }
   },
   "runs": {

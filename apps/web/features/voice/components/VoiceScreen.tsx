@@ -4,7 +4,7 @@
    no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { RUN_STATE } from "../../runs/run";
@@ -13,6 +13,7 @@ import { MINUTE_MS, compactAgo } from "../../../utils/time";
 import { useNewTask } from "../../tasks";
 import { useVoiceData } from "../hooks/useVoiceData";
 import { useVoiceSession } from "../hooks/useVoiceSession";
+import { useUtteranceDispatch } from "../hooks/useUtteranceDispatch";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoicePanel } from "./VoicePanel";
 import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
@@ -61,20 +62,44 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         ? demoMessages
         : demoMessages.slice(0, 2);
 
-  // Phase 11.4 seam: hand the spoken utterance to the unified composer — the
-  // real live transcript when recognition is available, else the demo's last
-  // user line so the seam stays exercised deterministically. The composer infers
-  // single vs loop and the operator confirms behind the gate.
+  // Phase 11.4 seam: hand a spoken utterance to the unified composer — the
+  // operator confirms single vs loop behind the gate. Also the "heard" sink for
+  // the Phase 18 bridge: plain speech (no recognised command) routes here.
+  const handOff = useCallback(
+    (text: string) => {
+      if (text.trim().length === 0) return;
+      onExit();
+      openNewTask(text);
+    },
+    [onExit, openNewTask],
+  );
+
+  // Phase 18: dispatch every finalized utterance — commands (approve/reject/stop/
+  // navigate/close) act on the real mutations, anything else is handed off as a
+  // task. The ack is surfaced in an aria-live region; never spoken (TTS is next).
+  const { dispatch, ack } = useUtteranceDispatch({
+    approvals,
+    liveRuns,
+    onExit,
+    onStageTask: handOff,
+  });
+  const lastDispatched = useRef("");
+  useEffect(() => {
+    if (mode !== "live") return;
+    const spoken = transcript.trim();
+    if (!spoken || spoken === lastDispatched.current) return;
+    lastDispatched.current = spoken;
+    dispatch(spoken);
+  }, [mode, transcript, dispatch]);
+
+  // The manual "new task from this" button: the live transcript, else the demo's
+  // last user line so the seam stays exercised deterministically.
   const lastUserUtterance =
     mode === "live"
       ? transcript
       : ([...demoMessages].reverse().find((m) => m.role === "user")?.text ?? "");
   const canHandToTask = lastUserUtterance.trim().length > 0;
-  const handToTask = () => {
-    if (!canHandToTask) return;
-    onExit();
-    openNewTask(lastUserUtterance);
-  };
+  const handToTask = () => handOff(lastUserUtterance);
 
   // Esc exits voice mode.
   useEffect(() => {
@@ -325,6 +350,13 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
           {mode === "live" && error && (
             <Typography mono role="alert" size="2xs" tone="bad" type="note">
               {t(`error.${error}`)}
+            </Typography>
+          )}
+
+          {/* What the last spoken command did — politely announced, not spoken. */}
+          {mode === "live" && ack && (
+            <Typography mono aria-live="polite" role="status" size="2xs" tone="accent" type="note">
+              {t(`ack.${ack.key}`)}
             </Typography>
           )}
 

@@ -685,6 +685,17 @@
       "network": "Speech service unavailable — check your connection.",
       "service-denied": "The speech service refused the request.",
       "unsupported": "Live voice isn't available in this browser."
+    },
+    "ack": {
+      "approved": "Approved.",
+      "nothingToApprove": "Nothing is awaiting approval.",
+      "rejected": "Rejected.",
+      "nothingToReject": "Nothing is awaiting approval.",
+      "stopped": "Stopping the run.",
+      "nothingToStop": "No running agent to stop.",
+      "navigating": "Navigating…",
+      "closing": "Closing VOICE MODE.",
+      "heard": "Got it — staged as a new task."
     }
   },
   "runs": {

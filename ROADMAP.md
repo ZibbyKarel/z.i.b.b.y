@@ -486,6 +486,63 @@ spend: 0 Kč.
 
 ---
 
+## Phase 18 — Voice command bridge (speech → action) — ✅ delivered 2026-06-14
+
+_Delivers ROADMAP **§7.2** minus the TTS read-back (which needs §7.1 `useSpeech`,
+still pending). Phase 17 made the microphone real but the transcript could only
+become a task; this phase makes the operator's voice **act** — "schválit",
+"odmítnout", "zastav", "jdi na runs", "zavři" execute against the real mutations,
+and anything else is staged as a one-tap new task. A spoken word is never a
+silent no-op (same rule as a typed task)._
+
+### 18.1 `parseUtterance` — pure cs/en command grammar
+
+- `features/voice/parseUtterance.ts`: normalize (lowercase + NFD + strip combining
+  marks + punctuation) then match a **closed** `VoiceAction` union —
+  `approveLatest | rejectLatest | stopActive | navigate(route) | closeOverlay |
+  createTask(text)`. Diacritics-insensitive matching, but `createTask` keeps the
+  **raw** utterance (diacritics intact) as the task text.
+- Guard against hijacking dictated tasks: approve/reject/stop/close match only on
+  **concise** utterances (≤3 words beginning with a command verb); navigate needs
+  an explicit verb (`jdi na` / `otevři` / `navigate to` / `open` / `show me` …)
+  **and** a known page alias, else it falls through to `createTask`. Unknown →
+  `createTask` always.
+
+### 18.2 `runVoiceAction` — pure executor + `useUtteranceDispatch` wiring
+
+- `features/voice/runVoiceAction.ts`: pure `(action, deps) → VoiceAck` — switches
+  on the action and calls the injected `approve/reject/stop/navigate/stageTask/close`
+  handler, returning a localizable ack (`approved`, `nothingToApprove`, `stopped`,
+  `navigating`, `heard`, …). No React, fully spy-testable.
+- `features/voice/hooks/useUtteranceDispatch.ts`: binds the pure executor to the
+  real `useApproveMutation` / `useRejectMutation` / `useStopAgentMutation`, the Next
+  router, and the overlay's exit — "latest" approval = the top of the pending queue,
+  "active" run = the first running **agent** run. Nothing bypasses the gate: approve/
+  reject ARE the operator's spoken decision at the gate; `createTask` only stages.
+
+### 18.3 `VoiceScreen` dispatches finalized utterances
+
+- A new finalized live transcript is dispatched once (a `ref` debounces re-renders);
+  the resulting ack renders in an `aria-live="polite"` region. The existing
+  "hand to task" button and demo path are unchanged.
+
+### Tests
+
+- `parseUtterance.test.ts`: every grammar row in cs + en, diacritics present and
+  stripped, the concise-word guard (long "approve …" sentence → task), navigate with
+  known/unknown page, empty → task.
+- `runVoiceAction.test.ts`: each action routes to the right handler with spies;
+  approve/reject/stop with and without a pending target → the correct ack; navigate
+  exits + routes; createTask stages.
+- `VoiceScreen.test.tsx`: a finalized command transcript invokes `dispatch`; ack text
+  renders; existing transcript/hand-off/unsupported assertions stay green.
+
+**Out of scope (→ next phases):** TTS read-back (§7.1 `useSpeech` — speak the ack
+and run outcomes aloud), reconnect backoff ladder, Chrome on-device opt-ins,
+Settings → Voice, wake word.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

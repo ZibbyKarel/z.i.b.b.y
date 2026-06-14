@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import type { VoiceSession } from "../hooks/useVoiceSession";
 import { VoiceScreen } from "./VoiceScreen";
@@ -9,12 +9,22 @@ import { VoiceScreen } from "./VoiceScreen";
 // the screen's projection of them.
 const mockSession = vi.hoisted(() => ({ current: null as unknown as VoiceSession }));
 const openSpy = vi.hoisted(() => vi.fn());
+// The dispatch bridge is unit-tested separately (parseUtterance + runVoiceAction);
+// here we mock it to assert the screen feeds it finalized transcripts and renders
+// the ack it returns.
+const dispatchMock = vi.hoisted(() => ({
+  dispatch: vi.fn(),
+  ack: null as { key: string } | null,
+}));
 
 vi.mock("../hooks/useVoiceSession", () => ({
   useVoiceSession: () => mockSession.current,
 }));
 vi.mock("../hooks/useVoiceData", () => ({
   useVoiceData: () => ({ approvals: [], liveRuns: [], recent: [], skills: [] }),
+}));
+vi.mock("../hooks/useUtteranceDispatch", () => ({
+  useUtteranceDispatch: () => dispatchMock,
 }));
 vi.mock("../../tasks", () => ({ useNewTask: () => ({ open: openSpy }) }));
 vi.mock("next/image", () => ({
@@ -38,6 +48,24 @@ function liveSession(over: Partial<VoiceSession> = {}): VoiceSession {
 }
 
 describe("VoiceScreen", () => {
+  beforeEach(() => {
+    dispatchMock.dispatch.mockClear();
+    dispatchMock.ack = null;
+  });
+
+  it("dispatches a finalized live utterance to the command bridge", () => {
+    mockSession.current = liveSession({ transcript: "schválit" });
+    render(<VoiceScreen onExit={vi.fn()} />);
+    expect(dispatchMock.dispatch).toHaveBeenCalledWith("schválit");
+  });
+
+  it("renders the acknowledgement of the last command", () => {
+    dispatchMock.ack = { key: "approved" };
+    mockSession.current = liveSession({ transcript: "schválit" });
+    render(<VoiceScreen onExit={vi.fn()} />);
+    expect(screen.getByText("Schváleno.")).toBeInTheDocument();
+  });
+
   it("renders the live spoken transcript", () => {
     mockSession.current = liveSession({ transcript: "run the tests" });
     render(<VoiceScreen onExit={vi.fn()} />);
