@@ -212,23 +212,34 @@ the missing turn: ambiguous → ask, the answer resolves it. Plan:
 | ---- | ------ | ----- |
 | 25.1 Classify-first + bounded clarification | ✅ done (2026-06-14) | `useUtteranceDispatch` now runs the read-only `classifyTask` before dispatching: high/medium confidence → `createTask` (as before); **low** (`isLowConfidence` < 0.4) → set `pendingClarify` + a `clarify` ack reading back the top candidate names ("Nejsem si jistý — můžeš upřesnit? Třeba: Kodér, Delivery."). The **next** utterance combines with the original and dispatches **regardless** of confidence (bounded — one round, never a second ask → always terminates). The optimistic `dispatching` ack is now **visual-only** ("Slyším: {task}"); ZIBBY speaks only the *outcome* (clarify / started / failed). `runVoiceAction` + `clarify`/`clarifyGeneric` keys + `values.options`; `VoiceScreen` `SILENT_ACKS` skip-set. i18n reworded `dispatching` + added clarify keys (cs+en). Gate untouched; `live|demo` deterministic; STT/TTS stays free (classifier is the Phase-11 deterministic router, no model call). Tests: low-conf→clarify (no createTask); clarification answer→combined dispatch, no re-classify; high-conf one-shot; gate answers never classify. **web/DS green (voice 113), api 691/691 in isolation.** The full-`pnpm test` reds were the known under-load api e2e flakes (all 6 vitest projects contending → e2e timeouts; web-only change, count varies run-to-run 3→1; each passes isolated). |
 
+## Phase 26: HUD runs feed — one card per task (fold a loop's child runs) — ✅ COMPLETE (2026-06-14)
+
+**Operator pivot:** _stop Voice work (nice-to-have) — polish the HUD, real bugs remain_
+([[memory]] `feedback_focus_hud_not_voice`). The voice arc (17–25) is parked as-is; the loop now
+hunts HUD bugs + JARVIS/butler polish. First bug fixed here. Plan:
+[docs/plans/phase-26.md](docs/plans/phase-26.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 26.1 One card per task in `/runs` (Běhy a aktivita) | ✅ done (2026-06-14) | A running **loop** (goal) showed TWO feed cards — the loop AND the child agent it was executing — because `useRunsQuery` merged the agent/pipeline/goal history lists with **no dedup** (a goal's maker dispatches a child agent/pipeline run = `iteration.makerRunRef`). Fix: extracted a pure `mergeRunFeed(agents, pipelines, goals, scheduled)` into `run.ts` that collects every goal's child run ids (`makerRunRef` + the claude verifier's `verifier.runRef`) and **folds those agent/pipeline runs out** of the feed; standalone runs untouched. `useRunsQuery` now just calls it. Execution kind moved into the task detail: `GoalDetailPanel`'s iteration timeline shows each iteration's **maker kind** (agent/pipeline glyph + label) + i18n `runs.goalMakerKind.{agent,pipeline}`. Bonus: the voice "Active agents" panel + briefing read the same deduped feed, so they no longer double-count either. Tests: `mergeRunFeed` folds child agent/pipeline + claude-verifier runs, keeps standalone, sorts newest-first; `GoalDetailPanel` shows maker kind. **web/DS green (runs 40), full workspace 1499/1499** (one transient red = known under-load api e2e flake, green on re-run; web-only change), lint + web-tsc clean. |
+
 ## Next iteration
 
-**Proposed Phase 26 — Voice text-input fallback (make the surface usable everywhere).** The North
-Star makes Voice and HUD **co-equal, interchangeable** surfaces — but on a browser without
-`SpeechRecognition` (Firefox default-off, Safari best-effort) the voice overlay today only shows the
-demo + an "unsupported" note; the operator **cannot actually enter an utterance** (the "Send" button
-falls back to the scripted demo line). ROADMAP §7.2 calls for "text-input fallback rendered
-automatically when `isSupported` is false." Phase 26: when STT is unavailable, render a small text
-field in the overlay; submitting it runs the **same** `dispatch` pipeline (clarify / brief / gate /
-task) — so voice dispatch, clarification and briefing work on every browser, still 100% free. GROUND
-first: `VoiceScreen`'s `mode`/`isSupported`/`lastUserUtterance` seam and the demo-vs-live branch;
-the field replaces the mic affordance only in the unsupported path (live STT keeps push-to-talk).
+**Proposed Phase 27 — Goal detail: open the maker/verifier run log (complete the fold).** Phase 26
+folds a loop's child runs out of the feed and shows the maker *kind* in the goal detail — but the
+child run's **actual log** is no longer reachable from the UI (its feed card is gone). North Star
+"always answerable" + the operator's "all info in the task detail" → the goal iteration timeline
+should let the operator **drill into** each iteration's maker run (and the claude verifier run): an
+"open log" affordance on the iteration row that opens the folded child's log (agent → `RunLogStream`
+via the agents log endpoint; pipeline → its stage detail). GROUND first: `GoalDetailPanel` (has
+`iteration.makerRunRef`/`verifier.runRef`), `RunDetail`/`RunLogStream`, and how the runs Screen
+selects a run for the detail panel — decide whether to render the child log inline in the goal
+detail or deep-link to the run by id.
 
-Deferred (needs spend or heavy deps, not free-envelope): **full "Claude behind the channel"** (open
-reasoning over the utterance — a backend model call); **wake word** (`@picovoice/porcupine-web` /
-`@ricky0123/vad-web` — dependency-heavy, optional).
+This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
+at concrete HUD bugs as they spot them (this one came that way) — each becomes the next phase; in
+between, the loop audits feed/detail states for similar double-counting or raw-data leaks.
 
-Also still open (hardening, fold in if it recurs): the api e2e under full-suite contention can flake
-on timeouts (passes per-project — api 691/691 isolated). The
+Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
+per-project — api 691/691 isolated). The
 [self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven engagement.
