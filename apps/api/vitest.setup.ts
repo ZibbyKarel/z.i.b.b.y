@@ -64,6 +64,15 @@ if (!process.env.ZIBBY_DATA_DIR) {
   cleanups.push(() => rmSync(tempData, { recursive: true, force: true }))
 }
 
+// Phase 12.7: pin a per-file temp worktree root so run worktrees are cut OUTSIDE
+// the data tree AND cleaned up — a test's `fs.rm(runsDir)` can no longer race a
+// live worktree (the standing `ENOTEMPTY` cleanup flake).
+if (!process.env.ZIBBY_WORKTREE_ROOT) {
+  const dir = mkdtempSync(join(tmpdir(), "zibby-worktrees-"))
+  process.env.ZIBBY_WORKTREE_ROOT = dir
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+}
+
 // Neutralise the committed `.env` `AGENT_RUNNER_MODE=claude` leak: tests run on
 // the deterministic demo seam unless a suite explicitly opts into another mode.
 process.env.AGENT_RUNNER_MODE ??= "demo"

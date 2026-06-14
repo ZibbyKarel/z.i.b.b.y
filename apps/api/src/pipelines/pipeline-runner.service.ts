@@ -28,6 +28,7 @@ import { LimitsService } from "../limits/limits.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { prepareWorktreeDir } from "../shared/worktree-root"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { PipelinesStorageService } from "./pipelines.storage.service"
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
@@ -233,7 +234,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           projectPath: project.path,
           runId: pipelineRunId,
           slug: pipelineId,
-          dir: path.join(root, "worktree"),
+          // Phase 12.7: worktree OUTSIDE the repo/data tree (only artifacts stay under root).
+          dir: await prepareWorktreeDir(pipelineRunId),
         })
         await this.writeAggregate(run)
       } catch (error) {

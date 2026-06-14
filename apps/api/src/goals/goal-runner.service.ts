@@ -24,6 +24,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { buildResumeContext } from "../pipelines/resume-context"
 import { buildVerifyCommand } from "../pipelines/verify-command"
 import { isAlive, killGroup } from "../runner/runner-core"
+import { prepareWorktreeDir } from "../shared/worktree-root"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
@@ -208,7 +209,9 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
           projectPath: resolved.path,
           runId: goalRunId,
           slug: title || goalId,
-          dir: path.join(root, "worktree"),
+          // Phase 12.7: the worktree lives OUTSIDE the repo/data tree; only forensic
+          // artifacts stay under `root` (= GOAL_RUNS_DIR/<id>).
+          dir: await prepareWorktreeDir(goalRunId),
         })
         await this.writeAggregate(run)
       } catch (error) {

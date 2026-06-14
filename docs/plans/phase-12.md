@@ -42,7 +42,27 @@ Progress (loop tracking)
       done) + daemon-mode restart (GOAL_AUTO_RESUME=1 → auto-continues). **12.1–12.4
       blast-radius set COMPLETE.**
 - [ ] 12.6 — Eliminate double verification
-- [ ] 12.7 — Worktrees outside the repo
+- [x] 12.7 — Worktrees outside the repo (DONE 2026-06-14). New shared
+      `src/shared/worktree-root.ts` (`resolveWorktreeRoot` + `prepareWorktreeDir`),
+      NOT derived from `resolveDataRoot`; default `os.tmpdir()/zibby-worktrees`,
+      override `ZIBBY_WORKTREE_ROOT`. All THREE runners (goal/pipeline/agent) cut
+      worktrees there instead of `path.join(<runDir>, "worktree")` — only forensic
+      artifacts stay under `*_RUNS_DIR`. `vitest.setup.ts` pins a per-file temp
+      worktree root. `workspace.removeWorktree` already used `git worktree remove
+      --force` + `prune` (best practice). Unit: path resolves outside the data root,
+      parent created/leaf left for git. CORRECTION: this does NOT fix the
+      `pipelines/agent-runs` `ENOTEMPTY` flake — that is the RunnerCore detached
+      child's `.log` write into the RUNS dir racing `afterAll`'s `fs.rm` after
+      `app.close()`'s ASYNC SIGTERM (a shutdown-await race), independent of worktree
+      location. See 12.9 below.
+- [ ] 12.9 — Synchronous reaping on shutdown (NEW). `RunnerCore.shutdown()` is `void`
+      and only SIGTERMs children without awaiting their exit, so `app.close()` returns
+      before the child stops writing its `.log` into the RUNS dir → a test's `fs.rm`
+      races it (`ENOTEMPTY`), and on a real SIGTERM the process can exit before reaping
+      completes. Make `shutdown()` async and await each killed child's `close` (bounded
+      timeout); thread through `AgentRunnerService`/`PipelineRunnerService.onModuleDestroy`.
+      The principled fix the 12.3 note called for (NOT a retry-rm paper-over). Clears the
+      standing `ENOTEMPTY` flake.
 - [ ] 12.8 — Durable self-development posture
 
 Parked / known: two claude-mode worktree e2e suites (pipelines.e2e PR-gate, agent-runs.e2e)

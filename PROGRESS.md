@@ -17,7 +17,8 @@ Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 | 12.3 Resource governance in `runShell` + shutdown hook | ✅ done (2026-06-14) | detached pgid spawn + wall-clock timeout (SIGTERM→SIGKILL) + `liveShells` tracking + `onModuleDestroy` reaping + output cap; `main.ts` now `enableShutdownHooks()` so reapers fire on SIGTERM |
 | 12.4 Gate `reconstruct()` re-dispatch (Law 3) | ✅ done (2026-06-14) | rehydrate always; boot parks live goals `awaiting-resume` (no auto-dispatch) unless `GOAL_AUTO_RESUME=1`; all `drive()` sites `.catch(onDriveError)` |
 | 12.6 Eliminate double verification | ⬜ | skip goal verifier when maker pipeline already verified |
-| 12.7 Worktrees outside the repo | ⬜ next | relocate to `ZIBBY_WORKTREE_ROOT`/`os.tmpdir()` — also kills the `ENOTEMPTY` flake |
+| 12.7 Worktrees outside the repo | ✅ done (2026-06-14) | shared `worktree-root.ts` (not from data root); all 3 runners cut worktrees in `ZIBBY_WORKTREE_ROOT`/`os.tmpdir()`. Does NOT fix the `ENOTEMPTY` flake (that's the RunnerCore shutdown-await race → 12.9) |
+| 12.9 Synchronous reaping on shutdown (NEW) | ⬜ next | make `RunnerCore.shutdown()` await killed children's exit → clears the `ENOTEMPTY` flake |
 | 12.8 Durable self-development posture | ⬜ | builder ≠ subject, OS sandbox, budget-as-contract |
 
 **Blast-radius prerequisite** (must be green before pointing the loop at this repo):
@@ -27,23 +28,25 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
 
 ### Parked / known flakes
 
-- `pipelines.e2e` (PR-gate) and `agent-runs.e2e` flake at `afterAll` cleanup with
-  `ENOTEMPTY` on their own temp run dirs — an unreaped-child / in-tree-worktree
-  race. Pre-existing (present at baseline), **not** a 12.5 regression; all
-  individual tests pass. Resolved by 12.3 (reaping) + 12.7 (worktree location),
-  not by masking the cleanup.
+- `pipelines.e2e` (PR-gate) + `agent-runs.e2e` `ENOTEMPTY` at `afterAll`. ROOT CAUSE
+  (characterized 2026-06-14): the RunnerCore detached child's `.log` write into the
+  RUNS dir races `afterAll`'s `fs.rm` because `app.close()`'s SIGTERM (`RunnerCore.
+  shutdown()`) is fire-and-forget — it returns before the child stops writing. NOT the
+  worktree location (12.7 relocated those and it still flakes) and NOT a 12.x regression.
+  All individual tests pass. Fix = **12.9** (await reaping on shutdown).
+- `categories.e2e` "rejects a duplicate" — flakes only under full-suite load; passes
+  6/6 in isolation. Pre-existing under-load timing flake, unrelated to worktrees.
 
 ## Next iteration
 
-**Phase 12.7 — worktrees outside the repo** (pulled ahead of 12.6 because it also
-kills the standing `pipelines.e2e`/`agent-runs.e2e` `ENOTEMPTY` flake). Goal worktrees
-are cut at `path.join(root, "worktree")` under `GOAL_RUNS_DIR` — inside the
-watched/tested tree (`goal-runner.service.ts` ~:175). Relocate to a dedicated
-`ZIBBY_WORKTREE_ROOT` (default `os.tmpdir()/zibby-worktrees`), keep only forensic
-artifacts (logs/sidecars/handoffs) under `data/goals/runs`; the worktree-root provider
-must NOT derive from `resolveDataRoot` (`shared/data-dir.ts`). Ensure cleanup removes
-the out-of-repo worktree on run delete (`workspace.service.ts`). **Investigate** whether
-the pipeline/agent RunnerCore worktrees (the actual ENOTEMPTY source) move too, or
-whether the flake needs a kill-then-await in the test cleanup — confirm the root cause
-before claiming the flake fixed. Then 12.6 (double-verify skip) and 12.8 (durable
-posture: builder ≠ subject, OS sandbox, budget-as-contract).
+**Phase 12.9 — synchronous reaping on shutdown** (the real `ENOTEMPTY` fix, now
+root-caused). `RunnerCore.shutdown()` (runner-core.ts ~:298) is `void` and only
+`killGroup`s children without awaiting their exit, so `app.close()` returns while a
+child is still flushing its `.log` into the RUNS dir → the e2e `afterAll`'s `fs.rm`
+races it (`ENOTEMPTY`), and on a real SIGTERM the node process can exit before reaping
+finishes. Make `shutdown()` async: after `killGroup`, await each tracked child's
+`close` event with a bounded timeout (then `SIGKILL` escalation, mirroring 12.3's
+`runShell`); thread the `await` through `AgentRunnerService` + `PipelineRunnerService`
+`onModuleDestroy` (already async). This is the principled fix the 12.3 note promised —
+NOT a retry-rm in the test. Verify the `pipelines.e2e`/`agent-runs.e2e` ENOTEMPTY is
+gone across repeated runs. Then 12.6 (double-verify skip) and 12.8 (durable posture).

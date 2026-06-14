@@ -16,6 +16,7 @@ import { formatClaudeStreamLine } from "../runner/claude-stream-format"
 import { RunnerCore } from "../runner/runner-core"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { prepareWorktreeDir } from "../shared/worktree-root"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { ORCHESTRATOR_ID } from "@zibby/contracts"
 import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
@@ -223,7 +224,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           projectPath: resolved.path,
           runId: `${agentId}_${startedMs}`,
           slug: title || agentId,
-          dir: path.join(cwd, "worktree"),
+          // Phase 12.7: worktree OUTSIDE the repo/data tree (only the sandbox stays under cwd).
+          dir: await prepareWorktreeDir(`${agentId}_${startedMs}`),
         })
         spawnCwd = workspace.path
       } catch (error) {
