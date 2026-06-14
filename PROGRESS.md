@@ -364,22 +364,32 @@ The coupling sweep found no real smells → pivoted to a real honest-status gap.
 | ---- | ------ | ----- |
 | 40.1 Shared `LoadError` + agents-screen error state | ✅ done (2026-06-14) | The cross-feature coupling sweep found the remaining imports (`runs→approvals`, `agents→gates`, `settings→voice`) are **legitimate domain composition**, not generic-component misplacement → no refactor (per the "don't invent refactors" guard). Real gap surfaced instead: every catalog Screen does `const { data = [] } = useXQuery()`, so an **unreachable API** errors → `data` is `[]` → the screen shows its **empty** state ("no agents yet — create your first…"). An outage reads as an empty workspace (dishonest status; could nudge re-creating existing entities). 8 screens; only 2 referenced an error. Fix: new shared `apps/web/components/LoadError/LoadError.tsx` (error twin of `EmptyState`: i18n-agnostic props, DS `Card` + warn `Icon` + optional retry `Button`); **agents** Screen renders `<LoadError onRetry={refetch}>` when `useAgentsQuery().isError` (error precedes empty). i18n `agents.loadError*`/`retry` (cs+en). GOTCHA: `IconTileTone` is only accent\|neutral (no warn) → used `Icon name="warn" tone="warn"` not `IconTile`. Tests: `LoadError.test` (title/desc; retry calls onRetry; no button without onRetry). **web/DS green, full workspace 1541/1541** (first run, no flake), lint + web-tsc clean. Commit `25c8712`. |
 
+## Phase 41: Propagate the honest "couldn't load" state to the catalog screens — ✅ COMPLETE (2026-06-14)
+
+Closed the Phase-40 honest-status gap across 5 more screens. Plan: [docs/plans/phase-41.md](docs/plans/phase-41.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 41.1 QueryError wrapper + skills/pipelines/projects/gates/memory | ✅ done (2026-06-14) | New thin `QueryError` wrapper = `LoadError` pre-wired with shared `common.loadError*` (cs+en) → each screen a one-liner. `skills`/`pipelines`/`projects`/`gates`/`memory` Screens render `<QueryError onRetry={refetch}>` when their primary list query `isError` (error precedes empty; `pipelines`+`memory` use an error early-return mirroring their empty early-return). Existing query mocks (return `{data}`, `isError` undefined→falsy) keep screen tests green. Tests: `QueryError.test`. **web/DS green (full web-components 378/378), api 691/691 isolated** (full-suite 1 known under-load flake; web-only), lint + web-tsc clean. Commit `e415502`. |
+
 ## Next iteration
 
-**Proposed Phase 41 — Propagate `LoadError` to the remaining catalog screens.** Phase 40 built the
-shared honest-error component + wired the **agents** screen; the same `data = []`-on-error bug lives in
-the other catalog screens. GROUND first (confirm each still has the empty-on-error shape + that its
-query exposes `isError`/`refetch`): **skills**, **pipelines**, **projects**, **gates**, **memory**,
-and **integrations** (integrations already references an error — verify it's honest). For each, swap the
-empty-vs-error decision to show `<LoadError onRetry={refetch}>` when the primary list query errors;
-add the per-feature i18n `loadError*` strings (reuse the agents wording). Batch the near-identical
-small edits (they share the pattern) into one completable phase, each with the `isError` guard. This
-closes the honest-status gap across the whole velín.
+**Proposed Phase 42 — `Collection` error state (finish the honest-status sweep).** Only `/integrations`
+remains on the empty-on-error bug: it uses the shared `Collection` component (not `EmptyState`), which
+has an `empty` prop but no error state, so an API outage there still reads as "no integrations yet."
+GROUND first: `apps/web/components/Collection/Collection.tsx` (its `empty` prop shape + render) and the
+`integrations/Screen.tsx` call site (it passes `items` + `empty`; check the query exposes `isError`/
+`refetch`). Add an optional `error?: { title; description; retryLabel?; onRetry? }` (or an `isError` +
+`onRetry` pair) to `Collection` that renders `LoadError` instead of the empty block; wire
+`integrations/Screen` to pass it from `useIntegrationsQuery().isError`. Reuse `common.loadError*`. This
+closes the honest-status gap on the **last** catalog surface. Keep it behaviour-preserving + tested
+(Collection renders error when set, else empty/items as before).
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
-at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
-feed/detail states for similar double-counting or raw-data leaks. (Audit signal after 14 phases:
-obvious gaps are exhausted — the highest-value next input would be the operator naming a concrete bug.)
+at concrete HUD bugs as they spot them — each becomes the next phase. (Audit signal after 15 phases:
+obvious gaps are exhausted — the highest-value next input would be the operator naming a concrete bug;
+after Phase 42 the honest-load-state sweep is complete and the loop should await operator direction or
+a newly-spotted bug rather than manufacture low-value work.)
 
 Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
 per-project — api 691/691 isolated). The
