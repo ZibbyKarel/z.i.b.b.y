@@ -15,13 +15,11 @@ test("a triaged inbound message surfaces an approval; approving it handles the i
   await expect(inbox).toBeVisible({ timeout: 20000 });
   await expect(inbox.getByText("needs approval")).toBeVisible({ timeout: 20000 });
 
-  // The drafted reply is waiting as a channel approval in the overview queue.
+  // The drafted reply is waiting as a channel approval (kind "channel") in the
+  // overview queue. Target it by its stable kind-scoped testid so the shared queue
+  // (which also holds the agent approval, approval.spec) can't cross-contaminate.
   await page.goto("/overview");
-  const channelCard = page
-    .locator("div")
-    .filter({ hasText: "channel-reply" })
-    .filter({ has: page.getByRole("button", { name: "Approve" }) })
-    .last();
+  const channelCard = page.getByTestId("approval-card-channel");
   const approve = channelCard.getByRole("button", { name: "Approve" });
   await expect(approve).toBeVisible({ timeout: 20000 });
   await approve.click();

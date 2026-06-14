@@ -16,8 +16,11 @@ import { useState } from "react";
 import type { Approval } from "../../../../domain";
 
 export interface ApprovalCardProps {
-  /** Domain approval; an enriched backend payload may add a semantic `riskType`. */
-  approval: Approval & { riskType?: string };
+  /**
+   * Domain approval; an enriched backend payload may add a semantic `riskType`
+   * and carries the contract `kind` (agent/channel/…) the card keys its testid on.
+   */
+  approval: Approval & { riskType?: string; kind?: string };
   onApprove?: (approval: Approval) => void;
   onReject?: (approval: Approval) => void;
 }
@@ -55,7 +58,15 @@ export function ApprovalCard({
   const hold = kind !== undefined && highRisk.has(kind);
 
   return (
-    <Card corners tone="warn">
+    <Card
+      corners
+      // Stable, kind-scoped root testid so the approvals queue (which mixes agent
+      // and channel cards) can be targeted deterministically — text-content
+      // filtering is fragile because the action label and the Approve button live
+      // in sibling sub-trees. Overrides Card's generic `card-root`.
+      data-testid={approval.kind ? `approval-card-${approval.kind}` : "approval-card"}
+      tone="warn"
+    >
       <Container padding="200">
         <Stack gap="150">
           <Stack align="center" direction="row" gap="100" justify="between">

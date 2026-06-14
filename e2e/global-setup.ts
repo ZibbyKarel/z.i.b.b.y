@@ -35,6 +35,14 @@ export default async function globalSetup(): Promise<void> {
 
   const ctx = await request.newContext({ baseURL: API });
 
+  // Drain any pending approvals BEFORE seeding. `.e2e-data` (agent-runs, approvals)
+  // persists across runs and isn't reset here, so without this a repeated `pnpm e2e`
+  // accumulates stale gated-agent approvals (the queue grows to 2, 3, … cards and
+  // selectors go ambiguous). Rejecting via the API clears the live in-memory queue
+  // too — so this works on a `reuseExistingServer` run, where a disk wipe alone
+  // wouldn't touch the already-loaded state.
+  await drainPendingApprovals(ctx);
+
   // A skill in the catalog (skills are catalog-only — invoked by agents, not run alone).
   await ctx
     .post("/api/skills", {
@@ -80,8 +88,12 @@ export default async function globalSetup(): Promise<void> {
     .catch(() => {});
   await ctx.put("/api/integrations/team-slack/credentials", { data: { token: "xoxb-e2e" } }).catch(() => {});
   await fs.mkdir(path.join(fakeDir, "team-slack"), { recursive: true });
+  // Unique id per seed: a reused dev server (`reuseExistingServer` on repeated local
+  // runs) keeps the channel watcher's processed-id set in memory, so a fixed id like
+  // "001" gets deduped and never re-triages. A fresh id each run always ingests.
+  const fixtureId = Date.now().toString(36);
   await fs.writeFile(
-    path.join(fakeDir, "team-slack", "001.json"),
+    path.join(fakeDir, "team-slack", `${fixtureId}.json`),
     JSON.stringify({ text: "Tady je nabídka a smlouva s deadline na příští týden", receivedAt: new Date().toISOString() }),
   );
 
@@ -100,5 +112,46 @@ export default async function globalSetup(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   await fs.writeFile(path.join(vault, "daily", `${today}.md`), `---\ntitle: ${today}\n---\n- 09:00 seeded daily entry\n`);
 
+  // Wait until both seeded approvals are actually pending before any spec runs. The
+  // agent approval is produced asynchronously by the demo runner; the channel one by
+  // the watcher's next tick. Specs run alphabetically against ONE shared queue, so a
+  // not-yet-present approval used to manifest as a cross-spec seesaw (whichever spec
+  // raced ahead won). Gating here makes the queue deterministic at suite start.
+  await waitForPendingApproval(ctx, "agent");
+  await waitForPendingApproval(ctx, "channel");
+
   await ctx.dispose();
+}
+
+/** Reject every currently-pending approval so the suite starts with an empty queue. */
+async function drainPendingApprovals(
+  ctx: Awaited<ReturnType<typeof request.newContext>>,
+): Promise<void> {
+  const res = await ctx.get("/api/approvals", { params: { status: "pending" } }).catch(() => null);
+  if (!res?.ok()) return;
+  const pending = (await res.json().catch(() => [])) as Array<{ id?: string }>;
+  if (!Array.isArray(pending)) return;
+  for (const a of pending) {
+    if (a.id) await ctx.post(`/api/approvals/${a.id}/reject`).catch(() => {});
+  }
+}
+
+/** Poll `GET /api/approvals?status=pending` until an approval of `kind` exists. */
+async function waitForPendingApproval(
+  ctx: Awaited<ReturnType<typeof request.newContext>>,
+  kind: string,
+  timeoutMs = 20000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await ctx.get("/api/approvals", { params: { status: "pending" } }).catch(() => null);
+    if (res?.ok()) {
+      const pending = (await res.json().catch(() => [])) as Array<{ kind?: string }>;
+      if (Array.isArray(pending) && pending.some((a) => a.kind === kind)) return;
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  // Don't hard-fail setup: a spec's own 20s wait still covers a slow producer, and
+  // failing setup would abort the whole suite. Surface it for triage instead.
+  console.warn(`[global-setup] no pending "${kind}" approval after ${timeoutMs}ms`);
 }

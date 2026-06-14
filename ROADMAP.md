@@ -6,43 +6,43 @@
 
 ---
 
-## Where we are today (verified 2026-06-11)
+## Where we are today (refreshed 2026-06-14 — Phases 1–14 shipped)
 
-**Real and working:**
+**The original North-Star gap table is closed.** Every row below is now delivered;
+the phase that did it is named. The detail of each lives in its phase section + the
+per-phase plan under `docs/plans/`.
 
-- Directed mode core: `POST /api/tasks` → `TaskClassifierService` (real
-  `claude -p` router, keyword fallback, orchestrator terminal rule) →
-  `AgentRunnerService` spawns real `claude -p` in a sandboxed run dir with
-  log/sidecar persistence (`apps/api/src/runner/runner-core.ts`).
-- Mid-run approval gate (Variant B): PreToolUse hook → `intent-request.json` →
-  `GateEvaluatorService` (locked floor from `POLICY.md`, harden-only agent
-  rules) → resume/deny. Approvals persist across restart. **Agent runs only.**
-- File-backed everything: agents, skills, pipelines, projects, approvals,
-  automations, gate rules, scheduled tasks under `apps/api/data/` (atomic
-  writes, tolerant parsing, restart reconciliation).
-- Automations (cron tick) + scheduled-task queue (30 s tick).
-- Memory vault: read-only index/search/graph + `appendDaily`
-  (`apps/api/src/memory/vault.service.ts`).
-- Web UI wired via ts-rest + TanStack Query; SSE run events + log streaming;
-  runs feed, approvals, gates editor, agents/projects/skills CRUD.
-- Tests: 17 API e2e files, ~22 API unit files, DS component tests, 3 Playwright
-  specs (`e2e/`), CI runs lint/typecheck/test/build (Playwright job manual-only).
+| North Star claim                                         | Status (delivered by)                                                                          |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Delivery loop with Kodér ⇄ Review ⇄ Tester retries       | ✅ real verify stage, back-edges, escalation, parking, seeded `delivery.pipeline.md` (**Phase 2**) |
+| "The PR is the gate"                                     | ✅ worktree-per-run `zibby/*` branches, push/PR gated on the locked floor, PR-draft prep (**Phase 3**) |
+| Second brain with run lifecycle (ground → work → record) | ✅ vault write API, grounding block, run recorder + learned-memory, MOC links (**Phase 4**)        |
+| Autonomous mode watching Slack/email                     | ✅ real integrations + credentials, Slack/email `ChannelWatcher`, sanitizer, tiered triage + mandate (**Phase 5**) |
+| Butler's briefing, always answerable                     | ✅ append-only activity JSONL, `GET /api/briefing` + morning automation, notification discipline (**Phase 6**) |
+| Voice operator interface                                 | ✅ browser-native STT/TTS, utterance→action grammar, overlay a11y, free wake word (**Phase 7**)    |
+| Multiple parallel engagements with budget caps           | ✅ per-project + per-goal budgets, concurrency isolation, ops hardening (**Phase 8**, **13.1**)    |
 
-**Gaps vs. North Star:**
+**Built on top of the North Star (Phases 9–14):**
 
-| North Star claim                                         | Reality                                                                                                                                       |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Delivery loop with Kodér ⇄ Review ⇄ Tester retries       | Backend `loop` back-edges exist but pipeline runs default to `demo-stage.mjs`; stage-level gates/resume missing; UI only builds linear chains |
-| "The PR is the gate"                                     | No git/branch/PR workflow at all                                                                                                              |
-| Second brain with run lifecycle (ground → work → record) | Vault is read-only + daily append; no grounding, no learned-memory writes, no MOC updates                                                     |
-| Autonomous mode watching Slack/email                     | Nothing exists; Integrations screen is a client-side mock (`CatalogProvider`)                                                                 |
-| Butler's briefing, always answerable                     | ActivityFeed is demo data; no activity log, no briefing                                                                                       |
-| Voice operator interface                                 | Demo transcript only (`useVoiceDemoSequence`)                                                                                                 |
-| Multiple parallel engagements with budget caps           | Limits are read-only display; no caps, no per-project budgets                                                                                 |
+- **Limit resilience** (9): `paused-limit` halt, auto-resume on window reset, checkpointed
+  delivery with progress markers.
+- **Loop engine** (10): `goal` task target + `GoalRun`, verifier as a first-class stop
+  condition, discovery triage (work finds itself), goal detail UI.
+- **Unified task UX** (11): one described intent → classifier routes to agent/pipeline/goal;
+  paths become scoped permissions.
+- **Self-development safety** (12) + **payoff** (13): ZIBBY is a safe target for its own loop
+  engine (verifier scoping, resource governance + reaping, Law-3 boot gate, worktrees out of
+  the repo, test isolation); per-goal budget enforced; the exit demonstration is an
+  executable e2e; launchd auto-resume for the unattended builder. Runbook:
+  `docs/ops/self-development.md`.
+- **Operator UX** (14): the new goal park reasons + budget surface with human-legible labels.
+
+**Tests (current):** ~91 api vitest files (unit + e2e), DS + web-components vitest (~206),
+**7 Playwright specs** (`e2e/`). Full api suite reliably 684/684 (13.4 stabilized
+concurrency). The loop's own gate runs `pnpm lint` + api/web `tsc` + vitest each iteration.
 
 FINISH.md Fáze A–C are incorporated below: B1–B3 → Phase 1, B4 → Phase 2,
-A + C → Phase 7. Phase 7 has no dependency on Phases 3–6 and can be pulled
-forward any time.
+A + C → Phase 7.
 
 ---
 
@@ -868,7 +868,7 @@ test"]` (`pipeline.schema.ts:45`, chain `verify-command.ts:23`) — the full
 - **Tests:** the suite itself — full `pnpm test` never touches `apps/api/data`,
   never spawns real claude.
 
-### 12.6 Eliminate double verification
+### 12.6 Eliminate double verification (done 2026-06-14)
 
 - The delivery pipeline already verifies (`delivery.pipeline.md:38-44`, up to 4×
   per run), then `drive()` runs the goal verifier unconditionally
@@ -884,7 +884,27 @@ test"]` (`pipeline.schema.ts:45`, chain `verify-command.ts:23`) — the full
   `os.tmpdir()`/`ZIBBY_WORKTREE_ROOT`; keep only forensic artifacts in `data/`.
 - **Tests:** unit: worktree path resolves outside the repo; cleanup removes it.
 
-### 12.8 Durable self-development posture
+### 12.9 Synchronous reaping on shutdown (added + done 2026-06-14)
+
+- `RunnerCore.shutdown()` (`runner-core.ts:298`) is `void` and only `killGroup`s its
+  children without awaiting their exit, so `app.close()` returns while a SIGTERM'd
+  child is still flushing its `.log` into the RUNS dir — the e2e `afterAll`'s `fs.rm`
+  races it (`ENOTEMPTY`), and on a real signal the process can exit before reaping
+  completes. Make `shutdown()` async: after `killGroup`, await each tracked child's
+  `close` (bounded timeout, then `SIGKILL` escalation — mirror 12.3's `runShell`); the
+  `AgentRunnerService`/`PipelineRunnerService` `onModuleDestroy` already await it.
+  Root-caused while delivering 12.7 (worktree relocation alone did NOT fix the flake).
+- **Tests:** the `pipelines.e2e`/`agent-runs.e2e` `ENOTEMPTY` is gone across repeated
+  runs; a unit that `shutdown()` resolves only after a tracked child's `close`.
+
+### 12.8 Durable self-development posture (done 2026-06-14 — closes Phase 12)
+
+Delivered as `docs/ops/self-development.md` (builder ≠ subject runbook, defense-in-depth
+layers, OS-sandbox recommendation, resource-governance-as-contract-dimension), Phase 12
+env knobs in `docs/ops/environment.md`, and the guard test
+`apps/api/src/shared/self-development.test.ts` (subject worktree never under the builder
+tree). **Phase 12 is complete: 12.1–12.7 + 12.9 + 12.8 all green; ZIBBY is now a safe
+target for its own loop engine.**
 
 - Builder ≠ subject: the orchestrator runs from a pinned build, not `ts-node-dev`
   on the tree it edits. OS-level sandbox (container/cgroup memory+cpu cap) for the
@@ -900,6 +920,117 @@ the repo, (b) leaving an orphaned child after an API kill, (c) re-dispatching
 itself on restart, or (d) exhausting RAM — and `pnpm test` is fully isolated from
 live data and real claude. The blast-radius set 12.1–12.4 must be green before any
 loop is pointed at this repo again.
+
+---
+
+## Phase 13 — Self-development payoff: enforced goal budget + the exit demonstration
+
+_Goal: Phase 12 made the repo **safe** to target; Phase 13 is the **payoff** — wire the
+one resource-governance piece 12.8 documented but didn't enforce (per-goal compute
+budget), then prove the whole thing end-to-end with the Phase 12 exit demonstration.
+Thin glue over delivered machinery (8.1 budget, goal loop, worktree isolation)._
+
+### 13.1 Enforce the per-goal budget (done 2026-06-14)
+
+- `GoalSchema.budget` (a `ProjectBudget`: `dailyRuns`/`weeklyRuns`) existed but was
+  **completely ignored** — the goal loop only checked the *project* cap
+  (`budgetOk(project)`, `goal-runner.service.ts:294`). Wire the goal's OWN budget into
+  the per-iteration guard: count the goal's iterations within a rolling 24h/7d window
+  from `run.iterations[].startedAt` (self-contained — no ledger), over-cap → park
+  `budget` (existing reason). A windowed cap distinct from `maxIterations` (the total
+  fuse). Composes with the project cap (both checked; either parks).
+- **Tests:** unit for the windowed counter (under/at/over daily & weekly, no budget →
+  always ok); e2e: a goal with `budget.dailyRuns: 1` parks `budget` after one iteration.
+
+### 13.2 Self-development exit demonstration (done 2026-06-14)
+
+- e2e in `goal-loop.e2e.test.ts`: a goal on a **sibling fixture checkout** finishes
+  `done` with the worktree under `ZIBBY_WORKTREE_ROOT` (not in the repo/data tree), the
+  subject's HEAD unmoved + working tree clean + a `zibby/*` branch present, and the
+  scoped `["true"]` verifier passing (a full-repo suite would have failed → `done`
+  proves no full-monorepo run). The Phase 12 exit criterion as an executable test.
+  Orphan-reaping is already unit-covered (12.3/12.9). Also hardened the `briefing.e2e`
+  ENOTEMPTY cleanup race (12.9 idiom).
+
+### 13.4 Test stability under concurrent load (done 2026-06-14)
+
+- The full 90-file e2e suite intermittently red ~1 assertion/run (a different suite each
+  time — categories/projects/memory — all green isolated): concurrency/timing contention,
+  not a cleanup race. Fix in `apps/api/vitest.config.ts`: cap forks to `max(2, cpus/2)`
+  (default ~cpus-1 ran ~9 NestJS AppModule boots at once + per-fork 12.5 data seeding),
+  widen `testTimeout`/`hookTimeout` to 30s, and bump `pipelines.e2e` `until` default
+  10s→25s (demo-timing). Result: **5/5 consecutive full runs green (680/680), ~11.5s**.
+  Both the under-load assertion class and the pre-existing pipelines demo-timeout flake
+  gone.
+
+### 13.3 launchd daemon + `GOAL_AUTO_RESUME` (done 2026-06-14 — closes Phase 13)
+
+- Extended the existing `ops/com.zibby.api.plist` (Phase 8.3) with `GOAL_AUTO_RESUME=1`
+  (installing the daemon = the operator's explicit opt-in to unattended operation, the
+  one legitimate place auto-resume belongs per 12.4) + `ZIBBY_WORKTREE_ROOT`; documented
+  the restart-resume semantics + self-development cross-ref in `docs/ops/deployment.md`;
+  guard test `apps/api/test/launchd-plist.test.ts`. The behavior is already e2e-covered
+  (goal-loop "restart with GOAL_AUTO_RESUME=1"). **Phase 13 complete: 13.1, 13.2, 13.4,
+  13.3 all green; the full api suite is reliably 684/684.**
+
+**Phase exit criterion:** a goal with a tight budget parks before exhausting it; the
+self-development smoke proves a sibling-checkout goal never touches the builder tree.
+
+---
+
+## Phase 14 — Operator UX for the new goal/loop states
+
+_The roadmap's Phases 1–13 are shipped. Phase 14 closes the UX gap they opened: the new
+goal park reasons (`verifier-scope`, `awaiting-resume`) and the per-goal `budget` (12.x/13.1)
+land in the data but render as raw enum strings with no operator-legible meaning. Thin web
+glue over delivered contracts._
+
+### 14.1 Surface goal park reasons + budget in the web UI (done 2026-06-14)
+
+- `GoalDetailPanel` interpolated `parkedReason` as a RAW enum string. Add friendly cs/en
+  i18n labels (`goalParkedReason.<reason>`) for all five reasons + a short hint line
+  (esp. `verifier-scope`, which is a config fix, not a plain resume), rendered as a clear
+  headline above the existing resume-with-note affordance. Add a **goal-budget bar** (when
+  `goal.budget.dailyRuns`/`weeklyRuns` is set): windowed iteration count vs the cap,
+  `warn` tone near/at the limit — mirrors the backend `goalBudgetExceeded` window.
+- **Tests:** web-components — friendly label per reason; budget bar renders only when a
+  budget exists and tones at the cap; raw enum never shown.
+
+### 14.2 Refresh roadmap ground-truth + Playwright audit (done 2026-06-14)
+
+- Rewrote the stale "Where we are today (verified 2026-06-11)" block + gap table — every
+  North-Star gap is delivered (the table now names the phase that closed each) + a Phases
+  9–14 summary; tests line corrected (7 Playwright specs, ~91 api files, 684/684).
+- Ran `pnpm e2e` (Playwright, chromium, 1 worker, boots api+web dev): **8–9 of 10 green.**
+  Fixed a REAL pre-existing failure — `pipeline-run.spec` waited for a `/Run · max/`
+  button that no longer exists (label drifted to `pipelineRun.launch` = "Run pipeline",
+  shared with the trigger); scoped the launch click to the dialog. Verified green across
+  runs.
+- **Parked (→ 14.3):** `approval.spec` + `channels.spec` flake intermittently — both
+  manipulate the shared approvals queue against the single long-lived dev server
+  (`workers:1`, one `data-test` dir), so accumulating cross-spec state interferes. NOT a
+  latency issue (a 45s bump didn't help) — a test-isolation gap. The 8 deterministic specs
+  (memory-graph ×5, briefing, pipeline-edit, pipeline-run) are stable.
+
+### 14.3 Playwright cross-spec isolation (done 2026-06-14)
+
+- Three compounding defects flaked `approval.spec`/`channels.spec`: (1) text-soup
+  selection — a greedy `.first()` "Approve" approved the *channel* card (the agent card
+  is a high-risk HoldButton, the channel card a plain Button), making the two specs fight
+  over one approval (a clean seesaw); (2) `.e2e-data` approvals were never drained, so
+  repeated runs piled up agent cards; (3) the gated run spawned REAL `claude` — slow and
+  often never gating in 20s. Fixed: a kind-scoped `data-testid=approval-card-{kind}` on
+  `ApprovalCard` (no more text-soup), a global-setup that drains the queue (API reject, so
+  it clears the reused server's in-memory copy) and then polls until both seeded approvals
+  are pending, and `CLAUDE_BIN`→`fake-claude.mjs` + a benign `FAKE_CLAUDE_INTENT` so the
+  `requires_approval` agent (→ catch-all `ask`) produces ONE token-free pending approval.
+  Both specs now assert the durable outcome (card leaves the queue / inbox handled), not
+  the transient optimistic UI. Result: `pnpm e2e` 10/10 across 3 repeated local runs
+  (~48s, down from ~1.1m). **Closes Phase 14.**
+
+**Phase exit criterion:** a parked goal shows a human-legible reason + the right next
+action; a budgeted goal shows its windowed cap; no raw enum reaches the operator; the
+roadmap header reflects reality and `pnpm e2e` is green (14.3).
 
 ---
 

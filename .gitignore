@@ -50,3 +50,9 @@ design-ref/
 z-i-b-b-y
 # Playwright MCP session artifacts (snapshots/console logs)
 /.playwright-mcp/
+
+# Stray fake-claude run artifacts (the e2e CLAUDE_BIN stub writes a marker + intent
+# files into the api server's cwd when a gated agent run isn't sandboxed to a worktree)
+/apps/api/agent-007-was-here.txt
+/apps/api/intent-request.json
+/apps/api/payment-done.txt

@@ -17,16 +17,17 @@ The payoff of Phase 12: enforce the last governance piece + prove it end-to-end.
 **All of 13.1–13.4 done; full api suite reliably 684/684.**
 Plan: [docs/plans/phase-13.md](docs/plans/phase-13.md).
 
-## Phase 14: operator UX for the new goal/loop states — in progress
+## Phase 14: operator UX for the new goal/loop states — ✅ COMPLETE (2026-06-14)
 
-Closes the UX gap Phases 12/13 opened (raw enum park reasons, unshown goal budget).
+Closes the UX gap Phases 12/13 opened (raw enum park reasons, unshown goal budget) and
+hardens the Playwright e2e suite. **14.1–14.3 done; `pnpm e2e` 10/10 across 3 runs.**
 Plan: [docs/plans/phase-14.md](docs/plans/phase-14.md).
 
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 14.1 Surface goal park reasons + budget (web) | ✅ done (2026-06-14) | friendly cs/en labels for `verifier-scope`/`awaiting-resume`/`budget`/… + next-step hints + a goal-budget bar (windowed runs vs `goal.budget`); raw enum no longer shown. web-components 211/211 |
 | 14.2 Roadmap ground-truth refresh + Playwright audit | ✅ done (2026-06-14) | rewrote stale "Where we are today" (all gaps closed); ran `pnpm e2e` → fixed real `pipeline-run.spec` label drift (verified green); parked approval/channels cross-spec contamination → 14.3 |
-| 14.3 Playwright cross-spec isolation (NEW) | ⬜ next | approval/channels share the dev server's approvals queue with no per-spec reset → flaky; isolate per spec so `pnpm e2e` is reliably green |
+| 14.3 Playwright cross-spec isolation | ✅ done (2026-06-14) | three compounding defects: text-soup selection (greedy `.first()` "Approve" approved the wrong card → approval/channels seesaw), `.e2e-data` approvals never drained (piled up across runs), and real `claude` for the gated run (non-deterministic). Fixed: kind-scoped `data-testid=approval-card-{kind}`, global-setup drains+gates the queue, `CLAUDE_BIN`→`fake-claude.mjs`+benign intent (token-free, `requires_approval`→catch-all `ask`), durable-outcome asserts. **`pnpm e2e` 10/10 across 3 runs (~48s); web-components 211/211. CLOSES PHASE 14.** |
 
 | Item | Status | Notes |
 | ---- | ------ | ----- |
@@ -64,35 +65,26 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
   wider timeouts + pipelines `until` 25s). 5/5 consecutive full runs green. The full
   `pnpm test` (api) is now reliably 680/680.
 
+## Phase 14: operator UX for the new goal/loop states — ✅ COMPLETE (2026-06-14)
+
+14.1–14.3 done. Goal park reasons + budget are operator-legible (14.1); the roadmap's
+ground truth is current (14.2); and `pnpm e2e` is reliably green (14.3 — 10/10 across 3
+repeated local runs, and ~2× faster now that the gated agent run is a token-free stub).
+
 ## Next iteration
 
-**Phase 14.3 — Playwright cross-spec isolation.** `pnpm e2e` is 8/10 stable but
-`approval.spec` + `channels.spec` flake intermittently: all 10 specs run against ONE
-long-lived dev server (`workers:1`) sharing the `data-test` approvals queue, with no
-per-spec reset — so accumulated/ordered state from earlier specs interferes (and a reused
-server's channel watcher dedups a re-seeded same-id fixture). It is NOT latency (a 45s
-timeout bump didn't help). Make each spec self-isolating:
-- `approval.spec` / `channels.spec`: in a `beforeEach`, reset the relevant slice via the
-  API (delete pending approvals, re-create the channel integration + a UNIQUE-id Tier-3
-  fixture) so the spec doesn't depend on global-setup-once state surviving prior specs;
-- consider per-spec unique fixture ids so the channel watcher can't dedup across a reused
-  server; or set `reuseExistingServer: false` for these (slower but clean).
-- Exit: `pnpm e2e` green across 3 repeated local runs (not just a cold first run).
+**Proposed Phase 15 — e2e in CI (fresh-server proof + Playwright on GitHub Actions).**
+14.3 made `pnpm e2e` deterministic *locally* (reused dev server). The remaining gap is
+proving it on a COLD server in CI: `reuseExistingServer: !CI` means CI boots fresh api+web
+every run, which exercises a different state path (disk-loaded approvals, no warm watcher).
+The existing GitHub Actions workflow runs `lint`/`typecheck`/`test` on Node 20 but **not**
+`pnpm e2e`. Phase 15 would: install the Chromium browser in CI, add an `e2e` job (boot the
+two dev servers via the Playwright `webServer` config, `CI=true`), upload the HTML
+report/traces on failure, and confirm the 14.3 isolation work holds on a cold server. Small,
+self-contained, and closes the "deterministic locally but unproven in CI" loop. Candidate
+follow-on if CI cost is a concern: gate the e2e job to PRs touching `apps/web`/`e2e`/contracts.
 
-Then Phase 14 is complete. Also still open from earlier: the api `agent-runs.e2e`
-git-fixture transient under full-suite load (rare; passes isolated) — fold into a test-
-hardening pass if it recurs. The [self-development runbook](docs/ops/self-development.md)
-is ready for a real operator-driven engagement.
-- Document the resume semantics: with `GOAL_AUTO_RESUME=1` a restart re-drives
-  `running`/`paused-limit` goals (12.4 `reconstruct`); without it they park
-  `awaiting-resume`. Cross-reference Phase 8.3 (ops hardening) — this is its goal-loop
-  slice. Tie into the existing `docs/ops/deployment.md`.
-- Tests: the restart→auto-resume path is already e2e-covered (`goal-loop.e2e` "restart
-  with GOAL_AUTO_RESUME=1"); 13.3 adds the plist + a doc-lint/shellcheck of the script,
-  not new runtime logic. Mostly ops glue.
-
-This closes Phase 13. After it, the roadmap's North-Star gaps are essentially delivered —
-a good moment to re-survey the gap table (Phase 0 "Where we are today") and propose a
-Phase 14 from whatever remains (or declare the roadmap done and shift to operator-driven
-work). If the operator wants to self-develop now, the
-[runbook](docs/ops/self-development.md) is ready.
+Also still open from earlier (fold into a hardening pass if it recurs): the api
+`agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated). The
+[self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven
+engagement.

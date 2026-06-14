@@ -44,6 +44,16 @@ const apiEnv: Record<string, string> = {
   AGENT_DEMO_STEPS: "3",
   AGENT_DEMO_DELAY_MS: "80",
   PORT: "3333",
+  // Deterministic, token-free agent runner: point the `claude` seam at the same
+  // fake-claude stub the api e2e uses, and give it a benign mid-run INTENT. The
+  // seeded gated agent (`requires_approval: true`) desugars to a catch-all `ask`
+  // rule, so this reliably pauses the run and surfaces ONE pending agent approval
+  // for approval.spec — instead of spawning real `claude` (slow, non-deterministic,
+  // sometimes never gating), which is why the agent card used to be flaky/absent.
+  CLAUDE_BIN: path.resolve("apps/api/test/fixtures/fake-claude.mjs"),
+  FAKE_CLAUDE_INTENT: JSON.stringify({ action: "send_message", context: "post the drafted reply" }),
+  FAKE_CLAUDE_STEPS: "4",
+  FAKE_CLAUDE_DELAY_MS: "40",
 };
 
 const sandboxChrome =
