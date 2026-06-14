@@ -92,9 +92,11 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
   const logPanel = run.logBase ? (
     <RunLogStream
       linesLabel={(n) => t("lines", { n })}
+      live={run.status === "running"}
       liveLabel={t("liveLog")}
+      logBase={run.logBase}
       logLabel={t("log")}
-      run={run}
+      runId={run.runId}
     />
   ) : run.kind === "pipeline" ? (
     <Stack align="center" direction="row" gap="100" justify="between">

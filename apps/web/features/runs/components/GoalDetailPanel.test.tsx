@@ -1,5 +1,6 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import type { RunView } from "../run";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 
@@ -7,6 +8,14 @@ const mutate = vi.fn();
 vi.mock("../../goals/mutations", () => ({
   useResumeGoalRunMutation: () => ({ mutate, isPending: false }),
 }));
+
+// Phase 27: the iteration log disclosure mounts `RunLogStream`, which tails the child
+// run via `useRunLog`. Stub it so the test doesn't need the SSE/polling backend, and
+// so we can assert exactly which child runId each row opens.
+const { useRunLogMock } = vi.hoisted(() => ({
+  useRunLogMock: vi.fn((runId: string) => ({ text: `log-${runId}`, done: true })),
+}));
+vi.mock("../useRunLog", () => ({ useRunLog: useRunLogMock }));
 
 // One stored goal: maxIterations 5, a daily run-budget of 2.
 vi.mock("../../goals/queries", () => ({
@@ -89,5 +98,86 @@ describe("GoalDetailPanel (14.1)", () => {
     // goalId "absent" → no goal matched → no budget → no bar.
     render(<GoalDetailPanel run={{ ...parkedGoal("iterations"), goalId: "absent" }} />);
     expect(screen.queryByText(/dnes|tento týden/)).not.toBeInTheDocument();
+  });
+});
+
+// Phase 27 — drill into the folded maker / verifier run log from the goal detail.
+describe("GoalDetailPanel (27) — open the folded child run log", () => {
+  beforeEach(() => useRunLogMock.mockClear());
+
+  // A running goal (no parked panel, so the only buttons are the per-row log toggles).
+  const running = (iterations: RunView["iterations"]): RunView => ({
+    ...parkedGoal("iterations"),
+    status: "running",
+    iterations,
+  });
+
+  // An agent-maker iteration with a claude verifier — both spawn pollable child runs.
+  const agentIter = (index: number) =>
+    ({
+      index,
+      makerKind: "agent" as const,
+      makerRunRef: `maker_${index}`,
+      verifier: {
+        kind: "claude" as const,
+        satisfied: false,
+        output: `verdict ${index}`,
+        runRef: `verify_${index}`,
+      },
+      startedAt: ISO(10_000),
+      status: "running" as const,
+    });
+
+  const logToggles = () => screen.getAllByRole("button", { name: /^log$/i });
+
+  it("mounts no child log stream until a row is expanded", () => {
+    render(<GoalDetailPanel run={running([agentIter(0)] as RunView["iterations"])} />);
+    expect(useRunLogMock).not.toHaveBeenCalled();
+  });
+
+  it("opens the agent maker log (by makerRunRef) on the row's log toggle", async () => {
+    render(<GoalDetailPanel run={running([agentIter(0)] as RunView["iterations"])} />);
+    await userEvent.click(logToggles()[0]!);
+    expect(useRunLogMock).toHaveBeenCalledWith("maker_0", "agents");
+    expect(screen.getByText("log makera")).toBeInTheDocument();
+  });
+
+  it("reveals the claude verifier log + verdict text when expanded", async () => {
+    render(<GoalDetailPanel run={running([agentIter(0)] as RunView["iterations"])} />);
+    await userEvent.click(logToggles()[0]!);
+    expect(useRunLogMock).toHaveBeenCalledWith("verify_0", "agents");
+    expect(screen.getByText("log verifieru")).toBeInTheDocument();
+    expect(screen.getByText("verdikt")).toBeInTheDocument();
+  });
+
+  it("shows the pipeline-maker note instead of a stream (pipeline log lives elsewhere)", async () => {
+    const pipeIter = {
+      index: 0,
+      makerKind: "pipeline" as const,
+      makerRunRef: "delivery_run_0",
+      verifier: { kind: "checks" as const, satisfied: true, output: "" },
+      startedAt: ISO(10_000),
+      status: "done" as const,
+    };
+    render(<GoalDetailPanel run={running([pipeIter] as RunView["iterations"])} />);
+    await userEvent.click(logToggles()[0]!);
+    expect(screen.getByText(/Maker běžel jako pipeline/)).toBeInTheDocument();
+    // A pipeline maker mounts no agent-log stream.
+    expect(useRunLogMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps a single iteration open — opening another collapses the first", async () => {
+    render(
+      <GoalDetailPanel
+        run={running([agentIter(0), agentIter(1)] as RunView["iterations"])}
+      />,
+    );
+    await userEvent.click(logToggles()[0]!);
+    expect(useRunLogMock).toHaveBeenCalledWith("maker_0", "agents");
+
+    await userEvent.click(logToggles()[1]!);
+    expect(useRunLogMock).toHaveBeenCalledWith("maker_1", "agents");
+    // Only one maker log is mounted at a time.
+    expect(screen.getAllByText("log makera")).toHaveLength(1);
   });
 });

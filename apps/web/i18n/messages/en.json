@@ -827,7 +827,12 @@
     "goalMakerKind": {
       "agent": "agent",
       "pipeline": "pipeline"
-    }
+    },
+    "goalOpenLog": "log",
+    "goalMakerLog": "maker log",
+    "goalVerifierLog": "verifier log",
+    "goalVerifierVerdict": "verdict",
+    "goalPipelineMakerNote": "Maker ran as a pipeline — its per-stage logs live in the pipeline detail."
   },
   "gates": {
     "title": "Approval rules",

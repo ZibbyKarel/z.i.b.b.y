@@ -1,23 +1,32 @@
 import { CodeBlock, Icon, Panel, Typography } from "@zibby/design-system";
-import type { RunView } from "../run";
 import { useRunLog } from "../useRunLog";
 
 export interface RunLogStreamProps {
-  run: RunView;
+  /** The run whose log to tail (an agent/skill run id, or a goal child's runRef). */
+  runId: string;
+  /** Which kind's log endpoint to poll. */
+  logBase: "agents" | "skills" | null;
+  /** Whether the run is still producing output (drives the live caret + label). */
+  live: boolean;
   liveLabel: string;
   logLabel: string;
   linesLabel: (n: number) => string;
 }
 
-/** Live, offset-polled log tail for a run — appends as the backend file grows. */
+/**
+ * Live, offset-polled log tail for a run — appends as the backend file grows.
+ * Ref-driven (id + base + live) so any holder of a bare run id can mount it — a run
+ * detail, or a folded goal-iteration child (Phase 27). Mount with `key={runId}`.
+ */
 export function RunLogStream({
-  run,
+  runId,
+  logBase,
+  live,
   liveLabel,
   logLabel,
   linesLabel,
 }: RunLogStreamProps) {
-  const { text, done } = useRunLog(run.runId, run.logBase);
-  const live = run.status === "running";
+  const { text, done } = useRunLog(runId, logBase);
   const lineCount = text ? text.replace(/\n$/, "").split("\n").length : 0;
 
   return (

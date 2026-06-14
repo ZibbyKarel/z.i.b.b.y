@@ -796,6 +796,38 @@ folded); the claude verifier run folded; a standalone agent run kept; newest-fir
 
 ---
 
+## Phase 27 — Goal detail: open the maker / verifier run log (complete the fold) — ✅ delivered 2026-06-14
+
+_Direct follow-up to Phase 26 + North-Star law "Always answerable." Folding a loop's child runs out
+of the feed (26) removed the only place their **actual log** was reachable. The goal's own surface
+(`GoalDetailPanel`) shows the iteration timeline but stops at status glyphs — the maker's work and
+the claude verifier's verdict reasoning are no longer openable from the HUD. The iteration schema
+already keeps the refs "so its log is pollable" (`makerRunRef`, `verifier.runRef`); this phase wires
+the UI to them so the folded execution stays answerable from the task detail._
+
+- **`RunLogStream` made ref-driven** — its props change from a whole `RunView` to the three values it
+  actually reads (`runId`, `logBase`, `live`), so any caller holding a bare run id (a goal iteration)
+  can mount it. `RunDetail` updated to pass `run.runId` / `run.logBase` / `run.status === "running"`.
+- **Per-iteration log disclosure in `GoalDetailPanel`** — each timeline row gets an "open log" toggle
+  (single open at a time → at most one live poller). Expanding reveals: the **maker log** (agent
+  makers → `RunLogStream` on the agents endpoint by `makerRunRef`; pipeline makers → a note that the
+  maker ran as a pipeline, stage logs live in the pipeline view — deferred), the **claude verifier
+  log** when `verifier.runRef` is set, and the **verifier verdict** text (`verifier.output`, always
+  present) in a `CodeBlock`. Collapsed rows mount no stream.
+- i18n `runs.goalOpenLog` / `runs.goalMakerLog` / `runs.goalVerifierLog` / `runs.goalVerifierVerdict`
+  / `runs.goalPipelineMakerNote` (cs+en).
+
+**Tests:** `GoalDetailPanel.test.tsx` — an agent-maker row shows the open-log toggle and, when
+expanded, mounts the maker log (mocked `useRunLog`) for `makerRunRef`; a claude verifier row reveals
+the verifier log for `verifier.runRef`; the verdict text always renders when output is present; a
+pipeline-maker row shows the note, no stream; opening one iteration collapses another. web/DS green.
+
+**Deferred:** pipeline-maker **stage** logs (a pipeline-run-by-id detail view doesn't exist yet —
+larger, separate phase); the runs Screen can't deep-link a folded child id (it selects only from the
+folded feed) → inline render is the right call, not navigation.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

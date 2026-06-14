@@ -15,6 +15,7 @@ import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useGoalsQuery } from "../../goals/queries";
 import { useResumeGoalRunMutation } from "../../goals/mutations";
 import type { RunView } from "../run";
+import { RunLogStream } from "./RunLogStream";
 
 export interface GoalDetailPanelProps {
   run: RunView;
@@ -31,6 +32,10 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   const { data: goals = [] } = useGoalsQuery();
   const resume = useResumeGoalRunMutation();
   const [note, setNote] = useState("");
+  // Which iteration's child log is expanded — at most one open ⇒ at most one live
+  // poller mounted at a time. Phase 27: the folded maker/verifier runs (Phase 26
+  // removed their feed card) stay answerable from the task detail.
+  const [openLog, setOpenLog] = useState<number | null>(null);
 
   const iterations = run.iterations ?? [];
   const goal = goals.find((g) => g.id === run.goalId);
@@ -94,46 +99,114 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
           </Typography>
         ) : (
           <Stack gap="100">
-            {iterations.map((it) => (
-              <Stack
-                align="center"
-                direction="row"
-                gap="100"
-                justify="between"
-                key={it.index}
-              >
-                <Stack align="center" direction="row" gap="100">
-                  <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
-                    {t("goalIteration", { n: it.index + 1 })}
-                  </Typography>
-                  {/* The execution kind of this iteration's maker (agent vs pipeline)
-                      — "what it runs as" lives in the task detail, not a 2nd feed card. */}
-                  <Stack align="center" direction="row" gap="50">
-                    <Icon
-                      name={it.makerKind === "agent" ? "bot" : "flow"}
-                      size="xs"
-                      tone="accent"
-                    />
-                    <Typography mono size="2xs" type="note" variant="tertiary">
-                      {t(`goalMakerKind.${it.makerKind}`)}
-                    </Typography>
+            {iterations.map((it) => {
+              const isOpen = openLog === it.index;
+              // The folded child runs whose log this row can reveal (Phase 27).
+              const hasLog = Boolean(
+                it.makerRunRef || it.verifier.runRef || it.verifier.output,
+              );
+              return (
+                <Stack gap="50" key={it.index}>
+                  <Stack align="center" direction="row" gap="100" justify="between">
+                    <Stack align="center" direction="row" gap="100">
+                      <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
+                        {t("goalIteration", { n: it.index + 1 })}
+                      </Typography>
+                      {/* The execution kind of this iteration's maker (agent vs pipeline)
+                          — "what it runs as" lives in the task detail, not a 2nd feed card. */}
+                      <Stack align="center" direction="row" gap="50">
+                        <Icon
+                          name={it.makerKind === "agent" ? "bot" : "flow"}
+                          size="xs"
+                          tone="accent"
+                        />
+                        <Typography mono size="2xs" type="note" variant="tertiary">
+                          {t(`goalMakerKind.${it.makerKind}`)}
+                        </Typography>
+                      </Stack>
+                      <Typography mono size="2xs" type="note" variant="tertiary">
+                        {t(`goalMakerStatus.${it.status}`)}
+                      </Typography>
+                    </Stack>
+                    <Stack align="center" direction="row" gap="100">
+                      <Stack align="center" direction="row" gap="50">
+                        <Icon
+                          name={it.verifier.satisfied ? "ok" : "x"}
+                          size="xs"
+                          tone={it.verifier.satisfied ? "ok" : "bad"}
+                        />
+                        <Typography mono size="2xs" type="note" variant="tertiary">
+                          {it.verifier.satisfied ? t("goalVerifierPass") : t("goalVerifierFail")}
+                        </Typography>
+                      </Stack>
+                      {/* Drill into the folded child's log — agent maker + claude verifier
+                          run logs + the verifier verdict (always answerable, Phase 27). */}
+                      {hasLog && (
+                        <Button
+                          icon="code"
+                          intent="ghost"
+                          onClick={() => setOpenLog(isOpen ? null : it.index)}
+                          size="sm"
+                        >
+                          {t("goalOpenLog")}
+                        </Button>
+                      )}
+                    </Stack>
                   </Stack>
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {t(`goalMakerStatus.${it.status}`)}
-                  </Typography>
+
+                  {isOpen && (
+                    <Stack gap="100">
+                      {it.makerKind === "agent" && it.makerRunRef ? (
+                        <Stack gap="50">
+                          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                            {t("goalMakerLog")}
+                          </Typography>
+                          <RunLogStream
+                            key={it.makerRunRef}
+                            linesLabel={(n) => t("lines", { n })}
+                            live={it.status === "running"}
+                            liveLabel={t("liveLog")}
+                            logBase="agents"
+                            logLabel={t("log")}
+                            runId={it.makerRunRef}
+                          />
+                        </Stack>
+                      ) : it.makerKind === "pipeline" ? (
+                        <Typography mono size="2xs" type="note" variant="tertiary">
+                          {t("goalPipelineMakerNote")}
+                        </Typography>
+                      ) : null}
+
+                      {it.verifier.kind === "claude" && it.verifier.runRef && (
+                        <Stack gap="50">
+                          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                            {t("goalVerifierLog")}
+                          </Typography>
+                          <RunLogStream
+                            key={it.verifier.runRef}
+                            linesLabel={(n) => t("lines", { n })}
+                            live={it.status === "running"}
+                            liveLabel={t("liveLog")}
+                            logBase="agents"
+                            logLabel={t("log")}
+                            runId={it.verifier.runRef}
+                          />
+                        </Stack>
+                      )}
+
+                      {it.verifier.output && (
+                        <Stack gap="50">
+                          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                            {t("goalVerifierVerdict")}
+                          </Typography>
+                          <CodeBlock maxHeight="md" text={it.verifier.output} />
+                        </Stack>
+                      )}
+                    </Stack>
+                  )}
                 </Stack>
-                <Stack align="center" direction="row" gap="50">
-                  <Icon
-                    name={it.verifier.satisfied ? "ok" : "x"}
-                    size="xs"
-                    tone={it.verifier.satisfied ? "ok" : "bad"}
-                  />
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {it.verifier.satisfied ? t("goalVerifierPass") : t("goalVerifierFail")}
-                  </Typography>
-                </Stack>
-              </Stack>
-            ))}
+              );
+            })}
           </Stack>
         )}
       </HudPanel>
