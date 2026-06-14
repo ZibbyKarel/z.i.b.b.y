@@ -43,4 +43,39 @@ describe("InboxPanel", () => {
     // The triaged item with an approval shows the "needs approval" marker (cs catalog).
     expect(screen.getByText("čeká na schválení")).toBeInTheDocument();
   });
+
+  it("surfaces the autonomy tier of a triaged item (accountability)", () => {
+    items = [
+      item({
+        id: "t3",
+        state: "triaged",
+        approvalId: "appr_1",
+        triage: { actionable: true, tier: 3, category: "request", confidence: 0.6, reason: "x" },
+      }),
+    ];
+    render(<InboxPanel />);
+    expect(screen.getByText("Tier 3")).toBeInTheDocument();
+  });
+
+  it("shows the handling action — dispatched for a Tier-1 task, replied for a sent reply", () => {
+    items = [
+      item({
+        id: "t1",
+        state: "handled",
+        taskId: "writer_1",
+        triage: { actionable: true, tier: 1, category: "bug", confidence: 0.9, reason: "x" },
+      }),
+      item({
+        id: "t2",
+        state: "handled",
+        reply: { text: "thanks", sentAt: "2026-06-12T01:00:00.000Z" },
+        triage: { actionable: true, tier: 2, category: "question", confidence: 0.8, reason: "x" },
+      }),
+    ];
+    render(<InboxPanel />);
+    expect(screen.getByText("předáno")).toBeInTheDocument();
+    expect(screen.getByText("odpovězeno")).toBeInTheDocument();
+    expect(screen.getByText("Tier 1")).toBeInTheDocument();
+    expect(screen.getByText("Tier 2")).toBeInTheDocument();
+  });
 });

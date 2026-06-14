@@ -12,6 +12,14 @@ const STATE_TONE: Record<ChannelItemState, "neutral" | "ok" | "warn" | "bad"> = 
   ignored: "bad",
 };
 
+/** Autonomy-contract tier → chip tone, escalating: 1 act-silently, 2 act-then-report,
+ *  3 surface-and-wait. The tier — not the channel — decides how ZIBBY acted. */
+const TIER_TONE: Record<1 | 2 | 3, "ok" | "accent" | "warn"> = {
+  1: "ok",
+  2: "accent",
+  3: "warn",
+};
+
 export enum InboxPanelTestId {
   Root = "inbox-panel",
   Item = "inbox-item",
@@ -30,6 +38,11 @@ function InboxRow({ item }: { item: ChannelItem }) {
     >
       <Stack align="center" direction="row" gap="100">
         <Tag tone={STATE_TONE[item.state]}>{t(`inbox.state.${item.state}`)}</Tag>
+        {item.triage && (
+          <Tag tone={TIER_TONE[item.triage.tier]}>
+            {t("inbox.tier", { n: item.triage.tier })}
+          </Tag>
+        )}
         {item.triage && <Tag tone="neutral">{t(`inbox.category.${item.triage.category}`)}</Tag>}
         {item.projectId && <Tag tone="accent">{item.projectId}</Tag>}
         <Container minW0 maxWidth="320px">
@@ -39,6 +52,10 @@ function InboxRow({ item }: { item: ChannelItem }) {
         </Container>
       </Stack>
       <Stack align="center" direction="row" gap="75">
+        {/* What ZIBBY did with it — the tiered autonomy action, so the inbox is
+            accountable, not just a feed. */}
+        {item.taskId && <Tag tone="accent">{t("inbox.dispatched")}</Tag>}
+        {item.reply && <Tag tone="ok">{t("inbox.replied")}</Tag>}
         {item.approvalId && item.state === "triaged" && (
           <Tag tone="warn">{t("inbox.needsApproval")}</Tag>
         )}

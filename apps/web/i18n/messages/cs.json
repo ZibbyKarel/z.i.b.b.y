@@ -391,6 +391,9 @@
   "inbox": {
     "title": "Příchozí zprávy",
     "needsApproval": "čeká na schválení",
+    "tier": "Tier {n}",
+    "dispatched": "předáno",
+    "replied": "odpovězeno",
     "state": {
       "new": "nové",
       "triaged": "roztříděno",

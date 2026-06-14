@@ -391,6 +391,9 @@
   "inbox": {
     "title": "Inbox",
     "needsApproval": "needs approval",
+    "tier": "Tier {n}",
+    "dispatched": "dispatched",
+    "replied": "replied",
     "state": {
       "new": "new",
       "triaged": "triaged",

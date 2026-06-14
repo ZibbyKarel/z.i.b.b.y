@@ -7648,7 +7648,7 @@
       "label": "InboxRow()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/components/InboxPanel.tsx",
-      "source_location": "L21",
+      "source_location": "L29",
       "id": "inboxpanel_inboxrow",
       "community": 242,
       "norm_label": "inboxrow()"
@@ -31725,7 +31725,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/components/InboxPanel.tsx",
-      "source_location": "L21",
+      "source_location": "L29",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_integrations_components_inboxpanel_tsx",
       "_tgt": "inboxpanel_inboxrow",

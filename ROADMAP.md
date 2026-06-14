@@ -1004,6 +1004,28 @@ override) — the link/backlink rows already cover navigation.
 
 ---
 
+## Phase 35 — Inbox shows the autonomy tier + what ZIBBY did (accountability) — ✅ delivered 2026-06-14
+
+_Audit of the `/integrations` (channels / autonomous mode) surface. It's real (integrations CRUD +
+credentials + connection test + a `ChannelItem` inbox reading the live query) — but the `InboxPanel`
+under-surfaced the autonomy contract. `ChannelItem.triage` carries `tier` (1 act-silently /
+2 act-then-report / 3 surface-and-wait — "the tier, not the channel, decides how ZIBBY acts") and the
+item carries the action ZIBBY took (`taskId` dispatched, `reply` sent, `approvalId` parked), yet the
+inbox row showed only state + category + a Tier-3 "needs approval" marker. The operator couldn't see
+**at what autonomy tier** an item was handled or **what was done** — the core of "always accountable"._
+
+- `InboxPanel`: each triaged row now shows a **tier chip** (`Tier 1/2/3`, tone escalating
+  ok→accent→warn) and **handling markers** — `taskId` → "dispatched", `reply` → "replied" — alongside
+  the existing Tier-3 "needs approval". So the inbox reads: what came in, how ZIBBY classified it
+  (tier + category), and what it did. Inbound `text` stays a truncated preview (data, not commands —
+  Law 4 unchanged).
+- i18n `inbox.tier` / `inbox.dispatched` / `inbox.replied` (cs+en).
+
+**Tests:** `InboxPanel.test.tsx` — a Tier-3 item shows "Tier 3"; a Tier-1 item with a `taskId` shows
+"dispatched"; an item with a `reply` shows "replied". web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
