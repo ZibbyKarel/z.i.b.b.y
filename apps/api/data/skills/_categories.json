@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Research",
+    "glyph": "search"
+  },
+  {
+    "name": "Marketing & Content",
+    "glyph": "spark"
+  },
+  {
+    "name": "Sales & Growth",
+    "glyph": "dollar"
+  },
+  {
+    "name": "Coding & Delivery",
+    "glyph": "code"
+  },
+  {
+    "name": "Agentic",
+    "glyph": "flow"
+  }
+]
