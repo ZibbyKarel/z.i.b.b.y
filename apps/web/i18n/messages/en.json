@@ -688,7 +688,7 @@
     "volume": "Volume",
     "mute": "Mute ZIBBY's voice",
     "unmute": "Unmute ZIBBY's voice",
-    "handToTask": "New task from this",
+    "send": "Dispatch",
     "briefMe": "Brief me",
     "hint": "click the mic for a demo · Esc for HUD",
     "hintLive": "click the mic and speak · Esc for HUD",
@@ -708,7 +708,10 @@
       "nothingToStop": "No running agent to stop.",
       "navigating": "Navigating…",
       "closing": "Closing VOICE MODE.",
-      "heard": "Got it — staged as a new task."
+      "dispatching": "On it — starting that: {task}",
+      "started": "It's running — watch it in the HUD.",
+      "dispatchFailed": "I couldn't start that.",
+      "heard": "I didn't catch that."
     },
     "speak": {
       "briefing": "{agents} agents running, {approvals} approvals waiting.",

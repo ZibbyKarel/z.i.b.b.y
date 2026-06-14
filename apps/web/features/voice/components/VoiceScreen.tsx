@@ -10,7 +10,6 @@ import { Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { RUN_STATE } from "../../runs/run";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, compactAgo } from "../../../utils/time";
-import { useNewTask } from "../../tasks";
 import { useVoiceData } from "../hooks/useVoiceData";
 import { useVoiceSession } from "../hooks/useVoiceSession";
 import { useUtteranceDispatch } from "../hooks/useUtteranceDispatch";
@@ -42,7 +41,6 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
   const { mode, state, revealed, isActive, transcript, interim, isSupported, error, toggleMic } =
     useVoiceSession({ lang });
   const { approvals, liveRuns, recent, skills } = useVoiceData();
-  const { open: openNewTask } = useNewTask();
   // A render-stable "now" for the relative times, ticked once a minute.
   const now = useNow(MINUTE_MS);
 
@@ -64,27 +62,12 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
         ? demoMessages
         : demoMessages.slice(0, 2);
 
-  // Phase 11.4 seam: hand a spoken utterance to the unified composer — the
-  // operator confirms single vs loop behind the gate. Also the "heard" sink for
-  // the Phase 18 bridge: plain speech (no recognised command) routes here.
-  const handOff = useCallback(
-    (text: string) => {
-      if (text.trim().length === 0) return;
-      onExit();
-      openNewTask(text);
-    },
-    [onExit, openNewTask],
-  );
-
-  // Phase 18: dispatch every finalized utterance — commands (approve/reject/stop/
-  // navigate/close) act on the real mutations, anything else is handed off as a
-  // task. The ack is surfaced in an aria-live region; never spoken (TTS is next).
-  const { dispatch, ack } = useUtteranceDispatch({
-    approvals,
-    liveRuns,
-    onExit,
-    onStageTask: handOff,
-  });
+  // Phase 23: dispatch every finalized utterance — gate answers (approve/reject) and
+  // control verbs (stop/navigate/close) act on the real mutations; anything else is a
+  // spoken **task** that dispatches straight to the `/tasks` layer (no composer modal —
+  // confirming understanding is the conversation's job). The ack is surfaced in an
+  // aria-live region and spoken via TTS below.
+  const { dispatch, ack } = useUtteranceDispatch({ approvals, liveRuns, onExit });
   const lastDispatched = useRef("");
   useEffect(() => {
     if (mode !== "live") return;
@@ -104,7 +87,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
   useEffect(() => {
     if (mode !== "live" || muted || !ack || ack === spokenAck.current) return;
     spokenAck.current = ack;
-    speak(t(`ack.${ack.key}`), speechLang);
+    speak(t(`ack.${ack.key}`, ack.values), speechLang);
   }, [ack, mode, muted, speak, t, speechLang]);
   const toggleMute = () => {
     setMuted((m) => {
@@ -163,14 +146,17 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     speak(text, speechLang);
   }, [recent, mode, muted, speak, t, speechLang]);
 
-  // The manual "new task from this" button: the live transcript, else the demo's
-  // last user line so the seam stays exercised deterministically.
+  // The manual "Send" button dispatches the last utterance straight to the tasks
+  // layer (same path as the auto-dispatch) — the live transcript, else the demo's
+  // last user line so the seam stays exercised deterministically in demo/CI.
   const lastUserUtterance =
     mode === "live"
       ? transcript
       : ([...demoMessages].reverse().find((m) => m.role === "user")?.text ?? "");
-  const canHandToTask = lastUserUtterance.trim().length > 0;
-  const handToTask = () => handOff(lastUserUtterance);
+  const canSend = lastUserUtterance.trim().length > 0;
+  const sendUtterance = () => {
+    if (canSend) dispatch(lastUserUtterance);
+  };
 
   // Esc exits voice mode.
   useEffect(() => {
@@ -424,10 +410,11 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
             </Typography>
           )}
 
-          {/* What the last spoken command did — politely announced, not spoken. */}
+          {/* What the last spoken command did — announced in an aria-live region
+              (also spoken via TTS above). Dispatches echo the understood task. */}
           {mode === "live" && ack && (
             <Typography mono aria-live="polite" role="status" size="2xs" tone="accent" type="note">
-              {t(`ack.${ack.key}`)}
+              {t(`ack.${ack.key}`, ack.values)}
             </Typography>
           )}
 
@@ -492,13 +479,13 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
 
         <button
           className="flex items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors enabled:cursor-pointer enabled:hover:border-accent enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={!canHandToTask}
-          onClick={handToTask}
-          title={t("handToTask")}
+          disabled={!canSend}
+          onClick={sendUtterance}
+          title={t("send")}
           type="button"
         >
-          <Icon name="plus" size="xs" />
-          {t("handToTask")}
+          <Icon name="play" size="xs" />
+          {t("send")}
         </button>
 
         <Typography mono size="2xs" style={{ letterSpacing: "0.08em" }} type="note" variant="tertiary">

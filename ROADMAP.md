@@ -677,6 +677,46 @@ web/DS+api 1472/1472.
 
 ---
 
+## Phase 23 — Conversational voice dispatch (North-Star realignment) — ✅ delivered 2026-06-14
+
+_The operator rewrote `north-star.md` (2026-06-14): **Voice is a conversation, not a
+command line** — "no 'new task' form to confirm — when ZIBBY understands the intent, it
+dispatches to the same `/tasks` layer the HUD drives, on its own, and tells you it has
+while the work runs." This re-opens functional voice work. The old voice path staged a
+spoken task into the **NewTaskDialog composer** (a confirm modal), conflating "did I
+understand you" (the conversation's job, never a modal) with the gate (a transactional
+confirm, never skipped). Phase 23 removes that modal seam: a spoken intent dispatches
+straight to the tasks layer and ZIBBY narrates it._
+
+**This is the first realignment slice — deliberately small.** Gate answers (spoken
+approve/reject) and the control verbs (stop/navigate/close) are unchanged; only the
+`createTask` branch changes from *stage-to-modal* to *dispatch-and-narrate*. Turn-by-turn
+clarification, live run-event narration, and full "Claude behind the channel" are later
+phases.
+
+- **`runVoiceAction`** — the `createTask` branch now calls a `dispatchTask(text)` handler
+  (was `stageTask`, which opened the composer) and returns a `dispatching` ack carrying
+  the understood text; an empty utterance still returns `heard` without dispatching.
+  `VoiceAck.values` widened to `{ page?; task? }`.
+- **`useUtteranceDispatch`** — owns `useCreateTaskMutation`; `dispatchTask` fires
+  `createTask({ text, paths })` directly (the Phase-11 backend classifier routes
+  agent/pipeline/orchestrator), then flips the ack `dispatching → started` on success or
+  `dispatchFailed` on error. **No navigation** — the overlay stays open so the new run
+  surfaces in the live "Active agents" panel (visible-and-steerable-in-the-HUD). Nothing
+  here touches the gate.
+- **`VoiceScreen`** — drops `useNewTask`/`openNewTask` entirely; the auto-dispatch of
+  each finalized transcript and the manual "Send" button both go through `dispatch`. TTS
+  now narrates the dispatch (`dispatching` echoes the understood text, `started` confirms
+  it's running) — "the butler talks back while the work happens, not only after."
+- i18n `voice.ack.{dispatching,started,dispatchFailed}` + relabelled `voice.send` (cs+en).
+
+**Tests:** `runVoiceAction` dispatch-not-stage + empty-noop; `useUtteranceDispatch`
+(dispatch fires `createTask` with text+paths, ack `dispatching→started`, error→failed, no
+navigate); `VoiceScreen` (finalized transcript dispatches; Send dispatches without
+exiting; speaks the dispatch ack). web/DS+api green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

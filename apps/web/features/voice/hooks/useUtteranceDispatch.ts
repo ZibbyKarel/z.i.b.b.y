@@ -4,6 +4,8 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApproveMutation, useRejectMutation } from "../../approvals/mutations";
 import { useStopAgentMutation } from "../../runs/mutations";
+import { useCreateTaskMutation } from "../../tasks/mutations";
+import { extractPaths } from "../../tasks/task";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../../runs/run";
 import { parseUtterance } from "../parseUtterance";
@@ -16,38 +18,56 @@ export interface UseUtteranceDispatchOptions {
   liveRuns: Pick<RunView, "runId" | "kind" | "status">[];
   /** Leaves voice mode (navigate / close). */
   onExit: () => void;
-  /** Hands a non-command utterance to the composer seam (the "heard" path). */
-  onStageTask: (text: string) => void;
 }
 
 export interface UtteranceDispatch {
   /** Parse a finalized utterance and run it; returns the ack it produced. */
   dispatch: (text: string) => VoiceAck;
-  /** The most recent acknowledgement, for an `aria-live` surface. */
+  /** The most recent acknowledgement, for an `aria-live` + TTS surface. */
   ack: VoiceAck | null;
 }
 
 /**
  * Binds the pure {@link parseUtterance}/{@link runVoiceAction} pair to the real
  * approval/stop mutations, the Next router and the overlay exit. The voice screen
- * calls `dispatch` once per finalized transcript; commands act immediately, plain
- * speech is staged as a one-tap task. Nothing here bypasses the gate — approve/reject
- * are the operator's own spoken decision at the gate.
+ * calls `dispatch` once per finalized transcript.
+ *
+ * A spoken **task** dispatches straight to the `/tasks` layer ({@link useCreateTaskMutation}
+ * — the Phase-11 backend classifier routes agent/pipeline/orchestrator), then the ack
+ * flips `dispatching → started` (or `dispatchFailed`); there is **no composer modal** and
+ * **no navigation**, so the overlay stays open and the new run surfaces in the live HUD
+ * panels (North Star: confirming understanding is the conversation's job, never a modal).
+ * Gate **answers** (approve/reject) are the operator's own spoken decision *at* the gate —
+ * nothing here bypasses it.
  */
 export function useUtteranceDispatch(
   options: UseUtteranceDispatchOptions,
 ): UtteranceDispatch {
-  const { approvals, liveRuns, onExit, onStageTask } = options;
+  const { approvals, liveRuns, onExit } = options;
   const router = useRouter();
   const approve = useApproveMutation();
   const reject = useRejectMutation();
   const stop = useStopAgentMutation();
+  const createTask = useCreateTaskMutation();
   const [ack, setAck] = useState<VoiceAck | null>(null);
 
   const pendingApprovalId = approvals[0]?.id;
   const activeRunId = liveRuns.find(
     (r) => r.status === "running" && r.kind === "agent",
   )?.runId;
+
+  const dispatchTask = useCallback(
+    (text: string) => {
+      createTask.mutate(
+        { body: { text, paths: extractPaths(text) } },
+        {
+          onSuccess: () => setAck({ key: "started" }),
+          onError: () => setAck({ key: "dispatchFailed" }),
+        },
+      );
+    },
+    [createTask],
+  );
 
   const dispatch = useCallback(
     (text: string): VoiceAck => {
@@ -58,7 +78,7 @@ export function useUtteranceDispatch(
         reject: (id) => reject.mutate({ params: { id }, body: {} }),
         stop: (runId) => stop.mutate({ params: { runId }, body: {} }),
         navigate: (route) => router.push(route),
-        stageTask: onStageTask,
+        dispatchTask,
         close: onExit,
       });
       setAck(result);
@@ -72,7 +92,7 @@ export function useUtteranceDispatch(
       stop,
       router,
       onExit,
-      onStageTask,
+      dispatchTask,
     ],
   );
 

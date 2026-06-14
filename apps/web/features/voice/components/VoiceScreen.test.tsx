@@ -9,13 +9,12 @@ import { VoiceScreen } from "./VoiceScreen";
 // unit-tested separately, so here we drive mode/transcript directly and assert
 // the screen's projection of them.
 const mockSession = vi.hoisted(() => ({ current: null as unknown as VoiceSession }));
-const openSpy = vi.hoisted(() => vi.fn());
-// The dispatch bridge is unit-tested separately (parseUtterance + runVoiceAction);
-// here we mock it to assert the screen feeds it finalized transcripts and renders
-// the ack it returns.
+// The dispatch bridge is unit-tested separately (parseUtterance + runVoiceAction +
+// useUtteranceDispatch); here we mock it to assert the screen feeds it finalized
+// transcripts and renders/speaks the ack it returns.
 const dispatchMock = vi.hoisted(() => ({
   dispatch: vi.fn(),
-  ack: null as { key: string } | null,
+  ack: null as { key: string; values?: Record<string, unknown> } | null,
 }));
 // TTS is unit-tested separately (useSpeech.test); here we mock it to assert the
 // screen speaks acknowledgements aloud.
@@ -47,7 +46,6 @@ vi.mock("../hooks/useUtteranceDispatch", () => ({
 vi.mock("../hooks/useSpeech", () => ({
   useSpeech: () => speechMock,
 }));
-vi.mock("../../tasks", () => ({ useNewTask: () => ({ open: openSpy }) }));
 vi.mock("next/image", () => ({
   default: ({ alt, ...rest }: { alt?: string } & Record<string, unknown>) =>
     createElement("img", { alt: alt ?? "", ...rest }),
@@ -164,24 +162,36 @@ describe("VoiceScreen", () => {
     expect(screen.getByText("run the tests")).toBeInTheDocument();
   });
 
-  it("hands the real transcript to the composer", () => {
-    openSpy.mockClear();
+  it("the Send button dispatches the real transcript directly — no composer, no exit", () => {
     const onExit = vi.fn();
     mockSession.current = liveSession({ transcript: "deploy the app" });
     render(<VoiceScreen onExit={onExit} />);
 
-    const handBtn = screen.getByText("Nový task z tohoto").closest("button");
-    expect(handBtn).not.toBeDisabled();
-    handBtn?.click();
-    expect(onExit).toHaveBeenCalled();
-    expect(openSpy).toHaveBeenCalledWith("deploy the app");
+    // Ignore the auto-dispatch on mount; assert the button's own dispatch.
+    dispatchMock.dispatch.mockClear();
+    const sendBtn = screen.getByText("Spustit").closest("button");
+    expect(sendBtn).not.toBeDisabled();
+    sendBtn?.click();
+    expect(dispatchMock.dispatch).toHaveBeenCalledWith("deploy the app");
+    // Dispatch keeps the overlay open (the run surfaces in the live HUD panels).
+    expect(onExit).not.toHaveBeenCalled();
   });
 
-  it("disables hand-to-task until something is spoken", () => {
+  it("disables Send until something is spoken", () => {
     mockSession.current = liveSession({ transcript: "", state: "idle", isActive: false });
     render(<VoiceScreen onExit={vi.fn()} />);
-    const handBtn = screen.getByText("Nový task z tohoto").closest("button");
-    expect(handBtn).toBeDisabled();
+    const sendBtn = screen.getByText("Spustit").closest("button");
+    expect(sendBtn).toBeDisabled();
+  });
+
+  it("speaks the dispatch ack, echoing the understood task", () => {
+    dispatchMock.ack = { key: "dispatching", values: { task: "nasaď build" } };
+    mockSession.current = liveSession({ transcript: "nasaď build" });
+    render(<VoiceScreen onExit={vi.fn()} />);
+    expect(speechMock.speak).toHaveBeenCalledWith(
+      "Rozumím — spouštím to: nasaď build",
+      "cs-CZ",
+    );
   });
 
   it("shows interim ghost text while listening", () => {

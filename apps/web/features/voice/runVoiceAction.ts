@@ -2,12 +2,13 @@ import type { NavPage, VoiceAction } from "./parseUtterance";
 
 /**
  * A localizable acknowledgement of what a dispatched utterance did. `key` is the
- * `voice.ack.*` message id; `values` carries interpolation (e.g. the page name).
- * The screen renders it in an `aria-live` region — nothing here speaks.
+ * `voice.ack.*` message id; `values` carries interpolation — the page name for a
+ * navigation, or the understood text for a dispatch (so ZIBBY can echo it back).
+ * The screen renders it in an `aria-live` region and speaks it via TTS.
  */
 export interface VoiceAck {
   key: VoiceAckKey;
-  values?: { page: NavPage };
+  values?: { page?: NavPage; task?: string };
 }
 
 export type VoiceAckKey =
@@ -19,12 +20,20 @@ export type VoiceAckKey =
   | "nothingToStop"
   | "navigating"
   | "closing"
+  // A spoken task: `dispatching` is the optimistic "starting that — <task>" ack the
+  // moment it's understood; `started`/`dispatchFailed` are set by the hook once the
+  // backend dispatch resolves. `heard` is the empty-utterance no-op (nothing to do).
+  | "dispatching"
+  | "started"
+  | "dispatchFailed"
   | "heard";
 
 /**
  * The side-effect handlers a {@link VoiceAction} is executed against. Injected so
  * the executor stays pure (the hook binds real mutations/router/exit). `pendingApprovalId`
  * is the latest gate awaiting a decision; `activeRunId` the agent run that "stop" targets.
+ * `dispatchTask` sends a spoken task straight to the `/tasks` layer — no composer modal,
+ * because confirming understanding is the conversation's job, not a form (North Star).
  */
 export interface VoiceActionDeps {
   pendingApprovalId?: string;
@@ -33,7 +42,7 @@ export interface VoiceActionDeps {
   reject: (id: string) => void;
   stop: (runId: string) => void;
   navigate: (route: string) => void;
-  stageTask: (text: string) => void;
+  dispatchTask: (text: string) => void;
   close: () => void;
 }
 
@@ -41,7 +50,9 @@ export interface VoiceActionDeps {
  * Execute a parsed {@link VoiceAction} against the injected handlers and return a
  * {@link VoiceAck}. Pure but for the handler calls — when the targeted resource is
  * absent (no pending approval, no running agent) it acts on nothing and returns the
- * "nothing to …" ack, never a silent no-op. `navigate` also exits the overlay.
+ * "nothing to …" ack, never a silent no-op. `navigate` also exits the overlay. A spoken
+ * task dispatches immediately (no modal) and returns the optimistic `dispatching` ack;
+ * the hook upgrades it to `started`/`dispatchFailed` once the backend responds.
  */
 export function runVoiceAction(
   action: VoiceAction,
@@ -73,8 +84,11 @@ export function runVoiceAction(
     case "closeOverlay":
       deps.close();
       return { key: "closing" };
-    case "createTask":
-      deps.stageTask(action.text);
-      return { key: "heard" };
+    case "createTask": {
+      const text = action.text.trim();
+      if (!text) return { key: "heard" };
+      deps.dispatchTask(text);
+      return { key: "dispatching", values: { task: text } };
+    }
   }
 }

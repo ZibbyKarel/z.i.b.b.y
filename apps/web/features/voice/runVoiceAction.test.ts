@@ -7,7 +7,7 @@ function makeDeps(over: Partial<VoiceActionDeps> = {}): VoiceActionDeps {
     reject: vi.fn(),
     stop: vi.fn(),
     navigate: vi.fn(),
-    stageTask: vi.fn(),
+    dispatchTask: vi.fn(),
     close: vi.fn(),
     ...over,
   };
@@ -78,11 +78,19 @@ describe("runVoiceAction", () => {
     expect(deps.close).toHaveBeenCalled();
   });
 
-  it("stages plain speech as a task", () => {
+  it("dispatches plain speech straight to the tasks layer (no modal)", () => {
     const deps = makeDeps();
     expect(
       runVoiceAction({ kind: "createTask", text: "fix the build" }, deps),
+    ).toEqual({ key: "dispatching", values: { task: "fix the build" } });
+    expect(deps.dispatchTask).toHaveBeenCalledWith("fix the build");
+  });
+
+  it("an empty utterance is a no-op — nothing dispatched", () => {
+    const deps = makeDeps();
+    expect(
+      runVoiceAction({ kind: "createTask", text: "   " }, deps),
     ).toEqual({ key: "heard" });
-    expect(deps.stageTask).toHaveBeenCalledWith("fix the build");
+    expect(deps.dispatchTask).not.toHaveBeenCalled();
   });
 });
