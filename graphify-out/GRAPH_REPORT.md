@@ -1,7 +1,7 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-14)
 
 ## Corpus Check
-- 973 files · ~1,050,684 words
+- 973 files · ~1,051,530 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -5105,8 +5105,10 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `filter()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 5`, `Community 7`, `Community 8`, `Community 9`, `Community 11`, `Community 12`, `Community 13`, `Community 17`, `Community 24`, `Community 28`, `Community 30`?**
-  _High betweenness centrality (0.078) - this node is a cross-community bridge._
-- **Why does `resolveDataRoot()` connect `Community 10` to `Community 4`?**
+  _High betweenness centrality (0.079) - this node is a cross-community bridge._
+- **Why does `t()` connect `Community 8` to `Community 7`, `Community 6`, `Community 14`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `useVoiceData()` connect `Community 7` to `Community 6`?**
   _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **Are the 69 inferred relationships involving `filter()` (e.g. with `DesignSystemProvider()` and `toggleWeekday()`) actually correct?**
   _`filter()` has 69 INFERRED edges - model-reasoned connections that need verification._
@@ -5115,6 +5117,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `AppModule`, `GatesModule`, `ScheduledTasksStorageModule` to the rest of the system?**
   _34 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._

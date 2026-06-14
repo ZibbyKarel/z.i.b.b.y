@@ -934,6 +934,25 @@ Confirm; reject stays single-click. web/DS green (runs 60, full web-components 3
 
 ---
 
+## Phase 32 — Overview starter cards actually navigate (dead-affordance fix) — ✅ delivered 2026-06-14
+
+_The briefing turned out to be well-surfaced already (`SummaryWidget` + `BriefingCard` reading the
+real `GET /api/briefing` + `ActivityFeed`), so the proposed "surface the briefing" was a non-gap. The
+gap analysis instead found a **dead interactive element** on the first screen a new operator sees: the
+fresh-workspace **starter cards** (Skills / Integrations / Agents / Pipelines) were wrapped in a
+`Pressable` whose `onClick` was an empty no-op with the comment "navigation handled by links" — but
+there were **no links**. Clicking a starter did nothing. The only no-op `onClick` in the whole web
+app (swept)._
+
+- `overview/Screen.tsx`: each starter `Card` is now wrapped in a `next/link` `<Link href={`/${id}`}>`
+  (mirrors `BriefingCard`'s `NeedsYouRow` pattern) — the `STARTERS` ids (`skills`/`integrations`/
+  `agents`/`pipelines`) are exactly their dashboard route segments. The no-op `Pressable` is gone.
+
+**Tests:** `overview/Screen.test.tsx` — with an empty (fresh) workspace, the four starter cards render
+as links pointing at `/skills`, `/integrations`, `/agents`, `/pipelines`. web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

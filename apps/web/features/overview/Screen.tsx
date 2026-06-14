@@ -6,10 +6,10 @@ import {
   Grid,
   Icon,
   IconTile,
-  Pressable,
   Stack,
   Typography,
 } from "@zibby/design-system";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -60,12 +60,10 @@ export function Screen() {
           <HudPanel title={t("overview.starterTitle")}>
             <Grid cols={1} gap="100" sm={2}>
               {STARTERS.map((s) => (
-                <Pressable
-                  key={s.id}
-                  onClick={() => {
-                    /* navigation handled by links */
-                  }}
-                >
+                // Each starter deep-links to its dashboard segment (the ids ARE the route
+                // segments). `Link` is a component, so react/forbid-dom-props doesn't apply
+                // to its `style` — same pattern as BriefingCard's NeedsYouRow.
+                <Link href={`/${s.id}`} key={s.id} style={{ display: "block" }}>
                   <Card interactive background="background" radius="default">
                     <Container padding={["100", "150"]}>
                       <Stack align="center" direction="row" gap="150">
@@ -94,7 +92,7 @@ export function Screen() {
                       </Stack>
                     </Container>
                   </Card>
-                </Pressable>
+                </Link>
               ))}
             </Grid>
           </HudPanel>
