@@ -10,7 +10,12 @@ import type { RunView } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 
 export interface PipelineStageTimelineProps {
-  run: RunView;
+  /** The pipeline run whose stages to show (its own runId, or a goal's pipeline maker ref). */
+  pipelineRunId: string;
+  /** The pipeline definition id, for the "open pipeline" link (empty → link hidden). */
+  owner: string;
+  /** The per-phase stage runs (may be undefined while the run aggregate is loading). */
+  stageRuns: RunView["stageRuns"];
 }
 
 /**
@@ -47,13 +52,32 @@ function StageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phaseId: 
  * at most one stage-log query in flight. The footer links to the pipeline *definition*
  * (a different surface — the template, not this run).
  */
-export function PipelineStageTimeline({ run }: PipelineStageTimelineProps) {
+export function PipelineStageTimeline({
+  pipelineRunId,
+  owner,
+  stageRuns,
+}: PipelineStageTimelineProps) {
   const t = useTranslations("runs");
   const router = useRouter();
-  const stages = run.stageRuns ?? [];
+  const stages = stageRuns ?? [];
   // Which stage's log is expanded (`"${phaseId}#${attempt}"`), or null. Single open ⇒
   // at most one stage-log fetch live.
   const [openLog, setOpenLog] = useState<string | null>(null);
+
+  // Link to the pipeline *definition* (a different surface than this run). Hidden when
+  // the owner id isn't known yet (e.g. a goal's maker run aggregate still loading).
+  const openPipelineLink = owner ? (
+    <Stack direction="row" justify="end">
+      <Button
+        icon="flow"
+        intent="ghost"
+        onClick={() => router.push(`/pipelines/${owner}`)}
+        size="sm"
+      >
+        {t("openPipeline")}
+      </Button>
+    </Stack>
+  ) : null;
 
   return (
     <HudPanel padding="250" title={t("stageTimeline")}>
@@ -62,16 +86,7 @@ export function PipelineStageTimeline({ run }: PipelineStageTimelineProps) {
           <Typography mono size="xs" type="note" variant="tertiary">
             {t("stageNone")}
           </Typography>
-          <Stack direction="row" justify="end">
-            <Button
-              icon="flow"
-              intent="ghost"
-              onClick={() => router.push(`/pipelines/${run.owner}`)}
-              size="sm"
-            >
-              {t("openPipeline")}
-            </Button>
-          </Stack>
+          {openPipelineLink}
         </Stack>
       ) : (
         <Stack gap="100">
@@ -107,20 +122,11 @@ export function PipelineStageTimeline({ run }: PipelineStageTimelineProps) {
                     </Button>
                   </Stack>
                 </Stack>
-                {isOpen && <StageLog phaseId={s.phaseId} pipelineRunId={run.runId} />}
+                {isOpen && <StageLog phaseId={s.phaseId} pipelineRunId={pipelineRunId} />}
               </Stack>
             );
           })}
-          <Stack direction="row" justify="end">
-            <Button
-              icon="flow"
-              intent="ghost"
-              onClick={() => router.push(`/pipelines/${run.owner}`)}
-              size="sm"
-            >
-              {t("openPipeline")}
-            </Button>
-          </Stack>
+          {openPipelineLink}
         </Stack>
       )}
     </HudPanel>

@@ -832,11 +832,11 @@
     "goalMakerLog": "maker log",
     "goalVerifierLog": "verifier log",
     "goalVerifierVerdict": "verdict",
-    "goalPipelineMakerNote": "Maker ran as a pipeline — its per-stage logs live in the pipeline detail.",
     "stageTimeline": "Run stages",
     "stageAttempt": "attempt {n}",
     "stageNoLog": "This stage has no log yet.",
-    "stageNone": "This run has no stages yet."
+    "stageNone": "This run has no stages yet.",
+    "stageLoading": "Loading maker stages…"
   },
   "gates": {
     "title": "Approval rules",

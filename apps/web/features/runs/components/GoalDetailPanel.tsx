@@ -14,7 +14,9 @@ import {
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useGoalsQuery } from "../../goals/queries";
 import { useResumeGoalRunMutation } from "../../goals/mutations";
+import { usePipelineRunQuery } from "../../pipelines/queries";
 import type { RunView } from "../run";
+import { PipelineStageTimeline } from "./PipelineStageTimeline";
 import { RunLogStream } from "./RunLogStream";
 
 export interface GoalDetailPanelProps {
@@ -38,6 +40,12 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   const [openLog, setOpenLog] = useState<number | null>(null);
 
   const iterations = run.iterations ?? [];
+  // Phase 29: when the *open* iteration's maker is a pipeline, fetch that maker run's
+  // aggregate so its stage timeline can render inline (one query — only the open row).
+  const openIter = iterations.find((it) => it.index === openLog);
+  const openMakerPipelineId =
+    openIter?.makerKind === "pipeline" ? openIter.makerRunRef ?? null : null;
+  const { data: makerPipeline } = usePipelineRunQuery(openMakerPipelineId);
   const goal = goals.find((g) => g.id === run.goalId);
   const maxIterations = goal?.maxIterations ?? iterations.length;
   const used = iterations.length;
@@ -171,10 +179,20 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                             runId={it.makerRunRef}
                           />
                         </Stack>
-                      ) : it.makerKind === "pipeline" ? (
-                        <Typography mono size="2xs" type="note" variant="tertiary">
-                          {t("goalPipelineMakerNote")}
-                        </Typography>
+                      ) : it.makerKind === "pipeline" && it.makerRunRef ? (
+                        // Phase 29: the pipeline maker's own stage timeline, inline (its
+                        // child run was folded out of the feed in Phase 26).
+                        makerPipeline ? (
+                          <PipelineStageTimeline
+                            owner={makerPipeline.pipelineId}
+                            pipelineRunId={it.makerRunRef}
+                            stageRuns={makerPipeline.stageRuns}
+                          />
+                        ) : (
+                          <Typography mono size="2xs" type="note" variant="tertiary">
+                            {t("stageLoading")}
+                          </Typography>
+                        )
                       ) : null}
 
                       {it.verifier.kind === "claude" && it.verifier.runRef && (

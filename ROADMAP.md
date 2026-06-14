@@ -861,6 +861,30 @@ this stage view.
 
 ---
 
+## Phase 29 — Goal detail: pipeline-maker iteration opens its stage timeline — ✅ delivered 2026-06-14
+
+_Closes the maker-fold arc 26 → 27 → 28 → 29. Phase 27 left a goal iteration's **pipeline** maker
+showing only a note ("its stage logs live in the pipeline view"); Phase 28 built that view. Phase 29
+joins them so every folded child execution — agent log, claude verifier log, and now pipeline stages
+— is answerable from the goal detail._
+
+- **`PipelineStageTimeline` made id-driven** — props change from `{ run: RunView }` to
+  `{ pipelineRunId, owner, stageRuns }` so a caller holding only a maker run **ref** (a goal iteration)
+  can render it; the "open pipeline" definition link is hidden when `owner` is empty (a maker run
+  aggregate still loading). `RunDetail` caller updated.
+- **`GoalDetailPanel`** — the open iteration's pipeline maker run is fetched with the existing
+  `usePipelineRunQuery(makerRunRef)` (one query, gated on the open row → no fan-out); its
+  `stageRuns` + `pipelineId` feed `PipelineStageTimeline` inline, replacing the Phase-27 note. A brief
+  `stageLoading` line covers the fetch.
+- i18n: dropped the now-dead `goalPipelineMakerNote`, added `runs.stageLoading` (cs+en).
+
+**Tests:** `PipelineStageTimeline.test.tsx` retargeted to the new props + a "definition link hidden
+when owner unknown" case; `GoalDetailPanel.test.tsx` — a pipeline-maker iteration opens the stage
+timeline (mocked `usePipelineRunQuery` + stubbed timeline), wiring the maker run id + pipeline id; no
+agent-log stream. web/DS green (runs 53), full workspace 1511 web + api 691/691 isolated.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

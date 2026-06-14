@@ -252,7 +252,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
         <>
           {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
           {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
-          <PipelineStageTimeline run={run} />
+          <PipelineStageTimeline owner={run.owner} pipelineRunId={run.runId} stageRuns={run.stageRuns} />
         </>
       ) : run.status === "paused-limit" ? (
         <>
