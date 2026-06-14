@@ -178,7 +178,8 @@ export function goalRunToView(r: GoalRun): RunView {
     status,
     pct: null,
     title: "",
-    prompt: r.currentIteration != null ? `iterace ${r.currentIteration + 1}` : "",
+    prompt:
+      r.currentIteration != null ? `iterace ${r.currentIteration + 1}` : "",
     project: r.cwd.split("/").pop() ?? "",
     startedAt: r.startedAt,
     logBase: null,

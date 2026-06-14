@@ -54,4 +54,5 @@ nebo upravuje unit + integration testy pokrývající právě tu funkcionalitu, 
    zjednodušení / bug — ne test infra.
 
 Na konci iterace stručně shrň: jaká fáze hotová, co je zaparkované, jaká fáze přijde
-příště a ČÍM posouvá systém blíž k North Staru. Pak spusť okamžitě další běh.
+příště a ČÍM posouvá systém blíž k North Staru. Nečekej na moje schválení a spusť okamžitě
+další fázi.
