@@ -335,17 +335,30 @@ Plan: [docs/plans/phase-37.md](docs/plans/phase-37.md).
 | ---- | ------ | ----- |
 | 37.1 Surface the locked POLICY.md floor on /gates | ✅ done (2026-06-14) | `/gates` is real (catalog matcher→decision, filter tabs, reorder=first-match order, CRUD via RuleModal). Gap: `useSystemPolicyQuery` (`GET /api/gates/policy` → locked POLICY.md rules) existed + was wired into the **agent** rules editor (`AgentRulesSection`, read-only inherited) but the main `/gates` Screen showed **only the editable catalog** — the floor (deny/ask rules an agent can only harden, never weaken — Law 1; never talked around — Law 4) was invisible on the primary gate page despite the hierarchy note claiming "floor → catalog → agent/skill". Fix: new `SystemFloorPanel` reuses `useSystemPolicyQuery` + `RuleCard locked` (same read-only treatment the agent editor uses) — a warn panel above the catalog listing the floor rules locked (shield, no edit/delete); hidden when empty. No new i18n (reuses `gates.inheritedTitle`/`inheritedNote`/`and`/`you`/`notifyHint`/`decision_.*`). Tests: `SystemFloorPanel.test` — floor rule → title + deny decision + no edit/delete; empty floor → nothing. **web/DS green (gates 2), full workspace 1534/1534** (first run, no flake), lint + web-tsc clean. Commit `05af645`. |
 
+## Phase 38: A disabled automation no longer shows a phantom next-run — ✅ COMPLETE (2026-06-14)
+
+Audit of `/automations` — excellent and real; one honesty bug fixed. Plan: [docs/plans/phase-38.md](docs/plans/phase-38.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 38.1 Honest next-run for disabled automations | ✅ done (2026-06-14) | `/automations` is excellent (real query, cron/event sections, enable toggle + run-now mutations, CRUD via a **friendly schedule picker** with a live `cronLabel` preview, per-card last-fired + computed next-run). Settings/mandate + discovery (proposed-task approvals carry the rationale in the approval `detail`) also checked — solid. Bug: `AutomationCard` computed `nextLabel` from the trigger **without checking `enabled`** → a **disabled** cron automation still showed "next run in 2h", a phantom fire for something that won't run (dishonest status). Fix: `!enabled` → a dedicated `nextOff` ("off · won't run") label instead of a future time (cron + event). i18n `automations.nextOff` (cs+en). Tests: new `AutomationCard.test` — enabled cron shows next-run; disabled shows "off · won't run", not a time. **web/DS green (automations 21), full workspace 1536/1536** (first run, no flake), lint + web-tsc clean. Commit `66ed8ff`. |
+
+**Note (audit signal):** the obvious HUD gaps are thinning — `/automations`, settings/mandate, and
+discovery were all found solid; this iteration's fix was a smaller honesty bug. Surfaces audited &
+improved so far: runs feed/detail, the gate (decision + floor), overview, memory, integrations inbox,
+projects/held, automations.
+
 ## Next iteration
 
-**Proposed Phase 38 — Audit the /automations (heartbeat / scheduled tasks) HUD surface.** The autonomous
-pillar runs on a **heartbeat**: _"watches inbound channels… on a heartbeat"_ + the morning-briefing
-automation (Phase 6). GROUND first against real code: the `/automations` segment + feature dir +
-query/mutation hooks + the automation/schedule contract — verify the HUD shows the **real** configured
-automations (cron/cadence, what each does, enabled/disabled, last-fired/next-fire), that toggling
-enable/disable + create/edit hit the real endpoint, and that the heartbeat status (is the watcher
-actually running?) is honestly shown (not a faked "on"). Pick the single biggest gap (a mock list, an
-unwired toggle, no last-fired/next-fire, a cadence that isn't legible, a dead "run now") as Phase 38's
-concrete change.
+**Proposed Phase 39 — Audit the agents detail / editor surface (core runner config).** Agents are the
+real runners; their detail/editor (`AgentViewDetails` / the agent edit flow + `AgentRulesSection`) wires
+the agent's prompt, linked skills, and **gate rules** (inherited floor + linked catalog + own rules —
+Phase 37 territory). GROUND first against real code: the agents feature dir + view/edit components +
+query/mutation hooks + `AgentSchema` — verify the editor shows/saves the **real** agent (prompt, model,
+glyph, linked skills, gate-rule links) against real endpoints, that the inherited-floor + linked-rules
+hierarchy is legible and honest, and that nothing reads as a mock/dead control. Pick the single biggest
+gap as Phase 39's concrete change. **If agents is also solid, pivot to a DESIGN/UX or SIMPLIFICATION
+improvement** (LOOP priority #2/#3) rather than forcing a micro-bug — the functional gaps are thinning.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
