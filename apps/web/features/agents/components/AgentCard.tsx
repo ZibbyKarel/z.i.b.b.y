@@ -2,7 +2,7 @@ import type { Agent } from "@zibby/contracts";
 import { Icon, type IconName, Tag } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudCard } from "../../../components/HudCard/HudCard";
-import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
+import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 
 export interface AgentCardProps {
   agent: Agent;

@@ -12,7 +12,7 @@ import {
 } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
 import type { Pipeline } from "../../../domain";
-import { ModelBadge, ThinkBadge } from "../../pipelines/components/PhaseChain";
+import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 
 export interface AgentViewDetailsProps {
   agent: Agent;

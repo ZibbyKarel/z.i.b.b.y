@@ -26,7 +26,7 @@ import {
 import type { IconName } from "@zibby/design-system";
 import type { PhaseEscalation, Pipeline } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
-import { ModelBadge, ThinkBadge } from "../PhaseChain";
+import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 
 const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"];
 const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"];

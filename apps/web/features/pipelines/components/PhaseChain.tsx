@@ -2,7 +2,6 @@
 
 import {
   type Agent,
-  AgentThinking,
   DEFAULT_VERIFY_CHECKS,
 } from "@zibby/contracts";
 import {
@@ -13,45 +12,16 @@ import {
   IconTile,
   Stack,
   Tag,
-  TagProps,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 import {
   type Pipeline,
   type PipelinePhase,
   glyphForPhase,
 } from "../../../domain";
-
-/** Per-run model badge (opus / sonnet / haiku). */
-export function ModelBadge({ model }: { model: PipelinePhase["model"] }) {
-  const t = useTranslations("phase");
-  return (
-    <Tag title={t("modelTitle")} tone="accent">
-      {model}
-    </Tag>
-  );
-}
-
-const AgentThinking_TagTone = (
-  level: AgentThinking = "low",
-): TagProps["tone"] =>
-  ({
-    high: "ok" as TagProps["tone"],
-    medium: "warn" as TagProps["tone"],
-    low: "neutral" as TagProps["tone"],
-  })[level];
-
-/** Thinking-level badge (high / medium / low). */
-export function ThinkBadge({ level }: { level: PipelinePhase["thinking"] }) {
-  const t = useTranslations("phase");
-  return (
-    <Tag title={t("thinkTitle")} tone={AgentThinking_TagTone(level)}>
-      ◇ {level}
-    </Tag>
-  );
-}
 
 function IoRow({
   label,

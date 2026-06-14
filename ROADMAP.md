@@ -1092,6 +1092,29 @@ that will never run. North Star: status must be honest ("always accountable")._
 
 ---
 
+## Phase 39 — Decouple the shared runtime badges from the pipelines feature — ✅ delivered 2026-06-14
+
+_Audit of the agents detail/editor surface — it's solid (real RHF editor: name/when-to-use/category/
+model/thinking/glyph/tools + a Markdown body editor; `AgentRulesSection` shows the floor + linked +
+own rules; `AgentViewDetails` shows model/thinking/tools/used-by-pipelines/instructions). No functional
+gap, so per the Phase-38 audit-signal this iteration takes a **simplification** (LOOP #3): the generic
+`ModelBadge` / `ThinkBadge` runtime badges (model name + thinking level) lived inside the **pipelines**
+`PhaseChain` component, but the **agents** feature (`AgentCard`, `AgentViewDetails`) reached across to
+import them — a cross-feature coupling (agents → pipelines) that also pulled the large `PhaseChain`
+module in for two small tags._
+
+- Extracted `ModelBadge` / `ThinkBadge` (+ the thinking→tone helper) into a neutral shared
+  `apps/web/components/RuntimeBadges/RuntimeBadges.tsx`, retyped against the shared `Agent["model"]` /
+  `AgentThinking` contract types (no `PipelinePhase` dependency). All five call sites now import from
+  the shared module: `AgentCard`, `AgentViewDetails`, `PhaseChain`, `PipelineRunModal`,
+  `PipelineDialog`. `PhaseChain` no longer owns/exports them. No behaviour change (same DS `Tag`, same
+  `phase.modelTitle`/`thinkTitle` i18n).
+
+**Tests:** new `RuntimeBadges.test.tsx` — `ModelBadge` renders the model name; `ThinkBadge` renders the
+level. The existing `PhaseChain.test` (now importing the badges) stays green. web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

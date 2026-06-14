@@ -18,7 +18,7 @@ import { useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
 import { type Pipeline, glyphForPhase } from "../../../../domain";
 import { type PhaseOverride, usePhaseOverrides } from "../../hooks/usePhaseOverrides";
-import { ModelBadge, ThinkBadge } from "../PhaseChain";
+import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 
 export interface PipelineRunModalProps {
   pipeline: Pipeline;
