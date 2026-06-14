@@ -300,18 +300,27 @@ daily + editor) — solid — but the note viewer broke index-first navigation. 
 | ---- | ------ | ----- |
 | 33.1 Navigable links + backlinks in the note viewer | ✅ done (2026-06-14) | The note **body** rendered as raw text (`[[wikilinks]]` inert), **backlinks** were plain `← a, b, c` text, and the note's resolved outbound **`links`** weren't shown at all — yet `NoteSchema` already carries `links` (resolved `[[wiki-link]]` targets) + `backlinks` as note-id arrays. So from an open MOC you couldn't click through to a linked note (only the graph let you traverse) — broke "MOCs are the way in… notes joined by wiki-links." Fix: extracted a testable **`NoteView`** composite rendering, below the body, two **navigable** rows — outbound `links` (→) + inbound `backlinks` (←), each a clickable `Chip` (`Pressable`) → `onSelect(id)`. `Screen` uses it (`onSelect=setSelected`). i18n `memory.noteLinks`/`noteBacklinks` (cs+en). Tests: `NoteView.test.tsx` — body renders; clicking a link/backlink chip calls `onSelect` with that id; both rows for a MOC-style note; no-note fallback. **web/DS green (memory 15, full web-components 363/363), full workspace 1524/1524** (first run, no flake), lint + web-tsc clean. Commit `f6ffc04`. Deferred: full markdown body rendering (inline `[[…]]` clickable, headings/lists). |
 
+## Phase 34: Render the memory note body as markdown — ✅ COMPLETE (2026-06-14)
+
+The deferred half of Phase 33 (readability). Plan: [docs/plans/phase-34.md](docs/plans/phase-34.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 34.1 Markdown-render the note body | ✅ done (2026-06-14) | The vault is "plain markdown… human-readable" but the note viewer rendered the body as one raw `Typography` (a wall of `#`/`-`/`**`/`[[…]]`). **Dependency-frugal fix:** `@uiw/react-md-editor` is already a dep (DS `MarkdownEditor` wraps it) and ships `MDEditor.Markdown` — no new dep, no hand-rolled parser. New DS **`Markdown`** viewer wraps it with the same GitHub-primer→token theme vars (dark, transparent bg); exported from DS index. `NoteView` body → `<Markdown source={note.body} />` (headings/lists/emphasis/code/links render); Phase-33 links/backlinks chip rows stay the index-first nav (inline `[[…]]` stays literal — deferred). Tests: DS `Markdown.test` (`# Hello`→h1, `- item`→listitems, `**bold**`→strong, testid); `NoteView.test` still finds the rendered body. **DS+web green, full workspace 1528/1528** (first run, no flake), lint + apps/web-tsc + ds-tsc clean. Commit `9c84d66`. |
+
 ## Next iteration
 
-**Proposed Phase 34 — Render the memory note body as markdown (readability).** The deferred half of
-Phase 33: the note body is plain markdown from the vault but renders as a single raw `Typography` —
-a wall of `#`, `-`, `**`, `[[…]]` text. The second brain is "plain markdown… human-readable"; reading
-a note in the HUD should show rendered markdown (headings, lists, emphasis, code) and ideally make
-inline `[[wikilinks]]` clickable (reusing Phase-33's `onSelect`). GROUND first: whether a markdown
-**renderer** already exists in the app or DS (the forms lib has a `FormMarkdownEditor` — does it ship a
-viewer? is `react-markdown`/`marked` already a dep?), and how `[[…]]` should map to `onSelect`. Pick
-the lightest approach (a small renderer or an existing dep) — keep it dependency-frugal. If a renderer
-would be heavy/new-dep, fall back to a minimal one (headings + lists + inline wikilinks) rather than
-pulling a large library.
+**Proposed Phase 35 — Audit the /integrations (channels / autonomous mode) HUD surface.** A major
+North-Star pillar not yet audited: _"Autonomous mode watching Slack/email on a heartbeat… when
+something actionable arrives it acts within its mandate."_ Phase 5 shipped real integrations +
+credentials + a `ChannelWatcher` + tiered triage + a two-level item store. GROUND first against real
+code: the `/integrations` segment + feature dir + query/mutation hooks + the contract — verify the HUD
+shows the **real** connected channels and their **inbound triage items** (the InboxPanel referenced in
+Phase-32's briefing grep), that connect/disconnect + credential entry hit the real endpoints (NOT a
+mock list), that the autonomy **tier/mandate** of a handled item is visible, and that inbound content
+is shown as **data, not commands** (Law 4 — no unsanitized passthrough that could read as an
+instruction). Pick the single biggest gap (a mock channel list, an unwired connect button, triage
+items with no tier/decision shown, raw inbound leaking) as Phase 35's concrete change.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
