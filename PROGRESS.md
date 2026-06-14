@@ -17,6 +17,16 @@ The payoff of Phase 12: enforce the last governance piece + prove it end-to-end.
 **All of 13.1–13.4 done; full api suite reliably 684/684.**
 Plan: [docs/plans/phase-13.md](docs/plans/phase-13.md).
 
+## Phase 14: operator UX for the new goal/loop states — in progress
+
+Closes the UX gap Phases 12/13 opened (raw enum park reasons, unshown goal budget).
+Plan: [docs/plans/phase-14.md](docs/plans/phase-14.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 14.1 Surface goal park reasons + budget (web) | ✅ done (2026-06-14) | friendly cs/en labels for `verifier-scope`/`awaiting-resume`/`budget`/… + next-step hints + a goal-budget bar (windowed runs vs `goal.budget`); raw enum no longer shown. web-components 211/211 |
+| 14.2 Roadmap ground-truth refresh + Playwright audit | ⬜ next | "Where we are today" is a month stale; run/repair `pnpm e2e` for goal/loop/self-dev surfaces |
+
 | Item | Status | Notes |
 | ---- | ------ | ----- |
 | 13.1 Enforce the per-goal budget | ✅ done (2026-06-14) | `GoalSchema.budget` was dead schema; now `goalBudgetExceeded()` (windowed run-count from `iterations[].startedAt`) parks `budget` at the iteration boundary. Composes with the 8.1 project cap. 679/679 green |
@@ -53,30 +63,24 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
   wider timeouts + pipelines `until` 25s). 5/5 consecutive full runs green. The full
   `pnpm test` (api) is now reliably 680/680.
 
-## Next iteration — Phases 1–13 all shipped; propose Phase 14
+## Next iteration
 
-Phase 13 closed the self-development arc. The roadmap's 13 phases are delivered; the next
-phase is genuinely open. Two candidates (recommend 14.1 — concrete web work building on
-what 12/13 shipped):
-
-**Phase 14.1 (recommended) — surface the new goal/park states in the web UI.** Phases 12/13
-added park reasons `verifier-scope`, `awaiting-resume`, and goal `budget` (and the goal's
-own budget cap), but `GoalDetailPanel` interpolates `parkedReason` as a RAW string — no
-friendly i18n label, no resume affordance distinct from the retries case, no goal-budget
-indicator. Build: i18n labels (cs/en) for the new reasons; a clear "ZIBBY paused on the
-usage/iteration/scope budget — resume?" surface; a goal-budget bar (iterations-used-in-window
-vs `goal.budget.dailyRuns/weeklyRuns`) alongside the existing cost bar. Web-components tests
-per surface; Playwright extends the goal-detail spec. Concrete, user-visible, ~1 iteration.
-
-**Phase 14.2 (alt) — roadmap ground-truth refresh + `pnpm e2e` (Playwright) audit.** The
+**Phase 14.2 — roadmap ground-truth refresh + Playwright `pnpm e2e` audit.** The roadmap's
 "Where we are today (verified 2026-06-11)" block + North-Star gap table are a month stale —
-nearly every gap is closed. Re-verify against current reality, and run/repair the Playwright
-operator-throughline (`pnpm e2e`) for the goal/loop/self-dev surfaces (the loop has exercised
-api unit/e2e but not Playwright). Heavier (browser + web app), lower code yield.
+Phases 1–13 closed nearly every listed gap. Re-verify against current reality and rewrite
+that section so the roadmap reflects what's shipped (delivery loop, PR gate, second brain,
+channels, briefing, voice, budgets, goal loop, self-development safety — all done). THEN
+run `pnpm e2e` (Playwright): the loop has exercised api unit/e2e + web-components throughout
+but never the browser operator-throughline. Characterize the 3 existing specs' state on the
+current tree (they may have drifted), repair any breakage, and add a thin goal/park-state
+spec if cheap (the 14.1 GoalDetailPanel surfaces). Heavier (browser + web app boot), so
+budget for setup; demo-mode keeps it deterministic. Exit: `pnpm e2e` green + an accurate
+roadmap header.
 
-If the operator wants to *actually* self-develop now, the
-[runbook](docs/ops/self-development.md) is ready — an operator action (real claude/tokens),
-not a loop iteration.
+Note: the api `agent-runs.e2e` git-fixture test still flakes ~rarely under full-suite load
+(passes isolated) — a residual git-timing transient, candidate to fold into a future test-
+hardening pass if it recurs. If the operator wants to self-develop now, the
+[runbook](docs/ops/self-development.md) is ready (operator action, not a loop iteration).
 - Document the resume semantics: with `GOAL_AUTO_RESUME=1` a restart re-drives
   `running`/`paused-limit` goals (12.4 `reconstruct`); without it they park
   `awaiting-resume`. Cross-reference Phase 8.3 (ops hardening) — this is its goal-loop

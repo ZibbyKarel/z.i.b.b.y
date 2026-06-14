@@ -753,7 +753,22 @@
     "goalIteration": "Iteration {n}",
     "goalVerifierPass": "verifier satisfied",
     "goalVerifierFail": "verifier not satisfied",
-    "goalParkedSummary": "parked ({reason}) · {attempts} attempts",
+    "goalParkedSummary": "{attempts} attempts",
+    "goalParkedReason": {
+      "iterations": "Reached the iteration limit",
+      "budget": "Hit the goal's run budget",
+      "limit": "Paused on the usage limit",
+      "verifier-scope": "Verifier has no scope",
+      "awaiting-resume": "Paused on restart — awaiting your go-ahead"
+    },
+    "goalParkedHint": {
+      "verifier-scope": "Give the goal explicit verifier commands (or the project its own checks), then resume.",
+      "awaiting-resume": "ZIBBY rehydrated this goal on restart but won't re-run it without you (Law 3)."
+    },
+    "goalBudget": "Budget — runs in window",
+    "goalBudgetUsed": "{used} / {cap} {window}",
+    "goalBudgetDaily": "today",
+    "goalBudgetWeekly": "this week",
     "goalMakerStatus": {
       "running": "running",
       "done": "maker done",

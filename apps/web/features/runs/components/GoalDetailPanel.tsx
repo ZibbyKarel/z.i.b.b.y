@@ -38,6 +38,31 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   const used = iterations.length;
   const pct = maxIterations > 0 ? Math.min(100, (used / maxIterations) * 100) : 0;
 
+  // Phase 14.1 — the goal's OWN windowed run budget (13.1): count iterations whose
+  // startedAt falls in the rolling daily/weekly window, mirroring the backend guard.
+  // `now` is read in an effect (not during render — React purity), so the bar paints a
+  // tick after mount; the window (hours/days) is stable over the panel's lifetime.
+  const DAY = 24 * 60 * 60 * 1000;
+  // Read "now" once via a lazy useState initializer (memoized — not re-read each render,
+  // so React purity is satisfied); the window (hours/days) is stable over the panel's life.
+  const [now] = useState(() => Date.now());
+  const within = (ms: number) =>
+    iterations.filter((it) => now - new Date(it.startedAt).getTime() < ms).length;
+  const budget =
+    goal?.budget?.dailyRuns !== undefined
+      ? { cap: goal.budget.dailyRuns, n: within(DAY), window: t("goalBudgetDaily") }
+      : goal?.budget?.weeklyRuns !== undefined
+        ? { cap: goal.budget.weeklyRuns, n: within(7 * DAY), window: t("goalBudgetWeekly") }
+        : null;
+  const budgetPct = budget && budget.cap > 0 ? Math.min(100, (budget.n / budget.cap) * 100) : 0;
+
+  // Phase 14.1 — a human-legible park reason (was a raw enum) + an optional next-step hint.
+  const parkedReason = run.goalParkedReason ?? "iterations";
+  const parkedHint =
+    parkedReason === "verifier-scope" || parkedReason === "awaiting-resume"
+      ? t(`goalParkedHint.${parkedReason}`)
+      : null;
+
   return (
     <Stack gap="200">
       <HudPanel padding="250" title={t("goalCost")}>
@@ -50,6 +75,17 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
           <Progress label={t("goalCost")} tone={pct >= 100 ? "warn" : "accent"} value={pct} />
         </Stack>
       </HudPanel>
+
+      {budget && (
+        <HudPanel padding="250" title={t("goalBudget")}>
+          <Stack gap="100">
+            <Typography mono size="xs" type="note" variant="secondary">
+              {t("goalBudgetUsed", { used: budget.n, cap: budget.cap, window: budget.window })}
+            </Typography>
+            <Progress label={t("goalBudget")} tone={budgetPct >= 100 ? "warn" : "accent"} value={budgetPct} />
+          </Stack>
+        </HudPanel>
+      )}
 
       <HudPanel padding="250" title={t("goalTimeline")}>
         {iterations.length === 0 ? (
@@ -93,12 +129,19 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
       {run.status === "parked" && run.goalParked && (
         <HudPanel padding="250" title={t("parkedContext")} tone="warn">
           <Stack gap="200">
-            <Typography mono size="xs" type="note" variant="secondary">
-              {t("goalParkedSummary", {
-                reason: run.goalParkedReason ?? "iterations",
-                attempts: run.goalParked.attempts,
-              })}
-            </Typography>
+            <Stack gap="50">
+              <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
+                {t(`goalParkedReason.${parkedReason}`)}
+              </Typography>
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("goalParkedSummary", { attempts: run.goalParked.attempts })}
+              </Typography>
+              {parkedHint && (
+                <Typography mono size="2xs" type="note" variant="tertiary">
+                  {parkedHint}
+                </Typography>
+              )}
+            </Stack>
             {iterations.length > 0 && iterations[iterations.length - 1]?.verifier.output && (
               <CodeBlock maxHeight="md" text={iterations[iterations.length - 1]!.verifier.output} />
             )}

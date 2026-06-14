@@ -753,7 +753,22 @@
     "goalIteration": "Iterace {n}",
     "goalVerifierPass": "verifikace prošla",
     "goalVerifierFail": "verifikace neprošla",
-    "goalParkedSummary": "zaparkováno ({reason}) · {attempts} pokusů",
+    "goalParkedSummary": "{attempts} pokusů",
+    "goalParkedReason": {
+      "iterations": "Vyčerpán limit iterací",
+      "budget": "Dosažen run budget cíle",
+      "limit": "Pozastaveno na usage limitu",
+      "verifier-scope": "Verifier nemá scope",
+      "awaiting-resume": "Pozastaveno po restartu — čeká na tvé svolení"
+    },
+    "goalParkedHint": {
+      "verifier-scope": "Zadej cíli explicitní verifier commands (nebo projektu vlastní checks) a pak resume.",
+      "awaiting-resume": "ZIBBY cíl po restartu rehydratoval, ale bez tebe ho znovu nespustí (Zákon 3)."
+    },
+    "goalBudget": "Budget — běhy v okně",
+    "goalBudgetUsed": "{used} / {cap} {window}",
+    "goalBudgetDaily": "dnes",
+    "goalBudgetWeekly": "tento týden",
     "goalMakerStatus": {
       "running": "běží",
       "done": "maker hotov",
