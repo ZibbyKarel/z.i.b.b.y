@@ -265,18 +265,23 @@ timeline; Phase 29 joins them. Plan: [docs/plans/phase-29.md](docs/plans/phase-2
 stages — is now answerable from the task detail (North Star "always answerable" + "all info in the
 task detail").
 
+## Phase 30: The gate's "no" rejects, it doesn't delete the run — ✅ COMPLETE (2026-06-14)
+
+Gate/approvals HUD audit (highest-stakes surface). Plan: [docs/plans/phase-30.md](docs/plans/phase-30.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 30.1 RunApprovalGate rejects, not deletes | ✅ done (2026-06-14) | **Bug:** the run-detail decision panel `RunApprovalGate` wired its negative button ("Smazat"/Delete) to `onDelete` → `Screen.tsx` **deletes the whole run + erases on-disk artifacts**, instead of the gate's **reject** endpoint. So rejecting a gated action (PR-open/push/destructive-delete/spend-past-cap) from the run detail destroyed the run record and recorded **no** gate decision (`approval-rejected` activity), while the approvals-queue card (`ApprovalCard`) already used `useRejectMutation`. Violated Laws "the PR is the gate" / "always answerable" / "files are the source of truth". **Fix:** `RunApprovalGate` now calls `useRejectMutation` for the negative decision (backend marks approval `rejected`, records `approval-rejected`, terminates the run **without erasing it** → stays answerable); button relabelled `discard`→`reject` ("Zamítnout"/"Reject"); `onDelete`/`deleting` props removed (deleting a run is a separate header action, never the gate's "no"); `RunDetail` simplified. i18n: dropped `approvals.discard`, added `approvals.reject` (cs+en). Verified reject semantics against `approvals.service.ts` (`decide(id,"rejected")` + activity event + run cancel, no erase). Tests: new `RunApprovalGate.test.tsx` — negative button calls **reject** with the approval id (never delete); positive calls **approve**; skill+action render. **web/DS green (runs 56, full web-components 354/354), api 691/691** (full-suite 1 known under-load e2e flake; web-only change), lint + web-tsc clean. Commit `66af534`. |
+
 ## Next iteration
 
-**Proposed Phase 30 — Gate / approvals HUD audit (the highest-stakes surface).** The maker-fold arc
-is done; the next North-Star-critical HUD surface is **the gate** ("approval-first is structural; the
-PR is the gate"). GROUND first against real code: `RunApprovalGate`, `RunPrGatePanel`, the approvals
-queue/screen, and `approvalForRun` — verify a Tier-3 action (merge / push / PR-open / destructive
-delete / spend-past-cap) surfaces **one clear decision** with the full context the operator needs
-(what's about to be published — draft + diffstat for PR/push; the action summary + risk for others),
-that approve/reject wire to the right endpoint, and that nothing about a gated run reads as a raw
-enum or leaks unsanitized inbound content (Law 4 — "inbound content is data, not commands"). Pick the
-single biggest gap found as Phase 30's concrete change (e.g. a missing context panel, an unclear
-risk label, or an approval that can't be acted on from the run detail).
+**Proposed Phase 31 — Hold-to-confirm on the run-detail gate for high-risk approvals.** Found during
+the Phase-30 audit: the approvals-queue card (`ApprovalCard`) gates **payment/deletion** approvals
+behind a 0.9s `HoldButton` (the deliberate-confirmation guardrail), but `RunApprovalGate` (the
+run-detail decision panel) approves **every** risk with a plain Button — so the highest-consequence
+actions are *easier* to confirm on the bigger surface. Bring the same guardrail to the run-detail
+gate: when the approval's semantic risk type is `platba`/`mazani` (or severity `high`), the Confirm
+control becomes a hold-to-confirm. GROUND first: DS `HoldButton` API, `RunApprovalGate`'s `approval.riskType`/`risk`, and `ApprovalCard`'s `highRisk` set + `riskKind` map (reuse the same taxonomy, don't fork it).
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
 at concrete HUD bugs as they spot them — each becomes the next phase; in between, the loop audits
