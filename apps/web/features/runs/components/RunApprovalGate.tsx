@@ -1,10 +1,10 @@
 "use client";
 
-import { Button, Icon, Stack, Typography } from "@zibby/design-system";
+import { Button, HoldButton, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import type { DashboardApproval } from "../../approvals/approval";
-import { SEVERITY } from "../../approvals/approval";
+import { HIGH_RISK_TYPES, SEVERITY } from "../../approvals/approval";
 import { ApprovalPreview } from "../../approvals/components/ApprovalPreview";
 import { useApproveMutation, useRejectMutation } from "../../approvals/mutations";
 
@@ -29,6 +29,10 @@ export function RunApprovalGate({ approval }: RunApprovalGateProps) {
   const approve = useApproveMutation();
   const reject = useRejectMutation();
   const sev = SEVERITY[approval.risk];
+  // Payment/deletion get the same deliberate hold-to-confirm guardrail the queue card
+  // uses — the highest-consequence actions must not be a single click on this surface.
+  const highRisk = approval.riskType !== undefined && HIGH_RISK_TYPES.has(approval.riskType);
+  const confirmAction = () => approve.mutate({ params: { id: approval.id }, body: {} });
 
   return (
     <HudPanel padding="250" title={t("exactAction")} tone={sev.tone}>
@@ -96,17 +100,28 @@ export function RunApprovalGate({ approval }: RunApprovalGateProps) {
         )}
 
         <Stack direction="row" gap="100">
-          <Button
-            block
-            disabled={reject.isPending}
-            icon="check"
-            intent="primary"
-            loading={approve.isPending}
-            onClick={() => approve.mutate({ params: { id: approval.id }, body: {} })}
-            tone="ok"
-          >
-            {t("confirm")}
-          </Button>
+          {highRisk ? (
+            <HoldButton
+              block
+              disabled={reject.isPending}
+              doneLabel={t("holdDone")}
+              label={t("holdToApprove")}
+              onConfirm={confirmAction}
+              tone={approval.riskType === "mazani" ? "bad" : "warn"}
+            />
+          ) : (
+            <Button
+              block
+              disabled={reject.isPending}
+              icon="check"
+              intent="primary"
+              loading={approve.isPending}
+              onClick={confirmAction}
+              tone="ok"
+            >
+              {t("confirm")}
+            </Button>
+          )}
           <Button
             block
             disabled={approve.isPending}

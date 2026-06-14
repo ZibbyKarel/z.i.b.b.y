@@ -592,6 +592,8 @@
     "consequenceLabel": "co se stane po schválení",
     "confirm": "Potvrdit",
     "reject": "Zamítnout",
+    "holdToApprove": "Podržet pro schválení",
+    "holdDone": "Schváleno",
     "guarantee": "ZIBBY nikdy nedokončí rizikovou akci bez tvého souhlasu. Approval gate je vynucená vrstva, ne doporučení.",
     "requestedLabel": "Vyžádáno",
     "viaLabel": "Spustil",

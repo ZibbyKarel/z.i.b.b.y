@@ -49,4 +49,24 @@ describe("RunApprovalGate (30) — the gate's no rejects, it never deletes the r
     expect(screen.getByText("Writer")).toBeInTheDocument();
     expect(screen.getByText(/git\.push/)).toBeInTheDocument();
   });
+
+  it("keeps a single-click Confirm for a non-high-risk approval (no riskType)", () => {
+    render(<RunApprovalGate approval={approval} />);
+    expect(screen.getByRole("button", { name: "Potvrdit" })).toBeInTheDocument();
+    expect(screen.queryByTestId("hold-button-root")).not.toBeInTheDocument();
+  });
+
+  it("gates a deletion approval behind hold-to-confirm (no single-click Confirm)", () => {
+    render(<RunApprovalGate approval={{ ...approval, riskType: "mazani" }} />);
+    // The deliberate guardrail replaces the plain Confirm button.
+    expect(screen.getByTestId("hold-button-root")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Potvrdit" })).not.toBeInTheDocument();
+    // Reject stays a single click (the safe direction).
+    expect(screen.getByRole("button", { name: "Zamítnout" })).toBeInTheDocument();
+  });
+
+  it("also gates a payment approval behind hold-to-confirm", () => {
+    render(<RunApprovalGate approval={{ ...approval, riskType: "platba" }} />);
+    expect(screen.getByTestId("hold-button-root")).toBeInTheDocument();
+  });
 });

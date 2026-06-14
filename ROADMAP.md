@@ -911,6 +911,29 @@ pair. web/DS green.
 
 ---
 
+## Phase 31 — Hold-to-confirm on the run-detail gate for high-risk approvals — ✅ delivered 2026-06-14
+
+_Second gap from the Phase-30 gate audit. The approvals-queue card (`ApprovalCard`) gates
+**payment/deletion** approvals behind a 0.9s `HoldButton` (the deliberate-confirmation guardrail), but
+`RunApprovalGate` (the run-detail decision panel) approved **every** risk with a plain one-click
+Button — so the highest-consequence actions were *easier* to confirm on the larger surface. Guardrail
+parity on the gate._
+
+- New canonical `HIGH_RISK_TYPES = {platba, mazani}` in `features/approvals/approval.ts` (the
+  taxonomy home — mirrors `ApprovalCard`'s `highRisk` payment/deletion set, so the queue card and the
+  run-detail gate agree, not fork).
+- `RunApprovalGate`: when `approval.riskType` is high-risk, the **Confirm** control becomes a DS
+  `HoldButton` (`tone="bad"` for deletion, `"warn"` for payment; 0.9s hold → `approve.mutate`); other
+  risks keep the single-click Confirm. **Reject stays a single click** — the safe direction is never
+  gated. Unenriched approvals (no `riskType`) degrade to the plain button, same as before.
+- i18n `approvals.holdToApprove` / `approvals.holdDone` (cs+en).
+
+**Tests:** `RunApprovalGate.test.tsx` — a deletion/payment approval renders the `HoldButton`
+(`hold-button-root`) and **no** single-click Confirm; a non-high-risk approval keeps the plain
+Confirm; reject stays single-click. web/DS green (runs 60, full web-components 357/357), api 691/691.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

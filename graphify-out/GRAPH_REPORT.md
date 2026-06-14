@@ -1,12 +1,12 @@
 # Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-14)
 
 ## Corpus Check
-- 973 files · ~1,049,754 words
+- 973 files · ~1,050,684 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2766 nodes · 3762 edges · 762 communities detected
-- Extraction: 65% EXTRACTED · 35% INFERRED · 0% AMBIGUOUS · INFERRED: 1299 edges (avg confidence: 0.8)
+- 2766 nodes · 3763 edges · 762 communities detected
+- Extraction: 65% EXTRACTED · 35% INFERRED · 0% AMBIGUOUS · INFERRED: 1300 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -792,112 +792,112 @@
   /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts
 - `filter()` --calls--> `navBadgeCount()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/notificationRules.ts
-- `filter()` --calls--> `logChunks()`  [INFERRED]
-  /Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/Screen.tsx → /Users/zibby/Workspace/z.i.b.b.y/apps/api/src/shared/sse/sse.test.ts
 - `seed()` --calls--> `writeFile()`  [INFERRED]
   /Users/zibby/Workspace/z.i.b.b.y/apps/api/test/channels.e2e.test.ts → /Users/zibby/Workspace/z.i.b.b.y/apps/api/scripts/seed.mjs
+- `writeFile()` --calls--> `preApprove()`  [INFERRED]
+  /Users/zibby/Workspace/z.i.b.b.y/apps/api/scripts/seed.mjs → /Users/zibby/Workspace/z.i.b.b.y/apps/api/src/runner/claude-approval-hook.test.ts
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (36): toAgentRun(), AgentRunnerService, boot(), bootApp(), sleep(), until(), exists(), main() (+28 more)
+Nodes (22): AllExceptionsFilter, ApprovalsService, BudgetService, over(), ChannelTriageFlowService, ChannelWatcherService, DiscoveryTriageService, KeywordTriager (+14 more)
 
 ### Community 1 - "Community 1"
+Cohesion: 0.03
+Nodes (32): exists(), main(), sleep(), list(), withPathLock(), safeJson(), checksVerifierBlocker(), goalBudgetExceeded() (+24 more)
+
+### Community 2 - "Community 2"
 Cohesion: 0.02
 Nodes (60): activity(), benignMarker(), boot(), fileExists(), paymentDone(), pendingFor(), runStatus(), sleep() (+52 more)
 
-### Community 2 - "Community 2"
-Cohesion: 0.03
-Nodes (23): AllExceptionsFilter, ApprovalsService, BudgetService, over(), ChannelTriageFlowService, ChannelWatcherService, DiscoveryTriageService, makeVault() (+15 more)
-
 ### Community 3 - "Community 3"
-Cohesion: 0.02
-Nodes (30): AdapterRegistry, AutomationsStorageService, BriefingService, startOfDay(), CategoryConflictError, CategoryNotFoundError, constructor(), create() (+22 more)
+Cohesion: 0.03
+Nodes (26): ActivityEventsService, toAgentRun(), AgentRunnerService, boot(), bootApp(), sleep(), until(), sleep() (+18 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
-Nodes (39): ActivityController, parseKinds(), ofKind(), sleep(), until(), ActivityLogService, readLines(), YYYY_MM_DD() (+31 more)
+Nodes (15): AdapterRegistry, BriefingService, startOfDay(), BudgetConfigStore, ChannelItemStore, ensureDir(), resolveSafeFile(), writeFileAtomic() (+7 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.03
-Nodes (41): GlobalSearch(), navBadgeCount(), selectNotifications(), RunApprovalGate(), useRunEventsConnected(), useCatalog(), getAgentsSearchQueryKey(), useAgentsSearchQuery() (+33 more)
+Nodes (17): makeRunner(), setup(), AgentsStorageService, ApprovalsStorageService, constructor(), corruptError(), delete(), fileExists() (+9 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.03
-Nodes (33): relativeTime(), onClick(), decisionLabel(), formatResetIn(), useEntityForm(), GateEvaluatorService, PathChips(), t() (+25 more)
+Nodes (40): ActivityController, parseKinds(), ofKind(), sleep(), until(), ActivityLogService, readLines(), YYYY_MM_DD() (+32 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.04
-Nodes (19): makeRunner(), setup(), ApprovalsStorageService, constructor(), corruptError(), delete(), fileExists(), get() (+11 more)
+Cohesion: 0.03
+Nodes (41): GlobalSearch(), navBadgeCount(), selectNotifications(), RunApprovalGate(), useRunEventsConnected(), useCatalog(), getAgentsSearchQueryKey(), useAgentsSearchQuery() (+33 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.04
-Nodes (41): ActivityLogModule, resolveActivityDir(), AgentsModule, resolveAgentsDir(), resolveRunsDir(), ApprovalsModule, resolveApprovalsDir(), AutomationsModule (+33 more)
+Nodes (32): relativeTime(), onClick(), decisionLabel(), formatResetIn(), useEntityForm(), PathChips(), t(), mergeRunFeed() (+24 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.06
-Nodes (14): AgentsStorageService, approvalSettings(), ClaudeRunCommandService, withExecutionDirective(), withOperatingContract(), mapToken(), mapTools(), toAllowedTools() (+6 more)
+Cohesion: 0.05
+Nodes (37): submit(), ClaudeCliRouter, buildConfig(), submit(), detectLoopCue(), fold(), KeywordScorer, keywordsOf() (+29 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.08
-Nodes (9): call(), checksVerifierBlocker(), goalBudgetExceeded(), GoalRunnerService, tailOf(), decideStop(), renderGoalProgress(), buildResumeContext() (+1 more)
+Cohesion: 0.04
+Nodes (41): ActivityLogModule, resolveActivityDir(), AgentsModule, resolveAgentsDir(), resolveRunsDir(), ApprovalsModule, resolveApprovalsDir(), AutomationsModule (+33 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.09
-Nodes (38): seed(), approvalSettings(), contextProbe(), flagGroups(), flagMatrix(), preflight(), record(), run() (+30 more)
+Nodes (37): seed(), approvalSettings(), contextProbe(), flagGroups(), flagMatrix(), preflight(), record(), run() (+29 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.07
-Nodes (29): submit(), buildConfig(), submit(), buildCreateGoalBody(), canSubmitLoop(), decodeMaker(), encodeMaker(), makeGoalId() (+21 more)
+Cohesion: 0.05
+Nodes (20): pathnameToNavId(), CategoryConflictError, CategoryNotFoundError, constructor(), create(), delete(), list(), writeAtomic() (+12 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.07
-Nodes (13): handleChange(), limitResumeMax(), LimitResumeService, buildLimits(), LimitsService, clampPct(), parseRateLimits(), resetMs() (+5 more)
+Nodes (29): classify(), classifyGh(), classifyGit(), classifySegment(), decide(), enrich(), isDestructive(), main() (+21 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.1
-Nodes (23): BudgetConfigStore, classify(), classifyGh(), classifyGit(), classifySegment(), decide(), enrich(), isDestructive() (+15 more)
-
-### Community 15 - "Community 15"
-Cohesion: 0.1
-Nodes (9): ClaudeCliRouter, detectLoopCue(), fold(), KeywordScorer, keywordsOf(), tokenize(), KeywordTriager, TaskClassifierService (+1 more)
-
-### Community 16 - "Community 16"
-Cohesion: 0.08
-Nodes (11): pathnameToNavId(), CredentialKindViolation, ImmutableKindViolation, IntegrationsController, NoCredentialsViolation, isModifierKey(), loadVoiceShortcut(), shortcutFromEvent() (+3 more)
-
-### Community 17 - "Community 17"
 Cohesion: 0.14
 Nodes (23): clamp(), concreteTime(), cronToSchedule(), dayName(), dayNameShort(), describeCron(), isDay(), isNum() (+15 more)
 
-### Community 18 - "Community 18"
-Cohesion: 0.13
-Nodes (2): MockSpeechSynthesis, MockSpeechSynthesisUtterance
+### Community 15 - "Community 15"
+Cohesion: 0.11
+Nodes (5): ImmutableKindError, IntegrationConflictError, IntegrationNotFoundError, IntegrationsStorageService, InvalidIntegrationIdError
 
-### Community 19 - "Community 19"
+### Community 16 - "Community 16"
 Cohesion: 0.13
 Nodes (5): Corners(), cn(), IconTile(), ListItem(), cn()
 
-### Community 20 - "Community 20"
+### Community 17 - "Community 17"
+Cohesion: 0.13
+Nodes (2): MockSpeechSynthesis, MockSpeechSynthesisUtterance
+
+### Community 18 - "Community 18"
+Cohesion: 0.12
+Nodes (4): AutomationConflictError, AutomationNotFoundError, AutomationsStorageService, InvalidAutomationIdError
+
+### Community 19 - "Community 19"
 Cohesion: 0.13
 Nodes (7): CorruptGoalFileError, GoalConflictError, GoalNotFoundError, GoalRunNotFoundError, GoalRunNotParkedError, InvalidGoalError, InvalidGoalIdError
 
-### Community 21 - "Community 21"
+### Community 20 - "Community 20"
 Cohesion: 0.14
 Nodes (6): AgentRunLogsController, ChannelEventsService, EventsController, fromRunStatus(), heartbeats(), streamRunLog()
 
-### Community 22 - "Community 22"
-Cohesion: 0.15
-Nodes (3): serialize(), tryParse(), SkillsStorageService
+### Community 21 - "Community 21"
+Cohesion: 0.23
+Nodes (8): approvalSettings(), ClaudeRunCommandService, withExecutionDirective(), withOperatingContract(), mapToken(), mapTools(), toAllowedTools(), toSubagentTools()
 
-### Community 23 - "Community 23"
+### Community 22 - "Community 22"
 Cohesion: 0.14
 Nodes (4): CategoriesController, makeCategoryHandlers(), ProjectCategoriesController, SkillCategoriesController
 
-### Community 24 - "Community 24"
+### Community 23 - "Community 23"
 Cohesion: 0.19
 Nodes (8): boot(), reboot(), server(), taskById(), close(), onKey(), boot(), teardown()
+
+### Community 24 - "Community 24"
+Cohesion: 0.18
+Nodes (6): GroundingService, selectIndexes(), truncate(), setup(), renderWithProviders(), render()
 
 ### Community 25 - "Community 25"
 Cohesion: 0.23
@@ -933,15 +933,15 @@ Nodes (5): useTokens(), Tab(), TabList(), TabPanel(), useTabsContext()
 
 ### Community 33 - "Community 33"
 Cohesion: 0.22
-Nodes (4): AgentConflictError, AgentNotFoundError, CorruptAgentFileError, InvalidAgentIdError
+Nodes (3): DuplicateNoteError, InvalidNoteIdError, NoteNotFoundError
 
 ### Community 34 - "Community 34"
-Cohesion: 0.31
-Nodes (5): hasKeys(), isNoisyBodyRoute(), LoggingInterceptor, preview(), safeStringify()
+Cohesion: 0.22
+Nodes (4): AgentConflictError, AgentNotFoundError, CorruptAgentFileError, InvalidAgentIdError
 
 ### Community 35 - "Community 35"
-Cohesion: 0.22
-Nodes (3): DuplicateNoteError, InvalidNoteIdError, NoteNotFoundError
+Cohesion: 0.31
+Nodes (5): hasKeys(), isNoisyBodyRoute(), LoggingInterceptor, preview(), safeStringify()
 
 ### Community 36 - "Community 36"
 Cohesion: 0.22
@@ -969,67 +969,67 @@ Nodes (0):
 
 ### Community 42 - "Community 42"
 Cohesion: 0.29
-Nodes (2): ActivityEventsService, next()
-
-### Community 43 - "Community 43"
-Cohesion: 0.29
 Nodes (3): useSpeechRecognition(), useVoiceDemoSequence(), useVoiceSession()
 
-### Community 44 - "Community 44"
+### Community 43 - "Community 43"
 Cohesion: 0.33
 Nodes (2): baseGoalRun(), goalWithChildren()
 
-### Community 45 - "Community 45"
+### Community 44 - "Community 44"
 Cohesion: 0.48
 Nodes (5): agentIter(), ISO(), iter(), parkedGoal(), running()
 
-### Community 46 - "Community 46"
+### Community 45 - "Community 45"
 Cohesion: 0.48
 Nodes (4): authSpawn(), nextSpawn(), okSpawnPair(), versionSpawn()
 
-### Community 47 - "Community 47"
+### Community 46 - "Community 46"
 Cohesion: 0.29
 Nodes (1): PipelineRunsController
 
-### Community 48 - "Community 48"
+### Community 47 - "Community 47"
 Cohesion: 0.29
 Nodes (4): Conflict, InvalidId, NotFound, Unrelated
 
-### Community 49 - "Community 49"
-Cohesion: 0.29
-Nodes (3): AutomationConflictError, AutomationNotFoundError, InvalidAutomationIdError
+### Community 48 - "Community 48"
+Cohesion: 0.38
+Nodes (1): ClaudeCliBriefer
 
-### Community 50 - "Community 50"
+### Community 49 - "Community 49"
 Cohesion: 0.29
 Nodes (3): ApprovalAlreadyDecidedError, ApprovalNotFoundError, InvalidApprovalIdError
 
-### Community 51 - "Community 51"
+### Community 50 - "Community 50"
 Cohesion: 0.4
 Nodes (4): isRecord(), parseApprovalDetail(), riskMeta(), RiskBadge()
 
-### Community 52 - "Community 52"
+### Community 51 - "Community 51"
 Cohesion: 0.33
 Nodes (1): GoalRunsController
 
-### Community 53 - "Community 53"
+### Community 52 - "Community 52"
 Cohesion: 0.33
 Nodes (1): AgentRunsController
 
-### Community 54 - "Community 54"
+### Community 53 - "Community 53"
 Cohesion: 0.33
 Nodes (2): LoggingModule, createTraceMiddleware()
+
+### Community 54 - "Community 54"
+Cohesion: 0.33
+Nodes (0): 
 
 ### Community 55 - "Community 55"
 Cohesion: 0.33
 Nodes (0): 
 
 ### Community 56 - "Community 56"
-Cohesion: 0.33
-Nodes (0): 
-
-### Community 57 - "Community 57"
 Cohesion: 0.6
 Nodes (3): put(), setChannel(), setDefault()
+
+### Community 57 - "Community 57"
+Cohesion: 0.4
+Nodes (2): useVoice(), Probe()
 
 ### Community 58 - "Community 58"
 Cohesion: 0.5
@@ -1040,16 +1040,16 @@ Cohesion: 0.5
 Nodes (2): saveRule(), setGates()
 
 ### Community 60 - "Community 60"
-Cohesion: 0.4
-Nodes (2): useVoice(), Probe()
-
-### Community 61 - "Community 61"
 Cohesion: 0.5
 Nodes (3): RunPrGatePanel(), getRunArtifactQueryKey(), useRunArtifactQuery()
 
-### Community 62 - "Community 62"
+### Community 61 - "Community 61"
 Cohesion: 0.4
 Nodes (2): FilePreview(), useEntityForm()
+
+### Community 62 - "Community 62"
+Cohesion: 0.4
+Nodes (0): 
 
 ### Community 63 - "Community 63"
 Cohesion: 0.4
@@ -1057,27 +1057,27 @@ Nodes (0):
 
 ### Community 64 - "Community 64"
 Cohesion: 0.4
-Nodes (0): 
+Nodes (1): GoalsController
 
 ### Community 65 - "Community 65"
 Cohesion: 0.4
-Nodes (1): GoalsController
+Nodes (2): ProjectConflictError, ProjectNotFoundError
 
 ### Community 66 - "Community 66"
 Cohesion: 0.4
-Nodes (2): ProjectConflictError, ProjectNotFoundError
+Nodes (2): GateRuleNotFoundError, InvalidGateRuleIdError
 
 ### Community 67 - "Community 67"
 Cohesion: 0.4
-Nodes (2): GateRuleNotFoundError, InvalidGateRuleIdError
+Nodes (1): PipelinesController
 
 ### Community 68 - "Community 68"
 Cohesion: 0.4
-Nodes (1): PipelinesController
+Nodes (2): PipelineRunNotFoundError, RunNotRetriesParkedError
 
 ### Community 69 - "Community 69"
-Cohesion: 0.4
-Nodes (2): PipelineRunNotFoundError, RunNotRetriesParkedError
+Cohesion: 0.6
+Nodes (3): matchesCron(), matchField(), zonedParts()
 
 ### Community 70 - "Community 70"
 Cohesion: 0.4
@@ -1113,7 +1113,7 @@ Nodes (1): MemoryController
 
 ### Community 78 - "Community 78"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (1): call()
 
 ### Community 79 - "Community 79"
 Cohesion: 0.5
@@ -1121,7 +1121,7 @@ Nodes (0):
 
 ### Community 80 - "Community 80"
 Cohesion: 0.5
-Nodes (1): beginHold()
+Nodes (0): 
 
 ### Community 81 - "Community 81"
 Cohesion: 0.5
@@ -1133,183 +1133,183 @@ Nodes (1): HealthController
 
 ### Community 83 - "Community 83"
 Cohesion: 0.5
-Nodes (1): GateRulesController
+Nodes (2): sanitizeBranchSlug(), WorkspaceSetupError
 
 ### Community 84 - "Community 84"
 Cohesion: 0.5
-Nodes (1): DiscoveryController
+Nodes (1): GateRulesController
 
 ### Community 85 - "Community 85"
 Cohesion: 0.5
-Nodes (1): LimitsController
+Nodes (1): DiscoveryController
 
 ### Community 86 - "Community 86"
 Cohesion: 0.5
-Nodes (1): AgentsController
+Nodes (1): LimitsController
 
 ### Community 87 - "Community 87"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (1): AgentsController
 
 ### Community 88 - "Community 88"
 Cohesion: 0.5
-Nodes (1): MandateController
+Nodes (0): 
 
 ### Community 89 - "Community 89"
 Cohesion: 0.5
-Nodes (1): BriefingController
+Nodes (1): MandateController
 
 ### Community 90 - "Community 90"
 Cohesion: 0.5
-Nodes (1): AutomationsController
+Nodes (1): BriefingController
 
 ### Community 91 - "Community 91"
 Cohesion: 0.5
-Nodes (1): SkillsController
+Nodes (1): AutomationsController
 
 ### Community 92 - "Community 92"
 Cohesion: 0.5
-Nodes (1): ChannelsController
+Nodes (1): SkillsController
 
 ### Community 93 - "Community 93"
 Cohesion: 0.5
-Nodes (1): BudgetController
+Nodes (1): ChannelsController
 
 ### Community 94 - "Community 94"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 0.5
+Nodes (1): BudgetController
 
 ### Community 95 - "Community 95"
 Cohesion: 0.67
 Nodes (0): 
 
 ### Community 96 - "Community 96"
+Cohesion: 0.67
+Nodes (0): 
+
+### Community 97 - "Community 97"
 Cohesion: 1.0
 Nodes (2): computeContainerStyle(), Container()
 
-### Community 97 - "Community 97"
+### Community 98 - "Community 98"
 Cohesion: 0.67
 Nodes (0): 
-
-### Community 98 - "Community 98"
-Cohesion: 1.0
-Nodes (2): glyphForAgent(), glyphForPhase()
 
 ### Community 99 - "Community 99"
 Cohesion: 1.0
-Nodes (2): getMandateQueryKey(), useMandateQuery()
+Nodes (2): glyphForAgent(), glyphForPhase()
 
 ### Community 100 - "Community 100"
 Cohesion: 1.0
-Nodes (2): getSystemPolicyQueryKey(), useSystemPolicyQuery()
+Nodes (2): getMandateQueryKey(), useMandateQuery()
 
 ### Community 101 - "Community 101"
 Cohesion: 1.0
-Nodes (2): getGateRulesQueryKey(), useGateRulesQuery()
+Nodes (2): getSystemPolicyQueryKey(), useSystemPolicyQuery()
 
 ### Community 102 - "Community 102"
 Cohesion: 1.0
-Nodes (2): getAgentGatesQueryKey(), useAgentGatesQuery()
+Nodes (2): getGateRulesQueryKey(), useGateRulesQuery()
 
 ### Community 103 - "Community 103"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getAgentGatesQueryKey(), useAgentGatesQuery()
 
 ### Community 104 - "Community 104"
-Cohesion: 1.0
-Nodes (2): apiRouting(), resolvePaths()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 105 - "Community 105"
 Cohesion: 1.0
-Nodes (2): getMemorySearchQueryKey(), useMemorySearchQuery()
+Nodes (2): apiRouting(), resolvePaths()
 
 ### Community 106 - "Community 106"
 Cohesion: 1.0
-Nodes (2): getNoteQueryKey(), useNoteQuery()
+Nodes (2): getMemorySearchQueryKey(), useMemorySearchQuery()
 
 ### Community 107 - "Community 107"
 Cohesion: 1.0
-Nodes (2): getMemoryGraphQueryKey(), useMemoryGraphQuery()
+Nodes (2): getNoteQueryKey(), useNoteQuery()
 
 ### Community 108 - "Community 108"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getMemoryGraphQueryKey(), useMemoryGraphQuery()
 
 ### Community 109 - "Community 109"
-Cohesion: 1.0
-Nodes (2): getGoalsQueryKey(), useGoalsQuery()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 110 - "Community 110"
 Cohesion: 1.0
-Nodes (2): getProjectCategoriesQueryKey(), useProjectCategoriesQuery()
+Nodes (2): getGoalsQueryKey(), useGoalsQuery()
 
 ### Community 111 - "Community 111"
 Cohesion: 1.0
-Nodes (2): getBudgetQueryKey(), useBudgetQuery()
+Nodes (2): getProjectCategoriesQueryKey(), useProjectCategoriesQuery()
 
 ### Community 112 - "Community 112"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getBudgetQueryKey(), useBudgetQuery()
 
 ### Community 113 - "Community 113"
 Cohesion: 0.67
 Nodes (0): 
 
 ### Community 114 - "Community 114"
-Cohesion: 1.0
-Nodes (2): getHealthQueryKey(), useHealthQuery()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 115 - "Community 115"
 Cohesion: 1.0
-Nodes (2): getLimitsQueryKey(), useLimitsQuery()
+Nodes (2): getHealthQueryKey(), useHealthQuery()
 
 ### Community 116 - "Community 116"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getLimitsQueryKey(), useLimitsQuery()
 
 ### Community 117 - "Community 117"
-Cohesion: 1.0
-Nodes (2): getCategoriesQueryKey(), useCategoriesQuery()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 118 - "Community 118"
 Cohesion: 1.0
-Nodes (2): getAgentsQueryKey(), useAgentsQuery()
+Nodes (2): getCategoriesQueryKey(), useCategoriesQuery()
 
 ### Community 119 - "Community 119"
 Cohesion: 1.0
-Nodes (2): getChannelItemsQueryKey(), useChannelItemsQuery()
+Nodes (2): getAgentsQueryKey(), useAgentsQuery()
 
 ### Community 120 - "Community 120"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getChannelItemsQueryKey(), useChannelItemsQuery()
 
 ### Community 121 - "Community 121"
-Cohesion: 1.0
-Nodes (2): getAutomationsQueryKey(), useAutomationsQuery()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 122 - "Community 122"
 Cohesion: 1.0
-Nodes (2): getSkillQueryKey(), useSkillQuery()
+Nodes (2): getAutomationsQueryKey(), useAutomationsQuery()
 
 ### Community 123 - "Community 123"
 Cohesion: 1.0
-Nodes (2): getSkillCategoriesQueryKey(), useSkillCategoriesQuery()
+Nodes (2): getSkillQueryKey(), useSkillQuery()
 
 ### Community 124 - "Community 124"
 Cohesion: 1.0
-Nodes (2): getActivityQueryKey(), useActivityQuery()
+Nodes (2): getSkillCategoriesQueryKey(), useSkillCategoriesQuery()
 
 ### Community 125 - "Community 125"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getActivityQueryKey(), useActivityQuery()
 
 ### Community 126 - "Community 126"
 Cohesion: 0.67
 Nodes (0): 
 
 ### Community 127 - "Community 127"
-Cohesion: 1.0
-Nodes (2): sleep(), until()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 128 - "Community 128"
 Cohesion: 0.67
@@ -5104,10 +5104,10 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `filter()` connect `Community 4` to `Community 0`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 9`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 16`, `Community 18`, `Community 28`, `Community 30`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **Why does `resolveDataRoot()` connect `Community 8` to `Community 3`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `filter()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 5`, `Community 7`, `Community 8`, `Community 9`, `Community 11`, `Community 12`, `Community 13`, `Community 17`, `Community 24`, `Community 28`, `Community 30`?**
+  _High betweenness centrality (0.078) - this node is a cross-community bridge._
+- **Why does `resolveDataRoot()` connect `Community 10` to `Community 4`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **Are the 69 inferred relationships involving `filter()` (e.g. with `DesignSystemProvider()` and `toggleWeekday()`) actually correct?**
   _`filter()` has 69 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 27 inferred relationships involving `writeFile()` (e.g. with `globalSetup()` and `seed()`) actually correct?**
@@ -5117,4 +5117,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03 - nodes in this community are weakly interconnected._

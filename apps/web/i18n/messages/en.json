@@ -592,6 +592,8 @@
     "consequenceLabel": "what happens after approval",
     "confirm": "Confirm",
     "reject": "Reject",
+    "holdToApprove": "Hold to approve",
+    "holdDone": "Approved",
     "guarantee": "ZIBBY never completes a risky action without your consent. The approval gate is an enforced layer, not a suggestion.",
     "requestedLabel": "Requested",
     "viaLabel": "Triggered by",

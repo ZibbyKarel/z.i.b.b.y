@@ -17,6 +17,14 @@ import type { IconName, TagTone } from "@zibby/design-system";
 /** Canonical, never-renamed semantic risk types (the approval gate taxonomy). */
 export type RiskType = "platba" | "mazani" | "push" | "odeslani";
 
+/**
+ * Risk types that require the deliberate **hold-to-confirm** guardrail rather than a
+ * single click — payment and deletion (mirrors `ApprovalCard`'s `highRisk` set, which
+ * maps these to the DS `payment`/`deletion` kinds). The canonical source so the queue
+ * card and the run-detail gate agree on which approvals are high-risk.
+ */
+export const HIGH_RISK_TYPES: ReadonlySet<RiskType> = new Set(["platba", "mazani"]);
+
 export type ApprovalActorKind = "skill" | "agent" | "pipeline";
 
 /** Structured preview of the exact action an agent is about to take. */
