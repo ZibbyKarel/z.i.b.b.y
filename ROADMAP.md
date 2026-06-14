@@ -981,6 +981,29 @@ index-first navigation now.
 
 ---
 
+## Phase 34 — Render the memory note body as markdown — ✅ delivered 2026-06-14
+
+_The deferred half of Phase 33: the vault is "plain markdown… human-readable", but the note viewer
+rendered the body as one raw `Typography` — a wall of `#`, `-`, `**`, `[[…]]`. Reading a note (or a
+MOC) in the HUD showed source, not prose._
+
+- **Dependency-frugal:** `@uiw/react-md-editor` is **already a dependency** (DS `MarkdownEditor`
+  wraps it) and ships `MDEditor.Markdown`, a themed markdown renderer — no new dep, no hand-rolled
+  parser. New DS **`Markdown`** viewer wraps it with the same GitHub-primer → design-token theme vars
+  (`data-color-mode="dark"`, transparent background) so rendered notes inherit the HUD palette.
+  Exported from the DS index.
+- `NoteView`: the body's raw `Typography` is replaced by `<Markdown source={note.body} />` — headings,
+  lists, emphasis, code, and standard links now render. The Phase-33 structured `links`/`backlinks`
+  chip rows remain the index-first navigation (inline `[[…]]` stays literal text — deferred).
+
+**Tests:** new DS `Markdown.test.tsx` — `# Hello` renders an `<h1>`, `- item` a list item, `**x**`
+strong; `NoteView.test.tsx` still finds the rendered body text. web/DS green.
+
+**Deferred (noted):** making inline `[[…]]` inside prose clickable (a react-markdown `components`
+override) — the link/backlink rows already cover navigation.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

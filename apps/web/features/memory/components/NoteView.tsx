@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Chip, Pressable, Stack, Typography } from "@zibby/design-system";
+import { Button, Chip, Markdown, Pressable, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { Note } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
@@ -67,9 +67,7 @@ export function NoteView({ note, onSelect, onEdit }: NoteViewProps) {
             </Button>
           </Stack>
 
-          <Typography size="base" type="note" variant="secondary">
-            {note.body ?? ""}
-          </Typography>
+          <Markdown source={note.body ?? ""} />
 
           {note.links.length > 0 && (
             <Stack gap="50">

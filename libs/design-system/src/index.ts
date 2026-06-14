@@ -268,6 +268,8 @@ export {
   MarkdownEditorTestId,
 } from "./components/MarkdownEditor/MarkdownEditor";
 export type { MarkdownEditorProps } from "./components/MarkdownEditor/MarkdownEditor";
+export { Markdown, MarkdownTestId } from "./components/Markdown/Markdown";
+export type { MarkdownProps } from "./components/Markdown/Markdown";
 
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
