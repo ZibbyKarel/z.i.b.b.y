@@ -24,6 +24,7 @@ import { SettingsSubnav } from "../settings/components/SettingsSubnav";
 import { useSkillsQuery } from "../skills/queries";
 import { GlobalRuleCard, type RuleUser } from "./components/GlobalRuleCard";
 import { RuleModal } from "./components/RuleModal";
+import { SystemFloorPanel } from "./components/SystemFloorPanel";
 import { DECISION_META, DECISION_ORDER } from "./gate";
 import {
   useCreateGateRuleMutation,
@@ -146,6 +147,10 @@ export function Screen() {
             </Typography>
           </Stack>
         </HudPanel>
+
+        {/* The locked POLICY.md floor — the structural guarantee, made visible above the
+            editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
+        <SystemFloorPanel />
 
         {shown.length === 0 ? (
           <EmptyState

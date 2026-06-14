@@ -1049,6 +1049,30 @@ web/DS green.
 
 ---
 
+## Phase 37 — /gates shows the locked system floor (POLICY.md) above the catalog — ✅ delivered 2026-06-14
+
+_Audit of the `/gates` (approval-rules catalog) surface. It's rich — real rule catalog (matcher →
+decision), decision-filter tabs, reorder (first-match-wins order), CRUD via `RuleModal`, and a text
+hierarchy note. But the **system floor itself was never shown** on the page: `useSystemPolicyQuery`
+(`GET /api/gates/policy` → the locked `POLICY.md` rules) existed and was wired into the **agent** rules
+editor (`AgentRulesSection`, as read-only inherited rules), yet the main `/gates` Screen rendered only
+the editable catalog. The note claimed "system floor → this catalog → agent/skill", but the floor — the
+deny/ask rules an agent's config "can only harden, never weaken" (Law 1) and that "cannot be talked
+around" (Law 4) — was invisible on the primary gate page. The operator couldn't verify the structural
+guarantee._
+
+- New `SystemFloorPanel` (reuses the existing `useSystemPolicyQuery` + `RuleCard locked` — the same
+  read-only treatment the agent editor already uses): a warn-toned panel above the catalog listing the
+  `POLICY.md` floor rules, each shown locked (shield, no edit/delete/reorder). Hidden when the floor is
+  empty. `/gates` Screen renders it right under the hierarchy note.
+- No new i18n — reuses `gates.inheritedTitle` / `inheritedNote` / `and` / `you` / `notifyHint` /
+  `decision_.*` (already shared with `AgentRulesSection`).
+
+**Tests:** new `SystemFloorPanel.test.tsx` — with a floor rule the panel renders its title + the rule's
+decision (deny) and **no** edit/delete controls (locked); an empty floor renders nothing. web/DS green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the
