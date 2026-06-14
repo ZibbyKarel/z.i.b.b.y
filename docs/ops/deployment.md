@@ -58,6 +58,24 @@ launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.api.plist
 | `PORT` | `3333` | API port |
 | `LOG_LEVEL` | `info` | Úroveň logování |
 | `CORS_ORIGIN` | `http://localhost:3000` | Povolená origin |
+| `GOAL_AUTO_RESUME` | `1` | **Phase 13.3** — na restartu démon re-drivuje `running`/`paused-limit` goaly (Phase 12.4 gate). Jen v démonu! |
+| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩` | **Phase 12.7** — worktrees mimo repo/data strom |
+
+### Goal auto-resume — unattended builder (Phase 13.3)
+
+Instalace tohoto démonu **JE** operátorův explicitní opt-in do bezobslužného provozu, takže
+`GOAL_AUTO_RESUME=1` v plistu je legitimní (jediné místo, kde auto-resume patří — Phase 12.4
+ho jinak gateuje za Tier 3). Sémantika restartu:
+
+| `GOAL_AUTO_RESUME` | Chování po restartu (`reconstruct()`) |
+|--------------------|----------------------------------------|
+| `1` (démon) | rehydratuje registr **a** re-drivuje `running`/`paused-limit` goaly (continuation, ne restart — Phase 9.3/12.4) |
+| unset (attended dev) | rehydratuje registr, ale live goaly zaparkuje `awaiting-resume` — čeká na operátora (Law 3) |
+
+**Self-development:** pokud démon má pohánět loop proti **vlastnímu** repu, řiď se
+[`self-development.md`](./self-development.md) — builder ≠ subject (subject = čerstvý sibling
+checkout jako projekt; worktrees v `ZIBBY_WORKTREE_ROOT` mimo builderův strom). Démon běží
+přes `api:start` (`serve` = `ts-node` bez `--respawn`), takže edit-respawn smyčka odpadá.
 
 ### Logy
 

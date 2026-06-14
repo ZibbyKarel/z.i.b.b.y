@@ -11,9 +11,10 @@ Make ZIBBY a safe target for its own loop engine (the "MEMORY BOMB" RCA).
 its own repo under the [self-development runbook](docs/ops/self-development.md).
 Detailed plan + verified RCA: [docs/plans/phase-12.md](docs/plans/phase-12.md).
 
-## Phase 13: self-development payoff — in progress
+## Phase 13: self-development payoff — ✅ COMPLETE (2026-06-14)
 
 The payoff of Phase 12: enforce the last governance piece + prove it end-to-end.
+**All of 13.1–13.4 done; full api suite reliably 684/684.**
 Plan: [docs/plans/phase-13.md](docs/plans/phase-13.md).
 
 | Item | Status | Notes |
@@ -21,7 +22,7 @@ Plan: [docs/plans/phase-13.md](docs/plans/phase-13.md).
 | 13.1 Enforce the per-goal budget | ✅ done (2026-06-14) | `GoalSchema.budget` was dead schema; now `goalBudgetExceeded()` (windowed run-count from `iterations[].startedAt`) parks `budget` at the iteration boundary. Composes with the 8.1 project cap. 679/679 green |
 | 13.2 Self-development exit demonstration | ✅ done (2026-06-14) | e2e in `goal-loop.e2e`: a goal on a sibling fixture checkout finishes `done` with the worktree under `ZIBBY_WORKTREE_ROOT` (not in the repo/data), the subject's HEAD unmoved + tree clean + a `zibby/*` branch present, scoped `["true"]` verifier (no full-repo suite). Also hardened `briefing.e2e` ENOTEMPTY (12.9 idiom). 680/680 green |
 | 13.4 Test stability under concurrent load | ✅ done (2026-06-14) | `vitest.config.ts` cap forks `max(2,cpus/2)` + `testTimeout/hookTimeout 30s` + `pipelines.e2e until` 25s. **5/5 consecutive full runs green (680/680)** |
-| 13.3 launchd daemon + `GOAL_AUTO_RESUME` | ⬜ next | unattended builder resumes across reboots |
+| 13.3 launchd daemon + `GOAL_AUTO_RESUME` | ✅ done (2026-06-14) | plist gains `GOAL_AUTO_RESUME=1` + `ZIBBY_WORKTREE_ROOT`; deployment.md resume-semantics + self-dev cross-ref; guard test. **CLOSES PHASE 13** |
 
 | Item | Status | Notes |
 | ---- | ------ | ----- |
@@ -52,15 +53,30 @@ are waste/blast-radius reduction + durable posture, not prerequisites.
   wider timeouts + pipelines `until` 25s). 5/5 consecutive full runs green. The full
   `pnpm test` (api) is now reliably 680/680.
 
-## Next iteration
+## Next iteration — Phases 1–13 all shipped; propose Phase 14
 
-**Phase 13.3 — launchd daemon + `GOAL_AUTO_RESUME` (the unattended-builder closer).**
-The only place auto-resume is legitimate (12.4 gates boot re-dispatch behind it). Ship the
-ops wiring so an unattended builder resumes goals across reboots:
-- A launchd plist template under `docs/ops/` (or `apps/api/scripts/`) running the pinned
-  `serve` build (NOT `ts-node-dev`, per the self-development runbook) with
-  `GOAL_AUTO_RESUME=1` + `ZIBBY_DATA_DIR`/`ZIBBY_WORKTREE_ROOT` set; `KeepAlive` for
-  crash-restart; stdout/stderr to a log path.
+Phase 13 closed the self-development arc. The roadmap's 13 phases are delivered; the next
+phase is genuinely open. Two candidates (recommend 14.1 — concrete web work building on
+what 12/13 shipped):
+
+**Phase 14.1 (recommended) — surface the new goal/park states in the web UI.** Phases 12/13
+added park reasons `verifier-scope`, `awaiting-resume`, and goal `budget` (and the goal's
+own budget cap), but `GoalDetailPanel` interpolates `parkedReason` as a RAW string — no
+friendly i18n label, no resume affordance distinct from the retries case, no goal-budget
+indicator. Build: i18n labels (cs/en) for the new reasons; a clear "ZIBBY paused on the
+usage/iteration/scope budget — resume?" surface; a goal-budget bar (iterations-used-in-window
+vs `goal.budget.dailyRuns/weeklyRuns`) alongside the existing cost bar. Web-components tests
+per surface; Playwright extends the goal-detail spec. Concrete, user-visible, ~1 iteration.
+
+**Phase 14.2 (alt) — roadmap ground-truth refresh + `pnpm e2e` (Playwright) audit.** The
+"Where we are today (verified 2026-06-11)" block + North-Star gap table are a month stale —
+nearly every gap is closed. Re-verify against current reality, and run/repair the Playwright
+operator-throughline (`pnpm e2e`) for the goal/loop/self-dev surfaces (the loop has exercised
+api unit/e2e but not Playwright). Heavier (browser + web app), lower code yield.
+
+If the operator wants to *actually* self-develop now, the
+[runbook](docs/ops/self-development.md) is ready — an operator action (real claude/tokens),
+not a loop iteration.
 - Document the resume semantics: with `GOAL_AUTO_RESUME=1` a restart re-drives
   `running`/`paused-limit` goals (12.4 `reconstruct`); without it they park
   `awaiting-resume`. Cross-reference Phase 8.3 (ops hardening) — this is its goal-loop

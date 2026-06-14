@@ -23,7 +23,15 @@ Progress (loop tracking)
       default 10s→25s (demo-timing). Result: 5/5 consecutive full runs green (680/680),
       ~11.5s wall. The under-load assertion class (categories/projects/memory) AND the
       pipelines demo-timeout flake are both gone.
-- [ ] 13.3 — launchd daemon + GOAL_AUTO_RESUME (Phase 8.3 territory)
+- [x] 13.3 — launchd daemon + GOAL_AUTO_RESUME (DONE 2026-06-14). **Closes Phase 13.**
+      Extended the existing `ops/com.zibby.api.plist` (Phase 8.3) with the
+      unattended-builder env: `GOAL_AUTO_RESUME=1` (installing the daemon IS the
+      operator's opt-in; the one legitimate place for auto-resume per 12.4) +
+      `ZIBBY_WORKTREE_ROOT`. Documented the restart/resume semantics + self-development
+      cross-ref in `docs/ops/deployment.md`. Guard test `launchd-plist.test.ts` (label,
+      KeepAlive/RunAtLoad, GOAL_AUTO_RESUME=1, worktree root). The auto-resume *behavior*
+      is already e2e-covered (goal-loop "restart with GOAL_AUTO_RESUME=1"). **PHASE 13
+      COMPLETE.**
 
 ---
 
