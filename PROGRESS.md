@@ -380,25 +380,32 @@ The last catalog surface (`/integrations`, via shared `Collection`). Plan: [docs
 | ---- | ------ | ----- |
 | 42.1 Collection error prop + integrations wiring | ✅ done (2026-06-14) | `Collection` gained optional `error?: LoadErrorProps` (symmetric with `empty: EmptyStateProps`, stays i18n-agnostic) → renders `<LoadError>` when set; **error precedes empty**, then items. `integrations/Screen` keeps the query object + passes `error` from `useIntegrationsQuery().isError` (`common.loadError*` + refetch). Tests: `Collection.test` — load error renders over empty when `error` set; existing cases unchanged. **web/DS green, full workspace 1544/1544** (first run, no flake), lint + web-tsc clean. Commit `93459f8`. **Honest-load sweep COMPLETE across every catalog surface** (agents + skills/pipelines/projects/gates/memory + integrations). |
 
+## Phase 43: Surface silent mutation failures (a global error toaster) — ✅ COMPLETE (2026-06-14)
+
+Write-side twin of the honest-load sweep. Plan: [docs/plans/phase-43.md](docs/plans/phase-43.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 43.1 Global mutation-error toaster | ✅ done (2026-06-14) | QueryClient had no `mutationCache` + no toast surface → a failed write (delete/create/toggle/approve/reject) was **silent**. ts-rest+`validateResponse` **throws** on network/unknown-status/schema-drift → react-query `onError` fires (covers the common "silent delete failed" case; in-contract 4xx resolve to the call site). Fix: module pub/sub `toastBus` (counter-keyed) + `Toaster` (subscribes, DS `Alert`s in a fixed `Container` overlay — `position` prop + `style` passthrough, no forbid-dom-props; auto-dismiss + close) mounted in `Providers`; QueryClient gained `MutationCache({ onError: () => toastBus.emit() })` — **one wiring point catches every mutation error app-wide**; copy localized in Toaster (`common.mutationError`). Tests: `toastBus.test` + `Toaster.test`. **web/DS green, full workspace 1549/1549** (first run, no flake), lint + web-tsc clean. Commit `c79fda2`. GOTCHA: eslint --fix kept stripping an inline `// eslint-disable-next-line` in JSX-expression position → use a DS `Container` (`style` passthrough on a component, no DOM-props rule) instead of a raw `<div>`. |
+
 ## Next iteration
 
-**Proposed Phase 43 — Surface silent mutation failures (always-answerable for writes).** A fresh lens
-after the read-side honest-load sweep: many `.mutate(...)` call sites across the HUD have **no
-`onError`** — a failed create/delete/update/toggle (API down, validation reject, conflict) shows the
-operator **nothing**; they click "Delete" and, if it fails, the item silently stays — they may assume
-it worked. North Star "always answerable" applies to writes too. GROUND first: grep `apps/web/features`
-for `.mutate(` and audit which lack error feedback; check the global ts-rest/react-query setup for any
-default error toast (if there's a global handler, this may be a non-gap — verify). If there's no global
-error surface, add one (a shared error toast/snackbar on mutation error) OR wire `onError` feedback on
-the highest-stakes writes (delete/approve/reject/gate decisions first). Pick the cleanest high-coverage
-approach (a global mutation-error toast via the QueryClient `MutationCache onError` is one tidy option).
-Keep it real + tested; if a global handler already exists, record that and pick the next genuine gap.
+**Proposed Phase 44 — Loading state, not a flash of "create your first" (empty-vs-loading).** Spotted
+during the Phase-43 work: every catalog screen does `const { data = [] } = useXQuery()` with **no
+`isPending`/`isLoading` guard**, so on a cold cache the first render shows `data = []` → the **empty
+state** ("no agents yet — create your first…") flashes for a beat before the data arrives and the
+content replaces it. A flash of "your workspace is empty" on every cold load is misleading (same family
+as the Phase-40 error-vs-empty bug, but for the loading moment). GROUND first: **does `BootSplash`
+(wrapped around all children in `Providers`) already gate the app on initial load and mask this?** —
+if it holds until first data/health resolves, this may be a non-gap (record + pick next). If not, add
+a loading state (a shared skeleton/spinner, reusing the `LoadError`/`EmptyState` component family) shown
+when the primary list query `isPending` (and the cache is cold) — before the empty/content decision.
+Pick the cleanest shared approach; keep it tested. **If BootSplash already masks it, the honest-status
+arc (load-error 40–42, mutation-error 43, loading-state 44) is complete and the loop should idle/await
+operator direction rather than manufacture low-value work — 18 phases done, obvious gaps exhausted.**
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
-at concrete HUD bugs as they spot them. **Audit signal after 17 phases:** obvious read-side gaps are
-exhausted; write-side error feedback is the next genuine lens. If Phase 43's audit finds a global
-handler already covers it, the loop should idle/await operator direction rather than manufacture
-low-value work.
+at concrete HUD bugs as they spot them — the highest-value next input would be a named bug.
 
 Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
 per-project — api 691/691 isolated). The
