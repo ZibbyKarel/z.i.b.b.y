@@ -372,24 +372,33 @@ Closed the Phase-40 honest-status gap across 5 more screens. Plan: [docs/plans/p
 | ---- | ------ | ----- |
 | 41.1 QueryError wrapper + skills/pipelines/projects/gates/memory | ✅ done (2026-06-14) | New thin `QueryError` wrapper = `LoadError` pre-wired with shared `common.loadError*` (cs+en) → each screen a one-liner. `skills`/`pipelines`/`projects`/`gates`/`memory` Screens render `<QueryError onRetry={refetch}>` when their primary list query `isError` (error precedes empty; `pipelines`+`memory` use an error early-return mirroring their empty early-return). Existing query mocks (return `{data}`, `isError` undefined→falsy) keep screen tests green. Tests: `QueryError.test`. **web/DS green (full web-components 378/378), api 691/691 isolated** (full-suite 1 known under-load flake; web-only), lint + web-tsc clean. Commit `e415502`. |
 
+## Phase 42: `Collection` error state finishes the honest-load sweep — ✅ COMPLETE (2026-06-14)
+
+The last catalog surface (`/integrations`, via shared `Collection`). Plan: [docs/plans/phase-42.md](docs/plans/phase-42.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 42.1 Collection error prop + integrations wiring | ✅ done (2026-06-14) | `Collection` gained optional `error?: LoadErrorProps` (symmetric with `empty: EmptyStateProps`, stays i18n-agnostic) → renders `<LoadError>` when set; **error precedes empty**, then items. `integrations/Screen` keeps the query object + passes `error` from `useIntegrationsQuery().isError` (`common.loadError*` + refetch). Tests: `Collection.test` — load error renders over empty when `error` set; existing cases unchanged. **web/DS green, full workspace 1544/1544** (first run, no flake), lint + web-tsc clean. Commit `93459f8`. **Honest-load sweep COMPLETE across every catalog surface** (agents + skills/pipelines/projects/gates/memory + integrations). |
+
 ## Next iteration
 
-**Proposed Phase 42 — `Collection` error state (finish the honest-status sweep).** Only `/integrations`
-remains on the empty-on-error bug: it uses the shared `Collection` component (not `EmptyState`), which
-has an `empty` prop but no error state, so an API outage there still reads as "no integrations yet."
-GROUND first: `apps/web/components/Collection/Collection.tsx` (its `empty` prop shape + render) and the
-`integrations/Screen.tsx` call site (it passes `items` + `empty`; check the query exposes `isError`/
-`refetch`). Add an optional `error?: { title; description; retryLabel?; onRetry? }` (or an `isError` +
-`onRetry` pair) to `Collection` that renders `LoadError` instead of the empty block; wire
-`integrations/Screen` to pass it from `useIntegrationsQuery().isError`. Reuse `common.loadError*`. This
-closes the honest-status gap on the **last** catalog surface. Keep it behaviour-preserving + tested
-(Collection renders error when set, else empty/items as before).
+**Proposed Phase 43 — Surface silent mutation failures (always-answerable for writes).** A fresh lens
+after the read-side honest-load sweep: many `.mutate(...)` call sites across the HUD have **no
+`onError`** — a failed create/delete/update/toggle (API down, validation reject, conflict) shows the
+operator **nothing**; they click "Delete" and, if it fails, the item silently stays — they may assume
+it worked. North Star "always answerable" applies to writes too. GROUND first: grep `apps/web/features`
+for `.mutate(` and audit which lack error feedback; check the global ts-rest/react-query setup for any
+default error toast (if there's a global handler, this may be a non-gap — verify). If there's no global
+error surface, add one (a shared error toast/snackbar on mutation error) OR wire `onError` feedback on
+the highest-stakes writes (delete/approve/reject/gate decisions first). Pick the cleanest high-coverage
+approach (a global mutation-error toast via the QueryClient `MutationCache onError` is one tidy option).
+Keep it real + tested; if a global handler already exists, record that and pick the next genuine gap.
 
 This continues the operator's "polish the velín" pass. **Open invitation:** the operator is pointing
-at concrete HUD bugs as they spot them — each becomes the next phase. (Audit signal after 15 phases:
-obvious gaps are exhausted — the highest-value next input would be the operator naming a concrete bug;
-after Phase 42 the honest-load-state sweep is complete and the loop should await operator direction or
-a newly-spotted bug rather than manufacture low-value work.)
+at concrete HUD bugs as they spot them. **Audit signal after 17 phases:** obvious read-side gaps are
+exhausted; write-side error feedback is the next genuine lens. If Phase 43's audit finds a global
+handler already covers it, the loop should idle/await operator direction rather than manufacture
+low-value work.
 
 Also still open (hardening): the api e2e under full-suite contention can flake on timeouts (passes
 per-project — api 691/691 isolated). The
