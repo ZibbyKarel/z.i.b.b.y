@@ -36,7 +36,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/vitest.setup.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_vitest_setup_tsx",
-      "community": 20,
+      "community": 19,
       "norm_label": "vitest.setup.tsx"
     },
     {
@@ -45,7 +45,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/vitest.setup.tsx",
       "source_location": "L9",
       "id": "vitest_setup_resizeobserver",
-      "community": 20,
+      "community": 19,
       "norm_label": "resizeobserver"
     },
     {
@@ -54,7 +54,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/vitest.setup.tsx",
       "source_location": "L10",
       "id": "vitest_setup_resizeobserver_observe",
-      "community": 20,
+      "community": 19,
       "norm_label": ".observe()"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/vitest.setup.tsx",
       "source_location": "L11",
       "id": "vitest_setup_resizeobserver_unobserve",
-      "community": 20,
+      "community": 19,
       "norm_label": ".unobserve()"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/vitest.setup.tsx",
       "source_location": "L12",
       "id": "vitest_setup_resizeobserver_disconnect",
-      "community": 20,
+      "community": 19,
       "norm_label": ".disconnect()"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/domain.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_domain_ts",
-      "community": 35,
+      "community": 36,
       "norm_label": "domain.ts"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/domain.ts",
       "source_location": "L116",
       "id": "domain_glyphforagent",
-      "community": 35,
+      "community": 36,
       "norm_label": "glyphforagent()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/domain.ts",
       "source_location": "L127",
       "id": "domain_glyphforphase",
-      "community": 35,
+      "community": 36,
       "norm_label": "glyphforphase()"
     },
     {
@@ -135,7 +135,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/layout.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_layout_tsx",
-      "community": 66,
+      "community": 67,
       "norm_label": "layout.tsx"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/layout.tsx",
       "source_location": "L32",
       "id": "layout_rootlayout",
-      "community": 66,
+      "community": 67,
       "norm_label": "rootlayout()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_page_tsx",
-      "community": 67,
+      "community": 68,
       "norm_label": "page.tsx"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/page.tsx",
       "source_location": "L3",
       "id": "page_rootpage",
-      "community": 67,
+      "community": 68,
       "norm_label": "rootpage()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/providers.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_providers_tsx",
-      "community": 68,
+      "community": 69,
       "norm_label": "providers.tsx"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/providers.tsx",
       "source_location": "L10",
       "id": "providers_providers",
-      "community": 68,
+      "community": 69,
       "norm_label": "providers()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/layout.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_layout_tsx",
-      "community": 69,
+      "community": 70,
       "norm_label": "layout.tsx"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/layout.tsx",
       "source_location": "L4",
       "id": "layout_dashboardlayout",
-      "community": 69,
+      "community": 70,
       "norm_label": "dashboardlayout()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/settings/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_settings_page_tsx",
-      "community": 70,
+      "community": 71,
       "norm_label": "page.tsx"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/settings/page.tsx",
       "source_location": "L3",
       "id": "page_settingspage",
-      "community": 70,
+      "community": 71,
       "norm_label": "settingspage()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/gates/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_gates_page_tsx",
-      "community": 71,
+      "community": 72,
       "norm_label": "page.tsx"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/gates/page.tsx",
       "source_location": "L3",
       "id": "page_gatespage",
-      "community": 71,
+      "community": 72,
       "norm_label": "gatespage()"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/memory/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_memory_page_tsx",
-      "community": 72,
+      "community": 73,
       "norm_label": "page.tsx"
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/memory/page.tsx",
       "source_location": "L3",
       "id": "page_memorypage",
-      "community": 72,
+      "community": 73,
       "norm_label": "memorypage()"
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/projects/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_projects_page_tsx",
-      "community": 73,
+      "community": 74,
       "norm_label": "page.tsx"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/projects/page.tsx",
       "source_location": "L3",
       "id": "page_projectspage",
-      "community": 73,
+      "community": 74,
       "norm_label": "projectspage()"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/agents/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_agents_page_tsx",
-      "community": 74,
+      "community": 75,
       "norm_label": "page.tsx"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/agents/page.tsx",
       "source_location": "L3",
       "id": "page_agentspage",
-      "community": 74,
+      "community": 75,
       "norm_label": "agentspage()"
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/pipelines/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_pipelines_page_tsx",
-      "community": 75,
+      "community": 76,
       "norm_label": "page.tsx"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/pipelines/page.tsx",
       "source_location": "L3",
       "id": "page_pipelinespage",
-      "community": 75,
+      "community": 76,
       "norm_label": "pipelinespage()"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/pipelines/[id]/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_pipelines_id_page_tsx",
-      "community": 76,
+      "community": 77,
       "norm_label": "page.tsx"
     },
     {
@@ -333,7 +333,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/pipelines/[id]/page.tsx",
       "source_location": "L3",
       "id": "page_pipelinedetailpage",
-      "community": 76,
+      "community": 77,
       "norm_label": "pipelinedetailpage()"
     },
     {
@@ -342,7 +342,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/integrations/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_integrations_page_tsx",
-      "community": 77,
+      "community": 78,
       "norm_label": "page.tsx"
     },
     {
@@ -351,7 +351,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/integrations/page.tsx",
       "source_location": "L3",
       "id": "page_integrationspage",
-      "community": 77,
+      "community": 78,
       "norm_label": "integrationspage()"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/automations/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_automations_page_tsx",
-      "community": 78,
+      "community": 79,
       "norm_label": "page.tsx"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/automations/page.tsx",
       "source_location": "L3",
       "id": "page_automationspage",
-      "community": 78,
+      "community": 79,
       "norm_label": "automationspage()"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/skills/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_skills_page_tsx",
-      "community": 79,
+      "community": 80,
       "norm_label": "page.tsx"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/skills/page.tsx",
       "source_location": "L3",
       "id": "page_skillspage",
-      "community": 79,
+      "community": 80,
       "norm_label": "skillspage()"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/overview/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_overview_page_tsx",
-      "community": 80,
+      "community": 81,
       "norm_label": "page.tsx"
     },
     {
@@ -405,7 +405,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/overview/page.tsx",
       "source_location": "L3",
       "id": "page_overviewpage",
-      "community": 80,
+      "community": 81,
       "norm_label": "overviewpage()"
     },
     {
@@ -414,7 +414,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/runs/page.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_app_dashboard_runs_page_tsx",
-      "community": 81,
+      "community": 82,
       "norm_label": "page.tsx"
     },
     {
@@ -423,7 +423,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/app/(dashboard)/runs/page.tsx",
       "source_location": "L3",
       "id": "page_runspage",
-      "community": 81,
+      "community": 82,
       "norm_label": "runspage()"
     },
     {
@@ -540,7 +540,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_test_speechsynthesismock_ts",
-      "community": 3,
+      "community": 6,
       "norm_label": "speechsynthesismock.ts"
     },
     {
@@ -549,7 +549,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L7",
       "id": "speechsynthesismock_mockspeechsynthesisutterance",
-      "community": 3,
+      "community": 6,
       "norm_label": "mockspeechsynthesisutterance"
     },
     {
@@ -558,7 +558,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L16",
       "id": "speechsynthesismock_mockspeechsynthesisutterance_constructor",
-      "community": 3,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -567,7 +567,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L21",
       "id": "speechsynthesismock_mockspeechsynthesis",
-      "community": 3,
+      "community": 6,
       "norm_label": "mockspeechsynthesis"
     },
     {
@@ -576,7 +576,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L29",
       "id": "speechsynthesismock_mockspeechsynthesis_constructor",
-      "community": 3,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -585,7 +585,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L33",
       "id": "speechsynthesismock_mockspeechsynthesis_getvoices",
-      "community": 3,
+      "community": 6,
       "norm_label": ".getvoices()"
     },
     {
@@ -594,7 +594,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L37",
       "id": "speechsynthesismock_mockspeechsynthesis_speak",
-      "community": 3,
+      "community": 6,
       "norm_label": ".speak()"
     },
     {
@@ -603,7 +603,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L43",
       "id": "speechsynthesismock_mockspeechsynthesis_cancel",
-      "community": 3,
+      "community": 6,
       "norm_label": ".cancel()"
     },
     {
@@ -612,7 +612,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L48",
       "id": "speechsynthesismock_mockspeechsynthesis_addeventlistener",
-      "community": 3,
+      "community": 6,
       "norm_label": ".addeventlistener()"
     },
     {
@@ -621,7 +621,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L52",
       "id": "speechsynthesismock_mockspeechsynthesis_removeeventlistener",
-      "community": 3,
+      "community": 6,
       "norm_label": ".removeeventlistener()"
     },
     {
@@ -630,7 +630,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L59",
       "id": "speechsynthesismock_mockspeechsynthesis_emitvoiceschanged",
-      "community": 3,
+      "community": 6,
       "norm_label": ".emitvoiceschanged()"
     },
     {
@@ -639,7 +639,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L64",
       "id": "speechsynthesismock_mockspeechsynthesis_latest",
-      "community": 3,
+      "community": 6,
       "norm_label": ".latest()"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L71",
       "id": "speechsynthesismock_mockspeechsynthesis_finishlatest",
-      "community": 3,
+      "community": 6,
       "norm_label": ".finishlatest()"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L78",
       "id": "speechsynthesismock_fixturevoices",
-      "community": 3,
+      "community": 6,
       "norm_label": "fixturevoices()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L92",
       "id": "speechsynthesismock_installmockspeechsynthesis",
-      "community": 3,
+      "community": 6,
       "norm_label": "installmockspeechsynthesis()"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L103",
       "id": "speechsynthesismock_uninstallspeechsynthesis",
-      "community": 3,
+      "community": 6,
       "norm_label": "uninstallspeechsynthesis()"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/render.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_test_render_tsx",
-      "community": 82,
+      "community": 83,
       "norm_label": "render.tsx"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/render.tsx",
       "source_location": "L17",
       "id": "render_renderwithproviders",
-      "community": 82,
+      "community": 83,
       "norm_label": "renderwithproviders()"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_settings_screen_tsx",
-      "community": 28,
+      "community": 27,
       "norm_label": "screen.tsx"
     },
     {
@@ -711,7 +711,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/Screen.tsx",
       "source_location": "L31",
       "id": "screen_formatuptime",
-      "community": 28,
+      "community": 27,
       "norm_label": "formatuptime()"
     },
     {
@@ -720,7 +720,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/Screen.tsx",
       "source_location": "L116",
       "id": "screen_setcaffeinatevalue",
-      "community": 28,
+      "community": 27,
       "norm_label": "setcaffeinatevalue()"
     },
     {
@@ -729,7 +729,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/Screen.tsx",
       "source_location": "L122",
       "id": "screen_setlocale",
-      "community": 28,
+      "community": 27,
       "norm_label": "setlocale()"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/mutations/useSetMandateMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_settings_mutations_usesetmandatemutation_ts",
-      "community": 83,
+      "community": 84,
       "norm_label": "usesetmandatemutation.ts"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/mutations/useSetMandateMutation.ts",
       "source_location": "L6",
       "id": "usesetmandatemutation_usesetmandatemutation",
-      "community": 83,
+      "community": 84,
       "norm_label": "usesetmandatemutation()"
     },
     {
@@ -765,7 +765,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/queries/useMandateQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_settings_queries_usemandatequery_ts",
-      "community": 36,
+      "community": 37,
       "norm_label": "usemandatequery.ts"
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/queries/useMandateQuery.ts",
       "source_location": "L5",
       "id": "usemandatequery_getmandatequerykey",
-      "community": 36,
+      "community": 37,
       "norm_label": "getmandatequerykey()"
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/queries/useMandateQuery.ts",
       "source_location": "L10",
       "id": "usemandatequery_usemandatequery",
-      "community": 36,
+      "community": 37,
       "norm_label": "usemandatequery()"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/SettingsSubnav.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_settings_components_settingssubnav_tsx",
-      "community": 84,
+      "community": 85,
       "norm_label": "settingssubnav.tsx"
     },
     {
@@ -837,7 +837,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/SettingsSubnav.tsx",
       "source_location": "L17",
       "id": "settingssubnav_settingssubnav",
-      "community": 84,
+      "community": 85,
       "norm_label": "settingssubnav()"
     },
     {
@@ -846,7 +846,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/MandateSection.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_settings_components_mandatesection_tsx",
-      "community": 21,
+      "community": 20,
       "norm_label": "mandatesection.tsx"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/MandateSection.tsx",
       "source_location": "L27",
       "id": "mandatesection_effective",
-      "community": 21,
+      "community": 20,
       "norm_label": "effective()"
     },
     {
@@ -864,7 +864,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/MandateSection.tsx",
       "source_location": "L32",
       "id": "mandatesection_put",
-      "community": 21,
+      "community": 20,
       "norm_label": "put()"
     },
     {
@@ -873,7 +873,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/MandateSection.tsx",
       "source_location": "L34",
       "id": "mandatesection_setdefault",
-      "community": 21,
+      "community": 20,
       "norm_label": "setdefault()"
     },
     {
@@ -882,7 +882,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/settings/components/MandateSection.tsx",
       "source_location": "L37",
       "id": "mandatesection_setchannel",
-      "community": 21,
+      "community": 20,
       "norm_label": "setchannel()"
     },
     {
@@ -891,7 +891,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/gate.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_gate_ts",
-      "community": 29,
+      "community": 28,
       "norm_label": "gate.ts"
     },
     {
@@ -900,7 +900,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/gate.ts",
       "source_location": "L51",
       "id": "gate_matchtext",
-      "community": 29,
+      "community": 28,
       "norm_label": "matchtext()"
     },
     {
@@ -909,7 +909,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/gate.ts",
       "source_location": "L75",
       "id": "gate_flattenresolve",
-      "community": 29,
+      "community": 28,
       "norm_label": "flattenresolve()"
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/gate.ts",
       "source_location": "L97",
       "id": "gate_freshruleid",
-      "community": 29,
+      "community": 28,
       "norm_label": "freshruleid()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L69",
       "id": "screen_save",
-      "community": 7,
+      "community": 0,
       "norm_label": "save()"
     },
     {
@@ -990,7 +990,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useUpdateGateRuleMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_mutations_useupdategaterulemutation_ts",
-      "community": 85,
+      "community": 86,
       "norm_label": "useupdategaterulemutation.ts"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useUpdateGateRuleMutation.ts",
       "source_location": "L6",
       "id": "useupdategaterulemutation_useupdategaterulemutation",
-      "community": 85,
+      "community": 86,
       "norm_label": "useupdategaterulemutation()"
     },
     {
@@ -1008,7 +1008,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useReplaceAgentGatesMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_mutations_usereplaceagentgatesmutation_ts",
-      "community": 86,
+      "community": 87,
       "norm_label": "usereplaceagentgatesmutation.ts"
     },
     {
@@ -1017,7 +1017,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useReplaceAgentGatesMutation.ts",
       "source_location": "L9",
       "id": "usereplaceagentgatesmutation_usereplaceagentgatesmutation",
-      "community": 86,
+      "community": 87,
       "norm_label": "usereplaceagentgatesmutation()"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useReorderGateRulesMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_mutations_usereordergaterulesmutation_ts",
-      "community": 87,
+      "community": 88,
       "norm_label": "usereordergaterulesmutation.ts"
     },
     {
@@ -1035,7 +1035,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useReorderGateRulesMutation.ts",
       "source_location": "L10",
       "id": "usereordergaterulesmutation_usereordergaterulesmutation",
-      "community": 87,
+      "community": 88,
       "norm_label": "usereordergaterulesmutation()"
     },
     {
@@ -1044,7 +1044,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useCreateGateRuleMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_mutations_usecreategaterulemutation_ts",
-      "community": 88,
+      "community": 89,
       "norm_label": "usecreategaterulemutation.ts"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useCreateGateRuleMutation.ts",
       "source_location": "L6",
       "id": "usecreategaterulemutation_usecreategaterulemutation",
-      "community": 88,
+      "community": 89,
       "norm_label": "usecreategaterulemutation()"
     },
     {
@@ -1062,7 +1062,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useDeleteGateRuleMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_mutations_usedeletegaterulemutation_ts",
-      "community": 89,
+      "community": 90,
       "norm_label": "usedeletegaterulemutation.ts"
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/mutations/useDeleteGateRuleMutation.ts",
       "source_location": "L6",
       "id": "usedeletegaterulemutation_usedeletegaterulemutation",
-      "community": 89,
+      "community": 90,
       "norm_label": "usedeletegaterulemutation()"
     },
     {
@@ -1089,7 +1089,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useSystemPolicyQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_queries_usesystempolicyquery_ts",
-      "community": 37,
+      "community": 38,
       "norm_label": "usesystempolicyquery.ts"
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useSystemPolicyQuery.ts",
       "source_location": "L5",
       "id": "usesystempolicyquery_getsystempolicyquerykey",
-      "community": 37,
+      "community": 38,
       "norm_label": "getsystempolicyquerykey()"
     },
     {
@@ -1107,7 +1107,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useSystemPolicyQuery.ts",
       "source_location": "L10",
       "id": "usesystempolicyquery_usesystempolicyquery",
-      "community": 37,
+      "community": 38,
       "norm_label": "usesystempolicyquery()"
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useGateRulesQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_queries_usegaterulesquery_ts",
-      "community": 38,
+      "community": 39,
       "norm_label": "usegaterulesquery.ts"
     },
     {
@@ -1134,7 +1134,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useGateRulesQuery.ts",
       "source_location": "L5",
       "id": "usegaterulesquery_getgaterulesquerykey",
-      "community": 38,
+      "community": 39,
       "norm_label": "getgaterulesquerykey()"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useGateRulesQuery.ts",
       "source_location": "L14",
       "id": "usegaterulesquery_usegaterulesquery",
-      "community": 38,
+      "community": 39,
       "norm_label": "usegaterulesquery()"
     },
     {
@@ -1152,7 +1152,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useAgentGatesQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_queries_useagentgatesquery_ts",
-      "community": 39,
+      "community": 40,
       "norm_label": "useagentgatesquery.ts"
     },
     {
@@ -1161,7 +1161,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useAgentGatesQuery.ts",
       "source_location": "L5",
       "id": "useagentgatesquery_getagentgatesquerykey",
-      "community": 39,
+      "community": 40,
       "norm_label": "getagentgatesquerykey()"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/queries/useAgentGatesQuery.ts",
       "source_location": "L10",
       "id": "useagentgatesquery_useagentgatesquery",
-      "community": 39,
+      "community": 40,
       "norm_label": "useagentgatesquery()"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_components_rulemodal_tsx",
-      "community": 14,
+      "community": 13,
       "norm_label": "rulemodal.tsx"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L35",
       "id": "rulemodal_matchtofields",
-      "community": 14,
+      "community": 13,
       "norm_label": "matchtofields()"
     },
     {
@@ -1197,7 +1197,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L52",
       "id": "rulemodal_buildmatch",
-      "community": 14,
+      "community": 13,
       "norm_label": "buildmatch()"
     },
     {
@@ -1206,7 +1206,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L69",
       "id": "rulemodal_leafnode",
-      "community": 14,
+      "community": 13,
       "norm_label": "leafnode()"
     },
     {
@@ -1215,7 +1215,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L76",
       "id": "rulemodal_buildresolve",
-      "community": 14,
+      "community": 13,
       "norm_label": "buildresolve()"
     },
     {
@@ -1224,7 +1224,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L126",
       "id": "rulemodal_setleaf",
-      "community": 14,
+      "community": 13,
       "norm_label": "setleaf()"
     },
     {
@@ -1233,7 +1233,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L128",
       "id": "rulemodal_addleaf",
-      "community": 14,
+      "community": 13,
       "norm_label": "addleaf()"
     },
     {
@@ -1242,7 +1242,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleModal.tsx",
       "source_location": "L129",
       "id": "rulemodal_removeleaf",
-      "community": 14,
+      "community": 13,
       "norm_label": "removeleaf()"
     },
     {
@@ -1260,7 +1260,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleParts.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_components_ruleparts_tsx",
-      "community": 40,
+      "community": 41,
       "norm_label": "ruleparts.tsx"
     },
     {
@@ -1269,7 +1269,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleParts.tsx",
       "source_location": "L8",
       "id": "ruleparts_decisionbadge",
-      "community": 40,
+      "community": 41,
       "norm_label": "decisionbadge()"
     },
     {
@@ -1278,7 +1278,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/RuleParts.tsx",
       "source_location": "L29",
       "id": "ruleparts_pat",
-      "community": 40,
+      "community": 41,
       "norm_label": "pat()"
     },
     {
@@ -1287,7 +1287,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/GlobalRuleCard.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_gates_components_globalrulecard_tsx",
-      "community": 90,
+      "community": 91,
       "norm_label": "globalrulecard.tsx"
     },
     {
@@ -1296,7 +1296,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/gates/components/GlobalRuleCard.tsx",
       "source_location": "L41",
       "id": "globalrulecard_userchip",
-      "community": 90,
+      "community": 91,
       "norm_label": "userchip()"
     },
     {
@@ -1305,7 +1305,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/grantLaw1.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_grantlaw1_test_ts",
-      "community": 91,
+      "community": 92,
       "norm_label": "grantlaw1.test.ts"
     },
     {
@@ -1314,7 +1314,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/grantLaw1.test.ts",
       "source_location": "L27",
       "id": "grantlaw1_test_walk",
-      "community": 91,
+      "community": 92,
       "norm_label": "walk()"
     },
     {
@@ -1323,7 +1323,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_loop_ts",
-      "community": 6,
+      "community": 5,
       "norm_label": "loop.ts"
     },
     {
@@ -1332,7 +1332,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L44",
       "id": "loop_proposedgoaltoloopstate",
-      "community": 6,
+      "community": 5,
       "norm_label": "proposedgoaltoloopstate()"
     },
     {
@@ -1341,7 +1341,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L60",
       "id": "loop_encodemaker",
-      "community": 6,
+      "community": 5,
       "norm_label": "encodemaker()"
     },
     {
@@ -1350,7 +1350,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L65",
       "id": "loop_decodemaker",
-      "community": 6,
+      "community": 5,
       "norm_label": "decodemaker()"
     },
     {
@@ -1359,7 +1359,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L80",
       "id": "loop_slugify",
-      "community": 6,
+      "community": 5,
       "norm_label": "slugify()"
     },
     {
@@ -1368,7 +1368,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L95",
       "id": "loop_makegoalid",
-      "community": 6,
+      "community": 5,
       "norm_label": "makegoalid()"
     },
     {
@@ -1377,7 +1377,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L101",
       "id": "loop_parsecommands",
-      "community": 6,
+      "community": 5,
       "norm_label": "parsecommands()"
     },
     {
@@ -1386,7 +1386,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L109",
       "id": "loop_cansubmitloop",
-      "community": 6,
+      "community": 5,
       "norm_label": "cansubmitloop()"
     },
     {
@@ -1395,7 +1395,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.ts",
       "source_location": "L123",
       "id": "loop_buildcreategoalbody",
-      "community": 6,
+      "community": 5,
       "norm_label": "buildcreategoalbody()"
     },
     {
@@ -1413,7 +1413,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_loop_test_ts",
-      "community": 6,
+      "community": 5,
       "norm_label": "loop.test.ts"
     },
     {
@@ -1422,7 +1422,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/loop.test.ts",
       "source_location": "L15",
       "id": "loop_test_loop",
-      "community": 6,
+      "community": 5,
       "norm_label": "loop()"
     },
     {
@@ -1440,7 +1440,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/TaskContext.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_taskcontext_tsx",
-      "community": 92,
+      "community": 93,
       "norm_label": "taskcontext.tsx"
     },
     {
@@ -1449,7 +1449,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/TaskContext.tsx",
       "source_location": "L49",
       "id": "taskcontext_handler",
-      "community": 92,
+      "community": 93,
       "norm_label": "handler()"
     },
     {
@@ -1458,7 +1458,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/voiceTaskSeam.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_voicetaskseam_test_tsx",
-      "community": 24,
+      "community": 21,
       "norm_label": "voicetaskseam.test.tsx"
     },
     {
@@ -1467,7 +1467,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/voiceTaskSeam.test.tsx",
       "source_location": "L13",
       "id": "voicetaskseam_test_probe",
-      "community": 24,
+      "community": 21,
       "norm_label": "probe()"
     },
     {
@@ -1566,7 +1566,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/mutations/useCancelScheduledTaskMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_mutations_usecancelscheduledtaskmutation_ts",
-      "community": 93,
+      "community": 94,
       "norm_label": "usecancelscheduledtaskmutation.ts"
     },
     {
@@ -1575,7 +1575,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/mutations/useCancelScheduledTaskMutation.ts",
       "source_location": "L6",
       "id": "usecancelscheduledtaskmutation_usecancelscheduledtaskmutation",
-      "community": 93,
+      "community": 94,
       "norm_label": "usecancelscheduledtaskmutation()"
     },
     {
@@ -1584,7 +1584,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/mutations/useClassifyTaskMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_mutations_useclassifytaskmutation_ts",
-      "community": 94,
+      "community": 8,
       "norm_label": "useclassifytaskmutation.ts"
     },
     {
@@ -1593,7 +1593,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/mutations/useClassifyTaskMutation.ts",
       "source_location": "L9",
       "id": "useclassifytaskmutation_useclassifytaskmutation",
-      "community": 94,
+      "community": 8,
       "norm_label": "useclassifytaskmutation()"
     },
     {
@@ -1602,7 +1602,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/mutations/useCreateTaskMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_mutations_usecreatetaskmutation_ts",
-      "community": 11,
+      "community": 8,
       "norm_label": "usecreatetaskmutation.ts"
     },
     {
@@ -1611,7 +1611,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/mutations/useCreateTaskMutation.ts",
       "source_location": "L11",
       "id": "usecreatetaskmutation_usecreatetaskmutation",
-      "community": 11,
+      "community": 8,
       "norm_label": "usecreatetaskmutation()"
     },
     {
@@ -1629,7 +1629,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/queries/useScheduledTasksQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_queries_usescheduledtasksquery_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "usescheduledtasksquery.ts"
     },
     {
@@ -1638,7 +1638,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/queries/useScheduledTasksQuery.ts",
       "source_location": "L5",
       "id": "usescheduledtasksquery_getscheduledtasksquerykey",
-      "community": 2,
+      "community": 3,
       "norm_label": "getscheduledtasksquerykey()"
     },
     {
@@ -1647,7 +1647,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/queries/useScheduledTasksQuery.ts",
       "source_location": "L15",
       "id": "usescheduledtasksquery_usescheduledtasksquery",
-      "community": 2,
+      "community": 3,
       "norm_label": "usescheduledtasksquery()"
     },
     {
@@ -1710,7 +1710,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/components/PathChips.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_components_pathchips_tsx",
-      "community": 0,
+      "community": 1,
       "norm_label": "pathchips.tsx"
     },
     {
@@ -1719,7 +1719,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/components/PathChips.tsx",
       "source_location": "L27",
       "id": "pathchips_pathchips",
-      "community": 0,
+      "community": 1,
       "norm_label": "pathchips()"
     },
     {
@@ -1746,7 +1746,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/components/NewTaskDialog.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_components_newtaskdialog_test_tsx",
-      "community": 41,
+      "community": 42,
       "norm_label": "newtaskdialog.test.tsx"
     },
     {
@@ -1755,7 +1755,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/components/NewTaskDialog.test.tsx",
       "source_location": "L25",
       "id": "newtaskdialog_test_resolvepaths",
-      "community": 41,
+      "community": 42,
       "norm_label": "resolvepaths()"
     },
     {
@@ -1764,7 +1764,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/tasks/components/NewTaskDialog.test.tsx",
       "source_location": "L33",
       "id": "newtaskdialog_test_apirouting",
-      "community": 41,
+      "community": 42,
       "norm_label": "apirouting()"
     },
     {
@@ -1881,7 +1881,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useMemorySearchQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_memory_queries_usememorysearchquery_ts",
-      "community": 42,
+      "community": 43,
       "norm_label": "usememorysearchquery.ts"
     },
     {
@@ -1890,7 +1890,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useMemorySearchQuery.ts",
       "source_location": "L4",
       "id": "usememorysearchquery_getmemorysearchquerykey",
-      "community": 42,
+      "community": 43,
       "norm_label": "getmemorysearchquerykey()"
     },
     {
@@ -1899,7 +1899,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useMemorySearchQuery.ts",
       "source_location": "L9",
       "id": "usememorysearchquery_usememorysearchquery",
-      "community": 42,
+      "community": 43,
       "norm_label": "usememorysearchquery()"
     },
     {
@@ -1908,7 +1908,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useNoteQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_memory_queries_usenotequery_ts",
-      "community": 43,
+      "community": 44,
       "norm_label": "usenotequery.ts"
     },
     {
@@ -1917,7 +1917,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useNoteQuery.ts",
       "source_location": "L4",
       "id": "usenotequery_getnotequerykey",
-      "community": 43,
+      "community": 44,
       "norm_label": "getnotequerykey()"
     },
     {
@@ -1926,7 +1926,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useNoteQuery.ts",
       "source_location": "L9",
       "id": "usenotequery_usenotequery",
-      "community": 43,
+      "community": 44,
       "norm_label": "usenotequery()"
     },
     {
@@ -1944,7 +1944,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useMemoryGraphQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_memory_queries_usememorygraphquery_ts",
-      "community": 44,
+      "community": 45,
       "norm_label": "usememorygraphquery.ts"
     },
     {
@@ -1953,7 +1953,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useMemoryGraphQuery.ts",
       "source_location": "L4",
       "id": "usememorygraphquery_getmemorygraphquerykey",
-      "community": 44,
+      "community": 45,
       "norm_label": "getmemorygraphquerykey()"
     },
     {
@@ -1962,7 +1962,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/queries/useMemoryGraphQuery.ts",
       "source_location": "L9",
       "id": "usememorygraphquery_usememorygraphquery",
-      "community": 44,
+      "community": 45,
       "norm_label": "usememorygraphquery()"
     },
     {
@@ -1971,7 +1971,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/NoteEditorDialog.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_memory_components_noteeditordialog_tsx",
-      "community": 6,
+      "community": 5,
       "norm_label": "noteeditordialog.tsx"
     },
     {
@@ -1980,7 +1980,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/NoteEditorDialog.tsx",
       "source_location": "L37",
       "id": "noteeditordialog_slugify",
-      "community": 6,
+      "community": 5,
       "norm_label": "slugify()"
     },
     {
@@ -1989,7 +1989,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/NoteEditorDialog.tsx",
       "source_location": "L68",
       "id": "noteeditordialog_ontitlechange",
-      "community": 6,
+      "community": 5,
       "norm_label": "ontitlechange()"
     },
     {
@@ -1998,7 +1998,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/NoteEditorDialog.tsx",
       "source_location": "L76",
       "id": "noteeditordialog_save",
-      "community": 6,
+      "community": 5,
       "norm_label": "save()"
     },
     {
@@ -2034,7 +2034,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/MemoryGraph.simulate.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_memory_components_memorygraph_simulate_test_ts",
-      "community": 45,
+      "community": 46,
       "norm_label": "memorygraph.simulate.test.ts"
     },
     {
@@ -2043,7 +2043,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/MemoryGraph.simulate.test.ts",
       "source_location": "L8",
       "id": "memorygraph_simulate_test_allfinite",
-      "community": 45,
+      "community": 46,
       "norm_label": "allfinite()"
     },
     {
@@ -2052,7 +2052,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/memory/components/MemoryGraph.simulate.test.ts",
       "source_location": "L11",
       "id": "memorygraph_simulate_test_inviewport",
-      "community": 45,
+      "community": 46,
       "norm_label": "inviewport()"
     },
     {
@@ -2124,7 +2124,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/goals/queries/useGoalRunsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_goals_queries_usegoalrunsquery_ts",
-      "community": 8,
+      "community": 7,
       "norm_label": "usegoalrunsquery.ts"
     },
     {
@@ -2133,7 +2133,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/goals/queries/useGoalRunsQuery.ts",
       "source_location": "L6",
       "id": "usegoalrunsquery_getgoalrunsquerykey",
-      "community": 8,
+      "community": 7,
       "norm_label": "getgoalrunsquerykey()"
     },
     {
@@ -2142,7 +2142,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/goals/queries/useGoalRunsQuery.ts",
       "source_location": "L18",
       "id": "usegoalrunsquery_usegoalrunsquery",
-      "community": 8,
+      "community": 7,
       "norm_label": "usegoalrunsquery()"
     },
     {
@@ -2160,7 +2160,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/goals/queries/useGoalsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_goals_queries_usegoalsquery_ts",
-      "community": 46,
+      "community": 47,
       "norm_label": "usegoalsquery.ts"
     },
     {
@@ -2169,7 +2169,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/goals/queries/useGoalsQuery.ts",
       "source_location": "L5",
       "id": "usegoalsquery_getgoalsquerykey",
-      "community": 46,
+      "community": 47,
       "norm_label": "getgoalsquerykey()"
     },
     {
@@ -2178,7 +2178,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/goals/queries/useGoalsQuery.ts",
       "source_location": "L10",
       "id": "usegoalsquery_usegoalsquery",
-      "community": 46,
+      "community": 47,
       "norm_label": "usegoalsquery()"
     },
     {
@@ -2205,7 +2205,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_projects_screen_tsx",
-      "community": 7,
+      "community": 0,
       "norm_label": "screen.tsx"
     },
     {
@@ -2214,7 +2214,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/Screen.tsx",
       "source_location": "L33",
       "id": "screen_newprojectdraft",
-      "community": 7,
+      "community": 0,
       "norm_label": "newprojectdraft()"
     },
     {
@@ -2322,7 +2322,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/queries/useProjectCategoriesQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_projects_queries_useprojectcategoriesquery_ts",
-      "community": 47,
+      "community": 48,
       "norm_label": "useprojectcategoriesquery.ts"
     },
     {
@@ -2331,7 +2331,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/queries/useProjectCategoriesQuery.ts",
       "source_location": "L5",
       "id": "useprojectcategoriesquery_getprojectcategoriesquerykey",
-      "community": 47,
+      "community": 48,
       "norm_label": "getprojectcategoriesquerykey()"
     },
     {
@@ -2340,7 +2340,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/queries/useProjectCategoriesQuery.ts",
       "source_location": "L15",
       "id": "useprojectcategoriesquery_useprojectcategoriesquery",
-      "community": 47,
+      "community": 48,
       "norm_label": "useprojectcategoriesquery()"
     },
     {
@@ -2385,7 +2385,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/queries/useBudgetQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_projects_queries_usebudgetquery_ts",
-      "community": 48,
+      "community": 49,
       "norm_label": "usebudgetquery.ts"
     },
     {
@@ -2394,7 +2394,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/queries/useBudgetQuery.ts",
       "source_location": "L7",
       "id": "usebudgetquery_getbudgetquerykey",
-      "community": 48,
+      "community": 49,
       "norm_label": "getbudgetquerykey()"
     },
     {
@@ -2403,7 +2403,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/queries/useBudgetQuery.ts",
       "source_location": "L19",
       "id": "usebudgetquery_usebudgetquery",
-      "community": 48,
+      "community": 49,
       "norm_label": "usebudgetquery()"
     },
     {
@@ -2439,7 +2439,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/components/ProjectCard.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_projects_components_projectcard_test_tsx",
-      "community": 49,
+      "community": 50,
       "norm_label": "projectcard.test.tsx"
     },
     {
@@ -2448,7 +2448,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/components/ProjectCard.test.tsx",
       "source_location": "L6",
       "id": "projectcard_test_project",
-      "community": 49,
+      "community": 50,
       "norm_label": "project()"
     },
     {
@@ -2457,7 +2457,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/components/ProjectCard.test.tsx",
       "source_location": "L13",
       "id": "projectcard_test_status",
-      "community": 49,
+      "community": 50,
       "norm_label": "status()"
     },
     {
@@ -2475,7 +2475,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/components/ProjectModal.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_projects_components_projectmodal_tsx",
-      "community": 50,
+      "community": 51,
       "norm_label": "projectmodal.tsx"
     },
     {
@@ -2484,7 +2484,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/components/ProjectModal.tsx",
       "source_location": "L38",
       "id": "projectmodal_topositiveint",
-      "community": 50,
+      "community": 51,
       "norm_label": "topositiveint()"
     },
     {
@@ -2493,7 +2493,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/projects/components/ProjectModal.tsx",
       "source_location": "L43",
       "id": "projectmodal_chiptoggle",
-      "community": 50,
+      "community": 51,
       "norm_label": "chiptoggle()"
     },
     {
@@ -2502,7 +2502,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/health/queries/useHealthQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_health_queries_usehealthquery_ts",
-      "community": 51,
+      "community": 52,
       "norm_label": "usehealthquery.ts"
     },
     {
@@ -2511,7 +2511,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/health/queries/useHealthQuery.ts",
       "source_location": "L7",
       "id": "usehealthquery_gethealthquerykey",
-      "community": 51,
+      "community": 52,
       "norm_label": "gethealthquerykey()"
     },
     {
@@ -2520,7 +2520,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/health/queries/useHealthQuery.ts",
       "source_location": "L23",
       "id": "usehealthquery_usehealthquery",
-      "community": 51,
+      "community": 52,
       "norm_label": "usehealthquery()"
     },
     {
@@ -2538,7 +2538,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/limits/queries/useLimitsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_limits_queries_uselimitsquery_ts",
-      "community": 52,
+      "community": 53,
       "norm_label": "uselimitsquery.ts"
     },
     {
@@ -2547,7 +2547,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/limits/queries/useLimitsQuery.ts",
       "source_location": "L7",
       "id": "uselimitsquery_getlimitsquerykey",
-      "community": 52,
+      "community": 53,
       "norm_label": "getlimitsquerykey()"
     },
     {
@@ -2556,7 +2556,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/limits/queries/useLimitsQuery.ts",
       "source_location": "L22",
       "id": "uselimitsquery_uselimitsquery",
-      "community": 52,
+      "community": 53,
       "norm_label": "uselimitsquery()"
     },
     {
@@ -2574,7 +2574,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_agentdraft_ts",
-      "community": 53,
+      "community": 54,
       "norm_label": "agentdraft.ts"
     },
     {
@@ -2583,7 +2583,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
       "source_location": "L4",
       "id": "agentdraft_agentfile",
-      "community": 53,
+      "community": 54,
       "norm_label": "agentfile()"
     },
     {
@@ -2592,7 +2592,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/agentDraft.ts",
       "source_location": "L17",
       "id": "agentdraft_newagentdraft",
-      "community": 53,
+      "community": 54,
       "norm_label": "newagentdraft()"
     },
     {
@@ -2601,7 +2601,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_screen_tsx",
-      "community": 7,
+      "community": 0,
       "norm_label": "screen.tsx"
     },
     {
@@ -2610,7 +2610,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/Screen.tsx",
       "source_location": "L62",
       "id": "screen_pipelinecount",
-      "community": 7,
+      "community": 0,
       "norm_label": "pipelinecount()"
     },
     {
@@ -2754,7 +2754,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useCategoriesQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_usecategoriesquery_ts",
-      "community": 54,
+      "community": 55,
       "norm_label": "usecategoriesquery.ts"
     },
     {
@@ -2763,7 +2763,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useCategoriesQuery.ts",
       "source_location": "L8",
       "id": "usecategoriesquery_getcategoriesquerykey",
-      "community": 54,
+      "community": 55,
       "norm_label": "getcategoriesquerykey()"
     },
     {
@@ -2772,7 +2772,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useCategoriesQuery.ts",
       "source_location": "L18",
       "id": "usecategoriesquery_usecategoriesquery",
-      "community": 54,
+      "community": 55,
       "norm_label": "usecategoriesquery()"
     },
     {
@@ -2808,7 +2808,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useRunningAgentsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_userunningagentsquery_ts",
-      "community": 8,
+      "community": 7,
       "norm_label": "userunningagentsquery.ts"
     },
     {
@@ -2817,7 +2817,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useRunningAgentsQuery.ts",
       "source_location": "L9",
       "id": "userunningagentsquery_getrunningagentsquerykey",
-      "community": 8,
+      "community": 7,
       "norm_label": "getrunningagentsquerykey()"
     },
     {
@@ -2826,7 +2826,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useRunningAgentsQuery.ts",
       "source_location": "L31",
       "id": "userunningagentsquery_userunningagentsquery",
-      "community": 8,
+      "community": 7,
       "norm_label": "userunningagentsquery()"
     },
     {
@@ -2835,7 +2835,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useRunLogQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_userunlogquery_ts",
-      "community": 15,
+      "community": 14,
       "norm_label": "userunlogquery.ts"
     },
     {
@@ -2844,7 +2844,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useRunLogQuery.ts",
       "source_location": "L11",
       "id": "userunlogquery_userunlogquery",
-      "community": 15,
+      "community": 14,
       "norm_label": "userunlogquery()"
     },
     {
@@ -2853,7 +2853,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useAgentsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_queries_useagentsquery_ts",
-      "community": 55,
+      "community": 56,
       "norm_label": "useagentsquery.ts"
     },
     {
@@ -2862,7 +2862,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useAgentsQuery.ts",
       "source_location": "L8",
       "id": "useagentsquery_getagentsquerykey",
-      "community": 55,
+      "community": 56,
       "norm_label": "getagentsquerykey()"
     },
     {
@@ -2871,7 +2871,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/queries/useAgentsQuery.ts",
       "source_location": "L19",
       "id": "useagentsquery_useagentsquery",
-      "community": 55,
+      "community": 56,
       "norm_label": "useagentsquery()"
     },
     {
@@ -2934,7 +2934,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentCard.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_components_agentcard_tsx",
-      "community": 0,
+      "community": 1,
       "norm_label": "agentcard.tsx"
     },
     {
@@ -2943,7 +2943,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentCard.tsx",
       "source_location": "L44",
       "id": "agentcard_onclick",
-      "community": 0,
+      "community": 1,
       "norm_label": "onclick()"
     },
     {
@@ -2988,7 +2988,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentRulesSection.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_agents_components_agentrulessection_tsx",
-      "community": 0,
+      "community": 1,
       "norm_label": "agentrulessection.tsx"
     },
     {
@@ -2997,7 +2997,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/agents/components/AgentRulesSection.tsx",
       "source_location": "L123",
       "id": "agentrulessection_decisionlabel",
-      "community": 0,
+      "community": 1,
       "norm_label": "decisionlabel()"
     },
     {
@@ -3096,7 +3096,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/mutations/useDuplicatePipelineMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_mutations_useduplicatepipelinemutation_ts",
-      "community": 30,
+      "community": 29,
       "norm_label": "useduplicatepipelinemutation.ts"
     },
     {
@@ -3105,7 +3105,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/mutations/useDuplicatePipelineMutation.ts",
       "source_location": "L13",
       "id": "useduplicatepipelinemutation_useduplicatepipelinemutation",
-      "community": 30,
+      "community": 29,
       "norm_label": "useduplicatepipelinemutation()"
     },
     {
@@ -3114,7 +3114,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/mutations/useDuplicatePipelineMutation.ts",
       "source_location": "L21",
       "id": "useduplicatepipelinemutation_duplicatepipelineid",
-      "community": 30,
+      "community": 29,
       "norm_label": "duplicatepipelineid()"
     },
     {
@@ -3123,7 +3123,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/mutations/useDuplicatePipelineMutation.ts",
       "source_location": "L33",
       "id": "useduplicatepipelinemutation_duplicatepipelinebody",
-      "community": 30,
+      "community": 29,
       "norm_label": "duplicatepipelinebody()"
     },
     {
@@ -3177,7 +3177,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelineRunsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_queries_usepipelinerunsquery_ts",
-      "community": 8,
+      "community": 7,
       "norm_label": "usepipelinerunsquery.ts"
     },
     {
@@ -3186,7 +3186,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelineRunsQuery.ts",
       "source_location": "L6",
       "id": "usepipelinerunsquery_getpipelinerunsquerykey",
-      "community": 8,
+      "community": 7,
       "norm_label": "getpipelinerunsquerykey()"
     },
     {
@@ -3195,7 +3195,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelineRunsQuery.ts",
       "source_location": "L19",
       "id": "usepipelinerunsquery_usepipelinerunsquery",
-      "community": 8,
+      "community": 7,
       "norm_label": "usepipelinerunsquery()"
     },
     {
@@ -3204,7 +3204,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelinesQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_queries_usepipelinesquery_ts",
-      "community": 31,
+      "community": 30,
       "norm_label": "usepipelinesquery.ts"
     },
     {
@@ -3213,7 +3213,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelinesQuery.ts",
       "source_location": "L6",
       "id": "usepipelinesquery_getpipelinesquerykey",
-      "community": 31,
+      "community": 30,
       "norm_label": "getpipelinesquerykey()"
     },
     {
@@ -3222,7 +3222,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelinesQuery.ts",
       "source_location": "L16",
       "id": "usepipelinesquery_selectpipelines",
-      "community": 31,
+      "community": 30,
       "norm_label": "selectpipelines()"
     },
     {
@@ -3231,7 +3231,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelinesQuery.ts",
       "source_location": "L39",
       "id": "usepipelinesquery_usepipelinesquery",
-      "community": 31,
+      "community": 30,
       "norm_label": "usepipelinesquery()"
     },
     {
@@ -3249,7 +3249,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelineRunQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_queries_usepipelinerunquery_ts",
-      "community": 8,
+      "community": 7,
       "norm_label": "usepipelinerunquery.ts"
     },
     {
@@ -3258,7 +3258,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelineRunQuery.ts",
       "source_location": "L6",
       "id": "usepipelinerunquery_getpipelinerunquerykey",
-      "community": 8,
+      "community": 7,
       "norm_label": "getpipelinerunquerykey()"
     },
     {
@@ -3267,7 +3267,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/queries/usePipelineRunQuery.ts",
       "source_location": "L21",
       "id": "usepipelinerunquery_usepipelinerunquery",
-      "community": 8,
+      "community": 7,
       "norm_label": "usepipelinerunquery()"
     },
     {
@@ -3276,7 +3276,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_components_phasechain_tsx",
-      "community": 16,
+      "community": 15,
       "norm_label": "phasechain.tsx"
     },
     {
@@ -3285,7 +3285,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L28",
       "id": "phasechain_modelbadge",
-      "community": 16,
+      "community": 15,
       "norm_label": "modelbadge()"
     },
     {
@@ -3294,7 +3294,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L37",
       "id": "phasechain_agentthinking_tagtone",
-      "community": 16,
+      "community": 15,
       "norm_label": "agentthinking_tagtone()"
     },
     {
@@ -3303,7 +3303,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L47",
       "id": "phasechain_thinkbadge",
-      "community": 16,
+      "community": 15,
       "norm_label": "thinkbadge()"
     },
     {
@@ -3312,7 +3312,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L56",
       "id": "phasechain_iorow",
-      "community": 16,
+      "community": 15,
       "norm_label": "iorow()"
     },
     {
@@ -3321,7 +3321,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L89",
       "id": "phasechain_attemptsfromstageruns",
-      "community": 16,
+      "community": 15,
       "norm_label": "attemptsfromstageruns()"
     },
     {
@@ -3330,7 +3330,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PhaseChain.tsx",
       "source_location": "L201",
       "id": "phasechain_cx",
-      "community": 16,
+      "community": 15,
       "norm_label": "cx()"
     },
     {
@@ -3357,7 +3357,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_components_pipelinerunmodal_pipelinerunmodal_tsx",
-      "community": 56,
+      "community": 57,
       "norm_label": "pipelinerunmodal.tsx"
     },
     {
@@ -3366,7 +3366,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L55",
       "id": "pipelinerunmodal_onformsubmit",
-      "community": 56,
+      "community": 57,
       "norm_label": "onformsubmit()"
     },
     {
@@ -3375,7 +3375,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineRunModal/PipelineRunModal.tsx",
       "source_location": "L88",
       "id": "pipelinerunmodal_t",
-      "community": 56,
+      "community": 57,
       "norm_label": "t()"
     },
     {
@@ -3393,7 +3393,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_components_pipelinedialog_pipelinedialog_tsx",
-      "community": 12,
+      "community": 11,
       "norm_label": "pipelinedialog.tsx"
     },
     {
@@ -3402,7 +3402,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L33",
       "id": "pipelinedialog_next",
-      "community": 12,
+      "community": 11,
       "norm_label": "next()"
     },
     {
@@ -3411,7 +3411,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L83",
       "id": "pipelinedialog_initialsteps",
-      "community": 12,
+      "community": 11,
       "norm_label": "initialsteps()"
     },
     {
@@ -3420,7 +3420,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L107",
       "id": "pipelinedialog_tophases",
-      "community": 12,
+      "community": 11,
       "norm_label": "tophases()"
     },
     {
@@ -3429,7 +3429,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L164",
       "id": "pipelinedialog_makestep",
-      "community": 12,
+      "community": 11,
       "norm_label": "makestep()"
     },
     {
@@ -3438,7 +3438,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L185",
       "id": "pipelinedialog_patchstep",
-      "community": 12,
+      "community": 11,
       "norm_label": "patchstep()"
     },
     {
@@ -3447,7 +3447,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L188",
       "id": "pipelinedialog_patchloop",
-      "community": 12,
+      "community": 11,
       "norm_label": "patchloop()"
     },
     {
@@ -3456,7 +3456,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L193",
       "id": "pipelinedialog_addstep",
-      "community": 12,
+      "community": 11,
       "norm_label": "addstep()"
     },
     {
@@ -3465,7 +3465,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L198",
       "id": "pipelinedialog_glyphfor",
-      "community": 12,
+      "community": 11,
       "norm_label": "glyphfor()"
     },
     {
@@ -3474,7 +3474,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L220",
       "id": "pipelinedialog_submit",
-      "community": 12,
+      "community": 11,
       "norm_label": "submit()"
     },
     {
@@ -3483,7 +3483,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/components/PipelineDialog/PipelineDialog.tsx",
       "source_location": "L362",
       "id": "pipelinedialog_t",
-      "community": 12,
+      "community": 11,
       "norm_label": "t()"
     },
     {
@@ -3546,7 +3546,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/hooks/usePhaseOverrides.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_pipelines_hooks_usephaseoverrides_ts",
-      "community": 57,
+      "community": 58,
       "norm_label": "usephaseoverrides.ts"
     },
     {
@@ -3555,7 +3555,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/hooks/usePhaseOverrides.ts",
       "source_location": "L9",
       "id": "usephaseoverrides_next",
-      "community": 57,
+      "community": 58,
       "norm_label": "next()"
     },
     {
@@ -3564,7 +3564,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/pipelines/hooks/usePhaseOverrides.ts",
       "source_location": "L22",
       "id": "usephaseoverrides_usephaseoverrides",
-      "community": 57,
+      "community": 58,
       "norm_label": "usephaseoverrides()"
     },
     {
@@ -3582,7 +3582,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_integrations_screen_tsx",
-      "community": 7,
+      "community": 0,
       "norm_label": "screen.tsx"
     },
     {
@@ -3591,7 +3591,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/Screen.tsx",
       "source_location": "L36",
       "id": "screen_persistsecret",
-      "community": 7,
+      "community": 0,
       "norm_label": "persistsecret()"
     },
     {
@@ -3600,7 +3600,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/Screen.tsx",
       "source_location": "L57",
       "id": "screen_onsubmit",
-      "community": 7,
+      "community": 0,
       "norm_label": "onsubmit()"
     },
     {
@@ -3609,7 +3609,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/Screen.tsx",
       "source_location": "L62",
       "id": "screen_ontest",
-      "community": 7,
+      "community": 0,
       "norm_label": "ontest()"
     },
     {
@@ -3744,7 +3744,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/queries/useChannelItemsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_integrations_queries_usechannelitemsquery_ts",
-      "community": 58,
+      "community": 59,
       "norm_label": "usechannelitemsquery.ts"
     },
     {
@@ -3753,7 +3753,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/queries/useChannelItemsQuery.ts",
       "source_location": "L5",
       "id": "usechannelitemsquery_getchannelitemsquerykey",
-      "community": 58,
+      "community": 59,
       "norm_label": "getchannelitemsquerykey()"
     },
     {
@@ -3762,7 +3762,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/queries/useChannelItemsQuery.ts",
       "source_location": "L14",
       "id": "usechannelitemsquery_usechannelitemsquery",
-      "community": 58,
+      "community": 59,
       "norm_label": "usechannelitemsquery()"
     },
     {
@@ -3834,7 +3834,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/components/IntegrationFormDialog.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_integrations_components_integrationformdialog_tsx",
-      "community": 7,
+      "community": 0,
       "norm_label": "integrationformdialog.tsx"
     },
     {
@@ -3843,7 +3843,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/components/IntegrationFormDialog.tsx",
       "source_location": "L82",
       "id": "integrationformdialog_buildconfig",
-      "community": 7,
+      "community": 0,
       "norm_label": "buildconfig()"
     },
     {
@@ -3852,7 +3852,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/integrations/components/IntegrationFormDialog.tsx",
       "source_location": "L104",
       "id": "integrationformdialog_submit",
-      "community": 7,
+      "community": 0,
       "norm_label": "submit()"
     },
     {
@@ -3861,7 +3861,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/voicePreference.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_voicepreference_ts",
-      "community": 59,
+      "community": 60,
       "norm_label": "voicepreference.ts"
     },
     {
@@ -3870,7 +3870,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/voicePreference.ts",
       "source_location": "L11",
       "id": "voicepreference_getpreferredvoiceuri",
-      "community": 59,
+      "community": 60,
       "norm_label": "getpreferredvoiceuri()"
     },
     {
@@ -3879,7 +3879,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/voicePreference.ts",
       "source_location": "L18",
       "id": "voicepreference_setpreferredvoiceuri",
-      "community": 59,
+      "community": 60,
       "norm_label": "setpreferredvoiceuri()"
     },
     {
@@ -3888,16 +3888,16 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/runVoiceAction.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_runvoiceaction_ts",
-      "community": 0,
+      "community": 1,
       "norm_label": "runvoiceaction.ts"
     },
     {
       "label": "runVoiceAction()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/runVoiceAction.ts",
-      "source_location": "L57",
+      "source_location": "L66",
       "id": "runvoiceaction_runvoiceaction",
-      "community": 0,
+      "community": 1,
       "norm_label": "runvoiceaction()"
     },
     {
@@ -3906,7 +3906,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_shortcut_ts",
-      "community": 13,
+      "community": 12,
       "norm_label": "shortcut.ts"
     },
     {
@@ -3915,7 +3915,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L53",
       "id": "shortcut_ismodifierkey",
-      "community": 13,
+      "community": 12,
       "norm_label": "ismodifierkey()"
     },
     {
@@ -3924,7 +3924,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L58",
       "id": "shortcut_matchesshortcut",
-      "community": 13,
+      "community": 12,
       "norm_label": "matchesshortcut()"
     },
     {
@@ -3933,7 +3933,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L70",
       "id": "shortcut_formatshortcutparts",
-      "community": 13,
+      "community": 12,
       "norm_label": "formatshortcutparts()"
     },
     {
@@ -3942,7 +3942,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L83",
       "id": "shortcut_isdefaultshortcut",
-      "community": 13,
+      "community": 12,
       "norm_label": "isdefaultshortcut()"
     },
     {
@@ -3951,7 +3951,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L89",
       "id": "shortcut_shortcutfromevent",
-      "community": 13,
+      "community": 12,
       "norm_label": "shortcutfromevent()"
     },
     {
@@ -3960,7 +3960,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L102",
       "id": "shortcut_loadvoiceshortcut",
-      "community": 13,
+      "community": 12,
       "norm_label": "loadvoiceshortcut()"
     },
     {
@@ -3969,7 +3969,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/shortcut.ts",
       "source_location": "L122",
       "id": "shortcut_savevoiceshortcut",
-      "community": 13,
+      "community": 12,
       "norm_label": "savevoiceshortcut()"
     },
     {
@@ -3985,19 +3985,10 @@
       "label": "summarizeBriefing()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/briefing.ts",
-      "source_location": "L35",
+      "source_location": "L32",
       "id": "briefing_summarizebriefing",
       "community": 0,
       "norm_label": "summarizebriefing()"
-    },
-    {
-      "label": "pickNewlyFinished()",
-      "file_type": "code",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/briefing.ts",
-      "source_location": "L62",
-      "id": "briefing_picknewlyfinished",
-      "community": 0,
-      "norm_label": "picknewlyfinished()"
     },
     {
       "label": "runVoiceAction.test.ts",
@@ -4023,7 +4014,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/VoiceContext.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_voicecontext_tsx",
-      "community": 24,
+      "community": 21,
       "norm_label": "voicecontext.tsx"
     },
     {
@@ -4032,7 +4023,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/VoiceContext.tsx",
       "source_location": "L41",
       "id": "voicecontext_voiceprovider",
-      "community": 24,
+      "community": 21,
       "norm_label": "voiceprovider()"
     },
     {
@@ -4041,7 +4032,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/VoiceContext.tsx",
       "source_location": "L88",
       "id": "voicecontext_usevoice",
-      "community": 24,
+      "community": 21,
       "norm_label": "usevoice()"
     },
     {
@@ -4086,34 +4077,34 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_parseutterance_ts",
-      "community": 6,
+      "community": 5,
       "norm_label": "parseutterance.ts"
     },
     {
       "label": "normalize()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L34",
+      "source_location": "L35",
       "id": "parseutterance_normalize",
-      "community": 6,
+      "community": 5,
       "norm_label": "normalize()"
     },
     {
       "label": "matchNavigate()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L144",
+      "source_location": "L174",
       "id": "parseutterance_matchnavigate",
-      "community": 6,
+      "community": 5,
       "norm_label": "matchnavigate()"
     },
     {
       "label": "parseUtterance()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L162",
+      "source_location": "L192",
       "id": "parseutterance_parseutterance",
-      "community": 6,
+      "community": 5,
       "norm_label": "parseutterance()"
     },
     {
@@ -4140,7 +4131,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/ShortcutCapture.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_shortcutcapture_tsx",
-      "community": 13,
+      "community": 12,
       "norm_label": "shortcutcapture.tsx"
     },
     {
@@ -4149,7 +4140,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/ShortcutCapture.tsx",
       "source_location": "L33",
       "id": "shortcutcapture_onkey",
-      "community": 13,
+      "community": 12,
       "norm_label": "onkey()"
     },
     {
@@ -4158,7 +4149,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/ShortcutCapture.tsx",
       "source_location": "L58",
       "id": "shortcutcapture_cn",
-      "community": 13,
+      "community": 12,
       "norm_label": "cn()"
     },
     {
@@ -4194,43 +4185,34 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_voicescreen_tsx",
-      "community": 3,
+      "community": 31,
       "norm_label": "voicescreen.tsx"
     },
     {
       "label": "toggleMute()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L92",
+      "source_location": "L75",
       "id": "voicescreen_togglemute",
-      "community": 3,
+      "community": 31,
       "norm_label": "togglemute()"
-    },
-    {
-      "label": "speakBriefing()",
-      "file_type": "code",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L119",
-      "id": "voicescreen_speakbriefing",
-      "community": 3,
-      "norm_label": "speakbriefing()"
     },
     {
       "label": "sendUtterance()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L157",
+      "source_location": "L150",
       "id": "voicescreen_sendutterance",
-      "community": 3,
+      "community": 31,
       "norm_label": "sendutterance()"
     },
     {
       "label": "handler()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L163",
+      "source_location": "L156",
       "id": "voicescreen_handler",
-      "community": 3,
+      "community": 31,
       "norm_label": "handler()"
     },
     {
@@ -4257,16 +4239,16 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_ts",
-      "community": 11,
+      "community": 8,
       "norm_label": "useutterancedispatch.ts"
     },
     {
       "label": "useUtteranceDispatch()",
       "file_type": "code",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.ts",
-      "source_location": "L43",
+      "source_location": "L52",
       "id": "useutterancedispatch_useutterancedispatch",
-      "community": 11,
+      "community": 8,
       "norm_label": "useutterancedispatch()"
     },
     {
@@ -4275,7 +4257,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceData.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usevoicedata_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "usevoicedata.ts"
     },
     {
@@ -4284,7 +4266,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceData.ts",
       "source_location": "L13",
       "id": "usevoicedata_usevoicedata",
-      "community": 2,
+      "community": 3,
       "norm_label": "usevoicedata()"
     },
     {
@@ -4302,7 +4284,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceSession.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usevoicesession_ts",
-      "community": 17,
+      "community": 16,
       "norm_label": "usevoicesession.ts"
     },
     {
@@ -4311,7 +4293,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceSession.ts",
       "source_location": "L49",
       "id": "usevoicesession_usevoicesession",
-      "community": 17,
+      "community": 16,
       "norm_label": "usevoicesession()"
     },
     {
@@ -4320,7 +4302,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceDemoSequence.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usevoicedemosequence_ts",
-      "community": 17,
+      "community": 16,
       "norm_label": "usevoicedemosequence.ts"
     },
     {
@@ -4329,7 +4311,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceDemoSequence.ts",
       "source_location": "L33",
       "id": "usevoicedemosequence_usevoicedemosequence",
-      "community": 17,
+      "community": 16,
       "norm_label": "usevoicedemosequence()"
     },
     {
@@ -4338,8 +4320,35 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
-      "community": 234,
+      "community": 32,
       "norm_label": "useutterancedispatch.test.tsx"
+    },
+    {
+      "label": "routingBody()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
+      "source_location": "L40",
+      "id": "useutterancedispatch_test_routingbody",
+      "community": 32,
+      "norm_label": "routingbody()"
+    },
+    {
+      "label": "classifyAt()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
+      "source_location": "L57",
+      "id": "useutterancedispatch_test_classifyat",
+      "community": 32,
+      "norm_label": "classifyat()"
+    },
+    {
+      "label": "options()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
+      "source_location": "L65",
+      "id": "useutterancedispatch_test_options",
+      "community": 32,
+      "norm_label": "options()"
     },
     {
       "label": "useSpeechRecognition.ts",
@@ -4347,7 +4356,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useSpeechRecognition.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usespeechrecognition_ts",
-      "community": 17,
+      "community": 16,
       "norm_label": "usespeechrecognition.ts"
     },
     {
@@ -4356,7 +4365,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useSpeechRecognition.ts",
       "source_location": "L60",
       "id": "usespeechrecognition_resolvector",
-      "community": 17,
+      "community": 16,
       "norm_label": "resolvector()"
     },
     {
@@ -4365,7 +4374,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useSpeechRecognition.ts",
       "source_location": "L85",
       "id": "usespeechrecognition_usespeechrecognition",
-      "community": 17,
+      "community": 16,
       "norm_label": "usespeechrecognition()"
     },
     {
@@ -4374,7 +4383,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useSpeech.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usespeech_test_tsx",
-      "community": 235,
+      "community": 234,
       "norm_label": "usespeech.test.tsx"
     },
     {
@@ -4419,7 +4428,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useVoiceSession.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usevoicesession_test_tsx",
-      "community": 236,
+      "community": 235,
       "norm_label": "usevoicesession.test.tsx"
     },
     {
@@ -4428,7 +4437,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_schedule_test_ts",
-      "community": 237,
+      "community": 236,
       "norm_label": "schedule.test.ts"
     },
     {
@@ -4437,7 +4446,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_schedule_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "schedule.ts"
     },
     {
@@ -4446,7 +4455,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L32",
       "id": "schedule_matchescron",
-      "community": 1,
+      "community": 2,
       "norm_label": "matchescron()"
     },
     {
@@ -4455,7 +4464,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L47",
       "id": "schedule_matchfield",
-      "community": 1,
+      "community": 2,
       "norm_label": "matchfield()"
     },
     {
@@ -4464,7 +4473,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L51",
       "id": "schedule_matchatom",
-      "community": 1,
+      "community": 2,
       "norm_label": "matchatom()"
     },
     {
@@ -4473,7 +4482,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L85",
       "id": "schedule_zonedparts",
-      "community": 1,
+      "community": 2,
       "norm_label": "zonedparts()"
     },
     {
@@ -4482,7 +4491,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L112",
       "id": "schedule_nextcronrun",
-      "community": 1,
+      "community": 2,
       "norm_label": "nextcronrun()"
     },
     {
@@ -4491,7 +4500,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L140",
       "id": "schedule_isnum",
-      "community": 1,
+      "community": 2,
       "norm_label": "isnum()"
     },
     {
@@ -4500,7 +4509,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L141",
       "id": "schedule_pad2",
-      "community": 1,
+      "community": 2,
       "norm_label": "pad2()"
     },
     {
@@ -4509,7 +4518,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L144",
       "id": "schedule_stepevery",
-      "community": 1,
+      "community": 2,
       "norm_label": "stepevery()"
     },
     {
@@ -4518,7 +4527,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L150",
       "id": "schedule_concretetime",
-      "community": 1,
+      "community": 2,
       "norm_label": "concretetime()"
     },
     {
@@ -4527,7 +4536,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L160",
       "id": "schedule_describecron",
-      "community": 1,
+      "community": 2,
       "norm_label": "describecron()"
     },
     {
@@ -4536,7 +4545,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L220",
       "id": "schedule_crontoschedule",
-      "community": 1,
+      "community": 2,
       "norm_label": "crontoschedule()"
     },
     {
@@ -4545,7 +4554,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L241",
       "id": "schedule_scheduletocron",
-      "community": 1,
+      "community": 2,
       "norm_label": "scheduletocron()"
     },
     {
@@ -4554,7 +4563,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L255",
       "id": "schedule_weekdaysatom",
-      "community": 1,
+      "community": 2,
       "norm_label": "weekdaysatom()"
     },
     {
@@ -4563,7 +4572,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L264",
       "id": "schedule_normalizeweekdays",
-      "community": 1,
+      "community": 2,
       "norm_label": "normalizeweekdays()"
     },
     {
@@ -4572,7 +4581,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L272",
       "id": "schedule_samedays",
-      "community": 1,
+      "community": 2,
       "norm_label": "samedays()"
     },
     {
@@ -4581,7 +4590,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L282",
       "id": "schedule_parseweekdays",
-      "community": 1,
+      "community": 2,
       "norm_label": "parseweekdays()"
     },
     {
@@ -4590,7 +4599,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L301",
       "id": "schedule_isday",
-      "community": 1,
+      "community": 2,
       "norm_label": "isday()"
     },
     {
@@ -4599,7 +4608,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L304",
       "id": "schedule_splittime",
-      "community": 1,
+      "community": 2,
       "norm_label": "splittime()"
     },
     {
@@ -4608,7 +4617,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L309",
       "id": "schedule_clamp",
-      "community": 1,
+      "community": 2,
       "norm_label": "clamp()"
     },
     {
@@ -4617,7 +4626,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L315",
       "id": "schedule_dayname",
-      "community": 1,
+      "community": 2,
       "norm_label": "dayname()"
     },
     {
@@ -4626,7 +4635,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L320",
       "id": "schedule_daynameshort",
-      "community": 1,
+      "community": 2,
       "norm_label": "daynameshort()"
     },
     {
@@ -4635,7 +4644,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L324",
       "id": "schedule_weekdayname",
-      "community": 1,
+      "community": 2,
       "norm_label": "weekdayname()"
     },
     {
@@ -4644,7 +4653,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/schedule.ts",
       "source_location": "L337",
       "id": "schedule_relativelabel",
-      "community": 1,
+      "community": 2,
       "norm_label": "relativelabel()"
     },
     {
@@ -4653,7 +4662,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/useCronLabel.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_usecronlabel_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "usecronlabel.ts"
     },
     {
@@ -4662,7 +4671,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/useCronLabel.ts",
       "source_location": "L10",
       "id": "usecronlabel_usecronlabel",
-      "community": 1,
+      "community": 2,
       "norm_label": "usecronlabel()"
     },
     {
@@ -4671,7 +4680,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/useCronLabel.ts",
       "source_location": "L17",
       "id": "usecronlabel_format",
-      "community": 1,
+      "community": 2,
       "norm_label": "format()"
     },
     {
@@ -4680,7 +4689,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_screen_tsx",
-      "community": 7,
+      "community": 0,
       "norm_label": "screen.tsx"
     },
     {
@@ -4689,7 +4698,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/Screen.tsx",
       "source_location": "L44",
       "id": "screen_resolvetarget",
-      "community": 7,
+      "community": 0,
       "norm_label": "resolvetarget()"
     },
     {
@@ -4698,7 +4707,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/Screen.tsx",
       "source_location": "L76",
       "id": "screen_rendercard",
-      "community": 7,
+      "community": 0,
       "norm_label": "rendercard()"
     },
     {
@@ -4707,7 +4716,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/Screen.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_screen_test_tsx",
-      "community": 238,
+      "community": 237,
       "norm_label": "screen.test.tsx"
     },
     {
@@ -4770,7 +4779,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/mutations/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_mutations_index_ts",
-      "community": 239,
+      "community": 238,
       "norm_label": "index.ts"
     },
     {
@@ -4779,7 +4788,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/queries/useAutomationsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_queries_useautomationsquery_ts",
-      "community": 60,
+      "community": 61,
       "norm_label": "useautomationsquery.ts"
     },
     {
@@ -4788,7 +4797,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/queries/useAutomationsQuery.ts",
       "source_location": "L4",
       "id": "useautomationsquery_getautomationsquerykey",
-      "community": 60,
+      "community": 61,
       "norm_label": "getautomationsquerykey()"
     },
     {
@@ -4797,7 +4806,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/queries/useAutomationsQuery.ts",
       "source_location": "L9",
       "id": "useautomationsquery_useautomationsquery",
-      "community": 60,
+      "community": 61,
       "norm_label": "useautomationsquery()"
     },
     {
@@ -4833,7 +4842,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/queries/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_queries_index_ts",
-      "community": 240,
+      "community": 239,
       "norm_label": "index.ts"
     },
     {
@@ -4842,7 +4851,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/components/AutomationCard.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_components_automationcard_tsx",
-      "community": 241,
+      "community": 240,
       "norm_label": "automationcard.tsx"
     },
     {
@@ -4851,7 +4860,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/components/AutomationFormDialog.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_automations_components_automationformdialog_tsx",
-      "community": 7,
+      "community": 0,
       "norm_label": "automationformdialog.tsx"
     },
     {
@@ -4860,7 +4869,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/automations/components/AutomationFormDialog.tsx",
       "source_location": "L130",
       "id": "automationformdialog_submit",
-      "community": 7,
+      "community": 0,
       "norm_label": "submit()"
     },
     {
@@ -4869,7 +4878,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_screen_tsx",
-      "community": 242,
+      "community": 241,
       "norm_label": "screen.tsx"
     },
     {
@@ -4932,7 +4941,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/mutations/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_mutations_index_ts",
-      "community": 243,
+      "community": 242,
       "norm_label": "index.ts"
     },
     {
@@ -4977,7 +4986,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_queries_useskillquery_ts",
-      "community": 61,
+      "community": 62,
       "norm_label": "useskillquery.ts"
     },
     {
@@ -4986,7 +4995,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillQuery.ts",
       "source_location": "L4",
       "id": "useskillquery_getskillquerykey",
-      "community": 61,
+      "community": 62,
       "norm_label": "getskillquerykey()"
     },
     {
@@ -4995,7 +5004,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillQuery.ts",
       "source_location": "L13",
       "id": "useskillquery_useskillquery",
-      "community": 61,
+      "community": 62,
       "norm_label": "useskillquery()"
     },
     {
@@ -5031,7 +5040,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_queries_index_ts",
-      "community": 244,
+      "community": 243,
       "norm_label": "index.ts"
     },
     {
@@ -5040,7 +5049,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillCategoriesQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_queries_useskillcategoriesquery_ts",
-      "community": 62,
+      "community": 63,
       "norm_label": "useskillcategoriesquery.ts"
     },
     {
@@ -5049,7 +5058,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillCategoriesQuery.ts",
       "source_location": "L5",
       "id": "useskillcategoriesquery_getskillcategoriesquerykey",
-      "community": 62,
+      "community": 63,
       "norm_label": "getskillcategoriesquerykey()"
     },
     {
@@ -5058,7 +5067,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillCategoriesQuery.ts",
       "source_location": "L15",
       "id": "useskillcategoriesquery_useskillcategoriesquery",
-      "community": 62,
+      "community": 63,
       "norm_label": "useskillcategoriesquery()"
     },
     {
@@ -5067,7 +5076,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_queries_useskillsquery_ts",
-      "community": 32,
+      "community": 33,
       "norm_label": "useskillsquery.ts"
     },
     {
@@ -5076,7 +5085,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillsQuery.ts",
       "source_location": "L7",
       "id": "useskillsquery_getskillsquerykey",
-      "community": 32,
+      "community": 33,
       "norm_label": "getskillsquerykey()"
     },
     {
@@ -5085,7 +5094,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillsQuery.ts",
       "source_location": "L17",
       "id": "useskillsquery_selectskills",
-      "community": 32,
+      "community": 33,
       "norm_label": "selectskills()"
     },
     {
@@ -5094,7 +5103,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/queries/useSkillsQuery.ts",
       "source_location": "L33",
       "id": "useskillsquery_useskillsquery",
-      "community": 32,
+      "community": 33,
       "norm_label": "useskillsquery()"
     },
     {
@@ -5121,7 +5130,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/SkillTile.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_components_skilltile_test_tsx",
-      "community": 245,
+      "community": 244,
       "norm_label": "skilltile.test.tsx"
     },
     {
@@ -5148,7 +5157,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/RunModal/RunModal.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_components_runmodal_runmodal_test_tsx",
-      "community": 246,
+      "community": 245,
       "norm_label": "runmodal.test.tsx"
     },
     {
@@ -5157,7 +5166,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/AddSkillModal/SkillFileList.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_components_addskillmodal_skillfilelist_tsx",
-      "community": 247,
+      "community": 246,
       "norm_label": "skillfilelist.tsx"
     },
     {
@@ -5166,7 +5175,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/AddSkillModal/AddSkillModal.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_components_addskillmodal_addskillmodal_test_tsx",
-      "community": 248,
+      "community": 247,
       "norm_label": "addskillmodal.test.tsx"
     },
     {
@@ -5175,7 +5184,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/AddSkillModal/AddSkillModal.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_skills_components_addskillmodal_addskillmodal_tsx",
-      "community": 63,
+      "community": 64,
       "norm_label": "addskillmodal.tsx"
     },
     {
@@ -5184,7 +5193,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/AddSkillModal/AddSkillModal.tsx",
       "source_location": "L110",
       "id": "addskillmodal_importtoeditor",
-      "community": 63,
+      "community": 64,
       "norm_label": "importtoeditor()"
     },
     {
@@ -5193,7 +5202,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/skills/components/AddSkillModal/AddSkillModal.tsx",
       "source_location": "L140",
       "id": "addskillmodal_isedit",
-      "community": 63,
+      "community": 64,
       "norm_label": "isedit()"
     },
     {
@@ -5220,7 +5229,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/approval.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_approval_ts",
-      "community": 19,
+      "community": 18,
       "norm_label": "approval.ts"
     },
     {
@@ -5229,7 +5238,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/approval.ts",
       "source_location": "L63",
       "id": "approval_isrecord",
-      "community": 19,
+      "community": 18,
       "norm_label": "isrecord()"
     },
     {
@@ -5238,7 +5247,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/approval.ts",
       "source_location": "L72",
       "id": "approval_parseapprovaldetail",
-      "community": 19,
+      "community": 18,
       "norm_label": "parseapprovaldetail()"
     },
     {
@@ -5247,7 +5256,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/approval.ts",
       "source_location": "L138",
       "id": "approval_riskmeta",
-      "community": 19,
+      "community": 18,
       "norm_label": "riskmeta()"
     },
     {
@@ -5256,7 +5265,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/mutations/useApproveMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_mutations_useapprovemutation_ts",
-      "community": 11,
+      "community": 8,
       "norm_label": "useapprovemutation.ts"
     },
     {
@@ -5265,7 +5274,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/mutations/useApproveMutation.ts",
       "source_location": "L6",
       "id": "useapprovemutation_useapprovemutation",
-      "community": 11,
+      "community": 8,
       "norm_label": "useapprovemutation()"
     },
     {
@@ -5274,7 +5283,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/mutations/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_mutations_index_ts",
-      "community": 249,
+      "community": 248,
       "norm_label": "index.ts"
     },
     {
@@ -5283,7 +5292,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/mutations/useRejectMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_mutations_userejectmutation_ts",
-      "community": 11,
+      "community": 8,
       "norm_label": "userejectmutation.ts"
     },
     {
@@ -5292,7 +5301,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/mutations/useRejectMutation.ts",
       "source_location": "L6",
       "id": "userejectmutation_userejectmutation",
-      "community": 11,
+      "community": 8,
       "norm_label": "userejectmutation()"
     },
     {
@@ -5301,7 +5310,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/queries/useApprovalsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_queries_useapprovalsquery_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "useapprovalsquery.ts"
     },
     {
@@ -5310,7 +5319,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/queries/useApprovalsQuery.ts",
       "source_location": "L6",
       "id": "useapprovalsquery_getapprovalsquerykey",
-      "community": 2,
+      "community": 3,
       "norm_label": "getapprovalsquerykey()"
     },
     {
@@ -5319,7 +5328,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/queries/useApprovalsQuery.ts",
       "source_location": "L15",
       "id": "useapprovalsquery_selectapprovals",
-      "community": 2,
+      "community": 3,
       "norm_label": "selectapprovals()"
     },
     {
@@ -5328,7 +5337,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/queries/useApprovalsQuery.ts",
       "source_location": "L26",
       "id": "useapprovalsquery_useapprovalsquery",
-      "community": 2,
+      "community": 3,
       "norm_label": "useapprovalsquery()"
     },
     {
@@ -5337,7 +5346,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/queries/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_queries_index_ts",
-      "community": 250,
+      "community": 249,
       "norm_label": "index.ts"
     },
     {
@@ -5346,7 +5355,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/components/ApprovalPreview.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_components_approvalpreview_tsx",
-      "community": 251,
+      "community": 250,
       "norm_label": "approvalpreview.tsx"
     },
     {
@@ -5355,7 +5364,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/components/SeverityMeter.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_components_severitymeter_tsx",
-      "community": 252,
+      "community": 251,
       "norm_label": "severitymeter.tsx"
     },
     {
@@ -5364,7 +5373,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/components/RiskBadge.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_approvals_components_riskbadge_tsx",
-      "community": 19,
+      "community": 18,
       "norm_label": "riskbadge.tsx"
     },
     {
@@ -5373,7 +5382,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/approvals/components/RiskBadge.tsx",
       "source_location": "L12",
       "id": "riskbadge_riskbadge",
-      "community": 19,
+      "community": 18,
       "norm_label": "riskbadge()"
     },
     {
@@ -5382,7 +5391,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/healthPresentation.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_healthpresentation_test_ts",
-      "community": 253,
+      "community": 252,
       "norm_label": "healthpresentation.test.ts"
     },
     {
@@ -5409,7 +5418,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_screen_tsx",
-      "community": 254,
+      "community": 253,
       "norm_label": "screen.tsx"
     },
     {
@@ -5418,7 +5427,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/Screen.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_screen_test_tsx",
-      "community": 255,
+      "community": 254,
       "norm_label": "screen.test.tsx"
     },
     {
@@ -5463,7 +5472,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/mutations/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_mutations_index_ts",
-      "community": 256,
+      "community": 255,
       "norm_label": "index.ts"
     },
     {
@@ -5472,7 +5481,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/useBriefingQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_queries_usebriefingquery_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "usebriefingquery.ts"
     },
     {
@@ -5481,7 +5490,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/useBriefingQuery.ts",
       "source_location": "L5",
       "id": "usebriefingquery_getbriefingquerykey",
-      "community": 2,
+      "community": 3,
       "norm_label": "getbriefingquerykey()"
     },
     {
@@ -5490,7 +5499,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/useBriefingQuery.ts",
       "source_location": "L14",
       "id": "usebriefingquery_usebriefingquery",
-      "community": 2,
+      "community": 3,
       "norm_label": "usebriefingquery()"
     },
     {
@@ -5499,7 +5508,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_queries_index_ts",
-      "community": 257,
+      "community": 256,
       "norm_label": "index.ts"
     },
     {
@@ -5508,7 +5517,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/useActivityQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_queries_useactivityquery_ts",
-      "community": 64,
+      "community": 65,
       "norm_label": "useactivityquery.ts"
     },
     {
@@ -5517,7 +5526,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/useActivityQuery.ts",
       "source_location": "L5",
       "id": "useactivityquery_getactivityquerykey",
-      "community": 64,
+      "community": 65,
       "norm_label": "getactivityquerykey()"
     },
     {
@@ -5526,7 +5535,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/queries/useActivityQuery.ts",
       "source_location": "L15",
       "id": "useactivityquery_useactivityquery",
-      "community": 64,
+      "community": 65,
       "norm_label": "useactivityquery()"
     },
     {
@@ -5553,7 +5562,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/ActivityFeed/ActivityFeed.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_components_activityfeed_activityfeed_tsx",
-      "community": 25,
+      "community": 24,
       "norm_label": "activityfeed.tsx"
     },
     {
@@ -5562,7 +5571,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/ActivityFeed/ActivityFeed.tsx",
       "source_location": "L35",
       "id": "activityfeed_activityicon",
-      "community": 25,
+      "community": 24,
       "norm_label": "activityicon()"
     },
     {
@@ -5571,7 +5580,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/ActivityFeed/ActivityFeed.tsx",
       "source_location": "L43",
       "id": "activityfeed_relativetime",
-      "community": 25,
+      "community": 24,
       "norm_label": "relativetime()"
     },
     {
@@ -5580,7 +5589,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/ActivityFeed/ActivityFeed.tsx",
       "source_location": "L56",
       "id": "activityfeed_tracecue",
-      "community": 25,
+      "community": 24,
       "norm_label": "tracecue()"
     },
     {
@@ -5589,7 +5598,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/ActivityFeed/ActivityFeed.tsx",
       "source_location": "L75",
       "id": "activityfeed_activityfeed",
-      "community": 25,
+      "community": 24,
       "norm_label": "activityfeed()"
     },
     {
@@ -5598,7 +5607,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/BriefingCard/BriefingCard.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_components_briefingcard_briefingcard_tsx",
-      "community": 258,
+      "community": 257,
       "norm_label": "briefingcard.tsx"
     },
     {
@@ -5607,7 +5616,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/overview/components/BriefingCard/BriefingCard.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_overview_components_briefingcard_briefingcard_test_tsx",
-      "community": 259,
+      "community": 258,
       "norm_label": "briefingcard.test.tsx"
     },
     {
@@ -5616,7 +5625,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/runEvents.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_runevents_tsx",
-      "community": 8,
+      "community": 7,
       "norm_label": "runevents.tsx"
     },
     {
@@ -5625,7 +5634,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/runEvents.tsx",
       "source_location": "L39",
       "id": "runevents_useruneventsconnected",
-      "community": 8,
+      "community": 7,
       "norm_label": "useruneventsconnected()"
     },
     {
@@ -5634,7 +5643,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/runEvents.tsx",
       "source_location": "L52",
       "id": "runevents_runeventsprovider",
-      "community": 8,
+      "community": 7,
       "norm_label": "runeventsprovider()"
     },
     {
@@ -5643,7 +5652,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_run_test_ts",
-      "community": 33,
+      "community": 34,
       "norm_label": "run.test.ts"
     },
     {
@@ -5652,7 +5661,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.test.ts",
       "source_location": "L5",
       "id": "run_test_approval",
-      "community": 33,
+      "community": 34,
       "norm_label": "approval()"
     },
     {
@@ -5661,7 +5670,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.test.ts",
       "source_location": "L17",
       "id": "run_test_run",
-      "community": 33,
+      "community": 34,
       "norm_label": "run()"
     },
     {
@@ -5670,7 +5679,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.test.ts",
       "source_location": "L54",
       "id": "run_test_basegoalrun",
-      "community": 33,
+      "community": 34,
       "norm_label": "basegoalrun()"
     },
     {
@@ -5679,7 +5688,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/useRunLog.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_userunlog_ts",
-      "community": 15,
+      "community": 14,
       "norm_label": "userunlog.ts"
     },
     {
@@ -5688,7 +5697,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/useRunLog.ts",
       "source_location": "L9",
       "id": "userunlog_userunlog",
-      "community": 15,
+      "community": 14,
       "norm_label": "userunlog()"
     },
     {
@@ -5697,7 +5706,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/useRunLogStream.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_userunlogstream_ts",
-      "community": 15,
+      "community": 14,
       "norm_label": "userunlogstream.ts"
     },
     {
@@ -5706,7 +5715,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/useRunLogStream.ts",
       "source_location": "L24",
       "id": "userunlogstream_userunlogstream",
-      "community": 15,
+      "community": 14,
       "norm_label": "userunlogstream()"
     },
     {
@@ -5715,7 +5724,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_screen_tsx",
-      "community": 0,
+      "community": 1,
       "norm_label": "screen.tsx"
     },
     {
@@ -5724,7 +5733,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L76",
       "id": "screen_count",
-      "community": 0,
+      "community": 1,
       "norm_label": "count()"
     },
     {
@@ -5733,7 +5742,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L78",
       "id": "screen_ago",
-      "community": 0,
+      "community": 1,
       "norm_label": "ago()"
     },
     {
@@ -5742,7 +5751,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L83",
       "id": "screen_timelabel",
-      "community": 0,
+      "community": 1,
       "norm_label": "timelabel()"
     },
     {
@@ -5751,7 +5760,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L93",
       "id": "screen_stop",
-      "community": 0,
+      "community": 1,
       "norm_label": "stop()"
     },
     {
@@ -5760,7 +5769,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L97",
       "id": "screen_remove",
-      "community": 0,
+      "community": 1,
       "norm_label": "remove()"
     },
     {
@@ -5769,7 +5778,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/Screen.tsx",
       "source_location": "L127",
       "id": "screen_t",
-      "community": 0,
+      "community": 1,
       "norm_label": "t()"
     },
     {
@@ -5778,7 +5787,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_run_ts",
-      "community": 5,
+      "community": 1,
       "norm_label": "run.ts"
     },
     {
@@ -5787,7 +5796,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L78",
       "id": "run_runtitle",
-      "community": 5,
+      "community": 1,
       "norm_label": "runtitle()"
     },
     {
@@ -5796,7 +5805,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L88",
       "id": "run_approvalforrun",
-      "community": 5,
+      "community": 1,
       "norm_label": "approvalforrun()"
     },
     {
@@ -5805,7 +5814,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L100",
       "id": "run_agentruntoview",
-      "community": 5,
+      "community": 1,
       "norm_label": "agentruntoview()"
     },
     {
@@ -5814,7 +5823,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L124",
       "id": "run_pipelineruntoview",
-      "community": 5,
+      "community": 1,
       "norm_label": "pipelineruntoview()"
     },
     {
@@ -5823,7 +5832,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L163",
       "id": "run_goalruntoview",
-      "community": 5,
+      "community": 1,
       "norm_label": "goalruntoview()"
     },
     {
@@ -5832,7 +5841,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L200",
       "id": "run_enrichrunwithtask",
-      "community": 5,
+      "community": 1,
       "norm_label": "enrichrunwithtask()"
     },
     {
@@ -5841,7 +5850,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L218",
       "id": "run_targetowner",
-      "community": 5,
+      "community": 1,
       "norm_label": "targetowner()"
     },
     {
@@ -5850,7 +5859,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L228",
       "id": "run_scheduledtasktoview",
-      "community": 5,
+      "community": 1,
       "norm_label": "scheduledtasktoview()"
     },
     {
@@ -5859,7 +5868,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/run.ts",
       "source_location": "L342",
       "id": "run_runglyph",
-      "community": 5,
+      "community": 1,
       "norm_label": "runglyph()"
     },
     {
@@ -5868,7 +5877,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/mutations/useResumePipelineRunMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_mutations_useresumepipelinerunmutation_ts",
-      "community": 18,
+      "community": 17,
       "norm_label": "useresumepipelinerunmutation.ts"
     },
     {
@@ -5877,7 +5886,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/mutations/useResumePipelineRunMutation.ts",
       "source_location": "L7",
       "id": "useresumepipelinerunmutation_useresumepipelinerunmutation",
-      "community": 18,
+      "community": 17,
       "norm_label": "useresumepipelinerunmutation()"
     },
     {
@@ -5904,7 +5913,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/mutations/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_mutations_index_ts",
-      "community": 260,
+      "community": 259,
       "norm_label": "index.ts"
     },
     {
@@ -5931,7 +5940,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/mutations/useStopAgentMutation.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_mutations_usestopagentmutation_ts",
-      "community": 11,
+      "community": 8,
       "norm_label": "usestopagentmutation.ts"
     },
     {
@@ -5940,7 +5949,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/mutations/useStopAgentMutation.ts",
       "source_location": "L6",
       "id": "usestopagentmutation_usestopagentmutation",
-      "community": 11,
+      "community": 8,
       "norm_label": "usestopagentmutation()"
     },
     {
@@ -5949,7 +5958,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useStageRunLogQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_queries_usestagerunlogquery_ts",
-      "community": 18,
+      "community": 17,
       "norm_label": "usestagerunlogquery.ts"
     },
     {
@@ -5958,7 +5967,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useStageRunLogQuery.ts",
       "source_location": "L5",
       "id": "usestagerunlogquery_getstagerunlogquerykey",
-      "community": 18,
+      "community": 17,
       "norm_label": "getstagerunlogquerykey()"
     },
     {
@@ -5967,7 +5976,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useStageRunLogQuery.ts",
       "source_location": "L15",
       "id": "usestagerunlogquery_usestagerunlogquery",
-      "community": 18,
+      "community": 17,
       "norm_label": "usestagerunlogquery()"
     },
     {
@@ -5976,7 +5985,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunArtifactQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_queries_userunartifactquery_ts",
-      "community": 26,
+      "community": 25,
       "norm_label": "userunartifactquery.ts"
     },
     {
@@ -5985,7 +5994,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunArtifactQuery.ts",
       "source_location": "L6",
       "id": "userunartifactquery_getrunartifactquerykey",
-      "community": 26,
+      "community": 25,
       "norm_label": "getrunartifactquerykey()"
     },
     {
@@ -5994,7 +6003,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunArtifactQuery.ts",
       "source_location": "L17",
       "id": "userunartifactquery_userunartifactquery",
-      "community": 26,
+      "community": 25,
       "norm_label": "userunartifactquery()"
     },
     {
@@ -6003,7 +6012,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunsQuery.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_queries_userunsquery_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "userunsquery.ts"
     },
     {
@@ -6012,7 +6021,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunsQuery.ts",
       "source_location": "L34",
       "id": "userunsquery_pollwhilelive",
-      "community": 2,
+      "community": 3,
       "norm_label": "pollwhilelive()"
     },
     {
@@ -6021,7 +6030,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunsQuery.ts",
       "source_location": "L42",
       "id": "userunsquery_pollwhilescheduled",
-      "community": 2,
+      "community": 3,
       "norm_label": "pollwhilescheduled()"
     },
     {
@@ -6030,7 +6039,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunsQuery.ts",
       "source_location": "L60",
       "id": "userunsquery_userunsquery",
-      "community": 2,
+      "community": 3,
       "norm_label": "userunsquery()"
     },
     {
@@ -6039,7 +6048,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/queries/useRunsQuery.ts",
       "source_location": "L126",
       "id": "userunsquery_userunglyphmap",
-      "community": 2,
+      "community": 3,
       "norm_label": "userunglyphmap()"
     },
     {
@@ -6048,7 +6057,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunParkedPanel.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_runparkedpanel_test_tsx",
-      "community": 261,
+      "community": 260,
       "norm_label": "runparkedpanel.test.tsx"
     },
     {
@@ -6057,7 +6066,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunPrGatePanel.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_runprgatepanel_test_tsx",
-      "community": 262,
+      "community": 261,
       "norm_label": "runprgatepanel.test.tsx"
     },
     {
@@ -6066,7 +6075,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/TaskCard.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_taskcard_tsx",
-      "community": 5,
+      "community": 1,
       "norm_label": "taskcard.tsx"
     },
     {
@@ -6075,7 +6084,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/TaskCard.tsx",
       "source_location": "L31",
       "id": "taskcard_taskcard",
-      "community": 5,
+      "community": 1,
       "norm_label": "taskcard()"
     },
     {
@@ -6084,7 +6093,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/TaskCard.tsx",
       "source_location": "L68",
       "id": "taskcard_live",
-      "community": 5,
+      "community": 1,
       "norm_label": "live()"
     },
     {
@@ -6093,7 +6102,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunParkedPanel.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_runparkedpanel_tsx",
-      "community": 18,
+      "community": 17,
       "norm_label": "runparkedpanel.tsx"
     },
     {
@@ -6102,7 +6111,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunParkedPanel.tsx",
       "source_location": "L29",
       "id": "runparkedpanel_runparkedpanel",
-      "community": 18,
+      "community": 17,
       "norm_label": "runparkedpanel()"
     },
     {
@@ -6111,7 +6120,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/GoalDetailPanel.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_goaldetailpanel_test_tsx",
-      "community": 34,
+      "community": 35,
       "norm_label": "goaldetailpanel.test.tsx"
     },
     {
@@ -6120,7 +6129,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/GoalDetailPanel.test.tsx",
       "source_location": "L28",
       "id": "goaldetailpanel_test_iso",
-      "community": 34,
+      "community": 35,
       "norm_label": "iso()"
     },
     {
@@ -6129,7 +6138,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/GoalDetailPanel.test.tsx",
       "source_location": "L29",
       "id": "goaldetailpanel_test_iter",
-      "community": 34,
+      "community": 35,
       "norm_label": "iter()"
     },
     {
@@ -6138,7 +6147,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/GoalDetailPanel.test.tsx",
       "source_location": "L37",
       "id": "goaldetailpanel_test_parkedgoal",
-      "community": 34,
+      "community": 35,
       "norm_label": "parkedgoal()"
     },
     {
@@ -6165,7 +6174,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/ParkedRunsPanel.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_parkedrunspanel_tsx",
-      "community": 263,
+      "community": 262,
       "norm_label": "parkedrunspanel.tsx"
     },
     {
@@ -6174,7 +6183,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunLogStream.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_runlogstream_tsx",
-      "community": 15,
+      "community": 14,
       "norm_label": "runlogstream.tsx"
     },
     {
@@ -6183,7 +6192,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunLogStream.tsx",
       "source_location": "L13",
       "id": "runlogstream_runlogstream",
-      "community": 15,
+      "community": 14,
       "norm_label": "runlogstream()"
     },
     {
@@ -6192,7 +6201,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/TaskCard.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_taskcard_test_tsx",
-      "community": 264,
+      "community": 263,
       "norm_label": "taskcard.test.tsx"
     },
     {
@@ -6219,7 +6228,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunPrGatePanel.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_runprgatepanel_tsx",
-      "community": 26,
+      "community": 25,
       "norm_label": "runprgatepanel.tsx"
     },
     {
@@ -6228,7 +6237,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunPrGatePanel.tsx",
       "source_location": "L20",
       "id": "runprgatepanel_runprgatepanel",
-      "community": 26,
+      "community": 25,
       "norm_label": "runprgatepanel()"
     },
     {
@@ -6237,7 +6246,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunDetail.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_rundetail_tsx",
-      "community": 5,
+      "community": 1,
       "norm_label": "rundetail.tsx"
     },
     {
@@ -6246,7 +6255,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunDetail.tsx",
       "source_location": "L37",
       "id": "rundetail_metacell",
-      "community": 5,
+      "community": 1,
       "norm_label": "metacell()"
     },
     {
@@ -6255,7 +6264,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunDetail.tsx",
       "source_location": "L79",
       "id": "rundetail_ago",
-      "community": 5,
+      "community": 1,
       "norm_label": "ago()"
     },
     {
@@ -6264,7 +6273,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunApprovalGate.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_runs_components_runapprovalgate_tsx",
-      "community": 11,
+      "community": 8,
       "norm_label": "runapprovalgate.tsx"
     },
     {
@@ -6273,7 +6282,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/runs/components/RunApprovalGate.tsx",
       "source_location": "L25",
       "id": "runapprovalgate_runapprovalgate",
-      "community": 11,
+      "community": 8,
       "norm_label": "runapprovalgate()"
     },
     {
@@ -6282,7 +6291,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/notificationRules.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_notifications_notificationrules_test_ts",
-      "community": 265,
+      "community": 264,
       "norm_label": "notificationrules.test.ts"
     },
     {
@@ -6291,7 +6300,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/useNotifications.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_notifications_usenotifications_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "usenotifications.ts"
     },
     {
@@ -6300,7 +6309,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/useNotifications.ts",
       "source_location": "L13",
       "id": "usenotifications_usenotifications",
-      "community": 2,
+      "community": 3,
       "norm_label": "usenotifications()"
     },
     {
@@ -6309,7 +6318,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/index.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_notifications_index_ts",
-      "community": 266,
+      "community": 265,
       "norm_label": "index.ts"
     },
     {
@@ -6318,7 +6327,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/notificationRules.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_features_notifications_notificationrules_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "notificationrules.ts"
     },
     {
@@ -6327,7 +6336,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/notificationRules.ts",
       "source_location": "L33",
       "id": "notificationrules_selectnotifications",
-      "community": 2,
+      "community": 3,
       "norm_label": "selectnotifications()"
     },
     {
@@ -6336,7 +6345,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/notifications/notificationRules.ts",
       "source_location": "L55",
       "id": "notificationrules_navbadgecount",
-      "community": 2,
+      "community": 3,
       "norm_label": "navbadgecount()"
     },
     {
@@ -6345,7 +6354,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/slug.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_utils_slug_ts",
-      "community": 7,
+      "community": 0,
       "norm_label": "slug.ts"
     },
     {
@@ -6354,7 +6363,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/slug.ts",
       "source_location": "L7",
       "id": "slug_slug",
-      "community": 7,
+      "community": 0,
       "norm_label": "slug()"
     },
     {
@@ -6363,7 +6372,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/slug.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_utils_slug_test_ts",
-      "community": 267,
+      "community": 266,
       "norm_label": "slug.test.ts"
     },
     {
@@ -6372,7 +6381,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.test.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_utils_time_test_ts",
-      "community": 65,
+      "community": 66,
       "norm_label": "time.test.ts"
     },
     {
@@ -6381,7 +6390,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.test.ts",
       "source_location": "L5",
       "id": "time_test_iso",
-      "community": 65,
+      "community": 66,
       "norm_label": "iso()"
     },
     {
@@ -6390,7 +6399,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.test.ts",
       "source_location": "L6",
       "id": "time_test_en",
-      "community": 65,
+      "community": 66,
       "norm_label": "en()"
     },
     {
@@ -6399,7 +6408,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_utils_time_ts",
-      "community": 5,
+      "community": 1,
       "norm_label": "time.ts"
     },
     {
@@ -6408,7 +6417,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.ts",
       "source_location": "L11",
       "id": "time_relativetime",
-      "community": 5,
+      "community": 1,
       "norm_label": "relativetime()"
     },
     {
@@ -6417,7 +6426,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.ts",
       "source_location": "L25",
       "id": "time_compactago",
-      "community": 5,
+      "community": 1,
       "norm_label": "compactago()"
     },
     {
@@ -6426,7 +6435,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/utils/time.ts",
       "source_location": "L35",
       "id": "time_resumeeta",
-      "community": 5,
+      "community": 1,
       "norm_label": "resumeeta()"
     },
     {
@@ -6435,7 +6444,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/store.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_state_store_tsx",
-      "community": 2,
+      "community": 3,
       "norm_label": "store.tsx"
     },
     {
@@ -6444,7 +6453,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/store.tsx",
       "source_location": "L40",
       "id": "store_catalogprovider",
-      "community": 2,
+      "community": 3,
       "norm_label": "catalogprovider()"
     },
     {
@@ -6453,7 +6462,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/store.tsx",
       "source_location": "L104",
       "id": "store_usecatalog",
-      "community": 2,
+      "community": 3,
       "norm_label": "usecatalog()"
     },
     {
@@ -6480,7 +6489,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/api.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_state_api_ts",
-      "community": 268,
+      "community": 267,
       "norm_label": "api.ts"
     },
     {
@@ -6489,7 +6498,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_state_forms_ts",
-      "community": 0,
+      "community": 1,
       "norm_label": "forms.ts"
     },
     {
@@ -6498,7 +6507,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts",
       "source_location": "L18",
       "id": "forms_slugpreview",
-      "community": 0,
+      "community": 1,
       "norm_label": "slugpreview()"
     },
     {
@@ -6507,7 +6516,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/forms.ts",
       "source_location": "L39",
       "id": "forms_useentityform",
-      "community": 0,
+      "community": 1,
       "norm_label": "useentityform()"
     },
     {
@@ -6516,7 +6525,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/state/config.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_state_config_ts",
-      "community": 269,
+      "community": 268,
       "norm_label": "config.ts"
     },
     {
@@ -6525,7 +6534,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/Collection/Collection.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_collection_collection_stories_tsx",
-      "community": 270,
+      "community": 269,
       "norm_label": "collection.stories.tsx"
     },
     {
@@ -6534,7 +6543,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/Collection/Collection.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_collection_collection_test_tsx",
-      "community": 271,
+      "community": 270,
       "norm_label": "collection.test.tsx"
     },
     {
@@ -6561,7 +6570,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/HudPanel/HudPanel.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_hudpanel_hudpanel_stories_tsx",
-      "community": 272,
+      "community": 271,
       "norm_label": "hudpanel.stories.tsx"
     },
     {
@@ -6570,7 +6579,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/HudPanel/HudPanel.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_hudpanel_hudpanel_tsx",
-      "community": 273,
+      "community": 272,
       "norm_label": "hudpanel.tsx"
     },
     {
@@ -6579,7 +6588,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/HudPanel/HudPanel.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_hudpanel_hudpanel_test_tsx",
-      "community": 274,
+      "community": 273,
       "norm_label": "hudpanel.test.tsx"
     },
     {
@@ -6606,7 +6615,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/Sidebar/Sidebar.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_sidebar_sidebar_test_tsx",
-      "community": 275,
+      "community": 274,
       "norm_label": "sidebar.test.tsx"
     },
     {
@@ -6615,7 +6624,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/Sidebar/Sidebar.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_sidebar_sidebar_tsx",
-      "community": 276,
+      "community": 275,
       "norm_label": "sidebar.tsx"
     },
     {
@@ -6624,7 +6633,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/Sidebar/Sidebar.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_sidebar_sidebar_stories_tsx",
-      "community": 277,
+      "community": 276,
       "norm_label": "sidebar.stories.tsx"
     },
     {
@@ -6633,7 +6642,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/LanguageSwitcher/LanguageSwitcher.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_languageswitcher_languageswitcher_stories_tsx",
-      "community": 278,
+      "community": 277,
       "norm_label": "languageswitcher.stories.tsx"
     },
     {
@@ -6642,7 +6651,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/LanguageSwitcher/LanguageSwitcher.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_languageswitcher_languageswitcher_test_tsx",
-      "community": 279,
+      "community": 278,
       "norm_label": "languageswitcher.test.tsx"
     },
     {
@@ -6669,7 +6678,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/RightRail/RightRail.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_rightrail_rightrail_test_tsx",
-      "community": 280,
+      "community": 279,
       "norm_label": "rightrail.test.tsx"
     },
     {
@@ -6678,7 +6687,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/RightRail/RightRail.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_rightrail_rightrail_stories_tsx",
-      "community": 281,
+      "community": 280,
       "norm_label": "rightrail.stories.tsx"
     },
     {
@@ -6687,7 +6696,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/RightRail/RightRail.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_rightrail_rightrail_tsx",
-      "community": 282,
+      "community": 281,
       "norm_label": "rightrail.tsx"
     },
     {
@@ -6714,7 +6723,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/BrandLogo/BrandLogo.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_brandlogo_brandlogo_stories_tsx",
-      "community": 283,
+      "community": 282,
       "norm_label": "brandlogo.stories.tsx"
     },
     {
@@ -6723,7 +6732,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/BrandLogo/BrandLogo.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_brandlogo_brandlogo_test_tsx",
-      "community": 284,
+      "community": 283,
       "norm_label": "brandlogo.test.tsx"
     },
     {
@@ -6732,7 +6741,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/LimitsRings/PopoverRow.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_limitsrings_popoverrow_tsx",
-      "community": 285,
+      "community": 284,
       "norm_label": "popoverrow.tsx"
     },
     {
@@ -6759,7 +6768,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/LimitsRings/LimitsRings.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_limitsrings_limitsrings_test_tsx",
-      "community": 286,
+      "community": 285,
       "norm_label": "limitsrings.test.tsx"
     },
     {
@@ -6786,7 +6795,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/LimitsRings/LimitsRings.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_limitsrings_limitsrings_tsx",
-      "community": 287,
+      "community": 286,
       "norm_label": "limitsrings.tsx"
     },
     {
@@ -6795,7 +6804,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/PlaceholderScreen/PlaceholderScreen.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_placeholderscreen_placeholderscreen_stories_tsx",
-      "community": 288,
+      "community": 287,
       "norm_label": "placeholderscreen.stories.tsx"
     },
     {
@@ -6804,7 +6813,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/PlaceholderScreen/PlaceholderScreen.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_placeholderscreen_placeholderscreen_test_tsx",
-      "community": 289,
+      "community": 288,
       "norm_label": "placeholderscreen.test.tsx"
     },
     {
@@ -6813,7 +6822,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/PlaceholderScreen/PlaceholderScreen.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_placeholderscreen_placeholderscreen_tsx",
-      "community": 290,
+      "community": 289,
       "norm_label": "placeholderscreen.tsx"
     },
     {
@@ -6822,7 +6831,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell/AppShell.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_appshell_appshell_stories_tsx",
-      "community": 291,
+      "community": 290,
       "norm_label": "appshell.stories.tsx"
     },
     {
@@ -6858,7 +6867,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell/AppShell.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_appshell_appshell_test_tsx",
-      "community": 292,
+      "community": 291,
       "norm_label": "appshell.test.tsx"
     },
     {
@@ -6867,7 +6876,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/TopBar/TopBar.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_topbar_topbar_stories_tsx",
-      "community": 293,
+      "community": 292,
       "norm_label": "topbar.stories.tsx"
     },
     {
@@ -6876,7 +6885,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/TopBar/TopBar.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_topbar_topbar_test_tsx",
-      "community": 294,
+      "community": 293,
       "norm_label": "topbar.test.tsx"
     },
     {
@@ -6885,7 +6894,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/TopBar/TopBar.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_topbar_topbar_tsx",
-      "community": 295,
+      "community": 294,
       "norm_label": "topbar.tsx"
     },
     {
@@ -6948,7 +6957,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/MainLayout/MainLayout.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_mainlayout_mainlayout_test_tsx",
-      "community": 296,
+      "community": 295,
       "norm_label": "mainlayout.test.tsx"
     },
     {
@@ -6957,7 +6966,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/MainLayout/MainLayout.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_mainlayout_mainlayout_tsx",
-      "community": 297,
+      "community": 296,
       "norm_label": "mainlayout.tsx"
     },
     {
@@ -6966,7 +6975,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/MainLayout/MainLayout.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_layout_mainlayout_mainlayout_stories_tsx",
-      "community": 298,
+      "community": 297,
       "norm_label": "mainlayout.stories.tsx"
     },
     {
@@ -6975,7 +6984,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/CategoryDialog/CategoryDialog.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_categorydialog_categorydialog_tsx",
-      "community": 299,
+      "community": 298,
       "norm_label": "categorydialog.tsx"
     },
     {
@@ -6984,7 +6993,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/PageHeader/PageHeader.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_pageheader_pageheader_test_tsx",
-      "community": 300,
+      "community": 299,
       "norm_label": "pageheader.test.tsx"
     },
     {
@@ -6993,7 +7002,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/PageHeader/PageHeader.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_pageheader_pageheader_tsx",
-      "community": 301,
+      "community": 300,
       "norm_label": "pageheader.tsx"
     },
     {
@@ -7002,7 +7011,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/PageHeader/PageHeader.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_pageheader_pageheader_stories_tsx",
-      "community": 302,
+      "community": 301,
       "norm_label": "pageheader.stories.tsx"
     },
     {
@@ -7011,7 +7020,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/HudCard/HudCard.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_hudcard_hudcard_stories_tsx",
-      "community": 303,
+      "community": 302,
       "norm_label": "hudcard.stories.tsx"
     },
     {
@@ -7020,7 +7029,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/HudCard/HudCard.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_hudcard_hudcard_test_tsx",
-      "community": 304,
+      "community": 303,
       "norm_label": "hudcard.test.tsx"
     },
     {
@@ -7029,7 +7038,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/HudCard/HudCard.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_hudcard_hudcard_tsx",
-      "community": 305,
+      "community": 304,
       "norm_label": "hudcard.tsx"
     },
     {
@@ -7074,7 +7083,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/LoadingScreen/CircuitTraces.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_loadingscreen_circuittraces_tsx",
-      "community": 306,
+      "community": 305,
       "norm_label": "circuittraces.tsx"
     },
     {
@@ -7119,7 +7128,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/LoadingScreen/LoadingScreen.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_loadingscreen_loadingscreen_test_tsx",
-      "community": 307,
+      "community": 306,
       "norm_label": "loadingscreen.test.tsx"
     },
     {
@@ -7128,7 +7137,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/LoadingScreen/BootProgress.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_loadingscreen_bootprogress_tsx",
-      "community": 308,
+      "community": 307,
       "norm_label": "bootprogress.tsx"
     },
     {
@@ -7137,7 +7146,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/LoadingScreen/constants.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_loadingscreen_constants_ts",
-      "community": 309,
+      "community": 308,
       "norm_label": "constants.ts"
     },
     {
@@ -7182,7 +7191,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/EntityField.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_entityfield_tsx",
-      "community": 310,
+      "community": 309,
       "norm_label": "entityfield.tsx"
     },
     {
@@ -7191,7 +7200,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/EntityFormModal.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_entityformmodal_stories_tsx",
-      "community": 311,
+      "community": 310,
       "norm_label": "entityformmodal.stories.tsx"
     },
     {
@@ -7200,7 +7209,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/EntityFormModal.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_entityformmodal_test_tsx",
-      "community": 312,
+      "community": 311,
       "norm_label": "entityformmodal.test.tsx"
     },
     {
@@ -7209,7 +7218,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/FilePreview.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_filepreview_tsx",
-      "community": 27,
+      "community": 26,
       "norm_label": "filepreview.tsx"
     },
     {
@@ -7218,7 +7227,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/FilePreview.tsx",
       "source_location": "L3",
       "id": "filepreview_filepreview",
-      "community": 27,
+      "community": 26,
       "norm_label": "filepreview()"
     },
     {
@@ -7227,7 +7236,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/EntityFormModal.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_entityformmodal_tsx",
-      "community": 313,
+      "community": 312,
       "norm_label": "entityformmodal.tsx"
     },
     {
@@ -7236,7 +7245,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/types.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_types_ts",
-      "community": 314,
+      "community": 313,
       "norm_label": "types.ts"
     },
     {
@@ -7245,7 +7254,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/useEntityForm.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_entityformmodal_useentityform_ts",
-      "community": 27,
+      "community": 26,
       "norm_label": "useentityform.ts"
     },
     {
@@ -7254,7 +7263,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/useEntityForm.ts",
       "source_location": "L5",
       "id": "useentityform_initialvalues",
-      "community": 27,
+      "community": 26,
       "norm_label": "initialvalues()"
     },
     {
@@ -7263,7 +7272,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EntityFormModal/useEntityForm.ts",
       "source_location": "L13",
       "id": "useentityform_useentityform",
-      "community": 27,
+      "community": 26,
       "norm_label": "useentityform()"
     },
     {
@@ -7272,7 +7281,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EmptyState/EmptyState.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_emptystate_emptystate_stories_tsx",
-      "community": 315,
+      "community": 314,
       "norm_label": "emptystate.stories.tsx"
     },
     {
@@ -7281,7 +7290,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EmptyState/EmptyState.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_emptystate_emptystate_tsx",
-      "community": 316,
+      "community": 315,
       "norm_label": "emptystate.tsx"
     },
     {
@@ -7290,7 +7299,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/EmptyState/EmptyState.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_emptystate_emptystate_test_tsx",
-      "community": 317,
+      "community": 316,
       "norm_label": "emptystate.test.tsx"
     },
     {
@@ -7299,7 +7308,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/PageContainer/PageContainer.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_pagecontainer_pagecontainer_stories_tsx",
-      "community": 318,
+      "community": 317,
       "norm_label": "pagecontainer.stories.tsx"
     },
     {
@@ -7326,7 +7335,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/PageContainer/PageContainer.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_pagecontainer_pagecontainer_test_tsx",
-      "community": 319,
+      "community": 318,
       "norm_label": "pagecontainer.test.tsx"
     },
     {
@@ -7335,7 +7344,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/SectionLabel/SectionLabel.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_sectionlabel_sectionlabel_test_tsx",
-      "community": 320,
+      "community": 319,
       "norm_label": "sectionlabel.test.tsx"
     },
     {
@@ -7362,7 +7371,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/SectionLabel/SectionLabel.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_sectionlabel_sectionlabel_stories_tsx",
-      "community": 321,
+      "community": 320,
       "norm_label": "sectionlabel.stories.tsx"
     },
     {
@@ -7371,7 +7380,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/SectionToolbar/SectionToolbar.stories.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_sectiontoolbar_sectiontoolbar_stories_tsx",
-      "community": 322,
+      "community": 321,
       "norm_label": "sectiontoolbar.stories.tsx"
     },
     {
@@ -7380,7 +7389,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/SectionToolbar/SectionToolbar.test.tsx",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_components_sectiontoolbar_sectiontoolbar_test_tsx",
-      "community": 323,
+      "community": 322,
       "norm_label": "sectiontoolbar.test.tsx"
     },
     {
@@ -7470,7 +7479,7 @@
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/i18n/keys.ts",
       "source_location": "L1",
       "id": "users_zibby_workspace_z_i_b_b_y_apps_web_i18n_keys_ts",
-      "community": 324,
+      "community": 323,
       "norm_label": "keys.ts"
     },
     {
@@ -8085,18 +8094,6 @@
       "relation": "calls",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L136",
-      "weight": 1.0,
-      "_src": "speechsynthesismock_mockspeechsynthesis_speak",
-      "_tgt": "voicescreen_speakbriefing",
-      "source": "speechsynthesismock_mockspeechsynthesis_speak",
-      "target": "voicescreen_speakbriefing"
-    },
-    {
-      "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/test/speechSynthesisMock.ts",
       "source_location": "L54",
       "weight": 1.0,
@@ -8548,18 +8545,6 @@
       "_tgt": "briefing_summarizebriefing",
       "source": "screen_filter",
       "target": "briefing_summarizebriefing"
-    },
-    {
-      "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/briefing.ts",
-      "source_location": "L66",
-      "weight": 1.0,
-      "_src": "screen_filter",
-      "_tgt": "briefing_picknewlyfinished",
-      "source": "screen_filter",
-      "target": "briefing_picknewlyfinished"
     },
     {
       "relation": "calls",
@@ -9412,6 +9397,18 @@
       "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_tasks_mutations_useclassifytaskmutation_ts",
       "target": "useclassifytaskmutation_useclassifytaskmutation",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.ts",
+      "source_location": "L60",
+      "weight": 1.0,
+      "_src": "useclassifytaskmutation_useclassifytaskmutation",
+      "_tgt": "useutterancedispatch_useutterancedispatch",
+      "source": "useclassifytaskmutation_useclassifytaskmutation",
+      "target": "useutterancedispatch_useutterancedispatch"
     },
     {
       "relation": "contains",
@@ -11625,7 +11622,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/runVoiceAction.ts",
-      "source_location": "L57",
+      "source_location": "L66",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_runvoiceaction_ts",
       "_tgt": "runvoiceaction_runvoiceaction",
@@ -11757,24 +11754,12 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/briefing.ts",
-      "source_location": "L35",
+      "source_location": "L32",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_briefing_ts",
       "_tgt": "briefing_summarizebriefing",
       "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_briefing_ts",
       "target": "briefing_summarizebriefing",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/briefing.ts",
-      "source_location": "L62",
-      "weight": 1.0,
-      "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_briefing_ts",
-      "_tgt": "briefing_picknewlyfinished",
-      "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_briefing_ts",
-      "target": "briefing_picknewlyfinished",
       "confidence_score": 1.0
     },
     {
@@ -11817,7 +11802,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_parseutterance_ts",
       "_tgt": "parseutterance_normalize",
@@ -11829,7 +11814,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L144",
+      "source_location": "L174",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_parseutterance_ts",
       "_tgt": "parseutterance_matchnavigate",
@@ -11841,7 +11826,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L162",
+      "source_location": "L192",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_parseutterance_ts",
       "_tgt": "parseutterance_parseutterance",
@@ -11853,7 +11838,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L166",
+      "source_location": "L196",
       "weight": 1.0,
       "_src": "parseutterance_parseutterance",
       "_tgt": "parseutterance_normalize",
@@ -11877,7 +11862,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/parseUtterance.ts",
-      "source_location": "L169",
+      "source_location": "L199",
       "weight": 1.0,
       "_src": "parseutterance_parseutterance",
       "_tgt": "parseutterance_matchnavigate",
@@ -11937,7 +11922,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L92",
+      "source_location": "L75",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_voicescreen_tsx",
       "_tgt": "voicescreen_togglemute",
@@ -11949,19 +11934,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L119",
-      "weight": 1.0,
-      "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_voicescreen_tsx",
-      "_tgt": "voicescreen_speakbriefing",
-      "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_voicescreen_tsx",
-      "target": "voicescreen_speakbriefing",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L157",
+      "source_location": "L150",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_voicescreen_tsx",
       "_tgt": "voicescreen_sendutterance",
@@ -11973,7 +11946,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/components/VoiceScreen.tsx",
-      "source_location": "L163",
+      "source_location": "L156",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_components_voicescreen_tsx",
       "_tgt": "voicescreen_handler",
@@ -11985,7 +11958,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.ts",
-      "source_location": "L43",
+      "source_location": "L52",
       "weight": 1.0,
       "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_ts",
       "_tgt": "useutterancedispatch_useutterancedispatch",
@@ -12123,6 +12096,42 @@
       "_tgt": "usevoicedemosequence_usevoicedemosequence",
       "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_usevoicedemosequence_ts",
       "target": "usevoicedemosequence_usevoicedemosequence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
+      "_tgt": "useutterancedispatch_test_routingbody",
+      "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
+      "target": "useutterancedispatch_test_routingbody",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
+      "_tgt": "useutterancedispatch_test_classifyat",
+      "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
+      "target": "useutterancedispatch_test_classifyat",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/voice/hooks/useUtteranceDispatch.test.tsx",
+      "source_location": "L65",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
+      "_tgt": "useutterancedispatch_test_options",
+      "source": "users_zibby_workspace_z_i_b_b_y_apps_web_features_voice_hooks_useutterancedispatch_test_tsx",
+      "target": "useutterancedispatch_test_options",
       "confidence_score": 1.0
     },
     {

@@ -709,8 +709,10 @@
       "navigating": "Přecházím…",
       "closing": "Zavírám VOICE MODE.",
       "briefing": "Briefing.",
-      "dispatching": "Rozumím — spouštím to: {task}",
+      "dispatching": "Slyším: {task}",
       "started": "Běží to. Sleduj v HUD.",
+      "clarify": "Nejsem si jistý — můžeš upřesnit? Třeba: {options}.",
+      "clarifyGeneric": "Nejsem si jistý — můžeš to upřesnit?",
       "dispatchFailed": "Nepodařilo se to spustit.",
       "heard": "Nezachytil jsem zadání."
     },

@@ -21,6 +21,11 @@ import { type VoiceMessage, VoiceTranscript } from "./VoiceTranscript";
 
 const ACCENT = "var(--color-accent)";
 
+/** Acks shown on screen but not read aloud — their speech is handled elsewhere
+ * (`briefing` by `onBrief`) or deliberately silent (`dispatching` = the optimistic
+ * "heard you"; ZIBBY speaks only the outcome). */
+const SILENT_ACKS = ["briefing", "dispatching"];
+
 export interface VoiceScreenProps {
   onExit: () => void;
 }
@@ -119,13 +124,14 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
     dispatch(spoken);
   }, [mode, transcript, dispatch]);
 
-  // Each command ack is read aloud once (unless muted). The `briefing` ack is
-  // visual-only — its summary was already spoken by `onBrief`, so skip its TTS.
+  // Each command ack is read aloud once (unless muted). Two acks are visual-only:
+  // `briefing` (its summary was already spoken by `onBrief`) and `dispatching` (the
+  // optimistic "heard you" — ZIBBY speaks only the outcome: started/clarify/failed).
   const spokenAck = useRef<typeof ack>(null);
   useEffect(() => {
     if (mode !== "live" || muted || !ack || ack === spokenAck.current) return;
     spokenAck.current = ack;
-    if (ack.key === "briefing") return;
+    if (SILENT_ACKS.includes(ack.key)) return;
     speak(t(`ack.${ack.key}`, ack.values), speechLang);
   }, [ack, mode, muted, speak, t, speechLang]);
 

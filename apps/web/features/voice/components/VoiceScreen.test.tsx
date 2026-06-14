@@ -177,12 +177,20 @@ describe("VoiceScreen", () => {
     expect(sendBtn).toBeDisabled();
   });
 
-  it("speaks the dispatch ack, echoing the understood task", () => {
+  it("shows the optimistic 'heard' ack on screen but does NOT speak it", () => {
     dispatchMock.ack = { key: "dispatching", values: { task: "nasaď build" } };
     mockSession.current = liveSession({ transcript: "nasaď build" });
     render(<VoiceScreen onExit={vi.fn()} />);
+    expect(screen.getByText("Slyším: nasaď build")).toBeInTheDocument();
+    expect(speechMock.speak).not.toHaveBeenCalled();
+  });
+
+  it("speaks the clarify follow-up question aloud", () => {
+    dispatchMock.ack = { key: "clarify", values: { options: "Kodér, Delivery" } };
+    mockSession.current = liveSession({ transcript: "udělej to" });
+    render(<VoiceScreen onExit={vi.fn()} />);
     expect(speechMock.speak).toHaveBeenCalledWith(
-      "Rozumím — spouštím to: nasaď build",
+      "Nejsem si jistý — můžeš upřesnit? Třeba: Kodér, Delivery.",
       "cs-CZ",
     );
   });

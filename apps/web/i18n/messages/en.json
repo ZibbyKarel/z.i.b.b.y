@@ -709,8 +709,10 @@
       "navigating": "Navigating…",
       "closing": "Closing VOICE MODE.",
       "briefing": "Briefing.",
-      "dispatching": "On it — starting that: {task}",
+      "dispatching": "Heard: {task}",
       "started": "It's running — watch it in the HUD.",
+      "clarify": "I'm not sure — can you clarify? For example: {options}.",
+      "clarifyGeneric": "I'm not sure — can you clarify that?",
       "dispatchFailed": "I couldn't start that.",
       "heard": "I didn't catch that."
     },

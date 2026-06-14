@@ -743,6 +743,32 @@ the `pickNewlyFinished` suite. web/DS+api green.
 
 ---
 
+## Phase 25 — Turn-by-turn voice clarification — ✅ delivered 2026-06-14
+
+_North Star: "what you want is resolved in the dialogue itself, turn by turn." Phase 23 made a
+spoken task dispatch immediately; but when the classifier is **low-confidence** that dispatches
+blind. Phase 25 adds the missing conversational turn: a low-confidence utterance gets a **spoken
+follow-up question** instead of a blind dispatch, and the operator's next utterance resolves it —
+a real two-turn dialogue, still no `NewTaskDialog`._
+
+- **Classify-first** — the spoken task now runs the read-only `classifyTask` before dispatching
+  (the same verdict the HUD composer previews). High/medium confidence → dispatch as before
+  (`createTask`); **low** confidence (`isLowConfidence`, < 0.4) → ask.
+- **One bounded clarification turn** — on low confidence ZIBBY speaks "I'm not sure — can you
+  clarify? e.g. {top candidates}" and remembers the original utterance; the **next** utterance is
+  combined with it and dispatched **regardless** of confidence (bounded — never a second ask, so
+  it always terminates).
+- **Acks** — the optimistic task ack is now visual-only "Heard: {task}" (TTS suppressed — ZIBBY
+  speaks only the *outcome*: the clarify question, or "it's running"). New `clarify` ack.
+- Gate untouched; `live|demo` deterministic. No backend reasoning call — STT/TTS stays free; the
+  classifier already exists (Phase 11).
+
+**Tests:** `useUtteranceDispatch` — low-confidence classify → `clarify` ack + no `createTask`; the
+clarification answer dispatches (combined text, no second ask); high-confidence still one-shot;
+gate answers never classify. `VoiceScreen` speaks the clarify question. web/DS+api green.
+
+---
+
 ## Phase 8 — Multi-engagement scale
 
 _Goal: the long-term purpose — several delivery engagements in parallel, the

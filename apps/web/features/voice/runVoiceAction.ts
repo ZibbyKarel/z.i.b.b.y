@@ -8,7 +8,7 @@ import type { NavPage, VoiceAction } from "./parseUtterance";
  */
 export interface VoiceAck {
   key: VoiceAckKey;
-  values?: { page?: NavPage; task?: string };
+  values?: { page?: NavPage; task?: string; options?: string };
 }
 
 export type VoiceAckKey =
@@ -23,12 +23,16 @@ export type VoiceAckKey =
   // A spoken status request — the briefing is spoken by the `brief` handler; this ack
   // is a visual-only label (its own TTS is suppressed to avoid double-speaking).
   | "briefing"
-  // A spoken task: `dispatching` is the optimistic "starting that — <task>" ack the
-  // moment it's understood; `started`/`dispatchFailed` are set by the hook once the
-  // backend dispatch resolves. `heard` is the empty-utterance no-op (nothing to do).
+  // A spoken task: `dispatching` is the optimistic "heard you — <task>" ack the moment
+  // it's understood (visual-only — TTS suppressed). The hook then resolves it async:
+  // `started`/`dispatchFailed` once the dispatch lands, or `clarify`/`clarifyGeneric`
+  // when the classifier is too unsure and ZIBBY asks a follow-up. `heard` is the
+  // empty-utterance no-op.
   | "dispatching"
   | "started"
   | "dispatchFailed"
+  | "clarify"
+  | "clarifyGeneric"
   | "heard";
 
 /**

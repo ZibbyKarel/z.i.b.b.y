@@ -1,11 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApproveMutation, useRejectMutation } from "../../approvals/mutations";
 import { useStopAgentMutation } from "../../runs/mutations";
-import { useCreateTaskMutation } from "../../tasks/mutations";
-import { extractPaths } from "../../tasks/task";
+import {
+  useClassifyTaskMutation,
+  useCreateTaskMutation,
+} from "../../tasks/mutations";
+import { extractPaths, isLowConfidence } from "../../tasks/task";
+import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../../runs/run";
 import { parseUtterance } from "../parseUtterance";
@@ -29,18 +33,21 @@ export interface UtteranceDispatch {
   ack: VoiceAck | null;
 }
 
+/** How many candidate names ZIBBY reads back when asking the operator to clarify. */
+const CLARIFY_CANDIDATES = 3;
+
 /**
  * Binds the pure {@link parseUtterance}/{@link runVoiceAction} pair to the real
  * approval/stop mutations, the Next router and the overlay exit. The voice screen
  * calls `dispatch` once per finalized transcript.
  *
- * A spoken **task** dispatches straight to the `/tasks` layer ({@link useCreateTaskMutation}
- * — the Phase-11 backend classifier routes agent/pipeline/orchestrator), then the ack
- * flips `dispatching → started` (or `dispatchFailed`); there is **no composer modal** and
- * **no navigation**, so the overlay stays open and the new run surfaces in the live HUD
- * panels (North Star: confirming understanding is the conversation's job, never a modal).
- * Gate **answers** (approve/reject) are the operator's own spoken decision *at* the gate —
- * nothing here bypasses it.
+ * A spoken **task** is classify-first (the read-only Phase-11 verdict): high/medium
+ * confidence dispatches straight to the `/tasks` layer ({@link useCreateTaskMutation});
+ * **low** confidence asks a spoken follow-up ({@link isLowConfidence}) instead of
+ * dispatching blind, and the operator's next utterance is combined and dispatched —
+ * a bounded two-turn dialogue (never a second ask), no composer modal, no navigation.
+ * Gate **answers** (approve/reject) are the operator's own spoken decision *at* the
+ * gate — those never classify and never bypass it.
  */
 export function useUtteranceDispatch(
   options: UseUtteranceDispatchOptions,
@@ -50,15 +57,19 @@ export function useUtteranceDispatch(
   const approve = useApproveMutation();
   const reject = useRejectMutation();
   const stop = useStopAgentMutation();
+  const classify = useClassifyTaskMutation();
   const createTask = useCreateTaskMutation();
   const [ack, setAck] = useState<VoiceAck | null>(null);
+  // The original utterance awaiting a clarification answer (null = none pending).
+  const pendingClarify = useRef<string | null>(null);
 
   const pendingApprovalId = approvals[0]?.id;
   const activeRunId = liveRuns.find(
     (r) => r.status === "running" && r.kind === "agent",
   )?.runId;
 
-  const dispatchTask = useCallback(
+  // Actually send the task to the `/tasks` layer (the backend classifier routes it).
+  const doDispatch = useCallback(
     (text: string) => {
       createTask.mutate(
         { body: { text, paths: extractPaths(text) } },
@@ -71,8 +82,54 @@ export function useUtteranceDispatch(
     [createTask],
   );
 
+  // The createTask branch's handler: classify first, then dispatch — or ask once.
+  const dispatchTask = useCallback(
+    (text: string) => {
+      classify.mutate(
+        { body: { text, paths: extractPaths(text) } },
+        {
+          onSuccess: (res) => {
+            const routing = selectApiResponseBody(res);
+            if (!isLowConfidence(routing.confidence)) {
+              doDispatch(text);
+              return;
+            }
+            // Too unsure to route blind — ask, remembering the original utterance.
+            pendingClarify.current = text;
+            const options = routing.candidates
+              .slice(0, CLARIFY_CANDIDATES)
+              .map((c) => c.name)
+              .join(", ");
+            setAck(
+              options
+                ? { key: "clarify", values: { options } }
+                : { key: "clarifyGeneric" },
+            );
+          },
+          onError: () => setAck({ key: "dispatchFailed" }),
+        },
+      );
+    },
+    [classify, doDispatch],
+  );
+
   const dispatch = useCallback(
     (text: string): VoiceAck => {
+      // Second turn: this utterance answers a pending clarification. Combine it with
+      // the original and dispatch regardless of confidence — bounded to one round, so
+      // it always terminates (no second ask).
+      if (pendingClarify.current !== null) {
+        const combined = `${pendingClarify.current} ${text}`.trim();
+        pendingClarify.current = null;
+        const result: VoiceAck = {
+          key: "dispatching",
+          values: { task: combined },
+        };
+        setAck(result);
+        doDispatch(combined);
+        return result;
+      }
+
       const result = runVoiceAction(parseUtterance(text), {
         pendingApprovalId,
         activeRunId,
@@ -97,6 +154,7 @@ export function useUtteranceDispatch(
       onExit,
       onBrief,
       dispatchTask,
+      doDispatch,
     ],
   );
 
