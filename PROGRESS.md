@@ -166,44 +166,50 @@ candidate) is already fully wired — roadmap 2.2 "stub" text was stale. Deliver
 voices + Test button) in Settings. Test-env fix: in-memory localStorage in vitest.setup (Node 25's
 experimental global Storage shadows jsdom's). web/DS+api **1472/1472**, tsc + lint clean.
 
+## Phase 23: conversational voice dispatch (North-Star realignment) — ✅ COMPLETE (2026-06-14)
+
+The operator rewrote `north-star.md` to make **Voice a conversation, not a command line** —
+"no 'new task' form to confirm — when ZIBBY understands the intent, it dispatches to the same
+`/tasks` layer the HUD drives, on its own, and tells you it has while the work runs." The old
+voice path staged a spoken task into the **NewTaskDialog composer** (a confirm modal),
+conflating "did I understand you" (the conversation's job, never a modal) with the gate.
+Phase 23 closes that one structural conflict. Plan: [docs/plans/phase-23.md](docs/plans/phase-23.md).
+
+| Item | Status | Notes |
+| ---- | ------ | ----- |
+| 23.1 Dispatch-and-narrate (replace the composer seam) | ✅ done (2026-06-14) | `runVoiceAction` `createTask` branch → `dispatchTask` (was `stageTask`/`openNewTask`), returns a `dispatching` ack echoing the understood text; empty utterance → `heard` no-op. `useUtteranceDispatch` owns `useCreateTaskMutation` and fires `createTask({text,paths})` directly (Phase-11 backend classifier routes agent/pipeline/orchestrator), flipping the ack `dispatching → started`/`dispatchFailed`; **no navigation** — overlay stays open, the new run appears in the live "Active agents" panel. `VoiceScreen` drops `useNewTask`/`openNewTask`; auto-dispatch + the relabelled **Send** button both go through `dispatch`; TTS narrates the dispatch ack. Gate untouched (spoken approve/reject still answer it). i18n `voice.ack.{dispatching,started,dispatchFailed}` + `voice.send` (cs+en). Tests: `runVoiceAction` dispatch-not-stage + empty no-op; new `useUtteranceDispatch.test` (createTask wiring + paths, ack transitions, error path, gate-answer path, no navigate); `VoiceScreen` Send-dispatch-no-exit + spoken-ack. **Full workspace 1479/1479** (DS+contracts+forms+api+web), lint + web-tsc clean. |
+
+**Scope kept small (LOOP.md):** `parseUtterance`'s gate/control grammar (approve/reject =
+spoken gate, endorsed by the North Star; stop/navigate/close = control affordances) is
+unchanged — a later "Claude behind the channel" phase subsumes it. Voice-driven loop/goal
+synthesis and live run-event *streaming* narration are deferred.
+
 ## Next iteration
 
-**⚠️ NORTH STAR CHANGED (operator edit, 2026-06-14) — re-opens functional work.** The operator
-rewrote `apps/api/data/vault/north-star.md` to make **Voice a co-equal, conversational surface**,
-which the current voice implementation (Phases 17–22) does NOT yet match. RE-GROUND against the
-new north-star.md; the "functional gaps exhausted" note below is now obsolete for voice.
+**Proposed Phase 24 — Live run-event narration ("narrating as it goes").** North-Star conflict
+#3 (the last open voice gap): "Claude runs behind the voice channel the whole time… narrating as
+it goes. The butler talks back while the work happens, not only after." Today's TTS (Phases 19/20)
+speaks acks/briefing and announces runs *finishing*; it does NOT narrate a run's **progress while
+it executes**. Phase 24: while the voice overlay is open and a dispatched run is live, subscribe to
+the run-event stream (`RunEventsProvider` already exists) and speak **milestone** transitions —
+phase changes (Architekt → Kodér → Tester), a gate opening, completion — *not* every log line.
+Research (2026-06-14, sources below) is explicit: long-running tasks want **sparse, context-aware**
+voice updates + visual detail in the HUD, never continuous per-event narration (over-speaking
+destroys trust). Design: a pure `pickRunMilestones(prevState, events)` selector (testable,
+dedup-by-phase like Phase 20's `pickNewlyFinished`) feeding the existing `useSpeech`; respects mute;
+seeds from the first event so in-flight history isn't replayed. GROUND first: read
+`RunEventsProvider`/`useRunEvents` and the run-event shape, and `VoiceScreen`'s Phase-20
+finish-announce effect (the same seed-from-first-feed idiom applies).
 
-What the new North Star demands (and where today's code conflicts):
+Candidate after that — **Phase 25: turn-by-turn clarification** — when the classifier is
+low-confidence, ZIBBY asks a spoken follow-up instead of dispatching blind (still no modal),
+realizing "resolved in the dialogue itself, turn by turn."
 
-1. **Voice is a conversation, "no command grammar to learn."** Today's `parseUtterance`
-   (`features/voice/parseUtterance.ts`, Phase 18) is a hardcoded approve/reject/stop/navigate/close
-   grammar — the exact thing the North Star now rejects. Intent should be understood
-   conversationally (Claude behind the channel), not regex-matched.
-2. **"No 'new task' form to confirm" — ZIBBY dispatches to `/tasks` on its own when it understands.**
-   Today the voice `createTask` path calls `openNewTask(text)` → the NewTask composer (a confirm
-   modal). The North Star explicitly forbids conflating "did I understand you" (conversation's job,
-   never a modal) with the gate. Voice should dispatch directly to the same `/tasks`/`createTask`
-   layer the HUD drives, no composer.
-3. **Narrate WHILE work runs** ("talks back while the work happens, not only after"; "Claude runs
-   behind the voice channel the whole time… narrating as it goes"). Today's TTS (Phases 19/20)
-   only speaks one-line acks/briefing after the fact.
-4. **Gate is the only interruption; spoken approval answers the gate** (never skipped). This part
-   already holds — keep it; only the *understanding* path changes.
+Also still open (fold into a hardening pass if it recurs): the api `agent-runs.e2e` git-fixture
+transient under full-suite load (rare; passes isolated). The
+[self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven engagement.
 
-**Proposed Phase 23 — Conversational voice dispatch (first realignment slice).** Make a spoken
-intent dispatch directly to the tasks layer with spoken narration, replacing the composer-confirm
-seam. Concretely: the finalized utterance → `createTask` (the backend classifier already routes
-agent/pipeline/goal, Phase 11) → ZIBBY narrates "starting that — <summary>" via `useSpeech` and the
-HUD transcript, **without** opening `NewTaskDialog`. The gate stays untouched (transactional
-actions still stop; spoken yes/no answers it). Keep `live|demo` deterministic for CI; web-
-components tests for the new dispatch-not-modal behavior. GROUND first: re-read the voice seam
-(`VoiceScreen` `handOff`/`useUtteranceDispatch`, the Phase-11.4 `openNewTask` seam) and decide how
-much of `parseUtterance` survives (gate yes/no may stay; the navigate/command grammar yields to
-conversation). Later phases: turn-by-turn clarification dialogue, live run-event narration
-streaming, full "Claude behind the channel."
-
-Also still open from earlier (fold into a hardening pass if it recurs): the api
-`agent-runs.e2e` git-fixture transient under full-suite load (rare; passes isolated — seen
-once last iteration in a 688-test run, green on clean re-run). The
-[self-development runbook](docs/ops/self-development.md) is ready for a real operator-driven
-engagement.
+_Research sources (Phase 24 narration UX):_
+[Aufait UX — VUI best practices](https://www.aufaitux.com/blog/voice-user-interface-design-best-practices/) ·
+[Eleken — Voice UI design 2026](https://www.eleken.co/blog-posts/voice-ui-design) ·
+[Rime — TTS voice best practices](https://rime.ai/resources/tts-voice-best-practices)
