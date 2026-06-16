@@ -53,6 +53,13 @@ export interface NewTaskDialogProps {
   onClose: () => void;
   /** Phase 11.4: seed the description field (a voice transcript / external trigger). */
   initialText?: string;
+  /**
+   * Lock the task to a specific destination, bypassing classification. Used when the
+   * operator picks the processor up front — e.g. "Run pipeline" hands the standard
+   * composer a pre-chosen pipeline target. The operator still describes the task; it
+   * is dispatched straight to this target (no live "ZIBBY will…" preview, no override).
+   */
+  initialTarget?: TaskTarget;
 }
 
 /** How long the scheduled confirmation lingers before the dialog closes itself. */
@@ -85,8 +92,11 @@ function toApiTarget(target: TaskTarget) {
  * goal and starts its run (scheduled loops defer through the task scheduler). Risky
  * actions are still caught later by the approval gate.
  */
-export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
+export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
+  // A pre-chosen destination (e.g. a pipeline) locks routing: classification is
+  // skipped and the task is dispatched straight to this target.
+  const forcedTarget = initialTarget ?? null;
   const router = useRouter();
   const { mutate: createTask, isPending: creatingTask } = useCreateTaskMutation();
   const { mutate: classify } = useClassifyTaskMutation();
@@ -142,7 +152,8 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   // Gate the preview on a long-enough query so a stale verdict never lingers after
   // the field is cleared (no setState-in-effect needed to reset it).
   const hasQuery = text.trim().length > 2;
-  const activeRouting = hasQuery ? routing : null;
+  // A forced target short-circuits routing entirely — no classify, no preview.
+  const activeRouting = !forcedTarget && hasQuery ? routing : null;
   const isLoop = activeRouting?.mode === "loop";
 
   // The side-effect-free verdict (the backend never starts a run here). Reused by the
@@ -156,10 +167,11 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
 
   // ── Live classify preview ───────────────────────────────────────────────
   useEffect(() => {
+    if (forcedTarget) return; // a locked target needs no routing verdict
     if (text.trim().length <= 2) return;
     const handle = setTimeout(runClassify, CLASSIFY_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [text, runClassify]);
+  }, [forcedTarget, text, runClassify]);
 
   // Seed the Loop form from a fresh proposal during render (the React-sanctioned
   // "adjust state on prop change" pattern, guarded against re-running) — unless the
@@ -207,10 +219,13 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   }, [outputType, fileDest, fileTo]);
 
   const submitSingle = useCallback(() => {
-    const override =
-      overrideIndex !== "" && activeRouting
+    // A forced target wins; otherwise an optional manual override; otherwise the
+    // backend classifies (no target field sent).
+    const chosenTarget =
+      forcedTarget ??
+      (overrideIndex !== "" && activeRouting
         ? activeRouting.candidates[Number(overrideIndex)]
-        : undefined;
+        : undefined);
     createTask(
       {
         body: {
@@ -218,13 +233,13 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
           text,
           paths,
           scheduledAt,
-          ...(override ? { target: toApiTarget(override) } : {}),
+          ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
           ...(output ? { output } : {}),
         },
       },
       { onSuccess: handleCreateTaskSuccess },
     );
-  }, [overrideIndex, activeRouting, createTask, title, text, paths, scheduledAt, output, handleCreateTaskSuccess]);
+  }, [forcedTarget, overrideIndex, activeRouting, createTask, title, text, paths, scheduledAt, output, handleCreateTaskSuccess]);
 
   const submitLoop = useCallback(() => {
     const seed = title.trim() || loop.objective;
@@ -322,7 +337,22 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const outputReady = isLoop || outputType !== "file" || fileTo.trim().length > 0;
   const canSubmit = (isLoop ? canSubmitLoop(loop) : text.trim().length > 2) && outputReady;
 
-  const header = (
+  // With a locked target the header names the destination (the pipeline) and a
+  // hint replaces the "ZIBBY classifies it" subtitle — routing is pre-decided.
+  const dialogAria = forcedTarget ? t("target.locked", { name: forcedTarget.name }) : t("dialogTitle");
+  const header = forcedTarget ? (
+    <Stack align="center" direction="row" gap="150">
+      <IconTile glyph={forcedTarget.glyph} size="md" />
+      <Container grow minW0>
+        <Typography mono size="md" tracking="wide" type="note" weight="bold">
+          {forcedTarget.name}
+        </Typography>
+        <Typography size="sm" type="note" variant="secondary">
+          {t("target.lockedHint")}
+        </Typography>
+      </Container>
+    </Stack>
+  ) : (
     <Stack align="center" direction="row" gap="150">
       <IconTile glyph="plus" size="md" />
       <Container grow minW0>
@@ -340,7 +370,7 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     return (
       <Dialog
         open
-        ariaLabel={t("dialogTitle")}
+        ariaLabel={dialogAria}
         closeLabel={t("cancel")}
         onClose={onClose}
         title={header}
@@ -406,7 +436,7 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     <Dialog
       open
       actions={actions}
-      ariaLabel={t("dialogTitle")}
+      ariaLabel={dialogAria}
       closeLabel={t("cancel")}
       onClose={onClose}
       title={header}

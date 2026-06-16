@@ -99,6 +99,10 @@
       "hint": "Override the routed destination.",
       "auto": "ZIBBY's pick (automatic)"
     },
+    "target": {
+      "locked": "New task for {name}",
+      "lockedHint": "Describe the task — it runs straight through this pipeline"
+    },
     "paths": {
       "scopedTo": "scoped to {project}",
       "grant": "grant access",

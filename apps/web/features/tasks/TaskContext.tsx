@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { NewTaskDialog } from "./components/NewTaskDialog";
+import type { TaskTarget } from "./task";
 
 /** Plain single-key shortcut that opens the New Task dialog from anywhere. */
 export const NEW_TASK_SHORTCUT = "n";
@@ -20,9 +21,11 @@ interface TaskStore {
   /**
    * Open the New Task dialog. An optional `initialText` seeds the description field
    * — Phase 11.4: a voice transcript (or any external trigger) fills the one field,
-   * then the operator confirms the inferred plan behind the same gate.
+   * then the operator confirms the inferred plan behind the same gate. An optional
+   * `initialTarget` locks the destination (e.g. "Run pipeline" pre-chooses a
+   * pipeline), bypassing classification.
    */
-  open: (initialText?: string) => void;
+  open: (initialText?: string, initialTarget?: TaskTarget) => void;
   close: () => void;
 }
 
@@ -36,13 +39,16 @@ const TaskContext = createContext<TaskStore | null>(null);
 export function NewTaskProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [initialText, setInitialText] = useState<string | undefined>(undefined);
-  const open = useCallback((text?: string) => {
+  const [initialTarget, setInitialTarget] = useState<TaskTarget | undefined>(undefined);
+  const open = useCallback((text?: string, target?: TaskTarget) => {
     setInitialText(text);
+    setInitialTarget(target);
     setIsOpen(true);
   }, []);
   const close = useCallback(() => {
     setIsOpen(false);
     setInitialText(undefined);
+    setInitialTarget(undefined);
   }, []);
 
   useEffect(() => {
@@ -53,8 +59,9 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === NEW_TASK_SHORTCUT) {
         e.preventDefault();
-        // The keyboard entry opens a blank composer (no seed text).
+        // The keyboard entry opens a blank composer (no seed text, no locked target).
         setInitialText(undefined);
+        setInitialTarget(undefined);
         setIsOpen((v) => !v);
       }
     };
@@ -67,10 +74,16 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
   return (
     <TaskContext.Provider value={value}>
       {children}
-      {/* Keyed on the seed so re-opening with a new transcript re-seeds the field
-          (the composer's `text` initializes from `initialText` on mount). */}
+      {/* Keyed on the seed + locked target so re-opening with a new transcript or a
+          different pipeline re-seeds the field (the composer initializes from the
+          props on mount). */}
       {isOpen && (
-        <NewTaskDialog initialText={initialText} key={initialText ?? ""} onClose={close} />
+        <NewTaskDialog
+          initialTarget={initialTarget}
+          initialText={initialText}
+          key={`${initialTarget?.kind === "orchestrator" ? "orchestrator" : (initialTarget?.id ?? "")}:${initialText ?? ""}`}
+          onClose={close}
+        />
       )}
     </TaskContext.Provider>
   );

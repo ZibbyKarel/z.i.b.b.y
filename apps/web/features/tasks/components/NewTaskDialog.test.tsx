@@ -374,4 +374,50 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     await userEvent.click(cancels[cancels.length - 1] as HTMLElement);
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("locks to a pre-chosen pipeline target: no classify, dispatches straight to it", async () => {
+    const onClose = vi.fn();
+    render(
+      <NewTaskDialog
+        initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        onClose={onClose}
+      />,
+    );
+    // The header names the locked pipeline; the dialog is the standard composer.
+    expect(screen.getByRole("dialog", { name: /Delivery/ })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+    // A locked target skips routing entirely — no classify, no preview, no override.
+    expect(classify).not.toHaveBeenCalled();
+    expect(screen.queryByText(/ZIBBY to předá/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Upravit/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    expect(createTask).toHaveBeenCalledTimes(1);
+    expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
+      kind: "pipeline",
+      id: "delivery",
+      name: "Delivery",
+      glyph: "flow",
+    });
+    expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("carries a chosen output into a pipeline-locked dispatch", async () => {
+    render(
+      <NewTaskDialog
+        initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        onClose={() => {}}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+
+    await userEvent.click(screen.getByLabelText("Výstup úkolu"));
+    await userEvent.click(await screen.findByRole("option", { name: "Otevřít PR" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+
+    expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("pipeline");
+    expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
+  });
 });

@@ -99,6 +99,10 @@
       "hint": "Přepiš zvolený cíl.",
       "auto": "Výběr ZIBBY (automaticky)"
     },
+    "target": {
+      "locked": "Nový task pro {name}",
+      "lockedHint": "Popiš task — projde rovnou touto pipelinou"
+    },
     "paths": {
       "scopedTo": "v projektu {project}",
       "grant": "povolit přístup",

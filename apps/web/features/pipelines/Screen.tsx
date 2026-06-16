@@ -20,16 +20,15 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
 import type { Pipeline } from "../../domain";
 import { useAgentsQuery } from "../agents/queries";
+import { useNewTask } from "../tasks/TaskContext";
 import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
 import { PhaseChain, attemptsFromStageRuns } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
 import { PipelineDialog } from "./components/PipelineDialog/PipelineDialog";
-import { PipelineRunModal } from "./components/PipelineRunModal/PipelineRunModal";
 import {
   duplicatePipelineBody,
   useCreatePipelineMutation,
   useDuplicatePipelineMutation,
-  useStartPipelineRunMutation,
   useUpdatePipelineMutation,
 } from "./mutations";
 import { usePipelineRunsQuery, usePipelinesQuery } from "./queries";
@@ -46,9 +45,8 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const createPipeline = useCreatePipelineMutation();
   const updatePipeline = useUpdatePipelineMutation();
   const duplicatePipeline = useDuplicatePipelineMutation();
-  const startRun = useStartPipelineRunMutation();
   const { data: agents = [] } = useAgentsQuery();
-  const [runPipeline, setRunPipeline] = useState<Pipeline | null>(null);
+  const { open: openNewTask } = useNewTask();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Pipeline | null>(null);
   const router = useRouter();
@@ -202,7 +200,14 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                   <Button
                     icon="play"
                     intent="primary"
-                    onClick={() => setRunPipeline(selected)}
+                    onClick={() =>
+                      openNewTask(undefined, {
+                        kind: "pipeline",
+                        id: selected.id,
+                        name: selected.name,
+                        glyph: "flow",
+                      })
+                    }
                   >
                     {t("pipelines.runPipeline")}
                   </Button>
@@ -273,21 +278,6 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
               { onSuccess: () => setEditing(null) },
             )
           }
-        />
-      )}
-      {runPipeline && (
-        <PipelineRunModal
-          agents={agents}
-          key={runPipeline.id}
-          onClose={() => setRunPipeline(null)}
-          onLaunch={({ project }) =>
-            startRun.mutate({
-              params: { id: runPipeline.id },
-              body: { project },
-            })
-          }
-          pipeline={runPipeline}
-          projects={[]}
         />
       )}
       {addModal}
