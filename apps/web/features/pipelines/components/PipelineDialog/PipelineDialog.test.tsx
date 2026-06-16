@@ -22,6 +22,7 @@ const existing: Pipeline = {
   lastState: "done",
   desc: "build → verify",
   file: "f",
+  outputs: [],
   phases: [
     {
       id: "koder",

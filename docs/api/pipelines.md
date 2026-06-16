@@ -54,9 +54,38 @@ phases:
   - id: dokumentátor
     type: agent
     agent: dokumentátor
+    produces: docs.md
+
+outputs:                 # co se stane s hotovou prací (delivery sinks)
+  - type: pr             # otevře PR z docs.md (gated — „PR je brána")
+    from: docs.md
+  - type: file           # zapíše review.md do projektu (jede na zibby/* branchi)
+    from: review.md
+    dest: project
+    to: reports/review.md
 ```
 
 Tělo `.md` souboru jsou instrukce pro celou pipeline (kontextová nápověda).
+
+### Výstupy (`outputs`) — delivery sinks
+
+Co se stane s hotovou prací **nedělá žádný agent** (dřív to byl agent `pr-autor`),
+ale je to konfigurace na úrovni pipeline. `outputs` je pole terminálních sinků, které
+runner zpracuje po zelené fázové smyčce — deterministicky, vlastněné systémem (žádný
+agent, žádný model, žádné tokeny; výstupní obdoba `verify` fáze). Pipeline jich může
+mít víc (otevřít PR _a_ zároveň zapsat report). Každý sink čerpá z `from` — relativní
+cesty, kterou některá fáze `produces`.
+
+| `type` | Pole | Co dělá |
+|--------|------|---------|
+| `pr` | `from` | Z `from` (Markdown `# titulek` + tělo) složí PR a otevře ho přes `git push && gh pr create`. **Vždy zaparkuje na schválení** — PR je brána, vynucená strukturálně systémem (Law 3), ne configem agenta. |
+| `file` | `from`, `dest`, `to` | Zkopíruje `from` do `to` — do projektového worktree (`dest: project`, jede na `zibby/*` branchi) nebo jako poznámku ve vaultu (`dest: vault`, trvalý druhý mozek pro pipeline, jejichž výsledek je informace, ne kód). |
+
+PR sink zaparkuje aggregate s `parkedReason: "output"` (durable přes restart — fázová
+smyčka už doběhla, žádné živé dítě), zapíše `pr-draft.md` + `diffstat.txt` jako
+rozhodovací plochu a založí approval `kind: "pipeline-output"` (runId = pipelineRunId).
+Schválení → systém spustí gated push a běh doběhne `done`; zamítnutí → práce zůstane na
+branchi bez PR (běh je stejně `done`). `file` sinky jsou Tier-1 a běží hned.
 
 ### CRUD API
 
@@ -82,9 +111,10 @@ Body: {
 ### Pipeline Run lifecycle
 
 ```
-running → done       (všechny fáze prošly)
+running → done       (všechny fáze prošly + výstupy doručeny)
         → failed     (fáze selhala a retry/eskalace se vyčerpaly a then.fail chybí)
-        → parked     (smyčka se vyčerpala → durable parking pro human review)
+        → parked     (smyčka se vyčerpala → durable parking pro human review;
+                      nebo `pr` output čeká na schválení brány → parkedReason "output")
 ```
 
 ### Polling logů

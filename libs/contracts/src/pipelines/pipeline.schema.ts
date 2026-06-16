@@ -69,12 +69,50 @@ export const PipelinePhaseSchema = z.object({
 })
 export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>
 
+/**
+ * What a pipeline does with its finished work — a terminal *delivery sink*,
+ * configured at the pipeline level rather than baked into an agent. Sinks are
+ * deterministic and system-owned (no agent, no model, no tokens), the output-side
+ * counterpart of the `verify` phase. A pipeline may declare several (e.g. open a PR
+ * *and* drop a report file). Each names a `from` artifact — the relative path a
+ * phase `produces` — as its source.
+ *
+ * - `pr`: derive `# title` + body from `from` (a Markdown artifact) and open a PR
+ *   via the gated `git push && gh pr create`. ALWAYS parks for approval — the PR is
+ *   the gate, enforced structurally by the system (Law 3), not by an agent's config.
+ * - `file`: copy `from` to `to` — into the project worktree (`dest: project`, rides
+ *   the run's `zibby/*` branch) or as a vault note (`dest: vault`, a durable
+ *   second-brain artifact for pipelines whose result is information, not code).
+ */
+export const PipelinePrOutputSchema = z.object({
+  type: z.literal("pr"),
+  from: z.string().min(1),
+})
+export type PipelinePrOutput = z.infer<typeof PipelinePrOutputSchema>
+
+export const PipelineFileOutputSchema = z.object({
+  type: z.literal("file"),
+  from: z.string().min(1),
+  /** Where `to` resolves: a project-relative path, or a vault note id. */
+  dest: z.enum(["project", "vault"]),
+  to: z.string().min(1),
+})
+export type PipelineFileOutput = z.infer<typeof PipelineFileOutputSchema>
+
+export const PipelineOutputSchema = z.discriminatedUnion("type", [
+  PipelinePrOutputSchema,
+  PipelineFileOutputSchema,
+])
+export type PipelineOutput = z.infer<typeof PipelineOutputSchema>
+
 /** The plain object form — `update` derives from this (a refined schema can't `.omit`). */
 const PipelineObject = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).optional(),
   desc: z.string().optional(),
   phases: z.array(PipelinePhaseSchema).min(1),
+  /** Terminal delivery sinks (default none, so every committed pipeline parses). */
+  outputs: z.array(PipelineOutputSchema).default([]),
   instructions: z.string().min(1),
 })
 
@@ -119,6 +157,18 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
           path: ["phases", i, "loop", key],
         })
       }
+    }
+  })
+  // An output sink draws from a phase artifact — its `from` must be something a
+  // phase actually `produces`, or it would read an empty handoff at delivery time.
+  const produced = new Set(p.phases.map((ph) => ph.produces).filter(Boolean))
+  p.outputs.forEach((out, i) => {
+    if (!produced.has(out.from)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `output.from "${out.from}" is not produced by any phase`,
+        path: ["outputs", i, "from"],
+      })
     }
   })
 }

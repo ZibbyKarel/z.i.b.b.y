@@ -10,6 +10,7 @@ const pipeline: Pipeline = {
   lastState: "done",
   desc: "build → verify",
   file: "f",
+  outputs: [],
   phases: [
     {
       type: "agent",

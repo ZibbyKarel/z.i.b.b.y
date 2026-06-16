@@ -58,8 +58,12 @@ export type StageRun = z.infer<typeof StageRunSchema>
  * - `limit` (Phase 9): the usage-limit auto-resume flapped past `LIMIT_RESUME_MAX`;
  *   no live child, durable, resumable (re-enters at the parked phase, not the loop
  *   back-edge, and does NOT reset the loop retry map).
+ * - `output`: a pipeline-level `pr` output sink is waiting on the PR gate. The phase
+ *   chain already finished green — there is no live child, so (unlike `approval`) it
+ *   is DURABLE: it survives a restart and resumes by re-entering output processing
+ *   when the operator approves. `pendingOutput` records where to resume.
  */
-export const ParkedReasonSchema = z.enum(["approval", "retries", "limit"])
+export const ParkedReasonSchema = z.enum(["approval", "retries", "limit", "output"])
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>
 
 /**
@@ -137,6 +141,12 @@ export const PipelineRunSchema = z.object({
   parkedReason: ParkedReasonSchema.optional(),
   /** Present while retries-parked: the surface the operator resumes from. */
   parked: ParkedDetailSchema.optional(),
+  /**
+   * Present while `parkedReason` is `output`: the index into the pipeline's
+   * `outputs` of the `pr` sink awaiting approval. On approve the runner resumes
+   * output processing from here; durable across restart.
+   */
+  pendingOutput: z.object({ index: z.number().int().nonnegative() }).optional(),
   /** Persisted per-phase retry counters, so a parked run resumes accurately. */
   retries: z.record(z.string(), z.number()).optional(),
   /**

@@ -106,6 +106,8 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> imple
     }
     if (typeof data.name === "string") candidate.name = data.name
     if (typeof data.desc === "string") candidate.desc = data.desc
+    // Delivery sinks (default [] when absent, so older pipelines parse unchanged).
+    if (data.outputs !== undefined) candidate.outputs = data.outputs
 
     const result = PipelineSchema.safeParse(candidate)
     return result.success ? result.data : null
@@ -117,6 +119,7 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> imple
       phases: pipeline.phases,
     }
     if (pipeline.desc !== undefined) data.desc = pipeline.desc
+    if (pipeline.outputs.length > 0) data.outputs = pipeline.outputs
     return data
   }
 }

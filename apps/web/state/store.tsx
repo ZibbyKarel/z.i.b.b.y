@@ -80,6 +80,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
               thinking: "medium",
             },
           ],
+          outputs: [],
         },
       ],
     }));

@@ -17,6 +17,11 @@ export const ApprovalRunKindSchema = z.enum([
   // runId is the proposal id; approving it dispatches the task via `createTask`.
   // *Proposed ≠ dispatched* — discovery only parks; only an approval dispatches.
   "proposed-task",
+  // A pipeline-level `pr` output sink awaiting sign-off before it opens the PR.
+  // The runId is the pipelineRunId itself (no live child — the chain already
+  // finished); approving it runs the gated push, rejecting it leaves the branch
+  // work without a PR. Structural "PR is the gate", system-owned, no agent.
+  "pipeline-output",
 ])
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>
 

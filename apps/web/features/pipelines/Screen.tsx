@@ -225,6 +225,37 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
               pipeline={selected}
             />
           </HudPanel>
+
+          {selected.outputs.length > 0 && (
+            <HudPanel padding="250" title={t("pipelines.outputsTitle")}>
+              <Stack gap="100">
+                {selected.outputs.map((o, i) => (
+                  <Stack
+                    align="center"
+                    direction="row"
+                    gap="100"
+                    key={`${o.type}-${o.from}-${i}`}
+                  >
+                    <Icon
+                      name={o.type === "pr" ? "branch" : o.dest === "vault" ? "brain" : "file"}
+                      size="md"
+                      tone="dim"
+                    />
+                    <Typography size="caption" type="note" variant="secondary">
+                      {o.type === "pr"
+                        ? t("pipelines.outputPr", { from: o.from })
+                        : t(
+                            o.dest === "vault"
+                              ? "pipelines.outputFileVault"
+                              : "pipelines.outputFileProject",
+                            { from: o.from, to: o.to },
+                          )}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </HudPanel>
+          )}
         </Stack>
       )}
 

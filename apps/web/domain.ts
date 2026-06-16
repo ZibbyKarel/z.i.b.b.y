@@ -76,6 +76,14 @@ export interface PipelinePhase {
 
 export type PipelineState = "done" | "parked" | "failed" | "running";
 
+/**
+ * A pipeline's terminal delivery sink (the config that replaced the `pr-autor`
+ * agent): open a PR, or write a produced artifact into the project or the vault.
+ */
+export type PipelineOutput =
+  | { type: "pr"; from: string }
+  | { type: "file"; from: string; dest: "project" | "vault"; to: string };
+
 export interface Pipeline {
   id: string;
   name: string;
@@ -84,6 +92,8 @@ export interface Pipeline {
   desc: string;
   file: string;
   phases: PipelinePhase[];
+  /** Delivery sinks run after the chain finishes green (empty = chain ends silently). */
+  outputs: PipelineOutput[];
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";

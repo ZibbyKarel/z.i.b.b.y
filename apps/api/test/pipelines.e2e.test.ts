@@ -418,6 +418,36 @@ describe("Pipelines API (e2e)", () => {
     await app2.close()
   })
 
+  it("an output-parked run (PR gate) survives a restart still parked", async () => {
+    const runId = "output_1780000000003"
+    const root = path.join(runsDir, runId)
+    await fs.mkdir(root, { recursive: true })
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: runId,
+        pipelineId: "delivery",
+        status: "parked",
+        parkedReason: "output",
+        pendingOutput: { index: 0 },
+        currentStage: null,
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    )
+
+    // Unlike an approval-parked stage (no live child → reconciled to failed), an
+    // output park is durable: the chain already finished, so it stays parked.
+    const app2 = await boot()
+    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
+    expect(res.body.status).toBe("parked")
+    expect(res.body.parkedReason).toBe("output")
+    expect(res.body.pendingOutput).toEqual({ index: 0 })
+    await app2.close()
+  })
+
   describe("seeded delivery pipeline", () => {
     const DELIVERY_SEED = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
@@ -428,13 +458,11 @@ describe("Pipelines API (e2e)", () => {
       await fs.copyFile(DELIVERY_SEED, path.join(pipelinesDir, "delivery.pipeline.md"))
     })
 
-    it("red verify loops back to koder, then finishes green with all handoffs", async () => {
+    it("runs the chain, parks on the PR output gate, finishes done on approval", async () => {
       const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"))
-      const marker = path.join(projectDir, "fixed.marker")
-      const check = `${JSON.stringify(process.execPath)} ${JSON.stringify(FLAKY_CHECK)} ${JSON.stringify(marker)}`
       await request(app.getHttpServer())
         .post("/api/projects")
-        .send({ id: "delivery-proj", name: "Delivery project", path: projectDir, checks: [check] })
+        .send({ id: "delivery-proj", name: "Delivery project", path: projectDir })
         .expect(201)
 
       const start = await request(app.getHttpServer())
@@ -443,19 +471,15 @@ describe("Pipelines API (e2e)", () => {
         .expect(201)
       const { pipelineRunId } = start.body as { pipelineRunId: string }
 
-      const final = await until(async () => {
+      // The chain (architekt → koder → review → dokumentator; Kodér self-checks, no
+      // separate verify phase) finishes green, then the `pr` output parks the run on
+      // the PR gate — "PR is the gate", system-owned, no agent.
+      const parked = await until(async () => {
         const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-        return res.body.status !== "running" ? res.body : null
+        return res.body.status === "parked" ? res.body : null
       })
-      expect(final.status).toBe("done")
-
-      // Attempt counts: the red verify sent koder (and review) around once more.
-      const tally = (phaseId: string) =>
-        final.stageRuns.filter((s: { phaseId: string }) => s.phaseId === phaseId).length
-      expect(tally("architekt")).toBe(1)
-      expect(tally("koder")).toBe(2)
-      expect(tally("verify")).toBe(2)
-      expect(tally("dokumentator")).toBe(1)
+      expect(parked.parkedReason).toBe("output")
+      expect(parked.pendingOutput).toEqual({ index: 0 })
 
       // The full handoff chain exists in the run tree.
       for (const [phase, file] of [
@@ -464,8 +488,26 @@ describe("Pipelines API (e2e)", () => {
         ["review", "review.md"],
         ["dokumentator", "docs.md"],
       ] as const) {
-        await fs.access(path.join(final.cwd, phase, file))
+        await fs.access(path.join(parked.cwd, phase, file))
       }
+
+      // A pipeline-output approval is queued; approving it opens the PR (a non-git
+      // project has no worktree, so the push is a soft no-op) and finishes the run.
+      const pending = await request(app.getHttpServer())
+        .get("/api/approvals")
+        .query({ status: "pending" })
+        .expect(200)
+      const card = (
+        pending.body as Array<{ id: string; runId: string; kind: string; action: string }>
+      ).find((a) => a.runId === pipelineRunId && a.kind === "pipeline-output")
+      expect(card?.action).toBe("pr.open")
+      await request(app.getHttpServer()).post(`/api/approvals/${card?.id}/approve`).expect(200)
+
+      const done = await until(async () => {
+        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
+        return res.body.status === "done" ? res.body : null
+      })
+      expect(done.status).toBe("done")
 
       await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     }, 15_000)

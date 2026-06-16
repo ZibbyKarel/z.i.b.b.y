@@ -32,6 +32,7 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
       commands: ph.commands,
       loop: ph.loop,
     })),
+    outputs: p.outputs,
   }));
 }
 

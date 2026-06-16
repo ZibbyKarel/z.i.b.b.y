@@ -9,6 +9,7 @@ import {
   PIPELINE_RUN_ARTIFACTS,
   type PhaseEscalation,
   type Pipeline,
+  type PipelineOutput,
   type PipelinePhase,
   type PipelineRun,
   type PipelineRunArtifact,
@@ -22,6 +23,7 @@ import { AgentsStorageService } from "../agents/agents.storage.service"
 import { ApprovalsService } from "../approvals/approvals.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service"
 import { GroundingService } from "../memory/grounding.service"
+import { DuplicateNoteError, VaultService } from "../memory/vault.service"
 import { ClaudePreflightService } from "../runner/claude-preflight.service"
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
 import { CommandMaterializerService } from "../runner/command-materializer.service"
@@ -108,6 +110,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
     private readonly grounding: GroundingService,
+    private readonly vault: VaultService,
     private readonly limits: LimitsService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
@@ -161,6 +164,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           })
         }
       },
+    })
+    // A pipeline-level `pr` output sink parks the whole aggregate (no live child).
+    // The approval's runId IS the pipelineRunId: approve → run the gated push and
+    // finish the run; reject → leave the branch work without a PR (still `done`).
+    this.approvals.register("pipeline-output", {
+      resume: (pipelineRunId) => this.resumeOutput(pipelineRunId, "approved"),
+      cancel: (pipelineRunId) => void this.resumeOutput(pipelineRunId, "rejected"),
     })
     await this.core.init()
     await this.reconstruct()
@@ -557,6 +567,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       await this.core.delete(stage.runId).catch(() => {})
     }
     this.runs.delete(pipelineRunId)
+    // An `output`-parked run owns a pending `pipeline-output` approval keyed on this
+    // pipelineRunId — resolve it (rejected, not routed back) so the queue doesn't keep
+    // a card for a run that no longer exists.
+    await this.approvals.cancelPendingForRun(pipelineRunId).catch(() => {})
     // Phase 3.1: drop the git worktree (and prune its metadata) BEFORE the folder
     // rm — rm-first would strand stale `.git/worktrees/*` in the project repo. The
     // branch is left intact (it may carry the PR). Best-effort; tolerant of a
@@ -819,11 +833,244 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    if (run.status === "running") run.status = "done"
+    if (run.status === "running") {
+      // Chain finished green — hand off to the pipeline's delivery sinks. A `pr`
+      // output parks the run on the PR gate; the run only reaches `done` once every
+      // output is delivered (handled inside runOutputs).
+      await this.runOutputs(run, pipeline, 0, phaseIds)
+      return
+    }
     run.currentStage = null
     await this.writeAggregate(run)
     await this.writeProgress(run, phaseIds)
     this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
+  }
+
+  /**
+   * Deliver the pipeline's outputs (terminal sinks) starting at `from`. `file` sinks
+   * run immediately (deterministic, Tier-1); a `pr` sink parks the whole run on the PR
+   * gate and returns — it resumes here at the same index when approved. Once every
+   * output is delivered the run finishes `done`. Outputs are post-chain delivery: a
+   * failed sink is logged, never fails the (already-green) run — the branch work is
+   * committed and safe.
+   */
+  private async runOutputs(
+    run: PipelineRun,
+    pipeline: Pipeline,
+    from: number,
+    phaseIds: string[],
+  ): Promise<void> {
+    const outputs = pipeline.outputs ?? []
+    for (let i = from; i < outputs.length; i++) {
+      const output = outputs[i]
+      if (!output) continue
+      if (output.type === "pr") {
+        await this.parkOnPrOutput(run, pipeline, output, i, phaseIds)
+        return // the run is parked; it resumes at index i on approval
+      }
+      await this.deliverFileOutput(run, pipeline, output)
+    }
+    run.status = "done"
+    run.currentStage = null
+    await this.writeAggregate(run)
+    await this.writeProgress(run, phaseIds)
+    this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
+  }
+
+  /** Absolute path of the artifact a `from` references (the phase that produces it). */
+  private resolveOutputSource(run: PipelineRun, pipeline: Pipeline, fromName: string): string | null {
+    const phase = pipeline.phases.find((p) => p.produces === fromName)
+    if (!phase) return null
+    return path.join(run.cwd, phase.id, fromName)
+  }
+
+  /** Split a Markdown artifact into a PR title (first `# ` heading) and the body. */
+  private parsePrMarkdown(content: string): { title: string; body: string } {
+    const lines = content.split(/\r?\n/)
+    const headingIdx = lines.findIndex((l) => /^#\s+/.test(l.trim()))
+    if (headingIdx >= 0) {
+      const heading = lines[headingIdx] ?? ""
+      return {
+        title: heading.replace(/^#\s+/, "").trim(),
+        body: lines.slice(headingIdx + 1).join("\n").trim(),
+      }
+    }
+    const firstLine = lines.find((l) => l.trim().length > 0)?.trim() ?? ""
+    return { title: firstLine, body: content.trim() }
+  }
+
+  /** Deliver a `file` output: write the source artifact into the project or the vault. */
+  private async deliverFileOutput(
+    run: PipelineRun,
+    pipeline: Pipeline,
+    output: Extract<PipelineOutput, { type: "file" }>,
+  ): Promise<void> {
+    const source = this.resolveOutputSource(run, pipeline, output.from)
+    const content = source ? await fs.readFile(source, "utf8").catch(() => null) : null
+    if (content === null) {
+      this.log.warn("file output skipped — source artifact missing", {
+        pipelineRunId: run.pipelineRunId,
+        from: output.from,
+      })
+      return
+    }
+    if (output.dest === "vault") {
+      // A durable second-brain artifact. Replace on re-delivery (idempotent re-run).
+      await this.vault.createNote({ id: output.to, tier: "knowledge", body: content }).catch(async (error) => {
+        if (error instanceof DuplicateNoteError) {
+          await this.vault.updateNote(output.to, { body: content }).catch(() => {})
+          return
+        }
+        this.log.warn("vault file output failed (soft)", {
+          pipelineRunId: run.pipelineRunId,
+          to: output.to,
+          err: error instanceof Error ? error.message : String(error),
+        })
+      })
+      this.log.info("file output delivered to vault", { pipelineRunId: run.pipelineRunId, to: output.to })
+      return
+    }
+    // dest: project — write into the run's worktree (rides the zibby/* branch) or,
+    // failing that, the project checkout. No project resolved → nowhere to write.
+    const base = run.workspace?.path ?? run.projectPath
+    if (!base) {
+      this.log.warn("project file output skipped — run has no project/worktree", {
+        pipelineRunId: run.pipelineRunId,
+        to: output.to,
+      })
+      return
+    }
+    const dest = this.resolveInside(base, output.to)
+    if (!dest) {
+      this.log.warn("project file output skipped — destination escapes the project", {
+        pipelineRunId: run.pipelineRunId,
+        to: output.to,
+      })
+      return
+    }
+    await fs.mkdir(path.dirname(dest), { recursive: true })
+    await fs.writeFile(dest, content, "utf8")
+    this.log.info("file output delivered to project", { pipelineRunId: run.pipelineRunId, to: output.to })
+  }
+
+  /**
+   * Park the run on the PR gate for a `pr` output. Structural Tier-3 — the PR is the
+   * gate, system-owned (no agent config can weaken it). Persists `output` parking
+   * (durable across restart) with the diffstat surface, and requests a
+   * `pipeline-output` approval keyed on the pipelineRunId.
+   */
+  private async parkOnPrOutput(
+    run: PipelineRun,
+    pipeline: Pipeline,
+    output: Extract<PipelineOutput, { type: "pr" }>,
+    index: number,
+    phaseIds: string[],
+  ): Promise<void> {
+    run.status = "parked"
+    run.parkedReason = "output"
+    run.pendingOutput = { index }
+    run.currentStage = null
+    // Assemble the Tier-3 decision surface: the branch-vs-base diffstat next to the run.
+    if (run.workspace) {
+      const diff = await this.workspace
+        .diffstat({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
+        .catch(() => "")
+      if (diff) await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {})
+    }
+    const source = this.resolveOutputSource(run, pipeline, output.from)
+    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : ""
+    const { title } = this.parsePrMarkdown(content)
+    // Write the PR draft at PARK time so the gate card can show what's about to be
+    // published (the web RunPrGatePanel reads `pr-draft.md`); openPrOutput reuses it.
+    await fs
+      .writeFile(path.join(run.cwd, "pr-draft.md"), content.trim() ? content : `# ${title || run.pipelineId}\n`, "utf8")
+      .catch(() => {})
+    await this.writeAggregate(run)
+    await this.writeProgress(run, phaseIds)
+    await this.approvals.requestApproval({
+      runId: run.pipelineRunId,
+      kind: "pipeline-output",
+      skill: "ZIBBY",
+      action: "pr.open",
+      detail: title || `Otevřít PR pro běh ${run.pipelineRunId}`,
+      risk: "medium",
+    })
+    this.log.info("pipeline run parked on PR output gate", {
+      pipelineRunId: run.pipelineRunId,
+      index,
+    })
+  }
+
+  /**
+   * Resume an `output`-parked run after the operator's decision on its PR gate.
+   * Approved → run the gated push and continue any later outputs; rejected → leave the
+   * branch work without a PR and continue. Either way the run finishes once the
+   * remaining outputs are delivered. Never throws (the approval flow must not crash).
+   */
+  private async resumeOutput(
+    pipelineRunId: string,
+    decision: "approved" | "rejected",
+  ): Promise<void> {
+    try {
+      const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+      if (!run || run.parkedReason !== "output" || !run.pendingOutput) {
+        this.log.warn("output resume skipped (run not output-parked)", { pipelineRunId, decision })
+        return
+      }
+      this.runs.set(run.pipelineRunId, run)
+      const pipeline = await this.pipelines.get(run.pipelineId)
+      const phaseIds = pipeline.phases.map((p) => p.id)
+      const index = run.pendingOutput.index
+      const output = (pipeline.outputs ?? [])[index]
+      run.status = "running"
+      delete run.parkedReason
+      delete run.pendingOutput
+      await this.writeAggregate(run)
+      if (decision === "approved" && output?.type === "pr") {
+        await this.openPrOutput(run, pipeline, output)
+      } else {
+        this.log.info("PR output declined — branch work left without a PR", { pipelineRunId })
+      }
+      await this.runOutputs(run, pipeline, index + 1, phaseIds)
+    } catch (error) {
+      this.log.error("output resume failed", {
+        pipelineRunId,
+        decision,
+        err: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  /** Execute an approved `pr` output: write the PR draft and run the gated push. */
+  private async openPrOutput(
+    run: PipelineRun,
+    pipeline: Pipeline,
+    output: Extract<PipelineOutput, { type: "pr" }>,
+  ): Promise<void> {
+    const source = this.resolveOutputSource(run, pipeline, output.from)
+    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : ""
+    const { title } = this.parsePrMarkdown(content)
+    // Keep `pr-draft.md` as the durable run artifact the web detail serves.
+    const bodyFile = path.join(run.cwd, "pr-draft.md")
+    await fs.writeFile(bodyFile, content.trim() ? content : `# ${title || run.pipelineId}\n`, "utf8").catch(() => {})
+    if (!run.workspace) {
+      this.log.warn("PR output approved but run has no worktree; nothing pushed", {
+        pipelineRunId: run.pipelineRunId,
+      })
+      return
+    }
+    const result = await this.workspace.openPr({
+      worktreePath: run.workspace.path,
+      title: title || run.pipelineId,
+      bodyFile,
+    })
+    if (result) {
+      this.log.info("PR output opened", { pipelineRunId: run.pipelineRunId, url: result.url })
+    } else {
+      this.log.warn("PR output push failed (soft) — branch work is committed and safe", {
+        pipelineRunId: run.pipelineRunId,
+      })
+    }
   }
 
   /**
@@ -1274,7 +1521,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // stage record (with its stashed spec) is rebuilt by core.init above, and a
       // boundary pause has no child at all — both survive by status alone, so they
       // fall through and stay resumable by the auto-resume tick.
-      const approvalParked = run.status === "parked" && run.parkedReason !== "retries"
+      // `output` parking (a PR-gate wait after the chain already finished) has no live
+      // child either — it is durable like `retries` and survives the restart parked.
+      const approvalParked =
+        run.status === "parked" && run.parkedReason !== "retries" && run.parkedReason !== "output"
       if (run.status === "running" || approvalParked) {
         run = {
           ...run,

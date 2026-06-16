@@ -51,5 +51,7 @@ export function duplicatePipelineBody(
       ...(ph.commands ? { commands: ph.commands } : {}),
       ...(ph.loop ? { loop: ph.loop } : {}),
     })),
+    // Carry the delivery sinks (PR / file outputs) into the copy unchanged.
+    outputs: pipeline.outputs,
   };
 }

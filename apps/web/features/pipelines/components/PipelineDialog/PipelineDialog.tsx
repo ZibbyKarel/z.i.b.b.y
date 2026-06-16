@@ -227,6 +227,9 @@ export function PipelineDialog({
         desc: description,
         instructions: description,
         phases,
+        // Delivery sinks aren't edited in this dialog yet — they're configured in the
+        // .pipeline.md `outputs:` block. A dialog-created pipeline starts with none.
+        outputs: [],
       });
       return;
     }

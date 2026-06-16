@@ -23,6 +23,7 @@ const pipeline: Pipeline = {
     },
     { id: "verify", type: "verify", commands: ["pnpm test"] },
   ],
+  outputs: [{ type: "pr", from: "implementation.md" }],
 };
 
 describe("duplicatePipelineId", () => {
@@ -45,6 +46,8 @@ describe("duplicatePipelineBody", () => {
     expect(body.phases).toHaveLength(2);
     expect(body.phases[0]).toMatchObject({ id: "koder", agent: "writer" });
     expect(body.phases[1]).toMatchObject({ id: "verify", type: "verify" });
+    // Delivery sinks carry into the copy unchanged.
+    expect(body.outputs).toEqual([{ type: "pr", from: "implementation.md" }]);
     expect(CreatePipelineSchema.safeParse(body).success).toBe(true);
   });
 });

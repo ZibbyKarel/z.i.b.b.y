@@ -17,6 +17,7 @@ const pipeline: Pipeline = {
   lastState: "parked",
   desc: "d",
   file: "f",
+  outputs: [],
   phases: [
     { type: "agent" as const, agent: "Architekt", consumes: "task.md", produces: "design.md", model: "opus" as const, thinking: "high" as const },
     { type: "agent" as const, agent: "Kodér", consumes: "design.md", produces: "branch", model: "sonnet" as const, thinking: "medium" as const },

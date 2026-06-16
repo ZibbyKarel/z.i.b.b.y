@@ -50,6 +50,25 @@ describe("PipelinesStorageService", () => {
     const got = await service.get("release")
     expect(got.phases).toHaveLength(2)
     expect(got.instructions).toBe("ship it")
+    expect(got.outputs).toEqual([]) // default when none declared
+  })
+
+  it("round-trips output sinks through the .pipeline.md frontmatter", async () => {
+    await service.create({
+      ...sample,
+      id: "delivery",
+      outputs: [
+        { type: "pr", from: "out.md" },
+        { type: "file", from: "out.md", dest: "vault", to: "note-1" },
+      ],
+    })
+    const parsed = matter(await fs.readFile(fileFor(dir, "delivery"), "utf8"))
+    expect(Array.isArray(parsed.data.outputs)).toBe(true)
+    const got = await service.get("delivery")
+    expect(got.outputs).toEqual([
+      { type: "pr", from: "out.md" },
+      { type: "file", from: "out.md", dest: "vault", to: "note-1" },
+    ])
   })
 
   it("rejects a duplicate id and a dangling loop target", async () => {

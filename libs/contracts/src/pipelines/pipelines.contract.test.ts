@@ -63,6 +63,48 @@ describe("pipeline schema", () => {
   it("requires at least one phase", () => {
     expect(PipelineSchema.safeParse({ id: "x", phases: [], instructions: "y" }).success).toBe(false)
   })
+
+  it("defaults outputs to an empty array (older pipelines parse unchanged)", () => {
+    const result = PipelineSchema.safeParse({
+      id: "release",
+      phases: [phase("a")],
+      instructions: "x",
+    })
+    expect(result.success && result.data.outputs).toEqual([])
+  })
+
+  it("accepts pr + file output sinks drawing from a produced artifact", () => {
+    const result = PipelineSchema.safeParse({
+      id: "release",
+      phases: [phase("a")],
+      outputs: [
+        { type: "pr", from: "out.md" },
+        { type: "file", from: "out.md", dest: "vault", to: "note-1" },
+      ],
+      instructions: "x",
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects an output.from that no phase produces (superRefine)", () => {
+    const result = PipelineSchema.safeParse({
+      id: "release",
+      phases: [phase("a")],
+      outputs: [{ type: "pr", from: "nonexistent.md" }],
+      instructions: "x",
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects a file output missing its dest discriminator", () => {
+    const result = PipelineSchema.safeParse({
+      id: "release",
+      phases: [phase("a")],
+      outputs: [{ type: "file", from: "out.md", to: "x" }],
+      instructions: "x",
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("pipeline run schema", () => {

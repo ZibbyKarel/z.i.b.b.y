@@ -42,13 +42,9 @@ phases:
     produces: docs.md
     model: sonnet
     thinking: low
-  - id: pr-autor
-    type: agent
-    agent: pr-autor
-    consumes: docs.md
-    produces: pr-draft.md
-    model: sonnet
-    thinking: medium
+outputs:
+  - type: pr
+    from: docs.md
 ---
 
 # Delivery
@@ -68,11 +64,17 @@ zaparkuje pro lidskou poznámku.
    výsledkem zapíše do shrnutí; co nedokázal dotáhnout do zelené, přizná.
 3. **review** — `implementation.md` → `review.md`: oponentura; selhání vrací práci
    Kodérovi s kontextem, eskalace zvedá model/thinking, vyčerpání → park.
-4. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
-5. **pr-autor** — `docs.md` → `pr-draft.md`: složí titulek + tělo PR, pak se
-   pokusí o jediný gated řetězec `git push -u origin <branch> && gh pr create …`.
-   Push i otevření PR jsou Tier-3: hook ohlásí `pr.open`, běh zaparkuje na
-   schválení. **PR je brána** — vše před ním se už stalo na větvi `zibby/*`.
+4. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR
+   (`docs.md` má tvar `# titulek` + tělo — to je vstup pro PR výstup).
+
+## Výstup
+
+Co se stane s hotovou prací **nedělá žádný agent** — je to výstup nakonfigurovaný
+na úrovni pipeline (`outputs`). Tato pipeline má jeden výstup `type: pr`: systém
+z `docs.md` složí titulek + tělo a otevře PR jediným gated řetězcem
+`git push -u origin <branch> && gh pr create …`. Push i otevření PR jsou Tier-3:
+běh zaparkuje na schválení. **PR je brána** — vše před ním se už stalo na větvi
+`zibby/*`, a bránu vynucuje systém, ne dobrá vůle agenta.
 
 Handoff je vždy jeden soubor; selhání předává ocas logu jako kontext dalšímu
 pokusu (plus případnou poznámku operátora po resume).

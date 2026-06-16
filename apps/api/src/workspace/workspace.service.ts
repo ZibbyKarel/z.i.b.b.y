@@ -190,6 +190,54 @@ export class WorkspaceService {
   }
 
   /**
+   * Open the run's PR: `git push -u origin <branch>` then `gh pr create`. This is the
+   * outward, Tier-3 action the deleted `pr-autor` agent used to perform — now a
+   * system step a pipeline `pr` output runs, but ONLY after the operator approved the
+   * `pipeline-output` gate (the runner never calls this before approval). Pushes the
+   * worktree's current branch; the title/body come from the output's `from` artifact.
+   * Returns the PR url on success, null on any failure (so a failed open surfaces as a
+   * soft error, not a crash — the branch work is already committed and safe).
+   */
+  async openPr(opts: {
+    worktreePath: string
+    title: string
+    bodyFile: string
+  }): Promise<{ url: string } | null> {
+    const marker = await fs.stat(path.join(opts.worktreePath, ".git")).catch(() => null)
+    if (!marker) {
+      this.log?.warn("openPr skipped — not a worktree", { worktreePath: opts.worktreePath })
+      return null
+    }
+    try {
+      const branch = (
+        await exec("git", ["branch", "--show-current"], {
+          cwd: opts.worktreePath,
+          timeout: GIT_TIMEOUT_MS,
+        })
+      ).stdout.trim()
+      if (!branch) throw new Error("worktree is in detached HEAD; no branch to push")
+      await exec("git", ["push", "-u", "origin", branch], {
+        cwd: opts.worktreePath,
+        timeout: GIT_TIMEOUT_MS,
+      })
+      const created = await exec(
+        "gh",
+        ["pr", "create", "--title", opts.title, "--body-file", opts.bodyFile],
+        { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS },
+      )
+      const url = created.stdout.trim().split(/\r?\n/).filter(Boolean).pop() ?? ""
+      this.log?.info("PR opened", { worktreePath: opts.worktreePath, branch, url })
+      return { url }
+    } catch (error) {
+      this.log?.warn("openPr failed (soft)", {
+        worktreePath: opts.worktreePath,
+        err: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
+
+  /**
    * A human-readable diff of the run's branch against its base HEAD — the commit
    * list plus the changed-files summary. Consumed by the PR gate (3.3) to assemble
    * the Tier-3 decision surface. Best-effort: a git failure yields an empty string.
