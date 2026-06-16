@@ -16,6 +16,8 @@ queued       ← projekt dosáhl maxConcurrent (FIFO, bez schválení)
 held         ← výdaj přesáhl budget cap (čeká na approve-override)
 dispatched   ← přiřazen runneru
     ↓
+awaiting-output ← run doběhl `done` a zvolený `pr` výstup čeká na bránu
+    ↓             (durable; approve/reject → outcome zapsán, zpět na dispatched)
 success | failed | cancelled
 ```
 
@@ -34,6 +36,9 @@ Body: {
   target?: TaskTarget        # Phase 11: předem zvolený cíl, který přeskočí klasifikaci
                              # (naplánovaný loop nese { kind: "goal", id }; scheduler ho
                              # při ticku znovu nasadí na tento cíl místo re-klasifikace)
+  output?: TaskOutput        # co se stane s hotovou prací (PR / soubor / void).
+                             # Chybí = zdědit (pipeline si nechá svoje outputs, agent
+                             # nic). Viz „Výstup úkolu" níže.
 }
 ```
 
@@ -120,6 +125,40 @@ DELETE /api/tasks/:id                 zrušení (jen scheduled | queued | held)
 POST   /api/tasks/:id/approve-override   odemkni held úlohu (spend-past-cap)
 POST   /api/tasks/classify            klasifikuj text bez vytvoření úlohy
 ```
+
+## Výstup úkolu (`output`)
+
+Operátor v dialogu Nový task volí, **co se stane s hotovou prací** — protějšek
+pipeline bloku `outputs:`. Je to deterministické a vlastněné systémem (žádný agent,
+žádné tokeny); výstupní strana „PR je brána". `TaskOutput` je diskriminovaná unie:
+
+| `type` | Pole | Co dělá |
+|--------|------|---------|
+| `pr` | — | Otevře PR z branche hotového runu. **Vždy zaparkuje** za approvalem `task-output`, než pushne (PR je brána, strukturálně). |
+| `file` | `dest`, `to` | Zapíše výsledek (shrnutí runu) do souboru — do projektového worktree (`dest: project`) nebo jako poznámku ve vaultu (`dest: vault`). Tier-1, hned. |
+| `void` | — | Explicitně žádný výstup (potlačí i pipeline deklarovaný `pr`). |
+
+**Chybějící pole = zdědit, ne void.** U pipeline cíle se použijí jeho vlastní
+`outputs:`, u agenta/orchestrátoru se nic nedoručí (dnešní chování). „Nezvolil" a
+„zvolil void" jsou dva různé stavy.
+
+**Dvě cesty, jedna brána.**
+
+- **Pipeline cíl** — `output` se předá runneru jako per-run override deklarovaných
+  `outputs:` (uloženo jako `PipelineRun.outputsOverride`; `void` → `[]`). Zbytek
+  obstará existující pipeline output gate (`parkedReason: "output"`).
+- **Agent / orchestrátor cíl** — gate žije na úrovni tasku (`TaskOutputService`),
+  protože agent runy nemají vlastní durable park. Když run skončí `done`:
+  - `file` se doručí hned (Tier-1), outcome se zapíše normálně.
+  - `pr` **commitne** branch (`checkpoint` — `git add -A && commit`, vlastněno
+    systémem, nezávisle na agentovi; commit ≠ push), zachytí `branch` + `repoPath`
+    do `pendingOutput`, založí approval `task-output` (runId = taskId) a task přejde
+    na `awaiting-output`. Tahle parkovací stav je **durable** (run už doběhl, žádné
+    živé dítě — `ScheduledTask` record JE ten stav, přežije restart zadarmo). Po
+    schválení systém pushne z `repoPath` proti `branch` (ref přežije i úklid
+    worktree) a zapíše outcome; zamítnutí nechá práci na branchi bez PR. Když branch
+    nemá žádné commity nebo run nemá worktree → soft no-op (žádná brána, outcome jako
+    obvykle).
 
 ## Phase 11 — sjednocené zadání (loop shape + path scoping)
 

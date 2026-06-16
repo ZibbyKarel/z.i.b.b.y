@@ -153,6 +153,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeApprovals as never,
       fakeGates as never,
       fakeLimits as never,
+      // The output gate is exercised in task-output.service.test.ts; here it never
+      // parks (a `done` run with no chosen output) → returns false, normal outcome.
+      { handleTerminal: async () => false } as never,
     )
     service.onModuleInit()
   })
@@ -218,7 +221,14 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     })
     const result = await service.createTask({ text: "ship it" })
     if (result.outcome !== "dispatched") throw new Error("expected dispatched")
-    expect(pipelineRunner.start).toHaveBeenCalledWith("release", result.task.id, undefined, [])
+    expect(pipelineRunner.start).toHaveBeenCalledWith(
+      "release",
+      result.task.id,
+      undefined,
+      [],
+      undefined,
+      undefined,
+    )
 
     pipelineListener?.(
       pipelineRun({

@@ -255,7 +255,7 @@ describe("PipelineRunnerService — output sinks", () => {
     await runner?.resume(RUN_ID)
 
     expect(d.workspace.openPr).toHaveBeenCalledWith({
-      worktreePath: wt,
+      cwd: wt,
       title: "Add feature X",
       bodyFile: path.join(run.cwd, "pr-draft.md"),
     })

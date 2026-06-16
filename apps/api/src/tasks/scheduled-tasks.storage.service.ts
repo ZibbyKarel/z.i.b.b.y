@@ -71,6 +71,7 @@ export class ScheduledTasksStorageService
       status: "scheduled",
       createdAt,
       ...(projectId ? { projectId } : {}),
+      ...(input.output ? { output: input.output } : {}),
       // Phase 11: a scheduled loop carries its `{ kind: "goal", id }` target so the
       // tick re-dispatches to it instead of re-classifying (goals are never routed).
       ...(input.target ? { target: input.target } : {}),
@@ -96,6 +97,7 @@ export class ScheduledTasksStorageService
       status,
       createdAt: new Date(now).toISOString(),
       ...(projectId ? { projectId } : {}),
+      ...(input.output ? { output: input.output } : {}),
     }
   }
 
@@ -147,6 +149,7 @@ export class ScheduledTasksStorageService
       deferredReason: "limit",
       limitDeferrals: 1,
       ...(projectId ? { projectId } : {}),
+      ...(input.output ? { output: input.output } : {}),
     }
     await this.writeEntity(task)
     return task
@@ -218,9 +221,37 @@ export class ScheduledTasksStorageService
       runRef,
       target,
       ...(projectId ? { projectId } : {}),
+      ...(input.output ? { output: input.output } : {}),
     }
     await this.writeEntity(task)
     return task
+  }
+
+  /**
+   * Park a dispatched task at the `pr` output gate: status `awaiting-output` with the
+   * captured `pendingOutput` (branch + repo + approval). The run already finished
+   * `done` — this is the durable gate state, so it survives a restart untouched.
+   */
+  async markAwaitingOutput(
+    id: string,
+    pendingOutput: NonNullable<ScheduledTask["pendingOutput"]>,
+  ): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = { ...existing, status: "awaiting-output", pendingOutput }
+    await this.writeEntity(merged)
+    return merged
+  }
+
+  /**
+   * Resolve the output gate (approve or reject decided): drop back to `dispatched`
+   * and clear `pendingOutput`. The run's outcome is written separately by the caller.
+   */
+  async resolveOutput(id: string): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = { ...existing, status: "dispatched" }
+    delete merged.pendingOutput
+    await this.writeEntity(merged)
+    return merged
   }
 
   /**

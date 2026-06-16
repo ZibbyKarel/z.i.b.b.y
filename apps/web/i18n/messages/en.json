@@ -116,6 +116,19 @@
       "hint": "Scope the task to a project — its folder joins the context, exactly like a path you type.",
       "none": "No project"
     },
+    "output": {
+      "label": "Task output",
+      "hint": "what happens to the finished work (a PR always waits at the approval gate)",
+      "auto": "Automatic",
+      "pr": "Open a PR",
+      "file": "Write to a file",
+      "void": "No output",
+      "destLabel": "Where",
+      "destProject": "Into the project",
+      "destVault": "Into the vault (second brain)",
+      "toLabel": "File name",
+      "toPlaceholder": "report.md"
+    },
     "schedule": {
       "label": "Delayed start",
       "now": "Now",
@@ -566,8 +579,6 @@
       "descLabel": "Description",
       "descPlaceholder": "What the pipeline does…",
       "agentLabel": "Agent",
-      "assignmentLabel": "First assignment file",
-      "assignmentHint": "the first agent picks this file up as its assignment",
       "handoffLabel": "Handoff file",
       "handoffHint": "written by this agent · the next agent picks it up as its assignment",
       "outputHint": "written by this agent · the pipeline's final output",

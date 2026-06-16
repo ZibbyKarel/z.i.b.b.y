@@ -14,6 +14,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import type { TaskOutput } from "@zibby/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import {
@@ -103,6 +104,12 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const [preset, setPreset] = useState<SchedulePreset>("now");
   const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
 
+  // The terminal output the operator wants for this task (the dialog selector). "" =
+  // inherit (the default — a pipeline keeps its own outputs, an agent delivers nothing).
+  const [outputType, setOutputType] = useState<"" | "pr" | "file" | "void">("");
+  const [fileDest, setFileDest] = useState<"project" | "vault">("project");
+  const [fileTo, setFileTo] = useState("");
+
   const [routing, setRouting] = useState<TaskRouting | null>(null);
   const [loop, setLoop] = useState<LoopFormState>(INITIAL_LOOP_STATE);
   const [loopEdited, setLoopEdited] = useState(false);
@@ -188,6 +195,17 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     [router, onClose, now],
   );
 
+  // Project the selector onto the wire `output`. "" = inherit (omit the field). A
+  // `file` with no name yet projects to nothing — the submit guard blocks that case so
+  // the choice is never silently dropped.
+  const output: TaskOutput | undefined = useMemo(() => {
+    if (outputType === "pr") return { type: "pr" };
+    if (outputType === "void") return { type: "void" };
+    if (outputType === "file" && fileTo.trim())
+      return { type: "file", dest: fileDest, to: fileTo.trim() };
+    return undefined;
+  }, [outputType, fileDest, fileTo]);
+
   const submitSingle = useCallback(() => {
     const override =
       overrideIndex !== "" && activeRouting
@@ -201,11 +219,12 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
           paths,
           scheduledAt,
           ...(override ? { target: toApiTarget(override) } : {}),
+          ...(output ? { output } : {}),
         },
       },
       { onSuccess: handleCreateTaskSuccess },
     );
-  }, [overrideIndex, activeRouting, createTask, title, text, paths, scheduledAt, handleCreateTaskSuccess]);
+  }, [overrideIndex, activeRouting, createTask, title, text, paths, scheduledAt, output, handleCreateTaskSuccess]);
 
   const submitLoop = useCallback(() => {
     const seed = title.trim() || loop.objective;
@@ -298,7 +317,10 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     );
   }, [pendingGrant, createProject, runClassify]);
 
-  const canSubmit = isLoop ? canSubmitLoop(loop) : text.trim().length > 2;
+  // A chosen `file` output needs a filename — else block, so the selection can't be
+  // silently dropped on submit.
+  const outputReady = isLoop || outputType !== "file" || fileTo.trim().length > 0;
+  const canSubmit = (isLoop ? canSubmitLoop(loop) : text.trim().length > 2) && outputReady;
 
   const header = (
     <Stack align="center" direction="row" gap="150">
@@ -459,6 +481,42 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
               )}
             </AccordionItem>
           </Accordion>
+        )}
+
+        {!isLoop && (
+          <Stack gap="100">
+            <SelectField
+              hint={t("output.hint")}
+              label={t("output.label")}
+              onValueChange={(v) => setOutputType(v as typeof outputType)}
+              options={[
+                { value: "", label: t("output.auto") },
+                { value: "pr", label: t("output.pr") },
+                { value: "file", label: t("output.file") },
+                { value: "void", label: t("output.void") },
+              ]}
+              value={outputType}
+            />
+            {outputType === "file" && (
+              <>
+                <SelectField
+                  label={t("output.destLabel")}
+                  onValueChange={(v) => setFileDest(v as "project" | "vault")}
+                  options={[
+                    { value: "project", label: t("output.destProject") },
+                    { value: "vault", label: t("output.destVault") },
+                  ]}
+                  value={fileDest}
+                />
+                <TextInputField
+                  label={t("output.toLabel")}
+                  onChange={(e) => setFileTo(e.target.value)}
+                  placeholder={t("output.toPlaceholder")}
+                  value={fileTo}
+                />
+              </>
+            )}
+          </Stack>
         )}
 
         <ScheduleField

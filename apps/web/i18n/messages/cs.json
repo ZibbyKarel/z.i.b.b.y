@@ -116,6 +116,19 @@
       "hint": "Zaměř task na projekt — jeho složka se přidá do kontextu, úplně stejně jako cesta napsaná ručně.",
       "none": "Žádný projekt"
     },
+    "output": {
+      "label": "Výstup úkolu",
+      "hint": "co se stane s hotovou prací (PR je vždy za bránou schválení)",
+      "auto": "Automaticky",
+      "pr": "Otevřít PR",
+      "file": "Zapsat do souboru",
+      "void": "Bez výstupu",
+      "destLabel": "Kam",
+      "destProject": "Do projektu",
+      "destVault": "Do vaultu (druhý mozek)",
+      "toLabel": "Název souboru",
+      "toPlaceholder": "report.md"
+    },
     "schedule": {
       "label": "Odložený start",
       "now": "Hned",
@@ -566,8 +579,6 @@
       "descLabel": "Popis",
       "descPlaceholder": "Co pipeline dělá…",
       "agentLabel": "Agent",
-      "assignmentLabel": "Soubor s prvním zadáním",
-      "assignmentHint": "první agent si tenhle soubor vezme jako zadání",
       "handoffLabel": "Předávací soubor",
       "handoffHint": "zapíše tenhle agent · další agent si ho vezme jako zadání",
       "outputHint": "zapíše tenhle agent · finální výstup pipeline",

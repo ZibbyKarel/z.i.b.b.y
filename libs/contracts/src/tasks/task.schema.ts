@@ -164,6 +164,37 @@ export const TaskRoutingSchema = z.object({
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>
 
 /**
+ * What happens to a task's finished work — the operator's per-task choice in the
+ * New Task dialog, the directed-task counterpart of a pipeline's `outputs:` block.
+ * Like the pipeline sinks it is deterministic and system-owned (no agent, no
+ * tokens); unlike them a task has no named `from` artifact, so the source is
+ * implicit: a `pr` pushes the run's worktree branch, a `file` writes the run's
+ * summary to the chosen destination.
+ *
+ *  - `pr`   — open a PR from the run's branch (gated — "PR je brána"; always parks
+ *             behind a `task-output` approval before the push).
+ *  - `file` — write the result to a path in the project worktree (`dest: project`)
+ *             or as a vault note (`dest: vault`). Tier-1, runs immediately.
+ *  - `void` — explicitly produce no output (suppresses even a pipeline's own
+ *             declared `pr` output for this run).
+ *
+ * ABSENT on a task (the field is `optional`) means *inherit*, NOT void: a
+ * pipeline-routed task falls back to the pipeline's declared `outputs:`, an
+ * agent/orchestrator task to today's behaviour (no terminal delivery). "Didn't
+ * choose" and "chose void" are two distinct states.
+ */
+export const TaskOutputSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("pr") }),
+  z.object({
+    type: z.literal("file"),
+    dest: z.enum(["project", "vault"]),
+    to: z.string().min(1),
+  }),
+  z.object({ type: z.literal("void") }),
+])
+export type TaskOutput = z.infer<typeof TaskOutputSchema>
+
+/**
  * The three delayed-start presets the New Task dialog offers. The wire format is
  * always the *resolved* absolute `scheduledAt` epoch ms (the client turns a preset
  * into a timestamp — `now` → null), so the backend never has to know preset
@@ -190,6 +221,12 @@ export const ScheduledTaskStatusSchema = z.enum([
   "dispatched",
   "cancelled",
   "failed",
+  // The dispatched run finished `done` and the task's chosen `pr` output is now
+  // waiting at the gate (a `task-output` approval) before the push. Durable — the
+  // run already ended, so there is no live child; the task record IS the durable
+  // state, so it survives a restart for free. Resolves to `dispatched` (the run's
+  // outcome is written) once the operator approves or rejects the PR.
+  "awaiting-output",
 ])
 export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>
 
@@ -242,6 +279,36 @@ export const ScheduledTaskSchema = z.object({
   approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */
   target: TaskTargetSchema.optional(),
+  /**
+   * The operator's chosen terminal output (the dialog selector). Absent = inherit
+   * (pipeline → its own `outputs:`, agent/orchestrator → none). Carried so the
+   * dispatch and the terminal-state output gate both see the same choice.
+   */
+  output: TaskOutputSchema.optional(),
+  /**
+   * Set when an agent/orchestrator task parks at the `pr` output gate
+   * (`status: "awaiting-output"`). Captured at terminal-`done` while the worktree
+   * is provably alive, so the push at approval time can run from the repo against a
+   * branch ref that outlives a reaped worktree (commit ≠ push). Cleared on resolve.
+   */
+  pendingOutput: z
+    .object({
+      /** The run branch to push (the work is already committed onto it). */
+      branch: z.string().min(1),
+      /** The git repo dir to push from (the worktree may be gone by approval time). */
+      repoPath: z.string().min(1),
+      /** The `task-output` approval gating the push. */
+      approvalId: z.string().min(1),
+      /** The PR title, composed at park time. */
+      title: z.string().min(1),
+      /**
+       * The PR body, composed at park time (the run summary + the branch's diffstat).
+       * Held here so the push needs neither the worktree nor a recomputed diff at
+       * approval time — durable across restart and worktree cleanup.
+       */
+      body: z.string(),
+    })
+    .optional(),
   /** Set once dispatched: the started agent-run / pipeline-run id. */
   runRef: z.string().optional(),
   /** Set on `failed`: a short reason. */
@@ -266,6 +333,12 @@ export const CreateTaskInputSchema = z.object({
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).max(64).optional(),
   scheduledAt: z.number().int().positive().nullish(),
+  /**
+   * The operator's chosen terminal output for this task (PR / file / void). Absent =
+   * inherit (see {@link TaskOutputSchema}). The dialog selector sets it; the
+   * scheduler threads it into dispatch and the terminal output gate.
+   */
+  output: TaskOutputSchema.optional(),
   /**
    * Phase 11: a pre-chosen dispatch target that bypasses classification — used by
    * the unified composer for a SCHEDULED loop, where the goal is created up front

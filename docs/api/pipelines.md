@@ -87,6 +87,12 @@ rozhodovací plochu a založí approval `kind: "pipeline-output"` (runId = pipel
 Schválení → systém spustí gated push a běh doběhne `done`; zamítnutí → práce zůstane na
 branchi bez PR (běh je stejně `done`). `file` sinky jsou Tier-1 a běží hned.
 
+**Per-run override.** Když je pipeline cílem directed tasku, který nese vlastní
+`output` (dialog Nový task — viz `docs/api/tasks.md`), tato volba **přepíše**
+deklarované `outputs:` pro daný běh: uloží se jako `PipelineRun.outputsOverride`
+(`void` → `[]`, potlačí i deklarovaný PR) a runner čte `outputsOverride ?? outputs`.
+`from` se dopočítá z posledního `produces` pipeline (task žádné `from` nenese).
+
 ### CRUD API
 
 ```

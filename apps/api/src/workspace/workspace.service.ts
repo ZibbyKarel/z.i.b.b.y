@@ -190,47 +190,62 @@ export class WorkspaceService {
   }
 
   /**
-   * Open the run's PR: `git push -u origin <branch>` then `gh pr create`. This is the
-   * outward, Tier-3 action the deleted `pr-autor` agent used to perform — now a
-   * system step a pipeline `pr` output runs, but ONLY after the operator approved the
-   * `pipeline-output` gate (the runner never calls this before approval). Pushes the
-   * worktree's current branch; the title/body come from the output's `from` artifact.
-   * Returns the PR url on success, null on any failure (so a failed open surfaces as a
-   * soft error, not a crash — the branch work is already committed and safe).
+   * Open the run's PR: `git push -u origin <branch>` then `gh pr create`, run in
+   * `cwd`. This is the outward, Tier-3 action the deleted `pr-autor` agent used to
+   * perform — now a system step a `pr` output runs, but ONLY after the operator
+   * approved the gate (`pipeline-output` / `task-output`; the runner never calls this
+   * before approval). The title/body come from the gate's draft.
+   *
+   * `branch` may be passed explicitly — a task-output gate captures it at terminal and
+   * pushes from the REPO dir, because a worktree's commits live in the shared object
+   * store and the branch ref outlives `git worktree remove` (commit ≠ push). When
+   * omitted (the pipeline path, `cwd` is the live worktree) it is derived from
+   * `cwd`'s current branch. Returns the PR url on success, null on any failure (a
+   * failed open surfaces as a soft error, not a crash — the branch work is committed
+   * and safe).
    */
   async openPr(opts: {
-    worktreePath: string
+    cwd: string
+    branch?: string
     title: string
-    bodyFile: string
+    /** PR body source: a file (`--body-file`, the pipeline path) or an inline string. */
+    bodyFile?: string
+    body?: string
   }): Promise<{ url: string } | null> {
-    const marker = await fs.stat(path.join(opts.worktreePath, ".git")).catch(() => null)
+    const marker = await fs.stat(path.join(opts.cwd, ".git")).catch(() => null)
     if (!marker) {
-      this.log?.warn("openPr skipped — not a worktree", { worktreePath: opts.worktreePath })
+      this.log?.warn("openPr skipped — not a git dir", { cwd: opts.cwd })
       return null
     }
     try {
-      const branch = (
-        await exec("git", ["branch", "--show-current"], {
-          cwd: opts.worktreePath,
-          timeout: GIT_TIMEOUT_MS,
-        })
-      ).stdout.trim()
-      if (!branch) throw new Error("worktree is in detached HEAD; no branch to push")
+      const branch =
+        opts.branch ??
+        (
+          await exec("git", ["branch", "--show-current"], {
+            cwd: opts.cwd,
+            timeout: GIT_TIMEOUT_MS,
+          })
+        ).stdout.trim()
+      if (!branch) throw new Error("detached HEAD; no branch to push")
       await exec("git", ["push", "-u", "origin", branch], {
-        cwd: opts.worktreePath,
+        cwd: opts.cwd,
         timeout: GIT_TIMEOUT_MS,
       })
+      const bodyArgs =
+        opts.bodyFile !== undefined
+          ? ["--body-file", opts.bodyFile]
+          : ["--body", opts.body ?? ""]
       const created = await exec(
         "gh",
-        ["pr", "create", "--title", opts.title, "--body-file", opts.bodyFile],
-        { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS },
+        ["pr", "create", "--title", opts.title, ...bodyArgs, "--head", branch],
+        { cwd: opts.cwd, timeout: GIT_TIMEOUT_MS },
       )
       const url = created.stdout.trim().split(/\r?\n/).filter(Boolean).pop() ?? ""
-      this.log?.info("PR opened", { worktreePath: opts.worktreePath, branch, url })
+      this.log?.info("PR opened", { cwd: opts.cwd, branch, url })
       return { url }
     } catch (error) {
       this.log?.warn("openPr failed (soft)", {
-        worktreePath: opts.worktreePath,
+        cwd: opts.cwd,
         err: error instanceof Error ? error.message : String(error),
       })
       return null

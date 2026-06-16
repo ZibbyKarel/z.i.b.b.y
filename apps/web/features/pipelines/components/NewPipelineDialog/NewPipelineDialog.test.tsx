@@ -22,9 +22,6 @@ describe("NewPipelineDialog", () => {
     expect(
       screen.getByRole("dialog", { name: "Nová pipeline" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Soubor s prvním zadáním")).toHaveValue(
-      "task.md",
-    );
     expect(screen.getAllByLabelText("Předávací soubor")).toHaveLength(1);
   });
 

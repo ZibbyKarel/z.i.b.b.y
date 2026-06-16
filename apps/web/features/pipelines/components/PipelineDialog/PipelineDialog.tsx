@@ -32,7 +32,12 @@ const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"];
 const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"];
 const next = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!;
 
-/** The file the first agent picks up as its assignment. */
+/**
+ * The file the first agent picks up as its assignment. This is ZIBBY-internal
+ * convention, not an operator choice — the dialog never surfaces it; the first
+ * phase always `consumes` this. An edited pipeline keeps whatever its first phase
+ * already consumed (older pipelines may differ).
+ */
 const INITIAL_ASSIGNMENT = "task.md";
 
 /** Loop editor state — `null` while the phase has no back-edge. */
@@ -175,9 +180,9 @@ export function PipelineDialog({
 
   const [name, setName] = useState(initial?.name ?? "");
   const [desc, setDesc] = useState(initial?.desc ?? "");
-  const [assignment, setAssignment] = useState(
-    initial?.phases[0]?.consumes ?? INITIAL_ASSIGNMENT,
-  );
+  // The first phase's assignment file is ZIBBY-internal convention, not edited in
+  // the dialog. New pipelines use the constant; an edited one keeps its own.
+  const assignment = initial?.phases[0]?.consumes ?? INITIAL_ASSIGNMENT;
   const [steps, setSteps] = useState<ChainStep[]>(() =>
     initial ? initialSteps(initial, agents) : [makeStep(1)],
   );
@@ -208,7 +213,6 @@ export function PipelineDialog({
   const canSubmit =
     !isPending &&
     name.trim().length > 0 &&
-    assignment.trim().length > 0 &&
     steps.length > 0 &&
     steps.every(
       (s) => s.type === "verify" || (s.agent && s.produces.trim().length > 0),
@@ -323,13 +327,6 @@ export function PipelineDialog({
                 {t("forms.pipeline.noAgents")}
               </Typography>
             )}
-
-            <TextInputField
-              hint={t("forms.pipeline.assignmentHint")}
-              label={t("forms.pipeline.assignmentLabel")}
-              onChange={(e) => setAssignment(e.target.value)}
-              value={assignment}
-            />
 
             {steps.map((s, i) => (
               <Fragment key={s.key}>

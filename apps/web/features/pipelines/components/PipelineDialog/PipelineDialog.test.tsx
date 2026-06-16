@@ -55,9 +55,8 @@ describe("PipelineDialog — edit mode", () => {
       />,
     );
 
-    // Pre-filled: name, assignment and the existing handoff.
+    // Pre-filled: name and the existing handoff (assignment file is internal).
     expect(screen.getByLabelText("Název pipeline")).toHaveValue("Delivery");
-    expect(screen.getByLabelText("Soubor s prvním zadáním")).toHaveValue("task.md");
     expect(screen.getByLabelText("Předávací soubor")).toHaveValue("implementation.md");
 
     // Change ONLY the name.

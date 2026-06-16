@@ -80,7 +80,15 @@ vi.mock("../../projects/mutations", () => ({
   useCreateProjectMutation: () => ({ mutate: createProject, isPending: false }),
 }));
 
-type CreateVars = { body: { text: string; paths?: string[]; scheduledAt?: number | null; target?: { kind: string; id?: string } } };
+type CreateVars = {
+  body: {
+    text: string;
+    paths?: string[];
+    scheduledAt?: number | null;
+    target?: { kind: string; id?: string };
+    output?: { type: string; dest?: string; to?: string };
+  };
+};
 type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
 const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
   const { scheduledAt, text } = vars.body;
@@ -183,8 +191,40 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
 
     expect(createTask).toHaveBeenCalledTimes(1);
     expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
+    // No output chosen → the field is omitted (inherit), not sent as void.
+    expect(createTask.mock.calls[0]?.[0].body.output).toBeUndefined();
     expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("carries a chosen PR output into the dispatched task", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await screen.findByText(/ZIBBY to předá/);
+
+    await userEvent.click(screen.getByLabelText("Výstup úkolu"));
+    await userEvent.click(await screen.findByRole("option", { name: "Otevřít PR" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+
+    expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
+  });
+
+  it("carries a chosen file output (dest + filename) into the dispatched task", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await screen.findByText(/ZIBBY to předá/);
+
+    await userEvent.click(screen.getByLabelText("Výstup úkolu"));
+    await userEvent.click(await screen.findByRole("option", { name: "Zapsat do souboru" }));
+    // The filename is required — submit stays blocked until it's filled.
+    await userEvent.type(screen.getByLabelText("Název souboru"), "report.md");
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+
+    expect(createTask.mock.calls[0]?.[0].body.output).toEqual({
+      type: "file",
+      dest: "project",
+      to: "report.md",
+    });
   });
 
   it("infers a loop and dispatches a goal (createGoal + startGoalRun) on one click", async () => {

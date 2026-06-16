@@ -12,6 +12,7 @@ před pokračováním. Přežije restart API — `ApprovalsStorageService` čte 
 | `agent` | Gate pravidlo rozhodlo `ask` uprostřed runu agenta |
 | `pipeline-stage` | Gate uvnitř fáze pipeline |
 | `pipeline-output` | Pipeline `pr` output čeká na schválení, než otevře PR (runId = pipelineRunId; bez agenta — vlastní systém) |
+| `task-output` | Directed task se zvoleným `pr` výstupem čeká, než otevře PR z branche hotového agent/orchestrátor runu (runId = taskId; durable `ScheduledTask` record drží stav, bez živého dítěte) |
 | `channel` | ZIBBY připravil draft odpovědi na zprávu (Tier 3) |
 | `task` | Task překročil budget cap (`spend-past-cap`) |
 

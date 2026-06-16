@@ -5,6 +5,7 @@ import {
   ResolvedPathSchema,
   ScheduledTaskSchema,
   ScheduledTaskStatusSchema,
+  TaskOutputSchema,
   TaskRoutingSchema,
   tasksContract,
 } from "../index"
@@ -144,6 +145,33 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
   it("stays valid with no target (the default path)", () => {
     expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true)
   })
+
+  it("accepts each chosen output (pr / file / void)", () => {
+    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "pr" } }).success).toBe(true)
+    expect(
+      CreateTaskInputSchema.safeParse({
+        text: "x",
+        output: { type: "file", dest: "vault", to: "notes/x.md" },
+      }).success,
+    ).toBe(true)
+    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "void" } }).success).toBe(true)
+  })
+
+  it("rejects a file output missing its dest/to", () => {
+    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "file" } }).success).toBe(false)
+  })
+})
+
+describe("TaskOutputSchema", () => {
+  it("rejects an unknown output type", () => {
+    expect(TaskOutputSchema.safeParse({ type: "email" }).success).toBe(false)
+  })
+
+  it("rejects a file dest outside project/vault", () => {
+    expect(
+      TaskOutputSchema.safeParse({ type: "file", dest: "s3", to: "x.md" }).success,
+    ).toBe(false)
+  })
 })
 
 describe("ScheduledTask budget statuses (Phase 8)", () => {
@@ -176,5 +204,24 @@ describe("ScheduledTask budget statuses (Phase 8)", () => {
         approvalId: "task_1_ab",
       }).success,
     ).toBe(true)
+  })
+
+  it("includes awaiting-output and round-trips a task parked at the PR gate", () => {
+    expect(ScheduledTaskStatusSchema.options).toContain("awaiting-output")
+    const parsed = ScheduledTaskSchema.safeParse({
+      ...base,
+      status: "awaiting-output",
+      runRef: "run_1",
+      target: { kind: "agent", id: "writer", name: "Writer" },
+      output: { type: "pr" },
+      pendingOutput: {
+        branch: "zibby/run-1-writer",
+        repoPath: "/repo",
+        approvalId: "task_1_ab",
+        title: "Ship it",
+        body: "the body",
+      },
+    })
+    expect(parsed.success).toBe(true)
   })
 })

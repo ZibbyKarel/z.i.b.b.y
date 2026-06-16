@@ -14,6 +14,7 @@ import type {
   Project,
   ScheduledTask,
   TaskOutcome,
+  TaskOutput,
   TaskTarget,
 } from "@zibby/contracts"
 import { ActivityLogService } from "../activity/activity-log.service"
@@ -31,6 +32,7 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service"
+import { TaskOutputService } from "./task-output.service"
 
 /** Thrown when there is nothing to route to (empty catalog) → the controller maps it to 422. */
 export class EmptyCatalogError extends Error {
@@ -98,6 +100,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
     private readonly limits: LimitsService,
+    private readonly taskOutput: TaskOutputService,
   ) {
     this.log = logger.child(TaskSchedulerService.name)
   }
@@ -293,6 +296,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       taskId,
       projectId,
       explicitTarget,
+      input.output,
     )
     if (!dispatched) throw new EmptyCatalogError()
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now)
@@ -344,6 +348,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       task.id,
       task.projectId,
       task.target,
+      task.output,
     )
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or pipelines available to route to")
@@ -473,6 +478,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      * proposed-task) carries its target explicitly. Absent → classify as before.
      */
     explicitTarget?: TaskTarget,
+    /**
+     * The task's chosen terminal output. Threaded into a pipeline route here (it
+     * overrides the pipeline's declared `outputs:` for this run). For an
+     * agent/orchestrator route the gate fires post-run from the task record, so it is
+     * not needed at dispatch.
+     */
+    output?: TaskOutput,
   ): Promise<{ runRef: string; target: TaskTarget } | null> {
     let target: TaskTarget
     let matchedTerms: string[]
@@ -492,7 +504,14 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       return { runRef: run.runId, target }
     }
     if (target.kind === "pipeline") {
-      const run = await this.pipelineRunner.start(target.id, taskId, projectId, matchedTerms)
+      const run = await this.pipelineRunner.start(
+        target.id,
+        taskId,
+        projectId,
+        matchedTerms,
+        undefined,
+        output,
+      )
       return { runRef: run.pipelineRunId, target }
     }
     if (target.kind === "goal") {
@@ -642,7 +661,17 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   private async writeAgentOutcome(taskId: string, run: AgentRun): Promise<void> {
     if (run.status !== "done" && run.status !== "error" && run.status !== "interrupted") return
     try {
+      const existing = await this.storage.get(taskId)
+      // Already resolved, or parked at the PR output gate (the gate writes the outcome
+      // on the operator's decision) — don't re-process / re-park.
+      if (existing.outcome || existing.status === "awaiting-output") return
       const summary = await this.agentRunSummary(run.runId)
+      // A successful run with a chosen `pr`/`file` output runs its terminal sink first.
+      // A `pr` sink that parks defers the outcome to the gate resolution → stop here.
+      if (run.status === "done") {
+        const parked = await this.taskOutput.handleTerminal(existing, run, summary)
+        if (parked) return
+      }
       const status = run.status === "done" ? "done" : "error"
       const task = await this.storage.writeOutcome(taskId, {
         status,

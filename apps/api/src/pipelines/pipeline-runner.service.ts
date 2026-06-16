@@ -17,6 +17,7 @@ import {
   type Project,
   type RunLogChunk,
   type StageRun,
+  type TaskOutput,
   type Workspace,
 } from "@zibby/contracts"
 import { AgentsStorageService } from "../agents/agents.storage.service"
@@ -198,6 +199,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
      * self-creating a worktree. Absent for every existing caller (no behaviour change).
      */
     externalWorkspace?: Workspace,
+    /**
+     * The originating task's chosen output (the dialog selector). When set it OVERRIDES
+     * the pipeline definition's `outputs:` for this run only — `void` suppresses even a
+     * declared `pr`. Absent = inherit the definition (every existing caller).
+     */
+    taskOutput?: TaskOutput,
   ): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId)
@@ -229,6 +236,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // Persisted so a parked/resumed run re-grounds each stage identically after
       // a restart (Phase 4) — the classifier's matched terms drive MOC selection.
       ...(matchedTerms?.length ? { matchedTerms } : {}),
+      // A directed task's output choice overrides the definition's `outputs:` for this
+      // run (void → [] suppresses even a declared PR). Absent = inherit.
+      ...(taskOutput ? { outputsOverride: this.toOutputsOverride(taskOutput, pipeline) } : {}),
     }
     this.runs.set(pipelineRunId, run)
     await this.writeAggregate(run)
@@ -860,7 +870,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     from: number,
     phaseIds: string[],
   ): Promise<void> {
-    const outputs = pipeline.outputs ?? []
+    const outputs = run.outputsOverride ?? pipeline.outputs ?? []
     for (let i = from; i < outputs.length; i++) {
       const output = outputs[i]
       if (!output) continue
@@ -875,6 +885,22 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.writeAggregate(run)
     await this.writeProgress(run, phaseIds)
     this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
+  }
+
+  /**
+   * Project a directed task's output choice onto this pipeline's sink array. A task
+   * carries no `from` (the pipeline owns its handoff names), so the source is the
+   * pipeline's terminal artifact — the last phase that `produces` anything (falling
+   * back to a conventional name when the pipeline produces nothing, in which case a
+   * `pr` sink simply has no body to read and titles off the pipeline id). `void` →
+   * `[]` (deliver nothing, suppressing even a declared PR).
+   */
+  private toOutputsOverride(taskOutput: TaskOutput, pipeline: Pipeline): PipelineOutput[] {
+    if (taskOutput.type === "void") return []
+    const from =
+      [...pipeline.phases].reverse().find((p) => p.produces)?.produces ?? "result.md"
+    if (taskOutput.type === "pr") return [{ type: "pr", from }]
+    return [{ type: "file", from, dest: taskOutput.dest, to: taskOutput.to }]
   }
 
   /** Absolute path of the artifact a `from` references (the phase that produces it). */
@@ -1021,7 +1047,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const pipeline = await this.pipelines.get(run.pipelineId)
       const phaseIds = pipeline.phases.map((p) => p.id)
       const index = run.pendingOutput.index
-      const output = (pipeline.outputs ?? [])[index]
+      const output = (run.outputsOverride ?? pipeline.outputs ?? [])[index]
       run.status = "running"
       delete run.parkedReason
       delete run.pendingOutput
@@ -1060,7 +1086,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       return
     }
     const result = await this.workspace.openPr({
-      worktreePath: run.workspace.path,
+      cwd: run.workspace.path,
       title: title || run.pipelineId,
       bodyFile,
     })

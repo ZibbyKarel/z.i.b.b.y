@@ -5,12 +5,15 @@ import { BudgetModule } from "../budget/budget.module"
 import { GatesModule } from "../gates/gates.module"
 import { GoalsModule } from "../goals/goals.module"
 import { LimitsModule } from "../limits/limits.module"
+import { MemoryModule } from "../memory/memory.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { ProjectsModule } from "../projects/projects.module"
+import { WorkspaceModule } from "../workspace/workspace.module"
 import { ClaudeCliRouter } from "./claude-cli-router"
 import { KeywordScorer } from "./keyword-scorer"
 import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module"
 import { TaskClassifierService } from "./task-classifier.service"
+import { TaskOutputService } from "./task-output.service"
 import { TASK_ROUTER } from "./task-router"
 import { TaskSchedulerService } from "./task-scheduler.service"
 import { TasksController } from "./tasks.controller"
@@ -34,12 +37,15 @@ import { TasksController } from "./tasks.controller"
     ApprovalsModule,
     GatesModule,
     LimitsModule,
+    WorkspaceModule,
+    MemoryModule,
     ScheduledTasksStorageModule,
   ],
   controllers: [TasksController],
   providers: [
     TaskSchedulerService,
     TaskClassifierService,
+    TaskOutputService,
     KeywordScorer,
     { provide: TASK_ROUTER, useClass: ClaudeCliRouter },
   ],

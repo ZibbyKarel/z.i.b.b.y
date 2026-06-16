@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { AgentIdSchema } from "../agents/agent.schema"
 import { WorkspaceSchema } from "../common.schema"
+import { PipelineOutputSchema } from "./pipeline.schema"
 
 /**
  * Status of a single stage's underlying run. The runner's full set, including
@@ -147,6 +148,15 @@ export const PipelineRunSchema = z.object({
    * output processing from here; durable across restart.
    */
   pendingOutput: z.object({ index: z.number().int().nonnegative() }).optional(),
+  /**
+   * A per-run override of the pipeline definition's `outputs:`, set when a directed
+   * task carried its own output choice (`createTask({ output })`). When present it
+   * REPLACES `pipeline.outputs` for this run only — the runner reads
+   * `outputsOverride ?? pipeline.outputs`. `[]` means the operator chose `void`
+   * (suppress even a declared PR); absent means inherit the definition. Persisted so a
+   * run parked mid-PR-gate resumes against the same sinks after a restart.
+   */
+  outputsOverride: z.array(PipelineOutputSchema).optional(),
   /** Persisted per-phase retry counters, so a parked run resumes accurately. */
   retries: z.record(z.string(), z.number()).optional(),
   /**
