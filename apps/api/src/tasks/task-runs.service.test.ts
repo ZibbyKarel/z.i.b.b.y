@@ -1,0 +1,248 @@
+import type {
+  Agent,
+  AgentRun,
+  Goal,
+  GoalRun,
+  Pipeline,
+  PipelineRun,
+  ScheduledTask,
+} from "@zibby/contracts"
+import { describe, expect, it, vi } from "vitest"
+import type { AgentRunnerService } from "../agents/agent-runner.service"
+import type { AgentsStorageService } from "../agents/agents.storage.service"
+import type { GoalRunnerService } from "../goals/goal-runner.service"
+import type { GoalsStorageService } from "../goals/goals.storage.service"
+import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
+import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
+import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
+import {
+  TaskRunNotResumableError,
+  TaskRunNotStoppableError,
+  TaskRunsService,
+} from "./task-runs.service"
+
+const AT = "2026-06-16T00:00:00.000Z"
+
+const agentA: AgentRun = {
+  runId: "researcher_1",
+  agentId: "researcher",
+  status: "running",
+  taskId: "task1",
+  pct: 42,
+  title: "",
+  prompt: "dig into X",
+  project: "acme",
+  files: [],
+  cwd: "/tmp/acme",
+  startedAt: AT,
+  pid: 100,
+  logFile: "/tmp/researcher_1.log",
+}
+
+// A goal's maker child run — same store as standalone agent runs, but folded out of the feed.
+const makerChild: AgentRun = {
+  ...agentA,
+  runId: "koder_2",
+  agentId: "koder",
+  taskId: undefined,
+  startedAt: "2026-06-16T00:01:00.000Z",
+}
+
+const pipeP: PipelineRun = {
+  pipelineRunId: "delivery_3",
+  pipelineId: "delivery",
+  status: "running",
+  taskId: undefined,
+  currentStage: "kodér",
+  stageRuns: [],
+  startedAt: "2026-06-16T00:02:00.000Z",
+  cwd: "/tmp/acme",
+}
+
+const goalG: GoalRun = {
+  goalRunId: "ship-it_4",
+  goalId: "ship-it",
+  status: "running",
+  currentIteration: 0,
+  iterations: [
+    {
+      index: 0,
+      makerKind: "agent",
+      makerRunRef: "koder_2",
+      verifier: { kind: "checks", satisfied: false, output: "" },
+      startedAt: "2026-06-16T00:01:00.000Z",
+      status: "running",
+    },
+  ],
+  startedAt: "2026-06-16T00:03:00.000Z",
+  cwd: "/tmp/acme",
+}
+
+const scheduledS: ScheduledTask = {
+  id: "task9",
+  title: "later",
+  text: "do it later",
+  paths: [],
+  scheduledAt: Date.parse("2026-06-17T00:00:00.000Z"),
+  status: "scheduled",
+  createdAt: AT,
+  target: { kind: "agent", id: "researcher", name: "Researcher" },
+}
+
+const agentDef = { id: "researcher", name: "Researcher" } as Agent
+const pipelineDef = { id: "delivery", name: "Delivery Pipeline" } as Pipeline
+// goal definition intentionally absent → processor.name must fall back to the id
+
+function build() {
+  const agentRunner = {
+    listAll: vi.fn(async () => [agentA, makerChild]),
+    get: vi.fn((id: string) => {
+      const run = [agentA, makerChild].find((r) => r.runId === id)
+      if (!run) throw new Error("not found")
+      return run
+    }),
+    readLog: vi.fn(async () => ({ content: "log", nextOffset: 3, done: false })),
+    stop: vi.fn((id: string) => ({ ...agentA, runId: id, status: "interrupted" })),
+    delete: vi.fn(async () => {}),
+  }
+  const pipelineRunner = {
+    listAll: vi.fn(async () => [pipeP]),
+    get: vi.fn((id: string) => {
+      if (id !== pipeP.pipelineRunId) throw new Error("not found")
+      return pipeP
+    }),
+    readStageLog: vi.fn(async () => ({ content: "stage", nextOffset: 5, done: false })),
+    readArtifact: vi.fn(async () => ({ name: "pr-draft.md", content: "PR" })),
+    resumeParked: vi.fn(async () => pipeP),
+    delete: vi.fn(async () => {}),
+  }
+  const goalRunner = {
+    listAll: vi.fn(async () => [goalG]),
+    get: vi.fn((id: string) => {
+      if (id !== goalG.goalRunId) throw new Error("not found")
+      return goalG
+    }),
+    readArtifact: vi.fn(async () => ({ name: "verdict.txt", content: "ok" })),
+    resumeParked: vi.fn(async () => goalG),
+    delete: vi.fn(async () => {}),
+  }
+  const agentsStore = { list: vi.fn(async () => [agentDef]) }
+  const pipelinesStore = { list: vi.fn(async () => [pipelineDef]) }
+  const goalsStore = { list: vi.fn(async () => [] as Goal[]) }
+  const scheduled = { list: vi.fn(async () => [scheduledS]) }
+
+  const service = new TaskRunsService(
+    agentRunner as unknown as AgentRunnerService,
+    pipelineRunner as unknown as PipelineRunnerService,
+    goalRunner as unknown as GoalRunnerService,
+    agentsStore as unknown as AgentsStorageService,
+    pipelinesStore as unknown as PipelinesStorageService,
+    goalsStore as unknown as GoalsStorageService,
+    scheduled as unknown as ScheduledTasksStorageService,
+  )
+  return { service, agentRunner, pipelineRunner, goalRunner }
+}
+
+describe("TaskRunsService", () => {
+  describe("listTaskRuns — goal child folding", () => {
+    it("folds a goal's maker child run out of the feed", async () => {
+      const { service } = build()
+      const feed = await service.listTaskRuns()
+      const ids = feed.map((r) => r.runId)
+      expect(ids).toContain("researcher_1")
+      expect(ids).toContain("delivery_3")
+      expect(ids).toContain("ship-it_4")
+      expect(ids).toContain("task9")
+      // The maker child must NOT appear as a peer row (Phase-26 one-card-per-task).
+      expect(ids).not.toContain("koder_2")
+    })
+
+    it("keeps the folded child reachable by id (goal detail fetches it)", async () => {
+      const { service } = build()
+      const child = await service.getTaskRun("koder_2")
+      expect(child.kind).toBe("agent")
+      expect(child.runId).toBe("koder_2")
+    })
+
+    it("sorts newest-first", async () => {
+      const { service } = build()
+      const feed = await service.listTaskRuns()
+      // task9 (scheduled tomorrow) sorts to the top by startedAt.
+      expect(feed[0]?.runId).toBe("task9")
+    })
+  })
+
+  describe("processor resolution", () => {
+    it("resolves the human name from the definition store", async () => {
+      const { service } = build()
+      const feed = await service.listTaskRuns()
+      const agent = feed.find((r) => r.runId === "researcher_1")
+      const pipeline = feed.find((r) => r.runId === "delivery_3")
+      expect(agent?.processor).toEqual({ kind: "agent", id: "researcher", name: "Researcher" })
+      expect(pipeline?.processor).toEqual({
+        kind: "pipeline",
+        id: "delivery",
+        name: "Delivery Pipeline",
+      })
+    })
+
+    it("falls back to the id when the definition is gone", async () => {
+      const { service } = build()
+      const feed = await service.listTaskRuns()
+      const goal = feed.find((r) => r.runId === "ship-it_4")
+      // goal definition absent → name === id
+      expect(goal?.processor).toEqual({ kind: "goal", id: "ship-it", name: "ship-it" })
+    })
+
+    it("carries the processor on a scheduled task from its chosen target", async () => {
+      const { service } = build()
+      const feed = await service.listTaskRuns()
+      const task = feed.find((r) => r.runId === "task9")
+      expect(task?.kind).toBe("scheduled")
+      expect(task?.processor).toEqual({ kind: "agent", id: "researcher", name: "Researcher" })
+    })
+  })
+
+  describe("resolveOwner — lifecycle dispatch by kind", () => {
+    it("routes logs to the agent runner", async () => {
+      const { service, agentRunner } = build()
+      await service.getLogs("researcher_1", 0)
+      expect(agentRunner.readLog).toHaveBeenCalledWith("researcher_1", 0)
+    })
+
+    it("routes stage logs to the pipeline runner", async () => {
+      const { service, pipelineRunner } = build()
+      await service.getStageLog("delivery_3", "kodér", 0)
+      expect(pipelineRunner.readStageLog).toHaveBeenCalledWith("delivery_3", "kodér", 0)
+    })
+
+    it("routes artifacts to the goal runner for a goal run", async () => {
+      const { service, goalRunner } = build()
+      const artifact = await service.getArtifact("ship-it_4", "verdict.txt")
+      expect(goalRunner.readArtifact).toHaveBeenCalledWith("ship-it_4", "verdict.txt")
+      expect(artifact).toEqual({ name: "verdict.txt", content: "ok" })
+    })
+
+    it("stops an agent run, refuses to stop a pipeline run", async () => {
+      const { service, agentRunner } = build()
+      await service.stop("researcher_1")
+      expect(agentRunner.stop).toHaveBeenCalledWith("researcher_1")
+      await expect(service.stop("delivery_3")).rejects.toBeInstanceOf(TaskRunNotStoppableError)
+    })
+
+    it("resumes pipeline/goal runs, refuses to resume an agent run", async () => {
+      const { service, pipelineRunner, goalRunner } = build()
+      await service.resume("delivery_3", "go")
+      expect(pipelineRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "go")
+      await service.resume("ship-it_4", "again")
+      expect(goalRunner.resumeParked).toHaveBeenCalledWith("ship-it_4", "again")
+      await expect(service.resume("researcher_1")).rejects.toBeInstanceOf(TaskRunNotResumableError)
+    })
+
+    it("deletes via the owning runner", async () => {
+      const { service, pipelineRunner } = build()
+      await service.delete("delivery_3")
+      expect(pipelineRunner.delete).toHaveBeenCalledWith("delivery_3")
+    })
+  })
+})

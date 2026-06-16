@@ -27,6 +27,7 @@ import { goalRunsContract, goalsContract } from "./goals/goals.contract"
 import { projectsContract } from "./projects/projects.contract"
 import { skillsContract } from "./skills/skills.contract"
 import { tasksContract } from "./tasks/tasks.contract"
+import { taskRunsContract } from "./tasks/task-runs.contract"
 
 const c = initContract()
 
@@ -64,6 +65,7 @@ export const appContract = c.router({
   health: healthContract,
   limits: limitsContract,
   tasks: tasksContract,
+  taskRuns: taskRunsContract,
   activity: activityContract,
   briefing: briefingContract,
   budget: budgetContract,
