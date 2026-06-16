@@ -1,0 +1,10 @@
+[
+  {
+    "id": "zibby-self",
+    "name": "ZIBBY (self)",
+    "path": "/Users/zibby/Workspace/z.i.b.b.y",
+    "desc": "ZIBBY's own repo — self-development target for the roadmap (M1–M8) delivery run. Worktree-isolated; PR is the gate.",
+    "category": "Test",
+    "checks": ["pnpm install --frozen-lockfile", "pnpm lint", "pnpm typecheck", "pnpm test"]
+  }
+]

@@ -22,6 +22,7 @@ import {
 } from "../../goals/mutations";
 import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
 import { useCreateProjectMutation } from "../../projects/mutations";
+import { useProjectsQuery } from "../../projects/queries/useProjectsQuery";
 import {
   INITIAL_LOOP_STATE,
   type LoopFormState,
@@ -92,10 +93,13 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const { mutate: startGoal, isPending: startingGoal } = useStartGoalMutation();
   const { mutate: createProject, isPending: granting } = useCreateProjectMutation();
   const { data: limits } = useLimitsQuery();
+  const { data: projects } = useProjectsQuery();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState(initialText ?? "");
   const [removedPaths, setRemovedPaths] = useState<Set<string>>(new Set());
+  /** Selected project id (its `path` is folded into `paths` like a typed path), or "" for none. */
+  const [projectId, setProjectId] = useState<string>("");
   const [preset, setPreset] = useState<SchedulePreset>("now");
   const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
 
@@ -113,10 +117,19 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
   const [now] = useState(() => Date.now());
   const resetsAt = limits?.rolling.resetsAt ?? null;
 
-  const paths = useMemo(
-    () => extractPaths(text).filter((p) => !removedPaths.has(p)),
-    [text, removedPaths],
+  // The project a `project` selection resolves to (its `path` joins `paths`).
+  const selectedProject = useMemo(
+    () => (projectId ? (projects ?? []).find((p) => p.id === projectId) ?? null : null),
+    [projects, projectId],
   );
+
+  // Detected paths plus the selected project's path — the project's folder is used
+  // exactly like a path the operator typed into the description (dedup, removable).
+  const paths = useMemo(() => {
+    const detected = extractPaths(text);
+    const all = selectedProject ? [selectedProject.path, ...detected] : detected;
+    return [...new Set(all)].filter((p) => !removedPaths.has(p));
+  }, [text, removedPaths, selectedProject]);
   const busy = creatingTask || creatingGoal || startingGoal || granting;
   const scheduledAt = resolveScheduledAt(preset, now, resetsAt);
   // Gate the preview on a long-enough query so a stale verdict never lingers after
@@ -252,9 +265,18 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     submitSingle();
   }, [busy, isLoop, loop, text, submitLoop, submitSingle]);
 
-  const handleRemovePath = useCallback((path: string) => {
-    setRemovedPaths((prev) => new Set(prev).add(path));
-  }, []);
+  const handleRemovePath = useCallback(
+    (path: string) => {
+      // The project's own path is owned by the selector — removing its chip
+      // deselects the project (keeps chip + dropdown in sync, re-selectable).
+      if (path === selectedProject?.path) {
+        setProjectId("");
+        return;
+      }
+      setRemovedPaths((prev) => new Set(prev).add(path));
+    },
+    [selectedProject],
+  );
 
   // ── Grant a folder (Phase 11.3, Law 1) ───────────────────────────────────
   // The "grant access" chip surfaces the path; the operator's CONFIRM is the act
@@ -346,6 +368,11 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
     </Stack>
   );
 
+  const projectOptions = [
+    { value: "", label: t("project.none") },
+    ...(projects ?? []).map((p) => ({ value: p.id, label: p.name })),
+  ];
+
   const candidateOptions = activeRouting
     ? [
         { value: "", label: t("override.auto") },
@@ -370,6 +397,16 @@ export function NewTaskDialog({ onClose, initialText }: NewTaskDialogProps) {
           placeholder={t("title.placeholder")}
           value={title}
         />
+
+        {(projects ?? []).length > 0 && (
+          <SelectField
+            hint={t("project.hint")}
+            label={t("project.label")}
+            onValueChange={setProjectId}
+            options={projectOptions}
+            value={projectId}
+          />
+        )}
 
         <TaskComposer
           onChange={setText}

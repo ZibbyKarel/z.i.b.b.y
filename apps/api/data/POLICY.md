@@ -36,15 +36,6 @@ policy:
     decision: ask
     resolve:
       type: human
-  - id: floor-pr.open
-    source: system
-    locked: true
-    match:
-      - type: action
-        action: pr.open
-    decision: ask
-    resolve:
-      type: human
   - id: floor-pr.merge
     source: system
     locked: true
@@ -58,15 +49,6 @@ policy:
     match:
       - type: action
         action: send_email
-    decision: ask
-    resolve:
-      type: human
-  - id: floor-delete
-    source: system
-    locked: true
-    match:
-      - type: action
-        action: delete
     decision: ask
     resolve:
       type: human

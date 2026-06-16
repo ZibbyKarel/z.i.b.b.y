@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { describe, expect, it } from "vitest";
 import type { Automation } from "@zibby/contracts";
-import { AutomationCard } from "./AutomationCard";
+import { AutomationCard, AutomationCardTestId } from "./AutomationCard";
 
 const base: Automation = {
   id: "daily-brief",
@@ -9,6 +9,7 @@ const base: Automation = {
   trigger: { type: "cron", expr: "0 9 * * *" },
   target: { type: "briefing" },
   enabled: true,
+  system: false,
 };
 
 const noop = () => {};
@@ -33,5 +34,34 @@ describe("AutomationCard (38) — honest next-run", () => {
     renderCard({ enabled: false });
     expect(screen.getByText("vypnuto · nepoběží")).toBeInTheDocument();
     expect(screen.queryByText(/příště/)).not.toBeInTheDocument();
+  });
+});
+
+describe("AutomationCard — system automations", () => {
+  it("shows the system badge for a system automation", () => {
+    renderCard({ system: true });
+    expect(screen.getByTestId(AutomationCardTestId.SystemBadge)).toHaveTextContent("Systémová");
+  });
+
+  it("does not show the system badge for a user automation", () => {
+    renderCard({ system: false });
+    expect(screen.queryByTestId(AutomationCardTestId.SystemBadge)).not.toBeInTheDocument();
+  });
+
+  it("disables the enable toggle for a system automation (schedule-only edit)", () => {
+    renderCard({ system: true });
+    expect(screen.getByTestId(AutomationCardTestId.Toggle)).toBeDisabled();
+  });
+
+  it("leaves the enable toggle interactive for a user automation", () => {
+    renderCard({ system: false });
+    expect(screen.getByTestId(AutomationCardTestId.Toggle)).not.toBeDisabled();
+  });
+});
+
+describe("AutomationCard — target rendering", () => {
+  it("renders the memory-distill target with its label", () => {
+    renderCard({ target: { type: "memory-distill" }, system: true });
+    expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent("Destilace paměti");
   });
 });

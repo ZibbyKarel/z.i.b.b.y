@@ -25,7 +25,7 @@ phases:
     thinking: high
   - id: techplan
     type: agent
-    agent: architekt
+    agent: architect
     consumes: prd.md
     produces: tech-plan.md
     model: opus

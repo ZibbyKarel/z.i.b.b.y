@@ -4,6 +4,7 @@ import type { Automation } from "@zibby/contracts"
 import { AgentRunnerService } from "../agents/agent-runner.service"
 import { BriefingService } from "../briefing/briefing.service"
 import { DiscoveryTriageService } from "../discovery/discovery-triage.service"
+import { MemoryDistillerService } from "../memory/memory-distiller.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -31,6 +32,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly trace: TraceContextService,
     private readonly briefing: BriefingService,
     private readonly discovery: DiscoveryTriageService,
+    private readonly distiller: MemoryDistillerService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -109,6 +111,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // *Proposed ≠ dispatched* — discovery never starts a run; the ref is a count.
         const parked = await this.discovery.run()
         return `discovery:${parked.length}`
+      }
+      case "memory-distill": {
+        // Nightly system automation: distil durable learnings out of finished runs
+        // into the vault. Not a claude run in the usual sense — a single cheap model
+        // pass owned by the system; the ref is `memory-distill:<count>`.
+        return this.distiller.distill()
       }
     }
   }

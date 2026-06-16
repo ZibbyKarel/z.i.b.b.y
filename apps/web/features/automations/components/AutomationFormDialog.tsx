@@ -46,8 +46,12 @@ export interface AutomationFormDialogProps {
   agents: ReadonlyArray<TargetOption>;
   pipelines: ReadonlyArray<TargetOption>;
   onClose: () => void;
-  /** Emits the full automation body (id preserved on edit); the screen persists it. */
-  onSubmit: (body: Omit<Automation, "lastFiredAt">) => void;
+  /**
+   * Emits the automation body (id preserved on edit); the screen persists it.
+   * `system` is server-owned and never settable from the client, so it is omitted —
+   * mirroring CreateAutomationSchema / UpdateAutomationSchema.
+   */
+  onSubmit: (body: Omit<Automation, "lastFiredAt" | "system">) => void;
 }
 
 /**
@@ -67,6 +71,10 @@ export function AutomationFormDialog({
   const locale = useLocale();
   const cronLabel = useCronLabel();
   const isNew = automation === undefined;
+  // A system automation is server-seeded: only its schedule may change. Everything
+  // else (name, trigger kind, target, prompt) is locked — the server rejects those
+  // edits, so we don't even offer the affordance.
+  const isSystem = automation?.system ?? false;
 
   const [name, setName] = useState(automation?.name ?? "");
   const [triggerType, setTriggerType] = useState<TriggerType>(automation?.trigger.type ?? "cron");
@@ -106,7 +114,8 @@ export function AutomationFormDialog({
   const triggerOk = triggerType === "cron" ? scheduleOk : event.trim().length > 0;
   const targetOk =
     targetType === "briefing" || targetType === "discovery" || targetValue.length > 0;
-  const canSave = name.trim().length > 0 && triggerOk && targetOk;
+  // System automations only edit the schedule, so the only gate is a valid trigger.
+  const canSave = isSystem ? triggerOk : name.trim().length > 0 && triggerOk && targetOk;
 
   // Friendly-picker strings, localized. Weekday names come from the cron helper
   // (0 = Sunday) so the UI and the scheduler agree on the index.
@@ -131,6 +140,19 @@ export function AutomationFormDialog({
     if (!canSave) return;
     const trigger: Trigger =
       triggerType === "cron" ? { type: "cron", expr } : { type: "event", event: event.trim() };
+    // System automation: only the schedule moves. Echo the seeded target/name/enabled
+    // back unchanged so the target builder below can't rebuild (and corrupt, e.g.
+    // memory-distill → briefing) a field the user was never allowed to touch.
+    if (automation && isSystem) {
+      onSubmit({
+        id: automation.id,
+        ...(automation.name !== undefined ? { name: automation.name } : {}),
+        trigger,
+        target: automation.target,
+        enabled: automation.enabled,
+      });
+      return;
+    }
     const target: Target =
       targetType === "agent"
         ? { type: "agent", agentId: targetValue, ...(prompt.trim() ? { prompt: prompt.trim() } : {}) }
@@ -138,7 +160,9 @@ export function AutomationFormDialog({
           ? { type: "pipeline", pipelineId: targetValue }
           : targetType === "discovery"
             ? { type: "discovery" }
-            : { type: "briefing" };
+            : targetType === "memory-distill"
+              ? { type: "memory-distill" }
+              : { type: "briefing" };
     onSubmit({
       id: automation?.id ?? slug(name, "automation"),
       name: name.trim(),
@@ -176,23 +200,38 @@ export function AutomationFormDialog({
       width="lg"
     >
       <Stack direction="col" gap="150">
-        <TextInputField
-          data-testid={AutomationFormTestId.Name}
-          label={t("nameLabel")}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("namePlaceholder")}
-          value={name}
-        />
+        {isSystem ? (
+          <Card background="background" radius="default">
+            <Container padding="150">
+              <Stack align="start" direction="row" gap="100">
+                <Icon name="shield" size="sm" tone="accent" />
+                <Typography leading="snug" size="caption" type="note" variant="secondary">
+                  {t("systemEditNote")}
+                </Typography>
+              </Stack>
+            </Container>
+          </Card>
+        ) : (
+          <TextInputField
+            data-testid={AutomationFormTestId.Name}
+            label={t("nameLabel")}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("namePlaceholder")}
+            value={name}
+          />
+        )}
 
-        <SegmentPickerField
-          label={t("triggerLabel")}
-          onValueChange={(v) => setTriggerType(v as TriggerType)}
-          options={[
-            { value: "cron", label: t("triggerCron") },
-            { value: "event", label: t("triggerEvent") },
-          ]}
-          value={triggerType}
-        />
+        {!isSystem && (
+          <SegmentPickerField
+            label={t("triggerLabel")}
+            onValueChange={(v) => setTriggerType(v as TriggerType)}
+            options={[
+              { value: "cron", label: t("triggerCron") },
+              { value: "event", label: t("triggerEvent") },
+            ]}
+            value={triggerType}
+          />
+        )}
         {triggerType === "cron" ? (
           <ScheduleField
             hint={cronLabel(expr)}
@@ -212,48 +251,57 @@ export function AutomationFormDialog({
           />
         )}
 
-        <SegmentPickerField
-          label={t("targetLabel")}
-          onValueChange={(v) => setTargetType(v as TargetType)}
-          options={[
-            { value: "agent", label: t("targetAgent") },
-            { value: "pipeline", label: t("targetPipeline") },
-            { value: "briefing", label: t("targetBriefing") },
-            { value: "discovery", label: t("targetDiscovery") },
-          ]}
-          value={targetType}
-        />
+        {/* Target is server-owned for system automations — only the schedule above moves. */}
+        {!isSystem && (
+          <>
+            <SegmentPickerField
+              label={t("targetLabel")}
+              onValueChange={(v) => setTargetType(v as TargetType)}
+              options={[
+                { value: "agent", label: t("targetAgent") },
+                { value: "pipeline", label: t("targetPipeline") },
+                { value: "briefing", label: t("targetBriefing") },
+                { value: "discovery", label: t("targetDiscovery") },
+              ]}
+              value={targetType}
+            />
 
-        {targetType === "briefing" || targetType === "discovery" ? (
-          <Card background="background" radius="default">
-            <Container padding="150">
-              <Stack align="start" direction="row" gap="100">
-                <Icon name={targetType === "discovery" ? "search" : "spark"} size="sm" tone="accent" />
-                <Typography leading="snug" size="caption" type="note" variant="secondary">
-                  {targetType === "discovery" ? t("discoveryNote") : t("briefingNote")}
-                </Typography>
-              </Stack>
-            </Container>
-          </Card>
-        ) : (
-          <SelectField
-            label={t("targetSelectLabel")}
-            onValueChange={setTargetId}
-            options={options}
-            value={targetValue}
-          />
-        )}
+            {targetType === "briefing" || targetType === "discovery" ? (
+              <Card background="background" radius="default">
+                <Container padding="150">
+                  <Stack align="start" direction="row" gap="100">
+                    <Icon
+                      name={targetType === "discovery" ? "search" : "spark"}
+                      size="sm"
+                      tone="accent"
+                    />
+                    <Typography leading="snug" size="caption" type="note" variant="secondary">
+                      {targetType === "discovery" ? t("discoveryNote") : t("briefingNote")}
+                    </Typography>
+                  </Stack>
+                </Container>
+              </Card>
+            ) : (
+              <SelectField
+                label={t("targetSelectLabel")}
+                onValueChange={setTargetId}
+                options={options}
+                value={targetValue}
+              />
+            )}
 
-        {targetType === "agent" && (
-          <TextAreaField
-            data-testid={AutomationFormTestId.Prompt}
-            hint={t("promptHint")}
-            label={t("promptLabel")}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={t("promptPlaceholder")}
-            rows={3}
-            value={prompt}
-          />
+            {targetType === "agent" && (
+              <TextAreaField
+                data-testid={AutomationFormTestId.Prompt}
+                hint={t("promptHint")}
+                label={t("promptLabel")}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={t("promptPlaceholder")}
+                rows={3}
+                value={prompt}
+              />
+            )}
+          </>
         )}
       </Stack>
     </Dialog>

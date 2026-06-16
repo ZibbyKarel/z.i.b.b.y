@@ -23,6 +23,11 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // approvals queue (a `proposed-task` per candidate). Deterministic assembly, not
   // a claude run — the scheduler dispatches it straight to the discovery service.
   z.object({ type: z.literal("discovery") }),
+  // Memory distillation: nightly sweep of terminal pipeline/agent/goal runs, a cheap
+  // model (haiku) extracts durable learnings into the vault. Agents stay memory-blind;
+  // learning is a SYSTEM capability — this is the canonical system automation. The
+  // scheduler dispatches it straight to the memory-distiller service.
+  z.object({ type: z.literal("memory-distill") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 
@@ -37,13 +42,23 @@ export const AutomationSchema = z.object({
   trigger: TriggerSchema,
   target: TargetSchema,
   enabled: z.boolean(),
+  /**
+   * Server-owned: a system automation is seeded by ZIBBY and cannot be deleted; only
+   * its schedule (`trigger`) may be edited. It is never settable through create/update
+   * (omitted from both input schemas) — the storage layer is the sole authority.
+   */
+  system: z.boolean().default(false),
   /** ISO timestamp of the last fire, for idempotence + display. */
   lastFiredAt: z.string().datetime().optional(),
 })
 export type Automation = z.infer<typeof AutomationSchema>
 
-export const CreateAutomationSchema = AutomationSchema.omit({ lastFiredAt: true })
+export const CreateAutomationSchema = AutomationSchema.omit({ lastFiredAt: true, system: true })
 export type CreateAutomationInput = z.infer<typeof CreateAutomationSchema>
 
-export const UpdateAutomationSchema = AutomationSchema.omit({ id: true, lastFiredAt: true }).partial()
+export const UpdateAutomationSchema = AutomationSchema.omit({
+  id: true,
+  lastFiredAt: true,
+  system: true,
+}).partial()
 export type UpdateAutomationInput = z.infer<typeof UpdateAutomationSchema>

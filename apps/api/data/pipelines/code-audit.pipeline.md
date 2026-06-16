@@ -25,7 +25,7 @@ phases:
     thinking: medium
   - id: report
     type: agent
-    agent: dokumentator
+    agent: documentation-engineer
     consumes: performance.md
     produces: audit-report.md
     model: sonnet

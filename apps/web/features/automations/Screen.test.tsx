@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Automation } from "@zibby/contracts";
 import { fireEvent, renderWithProviders as render, screen } from "../../test/render";
 import { Screen } from "./Screen";
@@ -11,15 +11,26 @@ const automation: Automation = {
   trigger: { type: "cron", expr: "0 7 * * *" },
   target: { type: "briefing" },
   enabled: true,
+  system: false,
   lastFiredAt: "2026-06-12T07:00:00.000Z",
+};
+
+const systemAutomation: Automation = {
+  id: "memory-distill",
+  name: "Destilace paměti",
+  trigger: { type: "cron", expr: "0 3 * * *" },
+  target: { type: "memory-distill" },
+  enabled: true,
+  system: true,
 };
 
 const trigger = vi.fn();
 const update = vi.fn();
 const create = vi.fn();
+let automations: Automation[] = [automation];
 
 vi.mock("./queries", () => ({
-  useAutomationsQuery: () => ({ data: [automation] }),
+  useAutomationsQuery: () => ({ data: automations }),
 }));
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
 vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
@@ -30,6 +41,13 @@ vi.mock("./mutations", () => ({
 }));
 
 describe("Automations Screen", () => {
+  beforeEach(() => {
+    automations = [automation];
+    trigger.mockClear();
+    update.mockClear();
+    create.mockClear();
+  });
+
   it("renders the cron automation with a human-readable schedule (not raw cron)", () => {
     render(<Screen />);
     expect(screen.getByTestId(AutomationCardTestId.Root)).toBeInTheDocument();
@@ -65,5 +83,40 @@ describe("Automations Screen", () => {
     render(<Screen />);
     fireEvent.click(screen.getByRole("button", { name: "Nová automatizace" }));
     expect(screen.getByTestId(AutomationFormTestId.Submit)).toBeInTheDocument();
+  });
+});
+
+describe("Automations Screen — system automation", () => {
+  beforeEach(() => {
+    automations = [systemAutomation];
+    trigger.mockClear();
+    update.mockClear();
+    create.mockClear();
+  });
+
+  it("shows the system badge and renders the memory-distill target label", () => {
+    render(<Screen />);
+    expect(screen.getByTestId(AutomationCardTestId.SystemBadge)).toHaveTextContent("Systémová");
+    // Goes through Screen.resolveTarget → the real label/glyph mapping path.
+    expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent("Destilace paměti");
+  });
+
+  it("disables the enable toggle so it can't be flipped (server rejects it)", () => {
+    render(<Screen />);
+    fireEvent.click(screen.getByTestId(AutomationCardTestId.Toggle));
+    expect(screen.getByTestId(AutomationCardTestId.Toggle)).toBeDisabled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("on edit, persists only the schedule (trigger) — never target/enabled", () => {
+    render(<Screen />);
+    fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
+    // The schedule-only form has no target picker; submit saves trigger alone.
+    fireEvent.click(screen.getByTestId(AutomationFormTestId.Submit));
+    expect(update).toHaveBeenCalledTimes(1);
+    const call = update.mock.calls[0]?.[0];
+    expect(call.params).toEqual({ id: "memory-distill" });
+    expect(Object.keys(call.body)).toEqual(["trigger"]);
+    expect(call.body.trigger).toEqual({ type: "cron", expr: "0 3 * * *" });
   });
 });

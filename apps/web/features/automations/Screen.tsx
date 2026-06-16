@@ -51,23 +51,22 @@ export function Screen() {
       const pipeline = pipelines.find((p) => p.id === target.pipelineId);
       return { name: pipeline?.name ?? target.pipelineId, glyph: "flow" };
     }
+    if (target.type === "discovery") return { glyph: "search" };
+    if (target.type === "memory-distill") return { glyph: "brain" };
     return { glyph: "spark" };
   };
 
-  const onSubmit = (body: Omit<Automation, "lastFiredAt">) => {
+  const onSubmit = (body: Omit<Automation, "lastFiredAt" | "system">) => {
     if (editing === "new") {
       create.mutate({ body }, { onSuccess: () => setEditing(null) });
     } else if (editing) {
+      // A system automation may only change its schedule — send the trigger alone so
+      // we never even attempt the target/enabled changes the server would reject.
+      const patch = editing.system
+        ? { trigger: body.trigger }
+        : { name: body.name, trigger: body.trigger, target: body.target, enabled: body.enabled };
       update.mutate(
-        {
-          params: { id: editing.id },
-          body: {
-            name: body.name,
-            trigger: body.trigger,
-            target: body.target,
-            enabled: body.enabled,
-          },
-        },
+        { params: { id: editing.id }, body: patch },
         { onSuccess: () => setEditing(null) },
       );
     }

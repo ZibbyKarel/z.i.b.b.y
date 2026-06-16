@@ -10,6 +10,7 @@ import {
   IconTile,
   Stack,
   StatusDot,
+  Tag,
   Toggle,
   Typography,
 } from "@zibby/design-system";
@@ -24,6 +25,8 @@ export enum AutomationCardTestId {
   Edit = "automation-card-edit",
   Run = "automation-card-run",
   Schedule = "automation-card-schedule",
+  Target = "automation-card-target",
+  SystemBadge = "automation-card-system",
 }
 
 const TRIGGER_GLYPH = { cron: "clock", event: "bolt" } as const satisfies Record<string, IconName>;
@@ -32,6 +35,7 @@ const TARGET_GLYPH = {
   pipeline: "flow",
   briefing: "spark",
   discovery: "search",
+  "memory-distill": "brain",
 } as const satisfies Record<Target["type"], IconName>;
 
 export interface AutomationCardProps {
@@ -94,7 +98,9 @@ export function AutomationCard({
       ? t("targetBriefing")
       : target.type === "discovery"
         ? t("targetDiscovery")
-        : (targetName ?? targetIdOf(target));
+        : target.type === "memory-distill"
+          ? t("targetMemoryDistill")
+          : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -109,6 +115,11 @@ export function AutomationCard({
                   {name}
                 </Typography>
               </Container>
+              {automation.system && (
+                <Tag data-testid={AutomationCardTestId.SystemBadge} icon="shield" tone="accent">
+                  {t("systemBadge")}
+                </Tag>
+              )}
             </Stack>
             <Stack align="center" direction="row" gap="100">
               <Typography
@@ -122,6 +133,7 @@ export function AutomationCard({
               <Toggle
                 checked={enabled}
                 data-testid={AutomationCardTestId.Toggle}
+                disabled={automation.system}
                 label={t("toggleLabel", { name })}
                 onChange={onToggle}
                 size="sm"
@@ -141,6 +153,7 @@ export function AutomationCard({
             <FlowBox
               glyph={targetGlyph ?? TARGET_GLYPH[target.type]}
               kind={t(targetKindKey(target.type))}
+              testid={AutomationCardTestId.Target}
               value={targetText}
             />
           </Stack>
@@ -225,7 +238,20 @@ function targetIdOf(target: Target): string {
   return target.type === "agent" ? target.agentId : target.type === "pipeline" ? target.pipelineId : "";
 }
 
-/** i18n key for the target kind label. */
-function targetKindKey(type: Target["type"]): "targetAgent" | "targetPipeline" | "targetBriefing" {
-  return type === "agent" ? "targetAgent" : type === "pipeline" ? "targetPipeline" : "targetBriefing";
+/** i18n key for the target kind label. Exhaustive over the target union. */
+function targetKindKey(
+  type: Target["type"],
+): "targetAgent" | "targetPipeline" | "targetBriefing" | "targetDiscovery" | "targetMemoryDistill" {
+  switch (type) {
+    case "agent":
+      return "targetAgent";
+    case "pipeline":
+      return "targetPipeline";
+    case "briefing":
+      return "targetBriefing";
+    case "discovery":
+      return "targetDiscovery";
+    case "memory-distill":
+      return "targetMemoryDistill";
+  }
 }

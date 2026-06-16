@@ -80,7 +80,7 @@ vi.mock("../../projects/mutations", () => ({
   useCreateProjectMutation: () => ({ mutate: createProject, isPending: false }),
 }));
 
-type CreateVars = { body: { text: string; scheduledAt?: number | null; target?: { kind: string; id?: string } } };
+type CreateVars = { body: { text: string; paths?: string[]; scheduledAt?: number | null; target?: { kind: string; id?: string } } };
 type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
 const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
   const { scheduledAt, text } = vars.body;
@@ -116,6 +116,16 @@ const startGoal = vi.fn((_vars: GoalVars, opts?: GoalOpts) =>
 vi.mock("../../goals/mutations", () => ({
   useCreateGoalMutation: () => ({ mutate: createGoal, isPending: false }),
   useStartGoalMutation: () => ({ mutate: startGoal, isPending: false }),
+}));
+
+vi.mock("../../projects/queries/useProjectsQuery", () => ({
+  useProjectsQuery: () => ({
+    data: [
+      { id: "alpha", name: "Alpha", path: "/Users/zibby/Projects/alpha" },
+      { id: "beta", name: "Beta", path: "/Users/zibby/Projects/beta" },
+    ],
+  }),
+  getProjectsQueryKey: () => ["projects"],
 }));
 
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
@@ -274,6 +284,39 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
       name: "widget",
       path: "/tmp/scratch/widget",
     });
+  });
+
+  it("folds a selected project's path into the dispatched task, exactly like a typed path", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+
+    // Pick a project — its configured `path` is added to context like a typed path.
+    await userEvent.click(screen.getByLabelText(/Projekt/));
+    await userEvent.click(await screen.findByRole("option", { name: "Beta" }));
+
+    // It flows through the live classify (attribution) and into the dispatched task.
+    await screen.findByText(/ZIBBY to předá/);
+    expect(classify.mock.calls.at(-1)?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
+
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
+  });
+
+  it("removing the project's path chip deselects the project (no orphaned path)", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await userEvent.click(screen.getByLabelText(/Projekt/));
+    await userEvent.click(await screen.findByRole("option", { name: "Beta" }));
+
+    const remove = await screen.findByRole("button", {
+      name: "Odebrat cestu /Users/zibby/Projects/beta",
+    });
+    await userEvent.click(remove);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain(
+      "/Users/zibby/Projects/beta",
+    );
   });
 
   it("seeds the description from initialText (voice transcript) and infers a loop", async () => {

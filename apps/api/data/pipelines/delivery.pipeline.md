@@ -6,21 +6,21 @@ desc: 'Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
 phases:
   - id: architekt
     type: agent
-    agent: architekt
+    agent: architect
     consumes: task.md
     produces: plan.md
     model: opus
     thinking: high
   - id: koder
     type: agent
-    agent: koder
+    agent: fullstack-developer
     consumes: plan.md
     produces: implementation.md
     model: sonnet
     thinking: medium
   - id: review
     type: agent
-    agent: code-review
+    agent: code-reviewer
     consumes: implementation.md
     produces: review.md
     model: opus
@@ -35,16 +35,9 @@ phases:
           thinking: high
         - model: opus
           thinking: high
-  - id: verify
-    type: verify
-    loop:
-      to: koder
-      maxRetries: 3
-      escalate: true
-      then: park
   - id: dokumentator
     type: agent
-    agent: dokumentator
+    agent: documentation-engineer
     consumes: review.md
     produces: docs.md
     model: sonnet
@@ -60,22 +53,23 @@ phases:
 
 # Delivery
 
-Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review → verify (Tester) →
-Dokumentátor**. Ohraničený stavový automat — opakuje s eskalací, a místo mlácení
-hlavou o zeď zaparkuje pro lidskou poznámku.
+Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review → Dokumentátor**.
+Kvalitu si hlídá sám Kodér — než předá práci, spustí kontroly projektu
+(lint/typecheck/testy) a opraví je do zelené; není pro to zvláštní fáze.
+Ohraničený stavový automat — opakuje s eskalací, a místo mlácení hlavou o zeď
+zaparkuje pro lidskou poznámku.
 
 ## Fáze
 
 1. **architekt** — `task.md` → `plan.md`: rozpad zadání na kroky a kontrakt změn.
 2. **koder** — `plan.md` → `implementation.md`: provede změny v cílovém projektu,
-   sepíše shrnutí změn (soubory, rozhodnutí, jak testovat).
+   pak **spustí kontroly kvality projektu** (lint/typecheck/testy podle konvencí
+   repa) a opraví je do zelené, než označí práci za hotovou. Co spustil a s jakým
+   výsledkem zapíše do shrnutí; co nedokázal dotáhnout do zelené, přizná.
 3. **review** — `implementation.md` → `review.md`: oponentura; selhání vrací práci
    Kodérovi s kontextem, eskalace zvedá model/thinking, vyčerpání → park.
-4. **verify** — deterministické kontroly projektu (lint, typecheck, testy) přímo
-   v checkoutu; červená vrací práci Kodérovi, vyčerpání → park. Tester JE tahle
-   fáze — žádný LLM, jen exit kódy.
-5. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
-6. **pr-autor** — `docs.md` → `pr-draft.md`: složí titulek + tělo PR, pak se
+4. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
+5. **pr-autor** — `docs.md` → `pr-draft.md`: složí titulek + tělo PR, pak se
    pokusí o jediný gated řetězec `git push -u origin <branch> && gh pr create …`.
    Push i otevření PR jsou Tier-3: hook ohlásí `pr.open`, běh zaparkuje na
    schválení. **PR je brána** — vše před ním se už stalo na větvi `zibby/*`.

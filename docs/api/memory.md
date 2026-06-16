@@ -118,6 +118,25 @@ Při dokončení runu (terminal state):
 2. Appenduje outcome summary (1–2 věty co run udělal / selhal)
 3. Aktualizuje relevantní indexy (pokud run produkoval nový kontext)
 
+## MemoryDistillerModule
+
+**Soubory:** `apps/api/src/memory/memory-distiller.module.ts`,
+`memory-distiller.service.ts`, `claude-cli-distiller.ts`
+
+Systémem vlastněné **učení z běhů** — výstupní zrcadlo groundingu. Grounding píše
+kontext _dovnitř_ runu, distiller čte poznatky _ven_; agent přitom o žádné paměti
+neví (učení NENÍ schopnost agenta). Spouští ho noční [systémová automatizace
+`memory-distill`](./automations.md#destilace-paměti-memory-distill).
+
+`MemoryDistillerService.distill()` projde terminální běhy pipeline/agentů/goalů, levný
+model (haiku, fail-open) z nich vytáhne trvalé poznatky a uloží je jako jeden noční
+digest `distilled-<datum>` v `knowledge/`, přilinkovaný z MOCů dotčených projektů.
+Idempotence přes marker `memory-distilled.json` v `cwd` běhu. Detaily viz doc
+automatizací.
+
+> Pozn.: dřívější per-agent `learned.md` (kdy si dokumentační agent psal paměť sám)
+> byl odstraněn — paměť se sbírá systémově, ne z popisu agenta.
+
 ## Chybové stavy
 
 | Error | HTTP | Kdy |
