@@ -155,21 +155,22 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
   it("opens the agent maker log (by makerRunRef) on the row's log toggle", async () => {
     render(<GoalDetailPanel run={running([agentIter(0)] as RunView["iterations"])} />);
     await userEvent.click(logToggles()[0]!);
-    expect(useRunLogMock).toHaveBeenCalledWith("maker_0", "agents");
+    expect(useRunLogMock).toHaveBeenCalledWith("maker_0");
     expect(screen.getByText("log makera")).toBeInTheDocument();
   });
 
   it("reveals the claude verifier log + verdict text when expanded", async () => {
     render(<GoalDetailPanel run={running([agentIter(0)] as RunView["iterations"])} />);
     await userEvent.click(logToggles()[0]!);
-    expect(useRunLogMock).toHaveBeenCalledWith("verify_0", "agents");
+    expect(useRunLogMock).toHaveBeenCalledWith("verify_0");
     expect(screen.getByText("log verifieru")).toBeInTheDocument();
     expect(screen.getByText("verdikt")).toBeInTheDocument();
   });
 
   it("opens the pipeline maker's stage timeline (not a note) when expanded", async () => {
     pipelineRunMock.mockReturnValue({
-      data: { pipelineRunId: "delivery_run_0", pipelineId: "delivery", stageRuns: [] },
+      // usePipelineRunQuery now returns a unified TaskRun: `owner` is the pipeline id.
+      data: { runId: "delivery_run_0", owner: "delivery", currentStage: null, status: "done", stageRuns: [] },
     });
     const pipeIter = {
       index: 0,
@@ -194,10 +195,10 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
       />,
     );
     await userEvent.click(logToggles()[0]!);
-    expect(useRunLogMock).toHaveBeenCalledWith("maker_0", "agents");
+    expect(useRunLogMock).toHaveBeenCalledWith("maker_0");
 
     await userEvent.click(logToggles()[1]!);
-    expect(useRunLogMock).toHaveBeenCalledWith("maker_1", "agents");
+    expect(useRunLogMock).toHaveBeenCalledWith("maker_1");
     // Only one maker log is mounted at a time.
     expect(screen.getAllByText("log makera")).toHaveLength(1);
   });

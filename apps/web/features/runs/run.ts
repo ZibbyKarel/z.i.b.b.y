@@ -1,84 +1,28 @@
-import {
-  type AgentRun,
-  type Approval,
-  type GoalRun,
-  ORCHESTRATOR_ID,
-  type PipelineRun,
-  type RunStatus,
-  type ScheduledTask,
-  type TaskTarget,
-} from "@zibby/contracts";
+import type { Approval, RunKind, TaskRun, TaskRunStatus } from "@zibby/contracts";
 import type { DotTone, IconName, TagTone } from "@zibby/design-system";
 
 /**
  * The Runs screen is a task feed: what the user asked for is the headline, the
- * agent/pipeline the task was routed to is metadata. The contract has no unified
- * task-run list, so we merge the per-kind lists client-side into this view model
- * (agent runs + pipeline runs + still-waiting scheduled tasks), deriving the
- * missing display fields (see DESIGN_VS_API_NOTES.md).
+ * agent/pipeline/goal that processes it is metadata (`processor`). The merge that
+ * used to live here (the per-kind run lists + still-waiting scheduled tasks, with a
+ * goal's child runs folded out) now runs server-side — this file is types + the
+ * pure presentation helpers the feed/detail render with.
+ *
+ * `RunView` is the web alias of the contract's {@link TaskRun}: a single import-swap
+ * so every consumer that reads `run.kind`/`run.owner`/`run.status`/… keeps working,
+ * and the "X is processing it" label reads `run.processor`.
  */
-export type RunKind = "agent" | "pipeline" | "goal" | "scheduled";
+export type RunView = TaskRun;
+
+/** Re-exported from the contract so existing `from "../run"` imports keep resolving. */
+export type { RunKind };
 
 /** Feed status: the shared run states plus the not-yet-fired `scheduled`, the
  * retries-parked `parked` (approval-parked pipelines keep reading as
  * `awaiting-approval` — that mapping is load-bearing for the approvals gate), and
  * Phase 8's pre-dispatch budget holds `held` (over a cap, behind an approval) and
- * `queued` (waiting for a concurrency slot). */
-export type FeedStatus = RunStatus | "scheduled" | "parked" | "held" | "queued";
-
-export interface RunView {
-  runId: string;
-  kind: RunKind;
-  /** The routed agent/pipeline id — `""` for a not-yet-dispatched scheduled task. */
-  owner: string;
-  status: FeedStatus;
-  /** 0–100, or null for pipeline runs (no single percentage). */
-  pct: number | null;
-  /** Short human task name from the New Task dialog; `""` when absent. */
-  title: string;
-  prompt: string;
-  project: string;
-  /** Start time — for a scheduled task, the future fire time (sorts it to the top). */
-  startedAt: string;
-  /** Log endpoint base — null for pipeline runs and scheduled tasks (no log). */
-  logBase: "agents" | null;
-  /** The task record this run was dispatched from (when born from one). */
-  taskId?: string;
-  /** Enriched from the task record: its display title (or text). */
-  taskTitle?: string;
-  /** Enriched from the task record: its full free-text description (the task's `text`). */
-  taskText?: string;
-  /** Enriched from the task record: the written-back run outcome. */
-  taskOutcome?: "done" | "error";
-  /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
-  parked?: PipelineRun["parked"];
-  /** The engagement a task is attributed to (Phase 8) — drives the queued caption. */
-  projectId?: string;
-  /** Held tasks: why the budget guard parked it. */
-  heldReason?: string;
-  /** Held tasks: the spend-past-cap approval gating the override. */
-  approvalId?: string;
-  /** Phase 9: when `paused-limit`, the epoch ms the usage window resets (countdown). */
-  resumeAt?: number | null;
-  /** Phase 9: how many auto-resume cycles a limit-paused run has used ("2/3"). */
-  limitResumeCycles?: number;
-  /** Phase 9: a window-deferred scheduled task (`deferredReason === "limit"`). */
-  deferredLimit?: boolean;
-  /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
-  checkpoints?: PipelineRun["checkpoints"];
-  /** Phase 28 (pipeline runs): the per-phase stage runs, for the detail's stage timeline. */
-  stageRuns?: PipelineRun["stageRuns"];
-  /** Pipeline runs: the phase currently executing, for the timeline's live (running) stage row. */
-  currentStage?: string | null;
-  /** Phase 10 (goal runs): the goal definition id, for the detail view's maxIterations lookup. */
-  goalId?: string;
-  /** Phase 10 (goal runs): the per-iteration maker→verifier log for the timeline. */
-  iterations?: GoalRun["iterations"];
-  /** Phase 10 (goal runs): the parked surface (iteration, attempts, verdict file). */
-  goalParked?: GoalRun["parked"];
-  /** Phase 10 (goal runs): why the goal parked (iterations / budget / limit). */
-  goalParkedReason?: GoalRun["parkedReason"];
-}
+ * `queued` (waiting for a concurrency slot). Aliased to the contract's `TaskRunStatus`. */
+export type FeedStatus = TaskRunStatus;
 
 /**
  * Task-first display name: the explicit task title, else (for runs born from a
@@ -116,206 +60,6 @@ export function approvalForRun<A extends Pick<Approval, "id" | "runId">>(
       a.runId === run.runId ||
       (run.kind === "pipeline" && a.runId.startsWith(`${run.runId}.`)),
   );
-}
-
-export function agentRunToView(r: AgentRun): RunView {
-  return {
-    runId: r.runId,
-    kind: "agent",
-    owner: r.agentId,
-    status: r.status,
-    pct: r.pct,
-    title: r.title,
-    prompt: r.prompt,
-    project: r.project,
-    startedAt: r.startedAt,
-    logBase: "agents",
-    taskId: r.taskId,
-    resumeAt: r.resumeAt,
-    limitResumeCycles: r.limitResumeCycles,
-  };
-}
-
-/**
- * Pipeline run → view. Maps the pipeline lifecycle onto the feed states. The
- * split on `parkedReason` is load-bearing: approval-parked runs keep reading as
- * `awaiting-approval` (the gate UI), retries-parked runs surface as first-class
- * `parked` (the resume-with-note queue).
- */
-export function pipelineRunToView(r: PipelineRun): RunView {
-  const status: FeedStatus =
-    r.status === "paused-limit"
-      ? "paused-limit"
-      : r.status === "parked"
-        ? r.parkedReason === "retries" || r.parkedReason === "limit"
-          ? "parked"
-          : "awaiting-approval"
-        : r.status === "failed"
-          ? "error"
-          : r.status === "done"
-            ? "done"
-            : "running";
-  return {
-    runId: r.pipelineRunId,
-    kind: "pipeline",
-    owner: r.pipelineId,
-    status,
-    pct: null,
-    title: "",
-    prompt: r.currentStage ? `fáze: ${r.currentStage}` : "",
-    project: r.cwd.split("/").pop() ?? "",
-    startedAt: r.startedAt,
-    logBase: null,
-    taskId: r.taskId,
-    parked: r.parked,
-    resumeAt: r.resumeAt,
-    limitResumeCycles: r.limitResumeCycles,
-    checkpoints: r.checkpoints,
-    stageRuns: r.stageRuns,
-    currentStage: r.currentStage,
-  };
-}
-
-/**
- * Goal run → view (Phase 10). Maps the goal lifecycle onto the feed states (the
- * same set pipelines use, so RUN_STATE already covers every status): `failed` →
- * `error`, `parked` → first-class `parked` (the resume-with-note queue), all parks
- * are operator-resumable so there is no approval-vs-retries split. `pct` is null
- * (the cost is iterations-used / maxIterations, shown in the detail view).
- */
-export function goalRunToView(r: GoalRun): RunView {
-  const status: FeedStatus =
-    r.status === "paused-limit"
-      ? "paused-limit"
-      : r.status === "parked"
-        ? "parked"
-        : r.status === "failed"
-          ? "error"
-          : r.status === "done"
-            ? "done"
-            : "running";
-  return {
-    runId: r.goalRunId,
-    kind: "goal",
-    owner: r.goalId,
-    status,
-    pct: null,
-    title: "",
-    prompt:
-      r.currentIteration != null ? `iterace ${r.currentIteration + 1}` : "",
-    project: r.cwd.split("/").pop() ?? "",
-    startedAt: r.startedAt,
-    logBase: null,
-    taskId: r.taskId,
-    resumeAt: r.resumeAt,
-    limitResumeCycles: r.limitResumeCycles,
-    goalId: r.goalId,
-    iterations: r.iterations,
-    goalParked: r.parked,
-    goalParkedReason: r.parkedReason,
-  };
-}
-
-/**
- * Fold the originating task record (title + written-back outcome) into a run
- * view. Dispatched tasks stay hidden as separate feed rows — the run row is the
- * canonical card — so this is where their data surfaces.
- */
-export function enrichRunWithTask(
-  run: RunView,
-  tasksById: ReadonlyMap<string, ScheduledTask>,
-): RunView {
-  if (!run.taskId) return run;
-  const task = tasksById.get(run.taskId);
-  if (!task) return run;
-  return {
-    ...run,
-    taskTitle: task.title || task.text,
-    taskText: task.text,
-    taskOutcome: task.outcome?.status,
-  };
-}
-
-/**
- * Owner id a routed target reads as in the feed: the stored definition's id, or
- * the reserved orchestrator id for the synthetic fallback target (which has none).
- */
-function targetOwner(target: TaskTarget | undefined): string {
-  if (!target) return "";
-  return target.kind === "orchestrator" ? ORCHESTRATOR_ID : target.id;
-}
-
-/**
- * Scheduled task → view, or null for `dispatched` (its run is already in the feed
- * via the run lists — including it again would duplicate the task). `cancelled`
- * reads as `interrupted`, a failed dispatch as `error`.
- */
-export function scheduledTaskToView(t: ScheduledTask): RunView | null {
-  if (t.status === "dispatched") return null;
-  const status: FeedStatus =
-    t.status === "scheduled"
-      ? "scheduled"
-      : t.status === "queued"
-        ? "queued"
-        : t.status === "held"
-          ? "held"
-          : t.status === "cancelled"
-            ? "interrupted"
-            : "error";
-  return {
-    runId: t.id,
-    kind: "scheduled",
-    owner: targetOwner(t.target),
-    status,
-    pct: null,
-    title: t.title,
-    prompt: t.text,
-    project: "",
-    startedAt: new Date(t.scheduledAt).toISOString(),
-    logBase: null,
-    projectId: t.projectId,
-    heldReason: t.heldReason,
-    approvalId: t.approvalId,
-    deferredLimit: t.deferredReason === "limit",
-  };
-}
-
-/**
- * The unified runs feed: merge the per-kind history lists into one task feed,
- * newest-first. **One card per task** — a loop (goal) dispatches its maker as a
- * child agent/pipeline run (`iteration.makerRunRef`) and its claude verifier as
- * another (`verifier.runRef`); those are internal execution detail of the goal
- * task, so they are folded **out** of the feed (their data surfaces inside the
- * goal's detail). Standalone agent/pipeline runs are untouched. Pure, so the
- * dedup is unit-tested without rendering the hook.
- */
-export function mergeRunFeed(
-  agents: readonly AgentRun[],
-  pipelines: readonly PipelineRun[],
-  goals: readonly GoalRun[],
-  scheduled: readonly ScheduledTask[],
-): RunView[] {
-  const tasksById = new Map(scheduled.map((t) => [t.id, t]));
-  // Every run a goal spawned (maker + claude verifier) — these are the goal's
-  // children, not peers of it in the feed.
-  const childRunIds = new Set<string>();
-  for (const g of goals) {
-    for (const it of g.iterations) {
-      if (it.makerRunRef) childRunIds.add(it.makerRunRef);
-      if (it.verifier.runRef) childRunIds.add(it.verifier.runRef);
-    }
-  }
-  const merged: RunView[] = [
-    ...agents
-      .filter((r) => !childRunIds.has(r.runId))
-      .map((r) => enrichRunWithTask(agentRunToView(r), tasksById)),
-    ...pipelines
-      .filter((r) => !childRunIds.has(r.pipelineRunId))
-      .map((r) => enrichRunWithTask(pipelineRunToView(r), tasksById)),
-    ...goals.map((r) => enrichRunWithTask(goalRunToView(r), tasksById)),
-    ...scheduled.flatMap((t) => scheduledTaskToView(t) ?? []),
-  ];
-  return merged.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
 export interface RunStateMeta {

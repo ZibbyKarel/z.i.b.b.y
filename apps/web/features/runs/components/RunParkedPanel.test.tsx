@@ -48,7 +48,7 @@ describe("RunParkedPanel", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /Pokračovat s poznámkou/ }));
     expect(mutate).toHaveBeenCalledWith({
-      params: { pipelineRunId: "delivery_1780000000000" },
+      params: { runId: "delivery_1780000000000" },
       body: { note: "zkus jiný selektor" },
     });
   });

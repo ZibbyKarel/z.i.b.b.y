@@ -97,8 +97,7 @@ export function Screen() {
   const remove = (runId: string, kind: string) => {
     setSelId(null);
     if (kind === "agent") deleteAgent.mutate({ params: { runId } });
-    else if (kind === "pipeline")
-      deletePipeline.mutate({ params: { pipelineRunId: runId } });
+    else if (kind === "pipeline") deletePipeline.mutate({ params: { runId } });
     else if (kind === "scheduled") cancelTask.mutate({ params: { id: runId } });
   };
 

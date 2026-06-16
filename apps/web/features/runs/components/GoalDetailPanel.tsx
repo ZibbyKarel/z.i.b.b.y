@@ -174,7 +174,6 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                             linesLabel={(n) => t("lines", { n })}
                             live={it.status === "running"}
                             liveLabel={t("liveLog")}
-                            logBase="agents"
                             logLabel={t("log")}
                             runId={it.makerRunRef}
                           />
@@ -186,7 +185,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                           <PipelineStageTimeline
                             currentStage={makerPipeline.currentStage}
                             live={makerPipeline.status === "running"}
-                            owner={makerPipeline.pipelineId}
+                            owner={makerPipeline.owner}
                             pipelineRunId={it.makerRunRef}
                             stageRuns={makerPipeline.stageRuns}
                           />
@@ -207,7 +206,6 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                             linesLabel={(n) => t("lines", { n })}
                             live={it.status === "running"}
                             liveLabel={t("liveLog")}
-                            logBase="agents"
                             logLabel={t("log")}
                             runId={it.verifier.runRef}
                           />
@@ -262,7 +260,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                 icon="run"
                 onClick={() =>
                   resume.mutate({
-                    params: { goalRunId: run.runId },
+                    params: { runId: run.runId },
                     body: { note: note.trim() || undefined },
                   })
                 }

@@ -60,7 +60,7 @@ export function RunParkedPanel({ run }: RunParkedPanelProps) {
             icon="run"
             onClick={() =>
               resume.mutate({
-                params: { pipelineRunId: run.runId },
+                params: { runId: run.runId },
                 body: { note: note.trim() || undefined },
               })
             }

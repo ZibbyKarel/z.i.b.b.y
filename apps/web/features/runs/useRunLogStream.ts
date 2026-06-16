@@ -18,25 +18,23 @@ const RUN_LOG_POLL_MS = 1_000;
  * contract's `…/logs` endpoint, so the viewer keeps working everywhere. Mount the
  * consumer with `key={runId}` so a new run gets a fresh hook.
  *
- * `base` selects the endpoint family (`agents` today; `skills` is reserved for a
- * future skill-run endpoint). A `null` run id or base renders nothing.
+ * Every run kind's log is served from the one unified surface
+ * (`/api/tasks/runs/:runId/logs`), with the resolver dispatching to the owning
+ * runner. A `null` run id renders nothing.
  */
-export function useRunLogStream(
-  runId: string | null,
-  base: "agents" | "skills" | null,
-): { text: string; done: boolean } {
+export function useRunLogStream(runId: string | null): { text: string; done: boolean } {
   const [text, setText] = useState("");
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!runId || !base) return;
+    if (!runId) return;
     let active = true;
     let offset = 0;
     let opened = false;
     let source: EventSource | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-    const logsBase = `${API_URL}/api/${base}/runs/${encodeURIComponent(runId)}/logs`;
+    const logsBase = `${API_URL}/api/tasks/runs/${encodeURIComponent(runId)}/logs`;
 
     const apply = (chunk: { content: string; nextOffset: number; done: boolean }) => {
       if (!active) return;
@@ -106,7 +104,7 @@ export function useRunLogStream(
 
     startStreaming();
     return cleanup;
-  }, [runId, base]);
+  }, [runId]);
 
   return { text, done };
 }

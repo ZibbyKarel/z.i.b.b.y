@@ -5,25 +5,23 @@ import type { IconName } from "@zibby/design-system";
 import { getApprovalsQueryKey } from "../../approvals/queries/useApprovalsQuery";
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
-import { getScheduledTasksQueryKey } from "../../tasks/queries/useScheduledTasksQuery";
 import { useRunEventsConnected } from "../runEvents";
-import { type RunView, mergeRunFeed } from "../run";
+import type { RunView } from "../run";
 
 const POLL_MS = 2_000;
 
-/** Cache keys for the full-history run feeds. Exported so the stop/delete mutations
- * can invalidate exactly what this feed reads. */
-export const allAgentRunsKey = ["agentRuns", "all"] as const;
-export const allPipelineRunsKey = ["pipelineRuns", "all"] as const;
-export const allGoalRunsKey = ["goalRuns", "all"] as const;
+/** Cache key for the unified task-run feed. Exported so the stop/resume/delete
+ * mutations and the SSE channel invalidate exactly what this feed reads. */
+export const allTaskRunsKey = ["taskRuns", "all"] as const;
 
-/** A run state that is still progressing (across every kind: agents/skills use
- * `awaiting-approval`, pipelines use `parked`). */
-const LIVE_STATES = new Set(["running", "awaiting-approval", "parked"]);
+/** A feed row that is still progressing — a live run (`running`/`awaiting-approval`/
+ * `parked`) or a still-waiting `scheduled` task whose due time can arrive any moment.
+ * Both ride the one feed now, so one gate covers them. */
+const LIVE_STATES = new Set(["running", "awaiting-approval", "parked", "scheduled"]);
 
-/** Keep polling while anything is still live; otherwise idle (the final poll still
- * catches the done transition). The cache holds the raw `{ status, body }` envelope
- * — `select` doesn't run on it — so read the runs off `.body`. */
+/** Keep polling while anything is still live/waiting; otherwise idle (the final poll
+ * still catches the done transition). The cache holds the raw `{ status, body }`
+ * envelope — `select` doesn't run on it — so read the rows off `.body`. */
 function pollWhileLive(query: {
   state: { data?: { body?: ReadonlyArray<{ status: string }> } };
 }): number | false {
@@ -31,71 +29,27 @@ function pollWhileLive(query: {
   return runs.some((r) => LIVE_STATES.has(r.status)) ? POLL_MS : false;
 }
 
-/** Poll the deferred-task queue while any task is still waiting to fire. */
-function pollWhileScheduled(query: {
-  state: { data?: { body?: ReadonlyArray<{ status: string }> } };
-}): number | false {
-  const tasks = query.state.data?.body ?? [];
-  return tasks.some((t) => t.status === "scheduled") ? POLL_MS : false;
-}
-
 /**
- * The unified runs feed. There is no cross-kind list endpoint, so this merges the
- * per-kind *full-history* lists (agent + pipeline) client-side, newest first — the
- * history endpoints return finished runs too (read from their on-disk sidecars), so
- * the feed isn't limited to the live retention window.
+ * The unified runs feed. One query against `GET /api/tasks/runs` — the server merges
+ * the per-kind run histories with the still-waiting scheduled tasks (and folds a
+ * goal's maker/verifier child runs out), so the client no longer merges anything.
  *
- * Freshness is push-driven via the `/api/events` SSE channel, which invalidates
- * both keys on every run transition. The self-gating poll (refetch while any run is
- * `running`/`awaiting-approval`/`parked`) is kept only as the fallback for when the
- * stream is down — `refetchInterval` is `false` while it's connected.
+ * Freshness is push-driven via the `/api/events` SSE channel, which invalidates the
+ * feed key on every run transition. The self-gating poll (refetch while any row is
+ * `running`/`awaiting-approval`/`parked`/`scheduled`) is kept only as the fallback
+ * for when the stream is down — `refetchInterval` is `false` while it's connected.
  */
 export function useRunsQuery(): { runs: RunView[] } {
   const streamConnected = useRunEventsConnected();
-  const fallbackPoll = streamConnected ? false : pollWhileLive;
-  const agents = apiClient.agentRuns.listRuns.useQuery({
-    queryKey: allAgentRunsKey,
-    refetchInterval: fallbackPoll,
-    refetchIntervalInBackground: true,
-    retry: false,
-    select: selectApiResponseBody,
-  });
-  const pipelines = apiClient.pipelineRuns.listAllPipelineRuns.useQuery({
-    queryKey: allPipelineRunsKey,
-    refetchInterval: fallbackPoll,
-    refetchIntervalInBackground: true,
-    retry: false,
-    select: selectApiResponseBody,
-  });
-  const goals = apiClient.goalRuns.listAllGoalRuns.useQuery({
-    queryKey: allGoalRunsKey,
-    refetchInterval: fallbackPoll,
-    refetchIntervalInBackground: true,
-    retry: false,
-    select: selectApiResponseBody,
-  });
-  // Deferred tasks join the feed too (the scheduler fires them into real runs);
-  // `scheduledTaskToView` drops `dispatched` ones so a fired task isn't doubled.
-  // Its poll gates on its own data: while any task still waits, its due time can
-  // arrive at any moment (the run-state gate would never match task statuses).
-  const scheduled = apiClient.tasks.listScheduledTasks.useQuery({
-    queryKey: getScheduledTasksQueryKey(),
-    refetchInterval: streamConnected ? false : pollWhileScheduled,
+  const query = apiClient.taskRuns.listTaskRuns.useQuery({
+    queryKey: allTaskRunsKey,
+    refetchInterval: streamConnected ? false : pollWhileLive,
     refetchIntervalInBackground: true,
     retry: false,
     select: selectApiResponseBody,
   });
 
-  const runs = useMemo<RunView[]>(
-    () =>
-      mergeRunFeed(
-        agents.data ?? [],
-        pipelines.data ?? [],
-        goals.data ?? [],
-        scheduled.data ?? [],
-      ),
-    [agents.data, pipelines.data, goals.data, scheduled.data],
-  );
+  const runs = useMemo<RunView[]>(() => query.data ?? [], [query.data]);
 
   // The 2s runs poll is the freshest signal that a run has paused at a gate, so
   // when one *enters* `awaiting-approval` we refetch the pending-approval queue

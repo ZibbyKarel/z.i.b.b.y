@@ -165,7 +165,6 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
       linesLabel={(n) => t("lines", { n })}
       live={run.status === "running"}
       liveLabel={t("liveLog")}
-      logBase={run.logBase}
       logLabel={t("log")}
       runId={run.runId}
     />

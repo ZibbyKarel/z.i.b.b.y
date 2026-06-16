@@ -15,6 +15,7 @@ import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module"
 import { TaskClassifierService } from "./task-classifier.service"
 import { TaskOutputService } from "./task-output.service"
 import { TASK_ROUTER } from "./task-router"
+import { TaskRunLogsController } from "./task-run-logs.controller"
 import { TaskRunsController } from "./task-runs.controller"
 import { TaskRunsService } from "./task-runs.service"
 import { TaskSchedulerService } from "./task-scheduler.service"
@@ -43,7 +44,7 @@ import { TasksController } from "./tasks.controller"
     MemoryModule,
     ScheduledTasksStorageModule,
   ],
-  controllers: [TasksController, TaskRunsController],
+  controllers: [TasksController, TaskRunsController, TaskRunLogsController],
   providers: [
     TaskSchedulerService,
     TaskRunsService,

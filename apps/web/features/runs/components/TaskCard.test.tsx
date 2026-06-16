@@ -1,8 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { ScheduledTask } from "@zibby/contracts";
-import { type RunView, runTitle, scheduledTaskToView } from "../run";
+import type { RunView } from "../run";
 import { TaskCard } from "./TaskCard";
 
 const run: RunView = {
@@ -158,60 +157,5 @@ describe("TaskCard", () => {
     );
     await userEvent.click(screen.getByRole("button"));
     expect(onSelect).toHaveBeenCalledWith("run-1");
-  });
-});
-
-describe("scheduledTaskToView", () => {
-  const task: ScheduledTask = {
-    id: "task-1",
-    title: "Ranní report",
-    text: "sestav report",
-    paths: [],
-    scheduledAt: Date.parse("2026-06-12T06:00:00.000Z"),
-    status: "scheduled",
-    createdAt: "2026-06-11T10:00:00.000Z",
-  };
-
-  it("maps a waiting task with its fire time as startedAt", () => {
-    const view = scheduledTaskToView(task);
-    expect(view).toMatchObject({
-      runId: "task-1",
-      kind: "scheduled",
-      status: "scheduled",
-      title: "Ranní report",
-      prompt: "sestav report",
-      owner: "",
-      logBase: null,
-      startedAt: "2026-06-12T06:00:00.000Z",
-    });
-    expect(runTitle(view as RunView)).toBe("Ranní report");
-  });
-
-  it("drops dispatched tasks (their run already feeds the list)", () => {
-    expect(scheduledTaskToView({ ...task, status: "dispatched" })).toBeNull();
-  });
-
-  it("reads cancelled as interrupted and a failed dispatch as error", () => {
-    expect(scheduledTaskToView({ ...task, status: "cancelled" })?.status).toBe(
-      "interrupted",
-    );
-    expect(scheduledTaskToView({ ...task, status: "failed" })?.status).toBe(
-      "error",
-    );
-  });
-
-  it("maps held/queued tasks, carrying projectId + heldReason (Phase 8)", () => {
-    const held = scheduledTaskToView({
-      ...task,
-      status: "held",
-      projectId: "alpha",
-      heldReason: "weekly run cap reached (5/5)",
-      approvalId: "task-1_ab",
-    });
-    expect(held).toMatchObject({ status: "held", projectId: "alpha", approvalId: "task-1_ab" });
-    expect(scheduledTaskToView({ ...task, status: "queued", projectId: "alpha" })).toMatchObject({
-      status: "queued",
-      projectId: "alpha",
-    });
   });
 });
