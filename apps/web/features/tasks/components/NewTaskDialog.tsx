@@ -54,10 +54,11 @@ export interface NewTaskDialogProps {
   /** Phase 11.4: seed the description field (a voice transcript / external trigger). */
   initialText?: string;
   /**
-   * Lock the task to a specific destination, bypassing classification. Used when the
-   * operator picks the processor up front — e.g. "Run pipeline" hands the standard
-   * composer a pre-chosen pipeline target. The operator still describes the task; it
-   * is dispatched straight to this target (no live "ZIBBY will…" preview, no override).
+   * Pre-select a destination in the standard composer. Used when the operator picks
+   * the processor up front — e.g. "Run pipeline" opens the dialog with that pipeline
+   * already chosen in the "Edit" target picker. Classification still runs (the normal
+   * flow), the chosen target heads the preview, and the operator can change it — it is
+   * a pre-fill, not a lock.
    */
   initialTarget?: TaskTarget;
 }
@@ -67,6 +68,11 @@ const CONFIRM_LINGER_MS = 1600;
 
 /** Debounce before the live classify preview fires while the operator types. */
 const CLASSIFY_DEBOUNCE_MS = 350;
+
+/** A stable key for a target, used to pre-select and dedupe entries in the picker. */
+function targetKey(target: TaskTarget): string {
+  return target.kind === "orchestrator" ? "orchestrator" : `${target.kind}:${target.id}`;
+}
 
 /** Project a client target onto the wire shape `createTask` accepts (drops nothing). */
 function toApiTarget(target: TaskTarget) {
@@ -94,9 +100,6 @@ function toApiTarget(target: TaskTarget) {
  */
 export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
-  // A pre-chosen destination (e.g. a pipeline) locks routing: classification is
-  // skipped and the task is dispatched straight to this target.
-  const forcedTarget = initialTarget ?? null;
   const router = useRouter();
   const { mutate: createTask, isPending: creatingTask } = useCreateTaskMutation();
   const { mutate: classify } = useClassifyTaskMutation();
@@ -124,8 +127,12 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   const [loop, setLoop] = useState<LoopFormState>(INITIAL_LOOP_STATE);
   const [loopEdited, setLoopEdited] = useState(false);
   const [seededKey, setSeededKey] = useState<string | null>(null);
-  /** Manual single-mode override: an index into `routing.candidates`, or null. */
-  const [overrideIndex, setOverrideIndex] = useState<string>("");
+  /**
+   * The chosen single-dispatch target, as a {@link targetKey}. "" = auto (let the
+   * classifier decide). Seeded from `initialTarget` so "Run pipeline" pre-selects the
+   * pipeline; the operator can switch it to another candidate or back to auto.
+   */
+  const [chosenKey, setChosenKey] = useState<string>(initialTarget ? targetKey(initialTarget) : "");
   /** Phase 11.3: the out-of-project path awaiting an explicit "grant access" confirm. */
   const [pendingGrant, setPendingGrant] = useState<string | null>(null);
 
@@ -152,9 +159,28 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   // Gate the preview on a long-enough query so a stale verdict never lingers after
   // the field is cleared (no setState-in-effect needed to reset it).
   const hasQuery = text.trim().length > 2;
-  // A forced target short-circuits routing entirely — no classify, no preview.
-  const activeRouting = !forcedTarget && hasQuery ? routing : null;
-  const isLoop = activeRouting?.mode === "loop";
+  const activeRouting = hasQuery ? routing : null;
+
+  // The targets the picker offers: the pre-selected one (if any) plus the live
+  // classify candidates, deduped — the seeded target is always present, so it never
+  // falls out of the list when candidates change.
+  const allTargets = useMemo(() => {
+    const list: TaskTarget[] = [];
+    const seen = new Set<string>();
+    for (const target of [...(initialTarget ? [initialTarget] : []), ...(activeRouting?.candidates ?? [])]) {
+      const key = targetKey(target);
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(target);
+      }
+    }
+    return list;
+  }, [initialTarget, activeRouting]);
+
+  // The effective single-dispatch target: an explicit pick, or null (auto → classify).
+  const chosenTarget = chosenKey ? allTargets.find((target) => targetKey(target) === chosenKey) ?? null : null;
+  // An explicit pick is always a one-shot dispatch — a loop is only inferred in auto mode.
+  const isLoop = !chosenTarget && activeRouting?.mode === "loop";
 
   // The side-effect-free verdict (the backend never starts a run here). Reused by the
   // debounce below and by the grant flow (re-resolve a path once it's a project).
@@ -166,12 +192,13 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   }, [classify, text, paths]);
 
   // ── Live classify preview ───────────────────────────────────────────────
+  // Runs even with a pre-selected target: it populates the alternatives the picker
+  // offers (so the choice stays changeable) and resolves the typed paths.
   useEffect(() => {
-    if (forcedTarget) return; // a locked target needs no routing verdict
     if (text.trim().length <= 2) return;
     const handle = setTimeout(runClassify, CLASSIFY_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [forcedTarget, text, runClassify]);
+  }, [text, runClassify]);
 
   // Seed the Loop form from a fresh proposal during render (the React-sanctioned
   // "adjust state on prop change" pattern, guarded against re-running) — unless the
@@ -219,13 +246,8 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   }, [outputType, fileDest, fileTo]);
 
   const submitSingle = useCallback(() => {
-    // A forced target wins; otherwise an optional manual override; otherwise the
-    // backend classifies (no target field sent).
-    const chosenTarget =
-      forcedTarget ??
-      (overrideIndex !== "" && activeRouting
-        ? activeRouting.candidates[Number(overrideIndex)]
-        : undefined);
+    // An explicit pick (pre-selected or chosen) sends a target; auto omits it so the
+    // backend classifies — byte-for-byte the un-seeded behaviour.
     createTask(
       {
         body: {
@@ -239,7 +261,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
       },
       { onSuccess: handleCreateTaskSuccess },
     );
-  }, [forcedTarget, overrideIndex, activeRouting, createTask, title, text, paths, scheduledAt, output, handleCreateTaskSuccess]);
+  }, [chosenTarget, createTask, title, text, paths, scheduledAt, output, handleCreateTaskSuccess]);
 
   const submitLoop = useCallback(() => {
     const seed = title.trim() || loop.objective;
@@ -337,22 +359,8 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   const outputReady = isLoop || outputType !== "file" || fileTo.trim().length > 0;
   const canSubmit = (isLoop ? canSubmitLoop(loop) : text.trim().length > 2) && outputReady;
 
-  // With a locked target the header names the destination (the pipeline) and a
-  // hint replaces the "ZIBBY classifies it" subtitle — routing is pre-decided.
-  const dialogAria = forcedTarget ? t("target.locked", { name: forcedTarget.name }) : t("dialogTitle");
-  const header = forcedTarget ? (
-    <Stack align="center" direction="row" gap="150">
-      <IconTile glyph={forcedTarget.glyph} size="md" />
-      <Container grow minW0>
-        <Typography mono size="md" tracking="wide" type="note" weight="bold">
-          {forcedTarget.name}
-        </Typography>
-        <Typography size="sm" type="note" variant="secondary">
-          {t("target.lockedHint")}
-        </Typography>
-      </Container>
-    </Stack>
-  ) : (
+  const dialogAria = t("dialogTitle");
+  const header = (
     <Stack align="center" direction="row" gap="150">
       <IconTile glyph="plus" size="md" />
       <Container grow minW0>
@@ -365,6 +373,22 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
       </Container>
     </Stack>
   );
+
+  // The "ZIBBY will…" preview reflects the *effective* target: an explicit pick (the
+  // pre-selected pipeline or a chosen candidate) shown as a one-shot dispatch; else
+  // the live classify verdict as-is. So the preview and the dispatch never drift.
+  const previewRouting: TaskRouting | null = chosenTarget
+    ? {
+        target: chosenTarget,
+        confidence: 1,
+        reason: t("target.chosenReason"),
+        matchedTerms: [],
+        candidates: activeRouting?.candidates ?? [chosenTarget],
+        mode: "single",
+        proposedGoal: null,
+        paths: activeRouting?.paths ?? [],
+      }
+    : activeRouting;
 
   if (scheduledWhen !== null) {
     return (
@@ -425,12 +449,10 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
     ...(projects ?? []).map((p) => ({ value: p.id, label: p.name })),
   ];
 
-  const candidateOptions = activeRouting
-    ? [
-        { value: "", label: t("override.auto") },
-        ...activeRouting.candidates.map((c, i) => ({ value: String(i), label: c.name })),
-      ]
-    : [];
+  const targetOptions = [
+    { value: "", label: t("override.auto") },
+    ...allTargets.map((target) => ({ value: targetKey(target), label: target.name })),
+  ];
 
   return (
     <Dialog
@@ -493,20 +515,20 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
           </Panel>
         )}
 
-        {activeRouting && <PlanPreview routing={activeRouting} />}
+        {previewRouting && <PlanPreview routing={previewRouting} />}
 
-        {activeRouting && (
+        {(activeRouting || initialTarget) && (
           <Accordion>
-            <AccordionItem summary={t("edit.label")}>
+            <AccordionItem defaultExpanded={!!initialTarget} summary={t("edit.label")}>
               {isLoop ? (
                 <LoopComposer onChange={patchLoop} state={loop} />
               ) : (
                 <SelectField
                   hint={t("override.hint")}
                   label={t("override.label")}
-                  onValueChange={setOverrideIndex}
-                  options={candidateOptions}
-                  value={overrideIndex}
+                  onValueChange={setChosenKey}
+                  options={targetOptions}
+                  value={chosenKey}
                 />
               )}
             </AccordionItem>

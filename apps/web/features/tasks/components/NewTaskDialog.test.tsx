@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, waitFor } from "../../../test/render";
 import { NewTaskDialog } from "./NewTaskDialog";
 
 /**
@@ -375,7 +375,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("locks to a pre-chosen pipeline target: no classify, dispatches straight to it", async () => {
+  it("pre-selects a pipeline in the standard composer and dispatches straight to it", async () => {
     const onClose = vi.fn();
     render(
       <NewTaskDialog
@@ -383,15 +383,16 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
         onClose={onClose}
       />,
     );
-    // The header names the locked pipeline; the dialog is the standard composer.
-    expect(screen.getByRole("dialog", { name: /Delivery/ })).toBeInTheDocument();
+    // It's the standard composer (not a locked mode) with the pipeline pre-chosen: the
+    // "Edit" target picker is open and already shows the pipeline as the selected value.
+    expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Předat/)).toHaveTextContent("Delivery");
 
     await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
-    // A locked target skips routing entirely — no classify, no preview, no override.
-    expect(classify).not.toHaveBeenCalled();
-    expect(screen.queryByText(/ZIBBY to předá/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Upravit/ })).not.toBeInTheDocument();
+    // Classification still runs (the normal flow, debounced) — it populates the alternatives.
+    await waitFor(() => expect(classify).toHaveBeenCalled());
 
+    // Submitting as-is dispatches straight to the pre-selected pipeline.
     await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
     expect(createTask).toHaveBeenCalledTimes(1);
     expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
@@ -404,7 +405,26 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("carries a chosen output into a pipeline-locked dispatch", async () => {
+  it("lets the operator switch the pre-selected pipeline to another target before dispatch", async () => {
+    render(
+      <NewTaskDialog
+        initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        onClose={() => {}}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+
+    // Switch the target picker from the pre-selected pipeline to the agent candidate
+    // (a classify alternative) — the pre-fill is changeable, not a lock.
+    await userEvent.click(screen.getByLabelText(/Předat/));
+    await userEvent.click(await screen.findByRole("option", { name: "Kodér" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("agent");
+    expect(createTask.mock.calls[0]?.[0].body.target?.id).toBe("koder");
+  });
+
+  it("carries a chosen output into a pre-selected pipeline dispatch", async () => {
     render(
       <NewTaskDialog
         initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}

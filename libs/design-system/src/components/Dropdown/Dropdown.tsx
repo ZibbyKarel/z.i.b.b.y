@@ -204,6 +204,7 @@ export function Dropdown<T extends string = string>({
           <>
             <div className="fixed inset-0 z-40" onClick={close} />
             <MenuSurface
+              scroll
               align={isField ? "stretch" : "end"}
               data-testid={DropdownTestId.Panel}
               id={`${baseId}-listbox`}
