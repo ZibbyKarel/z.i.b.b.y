@@ -46,17 +46,14 @@ GET    /api/agents/categories   seznam kategorií
 
 ## Agent Run — spouštění
 
-### Vytvoření runu
-
-```
-POST /api/agents/:id/runs
-Body: {
-  prompt: string       # popis úlohy pro agenta
-  project?: string     # ID projektu (pro worktree + kontext)
-  files?: string[]     # soubory předané agentovi
-  title?: string       # volitelný název runu
-}
-```
+> **Run se spouští jen přes úlohu.** Neexistuje žádná operátorská cesta jak
+> spustit agenta přímo — jediný vstupní bod je vytvoření úlohy
+> (`POST /api/tasks`) s cílem `{ kind: "agent", id }` (nebo klasifikátor cíl
+> vybere). Scheduler pak interně volá `AgentRunnerService.start(...)`. Detail
+> runu, logy, stop a smazání žijí na jednotném povrchu `/api/tasks/runs/*` —
+> viz [tasks.md](./tasks.md). Jediný per-kind run endpoint, který zůstává, je
+> katalogová živost `GET /api/agents/running` (běžící + právě doběhlé runy pro
+> badge v katalogu a panel na Overview).
 
 ### Run lifecycle
 
@@ -67,15 +64,20 @@ running → done
        → awaiting-approval  (gate zastavil run, čeká na schválení)
 ```
 
-### Polling a streaming logů
+### Polling a streaming logů (jednotný povrch)
 
 ```
-GET /api/agents/:id/runs/:runId              stav runu (status, pct, logFile)
-GET /api/agents/:id/runs/:runId/log?offset=  chunk logu od offsetu (bytes)
+GET  /api/tasks/runs                       jednotný feed (agent/pipeline/goal/scheduled)
+GET  /api/tasks/runs/:runId                detail runu (status, pct, …)
+GET  /api/tasks/runs/:runId/logs?offset=   chunk logu od offsetu (bytes)
+GET  /api/tasks/runs/:runId/logs/stream    SSE tail (fallback na offset-poll výše)
+POST /api/tasks/runs/:runId/stop           zastavení běžícího runu
+DELETE /api/tasks/runs/:runId              smazání runu + artefaktů
 ```
 
-Klient čte log po chunkcích opakovanými GET requesty s `?offset=nextOffset`
-dokud `done: true` v odpovědi. Žádný WebSocket, žádný SSE — pull model.
+Klient preferuje SSE stream (`…/logs/stream`); když ho proxy/prohlížeč nezvládne,
+spadne na pull model — opakované GET requesty s `?offset=nextOffset` dokud
+`done: true`. Resolver podle `runId` dispatchne na vlastnícího runnera.
 
 ## RunnerCore — spawn engine
 

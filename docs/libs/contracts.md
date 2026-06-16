@@ -164,11 +164,21 @@ Kompozitní router který slučuje všechny dílčí contracts:
 ```typescript
 export const appContract = initContract().router({
   agents: agentsContract,
-  agentRuns: agentRunsContract,
+  agentRuns: agentRunsContract,   // už jen GET /agents/running (katalogová živost)
   skills: skillsContract,
   pipelines: pipelinesContract,
-  // ... všechny ostatní
+  pipelineRuns: pipelineRunsContract, // už jen GET /pipelines/runs (katalogová živost)
+  taskRuns: taskRunsContract,     // jednotný run povrch: /api/tasks/runs/*
+  // ... všechny ostatní (žádný goalRunsContract — goal běhy žijí na taskRuns)
 })
 ```
 
 Používá se pro generování OpenAPI dokumentace v `main.ts`.
+
+> **Jednotný run povrch.** Per-kind run routy (`POST /:id/run`, run-history,
+> detail, logy, stop, resume, delete, artefakty) byly zrušeny. Run se spouští jen
+> přes úlohu (`POST /api/tasks`) a všechny operace nad během žijí na
+> `taskRunsContract` pod `/api/tasks/runs/*`. Z `agentRunsContract` /
+> `pipelineRunsContract` zůstaly jen živostní výpisy; `goalRunsContract` byl
+> smazán celý. Run **schémata** (`AgentRunSchema`, `PipelineRunSchema`,
+> `GoalRunSchema`) zůstávají — sdílí je `task-run.schema`.

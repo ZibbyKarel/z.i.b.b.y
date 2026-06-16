@@ -126,6 +126,33 @@ POST   /api/tasks/:id/approve-override   odemkni held úlohu (spend-past-cap)
 POST   /api/tasks/classify            klasifikuj text bez vytvoření úlohy
 ```
 
+## Jednotný run povrch (`/api/tasks/runs`)
+
+Úkol je entita, která běží; procesor (agent / pipeline / goal) je metadata.
+Všechny operace nad během žijí pod jedním povrchem — žádné per-kind run routy.
+Run se spouští **jen** vytvořením úlohy (`POST /api/tasks`); start není součástí
+tohoto povrchu. `TaskRunSchema` je nadmnožina feed-řádku + volitelný
+`processor: { kind, id, name }` (název padá zpět na id, když byla definice
+smazána). Goal maker/verifier child runy jsou z feedu složeny dovnitř (nejsou
+peer řádky), ale zůstávají dosažitelné v detailu cíle.
+
+```
+GET    /api/tasks/runs                          jednotný feed (newest-first; agent/pipeline/goal/scheduled)
+GET    /api/tasks/runs/:runId                   detail jednoho běhu
+GET    /api/tasks/runs/:runId/logs?offset=      chunk logu od byte offsetu
+GET    /api/tasks/runs/:runId/logs/stream       SSE tail (fallback na offset-poll)
+GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=   log jedné pipeline fáze
+GET    /api/tasks/runs/:runId/artifacts/:name   whitelistovaný artefakt (pr-draft.md, verdict.txt, …)
+POST   /api/tasks/runs/:runId/stop              zastavení běžícího runu
+POST   /api/tasks/runs/:runId/resume            pokračování parkovaného runu (s poznámkou)
+DELETE /api/tasks/runs/:runId                   smazání běhu + artefaktů
+```
+
+Resolver podle `runId` dispatchne na vlastnícího runnera. Jediné per-kind run
+endpointy, které zůstaly, jsou katalogové živosti `GET /api/agents/running` a
+`GET /api/pipelines/runs` (badge/počítadla v katalogu) — viz
+[agents-runs.md](./agents-runs.md) a [pipelines.md](./pipelines.md).
+
 ## Výstup úkolu (`output`)
 
 Operátor v dialogu Nový task volí, **co se stane s hotovou prací** — protějšek

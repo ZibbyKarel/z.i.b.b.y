@@ -105,14 +105,12 @@ DELETE /api/pipelines/:id       smazání pipeline
 
 ## Spouštění pipeline runu
 
-```
-POST /api/pipelines/:id/runs
-Body: {
-  prompt: string       # popis úlohy pro celou pipeline
-  project?: string     # ID projektu
-  title?: string
-}
-```
+> **Pipeline se spouští jen přes úlohu.** Žádná operátorská cesta ji nespustí
+> přímo — vytvoří se úloha (`POST /api/tasks`) s cílem
+> `{ kind: "pipeline", id }`; scheduler interně volá
+> `PipelineRunnerService.start(...)`. Jediný per-kind run endpoint, který
+> zůstává, je katalogová živost `GET /api/pipelines/runs` (běžící + právě
+> doběhlé runy pro počítadla pokusů v katalogu).
 
 ### Pipeline Run lifecycle
 
@@ -123,13 +121,16 @@ running → done       (všechny fáze prošly + výstupy doručeny)
                       nebo `pr` output čeká na schválení brány → parkedReason "output")
 ```
 
-### Polling logů
+### Polling logů (jednotný povrch)
+
+Detail, stage-logy, artefakty, resume a smazání pipeline runu žijí na jednotném
+`/api/tasks/runs/*` (viz [tasks.md](./tasks.md)):
 
 ```
-GET /api/pipelines/:id/runs/:runId              stav runu
-GET /api/pipelines/:id/runs/:runId/log?offset=  chunk logu
-GET /api/pipelines/runs/:pipelineRunId/stages/:phaseId/logs?offset=
-                                                log jedné fáze (po fázích)
+GET /api/tasks/runs/:runId                              stav runu (+ stageRuns[])
+GET /api/tasks/runs/:runId/stages/:phaseId/logs?offset= log jedné fáze (po fázích)
+GET /api/tasks/runs/:runId/artifacts/:name              whitelistovaný artefakt (pr-draft.md, …)
+POST /api/tasks/runs/:runId/resume                      pokračování retries-parkovaného runu
 ```
 
 **Živý log běžící fáze.** Stage se do `stageRuns` zapíše až ve chvíli, kdy dosáhne
