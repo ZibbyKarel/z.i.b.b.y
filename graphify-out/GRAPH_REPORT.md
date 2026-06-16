@@ -1,7 +1,7 @@
-# Graph Report - /Users/zibby/Workspace/z.i.b.b.y  (2026-06-16)
+# Graph Report - /private/var/folders/_v/gc64tfys6f7gmx208gbl_6tr0000gn/T/zibby-worktrees/delivery_1781634331446  (2026-06-16)
 
 ## Corpus Check
-- 1063 files · ~1,233,968 words
+- 1063 files · ~1,214,509 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -5522,9 +5522,9 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `filter()` connect `Community 5` to `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 6`, `Community 7`, `Community 8`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 15`, `Community 17`, `Community 26`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+  _High betweenness centrality (0.084) - this node is a cross-community bridge._
 - **Why does `resolveDataRoot()` connect `Community 9` to `Community 4`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **Are the 80 inferred relationships involving `filter()` (e.g. with `refinePipeline()` and `DesignSystemProvider()`) actually correct?**
   _`filter()` has 80 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 43 inferred relationships involving `writeEntity()` (e.g. with `.create()` and `.createHeld()`) actually correct?**

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { ProjectSchema, projectsContract } from "../index"
+import {
+  AutonomyPolicySchema,
+  PersonSchema,
+  ProjectProfileSchema,
+  ProjectSchema,
+  projectsContract,
+} from "../index"
 
 describe("projectsContract", () => {
   it("lists projects under GET /api/projects", () => {

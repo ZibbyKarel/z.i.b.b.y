@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { AGENT_ID_REGEX } from "../agents/agent.schema"
+import { ProjectIdSchema } from "../projects/project.schema"
 
 /**
  * Allowed shape of an integration `id` — the same restrictive pattern agents use
@@ -76,6 +77,8 @@ export const IntegrationSchema = z.object({
   lastError: z.string().optional(),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
+  /** Project ids this integration monitors (used by the triage layer to route items). */
+  monitorsProjects: z.array(ProjectIdSchema).default([]),
 })
 export type Integration = z.infer<typeof IntegrationSchema>
 
@@ -89,6 +92,7 @@ export const CreateIntegrationSchema = z.object({
   name: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   config: IntegrationConfigSchema,
+  monitorsProjects: z.array(ProjectIdSchema).default([]),
 })
 export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>
 

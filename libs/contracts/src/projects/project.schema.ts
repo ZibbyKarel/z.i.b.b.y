@@ -78,3 +78,86 @@ export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>
  */
 export const ProjectSecretsInputSchema = z.record(z.string(), z.string())
 export type ProjectSecretsInput = z.infer<typeof ProjectSecretsInputSchema>
+
+// ─── Project Profile schemas (M1) ───────────────────────────────────────────
+// Profile lives ONLY in vault/projects/<id>.md — NOT in ProjectSchema/registry.
+
+/** A person on the project team. VIP status raises autonomy escalation threshold. */
+export const PersonSchema = z
+  .object({
+    name: z.string().min(1),
+    role: z.string().min(1).optional(),
+    vip: z.boolean().default(false),
+    /** Preferred communication style (e.g. "concise Slack DMs"). */
+    commsStyle: z.string().optional(),
+  })
+  .strict()
+export type Person = z.infer<typeof PersonSchema>
+
+export const IdentitySchema = z
+  .object({
+    people: z.array(PersonSchema).default([]),
+  })
+  .strict()
+export type Identity = z.infer<typeof IdentitySchema>
+
+/**
+ * How ZIBBY should compose responses for this project.
+ * `autonomous` = send directly; `draft_only` = prepare for operator review.
+ * Default is `draft_only` (Tier-3 safe; autonomous is opt-in).
+ */
+export const RespondAsSchema = z.enum(["autonomous", "draft_only"])
+export type RespondAs = z.infer<typeof RespondAsSchema>
+
+/**
+ * Per-project autonomy policy. Only `alwaysAsk` has runtime gate effect —
+ * it emits `ask:human` rules scoped to this project. `canDoAlone` is
+ * declarative/UI documentation of intent; it generates NO `allow` rule
+ * (that would relax the floor, which is forbidden).
+ */
+export const AutonomyPolicySchema = z
+  .object({
+    /** Actions ZIBBY can perform without asking. Declarative only — no gate enforcement. */
+    canDoAlone: z.array(z.string().min(1)).default([]),
+    /** Actions that always require human approval for this project (compiled to gate rules). */
+    alwaysAsk: z.array(z.string().min(1)).default([]),
+    /** Whether VIP team members trigger escalation. */
+    vipEscalation: z.boolean().default(false),
+    respondAs: RespondAsSchema.default("draft_only"),
+  })
+  .strict()
+export type AutonomyPolicy = z.infer<typeof AutonomyPolicySchema>
+
+/** Daily operating rhythm for the project. */
+export const DailyRhythmSchema = z
+  .object({
+    /** Time of standup in "HH:MM" format (Europe/Prague). */
+    standupTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .optional(),
+    /** Standup output format / template. */
+    format: z.string().optional(),
+    activeHours: z
+      .object({
+        from: z.string().regex(/^\d{2}:\d{2}$/),
+        to: z.string().regex(/^\d{2}:\d{2}$/),
+      })
+      .optional(),
+  })
+  .strict()
+export type DailyRhythm = z.infer<typeof DailyRhythmSchema>
+
+/**
+ * The full project profile — persisted as vault/projects/<id>.md frontmatter.
+ * Read/written only via GET/PUT /projects/:id/profile.
+ * NOT part of ProjectSchema; never flows through PATCH /projects/:id.
+ */
+export const ProjectProfileSchema = z
+  .object({
+    identity: IdentitySchema.default({ people: [] }),
+    autonomyPolicy: AutonomyPolicySchema.default({}),
+    dailyRhythm: DailyRhythmSchema.optional(),
+  })
+  .strict()
+export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
