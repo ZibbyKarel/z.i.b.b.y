@@ -8,6 +8,7 @@ import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
@@ -83,12 +84,11 @@ describe("Agent runs API (e2e)", () => {
   })
 
   it("runs an agent end to end: start → running → logs → finishes, leaving a marker + durable log", async () => {
-    const start = await request(app.getHttpServer())
-      .post("/api/agents/agent-007/run")
-      .send({ prompt: "do the thing", project: "zibby-core" })
-      .expect(201)
+    const start = await app
+      .get(AgentRunnerService)
+      .start("agent-007", "do the thing", "zibby-core", [], "")
 
-    const { runId, agentId, status, pid, cwd, logFile } = start.body
+    const { runId, agentId, status, pid, cwd, logFile } = start
     expect(agentId).toBe("agent-007")
     expect(status).toBe("running")
     expect(runId).toBe(`agent-007_${runId.split("_")[1]}_${pid}`)
@@ -103,7 +103,7 @@ describe("Agent runs API (e2e)", () => {
     let log = ""
     const final = await until(async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/agents/runs/${runId}/logs`)
+        .get(`/api/tasks/runs/${runId}/logs`)
         .query({ offset })
         .expect(200)
       log += res.body.content
@@ -126,11 +126,8 @@ describe("Agent runs API (e2e)", () => {
   })
 
   it("records a finished run into today's daily note (Phase 4)", async () => {
-    const start = await request(app.getHttpServer())
-      .post("/api/agents/agent-007/run")
-      .send({ prompt: "record me", project: "" })
-      .expect(201)
-    const { runId } = start.body
+    const start = await app.get(AgentRunnerService).start("agent-007", "record me", "", [], "")
+    const { runId } = start
 
     // The recorder appends a daily line on terminal status (async, after finish).
     const daily = await until(async () => {
@@ -146,10 +143,7 @@ describe("Agent runs API (e2e)", () => {
     const dump = path.join(runsDir, "argv-dump.json")
     process.env.FAKE_CLAUDE_DUMP_ARGS_FILE = dump
     try {
-      await request(app.getHttpServer())
-        .post("/api/agents/agent-007/run")
-        .send({ prompt: "grounded run", project: "" })
-        .expect(201)
+      await app.get(AgentRunnerService).start("agent-007", "grounded run", "", [], "")
       const argv = await until<string[] | null>(async () => {
         const raw = await fs.readFile(dump, "utf8").catch(() => null)
         return raw ? (JSON.parse(raw) as string[]) : null
@@ -178,29 +172,23 @@ describe("Agent runs API (e2e)", () => {
   it("stops a running agent", async () => {
     process.env.FAKE_CLAUDE_STEPS = "50"
     process.env.FAKE_CLAUDE_DELAY_MS = "100"
-    const start = await request(app.getHttpServer())
-      .post("/api/agents/agent-007/run")
-      .send({ prompt: "long one", project: "zibby-core" })
-      .expect(201)
+    const start = await app.get(AgentRunnerService).start("agent-007", "long one", "zibby-core", [], "")
     process.env.FAKE_CLAUDE_STEPS = "3"
     process.env.FAKE_CLAUDE_DELAY_MS = "60"
 
-    const { runId } = start.body
+    const { runId } = start
     const stopped = await request(app.getHttpServer())
-      .post(`/api/agents/runs/${runId}/stop`)
+      .post(`/api/tasks/runs/${runId}/stop`)
       .send({})
       .expect(200)
     expect(stopped.body.runId).toBe(runId)
   })
 
   it("404s for an unknown agent or run", async () => {
-    await request(app.getHttpServer())
-      .post("/api/agents/no-such-agent/run")
-      .send({ prompt: "x" })
-      .expect(404)
+    await expect(app.get(AgentRunnerService).start("no-such-agent", "x", "", [], "")).rejects.toThrow()
 
     await request(app.getHttpServer())
-      .get("/api/agents/runs/not-a-real-run/logs")
+      .get("/api/tasks/runs/not-a-real-run/logs")
       .query({ offset: 0 })
       .expect(404)
   })
@@ -279,11 +267,10 @@ describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", 
   it("creates a worktree, lands the commit on its branch, leaves main untouched, and prunes on delete", async () => {
     const mainBefore = await git(repo, "rev-parse", "HEAD")
 
-    const start = await request(app.getHttpServer())
-      .post("/api/agents/builder/run")
-      .send({ prompt: "do the thing", project: "fixture-proj" })
-      .expect(201)
-    const { runId, workspace } = start.body as {
+    const start = await app
+      .get(AgentRunnerService)
+      .start("builder", "do the thing", "fixture-proj", [], "")
+    const { runId, workspace } = start as {
       runId: string
       workspace?: { branch: string; path: string; baseRef: string }
     }
@@ -293,7 +280,7 @@ describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", 
 
     await until(async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/agents/runs/${runId}/logs`)
+        .get(`/api/tasks/runs/${runId}/logs`)
         .query({ offset: 0 })
       return res.body.done ? res.body : null
     })
@@ -306,7 +293,7 @@ describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", 
     expect(await git(workspace!.path, "rev-parse", "--abbrev-ref", "HEAD")).toBe(workspace!.branch)
 
     // Delete prunes the worktree but keeps the branch (it may carry a PR).
-    await request(app.getHttpServer()).delete(`/api/agents/runs/${runId}`).expect(200)
+    await request(app.getHttpServer()).delete(`/api/tasks/runs/${runId}`).expect(200)
     const worktrees = await git(repo, "worktree", "list")
     expect(worktrees).not.toContain(workspace!.path)
     expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch)
@@ -353,14 +340,11 @@ describe("Agent runs persistence across restart (e2e)", () => {
 
   it("a completed run reappears in the list after a backend restart", async () => {
     const app1 = await bootApp()
-    const start = await request(app1.getHttpServer())
-      .post("/api/agents/agent-007/run")
-      .send({ prompt: "persist me", project: "zibby-core" })
-      .expect(201)
-    const { runId } = start.body
+    const start = await app1.get(AgentRunnerService).start("agent-007", "persist me", "zibby-core", [], "")
+    const { runId } = start
     await until(async () => {
       const res = await request(app1.getHttpServer())
-        .get(`/api/agents/runs/${runId}/logs`)
+        .get(`/api/tasks/runs/${runId}/logs`)
         .query({ offset: 0 })
       return res.body.done ? res.body : null
     })

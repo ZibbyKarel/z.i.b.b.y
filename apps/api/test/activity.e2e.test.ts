@@ -7,6 +7,7 @@ import { Test } from "@nestjs/testing"
 import type { ActivityEntry, ActivityKind } from "@zibby/contracts"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
 
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -124,11 +125,10 @@ describe("Activity log (e2e)", () => {
 
   it("records gate-decision + approval-requested + approval-approved for a gated run", async () => {
     process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT
-    const run = await request(app.getHttpServer())
-      .post("/api/agents/payer/run")
-      .send({ prompt: "buy the expensive thing", project: "zibby-core" })
-      .expect(201)
-    const runId = (run.body as { runId: string }).runId
+    const run = await app
+      .get(AgentRunnerService)
+      .start("payer", "buy the expensive thing", "zibby-core", [], "")
+    const runId = (run as { runId: string }).runId
 
     const approval = await until(async () => {
       const res = await request(app.getHttpServer()).get("/api/approvals").query({ status: "pending" }).expect(200)
@@ -137,7 +137,7 @@ describe("Activity log (e2e)", () => {
 
     await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).send({}).expect(200)
     await until(async () => {
-      const res = await request(app.getHttpServer()).get(`/api/agents/runs/${runId}`).expect(200)
+      const res = await request(app.getHttpServer()).get(`/api/tasks/runs/${runId}`).expect(200)
       return res.body.status === "done" ? true : null
     })
 

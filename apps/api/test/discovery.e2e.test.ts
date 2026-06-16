@@ -111,13 +111,14 @@ describe("Discovery triage API (e2e)", () => {
     const proposed = pending.body.filter((a: { kind: string }) => a.kind === "proposed-task")
     expect(proposed).toHaveLength(1)
 
-    // Law 4: discovery only PARKED — no run of any kind was started.
-    const agents = await request(app.getHttpServer()).get("/api/agents/runs").expect(200)
-    const pipelines = await request(app.getHttpServer()).get("/api/pipelines/run-history").expect(200)
-    const goals = await request(app.getHttpServer()).get("/api/goals/run-history").expect(200)
-    expect(agents.body).toHaveLength(0)
-    expect(pipelines.body).toHaveLength(0)
-    expect(goals.body).toHaveLength(0)
+    // Law 4: discovery only PARKED — no run of any kind was started. The unified feed
+    // folds a goal's maker/verifier children out, so a per-kind filter of one list is
+    // the faithful reconstruction of the old per-kind history counts.
+    const feed = (await request(app.getHttpServer()).get("/api/tasks/runs").expect(200))
+      .body as Array<{ kind: string }>
+    expect(feed.filter((r) => r.kind === "agent")).toHaveLength(0)
+    expect(feed.filter((r) => r.kind === "pipeline")).toHaveLength(0)
+    expect(feed.filter((r) => r.kind === "goal")).toHaveLength(0)
   })
 
   it("approving a proposal dispatches the task through the normal path", async () => {

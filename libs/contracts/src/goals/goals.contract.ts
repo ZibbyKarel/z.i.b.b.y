@@ -1,11 +1,6 @@
 import { initContract } from "@ts-rest/core"
 import { z } from "zod"
 import { ErrorSchema } from "../common.schema"
-import {
-  GoalRunSchema,
-  ResumeGoalRunSchema,
-  StartGoalRunSchema,
-} from "./goal-run.schema"
 import { CreateGoalSchema, GoalSchema, UpdateGoalSchema } from "./goal.schema"
 
 const c = initContract()
@@ -69,61 +64,9 @@ export const goalsContract = c.router(
 )
 export type GoalsContract = typeof goalsContract
 
-/** Goal execution — start the outer loop, poll the run aggregate, resume a parked run. */
-export const goalRunsContract = c.router(
-  {
-    startGoalRun: {
-      method: "POST",
-      path: "/goals/:id/run",
-      pathParams: GoalIdParam,
-      body: StartGoalRunSchema,
-      // 503: the Claude CLI preflight refused the start (claude mode only).
-      responses: { 201: GoalRunSchema, 404: ErrorSchema, 503: ErrorSchema },
-      summary: "Start a run of a goal",
-    },
-    listGoalRuns: {
-      method: "GET",
-      path: "/goals/runs",
-      responses: { 200: z.array(GoalRunSchema) },
-      summary: "List currently running (and just-finished) goal runs",
-    },
-    listAllGoalRuns: {
-      method: "GET",
-      path: "/goals/run-history",
-      responses: { 200: z.array(GoalRunSchema) },
-      summary: "List the full goal run history (on disk + in memory), newest first",
-    },
-    getGoalRun: {
-      method: "GET",
-      path: "/goals/runs/:goalRunId",
-      pathParams: z.object({ goalRunId: z.string() }),
-      responses: { 200: GoalRunSchema, 404: ErrorSchema },
-      summary: "Get a single goal run by id",
-    },
-    resumeGoalRun: {
-      method: "POST",
-      path: "/goals/runs/:goalRunId/resume",
-      pathParams: z.object({ goalRunId: z.string() }),
-      body: ResumeGoalRunSchema,
-      // 409: the run is not parked (a running / paused-limit run resumes only via its own machine).
-      responses: { 200: GoalRunSchema, 404: ErrorSchema, 409: ErrorSchema },
-      summary: "Resume a parked goal run with an operator note",
-    },
-    getGoalRunArtifact: {
-      method: "GET",
-      path: "/goals/runs/:goalRunId/artifacts/:name",
-      pathParams: z.object({ goalRunId: z.string(), name: z.string() }),
-      responses: { 200: GoalRunArtifactSchema, 404: ErrorSchema },
-      summary: "Read a whitelisted goal run artifact",
-    },
-    deleteGoalRun: {
-      method: "DELETE",
-      path: "/goals/runs/:goalRunId",
-      pathParams: z.object({ goalRunId: z.string() }),
-      responses: { 200: z.object({ goalRunId: z.string() }), 404: ErrorSchema },
-      summary: "Delete a goal run and all its artifacts",
-    },
-  },
-  { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type GoalRunsContract = typeof goalRunsContract
+// Goal execution has no per-kind HTTP surface: a goal run is started only by
+// creating a task (`POST /api/tasks` with a `goal` target), and every run
+// operation (detail, logs, resume, delete, artifacts) lives on the unified
+// `taskRuns` contract under `/api/tasks/runs/*`. The `GOAL_RUN_ARTIFACTS`
+// allowlist above is still the server-side guard the unified artifact endpoint
+// enforces. There is intentionally no `goalRunsContract`.

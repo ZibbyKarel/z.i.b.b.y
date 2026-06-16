@@ -54,20 +54,17 @@ describe("agentsContract", () => {
 })
 
 describe("agentRunsContract", () => {
-  it("exposes the run lifecycle routes under /api/agents", () => {
-    expect(agentRunsContract.startRun.method).toBe("POST")
-    expect(agentRunsContract.startRun.path).toBe("/api/agents/:id/run")
+  it("exposes only the catalog-liveness running list (run lifecycle moved to /api/tasks/runs)", () => {
     expect(agentRunsContract.listRunning.method).toBe("GET")
     expect(agentRunsContract.listRunning.path).toBe("/api/agents/running")
-    expect(agentRunsContract.getRunLogs.path).toBe("/api/agents/runs/:runId/logs")
-    expect(agentRunsContract.stopRun.path).toBe("/api/agents/runs/:runId/stop")
-  })
-
-  it("declares 404 on every run-or-agent-scoped route", () => {
-    expect(agentRunsContract.startRun.responses).toHaveProperty("404")
-    expect(agentRunsContract.getRun.responses).toHaveProperty("404")
-    expect(agentRunsContract.getRunLogs.responses).toHaveProperty("404")
-    expect(agentRunsContract.stopRun.responses).toHaveProperty("404")
+    // The per-kind run routes are gone — a run is started only via a task, and
+    // every run operation lives on the unified `taskRuns` contract.
+    expect(agentRunsContract).not.toHaveProperty("startRun")
+    expect(agentRunsContract).not.toHaveProperty("getRun")
+    expect(agentRunsContract).not.toHaveProperty("getRunLogs")
+    expect(agentRunsContract).not.toHaveProperty("stopRun")
+    expect(agentRunsContract).not.toHaveProperty("deleteRun")
+    expect(agentRunsContract).not.toHaveProperty("listRuns")
   })
 })
 

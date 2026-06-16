@@ -12,14 +12,18 @@ const phase = (id: string, extra: Record<string, unknown> = {}) => ({
 })
 
 describe("pipelinesContract", () => {
-  it("exposes CRUD and keeps run routes in the /api/pipelines/* space", () => {
+  it("exposes CRUD and keeps only the catalog-liveness run list", () => {
     expect(pipelinesContract.createPipeline.path).toBe("/api/pipelines")
     expect(pipelinesContract.getPipeline.path).toBe("/api/pipelines/:id")
-    expect(pipelineRunsContract.startPipelineRun.path).toBe("/api/pipelines/:id/run")
     expect(pipelineRunsContract.listPipelineRuns.path).toBe("/api/pipelines/runs")
-    expect(pipelineRunsContract.getStageRunLogs.path).toBe(
-      "/api/pipelines/runs/:pipelineRunId/stages/:phaseId/logs",
-    )
+    // The per-kind run lifecycle routes moved to the unified `taskRuns` contract.
+    expect(pipelineRunsContract).not.toHaveProperty("startPipelineRun")
+    expect(pipelineRunsContract).not.toHaveProperty("listAllPipelineRuns")
+    expect(pipelineRunsContract).not.toHaveProperty("getPipelineRun")
+    expect(pipelineRunsContract).not.toHaveProperty("resumePipelineRun")
+    expect(pipelineRunsContract).not.toHaveProperty("getStageRunLogs")
+    expect(pipelineRunsContract).not.toHaveProperty("getPipelineRunArtifact")
+    expect(pipelineRunsContract).not.toHaveProperty("deletePipelineRun")
   })
 })
 

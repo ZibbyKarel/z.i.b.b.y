@@ -9,6 +9,7 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+import { GoalRunnerService } from "../src/goals/goal-runner.service"
 import { TaskSchedulerService } from "../src/tasks/task-scheduler.service"
 import { ScheduledTasksStorageService } from "../src/tasks/scheduled-tasks.storage.service"
 
@@ -74,16 +75,34 @@ describe("Goal loop API (e2e, demo maker)", () => {
   }
 
   async function runGoal(id: string): Promise<string> {
-    const start = await request(app.getHttpServer())
-      .post(`/api/goals/${id}/run`)
-      .send({ project: "proj" })
-      .expect(201)
-    expect(start.body.status).toBe("running")
-    return start.body.goalRunId
+    const start = await app.get(GoalRunnerService).start(id, "", "proj", [], "")
+    expect(start.status).toBe("running")
+    return start.goalRunId
   }
 
-  function getRun(goalRunId: string) {
-    return request(app.getHttpServer()).get(`/api/goals/runs/${goalRunId}`).expect(200)
+  /**
+   * Read the native GoalRun off the runner service (NOT `/api/tasks/runs`): the unified
+   * TaskRun drops goal-native fields the assertions need — `workspace`, `parkedReason`/
+   * `parked` (it remaps those to `goalParkedReason`/`goalParked`). `.get()` resolves
+   * disk-reconstructed runs too (the restart tests boot a fresh app over the same dir).
+   */
+  function getRun(goalRunId: string): { body: ReturnType<GoalRunnerService["get"]> } {
+    return { body: app.get(GoalRunnerService).get(goalRunId) }
+  }
+
+  /**
+   * Poll the runner until `pred` holds, returning the (always-present) native GoalRun.
+   * `until` throws on timeout, so the result is never null — the cast narrows away the
+   * `| null` the predicate introduces.
+   */
+  async function untilGoalRun(
+    goalRunId: string,
+    pred: (run: ReturnType<GoalRunnerService["get"]>) => boolean,
+  ): Promise<ReturnType<GoalRunnerService["get"]>> {
+    return until(async () => {
+      const run = getRun(goalRunId).body
+      return pred(run) ? run : null
+    }) as Promise<ReturnType<GoalRunnerService["get"]>>
   }
 
   async function boot(autoResume = false): Promise<INestApplication> {
@@ -154,13 +173,10 @@ describe("Goal loop API (e2e, demo maker)", () => {
     const start = (await getRun(goalRunId)).body
     expect(start.workspace?.branch ?? (await getRun(goalRunId)).body.workspace?.branch).toMatch(/^zibby\//)
 
-    const final = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "running" ? res.body : null
-    })
+    const final = await untilGoalRun(goalRunId, (r) => r.status !== "running")
     expect(final.status).toBe("done")
     expect(final.iterations).toHaveLength(1)
-    expect(final.iterations[0].verifier.satisfied).toBe(true)
+    expect(final.iterations[0]!.verifier.satisfied).toBe(true)
 
     const raw = await fs.readFile(path.join(goalRunsDir, goalRunId, "run.json"), "utf8")
     expect(JSON.parse(raw).iterations).toHaveLength(1)
@@ -169,14 +185,11 @@ describe("Goal loop API (e2e, demo maker)", () => {
   it("iterates maker → verifier until green (fails twice, then passes → 3 iterations)", async () => {
     await makeGoal("flaky", 2, 5)
     const goalRunId = await runGoal("flaky")
-    const final = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "running" ? res.body : null
-    })
+    const final = await untilGoalRun(goalRunId, (r) => r.status !== "running")
     expect(final.status).toBe("done")
     expect(final.iterations).toHaveLength(3)
-    expect(final.iterations[0].verifier.satisfied).toBe(false)
-    expect(final.iterations[2].verifier.satisfied).toBe(true)
+    expect(final.iterations[0]!.verifier.satisfied).toBe(false)
+    expect(final.iterations[2]!.verifier.satisfied).toBe(true)
   })
 
   it("parks (reason iterations) when never green, then resume-with-note finishes it", async () => {
@@ -184,25 +197,19 @@ describe("Goal loop API (e2e, demo maker)", () => {
     // the same iteration (3rd invocation of the marker) → passes → done.
     await makeGoal("persist", 2, 2)
     const goalRunId = await runGoal("persist")
-    const parked = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status === "parked" ? res.body : null
-    })
+    const parked = await untilGoalRun(goalRunId, (r) => r.status === "parked")
     expect(parked.parkedReason).toBe("iterations")
-    expect(parked.parked.verdictFile).toContain("iteration-1.verdict.txt")
-    const verdict = await fs.readFile(parked.parked.verdictFile, "utf8")
+    expect(parked.parked!.verdictFile).toContain("iteration-1.verdict.txt")
+    const verdict = await fs.readFile(parked.parked!.verdictFile, "utf8")
     expect(verdict).toContain("check failed")
 
     // 409 if we resume something not parked — sanity on a fresh non-parked goal.
     await request(app.getHttpServer())
-      .post(`/api/goals/runs/${goalRunId}/resume`)
+      .post(`/api/tasks/runs/${goalRunId}/resume`)
       .send({ note: "Try once more — the fix should be in." })
       .expect(200)
 
-    const done = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "parked" && res.body.status !== "running" ? res.body : null
-    })
+    const done = await untilGoalRun(goalRunId, (r) => r.status !== "parked" && r.status !== "running")
     expect(done.status).toBe("done")
   })
 
@@ -223,14 +230,11 @@ describe("Goal loop API (e2e, demo maker)", () => {
       .expect(201)
     const goalRunId = await runGoal("noscope")
 
-    const parked = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status === "parked" ? res.body : null
-    })
+    const parked = await untilGoalRun(goalRunId, (r) => r.status === "parked")
     expect(parked.parkedReason).toBe("verifier-scope")
     // Parked before the loop → no maker iteration was ever dispatched.
     expect(parked.iterations).toHaveLength(0)
-    const verdict = await fs.readFile(parked.parked.verdictFile, "utf8")
+    const verdict = await fs.readFile(parked.parked!.verdictFile, "utf8")
     expect(verdict).toMatch(/no verifier scope/)
   })
 
@@ -249,16 +253,13 @@ describe("Goal loop API (e2e, demo maker)", () => {
       })
       .expect(201)
     // Run WITHOUT a project (project is optional on the run endpoint).
-    const start = await request(app.getHttpServer()).post("/api/goals/nocwd/run").send({}).expect(201)
-    const goalRunId = start.body.goalRunId
+    const start = await app.get(GoalRunnerService).start("nocwd", "", "", [], "")
+    const goalRunId = start.goalRunId
 
-    const parked = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status === "parked" ? res.body : null
-    })
+    const parked = await untilGoalRun(goalRunId, (r) => r.status === "parked")
     expect(parked.parkedReason).toBe("verifier-scope")
     expect(parked.iterations).toHaveLength(0)
-    const verdict = await fs.readFile(parked.parked.verdictFile, "utf8")
+    const verdict = await fs.readFile(parked.parked!.verdictFile, "utf8")
     expect(verdict).toMatch(/no workspace or project/)
   })
 
@@ -280,14 +281,11 @@ describe("Goal loop API (e2e, demo maker)", () => {
       .expect(201)
     const goalRunId = await runGoal("budgeted")
 
-    const parked = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status === "parked" ? res.body : null
-    })
+    const parked = await untilGoalRun(goalRunId, (r) => r.status === "parked")
     expect(parked.parkedReason).toBe("budget")
     // Exactly one iteration ran before the windowed cap tripped.
     expect(parked.iterations).toHaveLength(1)
-    expect(parked.iterations[0].verifier.satisfied).toBe(false)
+    expect(parked.iterations[0]!.verifier.satisfied).toBe(false)
   })
 
   it("self-development exit demonstration: a goal on a sibling checkout never touches the builder tree (13.2)", async () => {
@@ -316,15 +314,9 @@ describe("Goal loop API (e2e, demo maker)", () => {
       })
       .expect(201)
 
-    const start = await request(app.getHttpServer())
-      .post("/api/goals/selfdev/run")
-      .send({ project: "subject" })
-      .expect(201)
-    const goalRunId = start.body.goalRunId
-    const final = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "running" ? res.body : null
-    })
+    const start = await app.get(GoalRunnerService).start("selfdev", "", "subject", [], "")
+    const goalRunId = start.goalRunId
+    const final = await untilGoalRun(goalRunId, (r) => r.status !== "running")
 
     // (scope) the scoped ["true"] verifier passed — a full-repo suite would have failed
     // (the subject has no package.json), so reaching done proves no full-monorepo run.
@@ -332,11 +324,11 @@ describe("Goal loop API (e2e, demo maker)", () => {
 
     // (12.7) the worktree lived OUTSIDE the subject repo AND outside apps/api/data —
     // under the test's ZIBBY_WORKTREE_ROOT temp.
-    const wt: string = final.workspace.path
+    const wt: string = final.workspace!.path
     expect(wt.startsWith(process.env.ZIBBY_WORKTREE_ROOT as string)).toBe(true)
     expect(wt.startsWith(subject)).toBe(false)
     expect(wt.includes(`${path.sep}apps${path.sep}api${path.sep}data${path.sep}`)).toBe(false)
-    expect(final.workspace.branch).toMatch(/^zibby\//)
+    expect(final.workspace!.branch).toMatch(/^zibby\//)
 
     // (3.1) the subject's main checkout is untouched: HEAD unmoved, working tree clean.
     // The goal's commits live on its own zibby/* branch (in the worktree), never on HEAD.
@@ -358,7 +350,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
       return res.body.status === "done" ? res.body : null
     })
     await request(app.getHttpServer())
-      .post(`/api/goals/runs/${goalRunId}/resume`)
+      .post(`/api/tasks/runs/${goalRunId}/resume`)
       .send({})
       .expect(409)
   })
@@ -415,21 +407,15 @@ describe("Goal loop API (e2e, demo maker)", () => {
       })
       .expect(201)
 
-    const start = await request(app.getHttpServer())
-      .post("/api/goals/doubleverify/run")
-      .send({ project: "vproj" })
-      .expect(201)
-    const goalRunId = start.body.goalRunId
+    const start = await app.get(GoalRunnerService).start("doubleverify", "", "vproj", [], "")
+    const goalRunId = start.goalRunId
 
-    const final = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "running" ? res.body : null
-    })
+    const final = await untilGoalRun(goalRunId, (r) => r.status !== "running")
     expect(final.status).toBe("done")
     expect(final.iterations).toHaveLength(1) // satisfied on iteration 0, no second pass
-    expect(final.iterations[0].verifier.satisfied).toBe(true)
+    expect(final.iterations[0]!.verifier.satisfied).toBe(true)
     // The synthesized verdict proves the goal verifier was SKIPPED, not re-run.
-    expect(final.iterations[0].verifier.output).toMatch(/skipped a redundant re-run/)
+    expect(final.iterations[0]!.verifier.output).toMatch(/skipped a redundant re-run/)
 
     await fs.rm(vproj, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
   })
@@ -443,21 +429,15 @@ describe("Goal loop API (e2e, demo maker)", () => {
     await app.close()
     app = await boot() // default: gate ON
 
-    const parked = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status === "parked" ? res.body : null
-    })
+    const parked = await untilGoalRun(goalRunId, (r) => r.status === "parked")
     expect(parked.parkedReason).toBe("awaiting-resume")
 
     // The operator resumes explicitly → it continues to done (continuation, not restart).
     await request(app.getHttpServer())
-      .post(`/api/goals/runs/${goalRunId}/resume`)
+      .post(`/api/tasks/runs/${goalRunId}/resume`)
       .send({ note: "ok, continue" })
       .expect(200)
-    const done = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "parked" && res.body.status !== "running" ? res.body : null
-    })
+    const done = await untilGoalRun(goalRunId, (r) => r.status !== "parked" && r.status !== "running")
     expect(done.status).toBe("done")
   })
 
@@ -471,10 +451,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
     // reconciled to a dead state and re-dispatches the iteration (continuation).
     app = await boot(true)
 
-    const final = await until(async () => {
-      const res = await getRun(goalRunId)
-      return res.body.status !== "running" ? res.body : null
-    })
+    const final = await untilGoalRun(goalRunId, (r) => r.status !== "running")
     expect(final.status).toBe("done")
   })
 })

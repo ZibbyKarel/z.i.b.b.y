@@ -6,6 +6,7 @@ import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
 
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -57,15 +58,15 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
   }
 
   async function startRun(agentId: string, prompt: string) {
-    const res = await request(app.getHttpServer())
-      .post(`/api/agents/${agentId}/run`)
-      .send({ prompt, project: "zibby-core" })
-      .expect(201)
-    return res.body as { runId: string; cwd: string; status: string }
+    return (await app.get(AgentRunnerService).start(agentId, prompt, "zibby-core", [], "")) as {
+      runId: string
+      cwd: string
+      status: string
+    }
   }
 
   const runStatus = async (runId: string) =>
-    (await request(app.getHttpServer()).get(`/api/agents/runs/${runId}`).expect(200)).body
+    (await request(app.getHttpServer()).get(`/api/tasks/runs/${runId}`).expect(200)).body
       .status as string
 
   const pendingFor = async (runId: string) => {
@@ -297,15 +298,12 @@ describe("Mid-run pause is not durable across restart (e2e)", () => {
         ],
       })
       .expect(201)
-    const start = await request(app1.getHttpServer())
-      .post("/api/agents/payer/run")
-      .send({ prompt: "later", project: "zibby-core" })
-      .expect(201)
-    const { runId } = start.body
+    const start = await app1.get(AgentRunnerService).start("payer", "later", "zibby-core", [], "")
+    const { runId } = start
 
     // Wait until it has actually paused mid-run before tearing the backend down.
     await until(async () => {
-      const res = await request(app1.getHttpServer()).get(`/api/agents/runs/${runId}`)
+      const res = await request(app1.getHttpServer()).get(`/api/tasks/runs/${runId}`)
       return res.body.status === "awaiting-approval" ? true : null
     })
     await app1.close()
@@ -313,7 +311,7 @@ describe("Mid-run pause is not durable across restart (e2e)", () => {
     // Restart: the mid-run child died with the old backend and no spawn spec was
     // stashed, so the run is reconciled to interrupted — not resumable.
     const app2 = await boot()
-    const run = await request(app2.getHttpServer()).get(`/api/agents/runs/${runId}`).expect(200)
+    const run = await request(app2.getHttpServer()).get(`/api/tasks/runs/${runId}`).expect(200)
     expect(run.body.status).toBe("interrupted")
     await app2.close()
   })

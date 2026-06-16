@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common"
-import { AgentRunLogsController } from "./agent-run-logs.controller"
 import { AgentRunnerService, RUNS_DIR } from "./agent-runner.service"
 import { AgentRunsController } from "./agent-runs.controller"
 import { ApprovalsModule } from "../approvals/approvals.module"
@@ -50,7 +49,6 @@ export function resolveRunsDir(): string {
   controllers: [
     CategoriesController,
     AgentRunsController,
-    AgentRunLogsController,
     GatesController,
     AgentsController,
   ],

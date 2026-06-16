@@ -6,7 +6,9 @@ import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
+import { ClaudeUnavailableError } from "../src/runner/claude-preflight.service"
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -82,14 +84,15 @@ describe("Health API (e2e) — claude unavailable", () => {
       .send({ id: "preflight-probe", name: "Preflight probe", instructions: "noop" })
       .expect(201)
 
-    const res = await request(app.getHttpServer())
-      .post("/api/agents/preflight-probe/run")
-      .send({ prompt: "do nothing" })
-    expect(res.status).toBe(503)
-    expect(res.body.message).toContain("unavailable")
+    // Start now goes through the service, which throws ClaudeUnavailableError when the
+    // CLI preflight fails (the controller surfaced that as a 503) — and crucially does
+    // so BEFORE writing any run record.
+    await expect(
+      app.get(AgentRunnerService).start("preflight-probe", "do nothing", "", [], ""),
+    ).rejects.toBeInstanceOf(ClaudeUnavailableError)
 
     // The refusal happened before any run record was created.
-    const runs = await request(app.getHttpServer()).get("/api/agents/runs")
-    expect(runs.body).toEqual([])
+    const runs = await request(app.getHttpServer()).get("/api/tasks/runs").expect(200)
+    expect((runs.body as Array<{ kind: string }>).filter((r) => r.kind === "agent")).toEqual([])
   })
 })

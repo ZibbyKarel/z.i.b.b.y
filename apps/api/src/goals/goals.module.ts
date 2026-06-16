@@ -7,7 +7,6 @@ import { ProjectsModule } from "../projects/projects.module"
 import { WorkspaceModule } from "../workspace/workspace.module"
 import { dataDir } from "../shared/data-dir"
 import { GOAL_RUNS_DIR, GoalRunnerService } from "./goal-runner.service"
-import { GoalRunsController } from "./goal-runs.controller"
 import { GoalsController } from "./goals.controller"
 import { GOALS_DIR, GoalsStorageService } from "./goals.storage.service"
 
@@ -26,10 +25,9 @@ export function resolveGoalRunsDir(): string {
   // of them, dispatched verbatim (the inner loop). Workspace backs the per-run
   // worktree; Projects resolves the target project for cwd + budget attribution.
   imports: [AgentsModule, PipelinesModule, ProjectsModule, WorkspaceModule, BudgetModule, ActivityLogModule],
-  // GoalRunsController is declared before GoalsController so its static routes
-  // (`/goals/runs`, `/goals/runs/:id`) register ahead of `/goals/:id`, which would
-  // otherwise capture "runs" as a goal id.
-  controllers: [GoalRunsController, GoalsController],
+  // Goal runs have no per-kind HTTP surface — a goal is run only by creating a
+  // task, and every run operation lives on the unified `/api/tasks/runs/*`.
+  controllers: [GoalsController],
   providers: [
     { provide: GOALS_DIR, useFactory: resolveGoalsDir },
     { provide: GOAL_RUNS_DIR, useFactory: resolveGoalRunsDir },

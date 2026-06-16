@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
+import * as contracts from "../index"
 import {
   GoalRunSchema,
   GoalSchema,
   TaskTargetSchema,
   VerifierSpecSchema,
-  goalRunsContract,
   goalsContract,
 } from "../index"
 
@@ -18,16 +18,13 @@ const baseGoal = {
 }
 
 describe("goalsContract", () => {
-  it("exposes CRUD and keeps run routes in the /api/goals/* space", () => {
+  it("exposes CRUD over goal definitions", () => {
     expect(goalsContract.createGoal.path).toBe("/api/goals")
     expect(goalsContract.getGoal.path).toBe("/api/goals/:id")
-    expect(goalRunsContract.startGoalRun.path).toBe("/api/goals/:id/run")
-    expect(goalRunsContract.listGoalRuns.path).toBe("/api/goals/runs")
-    expect(goalRunsContract.resumeGoalRun.path).toBe("/api/goals/runs/:goalRunId/resume")
   })
 
-  it("gives resumeGoalRun a 409 for a non-parked run", () => {
-    expect(goalRunsContract.resumeGoalRun.responses).toHaveProperty("409")
+  it("has no per-kind run contract (goals run only via a task; ops live on /api/tasks/runs)", () => {
+    expect(contracts).not.toHaveProperty("goalRunsContract")
   })
 })
 

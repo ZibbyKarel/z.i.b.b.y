@@ -1,12 +1,7 @@
 import { initContract } from "@ts-rest/core"
 import { z } from "zod"
-import { RunLogChunkSchema } from "../agents/agent-run.schema"
 import { ErrorSchema } from "../common.schema"
-import {
-  PipelineRunSchema,
-  ResumePipelineRunSchema,
-  StartPipelineRunSchema,
-} from "./pipeline-run.schema"
+import { PipelineRunSchema } from "./pipeline-run.schema"
 import {
   CreatePipelineSchema,
   PipelineSchema,
@@ -81,71 +76,22 @@ export const pipelinesContract = c.router(
 )
 export type PipelinesContract = typeof pipelinesContract
 
-/** Pipeline execution — start a run, poll the aggregate, tail a stage's log. */
+/**
+ * Pipeline catalog-liveness contract — the one runtime endpoint that survives the
+ * run-surface unification: the "what's running now" list that feeds the catalog
+ * attempt counters and live badges. Every other run operation (start, detail,
+ * logs, resume, delete, artifacts) now lives on the unified `taskRuns` contract
+ * under `/api/tasks/runs/*` — a pipeline run is started only by creating a task.
+ * The `PIPELINE_RUN_ARTIFACTS` allowlist above is still the server-side guard the
+ * unified artifact endpoint enforces.
+ */
 export const pipelineRunsContract = c.router(
   {
-    startPipelineRun: {
-      method: "POST",
-      path: "/pipelines/:id/run",
-      pathParams: PipelineIdParam,
-      body: StartPipelineRunSchema,
-      // 503: the Claude CLI preflight refused the start (claude mode only).
-      responses: { 201: PipelineRunSchema, 404: ErrorSchema, 503: ErrorSchema },
-      summary: "Start a run of a pipeline",
-    },
     listPipelineRuns: {
       method: "GET",
       path: "/pipelines/runs",
       responses: { 200: z.array(PipelineRunSchema) },
       summary: "List currently running (and just-finished) pipeline runs",
-    },
-    listAllPipelineRuns: {
-      method: "GET",
-      path: "/pipelines/run-history",
-      responses: { 200: z.array(PipelineRunSchema) },
-      summary: "List the full pipeline run history (on disk + in memory), newest first",
-    },
-    getPipelineRun: {
-      method: "GET",
-      path: "/pipelines/runs/:pipelineRunId",
-      pathParams: z.object({ pipelineRunId: z.string() }),
-      responses: { 200: PipelineRunSchema, 404: ErrorSchema },
-      summary: "Get a single pipeline run by id",
-    },
-    resumePipelineRun: {
-      method: "POST",
-      path: "/pipelines/runs/:pipelineRunId/resume",
-      pathParams: z.object({ pipelineRunId: z.string() }),
-      body: ResumePipelineRunSchema,
-      // 409: the run is not retries-parked (approval-parked runs resume only via
-      // the approvals path — one gate, not two).
-      responses: { 200: PipelineRunSchema, 404: ErrorSchema, 409: ErrorSchema },
-      summary: "Resume a retries-parked pipeline run with an operator note",
-    },
-    getStageRunLogs: {
-      method: "GET",
-      path: "/pipelines/runs/:pipelineRunId/stages/:phaseId/logs",
-      pathParams: z.object({ pipelineRunId: z.string(), phaseId: z.string() }),
-      query: z.object({ offset: z.coerce.number().int().nonnegative().optional() }),
-      responses: { 200: RunLogChunkSchema, 404: ErrorSchema },
-      summary: "Read a pipeline stage's log from a byte offset",
-    },
-    getPipelineRunArtifact: {
-      method: "GET",
-      path: "/pipelines/runs/:pipelineRunId/artifacts/:name",
-      pathParams: z.object({ pipelineRunId: z.string(), name: z.string() }),
-      // The PR-gate decision surface (3.3): the pr draft + diffstat, plus the
-      // handoff set. `name` is matched against a fixed allowlist server-side — there
-      // is no generic file browser; the allowlist IS the API. 404 when absent.
-      responses: { 200: PipelineRunArtifactSchema, 404: ErrorSchema },
-      summary: "Read a whitelisted pipeline run artifact (PR draft, diffstat, handoffs)",
-    },
-    deletePipelineRun: {
-      method: "DELETE",
-      path: "/pipelines/runs/:pipelineRunId",
-      pathParams: z.object({ pipelineRunId: z.string() }),
-      responses: { 200: z.object({ pipelineRunId: z.string() }), 404: ErrorSchema },
-      summary: "Delete a pipeline run and all its artifacts",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

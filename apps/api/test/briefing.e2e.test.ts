@@ -7,6 +7,7 @@ import { Test } from "@nestjs/testing"
 import type { Briefing } from "@zibby/contracts"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
 import { ChannelWatcherService } from "../src/channels/channel-watcher.service"
 import { SchedulerService } from "../src/automations/scheduler.service"
@@ -84,11 +85,10 @@ describe("Briefing (e2e)", () => {
   it("GET /api/briefing surfaces the pending approval and the watched channel", async () => {
     // Spawn a gated run that parks at the approval gate.
     process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT
-    const run = await request(app.getHttpServer())
-      .post("/api/agents/payer/run")
-      .send({ prompt: "buy the expensive thing", project: "zibby-core" })
-      .expect(201)
-    const runId = (run.body as { runId: string }).runId
+    const run = await app
+      .get(AgentRunnerService)
+      .start("payer", "buy the expensive thing", "zibby-core", [], "")
+    const runId = (run as { runId: string }).runId
     await until(async () => {
       const pending = await request(app.getHttpServer()).get("/api/approvals?status=pending").expect(200)
       return (pending.body as Array<{ runId: string }>).some((a) => a.runId === runId) ? true : null

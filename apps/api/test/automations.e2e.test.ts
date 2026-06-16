@@ -63,7 +63,7 @@ describe("Automations API (e2e)", () => {
     expect(typeof runRef).toBe("string")
 
     // The agent run exists.
-    await request(app.getHttpServer()).get(`/api/agents/runs/${runRef}`).expect(200)
+    await request(app.getHttpServer()).get(`/api/tasks/runs/${runRef}`).expect(200)
   })
 
   it("the scheduler tick fires a due automation once per minute (idempotent)", async () => {

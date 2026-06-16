@@ -169,7 +169,7 @@ describe("Tasks API (e2e)", () => {
     expect(typeof res.body.runRef).toBe("string")
 
     // The dispatched agent run exists and carries the title through.
-    const run = await request(app.getHttpServer()).get(`/api/agents/runs/${res.body.runRef}`)
+    const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${res.body.runRef}`)
     expect(run.status).toBe(200)
     expect(run.body.title).toBe("Vault sync")
   })
@@ -186,9 +186,9 @@ describe("Tasks API (e2e)", () => {
     expect(typeof res.body.runRef).toBe("string")
 
     // The orchestrator run is a normal agent-feed run under the reserved owner id.
-    const run = await request(app.getHttpServer()).get(`/api/agents/runs/${res.body.runRef}`)
+    const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${res.body.runRef}`)
     expect(run.status).toBe(200)
-    expect(run.body.agentId).toBe("orchestrator")
+    expect(run.body.owner).toBe("orchestrator")
     expect(run.body.title).toBe("Mystery")
   })
 
@@ -231,7 +231,7 @@ describe("Tasks API (e2e)", () => {
     const task = list.body.find((t: { id: string }) => t.id === id)
     expect(task.status).toBe("dispatched")
     expect(typeof task.runRef).toBe("string")
-    await request(app.getHttpServer()).get(`/api/agents/runs/${task.runRef}`).expect(200)
+    await request(app.getHttpServer()).get(`/api/tasks/runs/${task.runRef}`).expect(200)
   })
 
   it("cancelling a scheduled task stops it from ever firing", async () => {
@@ -272,7 +272,7 @@ describe("Tasks API (e2e)", () => {
 
     // The run was born linked to the task record.
     const run = await request(app.getHttpServer())
-      .get(`/api/agents/runs/${res.body.runRef}`)
+      .get(`/api/tasks/runs/${res.body.runRef}`)
       .expect(200)
     expect(run.body.taskId).toBe(res.body.task.id)
 
@@ -379,7 +379,7 @@ describe("Tasks API (e2e)", () => {
       expect(res.status).toBe(201)
       expect(res.body.outcome).toBe("dispatched")
       expect(typeof res.body.runRef).toBe("string")
-      const run = await request(app.getHttpServer()).get(`/api/agents/runs/${res.body.runRef}`)
+      const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${res.body.runRef}`)
       expect(run.status).toBe(200)
       // The run is attributed to the granted project (no WorkspaceSetupError thrown).
       expect(run.body.project).toBe("nongit")

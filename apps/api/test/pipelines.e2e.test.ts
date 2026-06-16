@@ -9,6 +9,7 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service"
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -110,18 +111,14 @@ describe("Pipelines API (e2e)", () => {
   })
 
   it("runs a two-phase pipeline and hands off the produces file from A to B", async () => {
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/release/run")
-      .send({ project: "zibby-core" })
-      .expect(201)
-    const { pipelineRunId, status } = start.body
+    const pipelines = app.get(PipelineRunnerService)
+    const start = await pipelines.start("release", undefined, "zibby-core")
+    const { pipelineRunId, status } = start
     expect(status).toBe("running")
 
     const final = await until(async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/api/pipelines/runs/${pipelineRunId}`)
-        .expect(200)
-      return res.body.status !== "running" ? res.body : null
+      const res = pipelines.get(pipelineRunId)
+      return res.status !== "running" ? res : null
     })
 
     expect(final.status).toBe("done")
@@ -152,14 +149,11 @@ describe("Pipelines API (e2e)", () => {
     process.env.PIPELINE_DEMO_EMIT_LEARNED = "doc"
     let pipelineRunId: string
     try {
-      const start = await request(app.getHttpServer())
-        .post("/api/pipelines/learnpipe/run")
-        .send({ project: projectId })
-        .expect(201)
-      pipelineRunId = start.body.pipelineRunId
+      const start = await app.get(PipelineRunnerService).start("learnpipe", undefined, projectId)
+      pipelineRunId = start.pipelineRunId
       await until(async () => {
-        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-        return res.body.status === "done" ? res.body : null
+        const res = app.get(PipelineRunnerService).get(pipelineRunId)
+        return res.status === "done" ? res : null
       })
     } finally {
       delete process.env.PIPELINE_DEMO_EMIT_LEARNED
@@ -217,15 +211,12 @@ describe("Pipelines API (e2e)", () => {
       })
       .expect(201)
 
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/looped/run")
-      .send({})
-      .expect(201)
-    const { pipelineRunId } = start.body
+    const start = await app.get(PipelineRunnerService).start("looped", undefined, undefined)
+    const { pipelineRunId } = start
 
     const final = await until(async () => {
-      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-      return res.body.status !== "running" ? res.body : null
+      const res = app.get(PipelineRunnerService).get(pipelineRunId)
+      return res.status !== "running" ? res : null
     })
 
     expect(final.status).toBe("failed")
@@ -262,16 +253,13 @@ describe("Pipelines API (e2e)", () => {
       })
       .expect(201)
 
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/verified/run")
-      .send({ project: "verify-proj" })
-      .expect(201)
-    expect(start.body.projectPath).toBe(projectDir)
-    const { pipelineRunId } = start.body
+    const start = await app.get(PipelineRunnerService).start("verified", undefined, "verify-proj")
+    expect(start.projectPath).toBe(projectDir)
+    const { pipelineRunId } = start
 
     const final = await until(async () => {
-      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-      return res.body.status !== "running" ? res.body : null
+      const res = app.get(PipelineRunnerService).get(pipelineRunId)
+      return res.status !== "running" ? res : null
     })
 
     expect(final.status).toBe("done")
@@ -301,16 +289,13 @@ describe("Pipelines API (e2e)", () => {
       })
       .expect(201)
 
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/parking/run")
-      .send({})
-      .expect(201)
-    const { pipelineRunId } = start.body
+    const start = await app.get(PipelineRunnerService).start("parking", undefined, undefined)
+    const { pipelineRunId } = start
 
     // b fails, maxRetries 0 → immediately exhausted → durable parking.
     const parked = await until(async () => {
-      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-      return res.body.status === "parked" ? res.body : null
+      const res = app.get(PipelineRunnerService).get(pipelineRunId)
+      return res.status === "parked" ? res : null
     })
     expect(parked.parkedReason).toBe("retries")
     expect(parked.parked).toMatchObject({ phaseId: "b", attempts: 1 })
@@ -318,14 +303,14 @@ describe("Pipelines API (e2e)", () => {
     // A premature resume of a non-parked run 409s (sanity: wrong id state).
     delete process.env.PIPELINE_DEMO_FAIL_PHASES
     const resumed = await request(app.getHttpServer())
-      .post(`/api/pipelines/runs/${pipelineRunId}/resume`)
+      .post(`/api/tasks/runs/${pipelineRunId}/resume`)
       .send({ note: "zelená cesta — tentokrát to projde" })
       .expect(200)
     expect(resumed.body.status).toBe("running")
 
     const final = await until(async () => {
-      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-      return res.body.status !== "running" ? res.body : null
+      const res = app.get(PipelineRunnerService).get(pipelineRunId)
+      return res.status !== "running" ? res : null
     })
     expect(final.status).toBe("done")
     // The note landed next to the run for the audit trail.
@@ -334,7 +319,7 @@ describe("Pipelines API (e2e)", () => {
 
     // Resuming a finished run is refused.
     await request(app.getHttpServer())
-      .post(`/api/pipelines/runs/${pipelineRunId}/resume`)
+      .post(`/api/tasks/runs/${pipelineRunId}/resume`)
       .send({})
       .expect(409)
   })
@@ -359,11 +344,8 @@ describe("Pipelines API (e2e)", () => {
       .send({ id: "git-proj", name: "Git project", path: repo, checks: ["true"] })
       .expect(201)
 
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/release/run")
-      .send({ project: "git-proj" })
-      .expect(201)
-    const { pipelineRunId, workspace } = start.body as {
+    const start = await app.get(PipelineRunnerService).start("release", undefined, "git-proj")
+    const { pipelineRunId, workspace } = start as {
       pipelineRunId: string
       workspace?: { branch: string; path: string; baseRef: string }
     }
@@ -374,14 +356,14 @@ describe("Pipelines API (e2e)", () => {
     expect(await git(repo, "rev-parse", "HEAD")).toBe(mainBefore)
 
     const final = await until(async () => {
-      const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-      return res.body.status !== "running" ? res.body : null
+      const res = app.get(PipelineRunnerService).get(pipelineRunId)
+      return res.status !== "running" ? res : null
     })
     expect(final.status).toBe("done")
-    expect(final.workspace.branch).toBe(workspace!.branch)
+    expect(final.workspace?.branch).toBe(workspace!.branch)
 
     // Delete prunes the worktree but keeps the branch.
-    await request(app.getHttpServer()).delete(`/api/pipelines/runs/${pipelineRunId}`).expect(200)
+    await request(app.getHttpServer()).delete(`/api/tasks/runs/${pipelineRunId}`).expect(200)
     expect(await git(repo, "worktree", "list")).not.toContain(workspace!.path)
     expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch)
 
@@ -412,9 +394,9 @@ describe("Pipelines API (e2e)", () => {
     )
 
     const app2 = await boot()
-    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-    expect(res.body.status).toBe("parked")
-    expect(res.body.parkedReason).toBe("retries")
+    const res = app2.get(PipelineRunnerService).get(runId)
+    expect(res.status).toBe("parked")
+    expect(res.parkedReason).toBe("retries")
     await app2.close()
   })
 
@@ -441,10 +423,10 @@ describe("Pipelines API (e2e)", () => {
     // Unlike an approval-parked stage (no live child → reconciled to failed), an
     // output park is durable: the chain already finished, so it stays parked.
     const app2 = await boot()
-    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-    expect(res.body.status).toBe("parked")
-    expect(res.body.parkedReason).toBe("output")
-    expect(res.body.pendingOutput).toEqual({ index: 0 })
+    const res = app2.get(PipelineRunnerService).get(runId)
+    expect(res.status).toBe("parked")
+    expect(res.parkedReason).toBe("output")
+    expect(res.pendingOutput).toEqual({ index: 0 })
     await app2.close()
   })
 
@@ -465,18 +447,15 @@ describe("Pipelines API (e2e)", () => {
         .send({ id: "delivery-proj", name: "Delivery project", path: projectDir })
         .expect(201)
 
-      const start = await request(app.getHttpServer())
-        .post("/api/pipelines/delivery/run")
-        .send({ project: "delivery-proj" })
-        .expect(201)
-      const { pipelineRunId } = start.body as { pipelineRunId: string }
+      const start = await app.get(PipelineRunnerService).start("delivery", undefined, "delivery-proj")
+      const { pipelineRunId } = start as { pipelineRunId: string }
 
       // The chain (architekt → koder → review → dokumentator; Kodér self-checks, no
       // separate verify phase) finishes green, then the `pr` output parks the run on
       // the PR gate — "PR is the gate", system-owned, no agent.
       const parked = await until(async () => {
-        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-        return res.body.status === "parked" ? res.body : null
+        const res = app.get(PipelineRunnerService).get(pipelineRunId)
+        return res.status === "parked" ? res : null
       })
       expect(parked.parkedReason).toBe("output")
       expect(parked.pendingOutput).toEqual({ index: 0 })
@@ -504,8 +483,8 @@ describe("Pipelines API (e2e)", () => {
       await request(app.getHttpServer()).post(`/api/approvals/${card?.id}/approve`).expect(200)
 
       const done = await until(async () => {
-        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-        return res.body.status === "done" ? res.body : null
+        const res = app.get(PipelineRunnerService).get(pipelineRunId)
+        return res.status === "done" ? res : null
       })
       expect(done.status).toBe("done")
 
@@ -514,15 +493,12 @@ describe("Pipelines API (e2e)", () => {
 
     it("a persistently failing review exhausts its retries and parks", async () => {
       process.env.PIPELINE_DEMO_FAIL_PHASES = "review"
-      const start = await request(app.getHttpServer())
-        .post("/api/pipelines/delivery/run")
-        .send({})
-        .expect(201)
-      const { pipelineRunId } = start.body as { pipelineRunId: string }
+      const start = await app.get(PipelineRunnerService).start("delivery", undefined, undefined)
+      const { pipelineRunId } = start as { pipelineRunId: string }
 
       const parked = await until(async () => {
-        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`)
-        return res.body.status === "parked" ? res.body : null
+        const res = app.get(PipelineRunnerService).get(pipelineRunId)
+        return res.status === "parked" ? res : null
       })
       expect(parked.parkedReason).toBe("retries")
       expect(parked.parked).toMatchObject({ phaseId: "review", attempts: 4 })
@@ -548,9 +524,9 @@ describe("Pipelines API (e2e)", () => {
     )
 
     const app2 = await boot()
-    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-    expect(res.body.status).toBe("failed")
-    expect(res.body.currentStage).toBeNull()
+    const res = app2.get(PipelineRunnerService).get(runId)
+    expect(res.status).toBe("failed")
+    expect(res.currentStage).toBeNull()
     await app2.close()
   })
 })
@@ -647,8 +623,10 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
   })
 
   const runStatus = async (pipelineRunId: string) =>
-    (await request(app.getHttpServer()).get(`/api/pipelines/runs/${pipelineRunId}`).expect(200))
-      .body as { status: string; stageRuns: { status: string }[] }
+    app.get(PipelineRunnerService).get(pipelineRunId) as {
+      status: string
+      stageRuns: { status: string }[]
+    }
 
   const pendingStageApproval = async (pipelineRunId: string) => {
     const res = await request(app.getHttpServer())
@@ -662,11 +640,8 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
   }
 
   it("parks on a gated stage intent, then approve releases the SAME child to done", async () => {
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/gated/run")
-      .send({})
-      .expect(201)
-    const { pipelineRunId } = start.body as { pipelineRunId: string }
+    const start = await app.get(PipelineRunnerService).start("gated", undefined, undefined)
+    const { pipelineRunId } = start as { pipelineRunId: string }
 
     // The stage announces the delete → aggregate parks + a stage approval appears.
     await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
@@ -684,11 +659,8 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
   })
 
   it("reject aborts the gated stage and fails the run", async () => {
-    const start = await request(app.getHttpServer())
-      .post("/api/pipelines/gated/run")
-      .send({})
-      .expect(201)
-    const { pipelineRunId } = start.body as { pipelineRunId: string }
+    const start = await app.get(PipelineRunnerService).start("gated", undefined, undefined)
+    const { pipelineRunId } = start as { pipelineRunId: string }
 
     await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
     const approval = await until(() => pendingStageApproval(pipelineRunId))
@@ -722,9 +694,9 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
     )
 
     const app2 = await boot()
-    const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-    expect(res.body.status).toBe("failed")
-    expect(res.body.currentStage).toBeNull()
+    const res = app2.get(PipelineRunnerService).get(runId)
+    expect(res.status).toBe("failed")
+    expect(res.currentStage).toBeNull()
     await app2.close()
   })
 })
@@ -828,9 +800,7 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
   })
 
   const runStatus = async (id: string) =>
-    (await request(app.getHttpServer()).get(`/api/pipelines/runs/${id}`).expect(200)).body as {
-      status: string
-    }
+    app.get(PipelineRunnerService).get(id) as { status: string }
   const pendingStageApproval = async (id: string) => {
     const res = await request(app.getHttpServer()).get("/api/approvals").query({ status: "pending" }).expect(200)
     return res.body.find(
@@ -843,8 +813,8 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
   }
 
   it("parks on pr.open with a diffstat + draft, runs nothing before approval, then executes push + gh", async () => {
-    const start = await request(app.getHttpServer()).post("/api/pipelines/prgate/run").send({ project: "pr-proj" }).expect(201)
-    const { pipelineRunId } = start.body as { pipelineRunId: string }
+    const start = await app.get(PipelineRunnerService).start("prgate", undefined, "pr-proj")
+    const { pipelineRunId } = start as { pipelineRunId: string }
 
     // The stage announces pr.open → the run parks and a stage approval appears.
     await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
@@ -854,11 +824,11 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
     // The decision surface is assembled at park time: diffstat (the branch's commit)
     // + the PR draft, both served by the allowlisted artifact endpoint.
     const diff = await request(app.getHttpServer())
-      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/diffstat.txt`)
+      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/diffstat.txt`)
       .expect(200)
     expect(diff.body.content).toContain("feature.txt")
     const draft = await request(app.getHttpServer())
-      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/pr-draft.md`)
+      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/pr-draft.md`)
       .expect(200)
     expect(draft.body.content).toContain("Add feature")
 
@@ -883,8 +853,8 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
 
   it("rejecting the PR gate records no gh invocation and fails the run", async () => {
     await fs.rm(ghLog, { force: true })
-    const start = await request(app.getHttpServer()).post("/api/pipelines/prgate/run").send({ project: "pr-proj" }).expect(201)
-    const { pipelineRunId } = start.body as { pipelineRunId: string }
+    const start = await app.get(PipelineRunnerService).start("prgate", undefined, "pr-proj")
+    const { pipelineRunId } = start as { pipelineRunId: string }
 
     await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
     const approval = await until(() => pendingStageApproval(pipelineRunId))
@@ -899,16 +869,16 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
   })
 
   it("404s an artifact not on the allowlist (no generic file browser)", async () => {
-    const start = await request(app.getHttpServer()).post("/api/pipelines/prgate/run").send({ project: "pr-proj" }).expect(201)
-    const { pipelineRunId } = start.body as { pipelineRunId: string }
+    const start = await app.get(PipelineRunnerService).start("prgate", undefined, "pr-proj")
+    const { pipelineRunId } = start as { pipelineRunId: string }
     await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null))
 
     await request(app.getHttpServer())
-      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/secrets.env`)
+      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/secrets.env`)
       .expect(404)
     // A traversal attempt is just an off-allowlist name → 404, never escapes.
     await request(app.getHttpServer())
-      .get(`/api/pipelines/runs/${pipelineRunId}/artifacts/${encodeURIComponent("../../run.json")}`)
+      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/${encodeURIComponent("../../run.json")}`)
       .expect(404)
 
     // Clean up the still-parked run.

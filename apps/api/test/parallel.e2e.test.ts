@@ -6,6 +6,7 @@ import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
 
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -144,8 +145,7 @@ describe("Parallel engagements (e2e)", () => {
   })
 
   it("keeps each run in its own run dir (no checkout collision)", async () => {
-    const res = await request(server()).get("/api/agents/runs")
-    const runs = res.body as Array<{ runId: string; cwd: string }>
+    const runs = await app.get(AgentRunnerService).listAll()
     const cwds = runs.map((r) => r.cwd)
     expect(new Set(cwds).size).toBe(cwds.length) // all distinct
   })

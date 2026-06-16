@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
 import { LimitResumeService } from "../src/limits-resume/limit-resume.service"
 import { LimitsService } from "../src/limits/limits.service"
+import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service"
 
 /** Token-free `claude` stand-in so agent-run dispatch passes preflight (demo path). */
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -118,16 +119,14 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
     // The koder stage emits the usage-limit line + exits on its FIRST attempt only.
     process.env.PIPELINE_DEMO_LIMIT_PHASES = "koder"
     try {
-      const start = await request(app.getHttpServer())
-        .post("/api/pipelines/limitpipe/run")
-        .send({})
-        .expect(201)
-      const runId: string = start.body.pipelineRunId
+      const pipelines = app.get(PipelineRunnerService)
+      const start = await pipelines.start("limitpipe", undefined, undefined)
+      const runId: string = start.pipelineRunId
 
       // It halts at koder as `paused-limit`, with a resumeAt and an UNTOUCHED retry map.
       const paused = await until(async () => {
-        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-        return res.body.status === "paused-limit" ? res.body : null
+        const res = pipelines.get(runId)
+        return res.status === "paused-limit" ? res : null
       })
       expect(paused.currentStage).toBe("koder")
       expect(typeof paused.resumeAt).toBe("number")
@@ -135,12 +134,12 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
       expect(paused.retries?.koder ?? 0).toBe(0)
 
       // Wait past the (short, demo) resumeAt, then drive the resume scan by hand.
-      await sleep(Math.max(0, paused.resumeAt - Date.now()) + 100)
+      await sleep(Math.max(0, (paused.resumeAt ?? 0) - Date.now()) + 100)
       const limitResume = app.get(LimitResumeService)
       const done = await until(async () => {
         await limitResume.tick(new Date())
-        const res = await request(app.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-        return res.body.status === "done" ? res.body : null
+        const res = pipelines.get(runId)
+        return res.status === "done" ? res : null
       })
       // It finished at the same pipeline, having auto-resumed at least once.
       expect(done.status).toBe("done")
@@ -236,14 +235,11 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
         .post("/api/pipelines")
         .send({ id: "boundarypipe", phases: [phase("a"), phase("b")], instructions: "ship" })
         .expect(201)
-      const start = await request(app1.getHttpServer())
-        .post("/api/pipelines/boundarypipe/run")
-        .send({})
-        .expect(201)
-      runId = start.body.pipelineRunId
+      const start = await app1.get(PipelineRunnerService).start("boundarypipe", undefined, undefined)
+      runId = start.pipelineRunId
       await until(async () => {
-        const res = await request(app1.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-        return res.body.status === "paused-limit" ? res.body : null
+        const res = app1.get(PipelineRunnerService).get(runId)
+        return res.status === "paused-limit" ? res : null
       })
     } finally {
       await app1.close()
@@ -252,8 +248,8 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     // A fresh backend rebuilds the aggregate from disk; the pause survives unchanged.
     const app2 = await boot()
     try {
-      const res = await request(app2.getHttpServer()).get(`/api/pipelines/runs/${runId}`).expect(200)
-      expect(res.body.status).toBe("paused-limit")
+      const res = app2.get(PipelineRunnerService).get(runId)
+      expect(res.status).toBe("paused-limit")
     } finally {
       await app2.close()
     }

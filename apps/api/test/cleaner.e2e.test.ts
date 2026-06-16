@@ -6,6 +6,7 @@ import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { AgentRunnerService } from "../src/agents/agent-runner.service"
 import { AppModule } from "../src/app.module"
 
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/fake-claude.mjs")
@@ -67,7 +68,7 @@ describe("Cleaner agent (Variant B, e2e)", () => {
   }
 
   const runStatus = async (runId: string) =>
-    (await request(app.getHttpServer()).get(`/api/agents/runs/${runId}`).expect(200)).body
+    (await request(app.getHttpServer()).get(`/api/tasks/runs/${runId}`).expect(200)).body
       .status as string
 
   const pendingFor = async (runId: string) => {
@@ -113,11 +114,10 @@ describe("Cleaner agent (Variant B, e2e)", () => {
 
   it("pauses for approval, then deletes exactly the approved files in the granted dir", async () => {
     const target = await freshTarget()
-    const start = await request(app.getHttpServer())
-      .post("/api/agents/cleaner/run")
-      .send({ prompt: "tidy up my workspace", project: "zibby-core", files: [target] })
-      .expect(201)
-    const { runId, cwd } = start.body as { runId: string; cwd: string }
+    const start = await app
+      .get(AgentRunnerService)
+      .start("cleaner", "tidy up my workspace", "zibby-core", [target], "")
+    const { runId, cwd } = start as { runId: string; cwd: string }
 
     // It pauses mid-run with a pending approval naming the deletion.
     await until(async () => ((await runStatus(runId)) === "awaiting-approval" ? true : null))
@@ -161,11 +161,10 @@ describe("Cleaner agent (Variant B, e2e)", () => {
 
   it("rejecting the deletion leaves every file untouched and interrupts the run", async () => {
     const target = await freshTarget()
-    const start = await request(app.getHttpServer())
-      .post("/api/agents/cleaner/run")
-      .send({ prompt: "tidy up again", project: "zibby-core", files: [target] })
-      .expect(201)
-    const { runId } = start.body as { runId: string }
+    const start = await app
+      .get(AgentRunnerService)
+      .start("cleaner", "tidy up again", "zibby-core", [target], "")
+    const { runId } = start as { runId: string }
 
     const approval = await until(async () => (await pendingFor(runId)) ?? null)
     await request(app.getHttpServer())
