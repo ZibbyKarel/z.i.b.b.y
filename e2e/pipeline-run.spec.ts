@@ -18,12 +18,13 @@ test("open a pipeline, see its phase chain, and run it via the task composer", a
   // The detail panel shows the phase chain for the selected pipeline.
   await expect(page.getByText(/phase chain/)).toBeVisible();
 
-  // "Run pipeline" opens the standard composer, pre-locked to this pipeline (its
-  // name heads the dialog — routing is pre-decided, no classify preview).
+  // "Run pipeline" opens the standard composer with this pipeline pre-selected in the
+  // "Edit" target picker (a pre-fill, not a lock — classification still runs and the
+  // operator can change it). The pipeline name shows as the picker's chosen value.
   await page.getByRole("button", { name: "Run pipeline" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Demo Pipe")).toBeVisible();
+  await expect(dialog.getByTestId("accordion-details").getByText("Demo Pipe")).toBeVisible();
 
   // Describe the task and dispatch it straight through the pipeline.
   await dialog.getByLabel("Task", { exact: true }).fill("run the demo pipe");

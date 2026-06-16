@@ -17,10 +17,7 @@ import { useRouter } from "next/navigation";
 import type { TaskOutput } from "@zibby/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
-import {
-  useCreateGoalMutation,
-  useStartGoalMutation,
-} from "../../goals/mutations";
+import { useCreateGoalMutation } from "../../goals/mutations";
 import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
 import { useCreateProjectMutation } from "../../projects/mutations";
 import { useProjectsQuery } from "../../projects/queries/useProjectsQuery";
@@ -104,7 +101,6 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   const { mutate: createTask, isPending: creatingTask } = useCreateTaskMutation();
   const { mutate: classify } = useClassifyTaskMutation();
   const { mutate: createGoal, isPending: creatingGoal } = useCreateGoalMutation();
-  const { mutate: startGoal, isPending: startingGoal } = useStartGoalMutation();
   const { mutate: createProject, isPending: granting } = useCreateProjectMutation();
   const { data: limits } = useLimitsQuery();
   const { data: projects } = useProjectsQuery();
@@ -154,7 +150,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
     const all = selectedProject ? [selectedProject.path, ...detected] : detected;
     return [...new Set(all)].filter((p) => !removedPaths.has(p));
   }, [text, removedPaths, selectedProject]);
-  const busy = creatingTask || creatingGoal || startingGoal || granting;
+  const busy = creatingTask || creatingGoal || granting;
   const scheduledAt = resolveScheduledAt(preset, now, resetsAt);
   // Gate the preview on a long-enough query so a stale verdict never lingers after
   // the field is cleared (no setState-in-effect needed to reset it).
@@ -271,44 +267,25 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
       { body },
       {
         onSuccess: () => {
-          if (scheduledAt !== null) {
-            // Scheduled loop: the goal exists; the task carries its target so the
-            // scheduler's defer/limit/budget machinery owns the dispatch (Decision 4).
-            createTask(
-              {
-                body: {
-                  title: title.trim() || undefined,
-                  text,
-                  paths,
-                  scheduledAt,
-                  target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
-                },
-              },
-              { onSuccess: handleCreateTaskSuccess },
-            );
-            return;
-          }
-          // Immediate loop: start the goal run directly (the maker ⇄ verifier loop).
-          startGoal(
+          // Every loop enters through a task carrying its goal target — the scheduler's
+          // defer/limit/budget machinery owns the dispatch (immediate when scheduledAt is
+          // null, deferred otherwise). There is no direct goal-run start: only a task runs.
+          createTask(
             {
-              params: { id: goalId },
               body: {
                 title: title.trim() || undefined,
-                files: paths.length > 0 ? paths : undefined,
+                text,
+                paths,
+                scheduledAt,
+                target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
               },
             },
-            {
-              onSuccess: (res) => {
-                const run = selectApiResponseBody(res) as { goalRunId: string };
-                router.push(`/runs?run=${encodeURIComponent(run.goalRunId)}`);
-                onClose();
-              },
-            },
+            { onSuccess: handleCreateTaskSuccess },
           );
         },
       },
     );
-  }, [loop, title, now, scheduledAt, text, paths, createGoal, createTask, startGoal, router, onClose, handleCreateTaskSuccess]);
+  }, [loop, title, now, scheduledAt, text, paths, createGoal, createTask, handleCreateTaskSuccess]);
 
   const handleSubmit = useCallback(() => {
     if (busy) return;

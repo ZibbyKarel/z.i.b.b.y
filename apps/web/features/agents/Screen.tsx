@@ -22,7 +22,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { slug } from "../../utils/slug";
 import { usePipelinesQuery } from "../pipelines/queries";
-import { RunModal } from "../skills/components/RunModal/RunModal";
+import { useNewTask } from "../tasks/TaskContext";
 import { newAgentDraft } from "./agentDraft";
 import { AgentCard } from "./components/AgentCard";
 import { AgentDetailModal } from "./components/AgentDetailModal";
@@ -31,7 +31,6 @@ import {
   useCreateCategoryMutation,
   useDeleteAgentMutation,
   useDeleteCategoryMutation,
-  useStartAgentRunMutation,
   useUpdateAgentMutation,
 } from "./mutations";
 import { useAgentsQuery, useCategoriesQuery } from "./queries";
@@ -47,10 +46,9 @@ export function Screen() {
   const deleteAgent = useDeleteAgentMutation();
   const createCategory = useCreateCategoryMutation();
   const deleteCategory = useDeleteCategoryMutation();
-  const startAgentRun = useStartAgentRunMutation();
+  const { open: openNewTask } = useNewTask();
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Agent | null>(null);
-  const [runAgent, setRunAgent] = useState<Agent | null>(null);
   const [addingCategory, setAddingCategory] = useState(false);
 
   const list = agents;
@@ -225,7 +223,11 @@ export function Screen() {
             );
           }}
           onRun={(a) => {
-            setRunAgent(a);
+            if (!a.id) return;
+            // Only a task runs: pre-select the agent in the New Task dialog (the
+            // classifier still runs and the target stays changeable) instead of
+            // starting an agent run directly.
+            openNewTask(undefined, { kind: "agent", id: a.id, name: a.name ?? a.id, glyph: "bot" });
             setOpenId(null);
           }}
           onSave={save}
@@ -267,20 +269,6 @@ export function Screen() {
             )
           }
           pending={createCategory.isPending}
-        />
-      )}
-
-      {runAgent && (
-        <RunModal
-          agent={runAgent}
-          key={runAgent.id}
-          onClose={() => setRunAgent(null)}
-          onLaunch={({ agent, prompt, files }) =>
-            startAgentRun.mutate({
-              params: { id: agent.id },
-              body: { prompt, project: "", files },
-            })
-          }
         />
       )}
     </PageContainer>

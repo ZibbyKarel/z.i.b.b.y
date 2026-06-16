@@ -118,12 +118,8 @@ type GoalOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
 const createGoal = vi.fn((_vars: GoalVars, opts?: GoalOpts) =>
   opts?.onSuccess?.({ status: 201, body: {} }),
 );
-const startGoal = vi.fn((_vars: GoalVars, opts?: GoalOpts) =>
-  opts?.onSuccess?.({ status: 201, body: { goalRunId: "goal_run_1" } }),
-);
 vi.mock("../../goals/mutations", () => ({
   useCreateGoalMutation: () => ({ mutate: createGoal, isPending: false }),
-  useStartGoalMutation: () => ({ mutate: startGoal, isPending: false }),
 }));
 
 vi.mock("../../projects/queries/useProjectsQuery", () => ({
@@ -161,7 +157,6 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     classify.mockClear();
     createTask.mockClear();
     createGoal.mockClear();
-    startGoal.mockClear();
     createProject.mockClear();
   });
 
@@ -227,7 +222,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     });
   });
 
-  it("infers a loop and dispatches a goal (createGoal + startGoalRun) on one click", async () => {
+  it("infers a loop and dispatches it as a task carrying its goal target on one click", async () => {
     const onClose = vi.fn();
     render(<NewTaskDialog onClose={onClose} />);
     await userEvent.type(
@@ -245,8 +240,13 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(goalBody.verifier).toEqual({ kind: "checks" });
     expect(goalBody.maxIterations).toBe(6);
 
-    expect(startGoal).toHaveBeenCalledTimes(1);
-    expect(push).toHaveBeenCalledWith("/runs?run=goal_run_1");
+    // Only a task runs: the immediate loop enters through createTask with a goal target
+    // (scheduledAt null → the scheduler dispatches it now), never a direct goal-run start.
+    expect(createTask).toHaveBeenCalledTimes(1);
+    const taskBody = createTask.mock.calls[0]?.[0].body;
+    expect(taskBody?.target?.kind).toBe("goal");
+    expect(taskBody?.scheduledAt).toBeFalsy();
+    expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -279,7 +279,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(screen.getByLabelText(/Předat/)).toBeInTheDocument();
   });
 
-  it("defers a scheduled loop through createTask with a goal target (not startGoalRun)", async () => {
+  it("defers a scheduled loop through createTask with a goal target", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "keep retrying the deploy until it passes");
     expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
@@ -288,7 +288,6 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     await userEvent.click(screen.getByRole("button", { name: /Naplánovat/ }));
 
     expect(createGoal).toHaveBeenCalledTimes(1);
-    expect(startGoal).not.toHaveBeenCalled();
     const taskBody = createTask.mock.calls.at(-1)?.[0].body;
     expect(taskBody?.target?.kind).toBe("goal");
     expect(taskBody?.scheduledAt).toBeGreaterThan(Date.now());

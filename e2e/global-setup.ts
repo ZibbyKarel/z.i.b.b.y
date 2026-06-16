@@ -65,14 +65,23 @@ export default async function globalSetup(): Promise<void> {
     })
     .catch(() => {});
 
-  // A gated agent + a started run → a pending approval for the overview queue.
+  // A gated agent + a task dispatched to it → a pending approval for the overview queue.
+  // The run is started the only way a run can start now: by creating a task that carries
+  // the agent as its target (the unified entry path; no direct `/agents/:id/run`). The
+  // explicit target skips classification, so dispatch is deterministic.
   await ctx
     .post("/api/agents", {
       data: { id: "gated-agent", name: "Gated Agent", instructions: "needs approval", requires_approval: true, risk: "high" },
     })
     .catch(() => {});
   await ctx
-    .post("/api/agents/gated-agent/run", { data: { prompt: "do something risky", project: "zibby-core" } })
+    .post("/api/tasks", {
+      data: {
+        text: "do something risky",
+        paths: [],
+        target: { kind: "agent", id: "gated-agent", name: "Gated Agent", glyph: "bot" },
+      },
+    })
     .catch(() => {});
 
   // A channel integration + credentials + a Tier-3 fixture message, so the watcher

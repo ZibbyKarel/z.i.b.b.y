@@ -14,7 +14,7 @@ export function getProjectsQueryKey() {
  * is the single shape used end to end. Returns the TanStack query result directly;
  * `select` unwraps the response envelope so `data` is `Project[]`. Backed by the
  * shared `["projects"]` cache, so every screen that reads projects (the projects
- * page, the RunModal target picker) shares one source.
+ * page, the New Task composer) shares one source.
  */
 export function useProjectsQuery() {
   return apiClient.projects.listProjects.useQuery({
