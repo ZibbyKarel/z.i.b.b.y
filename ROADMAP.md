@@ -1,445 +1,309 @@
 # ZIBBY — Implementation Roadmap
 
-## From Current State to Vision A
+## From the Real Current State to the North Star
 
-> This document describes the concrete implementation phases from the current state (Phase 44 complete) to the final Vision A.
+> This roadmap is rebaselined against a **code-level audit** of the system (2026-06-16),
+> not against aspirational phase notes. Phase numbers from earlier planning are dropped —
+> what matters is the honest delta between what exists on disk today and the
+> [[north-star]] vision, and the shortest dependency-ordered path to close it.
 
----
-
-## Starting Point (Phase 44 — Complete)
-
-What already exists and works:
-
-- ✅ Delivery loop (agent → review → test → verify with retry)
-- ✅ Voice interface (live STT, approve/reject/stop)
-- ✅ 3-tier autonomy (act-silently / act-then-report / surface-and-wait)
-- ✅ Self-development pipeline (ZIBBY can develop its own code)
-- ✅ Memory vault (Obsidian markdown, index-first navigation)
-- ✅ Pipeline editor (loop back-edges, retry, escalation)
-- ✅ TaskClassifier (AI router + keyword scorer + orchestrator fallback)
-- ✅ Gate engine (approval rules, audit, dry-run evaluate)
-- ✅ ~680+ API tests, all green
-- ✅ Projects (currently just a namespace / folder selector)
-- ✅ Activity log (append-only JSONL)
-
-Key gaps versus Vision A:
-
-- ❌ Project = namespace, not an operational profile (channels, autonomy policy, people context)
-- ❌ No external channel integration (Slack, email) as a monitoring source
-- ❌ Morning briefing exists as an automation but is not narrative / contextual
-- ❌ Self-learning from approval signals not implemented
-- ❌ Nightly memory consolidation does not exist
-- ❌ Standup cheat sheet not generated automatically per project
+The canonical vision is `apps/api/data/vault/north-star.md`. This document is the
+execution plan that converges the system onto it.
 
 ---
 
-## Phase 45 — Project Operational Profile
+## State Audit — What Actually Exists (2026-06-16)
 
-**Goal:** Project stops being a namespace and becomes a full operational context.
+The previous roadmap treated channels, briefing, and budget as unbuilt. They are not.
+The real picture, verified against `apps/api/src`:
 
-### What Gets Implemented
+| Capability                                                          | Status                      | Reality on disk                                                                                                        |
+| ------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Delivery loop (agent → review → test → verify, retry/escalate)      | ✅ Real                     | `goals/`, `pipelines/`, `runner/` — bounded iteration, worktree isolation                                              |
+| Goals / loop engine (maker ⇄ verifier, parking, budget fuse)        | ✅ Real                     | `goals/goal-runner.service.ts`, per-goal run-count budget                                                              |
+| Self-development (builder ≠ subject, worktree off-tree)             | ✅ Real                     | sibling-checkout isolation, scoped verifier, `ZIBBY_WORKTREE_ROOT`                                                     |
+| TaskClassifier (LLM router + keyword fallback + orchestrator floor) | ✅ Real                     | `tasks/task-classifier.service.ts`                                                                                     |
+| Gate engine (locked floor, agent harden-only, dry-run evaluate)     | ✅ Real                     | `gates/`, `data/POLICY.md`; floor: payment/push/pr.open→ask, pr.merge→deny                                             |
+| **Channel runtime (Slack + email)**                                 | ✅ **Real, not greenfield** | `channels/` — Slack Web API fetch + email imapflow/nodemailer, 30s cursor-safe poll, approval-gated outbound           |
+| Memory vault + grounding + run recorder                             | ✅ Real                     | `memory/` — index-first read, daily append, term-matched grounding, episodic record                                    |
+| Briefing (assemble + butler prose + 07:00 cron)                     | ✅ Real, **thin**           | `briefing/` + `automations/morning-briefing.json` (fires daily) — sections exist, content is shallow                   |
+| Budget governance (per-project + global + concurrency)              | 🟡 Partial                  | `budget/` — run-count caps real; **USD cost tracking absent** (`budget.json`/ledger empty)                             |
+| Mandate / autonomy doc                                              | 🟡 Partial                  | `data/mandate.json` exists but minimal (`dispatch:true, reply:false`)                                                  |
+| **Project = operational profile**                                   | ❌ Gap                      | project is a registry (id/name/path/checks/budget/env) — **no people, autonomy_policy, daily_rhythm, channel binding** |
+| **Inbound message → action routing**                                | ❌ Gap                      | runtime ingests + triages, but no classifier→{respond\|create_task\|ignore}→tier wiring per project                    |
+| **Self-learning from approval signals**                             | ❌ Absent                   | no pattern extractor; `patterns/` folder doesn't exist in the vault                                                    |
+| **Nightly consolidation job**                                       | ❌ Absent                   | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                               |
+| **Standup cheat sheets per project**                                | ❌ Absent                   | only generic daily briefings                                                                                           |
+| **Research / intelligence layer**                                   | ❌ Absent                   | no ResearchAgent or watchers                                                                                           |
+| **GapDetector / "I want X" NL self-mod flow**                       | ❌ Absent                   | self-dev pipeline exists, the proactive front-end of it does not                                                       |
 
-**Project data model** — extending `project.md` frontmatter:
-
-```yaml
-identity: company, stack, my_role, people (name / role / vip flag / communication style)
-
-channels:
-  slack: { workspace, monitor: [], respond_as: "autonomous|draft_only" }
-  email: { address, monitor: bool }
-  jira: { project_id, board_id }
-  github: { repo }
-
-autonomy_policy:
-  can_do_alone: []
-  always_ask: []
-  vip_escalation: bool
-
-daily_rhythm: standup_time, standup_format, active_hours, monitoring
-
-budget: monthly_cap_usd, per_run_cap_usd
-```
-
-**Contract extension** (`libs/contracts/projects.contract.ts`):
-
-- `GET /projects/:id/profile` — full operational profile
-- `PUT /projects/:id/profile` — update profile
-- `GET /projects/:id/people` — list of people in project
-- `POST /projects/:id/people` — add a person
-
-**UI — Projects section** (`/apps/web/projects`):
-
-- Form for editing the project profile
-- "Team" section — people management with VIP flagging
-- "Channels" section — connecting Slack/email/Jira/GitHub
-- "Autonomy" section — visual rule editor (what ZIBBY can do / what must be escalated)
-- "Daily Rhythm" section — standup time, active hours
-
-**Gate engine update:**
-
-- Gate matcher extended with `project` context condition
-- Per-project policy overrides the global floor (can only be hardened, never relaxed)
-
-### Phase Output
-
-Operator can configure Project A with complete context in the UI. Gate engine respects it. Agents running in a project context have access to the profile.
+**The headline correction:** the hard infrastructure (channel I/O, gate floor, goal loop,
+vault, budget caps) is already real. The gaps are mostly **wiring and the semantic/learning
+layer** — turning existing pipes into per-project autonomous behavior, and giving the system
+a memory that compounds. That reorders the work significantly versus the old plan.
 
 ---
 
-## Phase 46 — Channel Integration (Slack + Email Monitoring)
+## Convergence Path
 
-**Goal:** ZIBBY begins actively monitoring external channels and responding to them.
-
-### What Gets Implemented
-
-**Integration runtime** — new NestJS module `IntegrationRunnerModule`:
-
-- Polling loop per active project (configurable interval)
-- Slack adapter: reads new messages from monitored channels
-- Email adapter: reads inbox of monitored address
-- Event emitter: `channel.message.received` → TaskClassifier
-
-**Incoming message classification:**
-
-- Incoming Slack/email → TaskClassifier receives text + metadata (who, from where, project)
-- Classifier returns: `{ action: "respond" | "create_task" | "ignore", confidence, suggested_agent }`
-- VIP flag on sender → automatically Tier 3 (always escalate)
-
-**Response flow:**
+Eight milestones, ordered by dependency and by impact on the north-star "finished day."
+Each lists **Reality** (what's already there), **Gap**, **Build**, **Output**.
 
 ```
-Incoming message
-  → Classifier → proposed action
-  → Gate engine (per project and action)
-  → Tier 1: executes autonomously
-  → Tier 2: executes, notifies
-  → Tier 3: prepares draft, waits in approval queue
+M1 Project Profile ──┬─→ M2 Inbound Autonomy ──→ M3 Narrative Briefing + Standup
+                     │                                      │
+                     └─→ M7 Multi-Project + USD Budget       └─→ M4 Self-Learning + Nightly Consolidation
+                                                                        │
+M5 Self-Modification Front-End ─────────────────────────────────────────┤
+M6 Research / Intelligence Layer ───────────────────────────────────────┘
+M8 Hardening + Telemetry  (continuous, not last)
 ```
-
-**UI — Integrations section:**
-
-- Live inbox view (what arrived, how it was handled)
-- Pending response drafts awaiting approval
-- History of sent responses
-
-**Concrete use cases:**
-
-- Bug report on Slack → creates Jira task + draft PR (Tier 3)
-- Internal technical question on Slack → responds per project autonomy policy
-- Email with a technical question → draft response for approval
-
-### Phase Output
-
-ZIBBY monitors Slack and email on behalf of the operator. Responds autonomously where allowed, escalates where not.
 
 ---
 
-## Phase 47 — Narrative Briefing and Standup System
+## M1 — Project Profile (the operational atom)
 
-**Goal:** Morning briefing becomes a genuine narrative debrief, not a task list.
+**Why first:** the north-star makes the project profile the unit of operational context
+("without a project profile, ZIBBY is blind"). Channels, autonomy, and briefing all key off
+it. Everything downstream depends on this.
 
-### What Gets Implemented
+**Reality:** `project` is a real, file-backed registry with `id/name/path/desc/category/checks/
+budget(dailyRuns/weeklyRuns/maxConcurrent)/env/secrets`. The gate engine already matches a
+`context` condition that can carry a `projectId`.
 
-**BriefingAgent** — new specialized agent:
+**Gap:** no `identity.people` (with VIP flags), no `autonomy_policy`, no `daily_rhythm`, no
+binding of an integration/channel to a project. The web surface is a thin CRUD picker, not a
+profile editor.
 
-Inputs:
+**Build:**
 
-- Activity log for the past N hours
-- Approval queue (what's pending)
-- Vault daily notes for the past 7 days (trend context)
-- Active project profiles
-- Pending Jira/GitHub items
+- Extend `libs/contracts/.../project.schema.ts` (contract-first): add `identity.people[]`
+  (name / role / vip / comms_style), `autonomy_policy` (`can_do_alone[]`, `always_ask[]`,
+  `vip_escalation`, `respond_as: autonomous|draft_only`), `daily_rhythm` (standup_time,
+  format, active_hours). Keep `budget` where it is.
+- Bind channels to projects: an integration references the project(s) it monitors (extend
+  the integrations contract, not the project — channels stay per-integration, projects
+  declare which they watch).
+- Endpoints: `GET/PUT /projects/:id/profile`, `GET/POST /projects/:id/people`.
+- Persist as `vault/projects/<id>.md` frontmatter so the profile is also a grounding note
+  (files are source of truth; today only `_categories.json` exists).
+- Gate: formalize per-project resolution on the existing `context` condition — a project's
+  policy can only **harden** the global floor (422 on relax), never relax it.
+- UI: real profile editor in `/projects` — Team (VIP flagging), Channels (bind integrations),
+  Autonomy (visual can-do / must-ask editor), Daily Rhythm. Replace the bare CRUD form.
 
-Output — narrative structure:
-
-```
-## Overnight (00:00 - 07:00)
-[narrative summary of what completed, what failed and why]
-
-## Waiting for You (X items)
-[approvals sorted by priority and deadline]
-
-## Today's Priorities
-[recommendations derived from backlog and context]
-
-## What I Learned
-[new patterns or anomalies from the past 24h]
-
-## Standup Cheat Sheets
-### Project: Company A (daily 09:45)
-Overnight: completed JIRA-142 (fix login bug), JIRA-143 (update dependencies)
-Today: continuing on JIRA-144 (dark mode implementation)
-Blocker: none
-```
-
-**Automation:**
-
-- Cron: `0 7 * * *` → triggers BriefingAgent
-- Output appears first on the velín dashboard
-- Push notification (if configured)
-
-**StandupAgent** — per-project, per-scheduled-time:
-
-- Cron per `daily_rhythm.standup_time` in the project profile
-- Reads Jira/GitHub activity for the past 24h
-- Generates cheat sheet in the configured format
-- Surfaces on velín 15 minutes before standup time
-
-### Phase Output
-
-Operator opens velín in the morning and sees a narrative overnight debrief + standup cheat sheets for every project.
+**Output:** an operator can fully describe a mission in the UI; agents running in that project
+ground on its profile; the gate respects per-project policy.
 
 ---
 
-## Phase 48 — Self-Learning and Memory Consolidation
+## M2 — Inbound Autonomy (channels → classifier → tier)
 
-**Goal:** ZIBBY learns from every interaction and consolidates insights nightly.
+**Why second:** the channel _runtime_ is the biggest already-built asset the old roadmap
+missed. The value is unlocked by wiring it to action, not by building it.
 
-### What Gets Implemented
+**Reality:** `ChannelWatcherService` polls Slack/email for real (cursor-safe, rate-limit
+tolerant), persists inbound items, runs an optional triage flow, and gates outbound replies
+through the approval engine.
 
-**Approval signal capture:**
+**Gap:** inbound items don't yet route through `TaskClassifier` into a per-project decision.
+There is no `{action: respond|create_task|ignore, confidence, suggested_agent}` verdict, no
+VIP→Tier-3 escalation, no draft-into-approval-queue for Tier 3.
 
-- Hook on every gate resolve (approve/reject)
-- Structured entry written to `vault/patterns/approval-patterns.md`:
+**Build:**
 
-```markdown
-## 2026-06-14 — email/send → approved
+- `channel.message.received` → `TaskClassifier` with `{text, sender, project, vip}` →
+  `{action, confidence, suggested_agent}`.
+- Route the verdict through the gate engine **with project context**:
+  Tier 1 act silently · Tier 2 act + record activity · Tier 3 prepare draft → approval queue.
+- VIP sender (from M1 profile) forces Tier 3. `respond_as: draft_only` forces Tier 3.
+- Integrations UI: live inbox showing how each item was handled, pending drafts awaiting
+  approval, sent-reply history (the read path largely exists — add the handling/draft view).
 
-- project: company-a
-- action: send email to external@company.com
-- context: reply to a technical question
-- decision: approved without edits
-- time to decision: 3 minutes
-```
-
-**PatternExtractor** — new agent (part of the nightly heartbeat):
-
-- Scans approval-patterns.md for the past 30 days
-- Identifies repeating patterns
-- If N >= 5 of the same pattern → drafts a new rule proposal
-- Writes to `vault/patterns/suggestions.md`
-- Morning briefing includes: "I have a proposed new autonomous rule, would you like to approve it?"
-
-**Nightly consolidation** (heartbeat daemon — extension of Phase 5):
-
-```
-23:00 every day:
-  1. PatternExtractor scans approval signals
-  2. BriefingPrepAgent prepares context for the morning briefing
-  3. VaultConsolidator merges daily notes into semantic memory
-  4. CostTracker calculates daily spend
-```
-
-**Explicit learning:**
-
-- When ZIBBY asks a question and the operator answers → automatic entry written to vault
-- Format: `Q: [question] | A: [answer] | context: [project/date]`
-- PatternExtractor includes these entries in consolidation
-
-### Phase Output
-
-ZIBBY visibly learns. After 2 weeks of operation it begins proposing new autonomous rules. Morning briefing includes an "I learned" section.
+**Output:** a Slack bug report becomes a task + draft PR (Tier 3); a routine question gets
+answered per policy (Tier 1/2). ZIBBY monitors on the operator's behalf and escalates where
+it must.
 
 ---
 
-## Phase 49 — Self-Modification Pipeline
+## M3 — Narrative Briefing + Standup Cheat Sheets
 
-**Goal:** Operator says "I want X" and ZIBBY implements it via PR.
+**Why third:** daily, visible value. The briefing is the operator's "I just show up for the
+daily" moment from the north-star.
 
-### What Gets Implemented
+**Reality:** `BriefingService` assembles `needsYou / didForYou / watching / engagements /
+counts`, runs an optional `claude -p` butler-voice rewrite of the headline, persists a daily
+note, and **already fires at 07:00** via `automations/morning-briefing.json`. Two real
+briefing notes exist in `vault/daily/`.
 
-This largely exists (self-development pipeline from Phase 44), but missing:
+**Gap:** content is shallow — headline-only prose, no 7-day trend context, no "What I learned"
+section, no per-project standup cheat sheets.
 
-**GapDetector agent:**
+**Build:**
 
-- Continuously analyzes activity log and vault
-- Detects recurring manual steps that could be automated
-- Generates `vault/suggestions/automation-gaps.md`
-- Morning briefing: "I noticed X — should I create an automation?"
+- Deepen the briefing: full narrative overnight section (completed/failed + why), 7-day trend
+  context from `vault/daily/*`, a "What I learned" section (fed by M4), priorities derived
+  from backlog.
+- `StandupAgent` per project: cron from `daily_rhythm.standup_time`, reads project channel/
+  activity for the past 24h, emits a cheat sheet in the configured format, surfaces on velín
+  ~15 min before standup.
+- Velín overview already renders `BriefingCard` — extend it to show standup cards per project.
 
-**Self-modification flow hardening:**
-
-- Every self-modification PR is automatically Tier 3 gated (hardcoded, cannot be changed)
-- PR description includes: what changes, why, impact on other features
-- After merge → ZIBBY automatically runs the test suite and reports results
-
-**"I want X" natural language flow:**
-
-```
-Operator: "Add Twitter/X monitoring for Project Company B"
-  → Classifier: self-modification task
-  → ZIBBY analyzes what would be needed (new adapter, new agent, config)
-  → Creates implementation plan (surfaces for approval)
-  → After approve: runs delivery pipeline against its own repository
-  → Creates PR with the implementation
-  → After PR approve: merge, restart, new capability active
-```
-
-### Phase Output
-
-ZIBBY is a fully self-modifying system. Operator adds capabilities in natural language.
+**Output:** the operator opens velín to a real narrative debrief plus a ready standup sheet
+for every active project.
 
 ---
 
-## Phase 50 — Research and Intelligence Layer
+## M4 — Self-Learning + Nightly Consolidation
 
-**Goal:** ZIBBY proactively monitors the world and surfaces relevant information.
+**Why fourth:** this is what makes ZIBBY a _second brain_ rather than an executor — "by
+morning it knows more than it did the night before." Genuinely greenfield.
 
-### What Gets Implemented
+**Reality:** approvals and the append-only activity log are real and queryable. Nothing reads
+them back for learning. The `patterns/` vault folder does not exist.
 
-**ResearchAgent** — new specialized agent with sub-agents:
+**Gap:** no approval-signal capture, no `PatternExtractor`, no nightly job, no Q&A learning
+capture.
 
-- `TrendWatcher` — monitors configured sources (RSS, HN, Twitter/X, Product Hunt)
-- `FinanceWatcher` — tracks configured tickers/crypto, generates an overview (not action recommendations)
-- `CompetitorWatcher` — monitors competing products/companies
-- `TechWatcher` — new libraries, frameworks, security CVEs
+**Build:**
 
-**Per-operator configuration** (in the main profile, not per project):
+- Approval-signal capture: hook every gate resolve → structured entry in
+  `vault/patterns/approval-patterns.md` (project, action, context, decision, time-to-decide).
+- `PatternExtractor` (nightly): scan 30 days of signals; ≥ N repeats of a pattern → draft a
+  rule proposal in `vault/patterns/suggestions.md`; the morning briefing surfaces it as
+  "I have a proposed autonomous rule — approve?".
+- Nightly heartbeat (extend the existing scheduler, ~23:00): PatternExtractor → BriefingPrep →
+  VaultConsolidator (merge daily notes into `knowledge/`) → CostTracker (feeds M7).
+- Explicit learning: when ZIBBY asks and the operator answers, write `Q/A/context` to the vault
+  for the extractor to consolidate.
+- Create the missing vault structure (`patterns/`, `suggestions/`) and the `MEMORY.md` /
+  index MOC the north-star links to but which isn't on disk yet.
 
-```yaml
-research:
-  interests:
-    - "React ecosystem"
-    - "agentic AI"
-    - "SaaS indie hacking"
-  finance_watch:
-    - "BTC"
-    - "ETH"
-    - "VOO"
-  sources:
-    - "https://news.ycombinator.com/rss"
-    - "https://www.producthunt.com/feed"
-```
-
-**Research agent output:**
-
-- Daily digest (part of the morning briefing)
-- On-demand: "What's trending in AI today?" → ZIBBY searches and responds
-- Proactive idea: "I noticed trend X — this could be an interesting product idea"
-
-**App idea generator** (bonus):
-
-- Combines trend data + operator skills (from vault)
-- Once a week: "Here are 3 app ideas that could be built"
-
-### Phase Output
-
-ZIBBY brings the world to the operator. Morning briefing includes an intelligence section.
+**Output:** after ~2 weeks of operation ZIBBY proposes its first autonomous rules; the briefing
+gains a real "What I learned" section.
 
 ---
 
-## Phase 51 — Multi-Project Orchestration and Budget Governance
+## M5 — Self-Modification Front-End ("I want X" → PR)
 
-**Goal:** ZIBBY handles multiple "jobs" in parallel with isolated rules and budgets.
+**Why fifth:** the engine exists; only the proactive front door and a hardened gate are missing.
 
-### What Gets Implemented
+**Reality:** goals + maker/verifier + worktree isolation (builder ≠ subject) are real and
+tested. The gate floor already routes `pr.open → ask` and `pr.merge → deny` structurally, so
+a self-mod PR cannot auto-merge.
 
-**Project isolation:**
+**Gap:** no `GapDetector`, no natural-language "I want X → plan → PR" flow, no explicit
+hardcoded Tier-3 marker on self-modification specifically, no post-merge auto test report.
 
-- Each project has its own gate policy (per-project floor, cannot be relaxed below global floor)
-- Each project has its own budget (monthly cap, per-run cap)
-- An agent running in a project context has no access to another project's data
+**Build:**
 
-**Budget governance:**
+- `GapDetector` agent: scans activity + vault for recurring manual steps →
+  `vault/suggestions/automation-gaps.md` → briefing: "I noticed X — automate it?".
+- Harden self-mod: a structural rule that any PR **against ZIBBY's own repo** is forced Tier 3
+  (belt-and-suspenders on top of the pr.open/pr.merge floor), with a PR description template
+  (what / why / blast radius).
+- "I want X" flow: classifier tags self-modification → plan (surfaced for approval) → delivery
+  pipeline against own repo → PR → after approve+merge, auto-run suite and report.
 
-- Real-time cost tracking per project per day
-- Automatic hold when a project reaches 80% of monthly cap
-- Alert at 90%, hard stop at 100%
-- Morning briefing includes: yesterday's spend, projected spend to end of month
-
-**Cross-project intelligence:**
-
-- ZIBBY can apply learnings from one project in another (if rules allow)
-- Example: coding conventions learned in Project A applied in Project B
-
-**Velín — multi-project view:**
-
-- Dashboard shows the status of all active projects at once
-- Per-project health, activity, pending approvals, budget utilization
-
-### Phase Output
-
-ZIBBY handles a role at multiple companies/projects in parallel with full isolation and cost control.
+**Output:** the operator adds capabilities in natural language; every self-change is gated and
+auditable end-to-end.
 
 ---
 
-## Phase 52 — Hardening, Telemetry, and Production Readiness
+## M6 — Research / Intelligence Layer
 
-**Goal:** The system is robust, survives crashes, and provides clear diagnostics.
+**Why sixth:** proactive, world-facing value — "ZIBBY brings the world to the operator." Fully
+greenfield, depends on the briefing (M3) and nightly job (M4) as delivery vehicles.
 
-### What Gets Implemented
+**Reality:** none. No research agents, no operator research config.
 
-**Process hardening:**
+**Build:**
 
-- Orphan process cleanup (kill -9 recovery)
-- Graceful shutdown with checkpoint persistence
-- Restart recovery — running tasks resume after backend restart
+- `ResearchAgent` with sub-watchers: `TrendWatcher` (RSS/HN/PH), `TechWatcher` (libs/CVEs),
+  optional `FinanceWatcher` (overview only, never advice), `CompetitorWatcher`.
+- Operator-level research config in the main profile (interests, sources, finance_watch) —
+  not per-project.
+- Output: a daily digest folded into the morning briefing; on-demand "what's trending in X?"
+  via the existing voice/task path; a weekly "3 app ideas" generator (bonus) combining trends
+  with operator skills from the vault.
 
-**Telemetry and health:**
-
-- `/api/health` with detailed status of all subsystems
-- Velín HUD — real-time health indicators (backend, vault, integrations)
-- Alert on degraded state (never silent fail)
-
-**Audit and compliance:**
-
-- Complete audit trail of all actions (who/what/when/result)
-- Audit log export (for employer needs or personal review)
-- Retention policy for run artifacts (automatic cleanup after N days)
-
-**Error recovery:**
-
-- Retry logic with exponential backoff for integration calls
-- Dead letter queue for failed tasks
-- Operator notification on repeated failure
-
-### Phase Output
-
-ZIBBY is a production-grade system. Survives unexpected failures, always reports its state, never fails silently.
+**Output:** the morning briefing gains an intelligence section; ZIBBY surfaces relevant signal
+unprompted.
 
 ---
 
-## Final State — Vision A Achieved
+## M7 — Multi-Project Isolation + USD Budget Governance
 
-After completing all phases ZIBBY can:
+**Why seventh:** matters once there is more than one mission; the run-count half already exists.
 
-| Capability                          | How                                   |
-| ----------------------------------- | ------------------------------------- |
-| Narrative morning briefing          | BriefingAgent + nightly consolidation |
-| Slack + email monitoring            | IntegrationRunnerModule               |
-| Autonomous responses per rules      | Gate engine + per-project policy      |
-| Standup cheat sheet per project     | StandupAgent + project profile        |
-| Self-learning from approval signals | PatternExtractor + nightly heartbeat  |
-| Self-modification via PR            | GapDetector + delivery pipeline       |
-| Research and trend monitoring       | ResearchAgent + TrendWatcher          |
-| Multi-project with isolation        | Project profiles + budget governance  |
-| Production robustness               | Hardening + telemetry                 |
+**Reality:** per-project run-count caps (daily/weekly), a global account ceiling, and a
+concurrency queue are all real. Per-project gate policy lands in M1.
+
+**Gap:** budget is **run-count only** — there is no USD cost tracking (`budget.json` and the
+ledger are empty), no 80/90/100% thresholds, no multi-project velín, no cross-project learning.
+
+**Build:**
+
+- Real-time USD cost tracking per project per day (CostTracker from M4 writes the ledger).
+- Thresholds: auto-hold at 80% of monthly cap, alert at 90%, hard stop at 100%; briefing shows
+  yesterday's spend + projected month-end.
+- Project data isolation: an agent in project A cannot read project B's data (enforce on the
+  grounding + workspace seam).
+- Multi-project velín: one dashboard, per-project health / activity / pending approvals /
+  budget utilization.
+- Cross-project intelligence: apply learnings (e.g. conventions) from A to B where rules allow.
+
+**Output:** ZIBBY runs several missions in parallel with isolated rules and real cost control.
 
 ---
 
-## Prioritization — What to Build First
+## M8 — Hardening + Telemetry (continuous)
 
-If capacity is limited, this is the recommended order by impact on Vision A:
+**Why continuous, not last:** much of this already exists from the self-development safety work;
+the rest should land alongside every milestone, not be deferred.
 
-1. **Phase 45** — Project profile (foundation for everything else)
-2. **Phase 46** — Slack + Email monitoring (largest practical impact)
-3. **Phase 47** — Narrative briefing + standup (daily value from day one)
-4. **Phase 48** — Self-learning (long-term value, grows over time)
-5. **Phase 50** — Research intelligence (proactive value)
-6. **Phase 49** — Self-modification hardening (partially exists already)
-7. **Phase 51** — Multi-project governance (when there are more projects)
-8. **Phase 52** — Production hardening (ongoing, not left until the end)
+**Reality:** graceful shutdown that awaits child exit, orphan/pgid reaping, goal/run restart
+recovery (reconstruct on boot), and a `/health` liveness probe are already real.
+
+**Gap:** `/health` lacks per-subsystem detail, no velín health indicators, no audit export, no
+retention policy, no dead-letter queue, no exponential backoff on integration calls.
+
+**Build:**
+
+- `/api/health` with per-subsystem status (backend, vault, integrations, scheduler); velín HUD
+  health indicators; never-silent degraded-state alerts.
+- Retry with exponential backoff for integration I/O; dead-letter queue for failed tasks;
+  operator notification on repeated failure.
+- Audit trail completeness (who/what/when/result) + export; retention/cleanup for run artifacts.
+
+**Output:** a production-grade system that survives failure and never fails silently.
+
+---
+
+## Recommended Order
+
+By impact on the north-star "finished day," respecting dependencies:
+
+1. **M1 — Project Profile** (foundation; everything keys off it)
+2. **M2 — Inbound Autonomy** (largest practical payoff; unlocks the already-built channel runtime)
+3. **M3 — Narrative Briefing + Standup** (daily value from day one)
+4. **M4 — Self-Learning + Nightly Consolidation** (compounding value; the "second brain")
+5. **M5 — Self-Modification Front-End** (engine exists; cheap to finish)
+6. **M6 — Research / Intelligence** (proactive value)
+7. **M7 — Multi-Project + USD Budget** (when there is more than one mission)
+8. **M8 — Hardening + Telemetry** (continuous, threaded through all of the above)
 
 ---
 
 ## Architectural Principles — Must Not Be Violated
 
-These principles are the DNA of the system and must not be compromised in any phase:
+The DNA of the system; no milestone may compromise these:
 
-- **Files are source of truth** — no black-box database, everything on disk
-- **Approval-first is law** — hardcoded, not config; payments and merges always require approval
-- **Contract-first development** — ts-rest contract before any implementation
-- **Index-first memory** — no vector RAG; MOC files, plain Markdown
-- **Polling, not SSE** — frontend polling, not server-sent events
-- **Single operator** — the system is optimized for one person, not a team
-- **Per-project gate floor** — rules can only be tightened, never relaxed
+- **Files are source of truth** — no black-box database; everything on disk, human-readable.
+- **Approval-first is law** — hardcoded at the dispatch/gate floor, not config; payments,
+  external email, merges, deletes, and self-modification PRs always require approval.
+- **Contract-first development** — ts-rest contract in `libs/contracts` before any implementation.
+- **Index-first memory** — no vector RAG; MOC files and atomic Markdown notes.
+- **Polling, not SSE** — frontend polling is a non-negotiable constraint.
+- **Per-project gate floor** — rules can only be tightened, never relaxed below the global floor.
+- **Single operator** — depth over breadth; one vault, one identity.
