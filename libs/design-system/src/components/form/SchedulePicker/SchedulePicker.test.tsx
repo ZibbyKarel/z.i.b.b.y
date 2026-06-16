@@ -67,8 +67,9 @@ describe("SchedulePicker", () => {
     );
     const monthDay = screen.getByTestId(SchedulePickerTestId.MonthDay);
     await userEvent.click(within(monthDay).getByTestId(DropdownTestId.Trigger));
-    // Options are days 1…31; index 2 is the 3rd of the month.
-    await userEvent.click(within(monthDay).getAllByTestId(DropdownTestId.Option)[2]!);
+    // Options render in a portal (document.body), so query them from `screen`, not
+    // within the trigger's container. Days 1…31; index 2 is the 3rd of the month.
+    await userEvent.click(screen.getAllByTestId(DropdownTestId.Option)[2]!);
     expect(onValueChange).toHaveBeenCalledWith({ ...base, repeat: "monthly", monthDay: 3 });
   });
 

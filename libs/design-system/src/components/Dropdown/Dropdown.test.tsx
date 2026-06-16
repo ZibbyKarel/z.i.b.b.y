@@ -67,4 +67,42 @@ describe("Dropdown", () => {
     );
     expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveAccessibleName("Jazyk rozhraní");
   });
+
+  it("opens with ArrowDown and points aria-activedescendant at the selected row", async () => {
+    const user = userEvent.setup();
+    render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    trigger.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const opts = screen.getAllByTestId(DropdownTestId.Option);
+    // The selected option ("cs") is the initial active row.
+    expect(trigger).toHaveAttribute("aria-activedescendant", opts[0]!.id);
+  });
+
+  it("moves the active row with ArrowDown and selects it with Enter", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Dropdown onChange={onChange} options={OPTIONS} value="cs" />);
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    trigger.focus();
+    await user.keyboard("{ArrowDown}"); // open, active = cs (index 0)
+    await user.keyboard("{ArrowDown}"); // active = en (index 1)
+    const opts = screen.getAllByTestId(DropdownTestId.Option);
+    expect(trigger).toHaveAttribute("aria-activedescendant", opts[1]!.id);
+    await user.keyboard("{Enter}");
+    expect(onChange).toHaveBeenCalledWith("en");
+    expect(screen.queryByTestId(DropdownTestId.Panel)).not.toBeInTheDocument();
+  });
+
+  it("wraps from the last row back to the first with ArrowDown", async () => {
+    const user = userEvent.setup();
+    render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="en" />);
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    trigger.focus();
+    await user.keyboard("{ArrowDown}"); // open, active = en (index 1, selected)
+    await user.keyboard("{ArrowDown}"); // wrap to index 0
+    const opts = screen.getAllByTestId(DropdownTestId.Option);
+    expect(trigger).toHaveAttribute("aria-activedescendant", opts[0]!.id);
+  });
 });
