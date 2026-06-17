@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveHealthPresentation } from "./healthPresentation";
+import { SUBSYSTEM_LABEL, deriveHealthPresentation, subsystemDotTone } from "./healthPresentation";
 
 describe("deriveHealthPresentation", () => {
   it("shows the connecting state while the first fetch is in flight", () => {
@@ -59,5 +59,22 @@ describe("deriveHealthPresentation", () => {
       label: "overview.systemNominal",
       detail: "overview.daemonReady",
     });
+  });
+});
+
+describe("subsystemDotTone (M8 per-subsystem HUD)", () => {
+  it("maps ok→ok, degraded→wait, down→bad", () => {
+    expect(subsystemDotTone("ok")).toBe("ok");
+    expect(subsystemDotTone("degraded")).toBe("wait");
+    expect(subsystemDotTone("down")).toBe("bad");
+  });
+
+  it("has a label for every subsystem name", () => {
+    expect(Object.keys(SUBSYSTEM_LABEL).sort()).toEqual([
+      "backend",
+      "integrations",
+      "scheduler",
+      "vault",
+    ]);
   });
 });

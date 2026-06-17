@@ -329,8 +329,12 @@ ledger are empty), no 80/90/100% thresholds, no multi-project velín, no cross-p
 > briefing's **needs-you** (rides the `parked` kind), so a repeatedly-failing task is escalated
 > to the operator instead of dying silently in the runs feed. `attempts` is tracked on the task.
 >
-> **Still open (continuous):** velín per-subsystem HUD widget; audit-trail export +
-> run-artifact retention.
+> **Per-subsystem HUD widget ✅ DONE 2026-06-18:** the velín overview `SummaryWidget` now
+> renders a status-dot row per subsystem from the `/health` `subsystems[]` payload
+> (`subsystemDotTone` ok→ok / degraded→wait / down→bad, `SUBSYSTEM_LABEL` i18n) — so a
+> degraded subsystem is visible at a glance, not just in the JSON probe.
+>
+> **Still open (continuous):** audit-trail export + run-artifact retention.
 
 **Why continuous, not last:** much of this already exists from the self-development safety work;
 the rest should land alongside every milestone, not be deferred.

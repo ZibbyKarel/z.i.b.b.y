@@ -17,7 +17,7 @@ import { useHealthQuery } from "../health/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useRunsQuery } from "../runs/queries/useRunsQuery";
 import { useSkillsQuery } from "../skills/queries";
-import { deriveHealthPresentation } from "./healthPresentation";
+import { SUBSYSTEM_LABEL, deriveHealthPresentation, subsystemDotTone } from "./healthPresentation";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -99,6 +99,21 @@ export function SummaryWidget() {
             </Stack>
           </Container>
         </Stack>
+        {health?.subsystems && health.subsystems.length > 0 ? (
+          <>
+            <Divider />
+            <Stack wrap align="center" direction="row" gap="300">
+              {health.subsystems.map((s) => (
+                <Stack align="center" direction="row" gap="100" key={s.name}>
+                  <StatusDot tone={subsystemDotTone(s.status)} />
+                  <Typography mono size="sm" type="note" variant="tertiary">
+                    {t(SUBSYSTEM_LABEL[s.name])}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </>
+        ) : null}
         <Divider />
         <Stack wrap direction="row" gap="450">
           <Stat

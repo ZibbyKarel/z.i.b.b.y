@@ -1,4 +1,5 @@
 import type { DotTone } from "@zibby/design-system";
+import type { SubsystemHealth } from "@zibby/contracts";
 import type { MessageKey } from "apps/web/i18n/keys";
 
 /** The HudPanel tones the health banner uses. */
@@ -67,3 +68,16 @@ export function deriveHealthPresentation({
     detail: "overview.daemonReady",
   };
 }
+
+/** Map one subsystem's health status to a StatusDot tone (M8 per-subsystem HUD). */
+export function subsystemDotTone(status: SubsystemHealth["status"]): DotTone {
+  return status === "ok" ? "ok" : status === "degraded" ? "wait" : "bad";
+}
+
+/** i18n label key per subsystem name — exhaustive over the contract's name union. */
+export const SUBSYSTEM_LABEL: Record<SubsystemHealth["name"], MessageKey> = {
+  backend: "overview.subsystemBackend",
+  vault: "overview.subsystemVault",
+  integrations: "overview.subsystemIntegrations",
+  scheduler: "overview.subsystemScheduler",
+};
