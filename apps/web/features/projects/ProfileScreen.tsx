@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   Button,
+  CodeBlock,
   Divider,
   Pressable,
   Stack,
@@ -23,7 +24,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { useProjectProfileQuery, useProjectQuery } from "./queries";
+import { useProjectProfileQuery, useProjectQuery, useProjectStandupQuery } from "./queries";
 import { useUpdateProjectProfileMutation } from "./mutations";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
 
   const projectQ = useProjectQuery(projectId);
   const profileQ = useProjectProfileQuery(projectId);
+  const standupQ = useProjectStandupQuery(projectId);
   const updateProfile = useUpdateProjectProfileMutation(projectId);
 
   // Controlled state — null means "follow server data"
@@ -377,6 +379,20 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
             />
           </Stack>
         </HudPanel>
+
+        {standupQ.data && (
+          <>
+            <Divider />
+            <HudPanel title={t("standup.title")}>
+              <Stack gap="75">
+                <Typography mono size="xs" type="note" variant="tertiary">
+                  {standupQ.data.date}
+                </Typography>
+                <CodeBlock data-testid="standup-text" text={standupQ.data.text} />
+              </Stack>
+            </HudPanel>
+          </>
+        )}
       </Stack>
     </PageContainer>
   );

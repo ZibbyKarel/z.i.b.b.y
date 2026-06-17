@@ -153,3 +153,12 @@ export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>
  */
 export const ProjectSecretsInputSchema = z.record(z.string(), z.string())
 export type ProjectSecretsInput = z.infer<typeof ProjectSecretsInputSchema>
+
+/** A standup cheat sheet generated for a project from the past 24 h of activity. */
+export const ProjectStandupSchema = z.object({
+  projectId: z.string(),
+  date: z.string(),
+  generatedAt: z.string().datetime(),
+  text: z.string(),
+})
+export type ProjectStandup = z.infer<typeof ProjectStandupSchema>

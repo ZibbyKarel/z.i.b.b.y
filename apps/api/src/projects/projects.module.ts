@@ -1,12 +1,14 @@
 import { Module } from "@nestjs/common"
 import { dataDir } from "../shared/data-dir"
+import { MemoryModule } from "../memory/memory.module"
 import { VAULT_DIR } from "../memory/vault.service"
-import { ProjectVaultService } from "./project-vault.service"
 import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store"
 import { ProjectCategoriesController } from "./project-categories.controller"
 import { ProjectCategoriesStorageService } from "./project-categories.storage.service"
+import { ProjectVaultService } from "./project-vault.service"
 import { ProjectsController } from "./projects.controller"
 import { PROJECTS_DIR, ProjectsStorageService } from "./projects.storage.service"
+import { StandupService } from "./standup.service"
 
 /**
  * Default registry directory when `PROJECTS_DIR` is not set. Anchored to the api
@@ -24,6 +26,7 @@ export function resolveProjectSecretsDir(): string {
 }
 
 @Module({
+  imports: [MemoryModule],
   // ProjectCategoriesController is declared before ProjectsController so its
   // static route (`GET /projects/categories`) registers ahead of `/projects/:id`,
   // which would otherwise capture "categories" as a project id.
@@ -39,7 +42,8 @@ export function resolveProjectSecretsDir(): string {
     ProjectCategoriesStorageService,
     ProjectSecretsStore,
     ProjectVaultService,
+    StandupService,
   ],
-  exports: [ProjectsStorageService, ProjectCategoriesStorageService, ProjectSecretsStore],
+  exports: [ProjectsStorageService, ProjectCategoriesStorageService, ProjectSecretsStore, StandupService],
 })
 export class ProjectsModule {}

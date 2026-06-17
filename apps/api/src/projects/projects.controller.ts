@@ -3,10 +3,11 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import type { Project, ProjectProfile } from "@zibby/contracts"
 import { projectsContract } from "@zibby/contracts"
 import { makeErrorMapper } from "../shared/http/error-mapping"
-import { ProjectVaultService } from "./project-vault.service"
 import { ProjectSecretsStore } from "./project-secrets.store"
+import { ProjectVaultService } from "./project-vault.service"
 import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors"
 import { ProjectsStorageService } from "./projects.storage.service"
+import { StandupService } from "./standup.service"
 
 const errors = makeErrorMapper("Project", {
   missing: [ProjectNotFoundError],
@@ -37,6 +38,7 @@ export class ProjectsController {
   constructor(
     private readonly storage: ProjectsStorageService,
     private readonly secrets: ProjectSecretsStore,
+    private readonly standup: StandupService,
     private readonly vault: ProjectVaultService,
   ) {}
 
@@ -107,6 +109,12 @@ export class ProjectsController {
           void this.vault.write(updated)
           return toProfile(updated)
         }),
+
+      getStandup: async ({ params: { id } }) => {
+        const result = await this.standup.get(id).catch(() => null)
+        if (!result) return { status: 404 as const, body: { message: `No standup for project "${id}"` } }
+        return { status: 200 as const, body: result }
+      },
     })
   }
 }

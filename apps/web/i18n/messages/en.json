@@ -1122,6 +1122,9 @@
         "format": "Standup format",
         "formatPlaceholder": "Yesterday / Today / Blockers"
       },
+      "standup": {
+        "title": "Standup cheat sheet"
+      },
       "link": "Profile"
     }
   },

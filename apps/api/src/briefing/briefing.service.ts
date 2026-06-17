@@ -76,6 +76,7 @@ export class BriefingService {
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
+    const trend7d = await this.readTrend7d(now)
     return assembleBriefing({
       now,
       since,
@@ -87,6 +88,7 @@ export class BriefingService {
       activity,
       tasks,
       projectNames,
+      trend7d,
     })
   }
 
@@ -141,5 +143,25 @@ export class BriefingService {
   private async writeCursor(generatedAt: string): Promise<void> {
     await ensureDir(this.activityDir)
     await writeFileAtomic(path.join(this.activityDir, CURSOR_FILE), JSON.stringify({ generatedAt }))
+  }
+
+  /**
+   * Read the first non-empty line from each of the past 7 daily vault notes as a
+   * trend summary. Missing days are silently skipped — never throws.
+   */
+  private async readTrend7d(now: Date): Promise<string[]> {
+    const summaries: string[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+      const date = d.toISOString().slice(0, 10)
+      try {
+        const note = await this.vault.note(date)
+        const firstLine = (note.body ?? "").split("\n").find((l) => l.trim().length > 0)
+        if (firstLine) summaries.push(`${date}: ${firstLine.replace(/^[-*]\s*/, "").trim()}`)
+      } catch {
+        // Day not found or unreadable — skip silently.
+      }
+    }
+    return summaries
   }
 }

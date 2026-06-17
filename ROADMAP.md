@@ -33,7 +33,7 @@ The real picture, verified against `apps/api/src`:
 | **Inbound message → action routing**                                | ✅ **Done (M2, 2026-06-17)** | project autonomy_policy enforced at triage: VIP+vip_escalation→T3, respond_as=draft_only→T3; vip stamped on item; inbox shows sender+VIP badge |
 | **Self-learning from approval signals**                             | ❌ Absent                   | no pattern extractor; `patterns/` folder doesn't exist in the vault                                                    |
 | **Nightly consolidation job**                                       | ❌ Absent                   | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                               |
-| **Standup cheat sheets per project**                                | ❌ Absent                   | only generic daily briefings                                                                                           |
+| **Standup cheat sheets per project**                                | ✅ **Done (M3, 2026-06-17)** | StandupService (24h activity→markdown); GET /projects/:id/standup; standup card on ProfileScreen; trend7d in Briefing |
 | **Research / intelligence layer**                                   | ❌ Absent                   | no ResearchAgent or watchers                                                                                           |
 | **GapDetector / "I want X" NL self-mod flow**                       | ❌ Absent                   | self-dev pipeline exists, the proactive front-end of it does not                                                       |
 
@@ -126,7 +126,7 @@ it must.
 
 ---
 
-## M3 — Narrative Briefing + Standup Cheat Sheets
+## M3 — Narrative Briefing + Standup Cheat Sheets ✅ DONE 2026-06-17
 
 **Why third:** daily, visible value. The briefing is the operator's "I just show up for the
 daily" moment from the north-star.

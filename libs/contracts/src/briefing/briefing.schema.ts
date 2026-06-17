@@ -91,6 +91,8 @@ export const BriefingSchema = z.object({
   /** Per-engagement rollup (Phase 8.2) — empty when nothing is project-attributed. */
   engagements: z.array(BriefingEngagementSchema),
   counts: BriefingCountsSchema,
+  /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
+  trend7d: z.array(z.string()).optional(),
 })
 export type Briefing = z.infer<typeof BriefingSchema>
 

@@ -29,6 +29,7 @@ const updateMutate = vi.fn();
 vi.mock("./queries", () => ({
   useProjectQuery: () => ({ data: project, isPending: false, isError: false }),
   useProjectProfileQuery: () => ({ data: profile }),
+  useProjectStandupQuery: () => ({ data: null }),
 }));
 
 vi.mock("./mutations", () => ({

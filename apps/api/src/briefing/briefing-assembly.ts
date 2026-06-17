@@ -32,6 +32,8 @@ export interface BriefingInput {
   tasks?: ScheduledTask[]
   /** projectId → display name, so the rollup reads in the operator's terms. */
   projectNames?: Record<string, string>
+  /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
+  trend7d?: string[]
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -81,6 +83,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     watching,
     engagements,
     counts,
+    ...(input.trend7d && input.trend7d.length > 0 ? { trend7d: input.trend7d } : {}),
   }
 }
 

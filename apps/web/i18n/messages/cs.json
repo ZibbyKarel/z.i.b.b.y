@@ -1122,6 +1122,9 @@
         "format": "Formát standupu",
         "formatPlaceholder": "Včera / Dnes / Blokery"
       },
+      "standup": {
+        "title": "Tahák pro standup"
+      },
       "link": "Profil"
     }
   },
