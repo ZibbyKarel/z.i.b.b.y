@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest"
 import { ChannelItemSchema, TriageVerdictSchema, channelsContract } from "../index"
 
 describe("channelsContract", () => {
-  it("exposes read-only item routes under /api/channels (no write endpoint)", () => {
+  it("exposes read-only ITEM routes (items are never client-writable, Law 4)", () => {
     expect(channelsContract.listChannelItems.path).toBe("/api/channels/items")
     expect(channelsContract.listChannelItems.method).toBe("GET")
     expect(channelsContract.getChannelItem.path).toBe("/api/channels/items/:id")
-    const methods = Object.values(channelsContract).map((r) => r.method)
-    expect(methods.every((m) => m === "GET")).toBe(true)
+    expect(channelsContract.getChannelItem.method).toBe("GET")
+  })
+
+  it("the only write surface is proposing a Jira issue — which PARKS an approval, never an item", () => {
+    expect(channelsContract.createJiraIssue.method).toBe("POST")
+    expect(channelsContract.createJiraIssue.path).toBe("/api/channels/integrations/:id/jira-issue")
+    // 202 (parked), not a 201 item-created — the create runs only on approve.
+    expect(channelsContract.createJiraIssue.responses).toHaveProperty("202")
   })
 })
 

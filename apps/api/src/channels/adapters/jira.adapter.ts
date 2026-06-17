@@ -89,6 +89,40 @@ export class JiraChannelAdapter implements ChannelAdapter {
     return { items, cursor: newest }
   }
 
+  /**
+   * Create a Jira issue (the finished-day "creates a Jira task"). Outbound write —
+   * the caller MUST gate this behind an approval (the `jira.create_issue` floor); the
+   * adapter only performs the authenticated POST. Returns the new issue key.
+   */
+  async createIssue(
+    integration: Integration,
+    creds: CredentialsInput,
+    fields: { summary: string; description?: string; projectKey?: string },
+  ): Promise<string> {
+    if (integration.config.kind !== "jira") throw new Error("not a jira integration")
+    const projectKey = fields.projectKey ?? integration.config.projectKey
+    if (!projectKey) throw new Error("jira create needs a projectKey (config or argument)")
+    const body = {
+      fields: {
+        project: { key: projectKey },
+        issuetype: { name: "Task" },
+        summary: fields.summary,
+        ...(fields.description
+          ? { description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: fields.description }] }] } }
+          : {}),
+      },
+    }
+    const res = await this.fetchImpl(`${integration.config.baseUrl}/rest/api/3/issue`, {
+      method: "POST",
+      headers: { authorization: this.authHeader(creds, integration.config.email), "content-type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) throw new Error(`jira create issue: HTTP ${res.status}`)
+    const created = (await res.json()) as { key?: string }
+    if (!created.key) throw new Error("jira create issue: no key returned")
+    return created.key
+  }
+
   async send(integration: Integration, creds: CredentialsInput, item: ChannelItem, text: string): Promise<void> {
     if (integration.config.kind !== "jira") throw new Error("not a jira integration")
     const key = item.externalRef.messageId

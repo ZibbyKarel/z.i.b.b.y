@@ -59,6 +59,23 @@ describe("JiraChannelAdapter", () => {
     expect((await bad.test(jira, { token: "tok" })).ok).toBe(false)
   })
 
+  it("createIssue POSTs to /issue with the project key and returns the new key", async () => {
+    const fetchImpl = jsonFetch({ key: "BUG-42" }, 201)
+    const adapter = new JiraChannelAdapter(fetchImpl)
+    const key = await adapter.createIssue(jira, { token: "tok" }, { summary: "New bug", description: "details" })
+    expect(key).toBe("BUG-42")
+    const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]! as [string, RequestInit]
+    expect(url).toContain("/rest/api/3/issue")
+    expect(JSON.parse(init.body as string).fields.project.key).toBe("BUG")
+    expect(JSON.parse(init.body as string).fields.summary).toBe("New bug")
+  })
+
+  it("createIssue throws when no projectKey is available", async () => {
+    const noProject: Integration = { ...jira, config: { kind: "jira", baseUrl: "https://acme.atlassian.net", email: "me@acme.com" } }
+    const adapter = new JiraChannelAdapter(jsonFetch({}, 201))
+    await expect(adapter.createIssue(noProject, { token: "tok" }, { summary: "x" })).rejects.toThrow(/projectKey/)
+  })
+
   it("send posts a comment to the issue", async () => {
     const fetchImpl = jsonFetch({})
     const adapter = new JiraChannelAdapter(fetchImpl)

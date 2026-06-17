@@ -84,6 +84,9 @@ const ASK_FLOOR_ACTIONS = [
   "pr.open",
   "send_email",
   "delete",
+  // The finished-day "creates a Jira task" — an outbound external write, so it is
+  // structurally Tier-3 (surfaced for approval), never autonomous. Harden-only.
+  "jira.create_issue",
   // Phase 8.1: spending past a per-engagement budget cap is a Tier-3 decision —
   // the budget guard holds the over-cap task and requests this approval (Law 3:
   // no autonomous spend past budget). Harden-only: an agent may raise it to deny.

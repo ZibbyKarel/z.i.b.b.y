@@ -53,6 +53,10 @@ Mapuje `integration.type` → konkrétní adapter implementaci.
 - Poll: REST `search` (JQL `project = KEY` + `updated >= cursor`), Basic auth `email:apiToken`
 - Cursor = nejnovější `updated`; id = `jira-<KEY>`, `externalRef.messageId` = issue key
 - Send: přidá komentář na issue (`/rest/api/3/issue/{key}/comment`)
+- **Create (finished-day "creates a Jira task"):** `createIssue` (POST `/rest/api/3/issue`) je
+  vždy za schválením — floor `jira.create_issue → ask` + `JiraIssueFlowService` (ResumableRunner):
+  `propose` zaparkuje approval `jira-issue`, vytvoření proběhne až na `resume` (approve).
+  Endpoint `POST /api/channels/integrations/:id/jira-issue` → `202 {approvalId}`.
 
 ### GitHub adapter
 

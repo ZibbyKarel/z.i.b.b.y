@@ -52,6 +52,15 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-jira.create_issue
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: jira.create_issue
+    decision: ask
+    resolve:
+      type: human
   - id: floor-spend-past-cap
     source: system
     locked: true

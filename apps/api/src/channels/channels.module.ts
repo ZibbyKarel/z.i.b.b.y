@@ -12,6 +12,7 @@ import { ChannelEventsService } from "./channel-events.service"
 import { ChannelTriageFlowService } from "./channel-triage-flow.service"
 import { CHANNEL_TRIAGE_FLOW, ChannelWatcherService } from "./channel-watcher.service"
 import { ChannelsController } from "./channels.controller"
+import { JiraIssueFlowService } from "./jira-issue-flow.service"
 import { ClaudeCliTriager } from "./triage/claude-cli-triager"
 import { KeywordTriager } from "./triage/keyword-triager"
 import { TRIAGE_ROUTER } from "./triage/triage-router"
@@ -50,6 +51,7 @@ export function resolveChannelsDir(): string {
     ChannelTriageFlowService,
     { provide: CHANNEL_TRIAGE_FLOW, useExisting: ChannelTriageFlowService },
     ChannelWatcherService,
+    JiraIssueFlowService,
   ],
   exports: [ChannelItemStore, ChannelEventsService],
 })

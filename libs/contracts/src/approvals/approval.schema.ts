@@ -27,6 +27,10 @@ export const ApprovalRunKindSchema = z.enum([
   // taskId (the durable ScheduledTask record holds the gate state — no live child);
   // approving runs the gated push, rejecting leaves the committed branch without a PR.
   "task-output",
+  // The finished-day "creates a Jira task": an outbound Jira-issue create parked for
+  // approval. The runId is the create-request id; approving it performs the gated POST
+  // via the Jira adapter, rejecting it drops the request. Outbound write → always Tier-3.
+  "jira-issue",
 ])
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>
 
