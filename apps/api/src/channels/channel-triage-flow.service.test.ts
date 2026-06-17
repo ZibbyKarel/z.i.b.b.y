@@ -46,6 +46,8 @@ describe("ChannelTriageFlowService", () => {
     decision?: "allow" | "notify" | "ask" | "deny"
     taskOutcome?: ChannelItem["outcome"]
     projects?: Project[]
+    jiraIntegrations?: Array<{ id: string; kind: string; enabled: boolean }>
+    jiraPropose?: ReturnType<typeof vi.fn>
   }) {
     createTask = vi.fn(async () => ({ outcome: "dispatched", task: { id: "task_1" }, runRef: "r1", target: {} }))
     requestApproval = vi.fn(async () => ({ id: "appr_1" }))
@@ -58,11 +60,12 @@ describe("ChannelTriageFlowService", () => {
     const scheduledTasks = { get: async () => ({ outcome: opts.taskOutcome }) }
     const gates = { floor: async () => [], evaluate: () => ({ decision: opts.decision ?? "notify" }) }
     const gateRules = { list: async () => [] }
-    const integrations = { get: async () => integration }
+    const integrations = { get: async () => integration, list: async () => opts.jiraIntegrations ?? [] }
     const projects = { list: async () => opts.projects ?? [] }
     const credentials = { read: async () => ({ token: "xoxb-1" }) }
     const registry = { resolve: () => ({ send }) }
     const approvals = { register, requestApproval }
+    const jiraFlow = opts.jiraPropose ? { propose: opts.jiraPropose } : undefined
 
     return new ChannelTriageFlowService(
       triage as never,
@@ -79,6 +82,7 @@ describe("ChannelTriageFlowService", () => {
       approvals as never,
       fakeLogger as never,
       { record: async () => {} } as never,
+      jiraFlow as never,
     )
   }
 
@@ -105,6 +109,37 @@ describe("ChannelTriageFlowService", () => {
     // Law 4: the raw text is enveloped, not bare; the title carries no body.
     expect(text).toContain("untrusted")
     expect(createTask.mock.calls[0]![0].title).not.toContain("secret-payload")
+  })
+
+  it("a bug verdict autonomously files a GATED Jira issue into the operator's Jira integration", async () => {
+    const jiraPropose = vi.fn(async () => ({ id: "appr_jira" }))
+    const flow = makeFlow({
+      verdict: bug,
+      jiraPropose,
+      jiraIntegrations: [{ id: "acme-jira", kind: "jira", enabled: true }],
+    })
+    await flow.handle(item({ text: "login crashes on submit" }))
+    expect(jiraPropose).toHaveBeenCalledTimes(1)
+    expect(jiraPropose.mock.calls[0]![0]).toMatchObject({ integrationId: "acme-jira" })
+    expect(jiraPropose.mock.calls[0]![0].summary).toContain("login crashes")
+  })
+
+  it("does not file a Jira issue when no Jira integration is configured", async () => {
+    const jiraPropose = vi.fn(async () => ({ id: "x" }))
+    const flow = makeFlow({ verdict: bug, jiraPropose, jiraIntegrations: [] })
+    await flow.handle(item({ text: "another bug" }))
+    expect(jiraPropose).not.toHaveBeenCalled()
+  })
+
+  it("does not file a Jira issue for a non-bug verdict", async () => {
+    const jiraPropose = vi.fn(async () => ({ id: "x" }))
+    const flow = makeFlow({
+      verdict: question,
+      jiraPropose,
+      jiraIntegrations: [{ id: "acme-jira", kind: "jira", enabled: true }],
+    })
+    await flow.handle(item())
+    expect(jiraPropose).not.toHaveBeenCalled()
   })
 
   it("tags the item + task with the matched engagement (Phase 8.2)", async () => {

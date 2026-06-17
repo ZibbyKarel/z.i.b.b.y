@@ -1,4 +1,4 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit, Optional } from "@nestjs/common"
 import type {
   ChannelItem,
   Decision,
@@ -22,6 +22,7 @@ import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.s
 import { AdapterRegistry } from "./adapters/adapter-registry"
 import { ChannelItemStore } from "./channel-item.store"
 import type { ChannelTriageFlow } from "./channel-watcher.service"
+import { JiraIssueFlowService } from "./jira-issue-flow.service"
 import { envelopeInbound } from "./sanitize"
 import { TriageService } from "./triage/triage.service"
 
@@ -70,6 +71,10 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     private readonly approvals: ApprovalsService,
     logger: LoggerService,
     private readonly activity: ActivityLogService,
+    // Optional so the unit test's manual construction (and any minimal wiring) still
+    // works; the live ChannelsModule always provides it. When present, a `bug` verdict
+    // also files a gated Jira issue (the finished-day "creates a Jira task").
+    @Optional() private readonly jiraFlow?: JiraIssueFlowService,
   ) {
     this.log = logger.child(ChannelTriageFlowService.name)
   }
@@ -77,6 +82,30 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
   onModuleInit(): void {
     // Register so a decision on a channel approval routes back here (decision 13).
     this.approvals.register("channel", this)
+  }
+
+  /**
+   * File a gated Jira issue for a bug report (the finished-day autonomous path).
+   * Targets the operator's first enabled Jira integration; `propose` only PARKS a
+   * `jira-issue` approval, so this is Tier-3-safe. Best-effort — any failure (no Jira
+   * configured, network) is logged and swallowed so it never blocks the triage tick.
+   */
+  private async maybeFileJiraBug(item: ChannelItem): Promise<void> {
+    if (!this.jiraFlow) return
+    try {
+      const integrations = await this.integrations.list().catch(() => [])
+      const jira = integrations.find((i) => i.enabled && i.kind === "jira")
+      if (!jira) return
+      const summary = item.text.length > 120 ? `${item.text.slice(0, 119)}…` : item.text
+      await this.jiraFlow.propose({
+        integrationId: jira.id,
+        summary: `Bug from ${item.integrationId}: ${summary}`,
+        description: `Reported via ${item.kind} (${item.integrationId})${item.from ? ` by ${item.from}` : ""}:\n\n${item.text}`,
+      })
+      this.log.info("bug report filed as a gated Jira issue", { itemId: item.id, jira: jira.id })
+    } catch (err) {
+      this.log.warn("failed to file bug as Jira issue (continuing)", { itemId: item.id, error: (err as Error).message })
+    }
   }
 
   /** Triage a `new` item and act by tier; returns the transitioned item. */
@@ -114,6 +143,13 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
         ...(isVip ? { vip: true } : {}),
       },
     })
+
+    // Finished-day "a bug report arrives — ZIBBY ... creates a Jira task": a bug
+    // verdict also files a GATED Jira issue (propose only parks an approval — never
+    // creates autonomously). Best-effort: a failure here never blocks triage.
+    if (effectiveVerdict.category === "bug" && effectiveVerdict.actionable) {
+      await this.maybeFileJiraBug(triaged)
+    }
 
     const dispatchAllowed = this.allowed(mandate, item.integrationId, "dispatch")
     const replyAllowed = this.allowed(mandate, item.integrationId, "reply")

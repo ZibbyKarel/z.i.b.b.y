@@ -131,9 +131,14 @@ it must.
 > `JiraIssueFlowService` ResumableRunner that PARKS a `jira-issue` approval on `propose` and
 > performs the create only on `resume` (approve) — never autonomously (Law 1/4, "the PR/issue
 > is the gate"). Surfaced via `POST /api/channels/integrations/:id/jira-issue` → `202
-> {approvalId}`. **All four channels are now monitored AND the finished-day outbound action is
-> real.** (A thin further step could auto-`propose` from a `bug` triage verdict; the gated
-> capability it would call now exists.)
+> {approvalId}`.
+>
+> **Autonomous routing ✅ DONE 2026-06-18:** the `ChannelTriageFlowService` now calls
+> `jiraFlow.propose()` on a `bug` verdict (targeting the operator's enabled Jira integration),
+> so the full finished-day path runs end-to-end and unprompted: _bug report arrives → triage
+> classifies `bug` → ZIBBY autonomously files a **gated** Jira issue → operator approves →
+> issue created_. Best-effort + Tier-3-safe (propose only parks; a failure never blocks triage).
+> **All four channels monitored AND the autonomous "creates a Jira task" scenario is real.**
 
 ---
 
