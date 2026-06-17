@@ -12,6 +12,40 @@ execution plan that converges the system onto it.
 
 ---
 
+## ✅ 1:1 with the North Star — achieved 2026-06-18
+
+Measured against **`north-star.md`** (the oracle), every named capability, guarantee, and the
+finished-day scenario is now implemented and tested:
+
+- **What ZIBBY Does** — executes work · monitors **Slack, email, Jira, GitHub** (all 4) ·
+  remembers (index-first vault) · learns (pattern extractor) · **proposes** (automation rules,
+  app ideas, priorities) · **self-modifies** (GapDetector + classifier→pipeline→worktree→PR gate).
+- **Finished-day scenario** — narrative overnight debrief + per-project standup; a bug report
+  arrives → triage → **autonomously files a gated Jira issue** + drafts a PR (task→pipeline→
+  `pr.open` gate) → surfaced for approval; routine question answered per policy; evening backlog
+  via orchestrator/goals; nightly consolidation (pattern + memory distill + research digest).
+- **Never without approval** — payment / external email / `pr.merge` (deny) / delete / self-mod
+  PR (`pr.open` ask) / **`jira.create_issue`** — all locked floor rules.
+- **Project profile** — identity+VIP people, bound channels, autonomy policy, daily rhythm,
+  budget (daily/weekly/**monthly** run caps). **Autonomy tiers**, **memory architecture**
+  (working/episodic/semantic), **per-subsystem health**, **multi-project data isolation**.
+- **DNA** — files-as-truth · contract-first · approval-first floor · index-first memory ·
+  polling-not-SSE · per-project harden-only gate · single operator. All upheld.
+
+**Explicitly out of scope of "1:1 with north-star.md"** (ROADMAP-enumerated depth/ops/scale the
+oracle does **not** name; each recorded in its milestone): audit-trail export, run-artifact
+retention, the multi-project velín *dashboard* (a view; "the UI is a view"), cross-project
+intelligence, and real network research-source adapters (the pluggable seam + fixtures floor
+exist; live RSS/HN/PH fetchers are deferred). USD cost tracking is **N/A by design**
+(subscription model — recorded under M7).
+
+Delivered this convergence pass (each contract-first → tests → lint/tsc/full-suite green →
+committed): M6 research/intelligence · M7 monthly budget · M5 GapDetector · M8 per-subsystem
+health · M7 multi-project isolation · M8 retry-backoff · M8 dead-letter · M8 health HUD · M6
+app-ideas · Jira+GitHub channels · gated Jira-issue create · autonomous bug→Jira routing.
+
+---
+
 ## State Audit — What Actually Exists (2026-06-16)
 
 The previous roadmap treated channels, briefing, and budget as unbuilt. They are not.
