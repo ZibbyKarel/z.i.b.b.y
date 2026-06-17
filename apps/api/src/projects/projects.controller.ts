@@ -1,8 +1,9 @@
 import { Controller } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import type { Project } from "@zibby/contracts"
+import type { Project, ProjectProfile } from "@zibby/contracts"
 import { projectsContract } from "@zibby/contracts"
 import { makeErrorMapper } from "../shared/http/error-mapping"
+import { ProjectVaultService } from "./project-vault.service"
 import { ProjectSecretsStore } from "./project-secrets.store"
 import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors"
 import { ProjectsStorageService } from "./projects.storage.service"
@@ -11,6 +12,15 @@ const errors = makeErrorMapper("Project", {
   missing: [ProjectNotFoundError],
   conflict: [ProjectConflictError],
 })
+
+/** Extract the profile fields from a full project entity. */
+function toProfile(project: Project): ProjectProfile {
+  return {
+    ...(project.identity ? { identity: project.identity } : {}),
+    ...(project.autonomy_policy ? { autonomy_policy: project.autonomy_policy } : {}),
+    ...(project.daily_rhythm ? { daily_rhythm: project.daily_rhythm } : {}),
+  }
+}
 
 /**
  * Implements `projectsContract` against the JSON-manifest-backed storage service.
@@ -27,6 +37,7 @@ export class ProjectsController {
   constructor(
     private readonly storage: ProjectsStorageService,
     private readonly secrets: ProjectSecretsStore,
+    private readonly vault: ProjectVaultService,
   ) {}
 
   /** Layer the read-time `hasSecrets` onto an entity for the wire. */
@@ -38,7 +49,11 @@ export class ProjectsController {
   handler() {
     return tsRestHandler(projectsContract, {
       createProject: ({ body }) =>
-        errors.created(async () => this.withSecretState(await this.storage.create(body))),
+        errors.created(async () => {
+          const project = await this.storage.create(body)
+          void this.vault.write(project)
+          return this.withSecretState(project)
+        }),
 
       listProjects: async () => {
         const all = await this.storage.list()
@@ -54,13 +69,18 @@ export class ProjectsController {
         errors.or404(id, async () => this.withSecretState(await this.storage.get(id))),
 
       updateProject: ({ params: { id }, body }) =>
-        errors.or404(id, async () => this.withSecretState(await this.storage.update(id, body))),
+        errors.or404(id, async () => {
+          const updated = await this.storage.update(id, body)
+          void this.vault.write(updated)
+          return this.withSecretState(updated)
+        }),
 
       deleteProject: ({ params: { id } }) =>
         errors.or404(id, async () => {
           await this.storage.get(id) // 404 before any side effect
           await this.storage.delete(id)
           await this.secrets.remove(id)
+          void this.vault.remove(id)
           return { id }
         }),
 
@@ -76,6 +96,16 @@ export class ProjectsController {
           const existing = await this.storage.get(id)
           await this.secrets.remove(id)
           return this.withSecretState(existing)
+        }),
+
+      getProjectProfile: ({ params: { id } }) =>
+        errors.or404(id, async () => toProfile(await this.storage.get(id))),
+
+      updateProjectProfile: ({ params: { id }, body }) =>
+        errors.or404(id, async () => {
+          const updated = await this.storage.update(id, body)
+          void this.vault.write(updated)
+          return toProfile(updated)
         }),
     })
   }

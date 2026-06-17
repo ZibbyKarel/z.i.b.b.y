@@ -9,6 +9,69 @@ import { AgentIdSchema } from "../agents/agent.schema"
  */
 export const ProjectIdSchema = AgentIdSchema
 
+/** A person associated with a project (team member, client contact, stakeholder). */
+export const ProjectPersonSchema = z.object({
+  name: z.string().min(1),
+  role: z.string().min(1),
+  /** VIP flag: forces Tier-3 escalation for messages from this person. */
+  vip: z.boolean().optional(),
+  /** Preferred communication style hint for drafted replies. */
+  comms_style: z.string().optional(),
+})
+export type ProjectPerson = z.infer<typeof ProjectPersonSchema>
+
+/** People associated with the project: team, clients, stakeholders. */
+export const ProjectIdentitySchema = z.object({
+  people: z.array(ProjectPersonSchema).optional(),
+})
+export type ProjectIdentity = z.infer<typeof ProjectIdentitySchema>
+
+/**
+ * Per-project autonomy policy. Can only **harden** the global floor (tighten rules)
+ * — the gate engine enforces 422 on any attempt to relax a floor rule.
+ */
+export const ProjectAutonomyPolicySchema = z.object({
+  /** Action verbs ZIBBY may perform without asking (e.g. "reply", "create_task"). */
+  can_do_alone: z.array(z.string()).optional(),
+  /** Action verbs that always require operator approval in this project. */
+  always_ask: z.array(z.string()).optional(),
+  /** When true, any message from a VIP person forces Tier-3 escalation. */
+  vip_escalation: z.boolean().optional(),
+  /** autonomous = act on tier policy; draft_only = always draft, never send. */
+  respond_as: z.enum(["autonomous", "draft_only"]).optional(),
+})
+export type ProjectAutonomyPolicy = z.infer<typeof ProjectAutonomyPolicySchema>
+
+/** Daily operational rhythm for the project. */
+export const ProjectDailyRhythmSchema = z.object({
+  /** HH:MM time for the standup cheat-sheet cron (Europe/Prague). */
+  standup_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "must be HH:MM")
+    .optional(),
+  /** Standup format description or template. */
+  format: z.string().optional(),
+  /** Active monitoring window, e.g. "09:00-18:00". */
+  active_hours: z.string().optional(),
+})
+export type ProjectDailyRhythm = z.infer<typeof ProjectDailyRhythmSchema>
+
+/**
+ * The operational profile of a project — who is involved, what ZIBBY may do
+ * autonomously, and when the operator expects to be active. Nested inside the
+ * full Project entity as optional fields.
+ */
+export const ProjectProfileSchema = z.object({
+  identity: ProjectIdentitySchema.optional(),
+  autonomy_policy: ProjectAutonomyPolicySchema.optional(),
+  daily_rhythm: ProjectDailyRhythmSchema.optional(),
+})
+export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
+
+/** Body accepted by `updateProjectProfile` — all profile fields optional. */
+export const UpdateProjectProfileSchema = ProjectProfileSchema.partial()
+export type UpdateProjectProfileInput = z.infer<typeof UpdateProjectProfileSchema>
+
 /**
  * Per-engagement budget (Phase 8.1). The unit is **run-count per window**, not
  * tokens: a run carries no usage data and `LimitsService` is account-level, so a
@@ -34,6 +97,10 @@ export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>
  * deleting a project removes only the registry record; the files it points at
  * are untouched. `category` links to the project taxonomy by name (free-form, the
  * closed set lives in the web app) and `path` is the root on the host system.
+ *
+ * The operational profile fields (`identity`, `autonomy_policy`, `daily_rhythm`)
+ * are also stored in the registry and mirrored to a vault note so agents can
+ * ground on the project context.
  */
 export const ProjectSchema = z.object({
   id: ProjectIdSchema,
@@ -60,6 +127,14 @@ export const ProjectSchema = z.object({
    * the controller always layers the real value onto wire responses.
    */
   hasSecrets: z.boolean().optional(),
+
+  // --- Operational profile (M1) ---
+  /** Team members, clients, and stakeholders associated with this project. */
+  identity: ProjectIdentitySchema.optional(),
+  /** Per-project autonomy policy (can only harden the global gate floor). */
+  autonomy_policy: ProjectAutonomyPolicySchema.optional(),
+  /** Daily operational rhythm: standup timing, monitoring hours. */
+  daily_rhythm: ProjectDailyRhythmSchema.optional(),
 })
 export type Project = z.infer<typeof ProjectSchema>
 

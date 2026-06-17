@@ -63,7 +63,8 @@
     "loadErrorDescription": "The API connection failed — your data is fine, it's just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
     "mutationError": "That didn't go through — your change wasn't saved. Please try again.",
-    "targetProject": "Target project"
+    "targetProject": "Target project",
+    "back": "Back"
   },
   "topbar": {
     "commandHint": "Command or skill (⌘K)",
@@ -1088,6 +1089,39 @@
       "namePlaceholder": "e.g. Dev",
       "glyphLabel": "Glyph",
       "duplicate": "Category “{name}” already exists."
+    },
+    "profile": {
+      "team": {
+        "title": "Team",
+        "empty": "No team members yet — add people who are involved in this project.",
+        "add": "Add person",
+        "remove": "Remove",
+        "name": "Name",
+        "namePlaceholder": "Jane Smith",
+        "role": "Role",
+        "rolePlaceholder": "Product Manager",
+        "vip": "VIP — forces escalation"
+      },
+      "autonomy": {
+        "title": "Autonomy policy",
+        "respondAs": "Respond as",
+        "autonomous": "Autonomous",
+        "draftOnly": "Draft only",
+        "vipEscalation": "Escalate messages from VIPs (force Tier 3)",
+        "canDoAlone": "Can do alone",
+        "canDoAloneHint": "Action verbs ZIBBY may perform without asking, comma-separated.",
+        "alwaysAsk": "Always ask",
+        "alwaysAskHint": "Action verbs that always require approval in this project, comma-separated."
+      },
+      "rhythm": {
+        "title": "Daily rhythm",
+        "standupTime": "Standup time",
+        "standupTimeHint": "HH:MM — standup cheat sheet will be ready 15 min before.",
+        "activeHours": "Active monitoring hours",
+        "format": "Standup format",
+        "formatPlaceholder": "Yesterday / Today / Blockers"
+      },
+      "link": "Profile"
     }
   },
   "automations": {

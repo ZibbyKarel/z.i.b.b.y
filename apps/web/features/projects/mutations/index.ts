@@ -1,5 +1,6 @@
 export { useCreateProjectMutation } from "./useCreateProjectMutation";
 export { useUpdateProjectMutation } from "./useUpdateProjectMutation";
+export { useUpdateProjectProfileMutation } from "./useUpdateProjectProfileMutation";
 export { useDeleteProjectMutation } from "./useDeleteProjectMutation";
 export { useCreateProjectCategoryMutation } from "./useCreateProjectCategoryMutation";
 export { useDeleteProjectCategoryMutation } from "./useDeleteProjectCategoryMutation";

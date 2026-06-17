@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Container,
@@ -95,6 +96,7 @@ export function ProjectModal({
 }: ProjectModalProps) {
   const t = useTranslations("projects");
   const tk = useTranslations();
+  const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [envRows, setEnvRows] = useState<KeyValueRow[]>(toRows(project.env));
   const [secretRows, setSecretRows] = useState<KeyValueRow[]>([]);
@@ -151,6 +153,16 @@ export function ProjectModal({
         <span />
       )}
       <Stack align="center" direction="row" gap="100">
+        {!isNew && (
+          <Button
+            icon="gear"
+            intent="ghost"
+            onClick={() => { onClose(); router.push(`/projects/${project.id}`); }}
+            size="sm"
+          >
+            {t("profile.link")}
+          </Button>
+        )}
         <Button intent="ghost" onClick={onClose}>
           {tk("common.cancel")}
         </Button>

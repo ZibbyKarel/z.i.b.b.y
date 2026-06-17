@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import { dataDir } from "../shared/data-dir"
+import { VAULT_DIR } from "../memory/vault.service"
+import { ProjectVaultService } from "./project-vault.service"
 import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store"
 import { ProjectCategoriesController } from "./project-categories.controller"
 import { ProjectCategoriesStorageService } from "./project-categories.storage.service"
@@ -29,9 +31,14 @@ export function resolveProjectSecretsDir(): string {
   providers: [
     { provide: PROJECTS_DIR, useFactory: resolveProjectsDir },
     { provide: PROJECT_SECRETS_DIR, useFactory: resolveProjectSecretsDir },
+    {
+      provide: VAULT_DIR,
+      useFactory: () => process.env.VAULT_DIR ?? dataDir("vault"),
+    },
     ProjectsStorageService,
     ProjectCategoriesStorageService,
     ProjectSecretsStore,
+    ProjectVaultService,
   ],
   exports: [ProjectsStorageService, ProjectCategoriesStorageService, ProjectSecretsStore],
 })

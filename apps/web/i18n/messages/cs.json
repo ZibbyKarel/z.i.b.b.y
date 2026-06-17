@@ -63,7 +63,8 @@
     "loadErrorDescription": "Spojení s API selhalo — tvoje data jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
     "retry": "Zkusit znovu",
     "mutationError": "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.",
-    "targetProject": "Cílový projekt"
+    "targetProject": "Cílový projekt",
+    "back": "Zpět"
   },
   "topbar": {
     "commandHint": "Příkaz nebo skill (⌘K)",
@@ -1088,6 +1089,39 @@
       "namePlaceholder": "např. Vývoj",
       "glyphLabel": "Glyph",
       "duplicate": "Kategorie „{name}“ už existuje."
+    },
+    "profile": {
+      "team": {
+        "title": "Tým",
+        "empty": "Zatím žádní členové týmu — přidej lidi zapojené do projektu.",
+        "add": "Přidat osobu",
+        "remove": "Odebrat",
+        "name": "Jméno",
+        "namePlaceholder": "Jana Nováková",
+        "role": "Role",
+        "rolePlaceholder": "Produktový manažer",
+        "vip": "VIP — vynutí eskalaci"
+      },
+      "autonomy": {
+        "title": "Zásady autonomie",
+        "respondAs": "Odpovídat jako",
+        "autonomous": "Autonomně",
+        "draftOnly": "Jen návrh",
+        "vipEscalation": "Eskalovat zprávy od VIP (vynutit Tier 3)",
+        "canDoAlone": "Může sám",
+        "canDoAloneHint": "Akce, které ZIBBY smí provést bez ptaní — čárkami oddělené.",
+        "alwaysAsk": "Vždy ptát se",
+        "alwaysAskHint": "Akce, které vždy vyžadují schválení v tomto projektu — čárkami oddělené."
+      },
+      "rhythm": {
+        "title": "Denní rytmus",
+        "standupTime": "Čas standupu",
+        "standupTimeHint": "HH:MM — tahák pro standup bude připraven 15 min předem.",
+        "activeHours": "Aktivní hodiny monitorování",
+        "format": "Formát standupu",
+        "formatPlaceholder": "Včera / Dnes / Blokery"
+      },
+      "link": "Profil"
     }
   },
   "automations": {

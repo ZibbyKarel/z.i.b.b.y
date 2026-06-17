@@ -4,8 +4,10 @@ import { ErrorSchema } from "../common.schema"
 import {
   CreateProjectSchema,
   ProjectIdSchema,
+  ProjectProfileSchema,
   ProjectSchema,
   ProjectSecretsInputSchema,
+  UpdateProjectProfileSchema,
   UpdateProjectSchema,
 } from "./project.schema"
 
@@ -79,6 +81,21 @@ export const projectsContract = c.router(
       pathParams: z.object({ id: ProjectIdSchema }),
       responses: { 200: ProjectSchema, 404: ErrorSchema },
       summary: "Remove a project's stored run secrets",
+    },
+    getProjectProfile: {
+      method: "GET",
+      path: "/projects/:id/profile",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      responses: { 200: ProjectProfileSchema, 404: ErrorSchema },
+      summary: "Get the operational profile (identity, autonomy policy, daily rhythm) of a project",
+    },
+    updateProjectProfile: {
+      method: "PUT",
+      path: "/projects/:id/profile",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      body: UpdateProjectProfileSchema,
+      responses: { 200: ProjectProfileSchema, 404: ErrorSchema, 422: ErrorSchema },
+      summary: "Replace the operational profile of a project",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
