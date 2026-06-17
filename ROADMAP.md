@@ -314,8 +314,15 @@ ledger are empty), no 80/90/100% thresholds, no multi-project velín, no cross-p
 > `ok`-with-note, a configured-but-unarmed loop is `degraded`). The HUD already renders the
 > overall `/health` status; a per-subsystem HUD widget is the obvious next web increment.
 >
-> **Still open (continuous):** velín per-subsystem HUD widget; exponential backoff + dead-letter
-> queue for integration I/O; audit-trail export + run-artifact retention.
+> **Delivered 2026-06-18:** exponential-backoff **retry for integration I/O** — a pure
+> `withRetry(fn, {retries, baseMs, shouldRetry})` (`shared/retry.ts`) wraps the channel poll, so
+> a transient network blip retries with backoff before the watcher's per-integration catch fires.
+> Exhaustion now records an `integration-retry-exhausted` activity line (not just a silent
+> `lastError` stamp), so a persistently failing channel surfaces in the briefing. Tunable via
+> `CHANNEL_POLL_RETRIES` / `CHANNEL_POLL_BACKOFF_MS`.
+>
+> **Still open (continuous):** velín per-subsystem HUD widget; **dead-letter queue** for failed
+> tasks; audit-trail export + run-artifact retention.
 
 **Why continuous, not last:** much of this already exists from the self-development safety work;
 the rest should land alongside every milestone, not be deferred.

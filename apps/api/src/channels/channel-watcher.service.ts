@@ -11,6 +11,7 @@ import { CredentialsStore } from "../integrations/credentials.store"
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { withRetry } from "../shared/retry"
 import { randomUUID } from "node:crypto"
 import { AdapterRegistry } from "./adapters/adapter-registry"
 import { ChannelEventsService } from "./channel-events.service"
@@ -93,9 +94,17 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
           const ids = await this.pollOne(integration, creds)
           ingested.push(...ids)
         } catch (err) {
+          // The poll exhausted its retry/backoff budget (pollOne) — surface it: stamp
+          // lastError AND record an activity line so a persistently failing channel is
+          // visible in the briefing, never silent (M8 "never fails silently").
           const message = err instanceof Error ? err.message : String(err)
           await this.integrations.markSync(integration.id, { status: "error", lastError: message })
-          this.log.warn("integration poll failed", { id: integration.id, error: message })
+          void this.activity.record({
+            kind: "integration-retry-exhausted",
+            summary: `integration ${integration.id} (${integration.kind}) failed after retries: ${message}`,
+            refs: { integrationId: integration.id, status: "error" },
+          })
+          this.log.warn("integration poll failed after retries", { id: integration.id, error: message })
         }
       })
     }
@@ -105,7 +114,22 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
   private async pollOne(integration: Integration, creds: CredentialsInput): Promise<string[]> {
     const adapter = this.registry.resolve(integration.kind)
     const cursor = await this.store.readCursor(integration.id)
-    const { items, cursor: nextCursor } = await adapter.poll(integration, creds, cursor)
+    // M8: retry a transient poll failure with exponential backoff before giving up.
+    // Only the network read retries; item persistence below is idempotent (dedup-by-id)
+    // and stays outside the retry. Exhaustion rethrows to tick's catch (the DLQ boundary).
+    const { items, cursor: nextCursor } = await withRetry(
+      () => adapter.poll(integration, creds, cursor),
+      {
+        retries: intEnv("CHANNEL_POLL_RETRIES", 2),
+        baseMs: intEnv("CHANNEL_POLL_BACKOFF_MS", 250),
+        onRetry: (attempt, error) =>
+          this.log.debug("integration poll retry", {
+            id: integration.id,
+            attempt,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+      },
+    )
 
     const ingested: string[] = []
     for (const msg of items) {
@@ -153,4 +177,10 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
     })
     return ingested
   }
+}
+
+/** Parse a non-negative integer env var, falling back to `dflt` on absent/garbage. */
+function intEnv(name: string, dflt: number): number {
+  const n = Number(process.env[name])
+  return Number.isFinite(n) && n >= 0 ? n : dflt
 }

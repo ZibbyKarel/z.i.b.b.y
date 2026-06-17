@@ -77,6 +77,10 @@ if (!process.env.ZIBBY_WORKTREE_ROOT) {
 // the deterministic demo seam unless a suite explicitly opts into another mode.
 process.env.AGENT_RUNNER_MODE ??= "demo"
 
+// M8: keep the integration-poll retry/backoff effectively instant under test so a
+// failing-poll case exercises the retry path without burning real wall-clock.
+process.env.CHANNEL_POLL_BACKOFF_MS ??= "1"
+
 // The agent runner always spawns real `claude` (no demo mode); pin the token-free
 // fake so a reconstructed agent-maker can never reach the real binary.
 process.env.CLAUDE_BIN ??= join(__dirname, "test", "fixtures", "fake-claude.mjs")
