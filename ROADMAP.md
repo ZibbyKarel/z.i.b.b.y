@@ -124,6 +124,14 @@ VIP→Tier-3 escalation, no draft-into-approval-queue for Tier 3.
 answered per policy (Tier 1/2). ZIBBY monitors on the operator's behalf and escalates where
 it must.
 
+> **Remaining north-star item (finished-day scenario):** _"A bug report arrives — ZIBBY
+> classifies it, **creates a Jira task**, drafts a PR, and surfaces it for approval."_ Inbound
+> Jira/GitHub monitoring now exists (2026-06-18); the **outbound "creates a Jira task"** action
+> is the next increment — a gated Jira-issue create (floor `jira.create_issue → ask`, approval
+> resume → `JiraChannelAdapter.createIssue`), wired as a triage verdict. The Jira adapter's
+> auth + base-url plumbing is already in place; this adds the POST `/issue` write + the gate +
+> the approval flow (mirrors the existing channel-reply approval seam).
+
 ---
 
 ## M3 — Narrative Briefing + Standup Cheat Sheets ✅ DONE 2026-06-17
