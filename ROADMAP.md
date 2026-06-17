@@ -154,7 +154,7 @@ for every active project.
 
 ---
 
-## M4 — Self-Learning + Nightly Consolidation
+## M4 — Self-Learning + Nightly Consolidation ✅ DONE 2026-06-17
 
 **Why fourth:** this is what makes ZIBBY a _second brain_ rather than an executor — "by
 morning it knows more than it did the night before." Genuinely greenfield.

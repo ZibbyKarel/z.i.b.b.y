@@ -93,6 +93,8 @@ export const BriefingSchema = z.object({
   counts: BriefingCountsSchema,
   /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
   trend7d: z.array(z.string()).optional(),
+  /** Proposed autonomous rules extracted from 30-day approval patterns (M4). */
+  learnedPatterns: z.array(z.string()).optional(),
 })
 export type Briefing = z.infer<typeof BriefingSchema>
 

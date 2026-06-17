@@ -3,6 +3,7 @@ import { AgentsModule } from "../agents/agents.module"
 import { BriefingModule } from "../briefing/briefing.module"
 import { DiscoveryModule } from "../discovery/discovery.module"
 import { MemoryDistillerModule } from "../memory/memory-distiller.module"
+import { PatternsModule } from "../patterns/patterns.module"
 import { PipelinesModule } from "../pipelines/pipelines.module"
 import { dataDir } from "../shared/data-dir"
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service"
@@ -20,7 +21,7 @@ export function resolveAutomationsDir(): string {
  * services). No cycle — the runner modules don't depend on this one.
  */
 @Module({
-  imports: [AgentsModule, PipelinesModule, BriefingModule, DiscoveryModule, MemoryDistillerModule],
+  imports: [AgentsModule, BriefingModule, DiscoveryModule, MemoryDistillerModule, PatternsModule, PipelinesModule],
   controllers: [AutomationsController],
   providers: [
     { provide: AUTOMATIONS_DIR, useFactory: resolveAutomationsDir },

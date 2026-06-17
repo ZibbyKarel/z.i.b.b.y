@@ -34,6 +34,8 @@ export interface BriefingInput {
   projectNames?: Record<string, string>
   /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
   trend7d?: string[]
+  /** Proposed autonomous rules extracted from 30-day approval patterns (M4). */
+  learnedPatterns?: string[]
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -84,6 +86,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     engagements,
     counts,
     ...(input.trend7d && input.trend7d.length > 0 ? { trend7d: input.trend7d } : {}),
+    ...(input.learnedPatterns && input.learnedPatterns.length > 0 ? { learnedPatterns: input.learnedPatterns } : {}),
   }
 }
 

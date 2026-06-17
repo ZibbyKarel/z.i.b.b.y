@@ -5,6 +5,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service"
 import { BriefingService } from "../briefing/briefing.service"
 import { DiscoveryTriageService } from "../discovery/discovery-triage.service"
 import { MemoryDistillerService } from "../memory/memory-distiller.service"
+import { PatternExtractorService } from "../patterns/pattern-extractor.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -33,6 +34,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly briefing: BriefingService,
     private readonly discovery: DiscoveryTriageService,
     private readonly distiller: MemoryDistillerService,
+    private readonly patterns: PatternExtractorService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -117,6 +119,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // into the vault. Not a claude run in the usual sense — a single cheap model
         // pass owned by the system; the ref is `memory-distill:<count>`.
         return this.distiller.distill()
+      }
+      case "pattern-extract": {
+        // M4 nightly job: scan 30 days of approval-decision activity, draft rule
+        // proposals into vault/patterns/suggestions.md; ref = `patterns:<count>`.
+        const { proposals } = await this.patterns.extract()
+        return `patterns:${proposals.length}`
       }
     }
   }

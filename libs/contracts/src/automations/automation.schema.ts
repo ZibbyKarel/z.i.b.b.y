@@ -28,6 +28,10 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // learning is a SYSTEM capability — this is the canonical system automation. The
   // scheduler dispatches it straight to the memory-distiller service.
   z.object({ type: z.literal("memory-distill") }),
+  // Pattern extraction (M4): scans 30 days of approval-decision activity, finds
+  // repeated action+outcome pairs, and drafts rule proposals into the vault for the
+  // morning briefing to surface. Deterministic; no LLM call.
+  z.object({ type: z.literal("pattern-extract") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

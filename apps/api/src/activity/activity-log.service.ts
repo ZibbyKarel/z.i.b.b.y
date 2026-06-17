@@ -112,6 +112,28 @@ export class ActivityLogService {
       .sort((a, b) => b.at.localeCompare(a.at))
   }
 
+  /**
+   * Every entry in the half-open window `[sinceDate, now)`, newest-first. Reads
+   * every day file in range — intended for long-horizon consumers (e.g. the 30-day
+   * pattern extractor) that need more history than `readSince`'s two-day window.
+   */
+  async readRange(sinceDate: Date, now: Date = new Date()): Promise<ActivityEntry[]> {
+    const days: string[] = []
+    const cursor = new Date(sinceDate)
+    cursor.setUTCHours(0, 0, 0, 0)
+    const end = YYYY_MM_DD(now)
+    while (YYYY_MM_DD(cursor) <= end) {
+      days.push(YYYY_MM_DD(cursor))
+      cursor.setUTCDate(cursor.getUTCDate() + 1)
+    }
+    const all: ActivityEntry[] = []
+    for (const day of days) all.push(...(await this.readDay(day)))
+    const sinceIso = sinceDate.toISOString()
+    return all
+      .filter((e) => e.at >= sinceIso)
+      .sort((a, b) => b.at.localeCompare(a.at))
+  }
+
   private fileFor(date: string): string {
     return path.join(this.dir, `${date}.jsonl`)
   }

@@ -76,7 +76,10 @@ export class BriefingService {
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
-    const trend7d = await this.readTrend7d(now)
+    const [trend7d, learnedPatterns] = await Promise.all([
+      this.readTrend7d(now),
+      this.readLearnedPatterns(),
+    ])
     return assembleBriefing({
       now,
       since,
@@ -89,6 +92,7 @@ export class BriefingService {
       tasks,
       projectNames,
       trend7d,
+      learnedPatterns,
     })
   }
 
@@ -128,6 +132,23 @@ export class BriefingService {
       // One note per day is the contract — a second generate updates, never 409s.
       if (!(error instanceof DuplicateNoteError)) throw error
       await this.vault.updateNote(noteId, { body, frontmatter })
+    }
+  }
+
+  /**
+   * Read the latest pattern proposals from the vault (`patterns/suggestions`),
+   * parsing `- [ ] …` and `- [x] …` bullet lines. Returns [] on any error.
+   */
+  private async readLearnedPatterns(): Promise<string[]> {
+    try {
+      const note = await this.vault.note("patterns/suggestions")
+      return (note.body ?? "")
+        .split("\n")
+        .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
+        .map((l) => l.replace(/^- \[.\] /, "").trim())
+        .filter(Boolean)
+    } catch {
+      return []
     }
   }
 
