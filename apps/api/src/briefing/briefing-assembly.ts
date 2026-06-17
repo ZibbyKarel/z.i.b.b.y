@@ -30,6 +30,8 @@ export interface BriefingInput {
   activity: ActivityEntry[]
   /** Queued + held tasks (Phase 8.2) — the engagement rollup's waiting work. */
   tasks?: ScheduledTask[]
+  /** M8: dead-lettered tasks (dispatch exhausted its retries) — each a needs-you. */
+  deadLetteredTasks?: ScheduledTask[]
   /** projectId → display name, so the rollup reads in the operator's terms. */
   projectNames?: Record<string, string>
   /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
@@ -62,7 +64,7 @@ const DID_LIMIT = 10
  */
 export function assembleBriefing(input: BriefingInput): Briefing {
   const goalRuns = input.goalRuns ?? []
-  const needsYou = buildNeedsYou(input.approvals, input.parkedRuns, goalRuns)
+  const needsYou = buildNeedsYou(input.approvals, input.parkedRuns, goalRuns, input.deadLetteredTasks ?? [])
   const didForYou = buildDidForYou(input.activity)
   const watching = buildWatching(input.channelItems, input.pausedLimitRuns ?? [], goalRuns)
   const engagements = buildEngagements(
@@ -136,6 +138,7 @@ function buildNeedsYou(
   approvals: Approval[],
   parkedRuns: PipelineRun[],
   goalRuns: GoalRun[],
+  deadLetteredTasks: ScheduledTask[],
 ): BriefingNeedsYouItem[] {
   const fromApprovals: BriefingNeedsYouItem[] = approvals.map((a) => ({
     kind: "approval",
@@ -162,8 +165,20 @@ function buildNeedsYou(
       at: g.startedAt,
       refs: { runRef: g.goalRunId, goalId: g.goalId, status: "parked" },
     }))
+  // M8: a dead-lettered task (dispatch exhausted its retries) needs the operator —
+  // it rides the same `parked` notification (no new kind), so a repeatedly-failing
+  // task surfaces in the briefing instead of dying silently in the runs feed.
+  const fromDeadLetter: BriefingNeedsYouItem[] = deadLetteredTasks.map((t) => ({
+    kind: "parked",
+    id: t.id,
+    summary: `task "${(t.title ?? t.text).slice(0, 80)}" failed repeatedly${t.error ? ` (${t.error})` : ""}`,
+    at: t.createdAt,
+    refs: { taskId: t.id, status: "dead-letter", ...(t.projectId ? { projectId: t.projectId } : {}) },
+  }))
   // Newest first so the most recent decision tops the list.
-  return [...fromApprovals, ...fromParked, ...fromParkedGoals].sort((a, b) => b.at.localeCompare(a.at))
+  return [...fromApprovals, ...fromParked, ...fromParkedGoals, ...fromDeadLetter].sort((a, b) =>
+    b.at.localeCompare(a.at),
+  )
 }
 
 function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {

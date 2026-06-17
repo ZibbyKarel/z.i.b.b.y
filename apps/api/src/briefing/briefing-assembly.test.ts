@@ -88,6 +88,37 @@ describe("assembleBriefing", () => {
     expect(briefing.needsYou[0]!.id).toBe("ap2")
   })
 
+  it("M8: a dead-lettered task surfaces in needsYou (parked kind) so it never fails silently", () => {
+    const briefing = assembleBriefing({
+      now: NOW,
+      since: SINCE,
+      approvals: [],
+      parkedRuns: [],
+      channelItems: [],
+      activity: [],
+      deadLetteredTasks: [
+        {
+          id: "t-dead",
+          text: "ship the thing",
+          title: "Ship it",
+          status: "dead-letter",
+          scheduledAt: 1,
+          createdAt: "2026-06-12T06:40:00.000Z",
+          error: "boom",
+          attempts: 3,
+        },
+      ],
+    })
+    expect(briefing.needsYou).toHaveLength(1)
+    expect(briefing.needsYou[0]).toMatchObject({
+      kind: "parked",
+      id: "t-dead",
+      refs: { taskId: "t-dead", status: "dead-letter" },
+    })
+    expect(briefing.needsYou[0]!.summary).toContain("failed repeatedly")
+    expect(briefing.nothingNeedsYou).toBe(false)
+  })
+
   it("Phase 9: a paused-limit run joins watching (not needsYou) with its resume epoch", () => {
     const resumeAt = Date.parse("2026-06-12T08:30:00.000Z")
     const briefing = assembleBriefing({

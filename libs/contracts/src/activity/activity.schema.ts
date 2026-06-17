@@ -48,6 +48,9 @@ export const ActivityKindSchema = z.enum([
   // M8 (hardening). An integration poll exhausted its retry/backoff budget — surfaced
   // (not just stamped as lastError) so a persistently failing channel never fails silently.
   "integration-retry-exhausted",
+  // M8 (hardening). A task's dispatch exhausted its retry budget and was dead-lettered —
+  // surfaced in the briefing's needs-you so a repeatedly-failing task never fails silently.
+  "task-dead-lettered",
 ])
 export type ActivityKind = z.infer<typeof ActivityKindSchema>
 

@@ -221,6 +221,11 @@ export const ScheduledTaskStatusSchema = z.enum([
   "dispatched",
   "cancelled",
   "failed",
+  // M8 dead-letter: a task whose dispatch threw a transient error and exhausted its
+  // bounded retry/backoff budget. Terminal — distinct from `failed` (a one-shot or
+  // permanent dispatch failure) so a repeatedly-failing task is surfaced for the
+  // operator (briefing needs-you + a `task-dead-lettered` activity), never silent.
+  "dead-letter",
   // The dispatched run finished `done` and the task's chosen `pr` output is now
   // waiting at the gate (a `task-output` approval) before the push. Durable — the
   // run already ended, so there is no live child; the task record IS the durable
@@ -275,6 +280,8 @@ export const ScheduledTaskSchema = z.object({
   deferredReason: z.enum(["limit"]).optional(),
   /** Phase 9: how many times the limit guard has re-deferred this task (diagnostic). */
   limitDeferrals: z.number().int().nonnegative().optional(),
+  /** M8: how many times a transient dispatch error retried; at the cap the task dead-letters. */
+  attempts: z.number().int().nonnegative().optional(),
   /** Set on `held`: the `spend-past-cap` approval gating the override. */
   approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */

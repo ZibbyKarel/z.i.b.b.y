@@ -321,8 +321,16 @@ ledger are empty), no 80/90/100% thresholds, no multi-project velín, no cross-p
 > `lastError` stamp), so a persistently failing channel surfaces in the briefing. Tunable via
 > `CHANNEL_POLL_RETRIES` / `CHANNEL_POLL_BACKOFF_MS`.
 >
-> **Still open (continuous):** velín per-subsystem HUD widget; **dead-letter queue** for failed
-> tasks; audit-trail export + run-artifact retention.
+> **Dead-letter queue ✅ DONE 2026-06-18:** a THROWN (transient/infra) dispatch error in the
+> scheduled tick now retries with exponential backoff (`markRetry`, re-`scheduled` at a backoff
+> `scheduledAt`) up to `MAX_DISPATCH_ATTEMPTS`, then terminal-`dead-letter`s
+> (`markDeadLettered`) — distinct from `failed` (a permanent "no agents" failure, which never
+> retries). A dead-lettered task records a `task-dead-lettered` activity AND surfaces in the
+> briefing's **needs-you** (rides the `parked` kind), so a repeatedly-failing task is escalated
+> to the operator instead of dying silently in the runs feed. `attempts` is tracked on the task.
+>
+> **Still open (continuous):** velín per-subsystem HUD widget; audit-trail export +
+> run-artifact retention.
 
 **Why continuous, not last:** much of this already exists from the self-development safety work;
 the rest should land alongside every milestone, not be deferred.

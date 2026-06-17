@@ -48,6 +48,11 @@ const SUMMARY_MAX_CHARS = 200
 /** The action name the spend-past-cap floor rule keys on (decision 5). */
 const SPEND_PAST_CAP = "spend-past-cap"
 
+/** M8: total dispatch attempts for a transient failure before the task dead-letters. */
+const MAX_DISPATCH_ATTEMPTS = 3
+/** M8: base backoff (ms) for a retried dispatch; the nth retry waits `base * 2^(n-1)`. */
+const DISPATCH_BACKOFF_MS = 30_000
+
 /** Agent run statuses that free a concurrency slot. */
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"])
 /** Pipeline run statuses that free a concurrency slot. */
@@ -246,9 +251,25 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           const result = await this.attemptDispatch(task, project, now, { skipBudget: false })
           if (result === "dispatched") fired.push(task.id)
         } catch (err) {
+          // M8: a THROWN dispatch error is transient (infra) — retry it with backoff
+          // up to the cap, then dead-letter + notify. (A deterministic "no agents"
+          // failure returns "failed" from attemptDispatch and never reaches here, so
+          // it stays terminal — the right transient/permanent split, for free.)
           const message = err instanceof Error ? err.message : String(err)
-          await this.storage.markFailed(task.id, message)
-          this.log.error("scheduled task failed", { id: task.id, error: message })
+          const attempt = (task.attempts ?? 0) + 1
+          if (attempt >= MAX_DISPATCH_ATTEMPTS) {
+            await this.storage.markDeadLettered(task.id, message)
+            void this.activity.record({
+              kind: "task-dead-lettered",
+              summary: `task "${(task.title ?? task.text).slice(0, 80)}" dead-lettered after ${attempt} attempts: ${message}`,
+              refs: { taskId: task.id, status: "dead-letter" },
+            })
+            this.log.error("scheduled task dead-lettered", { id: task.id, attempts: attempt, error: message })
+          } else {
+            const nextAt = now.getTime() + DISPATCH_BACKOFF_MS * 2 ** (attempt - 1)
+            await this.storage.markRetry(task.id, nextAt, message)
+            this.log.warn("scheduled task dispatch failed — retrying", { id: task.id, attempt, nextAt, error: message })
+          }
         }
       })
     }

@@ -75,6 +75,8 @@ export class BriefingService {
     const inFlight = channelItems.filter((i) => i.state === "new" || i.state === "triaged")
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
+    // M8: dead-lettered tasks (dispatch exhausted its retries) are a needs-you decision.
+    const deadLetteredTasks = allTasks.filter((t) => t.status === "dead-letter")
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
     const [trend7d, learnedPatterns, intelligence, automationGaps] = await Promise.all([
       this.readTrend7d(now),
@@ -92,6 +94,7 @@ export class BriefingService {
       channelItems: inFlight,
       activity,
       tasks,
+      deadLetteredTasks,
       projectNames,
       trend7d,
       learnedPatterns,

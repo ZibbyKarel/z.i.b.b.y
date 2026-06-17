@@ -277,7 +277,44 @@ export class ScheduledTasksStorageService
   /** Stamp a task failed with a short reason (kept for the queue's display). */
   async markFailed(id: string, error: string): Promise<ScheduledTask> {
     const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, status: "failed", error }
+    const merged: ScheduledTask = {
+      ...existing,
+      status: "failed",
+      error,
+      attempts: (existing.attempts ?? 0) + 1,
+    }
+    await this.writeEntity(merged)
+    return merged
+  }
+
+  /**
+   * M8: requeue a transient dispatch failure for another attempt — re-`scheduled` at
+   * `nextAt` (backoff), incrementing the attempt counter and stamping the error. The
+   * existing tick re-fires it when `nextAt` arrives; the caller dead-letters once the
+   * attempt cap is reached, so this can never loop unbounded.
+   */
+  async markRetry(id: string, nextAt: number, error: string): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = {
+      ...existing,
+      status: "scheduled",
+      scheduledAt: nextAt,
+      error,
+      attempts: (existing.attempts ?? 0) + 1,
+    }
+    await this.writeEntity(merged)
+    return merged
+  }
+
+  /** M8: terminal dead-letter — a transient dispatch failure that exhausted its retries. */
+  async markDeadLettered(id: string, error: string): Promise<ScheduledTask> {
+    const existing = await this.get(id)
+    const merged: ScheduledTask = {
+      ...existing,
+      status: "dead-letter",
+      error,
+      attempts: (existing.attempts ?? 0) + 1,
+    }
     await this.writeEntity(merged)
     return merged
   }
