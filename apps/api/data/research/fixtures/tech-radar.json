@@ -1,0 +1,16 @@
+[
+  {
+    "id": "tech-1",
+    "title": "Nx 21 ships task-graph caching improvements",
+    "url": "https://nx.dev/blog",
+    "summary": "The latest Nx monorepo release focuses on faster task graph computation.",
+    "publishedAt": "2026-06-15T12:00:00.000Z"
+  },
+  {
+    "id": "tech-2",
+    "title": "CVE in a popular typescript HTTP client",
+    "url": "https://example.com/cve",
+    "summary": "A high-severity CVE was disclosed in a widely used typescript HTTP client.",
+    "publishedAt": "2026-06-16T07:00:00.000Z"
+  }
+]

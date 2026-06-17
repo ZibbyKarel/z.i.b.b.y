@@ -42,6 +42,9 @@ export const ActivityKindSchema = z.enum([
   "channel-approval",
   "channel-ignored",
   "briefing-generated",
+  // M6 (research / intelligence, Tier 1 — silent + recorded). A digest pass ran and
+  // mirrored its result to the vault; the morning briefing reads the digest note.
+  "research-digest",
 ])
 export type ActivityKind = z.infer<typeof ActivityKindSchema>
 

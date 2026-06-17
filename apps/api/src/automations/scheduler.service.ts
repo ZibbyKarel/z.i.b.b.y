@@ -7,6 +7,7 @@ import { DiscoveryTriageService } from "../discovery/discovery-triage.service"
 import { MemoryDistillerService } from "../memory/memory-distiller.service"
 import { PatternExtractorService } from "../patterns/pattern-extractor.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
+import { ResearchService } from "../research/research.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
 import { AutomationsStorageService } from "./automations.storage.service"
@@ -35,6 +36,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly discovery: DiscoveryTriageService,
     private readonly distiller: MemoryDistillerService,
     private readonly patterns: PatternExtractorService,
+    private readonly research: ResearchService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -125,6 +127,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // proposals into vault/patterns/suggestions.md; ref = `patterns:<count>`.
         const { proposals } = await this.patterns.extract()
         return `patterns:${proposals.length}`
+      }
+      case "research-digest": {
+        // M6: fetch + rank the operator's research sources, mirror the digest to the
+        // vault for the morning briefing. Deterministic; ref = `research:<count>`.
+        const digest = await this.research.refresh()
+        return `research:${digest.items.length}`
       }
     }
   }

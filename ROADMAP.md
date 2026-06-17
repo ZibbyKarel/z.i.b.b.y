@@ -34,7 +34,7 @@ The real picture, verified against `apps/api/src`:
 | **Self-learning from approval signals**                             | ❌ Absent                   | no pattern extractor; `patterns/` folder doesn't exist in the vault                                                    |
 | **Nightly consolidation job**                                       | ❌ Absent                   | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                               |
 | **Standup cheat sheets per project**                                | ✅ **Done (M3, 2026-06-17)** | StandupService (24h activity→markdown); GET /projects/:id/standup; standup card on ProfileScreen; trend7d in Briefing |
-| **Research / intelligence layer**                                   | ❌ Absent                   | no ResearchAgent or watchers                                                                                           |
+| **Research / intelligence layer**                                   | ✅ **Done (M6, 2026-06-17)** | `research/` — operator config + source-adapter seam (fake fixtures) + interest-overlap ranking + vault `intelligence/digest` note + briefing Intelligence section + `research-digest` 06:00 automation |
 | **GapDetector / "I want X" NL self-mod flow**                       | ❌ Absent                   | self-dev pipeline exists, the proactive front-end of it does not                                                       |
 
 **The headline correction:** the hard infrastructure (channel I/O, gate floor, goal loop,
@@ -210,7 +210,16 @@ auditable end-to-end.
 
 ---
 
-## M6 — Research / Intelligence Layer
+## M6 — Research / Intelligence Layer ✅ DONE 2026-06-17
+
+> **Delivered:** operator-level research config (`data/research-config.json`), a pluggable
+> `ResearchSourceAdapter` seam (the `FakeResearchAdapter` reads `data/research/fixtures/*.json`;
+> real RSS/HN/PH fetchers slot in behind it later), pure interest-overlap ranking, a digest
+> pass that persists `data/research-digest.json` + mirrors the vault note `intelligence/digest`,
+> the morning briefing's new **Intelligence** section (`Briefing.intelligence`), and the
+> `research-digest` 06:00 automation. `finance` sources are gated behind `financeWatch`
+> (overview-only). Docs: `docs/api/research.md`. **Deferred:** real network source adapters;
+> on-demand "what's trending in X?" via the task path; the weekly "3 app ideas" generator.
 
 **Why sixth:** proactive, world-facing value — "ZIBBY brings the world to the operator." Fully
 greenfield, depends on the briefing (M3) and nightly job (M4) as delivery vehicles.

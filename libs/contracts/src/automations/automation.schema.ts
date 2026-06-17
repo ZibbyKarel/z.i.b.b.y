@@ -32,6 +32,10 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // repeated action+outcome pairs, and drafts rule proposals into the vault for the
   // morning briefing to surface. Deterministic; no LLM call.
   z.object({ type: z.literal("pattern-extract") }),
+  // Research digest (M6): fetch the operator's configured sources, rank by interest
+  // overlap, mirror the digest to the vault for the morning briefing to fold in.
+  // Deterministic assembly through the source-adapter seam; no claude run.
+  z.object({ type: z.literal("research-digest") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

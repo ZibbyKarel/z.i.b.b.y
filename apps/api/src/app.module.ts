@@ -24,6 +24,7 @@ import { MemoryModule } from "./memory/memory.module"
 import { RunRecorderModule } from "./memory/run-recorder.module"
 import { PipelinesModule } from "./pipelines/pipelines.module"
 import { ProjectsModule } from "./projects/projects.module"
+import { ResearchModule } from "./research/research.module"
 import { LoggingModule } from "./shared/logging/logging.module"
 import { SkillsModule } from "./skills/skills.module"
 import { TasksModule } from "./tasks/tasks.module"
@@ -52,6 +53,7 @@ import { TasksModule } from "./tasks/tasks.module"
     MandateModule,
     ChannelsModule,
     DiscoveryModule,
+    ResearchModule,
     HealthModule,
     LimitsModule,
     LimitResumeModule,

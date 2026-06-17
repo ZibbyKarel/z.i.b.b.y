@@ -16,6 +16,7 @@ apps/api/data/credentials
 apps/api/data/channels
 apps/api/data/activity
 apps/api/data/budget-ledger
+apps/api/data/research-digest.json
 apps/api/data/mcp-credentials
 apps/api/data/project-secrets
 

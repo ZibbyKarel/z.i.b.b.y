@@ -76,9 +76,10 @@ export class BriefingService {
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
-    const [trend7d, learnedPatterns] = await Promise.all([
+    const [trend7d, learnedPatterns, intelligence] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
+      this.readIntelligence(),
     ])
     return assembleBriefing({
       now,
@@ -93,6 +94,7 @@ export class BriefingService {
       projectNames,
       trend7d,
       learnedPatterns,
+      intelligence,
     })
   }
 
@@ -147,6 +149,25 @@ export class BriefingService {
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
         .map((l) => l.replace(/^- \[.\] /, "").trim())
         .filter(Boolean)
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Read the top research-digest headlines from the vault (`intelligence/digest`),
+   * parsing the `- **title** — summary` bullet lines the research pass writes. Caps
+   * at the first 5 (the briefing surfaces signal, not the whole digest). [] on error.
+   */
+  private async readIntelligence(): Promise<string[]> {
+    try {
+      const note = await this.vault.note("intelligence/digest")
+      return (note.body ?? "")
+        .split("\n")
+        .filter((l) => l.startsWith("- **"))
+        .map((l) => l.replace(/^- \*\*(.*?)\*\* — /, "$1 — ").replace(/^- /, "").trim())
+        .filter(Boolean)
+        .slice(0, 5)
     } catch {
       return []
     }
