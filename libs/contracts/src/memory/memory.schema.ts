@@ -26,6 +26,12 @@ export const IndexEntrySchema = z.object({
   id: z.string(),
   title: z.string(),
   tier: MemoryTierSchema,
+  /**
+   * The owning project (M7 multi-project isolation), derived from the note's
+   * `project:` frontmatter or its `type: project` profile id. Absent → a global note
+   * visible to every run; present → only a run in that project may ground on it.
+   */
+  project: z.string().optional(),
 })
 export type IndexEntry = z.infer<typeof IndexEntrySchema>
 

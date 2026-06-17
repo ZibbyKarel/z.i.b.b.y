@@ -2,8 +2,8 @@ import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { GroundingService, selectIndexes } from "./grounding.service"
-import { VaultService } from "./vault.service"
+import { GroundingService, selectIndexes, visibleToProject } from "./grounding.service"
+import { VaultService, ownerProjectOf } from "./vault.service"
 
 /** Build a service over a fresh temp vault seeded by `seed`. */
 async function makeVault(
@@ -35,6 +35,35 @@ describe("selectIndexes", () => {
   it("returns nothing when no term overlaps or terms are empty", () => {
     expect(selectIndexes(["nothing"], entries)).toEqual([])
     expect(selectIndexes([], entries)).toEqual([])
+  })
+})
+
+describe("ownerProjectOf", () => {
+  it("reads an explicit project tag", () => {
+    expect(ownerProjectOf({ project: "alpha" })).toBe("alpha")
+  })
+  it("falls back to a type:project profile's id", () => {
+    expect(ownerProjectOf({ type: "project", id: "beta" })).toBe("beta")
+  })
+  it("is undefined for a global note", () => {
+    expect(ownerProjectOf({ title: "Knowledge" })).toBeUndefined()
+    expect(ownerProjectOf({ project: "" })).toBeUndefined()
+  })
+})
+
+describe("visibleToProject (M7 isolation)", () => {
+  const entries = [
+    { id: "global-moc", title: "Global", tier: "knowledge" as const },
+    { id: "alpha-moc", title: "Alpha", tier: "knowledge" as const, project: "alpha" },
+    { id: "beta-moc", title: "Beta", tier: "knowledge" as const, project: "beta" },
+  ]
+
+  it("a project run sees global + its own notes, never another project's", () => {
+    expect(visibleToProject(entries, "alpha").map((e) => e.id)).toEqual(["global-moc", "alpha-moc"])
+  })
+
+  it("an unattributed run sees only global notes", () => {
+    expect(visibleToProject(entries, undefined).map((e) => e.id)).toEqual(["global-moc"])
   })
 })
 
@@ -95,6 +124,31 @@ describe("GroundingService.compose", () => {
     const headings = block.match(/^### /gm) ?? []
     // North Star + 2 MOCs = 3 sections.
     expect(headings.length).toBe(3)
+  })
+
+  it("never grounds on another project's notes, even on a term match (M7 isolation)", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({ id: "north-star", tier: "memory", title: "North Star", body: "Mission." })
+      await vault.createNote({
+        id: "alpha-moc",
+        tier: "knowledge",
+        title: "Alpha Roadmap",
+        body: "Project alpha roadmap.",
+        frontmatter: { project: "alpha" },
+      })
+      await vault.createNote({
+        id: "beta-moc",
+        tier: "knowledge",
+        title: "Beta Roadmap",
+        body: "Project beta roadmap.",
+        frontmatter: { project: "beta" },
+      })
+    })
+    dir = made.dir
+    // "roadmap" matches BOTH MOCs by title, but a run in alpha must see only alpha's.
+    const block = await made.grounding.compose({ task: "x", matchedTerms: ["roadmap"], projectId: "alpha" })
+    expect(block).toContain("Alpha Roadmap")
+    expect(block).not.toContain("Beta Roadmap")
   })
 
   it("truncates an oversized note body with a marker", async () => {

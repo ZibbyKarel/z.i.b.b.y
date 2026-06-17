@@ -21,6 +21,16 @@ export interface GroundingInput {
 }
 
 /**
+ * Multi-project isolation (M7): the candidate notes a run in `projectId` may ground
+ * on — every global note (no owner) plus only its own project's notes. A run in
+ * project A can therefore never term-match into project B's vault notes, and an
+ * unattributed run (no projectId) sees only global notes. Pure — exported for tests.
+ */
+export function visibleToProject(entries: IndexEntry[], projectId: string | undefined): IndexEntry[] {
+  return entries.filter((e) => !e.project || e.project === projectId)
+}
+
+/**
  * Score index entries by how many of `terms` appear (as whole tokens) in the
  * entry's id or title, then return the top `MOC_LIMIT`. Pure + deterministic
  * (ties broken by id) so it is unit-testable without a vault. Entries with no
@@ -79,7 +89,10 @@ export class GroundingService {
 
       await add(NORTH_STAR_ID)
       const entries = await this.vault.index().catch((): IndexEntry[] => [])
-      for (const entry of selectIndexes(terms, entries)) await add(entry.id)
+      // M7 isolation: restrict the candidate set to this run's project before
+      // term-matching, so a run can never ground on another project's notes.
+      const visible = visibleToProject(entries, input.projectId)
+      for (const entry of selectIndexes(terms, visible)) await add(entry.id)
       if (input.projectId) await add(input.projectId)
 
       if (sections.length === 0) return ""

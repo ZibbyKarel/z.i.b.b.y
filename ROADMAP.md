@@ -255,7 +255,7 @@ unprompted.
 
 ---
 
-## M7 — Multi-Project Isolation + Budget Governance ✅ DONE (budget) 2026-06-17
+## M7 — Multi-Project Isolation + Budget Governance ✅ DONE (budget + isolation) 2026-06-17
 
 > **Delivered (budget governance):** the north-star's "monthly cap" — a `monthlyRuns`
 > per-project cap mirroring daily/weekly (`ProjectBudget.monthlyRuns`, `ledger.countMonthly`
@@ -269,8 +269,17 @@ unprompted.
 > cost (`LedgerEntry` has no cost field; `ProjectBudgetSchema` comments that a token cap "would
 > be a lie in the UI"). The north-star says "monthly cap, per-run cap" — never "USD" — so 1:1
 > is met by run-count caps + subscription-window %; the per-goal run-count budget (Phase 13.1)
-> covers the "per-run cap" intent. **Still open (multi-project, not budget):** project data
-> isolation on the grounding/workspace seam, a multi-project velín, cross-project intelligence.
+> covers the "per-run cap" intent.
+>
+> **Project data isolation ✅ DONE 2026-06-17:** the workspace seam was already isolated
+> (per-project worktrees off `project.path` + explicit `--add-dir` allowlist). The real leak was
+> the **grounding read path** — `compose` used `projectId` additively while `vault.index()`
+> returned every note unfiltered, so a run in project A could term-match into project B's notes.
+> Now `IndexEntry` carries a `project` owner (`ownerProjectOf`: a `project:` frontmatter tag or a
+> `type: project` profile id), and `visibleToProject` restricts the candidate set before
+> term-matching — a run sees only global notes + its own project's; an unattributed run sees only
+> global. Profile notes are tagged `project: <id>`. **Still open (multi-project, not isolation):**
+> a multi-project velín dashboard, cross-project intelligence (applying A's learnings to B).
 
 **Why seventh:** matters once there is more than one mission; the run-count half already exists.
 

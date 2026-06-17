@@ -45,6 +45,21 @@ const WIKILINK = /\[\[([^\]]+)\]\]/g
 const TIERS: MemoryTier[] = ["memory", "daily", "knowledge"]
 
 /**
+ * The project a note belongs to (M7 multi-project isolation), or undefined if it is
+ * global. A note is project-owned when its frontmatter carries an explicit
+ * `project: <id>` tag, or when it is a `type: project` profile note (whose `id`
+ * frontmatter is the project it describes). Pure — exported for unit testing.
+ */
+export function ownerProjectOf(frontmatter: Record<string, unknown>): string | undefined {
+  const explicit = frontmatter.project
+  if (typeof explicit === "string" && explicit.length > 0) return explicit
+  if (frontmatter.type === "project" && typeof frontmatter.id === "string" && frontmatter.id.length > 0) {
+    return frontmatter.id
+  }
+  return undefined
+}
+
+/**
  * The same shape as `NoteIdSchema` in the contract: a filesystem-safe basename
  * (no separators, no leading dot). Mirrored here so `resolveSafeFile`'s guard
  * matches the contract's accept-set without importing zod into the service.
@@ -100,7 +115,10 @@ export class VaultService implements OnModuleInit {
     // Prefer explicit index/MOC notes as entry points; fall back to everything.
     const entryPoints = notes.filter((n) => /(^|[-_ ])(index|moc)$/i.test(n.id))
     const chosen = entryPoints.length > 0 ? entryPoints : notes
-    return chosen.map((n) => ({ id: n.id, title: n.title, tier: n.tier }))
+    return chosen.map((n) => {
+      const project = ownerProjectOf(n.frontmatter)
+      return { id: n.id, title: n.title, tier: n.tier, ...(project ? { project } : {}) }
+    })
   }
 
   async note(id: string): Promise<Note> {

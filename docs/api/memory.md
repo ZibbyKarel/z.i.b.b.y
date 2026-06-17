@@ -137,6 +137,23 @@ automatizací.
 > Pozn.: dřívější per-agent `learned.md` (kdy si dokumentační agent psal paměť sám)
 > byl odstraněn — paměť se sbírá systémově, ne z popisu agenta.
 
+## Izolace mezi projekty (M7)
+
+Běh v projektu A se nikdy nesmí „dosáhnout" na paměť projektu B. Workspace je
+izolovaný už strukturálně (per-projekt worktree z `project.path` + explicitní
+`--add-dir` allowlist). Únik byl ve **čtecí cestě groundingu**: `compose` používal
+`projectId` _aditivně_, zatímco `vault.index()` vracel všechny poznámky bez filtru —
+běh v A si tak mohl přes shodu termínů natáhnout MOC projektu B.
+
+Řešení (čistě restriktivní, bez migrace):
+
+- `IndexEntry` nese `project` (vlastníka). Odvozuje ho `ownerProjectOf` z frontmatteru:
+  explicitní tag `project: <id>`, nebo `type: project` profilová poznámka (její `id`).
+  Poznámka bez vlastníka je **globální** (North Star, `knowledge/`, systémové digesty).
+- `visibleToProject(entries, projectId)` zúží kandidáty _před_ term-matchingem: běh vidí
+  jen globální poznámky + poznámky svého projektu; neatribuovaný běh vidí jen globální.
+- Profilové poznámky (`vault/projects/<id>.md`) se značí `project: <id>`.
+
 ## Chybové stavy
 
 | Error | HTTP | Kdy |
