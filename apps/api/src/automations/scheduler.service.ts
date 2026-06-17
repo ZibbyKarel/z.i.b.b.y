@@ -8,6 +8,7 @@ import { MemoryDistillerService } from "../memory/memory-distiller.service"
 import { PatternExtractorService } from "../patterns/pattern-extractor.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { GapDetectorService } from "../gaps/gap-detector.service"
+import { IdeaGeneratorService } from "../ideas/idea-generator.service"
 import { ResearchService } from "../research/research.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -42,6 +43,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly patterns: PatternExtractorService,
     private readonly research: ResearchService,
     private readonly gaps: GapDetectorService,
+    private readonly ideas: IdeaGeneratorService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -155,6 +157,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // suggestions into the vault. Deterministic; ref = `gaps:<count>`.
         const { suggestions } = await this.gaps.detect()
         return `gaps:${suggestions.length}`
+      }
+      case "app-ideas": {
+        // M6: pair research interests with the latest digest trends into prototype
+        // pitches in the vault. Deterministic; ref = `ideas:<count>`.
+        const { ideas } = await this.ideas.generate()
+        return `ideas:${ideas.length}`
       }
     }
   }

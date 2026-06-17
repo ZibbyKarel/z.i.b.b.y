@@ -40,6 +40,9 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // could be automated, drafting "automate it?" suggestions into the vault for the
   // briefing. Deterministic; proposes ≠ acts (never creates an automation itself).
   z.object({ type: z.literal("gap-detect") }),
+  // App ideas (M6 weekly bonus): pair the operator's research interests with the
+  // latest digest trends into prototype pitches in the vault. Deterministic.
+  z.object({ type: z.literal("app-ideas") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

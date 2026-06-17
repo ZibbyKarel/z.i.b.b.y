@@ -78,11 +78,12 @@ export class BriefingService {
     // M8: dead-lettered tasks (dispatch exhausted its retries) are a needs-you decision.
     const deadLetteredTasks = allTasks.filter((t) => t.status === "dead-letter")
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
-    const [trend7d, learnedPatterns, intelligence, automationGaps] = await Promise.all([
+    const [trend7d, learnedPatterns, intelligence, automationGaps, appIdeas] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
       this.readIntelligence(),
       this.readAutomationGaps(),
+      this.readAppIdeas(),
     ])
     return assembleBriefing({
       now,
@@ -100,6 +101,7 @@ export class BriefingService {
       learnedPatterns,
       intelligence,
       automationGaps,
+      appIdeas,
     })
   }
 
@@ -192,6 +194,24 @@ export class BriefingService {
         .map((l) => l.replace(/^- \[.\] /, "").trim())
         .filter(Boolean)
         .slice(0, 5)
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Read the weekly "3 app ideas" from the vault (`suggestions/app-ideas`), parsing
+   * the `- [ ] …` bullet lines. Caps at the first 3. [] on error.
+   */
+  private async readAppIdeas(): Promise<string[]> {
+    try {
+      const note = await this.vault.note("suggestions/app-ideas")
+      return (note.body ?? "")
+        .split("\n")
+        .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
+        .map((l) => l.replace(/^- \[.\] /, "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
     } catch {
       return []
     }

@@ -38,6 +38,6 @@ export function resolveResearchFixturesDir(): string {
     FakeResearchAdapter,
     ResearchService,
   ],
-  exports: [ResearchService],
+  exports: [ResearchService, ResearchConfigStore],
 })
 export class ResearchModule {}

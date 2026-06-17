@@ -99,6 +99,8 @@ export const BriefingSchema = z.object({
   intelligence: z.array(z.string()).optional(),
   /** Recurring-manual-work "automate it?" suggestions (M5 GapDetector). */
   automationGaps: z.array(z.string()).optional(),
+  /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
+  appIdeas: z.array(z.string()).optional(),
 })
 export type Briefing = z.infer<typeof BriefingSchema>
 

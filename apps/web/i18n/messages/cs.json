@@ -1162,6 +1162,7 @@
     "targetPatternExtract": "Extrakce vzorů",
     "targetResearchDigest": "Výzkumný přehled",
     "targetGapDetect": "Detekce mezer",
+    "targetAppIdeas": "Nápady na aplikace",
     "discoveryNote": "Trigger prohledá práci a navrhne tasky za schvalovací bránou. Nic se nespustí, dokud neschválíš.",
     "systemBadge": "Systémová",
     "systemEditNote": "Systémová automatizace — seedovaná ZIBBYM. Měnit lze jen rozvrh; cíl ani název upravit nelze a smazat ji nejde.",

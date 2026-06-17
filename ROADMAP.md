@@ -232,8 +232,15 @@ auditable end-to-end.
 > pass that persists `data/research-digest.json` + mirrors the vault note `intelligence/digest`,
 > the morning briefing's new **Intelligence** section (`Briefing.intelligence`), and the
 > `research-digest` 06:00 automation. `finance` sources are gated behind `financeWatch`
-> (overview-only). Docs: `docs/api/research.md`. **Deferred:** real network source adapters;
-> on-demand "what's trending in X?" via the task path; the weekly "3 app ideas" generator.
+> (overview-only). Docs: `docs/api/research.md`.
+>
+> **App-ideas generator ✅ DONE 2026-06-18** (closes the north-star-named "Proposes — ... app
+> ideas"): `ideas/IdeaGeneratorService` deterministically pairs the operator's research
+> interests with the latest digest trends (`pairIdeas`, capped at 3) into prototype pitches in
+> `vault/suggestions/app-ideas.md`, surfaced in the briefing's **App ideas** section
+> (`Briefing.appIdeas`). Weekly `app-ideas` automation (Mon 06:30). *Proposes ≠ acts.*
+>
+> **Deferred:** real network source adapters; on-demand "what's trending in X?" via the task path.
 
 **Why sixth:** proactive, world-facing value — "ZIBBY brings the world to the operator." Fully
 greenfield, depends on the briefing (M3) and nightly job (M4) as delivery vehicles.

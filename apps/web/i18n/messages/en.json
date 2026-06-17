@@ -1162,6 +1162,7 @@
     "targetPatternExtract": "Pattern extraction",
     "targetResearchDigest": "Research digest",
     "targetGapDetect": "Gap detection",
+    "targetAppIdeas": "App ideas",
     "discoveryNote": "The trigger scans for work and proposes tasks behind the approval gate. Nothing runs until you approve.",
     "systemBadge": "System",
     "systemEditNote": "System automation — seeded by ZIBBY. Only its schedule can change; the target and name can't be edited and it can't be deleted.",

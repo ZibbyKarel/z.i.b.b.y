@@ -1,0 +1,1 @@
+{"id":"app-ideas","name":"Weekly app ideas","trigger":{"type":"cron","expr":"30 6 * * 1"},"target":{"type":"app-ideas"},"enabled":true,"system":true}
