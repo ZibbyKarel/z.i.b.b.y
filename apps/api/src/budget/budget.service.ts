@@ -10,7 +10,7 @@ import { BudgetConfigStore } from "./budget-config.store"
 import { BudgetLedgerStore, type LedgerEntry } from "./ledger.store"
 
 /** Why a dispatch is over-cap — the axis the guard reports and the approval names. */
-export type BudgetOverReason = "project-daily" | "project-weekly" | "global"
+export type BudgetOverReason = "project-daily" | "project-weekly" | "project-monthly" | "global"
 
 /** The budget guard's verdict for one dispatch. */
 export type BudgetCheck = { ok: true } | { ok: false; over: BudgetOverReason; detail: string }
@@ -75,7 +75,7 @@ export class BudgetService {
         .get(projectId)
         .then((p) => p.budget)
         .catch(() => undefined)
-      if (budget?.dailyRuns != null || budget?.weeklyRuns != null) {
+      if (budget?.dailyRuns != null || budget?.weeklyRuns != null || budget?.monthlyRuns != null) {
         try {
           if (budget.dailyRuns != null) {
             const used = await this.ledger.countDaily(projectId, now)
@@ -87,6 +87,12 @@ export class BudgetService {
             const used = await this.ledger.countWeekly(projectId, now)
             if (used >= budget.weeklyRuns) {
               return over("project-weekly", `weekly run cap reached (${used}/${budget.weeklyRuns})`)
+            }
+          }
+          if (budget.monthlyRuns != null) {
+            const used = await this.ledger.countMonthly(projectId, now)
+            if (used >= budget.monthlyRuns) {
+              return over("project-monthly", `monthly run cap reached (${used}/${budget.monthlyRuns})`)
             }
           }
         } catch (error) {
@@ -155,9 +161,10 @@ export class BudgetService {
     const rows: ProjectBudgetStatus[] = []
     for (const project of projects) {
       if (!project.budget) continue // only engagements with a budget appear in the readout
-      const [daily, weekly, running] = await Promise.all([
+      const [daily, weekly, monthly, running] = await Promise.all([
         this.ledger.countDaily(project.id, now).catch(() => 0),
         this.ledger.countWeekly(project.id, now).catch(() => 0),
+        this.ledger.countMonthly(project.id, now).catch(() => 0),
         this.countRunning(project.id),
       ])
       rows.push({
@@ -165,6 +172,7 @@ export class BudgetService {
         name: project.name,
         daily: { used: daily, ...(project.budget.dailyRuns != null ? { cap: project.budget.dailyRuns } : {}) },
         weekly: { used: weekly, ...(project.budget.weeklyRuns != null ? { cap: project.budget.weeklyRuns } : {}) },
+        monthly: { used: monthly, ...(project.budget.monthlyRuns != null ? { cap: project.budget.monthlyRuns } : {}) },
         running,
         ...(project.budget.maxConcurrent != null ? { maxConcurrent: project.budget.maxConcurrent } : {}),
         queued: queuedByProject.get(project.id) ?? 0,

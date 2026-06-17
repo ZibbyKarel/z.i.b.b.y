@@ -31,6 +31,8 @@ export const ProjectBudgetStatusSchema = z.object({
   name: z.string(),
   daily: BudgetWindowUsageSchema,
   weekly: BudgetWindowUsageSchema,
+  /** M7: month-to-date run count (Europe/Prague calendar month). Optional for back-compat. */
+  monthly: BudgetWindowUsageSchema.optional(),
   /** Top-level runs currently in flight for this project. */
   running: z.number().int().nonnegative(),
   maxConcurrent: z.number().int().positive().optional(),

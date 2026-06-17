@@ -85,6 +85,10 @@ export const ProjectBudgetSchema = z
   .object({
     dailyRuns: z.number().int().positive().optional(),
     weeklyRuns: z.number().int().positive().optional(),
+    // M7: the north-star's "monthly cap" — same run-count unit as daily/weekly,
+    // cut on the Europe/Prague calendar month. (USD is N/A: a Claude subscription
+    // exposes no per-run cost, so the budget unit is runs, never dollars.)
+    monthlyRuns: z.number().int().positive().optional(),
     maxConcurrent: z.number().int().positive().optional(),
   })
   .strict()

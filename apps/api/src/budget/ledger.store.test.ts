@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { BudgetLedgerStore, isoWeekDates, pragueDate } from "./ledger.store"
+import { BudgetLedgerStore, isoWeekDates, monthDates, pragueDate } from "./ledger.store"
 
 describe("pragueDate", () => {
   it("cuts the day on the Europe/Prague calendar, not UTC", () => {
@@ -33,6 +33,23 @@ describe("isoWeekDates", () => {
 
   it("returns a single day for a Monday", () => {
     expect(isoWeekDates("2026-06-08")).toEqual(["2026-06-08"])
+  })
+})
+
+describe("monthDates", () => {
+  it("returns 1st..date inclusive within the month", () => {
+    const dates = monthDates("2026-06-12")
+    expect(dates[0]).toBe("2026-06-01")
+    expect(dates[dates.length - 1]).toBe("2026-06-12")
+    expect(dates).toHaveLength(12)
+  })
+
+  it("returns a single day for the 1st", () => {
+    expect(monthDates("2026-06-01")).toEqual(["2026-06-01"])
+  })
+
+  it("does not bleed into an adjacent month", () => {
+    expect(monthDates("2026-07-03")).toEqual(["2026-07-01", "2026-07-02", "2026-07-03"])
   })
 })
 
@@ -71,6 +88,16 @@ describe("BudgetLedgerStore", () => {
     await store.record({ at: mon.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent" }, mon)
     await store.record({ at: fri.toISOString(), projectId: "alpha", runRef: "r2", kind: "agent" }, fri)
     expect(await store.countWeekly("alpha", fri)).toBe(2)
+  })
+
+  it("monthly count spans the calendar month, excluding the prior month", async () => {
+    const may = new Date("2026-05-31T08:00:00.000Z")
+    const jun1 = new Date("2026-06-01T08:00:00.000Z")
+    const jun12 = new Date("2026-06-12T08:00:00.000Z")
+    await store.record({ at: may.toISOString(), projectId: "alpha", runRef: "r0", kind: "agent" }, may)
+    await store.record({ at: jun1.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent" }, jun1)
+    await store.record({ at: jun12.toISOString(), projectId: "alpha", runRef: "r2", kind: "agent" }, jun12)
+    expect(await store.countMonthly("alpha", jun12)).toBe(2) // May run excluded
   })
 
   it("a missing day file reads as zero (fresh install)", async () => {

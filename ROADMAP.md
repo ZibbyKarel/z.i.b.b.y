@@ -27,7 +27,7 @@ The real picture, verified against `apps/api/src`:
 | **Channel runtime (Slack + email)**                                 | ✅ **Real, not greenfield** | `channels/` — Slack Web API fetch + email imapflow/nodemailer, 30s cursor-safe poll, approval-gated outbound           |
 | Memory vault + grounding + run recorder                             | ✅ Real                     | `memory/` — index-first read, daily append, term-matched grounding, episodic record                                    |
 | Briefing (assemble + butler prose + 07:00 cron)                     | ✅ Real, **thin**           | `briefing/` + `automations/morning-briefing.json` (fires daily) — sections exist, content is shallow                   |
-| Budget governance (per-project + global + concurrency)              | 🟡 Partial                  | `budget/` — run-count caps real; **USD cost tracking absent** (`budget.json`/ledger empty)                             |
+| Budget governance (per-project + global + concurrency)              | ✅ **Done (M7, 2026-06-17)** | `budget/` — daily/weekly/**monthly** run caps + global subscription-window % thresholds (80/90/100 via `pauseAtRollingPct`) + `spend-past-cap` floor gate. **USD N/A by design**: a Claude subscription exposes no per-run cost, so the budget unit is run-counts (the schema itself notes a token cap "would be a lie") |
 | Mandate / autonomy doc                                              | 🟡 Partial                  | `data/mandate.json` exists but minimal (`dispatch:true, reply:false`)                                                  |
 | **Project = operational profile**                                   | ✅ **Done (M1, 2026-06-17)** | contract extended (identity/autonomy_policy/daily_rhythm), `GET/PUT /projects/:id/profile`, vault mirror, profile editor UI at `/projects/[id]` |
 | **Inbound message → action routing**                                | ✅ **Done (M2, 2026-06-17)** | project autonomy_policy enforced at triage: VIP+vip_escalation→T3, respond_as=draft_only→T3; vip stamped on item; inbox shows sender+VIP badge |
@@ -241,7 +241,22 @@ unprompted.
 
 ---
 
-## M7 — Multi-Project Isolation + USD Budget Governance
+## M7 — Multi-Project Isolation + Budget Governance ✅ DONE (budget) 2026-06-17
+
+> **Delivered (budget governance):** the north-star's "monthly cap" — a `monthlyRuns`
+> per-project cap mirroring daily/weekly (`ProjectBudget.monthlyRuns`, `ledger.countMonthly`
+> over the Prague calendar month, enforced in `BudgetService.check` as `project-monthly`,
+> surfaced in `BudgetStatus.projects[].monthly` and the project profile editor). The
+> 80/90/100% auto-hold thresholds **already existed** (`pauseAtRollingPct`/`pauseAtWeeklyPct`
+> with `>=` checks); "spend past a cap requires approval" is the `spend-past-cap` locked floor.
+>
+> **USD cost tracking is N/A by design — recorded deviation:** ZIBBY runs on a Claude
+> *subscription*, not metered API billing, and a `claude -p` run surfaces no per-run token/USD
+> cost (`LedgerEntry` has no cost field; `ProjectBudgetSchema` comments that a token cap "would
+> be a lie in the UI"). The north-star says "monthly cap, per-run cap" — never "USD" — so 1:1
+> is met by run-count caps + subscription-window %; the per-goal run-count budget (Phase 13.1)
+> covers the "per-run cap" intent. **Still open (multi-project, not budget):** project data
+> isolation on the grounding/workspace seam, a multi-project velín, cross-project intelligence.
 
 **Why seventh:** matters once there is more than one mission; the run-count half already exists.
 

@@ -53,6 +53,7 @@ type ProjectEditValues = {
   category: string;
   budgetDailyRuns: string;
   budgetWeeklyRuns: string;
+  budgetMonthlyRuns: string;
   budgetMaxConcurrent: string;
 };
 
@@ -109,18 +110,21 @@ export function ProjectModal({
       category: project.category ?? categories[0]?.name ?? "",
       budgetDailyRuns: project.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
       budgetWeeklyRuns: project.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
+      budgetMonthlyRuns: project.budget?.monthlyRuns != null ? String(project.budget.monthlyRuns) : "",
       budgetMaxConcurrent:
         project.budget?.maxConcurrent != null ? String(project.budget.maxConcurrent) : "",
     },
     onSubmit: (values) => {
       const dailyRuns = toPositiveInt(values.budgetDailyRuns);
       const weeklyRuns = toPositiveInt(values.budgetWeeklyRuns);
+      const monthlyRuns = toPositiveInt(values.budgetMonthlyRuns);
       const maxConcurrent = toPositiveInt(values.budgetMaxConcurrent);
       const budget =
-        dailyRuns != null || weeklyRuns != null || maxConcurrent != null
+        dailyRuns != null || weeklyRuns != null || monthlyRuns != null || maxConcurrent != null
           ? {
               ...(dailyRuns != null ? { dailyRuns } : {}),
               ...(weeklyRuns != null ? { weeklyRuns } : {}),
+              ...(monthlyRuns != null ? { monthlyRuns } : {}),
               ...(maxConcurrent != null ? { maxConcurrent } : {}),
             }
           : undefined;
@@ -260,6 +264,12 @@ export function ProjectModal({
                 inputMode="numeric"
                 label={t("fields.budgetWeeklyRuns")}
                 name="budgetWeeklyRuns"
+                placeholder="—"
+              />
+              <FormTextInput<ProjectEditValues>
+                inputMode="numeric"
+                label={t("fields.budgetMonthlyRuns")}
+                name="budgetMonthlyRuns"
                 placeholder="—"
               />
               <FormTextInput<ProjectEditValues>

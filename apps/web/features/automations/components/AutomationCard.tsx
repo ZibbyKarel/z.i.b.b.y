@@ -36,6 +36,8 @@ const TARGET_GLYPH = {
   briefing: "spark",
   discovery: "search",
   "memory-distill": "brain",
+  "pattern-extract": "pulse",
+  "research-digest": "compass",
 } as const satisfies Record<Target["type"], IconName>;
 
 export interface AutomationCardProps {
@@ -241,7 +243,14 @@ function targetIdOf(target: Target): string {
 /** i18n key for the target kind label. Exhaustive over the target union. */
 function targetKindKey(
   type: Target["type"],
-): "targetAgent" | "targetPipeline" | "targetBriefing" | "targetDiscovery" | "targetMemoryDistill" {
+):
+  | "targetAgent"
+  | "targetPipeline"
+  | "targetBriefing"
+  | "targetDiscovery"
+  | "targetMemoryDistill"
+  | "targetPatternExtract"
+  | "targetResearchDigest" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -253,5 +262,9 @@ function targetKindKey(
       return "targetDiscovery";
     case "memory-distill":
       return "targetMemoryDistill";
+    case "pattern-extract":
+      return "targetPatternExtract";
+    case "research-digest":
+      return "targetResearchDigest";
   }
 }

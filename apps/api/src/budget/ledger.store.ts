@@ -61,6 +61,11 @@ export class BudgetLedgerStore {
     return this.countAcross(isoWeekDates(pragueDate(now)), projectId)
   }
 
+  /** Runs counted for `projectId` month-to-date (1st..now of the Prague month). */
+  async countMonthly(projectId: string, now: Date = new Date()): Promise<number> {
+    return this.countAcross(monthDates(pragueDate(now)), projectId)
+  }
+
   /** Sum matching lines across the given day-file names. */
   private async countAcross(dates: string[], projectId: string): Promise<number> {
     let total = 0
@@ -106,6 +111,20 @@ export function pragueDate(now: Date): string {
     month: "2-digit",
     day: "2-digit",
   }).format(now)
+}
+
+/**
+ * The YYYY-MM-DD day-file names of the calendar month containing `date`, from the
+ * 1st through `date` inclusive. Built off the already-Prague-local date string, so
+ * the month boundary is the Prague month (same precedent as {@link isoWeekDates}).
+ */
+export function monthDates(date: string): string[] {
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number]
+  const dates: string[] = []
+  for (let d = 1; d <= day; d++) {
+    dates.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`)
+  }
+  return dates
 }
 
 /**

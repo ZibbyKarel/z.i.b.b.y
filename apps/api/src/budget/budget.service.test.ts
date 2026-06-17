@@ -13,7 +13,12 @@ const limits = (over: Partial<Limits> = {}): Limits => ({
 })
 
 interface Deps {
-  ledger?: Partial<{ countDaily: () => Promise<number>; countWeekly: () => Promise<number>; record: () => Promise<void> }>
+  ledger?: Partial<{
+    countDaily: () => Promise<number>
+    countWeekly: () => Promise<number>
+    countMonthly: () => Promise<number>
+    record: () => Promise<void>
+  }>
   config?: { read: () => Promise<Record<string, number>> }
   project?: Project | null
   limitsSnapshot?: () => Promise<Limits>
@@ -25,6 +30,7 @@ function build(deps: Deps = {}): BudgetService {
   const ledger = {
     countDaily: deps.ledger?.countDaily ?? (async () => 0),
     countWeekly: deps.ledger?.countWeekly ?? (async () => 0),
+    countMonthly: deps.ledger?.countMonthly ?? (async () => 0),
     record: deps.ledger?.record ?? (async () => {}),
   }
   const config = deps.config ?? { read: async () => ({}) }
@@ -83,6 +89,18 @@ describe("BudgetService.check — caps arithmetic", () => {
     if (!result.ok) expect(result.over).toBe("project-weekly")
   })
 
+  it("over when the monthly cap is reached", async () => {
+    const svc = build({ project: project({ monthlyRuns: 20 }), ledger: { countMonthly: async () => 20 } })
+    const result = await svc.check("alpha")
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.over).toBe("project-monthly")
+  })
+
+  it("ok when under the monthly cap", async () => {
+    const svc = build({ project: project({ monthlyRuns: 20 }), ledger: { countMonthly: async () => 5 } })
+    expect(await svc.check("alpha")).toEqual({ ok: true })
+  })
+
   it("ok for an unattributed dispatch (no projectId, no global pause)", async () => {
     const svc = build()
     expect(await svc.check(undefined)).toEqual({ ok: true })
@@ -125,6 +143,17 @@ describe("BudgetService.check — fail-closed", () => {
     const result = await svc.check("alpha")
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.over).toBe("global")
+  })
+})
+
+describe("BudgetService.status — monthly", () => {
+  it("includes a month-to-date window with its cap", async () => {
+    const svc = build({
+      project: project({ monthlyRuns: 30 }),
+      ledger: { countMonthly: async () => 7 },
+    })
+    const status = await svc.status()
+    expect(status.projects[0]?.monthly).toEqual({ used: 7, cap: 30 })
   })
 })
 
