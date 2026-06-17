@@ -76,10 +76,11 @@ export class BriefingService {
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
-    const [trend7d, learnedPatterns, intelligence] = await Promise.all([
+    const [trend7d, learnedPatterns, intelligence, automationGaps] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
       this.readIntelligence(),
+      this.readAutomationGaps(),
     ])
     return assembleBriefing({
       now,
@@ -95,6 +96,7 @@ export class BriefingService {
       trend7d,
       learnedPatterns,
       intelligence,
+      automationGaps,
     })
   }
 
@@ -166,6 +168,25 @@ export class BriefingService {
         .split("\n")
         .filter((l) => l.startsWith("- **"))
         .map((l) => l.replace(/^- \*\*(.*?)\*\* — /, "$1 — ").replace(/^- /, "").trim())
+        .filter(Boolean)
+        .slice(0, 5)
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Read the GapDetector's "automate it?" suggestions from the vault
+   * (`suggestions/automation-gaps`), parsing the `- [ ] …` bullet lines. Caps at the
+   * first 5. [] on error.
+   */
+  private async readAutomationGaps(): Promise<string[]> {
+    try {
+      const note = await this.vault.note("suggestions/automation-gaps")
+      return (note.body ?? "")
+        .split("\n")
+        .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
+        .map((l) => l.replace(/^- \[.\] /, "").trim())
         .filter(Boolean)
         .slice(0, 5)
     } catch {

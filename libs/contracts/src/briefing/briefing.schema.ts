@@ -97,6 +97,8 @@ export const BriefingSchema = z.object({
   learnedPatterns: z.array(z.string()).optional(),
   /** Top research-digest headlines from the watched sources (M6 intelligence). */
   intelligence: z.array(z.string()).optional(),
+  /** Recurring-manual-work "automate it?" suggestions (M5 GapDetector). */
+  automationGaps: z.array(z.string()).optional(),
 })
 export type Briefing = z.infer<typeof BriefingSchema>
 

@@ -1,0 +1,1 @@
+{"id":"gap-detect","name":"Gap detection","trigger":{"type":"cron","expr":"0 23 * * *"},"target":{"type":"gap-detect"},"enabled":true,"system":true}

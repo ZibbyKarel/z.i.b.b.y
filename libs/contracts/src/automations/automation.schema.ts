@@ -36,6 +36,10 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // overlap, mirror the digest to the vault for the morning briefing to fold in.
   // Deterministic assembly through the source-adapter seam; no claude run.
   z.object({ type: z.literal("research-digest") }),
+  // Gap detection (M5): scan recurring `task-created` activity for manual work that
+  // could be automated, drafting "automate it?" suggestions into the vault for the
+  // briefing. Deterministic; proposes ≠ acts (never creates an automation itself).
+  z.object({ type: z.literal("gap-detect") }),
 ])
 export type Target = z.infer<typeof TargetSchema>
 

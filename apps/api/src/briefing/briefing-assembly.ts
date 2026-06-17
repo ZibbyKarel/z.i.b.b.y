@@ -38,6 +38,8 @@ export interface BriefingInput {
   learnedPatterns?: string[]
   /** Top research-digest headlines from the watched sources (M6 intelligence). */
   intelligence?: string[]
+  /** Recurring-manual-work "automate it?" suggestions (M5 GapDetector). */
+  automationGaps?: string[]
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -90,6 +92,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     ...(input.trend7d && input.trend7d.length > 0 ? { trend7d: input.trend7d } : {}),
     ...(input.learnedPatterns && input.learnedPatterns.length > 0 ? { learnedPatterns: input.learnedPatterns } : {}),
     ...(input.intelligence && input.intelligence.length > 0 ? { intelligence: input.intelligence } : {}),
+    ...(input.automationGaps && input.automationGaps.length > 0 ? { automationGaps: input.automationGaps } : {}),
   }
 }
 
@@ -278,6 +281,12 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
   if (briefing.intelligence && briefing.intelligence.length > 0) {
     lines.push("## Intelligence")
     for (const item of briefing.intelligence) lines.push(`- ${item}`)
+    lines.push("")
+  }
+
+  if (briefing.automationGaps && briefing.automationGaps.length > 0) {
+    lines.push("## Gaps I noticed")
+    for (const item of briefing.automationGaps) lines.push(`- ${item}`)
     lines.push("")
   }
 

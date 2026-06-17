@@ -7,6 +7,7 @@ import { DiscoveryTriageService } from "../discovery/discovery-triage.service"
 import { MemoryDistillerService } from "../memory/memory-distiller.service"
 import { PatternExtractorService } from "../patterns/pattern-extractor.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
+import { GapDetectorService } from "../gaps/gap-detector.service"
 import { ResearchService } from "../research/research.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
@@ -37,6 +38,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly distiller: MemoryDistillerService,
     private readonly patterns: PatternExtractorService,
     private readonly research: ResearchService,
+    private readonly gaps: GapDetectorService,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
@@ -133,6 +135,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // vault for the morning briefing. Deterministic; ref = `research:<count>`.
         const digest = await this.research.refresh()
         return `research:${digest.items.length}`
+      }
+      case "gap-detect": {
+        // M5: scan recurring task creation for automatable manual work, draft
+        // suggestions into the vault. Deterministic; ref = `gaps:<count>`.
+        const { suggestions } = await this.gaps.detect()
+        return `gaps:${suggestions.length}`
       }
     }
   }

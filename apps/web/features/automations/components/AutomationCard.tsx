@@ -38,6 +38,7 @@ const TARGET_GLYPH = {
   "memory-distill": "brain",
   "pattern-extract": "pulse",
   "research-digest": "compass",
+  "gap-detect": "flask",
 } as const satisfies Record<Target["type"], IconName>;
 
 export interface AutomationCardProps {
@@ -250,7 +251,8 @@ function targetKindKey(
   | "targetDiscovery"
   | "targetMemoryDistill"
   | "targetPatternExtract"
-  | "targetResearchDigest" {
+  | "targetResearchDigest"
+  | "targetGapDetect" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -266,5 +268,7 @@ function targetKindKey(
       return "targetPatternExtract";
     case "research-digest":
       return "targetResearchDigest";
+    case "gap-detect":
+      return "targetGapDetect";
   }
 }

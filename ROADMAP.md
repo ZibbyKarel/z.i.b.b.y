@@ -35,7 +35,7 @@ The real picture, verified against `apps/api/src`:
 | **Nightly consolidation job**                                       | ❌ Absent                   | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                               |
 | **Standup cheat sheets per project**                                | ✅ **Done (M3, 2026-06-17)** | StandupService (24h activity→markdown); GET /projects/:id/standup; standup card on ProfileScreen; trend7d in Briefing |
 | **Research / intelligence layer**                                   | ✅ **Done (M6, 2026-06-17)** | `research/` — operator config + source-adapter seam (fake fixtures) + interest-overlap ranking + vault `intelligence/digest` note + briefing Intelligence section + `research-digest` 06:00 automation |
-| **GapDetector / "I want X" NL self-mod flow**                       | ❌ Absent                   | self-dev pipeline exists, the proactive front-end of it does not                                                       |
+| **GapDetector / "I want X" NL self-mod flow**                       | ✅ **Done (M5, 2026-06-17)** | `gaps/` GapDetectorService — scans 30d `task-created` activity for recurring manual work → `vault/suggestions/automation-gaps.md` → briefing "Gaps I noticed"; `gap-detect` 23:00 automation. NL "I want X→PR" already covered by classifier→delivery pipeline→worktree→`pr.open` gate |
 
 **The headline correction:** the hard infrastructure (channel I/O, gate floor, goal loop,
 vault, budget caps) is already real. The gaps are mostly **wiring and the semantic/learning
@@ -184,7 +184,21 @@ gains a real "What I learned" section.
 
 ---
 
-## M5 — Self-Modification Front-End ("I want X" → PR)
+## M5 — Self-Modification Front-End ("I want X" → PR) ✅ DONE (front door) 2026-06-17
+
+> **Delivered:** the proactive front door — `GapDetectorService` (`gaps/`) scans 30 days of
+> `task-created` activity for recurring manual work, drafts "automate it?" suggestions into
+> `vault/suggestions/automation-gaps.md`, and the morning briefing surfaces them under
+> "Gaps I noticed" (`Briefing.automationGaps`). Nightly `gap-detect` automation (23:00).
+> Docs: `docs/api/gaps.md`. *Proposes ≠ acts* — it only writes a vault note.
+>
+> **Already satisfied (verified, not rebuilt):** the "I want X → plan → PR" back half — the
+> TaskClassifier routes a self-modification intent into the delivery pipeline against ZIBBY's
+> own repo, the goal loop builds it in an isolated sibling worktree (builder ≠ subject), and
+> the locked gate floor forces every PR through approval (`pr.open → ask`, `pr.merge → deny`),
+> so a self-mod PR is structurally Tier-3 already. **Deferred (belt-and-suspenders):** a
+> dedicated self-mod PR description template + an explicit "this PR targets ZIBBY's own repo"
+> marker on top of the existing floor.
 
 **Why fifth:** the engine exists; only the proactive front door and a hardened gate are missing.
 
