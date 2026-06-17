@@ -423,6 +423,7 @@
   "inbox": {
     "title": "Příchozí zprávy",
     "needsApproval": "čeká na schválení",
+    "vip": "VIP",
     "tier": "Tier {n}",
     "dispatched": "předáno",
     "replied": "odpovězeno",

@@ -91,33 +91,69 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     const matched = matchProject(projects, {
       text: `${item.text} ${integration?.name ?? item.integrationId}`,
     })
+    // Enforce per-project autonomy policy (M2): VIP escalation and respond_as.
+    const isVip = matched ? this.isVipSender(item.from, matched) : false
+    const forceT3 = matched ? this.forcesTier3(matched, isVip) : false
+    const effectiveVerdict: TriageVerdict = forceT3
+      ? { ...verdict, tier: 3, reason: `${verdict.reason} (policy: forced tier 3)` }
+      : verdict
     const triaged: ChannelItem = {
       ...item,
-      triage: verdict,
+      triage: effectiveVerdict,
       ...(matched ? { projectId: matched.id } : {}),
+      ...(isVip ? { vip: true } : {}),
     }
     void this.activity.record({
       kind: "channel-triage",
-      summary: `triaged ${verdict.category} (tier ${verdict.tier}) from ${item.integrationId}`,
+      summary: `triaged ${effectiveVerdict.category} (tier ${effectiveVerdict.tier}) from ${item.integrationId}${isVip ? " [VIP]" : ""}`,
       refs: {
         itemId: item.id,
         integrationId: item.integrationId,
-        status: verdict.category,
+        status: effectiveVerdict.category,
         ...(matched ? { projectId: matched.id } : {}),
+        ...(isVip ? { vip: true } : {}),
       },
     })
 
     const dispatchAllowed = this.allowed(mandate, item.integrationId, "dispatch")
     const replyAllowed = this.allowed(mandate, item.integrationId, "reply")
 
-    if (verdict.tier === 1 && verdict.actionable && dispatchAllowed) {
-      return this.dispatchTier1(triaged, verdict)
+    if (effectiveVerdict.tier === 1 && effectiveVerdict.actionable && dispatchAllowed) {
+      return this.dispatchTier1(triaged, effectiveVerdict)
     }
-    if (verdict.tier === 2 && verdict.actionable) {
-      return this.handleTier2(triaged, verdict, replyAllowed)
+    if (effectiveVerdict.tier === 2 && effectiveVerdict.actionable) {
+      return this.handleTier2(triaged, effectiveVerdict, replyAllowed)
     }
     // Tier 3, or a non-actionable/edge case → surface for the operator.
-    return this.parkForApproval(triaged, verdict)
+    return this.parkForApproval(triaged, effectiveVerdict)
+  }
+
+  // ---- Project autonomy policy enforcement (M2) --------------------------------
+
+  /**
+   * Returns true when the item's sender matches a VIP person in the project profile.
+   * Case-insensitive substring match so "alice@corp.com" matches person name "Alice".
+   */
+  private isVipSender(from: string | undefined, project: { identity?: { people?: Array<{ name: string; vip?: boolean }> } }): boolean {
+    if (!from) return false
+    const lower = from.toLowerCase()
+    return (
+      project.identity?.people?.some((p) => p.vip && lower.includes(p.name.toLowerCase())) ??
+      false
+    )
+  }
+
+  /**
+   * Returns true when the project's autonomy policy requires forcing Tier 3:
+   * `respond_as: draft_only` always, VIP sender + `vip_escalation` flag.
+   */
+  private forcesTier3(
+    project: { autonomy_policy?: { respond_as?: string; vip_escalation?: boolean } },
+    isVip: boolean,
+  ): boolean {
+    if (project.autonomy_policy?.respond_as === "draft_only") return true
+    if (isVip && project.autonomy_policy?.vip_escalation) return true
+    return false
   }
 
   // ---- Tier 1: dispatch a delivery task (silent) -------------------------------

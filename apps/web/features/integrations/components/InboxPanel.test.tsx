@@ -78,4 +78,22 @@ describe("InboxPanel", () => {
     expect(screen.getByText("Tier 1")).toBeInTheDocument();
     expect(screen.getByText("Tier 2")).toBeInTheDocument();
   });
+
+  it("shows VIP badge and sender prefix when item is from a VIP", () => {
+    items = [
+      item({ id: "vip1", state: "triaged", from: "alice@corp.com", vip: true }),
+    ];
+    render(<InboxPanel />);
+    expect(screen.getByText("VIP")).toBeInTheDocument();
+    expect(screen.getByText(/alice@corp\.com/)).toBeInTheDocument();
+  });
+
+  it("shows sender prefix without VIP badge for non-VIP items", () => {
+    items = [
+      item({ id: "plain1", state: "new", from: "bob@corp.com" }),
+    ];
+    render(<InboxPanel />);
+    expect(screen.queryByText("VIP")).toBeNull();
+    expect(screen.getByText(/bob@corp\.com/)).toBeInTheDocument();
+  });
 });

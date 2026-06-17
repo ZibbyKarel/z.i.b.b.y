@@ -423,6 +423,7 @@
   "inbox": {
     "title": "Inbox",
     "needsApproval": "needs approval",
+    "vip": "VIP",
     "tier": "Tier {n}",
     "dispatched": "dispatched",
     "replied": "replied",

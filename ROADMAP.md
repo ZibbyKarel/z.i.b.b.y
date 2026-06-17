@@ -30,7 +30,7 @@ The real picture, verified against `apps/api/src`:
 | Budget governance (per-project + global + concurrency)              | 🟡 Partial                  | `budget/` — run-count caps real; **USD cost tracking absent** (`budget.json`/ledger empty)                             |
 | Mandate / autonomy doc                                              | 🟡 Partial                  | `data/mandate.json` exists but minimal (`dispatch:true, reply:false`)                                                  |
 | **Project = operational profile**                                   | ✅ **Done (M1, 2026-06-17)** | contract extended (identity/autonomy_policy/daily_rhythm), `GET/PUT /projects/:id/profile`, vault mirror, profile editor UI at `/projects/[id]` |
-| **Inbound message → action routing**                                | ❌ Gap                      | runtime ingests + triages, but no classifier→{respond\|create_task\|ignore}→tier wiring per project                    |
+| **Inbound message → action routing**                                | ✅ **Done (M2, 2026-06-17)** | project autonomy_policy enforced at triage: VIP+vip_escalation→T3, respond_as=draft_only→T3; vip stamped on item; inbox shows sender+VIP badge |
 | **Self-learning from approval signals**                             | ❌ Absent                   | no pattern extractor; `patterns/` folder doesn't exist in the vault                                                    |
 | **Nightly consolidation job**                                       | ❌ Absent                   | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                               |
 | **Standup cheat sheets per project**                                | ❌ Absent                   | only generic daily briefings                                                                                           |
@@ -97,7 +97,7 @@ ground on its profile; the gate respects per-project policy.
 
 ---
 
-## M2 — Inbound Autonomy (channels → classifier → tier)
+## M2 — Inbound Autonomy (channels → classifier → tier) ✅ DONE 2026-06-17
 
 **Why second:** the channel _runtime_ is the biggest already-built asset the old roadmap
 missed. The value is unlocked by wiring it to action, not by building it.

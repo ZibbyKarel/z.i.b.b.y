@@ -66,6 +66,8 @@ export const ChannelItemSchema = z.object({
    * it rides into the dispatched task's projectId and the inbox Tag, nothing more.
    */
   projectId: z.string().optional(),
+  /** Stamped true when the sender matched a VIP person in the project profile. */
+  vip: z.boolean().optional(),
   /** Set when a Tier-1 task was dispatched for this item. */
   taskId: z.string().optional(),
   /** Set when a Tier-3 reply was parked as an approval. */

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import type { ChannelItem, Integration, Mandate, TriageVerdict } from "@zibby/contracts"
+import type { ChannelItem, Integration, Mandate, Project, TriageVerdict } from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ChannelItemStore } from "./channel-item.store"
 import { ChannelTriageFlowService } from "./channel-triage-flow.service"
@@ -45,7 +45,7 @@ describe("ChannelTriageFlowService", () => {
     mandate?: Mandate
     decision?: "allow" | "notify" | "ask" | "deny"
     taskOutcome?: ChannelItem["outcome"]
-    projects?: Array<{ id: string; name: string; path: string }>
+    projects?: Project[]
   }) {
     createTask = vi.fn(async () => ({ outcome: "dispatched", task: { id: "task_1" }, runRef: "r1", target: {} }))
     requestApproval = vi.fn(async () => ({ id: "appr_1" }))
@@ -184,5 +184,55 @@ describe("ChannelTriageFlowService", () => {
     await store.update(item({ state: "handled", taskId: "task_1" }))
     await flow.sweepOutcomes()
     expect((await store.get("team", "C1-100"))?.outcome).toEqual(outcome)
+  })
+
+  // ---- M2: project autonomy policy enforcement --------------------------------
+
+  it("VIP sender + vip_escalation forces Tier 3 even when triage says Tier 1", async () => {
+    const project: Project = {
+      id: "alpha",
+      name: "Alpha",
+      path: "/work/alpha",
+      identity: { people: [{ name: "alice", role: "CEO", vip: true }] },
+      autonomy_policy: { vip_escalation: true },
+    }
+    const flow = makeFlow({ verdict: bug, projects: [project] })
+    const out = await flow.handle(item({ text: "alpha bug report", from: "alice@corp.com" }))
+    // Tier-1 dispatch was suppressed; approval queued instead.
+    expect(createTask).not.toHaveBeenCalled()
+    expect(requestApproval).toHaveBeenCalledTimes(1)
+    expect(out.state).toBe("triaged")
+    expect(out.vip).toBe(true)
+  })
+
+  it("respond_as=draft_only forces Tier 3 even when triage says Tier 2", async () => {
+    const project: Project = {
+      id: "beta",
+      name: "Beta",
+      path: "/work/beta",
+      autonomy_policy: { respond_as: "draft_only" },
+    }
+    const flow = makeFlow({ verdict: question, projects: [project] })
+    const out = await flow.handle(item({ text: "beta question", integrationId: "team" }))
+    expect(send).not.toHaveBeenCalled()
+    expect(requestApproval).toHaveBeenCalledTimes(1)
+    expect(out.state).toBe("triaged")
+  })
+
+  it("VIP sender without vip_escalation flag does NOT force Tier 3", async () => {
+    const project: Project = {
+      id: "gamma",
+      name: "Gamma",
+      path: "/work/gamma",
+      identity: { people: [{ name: "bob", role: "PM", vip: true }] },
+      autonomy_policy: { vip_escalation: false },
+    }
+    // Tier-1 verdict — should still dispatch (vip_escalation is false)
+    const flow = makeFlow({ verdict: bug, projects: [project] })
+    const out = await flow.handle(item({ text: "gamma issue", from: "bob@corp.com" }))
+    expect(createTask).toHaveBeenCalledTimes(1)
+    expect(out.state).toBe("handled")
+    // vip still stamped on the item for the inbox
+    expect(out.vip).toBe(true)
   })
 })

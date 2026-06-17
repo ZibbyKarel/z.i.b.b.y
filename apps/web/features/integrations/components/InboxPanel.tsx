@@ -38,6 +38,7 @@ function InboxRow({ item }: { item: ChannelItem }) {
     >
       <Stack align="center" direction="row" gap="100">
         <Tag tone={STATE_TONE[item.state]}>{t(`inbox.state.${item.state}`)}</Tag>
+        {item.vip && <Tag tone="warn">{t("inbox.vip")}</Tag>}
         {item.triage && (
           <Tag tone={TIER_TONE[item.triage.tier]}>
             {t("inbox.tier", { n: item.triage.tier })}
@@ -47,7 +48,7 @@ function InboxRow({ item }: { item: ChannelItem }) {
         {item.projectId && <Tag tone="accent">{item.projectId}</Tag>}
         <Container minW0 maxWidth="320px">
           <Typography truncate size="sm" type="note" variant="secondary">
-            {item.text}
+            {item.from ? `${item.from}: ` : ""}{item.text}
           </Typography>
         </Container>
       </Stack>
