@@ -295,7 +295,18 @@ ledger are empty), no 80/90/100% thresholds, no multi-project velín, no cross-p
 
 ---
 
-## M8 — Hardening + Telemetry (continuous)
+## M8 — Hardening + Telemetry (continuous) 🟡 IN PROGRESS
+
+> **Delivered 2026-06-17:** `/api/health` now carries a **per-subsystem breakdown** (backend,
+> vault, integrations, scheduler) via `SubsystemHealthService` — each probe is defensive
+> (resolves, never throws) so one dead subsystem degrades only its own line; the overall
+> status degrades if claude is refused OR any subsystem is not `ok`. Added a scheduler
+> heartbeat (`SchedulerService.health()` → running/tickMs/lastTickAt; a disabled tick loop is
+> `ok`-with-note, a configured-but-unarmed loop is `degraded`). The HUD already renders the
+> overall `/health` status; a per-subsystem HUD widget is the obvious next web increment.
+>
+> **Still open (continuous):** velín per-subsystem HUD widget; exponential backoff + dead-letter
+> queue for integration I/O; audit-trail export + run-artifact retention.
 
 **Why continuous, not last:** much of this already exists from the self-development safety work;
 the rest should land alongside every milestone, not be deferred.

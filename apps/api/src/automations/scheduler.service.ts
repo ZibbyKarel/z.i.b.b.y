@@ -25,6 +25,9 @@ import { matchesCron } from "./cron"
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null
+  /** Wall-clock of the last tick — the heartbeat the /health probe reads (M8). */
+  private lastTickAt: string | null = null
+  private tickMs = 0
   private readonly log: ScopedLogger
 
   constructor(
@@ -45,6 +48,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     const tickMs = Number(process.env.AUTOMATION_TICK_MS)
+    this.tickMs = Number.isFinite(tickMs) ? tickMs : 0
     // A tick of 0 disables the loop (tests drive `tick()` directly).
     if (tickMs > 0) {
       this.timer = setInterval(() => void this.tick(), tickMs)
@@ -60,8 +64,18 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer)
   }
 
+  /**
+   * Heartbeat for the /health probe (M8). `running` is whether the tick loop is
+   * armed; `tickMs === 0` is the intentional test/CI mode (disabled, not broken).
+   * `lastTickAt` is null until the first tick fires.
+   */
+  health(): { running: boolean; tickMs: number; lastTickAt: string | null } {
+    return { running: this.timer !== null, tickMs: this.tickMs, lastTickAt: this.lastTickAt }
+  }
+
   /** Evaluate all enabled cron automations against `now`; fire the due ones. */
   async tick(now: Date = new Date()): Promise<string[]> {
+    this.lastTickAt = now.toISOString()
     const minute = now.toISOString().slice(0, 16)
     const fired: string[] = []
     for (const automation of await this.storage.list()) {
