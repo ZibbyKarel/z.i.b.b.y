@@ -1,8 +1,5 @@
 ---
 name: Delivery
-desc: 'Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
-  implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,
-  rozbitý test, failing test.'
 phases:
   - id: architekt
     type: agent
@@ -35,16 +32,24 @@ phases:
           thinking: high
         - model: opus
           thinking: high
+  - id: n-9
+    type: agent
+    agent: test-automator
+    consumes: review.md
+    produces: test-automator.md
+    model: sonnet
+    thinking: medium
   - id: dokumentator
     type: agent
     agent: documentation-engineer
-    consumes: review.md
+    consumes: test-automator.md
     produces: docs.md
     model: sonnet
     thinking: low
-outputs:
-  - type: pr
-    from: docs.md
+desc: >-
+  Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
+  implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,
+  rozbitý test, failing test.
 ---
 
 # Delivery

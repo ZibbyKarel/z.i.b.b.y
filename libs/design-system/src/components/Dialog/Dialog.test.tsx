@@ -27,6 +27,18 @@ describe("Dialog", () => {
     expect(footer).toHaveTextContent("OK");
   });
 
+  it("gives the full variant a definite height for a flex-1 canvas body", () => {
+    render(<Dialog open width="full">x</Dialog>);
+    const root = screen.getByTestId(DialogTestId.Root);
+    expect(root).toHaveStyle({ width: "1320px" });
+    expect(root.style.height).not.toBe("");
+  });
+
+  it("leaves non-full widths height-unset (hug content)", () => {
+    render(<Dialog open width="md">x</Dialog>);
+    expect(screen.getByTestId(DialogTestId.Root).style.height).toBe("");
+  });
+
   it("calls onClose on Escape", async () => {
     const onClose = vi.fn();
     render(<Dialog open onClose={onClose}>x</Dialog>);

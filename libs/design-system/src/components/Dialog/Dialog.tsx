@@ -5,7 +5,7 @@ import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Row } from "../Stack/Stack";
 
-export type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl";
+export type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
 export enum DialogTestId {
   Overlay = "dialog-overlay",
@@ -24,6 +24,17 @@ const dialogWidthPx: Record<DialogWidth, string> = {
   lg: "600px",
   xl: "800px",
   "2xl": "1000px",
+  // Near-viewport canvas modal (e.g. the pipeline node-graph editor). Capped by
+  // the shared `maxWidth: calc(100vw - 32px)` so it never overflows the screen.
+  full: "1320px",
+};
+
+/**
+ * `full` also takes a definite height so a flex-`1` body can host a scrollable
+ * canvas; every other width hugs its content (height left unset).
+ */
+const dialogHeight: Partial<Record<DialogWidth, string>> = {
+  full: "min(860px, calc(100vh - 80px))",
 };
 
 export interface DialogProps {
@@ -91,7 +102,7 @@ export function Dialog({
         data-testid={DialogTestId.Root}
         ref={dialogRef}
         role="dialog"
-        style={{ width: dialogWidthPx[width], maxWidth: "calc(100vw - 32px)" }}
+        style={{ width: dialogWidthPx[width], maxWidth: "calc(100vw - 32px)", height: dialogHeight[width] }}
         tabIndex={-1}
       >
         {title && <DialogHeader closeLabel={closeLabel} description={description} onClose={onClose} title={title} />}

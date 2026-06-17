@@ -39,4 +39,27 @@ export const Overview: Story = {
   ),
 };
 
+export const FullCanvas: Story = {
+  name: "Full (canvas)",
+  render: () => (
+    <Dialog
+      open
+      actions={
+        <>
+          <Button intent="ghost">Zrušit</Button>
+          <Button icon="plus" intent="primary">
+            Vytvořit
+          </Button>
+        </>
+      }
+      title="Editor pipeline"
+      width="full"
+    >
+      <DialogBody>
+        <p>Near-viewport modal — hosts a scrollable canvas in a flex-1 body.</p>
+      </DialogBody>
+    </Dialog>
+  ),
+};
+
 export const Playground: Story = {};
