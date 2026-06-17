@@ -11,7 +11,7 @@ export interface IntegrationCardProps {
   testing?: boolean;
 }
 
-const KIND_GLYPH = { slack: "plug", email: "server" } as const;
+const KIND_GLYPH = { slack: "plug", email: "server", jira: "checkpoint", github: "branch" } as const;
 
 /** Format a sync timestamp as a short, locale-agnostic caption (or a dash). */
 function lastSyncCaption(iso: string | undefined): string {
@@ -29,10 +29,15 @@ export function IntegrationCard({ integration, onConfigure, onTest, testing }: I
   const t = useTranslations();
   const status = INTEGRATION_STATUS[integration.status];
   const name = integration.name ?? integration.id;
+  const config = integration.config;
   const detail =
-    integration.config.kind === "slack"
-      ? t("integrations.channelCount", { count: integration.config.channels.length })
-      : integration.config.user;
+    config.kind === "slack"
+      ? t("integrations.channelCount", { count: config.channels.length })
+      : config.kind === "email"
+        ? config.user
+        : config.kind === "jira"
+          ? (config.projectKey ?? config.baseUrl)
+          : config.repo;
 
   return (
     <HudCard

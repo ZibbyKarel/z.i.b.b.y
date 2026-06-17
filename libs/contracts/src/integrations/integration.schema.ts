@@ -14,7 +14,7 @@ export const IntegrationIdSchema = z
   .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
 
 /** Which inbound channel an integration speaks. `kind` is immutable after create. */
-export const IntegrationKindSchema = z.enum(["slack", "email"])
+export const IntegrationKindSchema = z.enum(["slack", "email", "jira", "github"])
 export type IntegrationKind = z.infer<typeof IntegrationKindSchema>
 
 /**
@@ -47,10 +47,42 @@ export const EmailConfigSchema = z
   .strict()
 export type EmailConfig = z.infer<typeof EmailConfigSchema>
 
+/**
+ * Jira config — the site `baseUrl` and the account `email` (both non-secret); the
+ * API token lives in the credentials store (Basic `email:token`). `jql` narrows the
+ * polled issues (defaults to the project's recently-updated issues). `.strict()`.
+ */
+export const JiraConfigSchema = z
+  .object({
+    kind: z.literal("jira"),
+    baseUrl: z.string().url(),
+    email: z.string().min(1),
+    projectKey: z.string().min(1).optional(),
+    jql: z.string().min(1).optional(),
+  })
+  .strict()
+export type JiraConfig = z.infer<typeof JiraConfigSchema>
+
+/**
+ * GitHub config — the `repo` ("owner/name") to monitor; the PAT lives in the
+ * credentials store. `kinds` selects which event streams to ingest (issues and/or
+ * pull requests); defaults to both. `.strict()`.
+ */
+export const GitHubConfigSchema = z
+  .object({
+    kind: z.literal("github"),
+    repo: z.string().regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'"),
+    streams: z.array(z.enum(["issues", "pulls"])).default(["issues", "pulls"]),
+  })
+  .strict()
+export type GitHubConfig = z.infer<typeof GitHubConfigSchema>
+
 /** Discriminated on `kind` so config always matches the integration kind. */
 export const IntegrationConfigSchema = z.discriminatedUnion("kind", [
   SlackConfigSchema,
   EmailConfigSchema,
+  JiraConfigSchema,
+  GitHubConfigSchema,
 ])
 export type IntegrationConfig = z.infer<typeof IntegrationConfigSchema>
 

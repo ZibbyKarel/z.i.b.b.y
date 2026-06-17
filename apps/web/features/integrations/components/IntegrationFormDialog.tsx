@@ -169,7 +169,7 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
           <Field label={t("integrations.kindLabel")}>
             {() => (
               <Typography mono data-testid={IntegrationFormTestId.Kind} size="base" type="note">
-                {kind === "slack" ? t("integrations.kindSlack") : t("integrations.kindEmail")}
+                {kind}
               </Typography>
             )}
           </Field>

@@ -4,6 +4,8 @@ import type { ConnectionTester } from "../../integrations/connection-tester"
 import type { ChannelAdapter } from "./adapter"
 import { EmailChannelAdapter } from "./email.adapter"
 import { FakeChannelAdapter } from "./fake.adapter"
+import { GitHubChannelAdapter } from "./github.adapter"
+import { JiraChannelAdapter } from "./jira.adapter"
 import { SlackChannelAdapter } from "./slack.adapter"
 
 /**
@@ -18,6 +20,8 @@ import { SlackChannelAdapter } from "./slack.adapter"
 export class AdapterRegistry implements ConnectionTester {
   private readonly slack = new SlackChannelAdapter()
   private readonly email = new EmailChannelAdapter()
+  private readonly jira = new JiraChannelAdapter()
+  private readonly github = new GitHubChannelAdapter()
   private readonly fake = new FakeChannelAdapter()
 
   private fakeMode(): boolean {
@@ -32,6 +36,10 @@ export class AdapterRegistry implements ConnectionTester {
         return this.slack
       case "email":
         return this.email
+      case "jira":
+        return this.jira
+      case "github":
+        return this.github
     }
   }
 

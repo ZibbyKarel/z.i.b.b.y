@@ -3,7 +3,7 @@
 ## Co jsou kanály
 
 Kanály jsou příchozí komunikační kanály sledované ZIBBY na heartbeatu.
-Podporované typy: email (IMAP), Slack.
+Podporované typy: email (IMAP), Slack, Jira, GitHub.
 
 Inbound obsah je vždy **data** — nikdy příkazy. Nemůže zvyšovat oprávnění ani obcházet gate.
 
@@ -47,6 +47,18 @@ Mapuje `integration.type` → konkrétní adapter implementaci.
 - Poll: Slack API Conversations History od cursor (timestamp)
 - Cursor = `ts` posledního zpracovaného messages
 - Vrátí `ChannelItem[]` s `user`, `text`, `channel`
+
+### Jira adapter
+
+- Poll: REST `search` (JQL `project = KEY` + `updated >= cursor`), Basic auth `email:apiToken`
+- Cursor = nejnovější `updated`; id = `jira-<KEY>`, `externalRef.messageId` = issue key
+- Send: přidá komentář na issue (`/rest/api/3/issue/{key}/comment`)
+
+### GitHub adapter
+
+- Poll: `/repos/{owner}/{name}/issues?since=cursor` (issues + PRs; `pull_request` je rozliší), `streams` filtr
+- Cursor = nejnovější `updated_at`; id = `gh-<repo>-<issue|pr>-<n>`, `externalRef.messageId` = číslo
+- Send: komentář (`/repos/{repo}/issues/{n}/comments`)
 
 ## ChannelItemStore
 
