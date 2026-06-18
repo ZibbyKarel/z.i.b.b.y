@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert } from "@zibby/design-system";
+import { Alert, Button, Stack } from "@zibby/design-system";
 import type { Integration } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Collection } from "../../components/Collection/Collection";
 import { IntegrationCard } from "./components/IntegrationCard";
 import { type IntegrationDraft, IntegrationFormDialog } from "./components/IntegrationFormDialog";
@@ -76,23 +76,28 @@ export function Screen() {
 
   return (
     <PageContainer>
-      <SectionToolbar
-        addLabel={t("integrations.addIntegration")}
-        label={t("integrations.sectionLabel")}
-        onAdd={() => setEditing("new")}
-      />
+      <Stack gap="250">
+        <PageHeader
+          actions={
+            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+              {t("integrations.addIntegration")}
+            </Button>
+          }
+          subtitle={t("integrations.countSummary", { count: integrations.length })}
+          title={t("integrations.title")}
+        />
 
-      {testResult && (
-        <Alert
-          data-testid="integration-test-result"
-          onClose={() => setTestResult(null)}
-          severity={testResult.ok ? "ok" : "error"}
-        >
-          {testResult.detail}
-        </Alert>
-      )}
+        {testResult && (
+          <Alert
+            data-testid="integration-test-result"
+            onClose={() => setTestResult(null)}
+            severity={testResult.ok ? "ok" : "error"}
+          >
+            {testResult.detail}
+          </Alert>
+        )}
 
-      <Collection
+        <Collection
         empty={{
           glyph: "plug",
           title: t("integrations.emptyTitle"),
@@ -122,9 +127,10 @@ export function Screen() {
             testing={test.isPending}
           />
         )}
-      />
+        />
 
-      <InboxPanel />
+        <InboxPanel />
+      </Stack>
 
       {editing !== null && (
         <IntegrationFormDialog

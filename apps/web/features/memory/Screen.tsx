@@ -17,6 +17,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
 import { NoteView } from "./components/NoteView";
@@ -84,6 +85,23 @@ export function Screen() {
     </Stack>
   );
 
+  const header = (
+    <PageHeader
+      actions={
+        <Button
+          data-testid="memory-note-new"
+          icon="plus"
+          intent="primary"
+          onClick={() => setEditor({ mode: "create" })}
+        >
+          {t("newNote")}
+        </Button>
+      }
+      subtitle={t("countSummary", { count: graph?.nodes.length ?? 0 })}
+      title={t("title")}
+    />
+  );
+
   const toolbar = (
     <Stack wrap align="end" direction="row" gap="150" justify="between">
       <Container grow minW0>
@@ -96,13 +114,6 @@ export function Screen() {
         />
       </Container>
       {tierChips}
-      <Button
-        data-testid="memory-note-new"
-        icon="plus"
-        onClick={() => setEditor({ mode: "create" })}
-      >
-        {t("newNote")}
-      </Button>
     </Stack>
   );
 
@@ -156,10 +167,12 @@ export function Screen() {
   }
 
   return (
-    <Stack gap="250">
-      {toolbar}
+    <PageContainer>
+      <Stack gap="250">
+        {header}
+        {toolbar}
 
-      {search.trim().length > 0 && (
+        {search.trim().length > 0 && (
         <HudPanel padding="200" title={t("searchResults")}>
           {hits.length > 0 ? (
             <Stack gap="75">
@@ -234,7 +247,8 @@ export function Screen() {
         </Container>
       </Grid>
 
-      {editorDialog}
-    </Stack>
+        {editorDialog}
+      </Stack>
+    </PageContainer>
   );
 }

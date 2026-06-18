@@ -21,6 +21,8 @@
   },
   "memory": {
     "knowledgeGraph": "Graf znalostí",
+    "title": "Paměť",
+    "countSummary": "{count, plural, =0 {žádné poznámky} one {# poznámka} few {# poznámky} other {# poznámek}} · index-first vault, prostý Markdown",
     "loadingGraph": "Načítám graf…",
     "noteFallback": "Poznámka",
     "selectNode": "Vyber uzel a přečti si jeho poznámku.",
@@ -394,7 +396,8 @@
   },
   "integrations": {
     "addIntegration": "Přidat integraci",
-    "sectionLabel": "Integrace",
+    "title": "Integrace",
+    "countSummary": "{count, plural, =0 {žádné integrace} one {# integrace} few {# integrace} other {# integrací}} · příchozí kanály, které ZIBBY sleduje",
     "statusConnected": "připojeno",
     "statusDisconnected": "odpojeno",
     "statusError": "chyba",
@@ -463,7 +466,8 @@
     "addPipeline": "Přidat pipeline",
     "verify": "verify",
     "runPipeline": "Spustit pipeline",
-    "sectionLabel": "Pipeline",
+    "title": "Pipelines",
+    "countSummary": "{count, plural, =0 {žádné pipeline} one {# pipeline} few {# pipeline} other {# pipeline}} · více­agentní dodací řetězce",
     "emptyTitle": "Zatím žádné pipeline",
     "emptyDescription": "Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
     "emptyHint": "// vytvoří ~/zibby/pipelines/'<název>'.pipeline.md",
@@ -1252,7 +1256,8 @@
     }
   },
   "hooks": {
-    "sectionLabel": "Hooky",
+    "title": "Hooky",
+    "countSummary": "{count, plural, =0 {žádné hooky} one {# hook} few {# hooky} other {# hooků}} · shell příkazy kolem událostí agentů",
     "addHook": "Přidat hook",
     "create": "Vytvořit",
     "enabledShort": "aktivní",
@@ -1272,7 +1277,8 @@
     "enabledLabel": "Aktivní"
   },
   "mcp": {
-    "sectionLabel": "MCP servery",
+    "title": "MCP servery",
+    "countSummary": "{count, plural, =0 {žádné servery} one {# server} few {# servery} other {# serverů}} · poskytovatelé nástrojů pro agenty",
     "addServer": "Přidat MCP server",
     "create": "Vytvořit",
     "emptyTitle": "Zatím žádné MCP servery",

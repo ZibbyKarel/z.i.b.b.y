@@ -21,6 +21,8 @@
   },
   "memory": {
     "knowledgeGraph": "Knowledge graph",
+    "title": "Memory",
+    "countSummary": "{count, plural, =0 {no notes} one {# note} other {# notes}} · index-first vault, plain Markdown",
     "loadingGraph": "Loading graph…",
     "noteFallback": "Note",
     "selectNode": "Select a node to read its note.",
@@ -394,7 +396,8 @@
   },
   "integrations": {
     "addIntegration": "Add integration",
-    "sectionLabel": "Integrations",
+    "title": "Integrations",
+    "countSummary": "{count, plural, =0 {no integrations} one {# integration} other {# integrations}} · inbound channels ZIBBY watches",
     "statusConnected": "connected",
     "statusDisconnected": "disconnected",
     "statusError": "error",
@@ -463,7 +466,8 @@
     "addPipeline": "Add pipeline",
     "verify": "verify",
     "runPipeline": "Run pipeline",
-    "sectionLabel": "Pipelines",
+    "title": "Pipelines",
+    "countSummary": "{count, plural, =0 {no pipelines} one {# pipeline} other {# pipelines}} · multi-agent delivery chains",
     "emptyTitle": "No pipelines yet",
     "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
     "emptyHint": "// creates ~/zibby/pipelines/'<name>'.pipeline.md",
@@ -1252,7 +1256,8 @@
     }
   },
   "hooks": {
-    "sectionLabel": "Hooks",
+    "title": "Hooks",
+    "countSummary": "{count, plural, =0 {no hooks} one {# hook} other {# hooks}} · shell commands run around agent events",
     "addHook": "Add hook",
     "create": "Create",
     "enabledShort": "enabled",
@@ -1272,7 +1277,8 @@
     "enabledLabel": "Enabled"
   },
   "mcp": {
-    "sectionLabel": "MCP servers",
+    "title": "MCP servers",
+    "countSummary": "{count, plural, =0 {no servers} one {# server} other {# servers}} · tool providers agents can call",
     "addServer": "Add MCP server",
     "create": "Create",
     "emptyTitle": "No MCP servers yet",

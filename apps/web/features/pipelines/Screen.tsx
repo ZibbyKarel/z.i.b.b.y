@@ -17,7 +17,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import type { Pipeline } from "../../domain";
 import { useAgentsQuery } from "../agents/queries";
 import { useNewTask } from "../tasks/TaskContext";
@@ -76,19 +76,25 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
     />
   );
 
-  const toolbar = (
-    <SectionToolbar
-      addLabel={t("pipelines.addPipeline")}
-      label={t("pipelines.sectionLabel")}
-      onAdd={() => setAdding(true)}
+  const header = (
+    <PageHeader
+      actions={
+        <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+          {t("pipelines.addPipeline")}
+        </Button>
+      }
+      subtitle={t("pipelines.countSummary", { count: list.length })}
+      title={t("pipelines.title")}
     />
   );
 
   if (pipelinesQuery.isPending) {
     return (
       <PageContainer>
-        {toolbar}
-        <QueryLoading />
+        <Stack gap="250">
+          {header}
+          <QueryLoading />
+        </Stack>
         {addModal}
       </PageContainer>
     );
@@ -97,8 +103,10 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   if (pipelinesQuery.isError) {
     return (
       <PageContainer>
-        {toolbar}
-        <QueryError onRetry={() => void pipelinesQuery.refetch()} />
+        <Stack gap="250">
+          {header}
+          <QueryError onRetry={() => void pipelinesQuery.refetch()} />
+        </Stack>
         {addModal}
       </PageContainer>
     );
@@ -107,25 +115,29 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   if (list.length === 0) {
     return (
       <PageContainer>
-        {toolbar}
-        <EmptyState
+        <Stack gap="250">
+          {header}
+          <EmptyState
           actionLabel={t("pipelines.addPipeline")}
           description={t("pipelines.emptyDescription")}
           glyph="flow"
           hint={t("pipelines.emptyHint")}
           onAction={() => setAdding(true)}
           title={t("pipelines.emptyTitle")}
-        />
+          />
+        </Stack>
         {addModal}
       </PageContainer>
     );
   }
 
   return (
-    <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
-      <Stack gap="150">
-        {toolbar}
-        {list.map((p) => (
+    <PageContainer>
+      <Stack gap="250">
+        {header}
+        <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
+          <Stack gap="150">
+            {list.map((p) => (
           <PipelineCard
             agents={agents}
             key={p.id}
@@ -261,26 +273,28 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
               </Stack>
             </HudPanel>
           )}
-        </Stack>
-      )}
+          </Stack>
+        )}
+        </Grid>
 
-      {editing && (
-        <PipelineDialog
-          agents={agents}
-          initial={editing}
-          isPending={updatePipeline.isPending}
-          key={editing.id}
-          mode="edit"
-          onClose={() => setEditing(null)}
-          onSave={(id, patch) =>
-            updatePipeline.mutate(
-              { params: { id }, body: patch },
-              { onSuccess: () => setEditing(null) },
-            )
-          }
-        />
-      )}
-      {addModal}
-    </Grid>
+        {editing && (
+          <PipelineDialog
+            agents={agents}
+            initial={editing}
+            isPending={updatePipeline.isPending}
+            key={editing.id}
+            mode="edit"
+            onClose={() => setEditing(null)}
+            onSave={(id, patch) =>
+              updatePipeline.mutate(
+                { params: { id }, body: patch },
+                { onSuccess: () => setEditing(null) },
+              )
+            }
+          />
+        )}
+        {addModal}
+      </Stack>
+    </PageContainer>
   );
 }

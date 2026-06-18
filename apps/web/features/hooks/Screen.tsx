@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Button, Stack } from "@zibby/design-system";
 import type { Hook } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Collection } from "../../components/Collection/Collection";
 import { HookCard } from "./components/HookCard";
 import { type HookDraft, HookFormDialog } from "./components/HookFormDialog";
@@ -40,13 +41,18 @@ export function Screen() {
 
   return (
     <PageContainer>
-      <SectionToolbar
-        addLabel={t("hooks.addHook")}
-        label={t("hooks.sectionLabel")}
-        onAdd={() => setEditing("new")}
-      />
+      <Stack gap="250">
+        <PageHeader
+          actions={
+            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+              {t("hooks.addHook")}
+            </Button>
+          }
+          subtitle={t("hooks.countSummary", { count: hooks.length })}
+          title={t("hooks.title")}
+        />
 
-      <Collection
+        <Collection
         empty={{
           glyph: "checkpoint",
           title: t("hooks.emptyTitle"),
@@ -70,7 +76,8 @@ export function Screen() {
         renderItem={(h) => (
           <HookCard hook={h} key={h.id} onConfigure={(hook) => setEditing(hook)} />
         )}
-      />
+        />
+      </Stack>
 
       {editing !== null && (
         <HookFormDialog

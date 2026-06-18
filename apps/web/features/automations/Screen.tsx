@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Card,
   Container,
-  Divider,
   Icon,
   type IconName,
   Stack,
@@ -14,6 +12,7 @@ import {
 } from "@zibby/design-system";
 import type { Automation } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { useAgentsQuery } from "../agents/queries";
@@ -97,34 +96,21 @@ export function Screen() {
   return (
     <PageContainer>
       <Stack gap="250">
-        <Card corners background="panel" data-testid="automations-header" tone="accent">
-          <Container padding="250">
-            <Stack gap="200">
-              <Stack wrap align="start" direction="row" gap="200" justify="between">
-                <Container minW0>
-                  <Typography size="2xl" type="title" weight="semibold">
-                    {t("title")}
-                  </Typography>
-                  <Container>
-                    <Typography mono size="sm" type="note" variant="tertiary">
-                      {t("summary", { active: activeCount, total: automations.length })}
-                    </Typography>
-                  </Container>
-                </Container>
-                <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
-                  {t("addAutomation")}
-                </Button>
-              </Stack>
-              <Divider />
-              <Stack align="center" direction="row" gap="100">
-                <Icon name="shield" size="sm" tone="warn" />
-                <Typography mono size="2xs" type="micro" variant="tertiary">
-                  {t("autonomyNote")}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Container>
-        </Card>
+        <PageHeader
+          actions={
+            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+              {t("addAutomation")}
+            </Button>
+          }
+          subtitle={t("summary", { active: activeCount, total: automations.length })}
+          title={t("title")}
+        />
+        <Stack align="center" direction="row" gap="100">
+          <Icon name="shield" size="sm" tone="warn" />
+          <Typography mono size="2xs" type="micro" variant="tertiary">
+            {t("autonomyNote")}
+          </Typography>
+        </Stack>
 
         {automations.length === 0 ? (
           <EmptyState

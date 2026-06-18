@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Button, Stack } from "@zibby/design-system";
 import type { McpServer } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { SectionToolbar } from "../../components/SectionToolbar/SectionToolbar";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Collection } from "../../components/Collection/Collection";
 import { McpServerCard } from "./components/McpServerCard";
 import { type McpServerDraft, McpServerFormDialog } from "./components/McpServerFormDialog";
@@ -55,13 +56,18 @@ export function Screen() {
 
   return (
     <PageContainer>
-      <SectionToolbar
-        addLabel={t("mcp.addServer")}
-        label={t("mcp.sectionLabel")}
-        onAdd={() => setEditing("new")}
-      />
+      <Stack gap="250">
+        <PageHeader
+          actions={
+            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+              {t("mcp.addServer")}
+            </Button>
+          }
+          subtitle={t("mcp.countSummary", { count: servers.length })}
+          title={t("mcp.title")}
+        />
 
-      <Collection
+        <Collection
         empty={{
           glyph: "server",
           title: t("mcp.emptyTitle"),
@@ -85,7 +91,8 @@ export function Screen() {
         renderItem={(s) => (
           <McpServerCard key={s.id} onConfigure={(server) => setEditing(server)} server={s} />
         )}
-      />
+        />
+      </Stack>
 
       {editing !== null && (
         <McpServerFormDialog
