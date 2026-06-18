@@ -20,6 +20,7 @@ import { useHealthQuery } from "../health/queries";
 import { useVoice } from "../voice";
 import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { MandateSection } from "./components/MandateSection";
+import { ResearchSection } from "./components/ResearchSection";
 import { SettingsSubnav } from "./components/SettingsSubnav";
 import { VoiceVoiceSetting } from "./components/VoiceVoiceSetting";
 
@@ -181,6 +182,8 @@ export function Screen() {
         </HudPanel>
 
         <MandateSection />
+
+        <ResearchSection />
 
         <HudPanel padding="300" title={t("system")}>
           <Stack gap="150">

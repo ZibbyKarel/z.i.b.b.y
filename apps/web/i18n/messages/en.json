@@ -734,6 +734,30 @@
       "dispatch": "Dispatch",
       "reply": "Reply"
     },
+    "research": {
+      "title": "Research & intelligence",
+      "hint": "What ZIBBY watches for you. The nightly digest ranks each source against your interests and folds the top items into the morning briefing.",
+      "interests": "Interests",
+      "interestsHint": "Comma-separated terms the digest ranks against",
+      "financeWatch": "Finance watch",
+      "financeWatchHint": "Surface market signal in the overview — never advice.",
+      "sources": "Sources",
+      "sourceLabel": "Label",
+      "sourceKind": "Kind",
+      "sourceUrl": "URL",
+      "sourceEnabled": "On",
+      "addSource": "Add source",
+      "removeSource": "Remove",
+      "save": "Save",
+      "kind": {
+        "rss": "RSS feed",
+        "hn": "Hacker News",
+        "producthunt": "Product Hunt",
+        "tech": "Tech news",
+        "competitor": "Competitor",
+        "finance": "Finance"
+      }
+    },
     "preferences": "Preferences",
     "language": "Interface language",
     "languageHint": "Full interface translation is rolling out gradually — Czech and English are available for now.",

@@ -60,7 +60,7 @@ Audit of UI vs. backend settability (web `features/` vs `libs/contracts`):
 | Integrations — Slack/email | ✅ creatable | — |
 | Integrations — **Jira / GitHub** | ❌ kind absent from form (backend ready) | **P1 ✅** |
 | Integrations — email `mailbox`, per-kind secret label | ❌ omitted / slack-only token map | **P1 ✅** |
-| Research / intelligence config (interests, sources, financeWatch) | ❌ no UI at all | P2 |
+| Research / intelligence config (interests, sources, financeWatch) | ❌ no UI at all | **P2 ✅** |
 | Project profile `checks` + person `comms_style` | ❌ schema-only, no field | P3 |
 | Mandate (autonomy scope) | ✅ Settings → MandateSection | — |
 | Per-project gate hardening | ✅ ProfileScreen `autonomy_policy` (can_do_alone/always_ask) | — |
@@ -74,6 +74,16 @@ else→token` (Slack/Jira/GitHub all carry a token, verified against the adapter
 Per-kind secret label (Bot token / API token / Password). DS `ToggleField` extended with an
 optional `data-testid` override so sibling toggles are individually addressable. Tests pin the
 jira/github create payloads + token-out-of-band + the `owner/name` repo guard.
+
+**Phase 2 ✅ — Research / intelligence config editor.** The whole `research` contract
+(`GET/PUT /research/config`) existed with zero frontend — the operator could not turn on the
+intelligence layer the north-star names ("proposes app ideas, priorities") without editing
+`data/research-config.json` by hand. New `features/research` query+mutation hooks and a
+`ResearchSection` (rendered in Settings, the operator-global scope alongside the mandate): edits
+`interests` (comma list), per-source rows (label / kind / URL / on-off, add + remove), and the
+overview-only `financeWatch`. Local form state seeded from the loaded config; the whole document
+is PUT on Save (small, operator-owned — the mandate pattern). Tests pin seeding, the save body
+(parsed interests + trimmed sources), blank-source dropping, and an added source riding through.
 
 **Out of scope (confirmed, not UI work):** project↔integration *channel binding* — the
 north-star profile names "which Slack workspace … which repo", but `ProjectSchema` has **no

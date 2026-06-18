@@ -734,6 +734,30 @@
       "dispatch": "Dispatch",
       "reply": "Odpověď"
     },
+    "research": {
+      "title": "Výzkum & rozhled",
+      "hint": "Co ZIBBY sleduje za tebe. Noční digest seřadí každý zdroj podle tvých zájmů a nejlepší položky vloží do ranního briefingu.",
+      "interests": "Zájmy",
+      "interestsHint": "Termíny oddělené čárkou, podle nichž se digest řadí",
+      "financeWatch": "Sledování financí",
+      "financeWatchHint": "Ukáže tržní signál v přehledu — nikdy ne radu.",
+      "sources": "Zdroje",
+      "sourceLabel": "Název",
+      "sourceKind": "Typ",
+      "sourceUrl": "URL",
+      "sourceEnabled": "Zap",
+      "addSource": "Přidat zdroj",
+      "removeSource": "Odebrat",
+      "save": "Uložit",
+      "kind": {
+        "rss": "RSS feed",
+        "hn": "Hacker News",
+        "producthunt": "Product Hunt",
+        "tech": "Tech zprávy",
+        "competitor": "Konkurence",
+        "finance": "Finance"
+      }
+    },
     "preferences": "Předvolby",
     "language": "Jazyk rozhraní",
     "languageHint": "Plný překlad rozhraní se postupně dopisuje — zatím je dostupná čeština a angličtina.",
