@@ -16,6 +16,8 @@ export interface ToggleFieldProps {
   onChange: (next: boolean) => void;
   size?: ToggleSize;
   disabled?: boolean;
+  /** Overrides the control's testid — lets sibling toggles in one form be addressed individually. */
+  "data-testid"?: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -32,6 +34,7 @@ export function ToggleField({
   onChange,
   size,
   disabled,
+  "data-testid": testId = ToggleFieldTestId.Control,
   ref,
 }: ToggleFieldProps) {
   return (
@@ -41,7 +44,7 @@ export function ToggleField({
           aria-describedby={describedBy}
           aria-invalid={invalid || undefined}
           checked={checked}
-          data-testid={ToggleFieldTestId.Control}
+          data-testid={testId}
           disabled={disabled}
           id={id}
           label={label}

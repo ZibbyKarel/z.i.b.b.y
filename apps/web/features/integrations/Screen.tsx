@@ -38,7 +38,8 @@ export function Screen() {
     if (!secret) return;
     setCredentials.mutate({
       params: { id },
-      body: kind === "slack" ? { token: secret } : { password: secret },
+      // Email authenticates with a password; Slack/Jira/GitHub all carry a token.
+      body: kind === "email" ? { password: secret } : { token: secret },
     });
   };
 

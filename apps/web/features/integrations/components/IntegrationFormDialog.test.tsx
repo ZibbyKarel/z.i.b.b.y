@@ -59,4 +59,67 @@ describe("IntegrationFormDialog", () => {
       user: "bot@example.com",
     });
   });
+
+  it("emits a jira create payload with the non-secret config and the token separately", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await userEvent.click(screen.getByTestId("dropdown-trigger"));
+    await userEvent.click(screen.getByText("Jira"));
+
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-jira");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.JiraBaseUrl), "https://acme.atlassian.net");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.JiraEmail), "ops@acme.com");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.JiraProjectKey), "ACME");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.Secret), "jira-api-token");
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    const draft = onSubmit.mock.calls[0]![0];
+    expect(draft.create.kind).toBe("jira");
+    expect(draft.create.config).toEqual({
+      kind: "jira",
+      baseUrl: "https://acme.atlassian.net",
+      email: "ops@acme.com",
+      projectKey: "ACME",
+    });
+    // The token rides out-of-band — never inside the committed config.
+    expect(draft.secret).toBe("jira-api-token");
+    expect(JSON.stringify(draft.create)).not.toContain("jira-api-token");
+  });
+
+  it("emits a github create payload, dropping a disabled stream", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await userEvent.click(screen.getByTestId("dropdown-trigger"));
+    await userEvent.click(screen.getByText("GitHub"));
+
+    await userEvent.type(screen.getByTestId("integration-id"), "zibby-repo");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "acme/zibby");
+    // Default is both streams; turn pull requests off so only issues remain.
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.GithubStreamPulls));
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.Secret), "ghp-token");
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    const draft = onSubmit.mock.calls[0]![0];
+    expect(draft.create.kind).toBe("github");
+    expect(draft.create.config).toEqual({
+      kind: "github",
+      repo: "acme/zibby",
+      streams: ["issues"],
+    });
+    expect(draft.secret).toBe("ghp-token");
+  });
+
+  it("blocks save until a github repo is owner/name shaped", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await userEvent.click(screen.getByTestId("dropdown-trigger"));
+    await userEvent.click(screen.getByText("GitHub"));
+
+    await userEvent.type(screen.getByTestId("integration-id"), "bad-repo");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "not-a-repo");
+    expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeDisabled();
+  });
 })

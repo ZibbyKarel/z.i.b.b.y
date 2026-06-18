@@ -30,6 +30,14 @@ export enum IntegrationFormTestId {
   SmtpHost = "integration-smtp-host",
   SmtpPort = "integration-smtp-port",
   User = "integration-user",
+  Mailbox = "integration-mailbox",
+  JiraBaseUrl = "integration-jira-base-url",
+  JiraEmail = "integration-jira-email",
+  JiraProjectKey = "integration-jira-project-key",
+  JiraJql = "integration-jira-jql",
+  GithubRepo = "integration-github-repo",
+  GithubStreamIssues = "integration-github-stream-issues",
+  GithubStreamPulls = "integration-github-stream-pulls",
   Secret = "integration-secret",
   Submit = "integration-submit",
 }
@@ -58,7 +66,8 @@ export interface IntegrationFormDialogProps {
  * a write-only secret input. The secret is never read back — the field only shows
  * whether one is already stored (`hasCredentials`) and lets the operator replace
  * it. On submit the dialog emits the create/update payload plus any new secret;
- * the screen persists the secret through the separate credentials mutation.
+ * the screen persists the secret through the separate credentials mutation
+ * (Slack/Jira/GitHub carry a `token`, email a `password`).
  */
 export function IntegrationFormDialog({ integration, onClose, onSubmit }: IntegrationFormDialogProps) {
   const t = useTranslations();
@@ -72,34 +81,77 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
 
   const slackCfg = integration?.config.kind === "slack" ? integration.config : undefined;
   const emailCfg = integration?.config.kind === "email" ? integration.config : undefined;
+  const jiraCfg = integration?.config.kind === "jira" ? integration.config : undefined;
+  const githubCfg = integration?.config.kind === "github" ? integration.config : undefined;
+
   const [channels, setChannels] = useState((slackCfg?.channels ?? []).join(", "));
   const [imapHost, setImapHost] = useState(emailCfg?.imapHost ?? "");
   const [imapPort, setImapPort] = useState(String(emailCfg?.imapPort ?? 993));
   const [smtpHost, setSmtpHost] = useState(emailCfg?.smtpHost ?? "");
   const [smtpPort, setSmtpPort] = useState(String(emailCfg?.smtpPort ?? 465));
   const [user, setUser] = useState(emailCfg?.user ?? "");
+  const [mailbox, setMailbox] = useState(emailCfg?.mailbox ?? "");
+  const [baseUrl, setBaseUrl] = useState(jiraCfg?.baseUrl ?? "");
+  const [jiraEmail, setJiraEmail] = useState(jiraCfg?.email ?? "");
+  const [projectKey, setProjectKey] = useState(jiraCfg?.projectKey ?? "");
+  const [jql, setJql] = useState(jiraCfg?.jql ?? "");
+  const [repo, setRepo] = useState(githubCfg?.repo ?? "");
+  const [streamIssues, setStreamIssues] = useState(githubCfg ? githubCfg.streams.includes("issues") : true);
+  const [streamPulls, setStreamPulls] = useState(githubCfg ? githubCfg.streams.includes("pulls") : true);
 
-  const buildConfig = (): CreateIntegrationInput["config"] =>
-    kind === "slack"
-      ? {
+  const buildConfig = (): CreateIntegrationInput["config"] => {
+    switch (kind) {
+      case "slack":
+        return {
           kind: "slack",
           channels: channels
             .split(",")
             .map((c) => c.trim())
             .filter(Boolean),
-        }
-      : {
+        };
+      case "email":
+        return {
           kind: "email",
           imapHost: imapHost.trim(),
           imapPort: Number(imapPort) || 0,
           smtpHost: smtpHost.trim(),
           smtpPort: Number(smtpPort) || 0,
           user: user.trim(),
+          ...(mailbox.trim() ? { mailbox: mailbox.trim() } : {}),
         };
+      case "jira":
+        return {
+          kind: "jira",
+          baseUrl: baseUrl.trim(),
+          email: jiraEmail.trim(),
+          ...(projectKey.trim() ? { projectKey: projectKey.trim() } : {}),
+          ...(jql.trim() ? { jql: jql.trim() } : {}),
+        };
+      case "github": {
+        const streams = [
+          ...(streamIssues ? (["issues"] as const) : []),
+          ...(streamPulls ? (["pulls"] as const) : []),
+        ];
+        return { kind: "github", repo: repo.trim(), streams };
+      }
+    }
+  };
 
-  const canSave = isNew
-    ? id.trim().length > 0
-    : true;
+  /** Per-kind required fields — the create payload must validate against the contract. */
+  const configReady = (): boolean => {
+    switch (kind) {
+      case "slack":
+        return true;
+      case "email":
+        return imapHost.trim().length > 0 && smtpHost.trim().length > 0 && user.trim().length > 0;
+      case "jira":
+        return baseUrl.trim().length > 0 && jiraEmail.trim().length > 0;
+      case "github":
+        return /^[^/]+\/[^/]+$/.test(repo.trim());
+    }
+  };
+
+  const canSave = (isNew ? id.trim().length > 0 : true) && configReady();
 
   const submit = () => {
     const trimmedSecret = secret.trim() || undefined;
@@ -125,7 +177,12 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
     }
   };
 
-  const secretLabel = kind === "slack" ? t("integrations.botToken") : t("integrations.password");
+  const secretLabel =
+    kind === "email"
+      ? t("integrations.password")
+      : kind === "slack"
+        ? t("integrations.botToken")
+        : t("integrations.apiToken");
   const secretPlaceholder =
     integration?.hasCredentials ? t("integrations.credentialsStored") : t("integrations.credentialsNone");
 
@@ -162,6 +219,8 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
             options={[
               { value: "slack", label: t("integrations.kindSlack") },
               { value: "email", label: t("integrations.kindEmail") },
+              { value: "jira", label: t("integrations.kindJira") },
+              { value: "github", label: t("integrations.kindGithub") },
             ]}
             value={kind}
           />
@@ -192,7 +251,7 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
           value={name}
         />
 
-        {kind === "slack" ? (
+        {kind === "slack" && (
           <TextInputField
             data-testid={IntegrationFormTestId.SlackChannels}
             hint={t("integrations.channelsHint")}
@@ -201,7 +260,9 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
             placeholder="C0123, C0456"
             value={channels}
           />
-        ) : (
+        )}
+
+        {kind === "email" && (
           <>
             <Stack direction="row" gap="100">
               <TextInputField
@@ -238,6 +299,74 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
               label={t("integrations.user")}
               onChange={(e) => setUser(e.target.value)}
               value={user}
+            />
+            <TextInputField
+              data-testid={IntegrationFormTestId.Mailbox}
+              hint={t("integrations.mailboxHint")}
+              label={t("integrations.mailbox")}
+              onChange={(e) => setMailbox(e.target.value)}
+              placeholder="INBOX"
+              value={mailbox}
+            />
+          </>
+        )}
+
+        {kind === "jira" && (
+          <>
+            <TextInputField
+              data-testid={IntegrationFormTestId.JiraBaseUrl}
+              hint={t("integrations.jiraBaseUrlHint")}
+              label={t("integrations.jiraBaseUrl")}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="https://acme.atlassian.net"
+              value={baseUrl}
+            />
+            <TextInputField
+              data-testid={IntegrationFormTestId.JiraEmail}
+              label={t("integrations.jiraEmail")}
+              onChange={(e) => setJiraEmail(e.target.value)}
+              value={jiraEmail}
+            />
+            <Stack direction="row" gap="100">
+              <TextInputField
+                data-testid={IntegrationFormTestId.JiraProjectKey}
+                label={t("integrations.jiraProjectKey")}
+                onChange={(e) => setProjectKey(e.target.value)}
+                placeholder="ACME"
+                value={projectKey}
+              />
+            </Stack>
+            <TextInputField
+              data-testid={IntegrationFormTestId.JiraJql}
+              hint={t("integrations.jiraJqlHint")}
+              label={t("integrations.jiraJql")}
+              onChange={(e) => setJql(e.target.value)}
+              value={jql}
+            />
+          </>
+        )}
+
+        {kind === "github" && (
+          <>
+            <TextInputField
+              data-testid={IntegrationFormTestId.GithubRepo}
+              hint={t("integrations.githubRepoHint")}
+              label={t("integrations.githubRepo")}
+              onChange={(e) => setRepo(e.target.value)}
+              placeholder="owner/name"
+              value={repo}
+            />
+            <ToggleField
+              checked={streamIssues}
+              data-testid={IntegrationFormTestId.GithubStreamIssues}
+              label={t("integrations.githubStreamIssues")}
+              onChange={setStreamIssues}
+            />
+            <ToggleField
+              checked={streamPulls}
+              data-testid={IntegrationFormTestId.GithubStreamPulls}
+              label={t("integrations.githubStreamPulls")}
+              onChange={setStreamPulls}
             />
           </>
         )}

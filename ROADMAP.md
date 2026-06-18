@@ -46,6 +46,44 @@ app-ideas · Jira+GitHub channels · gated Jira-issue create · autonomous bug�
 
 ---
 
+## UI settability pass — every north-star feature configurable from the UI (2026-06-18)
+
+The backend reached 1:1 with the north-star, but several operator-settable surfaces the
+oracle names ("monitors Slack, email, **Jira, GitHub**"; the research/intelligence config)
+had **no create path in the UI** — the feature could not be turned on without hand-editing
+files. This pass closes that gap so "the UI is a view" holds for *writing* config too.
+
+Audit of UI vs. backend settability (web `features/` vs `libs/contracts`):
+
+| Surface | Before | Phase |
+| ------- | ------ | ----- |
+| Integrations — Slack/email | ✅ creatable | — |
+| Integrations — **Jira / GitHub** | ❌ kind absent from form (backend ready) | **P1 ✅** |
+| Integrations — email `mailbox`, per-kind secret label | ❌ omitted / slack-only token map | **P1 ✅** |
+| Research / intelligence config (interests, sources, financeWatch) | ❌ no UI at all | P2 |
+| Project profile `checks` + person `comms_style` | ❌ schema-only, no field | P3 |
+| Mandate (autonomy scope) | ✅ Settings → MandateSection | — |
+| Per-project gate hardening | ✅ ProfileScreen `autonomy_policy` (can_do_alone/always_ask) | — |
+
+**Phase 1 ✅ — Jira + GitHub integrations + email mailbox.** `IntegrationFormDialog` now
+offers all four kinds with kind-specific config (Jira: site URL/email/project key/JQL;
+GitHub: repo + issue/PR stream toggles; email gains `mailbox`). **Critical fix:** the
+credential-shape map in `Screen.tsx` was `slack→token else password` — Jira/GitHub would have
+silently stored their token under `password` and never authenticated. Now `email→password,
+else→token` (Slack/Jira/GitHub all carry a token, verified against the adapters' `tokenOf`).
+Per-kind secret label (Bot token / API token / Password). DS `ToggleField` extended with an
+optional `data-testid` override so sibling toggles are individually addressable. Tests pin the
+jira/github create payloads + token-out-of-band + the `owner/name` repo guard.
+
+**Out of scope (confirmed, not UI work):** project↔integration *channel binding* — the
+north-star profile names "which Slack workspace … which repo", but `ProjectSchema` has **no
+`channels` field**; triage matches by text today. Adding that linkage is backend schema work,
+not a UI gap, so it is not part of this UI goal. Automations' 5 system-seeded target kinds and
+gate multi-condition AND-rules remain system-managed / harden-only by design (not operator
+settability the oracle requires).
+
+---
+
 ## State Audit — What Actually Exists (2026-06-16)
 
 The previous roadmap treated channels, briefing, and budget as unbuilt. They are not.
