@@ -61,7 +61,7 @@ Audit of UI vs. backend settability (web `features/` vs `libs/contracts`):
 | Integrations — **Jira / GitHub** | ❌ kind absent from form (backend ready) | **P1 ✅** |
 | Integrations — email `mailbox`, per-kind secret label | ❌ omitted / slack-only token map | **P1 ✅** |
 | Research / intelligence config (interests, sources, financeWatch) | ❌ no UI at all | **P2 ✅** |
-| Project profile `checks` + person `comms_style` | ❌ schema-only, no field | P3 |
+| Project profile `checks` + person `comms_style` | ❌ schema-only, no field | **P3 ✅** |
 | Mandate (autonomy scope) | ✅ Settings → MandateSection | — |
 | Per-project gate hardening | ✅ ProfileScreen `autonomy_policy` (can_do_alone/always_ask) | — |
 
@@ -84,6 +84,17 @@ intelligence layer the north-star names ("proposes app ideas, priorities") witho
 overview-only `financeWatch`. Local form state seeded from the loaded config; the whole document
 is PUT on Save (small, operator-owned — the mandate pattern). Tests pin seeding, the save body
 (parsed interests + trimmed sources), blank-source dropping, and an added source riding through.
+
+**Phase 3 ✅ — Project profile completeness.** Two schema fields had no editor: person
+`comms_style` (the drafted-reply tone hint) is now a field on each `PersonRow` in
+`ProfileScreen`, riding into the identity save; and the project `checks` (verify-phase shell
+commands) — previously a silent passthrough in the projects Screen — is now a one-command-per-line
+`TextAreaField` in `ProjectModal`, parsed to `string[]` on save (blank → `undefined`, falling
+back to the shared default checks). Tests pin both saves and the seed/clear round-trip.
+
+**✅ All three phases delivered — every north-star-named setting is now UI-settable.** Web suite
+439/439 green; web tsc + lint clean each phase. The remaining base-config tsc errors are the
+pre-existing `apps/api` test-file baseline (untouched).
 
 **Out of scope (confirmed, not UI work):** project↔integration *channel binding* — the
 north-star profile names "which Slack workspace … which repo", but `ProjectSchema` has **no

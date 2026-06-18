@@ -1110,6 +1110,8 @@
       "budgetWeeklyRuns": "runs / week",
       "budgetMonthlyRuns": "runs / month",
       "budgetMaxConcurrent": "max parallel",
+      "checks": "Verify checks",
+      "checksHint": "Shell commands the pipeline verify phase runs in this project, one per line (joined with &&). Blank → the shared default checks.",
       "env": "Environment variables",
       "envHint": "Non-secret env vars injected into the project’s runs.",
       "envAdd": "Add variable",
@@ -1145,7 +1147,9 @@
         "namePlaceholder": "Jane Smith",
         "role": "Role",
         "rolePlaceholder": "Product Manager",
-        "vip": "VIP — forces escalation"
+        "vip": "VIP — forces escalation",
+        "commsStyle": "Comms style",
+        "commsStylePlaceholder": "Terse, prefers bullet points"
       },
       "autonomy": {
         "title": "Autonomy policy",

@@ -1110,6 +1110,8 @@
       "budgetWeeklyRuns": "běhů / týden",
       "budgetMonthlyRuns": "běhů / měsíc",
       "budgetMaxConcurrent": "max paralelně",
+      "checks": "Verifikační kontroly",
+      "checksHint": "Shell příkazy, které verify fáze pipeline spustí v tomto projektu, jeden na řádek (spojené přes &&). Prázdné → sdílené výchozí kontroly.",
       "env": "Proměnné prostředí",
       "envHint": "Ne-tajné env proměnné vkládané do běhů projektu.",
       "envAdd": "Přidat proměnnou",
@@ -1145,7 +1147,9 @@
         "namePlaceholder": "Jana Nováková",
         "role": "Role",
         "rolePlaceholder": "Produktový manažer",
-        "vip": "VIP — vynutí eskalaci"
+        "vip": "VIP — vynutí eskalaci",
+        "commsStyle": "Styl komunikace",
+        "commsStylePlaceholder": "Stručně, preferuje odrážky"
       },
       "autonomy": {
         "title": "Zásady autonomie",

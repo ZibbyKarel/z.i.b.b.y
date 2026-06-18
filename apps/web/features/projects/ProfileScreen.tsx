@@ -35,6 +35,8 @@ interface PersonRowProps {
   person: ProjectPerson;
   nameLabel: string;
   roleLabel: string;
+  commsStyleLabel: string;
+  commsStylePlaceholder: string;
   removeLabel: string;
   vipLabel: string;
   namePlaceholder: string;
@@ -47,6 +49,8 @@ function PersonRow({
   person,
   nameLabel,
   roleLabel,
+  commsStyleLabel,
+  commsStylePlaceholder,
   removeLabel,
   vipLabel,
   namePlaceholder,
@@ -69,6 +73,15 @@ function PersonRow({
         onChange={(e) => onChange({ ...person, role: e.target.value })}
         placeholder={rolePlaceholder}
         value={person.role}
+      />
+      <TextInputField
+        data-testid="person-comms-style"
+        label={commsStyleLabel}
+        onChange={(e) =>
+          onChange({ ...person, comms_style: e.target.value || undefined })
+        }
+        placeholder={commsStylePlaceholder}
+        value={person.comms_style ?? ""}
       />
       <Stack align="center" direction="row" gap="75">
         <Toggle
@@ -201,6 +214,8 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
             )}
             {effectivePeople.map((person, i) => (
               <PersonRow
+                commsStyleLabel={t("team.commsStyle")}
+                commsStylePlaceholder={t("team.commsStylePlaceholder")}
                 key={i}
                 nameLabel={t("team.name")}
                 namePlaceholder={t("team.namePlaceholder")}

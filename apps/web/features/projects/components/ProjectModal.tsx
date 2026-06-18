@@ -12,6 +12,7 @@ import {
   Stack,
   StatusDot,
   Tag,
+  TextAreaField,
   Typography,
 } from "@zibby/design-system";
 import type { Category, Project } from "@zibby/contracts";
@@ -101,6 +102,8 @@ export function ProjectModal({
   const [confirm, setConfirm] = useState(false);
   const [envRows, setEnvRows] = useState<KeyValueRow[]>(toRows(project.env));
   const [secretRows, setSecretRows] = useState<KeyValueRow[]>([]);
+  // Verify-phase shell commands, one per line (joined with && by the runner).
+  const [checksText, setChecksText] = useState((project.checks ?? []).join("\n"));
 
   const { renderForm, submit, form } = useFormControls<ProjectEditValues>({
     defaultValues: {
@@ -128,6 +131,10 @@ export function ProjectModal({
               ...(maxConcurrent != null ? { maxConcurrent } : {}),
             }
           : undefined;
+      const checks = checksText
+        .split("\n")
+        .map((c) => c.trim())
+        .filter(Boolean);
       onSave(
         {
           ...project,
@@ -136,6 +143,7 @@ export function ProjectModal({
           desc: values.desc.trim() || undefined,
           category: values.category || undefined,
           budget,
+          checks: checks.length > 0 ? checks : undefined,
           env: fromRows(envRows),
         },
         isNew,
@@ -279,6 +287,23 @@ export function ProjectModal({
                 placeholder="—"
               />
             </Stack>
+          </Stack>
+
+          <Stack gap="75">
+            <Typography mono size="sm" type="note" variant="secondary">
+              {t("fields.checks")}
+            </Typography>
+            <Typography size="xs" type="note" variant="tertiary">
+              {t("fields.checksHint")}
+            </Typography>
+            <TextAreaField
+              data-testid="project-checks"
+              label={t("fields.checks")}
+              onChange={(e) => setChecksText(e.target.value)}
+              placeholder={"pnpm lint\npnpm test"}
+              rows={3}
+              value={checksText}
+            />
           </Stack>
 
           <Stack gap="75">

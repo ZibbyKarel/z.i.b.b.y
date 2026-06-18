@@ -62,6 +62,51 @@ describe("ProjectModal env + secrets", () => {
     expect(onSetSecrets.mock.calls[0]![1]).toEqual({ OPENAI_API_KEY: "sk-secret" });
   });
 
+  it("saves verify checks as one command per line onto the project entity", async () => {
+    const onSave = vi.fn();
+    render(
+      <ProjectModal
+        categories={[]}
+        isNew={false}
+        onClose={vi.fn()}
+        onDelete={vi.fn()}
+        onDeleteSecrets={vi.fn()}
+        onSave={onSave}
+        onSetSecrets={vi.fn()}
+        project={project()}
+      />,
+    );
+
+    await userEvent.type(screen.getByTestId("project-checks"), "pnpm lint{enter}pnpm test");
+    await userEvent.click(screen.getByRole("button", { name: /uložit změny/i }));
+
+    const saved = onSave.mock.calls[0]![0] as Project;
+    expect(saved.checks).toEqual(["pnpm lint", "pnpm test"]);
+  });
+
+  it("seeds the checks editor from the existing project and clears to undefined when emptied", async () => {
+    const onSave = vi.fn();
+    render(
+      <ProjectModal
+        categories={[]}
+        isNew={false}
+        onClose={vi.fn()}
+        onDelete={vi.fn()}
+        onDeleteSecrets={vi.fn()}
+        onSave={onSave}
+        onSetSecrets={vi.fn()}
+        project={project({ checks: ["pnpm build"] })}
+      />,
+    );
+
+    expect(screen.getByTestId("project-checks")).toHaveValue("pnpm build");
+    await userEvent.clear(screen.getByTestId("project-checks"));
+    await userEvent.click(screen.getByRole("button", { name: /uložit změny/i }));
+
+    const saved = onSave.mock.calls[0]![0] as Project;
+    expect(saved.checks).toBeUndefined();
+  });
+
   it("hides the secrets section for a brand-new (unsaved) project", () => {
     render(
       <ProjectModal

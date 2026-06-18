@@ -73,6 +73,22 @@ describe("ProfileScreen", () => {
     );
   });
 
+  it("saves a person's comms style into the identity body", async () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    await userEvent.type(screen.getByTestId("person-comms-style"), "Terse");
+    await userEvent.click(screen.getByTestId("save-team"));
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          identity: {
+            people: [expect.objectContaining({ name: "Jana", comms_style: "Terse" })],
+          },
+        },
+      }),
+      expect.any(Object),
+    );
+  });
+
   it("adds a new person row", async () => {
     render(<ProfileScreen projectId="media-vault" />);
     const nameInputsBefore = screen.getAllByTestId("person-name").length;
