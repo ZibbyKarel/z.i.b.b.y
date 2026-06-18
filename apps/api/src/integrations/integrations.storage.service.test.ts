@@ -13,6 +13,7 @@ import {
 const sample: CreateIntegrationInput = {
   id: "team-slack",
   kind: "slack",
+  projectId: "acme-app",
   name: "Team Slack",
   config: { kind: "slack", channels: ["C1"] },
 }

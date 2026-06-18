@@ -12,7 +12,7 @@ import { IntegrationFormDialog, IntegrationFormTestId } from "./IntegrationFormD
 describe("IntegrationFormDialog", () => {
   it("emits a slack create payload with parsed channels and the secret separately", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
 
     await userEvent.type(screen.getByTestId("integration-id"), "team-slack");
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.Name), "Team Slack");
@@ -25,6 +25,7 @@ describe("IntegrationFormDialog", () => {
     expect(draft.create).toEqual({
       id: "team-slack",
       kind: "slack",
+      projectId: "acme-app",
       name: "Team Slack",
       enabled: true,
       config: { kind: "slack", channels: ["C1", "C2", "C3"] },
@@ -36,7 +37,7 @@ describe("IntegrationFormDialog", () => {
 
   it("switches to email config when the kind dropdown changes", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
 
     // Open the kind dropdown and pick the email option (cs catalog → "E-mail").
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
@@ -62,7 +63,7 @@ describe("IntegrationFormDialog", () => {
 
   it("emits a jira create payload with the non-secret config and the token separately", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("Jira"));
@@ -89,7 +90,7 @@ describe("IntegrationFormDialog", () => {
 
   it("emits a github create payload, dropping a disabled stream", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("GitHub"));
@@ -113,7 +114,7 @@ describe("IntegrationFormDialog", () => {
 
   it("blocks save until a github repo is owner/name shaped", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("GitHub"));

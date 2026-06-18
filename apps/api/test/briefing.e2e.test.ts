@@ -61,10 +61,15 @@ describe("Briefing (e2e)", () => {
         gates: [{ match: [{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }], decision: "ask", resolve: { type: "human" } }],
       })
       .expect(201)
-    // A channel integration → a watched channel.
+    // A channel integration → a watched channel. Integrations are owned by a project,
+    // so create one first for the FK check.
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "acme-app", name: "Acme", path: root })
+      .expect(201)
     await request(app.getHttpServer())
       .post("/api/integrations")
-      .send({ id: "team", kind: "slack", name: "Team", config: { kind: "slack", channels: ["C1"] } })
+      .send({ id: "team", kind: "slack", projectId: "acme-app", name: "Team", config: { kind: "slack", channels: ["C1"] } })
       .expect(201)
     await request(app.getHttpServer()).put("/api/integrations/team/credentials").send({ token: "xoxb-1" }).expect(200)
   })

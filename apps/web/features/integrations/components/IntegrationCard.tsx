@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Button, Container, Stack, StatusDot, Tag, Typography } from "@zibby/design-system";
+import { Button, Container, Stack, StatusDot, Tag, Toggle, Typography } from "@zibby/design-system";
 import type { Integration } from "@zibby/contracts";
 import { HudCard } from "../../../components/HudCard/HudCard";
 import { INTEGRATION_STATUS } from "../integrationStatus";
@@ -8,7 +8,12 @@ export interface IntegrationCardProps {
   integration: Integration;
   onConfigure?: (integration: Integration) => void;
   onTest?: (integration: Integration) => void;
+  onDelete?: (integration: Integration) => void;
+  /** Toggle the integration's `enabled` flag inline (no configure dialog needed). */
+  onToggleEnabled?: (integration: Integration) => void;
   testing?: boolean;
+  /** An enable/disable update is in flight (disables the inline toggle). */
+  togglingEnabled?: boolean;
 }
 
 const KIND_GLYPH = { slack: "plug", email: "server", jira: "checkpoint", github: "branch" } as const;
@@ -25,7 +30,15 @@ function lastSyncCaption(iso: string | undefined): string {
  * connection `status`, the footer shows the last sync time and the configured
  * channel/host, and the actions test the connection or open the editor.
  */
-export function IntegrationCard({ integration, onConfigure, onTest, testing }: IntegrationCardProps) {
+export function IntegrationCard({
+  integration,
+  onConfigure,
+  onTest,
+  onDelete,
+  onToggleEnabled,
+  testing,
+  togglingEnabled,
+}: IntegrationCardProps) {
   const t = useTranslations();
   const status = INTEGRATION_STATUS[integration.status];
   const name = integration.name ?? integration.id;
@@ -49,6 +62,20 @@ export function IntegrationCard({ integration, onConfigure, onTest, testing }: I
             </Typography>
           </Container>
           <Stack align="center" direction="row" gap="75">
+            {onToggleEnabled && (
+              <Toggle
+                checked={integration.enabled}
+                data-testid="integration-enabled-toggle"
+                disabled={togglingEnabled}
+                label={
+                  integration.enabled
+                    ? t("integrations.disableAria", { name })
+                    : t("integrations.enableAria", { name })
+                }
+                onChange={() => onToggleEnabled(integration)}
+                size="sm"
+              />
+            )}
             <Button
               disabled={testing || !integration.hasCredentials}
               icon="link"
@@ -61,6 +88,15 @@ export function IntegrationCard({ integration, onConfigure, onTest, testing }: I
             <Button icon="gear" intent="ghost" onClick={() => onConfigure?.(integration)} size="sm">
               {t("common.configure")}
             </Button>
+            {onDelete && (
+              <Button
+                aria-label={t("common.delete")}
+                icon="trash"
+                intent="ghost"
+                onClick={() => onDelete(integration)}
+                size="sm"
+              />
+            )}
           </Stack>
         </Stack>
       }

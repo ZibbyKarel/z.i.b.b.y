@@ -296,9 +296,9 @@
         "label": "Add skill",
         "sub": "SKILL.md — unit of work"
       },
-      "integrations": {
-        "label": "Add integration",
-        "sub": "driver to the outside world"
+      "projects": {
+        "label": "Add project",
+        "sub": "one company — channels and team"
       },
       "agents": {
         "label": "Add agent",
@@ -406,6 +406,8 @@
     "emptyHint": "// creates ~/zibby/integrations/'<name>'.json",
     "testConnection": "Test connection",
     "testFailed": "Connection test failed.",
+    "enableAria": "Enable {name}",
+    "disableAria": "Disable {name}",
     "lastSync": "Last sync",
     "channelCount": "{count, plural, one {# channel} other {# channels}}",
     "kindLabel": "Kind",
@@ -1093,12 +1095,16 @@
     "delete": "Delete",
     "deleteTitle": "Delete project?",
     "deleteBody": "Delete project {name}? The files on disk stay; only the registry record is removed.",
-    "modalSubtitle": "name · path · category · description",
     "budgetDaily": "daily",
     "budgetWeekly": "weekly",
     "budgetRunning": "running",
     "budgetQueued": "queued",
     "budgetHeld": "held",
+    "integrations": {
+      "title": "Integrations",
+      "add": "Add integration",
+      "empty": "No integrations yet — add Slack, email, Jira or GitHub for this project."
+    },
     "fields": {
       "name": "Project name",
       "namePlaceholder": "media-vault",
@@ -1142,6 +1148,10 @@
       "duplicate": "Category “{name}” already exists."
     },
     "profile": {
+      "basics": {
+        "title": "Project",
+        "newHint": "Save the project to set up its team, integrations and secrets."
+      },
       "team": {
         "title": "Team",
         "empty": "No team members yet — add people who are involved in this project.",
@@ -1176,8 +1186,7 @@
       },
       "standup": {
         "title": "Standup cheat sheet"
-      },
-      "link": "Profile"
+      }
     }
   },
   "automations": {

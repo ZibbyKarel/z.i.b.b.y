@@ -11,6 +11,7 @@ const fakeLogger = { child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(
 const integration: Integration = {
   id: "team",
   kind: "slack",
+  projectId: "acme-app",
   name: "Team Slack",
   enabled: true,
   config: { kind: "slack", channels: ["C1"] },
@@ -155,6 +156,15 @@ describe("ChannelTriageFlowService", () => {
     const out = await flow.handle(item({ text: "something generic and unrelated" }))
     expect(out.projectId).toBeUndefined()
     expect(createTask.mock.calls[0]![2]).toBeUndefined()
+  })
+
+  it("attributes the item to the integration's stored project, even with no text match", async () => {
+    // The integration fixture is owned by "acme-app"; the stored projectId wins over
+    // the text/name attribution (which would not match "Acme" in this body).
+    const flow = makeFlow({ verdict: bug, projects: [{ id: "acme-app", name: "Acme", path: "/work/acme" }] })
+    const out = await flow.handle(item({ text: "something generic and unrelated" }))
+    expect(out.projectId).toBe("acme-app")
+    expect(createTask.mock.calls[0]![2]).toBe("acme-app")
   })
 
   it("Tier 2 + reply mandate + gate notify: sends the draft and persists the reply", async () => {

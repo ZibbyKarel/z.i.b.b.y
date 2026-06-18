@@ -7,9 +7,12 @@ import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
 
+// Integrations are owned by a project (one project = one company); `acme-app` is a
+// seeded project in the test data root (see vitest.setup.ts).
 const SLACK = {
   id: "team-slack",
   kind: "slack",
+  projectId: "acme-app",
   name: "Team Slack",
   config: { kind: "slack", channels: ["C123"] },
 }
@@ -59,8 +62,30 @@ describe("Integrations API (e2e)", () => {
     await request(app.getHttpServer()).post("/api/integrations").send(SLACK).expect(409)
     await request(app.getHttpServer())
       .post("/api/integrations")
-      .send({ id: "bad", kind: "slack", config: { kind: "email", imapHost: "h", imapPort: 1, smtpHost: "h", smtpPort: 1, user: "u" } })
+      .send({ id: "bad", kind: "slack", projectId: "acme-app", config: { kind: "email", imapHost: "h", imapPort: 1, smtpHost: "h", smtpPort: 1, user: "u" } })
       .expect(422)
+  })
+
+  it("rejects an integration referencing an unknown project (422)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/integrations")
+      .send({ id: "orphan", kind: "slack", projectId: "nope-not-a-project", config: { kind: "slack", channels: [] } })
+      .expect(422)
+  })
+
+  it("lists integrations scoped to a project via ?projectId", async () => {
+    await request(app.getHttpServer())
+      .post("/api/integrations")
+      .send({ id: "self-mail", kind: "email", projectId: "zibby-self", config: { kind: "email", imapHost: "h", imapPort: 993, smtpHost: "h", smtpPort: 465, user: "me@x.dev" } })
+      .expect(201)
+
+    const acme = await request(app.getHttpServer()).get("/api/integrations?projectId=acme-app").expect(200)
+    const acmeIds = acme.body.map((i: { id: string }) => i.id)
+    expect(acmeIds).toContain("team-slack")
+    expect(acmeIds).not.toContain("self-mail")
+
+    const self = await request(app.getHttpServer()).get("/api/integrations?projectId=zibby-self").expect(200)
+    expect(self.body.map((i: { id: string }) => i.id)).toEqual(["self-mail"])
   })
 
   it("stores credentials separately: the entity file never contains the token", async () => {
@@ -92,6 +117,7 @@ describe("Integrations API (e2e)", () => {
     await request(app.getHttpServer()).post("/api/integrations").send({
       id: "no-creds",
       kind: "slack",
+      projectId: "acme-app",
       config: { kind: "slack", channels: [] },
     }).expect(201)
     await request(app.getHttpServer()).post("/api/integrations/no-creds/test").send({}).expect(409)

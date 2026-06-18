@@ -15,7 +15,8 @@ const ROUTES = {
   agents: "/agents",
   skills: "/skills",
   projects: "/projects",
-  integrations: "/integrations",
+  // Integrations are managed under their owning project now.
+  integrations: "/projects",
   automations: "/automations",
 } as const;
 

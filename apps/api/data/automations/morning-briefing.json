@@ -1,1 +1,1 @@
-{"id":"morning-briefing","name":"Morning briefing","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"briefing"},"enabled":true,"lastFiredAt":"2026-06-13T05:00:54.127Z"}
+{"id":"morning-briefing","name":"Morning briefing","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"briefing"},"enabled":true,"system":false,"lastFiredAt":"2026-06-18T05:00:21.229Z"}

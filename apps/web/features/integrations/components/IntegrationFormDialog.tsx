@@ -53,6 +53,8 @@ export interface IntegrationDraft {
 }
 
 export interface IntegrationFormDialogProps {
+  /** The owning project (one project = one company); baked into the create payload. */
+  projectId: string;
   /** Omit to create a new integration; pass one to edit it. */
   integration?: Integration;
   onClose: () => void;
@@ -69,7 +71,7 @@ export interface IntegrationFormDialogProps {
  * the screen persists the secret through the separate credentials mutation
  * (Slack/Jira/GitHub carry a `token`, email a `password`).
  */
-export function IntegrationFormDialog({ integration, onClose, onSubmit }: IntegrationFormDialogProps) {
+export function IntegrationFormDialog({ projectId, integration, onClose, onSubmit }: IntegrationFormDialogProps) {
   const t = useTranslations();
   const isNew = integration === undefined;
 
@@ -160,6 +162,7 @@ export function IntegrationFormDialog({ integration, onClose, onSubmit }: Integr
         create: {
           id: id.trim(),
           kind,
+          projectId,
           name: name.trim() || undefined,
           enabled,
           config: buildConfig(),

@@ -296,9 +296,9 @@
         "label": "Přidej skill",
         "sub": "SKILL.md — jednotka práce"
       },
-      "integrations": {
-        "label": "Přidej integraci",
-        "sub": "driver do okolního světa"
+      "projects": {
+        "label": "Přidej projekt",
+        "sub": "jedna firma — kanály a tým"
       },
       "agents": {
         "label": "Přidej agenta",
@@ -406,6 +406,8 @@
     "emptyHint": "// vytvoří ~/zibby/integrations/'<název>'.json",
     "testConnection": "Test spojení",
     "testFailed": "Test spojení selhal.",
+    "enableAria": "Aktivovat {name}",
+    "disableAria": "Deaktivovat {name}",
     "lastSync": "Poslední synchronizace",
     "channelCount": "{count, plural, one {# kanál} few {# kanály} other {# kanálů}}",
     "kindLabel": "Typ",
@@ -1093,12 +1095,16 @@
     "delete": "Smazat",
     "deleteTitle": "Smazat projekt?",
     "deleteBody": "Opravdu smazat projekt {name}? Soubory na disku zůstanou, odebere se jen záznam z velínu.",
-    "modalSubtitle": "název · cesta · kategorie · popis",
     "budgetDaily": "denně",
     "budgetWeekly": "týdně",
     "budgetRunning": "běží",
     "budgetQueued": "ve frontě",
     "budgetHeld": "pozdrženo",
+    "integrations": {
+      "title": "Integrace",
+      "add": "Přidat integraci",
+      "empty": "Zatím žádné integrace — přidej Slack, e-mail, Jiru nebo GitHub pro tento projekt."
+    },
     "fields": {
       "name": "Název projektu",
       "namePlaceholder": "media-vault",
@@ -1142,6 +1148,10 @@
       "duplicate": "Kategorie „{name}“ už existuje."
     },
     "profile": {
+      "basics": {
+        "title": "Projekt",
+        "newHint": "Po uložení projektu nastavíš jeho tým, integrace a tajemství."
+      },
       "team": {
         "title": "Tým",
         "empty": "Zatím žádní členové týmu — přidej lidi zapojené do projektu.",
@@ -1176,8 +1186,7 @@
       },
       "standup": {
         "title": "Tahák pro standup"
-      },
-      "link": "Profil"
+      }
     }
   },
   "automations": {

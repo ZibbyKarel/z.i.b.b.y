@@ -98,6 +98,11 @@ Implementuje `ChannelTriageFlow` interface:
 3. Dispatch příslušné akce
 4. Zapiš do activity logu (`channel-triage`)
 
+**Atribuce k projektu:** položka se přiřadí k projektu podle uloženého
+`integration.projectId` (autoritativní vlastník); textová/jménová heuristika
+`matchProject` je už jen fallback pro integrace bez uloženého projektu. `projectId`
+jede do `createTask` jako server-odvozený štítek (nikdy autorizace — Law 4).
+
 ### `sweepOutcomes()`
 
 Projde položky se stavem `handled` které mají `taskId` → zkopíruje terminal outcome z tasku.
@@ -122,13 +127,20 @@ Mandate obsahuje per-channel tier pravidla. `ChannelTriageFlowService` se před 
 - `integrations/credentials.store.ts` — API klíče a tokeny (oddělené od configs)
 - `integrations/connection-tester.ts` — ověření připojení
 
+**Vlastnictví projektem (jeden projekt = jedna firma):** každá integrace nese povinné
+`projectId` (FK na projekt). Integrace se spravují na detailu projektu — samostatná
+stránka Integrace neexistuje. `createIntegration`/`updateIntegration` ověří, že projekt
+existuje (jinak `422`). `id` integrace se nikdy nepřejmenovává (klíčuje credentials,
+`channels/<id>/` položky i cursor); `projectId` se měnit smí (přeřazení integrace).
+
 ```
-GET    /api/integrations           seznam
-POST   /api/integrations           vytvoření
-GET    /api/integrations/:id       detail
-PUT    /api/integrations/:id       aktualizace
-DELETE /api/integrations/:id       smazání
-POST   /api/integrations/:id/test  otestuj připojení
+GET    /api/integrations              seznam (volitelně ?projectId=<id> pro filtr na projekt)
+POST   /api/integrations              vytvoření (body.projectId povinné; neznámý projekt → 422)
+GET    /api/integrations/:id          detail
+PATCH  /api/integrations/:id          aktualizace (name/enabled/config/projectId; kind immutable)
+DELETE /api/integrations/:id          smazání (kaskáduje credentials)
+PUT    /api/integrations/:id/credentials   zápis secretu (write-only)
+POST   /api/integrations/:id/test     otestuj připojení
 ```
 
 Credentials jsou uloženy odděleně v `data/credentials/` (nikdy v `data/integrations/`).

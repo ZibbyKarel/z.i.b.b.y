@@ -22,6 +22,7 @@ describe("integration schema", () => {
       IntegrationSchema.safeParse({
         id: "team-slack",
         kind: "slack",
+        projectId: "acme-app",
         config: { kind: "slack", channels: ["C123"] },
       }).success,
     ).toBe(true)
@@ -29,6 +30,7 @@ describe("integration schema", () => {
       IntegrationSchema.safeParse({
         id: "support-mail",
         kind: "email",
+        projectId: "acme-app",
         config: {
           kind: "email",
           imapHost: "imap.example.com",
@@ -45,11 +47,23 @@ describe("integration schema", () => {
     const parsed = IntegrationSchema.parse({
       id: "x",
       kind: "slack",
+      projectId: "acme-app",
       config: { kind: "slack", channels: [] },
     })
     expect(parsed.enabled).toBe(true)
     expect(parsed.status).toBe("disconnected")
     expect(parsed.hasCredentials).toBe(false)
+    expect(parsed.projectId).toBe("acme-app")
+  })
+
+  it("requires a projectId (an integration is owned by a project)", () => {
+    expect(
+      IntegrationSchema.safeParse({
+        id: "x",
+        kind: "slack",
+        config: { kind: "slack", channels: [] },
+      }).success,
+    ).toBe(false)
   })
 
   it("rejects a config whose kind disagrees with the integration kind", () => {
@@ -57,6 +71,7 @@ describe("integration schema", () => {
       IntegrationSchema.safeParse({
         id: "x",
         kind: "slack",
+        projectId: "acme-app",
         config: { kind: "email", imapHost: "h", imapPort: 1, smtpHost: "h", smtpPort: 1, user: "u" },
       }).success,
     ).toBe(true) // schema only constrains config internally; controller pins kind===config.kind

@@ -17,6 +17,7 @@ import { useAgentsQuery } from "../agents/queries";
 import { useIntegrationsQuery } from "../integrations/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useSkillsQuery } from "../skills/queries";
+import { InboxPanel } from "../integrations/components/InboxPanel";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { useActivityQuery } from "./queries";
@@ -24,7 +25,7 @@ import { SummaryWidget } from "./SummaryWidget";
 
 const STARTERS = [
   { id: "skills", glyph: "spark" },
-  { id: "integrations", glyph: "plug" },
+  { id: "projects", glyph: "code" },
   { id: "agents", glyph: "bot" },
   { id: "pipelines", glyph: "flow" },
 ] as const;
@@ -49,6 +50,9 @@ export function Screen() {
         <SummaryWidget />
 
         <BriefingCard />
+
+        {/* Global inbox — recent channel items across every project, with project tags */}
+        <InboxPanel />
 
         {activity.length > 0 && (
           <HudPanel title={t("overview.activity")}>

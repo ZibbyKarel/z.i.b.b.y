@@ -15,6 +15,7 @@ vi.mock("../../integrations/queries", () => ({ useIntegrationsQuery: () => ({ da
 const slack: Integration = {
   id: "team",
   kind: "slack",
+  projectId: "acme-app",
   name: "Team",
   enabled: true,
   config: { kind: "slack", channels: [] },

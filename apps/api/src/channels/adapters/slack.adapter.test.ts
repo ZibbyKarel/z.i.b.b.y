@@ -10,6 +10,7 @@ const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const slack: Integration = {
   id: "team-slack",
   kind: "slack",
+  projectId: "acme-app",
   enabled: true,
   config: { kind: "slack", channels: ["C123"] },
   status: "disconnected",

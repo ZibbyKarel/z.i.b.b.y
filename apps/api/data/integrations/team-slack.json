@@ -1,1 +1,1 @@
-{"id": "team-slack", "kind": "slack", "name": "Acme Team Slack", "enabled": true, "config": {"kind": "slack", "channels": ["C0ACME01", "C0ACME02"]}, "status": "connected", "lastSyncAt": "2026-06-18T08:05:00.000Z"}
+{"id":"team-slack","kind":"slack","projectId":"acme-app","name":"Acme Team Slack","enabled":false,"config":{"kind":"slack","channels":["C0ACME01","C0ACME02"]},"status":"error","lastSyncAt":"2026-06-18T08:05:00.000Z","lastError":"conversations.history: invalid_auth"}

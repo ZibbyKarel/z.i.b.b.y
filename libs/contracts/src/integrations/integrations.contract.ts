@@ -32,8 +32,9 @@ export const integrationsContract = c.router(
     listIntegrations: {
       method: "GET",
       path: "/integrations",
+      query: z.object({ projectId: z.string().optional() }),
       responses: { 200: z.array(IntegrationSchema) },
-      summary: "List integrations",
+      summary: "List integrations (optionally filtered to one project)",
     },
     getIntegration: {
       method: "GET",

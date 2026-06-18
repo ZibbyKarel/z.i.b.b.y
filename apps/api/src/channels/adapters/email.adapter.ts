@@ -151,13 +151,23 @@ export class EmailChannelAdapter implements ChannelAdapter {
 function defaultImap(integration: Integration, creds: CredentialsInput): ImapClientLike {
   if (integration.config.kind !== "email") throw new Error("not an email integration")
   const password = passwordOf(creds) ?? ""
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: integration.config.imapHost,
     port: integration.config.imapPort,
     secure: integration.config.imapPort === 993,
     auth: { user: integration.config.user, pass: password },
     logger: false,
-  }) as unknown as ImapClientLike
+  })
+  // ImapFlow is an EventEmitter. When the session dies AFTER `connect()` has already
+  // settled — e.g. Gmail sends `* BYE [OVERQUOTA] …` and drops the socket post-auth —
+  // imapflow emits a late `'error'` on the instance. With no listener, Node promotes an
+  // unlistened `'error'` event to an uncaught exception, which crashes (and respawns) the
+  // long-running watcher → it re-polls on boot → the throttle never clears. The real error
+  // is already delivered to the caller via the `connect()`/`poll()` rejection (the watcher
+  // stamps `lastError`), so this listener only needs to absorb the duplicate and keep the
+  // process alive.
+  client.on("error", () => {})
+  return client as unknown as ImapClientLike
 }
 
 /** Real SMTP transport from the integration's host/port + the stored password. */

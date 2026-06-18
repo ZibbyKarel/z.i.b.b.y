@@ -17,13 +17,14 @@ app/
     ├── agents/page.tsx     Katalog agentů
     ├── automations/page.tsx Automatizace
     ├── gates/page.tsx      Gate pravidla
-    ├── integrations/page.tsx Integrace a kanály
     ├── memory/page.tsx     Vault browser
     ├── overview/page.tsx   Přehled (briefing + aktivita)
     ├── pipelines/
     │   ├── page.tsx        Seznam pipelines
     │   └── [id]/page.tsx   Detail pipeline + history runů
-    ├── projects/page.tsx   Portfolio projektů
+    ├── projects/
+    │   ├── page.tsx        Portfolio projektů
+    │   └── [id]/page.tsx   Detail projektu (tým, autonomie, integrace + inbox)
     ├── runs/page.tsx       Historie runů
     ├── settings/page.tsx   Nastavení workspace
     └── skills/page.tsx     Inventář skills

@@ -100,6 +100,13 @@ export type IntegrationStatus = z.infer<typeof IntegrationStatusSchema>
 export const IntegrationSchema = z.object({
   id: IntegrationIdSchema,
   kind: IntegrationKindSchema,
+  /**
+   * The project (one project = one company) this integration belongs to. Integrations
+   * are owned by a project and managed from its detail; this is a foreign key to a
+   * project `id` — never re-keyed (re-keying the integration `id` would orphan its
+   * credentials / channel items, but `projectId` is free to change to re-assign).
+   */
+  projectId: z.string().min(1),
   name: z.string().min(1).optional(),
   enabled: z.boolean().default(true),
   config: IntegrationConfigSchema,
@@ -118,6 +125,7 @@ export type Integration = z.infer<typeof IntegrationSchema>
 export const CreateIntegrationSchema = z.object({
   id: IntegrationIdSchema,
   kind: IntegrationKindSchema,
+  projectId: z.string().min(1),
   name: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   config: IntegrationConfigSchema,

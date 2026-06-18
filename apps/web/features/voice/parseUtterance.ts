@@ -20,7 +20,6 @@ export type NavPage =
   | "pipelines"
   | "projects"
   | "memory"
-  | "integrations"
   | "automations"
   | "gates"
   | "skills"
@@ -154,10 +153,12 @@ const NAV_ALIASES: Record<string, NavPage> = {
   pamet: "memory",
   memory: "memory",
   vault: "memory",
-  integrace: "integrations",
-  integrations: "integrations",
-  kanaly: "integrations",
-  channels: "integrations",
+  // Integrations are managed per project now (one project = one company), so the
+  // channel aliases land on the projects screen.
+  integrace: "projects",
+  integrations: "projects",
+  kanaly: "projects",
+  channels: "projects",
   automatizace: "automations",
   automations: "automations",
   brany: "gates",

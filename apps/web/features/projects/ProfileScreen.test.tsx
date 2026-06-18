@@ -25,24 +25,73 @@ const profile: ProjectProfile = {
 };
 
 const updateMutate = vi.fn();
+const createProjectMutate = vi.fn();
+const updateProjectMutate = vi.fn();
+const deleteProjectMutate = vi.fn();
+const setSecretsMutate = vi.fn();
+const deleteSecretsMutate = vi.fn();
+const replace = vi.fn();
+const push = vi.fn();
 
+// `projectId` flips the query into new-project mode; the mock ignores the
+// `enabled` option, so we just return the same project in both modes.
 vi.mock("./queries", () => ({
   useProjectQuery: () => ({ data: project, isPending: false, isError: false }),
   useProjectProfileQuery: () => ({ data: profile }),
   useProjectStandupQuery: () => ({ data: null }),
+  useProjectCategoriesQuery: () => ({ data: [{ name: "Dev", glyph: "code" }] }),
 }));
 
 vi.mock("./mutations", () => ({
   useUpdateProjectProfileMutation: () => ({ mutate: updateMutate, isPending: false }),
+  useCreateProjectMutation: () => ({ mutate: createProjectMutate, isPending: false }),
+  useUpdateProjectMutation: () => ({ mutate: updateProjectMutate, isPending: false }),
+  useDeleteProjectMutation: () => ({ mutate: deleteProjectMutate, isPending: false }),
+  useSetProjectSecretsMutation: () => ({ mutate: setSecretsMutate, isPending: false }),
+  useDeleteProjectSecretsMutation: () => ({ mutate: deleteSecretsMutate, isPending: false }),
 }));
 
-// next/navigation — router.push is a no-op in tests
+// The detail now mounts the project's integrations + inbox; stub those data hooks.
+vi.mock("../integrations/queries", () => ({
+  useIntegrationsQuery: () => ({
+    data: [
+      {
+        id: "team-slack",
+        kind: "slack",
+        projectId: "media-vault",
+        name: "Team Slack",
+        enabled: true,
+        config: { kind: "slack", channels: [] },
+        status: "connected",
+        hasCredentials: true,
+      },
+    ],
+  }),
+  useChannelItemsQuery: () => ({ data: [] }),
+}));
+
+vi.mock("../integrations/mutations", () => ({
+  useCreateIntegrationMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateIntegrationMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteIntegrationMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetCredentialsMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useTestIntegrationMutation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+// next/navigation — router.push/replace are no-ops in tests
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push, replace }),
 }));
 
 beforeEach(() => {
   updateMutate.mockReset();
+  createProjectMutate.mockReset();
+  updateProjectMutate.mockReset();
+  deleteProjectMutate.mockReset();
+  setSecretsMutate.mockReset();
+  deleteSecretsMutate.mockReset();
+  replace.mockReset();
+  push.mockReset();
 });
 
 describe("ProfileScreen", () => {
@@ -59,6 +108,23 @@ describe("ProfileScreen", () => {
   it("shows the standup time from the profile", () => {
     render(<ProfileScreen projectId="media-vault" />);
     expect(screen.getByDisplayValue("09:30")).toBeInTheDocument();
+  });
+
+  it("edits the core record in place (the dialog is gone)", () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    // The host path is now an editable field on the detail, not a dialog.
+    expect(screen.getByDisplayValue("~/Projects/media-vault")).toBeInTheDocument();
+  });
+
+  it("saves the core record via the update mutation", async () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    await userEvent.click(screen.getByTestId("save-basics"));
+    expect(updateProjectMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: { id: "media-vault" },
+        body: expect.objectContaining({ name: "media-vault", path: "~/Projects/media-vault" }),
+      }),
+    );
   });
 
   it("saves team on button click", async () => {
@@ -96,6 +162,12 @@ describe("ProfileScreen", () => {
     expect(screen.getAllByTestId("person-name")).toHaveLength(nameInputsBefore + 1);
   });
 
+  it("lists the project's integrations with an add control", () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    expect(screen.getByText("Team Slack")).toBeInTheDocument();
+    expect(screen.getByTestId("add-integration")).toBeInTheDocument();
+  });
+
   it("saves rhythm on button click", async () => {
     render(<ProfileScreen projectId="media-vault" />);
     await userEvent.click(screen.getByTestId("save-rhythm"));
@@ -106,5 +178,28 @@ describe("ProfileScreen", () => {
       }),
       expect.any(Object),
     );
+  });
+
+  describe("new project mode", () => {
+    it("shows only the basics panel — no team/integrations until saved", () => {
+      render(<ProfileScreen />);
+      expect(screen.getByTestId("save-basics")).toBeInTheDocument();
+      expect(screen.queryByTestId("save-team")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("add-integration")).not.toBeInTheDocument();
+    });
+
+    it("creates the project and redirects to its detail page", async () => {
+      render(<ProfileScreen />);
+      await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
+      const nameField = screen.getByPlaceholderText("media-vault");
+      await userEvent.type(nameField, "Alpha");
+      await userEvent.click(screen.getByTestId("save-basics"));
+      expect(createProjectMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({ id: "alpha", name: "Alpha" }),
+        }),
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
   });
 });

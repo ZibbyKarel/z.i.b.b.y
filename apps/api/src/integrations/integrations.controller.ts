@@ -2,6 +2,7 @@ import { Controller, Inject } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
 import type { Integration } from "@zibby/contracts"
 import { integrationsContract } from "@zibby/contracts"
+import { ProjectsStorageService } from "../projects/projects.storage.service"
 import { makeErrorMapper } from "../shared/http/error-mapping"
 import { CONNECTION_TESTER, type ConnectionTester } from "./connection-tester"
 import { credentialMatchesKind } from "./credential-kind"
@@ -31,12 +32,19 @@ export class IntegrationsController {
   constructor(
     private readonly storage: IntegrationsStorageService,
     private readonly credentials: CredentialsStore,
+    private readonly projects: ProjectsStorageService,
     @Inject(CONNECTION_TESTER) private readonly tester: ConnectionTester,
   ) {}
 
   /** Layer the read-time `hasCredentials` onto an entity for the wire. */
   private async withCredentialState(integration: Integration): Promise<Integration> {
     return { ...integration, hasCredentials: await this.credentials.has(integration.id) }
+  }
+
+  /** FK integrity: an integration must belong to an existing project (else 422). */
+  private async assertProjectExists(projectId: string): Promise<void> {
+    const exists = (await this.projects.list()).some((p) => p.id === projectId)
+    if (!exists) throw new UnknownProjectViolation()
   }
 
   @TsRestHandler(integrationsContract)
@@ -46,12 +54,19 @@ export class IntegrationsController {
         if (body.kind !== body.config.kind) {
           return Promise.resolve(unprocessable("config kind must match the integration kind"))
         }
-        return errors.created(async () => this.withCredentialState(await this.storage.create(body)))
+        return errors.created(
+          async () => {
+            await this.assertProjectExists(body.projectId)
+            return this.withCredentialState(await this.storage.create(body))
+          },
+          (error) => (error instanceof UnknownProjectViolation ? unprocessable("unknown project") : undefined),
+        )
       },
 
-      listIntegrations: async () => {
+      listIntegrations: async ({ query }) => {
         const all = await this.storage.list()
-        return { status: 200, body: await Promise.all(all.map((i) => this.withCredentialState(i))) }
+        const scoped = query.projectId ? all.filter((i) => i.projectId === query.projectId) : all
+        return { status: 200, body: await Promise.all(scoped.map((i) => this.withCredentialState(i))) }
       },
 
       getIntegration: ({ params: { id } }) =>
@@ -65,9 +80,15 @@ export class IntegrationsController {
             if (body.config && body.config.kind !== existing.kind) {
               throw new ImmutableKindViolation()
             }
+            if (body.projectId) await this.assertProjectExists(body.projectId)
             return this.withCredentialState(await this.storage.update(id, body))
           },
-          (error) => (error instanceof ImmutableKindViolation ? unprocessable("kind is immutable") : undefined),
+          (error) =>
+            error instanceof ImmutableKindViolation
+              ? unprocessable("kind is immutable")
+              : error instanceof UnknownProjectViolation
+                ? unprocessable("unknown project")
+                : undefined,
         ),
 
       deleteIntegration: ({ params: { id } }) =>
@@ -128,3 +149,4 @@ export class IntegrationsController {
 class ImmutableKindViolation extends Error {}
 class CredentialKindViolation extends Error {}
 class NoCredentialsViolation extends Error {}
+class UnknownProjectViolation extends Error {}

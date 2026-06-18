@@ -65,7 +65,7 @@ describe("parseUtterance", () => {
       ["zobraz projekty", "/projects"],
       ["navigate to overview", "/overview"],
       ["go to gates", "/gates"],
-      ["open integrations", "/integrations"],
+      ["open integrations", "/projects"],
       ["show me approvals", "/gates"],
     ];
     it.each(cases)("%s → navigate %s", (text, route) => {

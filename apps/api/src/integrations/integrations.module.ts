@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AdapterRegistry } from "../channels/adapters/adapter-registry"
+import { ProjectsModule } from "../projects/projects.module"
 import { dataDir } from "../shared/data-dir"
 import { CONNECTION_TESTER } from "./connection-tester"
 import { CREDENTIALS_DIR, CredentialsStore } from "./credentials.store"
@@ -23,6 +24,7 @@ export function resolveCredentialsDir(): string {
  * + registry are exported so the channels watcher (5.2) reuses them.
  */
 @Module({
+  imports: [ProjectsModule],
   controllers: [IntegrationsController],
   providers: [
     { provide: INTEGRATIONS_DIR, useFactory: resolveIntegrationsDir },

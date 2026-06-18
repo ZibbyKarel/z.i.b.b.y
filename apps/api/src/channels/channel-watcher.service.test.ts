@@ -18,6 +18,7 @@ const fakeTrace = { run: (_ctx: unknown, fn: () => unknown) => fn() }
 const slack = (id: string): CreateIntegrationInput => ({
   id,
   kind: "slack",
+  projectId: "acme-app",
   config: { kind: "slack", channels: ["C1"] },
 })
 

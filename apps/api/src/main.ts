@@ -20,6 +20,7 @@ import {
 } from "@zibby/contracts"
 import * as swaggerUi from "swagger-ui-express"
 import { AppModule } from "./app.module"
+import { LoggerService } from "./shared/logging/logger.service"
 
 // Compose the resource contracts into one router purely for documentation. Each
 // child already carries its own `/api` prefix, so the parent adds none — paths
@@ -65,6 +66,19 @@ async function bootstrap(): Promise<void> {
   // --respawn` and launchd a restart is a signal, not an `app.close()`, and
   // detached children would otherwise orphan and accumulate RAM.
   app.enableShutdownHooks()
+
+  // A long-running daemon polls third-party channels (IMAP/Slack/…) whose client
+  // libraries can reject a promise we don't own — e.g. a Gmail socket dropped after
+  // the greeting surfaces as an `imapflow` rejection outside any `await` we control.
+  // Route those through the structured logger (with the reason) instead of letting
+  // `ts-node-dev`/launchd print a raw stack or treat it as fatal. The per-integration
+  // watcher already stamps `lastError`; this is the floor for everything else, so the
+  // process never dies silently on a stray library rejection (Law 5: always answerable).
+  const log = app.get(LoggerService).child("UnhandledRejection")
+  process.on("unhandledRejection", (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason))
+    log.error("unhandled promise rejection", { error: err.message, stack: err.stack })
+  })
 
   // Default to 3333 (Phase 8.3) so the launchd plist can omit PORT and dev keeps
   // working — `Number(undefined)` was NaN. An explicit PORT (or a .env value) wins.

@@ -62,9 +62,14 @@ describe("Channels triage throughline (e2e)", () => {
       .post("/api/agents")
       .send({ id: "fixer", name: "Fixer", description: "fixes reported bugs", instructions: "Fix bugs." })
       .expect(201)
+    // Integrations are owned by a project; create one so the FK check passes.
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "acme-app", name: "Acme", path: root })
+      .expect(201)
     await request(app.getHttpServer())
       .post("/api/integrations")
-      .send({ id: "team", kind: "slack", name: "Team", config: { kind: "slack", channels: ["C1"] } })
+      .send({ id: "team", kind: "slack", projectId: "acme-app", name: "Team", config: { kind: "slack", channels: ["C1"] } })
       .expect(201)
     await request(app.getHttpServer()).put("/api/integrations/team/credentials").send({ token: "xoxb-1" }).expect(200)
   })
@@ -201,6 +206,7 @@ describe("Channels triage throughline (e2e)", () => {
       .send({
         id: "support",
         kind: "email",
+        projectId: "acme-app",
         name: "Support Mail",
         config: { kind: "email", imapHost: "imap.x", imapPort: 993, smtpHost: "smtp.x", smtpPort: 465, user: "bot@x.com" },
       })

@@ -11,7 +11,11 @@ const { integrations } = vi.hoisted(() => ({
   integrations: { data: [{ id: "x" }] as Array<{ id: string }> },
 }))
 vi.mock("./SummaryWidget", () => ({ SummaryWidget: () => null }))
-vi.mock("../integrations/queries", () => ({ useIntegrationsQuery: () => ({ data: integrations.data }) }))
+vi.mock("../integrations/queries", () => ({
+  useIntegrationsQuery: () => ({ data: integrations.data }),
+  // The mounted global InboxPanel reads this; empty → it renders null (out of scope here).
+  useChannelItemsQuery: () => ({ data: [] }),
+}))
 vi.mock("../skills/queries", () => ({ useSkillsQuery: () => ({ data: [] }) }))
 vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }))
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }))
@@ -45,7 +49,7 @@ describe("Overview Screen", () => {
     render(<Screen />)
     const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"))
     expect(hrefs).toEqual(
-      expect.arrayContaining(["/skills", "/integrations", "/agents", "/pipelines"]),
+      expect.arrayContaining(["/skills", "/projects", "/agents", "/pipelines"]),
     )
   })
 })

@@ -1,0 +1,814 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "vitest.config.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/vitest.config.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_vitest_config_ts",
+      "community": 4,
+      "norm_label": "vitest.config.ts"
+    },
+    {
+      "label": "common.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/common.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_common_schema_ts",
+      "community": 5,
+      "norm_label": "common.schema.ts"
+    },
+    {
+      "label": "app.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/app.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_app_contract_ts",
+      "community": 6,
+      "norm_label": "app.contract.ts"
+    },
+    {
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/index.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_index_ts",
+      "community": 7,
+      "norm_label": "index.ts"
+    },
+    {
+      "label": "research.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/research/research.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_research_research_contract_ts",
+      "community": 8,
+      "norm_label": "research.contract.ts"
+    },
+    {
+      "label": "research.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/research/research.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_research_research_contract_test_ts",
+      "community": 9,
+      "norm_label": "research.contract.test.ts"
+    },
+    {
+      "label": "research.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/research/research.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_research_research_schema_ts",
+      "community": 10,
+      "norm_label": "research.schema.ts"
+    },
+    {
+      "label": "gate.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_schema_ts",
+      "community": 3,
+      "norm_label": "gate.schema.ts"
+    },
+    {
+      "label": "refineResolve()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate.schema.ts",
+      "source_location": "L57",
+      "id": "gate_schema_refineresolve",
+      "community": 3,
+      "norm_label": "refineresolve()"
+    },
+    {
+      "label": "gate-rules.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate-rules.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_rules_contract_test_ts",
+      "community": 11,
+      "norm_label": "gate-rules.contract.test.ts"
+    },
+    {
+      "label": "gate.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_contract_ts",
+      "community": 12,
+      "norm_label": "gate.contract.ts"
+    },
+    {
+      "label": "gate-rules.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate-rules.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_rules_contract_ts",
+      "community": 13,
+      "norm_label": "gate-rules.contract.ts"
+    },
+    {
+      "label": "gate.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_contract_test_ts",
+      "community": 14,
+      "norm_label": "gate.contract.test.ts"
+    },
+    {
+      "label": "tasks.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/tasks/tasks.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_tasks_tasks_contract_ts",
+      "community": 15,
+      "norm_label": "tasks.contract.ts"
+    },
+    {
+      "label": "task-run.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/tasks/task-run.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_tasks_task_run_schema_ts",
+      "community": 16,
+      "norm_label": "task-run.schema.ts"
+    },
+    {
+      "label": "tasks.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/tasks/tasks.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_tasks_tasks_contract_test_ts",
+      "community": 17,
+      "norm_label": "tasks.contract.test.ts"
+    },
+    {
+      "label": "task-runs.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/tasks/task-runs.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_tasks_task_runs_contract_ts",
+      "community": 18,
+      "norm_label": "task-runs.contract.ts"
+    },
+    {
+      "label": "task.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/tasks/task.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_tasks_task_schema_ts",
+      "community": 19,
+      "norm_label": "task.schema.ts"
+    },
+    {
+      "label": "memory.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/memory/memory.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_memory_memory_schema_ts",
+      "community": 20,
+      "norm_label": "memory.schema.ts"
+    },
+    {
+      "label": "memory.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/memory/memory.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_memory_memory_contract_test_ts",
+      "community": 21,
+      "norm_label": "memory.contract.test.ts"
+    },
+    {
+      "label": "memory.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/memory/memory.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_memory_memory_contract_ts",
+      "community": 22,
+      "norm_label": "memory.contract.ts"
+    },
+    {
+      "label": "goal-run.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/goals/goal-run.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_goals_goal_run_schema_ts",
+      "community": 23,
+      "norm_label": "goal-run.schema.ts"
+    },
+    {
+      "label": "goals.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/goals/goals.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_goals_goals_contract_ts",
+      "community": 24,
+      "norm_label": "goals.contract.ts"
+    },
+    {
+      "label": "goals.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/goals/goals.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_goals_goals_contract_test_ts",
+      "community": 25,
+      "norm_label": "goals.contract.test.ts"
+    },
+    {
+      "label": "goal.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/goals/goal.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_goals_goal_schema_ts",
+      "community": 26,
+      "norm_label": "goal.schema.ts"
+    },
+    {
+      "label": "activity.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/activity/activity.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_activity_activity_contract_ts",
+      "community": 27,
+      "norm_label": "activity.contract.ts"
+    },
+    {
+      "label": "activity.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/activity/activity.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_activity_activity_contract_test_ts",
+      "community": 28,
+      "norm_label": "activity.contract.test.ts"
+    },
+    {
+      "label": "activity.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/activity/activity.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_activity_activity_schema_ts",
+      "community": 29,
+      "norm_label": "activity.schema.ts"
+    },
+    {
+      "label": "projects.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/projects/projects.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_projects_projects_contract_test_ts",
+      "community": 30,
+      "norm_label": "projects.contract.test.ts"
+    },
+    {
+      "label": "projects.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/projects/projects.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_projects_projects_contract_ts",
+      "community": 31,
+      "norm_label": "projects.contract.ts"
+    },
+    {
+      "label": "project.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/projects/project.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_projects_project_schema_ts",
+      "community": 32,
+      "norm_label": "project.schema.ts"
+    },
+    {
+      "label": "health.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/health/health.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_health_health_contract_ts",
+      "community": 33,
+      "norm_label": "health.contract.ts"
+    },
+    {
+      "label": "health.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/health/health.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_health_health_contract_test_ts",
+      "community": 34,
+      "norm_label": "health.contract.test.ts"
+    },
+    {
+      "label": "health.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/health/health.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_health_health_schema_ts",
+      "community": 35,
+      "norm_label": "health.schema.ts"
+    },
+    {
+      "label": "discovery.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/discovery/discovery.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_discovery_discovery_contract_ts",
+      "community": 36,
+      "norm_label": "discovery.contract.ts"
+    },
+    {
+      "label": "discovery.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/discovery/discovery.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_discovery_discovery_contract_test_ts",
+      "community": 37,
+      "norm_label": "discovery.contract.test.ts"
+    },
+    {
+      "label": "proposal.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/discovery/proposal.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_discovery_proposal_schema_ts",
+      "community": 38,
+      "norm_label": "proposal.schema.ts"
+    },
+    {
+      "label": "limits.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/limits/limits.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_limits_limits_contract_ts",
+      "community": 39,
+      "norm_label": "limits.contract.ts"
+    },
+    {
+      "label": "limits.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/limits/limits.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_limits_limits_schema_ts",
+      "community": 40,
+      "norm_label": "limits.schema.ts"
+    },
+    {
+      "label": "limits.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/limits/limits.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_limits_limits_contract_test_ts",
+      "community": 41,
+      "norm_label": "limits.contract.test.ts"
+    },
+    {
+      "label": "agent-run.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/agents/agent-run.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_agents_agent_run_schema_ts",
+      "community": 42,
+      "norm_label": "agent-run.schema.ts"
+    },
+    {
+      "label": "agents.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/agents/agents.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_agents_agents_contract_ts",
+      "community": 43,
+      "norm_label": "agents.contract.ts"
+    },
+    {
+      "label": "agents.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/agents/agents.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_agents_agents_contract_test_ts",
+      "community": 44,
+      "norm_label": "agents.contract.test.ts"
+    },
+    {
+      "label": "agent.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/agents/agent.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_agents_agent_schema_ts",
+      "community": 45,
+      "norm_label": "agent.schema.ts"
+    },
+    {
+      "label": "pipeline.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipeline.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipeline_schema_ts",
+      "community": 2,
+      "norm_label": "pipeline.schema.ts"
+    },
+    {
+      "label": "refinePipeline()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipeline.schema.ts",
+      "source_location": "L120",
+      "id": "pipeline_schema_refinepipeline",
+      "community": 2,
+      "norm_label": "refinepipeline()"
+    },
+    {
+      "label": "pipeline-run.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipeline-run.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipeline_run_schema_ts",
+      "community": 46,
+      "norm_label": "pipeline-run.schema.ts"
+    },
+    {
+      "label": "pipelines.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipelines.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipelines_contract_ts",
+      "community": 47,
+      "norm_label": "pipelines.contract.ts"
+    },
+    {
+      "label": "pipelines.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipelines.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipelines_contract_test_ts",
+      "community": 0,
+      "norm_label": "pipelines.contract.test.ts"
+    },
+    {
+      "label": "phase()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipelines.contract.test.ts",
+      "source_location": "L4",
+      "id": "pipelines_contract_test_phase",
+      "community": 0,
+      "norm_label": "phase()"
+    },
+    {
+      "label": "mcp.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/mcp/mcp.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_mcp_mcp_contract_ts",
+      "community": 48,
+      "norm_label": "mcp.contract.ts"
+    },
+    {
+      "label": "mcp.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/mcp/mcp.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_mcp_mcp_schema_ts",
+      "community": 49,
+      "norm_label": "mcp.schema.ts"
+    },
+    {
+      "label": "mandate.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/mandate/mandate.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_mandate_mandate_contract_test_ts",
+      "community": 50,
+      "norm_label": "mandate.contract.test.ts"
+    },
+    {
+      "label": "mandate.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/mandate/mandate.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_mandate_mandate_contract_ts",
+      "community": 51,
+      "norm_label": "mandate.contract.ts"
+    },
+    {
+      "label": "mandate.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/mandate/mandate.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_mandate_mandate_schema_ts",
+      "community": 52,
+      "norm_label": "mandate.schema.ts"
+    },
+    {
+      "label": "integrations.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/integrations/integrations.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_integrations_integrations_contract_ts",
+      "community": 53,
+      "norm_label": "integrations.contract.ts"
+    },
+    {
+      "label": "integration.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/integrations/integration.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_integrations_integration_contract_test_ts",
+      "community": 54,
+      "norm_label": "integration.contract.test.ts"
+    },
+    {
+      "label": "integration.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/integrations/integration.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_integrations_integration_schema_ts",
+      "community": 55,
+      "norm_label": "integration.schema.ts"
+    },
+    {
+      "label": "briefing.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/briefing/briefing.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_briefing_briefing_contract_ts",
+      "community": 56,
+      "norm_label": "briefing.contract.ts"
+    },
+    {
+      "label": "briefing.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/briefing/briefing.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_briefing_briefing_schema_ts",
+      "community": 57,
+      "norm_label": "briefing.schema.ts"
+    },
+    {
+      "label": "briefing.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/briefing/briefing.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_briefing_briefing_contract_test_ts",
+      "community": 58,
+      "norm_label": "briefing.contract.test.ts"
+    },
+    {
+      "label": "hooks.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/hooks/hooks.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_hooks_hooks_contract_ts",
+      "community": 59,
+      "norm_label": "hooks.contract.ts"
+    },
+    {
+      "label": "hook.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/hooks/hook.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_hooks_hook_schema_ts",
+      "community": 60,
+      "norm_label": "hook.schema.ts"
+    },
+    {
+      "label": "automations.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/automations/automations.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_automations_automations_contract_ts",
+      "community": 61,
+      "norm_label": "automations.contract.ts"
+    },
+    {
+      "label": "automation.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/automations/automation.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_automations_automation_schema_ts",
+      "community": 62,
+      "norm_label": "automation.schema.ts"
+    },
+    {
+      "label": "automations.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/automations/automations.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_automations_automations_contract_test_ts",
+      "community": 63,
+      "norm_label": "automations.contract.test.ts"
+    },
+    {
+      "label": "commands.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/commands/commands.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_commands_commands_contract_ts",
+      "community": 64,
+      "norm_label": "commands.contract.ts"
+    },
+    {
+      "label": "command.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/commands/command.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_commands_command_schema_ts",
+      "community": 65,
+      "norm_label": "command.schema.ts"
+    },
+    {
+      "label": "skills.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/skills/skills.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_skills_skills_contract_test_ts",
+      "community": 66,
+      "norm_label": "skills.contract.test.ts"
+    },
+    {
+      "label": "skill.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/skills/skill.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_skills_skill_schema_ts",
+      "community": 67,
+      "norm_label": "skill.schema.ts"
+    },
+    {
+      "label": "skills.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/skills/skills.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_skills_skills_contract_ts",
+      "community": 68,
+      "norm_label": "skills.contract.ts"
+    },
+    {
+      "label": "approval.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/approvals/approval.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_approvals_approval_schema_ts",
+      "community": 69,
+      "norm_label": "approval.schema.ts"
+    },
+    {
+      "label": "approvals.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/approvals/approvals.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_approvals_approvals_contract_ts",
+      "community": 70,
+      "norm_label": "approvals.contract.ts"
+    },
+    {
+      "label": "approvals.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/approvals/approvals.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_approvals_approvals_contract_test_ts",
+      "community": 71,
+      "norm_label": "approvals.contract.test.ts"
+    },
+    {
+      "label": "categories.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/categories/categories.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_categories_categories_contract_test_ts",
+      "community": 72,
+      "norm_label": "categories.contract.test.ts"
+    },
+    {
+      "label": "category.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/categories/category.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_categories_category_schema_ts",
+      "community": 73,
+      "norm_label": "category.schema.ts"
+    },
+    {
+      "label": "categories.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/categories/categories.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_categories_categories_contract_ts",
+      "community": 1,
+      "norm_label": "categories.contract.ts"
+    },
+    {
+      "label": "makeCategoriesContract()",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/categories/categories.contract.ts",
+      "source_location": "L28",
+      "id": "categories_contract_makecategoriescontract",
+      "community": 1,
+      "norm_label": "makecategoriescontract()"
+    },
+    {
+      "label": "channels.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/channels/channels.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_channels_channels_contract_ts",
+      "community": 74,
+      "norm_label": "channels.contract.ts"
+    },
+    {
+      "label": "channel.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/channels/channel.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_channels_channel_contract_test_ts",
+      "community": 75,
+      "norm_label": "channel.contract.test.ts"
+    },
+    {
+      "label": "channel.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/channels/channel.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_channels_channel_schema_ts",
+      "community": 76,
+      "norm_label": "channel.schema.ts"
+    },
+    {
+      "label": "budget.contract.test.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/budget/budget.contract.test.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_budget_budget_contract_test_ts",
+      "community": 77,
+      "norm_label": "budget.contract.test.ts"
+    },
+    {
+      "label": "budget.contract.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/budget/budget.contract.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_budget_budget_contract_ts",
+      "community": 78,
+      "norm_label": "budget.contract.ts"
+    },
+    {
+      "label": "budget.schema.ts",
+      "file_type": "code",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/budget/budget.schema.ts",
+      "source_location": "L1",
+      "id": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_budget_budget_schema_ts",
+      "community": 79,
+      "norm_label": "budget.schema.ts"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/gates/gate.schema.ts",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_schema_ts",
+      "_tgt": "gate_schema_refineresolve",
+      "source": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_gates_gate_schema_ts",
+      "target": "gate_schema_refineresolve",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipeline.schema.ts",
+      "source_location": "L120",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipeline_schema_ts",
+      "_tgt": "pipeline_schema_refinepipeline",
+      "source": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipeline_schema_ts",
+      "target": "pipeline_schema_refinepipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/pipelines/pipelines.contract.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipelines_contract_test_ts",
+      "_tgt": "pipelines_contract_test_phase",
+      "source": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_pipelines_pipelines_contract_test_ts",
+      "target": "pipelines_contract_test_phase",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zibby/Workspace/z.i.b.b.y/libs/contracts/src/categories/categories.contract.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_categories_categories_contract_ts",
+      "_tgt": "categories_contract_makecategoriescontract",
+      "source": "users_zibby_workspace_z_i_b_b_y_libs_contracts_src_categories_categories_contract_ts",
+      "target": "categories_contract_makecategoriescontract",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": []
+}

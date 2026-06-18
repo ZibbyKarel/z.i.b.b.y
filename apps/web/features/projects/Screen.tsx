@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Card,
@@ -21,40 +22,23 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { ProjectCard } from "./components/ProjectCard";
-import { ProjectModal } from "./components/ProjectModal";
 import { useBudgetQuery, useProjectCategoriesQuery, useProjectsQuery } from "./queries";
 import {
   useCreateProjectCategoryMutation,
-  useCreateProjectMutation,
   useDeleteProjectCategoryMutation,
-  useDeleteProjectMutation,
-  useDeleteProjectSecretsMutation,
-  useSetProjectSecretsMutation,
-  useUpdateProjectMutation,
 } from "./mutations";
-import { slug } from "../../utils/slug";
-
-function newProjectDraft(category?: string): Project {
-  return { id: "", name: "", path: "~/Projects/", desc: "", category };
-}
 
 export function Screen() {
   const t = useTranslations("projects");
+  const router = useRouter();
   const projectsQuery = useProjectsQuery();
   const projects = projectsQuery.data ?? [];
   const { data: categories = [] } = useProjectCategoriesQuery();
   const { data: budget } = useBudgetQuery();
   const budgetByProject = new Map((budget?.projects ?? []).map((p) => [p.projectId, p]));
-  const createProject = useCreateProjectMutation();
-  const updateProject = useUpdateProjectMutation();
-  const deleteProject = useDeleteProjectMutation();
   const createCategory = useCreateProjectCategoryMutation();
   const deleteCategory = useDeleteProjectCategoryMutation();
-  const setSecrets = useSetProjectSecretsMutation();
-  const deleteSecrets = useDeleteProjectSecretsMutation();
 
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Project | null>(null);
   const [addingCategory, setAddingCategory] = useState(false);
 
   // Projects whose category was deleted (or never set) surface in a trailing
@@ -62,29 +46,8 @@ export function Screen() {
   const knownNames = new Set(categories.map((c) => c.name));
   const uncategorized = projects.filter((p) => !p.category || !knownNames.has(p.category));
 
-  const openProject = openId ? (projects.find((p) => p.id === openId) ?? null) : null;
-
-  const save = (p: Project, isNew: boolean) => {
-    // `hasSecrets` is a computed read-only field — never part of a create/update body.
-    const body = {
-      name: p.name,
-      path: p.path,
-      desc: p.desc,
-      category: p.category,
-      checks: p.checks,
-      budget: p.budget,
-      env: p.env,
-    };
-    if (isNew) {
-      const id = slug(p.name) || `project-${Date.now()}`;
-      createProject.mutate({ body: { ...body, id } }, { onSuccess: () => setDraft(null) });
-    } else {
-      updateProject.mutate(
-        { params: { id: p.id }, body },
-        { onSuccess: () => setOpenId(null) },
-      );
-    }
-  };
+  const openProject = (p: Project) => router.push(`/projects/${p.id}`);
+  const addProject = () => router.push("/projects/new");
 
   const renderSection = (key: string, label: string, glyph: IconName, items: Project[]) => {
     const empty = items.length === 0;
@@ -130,7 +93,7 @@ export function Screen() {
               <ProjectCard
                 budget={budgetByProject.get(p.id)}
                 key={p.id}
-                onOpen={(x) => setOpenId(x.id)}
+                onOpen={openProject}
                 project={p}
               />
             ))}
@@ -149,11 +112,7 @@ export function Screen() {
               <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
                 {t("addCategory")}
               </Button>
-              <Button
-                icon="plus"
-                intent="primary"
-                onClick={() => setDraft(newProjectDraft(categories[0]?.name))}
-              >
+              <Button icon="plus" intent="primary" onClick={addProject}>
                 {t("addProject")}
               </Button>
             </>
@@ -172,7 +131,7 @@ export function Screen() {
             description={t("emptyDescription")}
             glyph="code"
             hint={t("emptyHint")}
-            onAction={() => setDraft(newProjectDraft())}
+            onAction={addProject}
             title={t("emptyTitle")}
           />
         ) : (
@@ -190,35 +149,6 @@ export function Screen() {
           </>
         )}
       </Stack>
-
-      {openProject && (
-        <ProjectModal
-          categories={categories}
-          isNew={false}
-          key={openProject.id}
-          onClose={() => setOpenId(null)}
-          onDelete={(id) =>
-            deleteProject.mutate({ params: { id } }, { onSuccess: () => setOpenId(null) })
-          }
-          onDeleteSecrets={(id) => deleteSecrets.mutate({ params: { id } })}
-          onSave={save}
-          onSetSecrets={(id, secrets) => setSecrets.mutate({ params: { id }, body: secrets })}
-          project={openProject}
-          settingSecrets={setSecrets.isPending || deleteSecrets.isPending}
-        />
-      )}
-
-      {draft && (
-        <ProjectModal
-          isNew
-          categories={categories}
-          key="new-project"
-          onClose={() => setDraft(null)}
-          onDelete={() => setDraft(null)}
-          onSave={save}
-          project={draft}
-        />
-      )}
 
       {addingCategory && (
         <CategoryDialog

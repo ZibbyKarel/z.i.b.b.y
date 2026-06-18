@@ -68,18 +68,24 @@ function InboxRow({ item }: { item: ChannelItem }) {
   );
 }
 
+export interface InboxPanelProps {
+  /** Scope the feed to one project's items; omit for the global (all-projects) inbox. */
+  projectId?: string;
+}
+
 /**
- * The inbox feed on /integrations (decision 17): a minimal, read-only list of
- * recent ingested channel items — state, category, a preview and a link cue when a
- * Tier-3 reply is waiting in the approvals queue. The richer briefing view is
- * Phase 6's job. Hidden entirely when nothing has been ingested.
+ * The inbox feed: a minimal, read-only list of recent ingested channel items —
+ * state, category, a preview and a link cue when a Tier-3 reply is waiting in the
+ * approvals queue. Rendered both globally (Overview, all projects) and scoped to a
+ * single project (project detail). Hidden entirely when nothing matches.
  */
-export function InboxPanel() {
+export function InboxPanel({ projectId }: InboxPanelProps) {
   const t = useTranslations();
   const { data: items = [] } = useChannelItemsQuery();
-  if (items.length === 0) return null;
+  const scoped = projectId ? items.filter((i) => i.projectId === projectId) : items;
+  if (scoped.length === 0) return null;
 
-  const recent = [...items].reverse().slice(0, 12);
+  const recent = [...scoped].reverse().slice(0, 12);
   return (
     <Container data-testid={InboxPanelTestId.Root}>
       <HudPanel title={t("inbox.title")}>

@@ -117,9 +117,14 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     // crafted message naming a project gains nothing but a grouping label).
     const integration = await this.integrations.get(item.integrationId).catch(() => null)
     const projects = await this.projects.list().catch(() => [])
-    const matched = matchProject(projects, {
-      text: `${item.text} ${integration?.name ?? item.integrationId}`,
-    })
+    // The integration's stored `projectId` (one project = one company) is the
+    // authoritative owner; fall back to text/name attribution only when an item's
+    // integration has no stored project (legacy / un-owned).
+    const owned = integration?.projectId
+      ? (projects.find((p) => p.id === integration.projectId) ?? null)
+      : null
+    const matched =
+      owned ?? matchProject(projects, { text: `${item.text} ${integration?.name ?? item.integrationId}` })
     // Enforce per-project autonomy policy (M2): VIP escalation and respond_as.
     const isVip = matched ? this.isVipSender(item.from, matched) : false
     const forceT3 = matched ? this.forcesTier3(matched, isVip) : false
