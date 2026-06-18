@@ -1,9 +1,10 @@
 import { Controller, Inject } from "@nestjs/common"
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import type { CredentialsInput, Integration } from "@zibby/contracts"
+import type { Integration } from "@zibby/contracts"
 import { integrationsContract } from "@zibby/contracts"
 import { makeErrorMapper } from "../shared/http/error-mapping"
 import { CONNECTION_TESTER, type ConnectionTester } from "./connection-tester"
+import { credentialMatchesKind } from "./credential-kind"
 import { CredentialsStore } from "./credentials.store"
 import {
   IntegrationConflictError,
@@ -36,11 +37,6 @@ export class IntegrationsController {
   /** Layer the read-time `hasCredentials` onto an entity for the wire. */
   private async withCredentialState(integration: Integration): Promise<Integration> {
     return { ...integration, hasCredentials: await this.credentials.has(integration.id) }
-  }
-
-  /** The credential kind required by an integration kind (closed mapping). */
-  private credentialMatchesKind(kind: Integration["kind"], creds: CredentialsInput): boolean {
-    return kind === "slack" ? "token" in creds : "password" in creds
   }
 
   @TsRestHandler(integrationsContract)
@@ -85,7 +81,7 @@ export class IntegrationsController {
       setCredentials: ({ params: { id }, body }) =>
         errors.or404(id, async () => {
           const existing = await this.storage.get(id)
-          if (!this.credentialMatchesKind(existing.kind, body)) {
+          if (!credentialMatchesKind(existing.kind, body)) {
             throw new CredentialKindViolation()
           }
           await this.credentials.write(id, body)
