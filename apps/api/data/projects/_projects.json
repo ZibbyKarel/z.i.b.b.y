@@ -3,8 +3,56 @@
     "id": "zibby-self",
     "name": "ZIBBY (self)",
     "path": "/Users/zibby/Workspace/z.i.b.b.y",
-    "desc": "ZIBBY's own repo — self-development target for the roadmap (M1–M8) delivery run. Worktree-isolated; PR is the gate.",
-    "category": "Test",
-    "checks": ["pnpm install --frozen-lockfile", "pnpm lint", "pnpm typecheck", "pnpm test"]
+    "desc": "ZIBBY's own repo — self-development target. Worktree-isolated; PR is the gate.",
+    "category": "Internal",
+    "checks": ["pnpm install --frozen-lockfile", "pnpm lint", "pnpm typecheck", "pnpm test"],
+    "budget": { "dailyRuns": 40, "weeklyRuns": 150, "monthlyRuns": 500, "maxConcurrent": 2 },
+    "identity": {
+      "people": [
+        { "name": "Karel", "role": "Operator", "vip": true, "comms_style": "direct, technical, terse" }
+      ]
+    },
+    "autonomy_policy": {
+      "can_do_alone": ["reply", "create_task", "summarize"],
+      "always_ask": ["merge", "deploy", "delete"],
+      "vip_escalation": false,
+      "respond_as": "autonomous"
+    },
+    "daily_rhythm": { "standup_time": "09:00", "format": "yesterday / today / blockers", "active_hours": "09:00-19:00" }
+  },
+  {
+    "id": "acme-app",
+    "name": "Acme App",
+    "path": "/Users/zibby/Workspace/acme-app",
+    "desc": "Client engagement — storefront + orders dashboard. Slack + email + Jira + GitHub monitored.",
+    "category": "Client",
+    "checks": ["pnpm lint", "pnpm test", "pnpm build"],
+    "budget": { "dailyRuns": 20, "monthlyRuns": 300, "maxConcurrent": 2 },
+    "env": { "NODE_ENV": "production", "API_BASE": "https://api.acme.com" },
+    "identity": {
+      "people": [
+        { "name": "Jane Client", "role": "Product Owner", "vip": true, "comms_style": "concise, formal, prefers bullet points" },
+        { "name": "Bob Dev", "role": "Engineer", "comms_style": "casual" }
+      ]
+    },
+    "autonomy_policy": {
+      "can_do_alone": ["reply", "create_task"],
+      "always_ask": ["send_invoice", "send_email", "merge"],
+      "vip_escalation": true,
+      "respond_as": "draft_only"
+    },
+    "daily_rhythm": { "standup_time": "09:30", "format": "what shipped / what's blocked / decisions needed", "active_hours": "08:00-17:00" }
+  },
+  {
+    "id": "media-vault",
+    "name": "Media Vault",
+    "path": "/Users/zibby/Workspace/media-vault",
+    "desc": "Internal tool — personal media indexer. Low autonomy, no external comms.",
+    "category": "Internal",
+    "checks": ["pnpm test"],
+    "budget": { "dailyRuns": 10, "monthlyRuns": 100 },
+    "identity": { "people": [{ "name": "Karel", "role": "Owner", "vip": true }] },
+    "autonomy_policy": { "can_do_alone": ["summarize"], "respond_as": "draft_only" },
+    "daily_rhythm": { "standup_time": "18:00", "active_hours": "evenings" }
   }
 ]

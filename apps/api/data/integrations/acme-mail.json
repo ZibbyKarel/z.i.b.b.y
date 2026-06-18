@@ -1,0 +1,1 @@
+{"id": "acme-mail", "kind": "email", "name": "Support Inbox", "enabled": true, "config": {"kind": "email", "imapHost": "imap.fastmail.com", "imapPort": 993, "smtpHost": "smtp.fastmail.com", "smtpPort": 465, "user": "ops@acme.dev", "mailbox": "INBOX"}, "status": "connected", "lastSyncAt": "2026-06-18T08:04:00.000Z"}

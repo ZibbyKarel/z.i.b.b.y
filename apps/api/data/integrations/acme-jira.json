@@ -1,0 +1,1 @@
+{"id": "acme-jira", "kind": "jira", "name": "Acme Jira", "enabled": true, "config": {"kind": "jira", "baseUrl": "https://acme.atlassian.net", "email": "ops@acme.dev", "projectKey": "ACME", "jql": "project = ACME AND statusCategory != Done"}, "status": "connected", "lastSyncAt": "2026-06-18T08:03:00.000Z"}
