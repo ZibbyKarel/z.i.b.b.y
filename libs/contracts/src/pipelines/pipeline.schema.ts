@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema"
+import { z } from "zod";
+import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
 
 /**
  * One rung of the loop's escalation ladder: the model/thinking override applied
@@ -9,8 +9,8 @@ import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/
 export const PhaseEscalationSchema = z.object({
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
-})
-export type PhaseEscalation = z.infer<typeof PhaseEscalationSchema>
+});
+export type PhaseEscalation = z.infer<typeof PhaseEscalationSchema>;
 
 /**
  * A phase's optional back-edge (the "tester loop"). On failure the runner jumps
@@ -27,22 +27,22 @@ export const PhaseLoopSchema = z.object({
   then: z.string().min(1),
   /** Per-retry model/thinking ladder (rung n → retry n; clamps to the last rung). */
   escalation: z.array(PhaseEscalationSchema).optional(),
-})
-export type PhaseLoop = z.infer<typeof PhaseLoopSchema>
+});
+export type PhaseLoop = z.infer<typeof PhaseLoopSchema>;
 
 /**
  * What a phase executes. `agent` (the default, so every committed `.pipeline.md`
  * parses unchanged) spawns the phase agent; `verify` runs deterministic shell
  * checks (no model, no tokens, no intents) — the "tester" of the delivery loop.
  */
-export const PipelinePhaseTypeSchema = z.enum(["agent", "verify"])
-export type PipelinePhaseType = z.infer<typeof PipelinePhaseTypeSchema>
+export const PipelinePhaseTypeSchema = z.enum(["agent", "verify"]);
+export type PipelinePhaseType = z.infer<typeof PipelinePhaseTypeSchema>;
 
 /**
  * Default verify-phase checks, shared by the API runner (fallback when neither
  * the phase nor the project declares its own) and the web display.
  */
-export const DEFAULT_VERIFY_CHECKS = ["pnpm lint", "npx tsc --noEmit", "pnpm test"] as const
+export const DEFAULT_VERIFY_CHECKS = ["pnpm lint", "npx tsc --noEmit", "pnpm test"] as const;
 
 /**
  * One stage of a pipeline. Taken 1:1 from the dashboard's `PipelinePhase`, plus an
@@ -66,8 +66,8 @@ export const PipelinePhaseSchema = z.object({
   /** Verify phases only: shell commands run with `&&` (override project checks). */
   commands: z.array(z.string().min(1)).optional(),
   loop: PhaseLoopSchema.optional(),
-})
-export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>
+});
+export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>;
 
 /**
  * What a pipeline does with its finished work — a terminal *delivery sink*,
@@ -87,8 +87,8 @@ export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>
 export const PipelinePrOutputSchema = z.object({
   type: z.literal("pr"),
   from: z.string().min(1),
-})
-export type PipelinePrOutput = z.infer<typeof PipelinePrOutputSchema>
+});
+export type PipelinePrOutput = z.infer<typeof PipelinePrOutputSchema>;
 
 export const PipelineFileOutputSchema = z.object({
   type: z.literal("file"),
@@ -96,14 +96,14 @@ export const PipelineFileOutputSchema = z.object({
   /** Where `to` resolves: a project-relative path, or a vault note id. */
   dest: z.enum(["project", "vault"]),
   to: z.string().min(1),
-})
-export type PipelineFileOutput = z.infer<typeof PipelineFileOutputSchema>
+});
+export type PipelineFileOutput = z.infer<typeof PipelineFileOutputSchema>;
 
 export const PipelineOutputSchema = z.discriminatedUnion("type", [
   PipelinePrOutputSchema,
   PipelineFileOutputSchema,
-])
-export type PipelineOutput = z.infer<typeof PipelineOutputSchema>
+]);
+export type PipelineOutput = z.infer<typeof PipelineOutputSchema>;
 
 /** The plain object form — `update` derives from this (a refined schema can't `.omit`). */
 const PipelineObject = z.object({
@@ -114,14 +114,18 @@ const PipelineObject = z.object({
   /** Terminal delivery sinks (default none, so every committed pipeline parses). */
   outputs: z.array(PipelineOutputSchema).default([]),
   instructions: z.string().min(1),
-})
+});
 
 /** Shared phase/loop validation (used by the full schema; storage re-validates updates). */
 function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx): void {
-  const ids = p.phases.map((ph) => ph.id)
-  const idSet = new Set(ids)
+  const ids = p.phases.map((ph) => ph.id);
+  const idSet = new Set(ids);
   if (idSet.size !== ids.length) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "phase ids must be unique", path: ["phases"] })
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "phase ids must be unique",
+      path: ["phases"],
+    });
   }
   p.phases.forEach((ph, i) => {
     if (ph.type === "agent") {
@@ -131,7 +135,7 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
             code: z.ZodIssueCode.custom,
             message: `an agent phase requires "${key}"`,
             path: ["phases", i, key],
-          })
+          });
         }
       }
     } else {
@@ -141,36 +145,36 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
           code: z.ZodIssueCode.custom,
           message: "a verify phase must not name an agent",
           path: ["phases", i, "agent"],
-        })
+        });
       }
     }
-    if (!ph.loop) return
+    if (!ph.loop) return;
     for (const [key, target] of [
       ["to", ph.loop.to],
       ["then", ph.loop.then],
     ] as const) {
-      const literals = key === "then" ? ["fail", "park"] : ["fail"]
+      const literals = key === "then" ? ["fail", "park"] : ["fail"];
       if (!literals.includes(target) && !idSet.has(target)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `loop.${key} "${target}" is not an existing phase id`,
           path: ["phases", i, "loop", key],
-        })
+        });
       }
     }
-  })
+  });
   // An output sink draws from a phase artifact — its `from` must be something a
   // phase actually `produces`, or it would read an empty handoff at delivery time.
-  const produced = new Set(p.phases.map((ph) => ph.produces).filter(Boolean))
+  const produced = new Set(p.phases.map((ph) => ph.produces).filter(Boolean));
   p.outputs.forEach((out, i) => {
     if (!produced.has(out.from)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `output.from "${out.from}" is not produced by any phase`,
         path: ["outputs", i, "from"],
-      })
+      });
     }
-  })
+  });
 }
 
 /**
@@ -180,13 +184,13 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
  * `loop.to`/`loop.then` must name an existing phase id (or `"fail"`), phase ids
  * must be unique, and per-`type` field requirements hold.
  */
-export const PipelineSchema = PipelineObject.superRefine(refinePipeline)
-export type Pipeline = z.infer<typeof PipelineSchema>
+export const PipelineSchema = PipelineObject.superRefine(refinePipeline);
+export type Pipeline = z.infer<typeof PipelineSchema>;
 
 /** Body accepted by `createPipeline` — full entity, with loop targets validated. */
-export const CreatePipelineSchema = PipelineSchema
-export type CreatePipelineInput = z.infer<typeof CreatePipelineSchema>
+export const CreatePipelineSchema = PipelineSchema;
+export type CreatePipelineInput = z.infer<typeof CreatePipelineSchema>;
 
 /** Body accepted by `updatePipeline` — every field optional (partial), id excluded. */
-export const UpdatePipelineSchema = PipelineObject.omit({ id: true }).partial()
-export type UpdatePipelineInput = z.infer<typeof UpdatePipelineSchema>
+export const UpdatePipelineSchema = PipelineObject.omit({ id: true }).partial();
+export type UpdatePipelineInput = z.infer<typeof UpdatePipelineSchema>;

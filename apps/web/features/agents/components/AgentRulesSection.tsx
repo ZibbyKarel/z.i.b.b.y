@@ -89,7 +89,9 @@ function LinkedRuleRow({
               <Stack wrap align="center" direction="row" gap="100">
                 <MatcherText andLabel={andLabel} match={rule.match} />
                 <DecisionBadge decision={rule.decision} label={decisionLabel} />
-                {rule.decision === "ask" && <ResolveChips resolve={rule.resolve} youLabel={youLabel} />}
+                {rule.decision === "ask" && (
+                  <ResolveChips resolve={rule.resolve} youLabel={youLabel} />
+                )}
               </Stack>
             </Stack>
           </Container>
@@ -128,7 +130,10 @@ export function AgentRulesSection({
   };
 
   const linked = useMemo(
-    () => gateRuleIds.map((id) => globalRules.find((r) => r.id === id)).filter((r): r is GlobalGateRule => Boolean(r)),
+    () =>
+      gateRuleIds
+        .map((id) => globalRules.find((r) => r.id === id))
+        .filter((r): r is GlobalGateRule => Boolean(r)),
     [gateRuleIds, globalRules],
   );
   const available = useMemo(
@@ -163,7 +168,13 @@ export function AgentRulesSection({
         ) : (
           <Stack gap="100">
             {inherited.map((rule) => (
-              <RuleCard locked key={rule.id} rule={rule} {...ruleProps} decisionLabel={decisionLabel(rule.decision)} />
+              <RuleCard
+                locked
+                key={rule.id}
+                rule={rule}
+                {...ruleProps}
+                decisionLabel={decisionLabel(rule.decision)}
+              />
             ))}
           </Stack>
         )}
@@ -211,7 +222,12 @@ export function AgentRulesSection({
 
       {/* 3) The agent's own rules — editable */}
       <Stack gap="100">
-        <GroupHeading count={gates.length} icon="bolt" title={t("ownTitle", { agent: agentName })} tone="accent" />
+        <GroupHeading
+          count={gates.length}
+          icon="bolt"
+          title={t("ownTitle", { agent: agentName })}
+          tone="accent"
+        />
         {ownDisplay.length === 0 ? (
           <Typography mono size="xs" type="note" variant="tertiary">
             {t("noOwnRules")}

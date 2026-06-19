@@ -1,13 +1,6 @@
 "use client";
 import type { ReactNode, Ref } from "react";
-import {
-  createContext,
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useId, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 import { focusRingInset } from "../../utils/focus";
 
@@ -33,16 +26,11 @@ export interface AccordionProps {
   className?: string;
 }
 
-export function Accordion({
-  children,
-  single = false,
-  className,
-}: AccordionProps) {
+export function Accordion({ children, single = false, className }: AccordionProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const claimed = useRef(false);
 
-  const toggle = (id: string) =>
-    setOpenId((prev) => (prev === id ? null : id));
+  const toggle = (id: string) => setOpenId((prev) => (prev === id ? null : id));
 
   const claimDefault = (id: string) => {
     if (!claimed.current) {
@@ -107,13 +95,13 @@ export interface AccordionDetailsProps {
   className?: string;
 }
 
-export function AccordionDetails({
-  children,
-  expanded = false,
-  className,
-}: AccordionDetailsProps) {
+export function AccordionDetails({ children, expanded = false, className }: AccordionDetailsProps) {
   if (!expanded) return null;
-  return <div className={cn("px-3.5 py-3", className)} data-testid={AccordionTestId.Details}>{children}</div>;
+  return (
+    <div className={cn("px-3.5 py-3", className)} data-testid={AccordionTestId.Details}>
+      {children}
+    </div>
+  );
 }
 
 export interface AccordionItemProps {
@@ -122,11 +110,7 @@ export interface AccordionItemProps {
   defaultExpanded?: boolean;
 }
 
-export function AccordionItem({
-  summary,
-  children,
-  defaultExpanded = false,
-}: AccordionItemProps) {
+export function AccordionItem({ summary, children, defaultExpanded = false }: AccordionItemProps) {
   const id = useId();
   const ctx = useContext(AccordionContext);
   const [localExpanded, setLocalExpanded] = useState(defaultExpanded);
@@ -140,9 +124,7 @@ export function AccordionItem({
   }, []);
 
   const expanded = ctx?.single ? ctx.openId === id : localExpanded;
-  const onToggle = ctx?.single
-    ? () => ctx.toggle(id)
-    : () => setLocalExpanded((v) => !v);
+  const onToggle = ctx?.single ? () => ctx.toggle(id) : () => setLocalExpanded((v) => !v);
 
   return (
     <>

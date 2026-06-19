@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Container,
-  Divider,
-  Stack,
-  Stat,
-  StatusDot,
-  Typography,
-} from "@zibby/design-system";
+import { Container, Divider, Stack, Stat, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { useIntegrationsQuery } from "../integrations/queries";
@@ -78,22 +71,10 @@ export function SummaryWidget() {
                   {t(healthDetail)}
                 </Typography>
               </Stack>
-              <Typography
-                leading="tight"
-                tracking="tighter"
-                type="pageTitle"
-                weight="semibold"
-              >
+              <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
                 {t("overview.title")}{" "}
-                <Typography
-                  as="span"
-                  type="pageTitle"
-                  variant="secondary"
-                  weight="semibold"
-                >
-                  {isFresh
-                    ? t("overview.emptyTitle")
-                    : t("overview.allRunning")}
+                <Typography as="span" type="pageTitle" variant="secondary" weight="semibold">
+                  {isFresh ? t("overview.emptyTitle") : t("overview.allRunning")}
                 </Typography>
               </Typography>
             </Stack>

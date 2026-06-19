@@ -9,8 +9,7 @@
  * - `focusRingOffset` — ring lifted off the element with a surface-colored gap,
  *   for filled controls (buttons, drop zones) where the ring needs contrast.
  */
-export const focusRing =
-  "outline-none focus-visible:ring-2 focus-visible:ring-accent";
+export const focusRing = "outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 export const focusRingInset =
   "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";

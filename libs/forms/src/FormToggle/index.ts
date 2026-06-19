@@ -1,2 +1,2 @@
-export { FormToggle } from "./FormToggle"
-export type { FormToggleProps } from "./FormToggle"
+export { FormToggle } from "./FormToggle";
+export type { FormToggleProps } from "./FormToggle";

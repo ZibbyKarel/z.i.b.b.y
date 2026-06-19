@@ -175,9 +175,7 @@ export function Dropdown<T extends string = string>({
         type="button"
       >
         {current?.code !== undefined && (
-          <span className={cn("text-accent", isField && "font-mono text-sm")}>
-            {current.code}
-          </span>
+          <span className={cn("text-accent", isField && "font-mono text-sm")}>{current.code}</span>
         )}
         <span
           className={cn(
@@ -250,9 +248,7 @@ export function Dropdown<T extends string = string>({
                         </span>
                       )}
                       <span className="text-md text-foreground flex-1">{opt.label}</span>
-                      {selected && (
-                        <Icon name="check" size="sm" stroke="medium" tone="accent" />
-                      )}
+                      {selected && <Icon name="check" size="sm" stroke="medium" tone="accent" />}
                     </button>
                   );
                 })}

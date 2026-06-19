@@ -1,12 +1,12 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
 
 /** A cron trigger (5-field expr, evaluated in Europe/Prague) or a named event. */
 export const TriggerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("cron"), expr: z.string().min(1) }),
   z.object({ type: z.literal("event"), event: z.string().min(1) }),
-])
-export type Trigger = z.infer<typeof TriggerSchema>
+]);
+export type Trigger = z.infer<typeof TriggerSchema>;
 
 /**
  * What an automation runs when it fires. A skill can't be a target: it isn't an
@@ -43,8 +43,8 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // App ideas (M6 weekly bonus): pair the operator's research interests with the
   // latest digest trends into prototype pitches in the vault. Deterministic.
   z.object({ type: z.literal("app-ideas") }),
-])
-export type Target = z.infer<typeof TargetSchema>
+]);
+export type Target = z.infer<typeof TargetSchema>;
 
 /**
  * A scheduled/triggered run. The daemon fires these without prompting — autonomy
@@ -65,15 +65,15 @@ export const AutomationSchema = z.object({
   system: z.boolean().default(false),
   /** ISO timestamp of the last fire, for idempotence + display. */
   lastFiredAt: z.string().datetime().optional(),
-})
-export type Automation = z.infer<typeof AutomationSchema>
+});
+export type Automation = z.infer<typeof AutomationSchema>;
 
-export const CreateAutomationSchema = AutomationSchema.omit({ lastFiredAt: true, system: true })
-export type CreateAutomationInput = z.infer<typeof CreateAutomationSchema>
+export const CreateAutomationSchema = AutomationSchema.omit({ lastFiredAt: true, system: true });
+export type CreateAutomationInput = z.infer<typeof CreateAutomationSchema>;
 
 export const UpdateAutomationSchema = AutomationSchema.omit({
   id: true,
   lastFiredAt: true,
   system: true,
-}).partial()
-export type UpdateAutomationInput = z.infer<typeof UpdateAutomationSchema>
+}).partial();
+export type UpdateAutomationInput = z.infer<typeof UpdateAutomationSchema>;

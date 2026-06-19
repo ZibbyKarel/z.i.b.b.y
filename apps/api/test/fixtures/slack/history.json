@@ -1,9 +1,26 @@
 {
   "ok": true,
   "messages": [
-    { "type": "message", "user": "U123", "text": "The app crashes on login, stack trace attached", "ts": "1700000100.000200", "thread_ts": "1700000100.000200" },
-    { "type": "message", "user": "U456", "text": "Can you share the latest status?", "ts": "1700000200.000300" },
-    { "type": "message", "subtype": "channel_join", "user": "U789", "text": "joined", "ts": "1700000050.000100" },
+    {
+      "type": "message",
+      "user": "U123",
+      "text": "The app crashes on login, stack trace attached",
+      "ts": "1700000100.000200",
+      "thread_ts": "1700000100.000200"
+    },
+    {
+      "type": "message",
+      "user": "U456",
+      "text": "Can you share the latest status?",
+      "ts": "1700000200.000300"
+    },
+    {
+      "type": "message",
+      "subtype": "channel_join",
+      "user": "U789",
+      "text": "joined",
+      "ts": "1700000050.000100"
+    },
     { "type": "message", "bot_id": "B000", "text": "automated notice", "ts": "1700000300.000400" }
   ]
 }

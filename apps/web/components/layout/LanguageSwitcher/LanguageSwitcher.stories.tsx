@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container } from "@zibby/design-system"
-import { LanguageSwitcher } from "./LanguageSwitcher"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container } from "@zibby/design-system";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const meta: Meta<typeof LanguageSwitcher> = {
   title: "Dashboard/Layout/LanguageSwitcher",
@@ -13,9 +13,9 @@ const meta: Meta<typeof LanguageSwitcher> = {
       </Container>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof LanguageSwitcher>
+type Story = StoryObj<typeof LanguageSwitcher>;
 
-export const Default: Story = {}
+export const Default: Story = {};

@@ -32,17 +32,9 @@ const statusDotTone: Record<AgentRun["status"], DotTone> = {
 };
 
 /** Live states — the only ones that pulse. */
-const liveStatuses: ReadonlySet<AgentRun["status"]> = new Set([
-  "running",
-  "awaiting-approval",
-]);
+const liveStatuses: ReadonlySet<AgentRun["status"]> = new Set(["running", "awaiting-approval"]);
 
-export function AgentRow({
-  run,
-  onOpen,
-  onStop,
-  divider = true,
-}: AgentRowProps) {
+export function AgentRow({ run, onOpen, onStop, divider = true }: AgentRowProps) {
   const t = useTranslations("agents");
   const name = run.agentId;
 
@@ -68,17 +60,11 @@ export function AgentRow({
     <>
       <Container padding={["150", "0"]}>
         <Stack align="center" direction="row" gap="150">
-          <StatusDot
-            pulse={liveStatuses.has(run.status)}
-            tone={statusDotTone[run.status]}
-          />
+          <StatusDot pulse={liveStatuses.has(run.status)} tone={statusDotTone[run.status]} />
           <Container grow minW0>
             {onOpen ? (
               <Stack>
-                <Pressable
-                  aria-label={t("openAria", { name })}
-                  onClick={() => onOpen(run)}
-                >
+                <Pressable aria-label={t("openAria", { name })} onClick={() => onOpen(run)}>
                   <Container textAlign="left">{body}</Container>
                 </Pressable>
               </Stack>

@@ -16,7 +16,13 @@ export interface IntegrationCardProps {
   togglingEnabled?: boolean;
 }
 
-const KIND_GLYPH = { slack: "plug", email: "server", jira: "checkpoint", github: "branch", calendar: "clock" } as const;
+const KIND_GLYPH = {
+  slack: "plug",
+  email: "server",
+  jira: "checkpoint",
+  github: "branch",
+  calendar: "clock",
+} as const;
 
 /** Format a sync timestamp as a short, locale-agnostic caption (or a dash). */
 function lastSyncCaption(iso: string | undefined): string {

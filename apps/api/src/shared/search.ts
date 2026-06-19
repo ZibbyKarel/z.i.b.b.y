@@ -9,9 +9,9 @@
 
 /** True when `query` is a case-insensitive substring of any provided field. */
 export function matchesQuery(fields: Array<string | undefined>, query: string): boolean {
-  const needle = query.trim().toLowerCase()
-  if (needle === "") return false
-  return fields.some((field) => field !== undefined && field.toLowerCase().includes(needle))
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return false;
+  return fields.some((field) => field !== undefined && field.toLowerCase().includes(needle));
 }
 
 /**
@@ -23,6 +23,6 @@ export function searchByText<T>(
   query: string,
   fields: (item: T) => Array<string | undefined>,
 ): T[] {
-  if (query.trim() === "") return []
-  return items.filter((item) => matchesQuery(fields(item), query))
+  if (query.trim() === "") return [];
+  return items.filter((item) => matchesQuery(fields(item), query));
 }

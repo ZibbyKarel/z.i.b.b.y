@@ -92,7 +92,9 @@ export function Dialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] backdrop-blur-sm"
       data-testid={DialogTestId.Overlay}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
       role="presentation"
     >
       <div
@@ -102,10 +104,21 @@ export function Dialog({
         data-testid={DialogTestId.Root}
         ref={dialogRef}
         role="dialog"
-        style={{ width: dialogWidthPx[width], maxWidth: "calc(100vw - 32px)", height: dialogHeight[width] }}
+        style={{
+          width: dialogWidthPx[width],
+          maxWidth: "calc(100vw - 32px)",
+          height: dialogHeight[width],
+        }}
         tabIndex={-1}
       >
-        {title && <DialogHeader closeLabel={closeLabel} description={description} onClose={onClose} title={title} />}
+        {title && (
+          <DialogHeader
+            closeLabel={closeLabel}
+            description={description}
+            onClose={onClose}
+            title={title}
+          />
+        )}
         {children && <DialogBody>{children}</DialogBody>}
         {actions && <DialogFooter>{actions}</DialogFooter>}
       </div>
@@ -125,9 +138,17 @@ function DialogHeader({
   closeLabel?: string;
 }) {
   return (
-    <div className="px-5 pt-4 pb-[14px] border-b border-border shrink-0" data-testid={DialogTestId.Header}>
+    <div
+      className="px-5 pt-4 pb-[14px] border-b border-border shrink-0"
+      data-testid={DialogTestId.Header}
+    >
       <Row gap="150" justify="between">
-        <div className="font-mono font-semibold text-md text-foreground" data-testid={DialogTestId.Title}>{title}</div>
+        <div
+          className="font-mono font-semibold text-md text-foreground"
+          data-testid={DialogTestId.Title}
+        >
+          {title}
+        </div>
         {onClose && (
           <button
             aria-label={closeLabel}
@@ -143,7 +164,12 @@ function DialogHeader({
         )}
       </Row>
       {description && (
-        <p className="mt-1.5 text-base text-foreground-dim leading-relaxed" data-testid={DialogTestId.Description}>{description}</p>
+        <p
+          className="mt-1.5 text-base text-foreground-dim leading-relaxed"
+          data-testid={DialogTestId.Description}
+        >
+          {description}
+        </p>
       )}
     </div>
   );
@@ -159,8 +185,13 @@ export function DialogBody({ children }: { children: ReactNode }) {
 
 function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="px-5 pt-3 pb-4 border-t border-border shrink-0" data-testid={DialogTestId.Footer}>
-      <Row gap="100" justify="end">{children}</Row>
+    <div
+      className="px-5 pt-3 pb-4 border-t border-border shrink-0"
+      data-testid={DialogTestId.Footer}
+    >
+      <Row gap="100" justify="end">
+        {children}
+      </Row>
     </div>
   );
 }

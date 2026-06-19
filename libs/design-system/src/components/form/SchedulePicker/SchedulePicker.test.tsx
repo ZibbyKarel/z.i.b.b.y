@@ -62,9 +62,7 @@ describe("SchedulePicker", () => {
 
   it("emits the picked day of month", async () => {
     const onValueChange = vi.fn();
-    render(
-      <SchedulePicker onValueChange={onValueChange} value={{ ...base, repeat: "monthly" }} />,
-    );
+    render(<SchedulePicker onValueChange={onValueChange} value={{ ...base, repeat: "monthly" }} />);
     const monthDay = screen.getByTestId(SchedulePickerTestId.MonthDay);
     await userEvent.click(within(monthDay).getByTestId(DropdownTestId.Trigger));
     // Options render in a portal (document.body), so query them from `screen`, not

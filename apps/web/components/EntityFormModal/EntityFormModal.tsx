@@ -1,13 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Container,
-  Dialog,
-  IconTile,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Container, Dialog, IconTile, Stack, Typography } from "@zibby/design-system";
 import type { DialogWidth, IconName } from "@zibby/design-system";
 import type { EntityFormValues, FieldSchema } from "./types";
 import { useEntityForm } from "./useEntityForm";
@@ -46,8 +39,16 @@ export function EntityFormModal({
     <Dialog
       actions={
         <>
-          <Button intent="ghost" onClick={onClose}>{t("cancel")}</Button>
-          <Button disabled={!canSubmit} form="entity-form" icon="plus" intent="primary" type="submit">
+          <Button intent="ghost" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button
+            disabled={!canSubmit}
+            form="entity-form"
+            icon="plus"
+            intent="primary"
+            type="submit"
+          >
             {submitLabel}
           </Button>
         </>
@@ -58,9 +59,13 @@ export function EntityFormModal({
         <Stack align="center" direction="row" gap="150">
           <IconTile glyph={glyph} size="md" />
           <Container minW0>
-            <Typography mono size="xl" type="note" weight="bold">{title}</Typography>
+            <Typography mono size="xl" type="note" weight="bold">
+              {title}
+            </Typography>
             {subtitle && (
-              <Typography size="base" type="note" variant="secondary">{subtitle}</Typography>
+              <Typography size="base" type="note" variant="secondary">
+                {subtitle}
+              </Typography>
             )}
           </Container>
         </Stack>
@@ -76,12 +81,7 @@ export function EntityFormModal({
       >
         <Stack gap="200">
           {fields.map((f) => (
-            <EntityField
-              field={f}
-              key={f.name}
-              onChange={set}
-              value={values[f.name] ?? ""}
-            />
+            <EntityField field={f} key={f.name} onChange={set} value={values[f.name] ?? ""} />
           ))}
           {preview && <FilePreview preview={preview} />}
         </Stack>

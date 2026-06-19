@@ -42,7 +42,7 @@ import { link } from "./link";
 import { warn } from "./warn";
 import { arrow } from "./arrow";
 import { butlerSign } from "./butlerSign";
-import { pin } from "./pin"
+import { pin } from "./pin";
 import { mic } from "./mic";
 import { trash } from "./trash";
 

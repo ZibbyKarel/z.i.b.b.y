@@ -1,11 +1,4 @@
-import {
-  Button,
-  Card,
-  Container,
-  IconTile,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Card, Container, IconTile, Stack, Typography } from "@zibby/design-system";
 import type { IconName } from "@zibby/design-system";
 
 export interface EmptyStateProps {

@@ -1,24 +1,24 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { type Category, CategorySchema, type CreateCategoryInput } from "@zibby/contracts"
-import { ensureDir, safeJson, writeFileAtomic } from "../file-storage"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { type Category, CategorySchema, type CreateCategoryInput } from "@zibby/contracts";
+import { ensureDir, safeJson, writeFileAtomic } from "../file-storage";
 
 /** Manifest file holding a category taxonomy, alongside its resource's data files. */
-export const CATEGORY_MANIFEST_FILE = "_categories.json"
+export const CATEGORY_MANIFEST_FILE = "_categories.json";
 
 /** Raised when creating a category whose name is already taken. */
 export class CategoryConflictError extends Error {
   constructor(public readonly name: string) {
-    super(`Category "${name}" already exists`)
-    this.name = "CategoryConflictError"
+    super(`Category "${name}" already exists`);
+    this.name = "CategoryConflictError";
   }
 }
 
 /** Raised when a category to delete does not exist in the manifest. */
 export class CategoryNotFoundError extends Error {
   constructor(public readonly name: string) {
-    super(`Category "${name}" not found`)
-    this.name = "CategoryNotFoundError"
+    super(`Category "${name}" not found`);
+    this.name = "CategoryNotFoundError";
   }
 }
 
@@ -35,50 +35,50 @@ export class CategoryNotFoundError extends Error {
  * its own data dir). The agents catalog keeps its own historical copy.
  */
 export abstract class CategoryManifestStore {
-  protected readonly dir: string
-  protected readonly file: string
+  protected readonly dir: string;
+  protected readonly file: string;
 
   protected constructor(dir: string) {
-    this.dir = path.resolve(dir)
-    this.file = path.join(this.dir, CATEGORY_MANIFEST_FILE)
+    this.dir = path.resolve(dir);
+    this.file = path.join(this.dir, CATEGORY_MANIFEST_FILE);
   }
 
   async list(): Promise<Category[]> {
-    const raw = await fs.readFile(this.file, "utf8").catch(() => null)
-    if (raw === null) return []
+    const raw = await fs.readFile(this.file, "utf8").catch(() => null);
+    if (raw === null) return [];
     // A hand-corrupted manifest reads as empty rather than crashing the API.
-    const parsed = safeJson(raw)
-    if (!Array.isArray(parsed)) return []
+    const parsed = safeJson(raw);
+    if (!Array.isArray(parsed)) return [];
     // Drop any entry that no longer matches the schema instead of failing the
     // whole listing (mirrors how the entity listings skip corrupt files).
     return parsed.flatMap((entry) => {
-      const result = CategorySchema.safeParse(entry)
-      return result.success ? [result.data] : []
-    })
+      const result = CategorySchema.safeParse(entry);
+      return result.success ? [result.data] : [];
+    });
   }
 
   async create(input: CreateCategoryInput): Promise<Category> {
-    const categories = await this.list()
+    const categories = await this.list();
     if (categories.some((c) => c.name === input.name)) {
-      throw new CategoryConflictError(input.name)
+      throw new CategoryConflictError(input.name);
     }
-    const category: Category = { name: input.name, glyph: input.glyph }
-    await this.writeAtomic([...categories, category])
-    return category
+    const category: Category = { name: input.name, glyph: input.glyph };
+    await this.writeAtomic([...categories, category]);
+    return category;
   }
 
   /** Remove a category from the manifest. The caller enforces the "empty" policy. */
   async delete(name: string): Promise<void> {
-    const categories = await this.list()
+    const categories = await this.list();
     if (!categories.some((c) => c.name === name)) {
-      throw new CategoryNotFoundError(name)
+      throw new CategoryNotFoundError(name);
     }
-    await this.writeAtomic(categories.filter((c) => c.name !== name))
+    await this.writeAtomic(categories.filter((c) => c.name !== name));
   }
 
   /** Write via a temp file + atomic rename so a crash can't leave a torn manifest. */
   private async writeAtomic(categories: Category[]): Promise<void> {
-    await ensureDir(this.dir)
-    await writeFileAtomic(this.file, `${JSON.stringify(categories, null, 2)}\n`)
+    await ensureDir(this.dir);
+    await writeFileAtomic(this.file, `${JSON.stringify(categories, null, 2)}\n`);
   }
 }

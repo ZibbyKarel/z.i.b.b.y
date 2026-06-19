@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common";
 import {
   type ClassifyTaskInput,
   type MakerRef,
@@ -8,14 +8,14 @@ import {
   type TaskRouting,
   TaskRoutingSchema,
   type TaskTarget,
-} from "@zibby/contracts"
-import { AgentsStorageService } from "../agents/agents.storage.service"
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
-import { matchProject } from "../projects/project-matcher"
-import { ProjectsStorageService } from "../projects/projects.storage.service"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { KeywordScorer, detectLoopCue } from "./keyword-scorer"
-import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from "./task-router"
+} from "@zibby/contracts";
+import { AgentsStorageService } from "../agents/agents.storage.service";
+import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { matchProject } from "../projects/project-matcher";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { KeywordScorer, detectLoopCue } from "./keyword-scorer";
+import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from "./task-router";
 
 /**
  * Keyword-scorer confidence below which the verdict is not trusted to name a
@@ -23,14 +23,14 @@ import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from 
  * scorer reports 0.22 for a zero-term match and ≥ 0.55 from the first matched
  * term, so 0.5 separates "guessed the top catalog entry" from "actually matched".
  */
-export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5
+export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5;
 
 /**
  * Phase 11: the iteration fuse a synthesized loop proposes by default. The operator
  * can edit it in the dialog's "Edit" disclosure before submit; it only ever caps a
  * proposal, never an existing goal.
  */
-export const DEFAULT_GOAL_ITERATIONS = 6
+export const DEFAULT_GOAL_ITERATIONS = 6;
 
 /**
  * Classifies a free-text task to a stored agent or pipeline. It builds the
@@ -51,7 +51,7 @@ export const DEFAULT_GOAL_ITERATIONS = 6
  */
 @Injectable()
 export class TaskClassifierService {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(
     private readonly agents: AgentsStorageService,
@@ -61,15 +61,15 @@ export class TaskClassifierService {
     private readonly projects: ProjectsStorageService,
     logger: LoggerService,
   ) {
-    this.log = logger.child(TaskClassifierService.name)
+    this.log = logger.child(TaskClassifierService.name);
   }
 
   async classify(input: ClassifyTaskInput): Promise<TaskRouting | null> {
-    const candidates = await this.buildCandidates()
-    if (candidates.length === 0) return null
+    const candidates = await this.buildCandidates();
+    if (candidates.length === 0) return null;
 
-    const base = await this.route(input, candidates)
-    return this.enrich(base, input, candidates)
+    const base = await this.route(input, candidates);
+    return this.enrich(base, input, candidates);
   }
 
   /**
@@ -82,19 +82,19 @@ export class TaskClassifierService {
     candidates: RoutableTarget[],
   ): Promise<TaskRouting> {
     try {
-      const routed = await this.router.route(input, candidates)
-      if (routed && this.isCoherent(routed, candidates)) return routed
+      const routed = await this.router.route(input, candidates);
+      if (routed && this.isCoherent(routed, candidates)) return routed;
     } catch (err) {
-      this.log.warn("router failed, using keyword fallback", { error: (err as Error).message })
+      this.log.warn("router failed, using keyword fallback", { error: (err as Error).message });
     }
 
-    const scored = this.fallback.score(input, candidates)
-    if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) return scored
+    const scored = this.fallback.score(input, candidates);
+    if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) return scored;
 
     // Terminal rule: nothing matched confidently — the orchestrator takes the task.
     this.log.info("no confident match, routing to orchestrator", {
       confidence: scored?.confidence ?? 0,
-    })
+    });
     return {
       target: ORCHESTRATOR_TARGET,
       // Carry the weak score through so the UI still reads this as a low-confidence
@@ -106,7 +106,7 @@ export class TaskClassifierService {
       mode: "single",
       proposedGoal: null,
       paths: [],
-    }
+    };
   }
 
   /**
@@ -122,10 +122,10 @@ export class TaskClassifierService {
     input: ClassifyTaskInput,
     candidates: RoutableTarget[],
   ): Promise<TaskRouting> {
-    const looped = base.mode === "loop" || detectLoopCue(input.text)
-    const proposedGoal = looped ? this.synthesizeGoal(base.target, input, candidates) : null
-    const paths = await this.resolvePaths(input.paths ?? [])
-    return { ...base, mode: proposedGoal ? "loop" : "single", proposedGoal, paths }
+    const looped = base.mode === "loop" || detectLoopCue(input.text);
+    const proposedGoal = looped ? this.synthesizeGoal(base.target, input, candidates) : null;
+    const paths = await this.resolvePaths(input.paths ?? []);
+    return { ...base, mode: proposedGoal ? "loop" : "single", proposedGoal, paths };
   }
 
   /**
@@ -142,15 +142,15 @@ export class TaskClassifierService {
     input: ClassifyTaskInput,
     candidates: RoutableTarget[],
   ): ProposedGoal | null {
-    const maker = this.resolveMaker(target, candidates)
-    if (!maker) return null
+    const maker = this.resolveMaker(target, candidates);
+    if (!maker) return null;
     return {
       objective: input.text,
       maker,
       verifier: { kind: "checks" },
       maxIterations: DEFAULT_GOAL_ITERATIONS,
       instructions: input.text,
-    }
+    };
   }
 
   /**
@@ -161,22 +161,21 @@ export class TaskClassifierService {
    */
   private resolveMaker(target: TaskTarget, candidates: RoutableTarget[]): MakerRef | null {
     if (target.kind === "agent" || target.kind === "pipeline") {
-      return { kind: target.kind, id: target.id }
+      return { kind: target.kind, id: target.id };
     }
-    const pipelines = candidates.filter((c) => c.kind === "pipeline")
-    const preferred =
-      pipelines.find((p) => /deliver/i.test(`${p.id} ${p.name}`)) ?? pipelines[0]
-    return preferred ? { kind: "pipeline", id: preferred.id } : null
+    const pipelines = candidates.filter((c) => c.kind === "pipeline");
+    const preferred = pipelines.find((p) => /deliver/i.test(`${p.id} ${p.name}`)) ?? pipelines[0];
+    return preferred ? { kind: "pipeline", id: preferred.id } : null;
   }
 
   /** Resolve each detected path to its containing project (read-only attribution, Law 4). */
   private async resolvePaths(paths: string[]): Promise<ResolvedPath[]> {
-    if (paths.length === 0) return []
-    const projects = await this.projects.list().catch(() => [])
+    if (paths.length === 0) return [];
+    const projects = await this.projects.list().catch(() => []);
     return paths.map((path) => {
-      const project = matchProject(projects, { paths: [path] })
-      return { path, project: project ? { id: project.id, name: project.name } : null }
-    })
+      const project = matchProject(projects, { paths: [path] });
+      return { path, project: project ? { id: project.id, name: project.name } : null };
+    });
   }
 
   /** Build the rankable candidate catalog from both stores (tolerant of listing failures). */
@@ -184,7 +183,7 @@ export class TaskClassifierService {
     const [agents, pipelines] = await Promise.all([
       this.agents.list().catch(() => []),
       this.pipelines.list().catch(() => []),
-    ])
+    ]);
 
     const agentTargets: RoutableTarget[] = agents.map((a) => ({
       kind: "agent",
@@ -193,7 +192,7 @@ export class TaskClassifierService {
       glyph: a.glyph ?? "bot",
       category: a.category,
       search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
-    }))
+    }));
 
     const pipelineTargets: RoutableTarget[] = pipelines.map((p) => ({
       kind: "pipeline",
@@ -202,20 +201,20 @@ export class TaskClassifierService {
       glyph: "flow",
       // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
       search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
-    }))
+    }));
 
-    return [...agentTargets, ...pipelineTargets]
+    return [...agentTargets, ...pipelineTargets];
   }
 
   /** A verdict is usable only if it parses and names a target that's actually in the catalog. */
   private isCoherent(routing: TaskRouting, candidates: RoutableTarget[]): boolean {
-    if (!TaskRoutingSchema.safeParse(routing).success) return false
-    const target = routing.target
+    if (!TaskRoutingSchema.safeParse(routing).success) return false;
+    const target = routing.target;
     // The orchestrator is this service's own terminal rule — a router that picks
     // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10) is
     // explicit-only: it never appears in the routable catalog, so the classifier
     // must never route to one (the same posture as orchestrator).
-    if (target.kind === "orchestrator" || target.kind === "goal") return false
-    return candidates.some((c) => c.id === target.id && c.kind === target.kind)
+    if (target.kind === "orchestrator" || target.kind === "goal") return false;
+    return candidates.some((c) => c.id === target.id && c.kind === target.kind);
   }
 }

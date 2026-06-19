@@ -23,31 +23,16 @@ export function BrandLogo() {
             alt="ZIBBY"
             height={44}
             src="/z.i.b.b.y-icon.png"
-
             style={{ borderRadius: "50%" }}
             width={44}
           />
-          <Typography
-            mono
-            as="div"
-            size="2xl"
-            tracking="mono"
-            type="subtitle"
-            weight="bold"
-          >
+          <Typography mono as="div" size="2xl" tracking="mono" type="subtitle" weight="bold">
             <Stack align="center" direction="row" gap="150">
               Z<Sep />I<Sep />B<Sep />B<Sep />Y
             </Stack>
           </Typography>
         </Stack>
-        <Typography
-          mono
-          nowrap
-          size="xs"
-          tracking="tighter"
-          type="note"
-          variant="tertiary"
-        >
+        <Typography mono nowrap size="xs" tracking="tighter" type="note" variant="tertiary">
           {t("tagline")}
         </Typography>
       </Container>

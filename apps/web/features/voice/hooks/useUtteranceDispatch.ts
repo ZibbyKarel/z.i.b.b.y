@@ -4,10 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApproveMutation, useRejectMutation } from "../../approvals/mutations";
 import { useStopAgentMutation } from "../../runs/mutations";
-import {
-  useClassifyTaskMutation,
-  useCreateTaskMutation,
-} from "../../tasks/mutations";
+import { useClassifyTaskMutation, useCreateTaskMutation } from "../../tasks/mutations";
 import { extractPaths, isLowConfidence } from "../../tasks/task";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import type { DashboardApproval } from "../../approvals/approval";
@@ -49,9 +46,7 @@ const CLARIFY_CANDIDATES = 3;
  * Gate **answers** (approve/reject) are the operator's own spoken decision *at* the
  * gate — those never classify and never bypass it.
  */
-export function useUtteranceDispatch(
-  options: UseUtteranceDispatchOptions,
-): UtteranceDispatch {
+export function useUtteranceDispatch(options: UseUtteranceDispatchOptions): UtteranceDispatch {
   const { approvals, liveRuns, onExit, onBrief } = options;
   const router = useRouter();
   const approve = useApproveMutation();
@@ -64,9 +59,7 @@ export function useUtteranceDispatch(
   const pendingClarify = useRef<string | null>(null);
 
   const pendingApprovalId = approvals[0]?.id;
-  const activeRunId = liveRuns.find(
-    (r) => r.status === "running" && r.kind === "agent",
-  )?.runId;
+  const activeRunId = liveRuns.find((r) => r.status === "running" && r.kind === "agent")?.runId;
 
   // Actually send the task to the `/tasks` layer (the backend classifier routes it).
   const doDispatch = useCallback(
@@ -100,11 +93,7 @@ export function useUtteranceDispatch(
               .slice(0, CLARIFY_CANDIDATES)
               .map((c) => c.name)
               .join(", ");
-            setAck(
-              options
-                ? { key: "clarify", values: { options } }
-                : { key: "clarifyGeneric" },
-            );
+            setAck(options ? { key: "clarify", values: { options } } : { key: "clarifyGeneric" });
           },
           onError: () => setAck({ key: "dispatchFailed" }),
         },

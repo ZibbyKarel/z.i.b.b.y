@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Dialog,
-  type IconName,
-  IconTile,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Dialog, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
 import { AGENT_GLYPHS } from "../../state/config";
 import { DialogTitle } from "../DialogTitle/DialogTitle";
 import { FormTextInput, useFormControls, zodResolver } from "@zibby/forms";

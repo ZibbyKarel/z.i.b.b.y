@@ -86,9 +86,7 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
   const briefingText = useCallback((): string => {
     const facts = summarizeBriefing({ approvals, liveRuns, recent });
     if (facts.quiet) return t("speak.nothing");
-    const parts = [
-      t("speak.briefing", { agents: facts.agents, approvals: facts.approvals }),
-    ];
+    const parts = [t("speak.briefing", { agents: facts.agents, approvals: facts.approvals })];
     if (facts.topApprovalSkill) {
       parts.push(t("speak.topApproval", { skill: facts.topApprovalSkill }));
     }
@@ -169,7 +167,8 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
       className="fixed inset-0 z-50 flex flex-col overflow-hidden font-sans"
       role="dialog"
       style={{
-        background: "radial-gradient(ellipse 100% 85% at 50% 48%, #0b1422 0%, var(--color-background) 62%)",
+        background:
+          "radial-gradient(ellipse 100% 85% at 50% 48%, #0b1422 0%, var(--color-background) 62%)",
         animation: "v-mode-in 0.42s cubic-bezier(.22,.68,0,1.2)",
       }}
     >
@@ -240,7 +239,10 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
                     {r.pct !== null && (
                       <>
                         <div className="h-0.5 w-10 overflow-hidden rounded-full bg-border">
-                          <div className="h-full rounded-full bg-accent" style={{ width: `${r.pct}%` }} />
+                          <div
+                            className="h-full rounded-full bg-accent"
+                            style={{ width: `${r.pct}%` }}
+                          />
                         </div>
                         <Typography mono size="2xs" type="note" variant="tertiary">
                           {r.pct}%
@@ -375,7 +377,12 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
               <Typography
                 mono
                 size="2xs"
-                style={{ marginTop: 6, display: "block", letterSpacing: "0.14em", animation: "v-fade-up 0.3s ease-out" }}
+                style={{
+                  marginTop: 6,
+                  display: "block",
+                  letterSpacing: "0.14em",
+                  animation: "v-fade-up 0.3s ease-out",
+                }}
                 tone="accent"
                 type="note"
               >
@@ -429,7 +436,9 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
             background: isActive ? ACCENT : "rgba(91,141,239,0.10)",
             border: `1.5px solid ${ACCENT}`,
             color: isActive ? "var(--color-background)" : ACCENT,
-            boxShadow: isActive ? "0 0 30px rgba(91,141,239,0.38), 0 0 60px rgba(91,141,239,0.13)" : "none",
+            boxShadow: isActive
+              ? "0 0 30px rgba(91,141,239,0.38), 0 0 60px rgba(91,141,239,0.13)"
+              : "none",
           }}
           title={
             mode === "live"
@@ -481,7 +490,13 @@ export function VoiceScreen({ onExit }: VoiceScreenProps) {
           {t("send")}
         </button>
 
-        <Typography mono size="2xs" style={{ letterSpacing: "0.08em" }} type="note" variant="tertiary">
+        <Typography
+          mono
+          size="2xs"
+          style={{ letterSpacing: "0.08em" }}
+          type="note"
+          variant="tertiary"
+        >
           {mode === "live" ? t("hintLive") : t("hint")}
         </Typography>
       </div>

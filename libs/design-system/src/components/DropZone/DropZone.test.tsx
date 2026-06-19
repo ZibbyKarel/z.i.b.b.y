@@ -19,18 +19,12 @@ describe("DropZone", () => {
 
   it("forwards aria-labelledby to the root", () => {
     render(<DropZone aria-labelledby="my-label" onDrop={vi.fn()} />);
-    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute(
-      "aria-labelledby",
-      "my-label",
-    );
+    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute("aria-labelledby", "my-label");
   });
 
   it("forwards aria-describedby to the root", () => {
     render(<DropZone aria-describedby="my-desc" onDrop={vi.fn()} />);
-    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute(
-      "aria-describedby",
-      "my-desc",
-    );
+    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute("aria-describedby", "my-desc");
   });
 
   it("adds error border class when invalid", () => {

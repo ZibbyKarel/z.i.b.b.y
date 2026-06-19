@@ -29,11 +29,7 @@ export const Overview: Story = {
           value={name}
         />
         <TextInputField hint="Nápověda k poli" label="S nápovědou" placeholder="…" />
-        <TextInputField
-          error="Toto pole je povinné"
-          label="S chybou"
-          placeholder="…"
-        />
+        <TextInputField error="Toto pole je povinné" label="S chybou" placeholder="…" />
       </div>
     );
   },

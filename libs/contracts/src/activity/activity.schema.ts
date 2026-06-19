@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /**
  * The closed vocabulary of recordable activity (Phase 6.1). One kind per real,
@@ -54,8 +54,8 @@ export const ActivityKindSchema = z.enum([
   // M6 (proposes app ideas, Tier 1 — silent + recorded). A weekly pass paired interests
   // with trends into prototype pitches in the vault; the morning briefing surfaces them.
   "app-ideas-generated",
-])
-export type ActivityKind = z.infer<typeof ActivityKindSchema>
+]);
+export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 
 /**
  * The structured links an activity entry may carry — every field an OPTIONAL
@@ -82,8 +82,8 @@ export const ActivityRefsSchema = z
     status: z.string().optional(),
     noteId: z.string().optional(),
   })
-  .strict()
-export type ActivityRefs = z.infer<typeof ActivityRefsSchema>
+  .strict();
+export type ActivityRefs = z.infer<typeof ActivityRefsSchema>;
 
 /**
  * One append-only line of the accountability record. `summary` is the single
@@ -100,11 +100,11 @@ export const ActivityEntrySchema = z.object({
   traceId: z.string().optional(),
   runId: z.string().optional(),
   refs: ActivityRefsSchema,
-})
-export type ActivityEntry = z.infer<typeof ActivityEntrySchema>
+});
+export type ActivityEntry = z.infer<typeof ActivityEntrySchema>;
 
 /** The accepted `date` shape — validated in the handler so a bad value is a 422. */
-export const ACTIVITY_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+export const ACTIVITY_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Query for `GET /api/activity`. `date` defaults to today (server-side); `kinds`
@@ -116,5 +116,5 @@ export const ActivityQuerySchema = z.object({
   date: z.string().optional(),
   kinds: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
-})
-export type ActivityQuery = z.infer<typeof ActivityQuerySchema>
+});
+export type ActivityQuery = z.infer<typeof ActivityQuerySchema>;

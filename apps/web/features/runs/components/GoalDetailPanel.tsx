@@ -44,7 +44,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   // aggregate so its stage timeline can render inline (one query — only the open row).
   const openIter = iterations.find((it) => it.index === openLog);
   const openMakerPipelineId =
-    openIter?.makerKind === "pipeline" ? openIter.makerRunRef ?? null : null;
+    openIter?.makerKind === "pipeline" ? (openIter.makerRunRef ?? null) : null;
   const { data: makerPipeline } = usePipelineRunQuery(openMakerPipelineId);
   const goal = goals.find((g) => g.id === run.goalId);
   const maxIterations = goal?.maxIterations ?? iterations.length;
@@ -95,7 +95,11 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
             <Typography mono size="xs" type="note" variant="secondary">
               {t("goalBudgetUsed", { used: budget.n, cap: budget.cap, window: budget.window })}
             </Typography>
-            <Progress label={t("goalBudget")} tone={budgetPct >= 100 ? "warn" : "accent"} value={budgetPct} />
+            <Progress
+              label={t("goalBudget")}
+              tone={budgetPct >= 100 ? "warn" : "accent"}
+              value={budgetPct}
+            />
           </Stack>
         </HudPanel>
       )}
@@ -110,9 +114,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
             {iterations.map((it) => {
               const isOpen = openLog === it.index;
               // The folded child runs whose log this row can reveal (Phase 27).
-              const hasLog = Boolean(
-                it.makerRunRef || it.verifier.runRef || it.verifier.output,
-              );
+              const hasLog = Boolean(it.makerRunRef || it.verifier.runRef || it.verifier.output);
               return (
                 <Stack gap="50" key={it.index}>
                   <Stack align="center" direction="row" gap="100" justify="between">
@@ -166,7 +168,14 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                     <Stack gap="100">
                       {it.makerKind === "agent" && it.makerRunRef ? (
                         <Stack gap="50">
-                          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                          <Typography
+                            mono
+                            uppercase
+                            size="2xs"
+                            tracking="wide"
+                            type="note"
+                            variant="tertiary"
+                          >
                             {t("goalMakerLog")}
                           </Typography>
                           <RunLogStream
@@ -198,7 +207,14 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
 
                       {it.verifier.kind === "claude" && it.verifier.runRef && (
                         <Stack gap="50">
-                          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                          <Typography
+                            mono
+                            uppercase
+                            size="2xs"
+                            tracking="wide"
+                            type="note"
+                            variant="tertiary"
+                          >
                             {t("goalVerifierLog")}
                           </Typography>
                           <RunLogStream
@@ -214,7 +230,14 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
 
                       {it.verifier.output && (
                         <Stack gap="50">
-                          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                          <Typography
+                            mono
+                            uppercase
+                            size="2xs"
+                            tracking="wide"
+                            type="note"
+                            variant="tertiary"
+                          >
                             {t("goalVerifierVerdict")}
                           </Typography>
                           <CodeBlock maxHeight="md" text={it.verifier.output} />

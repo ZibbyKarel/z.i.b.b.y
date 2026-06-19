@@ -85,12 +85,12 @@ Persistentní stav každé příchozí položky:
 
 ```typescript
 type ChannelItemState =
-  | "new"             // čerstvě přijato, čeká na triage
-  | "triaged"         // klasifikováno
-  | "handled"         // akce proběhla
-  | "ignored"         // záměrně přeskočeno
+  | "new" // čerstvě přijato, čeká na triage
+  | "triaged" // klasifikováno
+  | "handled" // akce proběhla
+  | "ignored" // záměrně přeskočeno
   | "approval-pending" // draft odpovědi čeká na schválení
-  | "replied"         // odpověď odeslána
+  | "replied"; // odpověď odeslána
 ```
 
 Uloženo v `apps/api/data/channels/<integrationId>-<itemId>.json`.
@@ -136,6 +136,7 @@ Mandate obsahuje per-channel tier pravidla. `ChannelTriageFlowService` se před 
 ## Integrace (credentials)
 
 **Soubory:**
+
 - `integrations/integrations.storage.service.ts` — konfigurace (bez secrets)
 - `integrations/credentials.store.ts` — API klíče a tokeny (oddělené od configs)
 - `integrations/connection-tester.ts` — ověření připojení
@@ -163,6 +164,7 @@ Tvar secretu podle kindu (`credentialMatchesKind`): email → `{password}`, osta
 ## Sanitizace
 
 `sanitizeInbound(text)` z `channels/sanitize.ts`:
+
 - Odstraní potenciálně škodlivý obsah (prompt injection pokusy)
 - Ořízne délku
 - Normalizuje whitespace
@@ -170,10 +172,10 @@ Tvar secretu podle kindu (`credentialMatchesKind`): email → `{password}`, osta
 
 ## Activity záznamy
 
-| Event | Kdy |
-|-------|-----|
-| `channel-item` | Nová položka přijata |
-| `channel-triage` | Položka klasifikována a tier určen |
-| `channel-reply` | Draft odpovědi připraven |
-| `channel-approval` | Schválení odpovědi (Tier 3) |
-| `channel-ignored` | Položka záměrně přeskočena |
+| Event              | Kdy                                |
+| ------------------ | ---------------------------------- |
+| `channel-item`     | Nová položka přijata               |
+| `channel-triage`   | Položka klasifikována a tier určen |
+| `channel-reply`    | Draft odpovědi připraven           |
+| `channel-approval` | Schválení odpovědi (Tier 3)        |
+| `channel-ignored`  | Položka záměrně přeskočena         |

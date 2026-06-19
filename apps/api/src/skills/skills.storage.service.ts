@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateSkillInput,
@@ -6,17 +6,17 @@ import {
   type Skill,
   SkillSchema,
   type UpdateSkillInput,
-} from "@zibby/contracts"
-import { MarkdownEntityStore, searchByText } from "../shared/file-storage"
+} from "@zibby/contracts";
+import { MarkdownEntityStore, searchByText } from "../shared/file-storage";
 import {
   CorruptSkillFileError,
   InvalidSkillIdError,
   SkillConflictError,
   SkillNotFoundError,
-} from "./skills.errors"
+} from "./skills.errors";
 
 /** DI token carrying the absolute path of the directory that holds skill files. */
-export const SKILLS_DIR = "SKILLS_DIR"
+export const SKILLS_DIR = "SKILLS_DIR";
 
 /**
  * File-backed persistence for skills: one Markdown `SKILL.md`-style file per
@@ -26,61 +26,61 @@ export const SKILLS_DIR = "SKILLS_DIR"
  */
 @Injectable()
 export class SkillsStorageService extends MarkdownEntityStore<Skill> implements OnModuleInit {
-  protected readonly fileExt = ".md"
-  protected readonly idRegex = AGENT_ID_REGEX
+  protected readonly fileExt = ".md";
+  protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(SKILLS_DIR) dir: string) {
-    super(dir)
+    super(dir);
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureDir()
+    await this.ensureDir();
   }
 
   async create(input: CreateSkillInput): Promise<Skill> {
-    const file = this.resolveFile(input.id)
+    const file = this.resolveFile(input.id);
     if (await this.fileExists(file)) {
-      throw new SkillConflictError(input.id)
+      throw new SkillConflictError(input.id);
     }
-    const skill: Skill = { ...input, name: input.name ?? input.id }
-    await this.writeEntity(skill)
-    return skill
+    const skill: Skill = { ...input, name: input.name ?? input.id };
+    await this.writeEntity(skill);
+    return skill;
   }
 
   /** Free-text search over the catalog by id, name, desc and category. */
   async search(query: string): Promise<Skill[]> {
-    return searchByText(await this.list(), query, (s) => [s.id, s.name, s.desc, s.category])
+    return searchByText(await this.list(), query, (s) => [s.id, s.name, s.desc, s.category]);
   }
 
   async update(id: string, patch: UpdateSkillInput): Promise<Skill> {
-    const existing = await this.get(id)
-    const merged: Skill = { ...existing, ...patch, id: existing.id }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: Skill = { ...existing, ...patch, id: existing.id };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   protected idOf(skill: Skill): string {
-    return skill.id
+    return skill.id;
   }
 
   protected notFound(id: string): Error {
-    return new SkillNotFoundError(id)
+    return new SkillNotFoundError(id);
   }
 
   protected invalidId(id: string): Error {
-    return new InvalidSkillIdError(id)
+    return new InvalidSkillIdError(id);
   }
 
   protected corruptError(id: string): Error {
-    return new CorruptSkillFileError(id)
+    return new CorruptSkillFileError(id);
   }
 
   protected compare(a: Skill, b: Skill): number {
-    return a.id.localeCompare(b.id)
+    return a.id.localeCompare(b.id);
   }
 
   protected bodyOf(skill: Skill): string {
-    return skill.instructions
+    return skill.instructions;
   }
 
   /**
@@ -89,31 +89,28 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> implements 
    * Returns null only if structurally broken — a single out-of-range field is
    * dropped rather than discarding the whole skill.
    */
-  protected fromFrontmatter(
-    data: Record<string, unknown>,
-    id: string,
-    body: string,
-  ): Skill | null {
-    const candidate: Record<string, unknown> = { id, instructions: body }
-    if (typeof data.name === "string") candidate.name = data.name
-    if (typeof data.glyph === "string") candidate.glyph = data.glyph
-    if (typeof data.desc === "string") candidate.desc = data.desc
-    if (typeof data.category === "string") candidate.category = data.category
-    if (typeof data.requires_approval === "boolean") candidate.requires_approval = data.requires_approval
-    if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk
+  protected fromFrontmatter(data: Record<string, unknown>, id: string, body: string): Skill | null {
+    const candidate: Record<string, unknown> = { id, instructions: body };
+    if (typeof data.name === "string") candidate.name = data.name;
+    if (typeof data.glyph === "string") candidate.glyph = data.glyph;
+    if (typeof data.desc === "string") candidate.desc = data.desc;
+    if (typeof data.category === "string") candidate.category = data.category;
+    if (typeof data.requires_approval === "boolean")
+      candidate.requires_approval = data.requires_approval;
+    if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk;
 
-    const result = SkillSchema.safeParse(candidate)
-    return result.success ? result.data : null
+    const result = SkillSchema.safeParse(candidate);
+    return result.success ? result.data : null;
   }
 
   /** Serialize a skill's structured config to the YAML frontmatter object. */
   protected toFrontmatter(skill: Skill): Record<string, unknown> {
-    const data: Record<string, unknown> = { name: skill.name ?? skill.id }
-    if (skill.glyph !== undefined) data.glyph = skill.glyph
-    if (skill.desc !== undefined) data.desc = skill.desc
-    if (skill.category !== undefined) data.category = skill.category
-    if (skill.requires_approval !== undefined) data.requires_approval = skill.requires_approval
-    if (skill.risk !== undefined) data.risk = skill.risk
-    return data
+    const data: Record<string, unknown> = { name: skill.name ?? skill.id };
+    if (skill.glyph !== undefined) data.glyph = skill.glyph;
+    if (skill.desc !== undefined) data.desc = skill.desc;
+    if (skill.category !== undefined) data.category = skill.category;
+    if (skill.requires_approval !== undefined) data.requires_approval = skill.requires_approval;
+    if (skill.risk !== undefined) data.risk = skill.risk;
+    return data;
   }
 }

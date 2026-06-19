@@ -68,12 +68,44 @@ export function LoadingScreen({
       role="status"
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={radialGlow} />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[100]" style={scanlines} />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-[100]"
+        style={scanlines}
+      />
 
-      <Corner style={{ top: 24, left: 24, borderTop: `1.5px solid ${ACCENT}`, borderLeft: `1.5px solid ${ACCENT}` }} />
-      <Corner style={{ top: 24, right: 24, borderTop: `1.5px solid ${ACCENT}`, borderRight: `1.5px solid ${ACCENT}` }} />
-      <Corner style={{ bottom: 24, left: 24, borderBottom: `1.5px solid ${ACCENT}`, borderLeft: `1.5px solid ${ACCENT}` }} />
-      <Corner style={{ bottom: 24, right: 24, borderBottom: `1.5px solid ${ACCENT}`, borderRight: `1.5px solid ${ACCENT}` }} />
+      <Corner
+        style={{
+          top: 24,
+          left: 24,
+          borderTop: `1.5px solid ${ACCENT}`,
+          borderLeft: `1.5px solid ${ACCENT}`,
+        }}
+      />
+      <Corner
+        style={{
+          top: 24,
+          right: 24,
+          borderTop: `1.5px solid ${ACCENT}`,
+          borderRight: `1.5px solid ${ACCENT}`,
+        }}
+      />
+      <Corner
+        style={{
+          bottom: 24,
+          left: 24,
+          borderBottom: `1.5px solid ${ACCENT}`,
+          borderLeft: `1.5px solid ${ACCENT}`,
+        }}
+      />
+      <Corner
+        style={{
+          bottom: 24,
+          right: 24,
+          borderBottom: `1.5px solid ${ACCENT}`,
+          borderRight: `1.5px solid ${ACCENT}`,
+        }}
+      />
 
       {version && (
         <div

@@ -1,19 +1,19 @@
-import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import { zodResolver } from "../zodResolver"
-import { z } from "zod"
-import { describe, expect, it, vi } from "vitest"
-import { ButtonGroupTestId, FieldTestId } from "@zibby/design-system"
-import { Form } from "../Form"
-import { FormSegmentPicker } from "./FormSegmentPicker"
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { zodResolver } from "../zodResolver";
+import { z } from "zod";
+import { describe, expect, it, vi } from "vitest";
+import { ButtonGroupTestId, FieldTestId } from "@zibby/design-system";
+import { Form } from "../Form";
+import { FormSegmentPicker } from "./FormSegmentPicker";
 
 const options = [
   { value: "day", label: "Den" },
   { value: "week", label: "Týden" },
   { value: "month", label: "Měsíc" },
-]
-const schema = z.object({ period: z.string().min(1, "Vyberte období") })
-type Schema = z.infer<typeof schema>
+];
+const schema = z.object({ period: z.string().min(1, "Vyberte období") });
+type Schema = z.infer<typeof schema>;
 
 describe("FormSegmentPicker", () => {
   it("shows zod error as error text on submit when no option chosen", async () => {
@@ -25,13 +25,13 @@ describe("FormSegmentPicker", () => {
         <FormSegmentPicker<Schema> label="Období" name="period" options={options} />
         <button type="submit">Submit</button>
       </Form>,
-    )
-    await userEvent.click(screen.getByRole("button", { name: "Submit" }))
-    expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Vyberte období")
-  })
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Vyberte období");
+  });
 
   it("updates the value when a segment is chosen", async () => {
-    const onSubmit = vi.fn()
+    const onSubmit = vi.fn();
     render(
       <Form<Schema>
         formOptions={{ resolver: zodResolver(schema), defaultValues: { period: "" } }}
@@ -40,11 +40,11 @@ describe("FormSegmentPicker", () => {
         <FormSegmentPicker<Schema> label="Období" name="period" options={options} />
         <button type="submit">Submit</button>
       </Form>,
-    )
-    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-week`))
-    await userEvent.click(screen.getByRole("button", { name: "Submit" }))
-    expect(onSubmit).toHaveBeenCalledWith({ period: "week" }, expect.anything())
-  })
+    );
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-week`));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(onSubmit).toHaveBeenCalledWith({ period: "week" }, expect.anything());
+  });
 
   it("uses defaultValues from Form to pre-select a segment", () => {
     render(
@@ -54,19 +54,16 @@ describe("FormSegmentPicker", () => {
       >
         <FormSegmentPicker<{ period: string }> label="Období" name="period" options={options} />
       </Form>,
-    )
+    );
     expect(screen.getByTestId(`${ButtonGroupTestId.Option}-month`)).toHaveAttribute(
       "aria-pressed",
       "true",
-    )
-  })
+    );
+  });
 
   it("passes through hint when there is no error", () => {
     render(
-      <Form<{ period: string }>
-        formOptions={{ defaultValues: { period: "" } }}
-        onSubmit={vi.fn()}
-      >
+      <Form<{ period: string }> formOptions={{ defaultValues: { period: "" } }} onSubmit={vi.fn()}>
         <FormSegmentPicker<{ period: string }>
           hint="Helper text"
           label="Období"
@@ -74,7 +71,7 @@ describe("FormSegmentPicker", () => {
           options={options}
         />
       </Form>,
-    )
-    expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("Helper text")
-  })
-})
+    );
+    expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("Helper text");
+  });
+});

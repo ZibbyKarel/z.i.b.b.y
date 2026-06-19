@@ -1,2 +1,2 @@
-export { FormFilePicker } from "./FormFilePicker"
-export type { FormFilePickerProps } from "./FormFilePicker"
+export { FormFilePicker } from "./FormFilePicker";
+export type { FormFilePickerProps } from "./FormFilePicker";

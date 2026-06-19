@@ -32,7 +32,11 @@ describe("Typography", () => {
   });
 
   it("applies secondary variant class", () => {
-    render(<Typography type="text" variant="secondary">A</Typography>);
+    render(
+      <Typography type="text" variant="secondary">
+        A
+      </Typography>,
+    );
     expect(screen.getByTestId(TypographyTestId.Root).className).toContain("text-foreground-dim");
   });
 
@@ -42,14 +46,22 @@ describe("Typography", () => {
   });
 
   it("applies a semantic tone over the variant colour", () => {
-    render(<Typography tone="ok" type="note">A</Typography>);
+    render(
+      <Typography tone="ok" type="note">
+        A
+      </Typography>,
+    );
     const el = screen.getByTestId(TypographyTestId.Root);
     expect(el.className).toContain("text-ok");
     expect(el.className).not.toContain("text-foreground");
   });
 
   it("overrides the rendered element via as", () => {
-    render(<Typography as="span" type="note">A</Typography>);
+    render(
+      <Typography as="span" type="note">
+        A
+      </Typography>,
+    );
     expect(screen.getByTestId(TypographyTestId.Root).tagName).toBe("SPAN");
   });
 
@@ -69,7 +81,12 @@ describe("Typography", () => {
   it("forwards a ref", () => {
     let node: HTMLElement | null = null;
     render(
-      <Typography ref={(el) => { node = el; }} type="title">
+      <Typography
+        ref={(el) => {
+          node = el;
+        }}
+        type="title"
+      >
         A
       </Typography>,
     );
@@ -77,7 +94,11 @@ describe("Typography", () => {
   });
 
   it("passes through arbitrary props and sets the root testid", () => {
-    render(<Typography aria-label="poznámka" type="note">A</Typography>);
+    render(
+      <Typography aria-label="poznámka" type="note">
+        A
+      </Typography>,
+    );
     const el = screen.getByTestId(TypographyTestId.Root);
     expect(el).toHaveAttribute("aria-label", "poznámka");
   });

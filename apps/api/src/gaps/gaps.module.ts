@@ -1,6 +1,6 @@
-import { Module } from "@nestjs/common"
-import { MemoryModule } from "../memory/memory.module"
-import { GapDetectorService } from "./gap-detector.service"
+import { Module } from "@nestjs/common";
+import { MemoryModule } from "../memory/memory.module";
+import { GapDetectorService } from "./gap-detector.service";
 
 /**
  * Gap detection (M5): scans 30 days of `task-created` activity for recurring manual

@@ -52,7 +52,7 @@ src/
 
 Cross-domain reuse: `ErrorSchema` lives in `common.schema.ts` (used by agents,
 agent-runs and categories); `AgentIdSchema` stays in `agents/agent.schema.ts` and
-is imported by `agent-runs` as a legitimate domain dependency (a run is *of* an agent).
+is imported by `agent-runs` as a legitimate domain dependency (a run is _of_ an agent).
 
 Routes are mounted under the `/api` prefix (`pathPrefix` in the router options).
 
@@ -78,6 +78,7 @@ Routes are mounted under the `/api` prefix (`pathPrefix` in the router options).
 
    Always declare the full set of `responses`, including error statuses
    (`404`, `409`, …) — they become part of the type-safe response union.
+
 3. **Export** any new schemas/types from `src/index.ts`.
 4. **Implement it** in `apps/api` (`src/agents/agents.controller.ts`). The
    `tsRestHandler(agentsContract, { ... })` object will now show a TypeScript

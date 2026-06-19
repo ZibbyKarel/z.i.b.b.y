@@ -1,14 +1,14 @@
-import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import { zodResolver } from "../zodResolver"
-import { z } from "zod"
-import { describe, expect, it, vi } from "vitest"
-import { FieldTestId, ToggleFieldTestId } from "@zibby/design-system"
-import { Form } from "../Form"
-import { FormToggle } from "./FormToggle"
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { zodResolver } from "../zodResolver";
+import { z } from "zod";
+import { describe, expect, it, vi } from "vitest";
+import { FieldTestId, ToggleFieldTestId } from "@zibby/design-system";
+import { Form } from "../Form";
+import { FormToggle } from "./FormToggle";
 
-const schema = z.object({ enabled: z.boolean().refine((v) => v, "Musíte souhlasit") })
-type Schema = z.infer<typeof schema>
+const schema = z.object({ enabled: z.boolean().refine((v) => v, "Musíte souhlasit") });
+type Schema = z.infer<typeof schema>;
 
 describe("FormToggle", () => {
   it("shows zod error as error text on submit when unchecked", async () => {
@@ -20,13 +20,13 @@ describe("FormToggle", () => {
         <FormToggle<Schema> label="Souhlasím" name="enabled" />
         <button type="submit">Submit</button>
       </Form>,
-    )
-    await userEvent.click(screen.getByRole("button", { name: "Submit" }))
-    expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Musíte souhlasit")
-  })
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Musíte souhlasit");
+  });
 
   it("toggles value on click and submits", async () => {
-    const onSubmit = vi.fn()
+    const onSubmit = vi.fn();
     render(
       <Form<{ enabled: boolean }>
         formOptions={{ defaultValues: { enabled: false } }}
@@ -35,11 +35,11 @@ describe("FormToggle", () => {
         <FormToggle<{ enabled: boolean }> label="Souhlasím" name="enabled" />
         <button type="submit">Submit</button>
       </Form>,
-    )
-    await userEvent.click(screen.getByTestId(ToggleFieldTestId.Control))
-    await userEvent.click(screen.getByRole("button", { name: "Submit" }))
-    expect(onSubmit).toHaveBeenCalledWith({ enabled: true }, expect.anything())
-  })
+    );
+    await userEvent.click(screen.getByTestId(ToggleFieldTestId.Control));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(onSubmit).toHaveBeenCalledWith({ enabled: true }, expect.anything());
+  });
 
   it("uses defaultValues from Form to set initial checked state", () => {
     render(
@@ -49,9 +49,9 @@ describe("FormToggle", () => {
       >
         <FormToggle<{ enabled: boolean }> label="Souhlasím" name="enabled" />
       </Form>,
-    )
-    expect(screen.getByTestId(ToggleFieldTestId.Control)).toHaveAttribute("aria-checked", "true")
-  })
+    );
+    expect(screen.getByTestId(ToggleFieldTestId.Control)).toHaveAttribute("aria-checked", "true");
+  });
 
   it("passes through hint when there is no error", () => {
     render(
@@ -61,7 +61,7 @@ describe("FormToggle", () => {
       >
         <FormToggle<{ enabled: boolean }> hint="Helper text" label="Souhlasím" name="enabled" />
       </Form>,
-    )
-    expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("Helper text")
-  })
-})
+    );
+    expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("Helper text");
+  });
+});

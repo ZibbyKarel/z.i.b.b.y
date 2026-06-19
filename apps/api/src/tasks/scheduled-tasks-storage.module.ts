@@ -1,10 +1,10 @@
-import { Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { ScheduledTasksStorageService, TASKS_DIR } from "./scheduled-tasks.storage.service"
+import { Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { ScheduledTasksStorageService, TASKS_DIR } from "./scheduled-tasks.storage.service";
 
 /** Default scheduled-tasks dir, anchored to `apps/api/data/tasks/scheduled`. */
 export function resolveTasksDir(): string {
-  return process.env.TASKS_DIR ?? dataDir("tasks", "scheduled")
+  return process.env.TASKS_DIR ?? dataDir("tasks", "scheduled");
 }
 
 /**

@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema"
+import { z } from "zod";
+import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema";
 
 /**
  * One thing that needs the operator (Law 5 "surface and wait"): a pending approval
@@ -14,8 +14,8 @@ export const BriefingNeedsYouItemSchema = z.object({
   refs: ActivityRefsSchema,
   /** The engagement this item belongs to (Phase 8.2) — drives the card grouping. */
   projectId: z.string().optional(),
-})
-export type BriefingNeedsYouItem = z.infer<typeof BriefingNeedsYouItemSchema>
+});
+export type BriefingNeedsYouItem = z.infer<typeof BriefingNeedsYouItemSchema>;
 
 /** One thing ZIBBY did for the operator (from the activity record since the cursor). */
 export const BriefingDidItemSchema = z.object({
@@ -24,8 +24,8 @@ export const BriefingDidItemSchema = z.object({
   at: z.string().datetime(),
   /** The engagement this item belongs to (Phase 8.2), when the activity carried one. */
   projectId: z.string().optional(),
-})
-export type BriefingDidItem = z.infer<typeof BriefingDidItemSchema>
+});
+export type BriefingDidItem = z.infer<typeof BriefingDidItemSchema>;
 
 /**
  * One engagement's slice of the briefing (Phase 8.2): how many things need the
@@ -40,8 +40,8 @@ export const BriefingEngagementSchema = z.object({
   didForYou: z.number().int().nonnegative(),
   queued: z.number().int().nonnegative(),
   held: z.number().int().nonnegative(),
-})
-export type BriefingEngagement = z.infer<typeof BriefingEngagementSchema>
+});
+export type BriefingEngagement = z.infer<typeof BriefingEngagementSchema>;
 
 /**
  * Something ZIBBY is keeping an eye on. Two shapes share the array:
@@ -60,8 +60,8 @@ export const BriefingWatchItemSchema = z.object({
   runRef: z.string().optional(),
   summary: z.string().optional(),
   resumeAt: z.number().int().nullable().optional(),
-})
-export type BriefingWatchItem = z.infer<typeof BriefingWatchItemSchema>
+});
+export type BriefingWatchItem = z.infer<typeof BriefingWatchItemSchema>;
 
 /** The headline tallies — the deterministic spine the butler-voice headline summarises. */
 export const BriefingCountsSchema = z.object({
@@ -70,8 +70,8 @@ export const BriefingCountsSchema = z.object({
   parked: z.number().int().nonnegative(),
   approvalsPending: z.number().int().nonnegative(),
   channelItemsNew: z.number().int().nonnegative(),
-})
-export type BriefingCounts = z.infer<typeof BriefingCountsSchema>
+});
+export type BriefingCounts = z.infer<typeof BriefingCountsSchema>;
 
 /**
  * The butler's briefing (Phase 6.2) — "what's happening / what happened", assembled
@@ -101,12 +101,12 @@ export const BriefingSchema = z.object({
   automationGaps: z.array(z.string()).optional(),
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
   appIdeas: z.array(z.string()).optional(),
-})
-export type Briefing = z.infer<typeof BriefingSchema>
+});
+export type Briefing = z.infer<typeof BriefingSchema>;
 
 /** Result of `POST /api/briefing/generate`: the briefing + the persisted vault note id. */
 export const GenerateBriefingResultSchema = z.object({
   briefing: BriefingSchema,
   noteId: z.string(),
-})
-export type GenerateBriefingResult = z.infer<typeof GenerateBriefingResultSchema>
+});
+export type GenerateBriefingResult = z.infer<typeof GenerateBriefingResultSchema>;

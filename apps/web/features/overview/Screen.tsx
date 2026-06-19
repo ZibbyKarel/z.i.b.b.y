@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Card,
-  Container,
-  Grid,
-  Icon,
-  IconTile,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, Grid, Icon, IconTile, Stack, Typography } from "@zibby/design-system";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -73,12 +65,7 @@ export function Screen() {
                       <Stack align="center" direction="row" gap="150">
                         <IconTile glyph={s.glyph} size="sm" />
                         <Container grow minW0>
-                          <Typography
-                            align="left"
-                            size="base"
-                            type="note"
-                            weight="medium"
-                          >
+                          <Typography align="left" size="base" type="note" weight="medium">
                             {t(`overview.starters.${s.id}.label`)}
                           </Typography>
                           <Typography

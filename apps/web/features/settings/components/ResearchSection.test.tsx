@@ -26,7 +26,10 @@ describe("ResearchSection", () => {
     };
     render(<ResearchSection />);
     expect(screen.getByTestId(ResearchSectionTestId.Interests)).toHaveValue("ai agents, devtools");
-    expect(screen.getByTestId(ResearchSectionTestId.FinanceWatch)).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId(ResearchSectionTestId.FinanceWatch)).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     expect(screen.getByTestId("research-source-0-label")).toHaveValue("Hacker News");
   });
 
@@ -34,7 +37,9 @@ describe("ResearchSection", () => {
     config = {
       interests: ["llm"],
       financeWatch: false,
-      sources: [{ id: "feed", kind: "rss", label: "Blog", url: "https://blog.example.com", enabled: true }],
+      sources: [
+        { id: "feed", kind: "rss", label: "Blog", url: "https://blog.example.com", enabled: true },
+      ],
     };
     render(<ResearchSection />);
 
@@ -46,7 +51,13 @@ describe("ResearchSection", () => {
         interests: ["llm"],
         financeWatch: true,
         sources: [
-          { id: "feed", kind: "rss", label: "Blog", enabled: true, url: "https://blog.example.com" },
+          {
+            id: "feed",
+            kind: "rss",
+            label: "Blog",
+            enabled: true,
+            url: "https://blog.example.com",
+          },
         ],
       },
     });

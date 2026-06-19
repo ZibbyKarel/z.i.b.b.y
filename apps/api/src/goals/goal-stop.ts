@@ -1,7 +1,7 @@
-import type { GoalRun } from "@zibby/contracts"
+import type { GoalRun } from "@zibby/contracts";
 
 /** The four outcomes of one iteration's stop check. */
-export type GoalStopDecision = "satisfied" | "continue" | "park-iterations" | "park-budget"
+export type GoalStopDecision = "satisfied" | "continue" | "park-iterations" | "park-budget";
 
 /**
  * The pure stop-condition matrix for the goal loop (Phase 10.2, decision 4).
@@ -13,15 +13,15 @@ export type GoalStopDecision = "satisfied" | "continue" | "park-iterations" | "p
  * exhausted its budget when that reaches `maxIterations`.
  */
 export function decideStop(input: {
-  satisfied: boolean
-  index: number
-  maxIterations: number
-  budgetOk: boolean
+  satisfied: boolean;
+  index: number;
+  maxIterations: number;
+  budgetOk: boolean;
 }): GoalStopDecision {
-  if (!input.budgetOk) return "park-budget"
-  if (input.satisfied) return "satisfied"
-  if (input.index + 1 >= input.maxIterations) return "park-iterations"
-  return "continue"
+  if (!input.budgetOk) return "park-budget";
+  if (input.satisfied) return "satisfied";
+  if (input.index + 1 >= input.maxIterations) return "park-iterations";
+  return "continue";
 }
 
 /**
@@ -35,14 +35,14 @@ export function renderGoalProgress(run: GoalRun, objective: string, maxIteration
     "",
     `Iteration ${(run.currentIteration ?? run.iterations.length) + 1} of ${maxIterations}.`,
     "",
-  ]
+  ];
   if (run.iterations.length === 0) {
-    lines.push("_No iterations completed yet._")
+    lines.push("_No iterations completed yet._");
   } else {
     for (const it of run.iterations) {
-      const verdict = it.verifier.satisfied ? "verifier satisfied" : "verifier NOT satisfied"
-      lines.push(`- Iteration ${it.index + 1}: maker ${it.status}, ${verdict}`)
+      const verdict = it.verifier.satisfied ? "verifier satisfied" : "verifier NOT satisfied";
+      lines.push(`- Iteration ${it.index + 1}: maker ${it.status}, ${verdict}`);
     }
   }
-  return lines.join("\n")
+  return lines.join("\n");
 }

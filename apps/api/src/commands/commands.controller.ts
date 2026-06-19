@@ -1,18 +1,18 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { commandsContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { commandsContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   CommandConflictError,
   CommandNotFoundError,
   InvalidCommandIdError,
-} from "./commands.errors"
-import { CommandsStorageService } from "./commands.storage.service"
+} from "./commands.errors";
+import { CommandsStorageService } from "./commands.storage.service";
 
 const errors = makeErrorMapper("Command", {
   missing: [CommandNotFoundError, InvalidCommandIdError],
   conflict: [CommandConflictError],
-})
+});
 
 /**
  * Implements `commandsContract` against the file-backed storage service. Mirrors
@@ -37,9 +37,9 @@ export class CommandsController {
 
       deleteCommand: ({ params: { id } }) =>
         errors.or404(id, async () => {
-          await this.storage.delete(id)
-          return { id }
+          await this.storage.delete(id);
+          return { id };
         }),
-    })
+    });
   }
 }

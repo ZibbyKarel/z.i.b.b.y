@@ -40,13 +40,11 @@ export function MainLayout({
         aria-label={t("navLabel")}
         as="nav"
         shrink={false}
-
         style={{ width: 224, backgroundColor: "var(--color-background-deep)" }}
       >
         <Container
           grow
           padding={["300", "150"]}
-           
           style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
         >
           <BrandLogo />
@@ -56,7 +54,7 @@ export function MainLayout({
 
       <Divider orientation="vertical" />
 
-      { }
+      {}
       <Stack grow style={{ minWidth: 0 }}>
         <TopBar
           breadcrumb={breadcrumb}
@@ -64,12 +62,7 @@ export function MainLayout({
           voiceSlot={voiceSlot}
           walletSlot={walletSlot}
         />
-        <Container
-          grow
-          overflow="auto"
-          padding={["300", "350"]}
-          position="relative"
-        >
+        <Container grow overflow="auto" padding={["300", "350"]} position="relative">
           {children}
         </Container>
       </Stack>

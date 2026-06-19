@@ -10,8 +10,14 @@ interface BrandMarkProps {
 export function BrandMark({ logo, testId }: BrandMarkProps) {
   return (
     <div className="relative mb-11 flex h-[220px] w-[220px] items-center justify-center">
-      <div className="animate-ripple absolute inset-0 rounded-full" style={{ background: "rgba(91,141,239,0.08)" }} />
-      <div className="animate-ripple absolute inset-0 rounded-full" style={{ background: "rgba(91,141,239,0.05)", animationDelay: "1.4s" }} />
+      <div
+        className="animate-ripple absolute inset-0 rounded-full"
+        style={{ background: "rgba(91,141,239,0.08)" }}
+      />
+      <div
+        className="animate-ripple absolute inset-0 rounded-full"
+        style={{ background: "rgba(91,141,239,0.05)", animationDelay: "1.4s" }}
+      />
       <div
         className="animate-ring-pulse absolute rounded-full"
         style={{ inset: -28, border: "1px solid rgba(91,141,239,0.12)", animationDelay: "0.7s" }}
@@ -20,7 +26,10 @@ export function BrandMark({ logo, testId }: BrandMarkProps) {
         className="animate-ring-pulse absolute rounded-full"
         style={{ inset: -10, border: "1.5px solid rgba(91,141,239,0.3)" }}
       />
-      <div className="animate-orbit-spin absolute rounded-full" style={{ inset: -22, border: "1px solid rgba(91,141,239,0.18)" }}>
+      <div
+        className="animate-orbit-spin absolute rounded-full"
+        style={{ inset: -22, border: "1px solid rgba(91,141,239,0.18)" }}
+      >
         <div
           className="absolute left-1/2 rounded-full"
           style={{

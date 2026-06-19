@@ -19,7 +19,11 @@ describe("Container", () => {
   });
 
   it("applies width and height", () => {
-    render(<Container height="50px" width="100px">x</Container>);
+    render(
+      <Container height="50px" width="100px">
+        x
+      </Container>,
+    );
     const el = screen.getByTestId(ContainerTestId.Root);
     expect(el.style.width).toBe("100px");
     expect(el.style.height).toBe("50px");
@@ -32,7 +36,15 @@ describe("Container", () => {
 
   it("forwards a ref", () => {
     let node: HTMLElement | null = null;
-    render(<Container ref={(el) => { node = el; }}>x</Container>);
+    render(
+      <Container
+        ref={(el) => {
+          node = el;
+        }}
+      >
+        x
+      </Container>,
+    );
     expect(node).not.toBeNull();
   });
 });

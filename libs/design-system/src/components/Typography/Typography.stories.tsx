@@ -1,9 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import {
-  Typography,
-  type TypographyType,
-  type TypographyVariant,
-} from "./Typography";
+import { Typography, type TypographyType, type TypographyVariant } from "./Typography";
 
 const meta: Meta<typeof Typography> = {
   title: "DesignSystem/Typography",
@@ -12,17 +8,7 @@ const meta: Meta<typeof Typography> = {
   argTypes: {
     type: {
       control: "select",
-      options: [
-        "pageTitle",
-        "title",
-        "subtitle",
-        "text",
-        "note",
-        "num",
-        "data",
-        "label",
-        "micro",
-      ],
+      options: ["pageTitle", "title", "subtitle", "text", "note", "num", "data", "label", "micro"],
     },
     variant: {
       control: "select",

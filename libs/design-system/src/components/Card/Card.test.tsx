@@ -21,7 +21,15 @@ describe("Card", () => {
 
   it("forwards a ref", () => {
     let node: HTMLDivElement | null = null;
-    render(<Card ref={(el) => { node = el; }}>x</Card>);
+    render(
+      <Card
+        ref={(el) => {
+          node = el;
+        }}
+      >
+        x
+      </Card>,
+    );
     expect(node).toBeInstanceOf(HTMLDivElement);
   });
 
@@ -39,22 +47,40 @@ describe("Card", () => {
   });
 
   it("CardHeader renders its children", () => {
-    render(<Card><CardHeader>Titulek</CardHeader></Card>);
+    render(
+      <Card>
+        <CardHeader>Titulek</CardHeader>
+      </Card>,
+    );
     expect(screen.getByTestId(CardTestId.Header)).toHaveTextContent("Titulek");
   });
 
   it("CardContent renders its children", () => {
-    render(<Card><CardContent>obsah</CardContent></Card>);
+    render(
+      <Card>
+        <CardContent>obsah</CardContent>
+      </Card>,
+    );
     expect(screen.getByTestId(CardTestId.Content)).toHaveTextContent("obsah");
   });
 
   it("CardFooter renders its children", () => {
-    render(<Card><CardFooter>zápatí</CardFooter></Card>);
+    render(
+      <Card>
+        <CardFooter>zápatí</CardFooter>
+      </Card>,
+    );
     expect(screen.getByTestId(CardTestId.Footer)).toHaveTextContent("zápatí");
   });
 
   it("CardActions renders its children via CardFooter", () => {
-    render(<Card><CardActions><button>OK</button></CardActions></Card>);
+    render(
+      <Card>
+        <CardActions>
+          <button>OK</button>
+        </CardActions>
+      </Card>,
+    );
     const footer = screen.getByTestId(CardTestId.Footer);
     expect(footer).toHaveTextContent("OK");
   });

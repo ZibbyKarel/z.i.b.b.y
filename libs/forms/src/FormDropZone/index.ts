@@ -1,2 +1,2 @@
-export { FormDropZone } from "./FormDropZone"
-export type { FormDropZoneProps } from "./FormDropZone"
+export { FormDropZone } from "./FormDropZone";
+export type { FormDropZoneProps } from "./FormDropZone";

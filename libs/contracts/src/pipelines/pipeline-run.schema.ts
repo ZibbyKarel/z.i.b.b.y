@@ -1,7 +1,7 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
-import { WorkspaceSchema } from "../common.schema"
-import { PipelineOutputSchema } from "./pipeline.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { WorkspaceSchema } from "../common.schema";
+import { PipelineOutputSchema } from "./pipeline.schema";
 
 /**
  * Status of a single stage's underlying run. The runner's full set, including
@@ -17,8 +17,8 @@ export const StageRunStatusSchema = z.enum([
   // Phase 9: the stage child died on a usage limit — a pause, not a failure.
   // Stashes a spawn spec (restart survival) and auto-resumes when the window resets.
   "paused-limit",
-])
-export type StageRunStatus = z.infer<typeof StageRunStatusSchema>
+]);
+export type StageRunStatus = z.infer<typeof StageRunStatusSchema>;
 
 /**
  * Lifecycle of a whole pipeline run. Mirrors the dashboard's `PipelineState`:
@@ -34,8 +34,8 @@ export const PipelineStateSchema = z.enum([
   // phase boundary because the window is exhausted. Auto-resumes on window reset;
   // unlike `parked` it is not an operator decision and burns no loop retries.
   "paused-limit",
-])
-export type PipelineState = z.infer<typeof PipelineStateSchema>
+]);
+export type PipelineState = z.infer<typeof PipelineStateSchema>;
 
 /**
  * One stage's execution within a pipeline run: which phase, the underlying
@@ -47,8 +47,8 @@ export const StageRunSchema = z.object({
   runId: z.string().min(1),
   attempt: z.number().int().min(1),
   status: StageRunStatusSchema,
-})
-export type StageRun = z.infer<typeof StageRunSchema>
+});
+export type StageRun = z.infer<typeof StageRunSchema>;
 
 /**
  * Why a run is `parked` — the parkings are different machines:
@@ -64,8 +64,8 @@ export type StageRun = z.infer<typeof StageRunSchema>
  *   is DURABLE: it survives a restart and resumes by re-entering output processing
  *   when the operator approves. `pendingOutput` records where to resume.
  */
-export const ParkedReasonSchema = z.enum(["approval", "retries", "limit", "output"])
-export type ParkedReason = z.infer<typeof ParkedReasonSchema>
+export const ParkedReasonSchema = z.enum(["approval", "retries", "limit", "output"]);
+export type ParkedReason = z.infer<typeof ParkedReasonSchema>;
 
 /**
  * A checkpoint commit (Phase 9.3) the runner made on the run's `zibby/*` branch after
@@ -78,8 +78,8 @@ export const PipelineCheckpointSchema = z.object({
   /** Abbreviated commit sha on the run branch. */
   sha: z.string().min(1),
   at: z.string().datetime(),
-})
-export type PipelineCheckpoint = z.infer<typeof PipelineCheckpointSchema>
+});
+export type PipelineCheckpoint = z.infer<typeof PipelineCheckpointSchema>;
 
 /** Detail of a retries-parking: which phase, how many attempts, the failure file. */
 export const ParkedDetailSchema = z.object({
@@ -88,8 +88,8 @@ export const ParkedDetailSchema = z.object({
   /** Absolute path of the failure-context file (the retry handoff + note target). */
   failureFile: z.string(),
   note: z.string().optional(),
-})
-export type ParkedDetail = z.infer<typeof ParkedDetailSchema>
+});
+export type ParkedDetail = z.infer<typeof ParkedDetailSchema>;
 
 /**
  * A run of a pipeline: the aggregate of its per-phase stage runs, the phase
@@ -179,17 +179,17 @@ export const PipelineRunSchema = z.object({
    * if the pipeline has no verify phase or none passed.
    */
   verifyCommands: z.array(z.string()).optional(),
-})
-export type PipelineRun = z.infer<typeof PipelineRunSchema>
+});
+export type PipelineRun = z.infer<typeof PipelineRunSchema>;
 
 /** Body accepted by `startPipelineRun`. */
 export const StartPipelineRunSchema = z.object({
   project: z.string().optional(),
-})
-export type StartPipelineRunInput = z.infer<typeof StartPipelineRunSchema>
+});
+export type StartPipelineRunInput = z.infer<typeof StartPipelineRunSchema>;
 
 /** Body accepted by `resumePipelineRun` — the operator's note for the retried phase. */
 export const ResumePipelineRunSchema = z.object({
   note: z.string().optional(),
-})
-export type ResumePipelineRunInput = z.infer<typeof ResumePipelineRunSchema>
+});
+export type ResumePipelineRunInput = z.infer<typeof ResumePipelineRunSchema>;

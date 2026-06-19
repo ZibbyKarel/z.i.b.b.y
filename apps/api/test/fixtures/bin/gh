@@ -3,11 +3,11 @@
 // GH_INVOCATIONS_FILE so an e2e can assert the EXACT `gh pr create …` invocation
 // the approved PR gate executed (and that nothing ran before approval). It never
 // touches the network — it just records and exits 0.
-import { appendFileSync } from "node:fs"
+import { appendFileSync } from "node:fs";
 
-const file = process.env.GH_INVOCATIONS_FILE
+const file = process.env.GH_INVOCATIONS_FILE;
 if (file) {
-  appendFileSync(file, `${JSON.stringify(process.argv.slice(2))}\n`, "utf8")
+  appendFileSync(file, `${JSON.stringify(process.argv.slice(2))}\n`, "utf8");
 }
-process.stdout.write("https://github.com/zibby/fixture/pull/1\n")
-process.exit(0)
+process.stdout.write("https://github.com/zibby/fixture/pull/1\n");
+process.exit(0);

@@ -17,13 +17,7 @@ export interface RunLogStreamProps {
  * or a folded goal-iteration child (Phase 27). The log is read from the unified
  * `/api/tasks/runs/:runId/logs` surface. Mount with `key={runId}`.
  */
-export function RunLogStream({
-  runId,
-  live,
-  liveLabel,
-  logLabel,
-  linesLabel,
-}: RunLogStreamProps) {
+export function RunLogStream({ runId, live, liveLabel, logLabel, linesLabel }: RunLogStreamProps) {
   const { text, done } = useRunLog(runId);
   const lineCount = text ? text.replace(/\n$/, "").split("\n").length : 0;
 
@@ -32,14 +26,7 @@ export function RunLogStream({
       header={
         <>
           <Icon name="pulse" size="sm" tone={live ? "accent" : "faint"} />
-          <Typography
-            mono
-            uppercase
-            size="2xs"
-            tracking="wide"
-            type="note"
-            variant="secondary"
-          >
+          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="secondary">
             {live ? liveLabel : logLabel}
           </Typography>
         </>

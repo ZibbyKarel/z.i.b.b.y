@@ -41,13 +41,7 @@ describe("PhaseChain — attempt counts", () => {
   };
 
   it("shows 'attempt n/m' on the looped node when a current run is supplied", () => {
-    render(
-      <PhaseChain
-        agents={[]}
-        attempts={{ koder: 2, verify: 2 }}
-        pipeline={looped}
-      />,
-    );
+    render(<PhaseChain agents={[]} attempts={{ koder: 2, verify: 2 }} pipeline={looped} />);
     // Only the looped node renders the counter (max = maxRetries + 1).
     expect(screen.getByText("pokus 2/3")).toBeInTheDocument();
   });

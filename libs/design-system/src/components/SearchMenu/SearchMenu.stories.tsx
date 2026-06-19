@@ -14,7 +14,9 @@ const SECTIONS: SearchMenuSection[] = [
   {
     id: "skills",
     label: "Skills",
-    items: [{ id: "summarize", title: "Summarize", subtitle: "TL;DR any document", glyph: "spark" }],
+    items: [
+      { id: "summarize", title: "Summarize", subtitle: "TL;DR any document", glyph: "spark" },
+    ],
   },
   {
     id: "integrations",
@@ -72,12 +74,7 @@ export const Overview: Story = {
     <div className="flex flex-col gap-8" style={{ minHeight: 420 }}>
       <Demo initialOpen initialValue="re" sections={SECTIONS} />
       <Demo initialOpen loading initialValue="xyz" sections={[]} />
-      <Demo
-        initialOpen
-        emptyLabel="No results"
-        initialValue="xyz"
-        sections={[]}
-      />
+      <Demo initialOpen emptyLabel="No results" initialValue="xyz" sections={[]} />
     </div>
   ),
 };

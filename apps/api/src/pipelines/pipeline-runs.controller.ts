@@ -1,7 +1,7 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { pipelineRunsContract } from "@zibby/contracts"
-import { PipelineRunnerService } from "./pipeline-runner.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { pipelineRunsContract } from "@zibby/contracts";
+import { PipelineRunnerService } from "./pipeline-runner.service";
 
 /**
  * Implements the trimmed `pipelineRunsContract` against {@link PipelineRunnerService}.
@@ -17,6 +17,6 @@ export class PipelineRunsController {
   handler() {
     return tsRestHandler(pipelineRunsContract, {
       listPipelineRuns: async () => ({ status: 200, body: this.runner.list() }),
-    })
+    });
   }
 }

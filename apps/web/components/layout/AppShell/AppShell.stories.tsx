@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container, Typography } from "@zibby/design-system"
-import { AppShell } from "./AppShell"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container, Typography } from "@zibby/design-system";
+import { AppShell } from "./AppShell";
 
 // AppShell reads the active route via next/navigation, which Storybook aliases
 // to a stub resolving to /overview — so the overview item shows as active.
@@ -17,9 +17,9 @@ const meta: Meta<typeof AppShell> = {
       </Container>
     ),
   },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof AppShell>
+type Story = StoryObj<typeof AppShell>;
 
-export const Default: Story = {}
+export const Default: Story = {};

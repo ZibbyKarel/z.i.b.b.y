@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
  * A project's `id` doubles as the registry key and travels in a URL path param
@@ -7,7 +7,7 @@ import { AgentIdSchema } from "../agents/agent.schema"
  * no path separators or traversal. The web app slugifies the free-form name
  * into this shape before creating, exactly as agents do.
  */
-export const ProjectIdSchema = AgentIdSchema
+export const ProjectIdSchema = AgentIdSchema;
 
 /** A person associated with a project (team member, client contact, stakeholder). */
 export const ProjectPersonSchema = z.object({
@@ -17,14 +17,14 @@ export const ProjectPersonSchema = z.object({
   vip: z.boolean().optional(),
   /** Preferred communication style hint for drafted replies. */
   comms_style: z.string().optional(),
-})
-export type ProjectPerson = z.infer<typeof ProjectPersonSchema>
+});
+export type ProjectPerson = z.infer<typeof ProjectPersonSchema>;
 
 /** People associated with the project: team, clients, stakeholders. */
 export const ProjectIdentitySchema = z.object({
   people: z.array(ProjectPersonSchema).optional(),
-})
-export type ProjectIdentity = z.infer<typeof ProjectIdentitySchema>
+});
+export type ProjectIdentity = z.infer<typeof ProjectIdentitySchema>;
 
 /**
  * Per-project autonomy policy. Can only **harden** the global floor (tighten rules)
@@ -39,8 +39,8 @@ export const ProjectAutonomyPolicySchema = z.object({
   vip_escalation: z.boolean().optional(),
   /** autonomous = act on tier policy; draft_only = always draft, never send. */
   respond_as: z.enum(["autonomous", "draft_only"]).optional(),
-})
-export type ProjectAutonomyPolicy = z.infer<typeof ProjectAutonomyPolicySchema>
+});
+export type ProjectAutonomyPolicy = z.infer<typeof ProjectAutonomyPolicySchema>;
 
 /** Daily operational rhythm for the project. */
 export const ProjectDailyRhythmSchema = z.object({
@@ -53,8 +53,8 @@ export const ProjectDailyRhythmSchema = z.object({
   format: z.string().optional(),
   /** Active monitoring window, e.g. "09:00-18:00". */
   active_hours: z.string().optional(),
-})
-export type ProjectDailyRhythm = z.infer<typeof ProjectDailyRhythmSchema>
+});
+export type ProjectDailyRhythm = z.infer<typeof ProjectDailyRhythmSchema>;
 
 /**
  * The operational profile of a project — who is involved, what ZIBBY may do
@@ -65,12 +65,12 @@ export const ProjectProfileSchema = z.object({
   identity: ProjectIdentitySchema.optional(),
   autonomy_policy: ProjectAutonomyPolicySchema.optional(),
   daily_rhythm: ProjectDailyRhythmSchema.optional(),
-})
-export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
+});
+export type ProjectProfile = z.infer<typeof ProjectProfileSchema>;
 
 /** Body accepted by `updateProjectProfile` — all profile fields optional. */
-export const UpdateProjectProfileSchema = ProjectProfileSchema.partial()
-export type UpdateProjectProfileInput = z.infer<typeof UpdateProjectProfileSchema>
+export const UpdateProjectProfileSchema = ProjectProfileSchema.partial();
+export type UpdateProjectProfileInput = z.infer<typeof UpdateProjectProfileSchema>;
 
 /**
  * Per-engagement budget (Phase 8.1). The unit is **run-count per window**, not
@@ -91,8 +91,8 @@ export const ProjectBudgetSchema = z
     monthlyRuns: z.number().int().positive().optional(),
     maxConcurrent: z.number().int().positive().optional(),
   })
-  .strict()
-export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>
+  .strict();
+export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>;
 
 /**
  * A target directory agents and skills can run against — the catalog of run
@@ -139,24 +139,24 @@ export const ProjectSchema = z.object({
   autonomy_policy: ProjectAutonomyPolicySchema.optional(),
   /** Daily operational rhythm: standup timing, monitoring hours. */
   daily_rhythm: ProjectDailyRhythmSchema.optional(),
-})
-export type Project = z.infer<typeof ProjectSchema>
+});
+export type Project = z.infer<typeof ProjectSchema>;
 
 /** Body accepted by `createProject` — the full entity (`id` + `name` + `path` required). */
-export const CreateProjectSchema = ProjectSchema.omit({ hasSecrets: true })
-export type CreateProjectInput = z.infer<typeof CreateProjectSchema>
+export const CreateProjectSchema = ProjectSchema.omit({ hasSecrets: true });
+export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 
 /** Body accepted by `updateProject` — every field optional (partial update), id + hasSecrets excluded. */
-export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true }).partial()
-export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>
+export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true }).partial();
+export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
 
 /**
  * Write-only secrets body — secret environment variables injected into this
  * project's runs. A flat string map; never readable over HTTP (no read endpoint;
  * the entity exposes only `hasSecrets`).
  */
-export const ProjectSecretsInputSchema = z.record(z.string(), z.string())
-export type ProjectSecretsInput = z.infer<typeof ProjectSecretsInputSchema>
+export const ProjectSecretsInputSchema = z.record(z.string(), z.string());
+export type ProjectSecretsInput = z.infer<typeof ProjectSecretsInputSchema>;
 
 /** A standup cheat sheet generated for a project from the past 24 h of activity. */
 export const ProjectStandupSchema = z.object({
@@ -164,5 +164,5 @@ export const ProjectStandupSchema = z.object({
   date: z.string(),
   generatedAt: z.string().datetime(),
   text: z.string(),
-})
-export type ProjectStandup = z.infer<typeof ProjectStandupSchema>
+});
+export type ProjectStandup = z.infer<typeof ProjectStandupSchema>;

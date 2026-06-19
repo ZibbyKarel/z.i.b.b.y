@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest"
-import { renderWithProviders, screen } from "../../../test/render"
-import { CatalogProvider } from "../../../state/store"
-import { RightRail } from "./RightRail"
+import { describe, expect, it } from "vitest";
+import { renderWithProviders, screen } from "../../../test/render";
+import { CatalogProvider } from "../../../state/store";
+import { RightRail } from "./RightRail";
 
 describe("RightRail", () => {
   it("renders the rail panels (approvals queue + running agents)", () => {
@@ -11,7 +11,7 @@ describe("RightRail", () => {
       <CatalogProvider>
         <RightRail />
       </CatalogProvider>,
-    )
-    expect(screen.getByText("fronta schválení")).toBeInTheDocument()
-  })
-})
+    );
+    expect(screen.getByText("fronta schválení")).toBeInTheDocument();
+  });
+});

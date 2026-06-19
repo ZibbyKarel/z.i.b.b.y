@@ -12,9 +12,7 @@ export function getApprovalsQueryKey() {
  * (semantic risk type + severity + structured preview). Plain-string details
  * degrade to `{ text }`, so this is safe against an unenriched backend.
  */
-function selectApprovals(response: {
-  body: ContractApproval[];
-}): DashboardApproval[] {
+function selectApprovals(response: { body: ContractApproval[] }): DashboardApproval[] {
   return response.body.map(parseApprovalDetail);
 }
 

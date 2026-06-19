@@ -1,12 +1,12 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
  * A command's `id` IS the slash-command name (`/<id>`). It doubles as the on-disk
  * file name and the materialized `<id>.md` under a run's `.claude/commands/`, so it
  * reuses the agent id rules (filename-safe, no traversal).
  */
-export const CommandIdSchema = AgentIdSchema
+export const CommandIdSchema = AgentIdSchema;
 
 /**
  * A custom Claude Code slash command (managed from the UI). On disk: one `<id>.md`
@@ -33,13 +33,13 @@ export const CommandSchema = z.object({
   "disable-model-invocation": z.boolean().optional(),
   enabled: z.boolean().default(true),
   instructions: z.string().min(1),
-})
-export type Command = z.infer<typeof CommandSchema>
+});
+export type Command = z.infer<typeof CommandSchema>;
 
 /** Body accepted by `createCommand` — full entity (`id` + `instructions` required). */
-export const CreateCommandSchema = CommandSchema
-export type CreateCommandInput = z.infer<typeof CreateCommandSchema>
+export const CreateCommandSchema = CommandSchema;
+export type CreateCommandInput = z.infer<typeof CreateCommandSchema>;
 
 /** Body accepted by `updateCommand` — every field optional (partial), id excluded. */
-export const UpdateCommandSchema = CommandSchema.omit({ id: true }).partial()
-export type UpdateCommandInput = z.infer<typeof UpdateCommandSchema>
+export const UpdateCommandSchema = CommandSchema.omit({ id: true }).partial();
+export type UpdateCommandInput = z.infer<typeof UpdateCommandSchema>;

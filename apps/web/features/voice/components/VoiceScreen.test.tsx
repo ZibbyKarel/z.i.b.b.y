@@ -103,10 +103,7 @@ describe("VoiceScreen", () => {
     expect(muteBtn).toHaveAttribute("aria-pressed", "false");
     act(() => muteBtn.click());
     expect(speechMock.stop).toHaveBeenCalled();
-    expect(screen.getByTitle("Zapnout hlas ZIBBYho")).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByTitle("Zapnout hlas ZIBBYho")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("speaks the briefing on demand (brief me)", () => {
@@ -202,7 +199,12 @@ describe("VoiceScreen", () => {
   });
 
   it("notes when live recognition is unavailable", () => {
-    mockSession.current = liveSession({ mode: "demo", isSupported: false, isActive: false, state: "idle" });
+    mockSession.current = liveSession({
+      mode: "demo",
+      isSupported: false,
+      isActive: false,
+      state: "idle",
+    });
     render(<VoiceScreen onExit={vi.fn()} />);
     expect(screen.getByText(/prohlížeči/i)).toBeInTheDocument();
   });

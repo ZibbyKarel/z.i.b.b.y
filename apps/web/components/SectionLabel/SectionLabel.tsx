@@ -6,20 +6,13 @@ export interface SectionLabelProps extends HTMLAttributes<HTMLDivElement> {
   ref?: React.Ref<HTMLElement>;
 }
 
-export function SectionLabel({
-  action,
-  children,
-  ref,
-  style,
-  ...props
-}: SectionLabelProps) {
+export function SectionLabel({ action, children, ref, style, ...props }: SectionLabelProps) {
   return (
     <Stack
       align="baseline"
       direction="row"
       justify="between"
       ref={ref}
-       
       style={{ marginBottom: "0.875rem", ...style }}
       {...props}
     >

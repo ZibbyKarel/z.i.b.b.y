@@ -36,6 +36,7 @@ buď na `/overview` (approvals badge, queued tasks) nebo inline v příslušné 
 ## Root layout (`app/layout.tsx`)
 
 Server component — načítá locale + messages a mountuje:
+
 1. `next/font/google` — Geist (`--font-sans`) + JetBrains Mono (`--font-mono`)
 2. `NextIntlClientProvider` — internacionalizace
 3. `<Providers>` — všechny client-side providery
@@ -45,11 +46,21 @@ Server component — načítá locale + messages a mountuje:
 Client component (`"use client"`):
 
 ```tsx
-<QueryClientProvider client={queryClient}>        // TanStack Query
-  <apiClient.ReactQueryProvider>                  // ts-rest client
-    <RunEventsProvider>                           // SSE/polling pro run logy
-      <DesignSystemProvider theme="dark">         // dark theme
-        <BootSplash>                              // loading screen
+<QueryClientProvider client={queryClient}>
+  {" "}
+  // TanStack Query
+  <apiClient.ReactQueryProvider>
+    {" "}
+    // ts-rest client
+    <RunEventsProvider>
+      {" "}
+      // SSE/polling pro run logy
+      <DesignSystemProvider theme="dark">
+        {" "}
+        // dark theme
+        <BootSplash>
+          {" "}
+          // loading screen
           {children}
         </BootSplash>
       </DesignSystemProvider>
@@ -67,6 +78,7 @@ Server component — renderuje `AppShell` s children.
 ## AppShell (`components/layout/AppShell/`)
 
 Client component (`"use client"`):
+
 - Použije `usePathname()` pro odvození aktivní navigace
 - Mountuje `CatalogProvider`, `VoiceProvider`, `NewTaskProvider`
 - Renderuje `MainLayout` s nav/rail/voice/task sloty
@@ -84,14 +96,15 @@ Client component (`"use client"`):
 
 ## Fonty
 
-| Proměnná | Font | Použití |
-|---------|------|---------|
-| `--font-sans` | Geist | UI text |
+| Proměnná      | Font                             | Použití             |
+| ------------- | -------------------------------- | ------------------- |
+| `--font-sans` | Geist                            | UI text             |
 | `--font-mono` | JetBrains Mono (400/500/600/700) | Kód, logy, terminál |
 
 ## API klient (`state/api.ts`)
 
 ts-rest klient generovaný z `@zibby/contracts`:
+
 - Typ-safe HTTP volání
 - Poskytuje `ReactQueryProvider` pro hooky
 - Základní URL: `http://localhost:3333` (konfigurovatelné přes env)
@@ -121,6 +134,7 @@ features/
 ```
 
 Každý feature modul má:
+
 ```
 features/<domain>/
   queries/      ← hooks (useXxxQuery.ts), re-export z queries/index.ts

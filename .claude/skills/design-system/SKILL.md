@@ -44,30 +44,31 @@ with descriptive property names (`colorForeground`, `colorBorderStrong`, `radius
 Tailwind `@theme` in `globals.css` maps Tailwind utility classes to those same CSS vars.
 
 **TS theme property → CSS var → Tailwind class:**
-- `colorForeground`      → `--color-foreground`      → `text-foreground`
-- `colorForegroundDim`   → `--color-foreground-dim`   → `text-foreground-dim`
+
+- `colorForeground` → `--color-foreground` → `text-foreground`
+- `colorForegroundDim` → `--color-foreground-dim` → `text-foreground-dim`
 - `colorForegroundFaint` → `--color-foreground-faint` → `text-foreground-faint`
-- `colorBackground`      → `--color-background`       → `bg-background`
-- `colorSurface`         → `--color-surface`          → `bg-surface`
-- `colorElevated`        → `--color-elevated`         → `bg-elevated`
-- `colorRaised`          → `--color-raised`           → `bg-raised`
-- `colorBorder`          → `--color-border`           → `border-border`
-- `colorBorderStrong`    → `--color-border-strong`    → `border-border-strong`
-- `colorAccent`          → `--color-accent`           → `text-accent` / `bg-accent`
-- `colorAccentDim`       → `--color-accent-dim`       → `bg-accent-dim`
-- `colorAccentContrast`  → `--color-accent-contrast`  → `text-accent-contrast`
-- `colorHome` / `colorWork` → `--color-home/work`     → `text-home` / `text-work`
-- `colorOk/Warn/Danger`  → `--color-ok/warn/bad`      → `text-ok` / `bg-ok` / `bg-ok/12` …
-- `shadowGlowAccent`     → `--shadow-glow-accent`     → `shadow-glow-accent`
-- `radiusDefault`        → `--radius`                 → `rounded`
-- `radiusSm`             → `--radius-sm`              → `rounded-sm`
+- `colorBackground` → `--color-background` → `bg-background`
+- `colorSurface` → `--color-surface` → `bg-surface`
+- `colorElevated` → `--color-elevated` → `bg-elevated`
+- `colorRaised` → `--color-raised` → `bg-raised`
+- `colorBorder` → `--color-border` → `border-border`
+- `colorBorderStrong` → `--color-border-strong` → `border-border-strong`
+- `colorAccent` → `--color-accent` → `text-accent` / `bg-accent`
+- `colorAccentDim` → `--color-accent-dim` → `bg-accent-dim`
+- `colorAccentContrast` → `--color-accent-contrast` → `text-accent-contrast`
+- `colorHome` / `colorWork` → `--color-home/work` → `text-home` / `text-work`
+- `colorOk/Warn/Danger` → `--color-ok/warn/bad` → `text-ok` / `bg-ok` / `bg-ok/12` …
+- `shadowGlowAccent` → `--shadow-glow-accent` → `shadow-glow-accent`
+- `radiusDefault` → `--radius` → `rounded`
+- `radiusSm` → `--radius-sm` → `rounded-sm`
 
 ```ts
 type Spacing =
-  | "0"   // 0px
-  | "25"  // 2px
-  | "50"  // 4px
-  | "75"  // 6px
+  | "0" // 0px
+  | "25" // 2px
+  | "50" // 4px
+  | "75" // 6px
   | "100" // 8px
   | "150" // 12px
   | "200" // 16px
@@ -80,26 +81,26 @@ type Spacing =
 
 type Padding = Spacing | [Spacing, Spacing] | [Spacing, Spacing, Spacing, Spacing];
 
-type Size = "xs" | "sm" | "md" | "lg" | "xl";  // semantic T-shirt sizes
+type Size = "xs" | "sm" | "md" | "lg" | "xl"; // semantic T-shirt sizes
 
 type IconStroke = "thin" | "default" | "medium" | "bold"; // 1.2 / 1.6 / 2 / 2.4
-type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl";    // 360 / 460 / 600 / 800 / 1000px
+type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl"; // 360 / 460 / 600 / 800 / 1000px
 ```
 
 ### Sealed component sizing — no raw px in public props
 
 All DS component props that control visual size use semantic tokens, never raw numbers or px strings.
 
-| Prop | Type | Component |
-|------|------|-----------|
-| `size` | `Size` | `Icon` — xs=12, sm=14, md=16, lg=20, xl=24 |
-| `stroke` | `IconStroke` | `Icon` — thin/default/medium/bold |
-| `size` | `Spacing` | `StatusDot` — diameter token, default "100" (8px) |
-| `height` | `Spacing` | `Progress` — track height token, default "75" (6px) |
-| `inset` | `Spacing` | `Corners` — corner bracket offset, default "75" (6px) |
-| `padding` | `Padding` | `CardContent` — content padding, default "200" (16px) |
-| `padding` | `Padding` | `Container` — accepts Spacing token(s) only |
-| `width` | `DialogWidth` | `Dialog` — sm/md/lg/xl/2xl preset widths |
+| Prop      | Type          | Component                                             |
+| --------- | ------------- | ----------------------------------------------------- |
+| `size`    | `Size`        | `Icon` — xs=12, sm=14, md=16, lg=20, xl=24            |
+| `stroke`  | `IconStroke`  | `Icon` — thin/default/medium/bold                     |
+| `size`    | `Spacing`     | `StatusDot` — diameter token, default "100" (8px)     |
+| `height`  | `Spacing`     | `Progress` — track height token, default "75" (6px)   |
+| `inset`   | `Spacing`     | `Corners` — corner bracket offset, default "75" (6px) |
+| `padding` | `Padding`     | `CardContent` — content padding, default "200" (16px) |
+| `padding` | `Padding`     | `Container` — accepts Spacing token(s) only           |
+| `width`   | `DialogWidth` | `Dialog` — sm/md/lg/xl/2xl preset widths              |
 
 **No `paddingX` / `paddingY` props on `Container`** — use `padding={["0", "200"]}` (CSS [y, x] shorthand) or `padding={["t", "r", "b", "l"]}` (4-value shorthand).
 
@@ -167,8 +168,7 @@ const component = cva("base-classes", {
   compoundVariants: [],
 });
 
-type ComponentProps = React.ComponentPropsWithoutRef<"button"> &
-  VariantProps<typeof component>;
+type ComponentProps = React.ComponentPropsWithoutRef<"button"> & VariantProps<typeof component>;
 ```
 
 Tailwind classes belong **only here** — the DS is sealed; no `className` overrides from outside.
@@ -221,9 +221,9 @@ Import directly from the same package (not through `index.ts` to avoid circular 
 
 ```tsx
 // ✅ EmptyState built from DS primitives
-import { Stack } from "../Stack/Stack"
-import { Text } from "../Text/Text"
-import { Icon } from "../Icon/Icon"
+import { Stack } from "../Stack/Stack";
+import { Text } from "../Text/Text";
+import { Icon } from "../Icon/Icon";
 
 export function EmptyState({ icon, title, description }: EmptyStateProps) {
   return (
@@ -232,12 +232,12 @@ export function EmptyState({ icon, title, description }: EmptyStateProps) {
       <Text weight="medium">{title}</Text>
       {description && <Text tone="secondary">{description}</Text>}
     </Stack>
-  )
+  );
 }
 
 // ✅ Stat built using Card + Text
-import { Card, CardContent } from "../Card/Card"
-import { Text } from "../Text/Text"
+import { Card, CardContent } from "../Card/Card";
+import { Text } from "../Text/Text";
 ```
 
 Good candidates to reach for: `Stack`, `Row`, `Container`, `Text`, `Heading`, `Icon`, `Card`, `Badge`, `Divider`, `Spacer`.
@@ -289,7 +289,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => { ... 
 **Mandatory for every component.** Each component declares its own `<Component>TestId` enum
 naming each important part it renders, and wires `data-testid` onto those parts. Tests then
 select elements with `getByTestId` — never `querySelector`, `container.firstChild`, or role/text
-queries used purely to *grab* a node (see Tests below).
+queries used purely to _grab_ a node (see Tests below).
 
 ```ts
 // Each component has its own enum — no loose strings. Values are kebab "<component>-<part>".
@@ -308,7 +308,11 @@ Rules:
   with it and key tests off the same prefix — keeps the prefix in the enum, no loose strings:
 
   ```ts
-  export enum TabsTestId { Root = "tabs-root", Tab = "tabs-tab", Panel = "tabs-panel" }
+  export enum TabsTestId {
+    Root = "tabs-root",
+    Tab = "tabs-tab",
+    Panel = "tabs-panel",
+  }
   // component: <button data-testid={`${TabsTestId.Tab}-${value}`} … />
   // test:      screen.getByTestId(`${TabsTestId.Tab}-${value}`)
   ```
@@ -388,7 +392,7 @@ Button.stories.tsx ← exactly two exports: Overview + Playground
 
 Grab elements through the component's `<Component>TestId` enum (see Testid enum above) with
 `getByTestId` / `queryByTestId` / `getAllByTestId`. Do **not** use `container.querySelector`,
-`container.firstChild`, or `getByRole`/`getByText` *as a way to find a node*.
+`container.firstChild`, or `getByRole`/`getByText` _as a way to find a node_.
 
 **Roles and ARIA stay — but as assertions, not selectors.** The selector changes; the assertion
 set never shrinks. Whatever a test verified before (a role, an accessible name, an `aria-*`), it
@@ -396,8 +400,8 @@ must still verify after. Use jest-dom matchers on the node you got by test-id:
 
 ```ts
 const el = screen.getByTestId(ProgressTestId.Root);
-expect(el).toHaveRole("progressbar");            // was getByRole("progressbar")
-expect(el).toHaveAccessibleName("5h rolling");   // was the { name } option
+expect(el).toHaveRole("progressbar"); // was getByRole("progressbar")
+expect(el).toHaveAccessibleName("5h rolling"); // was the { name } option
 expect(el).toHaveAttribute("aria-valuenow", "64");
 ```
 
@@ -409,7 +413,7 @@ control selected by test-id — it only passes when the `htmlFor`/`id` wiring is
 the owning part and query within it:
 
 ```ts
-within(screen.getByTestId(DialogTestId.Footer)).getByRole("button", { name: "OK" })
+within(screen.getByTestId(DialogTestId.Footer)).getByRole("button", { name: "OK" });
 ```
 
 Domain composites moved to app: use `apps/web/test/renderWithIntl.tsx` as test wrapper.
@@ -430,7 +434,9 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-3">
-        <Button intent="run" icon="play">Spustit</Button>
+        <Button intent="run" icon="play">
+          Spustit
+        </Button>
         <Button intent="solid">Solid</Button>
         {/* …all variants… */}
       </div>
@@ -438,7 +444,7 @@ export const Overview: Story = {
   ),
 };
 
-export const Playground: Story = {};  // picks up meta args + argTypes
+export const Playground: Story = {}; // picks up meta args + argTypes
 ```
 
 No other story exports. Remove `Default`, `Tones`, `Sizes`, `WithHeader`, etc. — everything goes into `Overview`.

@@ -1,11 +1,11 @@
-import { Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { MandateController } from "./mandate.controller"
-import { MANDATE_FILE, MandateStorageService } from "./mandate.storage.service"
+import { Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { MandateController } from "./mandate.controller";
+import { MANDATE_FILE, MandateStorageService } from "./mandate.storage.service";
 
 /** Default mandate file, anchored to `apps/api/data/mandate.json`. */
 export function resolveMandateFile(): string {
-  return process.env.MANDATE_FILE ?? dataDir("mandate.json")
+  return process.env.MANDATE_FILE ?? dataDir("mandate.json");
 }
 
 /**
@@ -15,10 +15,7 @@ export function resolveMandateFile(): string {
  */
 @Module({
   controllers: [MandateController],
-  providers: [
-    { provide: MANDATE_FILE, useFactory: resolveMandateFile },
-    MandateStorageService,
-  ],
+  providers: [{ provide: MANDATE_FILE, useFactory: resolveMandateFile }, MandateStorageService],
   exports: [MandateStorageService],
 })
 export class MandateModule {}

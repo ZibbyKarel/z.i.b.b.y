@@ -1,10 +1,10 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable } from "@nestjs/common"
-import type { Command } from "@zibby/contracts"
-import matter from "gray-matter"
-import { CommandsStorageService } from "../commands/commands.storage.service"
-import { fileExists, writeFileAtomic } from "../shared/file-storage"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable } from "@nestjs/common";
+import type { Command } from "@zibby/contracts";
+import matter from "gray-matter";
+import { CommandsStorageService } from "../commands/commands.storage.service";
+import { fileExists, writeFileAtomic } from "../shared/file-storage";
 
 /**
  * Materializes the enabled command catalog into a run's working tree so the
@@ -34,19 +34,19 @@ export class CommandMaterializerService {
     try {
       const commands = (await this.commands.list().catch((): Command[] => [])).filter(
         (command) => command.enabled,
-      )
-      if (commands.length === 0) return
-      const commandsDir = path.join(targetDir, ".claude", "commands")
-      await fs.mkdir(commandsDir, { recursive: true })
-      let wroteAny = false
+      );
+      if (commands.length === 0) return;
+      const commandsDir = path.join(targetDir, ".claude", "commands");
+      await fs.mkdir(commandsDir, { recursive: true });
+      let wroteAny = false;
       for (const command of commands) {
-        const file = path.join(commandsDir, `${command.id}.md`)
+        const file = path.join(commandsDir, `${command.id}.md`);
         // A pre-existing project/user command of the same name wins — only fill gaps.
-        if (await fileExists(file)) continue
-        await writeFileAtomic(file, renderCommandFile(command))
-        wroteAny = true
+        if (await fileExists(file)) continue;
+        await writeFileAtomic(file, renderCommandFile(command));
+        wroteAny = true;
       }
-      if (wroteAny) await excludeFromGit(targetDir)
+      if (wroteAny) await excludeFromGit(targetDir);
     } catch {
       // Fail-open: never let a materialization error block a run.
     }
@@ -59,15 +59,15 @@ export class CommandMaterializerService {
  * `enabled` flag is intentionally omitted from the materialized file.
  */
 function renderCommandFile(command: Command): string {
-  const data: Record<string, unknown> = {}
-  if (command.description !== undefined) data.description = command.description
-  if (command["argument-hint"] !== undefined) data["argument-hint"] = command["argument-hint"]
-  if (command["allowed-tools"] !== undefined) data["allowed-tools"] = command["allowed-tools"]
-  if (command.model !== undefined) data.model = command.model
+  const data: Record<string, unknown> = {};
+  if (command.description !== undefined) data.description = command.description;
+  if (command["argument-hint"] !== undefined) data["argument-hint"] = command["argument-hint"];
+  if (command["allowed-tools"] !== undefined) data["allowed-tools"] = command["allowed-tools"];
+  if (command.model !== undefined) data.model = command.model;
   if (command["disable-model-invocation"] !== undefined) {
-    data["disable-model-invocation"] = command["disable-model-invocation"]
+    data["disable-model-invocation"] = command["disable-model-invocation"];
   }
-  return matter.stringify(`\n${command.instructions}\n`, data)
+  return matter.stringify(`\n${command.instructions}\n`, data);
 }
 
 /**
@@ -79,26 +79,26 @@ function renderCommandFile(command: Command): string {
  */
 async function excludeFromGit(targetDir: string): Promise<void> {
   try {
-    const dotGit = path.join(targetDir, ".git")
-    const stat = await fs.stat(dotGit).catch(() => null)
-    if (!stat) return
-    let gitDir: string
+    const dotGit = path.join(targetDir, ".git");
+    const stat = await fs.stat(dotGit).catch(() => null);
+    if (!stat) return;
+    let gitDir: string;
     if (stat.isDirectory()) {
-      gitDir = dotGit
+      gitDir = dotGit;
     } else {
       // Worktree: `.git` is a file `gitdir: <absolute path>`.
-      const content = await fs.readFile(dotGit, "utf8")
-      const match = /^gitdir:\s*(.+)$/m.exec(content.trim())
-      if (!match?.[1]) return
-      gitDir = path.resolve(targetDir, match[1].trim())
+      const content = await fs.readFile(dotGit, "utf8");
+      const match = /^gitdir:\s*(.+)$/m.exec(content.trim());
+      if (!match?.[1]) return;
+      gitDir = path.resolve(targetDir, match[1].trim());
     }
-    const infoDir = path.join(gitDir, "info")
-    await fs.mkdir(infoDir, { recursive: true })
-    const excludeFile = path.join(infoDir, "exclude")
-    const existing = await fs.readFile(excludeFile, "utf8").catch(() => "")
-    if (existing.split("\n").some((line) => line.trim() === ".claude/commands/")) return
-    const next = existing.endsWith("\n") || existing === "" ? existing : `${existing}\n`
-    await fs.writeFile(excludeFile, `${next}.claude/commands/\n`)
+    const infoDir = path.join(gitDir, "info");
+    await fs.mkdir(infoDir, { recursive: true });
+    const excludeFile = path.join(infoDir, "exclude");
+    const existing = await fs.readFile(excludeFile, "utf8").catch(() => "");
+    if (existing.split("\n").some((line) => line.trim() === ".claude/commands/")) return;
+    const next = existing.endsWith("\n") || existing === "" ? existing : `${existing}\n`;
+    await fs.writeFile(excludeFile, `${next}.claude/commands/\n`);
   } catch {
     // Best-effort only.
   }

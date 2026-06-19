@@ -1,15 +1,15 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   ClassifyTaskInputSchema,
   CreateTaskInputSchema,
   CreateTaskResultSchema,
   ScheduledTaskSchema,
   TaskRoutingSchema,
-} from "./task.schema"
+} from "./task.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Task routing contract. A single side-effect-free endpoint: it classifies a
@@ -77,6 +77,6 @@ export const tasksContract = c.router(
     pathPrefix: "/api",
     strictStatusCodes: true,
   },
-)
+);
 
-export type TasksContract = typeof tasksContract
+export type TasksContract = typeof tasksContract;

@@ -1,6 +1,6 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   CreateProjectSchema,
   ProjectIdSchema,
@@ -10,9 +10,9 @@ import {
   ProjectStandupSchema,
   UpdateProjectProfileSchema,
   UpdateProjectSchema,
-} from "./project.schema"
+} from "./project.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * CRUD over the project registry — the catalog of target directories agents and
@@ -107,5 +107,5 @@ export const projectsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type ProjectsContract = typeof projectsContract
+);
+export type ProjectsContract = typeof projectsContract;

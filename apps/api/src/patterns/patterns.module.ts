@@ -1,6 +1,6 @@
-import { Module } from "@nestjs/common"
-import { MemoryModule } from "../memory/memory.module"
-import { PatternExtractorService } from "./pattern-extractor.service"
+import { Module } from "@nestjs/common";
+import { MemoryModule } from "../memory/memory.module";
+import { PatternExtractorService } from "./pattern-extractor.service";
 
 /**
  * Pattern extraction: scans the 30-day approval-decision activity and drafts

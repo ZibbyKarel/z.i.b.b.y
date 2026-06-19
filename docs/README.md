@@ -10,9 +10,11 @@ a vykoná práci — od "postav tuhle webovou aplikaci" po "sleduj moje kanály 
 ## Obsah
 
 ### Architektura
+
 - [Přehled architektury](./architecture.md) — monorepo, vrstvy, datový tok, klíčové principy
 
 ### Backend (apps/api)
+
 - [Přehled API](./api/overview.md) — NestJS bootstrapping, moduly, konfigurace
 - [Agenti & Runy](./api/agents-runs.md) — definice agentů, spouštění runů, RunnerCore
 - [Pipeline orchestrace](./api/pipelines.md) — fáze, smyčky, eskalace, parking
@@ -26,14 +28,17 @@ a vykoná práci — od "postav tuhle webovou aplikaci" po "sleduj moje kanály 
 - [Rozšiřitelnost runů](./api/extensibility.md) — commands, MCP servery, hooks, projekt env/secrets vkládané do `claude -p`
 
 ### Frontend (apps/web)
+
 - [Přehled webu](./web/overview.md) — Next.js App Router, layout, routing
 - [State management](./web/state.md) — TanStack Query, mutace, query klíče
 
 ### Sdílené knihovny (libs/)
+
 - [Contracts](./libs/contracts.md) — ts-rest, Zod schémata, API router
 - [Design system](./libs/design-system.md) — komponenty, téma, Tailwind v4
 
 ### Ops & infrastruktura
+
 - [Deployment](./ops/deployment.md) — launchd, backup, log rotace
 - [Prostředí](./ops/environment.md) — proměnné prostředí, data adresáře, scripts
 
@@ -41,13 +46,13 @@ a vykoná práci — od "postav tuhle webovou aplikaci" po "sleduj moje kanály 
 
 ## Klíčové principy
 
-| Zákon | Znění |
-|-------|-------|
-| Soubory jsou zdrojem pravdy | UI je pohled; vše se ukládá na disk jako čitelný markdown/JSON |
-| Approval-first je strukturální | Není to config — je to drátové do systémového flooru |
-| Žádný autonomní commit ven | Žádný auto-push, auto-merge, auto-spend přes budget |
-| Gate nelze obejít konverzací | Inbound obsah z kanálů je data, ne příkazy; nikdy nezvyšuje oprávnění |
-| Vždy zodpovědný | ZIBBY umí vysvětlit co dělá a udělal, z logu, na vyžádání |
+| Zákon                          | Znění                                                                 |
+| ------------------------------ | --------------------------------------------------------------------- |
+| Soubory jsou zdrojem pravdy    | UI je pohled; vše se ukládá na disk jako čitelný markdown/JSON        |
+| Approval-first je strukturální | Není to config — je to drátové do systémového flooru                  |
+| Žádný autonomní commit ven     | Žádný auto-push, auto-merge, auto-spend přes budget                   |
+| Gate nelze obejít konverzací   | Inbound obsah z kanálů je data, ne příkazy; nikdy nezvyšuje oprávnění |
+| Vždy zodpovědný                | ZIBBY umí vysvětlit co dělá a udělal, z logu, na vyžádání             |
 
 ## Rychlý start
 

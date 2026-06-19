@@ -1,6 +1,6 @@
-import { writeFileSync } from "node:fs"
-import { type SystemConfig, SystemConfigSchema } from "@zibby/contracts"
-import type { SystemConfigListener, SystemConfigStore } from "./system-config.store"
+import { writeFileSync } from "node:fs";
+import { type SystemConfig, SystemConfigSchema } from "@zibby/contracts";
+import type { SystemConfigListener, SystemConfigStore } from "./system-config.store";
 
 /**
  * Test defaults for the runtime system config: every heartbeat OFF (suites drive
@@ -14,7 +14,7 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   channelTickMs: 0,
   automationTickMs: 0,
   limitResumeTickMs: 0,
-})
+});
 
 /**
  * An in-memory {@link SystemConfigStore} for unit tests — no file IO. `write()` updates
@@ -22,22 +22,22 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
  * schedulers' live re-arm. Pass a partial to override the test defaults.
  */
 export function fakeSystemConfigStore(partial: Partial<SystemConfig> = {}): SystemConfigStore {
-  let config = SystemConfigSchema.parse({ ...TEST_SYSTEM_CONFIG, ...partial })
-  const listeners = new Set<SystemConfigListener>()
+  let config = SystemConfigSchema.parse({ ...TEST_SYSTEM_CONFIG, ...partial });
+  const listeners = new Set<SystemConfigListener>();
   const store: Pick<SystemConfigStore, "current" | "read" | "write" | "onChange"> = {
     current: () => config,
     read: async () => config,
     write: async (next) => {
-      config = SystemConfigSchema.parse(next)
-      for (const listener of listeners) listener(config)
-      return config
+      config = SystemConfigSchema.parse(next);
+      for (const listener of listeners) listener(config);
+      return config;
     },
     onChange: (listener) => {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
-  }
-  return store as SystemConfigStore
+  };
+  return store as SystemConfigStore;
 }
 
 /**
@@ -47,8 +47,8 @@ export function fakeSystemConfigStore(partial: Partial<SystemConfig> = {}): Syst
  * synchronously at construction.
  */
 export function writeSystemConfig(partial: Partial<SystemConfig> = {}): void {
-  const file = process.env.SYSTEM_CONFIG_FILE
-  if (!file) throw new Error("SYSTEM_CONFIG_FILE is not set (vitest.setup seeds it)")
-  const config = SystemConfigSchema.parse({ ...TEST_SYSTEM_CONFIG, ...partial })
-  writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`)
+  const file = process.env.SYSTEM_CONFIG_FILE;
+  if (!file) throw new Error("SYSTEM_CONFIG_FILE is not set (vitest.setup seeds it)");
+  const config = SystemConfigSchema.parse({ ...TEST_SYSTEM_CONFIG, ...partial });
+  writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
 }

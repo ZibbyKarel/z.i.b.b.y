@@ -1,7 +1,7 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { limitsContract } from "@zibby/contracts"
-import { LimitsService } from "./limits.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { limitsContract } from "@zibby/contracts";
+import { LimitsService } from "./limits.service";
 
 /**
  * Implements `limitsContract`. The usage computation lives in `LimitsService`;
@@ -18,6 +18,6 @@ export class LimitsController {
         status: 200,
         body: await this.limits.snapshot(),
       }),
-    })
+    });
   }
 }

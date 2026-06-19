@@ -123,14 +123,8 @@ export interface SystemStatus {
 }
 
 /** Glyph for an agent name, falling back to a generic bot. */
-export function glyphForAgent(
-  name: string | undefined,
-  agents: Agent[],
-): IconName {
-  return (
-    (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ??
-    "bot"
-  );
+export function glyphForAgent(name: string | undefined, agents: Agent[]): IconName {
+  return (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ?? "bot";
 }
 
 /** Glyph for a pipeline phase: verify phases get the shield, agents their glyph. */

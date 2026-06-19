@@ -63,7 +63,6 @@ export interface IntegrationFormDialogProps {
   onSubmit: (draft: IntegrationDraft) => void;
 }
 
-
 /**
  * Create/edit dialog for an integration (the AgentDetailModal pattern, NOT the
  * generic EntityFormModal): a kind dropdown, name, kind-specific config fields and
@@ -73,7 +72,12 @@ export interface IntegrationFormDialogProps {
  * the screen persists the secret through the separate credentials mutation
  * (Slack/Jira/GitHub carry a `token`, email a `password`).
  */
-export function IntegrationFormDialog({ projectId, integration, onClose, onSubmit }: IntegrationFormDialogProps) {
+export function IntegrationFormDialog({
+  projectId,
+  integration,
+  onClose,
+  onSubmit,
+}: IntegrationFormDialogProps) {
   const t = useTranslations();
   const isNew = integration === undefined;
 
@@ -101,8 +105,12 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
   const [projectKey, setProjectKey] = useState(jiraCfg?.projectKey ?? "");
   const [jql, setJql] = useState(jiraCfg?.jql ?? "");
   const [repo, setRepo] = useState(githubCfg?.repo ?? "");
-  const [streamIssues, setStreamIssues] = useState(githubCfg ? githubCfg.streams.includes("issues") : true);
-  const [streamPulls, setStreamPulls] = useState(githubCfg ? githubCfg.streams.includes("pulls") : true);
+  const [streamIssues, setStreamIssues] = useState(
+    githubCfg ? githubCfg.streams.includes("issues") : true,
+  );
+  const [streamPulls, setStreamPulls] = useState(
+    githubCfg ? githubCfg.streams.includes("pulls") : true,
+  );
   const [calendarId, setCalendarId] = useState(calendarCfg?.calendarId ?? "");
   const [lookaheadDays, setLookaheadDays] = useState(String(calendarCfg?.lookaheadDays ?? 14));
 
@@ -201,8 +209,9 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
         : kind === "calendar"
           ? t("integrations.serviceAccountKey")
           : t("integrations.apiToken");
-  const secretPlaceholder =
-    integration?.hasCredentials ? t("integrations.credentialsStored") : t("integrations.credentialsNone");
+  const secretPlaceholder = integration?.hasCredentials
+    ? t("integrations.credentialsStored")
+    : t("integrations.credentialsNone");
 
   return (
     <Dialog

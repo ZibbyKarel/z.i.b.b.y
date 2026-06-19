@@ -34,13 +34,13 @@ libs/design-system/src/
 
 Named spacing scale (`Spacing` type) → konkrétní px hodnoty:
 
-| Token | px |
-|-------|----|
-| `"0"` | 0px |
-| `"25"` | 2px |
-| `"50"` | 4px |
-| `"75"` | 6px |
-| `"100"` | 8px |
+| Token   | px   |
+| ------- | ---- |
+| `"0"`   | 0px  |
+| `"25"`  | 2px  |
+| `"50"`  | 4px  |
+| `"75"`  | 6px  |
+| `"100"` | 8px  |
 | `"150"` | 12px |
 | `"200"` | 16px |
 | `"250"` | 20px |
@@ -53,7 +53,7 @@ Named spacing scale (`Spacing` type) → konkrétní px hodnoty:
 ### Size enum
 
 ```typescript
-type Size = "xs" | "sm" | "md" | "lg" | "xl"
+type Size = "xs" | "sm" | "md" | "lg" | "xl";
 ```
 
 Používá ho `Icon`, `Button` a podobné komponenty pro pojmenované velikosti.
@@ -69,9 +69,7 @@ Komponenty používají **jen Tailwind classes** — `useTokens()` jen pro SVG/c
 ## DesignSystemProvider
 
 ```tsx
-<DesignSystemProvider theme="dark">
-  {children}
-</DesignSystemProvider>
+<DesignSystemProvider theme="dark">{children}</DesignSystemProvider>
 ```
 
 Nastaveno na `theme="dark"` v `apps/web/app/providers.tsx`.
@@ -94,14 +92,14 @@ DS používá Tailwind v4 s `@theme` v `globals.css`:
 
 ### Layout primitives
 
-| Komponenta | Účel |
-|-----------|------|
+| Komponenta  | Účel                                                       |
+| ----------- | ---------------------------------------------------------- |
 | `Container` | Obal s max-width, padding, overflow, position, grow/shrink |
-| `Stack` | Flex column/row s gap |
-| `Grid` | CSS Grid s cols, gap, align |
-| `Spacer` | Flex spacer |
-| `Surface` | Vrstvená plocha (background tier) |
-| `Pressable` | Interaktivní wrapper (keyboard + mouse) |
+| `Stack`     | Flex column/row s gap                                      |
+| `Grid`      | CSS Grid s cols, gap, align                                |
+| `Spacer`    | Flex spacer                                                |
+| `Surface`   | Vrstvená plocha (background tier)                          |
+| `Pressable` | Interaktivní wrapper (keyboard + mouse)                    |
 
 ### Typografie
 
@@ -109,11 +107,11 @@ DS používá Tailwind v4 s `@theme` v `globals.css`:
 
 ### Tlačítka
 
-| Komponenta | Účel |
-|-----------|------|
-| `Button` | Hlavní tlačítko (variant: solid/ghost/outline, size: xs-xl) |
-| `ButtonGroup` | Skupinování tlačítek |
-| `HoldButton` | Tlačítko s potvrzením podržením (pro destruktivní akce) |
+| Komponenta    | Účel                                                        |
+| ------------- | ----------------------------------------------------------- |
+| `Button`      | Hlavní tlačítko (variant: solid/ghost/outline, size: xs-xl) |
+| `ButtonGroup` | Skupinování tlačítek                                        |
+| `HoldButton`  | Tlačítko s potvrzením podržením (pro destruktivní akce)     |
 
 ### Formulářové prvky (form/)
 
@@ -136,41 +134,41 @@ form/
 
 ### Feedback
 
-| Komponenta | Účel |
-|-----------|------|
-| `Alert` | Informační / warning / error banner |
-| `StatusDot` | Stavový indikátor (barva + volitelný pulsing) |
-| `Progress` | Lineární progress bar |
-| `ProgressRing` | Kruhový progress |
-| `Sparkline` | Miniaturní chart |
-| `Stat` | Číslo + label + trend |
+| Komponenta     | Účel                                          |
+| -------------- | --------------------------------------------- |
+| `Alert`        | Informační / warning / error banner           |
+| `StatusDot`    | Stavový indikátor (barva + volitelný pulsing) |
+| `Progress`     | Lineární progress bar                         |
+| `ProgressRing` | Kruhový progress                              |
+| `Sparkline`    | Miniaturní chart                              |
+| `Stat`         | Číslo + label + trend                         |
 
 ### Navigace a data
 
-| Komponenta | Účel |
-|-----------|------|
-| `Tabs` | Tab navigace |
-| `Accordion` | Collapsible sekce |
-| `List` | Strukturovaný seznam |
-| `Dropdown` | Dropdown menu |
+| Komponenta    | Účel                     |
+| ------------- | ------------------------ |
+| `Tabs`        | Tab navigace             |
+| `Accordion`   | Collapsible sekce        |
+| `List`        | Strukturovaný seznam     |
+| `Dropdown`    | Dropdown menu            |
 | `MenuSurface` | Surface pro menu overlay |
-| `SearchBar` | Input pro search |
-| `SearchMenu` | Search s výsledky |
+| `SearchBar`   | Input pro search         |
+| `SearchMenu`  | Search s výsledky        |
 
 ### Overlays a obsah
 
-| Komponenta | Účel |
-|-----------|------|
-| `Dialog` | Modal dialog (DialogWidth: sm/md/lg/xl/full) |
-| `Panel` | Drawer/panel |
-| `Card` | Karta s volitelným header/footer |
-| `IconTile` | Ikona v dlaždici (size, color) |
-| `CodeBlock` | Code block s highlighting |
-| `MarkdownEditor` | Markdown editor + preview |
-| `Tag` | Barevný tag/badge |
-| `Chip` | Interaktivní chip |
-| `Kbd` | Klávesová zkratka |
-| `Divider` | Horizontální/vertikální oddělovač |
+| Komponenta       | Účel                                         |
+| ---------------- | -------------------------------------------- |
+| `Dialog`         | Modal dialog (DialogWidth: sm/md/lg/xl/full) |
+| `Panel`          | Drawer/panel                                 |
+| `Card`           | Karta s volitelným header/footer             |
+| `IconTile`       | Ikona v dlaždici (size, color)               |
+| `CodeBlock`      | Code block s highlighting                    |
+| `MarkdownEditor` | Markdown editor + preview                    |
+| `Tag`            | Barevný tag/badge                            |
+| `Chip`           | Interaktivní chip                            |
+| `Kbd`            | Klávesová zkratka                            |
+| `Divider`        | Horizontální/vertikální oddělovač            |
 
 ### Icon
 
@@ -183,6 +181,7 @@ form/
 ## Testování
 
 Každá DS komponenta:
+
 - Deklaruje `<Component>TestId` enum pro důležité části
 - Drátem `data-testid` na ty části
 - Testy selektují přes `getByTestId` (primární selektor)
@@ -190,11 +189,11 @@ Každá DS komponenta:
 
 ```typescript
 // Špatně ❌
-const button = container.querySelector("button")
+const button = container.querySelector("button");
 
 // Správně ✅
-const button = getByTestId(ButtonTestId.Root)
-expect(button).toHaveRole("button")
+const button = getByTestId(ButtonTestId.Root);
+expect(button).toHaveRole("button");
 ```
 
 Test helper: `renderWithTheme(component)` z `utils/testRender.tsx`
@@ -211,8 +210,8 @@ Test helper: `renderWithTheme(component)` z `utils/testRender.tsx`
 ## cn() helper
 
 ```typescript
-import { cn } from "@zibby/design-system"
+import { cn } from "@zibby/design-system";
 
-cn("base-class", isActive && "active", className)
+cn("base-class", isActive && "active", className);
 // clsx + tailwind-merge: bezpečné kombinování classů bez duplikace
 ```

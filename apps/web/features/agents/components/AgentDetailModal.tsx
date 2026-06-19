@@ -39,7 +39,12 @@ export interface AgentDetailModalProps {
 
 /** Convert an own rule into the shape `RuleModal` prefills from (a global rule). */
 function ownRuleToInitial(gate: GateRuleInput): GlobalGateRule {
-  return { id: "own", match: gate.match, decision: gate.decision, ...(gate.resolve ? { resolve: gate.resolve } : {}) };
+  return {
+    id: "own",
+    match: gate.match,
+    decision: gate.decision,
+    ...(gate.resolve ? { resolve: gate.resolve } : {}),
+  };
 }
 
 /** The agent's persisted fields as form defaults (used on open and on edit-reset). */
@@ -260,7 +265,11 @@ export function AgentDetailModal({
 
       {editingRule !== null && (
         <RuleModal
-          initial={typeof editingRule === "number" ? ownRuleToInitial(watchedGates[editingRule]!) : undefined}
+          initial={
+            typeof editingRule === "number"
+              ? ownRuleToInitial(watchedGates[editingRule]!)
+              : undefined
+          }
           onClose={() => setEditingRule(null)}
           onSave={(rule) =>
             saveRule({

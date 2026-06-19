@@ -1,9 +1,9 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { CategoryNameSchema, CategorySchema, CreateCategorySchema } from "./category.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { CategoryNameSchema, CategorySchema, CreateCategorySchema } from "./category.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The catalog resources that carry a category taxonomy. Each keeps its own,
@@ -11,7 +11,7 @@ const c = initContract()
  * skills or projects), so the contract is produced per resource by the factory
  * below and mounted under that resource's URL space.
  */
-export type CategorizedResource = "agents" | "skills" | "projects"
+export type CategorizedResource = "agents" | "skills" | "projects";
 
 /**
  * Build the categories sub-router for a given catalog resource. Categories are
@@ -64,17 +64,17 @@ export function makeCategoriesContract(resource: CategorizedResource) {
       pathPrefix: "/api",
       strictStatusCodes: true,
     },
-  )
+  );
 }
 
 /** Agent-catalog taxonomy — the original categories resource (`/api/agents/categories`). */
-export const categoriesContract = makeCategoriesContract("agents")
-export type CategoriesContract = typeof categoriesContract
+export const categoriesContract = makeCategoriesContract("agents");
+export type CategoriesContract = typeof categoriesContract;
 
 /** Skill-catalog taxonomy (`/api/skills/categories`). */
-export const skillCategoriesContract = makeCategoriesContract("skills")
-export type SkillCategoriesContract = typeof skillCategoriesContract
+export const skillCategoriesContract = makeCategoriesContract("skills");
+export type SkillCategoriesContract = typeof skillCategoriesContract;
 
 /** Project-registry taxonomy (`/api/projects/categories`). */
-export const projectCategoriesContract = makeCategoriesContract("projects")
-export type ProjectCategoriesContract = typeof projectCategoriesContract
+export const projectCategoriesContract = makeCategoriesContract("projects");
+export type ProjectCategoriesContract = typeof projectCategoriesContract;

@@ -1,9 +1,9 @@
-import type { ResearchItem, ResearchSource } from "@zibby/contracts"
-import type { RawResearchItem } from "./research-source.adapter"
+import type { ResearchItem, ResearchSource } from "@zibby/contracts";
+import type { RawResearchItem } from "./research-source.adapter";
 
 /** Lower-case, strip punctuation to spaces — shared by interest + item normalisation. */
 function normalize(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9\s]+/g, " ")
+  return text.toLowerCase().replace(/[^a-z0-9\s]+/g, " ");
 }
 
 /**
@@ -16,10 +16,10 @@ export function relevanceOf(
   item: RawResearchItem,
   interests: string[],
 ): { relevance: number; matchedInterests: string[] } {
-  if (interests.length === 0) return { relevance: 0.5, matchedInterests: [] }
-  const haystack = normalize(`${item.title} ${item.summary}`)
-  const matched = interests.filter((interest) => haystack.includes(normalize(interest).trim()))
-  return { relevance: matched.length / interests.length, matchedInterests: matched }
+  if (interests.length === 0) return { relevance: 0.5, matchedInterests: [] };
+  const haystack = normalize(`${item.title} ${item.summary}`);
+  const matched = interests.filter((interest) => haystack.includes(normalize(interest).trim()));
+  return { relevance: matched.length / interests.length, matchedInterests: matched };
 }
 
 /**
@@ -34,7 +34,7 @@ export function rankSourceItems(
 ): ResearchItem[] {
   return raw
     .map((item): ResearchItem => {
-      const { relevance, matchedInterests } = relevanceOf(item, interests)
+      const { relevance, matchedInterests } = relevanceOf(item, interests);
       return {
         id: item.id,
         title: item.title,
@@ -45,8 +45,8 @@ export function rankSourceItems(
         relevance,
         matchedInterests,
         ...(item.publishedAt ? { publishedAt: item.publishedAt } : {}),
-      }
+      };
     })
     .filter((item) => item.relevance > 0)
-    .sort((a, b) => b.relevance - a.relevance || a.title.localeCompare(b.title))
+    .sort((a, b) => b.relevance - a.relevance || a.title.localeCompare(b.title));
 }

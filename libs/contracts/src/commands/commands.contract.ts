@@ -1,16 +1,16 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   CommandIdSchema,
   CommandSchema,
   CreateCommandSchema,
   UpdateCommandSchema,
-} from "./command.schema"
+} from "./command.schema";
 
-const c = initContract()
+const c = initContract();
 
-const IdParam = z.object({ id: CommandIdSchema })
+const IdParam = z.object({ id: CommandIdSchema });
 
 /**
  * CRUD over custom Claude Code slash commands (`/<id>`). Mirrors `skillsContract`;
@@ -58,5 +58,5 @@ export const commandsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type CommandsContract = typeof commandsContract
+);
+export type CommandsContract = typeof commandsContract;

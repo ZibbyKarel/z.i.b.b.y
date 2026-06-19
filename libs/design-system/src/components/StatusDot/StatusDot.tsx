@@ -33,10 +33,7 @@ export enum StatusDotTestId {
   Dot = "status-dot-dot",
 }
 
-export interface StatusDotProps extends Omit<
-  HTMLAttributes<HTMLSpanElement>,
-  "className"
-> {
+export interface StatusDotProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
   tone: DotTone;
   /** Diameter as a spacing token. */
   size?: Spacing;
@@ -46,13 +43,7 @@ export interface StatusDotProps extends Omit<
 }
 
 /** A status dot — matte by default, glowing and pulsing only when live. */
-export function StatusDot({
-  tone,
-  size = "100",
-  pulse = false,
-  ref,
-  ...props
-}: StatusDotProps) {
+export function StatusDot({ tone, size = "100", pulse = false, ref, ...props }: StatusDotProps) {
   const px = spacingToPx(size);
   return (
     <span

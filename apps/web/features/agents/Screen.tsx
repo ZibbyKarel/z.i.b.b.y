@@ -56,24 +56,17 @@ export function Screen() {
   // Agents whose category was deleted (or never set) must not vanish: surface
   // them in a trailing fallback section instead of dropping them from the catalog.
   const knownNames = new Set(categories.map((c) => c.name));
-  const uncategorized = list.filter(
-    (a) => !a.category || !knownNames.has(a.category),
-  );
+  const uncategorized = list.filter((a) => !a.category || !knownNames.has(a.category));
 
   const pipelineCount = (a: Agent) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
 
-  const openAgent = openId
-    ? (agents.find((a) => a.id === openId) ?? null)
-    : null;
+  const openAgent = openId ? (agents.find((a) => a.id === openId) ?? null) : null;
 
   const save = (d: Agent, isNew: boolean) => {
     if (isNew) {
       const id = slug(d.name ?? "") || `agent-${Date.now()}`;
-      createAgent.mutate(
-        { body: { ...d, id } },
-        { onSuccess: () => setOpenId(id) },
-      );
+      createAgent.mutate({ body: { ...d, id } }, { onSuccess: () => setOpenId(id) });
       setDraft(null);
     } else {
       const { id, ...body } = d;
@@ -81,12 +74,7 @@ export function Screen() {
     }
   };
 
-  const renderSection = (
-    key: string,
-    label: string,
-    glyph: IconName,
-    items: Agent[],
-  ) => {
+  const renderSection = (key: string, label: string, glyph: IconName, items: Agent[]) => {
     const empty = items.length === 0;
     return (
       <Container key={key}>
@@ -101,9 +89,7 @@ export function Screen() {
                   aria-label={ta("deleteEmptyCategoryAria", { name: label })}
                   icon="x"
                   intent="danger"
-                  onClick={() =>
-                    deleteCategory.mutate({ params: { name: label } })
-                  }
+                  onClick={() => deleteCategory.mutate({ params: { name: label } })}
                   size="sm"
                 >
                   {ta("deleteEmptyCategory")}
@@ -148,11 +134,7 @@ export function Screen() {
         <PageHeader
           actions={
             <>
-              <Button
-                icon="plus"
-                intent="ghost"
-                onClick={() => setAddingCategory(true)}
-              >
+              <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
                 {ta("addCategory")}
               </Button>
               <Button
@@ -199,12 +181,7 @@ export function Screen() {
               ),
             )}
             {uncategorized.length > 0 &&
-              renderSection(
-                "__uncategorized",
-                ta("uncategorized"),
-                "bot",
-                uncategorized,
-              )}
+              renderSection("__uncategorized", ta("uncategorized"), "bot", uncategorized)}
           </>
         )}
       </Stack>
@@ -217,10 +194,7 @@ export function Screen() {
           mode="view"
           onClose={() => setOpenId(null)}
           onDelete={(id) => {
-            deleteAgent.mutate(
-              { params: { id } },
-              { onSuccess: () => setOpenId(null) },
-            );
+            deleteAgent.mutate({ params: { id } }, { onSuccess: () => setOpenId(null) });
           }}
           onRun={(a) => {
             if (!a.id) return;
@@ -263,10 +237,7 @@ export function Screen() {
           }}
           onClose={() => setAddingCategory(false)}
           onSubmit={(category) =>
-            createCategory.mutate(
-              { body: category },
-              { onSuccess: () => setAddingCategory(false) },
-            )
+            createCategory.mutate({ body: category }, { onSuccess: () => setAddingCategory(false) })
           }
           pending={createCategory.isPending}
         />

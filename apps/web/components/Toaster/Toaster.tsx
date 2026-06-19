@@ -25,10 +25,7 @@ export function Toaster() {
     () =>
       toastBus.subscribe((toast) => {
         setToasts((prev) => [...prev, toast]);
-        setTimeout(
-          () => setToasts((prev) => prev.filter((x) => x.id !== toast.id)),
-          DISMISS_MS,
-        );
+        setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== toast.id)), DISMISS_MS);
       }),
     [],
   );

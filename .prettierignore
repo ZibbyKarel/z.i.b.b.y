@@ -1,0 +1,16 @@
+node_modules
+**/.next/**
+**/dist/**
+**/storybook-static/**
+**/*.tsbuildinfo
+pnpm-lock.yaml
+package-lock.json
+graphify-out
+design-ref
+apps/api/data
+apps/api/data-test
+.playwright-mcp
+test-results
+playwright-report
+coverage
+docs/plans

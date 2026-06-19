@@ -1,11 +1,11 @@
-import { Injectable } from "@nestjs/common"
-import { type Observable, Subject } from "rxjs"
-import type { ChannelItem } from "@zibby/contracts"
+import { Injectable } from "@nestjs/common";
+import { type Observable, Subject } from "rxjs";
+import type { ChannelItem } from "@zibby/contracts";
 
 /** A channel-item transition pushed onto the unified SSE channel (decision 15). */
 export interface ChannelItemEvent {
-  itemId: string
-  state: ChannelItem["state"]
+  itemId: string;
+  state: ChannelItem["state"];
 }
 
 /**
@@ -17,13 +17,13 @@ export interface ChannelItemEvent {
  */
 @Injectable()
 export class ChannelEventsService {
-  private readonly subject = new Subject<ChannelItemEvent>()
+  private readonly subject = new Subject<ChannelItemEvent>();
 
   emit(event: ChannelItemEvent): void {
-    this.subject.next(event)
+    this.subject.next(event);
   }
 
   stream(): Observable<ChannelItemEvent> {
-    return this.subject.asObservable()
+    return this.subject.asObservable();
   }
 }

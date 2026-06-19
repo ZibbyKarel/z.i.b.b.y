@@ -1,14 +1,14 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { skillsContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
-import { InvalidSkillIdError, SkillConflictError, SkillNotFoundError } from "./skills.errors"
-import { SkillsStorageService } from "./skills.storage.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { skillsContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
+import { InvalidSkillIdError, SkillConflictError, SkillNotFoundError } from "./skills.errors";
+import { SkillsStorageService } from "./skills.storage.service";
 
 const errors = makeErrorMapper("Skill", {
   missing: [SkillNotFoundError, InvalidSkillIdError],
   conflict: [SkillConflictError],
-})
+});
 
 /**
  * Implements `skillsContract` against the file-backed storage service. Mirrors
@@ -38,9 +38,9 @@ export class SkillsController {
 
       deleteSkill: ({ params: { id } }) =>
         errors.or404(id, async () => {
-          await this.storage.delete(id)
-          return { id }
+          await this.storage.delete(id);
+          return { id };
         }),
-    })
+    });
   }
 }

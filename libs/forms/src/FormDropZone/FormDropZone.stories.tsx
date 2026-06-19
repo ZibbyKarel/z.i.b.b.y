@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { zodResolver } from "../zodResolver"
-import { z } from "zod"
-import { Form } from "../Form"
-import { FormDropZone } from "./FormDropZone"
+import type { Meta, StoryObj } from "@storybook/react";
+import { zodResolver } from "../zodResolver";
+import { z } from "zod";
+import { Form } from "../Form";
+import { FormDropZone } from "./FormDropZone";
 
 const meta: Meta<typeof FormDropZone> = {
   title: "Forms/FormDropZone",
@@ -15,13 +15,15 @@ const meta: Meta<typeof FormDropZone> = {
       </div>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof FormDropZone>
+type Story = StoryObj<typeof FormDropZone>;
 
-const schema = z.object({ files: z.array(z.instanceof(File)).min(1, "Nahrajte alespoň jeden soubor") })
-type Schema = z.infer<typeof schema>
+const schema = z.object({
+  files: z.array(z.instanceof(File)).min(1, "Nahrajte alespoň jeden soubor"),
+});
+type Schema = z.infer<typeof schema>;
 
 export const Overview: Story = {
   render: () => (
@@ -36,16 +38,13 @@ export const Overview: Story = {
       <button type="submit">Odeslat</button>
     </Form>
   ),
-}
+};
 
 export const Playground: Story = {
   args: { label: "Přílohy", name: "files", hint: "Přetáhněte soubory sem" },
   render: (args) => (
-    <Form<{ files: File[] }>
-      formOptions={{ defaultValues: { files: [] } }}
-      onSubmit={() => {}}
-    >
+    <Form<{ files: File[] }> formOptions={{ defaultValues: { files: [] } }} onSubmit={() => {}}>
       <FormDropZone<{ files: File[] }> {...args} name="files" />
     </Form>
   ),
-}
+};

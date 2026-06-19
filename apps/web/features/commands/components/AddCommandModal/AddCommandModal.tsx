@@ -194,10 +194,7 @@ export function AddCommandModal({
             label={t("disableInvocationLabel")}
             name="disableModelInvocation"
           />
-          <FormToggle<AddCommandFormValues>
-            label={t("enabledLabel")}
-            name="enabled"
-          />
+          <FormToggle<AddCommandFormValues> label={t("enabledLabel")} name="enabled" />
         </Stack>
 
         {/* right — instructions body */}

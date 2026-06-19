@@ -23,10 +23,7 @@ export enum ProgressRingTestId {
   Value = "progress-ring-value",
 }
 
-export interface ProgressRingProps extends Omit<
-  HTMLAttributes<HTMLSpanElement>,
-  "className"
-> {
+export interface ProgressRingProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
   /** Fill percentage, 0–100. */
   value: number;
   tone?: ProgressTone;

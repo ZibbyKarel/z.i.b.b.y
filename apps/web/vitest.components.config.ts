@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url"
-import { defineConfig } from "vitest/config"
-import react from "@vitejs/plugin-react"
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
 
 // Component tests for apps/web run under jsdom + React (the `web` project stays
 // node-only for the i18n catalog checks). Covers components/** plus the feature
@@ -31,4 +31,4 @@ export default defineConfig({
       "features/*/hooks/**/*.test.{ts,tsx}",
     ],
   },
-})
+});

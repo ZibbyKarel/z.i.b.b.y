@@ -16,7 +16,15 @@ describe("Kbd", () => {
 
   it("forwards a ref", () => {
     let node: HTMLElement | null = null;
-    render(<Kbd ref={(el) => { node = el; }}>⌘K</Kbd>);
+    render(
+      <Kbd
+        ref={(el) => {
+          node = el;
+        }}
+      >
+        ⌘K
+      </Kbd>,
+    );
     expect(node).not.toBeNull();
   });
 });

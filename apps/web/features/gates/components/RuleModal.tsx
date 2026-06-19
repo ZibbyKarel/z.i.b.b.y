@@ -1,8 +1,23 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { Decision, GlobalGateRule, GlobalGateRuleInput, MatchCondition, Resolve } from "@zibby/contracts";
-import { Button, Dialog, Divider, SegmentPickerField, SelectField, Stack, TextInputField, Typography } from "@zibby/design-system";
+import type {
+  Decision,
+  GlobalGateRule,
+  GlobalGateRuleInput,
+  MatchCondition,
+  Resolve,
+} from "@zibby/contracts";
+import {
+  Button,
+  Dialog,
+  Divider,
+  SegmentPickerField,
+  SelectField,
+  Stack,
+  TextInputField,
+  Typography,
+} from "@zibby/design-system";
 import { FormSelect, FormTextInput, useFormControls } from "@zibby/forms";
 import { MATCH_TYPE_ORDER, type MatchType, flattenResolve } from "../gate";
 
@@ -17,7 +32,13 @@ export interface RuleModalProps {
 
 const DECISIONS: Decision[] = ["allow", "notify", "ask", "deny"];
 const OPS = ["gt", "gte", "lt", "lte", "eq"] as const;
-const OP_SYMBOL: Record<(typeof OPS)[number], string> = { gt: ">", gte: "≥", lt: "<", lte: "≤", eq: "=" };
+const OP_SYMBOL: Record<(typeof OPS)[number], string> = {
+  gt: ">",
+  gte: "≥",
+  lt: "<",
+  lte: "≤",
+  eq: "=",
+};
 type ResolveKind = "human" | "check" | "agent";
 type ResolveLeafDraft = { kind: ResolveKind; name: string };
 
@@ -32,7 +53,9 @@ type RuleFormValues = {
 };
 
 /** Derive the form's match fields from a stored rule's first match condition. */
-function matchToFields(c: MatchCondition | undefined): Pick<RuleFormValues, "matchType" | "value1" | "value2" | "op"> {
+function matchToFields(
+  c: MatchCondition | undefined,
+): Pick<RuleFormValues, "matchType" | "value1" | "value2" | "op"> {
   switch (c?.type) {
     case "tool":
       return { matchType: "tool", value1: c.tool, value2: "", op: "gt" };
@@ -55,9 +78,13 @@ function buildMatch(v: RuleFormValues): MatchCondition | null {
     case "tool":
       return val ? { type: "tool", tool: val } : null;
     case "action":
-      return val ? { type: "action", action: val, ...(v.value2.trim() ? { branch: v.value2.trim() } : {}) } : null;
+      return val
+        ? { type: "action", action: val, ...(v.value2.trim() ? { branch: v.value2.trim() } : {}) }
+        : null;
     case "threshold":
-      return val && v.value2.trim() !== "" ? { type: "threshold", metric: val, op: v.op, value: Number(v.value2) } : null;
+      return val && v.value2.trim() !== ""
+        ? { type: "threshold", metric: val, op: v.op, value: Number(v.value2) }
+        : null;
     case "scope":
       return val ? { type: "scope", scope: val } : null;
     case "context":
@@ -73,7 +100,11 @@ function leafNode(leaf: ResolveLeafDraft): Resolve {
 }
 
 /** Combine the leaf drafts into a single `Resolve` (a tree only when there are 2+). */
-function buildResolve(decision: Decision, leaves: ResolveLeafDraft[], mode: "all" | "any"): Resolve | undefined {
+function buildResolve(
+  decision: Decision,
+  leaves: ResolveLeafDraft[],
+  mode: "all" | "any",
+): Resolve | undefined {
   if (decision !== "ask" || leaves.length === 0) return undefined;
   if (leaves.length === 1) return leafNode(leaves[0]!);
   const nodes = leaves.map(leafNode);
@@ -121,7 +152,8 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
   const values = form.watch();
   const leavesValid = leaves.every((l) => l.kind === "human" || l.name.trim() !== "");
   const canSave =
-    buildMatch(values) !== null && (values.decision !== "ask" || (leaves.length > 0 && leavesValid));
+    buildMatch(values) !== null &&
+    (values.decision !== "ask" || (leaves.length > 0 && leavesValid));
 
   const setLeaf = (i: number, patch: Partial<ResolveLeafDraft>) =>
     setLeaves((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
@@ -136,7 +168,12 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
           <Button intent="ghost" onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button disabled={!canSave || pending} icon="check" intent="primary" onClick={() => void submit()}>
+          <Button
+            disabled={!canSave || pending}
+            icon="check"
+            intent="primary"
+            onClick={() => void submit()}
+          >
             {t("saveRule")}
           </Button>
         </>
@@ -146,7 +183,11 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
       width="md"
     >
       <Stack gap="200">
-        <FormTextInput<RuleFormValues> label={t("ruleName")} name="name" placeholder={t("ruleNamePlaceholder")} />
+        <FormTextInput<RuleFormValues>
+          label={t("ruleName")}
+          name="name"
+          placeholder={t("ruleNamePlaceholder")}
+        />
 
         <FormSelect<MatchType, RuleFormValues>
           label={t("matchType")}
@@ -156,13 +197,22 @@ export function RuleModal({ initial, onClose, onSave, pending = false }: RuleMod
 
         {values.matchType === "threshold" ? (
           <Stack direction="row" gap="100">
-            <FormTextInput<RuleFormValues> label={t("metric")} name="value1" placeholder="purchase.amount" />
+            <FormTextInput<RuleFormValues>
+              label={t("metric")}
+              name="value1"
+              placeholder="purchase.amount"
+            />
             <FormSelect<(typeof OPS)[number], RuleFormValues>
               label={t("op")}
               name="op"
               options={OPS.map((o) => ({ value: o, label: OP_SYMBOL[o] }))}
             />
-            <FormTextInput<RuleFormValues> label={t("value")} name="value2" placeholder="500" type="number" />
+            <FormTextInput<RuleFormValues>
+              label={t("value")}
+              name="value2"
+              placeholder="500"
+              type="number"
+            />
           </Stack>
         ) : (
           <Stack direction="row" gap="100">

@@ -1,9 +1,9 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { Approval, ApprovalRunKind } from "@zibby/contracts"
-import { ActivityLogService } from "../activity/activity-log.service"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { ApprovalAlreadyDecidedError } from "./approvals.errors"
-import { ApprovalsStorageService } from "./approvals.storage.service"
+import { Injectable, Optional } from "@nestjs/common";
+import type { Approval, ApprovalRunKind } from "@zibby/contracts";
+import { ActivityLogService } from "../activity/activity-log.service";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { ApprovalAlreadyDecidedError } from "./approvals.errors";
+import { ApprovalsStorageService } from "./approvals.storage.service";
 
 /**
  * The capability the approvals service needs from a runner to act on a decision,
@@ -13,19 +13,19 @@ import { ApprovalsStorageService } from "./approvals.storage.service"
  */
 export interface ResumableRunner {
   /** Spawn an approved, previously-paused run. */
-  resume(runId: string): Promise<void> | void
+  resume(runId: string): Promise<void> | void;
   /** Terminate a rejected run without performing its action. */
-  cancel(runId: string): void
+  cancel(runId: string): void;
 }
 
 /** Inputs a runner supplies when it pauses a run on the approval gate. */
 export interface RequestApprovalInput {
-  runId: string
-  kind: ApprovalRunKind
-  skill: string
-  action: string
-  detail: string
-  risk: Approval["risk"]
+  runId: string;
+  kind: ApprovalRunKind;
+  skill: string;
+  action: string;
+  detail: string;
+  risk: Approval["risk"];
 }
 
 /**
@@ -36,8 +36,8 @@ export interface RequestApprovalInput {
  */
 @Injectable()
 export class ApprovalsService {
-  private readonly runners = new Map<ApprovalRunKind, ResumableRunner>()
-  private readonly log?: ScopedLogger
+  private readonly runners = new Map<ApprovalRunKind, ResumableRunner>();
+  private readonly log?: ScopedLogger;
 
   constructor(
     private readonly storage: ApprovalsStorageService,
@@ -47,13 +47,13 @@ export class ApprovalsService {
     // Optional for the same reason; the global ActivityLogModule supplies it live.
     @Optional() private readonly activity?: ActivityLogService,
   ) {
-    this.log = logger?.child(ApprovalsService.name)
+    this.log = logger?.child(ApprovalsService.name);
   }
 
   /** A runner registers itself so decisions on its kind can be routed back to it. */
   register(kind: ApprovalRunKind, runner: ResumableRunner): void {
-    this.runners.set(kind, runner)
-    this.log?.debug("runner registered for approvals", { kind })
+    this.runners.set(kind, runner);
+    this.log?.debug("runner registered for approvals", { kind });
   }
 
   /** Create a pending approval for a paused run. */
@@ -68,14 +68,14 @@ export class ApprovalsService {
       risk: input.risk,
       status: "pending",
       requestedAt: new Date().toISOString(),
-    }
+    };
     this.log?.info("approval requested", {
       id: approval.id,
       runId: approval.runId,
       kind: approval.kind,
       action: approval.action,
       risk: approval.risk,
-    })
+    });
     void this.activity?.record({
       kind: "approval-requested",
       summary: `approval needed: ${approval.skill} wants to ${approval.action}`,
@@ -85,40 +85,42 @@ export class ApprovalsService {
         action: approval.action,
         status: approval.kind,
       },
-    })
-    return this.storage.create(approval)
+    });
+    return this.storage.create(approval);
   }
 
   list(status?: Approval["status"]): Promise<Approval[]> {
-    return this.storage.list().then((all) => (status ? all.filter((a) => a.status === status) : all))
+    return this.storage
+      .list()
+      .then((all) => (status ? all.filter((a) => a.status === status) : all));
   }
 
   get(id: string): Promise<Approval> {
-    return this.storage.get(id)
+    return this.storage.get(id);
   }
 
   /** Approve a pending approval and resume its gated run. */
   async approve(id: string): Promise<Approval> {
-    const approval = await this.decide(id, "approved")
+    const approval = await this.decide(id, "approved");
     this.log?.info("approval approved; resuming run", {
       id,
       runId: approval.runId,
       kind: approval.kind,
-    })
-    await this.runners.get(approval.kind)?.resume(approval.runId)
-    return approval
+    });
+    await this.runners.get(approval.kind)?.resume(approval.runId);
+    return approval;
   }
 
   /** Reject a pending approval and terminate its gated run (no action taken). */
   async reject(id: string): Promise<Approval> {
-    const approval = await this.decide(id, "rejected")
+    const approval = await this.decide(id, "rejected");
     this.log?.info("approval rejected; cancelling run", {
       id,
       runId: approval.runId,
       kind: approval.kind,
-    })
-    this.runners.get(approval.kind)?.cancel(approval.runId)
-    return approval
+    });
+    this.runners.get(approval.kind)?.cancel(approval.runId);
+    return approval;
   }
 
   /**
@@ -128,22 +130,22 @@ export class ApprovalsService {
    * a pending card for a run that no longer exists.
    */
   async cancelPendingForRun(runId: string): Promise<void> {
-    const pending = await this.list("pending")
+    const pending = await this.list("pending");
     for (const approval of pending.filter((a) => a.runId === runId)) {
-      await this.decide(approval.id, "rejected").catch(() => {})
-      this.log?.info("pending approval cancelled with its run", { id: approval.id, runId })
+      await this.decide(approval.id, "rejected").catch(() => {});
+      this.log?.info("pending approval cancelled with its run", { id: approval.id, runId });
     }
   }
 
   private async decide(id: string, status: "approved" | "rejected"): Promise<Approval> {
-    const approval = await this.storage.get(id)
-    if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id)
-    const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() }
+    const approval = await this.storage.get(id);
+    if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id);
+    const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() };
     void this.activity?.record({
       kind: status === "approved" ? "approval-approved" : "approval-rejected",
       summary: `approval ${status}: ${approval.skill} · ${approval.action}`,
       refs: { approvalId: id, runRef: approval.runId, decision: status, status: approval.kind },
-    })
-    return this.storage.update(decided)
+    });
+    return this.storage.update(decided);
   }
 }

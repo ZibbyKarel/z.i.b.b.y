@@ -1,11 +1,11 @@
-import { Global, Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { SYSTEM_CONFIG_FILE, SystemConfigStore } from "./system-config.store"
-import { SystemController } from "./system.controller"
+import { Global, Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { SYSTEM_CONFIG_FILE, SystemConfigStore } from "./system-config.store";
+import { SystemController } from "./system.controller";
 
 /** Default config file, anchored to `apps/api/data/system-config.json`. */
 export function resolveSystemConfigFile(): string {
-  return process.env.SYSTEM_CONFIG_FILE ?? dataDir("system-config.json")
+  return process.env.SYSTEM_CONFIG_FILE ?? dataDir("system-config.json");
 }
 
 /**

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { Pipeline, Skill } from "../domain";
 import { slug } from "../utils/slug";
 import type { EntityFormValues } from "../components/EntityFormModal/EntityFormModal";
@@ -95,16 +88,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     [state, addSkill, addPipeline],
   );
 
-  return (
-    <CatalogContext.Provider value={value}>
-      {children}
-    </CatalogContext.Provider>
-  );
+  return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }
 
 export function useCatalog(): CatalogStore {
   const ctx = useContext(CatalogContext);
-  if (!ctx)
-    throw new Error("useCatalog must be used within CatalogProvider");
+  if (!ctx) throw new Error("useCatalog must be used within CatalogProvider");
   return ctx;
 }

@@ -16,7 +16,13 @@ export function CircuitTraces() {
       aria-hidden="true"
       className="pointer-events-none absolute opacity-55"
       preserveAspectRatio="xMidYMid meet"
-      style={{ width: "100vw", height: "100vh", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+      style={{
+        width: "100vw",
+        height: "100vh",
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+      }}
       viewBox="0 0 1000 1000"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -47,7 +53,11 @@ export function CircuitTraces() {
           cy={n.cy}
           key={`${n.cx}-${n.cy}`}
           r={3.5}
-          style={{ fill: ACCENT, opacity: 0, animation: `node-appear 0.3s ease forwards ${n.delay}s` }}
+          style={{
+            fill: ACCENT,
+            opacity: 0,
+            animation: `node-appear 0.3s ease forwards ${n.delay}s`,
+          }}
         />
       ))}
     </svg>

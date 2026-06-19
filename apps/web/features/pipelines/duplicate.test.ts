@@ -29,12 +29,10 @@ const pipeline: Pipeline = {
 describe("duplicatePipelineId", () => {
   it("derives <base>-copy, then numbered fallbacks on collision", () => {
     expect(duplicatePipelineId("delivery", ["delivery"])).toBe("delivery-copy");
-    expect(duplicatePipelineId("delivery", ["delivery", "delivery-copy"])).toBe(
-      "delivery-copy-2",
+    expect(duplicatePipelineId("delivery", ["delivery", "delivery-copy"])).toBe("delivery-copy-2");
+    expect(duplicatePipelineId("delivery", ["delivery", "delivery-copy", "delivery-copy-2"])).toBe(
+      "delivery-copy-3",
     );
-    expect(
-      duplicatePipelineId("delivery", ["delivery", "delivery-copy", "delivery-copy-2"]),
-    ).toBe("delivery-copy-3");
   });
 });
 

@@ -1,14 +1,14 @@
-import { readFileSync } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable } from "@nestjs/common"
-import { type SystemConfig, SystemConfigSchema } from "@zibby/contracts"
-import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage"
+import { readFileSync } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable } from "@nestjs/common";
+import { type SystemConfig, SystemConfigSchema } from "@zibby/contracts";
+import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 
 /** DI token carrying the absolute path of the system config file. */
-export const SYSTEM_CONFIG_FILE = "SYSTEM_CONFIG_FILE"
+export const SYSTEM_CONFIG_FILE = "SYSTEM_CONFIG_FILE";
 
 /** A subscriber notified after the config changes; returns an unsubscribe. */
-export type SystemConfigListener = (config: SystemConfig) => void
+export type SystemConfigListener = (config: SystemConfig) => void;
 
 /**
  * The operator-owned runtime system config, persisted as a single
@@ -27,50 +27,50 @@ export type SystemConfigListener = (config: SystemConfig) => void
  */
 @Injectable()
 export class SystemConfigStore {
-  private readonly dir: string
-  private config: SystemConfig
-  private readonly listeners = new Set<SystemConfigListener>()
+  private readonly dir: string;
+  private config: SystemConfig;
+  private readonly listeners = new Set<SystemConfigListener>();
 
   constructor(@Inject(SYSTEM_CONFIG_FILE) private readonly file: string) {
-    this.dir = path.dirname(file)
-    this.config = SystemConfigStore.load(file)
+    this.dir = path.dirname(file);
+    this.config = SystemConfigStore.load(file);
   }
 
   /** Read the file synchronously; a missing/garbage file → schema default. */
   private static load(file: string): SystemConfig {
-    let raw: string
+    let raw: string;
     try {
-      raw = readFileSync(file, "utf8")
+      raw = readFileSync(file, "utf8");
     } catch {
-      return SystemConfigSchema.parse({})
+      return SystemConfigSchema.parse({});
     }
-    const parsed = SystemConfigSchema.safeParse(safeJson(raw))
-    return parsed.success ? parsed.data : SystemConfigSchema.parse({})
+    const parsed = SystemConfigSchema.safeParse(safeJson(raw));
+    return parsed.success ? parsed.data : SystemConfigSchema.parse({});
   }
 
   /** The effective config right now (synchronous — the in-memory copy). */
   current(): SystemConfig {
-    return this.config
+    return this.config;
   }
 
   /** Async accessor for the controller; mirrors the in-memory {@link current}. */
   async read(): Promise<SystemConfig> {
-    return this.config
+    return this.config;
   }
 
   /** Replace the config (re-validated), persist atomically, then notify subscribers. */
   async write(next: SystemConfig): Promise<SystemConfig> {
-    const validated = SystemConfigSchema.parse(next)
-    await ensureDir(this.dir)
-    await writeFileAtomic(this.file, `${JSON.stringify(validated, null, 2)}\n`)
-    this.config = validated
-    for (const listener of this.listeners) listener(validated)
-    return validated
+    const validated = SystemConfigSchema.parse(next);
+    await ensureDir(this.dir);
+    await writeFileAtomic(this.file, `${JSON.stringify(validated, null, 2)}\n`);
+    this.config = validated;
+    for (const listener of this.listeners) listener(validated);
+    return validated;
   }
 
   /** Subscribe to config changes; returns an unsubscribe. */
   onChange(listener: SystemConfigListener): () => void {
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 }

@@ -28,12 +28,7 @@ export const Overview: Story = {
     const [ctx, setCtx] = useState("home");
     return (
       <div className="flex flex-col gap-6">
-        <SegmentPickerField
-          label="Kontext"
-          onValueChange={setCtx}
-          options={OPTIONS}
-          value={ctx}
-        />
+        <SegmentPickerField label="Kontext" onValueChange={setCtx} options={OPTIONS} value={ctx} />
         <SegmentPickerField
           hint="Vyber jeden kontext"
           label="S nápovědou"
@@ -50,12 +45,7 @@ export const Playground: Story = {
   render: (args) => {
     const [value, setValue] = useState("home");
     return (
-      <SegmentPickerField
-        {...args}
-        onValueChange={setValue}
-        options={OPTIONS}
-        value={value}
-      />
+      <SegmentPickerField {...args} onValueChange={setValue} options={OPTIONS} value={value} />
     );
   },
   args: { label: "Kontext" },

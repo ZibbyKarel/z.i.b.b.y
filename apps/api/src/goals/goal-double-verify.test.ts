@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest"
-import type { Goal, Project } from "@zibby/contracts"
-import type { LoggerService } from "../shared/logging/logger.service"
-import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
-import { fakeSystemConfigStore } from "../system/system-config.fixture"
-import { GoalRunnerService } from "./goal-runner.service"
+import { describe, expect, it } from "vitest";
+import type { Goal, Project } from "@zibby/contracts";
+import type { LoggerService } from "../shared/logging/logger.service";
+import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { GoalRunnerService } from "./goal-runner.service";
 
 /**
  * Phase 12.6 — `makerAlreadyVerified` returns a synthesized satisfied verdict ONLY
@@ -12,14 +12,16 @@ import { GoalRunnerService } from "./goal-runner.service"
  * else → null (verify normally). This is the pure decision; the e2e covers wiring.
  */
 function makeService(pipelineRun: { verifyCommands?: string[] } | "throw"): GoalRunnerService {
-  const noop = () => {}
-  const logger = { child: () => ({ info: noop, warn: noop, error: noop }) } as unknown as LoggerService
+  const noop = () => {};
+  const logger = {
+    child: () => ({ info: noop, warn: noop, error: noop }),
+  } as unknown as LoggerService;
   const pipelineRunner = {
     get: () => {
-      if (pipelineRun === "throw") throw new Error("not found")
-      return pipelineRun
+      if (pipelineRun === "throw") throw new Error("not found");
+      return pipelineRun;
     },
-  } as unknown as PipelineRunnerService
+  } as unknown as PipelineRunnerService;
   return new GoalRunnerService(
     "/tmp/goal-double-verify-test",
     null as never, // goals
@@ -32,10 +34,15 @@ function makeService(pipelineRun: { verifyCommands?: string[] } | "throw"): Goal
     logger,
     null as never, // trace
     fakeSystemConfigStore(),
-  )
+  );
 }
 
-const PROJECT: Project = { id: "proj", name: "proj", path: "/tmp/proj", checks: ["pnpm --filter app test"] }
+const PROJECT: Project = {
+  id: "proj",
+  name: "proj",
+  path: "/tmp/proj",
+  checks: ["pnpm --filter app test"],
+};
 
 function goal(over: Partial<Goal> = {}): Goal {
   return {
@@ -46,66 +53,64 @@ function goal(over: Partial<Goal> = {}): Goal {
     maxIterations: 3,
     instructions: "iterate",
     ...over,
-  }
+  };
 }
 
-function call(
-  svc: GoalRunnerService,
-  g: Goal,
-  project: Project | null,
-  status: string,
-): unknown {
+function call(svc: GoalRunnerService, g: Goal, project: Project | null, status: string): unknown {
   return (
     svc as unknown as {
-      makerAlreadyVerified: (g: Goal, p: Project | null, s: string, ref: string) => unknown
+      makerAlreadyVerified: (g: Goal, p: Project | null, s: string, ref: string) => unknown;
     }
-  ).makerAlreadyVerified(g, project, status, "delivery_1")
+  ).makerAlreadyVerified(g, project, status, "delivery_1");
 }
 
 describe("makerAlreadyVerified (12.6)", () => {
   it("skips when a pipeline maker ran the same project checks (verifier has no commands)", () => {
-    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] })
-    const verdict = call(svc, goal(), PROJECT, "done") as { satisfied: boolean; kind: string } | null
-    expect(verdict?.satisfied).toBe(true)
-    expect(verdict?.kind).toBe("checks")
-  })
+    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] });
+    const verdict = call(svc, goal(), PROJECT, "done") as {
+      satisfied: boolean;
+      kind: string;
+    } | null;
+    expect(verdict?.satisfied).toBe(true);
+    expect(verdict?.kind).toBe("checks");
+  });
 
   it("skips when explicit goal commands equal the maker's verify commands", () => {
-    const svc = makeService({ verifyCommands: ["a", "b"] })
-    const g = goal({ verifier: { kind: "checks", commands: ["a", "b"] } })
-    expect((call(svc, g, PROJECT, "done") as { satisfied: boolean } | null)?.satisfied).toBe(true)
-  })
+    const svc = makeService({ verifyCommands: ["a", "b"] });
+    const g = goal({ verifier: { kind: "checks", commands: ["a", "b"] } });
+    expect((call(svc, g, PROJECT, "done") as { satisfied: boolean } | null)?.satisfied).toBe(true);
+  });
 
   it("verifies normally when commands differ", () => {
-    const svc = makeService({ verifyCommands: ["a", "b"] })
-    const g = goal({ verifier: { kind: "checks", commands: ["a", "c"] } })
-    expect(call(svc, g, PROJECT, "done")).toBeNull()
-  })
+    const svc = makeService({ verifyCommands: ["a", "b"] });
+    const g = goal({ verifier: { kind: "checks", commands: ["a", "c"] } });
+    expect(call(svc, g, PROJECT, "done")).toBeNull();
+  });
 
   it("verifies normally for a claude verifier (independent judgment)", () => {
-    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] })
-    const g = goal({ verifier: { kind: "claude", agent: "code-review" } })
-    expect(call(svc, g, PROJECT, "done")).toBeNull()
-  })
+    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] });
+    const g = goal({ verifier: { kind: "claude", agent: "code-review" } });
+    expect(call(svc, g, PROJECT, "done")).toBeNull();
+  });
 
   it("verifies normally for a non-pipeline maker", () => {
-    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] })
-    const g = goal({ maker: { kind: "agent", id: "koder" } })
-    expect(call(svc, g, PROJECT, "done")).toBeNull()
-  })
+    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] });
+    const g = goal({ maker: { kind: "agent", id: "koder" } });
+    expect(call(svc, g, PROJECT, "done")).toBeNull();
+  });
 
   it("verifies normally when the maker did not finish done", () => {
-    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] })
-    expect(call(svc, goal(), PROJECT, "failed")).toBeNull()
-  })
+    const svc = makeService({ verifyCommands: ["pnpm --filter app test"] });
+    expect(call(svc, goal(), PROJECT, "failed")).toBeNull();
+  });
 
   it("verifies normally when the maker pipeline ran no verify phase (no marker)", () => {
-    const svc = makeService({}) // no verifyCommands
-    expect(call(svc, goal(), PROJECT, "done")).toBeNull()
-  })
+    const svc = makeService({}); // no verifyCommands
+    expect(call(svc, goal(), PROJECT, "done")).toBeNull();
+  });
 
   it("verifies normally when the maker run was already pruned", () => {
-    const svc = makeService("throw")
-    expect(call(svc, goal(), PROJECT, "done")).toBeNull()
-  })
-})
+    const svc = makeService("throw");
+    expect(call(svc, goal(), PROJECT, "done")).toBeNull();
+  });
+});

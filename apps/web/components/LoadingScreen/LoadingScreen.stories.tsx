@@ -64,13 +64,6 @@ export const Animated: Story = {
       return () => clearInterval(id);
     }, []);
     const status = [...PHASES].reverse().find((p) => p.at <= progress)?.text;
-    return (
-      <LoadingScreen
-        {...args}
-        logo={<Mark />}
-        progress={progress}
-        status={status}
-      />
-    );
+    return <LoadingScreen {...args} logo={<Mark />} progress={progress} status={status} />;
   },
 };

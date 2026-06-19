@@ -15,12 +15,7 @@ describe("SelectField", () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
     render(
-      <SelectField
-        label="Model"
-        onValueChange={onValueChange}
-        options={OPTIONS}
-        value="opus"
-      />,
+      <SelectField label="Model" onValueChange={onValueChange} options={OPTIONS} value="opus" />,
     );
 
     await user.click(screen.getByTestId(DropdownTestId.Trigger));
@@ -31,17 +26,8 @@ describe("SelectField", () => {
   });
 
   it("wires the label to the trigger for an accessible name", () => {
-    render(
-      <SelectField
-        label="Model"
-        onValueChange={vi.fn()}
-        options={OPTIONS}
-        value="opus"
-      />,
-    );
-    expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveAccessibleName(
-      "Model",
-    );
+    render(<SelectField label="Model" onValueChange={vi.fn()} options={OPTIONS} value="opus" />);
+    expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveAccessibleName("Model");
   });
 
   it("associates the error message with the trigger", () => {

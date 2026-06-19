@@ -9,12 +9,7 @@
  * Node x/y positions are *not* persisted — `phasesToGraph` re-derives a
  * left-to-right layout when an existing pipeline is opened.
  */
-import type {
-  Agent,
-  AgentModel,
-  AgentThinking,
-  CreatePipelineInput,
-} from "@zibby/contracts";
+import type { Agent, AgentModel, AgentThinking, CreatePipelineInput } from "@zibby/contracts";
 import type { PhaseEscalation, PhaseLoop, Pipeline } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
 
@@ -98,12 +93,7 @@ export const defaultProduces = (agentId: string, index: number): string =>
   `${slug(agentId, `handoff-${index}`)}.md`;
 
 /** A fresh node for an agent dropped/clicked from the palette. */
-export function makeNode(
-  agent: Agent,
-  index: number,
-  x: number,
-  y: number,
-): GraphNode {
+export function makeNode(agent: Agent, index: number, x: number, y: number): GraphNode {
   return {
     id: guid("n"),
     type: "agent",
@@ -117,8 +107,7 @@ export function makeNode(
   };
 }
 
-export const clamp = (v: number, lo: number, hi: number): number =>
-  Math.max(lo, Math.min(hi, v));
+export const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 // ---- phases → graph (auto-layout on open) ---------------------------------
 /**
@@ -127,10 +116,7 @@ export const clamp = (v: number, lo: number, hi: number): number =>
  * edge to the phase whose id matches `loop.to`. Returns an empty graph for a new
  * pipeline (no `initial`).
  */
-export function phasesToGraph(
-  initial: Pipeline | undefined,
-  agents: Agent[],
-): PipelineGraph {
+export function phasesToGraph(initial: Pipeline | undefined, agents: Agent[]): PipelineGraph {
   if (!initial || initial.phases.length === 0) {
     return { nodes: [], flow: [], rework: [] };
   }
@@ -205,10 +191,7 @@ export function orderNodes(graph: PipelineGraph): GraphNode[] {
  * node's incoming flow source (or the assignment file for a chain head). Mirrors
  * the proven id-based projection the linear dialog used.
  */
-export function graphToPhases(
-  graph: PipelineGraph,
-  assignment: string,
-): ContractPhase[] {
+export function graphToPhases(graph: PipelineGraph, assignment: string): ContractPhase[] {
   const order = orderNodes(graph);
   const hasIncoming = new Set(graph.flow.map((e) => e.to));
   const reworkFrom = new Map(graph.rework.map((r) => [r.from, r]));
@@ -304,11 +287,7 @@ export function validateGraph(graph: PipelineGraph, name: string): GraphValidity
 }
 
 /** True when wiring a rework edge `from → to` would point upstream (legal). */
-export function isUpstreamRework(
-  graph: PipelineGraph,
-  from: string,
-  to: string,
-): boolean {
+export function isUpstreamRework(graph: PipelineGraph, from: string, to: string): boolean {
   if (from === to) return false;
   const order = orderNodes(graph);
   const indexOf = new Map(order.map((n, i) => [n.id, i]));

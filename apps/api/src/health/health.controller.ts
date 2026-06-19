@@ -1,8 +1,8 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { healthContract } from "@zibby/contracts"
-import { ClaudePreflightService } from "../runner/claude-preflight.service"
-import { SubsystemHealthService } from "./subsystem-health.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { healthContract } from "@zibby/contracts";
+import { ClaudePreflightService } from "../runner/claude-preflight.service";
+import { SubsystemHealthService } from "./subsystem-health.service";
 
 /**
  * Implements `healthContract`. Process liveness needs no I/O — if the process
@@ -25,8 +25,8 @@ export class HealthController {
         const [claude, subsystems] = await Promise.all([
           this.preflight.probe(),
           this.subsystems.probeAll(),
-        ])
-        const degraded = !claude.ok || subsystems.some((s) => s.status !== "ok")
+        ]);
+        const degraded = !claude.ok || subsystems.some((s) => s.status !== "ok");
         return {
           status: 200,
           body: {
@@ -36,8 +36,8 @@ export class HealthController {
             claude,
             subsystems,
           },
-        }
+        };
       },
-    })
+    });
   }
 }

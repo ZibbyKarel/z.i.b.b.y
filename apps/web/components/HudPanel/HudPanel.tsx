@@ -1,12 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  Card,
-  CardProps,
-  Container,
-  type Padding,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Card, CardProps, Container, type Padding, Stack, Typography } from "@zibby/design-system";
 
 export interface HudPanelProps {
   title?: string;
@@ -21,13 +14,7 @@ export interface HudPanelProps {
   tone?: CardProps["tone"];
 }
 
-export function HudPanel({
-  title,
-  action,
-  padding = "250",
-  tone,
-  children,
-}: HudPanelProps) {
+export function HudPanel({ title, action, padding = "250", tone, children }: HudPanelProps) {
   const hasHeader = Boolean(title || action);
   return (
     <Card corners={Boolean(tone)} tone={tone}>

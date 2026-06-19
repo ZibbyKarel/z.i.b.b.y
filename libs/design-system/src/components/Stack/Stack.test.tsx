@@ -10,16 +10,12 @@ describe("Stack", () => {
 
   it("defaults to column direction", () => {
     render(<Stack>x</Stack>);
-    expect(screen.getByTestId(StackTestId.Root).style.flexDirection).toBe(
-      "column",
-    );
+    expect(screen.getByTestId(StackTestId.Root).style.flexDirection).toBe("column");
   });
 
   it("renders row direction", () => {
     render(<Stack direction="row">x</Stack>);
-    expect(screen.getByTestId(StackTestId.Root).style.flexDirection).toBe(
-      "row",
-    );
+    expect(screen.getByTestId(StackTestId.Root).style.flexDirection).toBe("row");
   });
 
   it("applies gap from spacing tokens", () => {

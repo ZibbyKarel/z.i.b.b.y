@@ -1,8 +1,10 @@
 import { DropZone, type DropZoneProps } from "../../DropZone/DropZone";
 import { Field } from "../Field";
 
-export interface DropZoneFieldProps
-  extends Omit<DropZoneProps, "invalid" | "aria-labelledby" | "aria-describedby"> {
+export interface DropZoneFieldProps extends Omit<
+  DropZoneProps,
+  "invalid" | "aria-labelledby" | "aria-describedby"
+> {
   label: string;
   hint?: string;
   error?: string;

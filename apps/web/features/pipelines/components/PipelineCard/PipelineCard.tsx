@@ -1,5 +1,5 @@
-import { Fragment } from "react"
-import { useTranslations } from "next-intl"
+import { Fragment } from "react";
+import { useTranslations } from "next-intl";
 import {
   Card,
   Chip,
@@ -9,31 +9,28 @@ import {
   Icon,
   Stack,
   Typography,
-} from "@zibby/design-system"
-import type { Agent } from "@zibby/contracts"
-import { type Pipeline, type PipelineState, glyphForPhase } from "../../../../domain"
+} from "@zibby/design-system";
+import type { Agent } from "@zibby/contracts";
+import { type Pipeline, type PipelineState, glyphForPhase } from "../../../../domain";
 
 const stateMeta = {
   done: { tone: "ok", pulse: false, labelKey: "stateDone" },
   parked: { tone: "wait", pulse: true, labelKey: "stateParked" },
   failed: { tone: "bad", pulse: false, labelKey: "stateFailed" },
   running: { tone: "run", pulse: true, labelKey: "stateRunning" },
-} as const satisfies Record<
-  PipelineState,
-  { tone: ChipTone; pulse: boolean; labelKey: string }
->
+} as const satisfies Record<PipelineState, { tone: ChipTone; pulse: boolean; labelKey: string }>;
 
 export interface PipelineCardProps {
-  pipeline: Pipeline
-  agents: Agent[]
-  selected: boolean
-  onSelect: (id: string) => void
+  pipeline: Pipeline;
+  agents: Agent[];
+  selected: boolean;
+  onSelect: (id: string) => void;
 }
 
 /** Master-list card for a pipeline: name, state, phase chips + last run. */
 export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineCardProps) {
-  const t = useTranslations("pipelines")
-  const sm = stateMeta[pipeline.lastState]
+  const t = useTranslations("pipelines");
+  const sm = stateMeta[pipeline.lastState];
   return (
     <Card
       aria-pressed={selected}
@@ -67,9 +64,7 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
                     {ph.type === "verify" ? t("verify") : ph.agent}
                   </Typography>
                 </Stack>
-                {i < pipeline.phases.length - 1 && (
-                  <Icon name="arrow" size="xs" tone="faint" />
-                )}
+                {i < pipeline.phases.length - 1 && <Icon name="arrow" size="xs" tone="faint" />}
               </Fragment>
             ))}
           </Stack>
@@ -83,5 +78,5 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
         </Stack>
       </Container>
     </Card>
-  )
+  );
 }

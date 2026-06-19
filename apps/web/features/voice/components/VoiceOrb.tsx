@@ -12,9 +12,26 @@ const ACCENT = "var(--color-accent)";
 
 /** Per-bar keyframe assignment for the radial waveform (20 bars). */
 const BAR_ANIMS = [
-  "v-bar-a", "v-bar-b", "v-bar-c", "v-bar-d", "v-bar-e", "v-bar-c", "v-bar-a", "v-bar-d",
-  "v-bar-b", "v-bar-e", "v-bar-a", "v-bar-c", "v-bar-d", "v-bar-b", "v-bar-e", "v-bar-a",
-  "v-bar-c", "v-bar-d", "v-bar-b", "v-bar-a",
+  "v-bar-a",
+  "v-bar-b",
+  "v-bar-c",
+  "v-bar-d",
+  "v-bar-e",
+  "v-bar-c",
+  "v-bar-a",
+  "v-bar-d",
+  "v-bar-b",
+  "v-bar-e",
+  "v-bar-a",
+  "v-bar-c",
+  "v-bar-d",
+  "v-bar-b",
+  "v-bar-e",
+  "v-bar-a",
+  "v-bar-c",
+  "v-bar-d",
+  "v-bar-b",
+  "v-bar-a",
 ];
 const NUM_BARS = 20;
 

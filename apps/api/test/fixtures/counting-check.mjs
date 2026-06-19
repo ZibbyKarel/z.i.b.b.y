@@ -5,20 +5,20 @@
 // landing after a few iterations without any real toolchain.
 //
 // usage: counting-check.mjs <marker-file> <failTimes>
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-const marker = process.argv[2]
-const failTimes = Number(process.argv[3] ?? "1")
+const marker = process.argv[2];
+const failTimes = Number(process.argv[3] ?? "1");
 if (!marker) {
-  console.error("usage: counting-check.mjs <marker-file> <failTimes>")
-  process.exit(2)
+  console.error("usage: counting-check.mjs <marker-file> <failTimes>");
+  process.exit(2);
 }
-const seen = existsSync(marker) ? Number(readFileSync(marker, "utf8").trim() || "0") : 0
-const next = seen + 1
-writeFileSync(marker, `${next}\n`)
+const seen = existsSync(marker) ? Number(readFileSync(marker, "utf8").trim() || "0") : 0;
+const next = seen + 1;
+writeFileSync(marker, `${next}\n`);
 if (next > failTimes) {
-  console.log(`check passed (invocation ${next})`)
-  process.exit(0)
+  console.log(`check passed (invocation ${next})`);
+  process.exit(0);
 }
-console.error(`check failed (invocation ${next} of ${failTimes})`)
-process.exit(1)
+console.error(`check failed (invocation ${next} of ${failTimes})`);
+process.exit(1);

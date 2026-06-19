@@ -27,10 +27,7 @@ export type Spacing =
   | "450"
   | "500";
 
-export type Padding =
-  | Spacing
-  | [Spacing, Spacing]
-  | [Spacing, Spacing, Spacing, Spacing];
+export type Padding = Spacing | [Spacing, Spacing] | [Spacing, Spacing, Spacing, Spacing];
 
 export type Size = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -54,9 +51,7 @@ export function spacingToPx(token: Spacing): string {
   return spacingValues[token];
 }
 
-export function resolvePadding(
-  p: Padding,
-): [Spacing, Spacing, Spacing, Spacing] {
+export function resolvePadding(p: Padding): [Spacing, Spacing, Spacing, Spacing] {
   if (typeof p === "string") return [p, p, p, p];
   if (p.length === 2) return [p[0], p[1], p[0], p[1]];
   return p;
@@ -161,46 +156,46 @@ export function mergeTheme(base: Theme, override: PartialTheme): Theme {
 export function tokensToCssVars(t: Theme): Record<string, string> {
   return {
     // backgrounds
-    "--color-background-deep":   t.colorBackgroundDeep,
-    "--color-background":        t.colorBackground,
-    "--color-surface":           t.colorSurface,
-    "--color-elevated":          t.colorElevated,
-    "--color-raised":            t.colorRaised,
-    "--color-hover":             t.colorHover,
+    "--color-background-deep": t.colorBackgroundDeep,
+    "--color-background": t.colorBackground,
+    "--color-surface": t.colorSurface,
+    "--color-elevated": t.colorElevated,
+    "--color-raised": t.colorRaised,
+    "--color-hover": t.colorHover,
     // foreground
-    "--color-foreground":        t.colorForeground,
-    "--color-foreground-dim":    t.colorForegroundDim,
-    "--color-foreground-faint":  t.colorForegroundFaint,
+    "--color-foreground": t.colorForeground,
+    "--color-foreground-dim": t.colorForegroundDim,
+    "--color-foreground-faint": t.colorForegroundFaint,
     // borders
-    "--color-border":            t.colorBorder,
-    "--color-border-strong":     t.colorBorderStrong,
+    "--color-border": t.colorBorder,
+    "--color-border-strong": t.colorBorderStrong,
     // accent
-    "--color-accent":            t.colorAccent,
-    "--color-accent-dim":        t.colorAccentDim,
-    "--color-accent-contrast":   t.colorAccentContrast,
-    "--color-accent-glow":       t.colorAccentGlow,
+    "--color-accent": t.colorAccent,
+    "--color-accent-dim": t.colorAccentDim,
+    "--color-accent-contrast": t.colorAccentContrast,
+    "--color-accent-glow": t.colorAccentGlow,
     // status
-    "--color-ok":                t.colorOk,
-    "--color-warn":              t.colorWarn,
-    "--color-bad":               t.colorDanger,
-    "--color-run":               t.colorRun,
+    "--color-ok": t.colorOk,
+    "--color-warn": t.colorWarn,
+    "--color-bad": t.colorDanger,
+    "--color-run": t.colorRun,
     // risk categories
-    "--color-risk-payment":      t.colorRiskPayment,
-    "--color-risk-deletion":     t.colorRiskDeletion,
-    "--color-risk-push":         t.colorRiskPush,
-    "--color-risk-send":         t.colorRiskSend,
+    "--color-risk-payment": t.colorRiskPayment,
+    "--color-risk-deletion": t.colorRiskDeletion,
+    "--color-risk-push": t.colorRiskPush,
+    "--color-risk-send": t.colorRiskSend,
     // radius
-    "--radius":                  t.radiusDefault,
-    "--radius-sm":               t.radiusSm,
-    "--radius-md":               t.radiusMd,
-    "--radius-lg":               t.radiusLg,
-    "--radius-full":             t.radiusFull,
+    "--radius": t.radiusDefault,
+    "--radius-sm": t.radiusSm,
+    "--radius-md": t.radiusMd,
+    "--radius-lg": t.radiusLg,
+    "--radius-full": t.radiusFull,
     // shadows
-    "--shadow-card":             t.shadowCard,
-    "--shadow-modal":            t.shadowModal,
-    "--shadow-glow-accent":      t.shadowGlowAccent,
+    "--shadow-card": t.shadowCard,
+    "--shadow-modal": t.shadowModal,
+    "--shadow-glow-accent": t.shadowGlowAccent,
     // fonts
-    "--font-sans":               t.fontSans,
-    "--font-mono":               t.fontMono,
+    "--font-sans": t.fontSans,
+    "--font-mono": t.fontMono,
   };
 }

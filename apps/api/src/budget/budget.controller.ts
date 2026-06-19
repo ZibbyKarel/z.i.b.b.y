@@ -1,8 +1,8 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { budgetContract } from "@zibby/contracts"
-import { BudgetConfigStore } from "./budget-config.store"
-import { BudgetService } from "./budget.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { budgetContract } from "@zibby/contracts";
+import { BudgetConfigStore } from "./budget-config.store";
+import { BudgetService } from "./budget.service";
 
 /**
  * Implements `budgetContract`: the per-engagement budget readout plus the
@@ -21,7 +21,10 @@ export class BudgetController {
     return tsRestHandler(budgetContract, {
       getBudget: async () => ({ status: 200, body: await this.budget.status() }),
       getBudgetConfig: async () => ({ status: 200, body: await this.config.read() }),
-      updateBudgetConfig: async ({ body }) => ({ status: 200, body: await this.config.write(body) }),
-    })
+      updateBudgetConfig: async ({ body }) => ({
+        status: 200,
+        body: await this.config.write(body),
+      }),
+    });
   }
 }

@@ -1,26 +1,26 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable } from "@nestjs/common"
-import type { Briefing } from "@zibby/contracts"
-import { ACTIVITY_DIR, ActivityLogService } from "../activity/activity-log.service"
-import { ApprovalsService } from "../approvals/approvals.service"
-import { ChannelItemStore } from "../channels/channel-item.store"
-import { DuplicateNoteError, VaultService } from "../memory/vault.service"
-import { GoalRunnerService } from "../goals/goal-runner.service"
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
-import { ProjectsStorageService } from "../projects/projects.storage.service"
-import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service"
-import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { assembleBriefing, renderBriefingMarkdown } from "./briefing-assembly"
-import { ClaudeCliBriefer } from "./claude-cli-briefer"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable } from "@nestjs/common";
+import type { Briefing } from "@zibby/contracts";
+import { ACTIVITY_DIR, ActivityLogService } from "../activity/activity-log.service";
+import { ApprovalsService } from "../approvals/approvals.service";
+import { ChannelItemStore } from "../channels/channel-item.store";
+import { DuplicateNoteError, VaultService } from "../memory/vault.service";
+import { GoalRunnerService } from "../goals/goal-runner.service";
+import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
+import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { assembleBriefing, renderBriefingMarkdown } from "./briefing-assembly";
+import { ClaudeCliBriefer } from "./claude-cli-briefer";
 
 /** The cursor file that records when the last briefing was generated (decision 11). */
-const CURSOR_FILE = "last-briefing.json"
+const CURSOR_FILE = "last-briefing.json";
 
 /** Start-of-day ISO for `now` — the since-fallback on first boot / deleted cursor. */
 function startOfDay(now: Date): string {
-  return `${now.toISOString().slice(0, 10)}T00:00:00.000Z`
+  return `${now.toISOString().slice(0, 10)}T00:00:00.000Z`;
 }
 
 /**
@@ -34,7 +34,7 @@ function startOfDay(now: Date): string {
  */
 @Injectable()
 export class BriefingService {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(
     private readonly approvals: ApprovalsService,
@@ -49,42 +49,43 @@ export class BriefingService {
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
-    this.log = logger.child(BriefingService.name)
+    this.log = logger.child(BriefingService.name);
   }
 
   /** Assemble the current briefing from the record — pure, no persistence. */
   async assemble(now: Date = new Date()): Promise<Briefing> {
-    const since = await this.readCursor(now)
-    const [approvals, allRuns, allGoalRuns, channelItems, activity, allTasks, projects] = await Promise.all([
-      this.approvals.list("pending"),
-      this.pipelines.listAll(),
-      this.goals.listAll(),
-      this.channels.list(),
-      this.activity.readSince(since, now),
-      this.tasks.list().catch(() => []),
-      this.projects.list().catch(() => []),
-    ])
+    const since = await this.readCursor(now);
+    const [approvals, allRuns, allGoalRuns, channelItems, activity, allTasks, projects] =
+      await Promise.all([
+        this.approvals.list("pending"),
+        this.pipelines.listAll(),
+        this.goals.listAll(),
+        this.channels.list(),
+        this.activity.readSince(since, now),
+        this.tasks.list().catch(() => []),
+        this.projects.list().catch(() => []),
+      ]);
     // Phase 10: in-flight (running/paused) goals feed "watching"; parked goals "needs you".
     const goalRuns = allGoalRuns.filter(
       (g) => g.status === "running" || g.status === "paused-limit" || g.status === "parked",
-    )
-    const parkedRuns = allRuns.filter((r) => r.status === "parked")
+    );
+    const parkedRuns = allRuns.filter((r) => r.status === "parked");
     // Phase 9: runs paused on the usage limit feed the "watching" line (Tier 1 — they
     // auto-resume, so they don't go in "needs you").
-    const pausedLimitRuns = allRuns.filter((r) => r.status === "paused-limit")
-    const inFlight = channelItems.filter((i) => i.state === "new" || i.state === "triaged")
+    const pausedLimitRuns = allRuns.filter((r) => r.status === "paused-limit");
+    const inFlight = channelItems.filter((i) => i.state === "new" || i.state === "triaged");
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
-    const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held")
+    const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held");
     // M8: dead-lettered tasks (dispatch exhausted its retries) are a needs-you decision.
-    const deadLetteredTasks = allTasks.filter((t) => t.status === "dead-letter")
-    const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]))
+    const deadLetteredTasks = allTasks.filter((t) => t.status === "dead-letter");
+    const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]));
     const [trend7d, learnedPatterns, intelligence, automationGaps, appIdeas] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
       this.readIntelligence(),
       this.readAutomationGaps(),
       this.readAppIdeas(),
-    ])
+    ]);
     return assembleBriefing({
       now,
       since,
@@ -102,7 +103,7 @@ export class BriefingService {
       intelligence,
       automationGaps,
       appIdeas,
-    })
+    });
   }
 
   /**
@@ -110,37 +111,43 @@ export class BriefingService {
    * note id (`briefing-<YYYY-MM-DD>`).
    */
   async generate(now: Date = new Date()): Promise<{ briefing: Briefing; noteId: string }> {
-    const assembled = await this.assemble(now)
+    const assembled = await this.assemble(now);
     // Optional butler voice; never blocks — the deterministic headline stands in.
-    const voiced = await this.briefer.headline(assembled).catch(() => null)
-    const briefing: Briefing = voiced ? { ...assembled, headline: voiced } : assembled
+    const voiced = await this.briefer.headline(assembled).catch(() => null);
+    const briefing: Briefing = voiced ? { ...assembled, headline: voiced } : assembled;
 
-    const noteId = `briefing-${now.toISOString().slice(0, 10)}`
-    await this.persistNote(noteId, briefing)
+    const noteId = `briefing-${now.toISOString().slice(0, 10)}`;
+    await this.persistNote(noteId, briefing);
     await this.vault.appendDaily(`briefing generated → [[${noteId}]]`).catch((err) => {
-      this.log.warn("daily briefing link failed", { error: (err as Error).message })
-    })
+      this.log.warn("daily briefing link failed", { error: (err as Error).message });
+    });
     // Advance the cursor ONLY after the note persists (crash → idempotent re-brief).
-    await this.writeCursor(briefing.generatedAt)
+    await this.writeCursor(briefing.generatedAt);
     void this.activity.record({
       kind: "briefing-generated",
       summary: briefing.headline,
       refs: { noteId },
-    })
-    this.log.info("briefing generated", { noteId, needsYou: briefing.needsYou.length })
-    return { briefing, noteId }
+    });
+    this.log.info("briefing generated", { noteId, needsYou: briefing.needsYou.length });
+    return { briefing, noteId };
   }
 
   /** Create the day's briefing note, or update it if today's was already generated. */
   private async persistNote(noteId: string, briefing: Briefing): Promise<void> {
-    const body = renderBriefingMarkdown(briefing)
-    const frontmatter = { generatedAt: briefing.generatedAt, since: briefing.since }
+    const body = renderBriefingMarkdown(briefing);
+    const frontmatter = { generatedAt: briefing.generatedAt, since: briefing.since };
     try {
-      await this.vault.createNote({ id: noteId, tier: "daily", title: "Briefing", body, frontmatter })
+      await this.vault.createNote({
+        id: noteId,
+        tier: "daily",
+        title: "Briefing",
+        body,
+        frontmatter,
+      });
     } catch (error) {
       // One note per day is the contract — a second generate updates, never 409s.
-      if (!(error instanceof DuplicateNoteError)) throw error
-      await this.vault.updateNote(noteId, { body, frontmatter })
+      if (!(error instanceof DuplicateNoteError)) throw error;
+      await this.vault.updateNote(noteId, { body, frontmatter });
     }
   }
 
@@ -150,14 +157,14 @@ export class BriefingService {
    */
   private async readLearnedPatterns(): Promise<string[]> {
     try {
-      const note = await this.vault.note("patterns/suggestions")
+      const note = await this.vault.note("patterns/suggestions");
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
         .map((l) => l.replace(/^- \[.\] /, "").trim())
-        .filter(Boolean)
+        .filter(Boolean);
     } catch {
-      return []
+      return [];
     }
   }
 
@@ -168,15 +175,20 @@ export class BriefingService {
    */
   private async readIntelligence(): Promise<string[]> {
     try {
-      const note = await this.vault.note("intelligence/digest")
+      const note = await this.vault.note("intelligence/digest");
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- **"))
-        .map((l) => l.replace(/^- \*\*(.*?)\*\* — /, "$1 — ").replace(/^- /, "").trim())
+        .map((l) =>
+          l
+            .replace(/^- \*\*(.*?)\*\* — /, "$1 — ")
+            .replace(/^- /, "")
+            .trim(),
+        )
         .filter(Boolean)
-        .slice(0, 5)
+        .slice(0, 5);
     } catch {
-      return []
+      return [];
     }
   }
 
@@ -187,15 +199,15 @@ export class BriefingService {
    */
   private async readAutomationGaps(): Promise<string[]> {
     try {
-      const note = await this.vault.note("suggestions/automation-gaps")
+      const note = await this.vault.note("suggestions/automation-gaps");
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
         .map((l) => l.replace(/^- \[.\] /, "").trim())
         .filter(Boolean)
-        .slice(0, 5)
+        .slice(0, 5);
     } catch {
-      return []
+      return [];
     }
   }
 
@@ -205,30 +217,38 @@ export class BriefingService {
    */
   private async readAppIdeas(): Promise<string[]> {
     try {
-      const note = await this.vault.note("suggestions/app-ideas")
+      const note = await this.vault.note("suggestions/app-ideas");
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
         .map((l) => l.replace(/^- \[.\] /, "").trim())
         .filter(Boolean)
-        .slice(0, 3)
+        .slice(0, 3);
     } catch {
-      return []
+      return [];
     }
   }
 
   /** Read the since-cursor; tolerant — a missing/garbage cursor → start of today. */
   private async readCursor(now: Date): Promise<string> {
-    const raw = await fs.readFile(path.join(this.activityDir, CURSOR_FILE), "utf8").catch(() => null)
-    if (raw === null) return startOfDay(now)
-    const parsed = safeJson(raw)
-    const at = parsed && typeof parsed === "object" ? (parsed as { generatedAt?: unknown }).generatedAt : undefined
-    return typeof at === "string" ? at : startOfDay(now)
+    const raw = await fs
+      .readFile(path.join(this.activityDir, CURSOR_FILE), "utf8")
+      .catch(() => null);
+    if (raw === null) return startOfDay(now);
+    const parsed = safeJson(raw);
+    const at =
+      parsed && typeof parsed === "object"
+        ? (parsed as { generatedAt?: unknown }).generatedAt
+        : undefined;
+    return typeof at === "string" ? at : startOfDay(now);
   }
 
   private async writeCursor(generatedAt: string): Promise<void> {
-    await ensureDir(this.activityDir)
-    await writeFileAtomic(path.join(this.activityDir, CURSOR_FILE), JSON.stringify({ generatedAt }))
+    await ensureDir(this.activityDir);
+    await writeFileAtomic(
+      path.join(this.activityDir, CURSOR_FILE),
+      JSON.stringify({ generatedAt }),
+    );
   }
 
   /**
@@ -236,18 +256,18 @@ export class BriefingService {
    * trend summary. Missing days are silently skipped — never throws.
    */
   private async readTrend7d(now: Date): Promise<string[]> {
-    const summaries: string[] = []
+    const summaries: string[] = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-      const date = d.toISOString().slice(0, 10)
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const date = d.toISOString().slice(0, 10);
       try {
-        const note = await this.vault.note(date)
-        const firstLine = (note.body ?? "").split("\n").find((l) => l.trim().length > 0)
-        if (firstLine) summaries.push(`${date}: ${firstLine.replace(/^[-*]\s*/, "").trim()}`)
+        const note = await this.vault.note(date);
+        const firstLine = (note.body ?? "").split("\n").find((l) => l.trim().length > 0);
+        if (firstLine) summaries.push(`${date}: ${firstLine.replace(/^[-*]\s*/, "").trim()}`);
       } catch {
         // Day not found or unreadable — skip silently.
       }
     }
-    return summaries
+    return summaries;
   }
 }

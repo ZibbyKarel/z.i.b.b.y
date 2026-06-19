@@ -1,19 +1,19 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { tasksContract } from "@zibby/contracts"
-import { ClaudeUnavailableError } from "../runner/claude-preflight.service"
-import { makeErrorMapper } from "../shared/http/error-mapping"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { tasksContract } from "@zibby/contracts";
+import { ClaudeUnavailableError } from "../runner/claude-preflight.service";
+import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   InvalidScheduledTaskIdError,
   ScheduledTaskNotFoundError,
   ScheduledTasksStorageService,
-} from "./scheduled-tasks.storage.service"
-import { TaskClassifierService } from "./task-classifier.service"
-import { EmptyCatalogError, TaskSchedulerService } from "./task-scheduler.service"
+} from "./scheduled-tasks.storage.service";
+import { TaskClassifierService } from "./task-classifier.service";
+import { EmptyCatalogError, TaskSchedulerService } from "./task-scheduler.service";
 
 const errors = makeErrorMapper("Scheduled task", {
   missing: [ScheduledTaskNotFoundError, InvalidScheduledTaskIdError],
-})
+});
 
 /**
  * Implements `tasksContract`. `classifyTask` is the side-effect-free verdict;
@@ -33,27 +33,27 @@ export class TasksController {
   handler() {
     return tsRestHandler(tasksContract, {
       classifyTask: async ({ body }) => {
-        const routing = await this.classifier.classify(body)
+        const routing = await this.classifier.classify(body);
         if (!routing) {
           return {
             status: 422,
             body: { message: "No agents or pipelines available to route to" },
-          }
+          };
         }
-        return { status: 200, body: routing }
+        return { status: 200, body: routing };
       },
 
       createTask: async ({ body }) => {
         try {
-          return { status: 201, body: await this.scheduler.createTask(body) }
+          return { status: 201, body: await this.scheduler.createTask(body) };
         } catch (error) {
           if (error instanceof EmptyCatalogError) {
-            return { status: 422, body: { message: error.message } }
+            return { status: 422, body: { message: error.message } };
           }
           if (error instanceof ClaudeUnavailableError) {
-            return { status: 503, body: { message: error.message } }
+            return { status: 503, body: { message: error.message } };
           }
-          throw error
+          throw error;
         }
       },
 
@@ -61,6 +61,6 @@ export class TasksController {
 
       cancelScheduledTask: ({ params: { id } }) =>
         errors.or404(id, () => this.scheduler.cancel(id)),
-    })
+    });
   }
 }

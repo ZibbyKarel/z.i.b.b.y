@@ -17,6 +17,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); echo \"$file\" | grep -qE '\\.(tsx?|jsx?)$' && cd /Users/zibby/Workspace/z.i.b.b.y && pnpm eslint --fix \"$file\" > /dev/null 2>&1 || true",
+            "async": true,
+            "statusMessage": "ESLint fix..."
+          },
+          {
+            "type": "command",
             "command": "file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); echo \"$file\" | grep -qvE '(docs/|\\.md$|\\.json$|node_modules)' && /Users/zibby/.local/bin/graphify update . > /dev/null 2>&1 || true",
             "async": true,
             "statusMessage": "Updating knowledge graph..."

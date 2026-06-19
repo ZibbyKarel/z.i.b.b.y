@@ -11,9 +11,7 @@ const options: ButtonGroupOption[] = [
 
 describe("ButtonGroup", () => {
   it("marks the active option as pressed", () => {
-    render(
-      <ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />,
-    );
+    render(<ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />);
     expect(screen.getByTestId(`${ButtonGroupTestId.Option}-home`)).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -26,9 +24,7 @@ describe("ButtonGroup", () => {
 
   it("calls onChange on click", async () => {
     const onChange = vi.fn();
-    render(
-      <ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />,
-    );
+    render(<ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />);
     await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-work`));
     expect(onChange).toHaveBeenCalledWith("work");
   });
@@ -50,9 +46,7 @@ describe("ButtonGroup", () => {
 
   it("does not clear on active click by default", async () => {
     const onChange = vi.fn();
-    render(
-      <ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />,
-    );
+    render(<ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />);
     await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-home`));
     expect(onChange).toHaveBeenCalledWith("home");
   });
@@ -88,9 +82,7 @@ describe("ButtonGroup", () => {
   });
 
   it("omits slot wrappers when no slot content is provided", () => {
-    render(
-      <ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />,
-    );
+    render(<ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />);
     expect(screen.queryByTestId(`${ButtonGroupTestId.Leading}-home`)).not.toBeInTheDocument();
     expect(screen.queryByTestId(`${ButtonGroupTestId.Trailing}-home`)).not.toBeInTheDocument();
   });

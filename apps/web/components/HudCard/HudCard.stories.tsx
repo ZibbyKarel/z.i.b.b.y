@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Button, Container, Icon, Tag } from "@zibby/design-system"
-import { HudCard } from "./HudCard"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button, Container, Icon, Tag } from "@zibby/design-system";
+import { HudCard } from "./HudCard";
 
 const meta: Meta<typeof HudCard> = {
   title: "Dashboard/HudCard",
@@ -18,10 +18,10 @@ const meta: Meta<typeof HudCard> = {
     glyph: "bot",
     description: "Prochází diff a hlásí regresní rizika před mergem.",
   },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof HudCard>
+type Story = StoryObj<typeof HudCard>;
 
 const badgeRows = [
   [
@@ -43,7 +43,7 @@ const badgeRows = [
       grep
     </Tag>,
   ],
-]
+];
 
 const runAction = (
   <Container textAlign="right">
@@ -51,12 +51,12 @@ const runAction = (
       spustit
     </Button>
   </Container>
-)
+);
 
 export const Default: Story = {
   args: { badges: badgeRows, actions: runAction, openLabel: "otevřít reviewer" },
-}
+};
 
 export const Minimal: Story = {
   args: { description: undefined, badges: undefined, actions: undefined },
-}
+};

@@ -7,9 +7,7 @@ import { TextInputField, TextInputFieldTestId } from "./TextInputField";
 describe("TextInputField", () => {
   it("associates the label with the input", () => {
     render(<TextInputField label="Název skillu" />);
-    expect(screen.getByTestId(TextInputFieldTestId.Control)).toHaveAccessibleName(
-      "Název skillu",
-    );
+    expect(screen.getByTestId(TextInputFieldTestId.Control)).toHaveAccessibleName("Název skillu");
   });
 
   it("accepts typing", async () => {
@@ -21,9 +19,7 @@ describe("TextInputField", () => {
 
   it("renders an error and marks the input invalid", () => {
     render(<TextInputField error="Povinné pole" label="Název" />);
-    expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent(
-      "Povinné pole",
-    );
+    expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Povinné pole");
     expect(screen.getByTestId(TextInputFieldTestId.Control)).toHaveAttribute(
       "aria-invalid",
       "true",

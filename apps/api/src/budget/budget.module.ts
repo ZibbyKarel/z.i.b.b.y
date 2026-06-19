@@ -1,23 +1,23 @@
-import { Module } from "@nestjs/common"
-import { AgentsModule } from "../agents/agents.module"
-import { LimitsModule } from "../limits/limits.module"
-import { PipelinesModule } from "../pipelines/pipelines.module"
-import { ProjectsModule } from "../projects/projects.module"
-import { dataDir } from "../shared/data-dir"
-import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module"
-import { BUDGET_CONFIG_FILE, BudgetConfigStore } from "./budget-config.store"
-import { BudgetController } from "./budget.controller"
-import { BudgetService } from "./budget.service"
-import { BUDGET_LEDGER_DIR, BudgetLedgerStore } from "./ledger.store"
+import { Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
+import { LimitsModule } from "../limits/limits.module";
+import { PipelinesModule } from "../pipelines/pipelines.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { dataDir } from "../shared/data-dir";
+import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
+import { BUDGET_CONFIG_FILE, BudgetConfigStore } from "./budget-config.store";
+import { BudgetController } from "./budget.controller";
+import { BudgetService } from "./budget.service";
+import { BUDGET_LEDGER_DIR, BudgetLedgerStore } from "./ledger.store";
 
 /** Default dispatch-ledger dir, anchored to `apps/api/data/budget-ledger` (gitignored). */
 export function resolveBudgetLedgerDir(): string {
-  return process.env.BUDGET_LEDGER_DIR ?? dataDir("budget-ledger")
+  return process.env.BUDGET_LEDGER_DIR ?? dataDir("budget-ledger");
 }
 
 /** Default global-config file, anchored to `apps/api/data/budget.json` (committed). */
 export function resolveBudgetConfigFile(): string {
-  return process.env.BUDGET_CONFIG_FILE ?? dataDir("budget.json")
+  return process.env.BUDGET_CONFIG_FILE ?? dataDir("budget.json");
 }
 
 /**

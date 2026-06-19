@@ -53,20 +53,11 @@ export const Overview: Story = {
         </Container>
       </Panel>
 
-      <Panel
-        live
-        header={<Label>running build</Label>}
-        padding="200"
-      >
+      <Panel live header={<Label>running build</Label>} padding="200">
         <Typography type="data">live panel — corner brackets in the run color</Typography>
       </Panel>
 
-      <Panel
-        live
-        header={<Label>awaiting approval</Label>}
-        liveTone="warn"
-        padding="200"
-      >
+      <Panel live header={<Label>awaiting approval</Label>} liveTone="warn" padding="200">
         <Typography type="data">live panel — awaiting tone</Typography>
       </Panel>
 

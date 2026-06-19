@@ -13,10 +13,7 @@ describe("DropZoneField", () => {
   it("wires the label to the dropzone via aria-labelledby", () => {
     render(<DropZoneField label="Přílohy" onDrop={vi.fn()} />);
     const labelId = screen.getByTestId(FieldTestId.Label).id;
-    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute(
-      "aria-labelledby",
-      labelId,
-    );
+    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute("aria-labelledby", labelId);
   });
 
   it("shows a hint", () => {
@@ -33,9 +30,6 @@ describe("DropZoneField", () => {
   it("wires aria-describedby to the error/hint message", () => {
     render(<DropZoneField error="Chyba" label="Přílohy" onDrop={vi.fn()} />);
     const messageId = screen.getByTestId(FieldTestId.Error).id;
-    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute(
-      "aria-describedby",
-      messageId,
-    );
+    expect(screen.getByTestId(DropZoneTestId.Root)).toHaveAttribute("aria-describedby", messageId);
   });
 });

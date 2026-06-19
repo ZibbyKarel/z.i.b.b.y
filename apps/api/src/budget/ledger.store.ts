@@ -1,29 +1,29 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable } from "@nestjs/common"
-import { ensureDir, isErrnoException, safeJson } from "../shared/file-storage"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable } from "@nestjs/common";
+import { ensureDir, isErrnoException, safeJson } from "../shared/file-storage";
 
 /** DI token for the directory holding the append-only `<date>.jsonl` dispatch ledger. */
-export const BUDGET_LEDGER_DIR = "BUDGET_LEDGER_DIR"
+export const BUDGET_LEDGER_DIR = "BUDGET_LEDGER_DIR";
 
 /** Timezone the budget windows are cut on — the scheduler's cron timezone precedent. */
-export const BUDGET_TZ = "Europe/Prague"
+export const BUDGET_TZ = "Europe/Prague";
 
 /** One ledger line: a single *started* run, attributed for windowed counting. */
 export interface LedgerEntry {
-  at: string
-  projectId?: string
-  taskId?: string
-  runRef: string
+  at: string;
+  projectId?: string;
+  taskId?: string;
+  runRef: string;
   /** The routed target kind ("agent" | "pipeline" | "orchestrator"). */
-  kind: string
+  kind: string;
 }
 
 /** Thrown when the ledger dir cannot be read (NOT a missing day file) — fail-closed signal. */
 export class LedgerUnreadableError extends Error {
   constructor(cause: unknown) {
-    super(`budget ledger unreadable: ${cause instanceof Error ? cause.message : String(cause)}`)
-    this.name = "LedgerUnreadableError"
+    super(`budget ledger unreadable: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "LedgerUnreadableError";
   }
 }
 
@@ -46,59 +46,63 @@ export class BudgetLedgerStore {
 
   /** Append one started-run line (awaited on the dispatch path — enforcement data). */
   async record(entry: LedgerEntry, now: Date = new Date()): Promise<void> {
-    await ensureDir(this.dir)
-    const file = this.fileFor(pragueDate(now))
-    await fs.appendFile(file, `${JSON.stringify(entry)}\n`, "utf8")
+    await ensureDir(this.dir);
+    const file = this.fileFor(pragueDate(now));
+    await fs.appendFile(file, `${JSON.stringify(entry)}\n`, "utf8");
   }
 
   /** Runs counted for `projectId` on the Prague day containing `now`. */
   async countDaily(projectId: string, now: Date = new Date()): Promise<number> {
-    return this.countAcross([pragueDate(now)], projectId)
+    return this.countAcross([pragueDate(now)], projectId);
   }
 
   /** Runs counted for `projectId` across the current ISO week (Mon..now), Prague. */
   async countWeekly(projectId: string, now: Date = new Date()): Promise<number> {
-    return this.countAcross(isoWeekDates(pragueDate(now)), projectId)
+    return this.countAcross(isoWeekDates(pragueDate(now)), projectId);
   }
 
   /** Runs counted for `projectId` month-to-date (1st..now of the Prague month). */
   async countMonthly(projectId: string, now: Date = new Date()): Promise<number> {
-    return this.countAcross(monthDates(pragueDate(now)), projectId)
+    return this.countAcross(monthDates(pragueDate(now)), projectId);
   }
 
   /** Sum matching lines across the given day-file names. */
   private async countAcross(dates: string[], projectId: string): Promise<number> {
-    let total = 0
+    let total = 0;
     for (const date of dates) {
       for (const entry of await this.readDay(date)) {
-        if (entry.projectId === projectId) total += 1
+        if (entry.projectId === projectId) total += 1;
       }
     }
-    return total
+    return total;
   }
 
   /** Tolerant read of one day file. ENOENT → []; any other error → fail-closed throw. */
   private async readDay(date: string): Promise<LedgerEntry[]> {
-    let raw: string
+    let raw: string;
     try {
-      raw = await fs.readFile(this.fileFor(date), "utf8")
+      raw = await fs.readFile(this.fileFor(date), "utf8");
     } catch (error) {
-      if (isErrnoException(error) && error.code === "ENOENT") return []
-      throw new LedgerUnreadableError(error)
+      if (isErrnoException(error) && error.code === "ENOENT") return [];
+      throw new LedgerUnreadableError(error);
     }
-    const out: LedgerEntry[] = []
+    const out: LedgerEntry[] = [];
     for (const line of raw.split("\n")) {
-      if (line.trim().length === 0) continue
-      const parsed = safeJson(line)
-      if (parsed && typeof parsed === "object" && typeof (parsed as LedgerEntry).runRef === "string") {
-        out.push(parsed as LedgerEntry)
+      if (line.trim().length === 0) continue;
+      const parsed = safeJson(line);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        typeof (parsed as LedgerEntry).runRef === "string"
+      ) {
+        out.push(parsed as LedgerEntry);
       }
     }
-    return out
+    return out;
   }
 
   private fileFor(date: string): string {
-    return path.join(this.dir, `${date}.jsonl`)
+    return path.join(this.dir, `${date}.jsonl`);
   }
 }
 
@@ -110,7 +114,7 @@ export function pragueDate(now: Date): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now)
+  }).format(now);
 }
 
 /**
@@ -119,12 +123,12 @@ export function pragueDate(now: Date): string {
  * the month boundary is the Prague month (same precedent as {@link isoWeekDates}).
  */
 export function monthDates(date: string): string[] {
-  const [year, month, day] = date.split("-").map(Number) as [number, number, number]
-  const dates: string[] = []
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
+  const dates: string[] = [];
   for (let d = 1; d <= day; d++) {
-    dates.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`)
+    dates.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
   }
-  return dates
+  return dates;
 }
 
 /**
@@ -134,13 +138,13 @@ export function monthDates(date: string): string[] {
  * Prague-local date string.
  */
 export function isoWeekDates(date: string): string[] {
-  const d = new Date(`${date}T00:00:00.000Z`)
+  const d = new Date(`${date}T00:00:00.000Z`);
   // getUTCDay: 0=Sun..6=Sat → days since Monday.
-  const sinceMonday = (d.getUTCDay() + 6) % 7
-  const dates: string[] = []
+  const sinceMonday = (d.getUTCDay() + 6) % 7;
+  const dates: string[] = [];
   for (let i = sinceMonday; i >= 0; i--) {
-    const day = new Date(d.getTime() - i * 24 * 60 * 60 * 1000)
-    dates.push(day.toISOString().slice(0, 10))
+    const day = new Date(d.getTime() - i * 24 * 60 * 60 * 1000);
+    dates.push(day.toISOString().slice(0, 10));
   }
-  return dates
+  return dates;
 }

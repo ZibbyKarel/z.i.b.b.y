@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /**
  * Shared error body for 4xx responses, used across multiple resource contracts
@@ -6,8 +6,8 @@ import { z } from "zod"
  * than any single resource's schema file so no domain has to reach into another's
  * just for the error shape.
  */
-export const ErrorSchema = z.object({ message: z.string() })
-export type ErrorBody = z.infer<typeof ErrorSchema>
+export const ErrorSchema = z.object({ message: z.string() });
+export type ErrorBody = z.infer<typeof ErrorSchema>;
 
 /**
  * The shared lifecycle states a run can be in, across every run kind (agent,
@@ -27,15 +27,15 @@ export const RunStatusSchema = z.enum([
   "interrupted",
   "awaiting-approval",
   "paused-limit",
-])
-export type RunStatus = z.infer<typeof RunStatusSchema>
+]);
+export type RunStatus = z.infer<typeof RunStatusSchema>;
 
 /**
  * Risk hint carried in agent/skill frontmatter. Display-only from Phase 3.5 on
  * (the gate policy engine decides; `risk` only colours the UI badge).
  */
-export const RiskSchema = z.enum(["low", "medium", "high"])
-export type Risk = z.infer<typeof RiskSchema>
+export const RiskSchema = z.enum(["low", "medium", "high"]);
+export type Risk = z.infer<typeof RiskSchema>;
 
 /**
  * The git worktree a run owns (Phase 3.1). A project-targeted run works on its own
@@ -49,5 +49,5 @@ export const WorkspaceSchema = z.object({
   branch: z.string().min(1),
   path: z.string().min(1),
   baseRef: z.string().min(1),
-})
-export type Workspace = z.infer<typeof WorkspaceSchema>
+});
+export type Workspace = z.infer<typeof WorkspaceSchema>;

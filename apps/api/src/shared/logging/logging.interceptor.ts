@@ -3,14 +3,14 @@ import {
   type ExecutionContext,
   Injectable,
   type NestInterceptor,
-} from "@nestjs/common"
-import type { Request, Response } from "express"
-import { type Observable, tap } from "rxjs"
-import { LoggerService, type ScopedLogger } from "./logger.service"
-import { safeStringify } from "./serialize"
+} from "@nestjs/common";
+import type { Request, Response } from "express";
+import { type Observable, tap } from "rxjs";
+import { LoggerService, type ScopedLogger } from "./logger.service";
+import { safeStringify } from "./serialize";
 
 /** Keep a request/response body preview bounded — never log it in full. */
-const BODY_PREVIEW_MAX = 1000
+const BODY_PREVIEW_MAX = 1000;
 
 /**
  * A route whose payloads are pure noise to log: the log-streaming endpoints
@@ -19,7 +19,7 @@ const BODY_PREVIEW_MAX = 1000
  * just not the bodies.
  */
 function isNoisyBodyRoute(url: string): boolean {
-  return url.includes("/logs")
+  return url.includes("/logs");
 }
 
 /**
@@ -35,55 +35,55 @@ function isNoisyBodyRoute(url: string): boolean {
  */
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(logger: LoggerService) {
-    this.log = logger.child("HTTP")
+    this.log = logger.child("HTTP");
   }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    if (context.getType() !== "http") return next.handle()
+    if (context.getType() !== "http") return next.handle();
 
-    const http = context.switchToHttp()
-    const req = http.getRequest<Request>()
-    const res = http.getResponse<Response>()
-    const method = req.method
-    const url = req.originalUrl || req.url
-    const startedAt = Date.now()
-    const skipBody = isNoisyBodyRoute(url)
+    const http = context.switchToHttp();
+    const req = http.getRequest<Request>();
+    const res = http.getResponse<Response>();
+    const method = req.method;
+    const url = req.originalUrl || req.url;
+    const startedAt = Date.now();
+    const skipBody = isNoisyBodyRoute(url);
     // Reads are polled hard (run/pipeline progress every few hundred ms); logging
     // each at `info` would bury the signal. State-changing calls are the ones worth
     // seeing by default → `info`; reads drop to `debug` (raise LOG_LEVEL to see them).
-    const level: "info" | "debug" = method === "GET" || method === "HEAD" ? "debug" : "info"
+    const level: "info" | "debug" = method === "GET" || method === "HEAD" ? "debug" : "info";
 
     this.log[level](`→ ${method} ${url}`, {
       ...(hasKeys(req.params) ? { params: req.params } : {}),
       ...(hasKeys(req.query) ? { query: req.query } : {}),
       ...(skipBody || !hasKeys(req.body) ? {} : { body: preview(req.body) }),
-    })
+    });
 
     return next.handle().pipe(
       tap({
         next: (value) => {
           this.log[level](`← ${method} ${url} ${res.statusCode} ${Date.now() - startedAt}ms`, {
             ...(skipBody ? {} : { result: preview(value) }),
-          })
+          });
         },
         error: (err: unknown) => {
           // The filter logs the full error; here we only mark the timing/route.
           this.log.warn(`✗ ${method} ${url} ${Date.now() - startedAt}ms`, {
             error: err instanceof Error ? err.message : String(err),
-          })
+          });
         },
       }),
-    )
+    );
   }
 }
 
 function hasKeys(value: unknown): boolean {
-  return typeof value === "object" && value !== null && Object.keys(value).length > 0
+  return typeof value === "object" && value !== null && Object.keys(value).length > 0;
 }
 
 function preview(value: unknown): string {
-  return safeStringify(value, BODY_PREVIEW_MAX)
+  return safeStringify(value, BODY_PREVIEW_MAX);
 }

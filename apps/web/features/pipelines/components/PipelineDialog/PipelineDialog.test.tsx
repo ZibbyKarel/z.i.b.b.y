@@ -46,7 +46,13 @@ const existing: Pipeline = {
 describe("PipelineDialog — edit mode", () => {
   it("pre-fills name and renders one node per phase from the graph", () => {
     render(
-      <PipelineDialog agents={agents} initial={existing} mode="edit" onClose={() => {}} onSave={() => {}} />,
+      <PipelineDialog
+        agents={agents}
+        initial={existing}
+        mode="edit"
+        onClose={() => {}}
+        onSave={() => {}}
+      />,
     );
     expect(screen.getByLabelText("Název pipeline")).toHaveValue("Delivery");
     expect(screen.getAllByTestId("pipeline-node")).toHaveLength(2);
@@ -57,7 +63,13 @@ describe("PipelineDialog — edit mode", () => {
   it("PATCHes only the name when only the name changes", async () => {
     const onSave = vi.fn();
     render(
-      <PipelineDialog agents={agents} initial={existing} mode="edit" onClose={() => {}} onSave={onSave} />,
+      <PipelineDialog
+        agents={agents}
+        initial={existing}
+        mode="edit"
+        onClose={() => {}}
+        onSave={onSave}
+      />,
     );
     await userEvent.clear(screen.getByLabelText("Název pipeline"));
     await userEvent.type(screen.getByLabelText("Název pipeline"), "Delivery v2");
@@ -72,7 +84,13 @@ describe("PipelineDialog — edit mode", () => {
   it("editing the hand-off file PATCHes phases keeping original ids + the verify loop", async () => {
     const onSave = vi.fn();
     render(
-      <PipelineDialog agents={agents} initial={existing} mode="edit" onClose={() => {}} onSave={onSave} />,
+      <PipelineDialog
+        agents={agents}
+        initial={existing}
+        mode="edit"
+        onClose={() => {}}
+        onSave={onSave}
+      />,
     );
     const handoff = screen.getByLabelText("Název předávacího souboru");
     await userEvent.clear(handoff);

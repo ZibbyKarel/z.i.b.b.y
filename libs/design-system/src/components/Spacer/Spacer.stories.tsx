@@ -25,9 +25,7 @@ export const Overview: Story = {
         <div className="flex flex-col gap-1">
           {sizes.map((size) => (
             <div className="flex items-center gap-4" key={size}>
-              <span className="w-12 font-mono text-xs text-foreground-faint">
-                {size}
-              </span>
+              <span className="w-12 font-mono text-xs text-foreground-faint">{size}</span>
               <div className="flex flex-col">
                 <div className="h-px w-24 bg-border" />
                 <Spacer axis="y" size={size} />

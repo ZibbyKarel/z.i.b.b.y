@@ -25,9 +25,7 @@ export function RunningAgentsPanel() {
 
   const runs = allRuns.filter((r) => r.status === "running");
 
-  const openRun = openRunId
-    ? (runs.find((r) => r.runId === openRunId) ?? null)
-    : null;
+  const openRun = openRunId ? (runs.find((r) => r.runId === openRunId) ?? null) : null;
 
   return (
     <HudPanel title={t("overview.runningAgents")}>
@@ -45,9 +43,7 @@ export function RunningAgentsPanel() {
               divider={i < runs.length - 1}
               key={run.runId}
               onOpen={(r) => setOpenRunId(r.runId)}
-              onStop={(r) =>
-                stopAgentRun.mutate({ params: { runId: r.runId }, body: {} })
-              }
+              onStop={(r) => stopAgentRun.mutate({ params: { runId: r.runId }, body: {} })}
               run={run}
             />
           ))}
@@ -55,11 +51,7 @@ export function RunningAgentsPanel() {
       )}
 
       {openRun && (
-        <RunLogModal
-          key={openRun.runId}
-          onClose={() => setOpenRunId(null)}
-          run={openRun}
-        />
+        <RunLogModal key={openRun.runId} onClose={() => setOpenRunId(null)} run={openRun} />
       )}
     </HudPanel>
   );

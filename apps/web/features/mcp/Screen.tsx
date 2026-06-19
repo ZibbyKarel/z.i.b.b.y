@@ -40,10 +40,7 @@ export function Screen() {
   const onSubmit = (draft: McpServerDraft) => {
     if (draft.create) {
       const { id } = draft.create;
-      create.mutate(
-        { body: draft.create },
-        { onSuccess: () => persistToken(id, draft.authToken) },
-      );
+      create.mutate({ body: draft.create }, { onSuccess: () => persistToken(id, draft.authToken) });
     } else if (draft.update) {
       const { id, patch } = draft.update;
       update.mutate(
@@ -68,29 +65,29 @@ export function Screen() {
         />
 
         <Collection
-        empty={{
-          glyph: "server",
-          title: t("mcp.emptyTitle"),
-          description: t("mcp.emptyDescription"),
-          actionLabel: t("mcp.addServer"),
-          hint: t("mcp.emptyHint"),
-          onAction: () => setEditing("new"),
-        }}
-        error={
-          serversQuery.isError
-            ? {
-                title: t("common.loadErrorTitle"),
-                description: t("common.loadErrorDescription"),
-                retryLabel: t("common.retry"),
-                onRetry: () => void serversQuery.refetch(),
-              }
-            : undefined
-        }
-        items={servers}
-        loading={serversQuery.isPending ? { label: t("common.loading") } : undefined}
-        renderItem={(s) => (
-          <McpServerCard key={s.id} onConfigure={(server) => setEditing(server)} server={s} />
-        )}
+          empty={{
+            glyph: "server",
+            title: t("mcp.emptyTitle"),
+            description: t("mcp.emptyDescription"),
+            actionLabel: t("mcp.addServer"),
+            hint: t("mcp.emptyHint"),
+            onAction: () => setEditing("new"),
+          }}
+          error={
+            serversQuery.isError
+              ? {
+                  title: t("common.loadErrorTitle"),
+                  description: t("common.loadErrorDescription"),
+                  retryLabel: t("common.retry"),
+                  onRetry: () => void serversQuery.refetch(),
+                }
+              : undefined
+          }
+          items={servers}
+          loading={serversQuery.isPending ? { label: t("common.loading") } : undefined}
+          renderItem={(s) => (
+            <McpServerCard key={s.id} onConfigure={(server) => setEditing(server)} server={s} />
+          )}
         />
       </Stack>
 

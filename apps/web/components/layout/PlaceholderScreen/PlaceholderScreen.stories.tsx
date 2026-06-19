@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container } from "@zibby/design-system"
-import { PlaceholderScreen } from "./PlaceholderScreen"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container } from "@zibby/design-system";
+import { PlaceholderScreen } from "./PlaceholderScreen";
 
 const meta: Meta<typeof PlaceholderScreen> = {
   title: "Dashboard/Layout/PlaceholderScreen",
@@ -14,9 +14,9 @@ const meta: Meta<typeof PlaceholderScreen> = {
     ),
   ],
   args: { label: "Běhy", glyph: "flow" },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof PlaceholderScreen>
+type Story = StoryObj<typeof PlaceholderScreen>;
 
-export const Default: Story = {}
+export const Default: Story = {};

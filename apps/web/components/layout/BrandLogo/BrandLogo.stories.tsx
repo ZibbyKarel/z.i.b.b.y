@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container } from "@zibby/design-system"
-import { BrandLogo } from "./BrandLogo"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container } from "@zibby/design-system";
+import { BrandLogo } from "./BrandLogo";
 
 const meta: Meta<typeof BrandLogo> = {
   title: "Dashboard/Layout/BrandLogo",
@@ -13,9 +13,9 @@ const meta: Meta<typeof BrandLogo> = {
       </Container>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof BrandLogo>
+type Story = StoryObj<typeof BrandLogo>;
 
-export const Default: Story = {}
+export const Default: Story = {};

@@ -4,10 +4,10 @@ import {
   type ExceptionFilter,
   HttpException,
   Injectable,
-} from "@nestjs/common"
-import type { Request, Response } from "express"
-import { LoggerService, type ScopedLogger } from "./logger.service"
-import { TraceContextService } from "./trace-context.service"
+} from "@nestjs/common";
+import type { Request, Response } from "express";
+import { LoggerService, type ScopedLogger } from "./logger.service";
+import { TraceContextService } from "./trace-context.service";
 
 /**
  * Catches everything that escapes a handler and logs it with the request's trace
@@ -24,34 +24,36 @@ import { TraceContextService } from "./trace-context.service"
 @Injectable()
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(
     logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
-    this.log = logger.child("Exception")
+    this.log = logger.child("Exception");
   }
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const http = host.switchToHttp()
-    const req = http.getRequest<Request>()
-    const res = http.getResponse<Response>()
+    const http = host.switchToHttp();
+    const req = http.getRequest<Request>();
+    const res = http.getResponse<Response>();
 
-    const isHttp = exception instanceof HttpException
-    const status = isHttp ? exception.getStatus() : 500
-    const traceId = this.trace.getTraceId()
+    const isHttp = exception instanceof HttpException;
+    const status = isHttp ? exception.getStatus() : 500;
+    const traceId = this.trace.getTraceId();
 
-    const level = status >= 500 ? "error" : "warn"
+    const level = status >= 500 ? "error" : "warn";
     this.log[level](`✗ ${req.method} ${req.originalUrl || req.url} ${status}`, {
       err: exception instanceof Error ? exception.message : String(exception),
       ...(level === "error" && exception instanceof Error ? { stack: exception.stack } : {}),
-    })
+    });
 
-    const base = isHttp ? exception.getResponse() : { statusCode: 500, message: "Internal server error" }
+    const base = isHttp
+      ? exception.getResponse()
+      : { statusCode: 500, message: "Internal server error" };
     const body =
-      typeof base === "string" ? { statusCode: status, message: base } : { ...(base as object) }
+      typeof base === "string" ? { statusCode: status, message: base } : { ...(base as object) };
 
-    res.status(status).json({ ...body, ...(traceId ? { traceId } : {}) })
+    res.status(status).json({ ...body, ...(traceId ? { traceId } : {}) });
   }
 }

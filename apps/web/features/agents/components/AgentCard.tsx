@@ -11,11 +11,7 @@ export interface AgentCardProps {
   onClick?: (agent: Agent) => void;
 }
 
-export function AgentCard({
-  agent,
-  pipelineCount = 0,
-  onClick,
-}: AgentCardProps) {
+export function AgentCard({ agent, pipelineCount = 0, onClick }: AgentCardProps) {
   const t = useTranslations("agents");
   const name = agent.name ?? agent.id;
   const tools = agent.tools ?? [];
@@ -28,8 +24,7 @@ export function AgentCard({
           <ThinkBadge key="think" level={agent.thinking ?? "medium"} />,
           pipelineCount > 0 ? (
             <Tag key="usage" tone="accent">
-              <Icon name="flow" size="xs" />{" "}
-              {t("pipelineUsage", { count: pipelineCount })}
+              <Icon name="flow" size="xs" /> {t("pipelineUsage", { count: pipelineCount })}
             </Tag>
           ) : null,
         ],

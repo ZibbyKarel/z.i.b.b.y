@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
  * A discovery-suggested routing destination for a proposed task. A subset of the
@@ -12,8 +12,8 @@ export const SuggestedTargetSchema = z
     kind: z.enum(["agent", "pipeline", "goal", "orchestrator"]),
     id: AgentIdSchema.optional(),
   })
-  .strict()
-export type SuggestedTarget = z.infer<typeof SuggestedTargetSchema>
+  .strict();
+export type SuggestedTarget = z.infer<typeof SuggestedTargetSchema>;
 
 /**
  * A work candidate the discovery triage produces — **inert data**, the security
@@ -31,12 +31,12 @@ export const CandidateSchema = z
     suggestedTarget: SuggestedTargetSchema.optional(),
     confidence: z.number().min(0).max(1),
   })
-  .strict()
-export type Candidate = z.infer<typeof CandidateSchema>
+  .strict();
+export type Candidate = z.infer<typeof CandidateSchema>;
 
 /** Lifecycle of a stored proposal: `proposed` (awaiting the gate) → dispatched / ignored. */
-export const ProposalStateSchema = z.enum(["proposed", "dispatched", "ignored"])
-export type ProposalState = z.infer<typeof ProposalStateSchema>
+export const ProposalStateSchema = z.enum(["proposed", "dispatched", "ignored"]);
+export type ProposalState = z.infer<typeof ProposalStateSchema>;
 
 /**
  * A persisted discovery proposal — one candidate plus its lifecycle. Stored as
@@ -49,5 +49,5 @@ export const ProposalSchema = z.object({
   /** The `proposed-task` approval gating this proposal (set on park). */
   approvalId: z.string().optional(),
   createdAt: z.string().datetime(),
-})
-export type Proposal = z.infer<typeof ProposalSchema>
+});
+export type Proposal = z.infer<typeof ProposalSchema>;

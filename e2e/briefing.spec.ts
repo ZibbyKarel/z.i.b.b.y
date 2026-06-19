@@ -22,7 +22,5 @@ test("the overview briefing card generates a briefing and the activity feed reco
 
   // That generate recorded a `briefing-generated` entry, so the feed is non-empty.
   await expect(page.getByTestId("activity-feed")).toBeVisible({ timeout: 20000 });
-  await expect(
-    page.getByTestId("activity-feed-item").first(),
-  ).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("activity-feed-item").first()).toBeVisible({ timeout: 20000 });
 });

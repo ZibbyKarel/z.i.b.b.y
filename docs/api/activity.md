@@ -11,13 +11,13 @@ Každý řádek je `JSON.stringify(ActivityEntry) + "\n"` — jeden `fs.appendFi
 
 ```typescript
 interface ActivityEntry {
-  id: string           // collision-resistant UUID
-  at: string           // ISO datetime
-  kind: ActivityKind   // uzavřený výčet (viz níže)
-  summary: string      // jedna lidsky čitelná věta
-  traceId?: string     // z AsyncLocalStorage (automaticky)
-  runId?: string       // z AsyncLocalStorage (automaticky)
-  refs: ActivityRefs   // strukturované linky (strict object)
+  id: string; // collision-resistant UUID
+  at: string; // ISO datetime
+  kind: ActivityKind; // uzavřený výčet (viz níže)
+  summary: string; // jedna lidsky čitelná věta
+  traceId?: string; // z AsyncLocalStorage (automaticky)
+  runId?: string; // z AsyncLocalStorage (automaticky)
+  refs: ActivityRefs; // strukturované linky (strict object)
 }
 ```
 
@@ -25,13 +25,26 @@ interface ActivityEntry {
 
 ```typescript
 type ActivityKind =
-  | "task-created" | "task-dispatched" | "task-outcome" | "task-held" | "task-queued"
-  | "run-started" | "run-finished"
-  | "pipeline-started" | "pipeline-finished" | "pipeline-parked"
-  | "approval-requested" | "approval-approved" | "approval-rejected"
+  | "task-created"
+  | "task-dispatched"
+  | "task-outcome"
+  | "task-held"
+  | "task-queued"
+  | "run-started"
+  | "run-finished"
+  | "pipeline-started"
+  | "pipeline-finished"
+  | "pipeline-parked"
+  | "approval-requested"
+  | "approval-approved"
+  | "approval-rejected"
   | "gate-decision"
-  | "channel-item" | "channel-triage" | "channel-reply" | "channel-approval" | "channel-ignored"
-  | "briefing-generated"
+  | "channel-item"
+  | "channel-triage"
+  | "channel-reply"
+  | "channel-approval"
+  | "channel-ignored"
+  | "briefing-generated";
 ```
 
 Žádný volný text — nový kind se přidá explicitně do schématu.
@@ -40,18 +53,18 @@ type ActivityKind =
 
 ```typescript
 interface ActivityRefs {
-  taskId?: string
-  runRef?: string
-  pipelineId?: string
-  agentId?: string
-  projectId?: string       // přiřazení k projektu (Phase 8)
-  approvalId?: string
-  integrationId?: string
-  itemId?: string
-  action?: string
-  decision?: string
-  status?: string
-  noteId?: string
+  taskId?: string;
+  runRef?: string;
+  pipelineId?: string;
+  agentId?: string;
+  projectId?: string; // přiřazení k projektu (Phase 8)
+  approvalId?: string;
+  integrationId?: string;
+  itemId?: string;
+  action?: string;
+  decision?: string;
+  status?: string;
+  noteId?: string;
 }
 ```
 
@@ -98,10 +111,10 @@ Načte activity log za daný den a sestaví `BriefingItem[]`:
 
 ```typescript
 interface BriefingItem {
-  kind: BriefingItemKind   // "tasks" | "approvals" | "runs" | "channels" | "insights"
-  title: string
-  items: string[]
-  count: number
+  kind: BriefingItemKind; // "tasks" | "approvals" | "runs" | "channels" | "insights"
+  title: string;
+  items: string[];
+  count: number;
 }
 ```
 
@@ -130,7 +143,7 @@ Cíl automations (typ `briefing`):
 ```yaml
 trigger:
   type: cron
-  cron: "0 8 * * *"    # každý den v 8:00
+  cron: "0 8 * * *" # každý den v 8:00
 target:
   type: briefing
 ```

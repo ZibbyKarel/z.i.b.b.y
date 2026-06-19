@@ -11,10 +11,7 @@ export enum AlertTestId {
   CloseButton = "alert-close-button",
 }
 
-export interface AlertProps extends Omit<
-  HTMLAttributes<HTMLDivElement>,
-  "title" | "className"
-> {
+export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title" | "className"> {
   severity?: AlertSeverity;
   title?: ReactNode;
   onClose?: () => void;
@@ -28,34 +25,25 @@ const severityClasses: Record<AlertSeverity, string> = {
   error: "text-bad bg-bad/10 border-bad/25",
 };
 
-export function Alert({
-  severity = "info",
-  title,
-  onClose,
-  children,
-  ...rest
-}: AlertProps) {
+export function Alert({ severity = "info", title, onClose, children, ...rest }: AlertProps) {
   return (
     <div
       data-testid={AlertTestId.Root}
       {...rest}
-      className={cn(
-        "px-[14px] py-[10px] rounded border",
-        severityClasses[severity],
-      )}
+      className={cn("px-[14px] py-[10px] rounded border", severityClasses[severity])}
       role="alert"
     >
       <Stack direction="row" gap="150">
         <div className="flex-1 text-base leading-relaxed">
-          {title && <div className="font-semibold mb-0.5" data-testid={AlertTestId.Title}>{title}</div>}
+          {title && (
+            <div className="font-semibold mb-0.5" data-testid={AlertTestId.Title}>
+              {title}
+            </div>
+          )}
           {children}
         </div>
         {onClose && (
-          <Pressable
-            aria-label="Dismiss"
-            data-testid={AlertTestId.CloseButton}
-            onClick={onClose}
-          >
+          <Pressable aria-label="Dismiss" data-testid={AlertTestId.CloseButton} onClick={onClose}>
             ✕
           </Pressable>
         )}

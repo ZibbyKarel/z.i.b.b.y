@@ -1,5 +1,5 @@
-import { Module } from "@nestjs/common"
-import { WorkspaceService } from "./workspace.service"
+import { Module } from "@nestjs/common";
+import { WorkspaceService } from "./workspace.service";
 
 /**
  * Provides the {@link WorkspaceService} (per-run git worktree management, Phase 3.1)

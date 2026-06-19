@@ -91,27 +91,29 @@ Každý projekt má `maxConcurrent` (kolik runů může běžet najednou):
 ```typescript
 // taskTickMs (runtime system config) = 30_000 výchozí (0 = disabled, pro testy);
 // scheduler se přearmuje naživo přes SystemConfigStore.onChange při změně configu.
-setInterval(() => tick(), systemConfig.current().taskTickMs)
+setInterval(() => tick(), systemConfig.current().taskTickMs);
 ```
 
 `tick()`:
+
 1. Načte všechny `scheduled` úlohy s `scheduledAt <= now`
 2. Pro každou volá `attemptDispatch(task)`
 3. `attemptDispatch` → budget check → concurrency check → route → dispatch
 
 ## Routing a dispatch
 
-| Target | Dispatcher |
-|--------|-----------|
-| `agent` | `AgentRunnerService.startRun(agentId, { prompt, project })` |
-| `pipeline` | `PipelineRunnerService.startRun(pipelineId, { prompt, project })` |
-| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })` |
+| Target         | Dispatcher                                                        |
+| -------------- | ----------------------------------------------------------------- |
+| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`       |
+| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })` |
+| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`        |
 
 Po dispatchun se zapíše `runRef` do task recordu.
 
 ## Výsledek (outcome)
 
 Daemon sleduje terminal stav run:
+
 - `AgentRun.status: done | error | interrupted` → task dostane `outcome: { status, summary }`
 - `PipelineRun.status: done | failed` → totéž
 - `summary` je zkrácen na `SUMMARY_MAX_CHARS = 200` znaků
@@ -160,11 +162,11 @@ Operátor v dialogu Nový task volí, **co se stane s hotovou prací** — prot�
 pipeline bloku `outputs:`. Je to deterministické a vlastněné systémem (žádný agent,
 žádné tokeny); výstupní strana „PR je brána". `TaskOutput` je diskriminovaná unie:
 
-| `type` | Pole | Co dělá |
-|--------|------|---------|
-| `pr` | — | Otevře PR z branche hotového runu. **Vždy zaparkuje** za approvalem `task-output`, než pushne (PR je brána, strukturálně). |
+| `type` | Pole         | Co dělá                                                                                                                                            |
+| ------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr`   | —            | Otevře PR z branche hotového runu. **Vždy zaparkuje** za approvalem `task-output`, než pushne (PR je brána, strukturálně).                         |
 | `file` | `dest`, `to` | Zapíše výsledek (shrnutí runu) do souboru — do projektového worktree (`dest: project`) nebo jako poznámku ve vaultu (`dest: vault`). Tier-1, hned. |
-| `void` | — | Explicitně žádný výstup (potlačí i pipeline deklarovaný `pr`). |
+| `void` | —            | Explicitně žádný výstup (potlačí i pipeline deklarovaný `pr`).                                                                                     |
 
 **Chybějící pole = zdědit, ne void.** U pipeline cíle se použijí jeho vlastní
 `outputs:`, u agenta/orchestrátoru se nic nedoručí (dnešní chování). „Nezvolil" a
@@ -222,10 +224,10 @@ ale nese tři přídavná, zpětně kompatibilní pole (starý klient je ignoruj
 
 ## Activity záznamy
 
-| Event | Kdy |
-|-------|-----|
-| `task-created` | Úloha vytvořena |
-| `task-dispatched` | Úloha odeslána runneru |
-| `task-queued` | Úloha zařazena do fronty (maxConcurrent) |
-| `task-held` | Úloha pozastavena pro budget schválení |
-| `task-outcome` | Run dokončen, outcome zapsán zpět |
+| Event             | Kdy                                      |
+| ----------------- | ---------------------------------------- |
+| `task-created`    | Úloha vytvořena                          |
+| `task-dispatched` | Úloha odeslána runneru                   |
+| `task-queued`     | Úloha zařazena do fronty (maxConcurrent) |
+| `task-held`       | Úloha pozastavena pro budget schválení   |
+| `task-outcome`    | Run dokončen, outcome zapsán zpět        |

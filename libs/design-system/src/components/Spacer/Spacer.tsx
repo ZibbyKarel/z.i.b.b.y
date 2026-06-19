@@ -15,13 +15,13 @@ export function Spacer({ size, axis = "both", grow }: SpacerProps) {
   const px = size !== undefined ? spacingToPx(size) : undefined;
 
   const style: CSSProperties = {
-    display:     "block",
-    flexGrow:    grow ? 1 : undefined,
-    width:       axis === "y" ? undefined : (px ?? (grow ? undefined : "0")),
-    height:      axis === "x" ? undefined : (px ?? (grow ? undefined : "0")),
-    minWidth:    axis === "y" ? undefined : px,
-    minHeight:   axis === "x" ? undefined : px,
-    flexShrink:  0,
+    display: "block",
+    flexGrow: grow ? 1 : undefined,
+    width: axis === "y" ? undefined : (px ?? (grow ? undefined : "0")),
+    height: axis === "x" ? undefined : (px ?? (grow ? undefined : "0")),
+    minWidth: axis === "y" ? undefined : px,
+    minHeight: axis === "x" ? undefined : px,
+    flexShrink: 0,
     pointerEvents: "none",
   };
 

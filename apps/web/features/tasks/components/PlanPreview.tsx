@@ -20,10 +20,7 @@ export function PlanPreview({ routing }: PlanPreviewProps) {
   if (mode === "loop" && proposedGoal) {
     const makerName =
       routing.candidates.find(
-        (c) =>
-          c.kind === proposedGoal.maker.kind &&
-          "id" in c &&
-          c.id === proposedGoal.maker.id,
+        (c) => c.kind === proposedGoal.maker.kind && "id" in c && c.id === proposedGoal.maker.id,
       )?.name ?? proposedGoal.maker.id;
     return (
       <Container>

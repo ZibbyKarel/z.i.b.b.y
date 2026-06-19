@@ -9,13 +9,13 @@ Plánování ZIBBY — ne cron pro příkazy, ale cron pro záměry.
 
 ```typescript
 interface Automation {
-  id: string
-  name: string
-  enabled: boolean
-  trigger: CronTrigger | EventTrigger
-  target: AutomationTarget
-  system: boolean        // server-owned: nesmazatelná, editovatelný jen rozvrh
-  lastFiredAt?: string   // ISO datetime (idempotence)
+  id: string;
+  name: string;
+  enabled: boolean;
+  trigger: CronTrigger | EventTrigger;
+  target: AutomationTarget;
+  system: boolean; // server-owned: nesmazatelná, editovatelný jen rozvrh
+  lastFiredAt?: string; // ISO datetime (idempotence)
 }
 ```
 
@@ -27,15 +27,15 @@ vynechán z obou vstupních schémat). Viz [Systémové automatizace](#systémov
 ```typescript
 // Cron trigger — 5polní výraz
 interface CronTrigger {
-  type: "cron"
-  cron: string          // "0 8 * * *" = každý den v 8:00
-  timezone: string      // výchozí "Europe/Prague"
+  type: "cron";
+  cron: string; // "0 8 * * *" = každý den v 8:00
+  timezone: string; // výchozí "Europe/Prague"
 }
 
 // Event trigger — pojmenovaná událost
 interface EventTrigger {
-  type: "event"
-  event: string         // název události (např. "briefing-generated")
+  type: "event";
+  event: string; // název události (např. "briefing-generated")
 }
 ```
 
@@ -43,29 +43,29 @@ interface EventTrigger {
 
 ```typescript
 interface PipelineTarget {
-  type: "pipeline"
-  pipelineId: string
-  prompt?: string        // volitelný prompt předaný pipeline
+  type: "pipeline";
+  pipelineId: string;
+  prompt?: string; // volitelný prompt předaný pipeline
 }
 
 interface AgentTarget {
-  type: "agent"
-  agentId: string
-  prompt?: string        // prompt předaný agentovi
+  type: "agent";
+  agentId: string;
+  prompt?: string; // prompt předaný agentovi
 }
 
 interface BriefingTarget {
-  type: "briefing"
+  type: "briefing";
   // bez dalších polí — deterministické generování briefingu
 }
 
 interface DiscoveryTarget {
-  type: "discovery"
+  type: "discovery";
   // deterministický sken → kandidáti úkolů za schvalovací bránou
 }
 
 interface MemoryDistillTarget {
-  type: "memory-distill"
+  type: "memory-distill";
   // noční destilace paměti — viz Systémové automatizace
 }
 ```

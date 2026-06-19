@@ -55,9 +55,7 @@ export function SkillFileList({ files, selectedCount, onToggle, onImport }: Skil
         <Container maxHeight="18rem" overflowY="auto">
           <Stack>
             {files.map((f, i) => {
-              const folder = f.path.includes("/")
-                ? f.path.split("/").slice(0, -1).join("/")
-                : "";
+              const folder = f.path.includes("/") ? f.path.split("/").slice(0, -1).join("/") : "";
               return (
                 <Container key={f.path}>
                   {i > 0 && <Divider />}

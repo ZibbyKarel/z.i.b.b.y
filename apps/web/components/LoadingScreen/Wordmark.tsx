@@ -9,10 +9,7 @@ interface WordmarkProps {
 export function Wordmark({ wordmark, testId }: WordmarkProps) {
   const chars = [...wordmark];
   return (
-    <div
-      className="mb-2 text-center text-[28px] font-bold tracking-[0.32em]"
-      data-testid={testId}
-    >
+    <div className="mb-2 text-center text-[28px] font-bold tracking-[0.32em]" data-testid={testId}>
       {chars.map((ch, i) => {
         const isDot = ch === ".";
         return (

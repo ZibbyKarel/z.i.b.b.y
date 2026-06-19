@@ -5,10 +5,7 @@ export enum KbdTestId {
   Root = "kbd-root",
 }
 
-export interface KbdProps extends Omit<
-  HTMLAttributes<HTMLElement>,
-  "className"
-> {
+export interface KbdProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   ref?: Ref<HTMLElement>;
 }
 

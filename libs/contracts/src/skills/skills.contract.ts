@@ -1,9 +1,9 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { CreateSkillSchema, SkillIdSchema, SkillSchema, UpdateSkillSchema } from "./skill.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { CreateSkillSchema, SkillIdSchema, SkillSchema, UpdateSkillSchema } from "./skill.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * CRUD over skill definitions (SKILL.md files). Mirrors `agentsContract`; the
@@ -57,8 +57,8 @@ export const skillsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type SkillsContract = typeof skillsContract
+);
+export type SkillsContract = typeof skillsContract;
 
 // A skill is not an autonomous executable — it's a capability an agent invokes
 // from its delegatable catalog, so there is no standalone "skill run" contract.

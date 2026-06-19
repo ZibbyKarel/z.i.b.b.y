@@ -1,12 +1,12 @@
-import { Global, Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { ActivityEventsService } from "./activity-events.service"
-import { ACTIVITY_DIR, ActivityLogService } from "./activity-log.service"
-import { ActivityController } from "./activity.controller"
+import { Global, Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { ActivityEventsService } from "./activity-events.service";
+import { ACTIVITY_DIR, ActivityLogService } from "./activity-log.service";
+import { ActivityController } from "./activity.controller";
 
 /** Default activity dir, anchored to `apps/api/data/activity` (gitignored). */
 export function resolveActivityDir(): string {
-  return process.env.ACTIVITY_DIR ?? dataDir("activity")
+  return process.env.ACTIVITY_DIR ?? dataDir("activity");
 }
 
 /**

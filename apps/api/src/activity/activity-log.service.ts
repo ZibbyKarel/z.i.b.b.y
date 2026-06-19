@@ -1,37 +1,37 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable, Logger } from "@nestjs/common"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   type ActivityEntry,
   ActivityEntrySchema,
   type ActivityKind,
   type ActivityRefs,
-} from "@zibby/contracts"
-import { collisionResistantId, ensureDir, safeJson } from "../shared/file-storage"
-import { TraceContextService } from "../shared/logging/trace-context.service"
-import { ActivityEventsService } from "./activity-events.service"
+} from "@zibby/contracts";
+import { collisionResistantId, ensureDir, safeJson } from "../shared/file-storage";
+import { TraceContextService } from "../shared/logging/trace-context.service";
+import { ActivityEventsService } from "./activity-events.service";
 
 /** DI token for the directory holding the append-only `<date>.jsonl` activity logs. */
-export const ACTIVITY_DIR = "ACTIVITY_DIR"
+export const ACTIVITY_DIR = "ACTIVITY_DIR";
 
 /** What an emission site supplies; id/at/trace are stamped by {@link record}. */
 export interface ActivityInput {
-  kind: ActivityKind
-  summary: string
-  refs?: ActivityRefs
+  kind: ActivityKind;
+  summary: string;
+  refs?: ActivityRefs;
 }
 
 /** Options for {@link ActivityLogService.list}. */
 export interface ActivityListOptions {
   /** `YYYY-MM-DD`; defaults to today (derived from `now`). */
-  date?: string
+  date?: string;
   /** Restrict to these kinds. */
-  kinds?: ActivityKind[]
+  kinds?: ActivityKind[];
   /** Newest-first cap (the controller defaults this to 50). */
-  limit?: number
+  limit?: number;
 }
 
-const YYYY_MM_DD = (d: Date): string => d.toISOString().slice(0, 10)
+const YYYY_MM_DD = (d: Date): string => d.toISOString().slice(0, 10);
 
 /**
  * The append-only activity log (Phase 6.1) — ZIBBY's accountability record. One
@@ -52,7 +52,7 @@ const YYYY_MM_DD = (d: Date): string => d.toISOString().slice(0, 10)
  */
 @Injectable()
 export class ActivityLogService {
-  private readonly logger = new Logger(ActivityLogService.name)
+  private readonly logger = new Logger(ActivityLogService.name);
 
   constructor(
     @Inject(ACTIVITY_DIR) private readonly dir: string,
@@ -68,7 +68,7 @@ export class ActivityLogService {
    */
   async record(input: ActivityInput, now: Date = new Date()): Promise<void> {
     try {
-      const snap = this.trace.snapshot()
+      const snap = this.trace.snapshot();
       const entry: ActivityEntry = ActivityEntrySchema.parse({
         id: collisionResistantId("act"),
         at: now.toISOString(),
@@ -77,24 +77,28 @@ export class ActivityLogService {
         ...(snap.traceId ? { traceId: snap.traceId } : {}),
         ...(snap.runId ? { runId: snap.runId } : {}),
         refs: input.refs ?? {},
-      })
-      await ensureDir(this.dir)
-      await fs.appendFile(this.fileFor(entry.at.slice(0, 10)), `${JSON.stringify(entry)}\n`, "utf8")
-      this.events.emit({ kind: entry.kind, at: entry.at })
+      });
+      await ensureDir(this.dir);
+      await fs.appendFile(
+        this.fileFor(entry.at.slice(0, 10)),
+        `${JSON.stringify(entry)}\n`,
+        "utf8",
+      );
+      this.events.emit({ kind: entry.kind, at: entry.at });
     } catch (error) {
-      this.logger.warn(`activity record dropped (${input.kind}): ${String(error)}`)
+      this.logger.warn(`activity record dropped (${input.kind}): ${String(error)}`);
     }
   }
 
   /** Read one day's entries, newest-first, optionally filtered by kind and capped. */
   async list(opts: ActivityListOptions = {}, now: Date = new Date()): Promise<ActivityEntry[]> {
-    const date = opts.date ?? YYYY_MM_DD(now)
-    let entries = (await this.readDay(date)).reverse()
+    const date = opts.date ?? YYYY_MM_DD(now);
+    let entries = (await this.readDay(date)).reverse();
     if (opts.kinds && opts.kinds.length > 0) {
-      const set = new Set(opts.kinds)
-      entries = entries.filter((e) => set.has(e.kind))
+      const set = new Set(opts.kinds);
+      entries = entries.filter((e) => set.has(e.kind));
     }
-    return opts.limit !== undefined ? entries.slice(0, opts.limit) : entries
+    return opts.limit !== undefined ? entries.slice(0, opts.limit) : entries;
   }
 
   /**
@@ -103,13 +107,11 @@ export class ActivityLogService {
    * further back than the morning automation cadence) and filters by `at`.
    */
   async readSince(sinceIso: string, now: Date = new Date()): Promise<ActivityEntry[]> {
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    const days = [YYYY_MM_DD(yesterday), YYYY_MM_DD(now)]
-    const all: ActivityEntry[] = []
-    for (const day of days) all.push(...(await this.readDay(day)))
-    return all
-      .filter((e) => e.at >= sinceIso)
-      .sort((a, b) => b.at.localeCompare(a.at))
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const days = [YYYY_MM_DD(yesterday), YYYY_MM_DD(now)];
+    const all: ActivityEntry[] = [];
+    for (const day of days) all.push(...(await this.readDay(day)));
+    return all.filter((e) => e.at >= sinceIso).sort((a, b) => b.at.localeCompare(a.at));
   }
 
   /**
@@ -118,36 +120,34 @@ export class ActivityLogService {
    * pattern extractor) that need more history than `readSince`'s two-day window.
    */
   async readRange(sinceDate: Date, now: Date = new Date()): Promise<ActivityEntry[]> {
-    const days: string[] = []
-    const cursor = new Date(sinceDate)
-    cursor.setUTCHours(0, 0, 0, 0)
-    const end = YYYY_MM_DD(now)
+    const days: string[] = [];
+    const cursor = new Date(sinceDate);
+    cursor.setUTCHours(0, 0, 0, 0);
+    const end = YYYY_MM_DD(now);
     while (YYYY_MM_DD(cursor) <= end) {
-      days.push(YYYY_MM_DD(cursor))
-      cursor.setUTCDate(cursor.getUTCDate() + 1)
+      days.push(YYYY_MM_DD(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
-    const all: ActivityEntry[] = []
-    for (const day of days) all.push(...(await this.readDay(day)))
-    const sinceIso = sinceDate.toISOString()
-    return all
-      .filter((e) => e.at >= sinceIso)
-      .sort((a, b) => b.at.localeCompare(a.at))
+    const all: ActivityEntry[] = [];
+    for (const day of days) all.push(...(await this.readDay(day)));
+    const sinceIso = sinceDate.toISOString();
+    return all.filter((e) => e.at >= sinceIso).sort((a, b) => b.at.localeCompare(a.at));
   }
 
   private fileFor(date: string): string {
-    return path.join(this.dir, `${date}.jsonl`)
+    return path.join(this.dir, `${date}.jsonl`);
   }
 
   /** Tolerant read of one day file: parse each line, skip garbage, never throw. */
   private async readDay(date: string): Promise<ActivityEntry[]> {
-    const raw = await fs.readFile(this.fileFor(date), "utf8").catch(() => null)
-    if (raw === null) return []
-    const out: ActivityEntry[] = []
+    const raw = await fs.readFile(this.fileFor(date), "utf8").catch(() => null);
+    if (raw === null) return [];
+    const out: ActivityEntry[] = [];
     for (const line of raw.split("\n")) {
-      if (line.trim().length === 0) continue
-      const parsed = ActivityEntrySchema.safeParse(safeJson(line))
-      if (parsed.success) out.push(parsed.data)
+      if (line.trim().length === 0) continue;
+      const parsed = ActivityEntrySchema.safeParse(safeJson(line));
+      if (parsed.success) out.push(parsed.data);
     }
-    return out
+    return out;
   }
 }

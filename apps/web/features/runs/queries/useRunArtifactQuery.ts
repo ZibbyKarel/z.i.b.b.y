@@ -13,11 +13,7 @@ export function getRunArtifactQueryKey(pipelineRunId: string, name: string) {
  * parked, nothing appends). A missing/off-allowlist artifact 404s; the panel keys
  * off `data` being absent and simply omits that block.
  */
-export function useRunArtifactQuery(
-  pipelineRunId: string,
-  name: string,
-  enabled = true,
-) {
+export function useRunArtifactQuery(pipelineRunId: string, name: string, enabled = true) {
   return apiClient.taskRuns.getTaskRunArtifact.useQuery({
     queryKey: getRunArtifactQueryKey(pipelineRunId, name),
     queryData: { params: { runId: pipelineRunId, name } },

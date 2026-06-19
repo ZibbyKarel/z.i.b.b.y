@@ -1,9 +1,9 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { categoriesContract } from "@zibby/contracts"
-import { makeCategoryHandlers } from "../shared/categories/category-handlers"
-import { AgentsStorageService } from "./agents.storage.service"
-import { CategoriesStorageService } from "./categories.storage.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { categoriesContract } from "@zibby/contracts";
+import { makeCategoryHandlers } from "../shared/categories/category-handlers";
+import { AgentsStorageService } from "./agents.storage.service";
+import { CategoriesStorageService } from "./categories.storage.service";
 
 /**
  * Implements `categoriesContract` (`/api/agents/categories`). Mounted *before*
@@ -30,6 +30,6 @@ export class CategoriesController {
           (await this.agents.list()).filter((a) => a.category === name).length,
         noun: "agent",
       }),
-    )
+    );
   }
 }

@@ -1,25 +1,25 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
-import { type Proposal, ProposalSchema } from "@zibby/contracts"
-import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage"
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { type Proposal, ProposalSchema } from "@zibby/contracts";
+import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
 
 /** DI token carrying the absolute path of the directory that holds proposal files. */
-export const PROPOSALS_DIR = "PROPOSALS_DIR"
+export const PROPOSALS_DIR = "PROPOSALS_DIR";
 
-const ID_REGEX = /^[a-zA-Z0-9._-]+$/
+const ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 /** Raised when a proposal id is unknown. */
 export class ProposalNotFoundError extends Error {
   constructor(id: string) {
-    super(`Proposal "${id}" not found`)
-    this.name = "ProposalNotFoundError"
+    super(`Proposal "${id}" not found`);
+    this.name = "ProposalNotFoundError";
   }
 }
 
 /** Raised when a proposal id is unsafe to use as a file name. */
 export class InvalidProposalIdError extends Error {
   constructor(id: string) {
-    super(`Invalid proposal id: "${id}"`)
-    this.name = "InvalidProposalIdError"
+    super(`Invalid proposal id: "${id}"`);
+    this.name = "InvalidProposalIdError";
   }
 }
 
@@ -30,54 +30,54 @@ export class InvalidProposalIdError extends Error {
  */
 @Injectable()
 export class ProposalsStorageService extends EntityFileStore<Proposal> implements OnModuleInit {
-  protected readonly fileExt = ".json"
-  protected readonly idRegex = ID_REGEX
+  protected readonly fileExt = ".json";
+  protected readonly idRegex = ID_REGEX;
 
   constructor(@Inject(PROPOSALS_DIR) dir: string) {
-    super(dir)
+    super(dir);
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureDir()
+    await this.ensureDir();
   }
 
   async create(proposal: Proposal): Promise<Proposal> {
-    await this.writeEntity(proposal)
-    return proposal
+    await this.writeEntity(proposal);
+    return proposal;
   }
 
   async update(proposal: Proposal): Promise<Proposal> {
-    await this.writeEntity(proposal)
-    return proposal
+    await this.writeEntity(proposal);
+    return proposal;
   }
 
   /** A fresh, filename-safe, collision-resistant proposal id. */
   newId(): string {
-    return collisionResistantId("proposal")
+    return collisionResistantId("proposal");
   }
 
   protected idOf(proposal: Proposal): string {
-    return proposal.id
+    return proposal.id;
   }
 
   protected serialize(proposal: Proposal): string {
-    return JSON.stringify(proposal)
+    return JSON.stringify(proposal);
   }
 
   protected tryParse(raw: string): Proposal | null {
-    const parsed = ProposalSchema.safeParse(safeJson(raw))
-    return parsed.success ? parsed.data : null
+    const parsed = ProposalSchema.safeParse(safeJson(raw));
+    return parsed.success ? parsed.data : null;
   }
 
   protected compare(a: Proposal, b: Proposal): number {
-    return a.createdAt.localeCompare(b.createdAt)
+    return a.createdAt.localeCompare(b.createdAt);
   }
 
   protected notFound(id: string): Error {
-    return new ProposalNotFoundError(id)
+    return new ProposalNotFoundError(id);
   }
 
   protected invalidId(id: string): Error {
-    return new InvalidProposalIdError(id)
+    return new InvalidProposalIdError(id);
   }
 }

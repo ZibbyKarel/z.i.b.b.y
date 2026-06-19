@@ -1,14 +1,14 @@
-import { Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { MemoryModule } from "../memory/memory.module"
-import { VAULT_DIR } from "../memory/vault.service"
-import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store"
-import { ProjectCategoriesController } from "./project-categories.controller"
-import { ProjectCategoriesStorageService } from "./project-categories.storage.service"
-import { ProjectVaultService } from "./project-vault.service"
-import { ProjectsController } from "./projects.controller"
-import { PROJECTS_DIR, ProjectsStorageService } from "./projects.storage.service"
-import { StandupService } from "./standup.service"
+import { Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { MemoryModule } from "../memory/memory.module";
+import { VAULT_DIR } from "../memory/vault.service";
+import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store";
+import { ProjectCategoriesController } from "./project-categories.controller";
+import { ProjectCategoriesStorageService } from "./project-categories.storage.service";
+import { ProjectVaultService } from "./project-vault.service";
+import { ProjectsController } from "./projects.controller";
+import { PROJECTS_DIR, ProjectsStorageService } from "./projects.storage.service";
+import { StandupService } from "./standup.service";
 
 /**
  * Default registry directory when `PROJECTS_DIR` is not set. Anchored to the api
@@ -17,12 +17,12 @@ import { StandupService } from "./standup.service"
  * (same rationale as `resolveAgentsDir`).
  */
 export function resolveProjectsDir(): string {
-  return process.env.PROJECTS_DIR ?? dataDir("projects")
+  return process.env.PROJECTS_DIR ?? dataDir("projects");
 }
 
 /** Default project-secrets dir (gitignored), anchored to `apps/api/data/project-secrets`. */
 export function resolveProjectSecretsDir(): string {
-  return process.env.PROJECT_SECRETS_DIR ?? dataDir("project-secrets")
+  return process.env.PROJECT_SECRETS_DIR ?? dataDir("project-secrets");
 }
 
 @Module({
@@ -44,6 +44,11 @@ export function resolveProjectSecretsDir(): string {
     ProjectVaultService,
     StandupService,
   ],
-  exports: [ProjectsStorageService, ProjectCategoriesStorageService, ProjectSecretsStore, StandupService],
+  exports: [
+    ProjectsStorageService,
+    ProjectCategoriesStorageService,
+    ProjectSecretsStore,
+    StandupService,
+  ],
 })
 export class ProjectsModule {}

@@ -1,17 +1,17 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   CreateMcpServerSchema,
   McpCredentialsInputSchema,
   McpServerIdSchema,
   McpServerSchema,
   UpdateMcpServerSchema,
-} from "./mcp.schema"
+} from "./mcp.schema";
 
-const c = initContract()
+const c = initContract();
 
-const IdParam = z.object({ id: McpServerIdSchema })
+const IdParam = z.object({ id: McpServerIdSchema });
 
 /**
  * Connected MCP servers. CRUD plus a write-only credentials sub-resource, mirroring
@@ -74,5 +74,5 @@ export const mcpContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type McpContract = typeof mcpContract
+);
+export type McpContract = typeof mcpContract;

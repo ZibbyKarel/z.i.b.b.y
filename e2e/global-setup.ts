@@ -46,7 +46,13 @@ export default async function globalSetup(): Promise<void> {
   // A skill in the catalog (skills are catalog-only — invoked by agents, not run alone).
   await ctx
     .post("/api/skills", {
-      data: { id: "demo-skill", name: "Demo Skill", glyph: "spark", desc: "a demo skill", instructions: "do the demo" },
+      data: {
+        id: "demo-skill",
+        name: "Demo Skill",
+        glyph: "spark",
+        desc: "a demo skill",
+        instructions: "do the demo",
+      },
     })
     .catch(() => {});
 
@@ -58,8 +64,22 @@ export default async function globalSetup(): Promise<void> {
         name: "Demo Pipe",
         instructions: "demo pipeline",
         phases: [
-          { id: "a", agent: "demo-skill", consumes: "a.in", produces: "a.out", model: "sonnet", thinking: "medium" },
-          { id: "b", agent: "demo-skill", consumes: "b.in", produces: "b.out", model: "sonnet", thinking: "medium" },
+          {
+            id: "a",
+            agent: "demo-skill",
+            consumes: "a.in",
+            produces: "a.out",
+            model: "sonnet",
+            thinking: "medium",
+          },
+          {
+            id: "b",
+            agent: "demo-skill",
+            consumes: "b.in",
+            produces: "b.out",
+            model: "sonnet",
+            thinking: "medium",
+          },
         ],
       },
     })
@@ -71,7 +91,13 @@ export default async function globalSetup(): Promise<void> {
   // explicit target skips classification, so dispatch is deterministic.
   await ctx
     .post("/api/agents", {
-      data: { id: "gated-agent", name: "Gated Agent", instructions: "needs approval", requires_approval: true, risk: "high" },
+      data: {
+        id: "gated-agent",
+        name: "Gated Agent",
+        instructions: "needs approval",
+        requires_approval: true,
+        risk: "high",
+      },
     })
     .catch(() => {});
   await ctx
@@ -92,10 +118,17 @@ export default async function globalSetup(): Promise<void> {
   await fs.rm(path.join(E2E_DATA, "channels"), { recursive: true, force: true });
   await ctx
     .post("/api/integrations", {
-      data: { id: "team-slack", kind: "slack", name: "Team Slack", config: { kind: "slack", channels: ["C1"] } },
+      data: {
+        id: "team-slack",
+        kind: "slack",
+        name: "Team Slack",
+        config: { kind: "slack", channels: ["C1"] },
+      },
     })
     .catch(() => {});
-  await ctx.put("/api/integrations/team-slack/credentials", { data: { token: "xoxb-e2e" } }).catch(() => {});
+  await ctx
+    .put("/api/integrations/team-slack/credentials", { data: { token: "xoxb-e2e" } })
+    .catch(() => {});
   await fs.mkdir(path.join(fakeDir, "team-slack"), { recursive: true });
   // Unique id per seed: a reused dev server (`reuseExistingServer` on repeated local
   // runs) keeps the channel watcher's processed-id set in memory, so a fixed id like
@@ -103,7 +136,10 @@ export default async function globalSetup(): Promise<void> {
   const fixtureId = Date.now().toString(36);
   await fs.writeFile(
     path.join(fakeDir, "team-slack", `${fixtureId}.json`),
-    JSON.stringify({ text: "Tady je nabídka a smlouva s deadline na příští týden", receivedAt: new Date().toISOString() }),
+    JSON.stringify({
+      text: "Tady je nabídka a smlouva s deadline na příští týden",
+      receivedAt: new Date().toISOString(),
+    }),
   );
 
   // A small wiki-linked vault for the memory graph. Reset it first so notes a
@@ -113,13 +149,28 @@ export default async function globalSetup(): Promise<void> {
   await fs.rm(vault, { recursive: true, force: true });
   await fs.mkdir(path.join(vault, "knowledge"), { recursive: true });
   await fs.mkdir(path.join(vault, "daily"), { recursive: true });
-  await fs.writeFile(path.join(vault, "MEMORY.md"), "---\ntitle: Memory\n---\nSee [[rohlik]] and [[zibby]].\n");
-  await fs.writeFile(path.join(vault, "north-star.md"), "---\ntitle: North Star\n---\nThe mission of ZIBBY.\n");
-  await fs.writeFile(path.join(vault, "knowledge", "rohlik.md"), "---\ntitle: Rohlik\n---\nGroceries [[zibby]].\n");
-  await fs.writeFile(path.join(vault, "knowledge", "zibby.md"), "---\ntitle: Zibby\n---\nThe orchestrator note.\n");
+  await fs.writeFile(
+    path.join(vault, "MEMORY.md"),
+    "---\ntitle: Memory\n---\nSee [[rohlik]] and [[zibby]].\n",
+  );
+  await fs.writeFile(
+    path.join(vault, "north-star.md"),
+    "---\ntitle: North Star\n---\nThe mission of ZIBBY.\n",
+  );
+  await fs.writeFile(
+    path.join(vault, "knowledge", "rohlik.md"),
+    "---\ntitle: Rohlik\n---\nGroceries [[zibby]].\n",
+  );
+  await fs.writeFile(
+    path.join(vault, "knowledge", "zibby.md"),
+    "---\ntitle: Zibby\n---\nThe orchestrator note.\n",
+  );
   // A daily note (id = today's date) so the memory screen's daily timeline has a row.
   const today = new Date().toISOString().slice(0, 10);
-  await fs.writeFile(path.join(vault, "daily", `${today}.md`), `---\ntitle: ${today}\n---\n- 09:00 seeded daily entry\n`);
+  await fs.writeFile(
+    path.join(vault, "daily", `${today}.md`),
+    `---\ntitle: ${today}\n---\n- 09:00 seeded daily entry\n`,
+  );
 
   // Wait until both seeded approvals are actually pending before any spec runs. The
   // agent approval is produced asynchronously by the demo runner; the channel one by
@@ -153,7 +204,9 @@ async function waitForPendingApproval(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await ctx.get("/api/approvals", { params: { status: "pending" } }).catch(() => null);
+    const res = await ctx
+      .get("/api/approvals", { params: { status: "pending" } })
+      .catch(() => null);
     if (res?.ok()) {
       const pending = (await res.json().catch(() => [])) as Array<{ kind?: string }>;
       if (Array.isArray(pending) && pending.some((a) => a.kind === kind)) return;

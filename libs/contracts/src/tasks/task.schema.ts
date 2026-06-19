@@ -1,7 +1,7 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
-import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema"
-import { ProjectIdSchema } from "../projects/project.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
+import { ProjectIdSchema } from "../projects/project.schema";
 
 /**
  * Display fields every routing target carries. `glyph` is a free-form string
@@ -14,21 +14,21 @@ const taskTargetDisplayShape = {
   glyph: z.string().optional(),
   /** Free-form functional area, when the definition carries one. */
   category: z.string().optional(),
-}
+};
 
 /** A stored agent as a routing destination. */
 export const AgentTaskTargetSchema = z.object({
   kind: z.literal("agent"),
   id: AgentIdSchema,
   ...taskTargetDisplayShape,
-})
+});
 
 /** A stored pipeline as a routing destination. */
 export const PipelineTaskTargetSchema = z.object({
   kind: z.literal("pipeline"),
   id: AgentIdSchema,
   ...taskTargetDisplayShape,
-})
+});
 
 /**
  * A stored goal as a routing destination (Phase 10). Like a pipeline it references
@@ -40,7 +40,7 @@ export const GoalTaskTargetSchema = z.object({
   kind: z.literal("goal"),
   id: AgentIdSchema,
   ...taskTargetDisplayShape,
-})
+});
 
 /**
  * The terminal routing fallback: a single orchestrator session that has every
@@ -51,7 +51,7 @@ export const GoalTaskTargetSchema = z.object({
 export const OrchestratorTaskTargetSchema = z.object({
   kind: z.literal("orchestrator"),
   ...taskTargetDisplayShape,
-})
+});
 
 /**
  * A destination for a free-text task: a stored agent, a stored pipeline, or the
@@ -62,25 +62,25 @@ export const TaskTargetSchema = z.discriminatedUnion("kind", [
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
   OrchestratorTaskTargetSchema,
-])
-export type TaskTarget = z.infer<typeof TaskTargetSchema>
-export type TaskTargetKind = TaskTarget["kind"]
+]);
+export type TaskTarget = z.infer<typeof TaskTargetSchema>;
+export type TaskTargetKind = TaskTarget["kind"];
 
 /** A target that references a stored definition (has an `id`) — what the routers rank. */
-export type CatalogTaskTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" }>
+export type CatalogTaskTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" }>;
 
 /**
  * Reserved owner id orchestrator runs carry as their `agentId` in the run feed.
  * Not a stored agent — a stored definition with this id would shadow it.
  */
-export const ORCHESTRATOR_ID = "orchestrator"
+export const ORCHESTRATOR_ID = "orchestrator";
 
 /** The orchestrator's synthetic display identity (the dashboard renders these). */
 export const ORCHESTRATOR_TARGET = {
   kind: "orchestrator",
   name: "Orchestrator",
   glyph: "compass",
-} as const satisfies TaskTarget
+} as const satisfies TaskTarget;
 
 /**
  * Request body for the classifier: the free-text task plus any file/folder paths
@@ -90,8 +90,8 @@ export const ORCHESTRATOR_TARGET = {
 export const ClassifyTaskInputSchema = z.object({
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).max(64).optional(),
-})
-export type ClassifyTaskInput = z.infer<typeof ClassifyTaskInputSchema>
+});
+export type ClassifyTaskInput = z.infer<typeof ClassifyTaskInputSchema>;
 
 /**
  * Phase 11: how a classified task should EXECUTE. `single` is the default
@@ -102,8 +102,8 @@ export type ClassifyTaskInput = z.infer<typeof ClassifyTaskInputSchema>
  * it is NEVER a `target.kind: "goal"` at classify time (goal targets require a
  * persisted `.goal.md`). Persistence happens only on submit.
  */
-export const TaskModeSchema = z.enum(["single", "loop"])
-export type TaskMode = z.infer<typeof TaskModeSchema>
+export const TaskModeSchema = z.enum(["single", "loop"]);
+export type TaskMode = z.infer<typeof TaskModeSchema>;
 
 /**
  * Phase 11: a synthesized (un-persisted) goal definition the classifier proposes
@@ -118,8 +118,8 @@ export const ProposedGoalSchema = z.object({
   verifier: VerifierSpecSchema,
   maxIterations: z.number().int().positive(),
   instructions: z.string().min(1),
-})
-export type ProposedGoal = z.infer<typeof ProposedGoalSchema>
+});
+export type ProposedGoal = z.infer<typeof ProposedGoalSchema>;
 
 /**
  * Phase 11: one of the task's detected paths resolved against the project registry
@@ -132,8 +132,8 @@ export type ProposedGoal = z.infer<typeof ProposedGoalSchema>
 export const ResolvedPathSchema = z.object({
   path: z.string(),
   project: z.object({ id: ProjectIdSchema, name: z.string() }).nullable(),
-})
-export type ResolvedPath = z.infer<typeof ResolvedPathSchema>
+});
+export type ResolvedPath = z.infer<typeof ResolvedPathSchema>;
 
 /**
  * The router verdict the approval gate renders: the chosen target, a 0–1
@@ -160,8 +160,8 @@ export const TaskRoutingSchema = z.object({
   proposedGoal: ProposedGoalSchema.nullable().default(null),
   /** Phase 11: detected paths resolved against the project registry. */
   paths: z.array(ResolvedPathSchema).default([]),
-})
-export type TaskRouting = z.infer<typeof TaskRoutingSchema>
+});
+export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 
 /**
  * What happens to a task's finished work — the operator's per-task choice in the
@@ -191,8 +191,8 @@ export const TaskOutputSchema = z.discriminatedUnion("type", [
     to: z.string().min(1),
   }),
   z.object({ type: z.literal("void") }),
-])
-export type TaskOutput = z.infer<typeof TaskOutputSchema>
+]);
+export type TaskOutput = z.infer<typeof TaskOutputSchema>;
 
 /**
  * The three delayed-start presets the New Task dialog offers. The wire format is
@@ -200,8 +200,8 @@ export type TaskOutput = z.infer<typeof TaskOutputSchema>
  * into a timestamp — `now` → null), so the backend never has to know preset
  * semantics; this enum is shared only so both ends name the choices the same way.
  */
-export const SchedulePresetSchema = z.enum(["now", "in-1h", "limit-reset"])
-export type SchedulePreset = z.infer<typeof SchedulePresetSchema>
+export const SchedulePresetSchema = z.enum(["now", "in-1h", "limit-reset"]);
+export type SchedulePreset = z.infer<typeof SchedulePresetSchema>;
 
 /**
  * Lifecycle of a deferred task. It waits at `scheduled` until its `scheduledAt`,
@@ -232,8 +232,8 @@ export const ScheduledTaskStatusSchema = z.enum([
   // state, so it survives a restart for free. Resolves to `dispatched` (the run's
   // outcome is written) once the operator approves or rejects the PR.
   "awaiting-output",
-])
-export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>
+]);
+export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>;
 
 /**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
@@ -243,8 +243,8 @@ export const TaskOutcomeSchema = z.object({
   status: z.enum(["done", "error"]),
   summary: z.string(),
   finishedAt: z.string().datetime(),
-})
-export type TaskOutcome = z.infer<typeof TaskOutcomeSchema>
+});
+export type TaskOutcome = z.infer<typeof TaskOutcomeSchema>;
 
 /**
  * A task whose dispatch was deferred to a future `scheduledAt`. Persisted as one
@@ -327,8 +327,8 @@ export const ScheduledTaskSchema = z.object({
    * DISPATCH failed, while a dispatched run that errored lands here.
    */
   outcome: TaskOutcomeSchema.optional(),
-})
-export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>
+});
+export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>;
 
 /**
  * Request body for creating a task. `title` is an optional short name. A future
@@ -356,8 +356,8 @@ export const CreateTaskInputSchema = z.object({
    * dispatch destination, not a project assertion.
    */
   target: TaskTargetSchema.optional(),
-})
-export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>
+});
+export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 
 /**
  * Outcome of `createTask`: either the task was dispatched right away (→ a live run
@@ -375,5 +375,5 @@ export const CreateTaskResultSchema = z.discriminatedUnion("outcome", [
     outcome: z.literal("scheduled"),
     task: ScheduledTaskSchema,
   }),
-])
-export type CreateTaskResult = z.infer<typeof CreateTaskResultSchema>
+]);
+export type CreateTaskResult = z.infer<typeof CreateTaskResultSchema>;

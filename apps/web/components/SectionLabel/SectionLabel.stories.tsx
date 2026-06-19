@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Button, Container } from "@zibby/design-system"
-import { SectionLabel } from "./SectionLabel"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button, Container } from "@zibby/design-system";
+import { SectionLabel } from "./SectionLabel";
 
 const meta: Meta<typeof SectionLabel> = {
   title: "Dashboard/SectionLabel",
@@ -14,12 +14,12 @@ const meta: Meta<typeof SectionLabel> = {
     ),
   ],
   args: { children: "moje skilly" },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof SectionLabel>
+type Story = StoryObj<typeof SectionLabel>;
 
-export const Default: Story = {}
+export const Default: Story = {};
 
 export const WithAction: Story = {
   args: {
@@ -29,4 +29,4 @@ export const WithAction: Story = {
       </Button>
     ),
   },
-}
+};

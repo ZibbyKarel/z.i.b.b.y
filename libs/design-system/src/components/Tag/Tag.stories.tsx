@@ -9,7 +9,18 @@ const meta: Meta<typeof Tag> = {
   argTypes: {
     tone: {
       control: "select",
-      options: ["neutral", "accent", "ok", "warn", "bad", "run", "payment", "deletion", "push", "send"],
+      options: [
+        "neutral",
+        "accent",
+        "ok",
+        "warn",
+        "bad",
+        "run",
+        "payment",
+        "deletion",
+        "push",
+        "send",
+      ],
     },
     size: { control: "radio", options: ["sm", "md"] },
     solid: { control: "boolean" },

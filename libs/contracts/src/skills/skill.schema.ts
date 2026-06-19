@@ -1,6 +1,6 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
-import { RiskSchema } from "../common.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { RiskSchema } from "../common.schema";
 
 /**
  * A skill is the same on-disk shape as an agent — a `SKILL.md` file with YAML
@@ -10,7 +10,7 @@ import { RiskSchema } from "../common.schema"
  * (`id, name, glyph, desc`); `instructions` is the Markdown body. `desc`/`glyph`
  * stay free-form for the same reason agents' do — the closed set lives in the app.
  */
-export const SkillIdSchema = AgentIdSchema
+export const SkillIdSchema = AgentIdSchema;
 
 export const SkillSchema = z.object({
   id: SkillIdSchema,
@@ -29,13 +29,13 @@ export const SkillSchema = z.object({
   /** Ids of linked global rules (the "Pravidla schvalování" catalog); see {@link AgentSchema}. */
   gateRuleIds: z.array(z.string()).optional(),
   instructions: z.string().min(1),
-})
-export type Skill = z.infer<typeof SkillSchema>
+});
+export type Skill = z.infer<typeof SkillSchema>;
 
 /** Body accepted by `createSkill` — full entity (`id` + `instructions` required). */
-export const CreateSkillSchema = SkillSchema
-export type CreateSkillInput = z.infer<typeof CreateSkillSchema>
+export const CreateSkillSchema = SkillSchema;
+export type CreateSkillInput = z.infer<typeof CreateSkillSchema>;
 
 /** Body accepted by `updateSkill` — every field optional (partial), id excluded. */
-export const UpdateSkillSchema = SkillSchema.omit({ id: true }).partial()
-export type UpdateSkillInput = z.infer<typeof UpdateSkillSchema>
+export const UpdateSkillSchema = SkillSchema.omit({ id: true }).partial();
+export type UpdateSkillInput = z.infer<typeof UpdateSkillSchema>;

@@ -1,6 +1,6 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   CreateIntegrationSchema,
   CredentialsInputSchema,
@@ -8,11 +8,11 @@ import {
   IntegrationSchema,
   TestResultSchema,
   UpdateIntegrationSchema,
-} from "./integration.schema"
+} from "./integration.schema";
 
-const c = initContract()
+const c = initContract();
 
-const IdParam = z.object({ id: IntegrationIdSchema })
+const IdParam = z.object({ id: IntegrationIdSchema });
 
 /**
  * Integrations (Phase 5): configured inbound channels (Slack, email). CRUD plus a
@@ -83,5 +83,5 @@ export const integrationsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type IntegrationsContract = typeof integrationsContract
+);
+export type IntegrationsContract = typeof integrationsContract;

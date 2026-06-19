@@ -1,4 +1,4 @@
-import type { ZodType } from "zod"
+import type { ZodType } from "zod";
 
 /**
  * Which kind of thing a run executes. A single {@link RunnerCore} serves all
@@ -6,7 +6,7 @@ import type { ZodType } from "zod"
  * pipeline-stage) project their own contract shape on top of the shared
  * machinery instead of duplicating spawn/log/sidecar/restart logic N times.
  */
-export type RunKind = "agent" | "skill" | "pipeline-stage"
+export type RunKind = "agent" | "skill" | "pipeline-stage";
 
 /**
  * The lifecycle states a run can be in. Mirrors the agent-run contract enum;
@@ -20,7 +20,7 @@ export type RunnerRunStatus =
   | "error"
   | "interrupted"
   | "awaiting-approval"
-  | "paused-limit"
+  | "paused-limit";
 
 /**
  * The kind-agnostic fields every run record carries on disk and in memory. A
@@ -28,48 +28,48 @@ export type RunnerRunStatus =
  * `agentId`/`prompt`/`project`).
  */
 export interface BaseRun {
-  runId: string
-  kind: RunKind
-  status: RunnerRunStatus
+  runId: string;
+  kind: RunKind;
+  status: RunnerRunStatus;
   /** Progress 0–100, parsed from `PROGRESS <n>` lines the run emits. */
-  pct: number
+  pct: number;
   /** Absolute working directory the process ran in (its sandbox folder). */
-  cwd: string
-  startedAt: string
-  pid: number
-  logFile: string
+  cwd: string;
+  startedAt: string;
+  pid: number;
+  logFile: string;
   /** Phase 6: process-group id for liveness probing; absent until then. */
-  pgid?: number
+  pgid?: number;
   /**
    * Phase 9: when `status` is `paused-limit`, the epoch ms the usage window is
    * expected to reset (null when unknown). The core sets it at classification time
    * so a wrapper's record carries it through to the contract; the resume tick reads
    * it. Absent on every non-paused run.
    */
-  resumeAt?: number | null
+  resumeAt?: number | null;
   /** Phase 9: how many times this run has been auto-resumed off a limit pause. */
-  limitResumeCycles?: number
+  limitResumeCycles?: number;
 }
 
 /** Everything a wrapper must hand the core to spawn one run. */
 export interface RunSpec {
-  kind: RunKind
+  kind: RunKind;
   /**
    * Base component of the run id and (by convention) the sandbox folder name —
    * `agentId`, `skillId`, or `${pipelineRunId}.${phaseId}`. Must be filename-safe.
    */
-  ownerId: string
-  command: string
-  args: string[]
+  ownerId: string;
+  command: string;
+  args: string[];
   /** The sandbox the process runs in; the core creates it before spawning. */
-  cwd: string
+  cwd: string;
   /**
    * Optional working directory the child SPAWNS in, when it differs from the
    * sandbox `cwd` (a claude stage of a project-targeted pipeline run spawns
    * inside the project checkout so its real CLAUDE.md/.claude context loads).
    * Logs, sidecar and the intent coordination dir stay anchored to `cwd`.
    */
-  spawnCwd?: string
+  spawnCwd?: string;
   /**
    * Extra environment variables merged into the child's `env` at spawn (on top of
    * `process.env` + the intent-dir pin). Carries per-project env/secrets (and any
@@ -77,22 +77,22 @@ export interface RunSpec {
    * (`ZIBBY_INTENT_DIR`) are applied AFTER this map, so a project env can never
    * override them. Absent for runs that need no extra env (today's default).
    */
-  env?: Record<string, string>
+  env?: Record<string, string>;
   /**
    * Timestamp used for both the run id's middle segment and `startedAt`. Pass it
    * so a wrapper's sandbox-folder name and the resulting run id agree; defaults to
    * `Date.now()` when omitted.
    */
-  startedMs?: number
+  startedMs?: number;
   /** Extra fields the wrapper folds into its record via {@link KindStrategy.assemble}. */
-  extra: Record<string, unknown>
+  extra: Record<string, unknown>;
 }
 
 /** A slice of a run's log read from a byte `offset` (matches `RunLogChunkSchema`). */
 export interface RunLogChunk {
-  content: string
-  nextOffset: number
-  done: boolean
+  content: string;
+  nextOffset: number;
+  done: boolean;
 }
 
 /**
@@ -101,11 +101,11 @@ export interface RunLogChunk {
  */
 export interface KindStrategy<R extends BaseRun> {
   /** Build the full sidecar record from the core's base fields + `spec.extra`. */
-  assemble(base: BaseRun, spec: RunSpec): R
+  assemble(base: BaseRun, spec: RunSpec): R;
   /**
    * Validate (and default-fill) a sidecar read from disk on restart. The input is
    * untyped (`unknown`) so schemas may use `.default()` for back-compat without the
    * input type having to equal the fully-populated output `R`.
    */
-  schema: ZodType<R, unknown>
+  schema: ZodType<R, unknown>;
 }

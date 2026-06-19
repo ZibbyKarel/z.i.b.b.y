@@ -97,13 +97,25 @@ const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
       status: 201,
       body: {
         outcome: "scheduled",
-        task: { id: "task_1", title: "", text, paths: [], scheduledAt, status: "scheduled", createdAt: new Date(0).toISOString() },
+        task: {
+          id: "task_1",
+          title: "",
+          text,
+          paths: [],
+          scheduledAt,
+          status: "scheduled",
+          createdAt: new Date(0).toISOString(),
+        },
       },
     });
   } else {
     opts?.onSuccess?.({
       status: 201,
-      body: { outcome: "dispatched", runRef: "zibby_123_42", target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" } },
+      body: {
+        outcome: "dispatched",
+        runRef: "zibby_123_42",
+        target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" },
+      },
     });
   }
 });
@@ -171,7 +183,9 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
   it("surfaces detected paths as removable context chips", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "Srovnej média v ~/Projects/media-vault");
-    const remove = await screen.findByRole("button", { name: "Odebrat cestu ~/Projects/media-vault" });
+    const remove = await screen.findByRole("button", {
+      name: "Odebrat cestu ~/Projects/media-vault",
+    });
     await userEvent.click(remove);
     expect(screen.queryByRole("button", { name: /Odebrat cestu/ })).not.toBeInTheDocument();
   });
@@ -281,7 +295,10 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
 
   it("defers a scheduled loop through createTask with a goal target", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "keep retrying the deploy until it passes");
+    await userEvent.type(
+      screen.getByLabelText(/Zadání/),
+      "keep retrying the deploy until it passes",
+    );
     expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Za 1 h/ }));
@@ -353,13 +370,13 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     await userEvent.click(remove);
 
     await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
-    expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain(
-      "/Users/zibby/Projects/beta",
-    );
+    expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/beta");
   });
 
   it("seeds the description from initialText (voice transcript) and infers a loop", async () => {
-    render(<NewTaskDialog initialText="keep retrying the deploy until it passes" onClose={() => {}} />);
+    render(
+      <NewTaskDialog initialText="keep retrying the deploy until it passes" onClose={() => {}} />,
+    );
     // The one field is pre-filled — Phase 11.4 voice fills it, no spoken form-filling.
     expect(screen.getByLabelText(/Zadání/)).toHaveValue("keep retrying the deploy until it passes");
     // The seeded text classifies on mount → the loop preview appears with no extra input.

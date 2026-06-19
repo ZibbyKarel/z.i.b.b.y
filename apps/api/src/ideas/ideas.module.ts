@@ -1,7 +1,7 @@
-import { Module } from "@nestjs/common"
-import { MemoryModule } from "../memory/memory.module"
-import { ResearchModule } from "../research/research.module"
-import { IdeaGeneratorService } from "./idea-generator.service"
+import { Module } from "@nestjs/common";
+import { MemoryModule } from "../memory/memory.module";
+import { ResearchModule } from "../research/research.module";
+import { IdeaGeneratorService } from "./idea-generator.service";
 
 /**
  * App-ideas generation (north-star "Proposes ... app ideas"; M6 weekly bonus).

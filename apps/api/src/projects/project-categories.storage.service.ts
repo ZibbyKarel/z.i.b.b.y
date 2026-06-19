@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { CategoryManifestStore } from "../shared/categories/category-manifest-store"
-import { PROJECTS_DIR } from "./projects.storage.service"
+import { Inject, Injectable } from "@nestjs/common";
+import { CategoryManifestStore } from "../shared/categories/category-manifest-store";
+import { PROJECTS_DIR } from "./projects.storage.service";
 
 /**
  * Category taxonomy for the project registry. Lives in the same data directory as
@@ -10,6 +10,6 @@ import { PROJECTS_DIR } from "./projects.storage.service"
 @Injectable()
 export class ProjectCategoriesStorageService extends CategoryManifestStore {
   constructor(@Inject(PROJECTS_DIR) dir: string) {
-    super(dir)
+    super(dir);
   }
 }

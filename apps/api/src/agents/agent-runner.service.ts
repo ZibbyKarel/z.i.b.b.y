@@ -1,34 +1,34 @@
-import { randomUUID } from "node:crypto"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
-import type { Agent, AgentRun, Project, Workspace } from "@zibby/contracts"
-import type { IntendedAction } from "@zibby/contracts"
-import { AgentsStorageService } from "./agents.storage.service"
-import { ApprovalsService } from "../approvals/approvals.service"
-import { GateEvaluatorService } from "../gates/gate-evaluator.service"
-import { LimitsService } from "../limits/limits.service"
-import { GroundingService } from "../memory/grounding.service"
-import { ProjectSecretsStore } from "../projects/project-secrets.store"
-import { ProjectsStorageService } from "../projects/projects.storage.service"
-import { ClaudePreflightService } from "../runner/claude-preflight.service"
-import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
-import { CommandMaterializerService } from "../runner/command-materializer.service"
-import { formatClaudeStreamLine } from "../runner/claude-stream-format"
-import { RunnerCore } from "../runner/runner-core"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { TraceContextService } from "../shared/logging/trace-context.service"
-import { prepareWorktreeDir } from "../shared/worktree-root"
-import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
-import { ORCHESTRATOR_ID } from "@zibby/contracts"
-import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record"
-import { ORCHESTRATOR_AGENT } from "./orchestrator.agent"
+import { randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import type { Agent, AgentRun, Project, Workspace } from "@zibby/contracts";
+import type { IntendedAction } from "@zibby/contracts";
+import { AgentsStorageService } from "./agents.storage.service";
+import { ApprovalsService } from "../approvals/approvals.service";
+import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import { LimitsService } from "../limits/limits.service";
+import { GroundingService } from "../memory/grounding.service";
+import { ProjectSecretsStore } from "../projects/project-secrets.store";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ClaudePreflightService } from "../runner/claude-preflight.service";
+import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
+import { CommandMaterializerService } from "../runner/command-materializer.service";
+import { formatClaudeStreamLine } from "../runner/claude-stream-format";
+import { RunnerCore } from "../runner/runner-core";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { TraceContextService } from "../shared/logging/trace-context.service";
+import { prepareWorktreeDir } from "../shared/worktree-root";
+import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service";
+import { ORCHESTRATOR_ID } from "@zibby/contracts";
+import { type AgentRunRecord, agentStrategy, toAgentRun } from "./agent-run.record";
+import { ORCHESTRATOR_AGENT } from "./orchestrator.agent";
 
 /** DI token carrying the absolute path of the directory that holds run artifacts. */
-export const RUNS_DIR = "RUNS_DIR"
+export const RUNS_DIR = "RUNS_DIR";
 
 // Re-exported so existing importers (the controller) keep their import path.
-export { RunNotFoundError } from "../runner/runner-core"
+export { RunNotFoundError } from "../runner/runner-core";
 
 /**
  * Spawns agents as child processes and tracks their runs durably. A thin wrapper
@@ -49,9 +49,9 @@ export { RunNotFoundError } from "../runner/runner-core"
  */
 @Injectable()
 export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
-  private readonly dir: string
-  private readonly core: RunnerCore<AgentRunRecord>
-  private readonly log: ScopedLogger
+  private readonly dir: string;
+  private readonly core: RunnerCore<AgentRunRecord>;
+  private readonly log: ScopedLogger;
 
   constructor(
     @Inject(RUNS_DIR) dir: string,
@@ -69,8 +69,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
   ) {
-    this.dir = path.resolve(dir)
-    this.log = logger.child(AgentRunnerService.name)
+    this.dir = path.resolve(dir);
+    this.log = logger.child(AgentRunnerService.name);
     // Layer 2: a usage-limit signal in a run's output busts the limits cache so the
     // next /api/limits read re-fetches the authoritative percentages.
     // Variant B: a mid-run `INTENT {json}` line routes through the gate evaluator.
@@ -87,19 +87,19 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // Phase 9: resolve a limit-paused run's resume epoch (detected reset → live
       // window reset → conservative fallback), so the core can stamp `resumeAt`.
       (detected) => this.limits.resolveResumeAt(detected),
-    )
+    );
   }
 
   /** Rebuild the registry from disk and register for approval decisions on agent runs. */
   async onModuleInit(): Promise<void> {
     this.approvals.register("agent", {
       resume: async (runId) => {
-        await this.core.resume(runId)
+        await this.core.resume(runId);
       },
       cancel: (runId) => {
-        this.core.cancel(runId)
+        this.core.cancel(runId);
       },
-    })
+    });
     // A run that reaches a terminal state while its approval is still pending was
     // never decided — the gate hook's fail-closed deadline denied it, or the child
     // died waiting. Resolve the card as rejected so the queue doesn't keep an
@@ -110,20 +110,20 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // usage window exhausted (a fresh, non-stale snapshot at ≥ 100 %) is a pause,
       // not a failure — even if no limit line was printed. Reclassify before the
       // error is treated as terminal anywhere downstream.
-      if (rec.status === "error") void this.maybePauseOnExhaustedWindow(rec.runId)
+      if (rec.status === "error") void this.maybePauseOnExhaustedWindow(rec.runId);
       const terminal =
-        rec.status === "done" || rec.status === "error" || rec.status === "interrupted"
+        rec.status === "done" || rec.status === "error" || rec.status === "interrupted";
       // `paused-limit` is deliberately NOT terminal: its approvals (none in practice)
       // stay, and the run is owed an auto-resume.
-      if (terminal) void this.approvals.cancelPendingForRun(rec.runId)
-    })
-    await this.core.init()
-    this.log.debug("agent runner initialized")
+      if (terminal) void this.approvals.cancelPendingForRun(rec.runId);
+    });
+    await this.core.init();
+    this.log.debug("agent runner initialized");
   }
 
   /** Kill any still-live children on shutdown so we don't leak zombies (Phase 12.9: await reaping). */
   async onModuleDestroy(): Promise<void> {
-    await this.core.shutdown()
+    await this.core.shutdown();
   }
 
   /**
@@ -149,8 +149,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     workspace?: Workspace,
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
-    const agent = await this.agents.get(agentId)
-    return this.launch(agent, prompt, project, files, title, taskId, matchedTerms, workspace)
+    const agent = await this.agents.get(agentId);
+    return this.launch(agent, prompt, project, files, title, taskId, matchedTerms, workspace);
   }
 
   /**
@@ -170,7 +170,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     matchedTerms?: string[],
     project = "",
   ): Promise<AgentRun> {
-    return this.launch(ORCHESTRATOR_AGENT, prompt, project, files, title, taskId, matchedTerms)
+    return this.launch(ORCHESTRATOR_AGENT, prompt, project, files, title, taskId, matchedTerms);
   }
 
   /** Shared spawn path: build the command for `agent` and hand it to the core. */
@@ -184,21 +184,21 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     matchedTerms?: string[],
     externalWorkspace?: Workspace,
   ): Promise<AgentRun> {
-    const agentId = agent.id
+    const agentId = agent.id;
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
     // start a session, so no dead run record is ever created (→ 503 / failed task).
-    await this.preflight.assertAvailable()
-    this.log.info("starting agent run", { agentId, project, files: files.length })
+    await this.preflight.assertAvailable();
+    this.log.info("starting agent run", { agentId, project, files: files.length });
 
-    const startedMs = Date.now()
+    const startedMs = Date.now();
     // The per-run sandbox the session runs in (its cwd). The directories it
     // operates on are passed separately as `--add-dir` grants, never as the cwd.
-    const cwd = path.join(this.dir, `${agentId}_${startedMs}`)
-    const grantDirs = await this.resolveGrantDirs(files)
+    const cwd = path.join(this.dir, `${agentId}_${startedMs}`);
+    const grantDirs = await this.resolveGrantDirs(files);
 
     // Resolve the project first so memory grounding can include the project note;
     // the same resolution then drives the Phase 3.1 worktree below.
-    const resolved = await this.resolveProject(project)
+    const resolved = await this.resolveProject(project);
     // Memory grounding (Phase 4): North Star + relevant MOCs + the project note,
     // composed from the vault. Fail-open inside the service ("" on any error) so a
     // vault hiccup never blocks the run.
@@ -206,23 +206,23 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       task: prompt,
       projectId: resolved?.id,
       matchedTerms,
-    })
-    const { command, args } = await this.buildCommand(agent, prompt, grantDirs, grounding, cwd)
+    });
+    const { command, args } = await this.buildCommand(agent, prompt, grantDirs, grounding, cwd);
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
     // sandbox; the session spawns there (its first `spawnCwd` ever) so its commits
     // land on the run's own `zibby/*` branch. The sandbox stays the intent/artifact
     // home (ZIBBY_INTENT_DIR is still `cwd`). An unresolvable project string, a
     // non-git project, or a worktree-setup failure → today's behavior (sandbox-only).
-    let workspace: Workspace | undefined
-    let spawnCwd: string | undefined
+    let workspace: Workspace | undefined;
+    let spawnCwd: string | undefined;
     // Phase 10: a goal-supplied worktree only changes the spawn cwd — this run does
     // NOT record or prune it (the goal owns its lifecycle), keeping the maker run's
     // artifact/sidecar layout identical to a normal run.
     if (externalWorkspace) {
-      spawnCwd = externalWorkspace.path
+      spawnCwd = externalWorkspace.path;
     } else if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
-      await fs.mkdir(cwd, { recursive: true })
+      await fs.mkdir(cwd, { recursive: true });
       try {
         workspace = await this.workspace.createWorktree({
           projectPath: resolved.path,
@@ -230,29 +230,29 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           slug: title || agentId,
           // Phase 12.7: worktree OUTSIDE the repo/data tree (only the sandbox stays under cwd).
           dir: await prepareWorktreeDir(`${agentId}_${startedMs}`),
-        })
-        spawnCwd = workspace.path
+        });
+        spawnCwd = workspace.path;
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError)) throw error
+        if (!(error instanceof WorkspaceSetupError)) throw error;
         this.log.warn("agent worktree setup failed; running sandbox-only", {
           agentId,
           projectPath: resolved.path,
           err: error.message,
-        })
+        });
       }
     } else if (resolved) {
       // Phase 11.3: a resolved but NON-git project (e.g. a freshly granted plain
       // folder) gets no worktree — but it still scopes the run: spawn directly in the
       // folder (the pre-3.1 posture). No createWorktree call, so no WorkspaceSetupError.
-      spawnCwd = resolved.path
+      spawnCwd = resolved.path;
     }
 
     // Materialize the enabled custom commands into the run's working tree so a
     // skill/agent that depends on `/<id>` can resolve it. Writes into the spawn cwd
     // (the worktree for a project run, else the sandbox); best-effort/fail-open.
-    await this.commandMaterializer.materialize(spawnCwd ?? cwd)
+    await this.commandMaterializer.materialize(spawnCwd ?? cwd);
     // Per-project env + secrets injected into this run's process (Phase D).
-    const env = await this.resolveProjectEnv(resolved)
+    const env = await this.resolveProjectEnv(resolved);
 
     const spec = {
       kind: "agent" as const,
@@ -266,14 +266,23 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // The originating request's traceId rides along in the persisted record, so
       // a later mid-run gate (fired from child output, outside any request — even
       // after an API restart) can re-link its logs to that origin.
-      extra: { agentId, title, prompt, project, files, taskId, traceId: this.trace.getTraceId(), workspace },
-    }
+      extra: {
+        agentId,
+        title,
+        prompt,
+        project,
+        files,
+        taskId,
+        traceId: this.trace.getTraceId(),
+        workspace,
+      },
+    };
 
     // Variant B: the run spawns immediately. Gating happens mid-run — when the
     // child announces an external-effect action via a `INTENT {json}` line, the
     // core routes it to {@link onIntent} below for evaluation.
-    const rec = await this.core.start(spec)
-    return toAgentRun(rec)
+    const rec = await this.core.start(spec);
+    return toAgentRun(rec);
   }
 
   /**
@@ -282,12 +291,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * → null (the run is sandbox-only, no worktree); never throws.
    */
   private async resolveProject(projectRef: string): Promise<Project | null> {
-    if (!projectRef) return null
+    if (!projectRef) return null;
     try {
-      return await this.projects.get(projectRef)
+      return await this.projects.get(projectRef);
     } catch {
-      const all = await this.projects.list().catch((): Project[] => [])
-      return all.find((p) => p.name === projectRef) ?? null
+      const all = await this.projects.list().catch((): Project[] => []);
+      return all.find((p) => p.name === projectRef) ?? null;
     }
   }
 
@@ -301,10 +310,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private async resolveProjectEnv(
     project: Project | null,
   ): Promise<Record<string, string> | undefined> {
-    if (!project) return undefined
-    const secrets = await this.projectSecrets.read(project.id).catch(() => null)
-    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) }
-    return Object.keys(merged).length > 0 ? merged : undefined
+    if (!project) return undefined;
+    const secrets = await this.projectSecrets.read(project.id).catch(() => null);
+    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) };
+    return Object.keys(merged).length > 0 ? merged : undefined;
   }
 
   /**
@@ -324,48 +333,51 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private onIntent(runId: string, action: IntendedAction): Promise<void> {
     // Re-establish a logging scope for this background gate: the originating
     // request's trace id (so it links back) plus the run id (the durable key).
-    const traceId = this.originOf(runId) ?? this.trace.getTraceId() ?? randomUUID()
-    return this.trace.run({ traceId, runId }, () => this.evaluateIntent(runId, action))
+    const traceId = this.originOf(runId) ?? this.trace.getTraceId() ?? randomUUID();
+    return this.trace.run({ traceId, runId }, () => this.evaluateIntent(runId, action));
   }
 
   /** The persisted origin traceId of a run, or undefined for an unknown run. */
   private originOf(runId: string): string | undefined {
     try {
-      return this.core.get(runId).traceId
+      return this.core.get(runId).traceId;
     } catch {
-      return undefined
+      return undefined;
     }
   }
 
   private async evaluateIntent(runId: string, action: IntendedAction): Promise<void> {
     try {
-      const rec = this.core.get(runId)
+      const rec = this.core.get(runId);
       // The orchestrator is synthetic (not in storage); its empty gates/
       // requires_approval mean the evaluation runs on the locked floor alone.
       const agent =
-        rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId)
+        rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId);
       const rules = await this.gates.rulesForAgent({
         gates: agent.gates,
         requires_approval: agent.requires_approval,
-      })
-      const evaluation = this.gates.evaluate(rules, action)
-      const decision = evaluation.decision
+      });
+      const evaluation = this.gates.evaluate(rules, action);
+      const decision = evaluation.decision;
       this.log.info("evaluating mid-run intent", {
         agentId: rec.agentId,
         action: action.action,
         tool: action.tool,
         decision,
         ruleId: evaluation.ruleId,
-      })
+      });
 
       if (decision === "deny") {
-        this.log.warn("mid-run intent denied", { action: action.action, ruleId: evaluation.ruleId })
-        await this.core.denyIntent(runId)
-        return
+        this.log.warn("mid-run intent denied", {
+          action: action.action,
+          ruleId: evaluation.ruleId,
+        });
+        await this.core.denyIntent(runId);
+        return;
       }
       if (decision === "ask") {
-        this.log.info("mid-run intent held for approval", { action: action.action })
-        await this.core.holdForApproval(runId)
+        this.log.info("mid-run intent held for approval", { action: action.action });
+        await this.core.holdForApproval(runId);
         await this.approvals.requestApproval({
           runId,
           kind: "agent",
@@ -378,25 +390,25 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           // A destructive delete is irreversible — always the highest severity,
           // regardless of the agent's configured default. Losing files is never
           // "medium". (The hook tags these with `action: "delete"`.)
-          risk: action.action === "delete" ? "high" : agent.risk ?? "medium",
-        })
-        return
+          risk: action.action === "delete" ? "high" : (agent.risk ?? "medium"),
+        });
+        return;
       }
       // allow / notify: let the action proceed immediately.
-      await this.core.allowIntent(runId)
+      await this.core.allowIntent(runId);
     } catch (error) {
       // Unknown agent / evaluation failure → fail safe: refuse the action.
       this.log.error("mid-run intent evaluation failed; failing safe to deny", {
         err: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-      })
-      await this.core.denyIntent(runId).catch(() => {})
+      });
+      await this.core.denyIntent(runId).catch(() => {});
     }
   }
 
   /** Running runs, plus any finished within the retention window; newest first. */
   listRunning(): AgentRun[] {
-    return this.core.list().map(toAgentRun)
+    return this.core.list().map(toAgentRun);
   }
 
   /**
@@ -408,7 +420,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     return this.core
       .list()
       .filter((rec) => rec.status === "paused-limit")
-      .map(toAgentRun)
+      .map(toAgentRun);
   }
 
   /**
@@ -416,8 +428,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * (so a re-pause carries it forward), then respawn from its stashed spawn spec.
    */
   async resumeLimitPaused(runId: string): Promise<AgentRun> {
-    await this.core.markResumeCycle(runId)
-    return toAgentRun(await this.core.resume(runId))
+    await this.core.markResumeCycle(runId);
+    return toAgentRun(await this.core.resume(runId));
   }
 
   /**
@@ -426,7 +438,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * reason rather than a respawn-forever loop.
    */
   async failLimitFlapped(runId: string, reason: string): Promise<void> {
-    await this.core.failLimit(runId, reason)
+    await this.core.failLimit(runId, reason);
   }
 
   /**
@@ -439,22 +451,22 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
       exhausted: false,
       resumeAt: null,
-    }))
-    if (!exhausted) return
-    await this.core.reclassifyErrorAsPausedLimit(runId, resumeAt).catch(() => {})
+    }));
+    if (!exhausted) return;
+    await this.core.reclassifyErrorAsPausedLimit(runId, resumeAt).catch(() => {});
   }
 
   /** The full run history (on disk + in memory), newest first; no age cutoff. */
   async listAll(): Promise<AgentRun[]> {
-    return (await this.core.listAll()).map(toAgentRun)
+    return (await this.core.listAll()).map(toAgentRun);
   }
 
   get(runId: string): AgentRun {
-    return toAgentRun(this.core.get(runId))
+    return toAgentRun(this.core.get(runId));
   }
 
   stop(runId: string): AgentRun {
-    return toAgentRun(this.core.stop(runId))
+    return toAgentRun(this.core.stop(runId));
   }
 
   /** Permanently delete a run and all its artifacts (sidecar, log, sandbox). */
@@ -463,32 +475,35 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // `.git/worktrees/*` metadata in the project repo). The worktree lives under
     // the sandbox; its main repo is re-resolved from the run's `project` label.
     // Best-effort and tolerant — a swept/unknown run simply skips this.
-    let rec: AgentRunRecord | undefined
+    let rec: AgentRunRecord | undefined;
     try {
-      rec = this.core.get(runId)
+      rec = this.core.get(runId);
     } catch {
-      rec = undefined
+      rec = undefined;
     }
     if (rec?.workspace && rec.project) {
-      const resolved = await this.resolveProject(rec.project)
+      const resolved = await this.resolveProject(rec.project);
       if (resolved) {
         await this.workspace
           .removeWorktree({ projectPath: resolved.path, worktreePath: rec.workspace.path })
-          .catch(() => {})
+          .catch(() => {});
       }
     }
-    await this.core.delete(runId)
+    await this.core.delete(runId);
     // A run deleted while paused on the gate leaves its approval pending forever —
     // resolve it here (no runner round-trip; the run is already gone).
-    await this.approvals.cancelPendingForRun(runId)
+    await this.approvals.cancelPendingForRun(runId);
   }
 
-  readLog(runId: string, offset: number): Promise<{
-    content: string
-    nextOffset: number
-    done: boolean
+  readLog(
+    runId: string,
+    offset: number,
+  ): Promise<{
+    content: string;
+    nextOffset: number;
+    done: boolean;
   }> {
-    return this.core.readLog(runId, offset)
+    return this.core.readLog(runId, offset);
   }
 
   /**
@@ -498,7 +513,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * unsubscribe for the controller to call when the stream closes.
    */
   onRunStatus(listener: (run: AgentRun) => void): () => void {
-    return this.core.onStatus((rec) => listener(toAgentRun(rec)))
+    return this.core.onStatus((rec) => listener(toAgentRun(rec)));
   }
 
   /**
@@ -508,7 +523,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * path exactly. Returns an unsubscribe for stream teardown.
    */
   onLogAppend(runId: string, listener: () => void): () => void {
-    return this.core.onLog(runId, listener)
+    return this.core.onLog(runId, listener);
   }
 
   /**
@@ -527,7 +542,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   ): Promise<{ command: string; args: string[] }> {
     const task = grantDirs.length
       ? `${prompt}\n\nOperate on this directory: ${grantDirs[0]}`.trim()
-      : prompt
+      : prompt;
     return this.claude.buildClaudeCommand({
       instructions: agent.instructions,
       task,
@@ -544,7 +559,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // standalone agent run passes no `delegates`, so its catalog folds down to
       // ZIBBY's operational core (see selectCatalogAgents) — never the whole library.
       ...(sandboxCwd ? { systemPromptDir: sandboxCwd } : {}),
-    })
+    });
   }
 
   /**
@@ -559,13 +574,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * directory simply gets no grant (the model then has nothing external to touch).
    */
   private async resolveGrantDirs(files: string[]): Promise<string[]> {
-    const dirs: string[] = []
+    const dirs: string[] = [];
     for (const f of files) {
-      if (!path.isAbsolute(f)) continue
-      const abs = path.resolve(f)
-      const stat = await fs.stat(abs).catch(() => null)
-      if (stat?.isDirectory()) dirs.push(abs)
+      if (!path.isAbsolute(f)) continue;
+      const abs = path.resolve(f);
+      const stat = await fs.stat(abs).catch(() => null);
+      if (stat?.isDirectory()) dirs.push(abs);
     }
-    return dirs
+    return dirs;
   }
 }

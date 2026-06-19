@@ -34,7 +34,7 @@ finished-day scenario is now implemented and tested:
 
 **Explicitly out of scope of "1:1 with north-star.md"** (ROADMAP-enumerated depth/ops/scale the
 oracle does **not** name; each recorded in its milestone): audit-trail export, run-artifact
-retention, the multi-project velín *dashboard* (a view; "the UI is a view"), cross-project
+retention, the multi-project velín _dashboard_ (a view; "the UI is a view"), cross-project
 intelligence, and real network research-source adapters (the pluggable seam + fixtures floor
 exist; live RSS/HN/PH fetchers are deferred). USD cost tracking is **N/A by design**
 (subscription model — recorded under M7).
@@ -51,19 +51,19 @@ app-ideas · Jira+GitHub channels · gated Jira-issue create · autonomous bug�
 The backend reached 1:1 with the north-star, but several operator-settable surfaces the
 oracle names ("monitors Slack, email, **Jira, GitHub**"; the research/intelligence config)
 had **no create path in the UI** — the feature could not be turned on without hand-editing
-files. This pass closes that gap so "the UI is a view" holds for *writing* config too.
+files. This pass closes that gap so "the UI is a view" holds for _writing_ config too.
 
 Audit of UI vs. backend settability (web `features/` vs `libs/contracts`):
 
-| Surface | Before | Phase |
-| ------- | ------ | ----- |
-| Integrations — Slack/email | ✅ creatable | — |
-| Integrations — **Jira / GitHub** | ❌ kind absent from form (backend ready) | **P1 ✅** |
-| Integrations — email `mailbox`, per-kind secret label | ❌ omitted / slack-only token map | **P1 ✅** |
-| Research / intelligence config (interests, sources, financeWatch) | ❌ no UI at all | **P2 ✅** |
-| Project profile `checks` + person `comms_style` | ❌ schema-only, no field | **P3 ✅** |
-| Mandate (autonomy scope) | ✅ Settings → MandateSection | — |
-| Per-project gate hardening | ✅ ProfileScreen `autonomy_policy` (can_do_alone/always_ask) | — |
+| Surface                                                           | Before                                                       | Phase     |
+| ----------------------------------------------------------------- | ------------------------------------------------------------ | --------- |
+| Integrations — Slack/email                                        | ✅ creatable                                                 | —         |
+| Integrations — **Jira / GitHub**                                  | ❌ kind absent from form (backend ready)                     | **P1 ✅** |
+| Integrations — email `mailbox`, per-kind secret label             | ❌ omitted / slack-only token map                            | **P1 ✅** |
+| Research / intelligence config (interests, sources, financeWatch) | ❌ no UI at all                                              | **P2 ✅** |
+| Project profile `checks` + person `comms_style`                   | ❌ schema-only, no field                                     | **P3 ✅** |
+| Mandate (autonomy scope)                                          | ✅ Settings → MandateSection                                 | —         |
+| Per-project gate hardening                                        | ✅ ProfileScreen `autonomy_policy` (can_do_alone/always_ask) | —         |
 
 **Phase 1 ✅ — Jira + GitHub integrations + email mailbox.** `IntegrationFormDialog` now
 offers all four kinds with kind-specific config (Jira: site URL/email/project key/JQL;
@@ -96,7 +96,7 @@ back to the shared default checks). Tests pin both saves and the seed/clear roun
 439/439 green; web tsc + lint clean each phase. The remaining base-config tsc errors are the
 pre-existing `apps/api` test-file baseline (untouched).
 
-**Out of scope (confirmed, not UI work):** project↔integration *channel binding* — the
+**Out of scope (confirmed, not UI work):** project↔integration _channel binding_ — the
 north-star profile names "which Slack workspace … which repo", but `ProjectSchema` has **no
 `channels` field**; triage matches by text today. Adding that linkage is backend schema work,
 not a UI gap, so it is not part of this UI goal. Automations' 5 system-seeded target kinds and
@@ -110,25 +110,25 @@ settability the oracle requires).
 The previous roadmap treated channels, briefing, and budget as unbuilt. They are not.
 The real picture, verified against `apps/api/src`:
 
-| Capability                                                          | Status                      | Reality on disk                                                                                                        |
-| ------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Delivery loop (agent → review → test → verify, retry/escalate)      | ✅ Real                     | `goals/`, `pipelines/`, `runner/` — bounded iteration, worktree isolation                                              |
-| Goals / loop engine (maker ⇄ verifier, parking, budget fuse)        | ✅ Real                     | `goals/goal-runner.service.ts`, per-goal run-count budget                                                              |
-| Self-development (builder ≠ subject, worktree off-tree)             | ✅ Real                     | sibling-checkout isolation, scoped verifier, `ZIBBY_WORKTREE_ROOT`                                                     |
-| TaskClassifier (LLM router + keyword fallback + orchestrator floor) | ✅ Real                     | `tasks/task-classifier.service.ts`                                                                                     |
-| Gate engine (locked floor, agent harden-only, dry-run evaluate)     | ✅ Real                     | `gates/`, `data/POLICY.md`; floor: payment/push/pr.open→ask, pr.merge→deny                                             |
-| **Channel runtime (Slack, email, Jira, GitHub)**                    | ✅ **All 4 (2026-06-18)** | `channels/` — Slack Web API + email imapflow/nodemailer + **Jira REST (JQL poll, Basic auth, comment send)** + **GitHub issues/PRs (since-poll, streams filter, comment send)**, 30s cursor-safe poll, approval-gated outbound. Closes north-star "monitors Slack, email, Jira, GitHub" |
-| Memory vault + grounding + run recorder                             | ✅ Real                     | `memory/` — index-first read, daily append, term-matched grounding, episodic record                                    |
-| Briefing (assemble + butler prose + 07:00 cron)                     | ✅ Real, **thin**           | `briefing/` + `automations/morning-briefing.json` (fires daily) — sections exist, content is shallow                   |
+| Capability                                                          | Status                       | Reality on disk                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Delivery loop (agent → review → test → verify, retry/escalate)      | ✅ Real                      | `goals/`, `pipelines/`, `runner/` — bounded iteration, worktree isolation                                                                                                                                                                                                                                                |
+| Goals / loop engine (maker ⇄ verifier, parking, budget fuse)        | ✅ Real                      | `goals/goal-runner.service.ts`, per-goal run-count budget                                                                                                                                                                                                                                                                |
+| Self-development (builder ≠ subject, worktree off-tree)             | ✅ Real                      | sibling-checkout isolation, scoped verifier, `ZIBBY_WORKTREE_ROOT`                                                                                                                                                                                                                                                       |
+| TaskClassifier (LLM router + keyword fallback + orchestrator floor) | ✅ Real                      | `tasks/task-classifier.service.ts`                                                                                                                                                                                                                                                                                       |
+| Gate engine (locked floor, agent harden-only, dry-run evaluate)     | ✅ Real                      | `gates/`, `data/POLICY.md`; floor: payment/push/pr.open→ask, pr.merge→deny                                                                                                                                                                                                                                               |
+| **Channel runtime (Slack, email, Jira, GitHub)**                    | ✅ **All 4 (2026-06-18)**    | `channels/` — Slack Web API + email imapflow/nodemailer + **Jira REST (JQL poll, Basic auth, comment send)** + **GitHub issues/PRs (since-poll, streams filter, comment send)**, 30s cursor-safe poll, approval-gated outbound. Closes north-star "monitors Slack, email, Jira, GitHub"                                  |
+| Memory vault + grounding + run recorder                             | ✅ Real                      | `memory/` — index-first read, daily append, term-matched grounding, episodic record                                                                                                                                                                                                                                      |
+| Briefing (assemble + butler prose + 07:00 cron)                     | ✅ Real, **thin**            | `briefing/` + `automations/morning-briefing.json` (fires daily) — sections exist, content is shallow                                                                                                                                                                                                                     |
 | Budget governance (per-project + global + concurrency)              | ✅ **Done (M7, 2026-06-17)** | `budget/` — daily/weekly/**monthly** run caps + global subscription-window % thresholds (80/90/100 via `pauseAtRollingPct`) + `spend-past-cap` floor gate. **USD N/A by design**: a Claude subscription exposes no per-run cost, so the budget unit is run-counts (the schema itself notes a token cap "would be a lie") |
-| Mandate / autonomy doc                                              | 🟡 Partial                  | `data/mandate.json` exists but minimal (`dispatch:true, reply:false`)                                                  |
-| **Project = operational profile**                                   | ✅ **Done (M1, 2026-06-17)** | contract extended (identity/autonomy_policy/daily_rhythm), `GET/PUT /projects/:id/profile`, vault mirror, profile editor UI at `/projects/[id]` |
-| **Inbound message → action routing**                                | ✅ **Done (M2, 2026-06-17)** | project autonomy_policy enforced at triage: VIP+vip_escalation→T3, respond_as=draft_only→T3; vip stamped on item; inbox shows sender+VIP badge |
-| **Self-learning from approval signals**                             | ❌ Absent                   | no pattern extractor; `patterns/` folder doesn't exist in the vault                                                    |
-| **Nightly consolidation job**                                       | ❌ Absent                   | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                               |
-| **Standup cheat sheets per project**                                | ✅ **Done (M3, 2026-06-17)** | StandupService (24h activity→markdown); GET /projects/:id/standup; standup card on ProfileScreen; trend7d in Briefing |
-| **Research / intelligence layer**                                   | ✅ **Done (M6, 2026-06-17)** | `research/` — operator config + source-adapter seam (fake fixtures) + interest-overlap ranking + vault `intelligence/digest` note + briefing Intelligence section + `research-digest` 06:00 automation |
-| **GapDetector / "I want X" NL self-mod flow**                       | ✅ **Done (M5, 2026-06-17)** | `gaps/` GapDetectorService — scans 30d `task-created` activity for recurring manual work → `vault/suggestions/automation-gaps.md` → briefing "Gaps I noticed"; `gap-detect` 23:00 automation. NL "I want X→PR" already covered by classifier→delivery pipeline→worktree→`pr.open` gate |
+| Mandate / autonomy doc                                              | 🟡 Partial                   | `data/mandate.json` exists but minimal (`dispatch:true, reply:false`)                                                                                                                                                                                                                                                    |
+| **Project = operational profile**                                   | ✅ **Done (M1, 2026-06-17)** | contract extended (identity/autonomy_policy/daily_rhythm), `GET/PUT /projects/:id/profile`, vault mirror, profile editor UI at `/projects/[id]`                                                                                                                                                                          |
+| **Inbound message → action routing**                                | ✅ **Done (M2, 2026-06-17)** | project autonomy_policy enforced at triage: VIP+vip_escalation→T3, respond_as=draft_only→T3; vip stamped on item; inbox shows sender+VIP badge                                                                                                                                                                           |
+| **Self-learning from approval signals**                             | ❌ Absent                    | no pattern extractor; `patterns/` folder doesn't exist in the vault                                                                                                                                                                                                                                                      |
+| **Nightly consolidation job**                                       | ❌ Absent                    | heartbeat scheduler exists, but no nightly roll-up / cost / pattern pass                                                                                                                                                                                                                                                 |
+| **Standup cheat sheets per project**                                | ✅ **Done (M3, 2026-06-17)** | StandupService (24h activity→markdown); GET /projects/:id/standup; standup card on ProfileScreen; trend7d in Briefing                                                                                                                                                                                                    |
+| **Research / intelligence layer**                                   | ✅ **Done (M6, 2026-06-17)** | `research/` — operator config + source-adapter seam (fake fixtures) + interest-overlap ranking + vault `intelligence/digest` note + briefing Intelligence section + `research-digest` 06:00 automation                                                                                                                   |
+| **GapDetector / "I want X" NL self-mod flow**                       | ✅ **Done (M5, 2026-06-17)** | `gaps/` GapDetectorService — scans 30d `task-created` activity for recurring manual work → `vault/suggestions/automation-gaps.md` → briefing "Gaps I noticed"; `gap-detect` 23:00 automation. NL "I want X→PR" already covered by classifier→delivery pipeline→worktree→`pr.open` gate                                   |
 
 **The headline correction:** the hard infrastructure (channel I/O, gate floor, goal loop,
 vault, budget caps) is already real. The gaps are mostly **wiring and the semantic/learning
@@ -224,7 +224,7 @@ it must.
 > `JiraIssueFlowService` ResumableRunner that PARKS a `jira-issue` approval on `propose` and
 > performs the create only on `resume` (approve) — never autonomously (Law 1/4, "the PR/issue
 > is the gate"). Surfaced via `POST /api/channels/integrations/:id/jira-issue` → `202
-> {approvalId}`.
+{approvalId}`.
 >
 > **Autonomous routing ✅ DONE 2026-06-18:** the `ChannelTriageFlowService` now calls
 > `jiraFlow.propose()` on a `bug` verdict (targeting the operator's enabled Jira integration),
@@ -299,7 +299,7 @@ gains a real "What I learned" section.
 > `task-created` activity for recurring manual work, drafts "automate it?" suggestions into
 > `vault/suggestions/automation-gaps.md`, and the morning briefing surfaces them under
 > "Gaps I noticed" (`Briefing.automationGaps`). Nightly `gap-detect` automation (23:00).
-> Docs: `docs/api/gaps.md`. *Proposes ≠ acts* — it only writes a vault note.
+> Docs: `docs/api/gaps.md`. _Proposes ≠ acts_ — it only writes a vault note.
 >
 > **Already satisfied (verified, not rebuilt):** the "I want X → plan → PR" back half — the
 > TaskClassifier routes a self-modification intent into the delivery pipeline against ZIBBY's
@@ -347,7 +347,7 @@ auditable end-to-end.
 > ideas"): `ideas/IdeaGeneratorService` deterministically pairs the operator's research
 > interests with the latest digest trends (`pairIdeas`, capped at 3) into prototype pitches in
 > `vault/suggestions/app-ideas.md`, surfaced in the briefing's **App ideas** section
-> (`Briefing.appIdeas`). Weekly `app-ideas` automation (Mon 06:30). *Proposes ≠ acts.*
+> (`Briefing.appIdeas`). Weekly `app-ideas` automation (Mon 06:30). _Proposes ≠ acts._
 >
 > **Deferred:** real network source adapters; on-demand "what's trending in X?" via the task path.
 
@@ -381,7 +381,7 @@ unprompted.
 > with `>=` checks); "spend past a cap requires approval" is the `spend-past-cap` locked floor.
 >
 > **USD cost tracking is N/A by design — recorded deviation:** ZIBBY runs on a Claude
-> *subscription*, not metered API billing, and a `claude -p` run surfaces no per-run token/USD
+> _subscription_, not metered API billing, and a `claude -p` run surfaces no per-run token/USD
 > cost (`LedgerEntry` has no cost field; `ProjectBudgetSchema` comments that a token cap "would
 > be a lie in the UI"). The north-star says "monthly cap, per-run cap" — never "USD" — so 1:1
 > is met by run-count caps + subscription-window %; the per-goal run-count budget (Phase 13.1)

@@ -60,9 +60,7 @@ const apiEnv: Record<string, string> = {
 const sandboxChrome =
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
   "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
-const launchOptions = fs.existsSync(sandboxChrome)
-  ? { executablePath: sandboxChrome }
-  : undefined;
+const launchOptions = fs.existsSync(sandboxChrome) ? { executablePath: sandboxChrome } : undefined;
 
 export default defineConfig({
   testDir: "./e2e",

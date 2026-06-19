@@ -56,9 +56,7 @@ function routingBody(confidence: number) {
 /** Make `classify` resolve (async, like a real mutation) at the given confidence. */
 function classifyAt(confidence: number) {
   classify.mockImplementation((_vars: unknown, opts?: MutOpts) => {
-    Promise.resolve().then(() =>
-      opts?.onSuccess?.({ status: 200, body: routingBody(confidence) }),
-    );
+    Promise.resolve().then(() => opts?.onSuccess?.({ status: 200, body: routingBody(confidence) }));
   });
 }
 
@@ -93,9 +91,7 @@ describe("useUtteranceDispatch", () => {
 
   it("dispatches a confident spoken task to the tasks layer (no modal, no navigation)", async () => {
     const onExit = vi.fn();
-    const { result } = renderHook(() =>
-      useUtteranceDispatch(options({ onExit })),
-    );
+    const { result } = renderHook(() => useUtteranceDispatch(options({ onExit })));
 
     act(() => {
       result.current.dispatch("build me a login page");
@@ -175,9 +171,7 @@ describe("useUtteranceDispatch", () => {
     act(() => {
       result.current.dispatch("deploy it");
     });
-    await waitFor(() =>
-      expect(result.current.ack).toEqual({ key: "dispatchFailed" }),
-    );
+    await waitFor(() => expect(result.current.ack).toEqual({ key: "dispatchFailed" }));
   });
 
   it("a recognised gate answer approves — it never classifies or creates a task", () => {
@@ -195,9 +189,7 @@ describe("useUtteranceDispatch", () => {
 
   it("a spoken status question speaks the briefing — it does not create a task", () => {
     const onBrief = vi.fn();
-    const { result } = renderHook(() =>
-      useUtteranceDispatch(options({ onBrief })),
-    );
+    const { result } = renderHook(() => useUtteranceDispatch(options({ onBrief })));
     act(() => {
       result.current.dispatch("co se děje");
     });

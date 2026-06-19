@@ -86,35 +86,30 @@ export function useSpeech(): SpeechSession {
     };
   }, []);
 
-  const speak = useCallback(
-    (text: string, lang: SpeechLang = "cs-CZ") => {
-      const spoken = text.trim();
-      if (!spoken || !speechSupported()) return;
-      const synth = window.speechSynthesis;
-      synth.cancel(); // never queue on top of an older line
+  const speak = useCallback((text: string, lang: SpeechLang = "cs-CZ") => {
+    const spoken = text.trim();
+    if (!spoken || !speechSupported()) return;
+    const synth = window.speechSynthesis;
+    synth.cancel(); // never queue on top of an older line
 
-      const utt = new SpeechSynthesisUtterance(spoken);
-      utteranceRef.current = utt; // prevent GC before onend
-      // The operator's chosen voice wins when it's available; otherwise fall back
-      // to the best locale match. Read at speak-time so a Settings change is live.
-      const preferred = getPreferredVoiceURI();
-      const chosen = preferred
-        ? voicesRef.current.find((v) => v.voiceURI === preferred)
-        : undefined;
-      utt.voice = chosen ?? selectVoice(voicesRef.current, lang);
-      utt.lang = lang; // always set — Android won't pick a voice otherwise
-      utt.rate = 1.05;
-      utt.onstart = () => setIsSpeaking(true);
-      const done = () => {
-        setIsSpeaking(false);
-        utteranceRef.current = null;
-      };
-      utt.onend = done;
-      utt.onerror = done;
-      synth.speak(utt);
-    },
-    [],
-  );
+    const utt = new SpeechSynthesisUtterance(spoken);
+    utteranceRef.current = utt; // prevent GC before onend
+    // The operator's chosen voice wins when it's available; otherwise fall back
+    // to the best locale match. Read at speak-time so a Settings change is live.
+    const preferred = getPreferredVoiceURI();
+    const chosen = preferred ? voicesRef.current.find((v) => v.voiceURI === preferred) : undefined;
+    utt.voice = chosen ?? selectVoice(voicesRef.current, lang);
+    utt.lang = lang; // always set — Android won't pick a voice otherwise
+    utt.rate = 1.05;
+    utt.onstart = () => setIsSpeaking(true);
+    const done = () => {
+      setIsSpeaking(false);
+      utteranceRef.current = null;
+    };
+    utt.onend = done;
+    utt.onerror = done;
+    synth.speak(utt);
+  }, []);
 
   const stop = useCallback(() => {
     if (speechSupported()) window.speechSynthesis.cancel();

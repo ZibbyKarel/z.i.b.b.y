@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Button, Container, Typography } from "@zibby/design-system"
-import { HudPanel } from "./HudPanel"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button, Container, Typography } from "@zibby/design-system";
+import { HudPanel } from "./HudPanel";
 
 const meta: Meta<typeof HudPanel> = {
   title: "Dashboard/HudPanel",
@@ -14,10 +14,10 @@ const meta: Meta<typeof HudPanel> = {
     ),
   ],
   args: { title: "běžící agenti" },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof HudPanel>
+type Story = StoryObj<typeof HudPanel>;
 
 export const Default: Story = {
   render: (args) => (
@@ -27,13 +27,17 @@ export const Default: Story = {
       </Typography>
     </HudPanel>
   ),
-}
+};
 
 export const WithAction: Story = {
   render: (args) => (
     <HudPanel
       {...args}
-      action={<Button icon="plus" intent="ghost" size="sm">Přidat skill</Button>}
+      action={
+        <Button icon="plus" intent="ghost" size="sm">
+          Přidat skill
+        </Button>
+      }
       tone="run"
     >
       <Typography size="md" type="note" variant="secondary">
@@ -41,4 +45,4 @@ export const WithAction: Story = {
       </Typography>
     </HudPanel>
   ),
-}
+};

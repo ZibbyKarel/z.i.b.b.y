@@ -2,14 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Container,
-  IconTile,
-  Pressable,
-  Stack,
-  Tag,
-  Typography,
-} from "@zibby/design-system";
+import { Container, IconTile, Pressable, Stack, Tag, Typography } from "@zibby/design-system";
 import type { Category } from "@zibby/contracts";
 import {
   type Control,

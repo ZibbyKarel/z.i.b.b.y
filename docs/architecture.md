@@ -58,23 +58,23 @@ Operator klikne v UI
 
 Všechna data jsou soubory na disku. Není žádná SQL databáze.
 
-| Typ dat | Formát | Umístění |
-|---------|--------|----------|
-| Agent definice | Markdown + YAML frontmatter | `apps/api/data/agents/<id>.md` |
-| Pipeline definice | Markdown + YAML frontmatter | `apps/api/data/pipelines/<id>.pipeline.md` |
-| Run záznamy (sidecar) | JSON | `apps/api/data/agents/<id>/runs/<runId>/sidecar.json` |
-| Run logy | plaintext | `apps/api/data/agents/<id>/runs/<runId>/run.log` |
-| Schválení | JSON | `apps/api/data/approvals/<id>.json` |
-| Automatizace | JSON | `apps/api/data/automations/<id>.json` |
-| Projekty | JSON | `apps/api/data/projects/<id>.json` |
-| Naplánované úlohy | JSON | `apps/api/data/tasks/<id>.json` |
-| Activity log | JSONL (append-only) | `apps/api/data/activity/YYYY-MM-DD.jsonl` |
-| Memory vault | Markdown + frontmatter | `apps/api/data/vault/{memory,daily,knowledge}/<id>.md` |
-| Integrace | JSON | `apps/api/data/integrations/<id>.json` |
-| Credentials | JSON (odděleno) | `apps/api/data/credentials/<integrationId>.json` |
-| Budget ledger | JSON | `apps/api/data/budget-ledger/` |
-| Gate floor (POLICY.md) | Markdown | `apps/api/data/gates/POLICY.md` |
-| Global gate pravidla | JSON | `apps/api/data/gate-rules/<id>.json` |
+| Typ dat                | Formát                      | Umístění                                               |
+| ---------------------- | --------------------------- | ------------------------------------------------------ |
+| Agent definice         | Markdown + YAML frontmatter | `apps/api/data/agents/<id>.md`                         |
+| Pipeline definice      | Markdown + YAML frontmatter | `apps/api/data/pipelines/<id>.pipeline.md`             |
+| Run záznamy (sidecar)  | JSON                        | `apps/api/data/agents/<id>/runs/<runId>/sidecar.json`  |
+| Run logy               | plaintext                   | `apps/api/data/agents/<id>/runs/<runId>/run.log`       |
+| Schválení              | JSON                        | `apps/api/data/approvals/<id>.json`                    |
+| Automatizace           | JSON                        | `apps/api/data/automations/<id>.json`                  |
+| Projekty               | JSON                        | `apps/api/data/projects/<id>.json`                     |
+| Naplánované úlohy      | JSON                        | `apps/api/data/tasks/<id>.json`                        |
+| Activity log           | JSONL (append-only)         | `apps/api/data/activity/YYYY-MM-DD.jsonl`              |
+| Memory vault           | Markdown + frontmatter      | `apps/api/data/vault/{memory,daily,knowledge}/<id>.md` |
+| Integrace              | JSON                        | `apps/api/data/integrations/<id>.json`                 |
+| Credentials            | JSON (odděleno)             | `apps/api/data/credentials/<integrationId>.json`       |
+| Budget ledger          | JSON                        | `apps/api/data/budget-ledger/`                         |
+| Gate floor (POLICY.md) | Markdown                    | `apps/api/data/gates/POLICY.md`                        |
+| Global gate pravidla   | JSON                        | `apps/api/data/gate-rules/<id>.json`                   |
 
 ## Spouštění agentů (abstrakce)
 
@@ -97,6 +97,7 @@ agent runner, skill runner a pipeline stage runner jsou jen thin wrappers s vlas
 ## Autonomní smyčka (dva módy)
 
 ### Directed (říjzený)
+
 ```
 Operátor zadá úlohu (UI / API)
   → TaskSchedulerService.createTask()
@@ -108,6 +109,7 @@ Operátor zadá úlohu (UI / API)
 ```
 
 ### Autonomous (autonomní)
+
 ```
 ChannelWatcherService heartbeat (každých 30s)
   → adapter.poll() → nové položky z emailu / Slacku
@@ -144,12 +146,12 @@ Systémový floor (`POLICY.md`) je locked — agent ho může jen zpřísnit, ni
 
 ## Testování
 
-| Vrstva | Framework | Příkaz |
-|--------|-----------|--------|
-| API unit + integration | Vitest (project: api) | `pnpm api:test` |
-| Web components | Vitest (project: web, jsdom) | `pnpm web:test` |
-| E2E | Playwright | `pnpm e2e` |
-| Design system | Vitest + Storybook | `pnpm test` |
+| Vrstva                 | Framework                    | Příkaz          |
+| ---------------------- | ---------------------------- | --------------- |
+| API unit + integration | Vitest (project: api)        | `pnpm api:test` |
+| Web components         | Vitest (project: web, jsdom) | `pnpm web:test` |
+| E2E                    | Playwright                   | `pnpm e2e`      |
+| Design system          | Vitest + Storybook           | `pnpm test`     |
 
 `pnpm typecheck` spouští `tsc --noEmit` pro `tsconfig.base.json` + `apps/web/tsconfig.json`.
 Pozor: `rtk pnpm typecheck` filtruje výstup a maskuje chyby — vždy použít přímé `tsc`.

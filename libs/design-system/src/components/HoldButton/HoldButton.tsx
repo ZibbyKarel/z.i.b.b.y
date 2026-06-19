@@ -1,11 +1,5 @@
 "use client";
-import {
-  type ButtonHTMLAttributes,
-  type Ref,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ButtonHTMLAttributes, type Ref, useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 import { disabledClasses, focusRingOffset } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
@@ -35,11 +29,10 @@ export enum HoldButtonTestId {
   Icon = "hold-button-icon",
 }
 
-export interface HoldButtonProps
-  extends Omit<
-    ButtonHTMLAttributes<HTMLButtonElement>,
-    "className" | "onClick" | "children"
-  > {
+export interface HoldButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "className" | "onClick" | "children"
+> {
   /** Fired once the hold completes. */
   onConfirm?: () => void;
   /** Idle label. */
@@ -138,9 +131,7 @@ export function HoldButton({
         />
       )}
       <span className="relative inline-flex items-center gap-1.5">
-        {done && (
-          <Icon data-testid={HoldButtonTestId.Icon} name="check" size="sm" stroke="bold" />
-        )}
+        {done && <Icon data-testid={HoldButtonTestId.Icon} name="check" size="sm" stroke="bold" />}
         {done ? doneLabel : label}
       </span>
     </button>

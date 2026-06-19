@@ -1,11 +1,11 @@
-import { Injectable } from "@nestjs/common"
-import type { ActivityKind } from "@zibby/contracts"
-import { type Observable, Subject } from "rxjs"
+import { Injectable } from "@nestjs/common";
+import type { ActivityKind } from "@zibby/contracts";
+import { type Observable, Subject } from "rxjs";
 
 /** An activity entry recorded onto the unified SSE channel (decision 7). */
 export interface ActivityEvent {
-  kind: ActivityKind
-  at: string
+  kind: ActivityKind;
+  at: string;
 }
 
 /**
@@ -18,13 +18,13 @@ export interface ActivityEvent {
  */
 @Injectable()
 export class ActivityEventsService {
-  private readonly subject = new Subject<ActivityEvent>()
+  private readonly subject = new Subject<ActivityEvent>();
 
   emit(event: ActivityEvent): void {
-    this.subject.next(event)
+    this.subject.next(event);
   }
 
   stream(): Observable<ActivityEvent> {
-    return this.subject.asObservable()
+    return this.subject.asObservable();
   }
 }

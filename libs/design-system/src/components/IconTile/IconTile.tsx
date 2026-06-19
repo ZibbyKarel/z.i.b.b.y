@@ -46,10 +46,7 @@ const radiusClass: Record<IconTileRadius, string> = {
   default: "rounded",
 };
 
-export interface IconTileProps extends Omit<
-  HTMLAttributes<HTMLElement>,
-  "className"
-> {
+export interface IconTileProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   /** Glyph rendered inside the tile (ignored when `children` is provided). */
   glyph?: IconName;
   size?: IconTileSize;

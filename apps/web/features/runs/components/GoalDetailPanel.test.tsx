@@ -130,20 +130,19 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
   });
 
   // An agent-maker iteration with a claude verifier — both spawn pollable child runs.
-  const agentIter = (index: number) =>
-    ({
-      index,
-      makerKind: "agent" as const,
-      makerRunRef: `maker_${index}`,
-      verifier: {
-        kind: "claude" as const,
-        satisfied: false,
-        output: `verdict ${index}`,
-        runRef: `verify_${index}`,
-      },
-      startedAt: ISO(10_000),
-      status: "running" as const,
-    });
+  const agentIter = (index: number) => ({
+    index,
+    makerKind: "agent" as const,
+    makerRunRef: `maker_${index}`,
+    verifier: {
+      kind: "claude" as const,
+      satisfied: false,
+      output: `verdict ${index}`,
+      runRef: `verify_${index}`,
+    },
+    startedAt: ISO(10_000),
+    status: "running" as const,
+  });
 
   const logToggles = () => screen.getAllByRole("button", { name: /^log$/i });
 
@@ -170,7 +169,13 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
   it("opens the pipeline maker's stage timeline (not a note) when expanded", async () => {
     pipelineRunMock.mockReturnValue({
       // usePipelineRunQuery now returns a unified TaskRun: `owner` is the pipeline id.
-      data: { runId: "delivery_run_0", owner: "delivery", currentStage: null, status: "done", stageRuns: [] },
+      data: {
+        runId: "delivery_run_0",
+        owner: "delivery",
+        currentStage: null,
+        status: "done",
+        stageRuns: [],
+      },
     });
     const pipeIter = {
       index: 0,
@@ -190,9 +195,7 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
 
   it("keeps a single iteration open — opening another collapses the first", async () => {
     render(
-      <GoalDetailPanel
-        run={running([agentIter(0), agentIter(1)] as RunView["iterations"])}
-      />,
+      <GoalDetailPanel run={running([agentIter(0), agentIter(1)] as RunView["iterations"])} />,
     );
     await userEvent.click(logToggles()[0]!);
     expect(useRunLogMock).toHaveBeenCalledWith("maker_0");

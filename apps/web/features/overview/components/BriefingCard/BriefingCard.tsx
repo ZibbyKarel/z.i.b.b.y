@@ -58,7 +58,11 @@ export function BriefingCard() {
       <HudPanel
         action={
           <Stack align="center" direction="row" gap="100">
-            {generate.isSuccess && <Tag data-testid={BriefingCardTestId.Ready} tone="ok">{t("overview.briefingReady")}</Tag>}
+            {generate.isSuccess && (
+              <Tag data-testid={BriefingCardTestId.Ready} tone="ok">
+                {t("overview.briefingReady")}
+              </Tag>
+            )}
             <Button
               data-testid={BriefingCardTestId.Generate}
               icon="spark"
@@ -75,7 +79,12 @@ export function BriefingCard() {
         tone={accent ? "accent" : undefined}
       >
         <Stack gap="150">
-          <Typography data-testid={BriefingCardTestId.Headline} size="base" type="note" weight="medium">
+          <Typography
+            data-testid={BriefingCardTestId.Headline}
+            size="base"
+            type="note"
+            weight="medium"
+          >
             {b.headline}
           </Typography>
 

@@ -1,12 +1,12 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
 import {
   ensureDir,
   fileExists,
   isErrnoException,
   resolveSafeFile,
   writeFileAtomic,
-} from "./file-utils"
+} from "./file-utils";
 
 /**
  * Shared base for the file-backed stores: one file per entity, named
@@ -24,102 +24,102 @@ import {
  * are built from {@link writeEntity} / {@link fileExists} / {@link resolveFile}.
  */
 export abstract class EntityFileStore<T> {
-  protected readonly dir: string
+  protected readonly dir: string;
 
   /** File suffix, e.g. `.md`, `.pipeline.md`, `.json`. */
-  protected abstract readonly fileExt: string
+  protected abstract readonly fileExt: string;
   /** Allowed-id pattern; the path-containment check is applied on top. */
-  protected abstract readonly idRegex: RegExp
+  protected abstract readonly idRegex: RegExp;
 
   constructor(dir: string) {
-    this.dir = path.resolve(dir)
+    this.dir = path.resolve(dir);
   }
 
   /** The id used to derive the on-disk file name for a write. */
-  protected abstract idOf(entity: T): string
+  protected abstract idOf(entity: T): string;
   /** Render an entity to its on-disk text form. */
-  protected abstract serialize(entity: T): string
+  protected abstract serialize(entity: T): string;
   /**
    * Parse on-disk text back into an entity, or null if structurally broken.
    * `id` is the id derived from the file name (the source of truth for stores
    * that key on the file name; ignored by stores that carry the id in-band).
    */
-  protected abstract tryParse(raw: string, id: string): T | null
+  protected abstract tryParse(raw: string, id: string): T | null;
   /** Ordering for {@link list}. */
-  protected abstract compare(a: T, b: T): number
+  protected abstract compare(a: T, b: T): number;
   /** Error thrown when an entity is missing. */
-  protected abstract notFound(id: string): Error
+  protected abstract notFound(id: string): Error;
   /** Error thrown when an id is malformed or would escape the data directory. */
-  protected abstract invalidId(id: string): Error
+  protected abstract invalidId(id: string): Error;
   /**
    * Error thrown by {@link get} when a file exists but cannot be parsed.
    * Defaults to {@link notFound} (the JSON stores' behavior); the Markdown
    * stores override this to throw their dedicated corrupt-file error.
    */
   protected corruptError(id: string): Error {
-    return this.notFound(id)
+    return this.notFound(id);
   }
 
   /** Ensure the data directory exists before the app starts serving traffic. */
   async ensureDir(): Promise<void> {
-    await ensureDir(this.dir)
+    await ensureDir(this.dir);
   }
 
   /** Resolve an id to a safe absolute path, throwing the domain invalid-id error. */
   protected resolveFile(id: string): string {
-    const file = resolveSafeFile(this.dir, id, this.fileExt, this.idRegex)
-    if (file === null) throw this.invalidId(id)
-    return file
+    const file = resolveSafeFile(this.dir, id, this.fileExt, this.idRegex);
+    if (file === null) throw this.invalidId(id);
+    return file;
   }
 
   protected async fileExists(file: string): Promise<boolean> {
-    return fileExists(file)
+    return fileExists(file);
   }
 
   /** Atomically persist an entity to its id-derived file. */
   protected async writeEntity(entity: T): Promise<void> {
-    const file = this.resolveFile(this.idOf(entity))
-    await this.ensureDir()
-    await writeFileAtomic(file, this.serialize(entity))
+    const file = this.resolveFile(this.idOf(entity));
+    await this.ensureDir();
+    await writeFileAtomic(file, this.serialize(entity));
   }
 
   async get(id: string): Promise<T> {
-    const file = this.resolveFile(id)
-    let raw: string
+    const file = this.resolveFile(id);
+    let raw: string;
     try {
-      raw = await fs.readFile(file, "utf8")
+      raw = await fs.readFile(file, "utf8");
     } catch (error) {
-      if (isErrnoException(error) && error.code === "ENOENT") throw this.notFound(id)
-      throw error
+      if (isErrnoException(error) && error.code === "ENOENT") throw this.notFound(id);
+      throw error;
     }
-    const parsed = this.tryParse(raw, id)
-    if (!parsed) throw this.corruptError(id)
-    return parsed
+    const parsed = this.tryParse(raw, id);
+    if (!parsed) throw this.corruptError(id);
+    return parsed;
   }
 
   async list(): Promise<T[]> {
-    await this.ensureDir()
-    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
-    const out: T[] = []
+    await this.ensureDir();
+    const entries = await fs.readdir(this.dir).catch(() => [] as string[]);
+    const out: T[] = [];
     for (const entry of entries) {
-      if (!entry.endsWith(this.fileExt)) continue
-      const id = entry.slice(0, -this.fileExt.length)
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
+      if (!entry.endsWith(this.fileExt)) continue;
+      const id = entry.slice(0, -this.fileExt.length);
+      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null);
       // Skip corrupt/unreadable files instead of failing the whole listing.
-      if (raw === null) continue
-      const parsed = this.tryParse(raw, id)
-      if (parsed) out.push(parsed)
+      if (raw === null) continue;
+      const parsed = this.tryParse(raw, id);
+      if (parsed) out.push(parsed);
     }
-    return out.sort((a, b) => this.compare(a, b))
+    return out.sort((a, b) => this.compare(a, b));
   }
 
   async delete(id: string): Promise<void> {
-    const file = this.resolveFile(id)
+    const file = this.resolveFile(id);
     try {
-      await fs.unlink(file)
+      await fs.unlink(file);
     } catch (error) {
-      if (isErrnoException(error) && error.code === "ENOENT") throw this.notFound(id)
-      throw error
+      if (isErrnoException(error) && error.code === "ENOENT") throw this.notFound(id);
+      throw error;
     }
   }
 }

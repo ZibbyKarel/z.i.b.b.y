@@ -8,11 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * `audio-capture` collapse to `mic-denied` (and permanently kill the retry
  * loop); `no-speech` / `aborted` are normal session noise and never surface.
  */
-export type SpeechRecognitionError =
-  | "mic-denied"
-  | "unsupported"
-  | "network"
-  | "service-denied";
+export type SpeechRecognitionError = "mic-denied" | "unsupported" | "network" | "service-denied";
 
 export interface SpeechRecognitionSession {
   /** Whether this browser exposes the Web Speech recognition API. */

@@ -1,10 +1,10 @@
-type ErrorCtor = abstract new (...args: never[]) => Error
+type ErrorCtor = abstract new (...args: never[]) => Error;
 
 export interface ErrorMapperOptions {
   /** NotFound + InvalidId error classes — both read as "no such entity" → 404. */
-  missing: ErrorCtor[]
+  missing: ErrorCtor[];
   /** Conflict error classes that map to a 409 on create. */
-  conflict?: ErrorCtor[]
+  conflict?: ErrorCtor[];
 }
 
 /**
@@ -21,10 +21,10 @@ export interface ErrorMapperOptions {
  */
 export function makeErrorMapper(entity: string, opts: ErrorMapperOptions) {
   const is = (error: unknown, ctors?: ErrorCtor[]): boolean =>
-    ctors?.some((ctor) => error instanceof ctor) ?? false
+    ctors?.some((ctor) => error instanceof ctor) ?? false;
 
   const notFound = (id: string) =>
-    ({ status: 404, body: { message: `${entity} "${id}" not found` } }) as const
+    ({ status: 404, body: { message: `${entity} "${id}" not found` } }) as const;
 
   return {
     /** True when the error is one of the configured `missing` classes. */
@@ -40,12 +40,12 @@ export function makeErrorMapper(entity: string, opts: ErrorMapperOptions) {
       extra?: (error: unknown) => E | undefined,
     ): Promise<{ status: 200; body: T } | ReturnType<typeof notFound> | E> {
       try {
-        return { status: 200, body: await fn() }
+        return { status: 200, body: await fn() };
       } catch (error) {
-        const mapped = extra?.(error)
-        if (mapped !== undefined) return mapped
-        if (is(error, opts.missing)) return notFound(id)
-        throw error
+        const mapped = extra?.(error);
+        if (mapped !== undefined) return mapped;
+        if (is(error, opts.missing)) return notFound(id);
+        throw error;
       }
     },
 
@@ -55,15 +55,15 @@ export function makeErrorMapper(entity: string, opts: ErrorMapperOptions) {
       extra?: (error: unknown) => E | undefined,
     ): Promise<{ status: 201; body: T } | { status: 409; body: { message: string } } | E> {
       try {
-        return { status: 201, body: await fn() }
+        return { status: 201, body: await fn() };
       } catch (error) {
-        const mapped = extra?.(error)
-        if (mapped !== undefined) return mapped
+        const mapped = extra?.(error);
+        if (mapped !== undefined) return mapped;
         if (is(error, opts.conflict)) {
-          return { status: 409, body: { message: (error as Error).message } }
+          return { status: 409, body: { message: (error as Error).message } };
         }
-        throw error
+        throw error;
       }
     },
-  }
+  };
 }

@@ -1,4 +1,4 @@
-import type { SVGProps } from "react"
+import type { SVGProps } from "react";
 
 export enum SparklineTestId {
   Root = "sparkline-root",
@@ -6,36 +6,34 @@ export enum SparklineTestId {
   Line = "sparkline-line",
 }
 
-export interface SparklineProps extends Omit<SVGProps<SVGSVGElement>, "points" | "className" | "width" | "height"> {
+export interface SparklineProps extends Omit<
+  SVGProps<SVGSVGElement>,
+  "points" | "className" | "width" | "height"
+> {
   /** Series values. */
-  data: number[]
+  data: number[];
   /** Stroke color (defaults to the active accent). */
-  color?: string
-  ref?: React.Ref<SVGSVGElement>
+  color?: string;
+  ref?: React.Ref<SVGSVGElement>;
 }
 
 const VIEW_W = 260;
 const VIEW_H = 40;
 
 /** A tiny filled trend line — used by the Agent SDK 14-day spend widget. */
-export function Sparkline({
-  data,
-  color = "var(--color-accent)",
-  ref,
-  ...props
-}: SparklineProps) {
+export function Sparkline({ data, color = "var(--color-accent)", ref, ...props }: SparklineProps) {
   const width = VIEW_W;
   const height = VIEW_H;
-  if (data.length === 0) return null
-  const max = Math.max(...data)
-  const min = Math.min(...data)
-  const span = max - min || 1
+  if (data.length === 0) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const span = max - min || 1;
   const points = data.map((v, i) => {
-    const x = (i / (data.length - 1 || 1)) * width
-    const y = height - ((v - min) / span) * (height - 6) - 3
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  })
-  const line = points.join(" ")
+    const x = (i / (data.length - 1 || 1)) * width;
+    const y = height - ((v - min) / span) * (height - 6) - 3;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const line = points.join(" ");
   return (
     <svg
       aria-hidden="true"
@@ -65,5 +63,5 @@ export function Sparkline({
         strokeWidth="1.6"
       />
     </svg>
-  )
+  );
 }

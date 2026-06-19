@@ -74,7 +74,12 @@ function targetKey(target: TaskTarget): string {
 /** Project a client target onto the wire shape `createTask` accepts (drops nothing). */
 function toApiTarget(target: TaskTarget) {
   if (target.kind === "orchestrator") {
-    return { kind: "orchestrator" as const, name: target.name, glyph: target.glyph, category: target.category };
+    return {
+      kind: "orchestrator" as const,
+      name: target.name,
+      glyph: target.glyph,
+      category: target.category,
+    };
   }
   return {
     kind: target.kind,
@@ -139,7 +144,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
 
   // The project a `project` selection resolves to (its `path` joins `paths`).
   const selectedProject = useMemo(
-    () => (projectId ? (projects ?? []).find((p) => p.id === projectId) ?? null : null),
+    () => (projectId ? ((projects ?? []).find((p) => p.id === projectId) ?? null) : null),
     [projects, projectId],
   );
 
@@ -163,7 +168,10 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   const allTargets = useMemo(() => {
     const list: TaskTarget[] = [];
     const seen = new Set<string>();
-    for (const target of [...(initialTarget ? [initialTarget] : []), ...(activeRouting?.candidates ?? [])]) {
+    for (const target of [
+      ...(initialTarget ? [initialTarget] : []),
+      ...(activeRouting?.candidates ?? []),
+    ]) {
       const key = targetKey(target);
       if (!seen.has(key)) {
         seen.add(key);
@@ -174,7 +182,9 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
   }, [initialTarget, activeRouting]);
 
   // The effective single-dispatch target: an explicit pick, or null (auto → classify).
-  const chosenTarget = chosenKey ? allTargets.find((target) => targetKey(target) === chosenKey) ?? null : null;
+  const chosenTarget = chosenKey
+    ? (allTargets.find((target) => targetKey(target) === chosenKey) ?? null)
+    : null;
   // An explicit pick is always a one-shot dispatch — a loop is only inferred in auto mode.
   const isLoop = !chosenTarget && activeRouting?.mode === "loop";
 
@@ -479,12 +489,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
                 <Button icon="x" intent="ghost" onClick={() => setPendingGrant(null)}>
                   {t("paths.grantCancel")}
                 </Button>
-                <Button
-                  icon="shield"
-                  intent="primary"
-                  loading={granting}
-                  onClick={confirmGrant}
-                >
+                <Button icon="shield" intent="primary" loading={granting} onClick={confirmGrant}>
                   {t("paths.grantConfirmYes")}
                 </Button>
               </Stack>
@@ -548,12 +553,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
           </Stack>
         )}
 
-        <ScheduleField
-          now={now}
-          onChange={setPreset}
-          resetsAt={resetsAt}
-          value={preset}
-        />
+        <ScheduleField now={now} onChange={setPreset} resetsAt={resetsAt} value={preset} />
       </Stack>
     </Dialog>
   );

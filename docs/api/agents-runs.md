@@ -7,26 +7,26 @@ Agent je Markdown soubor s YAML frontmatter v `apps/api/data/agents/<id>.md`.
 ### Frontmatter pole
 
 ```yaml
-id: kodér                       # filesystem-safe identifikátor
-name: Kodér                     # zobrazovaný název
-description: |                  # popis pro klasifikátor úloh
+id: kodér # filesystem-safe identifikátor
+name: Kodér # zobrazovaný název
+description: | # popis pro klasifikátor úloh
   Implementuje funkce podle specifikace.
-glyph: "💻"                     # emoji ikona (volitelné)
-model: opus                     # opus | sonnet | haiku
-thinking: high                  # high | medium | low  (extended thinking)
-tools:                          # povolené nástroje claude CLI
+glyph: "💻" # emoji ikona (volitelné)
+model: opus # opus | sonnet | haiku
+thinking: high # high | medium | low  (extended thinking)
+tools: # povolené nástroje claude CLI
   - bash
   - edit
   - read
-risk: medium                    # low | medium | high (display hint)
-gates:                          # vlastní gate pravidla (inline)
+risk: medium # low | medium | high (display hint)
+gates: # vlastní gate pravidla (inline)
   - match:
       - type: action
         action: git.push
     decision: ask
     resolve:
       type: human
-gateRuleIds:                    # reference na globální katalog
+gateRuleIds: # reference na globální katalog
   - push-to-main
 ```
 
@@ -101,8 +101,8 @@ Každý druh runu implementuje `KindStrategy<R extends BaseRun>`:
 
 ```typescript
 interface KindStrategy<R extends BaseRun> {
-  assemble(base: BaseRun, spec: RunSpec): R   // sestaví sidecar z base + extra polí
-  schema: ZodType<R, unknown>                  // validuje sidecar při restart reconciliation
+  assemble(base: BaseRun, spec: RunSpec): R; // sestaví sidecar z base + extra polí
+  schema: ZodType<R, unknown>; // validuje sidecar při restart reconciliation
 }
 ```
 
@@ -122,6 +122,7 @@ Tím je restart API bezpečný i uprostřed spuštěného runu.
 ### Git worktree integrace
 
 Pro project-targeted runy se vytvoří git worktree:
+
 - Branch: `zibby/<runId>-<slug>`
 - Namespace `apps/api/src/workspace/` spravuje lifecycle (create / cleanup)
 

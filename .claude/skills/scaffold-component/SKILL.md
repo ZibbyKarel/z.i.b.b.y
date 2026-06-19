@@ -17,6 +17,7 @@ Před generováním si přečti `CLAUDE.md` v rootu a `design-system` skill pro 
 ## Vstupy
 
 Zjisti od uživatele (nebo vyvoď z kontextu):
+
 1. **Název** komponenty (PascalCase, např. `Badge`)
 2. **Varianty** — jaké `intent` / `size` / jiné dimenze
 3. **HTML element** jako základ (`button`, `div`, `span`, `input`, …)
@@ -77,6 +78,7 @@ export function <Name>({ intent, size, ref, ...props }: <Name>Props & {
 ```
 
 Pravidla:
+
 - Žádný `forwardRef` (React 19)
 - Žádný `className` prop — DS je sealed
 - Žádné `any`
@@ -94,7 +96,7 @@ libs/design-system/src/components/<Name>/<Name>.test.tsx
 Šablona:
 
 Elementy získávej přes `getByTestId` a `<Name>TestId` enum — nikdy `querySelector` /
-`container.firstChild` / role/text query jako *selektor*. Role a ARIA zůstávají jako *asserce*
+`container.firstChild` / role/text query jako _selektor_. Role a ARIA zůstávají jako _asserce_
 (`toHaveRole`, `toHaveAccessibleName`, `toHaveAttribute`). Viz design-system SKILL.md → Tests.
 
 ```tsx
@@ -134,6 +136,7 @@ describe("<Name>", () => {
 ```
 
 Vždy testuj:
+
 - Renderuje správný obsah (přes `getByTestId` + `toHaveTextContent`)
 - Callback props fungují (`onClick`, `onChange`, …)
 - Klávesová dostupnost (Tab, Enter/Space)
@@ -213,6 +216,7 @@ Vždy exportuj komponentu i její Props typ.
 ## Výstup po dokončení
 
 Oznám uživateli:
+
 1. Cestu k vytvořeným souborům
 2. Jak spustit testy: `nx test design-system`
 3. Jak spustit Storybook: `nx storybook design-system`

@@ -1,17 +1,17 @@
-import { Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "./mcp-credentials.store"
-import { McpController } from "./mcp.controller"
-import { MCP_DIR, McpServersStorageService } from "./mcp.storage.service"
+import { Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "./mcp-credentials.store";
+import { McpController } from "./mcp.controller";
+import { MCP_DIR, McpServersStorageService } from "./mcp.storage.service";
 
 /** Default MCP servers dir, anchored to `apps/api/data/mcp-servers` (committed config). */
 export function resolveMcpDir(): string {
-  return process.env.MCP_DIR ?? dataDir("mcp-servers")
+  return process.env.MCP_DIR ?? dataDir("mcp-servers");
 }
 
 /** Default MCP credentials dir (gitignored), anchored to `apps/api/data/mcp-credentials`. */
 export function resolveMcpCredentialsDir(): string {
-  return process.env.MCP_CREDENTIALS_DIR ?? dataDir("mcp-credentials")
+  return process.env.MCP_CREDENTIALS_DIR ?? dataDir("mcp-credentials");
 }
 
 /**

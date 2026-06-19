@@ -16,10 +16,10 @@ const TOOL_MAP: Record<string, readonly string[]> = {
   bash: ["Bash"],
   git: ["Bash(git:*)"],
   web: ["WebFetch", "WebSearch"],
-}
+};
 
 /** Tools assumed for an entity (e.g. a skill) that declares none structurally. */
-export const DEFAULT_TOOLS: readonly string[] = ["read", "write"]
+export const DEFAULT_TOOLS: readonly string[] = ["read", "write"];
 
 /**
  * Map a single token. A known internal name expands via {@link TOOL_MAP};
@@ -27,10 +27,10 @@ export const DEFAULT_TOOLS: readonly string[] = ["read", "write"]
  * (`Read`, `Grep`, `WebFetch`, `Bash(npm:*)`, …) and passes through verbatim.
  */
 function mapToken(token: string): readonly string[] {
-  const key = token.trim()
-  if (key === "") return []
-  const mapped = TOOL_MAP[key.toLowerCase()]
-  return mapped ?? [key]
+  const key = token.trim();
+  if (key === "") return [];
+  const mapped = TOOL_MAP[key.toLowerCase()];
+  return mapped ?? [key];
 }
 
 /**
@@ -38,12 +38,12 @@ function mapToken(token: string): readonly string[] {
  * applying {@link DEFAULT_TOOLS} when none are declared. No `Agent` injection.
  */
 export function mapTools(tools: readonly string[] | undefined): string[] {
-  const source = tools && tools.length > 0 ? tools : DEFAULT_TOOLS
-  const out = new Set<string>()
+  const source = tools && tools.length > 0 ? tools : DEFAULT_TOOLS;
+  const out = new Set<string>();
   for (const token of source) {
-    for (const mapped of mapToken(token)) out.add(mapped)
+    for (const mapped of mapToken(token)) out.add(mapped);
   }
-  return [...out]
+  return [...out];
 }
 
 /**
@@ -58,7 +58,7 @@ export function mapTools(tools: readonly string[] | undefined): string[] {
  * denied under `dontAsk`).
  */
 export function toAllowedTools(tools: readonly string[] | undefined): string[] {
-  return [...new Set([...mapTools(tools), "Agent"])]
+  return [...new Set([...mapTools(tools), "Agent"])];
 }
 
 /**
@@ -69,6 +69,6 @@ export function toAllowedTools(tools: readonly string[] | undefined): string[] {
  * Returns `undefined` when empty so the caller can omit the key.
  */
 export function toSubagentTools(tools: readonly string[] | undefined): string | undefined {
-  const mapped = mapTools(tools)
-  return mapped.length > 0 ? mapped.join(", ") : undefined
+  const mapped = mapTools(tools);
+  return mapped.length > 0 ? mapped.join(", ") : undefined;
 }

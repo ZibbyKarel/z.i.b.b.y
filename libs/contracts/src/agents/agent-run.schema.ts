@@ -1,6 +1,6 @@
-import { z } from "zod"
-import { AgentIdSchema } from "./agent.schema"
-import { RunStatusSchema, WorkspaceSchema } from "../common.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "./agent.schema";
+import { RunStatusSchema, WorkspaceSchema } from "../common.schema";
 
 /**
  * A single execution of an agent. The backend keeps these in an in-memory
@@ -24,8 +24,8 @@ import { RunStatusSchema, WorkspaceSchema } from "../common.schema"
  * Aliased to the shared {@link RunStatusSchema} so every run kind moves in lockstep
  * (widening it is a deliberate, single-point contract change).
  */
-export const AgentRunStatusSchema = RunStatusSchema
-export type AgentRunStatus = z.infer<typeof AgentRunStatusSchema>
+export const AgentRunStatusSchema = RunStatusSchema;
+export type AgentRunStatus = z.infer<typeof AgentRunStatusSchema>;
 
 export const AgentRunSchema = z.object({
   runId: z.string().min(1),
@@ -76,8 +76,8 @@ export const AgentRunSchema = z.object({
   startedAt: z.string().datetime(),
   pid: z.number().int(),
   logFile: z.string(),
-})
-export type AgentRun = z.infer<typeof AgentRunSchema>
+});
+export type AgentRun = z.infer<typeof AgentRunSchema>;
 
 /** Body accepted by `startRun`. */
 export const StartRunSchema = z.object({
@@ -87,8 +87,8 @@ export const StartRunSchema = z.object({
   files: z.array(z.string()).optional(),
   /** Optional short human name for the run (from the New Task dialog's title field). */
   title: z.string().max(200).optional(),
-})
-export type StartRunInput = z.infer<typeof StartRunSchema>
+});
+export type StartRunInput = z.infer<typeof StartRunSchema>;
 
 /**
  * A slice of a run's log, read from a byte `offset`. The client appends `content`
@@ -99,5 +99,5 @@ export const RunLogChunkSchema = z.object({
   content: z.string(),
   nextOffset: z.number().int().nonnegative(),
   done: z.boolean(),
-})
-export type RunLogChunk = z.infer<typeof RunLogChunkSchema>
+});
+export type RunLogChunk = z.infer<typeof RunLogChunkSchema>;

@@ -26,26 +26,18 @@ describe("parseUtterance", () => {
   });
 
   describe("reject", () => {
-    it.each([
-      "odmítnout",
-      "Odmítni",
-      "zamítnout",
-      "zruš",
-      "reject",
-      "deny",
-      "decline it",
-    ])("%s → rejectLatest", (text) => {
-      expect(parseUtterance(text)).toEqual({ kind: "rejectLatest" });
-    });
+    it.each(["odmítnout", "Odmítni", "zamítnout", "zruš", "reject", "deny", "decline it"])(
+      "%s → rejectLatest",
+      (text) => {
+        expect(parseUtterance(text)).toEqual({ kind: "rejectLatest" });
+      },
+    );
   });
 
   describe("stop", () => {
-    it.each(["zastav", "zastavit", "stop", "Stop it", "halt"])(
-      "%s → stopActive",
-      (text) => {
-        expect(parseUtterance(text)).toEqual({ kind: "stopActive" });
-      },
-    );
+    it.each(["zastav", "zastavit", "stop", "Stop it", "halt"])("%s → stopActive", (text) => {
+      expect(parseUtterance(text)).toEqual({ kind: "stopActive" });
+    });
   });
 
   describe("close", () => {
@@ -71,9 +63,7 @@ describe("parseUtterance", () => {
     it.each(cases)("%s → navigate %s", (text, route) => {
       const action = parseUtterance(text);
       expect(action.kind).toBe("navigate");
-      expect((action as Extract<VoiceAction, { kind: "navigate" }>).route).toBe(
-        route,
-      );
+      expect((action as Extract<VoiceAction, { kind: "navigate" }>).route).toBe(route);
     });
 
     it("an unknown page falls through to a task", () => {
@@ -129,9 +119,10 @@ describe("parseUtterance", () => {
     });
 
     it("a normal English request → task", () => {
-      expect(parseUtterance("fix the failing test in the auth service")).toEqual(
-        { kind: "createTask", text: "fix the failing test in the auth service" },
-      );
+      expect(parseUtterance("fix the failing test in the auth service")).toEqual({
+        kind: "createTask",
+        text: "fix the failing test in the auth service",
+      });
     });
   });
 });

@@ -1,5 +1,5 @@
-import matter from "gray-matter"
-import { EntityFileStore } from "./entity-file-store"
+import matter from "gray-matter";
+import { EntityFileStore } from "./entity-file-store";
 
 /**
  * Base for the Markdown-backed stores (agents, skills, pipelines): one file per
@@ -12,28 +12,28 @@ import { EntityFileStore } from "./entity-file-store"
  */
 export abstract class MarkdownEntityStore<T> extends EntityFileStore<T> {
   /** Structured config to emit as YAML frontmatter. */
-  protected abstract toFrontmatter(entity: T): Record<string, unknown>
+  protected abstract toFrontmatter(entity: T): Record<string, unknown>;
   /** The Markdown body (typically the entity's `instructions`). */
-  protected abstract bodyOf(entity: T): string
+  protected abstract bodyOf(entity: T): string;
   /** Map parsed frontmatter + body back to an entity, or null if invalid. */
   protected abstract fromFrontmatter(
     data: Record<string, unknown>,
     id: string,
     body: string,
-  ): T | null
+  ): T | null;
 
   protected serialize(entity: T): string {
     // Blank line after the frontmatter (skill-file style); trailing newline at EOF.
-    return matter.stringify(`\n${this.bodyOf(entity)}\n`, this.toFrontmatter(entity))
+    return matter.stringify(`\n${this.bodyOf(entity)}\n`, this.toFrontmatter(entity));
   }
 
   protected tryParse(raw: string, id: string): T | null {
-    let parsed: matter.GrayMatterFile<string>
+    let parsed: matter.GrayMatterFile<string>;
     try {
-      parsed = matter(raw)
+      parsed = matter(raw);
     } catch {
-      return null
+      return null;
     }
-    return this.fromFrontmatter(parsed.data as Record<string, unknown>, id, parsed.content.trim())
+    return this.fromFrontmatter(parsed.data as Record<string, unknown>, id, parsed.content.trim());
   }
 }

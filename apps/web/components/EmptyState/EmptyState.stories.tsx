@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container } from "@zibby/design-system"
-import { EmptyState } from "./EmptyState"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container } from "@zibby/design-system";
+import { EmptyState } from "./EmptyState";
 
 const meta: Meta<typeof EmptyState> = {
   title: "Dashboard/EmptyState",
@@ -20,13 +20,13 @@ const meta: Meta<typeof EmptyState> = {
     actionLabel: "Přidat skill",
     hint: "~/zibby/skills/",
   },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof EmptyState>
+type Story = StoryObj<typeof EmptyState>;
 
-export const Default: Story = {}
+export const Default: Story = {};
 
 export const WithoutAction: Story = {
   args: { actionLabel: undefined, hint: undefined },
-}
+};

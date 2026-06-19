@@ -1,31 +1,31 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   type CreateTaskInput,
   type ScheduledTask,
   ScheduledTaskSchema,
   type TaskOutcome,
   type TaskTarget,
-} from "@zibby/contracts"
-import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage"
+} from "@zibby/contracts";
+import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
 
-export const TASKS_DIR = "TASKS_DIR"
+export const TASKS_DIR = "TASKS_DIR";
 
 /** Filename-safe ids (the path-containment guard is applied on top). */
-const TASK_ID_REGEX = /^[a-zA-Z0-9._-]+$/
+const TASK_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 /** Statuses a task can still be cancelled from — it never dispatched (Phase 8). */
-const CANCELLABLE = new Set<ScheduledTask["status"]>(["scheduled", "queued", "held"])
+const CANCELLABLE = new Set<ScheduledTask["status"]>(["scheduled", "queued", "held"]);
 
 export class ScheduledTaskNotFoundError extends Error {
   constructor(public readonly id: string) {
-    super(`Scheduled task "${id}" not found`)
-    this.name = "ScheduledTaskNotFoundError"
+    super(`Scheduled task "${id}" not found`);
+    this.name = "ScheduledTaskNotFoundError";
   }
 }
 export class InvalidScheduledTaskIdError extends Error {
   constructor(public readonly id: string) {
-    super(`Invalid scheduled task id: "${id}"`)
-    this.name = "InvalidScheduledTaskIdError"
+    super(`Invalid scheduled task id: "${id}"`);
+    this.name = "InvalidScheduledTaskIdError";
   }
 }
 
@@ -40,20 +40,20 @@ export class ScheduledTasksStorageService
   extends EntityFileStore<ScheduledTask>
   implements OnModuleInit
 {
-  protected readonly fileExt = ".json"
-  protected readonly idRegex = TASK_ID_REGEX
+  protected readonly fileExt = ".json";
+  protected readonly idRegex = TASK_ID_REGEX;
 
   constructor(@Inject(TASKS_DIR) dir: string) {
-    super(dir)
+    super(dir);
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureDir()
+    await this.ensureDir();
   }
 
   /** A fresh collision-resistant task id (exposed so a run can be born linked). */
   newId(): string {
-    return collisionResistantId("task")
+    return collisionResistantId("task");
   }
 
   /** Persist a fresh `scheduled` task built from the create input. */
@@ -75,9 +75,9 @@ export class ScheduledTasksStorageService
       // Phase 11: a scheduled loop carries its `{ kind: "goal", id }` target so the
       // tick re-dispatches to it instead of re-classifying (goals are never routed).
       ...(input.target ? { target: input.target } : {}),
-    }
-    await this.writeEntity(task)
-    return task
+    };
+    await this.writeEntity(task);
+    return task;
   }
 
   /** Shared base for a pre-dispatch hold (`held` / `queued`): a task with no run yet. */
@@ -98,7 +98,7 @@ export class ScheduledTasksStorageService
       createdAt: new Date(now).toISOString(),
       ...(projectId ? { projectId } : {}),
       ...(input.output ? { output: input.output } : {}),
-    }
+    };
   }
 
   /** Persist a task held over a budget cap (Phase 8.1), carrying the reason. */
@@ -109,9 +109,12 @@ export class ScheduledTasksStorageService
     heldReason: string,
     now: number,
   ): Promise<ScheduledTask> {
-    const task: ScheduledTask = { ...this.parkedTask(id, input, "held", projectId, now), heldReason }
-    await this.writeEntity(task)
-    return task
+    const task: ScheduledTask = {
+      ...this.parkedTask(id, input, "held", projectId, now),
+      heldReason,
+    };
+    await this.writeEntity(task);
+    return task;
   }
 
   /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
@@ -121,9 +124,9 @@ export class ScheduledTasksStorageService
     projectId: string | undefined,
     now: number,
   ): Promise<ScheduledTask> {
-    const task = this.parkedTask(id, input, "queued", projectId, now)
-    await this.writeEntity(task)
-    return task
+    const task = this.parkedTask(id, input, "queued", projectId, now);
+    await this.writeEntity(task);
+    return task;
   }
 
   /**
@@ -150,9 +153,9 @@ export class ScheduledTasksStorageService
       limitDeferrals: 1,
       ...(projectId ? { projectId } : {}),
       ...(input.output ? { output: input.output } : {}),
-    }
-    await this.writeEntity(task)
-    return task
+    };
+    await this.writeEntity(task);
+    return task;
   }
 
   /**
@@ -161,40 +164,40 @@ export class ScheduledTasksStorageService
    * Deferral is cheap (no spawn, no token), so this is unbounded.
    */
   async markDeferredLimit(id: string, resumeAt: number): Promise<ScheduledTask> {
-    const existing = await this.get(id)
+    const existing = await this.get(id);
     const merged: ScheduledTask = {
       ...existing,
       status: "scheduled",
       scheduledAt: resumeAt,
       deferredReason: "limit",
       limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
-    }
-    await this.writeEntity(merged)
-    return merged
+    };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /** Move an existing task to `held` with a reason (the tick fire path). */
   async markHeld(id: string, heldReason: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, status: "held", heldReason }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, status: "held", heldReason };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /** Move an existing task to `queued` (the tick / release-at-capacity paths). */
   async markQueued(id: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, status: "queued" }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, status: "queued" };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /** Stamp the `spend-past-cap` approval onto a held task. */
   async setApproval(id: string, approvalId: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, approvalId }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, approvalId };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /**
@@ -222,9 +225,9 @@ export class ScheduledTasksStorageService
       target,
       ...(projectId ? { projectId } : {}),
       ...(input.output ? { output: input.output } : {}),
-    }
-    await this.writeEntity(task)
-    return task
+    };
+    await this.writeEntity(task);
+    return task;
   }
 
   /**
@@ -236,10 +239,10 @@ export class ScheduledTasksStorageService
     id: string,
     pendingOutput: NonNullable<ScheduledTask["pendingOutput"]>,
   ): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, status: "awaiting-output", pendingOutput }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, status: "awaiting-output", pendingOutput };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /**
@@ -247,11 +250,11 @@ export class ScheduledTasksStorageService
    * and clear `pendingOutput`. The run's outcome is written separately by the caller.
    */
   async resolveOutput(id: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, status: "dispatched" }
-    delete merged.pendingOutput
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, status: "dispatched" };
+    delete merged.pendingOutput;
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /**
@@ -259,32 +262,32 @@ export class ScheduledTasksStorageService
    * first write wins (the fast path and the catch-up sweep may both fire).
    */
   async writeOutcome(id: string, outcome: TaskOutcome): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    if (existing.outcome) return existing
-    const merged: ScheduledTask = { ...existing, outcome }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    if (existing.outcome) return existing;
+    const merged: ScheduledTask = { ...existing, outcome };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /** Stamp a task dispatched: record the chosen target and the started run's ref. */
   async markDispatched(id: string, runRef: string, target: TaskTarget): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    const merged: ScheduledTask = { ...existing, status: "dispatched", runRef, target }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, status: "dispatched", runRef, target };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /** Stamp a task failed with a short reason (kept for the queue's display). */
   async markFailed(id: string, error: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
+    const existing = await this.get(id);
     const merged: ScheduledTask = {
       ...existing,
       status: "failed",
       error,
       attempts: (existing.attempts ?? 0) + 1,
-    }
-    await this.writeEntity(merged)
-    return merged
+    };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /**
@@ -294,29 +297,29 @@ export class ScheduledTasksStorageService
    * attempt cap is reached, so this can never loop unbounded.
    */
   async markRetry(id: string, nextAt: number, error: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
+    const existing = await this.get(id);
     const merged: ScheduledTask = {
       ...existing,
       status: "scheduled",
       scheduledAt: nextAt,
       error,
       attempts: (existing.attempts ?? 0) + 1,
-    }
-    await this.writeEntity(merged)
-    return merged
+    };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /** M8: terminal dead-letter — a transient dispatch failure that exhausted its retries. */
   async markDeadLettered(id: string, error: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
+    const existing = await this.get(id);
     const merged: ScheduledTask = {
       ...existing,
       status: "dead-letter",
       error,
       attempts: (existing.attempts ?? 0) + 1,
-    }
-    await this.writeEntity(merged)
-    return merged
+    };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   /**
@@ -327,36 +330,36 @@ export class ScheduledTasksStorageService
    * truth) — this only flips the record.
    */
   async cancel(id: string): Promise<ScheduledTask> {
-    const existing = await this.get(id)
-    if (!CANCELLABLE.has(existing.status)) return existing
-    const merged: ScheduledTask = { ...existing, status: "cancelled" }
-    await this.writeEntity(merged)
-    return merged
+    const existing = await this.get(id);
+    if (!CANCELLABLE.has(existing.status)) return existing;
+    const merged: ScheduledTask = { ...existing, status: "cancelled" };
+    await this.writeEntity(merged);
+    return merged;
   }
 
   protected idOf(task: ScheduledTask): string {
-    return task.id
+    return task.id;
   }
 
   protected serialize(task: ScheduledTask): string {
-    return JSON.stringify(task)
+    return JSON.stringify(task);
   }
 
   protected tryParse(raw: string): ScheduledTask | null {
-    const parsed = ScheduledTaskSchema.safeParse(safeJson(raw))
-    return parsed.success ? parsed.data : null
+    const parsed = ScheduledTaskSchema.safeParse(safeJson(raw));
+    return parsed.success ? parsed.data : null;
   }
 
   /** Newest first — the queue reads most-recent at the top. */
   protected compare(a: ScheduledTask, b: ScheduledTask): number {
-    return b.createdAt.localeCompare(a.createdAt)
+    return b.createdAt.localeCompare(a.createdAt);
   }
 
   protected notFound(id: string): Error {
-    return new ScheduledTaskNotFoundError(id)
+    return new ScheduledTaskNotFoundError(id);
   }
 
   protected invalidId(id: string): Error {
-    return new InvalidScheduledTaskIdError(id)
+    return new InvalidScheduledTaskIdError(id);
   }
 }

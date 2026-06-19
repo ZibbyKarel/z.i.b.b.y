@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Card, Container, Typography } from "@zibby/design-system"
-import { Collection } from "./Collection"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Card, Container, Typography } from "@zibby/design-system";
+import { Collection } from "./Collection";
 
 const meta: Meta<typeof Collection> = {
   title: "Dashboard/Collection",
@@ -13,10 +13,10 @@ const meta: Meta<typeof Collection> = {
       </Container>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof Collection<string>>
+type Story = StoryObj<typeof Collection<string>>;
 
 const empty = {
   glyph: "spark" as const,
@@ -24,7 +24,7 @@ const empty = {
   description: "Vytvoř svůj první SKILL.md a objeví se tady.",
   actionLabel: "Přidat skill",
   hint: "~/zibby/skills/",
-}
+};
 
 export const Filled: Story = {
   args: {
@@ -40,7 +40,7 @@ export const Filled: Story = {
       </Card>
     ),
   },
-}
+};
 
 export const Empty: Story = {
   args: {
@@ -48,4 +48,4 @@ export const Empty: Story = {
     empty,
     renderItem: (name) => <div key={name}>{name}</div>,
   },
-}
+};

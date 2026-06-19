@@ -9,6 +9,7 @@ API běží jako macOS launchd daemon — automatický start při loginu, automa
 ### Instalace
 
 1. Zkopíruj plist a vyplň strojové hodnoty (označeny `⟨…⟩`):
+
    ```xml
    <key>ProgramArguments</key>
    <array>
@@ -22,6 +23,7 @@ API běží jako macOS launchd daemon — automatický start při loginu, automa
    ```
 
 2. Zkopíruj do LaunchAgents:
+
    ```bash
    cp ops/com.zibby.api.plist ~/Library/LaunchAgents/
    ```
@@ -50,16 +52,16 @@ launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.api.plist
 
 ### Konfigurace v plistu
 
-| Klíč | Hodnota | Popis |
-|------|---------|-------|
-| `RunAtLoad` | `true` | Spustí se automaticky po boostrapping |
-| `KeepAlive` | `true` | Restartuje po crash |
-| `ThrottleInterval` | `10` | 10s backoff mezi restarty |
-| `PORT` | `3333` | API port |
-| `LOG_LEVEL` | `info` | Úroveň logování |
-| `CORS_ORIGIN` | `http://localhost:3000` | Povolená origin |
-| `GOAL_AUTO_RESUME` | `1` | **Phase 13.3** — na restartu démon re-drivuje `running`/`paused-limit` goaly (Phase 12.4 gate). Jen v démonu! |
-| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩` | **Phase 12.7** — worktrees mimo repo/data strom |
+| Klíč                  | Hodnota                 | Popis                                                                                                         |
+| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `RunAtLoad`           | `true`                  | Spustí se automaticky po boostrapping                                                                         |
+| `KeepAlive`           | `true`                  | Restartuje po crash                                                                                           |
+| `ThrottleInterval`    | `10`                    | 10s backoff mezi restarty                                                                                     |
+| `PORT`                | `3333`                  | API port                                                                                                      |
+| `LOG_LEVEL`           | `info`                  | Úroveň logování                                                                                               |
+| `CORS_ORIGIN`         | `http://localhost:3000` | Povolená origin                                                                                               |
+| `GOAL_AUTO_RESUME`    | `1`                     | **Phase 13.3** — na restartu démon re-drivuje `running`/`paused-limit` goaly (Phase 12.4 gate). Jen v démonu! |
+| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩`  | **Phase 12.7** — worktrees mimo repo/data strom                                                               |
 
 ### Goal auto-resume — unattended builder (Phase 13.3)
 
@@ -67,10 +69,10 @@ Instalace tohoto démonu **JE** operátorův explicitní opt-in do bezobslužné
 `GOAL_AUTO_RESUME=1` v plistu je legitimní (jediné místo, kde auto-resume patří — Phase 12.4
 ho jinak gateuje za Tier 3). Sémantika restartu:
 
-| `GOAL_AUTO_RESUME` | Chování po restartu (`reconstruct()`) |
-|--------------------|----------------------------------------|
-| `1` (démon) | rehydratuje registr **a** re-drivuje `running`/`paused-limit` goaly (continuation, ne restart — Phase 9.3/12.4) |
-| unset (attended dev) | rehydratuje registr, ale live goaly zaparkuje `awaiting-resume` — čeká na operátora (Law 3) |
+| `GOAL_AUTO_RESUME`   | Chování po restartu (`reconstruct()`)                                                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `1` (démon)          | rehydratuje registr **a** re-drivuje `running`/`paused-limit` goaly (continuation, ne restart — Phase 9.3/12.4) |
+| unset (attended dev) | rehydratuje registr, ale live goaly zaparkuje `awaiting-resume` — čeká na operátora (Law 3)                     |
 
 **Self-development:** pokud démon má pohánět loop proti **vlastnímu** repu, řiď se
 [`self-development.md`](./self-development.md) — builder ≠ subject (subject = čerstvý sibling
@@ -127,6 +129,7 @@ sudo cp ops/zibby.newsyslog.conf /etc/newsyslog.d/
 ```
 
 Rotuje:
+
 - `~/Library/Logs/zibby/api.out.log`
 - `~/Library/Logs/zibby/api.err.log`
 - `~/Library/Logs/zibby/backup.out.log`
@@ -134,11 +137,13 @@ Rotuje:
 ## Build pro produkci
 
 API build (esbuild/tsc):
+
 ```bash
 pnpm api:start   # spustí zkompilovaný server přímo (bez ts-node-dev)
 ```
 
 Web build:
+
 ```bash
 pnpm web:build   # Next.js production build
 pnpm web:start   # Spuštění production buildu
@@ -152,6 +157,7 @@ launchd garantuje jednu instanci per `Label` na systémové úrovni — label `c
 ## Crash-safety
 
 Restart API je bezpečný díky reconciliation mechanismům:
+
 - `RunnerCore.init()` — orphaned "running" runy → "interrupted"
 - `RunRecorderModule` — re-audit vault po restartu
 - `TaskSchedulerService` bootstrap drain — queued tasks se obnoví

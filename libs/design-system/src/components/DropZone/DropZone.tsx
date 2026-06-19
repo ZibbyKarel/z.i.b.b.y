@@ -54,9 +54,7 @@ export function DropZone({
   });
 
   const iconTone =
-    isDragActive && isDragAccept ? "accent"
-    : isDragActive && isDragReject ? "bad"
-    : "faint";
+    isDragActive && isDragAccept ? "accent" : isDragActive && isDragReject ? "bad" : "faint";
 
   return (
     <div
@@ -77,10 +75,7 @@ export function DropZone({
     >
       <input {...getInputProps()} data-testid={DropZoneTestId.Input} />
       <Icon aria-hidden name="file" size="lg" stroke="thin" tone={iconTone} />
-      <span
-        className="font-mono text-sm text-foreground-faint"
-        data-testid={DropZoneTestId.Hint}
-      >
+      <span className="font-mono text-sm text-foreground-faint" data-testid={DropZoneTestId.Hint}>
         {isDragActive
           ? isDragReject
             ? "Typ souboru není povolen"

@@ -10,11 +10,7 @@ import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { usePipelinesQuery } from "../../pipelines/queries/usePipelinesQuery";
-import {
-  type LoopFormState,
-  type VerifierKind,
-  encodeMaker,
-} from "../loop";
+import { type LoopFormState, type VerifierKind, encodeMaker } from "../loop";
 
 export interface LoopComposerProps {
   state: LoopFormState;
@@ -42,11 +38,7 @@ export function LoopComposer({ state, onChange }: LoopComposerProps) {
       label: p.name,
       code: t("loop.makerKind.pipeline"),
     }));
-    return [
-      { value: "", label: t("loop.maker.placeholder") },
-      ...agentOpts,
-      ...pipelineOpts,
-    ];
+    return [{ value: "", label: t("loop.maker.placeholder") }, ...agentOpts, ...pipelineOpts];
   }, [agents, pipelines, t]);
 
   const reviewerOptions = useMemo(
@@ -87,9 +79,7 @@ export function LoopComposer({ state, onChange }: LoopComposerProps) {
       <SegmentPickerField
         hint={t("loop.verifier.hint")}
         label={t("loop.verifier.label")}
-        onValueChange={(value) =>
-          onChange({ verifierKind: value as VerifierKind })
-        }
+        onValueChange={(value) => onChange({ verifierKind: value as VerifierKind })}
         options={verifierOptions}
         value={state.verifierKind}
       />

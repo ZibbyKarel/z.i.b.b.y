@@ -1,20 +1,20 @@
-import { describe, expect, it } from "vitest"
-import { AutomationSchema, automationsContract } from "../index"
+import { describe, expect, it } from "vitest";
+import { AutomationSchema, automationsContract } from "../index";
 
 describe("automationsContract", () => {
   it("exposes CRUD + trigger under /api/automations", () => {
-    expect(automationsContract.createAutomation.path).toBe("/api/automations")
-    expect(automationsContract.triggerAutomation.path).toBe("/api/automations/:id/trigger")
-    expect(automationsContract.updateAutomation.method).toBe("PATCH")
-  })
+    expect(automationsContract.createAutomation.path).toBe("/api/automations");
+    expect(automationsContract.triggerAutomation.path).toBe("/api/automations/:id/trigger");
+    expect(automationsContract.updateAutomation.method).toBe("PATCH");
+  });
 
   it("exposes a search route declared before the `:id` route", () => {
-    expect(automationsContract.searchAutomations.method).toBe("GET")
-    expect(automationsContract.searchAutomations.path).toBe("/api/automations/search")
-    const keys = Object.keys(automationsContract)
-    expect(keys.indexOf("searchAutomations")).toBeLessThan(keys.indexOf("getAutomation"))
-  })
-})
+    expect(automationsContract.searchAutomations.method).toBe("GET");
+    expect(automationsContract.searchAutomations.path).toBe("/api/automations/search");
+    const keys = Object.keys(automationsContract);
+    expect(keys.indexOf("searchAutomations")).toBeLessThan(keys.indexOf("getAutomation"));
+  });
+});
 
 describe("automation schema", () => {
   it("accepts a cron→pipeline and an event→agent automation", () => {
@@ -25,7 +25,7 @@ describe("automation schema", () => {
         target: { type: "pipeline", pipelineId: "release" },
         enabled: true,
       }).success,
-    ).toBe(true)
+    ).toBe(true);
     expect(
       AutomationSchema.safeParse({
         id: "on-push",
@@ -33,8 +33,8 @@ describe("automation schema", () => {
         target: { type: "agent", agentId: "reviewer", prompt: "review it" },
         enabled: false,
       }).success,
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
 
   it("accepts a briefing target (no agent/pipeline picker)", () => {
     expect(
@@ -44,8 +44,8 @@ describe("automation schema", () => {
         target: { type: "briefing" },
         enabled: true,
       }).success,
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
 
   it("rejects an unknown trigger or target type", () => {
     expect(
@@ -55,6 +55,6 @@ describe("automation schema", () => {
         target: { type: "agent", agentId: "a" },
         enabled: true,
       }).success,
-    ).toBe(false)
-  })
-})
+    ).toBe(false);
+  });
+});

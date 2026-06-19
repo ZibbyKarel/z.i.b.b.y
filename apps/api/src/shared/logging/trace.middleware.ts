@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto"
-import type { NextFunction, Request, Response } from "express"
-import type { TraceContextService } from "./trace-context.service"
+import { randomUUID } from "node:crypto";
+import type { NextFunction, Request, Response } from "express";
+import type { TraceContextService } from "./trace-context.service";
 
 /** Request/response header carrying the correlation id across the boundary. */
-export const TRACE_HEADER = "x-trace-id"
+export const TRACE_HEADER = "x-trace-id";
 
 /**
  * The first thing that runs on every request: assign (or adopt) a trace id and
@@ -20,10 +20,10 @@ export const TRACE_HEADER = "x-trace-id"
  */
 export function createTraceMiddleware(trace: TraceContextService) {
   return function traceMiddleware(req: Request, res: Response, next: NextFunction): void {
-    const incoming = req.headers[TRACE_HEADER]
-    const provided = (Array.isArray(incoming) ? incoming[0] : incoming)?.trim()
-    const traceId = provided && provided.length > 0 ? provided : randomUUID()
-    res.setHeader(TRACE_HEADER, traceId)
-    trace.run({ traceId }, () => next())
-  }
+    const incoming = req.headers[TRACE_HEADER];
+    const provided = (Array.isArray(incoming) ? incoming[0] : incoming)?.trim();
+    const traceId = provided && provided.length > 0 ? provided : randomUUID();
+    res.setHeader(TRACE_HEADER, traceId);
+    trace.run({ traceId }, () => next());
+  };
 }

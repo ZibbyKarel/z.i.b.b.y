@@ -14,14 +14,8 @@ describe("AddCommandModal", () => {
     render(<AddCommandModal onClose={vi.fn()} onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByRole("textbox", { name: /identifikátor/i }), "orchestrate");
-    await userEvent.type(
-      screen.getByRole("textbox", { name: /tools/i }),
-      "Read, Bash",
-    );
-    await userEvent.type(
-      screen.getByRole("textbox", { name: /instrukce/i }),
-      "Do $ARGUMENTS",
-    );
+    await userEvent.type(screen.getByRole("textbox", { name: /tools/i }), "Read, Bash");
+    await userEvent.type(screen.getByRole("textbox", { name: /instrukce/i }), "Do $ARGUMENTS");
     await userEvent.click(screen.getByRole("button", { name: /vytvořit/i }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ButtonGroup,
-  Container,
-  Grid,
-  Icon,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { ButtonGroup, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -66,8 +59,7 @@ export function Screen() {
   const deletePipeline = useDeletePipelineRunMutation();
   const cancelTask = useCancelScheduledTaskMutation();
 
-  const list =
-    filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  const list = filter === "all" ? runs : runs.filter((r) => r.status === filter);
   // Keep the detail in sync with the filtered list: a selection only counts when
   // it's actually visible, and we fall back to the first row of the *current*
   // filter — never to runs[0], which would show an out-of-filter run's detail.
@@ -83,9 +75,7 @@ export function Screen() {
   const timeLabel = (r: RunView) => {
     const inMin = Math.floor((Date.parse(r.startedAt) - now) / 60000);
     if (r.status === "scheduled" && inMin >= 1) {
-      return inMin < 60
-        ? t("inM", { n: inMin })
-        : t("inH", { n: Math.floor(inMin / 60) });
+      return inMin < 60 ? t("inM", { n: inMin }) : t("inH", { n: Math.floor(inMin / 60) });
     }
     return relative(r.startedAt, now, ago);
   };
@@ -101,8 +91,7 @@ export function Screen() {
     else if (kind === "scheduled") cancelTask.mutate({ params: { id: runId } });
   };
 
-  const deleting =
-    deleteAgent.isPending || deletePipeline.isPending || cancelTask.isPending;
+  const deleting = deleteAgent.isPending || deletePipeline.isPending || cancelTask.isPending;
 
   const running = count("running");
   const awaiting = count("awaiting-approval");
@@ -128,11 +117,7 @@ export function Screen() {
         />
 
         {runs.length === 0 ? (
-          <EmptyState
-            description={t("emptyDesc")}
-            glyph="pulse"
-            title={t("emptyTitle")}
-          />
+          <EmptyState description={t("emptyDesc")} glyph="pulse" title={t("emptyTitle")} />
         ) : (
           <Grid align="start" gap="300" sidebar="left">
             <Stack gap="100">
@@ -189,11 +174,7 @@ export function Screen() {
 }
 
 // Local relative-time wrapper (keeps the `ago` resolver close to its labels).
-function relative(
-  iso: string,
-  now: number,
-  ago: (n: number, unit: string) => string,
-): string {
+function relative(iso: string, now: number, ago: (n: number, unit: string) => string): string {
   const min = Math.floor(Math.max(0, now - Date.parse(iso)) / 60000);
   if (min < 1) return ago(0, "m");
   if (min < 60) return ago(min, "m");

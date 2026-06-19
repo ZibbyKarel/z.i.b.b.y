@@ -1,13 +1,13 @@
 /** The pieces a resumed/retried phase's resume-context block is assembled from. */
 export interface ResumeContextInput {
   /** The current `PROGRESS.md` body (what is done / in progress / next). */
-  progressMd?: string
+  progressMd?: string;
   /** `git log --oneline <baseRef>..HEAD` on the run branch (the committed checkpoints). */
-  checkpointLog?: string
+  checkpointLog?: string;
   /** An operator note (resume-with-note, 2.3) to carry into the retried phase. */
-  note?: string
+  note?: string;
   /** The failing stage's log tail (loop back-edge, 2.x) — what went wrong last time. */
-  failureTail?: string
+  failureTail?: string;
 }
 
 /**
@@ -22,12 +22,12 @@ export interface ResumeContextInput {
  * run carries no spurious block.
  */
 export function buildResumeContext(input: ResumeContextInput): string {
-  const progress = input.progressMd?.trim()
-  const log = input.checkpointLog?.trim()
-  const note = input.note?.trim()
-  const failure = input.failureTail?.trim()
+  const progress = input.progressMd?.trim();
+  const log = input.checkpointLog?.trim();
+  const note = input.note?.trim();
+  const failure = input.failureTail?.trim();
 
-  if (!progress && !log && !note && !failure) return ""
+  if (!progress && !log && !note && !failure) return "";
 
   const lines: string[] = [
     "## Resume context — continuation, not restart",
@@ -35,20 +35,20 @@ export function buildResumeContext(input: ResumeContextInput): string {
     "You are resuming work already in progress. Do NOT re-implement completed items or",
     "re-do committed work — continue from where it left off.",
     "",
-  ]
+  ];
 
   if (log) {
-    lines.push("### Already committed (checkpoints on this branch)", "", "```", log, "```", "")
+    lines.push("### Already committed (checkpoints on this branch)", "", "```", log, "```", "");
   }
   if (progress) {
-    lines.push("### Progress so far", "", progress.trimEnd(), "")
+    lines.push("### Progress so far", "", progress.trimEnd(), "");
   }
   if (note) {
-    lines.push("### Operator note for this attempt", "", note, "")
+    lines.push("### Operator note for this attempt", "", note, "");
   }
   if (failure) {
-    lines.push("### What failed last attempt", "", "```", failure, "```", "")
+    lines.push("### What failed last attempt", "", "```", failure, "```", "");
   }
 
-  return lines.join("\n").trimEnd()
+  return lines.join("\n").trimEnd();
 }

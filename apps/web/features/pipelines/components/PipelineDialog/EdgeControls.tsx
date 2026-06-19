@@ -85,7 +85,8 @@ export interface ReworkControlProps {
   onDelete: () => void;
 }
 
-const STEP = "grid size-[15px] place-items-center rounded-sm border border-border bg-transparent font-mono text-[11px] leading-none text-foreground-dim hover:text-foreground";
+const STEP =
+  "grid size-[15px] place-items-center rounded-sm border border-border bg-transparent font-mono text-[11px] leading-none text-foreground-dim hover:text-foreground";
 
 /** Max-retries stepper + escalate-effort toggle floating on a rework arc. */
 export function ReworkControl({
@@ -114,7 +115,13 @@ export function ReworkControl({
           >
             −
           </button>
-          <Typography mono size="xs" style={{ width: 14, textAlign: "center" }} type="note" weight="bold">
+          <Typography
+            mono
+            size="xs"
+            style={{ width: 14, textAlign: "center" }}
+            type="note"
+            weight="bold"
+          >
             {maxRetries}
           </Typography>
           <button

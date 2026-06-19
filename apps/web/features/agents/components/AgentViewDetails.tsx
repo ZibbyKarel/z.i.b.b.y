@@ -1,15 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  Card,
-  CodeBlock,
-  Container,
-  Icon,
-  Stack,
-  Tag,
-  Typography,
-} from "@zibby/design-system";
+import { Card, CodeBlock, Container, Icon, Stack, Tag, Typography } from "@zibby/design-system";
 import type { Agent } from "@zibby/contracts";
 import type { Pipeline } from "../../../domain";
 import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/RuntimeBadges";

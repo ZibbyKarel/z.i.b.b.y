@@ -10,7 +10,9 @@ const setMandate = vi.fn();
 
 vi.mock("../queries", () => ({ useMandateQuery: () => ({ data: mandate }) }));
 vi.mock("../mutations", () => ({ useSetMandateMutation: () => ({ mutate: setMandate }) }));
-vi.mock("../../integrations/queries", () => ({ useIntegrationsQuery: () => ({ data: integrations }) }));
+vi.mock("../../integrations/queries", () => ({
+  useIntegrationsQuery: () => ({ data: integrations }),
+}));
 
 const slack: Integration = {
   id: "team",
@@ -51,6 +53,9 @@ describe("MandateSection", () => {
     integrations = [slack];
     mandate = { defaults: { dispatch: true, reply: false }, channels: { team: { reply: true } } };
     render(<MandateSection />);
-    expect(screen.getByTestId("settings-mandate-team-reply")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("settings-mandate-team-reply")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 });

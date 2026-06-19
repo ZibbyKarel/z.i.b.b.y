@@ -9,6 +9,7 @@
 ## Co obsahuje
 
 Každá doména má vlastní složku s:
+
 - `<domain>.schema.ts` — Zod schémata + TypeScript typy (odvozené přes `z.infer`)
 - `<domain>.contract.ts` — ts-rest router s HTTP metodami, endpointy, body/query/response typy
 
@@ -16,48 +17,46 @@ Všechny exporty re-exportovány z `libs/contracts/src/index.ts`.
 
 ## Domény
 
-| Složka | Klíčové schéma | Contract |
-|--------|----------------|---------|
-| `agents/` | `AgentSchema`, `AgentRunSchema` | CRUD + runy agentů |
-| `skills/` | `SkillSchema` | CRUD skills |
-| `categories/` | `CategorySchema` | Kategorie agentů a skills |
-| `pipelines/` | `PipelineSchema`, `PipelineRunSchema` | CRUD + runy pipelines |
-| `approvals/` | `ApprovalSchema` | Schválení |
-| `gates/` | `GateRuleSchema`, `MatchConditionSchema`, `ResolveSchema` | Gate pravidla |
-| `memory/` | `NoteSchema`, `IndexEntrySchema`, `MemoryGraphSchema` | Vault operace |
-| `activity/` | `ActivityEntrySchema`, `ActivityKindSchema`, `ActivityRefsSchema` | Audit log |
-| `automations/` | `AutomationSchema` | Plánované automatizace |
-| `projects/` | `ProjectSchema` | Projekty |
-| `tasks/` | `ScheduledTaskSchema`, `TaskRoutingSchema` | Deferred tasks |
-| `integrations/` | `IntegrationSchema` | Kanálové integrace |
-| `channels/` | `ChannelItemSchema` | Příchozí položky z kanálů |
-| `mandate/` | `MandateSchema` | Scope autonomie |
-| `health/` | `HealthStatusSchema` | Zdravotní stav systému |
-| `limits/` | `LimitsSchema` | Budget a limity |
-| `budget/` | `BudgetSchema` | Výdajový ledger |
-| `briefing/` | `BriefingItemSchema` | Briefing |
-| `gate-rules/` | `GlobalGateRuleSchema` | Globální katalog pravidel |
+| Složka          | Klíčové schéma                                                    | Contract                  |
+| --------------- | ----------------------------------------------------------------- | ------------------------- |
+| `agents/`       | `AgentSchema`, `AgentRunSchema`                                   | CRUD + runy agentů        |
+| `skills/`       | `SkillSchema`                                                     | CRUD skills               |
+| `categories/`   | `CategorySchema`                                                  | Kategorie agentů a skills |
+| `pipelines/`    | `PipelineSchema`, `PipelineRunSchema`                             | CRUD + runy pipelines     |
+| `approvals/`    | `ApprovalSchema`                                                  | Schválení                 |
+| `gates/`        | `GateRuleSchema`, `MatchConditionSchema`, `ResolveSchema`         | Gate pravidla             |
+| `memory/`       | `NoteSchema`, `IndexEntrySchema`, `MemoryGraphSchema`             | Vault operace             |
+| `activity/`     | `ActivityEntrySchema`, `ActivityKindSchema`, `ActivityRefsSchema` | Audit log                 |
+| `automations/`  | `AutomationSchema`                                                | Plánované automatizace    |
+| `projects/`     | `ProjectSchema`                                                   | Projekty                  |
+| `tasks/`        | `ScheduledTaskSchema`, `TaskRoutingSchema`                        | Deferred tasks            |
+| `integrations/` | `IntegrationSchema`                                               | Kanálové integrace        |
+| `channels/`     | `ChannelItemSchema`                                               | Příchozí položky z kanálů |
+| `mandate/`      | `MandateSchema`                                                   | Scope autonomie           |
+| `health/`       | `HealthStatusSchema`                                              | Zdravotní stav systému    |
+| `limits/`       | `LimitsSchema`                                                    | Budget a limity           |
+| `budget/`       | `BudgetSchema`                                                    | Výdajový ledger           |
+| `briefing/`     | `BriefingItemSchema`                                              | Briefing                  |
+| `gate-rules/`   | `GlobalGateRuleSchema`                                            | Globální katalog pravidel |
 
 ## Sdílené schéma (common.schema.ts)
 
 ```typescript
 // Odpověď při chybě
-const ErrorSchema = z.object({ message: z.string() })
+const ErrorSchema = z.object({ message: z.string() });
 
 // Sdílený lifecycle runů
-const RunStatusSchema = z.enum([
-  "running", "done", "error", "interrupted", "awaiting-approval"
-])
+const RunStatusSchema = z.enum(["running", "done", "error", "interrupted", "awaiting-approval"]);
 
 // Risk hint (display-only)
-const RiskSchema = z.enum(["low", "medium", "high"])
+const RiskSchema = z.enum(["low", "medium", "high"]);
 
 // Git worktree
 const WorkspaceSchema = z.object({
   branch: z.string(),
   path: z.string(),
   baseRef: z.string(),
-})
+});
 ```
 
 ## Jak funguje ts-rest
@@ -66,11 +65,11 @@ const WorkspaceSchema = z.object({
 
 ```typescript
 // libs/contracts/src/agents/agents.contract.ts
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { AgentSchema, CreateAgentInputSchema } from "./agent.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { AgentSchema, CreateAgentInputSchema } from "./agent.schema";
 
-const c = initContract()
+const c = initContract();
 
 export const agentsContract = c.router({
   list: {
@@ -88,7 +87,7 @@ export const agentsContract = c.router({
     },
   },
   // ...
-})
+});
 ```
 
 ### Implementace na serveru (apps/api)
@@ -103,14 +102,14 @@ export class AgentsController {
   async handler() {
     return tsRestHandler(agentsContract, {
       list: async () => {
-        const agents = await this.service.list()
-        return { status: 200 as const, body: agents }
+        const agents = await this.service.list();
+        return { status: 200 as const, body: agents };
       },
       create: async ({ body }) => {
-        const agent = await this.service.create(body)
-        return { status: 201 as const, body: agent }
+        const agent = await this.service.create(body);
+        return { status: 201 as const, body: agent };
       },
-    })
+    });
   }
 }
 ```
@@ -119,20 +118,16 @@ export class AgentsController {
 
 ```typescript
 // apps/web/state/api.ts
-import { initQueryClient } from "@ts-rest/react-query"
-import { agentsContract } from "@zibby/contracts"
+import { initQueryClient } from "@ts-rest/react-query";
+import { agentsContract } from "@zibby/contracts";
 
 export const apiClient = initQueryClient(appContract, {
   baseUrl: "http://localhost:3333",
   baseHeaders: {},
-})
+});
 
 // V hooku:
-const { data } = apiClient.agents.list.useQuery(
-  ["agents"],
-  {},
-  { select: selectApiResponseBody }
-)
+const { data } = apiClient.agents.list.useQuery(["agents"], {}, { select: selectApiResponseBody });
 ```
 
 ## Validace
@@ -146,13 +141,13 @@ const { data } = apiClient.agents.list.useQuery(
 
 ```typescript
 // Agent, pipeline, skill id
-const AGENT_ID_REGEX = /^[a-zA-Z0-9._-]+$/
+const AGENT_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 // Note id (vault)
-const NoteIdSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,119}$/)
+const NoteIdSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,119}$/);
 
 // Gate rule id
-const GateRuleIdSchema = z.string().regex(/^[a-zA-Z0-9._-]+$/)
+const GateRuleIdSchema = z.string().regex(/^[a-zA-Z0-9._-]+$/);
 ```
 
 Filesystem-safe identifikátory — žádné path separátory, žádné `..`.
@@ -164,13 +159,13 @@ Kompozitní router který slučuje všechny dílčí contracts:
 ```typescript
 export const appContract = initContract().router({
   agents: agentsContract,
-  agentRuns: agentRunsContract,   // už jen GET /agents/running (katalogová živost)
+  agentRuns: agentRunsContract, // už jen GET /agents/running (katalogová živost)
   skills: skillsContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract, // už jen GET /pipelines/runs (katalogová živost)
-  taskRuns: taskRunsContract,     // jednotný run povrch: /api/tasks/runs/*
+  taskRuns: taskRunsContract, // jednotný run povrch: /api/tasks/runs/*
   // ... všechny ostatní (žádný goalRunsContract — goal běhy žijí na taskRuns)
-})
+});
 ```
 
 Používá se pro generování OpenAPI dokumentace v `main.ts`.

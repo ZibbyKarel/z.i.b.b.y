@@ -1,13 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { NavItem } from "./List";
-import {
-  List,
-  ListItem,
-  ListItemBadge,
-  ListItemIcon,
-  ListItemText,
-} from "./List";
+import { List, ListItem, ListItemBadge, ListItemIcon, ListItemText } from "./List";
 
 const navItems: NavItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },
@@ -49,11 +43,7 @@ export const Overview: Story = {
       <div className="flex min-h-0 flex-1 flex-col">
         <List>
           {navItems.map((item) => (
-            <ListItem
-              active={item.id === active}
-              key={item.id}
-              onSelect={() => setActive(item.id)}
-            >
+            <ListItem active={item.id === active} key={item.id} onSelect={() => setActive(item.id)}>
               <ListItemIcon glyph={item.glyph} />
               <ListItemText>{item.label}</ListItemText>
               {item.badge ? <ListItemBadge>{item.badge}</ListItemBadge> : null}
@@ -61,10 +51,7 @@ export const Overview: Story = {
           ))}
         </List>
         <div className="mt-auto border-t border-border pt-3">
-          <ListItem
-            active={settingsItem.id === active}
-            onSelect={() => setActive(settingsItem.id)}
-          >
+          <ListItem active={settingsItem.id === active} onSelect={() => setActive(settingsItem.id)}>
             <ListItemIcon glyph={settingsItem.glyph} />
             <ListItemText>{settingsItem.label}</ListItemText>
           </ListItem>
@@ -80,11 +67,7 @@ export const Playground: Story = {
     return (
       <List>
         {navItems.slice(0, 4).map((item) => (
-          <ListItem
-            active={item.id === active}
-            key={item.id}
-            onSelect={() => setActive(item.id)}
-          >
+          <ListItem active={item.id === active} key={item.id} onSelect={() => setActive(item.id)}>
             <ListItemIcon glyph={item.glyph} />
             <ListItemText>{item.label}</ListItemText>
           </ListItem>

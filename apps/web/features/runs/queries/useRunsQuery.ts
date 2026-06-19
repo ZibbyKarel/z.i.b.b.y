@@ -58,7 +58,9 @@ export function useRunsQuery(): { runs: RunView[] } {
   const qc = useQueryClient();
   const awaitingRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const awaiting = new Set(runs.filter((r) => r.status === "awaiting-approval").map((r) => r.runId));
+    const awaiting = new Set(
+      runs.filter((r) => r.status === "awaiting-approval").map((r) => r.runId),
+    );
     const entered = [...awaiting].some((id) => !awaitingRef.current.has(id));
     awaitingRef.current = awaiting;
     if (entered) void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });

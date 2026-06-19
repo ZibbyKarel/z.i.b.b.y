@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Dropdown, Stack, Typography } from "@zibby/design-system";
 import { type SpeechLang, useSpeech } from "../../voice/hooks/useSpeech";
-import {
-  getPreferredVoiceURI,
-  setPreferredVoiceURI,
-} from "../../voice/voicePreference";
+import { getPreferredVoiceURI, setPreferredVoiceURI } from "../../voice/voicePreference";
 
 export interface VoiceVoiceSettingProps {
   /** Locale tag used by the "test" sample utterance. */
@@ -45,12 +42,7 @@ export function VoiceVoiceSetting({ lang }: VoiceVoiceSettingProps) {
 
   return (
     <Stack align="center" direction="row" gap="100">
-      <Dropdown
-        aria-label={t("voiceVoice")}
-        onChange={onChange}
-        options={options}
-        value={value}
-      />
+      <Dropdown aria-label={t("voiceVoice")} onChange={onChange} options={options} value={value} />
       <Button
         icon="play"
         intent="ghost"

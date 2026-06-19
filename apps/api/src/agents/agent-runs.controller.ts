@@ -1,7 +1,7 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { agentRunsContract } from "@zibby/contracts"
-import { AgentRunnerService } from "./agent-runner.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { agentRunsContract } from "@zibby/contracts";
+import { AgentRunnerService } from "./agent-runner.service";
 
 /**
  * Implements the trimmed `agentRunsContract` against the {@link AgentRunnerService}.
@@ -17,6 +17,6 @@ export class AgentRunsController {
   handler() {
     return tsRestHandler(agentRunsContract, {
       listRunning: async () => ({ status: 200, body: this.runner.listRunning() }),
-    })
+    });
   }
 }

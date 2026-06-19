@@ -1,9 +1,9 @@
-import type { Project } from "@zibby/contracts"
+import type { Project } from "@zibby/contracts";
 
 /** The text/paths a task carries that attribution keys on. */
 export interface MatchProjectInput {
-  text?: string
-  paths?: string[]
+  text?: string;
+  paths?: string[];
 }
 
 /**
@@ -22,65 +22,61 @@ export interface MatchProjectInput {
  * project gains nothing but its own grouping.
  */
 export function matchProject(projects: Project[], input: MatchProjectInput): Project | null {
-  return matchByPath(projects, input.paths) ?? matchByText(projects, input.text) ?? null
+  return matchByPath(projects, input.paths) ?? matchByText(projects, input.text) ?? null;
 }
 
 /** Longest project `path` that contains one of the given file paths. */
 function matchByPath(projects: Project[], paths?: string[]): Project | null {
-  if (!paths || paths.length === 0) return null
-  let best: Project | null = null
-  let bestLen = -1
+  if (!paths || paths.length === 0) return null;
+  let best: Project | null = null;
+  let bestLen = -1;
   for (const project of projects) {
-    const base = normalizePath(project.path)
-    if (base.length === 0) continue
+    const base = normalizePath(project.path);
+    if (base.length === 0) continue;
     for (const raw of paths) {
-      const candidate = normalizePath(raw)
+      const candidate = normalizePath(raw);
       if (isUnder(candidate, base) && base.length > bestLen) {
-        best = project
-        bestLen = base.length
+        best = project;
+        bestLen = base.length;
       }
     }
   }
-  return best
+  return best;
 }
 
 /** Whole-word match of a project id or name in the text; longest name wins ties. */
 function matchByText(projects: Project[], text?: string): Project | null {
-  if (!text || text.trim().length === 0) return null
-  const haystack = fold(text)
-  let best: Project | null = null
-  let bestLen = -1
+  if (!text || text.trim().length === 0) return null;
+  const haystack = fold(text);
+  let best: Project | null = null;
+  let bestLen = -1;
   for (const project of projects) {
     for (const needle of [project.name, project.id]) {
-      const folded = fold(needle)
-      if (folded.length === 0) continue
+      const folded = fold(needle);
+      if (folded.length === 0) continue;
       if (containsWord(haystack, folded) && folded.length > bestLen) {
-        best = project
-        bestLen = folded.length
+        best = project;
+        bestLen = folded.length;
       }
     }
   }
-  return best
+  return best;
 }
 
 /** Normalize a path for prefix comparison: trim, strip a trailing slash. */
 function normalizePath(p: string): string {
-  const trimmed = p.trim().replace(/\/+$/, "")
-  return trimmed
+  const trimmed = p.trim().replace(/\/+$/, "");
+  return trimmed;
 }
 
 /** True when `candidate` equals `base` or sits below it on a path-segment boundary. */
 function isUnder(candidate: string, base: string): boolean {
-  return candidate === base || candidate.startsWith(`${base}/`)
+  return candidate === base || candidate.startsWith(`${base}/`);
 }
 
 /** Lowercase + strip diacritics so "Síť" matches "sit" (Czech names vs ASCII text). */
 function fold(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim()
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
 
 /**
@@ -89,17 +85,17 @@ function fold(s: string): string {
  * (or a string edge) is a boundary. Both args are already folded.
  */
 function containsWord(haystack: string, needle: string): boolean {
-  let from = 0
+  let from = 0;
   for (;;) {
-    const at = haystack.indexOf(needle, from)
-    if (at === -1) return false
-    const before = at === 0 ? "" : haystack[at - 1]!
-    const after = at + needle.length >= haystack.length ? "" : haystack[at + needle.length]!
-    if (!isWordChar(before) && !isWordChar(after)) return true
-    from = at + 1
+    const at = haystack.indexOf(needle, from);
+    if (at === -1) return false;
+    const before = at === 0 ? "" : haystack[at - 1]!;
+    const after = at + needle.length >= haystack.length ? "" : haystack[at + needle.length]!;
+    if (!isWordChar(before) && !isWordChar(after)) return true;
+    from = at + 1;
   }
 }
 
 function isWordChar(ch: string): boolean {
-  return ch.length > 0 && /[a-z0-9_-]/.test(ch)
+  return ch.length > 0 && /[a-z0-9_-]/.test(ch);
 }

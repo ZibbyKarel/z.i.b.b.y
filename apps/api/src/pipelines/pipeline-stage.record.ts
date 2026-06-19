@@ -1,5 +1,5 @@
-import { z } from "zod"
-import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types"
+import { z } from "zod";
+import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types";
 
 /**
  * On-disk / in-memory record for a single pipeline stage's child process. Carries
@@ -25,9 +25,9 @@ export const PipelineStageRecordSchema = z.object({
   pipelineRunId: z.string(),
   phaseId: z.string(),
   attempt: z.number().int().min(1),
-})
+});
 
-export type PipelineStageRecord = z.infer<typeof PipelineStageRecordSchema> & BaseRun
+export type PipelineStageRecord = z.infer<typeof PipelineStageRecordSchema> & BaseRun;
 
 /** The strategy that teaches {@link RunnerCore} how to handle the `pipeline-stage` kind. */
 export const pipelineStageStrategy: KindStrategy<PipelineStageRecord> = {
@@ -39,6 +39,6 @@ export const pipelineStageStrategy: KindStrategy<PipelineStageRecord> = {
       pipelineRunId: String(spec.extra.pipelineRunId ?? ""),
       phaseId: String(spec.extra.phaseId ?? ""),
       attempt: Number(spec.extra.attempt ?? 1),
-    }
+    };
   },
-}
+};

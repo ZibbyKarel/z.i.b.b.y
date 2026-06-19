@@ -1,7 +1,7 @@
-import { initContract } from "@ts-rest/core"
-import { LimitsSchema } from "./limits.schema"
+import { initContract } from "@ts-rest/core";
+import { LimitsSchema } from "./limits.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Limits contract. A cross-cutting operational concern (like `health`), kept out
@@ -26,6 +26,6 @@ export const limitsContract = c.router(
     pathPrefix: "/api",
     strictStatusCodes: true,
   },
-)
+);
 
-export type LimitsContract = typeof limitsContract
+export type LimitsContract = typeof limitsContract;

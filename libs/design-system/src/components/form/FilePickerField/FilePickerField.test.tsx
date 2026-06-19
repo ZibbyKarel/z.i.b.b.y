@@ -7,16 +7,12 @@ import { FilePickerField, FilePickerFieldTestId } from "./FilePickerField";
 describe("FilePickerField", () => {
   it("associates the label with the input", () => {
     render(<FilePickerField label="Nahrát soubor" />);
-    expect(screen.getByTestId(FilePickerFieldTestId.Input)).toHaveAccessibleName(
-      "Nahrát soubor",
-    );
+    expect(screen.getByTestId(FilePickerFieldTestId.Input)).toHaveAccessibleName("Nahrát soubor");
   });
 
   it("renders the placeholder when no file is selected", () => {
     render(<FilePickerField label="Soubor" placeholder="Žádný soubor" />);
-    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent(
-      "Žádný soubor",
-    );
+    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent("Žádný soubor");
   });
 
   it("shows the filename after a file is selected", () => {
@@ -29,9 +25,7 @@ describe("FilePickerField", () => {
     });
     fireEvent.change(input);
 
-    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent(
-      "report.pdf",
-    );
+    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent("report.pdf");
   });
 
   it("shows a count when multiple files are selected", () => {
@@ -39,11 +33,7 @@ describe("FilePickerField", () => {
     const input = screen.getByTestId(FilePickerFieldTestId.Input);
 
     Object.defineProperty(input, "files", {
-      value: [
-        new File([""], "a.txt"),
-        new File([""], "b.txt"),
-        new File([""], "c.txt"),
-      ],
+      value: [new File([""], "a.txt"), new File([""], "b.txt"), new File([""], "c.txt")],
       configurable: true,
     });
     fireEvent.change(input);
@@ -70,18 +60,12 @@ describe("FilePickerField", () => {
   it("renders an error and marks the input invalid", () => {
     render(<FilePickerField error="Povinné pole" label="Soubor" />);
     expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Povinné pole");
-    expect(screen.getByTestId(FilePickerFieldTestId.Input)).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
+    expect(screen.getByTestId(FilePickerFieldTestId.Input)).toHaveAttribute("aria-invalid", "true");
   });
 
   it("the trigger button is type=button", () => {
     render(<FilePickerField label="Soubor" />);
-    expect(screen.getByTestId(FilePickerFieldTestId.Trigger)).toHaveAttribute(
-      "type",
-      "button",
-    );
+    expect(screen.getByTestId(FilePickerFieldTestId.Trigger)).toHaveAttribute("type", "button");
   });
 
   it("the trigger button is keyboard accessible", async () => {
@@ -102,9 +86,7 @@ describe("FilePickerField", () => {
     Object.defineProperty(input, "files", { value: [a, b], configurable: true });
     fireEvent.change(input);
 
-    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent(
-      "my-project",
-    );
+    expect(screen.getByTestId(FilePickerFieldTestId.Display)).toHaveTextContent("my-project");
   });
 
   it("sets webkitdirectory attribute when directory prop is true", () => {

@@ -11,11 +11,11 @@ the morning briefing still accounts for everything.
 
 ## Components
 
-| Process | What | How |
-| --- | --- | --- |
-| **API** | The butler — runs, scheduler, channels, briefing | `pnpm api:start` (`ts-node src/main.ts`), launchd `com.zibby.api` |
-| Web (optional) | The dashboard view | `pnpm web:build` → `pnpm web:start`, optional own plist |
-| Backup | Vault git commit + data rsync | `apps/api/scripts/backup.sh`, launchd `com.zibby.backup` |
+| Process        | What                                             | How                                                               |
+| -------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
+| **API**        | The butler — runs, scheduler, channels, briefing | `pnpm api:start` (`ts-node src/main.ts`), launchd `com.zibby.api` |
+| Web (optional) | The dashboard view                               | `pnpm web:build` → `pnpm web:start`, optional own plist           |
+| Backup         | Vault git commit + data rsync                    | `apps/api/scripts/backup.sh`, launchd `com.zibby.backup`          |
 
 There is **no build step** for the API — it runs from source via `ts-node`.
 
@@ -70,18 +70,18 @@ double-starts a label, which is also the **one-instance-per-data-root** guarante
 
 Set in the plist's `EnvironmentVariables` (or a `.env` the API loads).
 
-| Var | Default | Purpose |
-| --- | --- | --- |
-| `PORT` | `3333` | API listen port (Phase 8.3 default; the plist sets it explicitly) |
-| `CORS_ORIGIN` | `http://localhost:3000` | Comma-separated allowed origins |
-| `LOG_LEVEL` | `info` | `debug`/`info`/`warn`/`error` |
-| `ZIBBY_DATA_DIR` | `apps/api/data` | Single data-root switch — repoints every store at once |
-| `VAULT_DIR` | `$ZIBBY_DATA_DIR/vault` | Obsidian vault (second brain) |
-| `BUDGET_LEDGER_DIR` | `$ZIBBY_DATA_DIR/budget-ledger` | Dispatch ledger (enforcement; gitignored) |
-| `BUDGET_CONFIG_FILE` | `$ZIBBY_DATA_DIR/budget.json` | Operator global pause thresholds (committed) |
+| Var                  | Default                              | Purpose                                                                                                                                          |
+| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`               | `3333`                               | API listen port (Phase 8.3 default; the plist sets it explicitly)                                                                                |
+| `CORS_ORIGIN`        | `http://localhost:3000`              | Comma-separated allowed origins                                                                                                                  |
+| `LOG_LEVEL`          | `info`                               | `debug`/`info`/`warn`/`error`                                                                                                                    |
+| `ZIBBY_DATA_DIR`     | `apps/api/data`                      | Single data-root switch — repoints every store at once                                                                                           |
+| `VAULT_DIR`          | `$ZIBBY_DATA_DIR/vault`              | Obsidian vault (second brain)                                                                                                                    |
+| `BUDGET_LEDGER_DIR`  | `$ZIBBY_DATA_DIR/budget-ledger`      | Dispatch ledger (enforcement; gitignored)                                                                                                        |
+| `BUDGET_CONFIG_FILE` | `$ZIBBY_DATA_DIR/budget.json`        | Operator global pause thresholds (committed)                                                                                                     |
 | `SYSTEM_CONFIG_FILE` | `$ZIBBY_DATA_DIR/system-config.json` | Runtime system config (tick intervals, goal auto-resume) — file-backed, editable from `/settings`. Path knob only; see `docs/ops/environment.md` |
-| `CLAUDE_BIN` | `claude` on `PATH` | Claude CLI; point at `fake-claude.mjs` for token-free runs |
-| `ZIBBY_BACKUP_DIR` | _(unset)_ | rsync destination root for `backup.sh` |
+| `CLAUDE_BIN`         | `claude` on `PATH`                   | Claude CLI; point at `fake-claude.mjs` for token-free runs                                                                                       |
+| `ZIBBY_BACKUP_DIR`   | _(unset)_                            | rsync destination root for `backup.sh`                                                                                                           |
 
 The `PATH` in the plist **must** include the dir holding `claude` — agent and
 pipeline runs shell out to it.
@@ -143,7 +143,7 @@ this acceptable. Backup logs are written by a short-lived job and rotate cleanly
 ## Caveats
 
 - **One instance per data root.** `withPathLock` serializes read-modify-write only
-  *within* one API process; two API processes on the same `ZIBBY_DATA_DIR` would race
+  _within_ one API process; two API processes on the same `ZIBBY_DATA_DIR` would race
   the vault MOCs and ledger. The launchd `KeepAlive` label guarantees a single
   instance — do not also run `pnpm api:dev` against the live data root.
 - **Backups never push** anywhere (Law 3). Offsite is your explicit, manual step.

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /**
  * Operator-owned runtime system config — `data/system-config.json`. These knobs were
@@ -31,5 +31,5 @@ export const SystemConfigSchema = z
      */
     goalAutoResume: z.boolean().default(false),
   })
-  .strict()
-export type SystemConfig = z.infer<typeof SystemConfigSchema>
+  .strict();
+export type SystemConfig = z.infer<typeof SystemConfigSchema>;

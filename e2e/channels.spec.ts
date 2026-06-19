@@ -26,7 +26,7 @@ test("a triaged inbound message surfaces an approval; approving it handles the i
 
   // Back on the inbox, the item is now handled (the reply was sent on approve).
   await page.goto("/integrations");
-  await expect(
-    page.getByTestId("inbox-panel").getByText("handled").first(),
-  ).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("inbox-panel").getByText("handled").first()).toBeVisible({
+    timeout: 20000,
+  });
 });

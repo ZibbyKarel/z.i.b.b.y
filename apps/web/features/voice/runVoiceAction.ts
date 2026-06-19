@@ -63,10 +63,7 @@ export interface VoiceActionDeps {
  * task dispatches immediately (no modal) and returns the optimistic `dispatching` ack;
  * the hook upgrades it to `started`/`dispatchFailed` once the backend responds.
  */
-export function runVoiceAction(
-  action: VoiceAction,
-  deps: VoiceActionDeps,
-): VoiceAck {
+export function runVoiceAction(action: VoiceAction, deps: VoiceActionDeps): VoiceAck {
   switch (action.kind) {
     case "approveLatest":
       if (deps.pendingApprovalId) {

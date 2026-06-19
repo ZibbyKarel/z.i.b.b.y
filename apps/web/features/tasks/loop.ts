@@ -46,8 +46,7 @@ export function proposedGoalToLoopState(goal: ProposedGoal): LoopFormState {
     objective: goal.objective,
     maker: encodeMaker(goal.maker.kind, goal.maker.id),
     verifierKind: goal.verifier.kind,
-    commands:
-      goal.verifier.kind === "checks" ? (goal.verifier.commands ?? []).join("\n") : "",
+    commands: goal.verifier.kind === "checks" ? (goal.verifier.commands ?? []).join("\n") : "",
     reviewer: goal.verifier.kind === "claude" ? goal.verifier.agent : "",
     maxIterations: String(goal.maxIterations),
     instructions: goal.instructions,
@@ -62,9 +61,7 @@ export function encodeMaker(kind: MakerKind, id: string): string {
 }
 
 /** Decode a `"<kind>:<id>"` Select value back into a maker ref, or null if malformed. */
-export function decodeMaker(
-  value: string,
-): { kind: MakerKind; id: string } | null {
+export function decodeMaker(value: string): { kind: MakerKind; id: string } | null {
   const sep = value.indexOf(MAKER_SEP);
   if (sep <= 0) return null;
   const kind = value.slice(0, sep);

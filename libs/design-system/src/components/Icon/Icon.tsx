@@ -9,14 +9,7 @@ export type { IconName };
 
 export type IconStroke = "thin" | "default" | "medium" | "bold";
 
-export type IconTone =
-  | "ok"
-  | "bad"
-  | "warn"
-  | "run"
-  | "accent"
-  | "dim"
-  | "faint";
+export type IconTone = "ok" | "bad" | "warn" | "run" | "accent" | "dim" | "faint";
 
 const toneClass: Record<IconTone, string> = {
   ok: "text-ok",

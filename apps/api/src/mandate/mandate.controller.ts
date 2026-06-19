@@ -1,7 +1,7 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { MandateSchema, mandateContract } from "@zibby/contracts"
-import { MandateStorageService } from "./mandate.storage.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { MandateSchema, mandateContract } from "@zibby/contracts";
+import { MandateStorageService } from "./mandate.storage.service";
 
 /**
  * The autonomy mandate endpoints. GET returns the current (seeded) mandate; PUT
@@ -20,12 +20,15 @@ export class MandateController {
       getMandate: async () => ({ status: 200, body: await this.storage.read() }),
 
       setMandate: async ({ body }) => {
-        const parsed = MandateSchema.safeParse(body)
+        const parsed = MandateSchema.safeParse(body);
         if (!parsed.success) {
-          return { status: 422 as const, body: { message: "mandate has unknown or invalid fields" } }
+          return {
+            status: 422 as const,
+            body: { message: "mandate has unknown or invalid fields" },
+          };
         }
-        return { status: 200 as const, body: await this.storage.write(parsed.data) }
+        return { status: 200 as const, body: await this.storage.write(parsed.data) };
       },
-    })
+    });
   }
 }

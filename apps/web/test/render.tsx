@@ -14,10 +14,7 @@ import messages from "../i18n/messages/cs.json";
  * Plain presentational components (the extracted generic primitives) are
  * i18n-agnostic and can still use Testing Library's bare `render` directly.
  */
-export function renderWithProviders(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">,
-) {
+export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -26,9 +23,7 @@ export function renderWithProviders(
     return (
       <DesignSystemProvider>
         <NextIntlClientProvider locale="cs" messages={messages}>
-          <QueryClientProvider client={queryClient}>
-            {children}
-          </QueryClientProvider>
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         </NextIntlClientProvider>
       </DesignSystemProvider>
     );

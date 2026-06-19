@@ -20,9 +20,7 @@ export const Overview: Story = {
           key={name}
         >
           <Icon name={name} size="lg" />
-          <span className="font-mono text-2xs text-foreground-faint">
-            {name}
-          </span>
+          <span className="font-mono text-2xs text-foreground-faint">{name}</span>
         </div>
       ))}
     </div>

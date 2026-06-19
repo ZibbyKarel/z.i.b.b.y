@@ -1,10 +1,10 @@
-import { Module } from "@nestjs/common"
-import { AutomationsModule } from "../automations/automations.module"
-import { IntegrationsModule } from "../integrations/integrations.module"
-import { MemoryModule } from "../memory/memory.module"
-import { ClaudeRunModule } from "../runner/claude-run.module"
-import { HealthController } from "./health.controller"
-import { SubsystemHealthService } from "./subsystem-health.service"
+import { Module } from "@nestjs/common";
+import { AutomationsModule } from "../automations/automations.module";
+import { IntegrationsModule } from "../integrations/integrations.module";
+import { MemoryModule } from "../memory/memory.module";
+import { ClaudeRunModule } from "../runner/claude-run.module";
+import { HealthController } from "./health.controller";
+import { SubsystemHealthService } from "./subsystem-health.service";
 
 /**
  * Health/readiness. ClaudeRunModule exports the preflight probe; MemoryModule,

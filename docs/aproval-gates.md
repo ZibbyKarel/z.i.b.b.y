@@ -30,14 +30,15 @@ Evaluátor zavolá `rulesForAgent()`, která vrátí **seřazený seznam pravide
 
 ```typescript
 const rules = await this.gates.rulesForAgent({
-  gates: agent.gates,          // agent's own rules (z DB)
-  requires_approval: agent.requires_approval,  // legacy flag
-})
+  gates: agent.gates, // agent's own rules (z DB)
+  requires_approval: agent.requires_approval, // legacy flag
+});
 ```
 
 Uvnitř `rulesForAgent()` se dějí dvě věci:
 
 **a) Legacy desugar** — pokud agent nemá `gates` (prázdné pole) ale má `requires_approval: true`, vytvoří se syntetické pravidlo:
+
 ```typescript
 {
   id: "legacy-requires-approval",
@@ -48,6 +49,7 @@ Uvnitř `rulesForAgent()` se dějí dvě věci:
 ```
 
 **b) Konkatenace** — vlastní pravidla agenta jdou **před** systémový floor:
+
 ```
 [vlastní pravidla agenta, agent-0, agent-1, ...]
 +
@@ -59,7 +61,7 @@ Pořadí je záměrné: agent může zpřísnit floor (přidat `ask` tam kde flo
 ### 3. Evaluace: `evaluate(rules, action)`
 
 ```typescript
-const decision = this.gates.evaluate(rules, action).decision
+const decision = this.gates.evaluate(rules, action).decision;
 ```
 
 Evaluátor prochází seznam pravidel **od začátku** a pro každé pravidlo zkontroluje všechny jeho `match` podmínky (jsou AND-ované). **První pravidlo, kde všechny podmínky sedí, vyhrává.** Zbytek se ignoruje.
@@ -68,12 +70,12 @@ Pokud žádné pravidlo nesedí → výchozí `"allow"`.
 
 #### Jak funguje každý typ match podmínky
 
-| Typ | Co kontroluje | Příklad |
-|-----|--------------|---------|
-| `tool` | Přesná shoda nástroje/skillu | `{ type: "tool", tool: "bash" }` |
-| `action` | Přesná shoda akce + volitelně větve | `{ type: "action", action: "git.force_push", branch: "main" }` |
-| `scope` | Prefix wildcard na scope | `{ type: "scope", scope: "feature/*" }` |
-| `context` | ID agenta nebo `"*"` catchall | `{ type: "context", context: "*" }` |
+| Typ         | Co kontroluje                           | Příklad                                                                  |
+| ----------- | --------------------------------------- | ------------------------------------------------------------------------ |
+| `tool`      | Přesná shoda nástroje/skillu            | `{ type: "tool", tool: "bash" }`                                         |
+| `action`    | Přesná shoda akce + volitelně větve     | `{ type: "action", action: "git.force_push", branch: "main" }`           |
+| `scope`     | Prefix wildcard na scope                | `{ type: "scope", scope: "feature/*" }`                                  |
+| `context`   | ID agenta nebo `"*"` catchall           | `{ type: "context", context: "*" }`                                      |
 | `threshold` | Numerická porovnání na `action.metrics` | `{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }` |
 
 Všechny podmínky v jednom pravidle musí **zároveň** platit (AND). Podmínky napříč pravidly jsou OR (stačí, aby jedno pravidlo celé sedělo).
@@ -83,22 +85,26 @@ Všechny podmínky v jednom pravidle musí **zároveň** platit (AND). Podmínky
 Na základě `decision` `onIntent` zvolí jednu ze tří větví (child celou dobu blokuje):
 
 **`"ask"`** — uživatel musí schválit:
+
 ```
 core.holdForApproval(runId) → status "running" → "awaiting-approval" (child žije dál a blokuje)
 requestApproval()           → ${approvalId}.json na disk + status "pending"
 ```
+
 Po **approve**: `ApprovalsService.approve()` → `runner.resume()` → `core.resume()` zapíše
 `{ decision: "allow" }` do `intent-decision.json`, child odblokuje a pokračuje, status zpět na `running`.
 Po **reject**: `runner.cancel()` → `core.cancel()` zapíše `{ decision: "deny" }` + nastaví `interrupting`,
 child se ukončí, status `interrupted`.
 
 **`"deny"`** — zakázáno politikou (bez čekání na uživatele):
+
 ```
 core.denyIntent(runId) → interrupting=true + zápis { decision: "deny" }
 child dostane deny → process.exit(1) → exit handler → status "interrupted"
 ```
 
 **`"allow"` nebo `"notify"`** — pustit dál:
+
 ```
 core.allowIntent(runId) → zápis { decision: "allow" }
 child odblokuje a provede akci, status zůstává "running"
@@ -192,20 +198,20 @@ jako `allow` bez přerušení.
 
 Mid-run pauza (`awaiting-approval` s živým blokujícím childem) **nepřežije restart backendu** — child
 je potomek API procesu a umírá s ním, a žádný spawn spec se neukládá. Na `init()` se takový běh
-rekonciluje na `interrupted` (rozlišení: `awaiting-approval` *se* stashnutým spec = pipeline-stage
-pauza na spawn boundary, ta přežije a jde resumovat; *bez* spec = mrtvá mid-run pauza → `interrupted`).
+rekonciluje na `interrupted` (rozlišení: `awaiting-approval` _se_ stashnutým spec = pipeline-stage
+pauza na spawn boundary, ta přežije a jde resumovat; _bez_ spec = mrtvá mid-run pauza → `interrupted`).
 
 ---
 
 ## Klíčové soubory
 
-| Soubor | Co dělá |
-|--------|---------|
-| `apps/api/src/gates/gate-evaluator.service.ts` | Celá evaluační logika — `rulesForAgent`, `evaluate`, `matches`, `validateHardenOnly` |
-| `apps/api/src/gates/policy.storage.service.ts` | Čte locked floor z `POLICY.md` |
-| `apps/api/src/agents/agent-runner.service.ts` | `onIntent()` — volá evaluátor mid-run, větví na ask/deny/allow |
-| `apps/api/src/agents/demo-task.mjs` | Demo child: emituje `INTENT` a blokuje na `intent-decision.json` |
-| `apps/api/src/runner/runner-core.ts` | `wire()` INTENT parser; `allowIntent`/`denyIntent`/`holdForApproval`; `resume`/`cancel` |
-| `apps/api/src/approvals/approvals.service.ts:47` | Vytvoří Approval entitu, resume/cancel routing |
-| `libs/contracts/src/gates/gate.schema.ts` | Typy: `GateRule`, `MatchCondition`, `Decision`, `IntendedAction` |
-| `apps/web/features/approvals/queries/useApprovalsQuery.ts` | UI polling každou minutu |
+| Soubor                                                     | Co dělá                                                                                 |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `apps/api/src/gates/gate-evaluator.service.ts`             | Celá evaluační logika — `rulesForAgent`, `evaluate`, `matches`, `validateHardenOnly`    |
+| `apps/api/src/gates/policy.storage.service.ts`             | Čte locked floor z `POLICY.md`                                                          |
+| `apps/api/src/agents/agent-runner.service.ts`              | `onIntent()` — volá evaluátor mid-run, větví na ask/deny/allow                          |
+| `apps/api/src/agents/demo-task.mjs`                        | Demo child: emituje `INTENT` a blokuje na `intent-decision.json`                        |
+| `apps/api/src/runner/runner-core.ts`                       | `wire()` INTENT parser; `allowIntent`/`denyIntent`/`holdForApproval`; `resume`/`cancel` |
+| `apps/api/src/approvals/approvals.service.ts:47`           | Vytvoří Approval entitu, resume/cancel routing                                          |
+| `libs/contracts/src/gates/gate.schema.ts`                  | Typy: `GateRule`, `MatchCondition`, `Decision`, `IntendedAction`                        |
+| `apps/web/features/approvals/queries/useApprovalsQuery.ts` | UI polling každou minutu                                                                |

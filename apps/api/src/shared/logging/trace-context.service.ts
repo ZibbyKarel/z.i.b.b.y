@@ -1,5 +1,5 @@
-import { AsyncLocalStorage } from "node:async_hooks"
-import { Injectable } from "@nestjs/common"
+import { AsyncLocalStorage } from "node:async_hooks";
+import { Injectable } from "@nestjs/common";
 
 /**
  * What we carry alongside any unit of work so its logs can be correlated.
@@ -13,8 +13,8 @@ import { Injectable } from "@nestjs/common"
  *   so a scheduler- or request-started run still links back to its origin.
  */
 export interface TraceStore {
-  traceId: string
-  runId?: string
+  traceId: string;
+  runId?: string;
 }
 
 /**
@@ -26,23 +26,23 @@ export interface TraceStore {
  */
 @Injectable()
 export class TraceContextService {
-  private readonly als = new AsyncLocalStorage<TraceStore>()
+  private readonly als = new AsyncLocalStorage<TraceStore>();
 
   /** Run `fn` (and everything it awaits) within `store`. */
   run<T>(store: TraceStore, fn: () => T): T {
-    return this.als.run(store, fn)
+    return this.als.run(store, fn);
   }
 
   /** The active store as a plain object (empty when outside any scope). */
   snapshot(): Partial<TraceStore> {
-    return this.als.getStore() ?? {}
+    return this.als.getStore() ?? {};
   }
 
   getTraceId(): string | undefined {
-    return this.als.getStore()?.traceId
+    return this.als.getStore()?.traceId;
   }
 
   getRunId(): string | undefined {
-    return this.als.getStore()?.runId
+    return this.als.getStore()?.runId;
   }
 }

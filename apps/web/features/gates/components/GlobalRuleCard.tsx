@@ -96,18 +96,10 @@ export function GlobalRuleCard({
                       label={t(`decision_.${rule.decision}`)}
                     />
                     {rule.decision === "ask" && (
-                      <ResolveChips
-                        resolve={rule.resolve}
-                        youLabel={t("you")}
-                      />
+                      <ResolveChips resolve={rule.resolve} youLabel={t("you")} />
                     )}
                     {rule.decision === "notify" && (
-                      <Typography
-                        mono
-                        size="2xs"
-                        type="note"
-                        variant="tertiary"
-                      >
+                      <Typography mono size="2xs" type="note" variant="tertiary">
                         {t("notifyHint")}
                       </Typography>
                     )}
@@ -123,13 +115,7 @@ export function GlobalRuleCard({
               <Stack align="center" direction="row" gap="50">
                 {total > 0 ? (
                   <Tag tone="accent">
-                    <Stack
-                      inline
-                      align="center"
-                      as="span"
-                      direction="row"
-                      gap="50"
-                    >
+                    <Stack inline align="center" as="span" direction="row" gap="50">
                       <Icon name="bot" size="xs" />
                       {total}
                     </Stack>
@@ -183,19 +169,8 @@ export function GlobalRuleCard({
                 <Divider />
                 <Stack wrap align="center" direction="row" gap="100">
                   {agents.length > 0 && (
-                    <Stack
-                      inline
-                      align="center"
-                      as="span"
-                      direction="row"
-                      gap="75"
-                    >
-                      <Typography
-                        mono
-                        size="2xs"
-                        type="note"
-                        variant="tertiary"
-                      >
+                    <Stack inline align="center" as="span" direction="row" gap="75">
+                      <Typography mono size="2xs" type="note" variant="tertiary">
                         {t("usedByAgents")}
                       </Typography>
                       {agents.map((a) => (
@@ -204,19 +179,8 @@ export function GlobalRuleCard({
                     </Stack>
                   )}
                   {skills.length > 0 && (
-                    <Stack
-                      inline
-                      align="center"
-                      as="span"
-                      direction="row"
-                      gap="75"
-                    >
-                      <Typography
-                        mono
-                        size="2xs"
-                        type="note"
-                        variant="tertiary"
-                      >
+                    <Stack inline align="center" as="span" direction="row" gap="75">
+                      <Typography mono size="2xs" type="note" variant="tertiary">
                         {t("usedBySkills")}
                       </Typography>
                       {skills.map((s) => (

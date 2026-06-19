@@ -1,25 +1,25 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { pipelinesContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { pipelinesContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   InvalidPipelineError,
   InvalidPipelineIdError,
   PipelineConflictError,
   PipelineNotFoundError,
-} from "./pipelines.errors"
-import { PipelinesStorageService } from "./pipelines.storage.service"
+} from "./pipelines.errors";
+import { PipelinesStorageService } from "./pipelines.storage.service";
 
 const errors = makeErrorMapper("Pipeline", {
   missing: [PipelineNotFoundError, InvalidPipelineIdError],
   conflict: [PipelineConflictError],
-})
+});
 
 /** A dangling loop target (caught by the schema/storage) maps to a 422. */
 const invalid = (error: unknown) =>
   error instanceof InvalidPipelineError
     ? ({ status: 422, body: { message: error.message } } as const)
-    : undefined
+    : undefined;
 
 /**
  * Implements `pipelinesContract` against the file-backed storage service. A
@@ -44,9 +44,9 @@ export class PipelinesController {
 
       deletePipeline: ({ params: { id } }) =>
         errors.or404(id, async () => {
-          await this.storage.delete(id)
-          return { id }
+          await this.storage.delete(id);
+          return { id };
         }),
-    })
+    });
   }
 }

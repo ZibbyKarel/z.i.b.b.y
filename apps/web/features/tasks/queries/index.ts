@@ -1,4 +1,1 @@
-export {
-  getScheduledTasksQueryKey,
-  useScheduledTasksQuery,
-} from "./useScheduledTasksQuery";
+export { getScheduledTasksQueryKey, useScheduledTasksQuery } from "./useScheduledTasksQuery";

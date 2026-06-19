@@ -6,7 +6,6 @@ import { getScheduledTasksQueryKey } from "../queries/useScheduledTasksQuery";
 export function useCancelScheduledTaskMutation() {
   const qc = useQueryClient();
   return apiClient.tasks.cancelScheduledTask.useMutation({
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() }),
   });
 }

@@ -77,8 +77,20 @@ export class MockSpeechSynthesis {
 /** A tiny voice fixture: a local Czech voice, a remote English one, plus a default. */
 export function fixtureVoices(): SpeechSynthesisVoice[] {
   return [
-    { name: "Czech (local)", lang: "cs-CZ", localService: true, default: false, voiceURI: "cs-local" },
-    { name: "Google US English", lang: "en-US", localService: false, default: true, voiceURI: "en-remote" },
+    {
+      name: "Czech (local)",
+      lang: "cs-CZ",
+      localService: true,
+      default: false,
+      voiceURI: "cs-local",
+    },
+    {
+      name: "Google US English",
+      lang: "en-US",
+      localService: false,
+      default: true,
+      voiceURI: "en-remote",
+    },
     { name: "English (UK)", lang: "en-GB", localService: true, default: false, voiceURI: "en-gb" },
   ] as SpeechSynthesisVoice[];
 }

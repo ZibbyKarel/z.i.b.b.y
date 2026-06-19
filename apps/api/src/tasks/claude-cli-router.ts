@@ -1,14 +1,14 @@
-import { spawn } from "node:child_process"
-import { Injectable } from "@nestjs/common"
-import type { ClassifyTaskInput, TaskRouting } from "@zibby/contracts"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router"
+import { spawn } from "node:child_process";
+import { Injectable } from "@nestjs/common";
+import type { ClassifyTaskInput, TaskRouting } from "@zibby/contracts";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router";
 
 /** How long the headless `claude -p` router may take before we give up and fall back. */
-const ROUTER_TIMEOUT_MS = 8000
+const ROUTER_TIMEOUT_MS = 8000;
 
 /** Cap the task text we hand the router so a giant paste can't bloat the prompt. */
-const MAX_TASK_CHARS = 4000
+const MAX_TASK_CHARS = 4000;
 
 /**
  * The frozen router system prompt. The catalog is the only volatile part and is
@@ -28,18 +28,18 @@ const ROUTER_SYSTEM_PROMPT = [
   '- loop is true ONLY when the task asks to iterate until a condition holds (e.g. "keep going until the tests pass"); otherwise false.',
   "- objective: when loop is true, a one-line statement of the outcome to drive toward; else an empty string.",
   "- Always still pick an agent/pipeline targetKind+targetId — loop is an annotation on that pick, NOT a new target kind.",
-].join("\n")
+].join("\n");
 
 interface RouterVerdict {
-  targetKind: "agent" | "pipeline"
-  targetId: string
-  confidence: number
-  reason: string
-  matchedTerms: string[]
+  targetKind: "agent" | "pipeline";
+  targetId: string;
+  confidence: number;
+  reason: string;
+  matchedTerms: string[];
   /** Phase 11: the model's iterate-until-satisfied signal (annotation on the maker pick). */
-  loop?: boolean
+  loop?: boolean;
   /** Phase 11: a one-line objective the model offers when `loop` is true (tolerated, optional). */
-  objective?: string
+  objective?: string;
 }
 
 /**
@@ -56,33 +56,35 @@ interface RouterVerdict {
  */
 @Injectable()
 export class ClaudeCliRouter implements TaskRouter {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(logger: LoggerService) {
-    this.log = logger.child(ClaudeCliRouter.name)
+    this.log = logger.child(ClaudeCliRouter.name);
   }
 
   async route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null> {
-    if (process.env.VITEST) return null
-    if (candidates.length === 0) return null
+    if (process.env.VITEST) return null;
+    if (candidates.length === 0) return null;
 
-    let raw: string
+    let raw: string;
     try {
-      raw = await this.runClaude(this.buildPrompt(input, candidates))
+      raw = await this.runClaude(this.buildPrompt(input, candidates));
     } catch (err) {
-      this.log.debug("router CLI call failed", { error: (err as Error).message })
-      return null
+      this.log.debug("router CLI call failed", { error: (err as Error).message });
+      return null;
     }
 
-    const verdict = this.parseVerdict(raw)
-    if (!verdict) return null
+    const verdict = this.parseVerdict(raw);
+    if (!verdict) return null;
 
-    const chosen = candidates.find((c) => c.id === verdict.targetId && c.kind === verdict.targetKind)
+    const chosen = candidates.find(
+      (c) => c.id === verdict.targetId && c.kind === verdict.targetKind,
+    );
     if (!chosen) {
       this.log.debug("router chose an unknown target", {
         target: `${verdict.targetKind}:${verdict.targetId}`,
-      })
-      return null
+      });
+      return null;
     }
 
     return {
@@ -96,24 +98,17 @@ export class ClaudeCliRouter implements TaskRouter {
       mode: verdict.loop ? "loop" : "single",
       proposedGoal: null,
       paths: [],
-    }
+    };
   }
 
   /** Serialize the task + catalog into the `-p` user turn. */
   private buildPrompt(input: ClassifyTaskInput, candidates: RoutableTarget[]): string {
     const catalog = candidates
       .map((c) => `${c.kind}  ${c.id} | ${c.category ?? "-"} | ${c.search}`)
-      .join("\n")
-    const paths = input.paths?.length ? `\nPATHS: ${input.paths.join(", ")}` : ""
-    const text = input.text.slice(0, MAX_TASK_CHARS)
-    return [
-      ROUTER_SYSTEM_PROMPT,
-      "",
-      `TASK: ${text}${paths}`,
-      "",
-      "CATALOG:",
-      catalog,
-    ].join("\n")
+      .join("\n");
+    const paths = input.paths?.length ? `\nPATHS: ${input.paths.join(", ")}` : "";
+    const text = input.text.slice(0, MAX_TASK_CHARS);
+    return [ROUTER_SYSTEM_PROMPT, "", `TASK: ${text}${paths}`, "", "CATALOG:", catalog].join("\n");
   }
 
   /**
@@ -123,39 +118,36 @@ export class ClaudeCliRouter implements TaskRouter {
    */
   protected runClaude(prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn(process.env.CLAUDE_BIN ?? "claude", [
-        "-p",
-        prompt,
-        "--output-format",
-        "json",
-        "--model",
-        "haiku",
-      ], { stdio: ["ignore", "pipe", "pipe"] })
+      const child = spawn(
+        process.env.CLAUDE_BIN ?? "claude",
+        ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      );
 
-      let stdout = ""
-      let stderr = ""
+      let stdout = "";
+      let stderr = "";
       const timer = setTimeout(() => {
-        child.kill()
-        reject(new Error(`router timed out after ${ROUTER_TIMEOUT_MS}ms`))
-      }, ROUTER_TIMEOUT_MS)
-      timer.unref?.()
+        child.kill();
+        reject(new Error(`router timed out after ${ROUTER_TIMEOUT_MS}ms`));
+      }, ROUTER_TIMEOUT_MS);
+      timer.unref?.();
 
       child.stdout?.on("data", (buf: Buffer) => {
-        stdout += buf.toString("utf8")
-      })
+        stdout += buf.toString("utf8");
+      });
       child.stderr?.on("data", (buf: Buffer) => {
-        stderr += buf.toString("utf8")
-      })
+        stderr += buf.toString("utf8");
+      });
       child.on("error", (err) => {
-        clearTimeout(timer)
-        reject(err)
-      })
+        clearTimeout(timer);
+        reject(err);
+      });
       child.on("exit", (code) => {
-        clearTimeout(timer)
-        if (code === 0) resolve(stdout)
-        else reject(new Error(`claude exited ${code}: ${stderr.slice(0, 200)}`))
-      })
-    })
+        clearTimeout(timer);
+        if (code === 0) resolve(stdout);
+        else reject(new Error(`claude exited ${code}: ${stderr.slice(0, 200)}`));
+      });
+    });
   }
 
   /**
@@ -164,15 +156,15 @@ export class ClaudeCliRouter implements TaskRouter {
    * fenced). Returns null on anything that isn't a usable verdict.
    */
   private parseVerdict(raw: string): RouterVerdict | null {
-    const inner = this.extractResultText(raw)
-    if (inner === null) return null
-    const obj = this.parseJsonObject(inner)
-    if (!obj) return null
+    const inner = this.extractResultText(raw);
+    if (inner === null) return null;
+    const obj = this.parseJsonObject(inner);
+    if (!obj) return null;
 
-    const kind = obj.targetKind
-    const id = obj.targetId
+    const kind = obj.targetKind;
+    const id = obj.targetId;
     if ((kind !== "agent" && kind !== "pipeline") || typeof id !== "string" || id.length === 0) {
-      return null
+      return null;
     }
     return {
       targetKind: kind,
@@ -183,34 +175,34 @@ export class ClaudeCliRouter implements TaskRouter {
       // Phase 11: tolerate both new fields' absence (old prompts / partial replies).
       loop: obj.loop === true,
       objective: typeof obj.objective === "string" ? obj.objective : undefined,
-    }
+    };
   }
 
   /** Unwrap the `{ result }` envelope; tolerate plain text that is already the verdict. */
   private extractResultText(raw: string): string | null {
-    const trimmed = raw.trim()
-    if (trimmed.length === 0) return null
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return null;
     try {
-      const envelope = JSON.parse(trimmed) as { result?: unknown }
-      if (typeof envelope.result === "string") return envelope.result
+      const envelope = JSON.parse(trimmed) as { result?: unknown };
+      if (typeof envelope.result === "string") return envelope.result;
       // Already the verdict object, not an envelope.
-      if (envelope && typeof envelope === "object" && "targetId" in envelope) return trimmed
+      if (envelope && typeof envelope === "object" && "targetId" in envelope) return trimmed;
     } catch {
       // Not JSON at all — treat the raw text as the candidate verdict.
     }
-    return trimmed
+    return trimmed;
   }
 
   /** Parse a JSON object out of text, stripping ``` fences and surrounding prose. */
   private parseJsonObject(text: string): Record<string, unknown> | null {
-    const start = text.indexOf("{")
-    const end = text.lastIndexOf("}")
-    if (start === -1 || end <= start) return null
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end <= start) return null;
     try {
-      const parsed = JSON.parse(text.slice(start, end + 1))
-      return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null
+      const parsed = JSON.parse(text.slice(start, end + 1));
+      return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
     } catch {
-      return null
+      return null;
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { CredentialsInput, Integration, TestResult } from "@zibby/contracts"
+import type { CredentialsInput, Integration, TestResult } from "@zibby/contracts";
 
 /**
  * The seam the `POST /integrations/:id/test` endpoint calls to probe a live
@@ -7,8 +7,8 @@ import type { CredentialsInput, Integration, TestResult } from "@zibby/contracts
  * harness with `CHANNEL_FAKE_DIR` set, faked) probe through the resolved adapter.
  */
 export interface ConnectionTester {
-  test(integration: Integration, creds: CredentialsInput): Promise<TestResult>
+  test(integration: Integration, creds: CredentialsInput): Promise<TestResult>;
 }
 
 /** DI token for the active {@link ConnectionTester}. */
-export const CONNECTION_TESTER = Symbol("CONNECTION_TESTER")
+export const CONNECTION_TESTER = Symbol("CONNECTION_TESTER");

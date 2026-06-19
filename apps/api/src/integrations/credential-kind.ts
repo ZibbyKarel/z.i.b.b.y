@@ -1,4 +1,4 @@
-import type { CredentialsInput, IntegrationKind } from "@zibby/contracts"
+import type { CredentialsInput, IntegrationKind } from "@zibby/contracts";
 
 /**
  * Whether a credential payload matches the kind an integration needs. Email
@@ -9,5 +9,5 @@ import type { CredentialsInput, IntegrationKind } from "@zibby/contracts"
  * test, instead of living only inside the controller handler.
  */
 export function credentialMatchesKind(kind: IntegrationKind, creds: CredentialsInput): boolean {
-  return kind === "email" ? "password" in creds : "token" in creds
+  return kind === "email" ? "password" in creds : "token" in creds;
 }

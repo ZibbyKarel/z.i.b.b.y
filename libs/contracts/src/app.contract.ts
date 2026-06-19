@@ -1,37 +1,37 @@
-import { initContract } from "@ts-rest/core"
-import { activityContract } from "./activity/activity.contract"
-import { agentRunsContract, agentsContract } from "./agents/agents.contract"
-import { briefingContract } from "./briefing/briefing.contract"
-import { budgetContract } from "./budget/budget.contract"
-import { approvalsContract } from "./approvals/approvals.contract"
-import { discoveryContract } from "./discovery/discovery.contract"
-import { researchContract } from "./research/research.contract"
-import { gatesContract } from "./gates/gate.contract"
-import { gateRulesContract } from "./gates/gate-rules.contract"
-import { automationsContract } from "./automations/automations.contract"
-import { channelsContract } from "./channels/channels.contract"
-import { commandsContract } from "./commands/commands.contract"
-import { integrationsContract } from "./integrations/integrations.contract"
-import { mandateContract } from "./mandate/mandate.contract"
-import { mcpContract } from "./mcp/mcp.contract"
-import { memoryContract } from "./memory/memory.contract"
+import { initContract } from "@ts-rest/core";
+import { activityContract } from "./activity/activity.contract";
+import { agentRunsContract, agentsContract } from "./agents/agents.contract";
+import { briefingContract } from "./briefing/briefing.contract";
+import { budgetContract } from "./budget/budget.contract";
+import { approvalsContract } from "./approvals/approvals.contract";
+import { discoveryContract } from "./discovery/discovery.contract";
+import { researchContract } from "./research/research.contract";
+import { gatesContract } from "./gates/gate.contract";
+import { gateRulesContract } from "./gates/gate-rules.contract";
+import { automationsContract } from "./automations/automations.contract";
+import { channelsContract } from "./channels/channels.contract";
+import { commandsContract } from "./commands/commands.contract";
+import { integrationsContract } from "./integrations/integrations.contract";
+import { mandateContract } from "./mandate/mandate.contract";
+import { mcpContract } from "./mcp/mcp.contract";
+import { memoryContract } from "./memory/memory.contract";
 import {
   categoriesContract,
   projectCategoriesContract,
   skillCategoriesContract,
-} from "./categories/categories.contract"
-import { healthContract } from "./health/health.contract"
-import { hooksContract } from "./hooks/hooks.contract"
-import { limitsContract } from "./limits/limits.contract"
-import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract"
-import { goalsContract } from "./goals/goals.contract"
-import { projectsContract } from "./projects/projects.contract"
-import { skillsContract } from "./skills/skills.contract"
-import { systemContract } from "./system/system.contract"
-import { tasksContract } from "./tasks/tasks.contract"
-import { taskRunsContract } from "./tasks/task-runs.contract"
+} from "./categories/categories.contract";
+import { healthContract } from "./health/health.contract";
+import { hooksContract } from "./hooks/hooks.contract";
+import { limitsContract } from "./limits/limits.contract";
+import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract";
+import { goalsContract } from "./goals/goals.contract";
+import { projectsContract } from "./projects/projects.contract";
+import { skillsContract } from "./skills/skills.contract";
+import { systemContract } from "./system/system.contract";
+import { tasksContract } from "./tasks/tasks.contract";
+import { taskRunsContract } from "./tasks/task-runs.contract";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The whole API as one nested router — every resource contract under a named key.
@@ -72,6 +72,6 @@ export const appContract = c.router({
   activity: activityContract,
   briefing: briefingContract,
   budget: budgetContract,
-})
+});
 
-export type AppContract = typeof appContract
+export type AppContract = typeof appContract;

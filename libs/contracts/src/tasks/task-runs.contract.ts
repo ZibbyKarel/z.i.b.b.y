@@ -1,16 +1,12 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { RunLogChunkSchema } from "../agents/agent-run.schema"
-import { ErrorSchema } from "../common.schema"
-import {
-  ResumeTaskRunSchema,
-  TaskRunArtifactSchema,
-  TaskRunSchema,
-} from "./task-run.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { RunLogChunkSchema } from "../agents/agent-run.schema";
+import { ErrorSchema } from "../common.schema";
+import { ResumeTaskRunSchema, TaskRunArtifactSchema, TaskRunSchema } from "./task-run.schema";
 
-const c = initContract()
+const c = initContract();
 
-const RunIdParam = z.object({ runId: z.string() })
+const RunIdParam = z.object({ runId: z.string() });
 
 /**
  * The unified task-run surface (replaces the per-kind `agentRuns` / `pipelineRuns` /
@@ -126,6 +122,6 @@ export const taskRunsContract = c.router(
     pathPrefix: "/api",
     strictStatusCodes: true,
   },
-)
+);
 
-export type TaskRunsContract = typeof taskRunsContract
+export type TaskRunsContract = typeof taskRunsContract;

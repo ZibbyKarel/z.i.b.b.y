@@ -88,14 +88,19 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
   const cycleThink = (id: string) =>
     setGraph((g) => ({
       ...g,
-      nodes: g.nodes.map((n) => (n.id === id ? { ...n, thinking: cycle(CYCLE_THINK, n.thinking) } : n)),
+      nodes: g.nodes.map((n) =>
+        n.id === id ? { ...n, thinking: cycle(CYCLE_THINK, n.thinking) } : n,
+      ),
     }));
   const setProduces = (id: string, produces: string) =>
     setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => (n.id === id ? { ...n, produces } : n)) }));
   const delFlow = (id: string) =>
     setGraph((g) => ({ ...g, flow: g.flow.filter((e) => e.id !== id) }));
   const patchRework = (id: string, patch: Partial<{ maxRetries: number; escalate: boolean }>) =>
-    setGraph((g) => ({ ...g, rework: g.rework.map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
+    setGraph((g) => ({
+      ...g,
+      rework: g.rework.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+    }));
   const delRework = (id: string) =>
     setGraph((g) => ({ ...g, rework: g.rework.filter((r) => r.id !== id) }));
 
@@ -117,7 +122,15 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
         ...g,
         rework: [
           ...g.rework.filter((r) => r.from !== pend.from),
-          { id: guid("w"), from: pend.from, to: tgt.node, maxRetries: 3, escalate: true, then: "park", escalation: [] },
+          {
+            id: guid("w"),
+            from: pend.from,
+            to: tgt.node,
+            maxRetries: 3,
+            escalate: true,
+            then: "park",
+            escalation: [],
+          },
         ],
       }));
     }
@@ -127,7 +140,11 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
   const onPortDown = (which: PortKind, nodeId: string, e: MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setPending({ kind: which === "top" ? "rework" : "flow", from: nodeId, cursor: portPt(nodeById(nodeId), which) });
+    setPending({
+      kind: which === "top" ? "rework" : "flow",
+      from: nodeId,
+      cursor: portPt(nodeById(nodeId), which),
+    });
     setHover(null);
   };
   const onNodeDown = (nodeId: string, e: MouseEvent) => {
@@ -145,7 +162,8 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
     if (hoverRef.current?.type === "in" && hoverRef.current.node === nodeId) setHover(null);
   };
   const onNodeEnter = (nodeId: string) => {
-    if (pending?.kind === "rework" && pending.from !== nodeId) setHover({ type: "node", node: nodeId });
+    if (pending?.kind === "rework" && pending.from !== nodeId)
+      setHover({ type: "node", node: nodeId });
   };
   const onNodeLeave = (nodeId: string) => {
     if (hoverRef.current?.type === "node" && hoverRef.current.node === nodeId) setHover(null);
@@ -236,7 +254,13 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
           height={CANVAS_H}
           role="presentation"
           // eslint-disable-next-line react/forbid-dom-props
-          style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1, overflow: "visible" }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 1,
+            overflow: "visible",
+          }}
           width={CANVAS_W}
         >
           {graph.flow.map((e) => {
@@ -248,7 +272,10 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
             return (
               <g key={e.id}>
                 <path d={flowPath(a, b)} fill="none" stroke={ACCENT} strokeWidth="1.6" />
-                <path d={`M${b.x},${b.y} L${b.x - 8},${b.y - 4.5} L${b.x - 8},${b.y + 4.5} Z`} fill={ACCENT} />
+                <path
+                  d={`M${b.x},${b.y} L${b.x - 8},${b.y - 4.5} L${b.x - 8},${b.y + 4.5} Z`}
+                  fill={ACCENT}
+                />
               </g>
             );
           })}
@@ -260,14 +287,27 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
             const b = portPt(to, "top");
             return (
               <g key={r.id}>
-                <path d={reworkPath(a, b)} fill="none" stroke={BAD} strokeDasharray="4 3" strokeWidth="1.4" />
-                <path d={`M${b.x},${b.y} L${b.x - 4.5},${b.y - 8} L${b.x + 4.5},${b.y - 8} Z`} fill={BAD} />
+                <path
+                  d={reworkPath(a, b)}
+                  fill="none"
+                  stroke={BAD}
+                  strokeDasharray="4 3"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d={`M${b.x},${b.y} L${b.x - 4.5},${b.y - 8} L${b.x + 4.5},${b.y - 8} Z`}
+                  fill={BAD}
+                />
               </g>
             );
           })}
           {pending && pendFrom && (
             <path
-              d={pending.kind === "rework" ? reworkPath(pendFrom, pending.cursor) : flowPath(pendFrom, pending.cursor)}
+              d={
+                pending.kind === "rework"
+                  ? reworkPath(pendFrom, pending.cursor)
+                  : flowPath(pendFrom, pending.cursor)
+              }
               fill="none"
               opacity="0.8"
               stroke={pending.kind === "rework" ? BAD : ACCENT}

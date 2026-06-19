@@ -1,9 +1,9 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common"
-import type { Proposal, SuggestedTarget, TaskTarget } from "@zibby/contracts"
-import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { TaskSchedulerService } from "../tasks/task-scheduler.service"
-import { ProposalsStorageService } from "./proposals.storage.service"
+import { Injectable, type OnModuleInit } from "@nestjs/common";
+import type { Proposal, SuggestedTarget, TaskTarget } from "@zibby/contracts";
+import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { ProposalsStorageService } from "./proposals.storage.service";
 
 /**
  * Convert a discovery {@link SuggestedTarget} into a dispatchable {@link TaskTarget},
@@ -12,10 +12,11 @@ import { ProposalsStorageService } from "./proposals.storage.service"
  * classification rather than a malformed target.
  */
 function toTaskTarget(s: SuggestedTarget | undefined): TaskTarget | undefined {
-  if (!s) return undefined
-  if (s.kind === "orchestrator") return { kind: "orchestrator", name: "Orchestrator", glyph: "compass" }
-  if (!s.id) return undefined
-  return { kind: s.kind, id: s.id, name: s.id }
+  if (!s) return undefined;
+  if (s.kind === "orchestrator")
+    return { kind: "orchestrator", name: "Orchestrator", glyph: "compass" };
+  if (!s.id) return undefined;
+  return { kind: s.kind, id: s.id, name: s.id };
 }
 
 /**
@@ -28,7 +29,7 @@ function toTaskTarget(s: SuggestedTarget | undefined): TaskTarget | undefined {
  */
 @Injectable()
 export class ProposedTaskFlowService implements OnModuleInit, ResumableRunner {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(
     private readonly approvals: ApprovalsService,
@@ -36,12 +37,12 @@ export class ProposedTaskFlowService implements OnModuleInit, ResumableRunner {
     private readonly tasks: TaskSchedulerService,
     logger: LoggerService,
   ) {
-    this.log = logger.child(ProposedTaskFlowService.name)
+    this.log = logger.child(ProposedTaskFlowService.name);
   }
 
   onModuleInit(): void {
     // Register so a decision on a proposed-task approval routes back here.
-    this.approvals.register("proposed-task", this)
+    this.approvals.register("proposed-task", this);
   }
 
   /** Park a proposal behind a Tier-3 `proposed-task` approval; persists the approval id. */
@@ -53,37 +54,39 @@ export class ProposedTaskFlowService implements OnModuleInit, ResumableRunner {
       action: "dispatch-task",
       detail: `${proposal.candidate.title} — ${proposal.candidate.rationale}`,
       risk: "low",
-    })
-    await this.proposals.update({ ...proposal, approvalId: approval.id })
+    });
+    await this.proposals.update({ ...proposal, approvalId: approval.id });
     this.log.info("proposed task parked for approval", {
       proposalId: proposal.id,
       approvalId: approval.id,
-    })
+    });
   }
 
   /** Approve → dispatch the proposed task once, through the normal createTask path. */
   async resume(proposalId: string): Promise<void> {
-    const proposal = await this.proposals.get(proposalId).catch(() => null)
+    const proposal = await this.proposals.get(proposalId).catch(() => null);
     if (!proposal || proposal.state !== "proposed") {
-      this.log.warn("proposed-task resume skipped", { proposalId, state: proposal?.state })
-      return
+      this.log.warn("proposed-task resume skipped", { proposalId, state: proposal?.state });
+      return;
     }
-    const target = toTaskTarget(proposal.candidate.suggestedTarget)
+    const target = toTaskTarget(proposal.candidate.suggestedTarget);
     await this.tasks.createTask(
       { text: proposal.candidate.text, title: proposal.candidate.title },
       Date.now(),
       undefined,
       target,
-    )
-    await this.proposals.update({ ...proposal, state: "dispatched" })
-    this.log.info("proposed task dispatched on approval", { proposalId, target: target?.kind })
+    );
+    await this.proposals.update({ ...proposal, state: "dispatched" });
+    this.log.info("proposed task dispatched on approval", { proposalId, target: target?.kind });
   }
 
   /** Reject → mark the proposal ignored (no task is created). */
   cancel(proposalId: string): void {
     void this.proposals
       .get(proposalId)
-      .then((p) => (p.state === "proposed" ? this.proposals.update({ ...p, state: "ignored" }) : null))
-      .catch(() => {})
+      .then((p) =>
+        p.state === "proposed" ? this.proposals.update({ ...p, state: "ignored" }) : null,
+      )
+      .catch(() => {});
   }
 }

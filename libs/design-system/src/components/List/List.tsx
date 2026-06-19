@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  type ReactNode,
-  createContext,
-  useContext,
-} from "react";
+import { type ReactNode, createContext, useContext } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Stack } from "../Stack/Stack";
@@ -56,10 +52,7 @@ export function ListItemText({ children }: { children: ReactNode }) {
   return <span className="flex-1">{children}</span>;
 }
 
-export type ListItemBadgeProps = Omit<
-  React.HTMLAttributes<HTMLSpanElement>,
-  "className"
->;
+export type ListItemBadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, "className">;
 
 export function ListItemBadge({ children, ...rest }: ListItemBadgeProps) {
   return (
@@ -75,20 +68,12 @@ export function ListItemBadge({ children, ...rest }: ListItemBadgeProps) {
 
 // --- ListItem ---
 
-export type ListItemProps = Omit<
-  React.HTMLAttributes<HTMLElement>,
-  "className" | "onClick"
-> & {
+export type ListItemProps = Omit<React.HTMLAttributes<HTMLElement>, "className" | "onClick"> & {
   active?: boolean;
   onSelect?: () => void;
 };
 
-export function ListItem({
-  active = false,
-  onSelect,
-  children,
-  ...rest
-}: ListItemProps) {
+export function ListItem({ active = false, onSelect, children, ...rest }: ListItemProps) {
   const className = cn(
     "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg transition-colors",
     focusRing,

@@ -1,21 +1,21 @@
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
-import { Injectable, Optional } from "@nestjs/common"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { type RateLimitSnapshot, clampPct } from "./rate-limits.reader"
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { Injectable, Optional } from "@nestjs/common";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { type RateLimitSnapshot, clampPct } from "./rate-limits.reader";
 
-const execFileAsync = promisify(execFile)
+const execFileAsync = promisify(execFile);
 
 /** A minimal `Headers`-like reader — just enough of the standard `Headers` API. */
 export interface HeaderBag {
-  get(name: string): string | null
+  get(name: string): string | null;
 }
 
 /** Parse a header value as a finite number, or null when absent/non-numeric. */
 function num(v: string | null): number | null {
-  if (v === null) return null
-  const n = Number(v)
-  return Number.isFinite(n) ? n : null
+  if (v === null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -26,12 +26,12 @@ function num(v: string | null): number | null {
  * the status-line capture rather than reporting a bogus 0%.
  */
 export function parseUsageHeaders(headers: HeaderBag, now: number): RateLimitSnapshot | null {
-  const u5 = num(headers.get("anthropic-ratelimit-unified-5h-utilization"))
-  const u7 = num(headers.get("anthropic-ratelimit-unified-7d-utilization"))
-  if (u5 === null && u7 === null) return null
+  const u5 = num(headers.get("anthropic-ratelimit-unified-5h-utilization"));
+  const u7 = num(headers.get("anthropic-ratelimit-unified-7d-utilization"));
+  if (u5 === null && u7 === null) return null;
 
-  const r5 = num(headers.get("anthropic-ratelimit-unified-5h-reset"))
-  const r7 = num(headers.get("anthropic-ratelimit-unified-7d-reset"))
+  const r5 = num(headers.get("anthropic-ratelimit-unified-5h-reset"));
+  const r7 = num(headers.get("anthropic-ratelimit-unified-7d-reset"));
 
   return {
     rolling5hPct: clampPct((u5 ?? 0) * 100),
@@ -40,11 +40,11 @@ export function parseUsageHeaders(headers: HeaderBag, now: number): RateLimitSna
     weekly7dResetsAt: r7 === null ? null : Math.round(r7 * 1000),
     capturedAt: now,
     stale: false,
-  }
+  };
 }
 
 /** The macOS Keychain item Claude Code stores its OAuth credentials under. */
-const KEYCHAIN_SERVICE = "Claude Code-credentials"
+const KEYCHAIN_SERVICE = "Claude Code-credentials";
 
 /**
  * Fetches the real interactive-window utilization straight from Anthropic. Unlike
@@ -60,15 +60,15 @@ const KEYCHAIN_SERVICE = "Claude Code-credentials"
  */
 @Injectable()
 export class UsageFetcher {
-  private readonly log?: ScopedLogger
+  private readonly log?: ScopedLogger;
 
   // Optional so a test can `new (class extends UsageFetcher …)()` without DI.
   constructor(@Optional() logger?: LoggerService) {
-    this.log = logger?.child(UsageFetcher.name)
+    this.log = logger?.child(UsageFetcher.name);
   }
 
   protected now(): number {
-    return Date.now()
+    return Date.now();
   }
 
   /** Read `claudeAiOauth.accessToken` from the Keychain, or null if unavailable. */
@@ -79,13 +79,13 @@ export class UsageFetcher {
         "-s",
         KEYCHAIN_SERVICE,
         "-w",
-      ])
-      const token = (JSON.parse(stdout) as { claudeAiOauth?: { accessToken?: unknown } }).claudeAiOauth
-        ?.accessToken
-      return typeof token === "string" && token.length > 0 ? token : null
+      ]);
+      const token = (JSON.parse(stdout) as { claudeAiOauth?: { accessToken?: unknown } })
+        .claudeAiOauth?.accessToken;
+      return typeof token === "string" && token.length > 0 ? token : null;
     } catch (err) {
-      this.log?.debug("oauth token not readable", { error: (err as Error).message })
-      return null
+      this.log?.debug("oauth token not readable", { error: (err as Error).message });
+      return null;
     }
   }
 
@@ -104,7 +104,7 @@ export class UsageFetcher {
         max_tokens: 1,
         messages: [{ role: "user", content: "hi" }],
       }),
-    })
+    });
   }
 
   /**
@@ -116,17 +116,17 @@ export class UsageFetcher {
     // Never touch the Keychain or the network under the test runner: the e2e suite
     // exercises the real endpoint, and a live call there would burn the user's quota
     // on every `pnpm test`. Tests that want the live path stub `doFetch` directly.
-    if (process.env.VITEST) return null
-    const token = await this.getToken()
-    if (token === null) return null
+    if (process.env.VITEST) return null;
+    const token = await this.getToken();
+    if (token === null) return null;
     try {
-      const res = await this.doFetch(token)
+      const res = await this.doFetch(token);
       // Drain the body so the socket is freed even though we only want headers.
-      await res.text().catch(() => undefined)
-      return parseUsageHeaders(res.headers, this.now())
+      await res.text().catch(() => undefined);
+      return parseUsageHeaders(res.headers, this.now());
     } catch (err) {
-      this.log?.debug("usage fetch failed", { error: (err as Error).message })
-      return null
+      this.log?.debug("usage fetch failed", { error: (err as Error).message });
+      return null;
     }
   }
 }

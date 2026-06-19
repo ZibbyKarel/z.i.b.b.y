@@ -16,13 +16,7 @@ export interface TextInputFieldProps extends Omit<
 }
 
 /** Labelled single-line text input. */
-export function TextInputField({
-  label,
-  hint,
-  error,
-  ref,
-  ...props
-}: TextInputFieldProps) {
+export function TextInputField({ label, hint, error, ref, ...props }: TextInputFieldProps) {
   return (
     <Field error={error} hint={hint} label={label}>
       {({ id, describedBy, invalid }) => (

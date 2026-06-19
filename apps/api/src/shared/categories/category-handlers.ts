@@ -2,7 +2,7 @@ import {
   CategoryConflictError,
   type CategoryManifestStore,
   CategoryNotFoundError,
-} from "./category-manifest-store"
+} from "./category-manifest-store";
 
 /**
  * Build the `@ts-rest/nest` handler implementation for a categories sub-router.
@@ -16,45 +16,47 @@ import {
  * that as a 409).
  */
 export function makeCategoryHandlers(deps: {
-  store: CategoryManifestStore
+  store: CategoryManifestStore;
   /** How many entities currently sit in the named category. */
-  countInCategory: (name: string) => Promise<number>
+  countInCategory: (name: string) => Promise<number>;
   /** Singular noun for the 409 message, e.g. "skill" / "project". */
-  noun: string
+  noun: string;
 }) {
-  const { store, countInCategory, noun } = deps
+  const { store, countInCategory, noun } = deps;
   return {
     listCategories: async () => ({ status: 200 as const, body: await store.list() }),
 
     createCategory: async ({ body }: { body: { name: string; glyph: string } }) => {
       try {
-        const category = await store.create(body)
-        return { status: 201 as const, body: category }
+        const category = await store.create(body);
+        return { status: 201 as const, body: category };
       } catch (error) {
         if (error instanceof CategoryConflictError) {
-          return { status: 409 as const, body: { message: error.message } }
+          return { status: 409 as const, body: { message: error.message } };
         }
-        throw error
+        throw error;
       }
     },
 
     deleteCategory: async ({ params: { name } }: { params: { name: string } }) => {
-      const inUse = await countInCategory(name)
+      const inUse = await countInCategory(name);
       if (inUse > 0) {
         return {
           status: 409 as const,
-          body: { message: `Category "${name}" still has ${inUse} ${noun}(s) and cannot be deleted` },
-        }
+          body: {
+            message: `Category "${name}" still has ${inUse} ${noun}(s) and cannot be deleted`,
+          },
+        };
       }
       try {
-        await store.delete(name)
-        return { status: 200 as const, body: { name } }
+        await store.delete(name);
+        return { status: 200 as const, body: { name } };
       } catch (error) {
         if (error instanceof CategoryNotFoundError) {
-          return { status: 404 as const, body: { message: error.message } }
+          return { status: 404 as const, body: { message: error.message } };
         }
-        throw error
+        throw error;
       }
     },
-  }
+  };
 }

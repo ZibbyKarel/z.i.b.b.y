@@ -21,14 +21,12 @@ const button = cva(
   {
     variants: {
       intent: {
-        primary:
-          "border border-transparent bg-accent/90 text-accent-contrast hover:bg-accent",
+        primary: "border border-transparent bg-accent/90 text-accent-contrast hover:bg-accent",
         ghost:
           "border border-border text-foreground-dim bg-transparent " +
           "hover:bg-[rgba(255,255,255,0.05)] hover:text-foreground hover:border-border-strong",
         danger:
-          "border border-bad/35 text-bad bg-transparent " +
-          "hover:bg-bad/10 hover:text-foreground",
+          "border border-bad/35 text-bad bg-transparent " + "hover:bg-bad/10 hover:text-foreground",
       },
       tone: {
         accent: "",
@@ -69,7 +67,8 @@ export enum ButtonTestId {
 }
 
 export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">,
+  extends
+    Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">,
     Omit<VariantProps<typeof button>, "intent" | "size"> {
   intent?: ButtonIntent;
   size?: ButtonSize;

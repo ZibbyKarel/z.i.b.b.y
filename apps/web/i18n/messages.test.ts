@@ -33,9 +33,7 @@ function loadCatalogs(): Record<string, Catalog> {
 function leafKeys(obj: Catalog, prefix = ""): string[] {
   return Object.entries(obj).flatMap(([key, value]) => {
     const path = prefix ? `${prefix}.${key}` : key;
-    return value !== null && typeof value === "object"
-      ? leafKeys(value as Catalog, path)
-      : [path];
+    return value !== null && typeof value === "object" ? leafKeys(value as Catalog, path) : [path];
   });
 }
 

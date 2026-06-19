@@ -12,6 +12,6 @@ const projects = [
   "./apps/api/vitest.config.ts",
   "./apps/web/vitest.config.ts",
   "./apps/web/vitest.components.config.ts",
-]
+];
 
-export default projects
+export default projects;

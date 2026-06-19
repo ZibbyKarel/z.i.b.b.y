@@ -1,12 +1,12 @@
-import { Controller, type MessageEvent, Sse } from "@nestjs/common"
-import type { AgentRun, GoalRun, PipelineRun } from "@zibby/contracts"
-import { type Observable, map, merge } from "rxjs"
-import { ActivityEventsService } from "../activity/activity-events.service"
-import { AgentRunnerService } from "../agents/agent-runner.service"
-import { ChannelEventsService } from "../channels/channel-events.service"
-import { GoalRunnerService } from "../goals/goal-runner.service"
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
-import { fromRunStatus, heartbeats } from "../shared/sse/sse"
+import { Controller, type MessageEvent, Sse } from "@nestjs/common";
+import type { AgentRun, GoalRun, PipelineRun } from "@zibby/contracts";
+import { type Observable, map, merge } from "rxjs";
+import { ActivityEventsService } from "../activity/activity-events.service";
+import { AgentRunnerService } from "../agents/agent-runner.service";
+import { ChannelEventsService } from "../channels/channel-events.service";
+import { GoalRunnerService } from "../goals/goal-runner.service";
+import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { fromRunStatus, heartbeats } from "../shared/sse/sse";
 
 /**
  * The single multiplexed status channel. One `EventSource` per client carries
@@ -67,6 +67,6 @@ export class EventsController {
         ),
       ),
       heartbeats(),
-    )
+    );
   }
 }

@@ -1,8 +1,8 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ResearchConfigSchema, ResearchDigestSchema } from "./research.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ResearchConfigSchema, ResearchDigestSchema } from "./research.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The research / intelligence layer API (M6). Config is operator-owned and
@@ -41,5 +41,5 @@ export const researchContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type ResearchContract = typeof researchContract
+);
+export type ResearchContract = typeof researchContract;

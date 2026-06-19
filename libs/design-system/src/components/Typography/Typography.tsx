@@ -33,13 +33,7 @@ export type TypographySize =
 
 export type TypographyWeight = "normal" | "medium" | "semibold" | "bold";
 
-export type TypographyTracking =
-  | "tighter"
-  | "normal"
-  | "wide"
-  | "wider"
-  | "widest"
-  | "mono";
+export type TypographyTracking = "tighter" | "normal" | "wide" | "wider" | "widest" | "mono";
 
 export type TypographyLeading = "tight" | "snug" | "normal" | "relaxed";
 
@@ -73,9 +67,32 @@ const typePreset: Record<TypographyType, TypePreset> = {
   text: { tag: "div", size: "lg", weight: "normal", leading: 1.6 },
   note: { tag: "div", size: "caption", weight: "normal", leading: 1.5 },
   num: { tag: "span", size: "4xl", weight: "semibold", leading: 1, mono: true },
-  data: { tag: "span", size: "sm", weight: "normal", leading: 1.6, mono: true, variant: "secondary" },
-  label: { tag: "span", size: "xs", weight: "medium", leading: 1.2, mono: true, uppercase: true, tracking: "wider", variant: "tertiary" },
-  micro: { tag: "span", size: "xs", weight: "normal", leading: 1.5, mono: true, variant: "tertiary" },
+  data: {
+    tag: "span",
+    size: "sm",
+    weight: "normal",
+    leading: 1.6,
+    mono: true,
+    variant: "secondary",
+  },
+  label: {
+    tag: "span",
+    size: "xs",
+    weight: "medium",
+    leading: 1.2,
+    mono: true,
+    uppercase: true,
+    tracking: "wider",
+    variant: "tertiary",
+  },
+  micro: {
+    tag: "span",
+    size: "xs",
+    weight: "normal",
+    leading: 1.5,
+    mono: true,
+    variant: "tertiary",
+  },
 };
 
 const variantClass: Record<TypographyVariant, string> = {
@@ -106,10 +123,7 @@ const leadingValue: Record<TypographyLeading, number> = {
   relaxed: 1.6,
 };
 
-export interface TypographyProps extends Omit<
-  HTMLAttributes<HTMLElement>,
-  "className"
-> {
+export interface TypographyProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   /** Preset that drives the default tag, size, weight and leading. */
   type: TypographyType;
   /** Neutral foreground level. */
@@ -157,9 +171,7 @@ export function Typography({
   const computedStyle: CSSProperties = {
     fontSize: `var(--text-${size ?? preset.size})`,
     lineHeight: leading ? leadingValue[leading] : preset.leading,
-    ...(resolvedTracking
-      ? { letterSpacing: `var(--tracking-${resolvedTracking})` }
-      : {}),
+    ...(resolvedTracking ? { letterSpacing: `var(--tracking-${resolvedTracking})` } : {}),
     ...(align ? { textAlign: align } : {}),
     ...style,
   };

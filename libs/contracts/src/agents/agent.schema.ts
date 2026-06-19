@@ -1,6 +1,6 @@
-import { z } from "zod"
-import { RiskSchema } from "../common.schema"
-import { GateRuleInputSchema } from "../gates/gate.schema"
+import { z } from "zod";
+import { RiskSchema } from "../common.schema";
+import { GateRuleInputSchema } from "../gates/gate.schema";
 
 /**
  * Allowed shape of an agent `id`. The id doubles as the on-disk file name (and is
@@ -9,21 +9,21 @@ import { GateRuleInputSchema } from "../gates/gate.schema"
  * separators (`/`, `\`) and traversal sequences (`..`) at the contract boundary.
  * The storage layer enforces the same rule independently (defense in depth).
  */
-export const AGENT_ID_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/
+export const AGENT_ID_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/;
 
 export const AgentIdSchema = z
   .string()
   .min(1)
   .max(128)
-  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
+  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
 /** Model the agent runs on. Mirrors the dashboard's `ModelName`. */
-export const AgentModelSchema = z.enum(["opus", "sonnet", "haiku"])
-export type AgentModel = z.infer<typeof AgentModelSchema>
+export const AgentModelSchema = z.enum(["opus", "sonnet", "haiku"]);
+export type AgentModel = z.infer<typeof AgentModelSchema>;
 
 /** Thinking budget. Mirrors the dashboard's `ThinkingLevel`. */
-export const AgentThinkingSchema = z.enum(["high", "medium", "low"])
-export type AgentThinking = z.infer<typeof AgentThinkingSchema>
+export const AgentThinkingSchema = z.enum(["high", "medium", "low"]);
+export type AgentThinking = z.infer<typeof AgentThinkingSchema>;
 
 /**
  * Full agent entity as returned by the API. On disk each agent is a Markdown file
@@ -65,13 +65,13 @@ export const AgentSchema = z.object({
    */
   gateRuleIds: z.array(z.string()).optional(),
   instructions: z.string().min(1),
-})
-export type Agent = z.infer<typeof AgentSchema>
+});
+export type Agent = z.infer<typeof AgentSchema>;
 
 /** Body accepted by `createAgent` — the full entity (`id` + `instructions` required). */
-export const CreateAgentSchema = AgentSchema
-export type CreateAgentInput = z.infer<typeof CreateAgentSchema>
+export const CreateAgentSchema = AgentSchema;
+export type CreateAgentInput = z.infer<typeof CreateAgentSchema>;
 
 /** Body accepted by `updateAgent` — every field is optional (partial update), id excluded. */
-export const UpdateAgentSchema = AgentSchema.omit({ id: true }).partial()
-export type UpdateAgentInput = z.infer<typeof UpdateAgentSchema>
+export const UpdateAgentSchema = AgentSchema.omit({ id: true }).partial();
+export type UpdateAgentInput = z.infer<typeof UpdateAgentSchema>;

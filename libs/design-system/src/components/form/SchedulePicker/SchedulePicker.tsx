@@ -90,17 +90,13 @@ export interface SchedulePickerProps {
   invalid?: boolean;
 }
 
-const timeInputClass = cn(
-  fieldControlClass,
-  "w-auto cursor-pointer dark:[color-scheme:dark]",
-);
+const timeInputClass = cn(fieldControlClass, "w-auto cursor-pointer dark:[color-scheme:dark]");
 
 const dayToggleClass =
   "inline-flex h-9 min-w-9 items-center justify-center rounded border px-2 " +
   "font-mono text-sm font-semibold transition-colors";
 const dayToggleActive = "border-accent bg-accent text-accent-contrast";
-const dayToggleIdle =
-  "border-border bg-background text-foreground-dim hover:text-foreground";
+const dayToggleIdle = "border-border bg-background text-foreground-dim hover:text-foreground";
 
 /**
  * Human-friendly recurring-schedule chooser: a weekly/monthly repeat control,
@@ -125,9 +121,7 @@ export function SchedulePicker({
 
   const toggleWeekday = (day: number) => {
     const has = value.weekdays.includes(day);
-    const next = has
-      ? value.weekdays.filter((d) => d !== day)
-      : [...value.weekdays, day];
+    const next = has ? value.weekdays.filter((d) => d !== day) : [...value.weekdays, day];
     next.sort((a, b) => a - b);
     set({ weekdays: next });
   };

@@ -71,16 +71,7 @@ const REJECT = new Set([
   "zrusit",
 ]);
 const STOP = new Set(["zastav", "zastavit", "zastavte", "stop", "halt"]);
-const CLOSE = new Set([
-  "zavri",
-  "zavrit",
-  "zavrete",
-  "konec",
-  "close",
-  "exit",
-  "dismiss",
-  "hud",
-]);
+const CLOSE = new Set(["zavri", "zavrit", "zavrete", "konec", "close", "exit", "dismiss", "hud"]);
 
 /** Max words for a bare command — keeps "approve" / "stop the agent" in, dictation out. */
 const MAX_COMMAND_WORDS = 3;

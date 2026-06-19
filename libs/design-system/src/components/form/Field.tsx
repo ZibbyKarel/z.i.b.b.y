@@ -43,8 +43,7 @@ export interface FieldProps {
   ref?: Ref<HTMLElement>;
 }
 
-const labelClass =
-  "font-mono text-sm uppercase tracking-wider text-foreground-faint";
+const labelClass = "font-mono text-sm uppercase tracking-wider text-foreground-faint";
 const hintClass = "font-mono text-xs text-foreground-faint";
 const errorClass = "font-mono text-xs text-bad";
 
@@ -61,14 +60,7 @@ export const fieldControlClass =
  * concrete control is supplied as a render function so `Field` can hand it the
  * `id`, `labelId`, `describedBy` and `invalid` it needs to stay accessible.
  */
-export function Field({
-  label,
-  hint,
-  error,
-  layout = "column",
-  children,
-  ref,
-}: FieldProps) {
+export function Field({ label, hint, error, layout = "column", children, ref }: FieldProps) {
   const id = useId();
   const labelId = `${id}-label`;
   const messageId = `${id}-message`;
@@ -81,23 +73,13 @@ export function Field({
   });
 
   const labelEl = (
-    <label
-      className={labelClass}
-      data-testid={FieldTestId.Label}
-      htmlFor={id}
-      id={labelId}
-    >
+    <label className={labelClass} data-testid={FieldTestId.Label} htmlFor={id} id={labelId}>
       {label}
     </label>
   );
 
   const messageEl = error ? (
-    <span
-      className={errorClass}
-      data-testid={FieldTestId.Error}
-      id={messageId}
-      role="alert"
-    >
+    <span className={errorClass} data-testid={FieldTestId.Error} id={messageId} role="alert">
       {error}
     </span>
   ) : hint ? (
@@ -108,13 +90,7 @@ export function Field({
 
   if (layout === "row") {
     return (
-      <Stack
-        align="start"
-        data-testid={FieldTestId.Root}
-        direction="row"
-        gap="150"
-        ref={ref}
-      >
+      <Stack align="start" data-testid={FieldTestId.Root} direction="row" gap="150" ref={ref}>
         {control}
         <Stack gap="50">
           {labelEl}

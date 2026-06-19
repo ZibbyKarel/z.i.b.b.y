@@ -14,12 +14,12 @@ Everything Phase 7 needs can be built **entirely on browser-native APIs**. No El
 
 ### 1.1 Browser support matrix (2025)
 
-| Browser | SpeechRecognition | Notes |
-|---|---|---|
-| Chrome 25+ / Edge 87+ | ✅ Full | `window.SpeechRecognition` **and** `window.webkitSpeechRecognition` both present |
-| Safari 14.1+ (macOS) / 14.5+ (iOS) | ✅ Partial | `webkitSpeechRecognition` only; shows Apple permission modal ("send audio to Apple") |
-| Firefox | ❌ Off by default | Hidden behind `dom.webspeech.recognition.enable` in `about:config`; treat as unsupported |
-| Chrome 139+ | ✅ + on-device mode | New `processLocally: true` flag; smaller model, no audio leaves device; language pack may need download |
+| Browser                            | SpeechRecognition   | Notes                                                                                                   |
+| ---------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
+| Chrome 25+ / Edge 87+              | ✅ Full             | `window.SpeechRecognition` **and** `window.webkitSpeechRecognition` both present                        |
+| Safari 14.1+ (macOS) / 14.5+ (iOS) | ✅ Partial          | `webkitSpeechRecognition` only; shows Apple permission modal ("send audio to Apple")                    |
+| Firefox                            | ❌ Off by default   | Hidden behind `dom.webspeech.recognition.enable` in `about:config`; treat as unsupported                |
+| Chrome 139+                        | ✅ + on-device mode | New `processLocally: true` flag; smaller model, no audio leaves device; language pack may need download |
 
 **For ZIBBY** (self-hosted, single operator, Chromium expected): safe to target Chrome/Edge as primary. Safari is a nice-to-have. Firefox degrades gracefully to text input.
 
@@ -28,14 +28,16 @@ Everything Phase 7 needs can be built **entirely on browser-native APIs**. No El
 Chrome's default mode sends audio to Google's servers — it requires a network connection and **won't work offline**. Chrome 139 introduced `recognition.processLocally = true` for on-device processing (no audio sent anywhere, lower latency, smaller model). Check availability first:
 
 ```ts
-const SpeechRecognition =
-  window.SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+const SpeechRecognition = window.SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
 // Chrome 139+ on-device opt-in
-if ('available' in SpeechRecognition) {
-  const status = await SpeechRecognition.available({ langs: ['cs-CZ', 'en-US'], processLocally: true });
-  if (status === 'downloadable') {
-    await SpeechRecognition.install({ langs: ['cs-CZ', 'en-US'], processLocally: true });
+if ("available" in SpeechRecognition) {
+  const status = await SpeechRecognition.available({
+    langs: ["cs-CZ", "en-US"],
+    processLocally: true,
+  });
+  if (status === "downloadable") {
+    await SpeechRecognition.install({ langs: ["cs-CZ", "en-US"], processLocally: true });
   }
 }
 ```
@@ -44,16 +46,16 @@ if ('available' in SpeechRecognition) {
 
 From `SpeechRecognitionErrorEvent.error`:
 
-| Code | Meaning | Action |
-|---|---|---|
-| `not-allowed` | Mic permission denied or HTTPS missing | Show "mic-denied" UI state |
-| `service-not-allowed` | Browser blocked the STT service (CSP, iframe) | Show "unsupported" |
-| `network` | Cloud STT server unreachable | Retry with backoff; show "network" state |
-| `no-speech` | Silence timeout — no speech detected | Auto-restart (continuous mode) |
-| `audio-capture` | Mic hardware not available | Show "mic-denied" |
-| `language-not-supported` | `lang` attribute not supported | Fallback to `en-US` |
-| `aborted` | Stopped by user or programmatically | Suppress; expected |
-| `phrases-not-supported` | Contextual biasing not available on this engine | Ignore; feature-detect |
+| Code                     | Meaning                                         | Action                                   |
+| ------------------------ | ----------------------------------------------- | ---------------------------------------- |
+| `not-allowed`            | Mic permission denied or HTTPS missing          | Show "mic-denied" UI state               |
+| `service-not-allowed`    | Browser blocked the STT service (CSP, iframe)   | Show "unsupported"                       |
+| `network`                | Cloud STT server unreachable                    | Retry with backoff; show "network" state |
+| `no-speech`              | Silence timeout — no speech detected            | Auto-restart (continuous mode)           |
+| `audio-capture`          | Mic hardware not available                      | Show "mic-denied"                        |
+| `language-not-supported` | `lang` attribute not supported                  | Fallback to `en-US`                      |
+| `aborted`                | Stopped by user or programmatically             | Suppress; expected                       |
+| `phrases-not-supported`  | Contextual biasing not available on this engine | Ignore; feature-detect                   |
 
 ### 1.4 Continuous mode + reconnection strategy
 
@@ -80,7 +82,7 @@ class RecognitionSession {
     this.rec = new R();
     this.rec.continuous = true;
     this.rec.interimResults = true;
-    this.rec.lang = 'cs-CZ'; // set from cookie
+    this.rec.lang = "cs-CZ"; // set from cookie
 
     this.rec.onend = () => {
       // fired on both normal stop AND silent drop — restart only if we're still "active"
@@ -91,9 +93,11 @@ class RecognitionSession {
       }
     };
     this.rec.onerror = (e) => {
-      if (e.error === 'no-speech') return; // silent drop, onend fires next anyway
-      if (e.error === 'network') { /* surface network state, keep retrying */ }
-      if (e.error === 'not-allowed' || e.error === 'audio-capture') {
+      if (e.error === "no-speech") return; // silent drop, onend fires next anyway
+      if (e.error === "network") {
+        /* surface network state, keep retrying */
+      }
+      if (e.error === "not-allowed" || e.error === "audio-capture") {
         this.active = false; // permanent; stop retrying
       }
     };
@@ -109,8 +113,8 @@ class RecognitionSession {
 
 ```ts
 recognition.onresult = (event) => {
-  let interim = '';
-  let final = '';
+  let interim = "";
+  let final = "";
   for (let i = event.resultIndex; i < event.results.length; i++) {
     const t = event.results[i][0].transcript;
     if (event.results[i].isFinal) final += t;
@@ -128,8 +132,8 @@ Chrome's STT engine **does return proper diacritics** (háčky + čárky) for `c
 function normalizeCzech(s: string) {
   return s
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // strip diacritics for matching
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics for matching
     .trim();
 }
 // "Schválit" → "schvalit", "Odmítnout" → "odmitnout"
@@ -141,11 +145,11 @@ You can boost recognition of domain-specific commands with `SpeechRecognitionPhr
 
 ```ts
 recognition.phrases = [
-  new SpeechRecognitionPhrase('schválit', 8.0),
-  new SpeechRecognitionPhrase('odmítnout', 8.0),
-  new SpeechRecognitionPhrase('zastavit', 7.0),
-  new SpeechRecognitionPhrase('approve', 8.0),
-  new SpeechRecognitionPhrase('reject', 8.0),
+  new SpeechRecognitionPhrase("schválit", 8.0),
+  new SpeechRecognitionPhrase("odmítnout", 8.0),
+  new SpeechRecognitionPhrase("zastavit", 7.0),
+  new SpeechRecognitionPhrase("approve", 8.0),
+  new SpeechRecognitionPhrase("reject", 8.0),
 ];
 ```
 
@@ -163,10 +167,17 @@ Boost range 0–10, higher = more likely. This can significantly improve recogni
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
     const voices = speechSynthesis.getVoices();
-    if (voices.length) { resolve(voices); return; }
-    speechSynthesis.addEventListener('voiceschanged', () => {
-      resolve(speechSynthesis.getVoices());
-    }, { once: true });
+    if (voices.length) {
+      resolve(voices);
+      return;
+    }
+    speechSynthesis.addEventListener(
+      "voiceschanged",
+      () => {
+        resolve(speechSynthesis.getVoices());
+      },
+      { once: true },
+    );
   });
 }
 ```
@@ -178,24 +189,25 @@ In React, this belongs inside a `useEffect` — never in component body or useSt
 ```ts
 function selectVoice(
   voices: SpeechSynthesisVoice[],
-  lang: 'cs-CZ' | 'en-US'
+  lang: "cs-CZ" | "en-US",
 ): SpeechSynthesisVoice | null {
   // 1. Exact locale match, preferring local (non-remote) voices
-  const exact = voices.filter(v => v.lang === lang);
-  const local = exact.find(v => v.localService);
+  const exact = voices.filter((v) => v.lang === lang);
+  const local = exact.find((v) => v.localService);
   if (local) return local;
   if (exact[0]) return exact[0];
 
   // 2. Language prefix fallback (cs-* for Czech)
-  const prefix = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+  const prefix = voices.find((v) => v.lang.startsWith(lang.split("-")[0]));
   if (prefix) return prefix;
 
   // 3. Browser default
-  return voices.find(v => v.default) ?? voices[0] ?? null;
+  return voices.find((v) => v.default) ?? voices[0] ?? null;
 }
 ```
 
 **Czech voice availability:**
+
 - macOS/Safari: includes Czech system voice if installed in System Settings > Accessibility
 - Chrome (with network): Google Czech voice available via cloud
 - Edge on Windows 11: 250+ neural voices including Czech (`cs-CZ-VlastaNeural`, `cs-CZ-AntoninNeural`)
@@ -203,14 +215,14 @@ function selectVoice(
 
 ### 2.3 Production TTS bugs and workarounds
 
-| Bug | Browsers | Workaround |
-|---|---|---|
-| **Utterance GC before finish** — `onend` never fires | All | Keep a module-level reference to the utterance object |
-| **Autoplay blocked** — `speak()` before user gesture throws | Chrome 71+, iOS | Only call `speak()` inside a user event handler; queue utterances, flush on first gesture |
-| **Android voice lock** — only one system voice, no programmatic control | Android Chrome + FF | Always set `utterance.lang = voice.lang`; normalize `en_US` → `en-US` (underscore quirk) |
-| **iOS only 36 of 55 listed voices work** | iOS Safari | Keep a whitelist of known-working iOS voice names |
-| **iOS mute switch silences TTS** | iOS Safari | No workaround; document limitation |
-| **Chrome 15s silence kills synthesis on Android** | Android Chrome | Re-call `speak()` with a silent utterance every 14s if queue is active (dirty but documented) |
+| Bug                                                                     | Browsers            | Workaround                                                                                    |
+| ----------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------- |
+| **Utterance GC before finish** — `onend` never fires                    | All                 | Keep a module-level reference to the utterance object                                         |
+| **Autoplay blocked** — `speak()` before user gesture throws             | Chrome 71+, iOS     | Only call `speak()` inside a user event handler; queue utterances, flush on first gesture     |
+| **Android voice lock** — only one system voice, no programmatic control | Android Chrome + FF | Always set `utterance.lang = voice.lang`; normalize `en_US` → `en-US` (underscore quirk)      |
+| **iOS only 36 of 55 listed voices work**                                | iOS Safari          | Keep a whitelist of known-working iOS voice names                                             |
+| **iOS mute switch silences TTS**                                        | iOS Safari          | No workaround; document limitation                                                            |
+| **Chrome 15s silence kills synthesis on Android**                       | Android Chrome      | Re-call `speak()` with a silent utterance every 14s if queue is active (dirty but documented) |
 
 ### 2.4 `useSpeech` hook pattern (SSR-safe)
 
@@ -220,28 +232,38 @@ export function useSpeech() {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
     loadVoices().then(setVoices);
   }, []);
 
-  const speak = useCallback((text: string, lang: 'cs-CZ' | 'en-US' = 'cs-CZ') => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel(); // stop any current speech
-    const utt = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utt; // prevent GC
-    utt.voice = selectVoice(voices, lang);
-    utt.lang = lang;
-    utt.rate = 1.1;
-    utt.onend = () => { utteranceRef.current = null; };
-    window.speechSynthesis.speak(utt);
-  }, [voices]);
+  const speak = useCallback(
+    (text: string, lang: "cs-CZ" | "en-US" = "cs-CZ") => {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel(); // stop any current speech
+      const utt = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utt; // prevent GC
+      utt.voice = selectVoice(voices, lang);
+      utt.lang = lang;
+      utt.rate = 1.1;
+      utt.onend = () => {
+        utteranceRef.current = null;
+      };
+      window.speechSynthesis.speak(utt);
+    },
+    [voices],
+  );
 
   const stop = useCallback(() => {
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
   }, []);
 
-  return { speak, stop, voices, supported: typeof window !== 'undefined' && 'speechSynthesis' in window };
+  return {
+    speak,
+    stop,
+    voices,
+    supported: typeof window !== "undefined" && "speechSynthesis" in window,
+  };
 }
 ```
 
@@ -258,6 +280,7 @@ export function useSpeech() {
 **Custom wake word:** Free to train in Picovoice Console; download a `.ppn` file for the Web/WASM platform. A "Zibby" wake word takes ~30 seconds to train.
 
 **Next.js setup:**
+
 ```bash
 pnpm add @picovoice/porcupine-react @picovoice/web-voice-processor
 ```
@@ -265,20 +288,18 @@ pnpm add @picovoice/porcupine-react @picovoice/web-voice-processor
 Put `porcupine_params.pv` and `zibby_en.ppn` in `/public`. Then:
 
 ```ts
-import { usePorcupine } from '@picovoice/porcupine-react';
+import { usePorcupine } from "@picovoice/porcupine-react";
 
 const { init, start, stop, isLoaded, isListening, keywordDetection } = usePorcupine();
 
 useEffect(() => {
-  init(
-    process.env.NEXT_PUBLIC_PICOVOICE_KEY!,
-    [{ publicPath: '/zibby_en.ppn', label: 'zibby' }],
-    { publicPath: '/porcupine_params.pv' }
-  );
+  init(process.env.NEXT_PUBLIC_PICOVOICE_KEY!, [{ publicPath: "/zibby_en.ppn", label: "zibby" }], {
+    publicPath: "/porcupine_params.pv",
+  });
 }, []);
 
 useEffect(() => {
-  if (keywordDetection?.label === 'zibby') {
+  if (keywordDetection?.label === "zibby") {
     // start SpeechRecognition session
   }
 }, [keywordDetection]);
@@ -295,33 +316,43 @@ useEffect(() => {
 **How it works:** Silero VAD ONNX model via `onnxruntime-web`, AudioWorklet, fully on-device.
 
 **Next.js config** — need to copy WASM/worklet files:
+
 ```ts
 // next.config.ts
-const CopyPlugin = require('copy-webpack-plugin');
+const CopyPlugin = require("copy-webpack-plugin");
 
 export default {
   webpack(config) {
-    config.plugins.push(new CopyPlugin({
-      patterns: [
-        { from: 'node_modules/@ricky0123/vad-web/dist/*.worklet.js', to: 'static/chunks/[name][ext]' },
-        { from: 'node_modules/@ricky0123/vad-web/dist/*.onnx', to: 'static/chunks/[name][ext]' },
-        { from: 'node_modules/onnxruntime-web/dist/*.wasm', to: 'static/chunks/[name][ext]' },
-      ],
-    }));
+    config.plugins.push(
+      new CopyPlugin({
+        patterns: [
+          {
+            from: "node_modules/@ricky0123/vad-web/dist/*.worklet.js",
+            to: "static/chunks/[name][ext]",
+          },
+          { from: "node_modules/@ricky0123/vad-web/dist/*.onnx", to: "static/chunks/[name][ext]" },
+          { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "static/chunks/[name][ext]" },
+        ],
+      }),
+    );
     return config;
   },
 };
 ```
 
 ```ts
-import { useMicVAD } from '@ricky0123/vad-react';
+import { useMicVAD } from "@ricky0123/vad-react";
 
 const vad = useMicVAD({
   startOnLoad: true,
-  onSpeechStart: () => { /* activate STT */ },
-  onSpeechEnd: (audio) => { /* audio segment available */ },
-  baseAssetPath: '/_next/static/chunks/',
-  onnxWASMBasePath: '/_next/static/chunks/',
+  onSpeechStart: () => {
+    /* activate STT */
+  },
+  onSpeechEnd: (audio) => {
+    /* audio segment available */
+  },
+  baseAssetPath: "/_next/static/chunks/",
+  onnxWASMBasePath: "/_next/static/chunks/",
 });
 ```
 
@@ -344,40 +375,42 @@ Both APIs are absent from jsdom — you must stub them manually. The key insight
 export class MockSpeechRecognition extends EventTarget {
   continuous = false;
   interimResults = false;
-  lang = '';
+  lang = "";
   phrases: unknown[] = [];
 
   start = vi.fn(() => {
-    this.dispatchEvent(new Event('start'));
+    this.dispatchEvent(new Event("start"));
   });
   stop = vi.fn(() => {
-    this.dispatchEvent(new Event('end'));
+    this.dispatchEvent(new Event("end"));
   });
   abort = vi.fn(() => {
-    this.dispatchEvent(new Event('end'));
+    this.dispatchEvent(new Event("end"));
   });
 
   // test helpers
   simulateFinalResult(transcript: string, confidence = 0.95) {
-    const event = Object.assign(new Event('result'), {
+    const event = Object.assign(new Event("result"), {
       resultIndex: 0,
-      results: [{
-        0: { transcript, confidence },
-        isFinal: true,
-        length: 1,
-      }],
+      results: [
+        {
+          0: { transcript, confidence },
+          isFinal: true,
+          length: 1,
+        },
+      ],
     });
     this.dispatchEvent(event);
   }
 
   simulateError(error: string) {
-    const event = Object.assign(new Event('error'), { error, message: '' });
+    const event = Object.assign(new Event("error"), { error, message: "" });
     this.dispatchEvent(event);
   }
 }
 
 // in vitest.setup.ts:
-Object.defineProperty(window, 'SpeechRecognition', {
+Object.defineProperty(window, "SpeechRecognition", {
   value: MockSpeechRecognition,
   writable: true,
 });
@@ -388,8 +421,20 @@ Object.defineProperty(window, 'SpeechRecognition', {
 ```ts
 // test/mocks/speechSynthesis.ts
 const mockVoices: SpeechSynthesisVoice[] = [
-  { name: 'Google Czech', lang: 'cs-CZ', default: true, localService: false, voiceURI: 'Google Czech' } as SpeechSynthesisVoice,
-  { name: 'Google US English', lang: 'en-US', default: false, localService: false, voiceURI: 'Google US English' } as SpeechSynthesisVoice,
+  {
+    name: "Google Czech",
+    lang: "cs-CZ",
+    default: true,
+    localService: false,
+    voiceURI: "Google Czech",
+  } as SpeechSynthesisVoice,
+  {
+    name: "Google US English",
+    lang: "en-US",
+    default: false,
+    localService: false,
+    voiceURI: "Google US English",
+  } as SpeechSynthesisVoice,
 ];
 
 const mockSpeechSynthesis = {
@@ -404,7 +449,7 @@ const mockSpeechSynthesis = {
   onvoiceschanged: null as EventListener | null,
 };
 
-Object.defineProperty(window, 'speechSynthesis', {
+Object.defineProperty(window, "speechSynthesis", {
   value: mockSpeechSynthesis,
   writable: true,
 });
@@ -414,48 +459,49 @@ Object.defineProperty(window, 'speechSynthesis', {
 
 ```ts
 // useSpeechRecognition.test.ts
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useSpeechRecognition } from '../useSpeechRecognition';
+import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useSpeechRecognition } from "../useSpeechRecognition";
 
-describe('useSpeechRecognition', () => {
+describe("useSpeechRecognition", () => {
   let mockInstance: MockSpeechRecognition;
 
   beforeEach(() => {
-    vi.spyOn(window, 'SpeechRecognition').mockImplementation(() => {
+    vi.spyOn(window, "SpeechRecognition").mockImplementation(() => {
       mockInstance = new MockSpeechRecognition();
       return mockInstance;
     });
   });
 
-  it('transitions to listening state on start', () => {
-    const { result } = renderHook(() => useSpeechRecognition({ lang: 'cs-CZ' }));
+  it("transitions to listening state on start", () => {
+    const { result } = renderHook(() => useSpeechRecognition({ lang: "cs-CZ" }));
     act(() => result.current.startListening());
     expect(result.current.isListening).toBe(true);
   });
 
-  it('sets transcript on final result', async () => {
+  it("sets transcript on final result", async () => {
     const onFinal = vi.fn();
-    const { result } = renderHook(() => useSpeechRecognition({ lang: 'cs-CZ', onFinal }));
+    const { result } = renderHook(() => useSpeechRecognition({ lang: "cs-CZ", onFinal }));
     act(() => result.current.startListening());
-    act(() => mockInstance.simulateFinalResult('schválit'));
-    expect(onFinal).toHaveBeenCalledWith('schválit');
+    act(() => mockInstance.simulateFinalResult("schválit"));
+    expect(onFinal).toHaveBeenCalledWith("schválit");
   });
 
-  it('maps not-allowed error to mic-denied state', () => {
-    const { result } = renderHook(() => useSpeechRecognition({ lang: 'cs-CZ' }));
+  it("maps not-allowed error to mic-denied state", () => {
+    const { result } = renderHook(() => useSpeechRecognition({ lang: "cs-CZ" }));
     act(() => result.current.startListening());
-    act(() => mockInstance.simulateError('not-allowed'));
-    expect(result.current.error).toBe('mic-denied');
+    act(() => mockInstance.simulateError("not-allowed"));
+    expect(result.current.error).toBe("mic-denied");
     expect(result.current.isListening).toBe(false);
   });
 
-  it('retries on no-speech error in continuous mode', async () => {
-    const { result } = renderHook(() =>
-      useSpeechRecognition({ lang: 'cs-CZ', continuous: true })
-    );
+  it("retries on no-speech error in continuous mode", async () => {
+    const { result } = renderHook(() => useSpeechRecognition({ lang: "cs-CZ", continuous: true }));
     act(() => result.current.startListening());
-    act(() => { mockInstance.simulateError('no-speech'); mockInstance.dispatchEvent(new Event('end')); });
+    act(() => {
+      mockInstance.simulateError("no-speech");
+      mockInstance.dispatchEvent(new Event("end"));
+    });
     // after debounce, start should be called again
     await vi.runAllTimersAsync();
     expect(mockInstance.start).toHaveBeenCalledTimes(2);
@@ -471,15 +517,15 @@ describe('useSpeechRecognition', () => {
 
 ```ts
 export type SpeechRecognitionError =
-  | 'mic-denied'      // not-allowed | audio-capture
-  | 'unsupported'     // no SpeechRecognition in window
-  | 'network'         // network error
-  | 'service-denied'; // service-not-allowed
+  | "mic-denied" // not-allowed | audio-capture
+  | "unsupported" // no SpeechRecognition in window
+  | "network" // network error
+  | "service-denied"; // service-not-allowed
 
 export interface UseSpeechRecognitionOptions {
-  lang?: string;         // from locale cookie
+  lang?: string; // from locale cookie
   continuous?: boolean;
-  mode?: 'live' | 'demo'; // demo uses the existing useVoiceDemoSequence
+  mode?: "live" | "demo"; // demo uses the existing useVoiceDemoSequence
   onInterim?: (text: string) => void;
   onFinal?: (text: string) => void;
   onError?: (error: SpeechRecognitionError) => void;
@@ -488,7 +534,7 @@ export interface UseSpeechRecognitionOptions {
 export interface UseSpeechRecognitionResult {
   isListening: boolean;
   isSupported: boolean;
-  transcript: string;      // latest interim
+  transcript: string; // latest interim
   error: SpeechRecognitionError | null;
   startListening: () => void;
   stopListening: () => void;
@@ -496,9 +542,11 @@ export interface UseSpeechRecognitionResult {
 ```
 
 **SSR guard pattern:**
+
 ```ts
-const isSupported = typeof window !== 'undefined' &&
-  ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+const isSupported =
+  typeof window !== "undefined" &&
+  ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 ```
 
 ### 5.2 `useSpeech` (TTS)
@@ -517,12 +565,12 @@ export interface UseSpeechResult {
 
 ```ts
 export interface VoiceSession {
-  mode: 'live' | 'demo';
+  mode: "live" | "demo";
   isListening: boolean;
   isSpeaking: boolean;
   isSupported: boolean;
   error: SpeechRecognitionError | null;
-  transcript: string;        // current interim
+  transcript: string; // current interim
   startListening: () => void;
   stopListening: () => void;
   speak: (text: string) => void;
@@ -536,34 +584,34 @@ export interface VoiceSession {
 
 The grammar in `dispatchUtterance.ts` should normalize before matching. Suggested grammar table covering Phase 7.2:
 
-| Czech (normalized) | English (normalized) | Action |
-|---|---|---|
-| `schval` / `schvalit` | `approve` | `approveLatest` |
-| `odmit` / `odmitnout` | `reject` / `deny` | `rejectLatest` |
-| `zastav` / `zastavit` / `stop` | `stop` | `stopActive` |
-| `jdi na {page}` | `navigate to {page}` | `navigate(page)` |
-| `zavrit` / `zavrít` | `close` | `closeOverlay` |
-| anything else | anything else | `createTask(utterance)` |
+| Czech (normalized)             | English (normalized) | Action                  |
+| ------------------------------ | -------------------- | ----------------------- |
+| `schval` / `schvalit`          | `approve`            | `approveLatest`         |
+| `odmit` / `odmitnout`          | `reject` / `deny`    | `rejectLatest`          |
+| `zastav` / `zastavit` / `stop` | `stop`               | `stopActive`            |
+| `jdi na {page}`                | `navigate to {page}` | `navigate(page)`        |
+| `zavrit` / `zavrít`            | `close`              | `closeOverlay`          |
+| anything else                  | anything else        | `createTask(utterance)` |
 
 ```ts
 const COMMANDS: Array<{ patterns: RegExp[]; action: () => VoiceAction }> = [
   {
     patterns: [/^schval(it)?$/, /^approve$/],
-    action: () => ({ type: 'approveLatest' }),
+    action: () => ({ type: "approveLatest" }),
   },
   {
     patterns: [/^odm[ií]t(nout)?$/, /^(reject|deny)$/],
-    action: () => ({ type: 'rejectLatest' }),
+    action: () => ({ type: "rejectLatest" }),
   },
   // ...
 ];
 
-export function parseUtterance(raw: string, lang: 'cs' | 'en'): VoiceAction {
+export function parseUtterance(raw: string, lang: "cs" | "en"): VoiceAction {
   const normalized = normalizeCzech(raw); // strip diacritics, lowercase
   for (const cmd of COMMANDS) {
-    if (cmd.patterns.some(p => p.test(normalized))) return cmd.action();
+    if (cmd.patterns.some((p) => p.test(normalized))) return cmd.action();
   }
-  return { type: 'createTask', text: raw }; // preserve original for task text
+  return { type: "createTask", text: raw }; // preserve original for task text
 }
 ```
 
@@ -582,19 +630,19 @@ export function parseUtterance(raw: string, lang: 'cs' | 'en'): VoiceAction {
 
 ## 8. Key Gotchas Summary
 
-| Risk | Mitigation |
-|---|---|
-| Chrome STT requires network (default) | Use `processLocally: true` in Chrome 139+ as opt-in; `network` error state in hook |
-| `onend` fires on both `stop()` AND silent session drop | Use `active` boolean flag — only restart if the session was supposed to be running |
-| `getVoices()` returns `[]` on first call | Always use `voiceschanged` listener; resolve promise `{ once: true }` |
-| iOS: only 36/55 listed voices work | Whitelist known-working voice names for iOS |
-| Android: `utterance.lang` must be set explicitly | Always set `utt.lang = voice.lang` with underscore normalization |
-| Utterance GC before `onend` | Keep module-level ref to `SpeechSynthesisUtterance` |
-| `speak()` before user gesture blocked | Queue utterances, flush on first user interaction |
-| Porcupine free tier: 3 users/month | For single-operator ZIBBY, non-issue; AccessKey via `NEXT_PUBLIC_PICOVOICE_KEY` env var |
-| WASM/worklet files need webpack copy config for VAD | Use `copy-webpack-plugin` in `next.config.ts` |
-| SSR: `window` is undefined in Next.js server components | Guard every Speech API access with `typeof window !== 'undefined'` |
-| Firefox: SpeechRecognition off by default | `isSupported` check → render text-input fallback automatically |
+| Risk                                                    | Mitigation                                                                              |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Chrome STT requires network (default)                   | Use `processLocally: true` in Chrome 139+ as opt-in; `network` error state in hook      |
+| `onend` fires on both `stop()` AND silent session drop  | Use `active` boolean flag — only restart if the session was supposed to be running      |
+| `getVoices()` returns `[]` on first call                | Always use `voiceschanged` listener; resolve promise `{ once: true }`                   |
+| iOS: only 36/55 listed voices work                      | Whitelist known-working voice names for iOS                                             |
+| Android: `utterance.lang` must be set explicitly        | Always set `utt.lang = voice.lang` with underscore normalization                        |
+| Utterance GC before `onend`                             | Keep module-level ref to `SpeechSynthesisUtterance`                                     |
+| `speak()` before user gesture blocked                   | Queue utterances, flush on first user interaction                                       |
+| Porcupine free tier: 3 users/month                      | For single-operator ZIBBY, non-issue; AccessKey via `NEXT_PUBLIC_PICOVOICE_KEY` env var |
+| WASM/worklet files need webpack copy config for VAD     | Use `copy-webpack-plugin` in `next.config.ts`                                           |
+| SSR: `window` is undefined in Next.js server components | Guard every Speech API access with `typeof window !== 'undefined'`                      |
+| Firefox: SpeechRecognition off by default               | `isSupported` check → render text-input fallback automatically                          |
 
 ---
 

@@ -1,7 +1,7 @@
-import { Module } from "@nestjs/common"
-import { AgentsModule } from "../agents/agents.module"
-import { PipelinesModule } from "../pipelines/pipelines.module"
-import { ActivityRecorderService } from "./activity-recorder.service"
+import { Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
+import { PipelinesModule } from "../pipelines/pipelines.module";
+import { ActivityRecorderService } from "./activity-recorder.service";
 
 /**
  * Subscribes both runners and records run transitions into the activity log —

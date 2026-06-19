@@ -1,6 +1,6 @@
-import { z } from "zod"
-import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema"
-import { ProjectBudgetSchema } from "../projects/project.schema"
+import { z } from "zod";
+import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
+import { ProjectBudgetSchema } from "../projects/project.schema";
 
 /**
  * The maker a goal iterates: an existing stored agent OR pipeline, dispatched
@@ -10,8 +10,8 @@ import { ProjectBudgetSchema } from "../projects/project.schema"
 export const MakerRefSchema = z.object({
   kind: z.enum(["agent", "pipeline"]),
   id: AgentIdSchema,
-})
-export type MakerRef = z.infer<typeof MakerRefSchema>
+});
+export type MakerRef = z.infer<typeof MakerRefSchema>;
 
 /**
  * How a goal's verifier decides "satisfied" — a spec, not a new engine:
@@ -37,8 +37,8 @@ export const VerifierSpecSchema = z.discriminatedUnion("kind", [
     model: AgentModelSchema.optional(),
     thinking: AgentThinkingSchema.optional(),
   }),
-])
-export type VerifierSpec = z.infer<typeof VerifierSpecSchema>
+]);
+export type VerifierSpec = z.infer<typeof VerifierSpecSchema>;
 
 /** The plain object form — `update` derives from this. */
 const GoalObject = z.object({
@@ -55,7 +55,7 @@ const GoalObject = z.object({
   budget: ProjectBudgetSchema.optional(),
   /** Markdown body — extra standing instructions handed to each maker iteration. */
   instructions: z.string().min(1),
-})
+});
 
 /**
  * A goal definition — the outer loop's recipe — stored as a `.goal.md` file
@@ -63,13 +63,13 @@ const GoalObject = z.object({
  * body is `instructions`). A parallel to a pipeline definition, not a new dispatch
  * path: the maker it names is an existing agent or pipeline.
  */
-export const GoalSchema = GoalObject
-export type Goal = z.infer<typeof GoalSchema>
+export const GoalSchema = GoalObject;
+export type Goal = z.infer<typeof GoalSchema>;
 
 /** Body accepted by `createGoal` — the full entity (`id` + required fields). */
-export const CreateGoalSchema = GoalSchema
-export type CreateGoalInput = z.infer<typeof CreateGoalSchema>
+export const CreateGoalSchema = GoalSchema;
+export type CreateGoalInput = z.infer<typeof CreateGoalSchema>;
 
 /** Body accepted by `updateGoal` — every field optional (partial), id excluded. */
-export const UpdateGoalSchema = GoalObject.omit({ id: true }).partial()
-export type UpdateGoalInput = z.infer<typeof UpdateGoalSchema>
+export const UpdateGoalSchema = GoalObject.omit({ id: true }).partial();
+export type UpdateGoalInput = z.infer<typeof UpdateGoalSchema>;

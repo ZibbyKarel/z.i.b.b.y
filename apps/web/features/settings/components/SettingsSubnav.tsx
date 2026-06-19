@@ -18,8 +18,7 @@ export function SettingsSubnav() {
   const t = useTranslations("settings.subnav");
   const router = useRouter();
   const pathname = usePathname();
-  const active =
-    SECTIONS.find((s) => pathname.startsWith(s.href))?.id ?? "general";
+  const active = SECTIONS.find((s) => pathname.startsWith(s.href))?.id ?? "general";
 
   return (
     <ButtonGroup

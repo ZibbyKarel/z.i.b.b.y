@@ -10,11 +10,7 @@ import { Collection } from "../../components/Collection/Collection";
 import { HookCard } from "./components/HookCard";
 import { type HookDraft, HookFormDialog } from "./components/HookFormDialog";
 import { useHooksQuery } from "./queries";
-import {
-  useCreateHookMutation,
-  useDeleteHookMutation,
-  useUpdateHookMutation,
-} from "./mutations";
+import { useCreateHookMutation, useDeleteHookMutation, useUpdateHookMutation } from "./mutations";
 
 /** Which hook the form dialog is open for: "new", an entity, or closed. */
 type Editing = "new" | Hook | null;
@@ -53,29 +49,29 @@ export function Screen() {
         />
 
         <Collection
-        empty={{
-          glyph: "checkpoint",
-          title: t("hooks.emptyTitle"),
-          description: t("hooks.emptyDescription"),
-          actionLabel: t("hooks.addHook"),
-          hint: t("hooks.emptyHint"),
-          onAction: () => setEditing("new"),
-        }}
-        error={
-          hooksQuery.isError
-            ? {
-                title: t("common.loadErrorTitle"),
-                description: t("common.loadErrorDescription"),
-                retryLabel: t("common.retry"),
-                onRetry: () => void hooksQuery.refetch(),
-              }
-            : undefined
-        }
-        items={hooks}
-        loading={hooksQuery.isPending ? { label: t("common.loading") } : undefined}
-        renderItem={(h) => (
-          <HookCard hook={h} key={h.id} onConfigure={(hook) => setEditing(hook)} />
-        )}
+          empty={{
+            glyph: "checkpoint",
+            title: t("hooks.emptyTitle"),
+            description: t("hooks.emptyDescription"),
+            actionLabel: t("hooks.addHook"),
+            hint: t("hooks.emptyHint"),
+            onAction: () => setEditing("new"),
+          }}
+          error={
+            hooksQuery.isError
+              ? {
+                  title: t("common.loadErrorTitle"),
+                  description: t("common.loadErrorDescription"),
+                  retryLabel: t("common.retry"),
+                  onRetry: () => void hooksQuery.refetch(),
+                }
+              : undefined
+          }
+          items={hooks}
+          loading={hooksQuery.isPending ? { label: t("common.loading") } : undefined}
+          renderItem={(h) => (
+            <HookCard hook={h} key={h.id} onConfigure={(hook) => setEditing(hook)} />
+          )}
         />
       </Stack>
 

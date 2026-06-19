@@ -1,11 +1,4 @@
-import {
-  Card,
-  Container,
-  IconTile,
-  Stack,
-  StatusDot,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { Command } from "@zibby/contracts";
 
 export interface CommandTileProps {

@@ -1,11 +1,13 @@
-import type { Ref } from "react"
-import { type FieldValues, type Path, useController } from "react-hook-form"
-import { TextAreaField, type TextAreaFieldProps } from "@zibby/design-system"
+import type { Ref } from "react";
+import { type FieldValues, type Path, useController } from "react-hook-form";
+import { TextAreaField, type TextAreaFieldProps } from "@zibby/design-system";
 
-export interface FormTextAreaProps<TFieldValues extends FieldValues = FieldValues>
-  extends Omit<TextAreaFieldProps, "value" | "onChange" | "onBlur" | "defaultValue" | "name" | "ref"> {
-  name: Path<TFieldValues>
-  defaultValue?: string
+export interface FormTextAreaProps<TFieldValues extends FieldValues = FieldValues> extends Omit<
+  TextAreaFieldProps,
+  "value" | "onChange" | "onBlur" | "defaultValue" | "name" | "ref"
+> {
+  name: Path<TFieldValues>;
+  defaultValue?: string;
 }
 
 export function FormTextArea<TFieldValues extends FieldValues = FieldValues>({
@@ -18,7 +20,7 @@ export function FormTextArea<TFieldValues extends FieldValues = FieldValues>({
   const { field, fieldState } = useController<TFieldValues>({
     name,
     defaultValue: (defaultValue ?? "") as never,
-  })
+  });
   return (
     <TextAreaField
       {...props}
@@ -30,5 +32,5 @@ export function FormTextArea<TFieldValues extends FieldValues = FieldValues>({
       ref={field.ref as unknown as Ref<HTMLTextAreaElement>}
       value={(field.value ?? "") as string}
     />
-  )
+  );
 }

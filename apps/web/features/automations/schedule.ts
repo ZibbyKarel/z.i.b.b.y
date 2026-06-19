@@ -221,7 +221,12 @@ export function cronToSchedule(expr: string): Schedule | null {
   const desc = describeCron(expr);
   switch (desc.kind) {
     case "daily":
-      return { ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [...ALL_WEEKDAYS], time: desc.time };
+      return {
+        ...DEFAULT_SCHEDULE,
+        repeat: "weekly",
+        weekdays: [...ALL_WEEKDAYS],
+        time: desc.time,
+      };
     case "weekdays":
       return { ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [1, 2, 3, 4, 5], time: desc.time };
     case "weekends":

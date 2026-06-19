@@ -27,8 +27,16 @@ const tag = cva(
       solid: { true: "", false: "" },
     },
     compoundVariants: [
-      { tone: "neutral", solid: true, className: "bg-foreground-dim text-background border-transparent" },
-      { tone: "accent", solid: true, className: "bg-accent text-accent-contrast border-transparent" },
+      {
+        tone: "neutral",
+        solid: true,
+        className: "bg-foreground-dim text-background border-transparent",
+      },
+      {
+        tone: "accent",
+        solid: true,
+        className: "bg-accent text-accent-contrast border-transparent",
+      },
       { tone: "ok", solid: true, className: "bg-ok text-background border-transparent" },
       { tone: "warn", solid: true, className: "bg-warn text-background border-transparent" },
       { tone: "bad", solid: true, className: "bg-bad text-background border-transparent" },
@@ -60,8 +68,7 @@ export enum TagTestId {
 }
 
 export interface TagProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">,
-    VariantProps<typeof tag> {
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">, VariantProps<typeof tag> {
   /** Optional leading glyph (categorical marker — risk kind, channel, …). */
   icon?: IconName;
   ref?: React.Ref<HTMLSpanElement>;

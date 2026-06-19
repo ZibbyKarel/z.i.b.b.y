@@ -64,9 +64,10 @@ describe("runVoiceAction", () => {
 
   it("navigates and exits the overlay", () => {
     const deps = makeDeps();
-    expect(
-      runVoiceAction({ kind: "navigate", route: "/runs", page: "runs" }, deps),
-    ).toEqual({ key: "navigating", values: { page: "runs" } });
+    expect(runVoiceAction({ kind: "navigate", route: "/runs", page: "runs" }, deps)).toEqual({
+      key: "navigating",
+      values: { page: "runs" },
+    });
     expect(deps.close).toHaveBeenCalled();
     expect(deps.navigate).toHaveBeenCalledWith("/runs");
   });
@@ -89,17 +90,16 @@ describe("runVoiceAction", () => {
 
   it("dispatches plain speech straight to the tasks layer (no modal)", () => {
     const deps = makeDeps();
-    expect(
-      runVoiceAction({ kind: "createTask", text: "fix the build" }, deps),
-    ).toEqual({ key: "dispatching", values: { task: "fix the build" } });
+    expect(runVoiceAction({ kind: "createTask", text: "fix the build" }, deps)).toEqual({
+      key: "dispatching",
+      values: { task: "fix the build" },
+    });
     expect(deps.dispatchTask).toHaveBeenCalledWith("fix the build");
   });
 
   it("an empty utterance is a no-op — nothing dispatched", () => {
     const deps = makeDeps();
-    expect(
-      runVoiceAction({ kind: "createTask", text: "   " }, deps),
-    ).toEqual({ key: "heard" });
+    expect(runVoiceAction({ kind: "createTask", text: "   " }, deps)).toEqual({ key: "heard" });
     expect(deps.dispatchTask).not.toHaveBeenCalled();
   });
 });

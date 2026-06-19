@@ -1,23 +1,23 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { approvalsContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { approvalsContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   ApprovalAlreadyDecidedError,
   ApprovalNotFoundError,
   InvalidApprovalIdError,
-} from "./approvals.errors"
-import { ApprovalsService } from "./approvals.service"
+} from "./approvals.errors";
+import { ApprovalsService } from "./approvals.service";
 
 const errors = makeErrorMapper("Approval", {
   missing: [ApprovalNotFoundError, InvalidApprovalIdError],
-})
+});
 
 /** Deciding an already-decided approval → 409. */
 const decided = (error: unknown) =>
   error instanceof ApprovalAlreadyDecidedError
     ? ({ status: 409, body: { message: error.message } } as const)
-    : undefined
+    : undefined;
 
 /**
  * Implements `approvalsContract` against {@link ApprovalsService}. Missing/unsafe
@@ -42,6 +42,6 @@ export class ApprovalsController {
 
       rejectApproval: ({ params: { id } }) =>
         errors.or404(id, () => this.approvals.reject(id), decided),
-    })
+    });
   }
 }

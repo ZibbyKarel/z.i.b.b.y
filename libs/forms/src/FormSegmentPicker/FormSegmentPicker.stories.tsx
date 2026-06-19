@@ -1,15 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { zodResolver } from "../zodResolver"
-import { z } from "zod"
-import { Stack } from "@zibby/design-system"
-import { Form } from "../Form"
-import { FormSegmentPicker } from "./FormSegmentPicker"
+import type { Meta, StoryObj } from "@storybook/react";
+import { zodResolver } from "../zodResolver";
+import { z } from "zod";
+import { Stack } from "@zibby/design-system";
+import { Form } from "../Form";
+import { FormSegmentPicker } from "./FormSegmentPicker";
 
 const periodOptions = [
   { value: "day", label: "Den" },
   { value: "week", label: "Týden" },
   { value: "month", label: "Měsíc" },
-]
+];
 
 const meta: Meta<typeof FormSegmentPicker> = {
   title: "Forms/FormSegmentPicker",
@@ -22,13 +22,13 @@ const meta: Meta<typeof FormSegmentPicker> = {
       </div>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof FormSegmentPicker>
+type Story = StoryObj<typeof FormSegmentPicker>;
 
-const schema = z.object({ period: z.string().min(1, "Vyberte období") })
-type Schema = z.infer<typeof schema>
+const schema = z.object({ period: z.string().min(1, "Vyberte období") });
+type Schema = z.infer<typeof schema>;
 
 export const Overview: Story = {
   render: () => (
@@ -50,16 +50,13 @@ export const Overview: Story = {
       </Stack>
     </Form>
   ),
-}
+};
 
 export const Playground: Story = {
   args: { label: "Období", name: "period", hint: "Nápověda", options: periodOptions },
   render: (args) => (
-    <Form<{ period: string }>
-      formOptions={{ defaultValues: { period: "" } }}
-      onSubmit={() => {}}
-    >
+    <Form<{ period: string }> formOptions={{ defaultValues: { period: "" } }} onSubmit={() => {}}>
       <FormSegmentPicker<{ period: string }> {...args} name="period" />
     </Form>
   ),
-}
+};

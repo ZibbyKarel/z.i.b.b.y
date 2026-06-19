@@ -1,20 +1,20 @@
-import { Module } from "@nestjs/common"
-import { AdapterRegistry } from "../channels/adapters/adapter-registry"
-import { ProjectsModule } from "../projects/projects.module"
-import { dataDir } from "../shared/data-dir"
-import { CONNECTION_TESTER } from "./connection-tester"
-import { CREDENTIALS_DIR, CredentialsStore } from "./credentials.store"
-import { IntegrationsController } from "./integrations.controller"
-import { INTEGRATIONS_DIR, IntegrationsStorageService } from "./integrations.storage.service"
+import { Module } from "@nestjs/common";
+import { AdapterRegistry } from "../channels/adapters/adapter-registry";
+import { ProjectsModule } from "../projects/projects.module";
+import { dataDir } from "../shared/data-dir";
+import { CONNECTION_TESTER } from "./connection-tester";
+import { CREDENTIALS_DIR, CredentialsStore } from "./credentials.store";
+import { IntegrationsController } from "./integrations.controller";
+import { INTEGRATIONS_DIR, IntegrationsStorageService } from "./integrations.storage.service";
 
 /** Default integrations dir, anchored to `apps/api/data/integrations`. */
 export function resolveIntegrationsDir(): string {
-  return process.env.INTEGRATIONS_DIR ?? dataDir("integrations")
+  return process.env.INTEGRATIONS_DIR ?? dataDir("integrations");
 }
 
 /** Default credentials dir (gitignored), anchored to `apps/api/data/credentials`. */
 export function resolveCredentialsDir(): string {
-  return process.env.CREDENTIALS_DIR ?? dataDir("credentials")
+  return process.env.CREDENTIALS_DIR ?? dataDir("credentials");
 }
 
 /**

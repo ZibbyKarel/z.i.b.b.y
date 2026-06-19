@@ -39,7 +39,9 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
   const integrationsQuery = useIntegrationsQuery(projectId);
   const integrations = integrationsQuery.data ?? [];
   const [editing, setEditing] = useState<Editing>(null);
-  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; detail: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; detail: string } | null>(
+    null,
+  );
 
   const create = useCreateIntegrationMutation();
   const update = useUpdateIntegrationMutation();
@@ -60,11 +62,17 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
   const onSubmit = (draft: IntegrationDraft) => {
     if (draft.create) {
       const { id, kind } = draft.create;
-      create.mutate({ body: draft.create }, { onSuccess: () => persistSecret(id, kind, draft.secret) });
+      create.mutate(
+        { body: draft.create },
+        { onSuccess: () => persistSecret(id, kind, draft.secret) },
+      );
     } else if (draft.update) {
       const { id, patch } = draft.update;
       const kind = (editing !== "new" && editing?.kind) || "slack";
-      update.mutate({ params: { id }, body: patch }, { onSuccess: () => persistSecret(id, kind, draft.secret) });
+      update.mutate(
+        { params: { id }, body: patch },
+        { onSuccess: () => persistSecret(id, kind, draft.secret) },
+      );
     }
     setEditing(null);
   };
@@ -74,8 +82,10 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
     test.mutate(
       { params: { id: integration.id }, body: {} },
       {
-        onSuccess: ({ body }) => setTestResult({ id: integration.id, ok: body.ok, detail: body.detail }),
-        onError: () => setTestResult({ id: integration.id, ok: false, detail: t("integrations.testFailed") }),
+        onSuccess: ({ body }) =>
+          setTestResult({ id: integration.id, ok: body.ok, detail: body.detail }),
+        onError: () =>
+          setTestResult({ id: integration.id, ok: false, detail: t("integrations.testFailed") }),
       },
     );
   };
@@ -124,7 +134,10 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
             onDelete={onDelete}
             onTest={onTest}
             onToggleEnabled={(integration) =>
-              update.mutate({ params: { id: integration.id }, body: { enabled: !integration.enabled } })
+              update.mutate({
+                params: { id: integration.id },
+                body: { enabled: !integration.enabled },
+              })
             }
             testing={test.isPending}
             togglingEnabled={update.isPending}

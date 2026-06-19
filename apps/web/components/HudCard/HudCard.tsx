@@ -63,27 +63,23 @@ export function HudCard({
                 {title}
               </Typography>
               {subtitle != null && subtitle !== "" && (
-                <Typography
-                  mono
-                  truncate
-                  size="caption"
-                  type="note"
-                  variant="tertiary"
-                >
+                <Typography mono truncate size="caption" type="note" variant="tertiary">
                   {subtitle}
                 </Typography>
               )}
               {description != null && description !== "" && (
                 <>
                   {/* 2-line clamp: -webkit-line-clamp has no DS equivalent. */}
-                  {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    <Typography
-                      leading="snug"
-                      size="caption"
-                      type="note"
-                      variant="secondary"
-                    >
+                  <div
+                    // eslint-disable-next-line react/forbid-dom-props
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Typography leading="snug" size="caption" type="note" variant="secondary">
                       {description}
                     </Typography>
                   </div>

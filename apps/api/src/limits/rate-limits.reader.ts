@@ -1,21 +1,21 @@
-import { promises as fs } from "node:fs"
-import { homedir } from "node:os"
-import { join } from "node:path"
-import { Injectable, Optional } from "@nestjs/common"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
+import { promises as fs } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { Injectable, Optional } from "@nestjs/common";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** The server-computed interactive-window utilization, as whole percents. */
 export interface RateLimitSnapshot {
-  rolling5hPct: number
-  weekly7dPct: number
+  rolling5hPct: number;
+  weekly7dPct: number;
   /** When the rolling 5h window's utilization resets (epoch ms), or null if unknown. */
-  rolling5hResetsAt: number | null
+  rolling5hResetsAt: number | null;
   /** When the weekly window's utilization resets (epoch ms), or null if unknown. */
-  weekly7dResetsAt: number | null
+  weekly7dResetsAt: number | null;
   /** When the reading was taken (epoch ms), or null if never. */
-  capturedAt: number | null
+  capturedAt: number | null;
   /** No fresh reading: either nothing captured yet or the capture has aged out. */
-  stale: boolean
+  stale: boolean;
 }
 
 /**
@@ -24,7 +24,7 @@ export interface RateLimitSnapshot {
  * stepped away — the last percentages are aging, not wrong — but we flag it so
  * the panel can say so rather than imply a live number.
  */
-export const STALE_AFTER_MS = 10 * 60 * 1000
+export const STALE_AFTER_MS = 10 * 60 * 1000;
 
 const UNKNOWN: RateLimitSnapshot = {
   rolling5hPct: 0,
@@ -33,7 +33,7 @@ const UNKNOWN: RateLimitSnapshot = {
   weekly7dResetsAt: null,
   capturedAt: null,
   stale: true,
-}
+};
 
 /**
  * Claude Code's config directory. Honors `CLAUDE_CONFIG_DIR` (Claude Code's own
@@ -43,19 +43,19 @@ const UNKNOWN: RateLimitSnapshot = {
  * same machine and shares the env.
  */
 export function claudeConfigDir(): string {
-  return process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")
+  return process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude");
 }
 
 /** Round + clamp an unknown value to a `[0, 100]` whole percent; 0 if not a number. */
 export function clampPct(v: unknown): number {
-  if (typeof v !== "number" || Number.isNaN(v)) return 0
-  return Math.min(100, Math.max(0, Math.round(v)))
+  if (typeof v !== "number" || Number.isNaN(v)) return 0;
+  return Math.min(100, Math.max(0, Math.round(v)));
 }
 
 /** A `resets_at` epoch-seconds field → epoch ms, or null if absent/non-numeric. */
 function resetMs(v: unknown): number | null {
-  if (typeof v !== "number" || Number.isNaN(v)) return null
-  return Math.round(v * 1000)
+  if (typeof v !== "number" || Number.isNaN(v)) return null;
+  return Math.round(v * 1000);
 }
 
 /**
@@ -66,22 +66,22 @@ function resetMs(v: unknown): number | null {
  * the same `anthropic-ratelimit-unified-*` utilization the status line renders.
  */
 export function parseRateLimits(raw: string, now: number): RateLimitSnapshot {
-  let doc: unknown
+  let doc: unknown;
   try {
-    doc = JSON.parse(raw)
+    doc = JSON.parse(raw);
   } catch {
-    return UNKNOWN
+    return UNKNOWN;
   }
-  if (typeof doc !== "object" || doc === null) return UNKNOWN
-  const d = doc as Record<string, unknown>
-  const rl = d.rateLimits as Record<string, unknown> | null | undefined
-  const five = rl?.five_hour as Record<string, unknown> | undefined
-  const seven = rl?.seven_day as Record<string, unknown> | undefined
+  if (typeof doc !== "object" || doc === null) return UNKNOWN;
+  const d = doc as Record<string, unknown>;
+  const rl = d.rateLimits as Record<string, unknown> | null | undefined;
+  const five = rl?.five_hour as Record<string, unknown> | undefined;
+  const seven = rl?.seven_day as Record<string, unknown> | undefined;
 
   const hasReading =
-    typeof five?.used_percentage === "number" || typeof seven?.used_percentage === "number"
-  const capturedAt = typeof d.capturedAt === "number" ? d.capturedAt : null
-  const stale = !hasReading || capturedAt === null || now - capturedAt > STALE_AFTER_MS
+    typeof five?.used_percentage === "number" || typeof seven?.used_percentage === "number";
+  const capturedAt = typeof d.capturedAt === "number" ? d.capturedAt : null;
+  const stale = !hasReading || capturedAt === null || now - capturedAt > STALE_AFTER_MS;
 
   return {
     rolling5hPct: clampPct(five?.used_percentage),
@@ -90,7 +90,7 @@ export function parseRateLimits(raw: string, now: number): RateLimitSnapshot {
     weekly7dResetsAt: resetMs(seven?.resets_at),
     capturedAt,
     stale,
-  }
+  };
 }
 
 /**
@@ -106,27 +106,27 @@ export function parseRateLimits(raw: string, now: number): RateLimitSnapshot {
  */
 @Injectable()
 export class RateLimitsReader {
-  private readonly log?: ScopedLogger
-  private readonly file = join(claudeConfigDir(), "rate-limits.json")
+  private readonly log?: ScopedLogger;
+  private readonly file = join(claudeConfigDir(), "rate-limits.json");
 
   // Optional so a test can `new (class extends RateLimitsReader …)()` without DI.
   constructor(@Optional() logger?: LoggerService) {
-    this.log = logger?.child(RateLimitsReader.name)
+    this.log = logger?.child(RateLimitsReader.name);
   }
 
   /** Override point for tests; production reads the wall clock. */
   protected now(): number {
-    return Date.now()
+    return Date.now();
   }
 
   async read(): Promise<RateLimitSnapshot> {
-    let raw: string
+    let raw: string;
     try {
-      raw = await fs.readFile(this.file, "utf8")
+      raw = await fs.readFile(this.file, "utf8");
     } catch (err) {
-      this.log?.debug("rate-limits capture not readable", { error: (err as Error).message })
-      return UNKNOWN
+      this.log?.debug("rate-limits capture not readable", { error: (err as Error).message });
+      return UNKNOWN;
     }
-    return parseRateLimits(raw, this.now())
+    return parseRateLimits(raw, this.now());
   }
 }

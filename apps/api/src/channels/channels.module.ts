@@ -1,26 +1,26 @@
-import { Module } from "@nestjs/common"
-import { ApprovalsModule } from "../approvals/approvals.module"
-import { GateRulesModule } from "../gate-rules/gate-rules.module"
-import { GatesModule } from "../gates/gates.module"
-import { IntegrationsModule } from "../integrations/integrations.module"
-import { MandateModule } from "../mandate/mandate.module"
-import { ProjectsModule } from "../projects/projects.module"
-import { dataDir } from "../shared/data-dir"
-import { TasksModule } from "../tasks/tasks.module"
-import { CHANNELS_DIR, ChannelItemStore } from "./channel-item.store"
-import { ChannelEventsService } from "./channel-events.service"
-import { ChannelTriageFlowService } from "./channel-triage-flow.service"
-import { CHANNEL_TRIAGE_FLOW, ChannelWatcherService } from "./channel-watcher.service"
-import { ChannelsController } from "./channels.controller"
-import { JiraIssueFlowService } from "./jira-issue-flow.service"
-import { ClaudeCliTriager } from "./triage/claude-cli-triager"
-import { KeywordTriager } from "./triage/keyword-triager"
-import { TRIAGE_ROUTER } from "./triage/triage-router"
-import { TriageService } from "./triage/triage.service"
+import { Module } from "@nestjs/common";
+import { ApprovalsModule } from "../approvals/approvals.module";
+import { GateRulesModule } from "../gate-rules/gate-rules.module";
+import { GatesModule } from "../gates/gates.module";
+import { IntegrationsModule } from "../integrations/integrations.module";
+import { MandateModule } from "../mandate/mandate.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { dataDir } from "../shared/data-dir";
+import { TasksModule } from "../tasks/tasks.module";
+import { CHANNELS_DIR, ChannelItemStore } from "./channel-item.store";
+import { ChannelEventsService } from "./channel-events.service";
+import { ChannelTriageFlowService } from "./channel-triage-flow.service";
+import { CHANNEL_TRIAGE_FLOW, ChannelWatcherService } from "./channel-watcher.service";
+import { ChannelsController } from "./channels.controller";
+import { JiraIssueFlowService } from "./jira-issue-flow.service";
+import { ClaudeCliTriager } from "./triage/claude-cli-triager";
+import { KeywordTriager } from "./triage/keyword-triager";
+import { TRIAGE_ROUTER } from "./triage/triage-router";
+import { TriageService } from "./triage/triage.service";
 
 /** Default channels dir, anchored to `apps/api/data/channels`. */
 export function resolveChannelsDir(): string {
-  return process.env.CHANNELS_DIR ?? dataDir("channels")
+  return process.env.CHANNELS_DIR ?? dataDir("channels");
 }
 
 /**

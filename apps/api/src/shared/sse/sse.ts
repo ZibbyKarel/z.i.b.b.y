@@ -1,6 +1,6 @@
-import type { MessageEvent } from "@nestjs/common"
-import type { RunLogChunk } from "@zibby/contracts"
-import { Observable } from "rxjs"
+import type { MessageEvent } from "@nestjs/common";
+import type { RunLogChunk } from "@zibby/contracts";
+import { Observable } from "rxjs";
 
 /**
  * SSE plumbing shared by the streaming endpoints. The frontend used to poll runs
@@ -12,7 +12,7 @@ import { Observable } from "rxjs"
  */
 
 /** How often an otherwise-idle stream emits a keep-alive so proxies don't drop it. */
-const HEARTBEAT_MS = 25_000
+const HEARTBEAT_MS = 25_000;
 
 /**
  * Stream one run's log as offset-keyed deltas. `read(offset)` returns the bytes
@@ -33,27 +33,31 @@ export function streamRunLog(
   subscribe: (listener: () => void) => () => void,
 ): Observable<MessageEvent> {
   return new Observable<MessageEvent>((subscriber) => {
-    let offset = startOffset
-    let dirty = true
-    let pumping = false
-    let closed = false
+    let offset = startOffset;
+    let dirty = true;
+    let pumping = false;
+    let closed = false;
 
     const pump = async (): Promise<void> => {
-      if (pumping || closed) return
-      pumping = true
+      if (pumping || closed) return;
+      pumping = true;
       try {
         while (dirty && !closed) {
-          dirty = false
-          const chunk = await read(offset)
-          if (closed) return
+          dirty = false;
+          const chunk = await read(offset);
+          if (closed) return;
           if (chunk.content) {
-            offset = chunk.nextOffset
+            offset = chunk.nextOffset;
             subscriber.next({
               id: String(offset),
-              data: JSON.stringify({ content: chunk.content, nextOffset: offset, done: chunk.done }),
-            })
+              data: JSON.stringify({
+                content: chunk.content,
+                nextOffset: offset,
+                done: chunk.done,
+              }),
+            });
             // More may have landed while we awaited the read above.
-            dirty = true
+            dirty = true;
           }
           if (chunk.done) {
             // A run already finished (or finishing with no tail) still needs a final
@@ -62,47 +66,47 @@ export function streamRunLog(
               subscriber.next({
                 id: String(chunk.nextOffset),
                 data: JSON.stringify({ content: "", nextOffset: chunk.nextOffset, done: true }),
-              })
+              });
             }
-            closed = true
-            subscriber.complete()
-            return
+            closed = true;
+            subscriber.complete();
+            return;
           }
         }
       } catch (error) {
         if (!closed) {
-          closed = true
-          subscriber.error(error)
+          closed = true;
+          subscriber.error(error);
         }
       } finally {
-        pumping = false
+        pumping = false;
       }
-    }
+    };
 
     const unsubscribe = subscribe(() => {
-      dirty = true
-      void pump()
-    })
+      dirty = true;
+      void pump();
+    });
     const heartbeat = setInterval(() => {
-      if (!closed) subscriber.next({ type: "ping", data: "" })
-    }, HEARTBEAT_MS)
-    heartbeat.unref?.()
-    void pump()
+      if (!closed) subscriber.next({ type: "ping", data: "" });
+    }, HEARTBEAT_MS);
+    heartbeat.unref?.();
+    void pump();
 
     return () => {
-      closed = true
-      clearInterval(heartbeat)
-      unsubscribe()
-    }
-  })
+      closed = true;
+      clearInterval(heartbeat);
+      unsubscribe();
+    };
+  });
 }
 
 /** The shape every run-status event carries on the unified `/api/events` channel. */
 export interface RunStatusEvent {
   /** Which client query family to refetch. */
-  scope: "agent-runs" | "pipeline-runs" | "goal-runs"
-  runId: string
-  status: string
+  scope: "agent-runs" | "pipeline-runs" | "goal-runs";
+  runId: string;
+  status: string;
 }
 
 /**
@@ -119,19 +123,19 @@ export function fromRunStatus<T>(
 ): Observable<MessageEvent> {
   return new Observable<MessageEvent>((subscriber) => {
     const unsubscribe = subscribe((run) => {
-      const { runId, status } = project(run)
-      const event: RunStatusEvent = { scope, runId, status }
-      subscriber.next({ data: JSON.stringify(event) })
-    })
-    return () => unsubscribe()
-  })
+      const { runId, status } = project(run);
+      const event: RunStatusEvent = { scope, runId, status };
+      subscriber.next({ data: JSON.stringify(event) });
+    });
+    return () => unsubscribe();
+  });
 }
 
 /** A bare keep-alive stream, merged into the status channel so it never idles out. */
 export function heartbeats(): Observable<MessageEvent> {
   return new Observable<MessageEvent>((subscriber) => {
-    const timer = setInterval(() => subscriber.next({ type: "ping", data: "" }), HEARTBEAT_MS)
-    timer.unref?.()
-    return () => clearInterval(timer)
-  })
+    const timer = setInterval(() => subscriber.next({ type: "ping", data: "" }), HEARTBEAT_MS);
+    timer.unref?.();
+    return () => clearInterval(timer);
+  });
 }

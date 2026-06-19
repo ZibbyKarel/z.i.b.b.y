@@ -1,19 +1,25 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   GATE_RULE_ID_REGEX,
   type GlobalGateRule,
   type GlobalGateRuleInput,
   GlobalGateRuleSchema,
-} from "@zibby/contracts"
-import { collisionResistantId, ensureDir, fileExists, safeJson, writeFileAtomic } from "../shared/file-storage"
-import { GateRuleNotFoundError, InvalidGateRuleIdError } from "./gate-rules.errors"
+} from "@zibby/contracts";
+import {
+  collisionResistantId,
+  ensureDir,
+  fileExists,
+  safeJson,
+  writeFileAtomic,
+} from "../shared/file-storage";
+import { GateRuleNotFoundError, InvalidGateRuleIdError } from "./gate-rules.errors";
 
 /** DI token carrying the absolute path of the directory that holds the catalog file. */
-export const GATE_RULES_DIR = "GATE_RULES_DIR"
+export const GATE_RULES_DIR = "GATE_RULES_DIR";
 
-const FILE = "gate-rules.json"
+const FILE = "gate-rules.json";
 
 /**
  * Durable persistence for the global gate-rule catalog: a single ordered
@@ -24,58 +30,58 @@ const FILE = "gate-rules.json"
  */
 @Injectable()
 export class GateRulesStorageService implements OnModuleInit {
-  private readonly dir: string
+  private readonly dir: string;
 
   constructor(@Inject(GATE_RULES_DIR) dir: string) {
-    this.dir = path.resolve(dir)
+    this.dir = path.resolve(dir);
   }
 
   async onModuleInit(): Promise<void> {
-    await ensureDir(this.dir)
-    if (!(await fileExists(this.file))) await this.persist(DEFAULT_CATALOG)
+    await ensureDir(this.dir);
+    if (!(await fileExists(this.file))) await this.persist(DEFAULT_CATALOG);
   }
 
   /** The whole catalog, in order. A single malformed rule is skipped, not fatal. */
   async list(): Promise<GlobalGateRule[]> {
-    const raw = await fs.readFile(this.file, "utf8").catch(() => null)
-    if (raw === null) return [...DEFAULT_CATALOG]
-    const parsed = safeJson(raw)
-    if (!Array.isArray(parsed)) return [...DEFAULT_CATALOG]
-    const rules: GlobalGateRule[] = []
+    const raw = await fs.readFile(this.file, "utf8").catch(() => null);
+    if (raw === null) return [...DEFAULT_CATALOG];
+    const parsed = safeJson(raw);
+    if (!Array.isArray(parsed)) return [...DEFAULT_CATALOG];
+    const rules: GlobalGateRule[] = [];
     for (const item of parsed) {
-      const rule = GlobalGateRuleSchema.safeParse(item)
-      if (rule.success) rules.push(rule.data)
+      const rule = GlobalGateRuleSchema.safeParse(item);
+      if (rule.success) rules.push(rule.data);
     }
-    return rules
+    return rules;
   }
 
   /** Append a new rule to the catalog; the server assigns a stable, unique id. */
   async create(input: GlobalGateRuleInput): Promise<GlobalGateRule> {
-    const rules = await this.list()
-    const rule: GlobalGateRule = { ...input, id: collisionResistantId("gr") }
-    await this.persist([...rules, rule])
-    return rule
+    const rules = await this.list();
+    const rule: GlobalGateRule = { ...input, id: collisionResistantId("gr") };
+    await this.persist([...rules, rule]);
+    return rule;
   }
 
   /** Replace a rule's editable core in place (keeps its id and position). */
   async update(id: string, input: GlobalGateRuleInput): Promise<GlobalGateRule> {
-    this.assertValidId(id)
-    const rules = await this.list()
-    const index = rules.findIndex((r) => r.id === id)
-    if (index === -1) throw new GateRuleNotFoundError(id)
-    const updated: GlobalGateRule = { ...input, id }
-    const next = [...rules]
-    next[index] = updated
-    await this.persist(next)
-    return updated
+    this.assertValidId(id);
+    const rules = await this.list();
+    const index = rules.findIndex((r) => r.id === id);
+    if (index === -1) throw new GateRuleNotFoundError(id);
+    const updated: GlobalGateRule = { ...input, id };
+    const next = [...rules];
+    next[index] = updated;
+    await this.persist(next);
+    return updated;
   }
 
   /** Remove a rule from the catalog. */
   async remove(id: string): Promise<void> {
-    this.assertValidId(id)
-    const rules = await this.list()
-    if (!rules.some((r) => r.id === id)) throw new GateRuleNotFoundError(id)
-    await this.persist(rules.filter((r) => r.id !== id))
+    this.assertValidId(id);
+    const rules = await this.list();
+    if (!rules.some((r) => r.id === id)) throw new GateRuleNotFoundError(id);
+    await this.persist(rules.filter((r) => r.id !== id));
   }
 
   /**
@@ -84,30 +90,30 @@ export class GateRulesStorageService implements OnModuleInit {
    * client can never silently drop or duplicate a rule.
    */
   async reorder(ids: string[]): Promise<GlobalGateRule[] | null> {
-    const rules = await this.list()
-    if (ids.length !== rules.length) return null
-    const byId = new Map(rules.map((r) => [r.id, r]))
-    const next: GlobalGateRule[] = []
+    const rules = await this.list();
+    if (ids.length !== rules.length) return null;
+    const byId = new Map(rules.map((r) => [r.id, r]));
+    const next: GlobalGateRule[] = [];
     for (const id of ids) {
-      const rule = byId.get(id)
-      if (!rule || next.includes(rule)) return null
-      next.push(rule)
+      const rule = byId.get(id);
+      if (!rule || next.includes(rule)) return null;
+      next.push(rule);
     }
-    await this.persist(next)
-    return next
+    await this.persist(next);
+    return next;
   }
 
   private get file(): string {
-    return path.join(this.dir, FILE)
+    return path.join(this.dir, FILE);
   }
 
   private assertValidId(id: string): void {
-    if (!GATE_RULE_ID_REGEX.test(id)) throw new InvalidGateRuleIdError(id)
+    if (!GATE_RULE_ID_REGEX.test(id)) throw new InvalidGateRuleIdError(id);
   }
 
   private async persist(rules: GlobalGateRule[]): Promise<void> {
-    await ensureDir(this.dir)
-    await writeFileAtomic(this.file, JSON.stringify(rules, null, 2))
+    await ensureDir(this.dir);
+    await writeFileAtomic(this.file, JSON.stringify(rules, null, 2));
   }
 }
 
@@ -156,4 +162,4 @@ const DEFAULT_CATALOG: GlobalGateRule[] = [
     decision: "ask",
     resolve: { type: "human" },
   },
-]
+];

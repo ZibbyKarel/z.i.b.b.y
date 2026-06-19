@@ -1,7 +1,7 @@
-import { initContract } from "@ts-rest/core"
-import { HealthSchema } from "./health.schema"
+import { initContract } from "@ts-rest/core";
+import { HealthSchema } from "./health.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Health/liveness contract. Kept separate from `agentsContract` because it is a
@@ -24,6 +24,6 @@ export const healthContract = c.router(
     pathPrefix: "/api",
     strictStatusCodes: true,
   },
-)
+);
 
-export type HealthContract = typeof healthContract
+export type HealthContract = typeof healthContract;

@@ -34,10 +34,7 @@ describe("ProjectCard budget", () => {
 
   it("surfaces a held count when the engagement has tasks held over budget", () => {
     render(
-      <ProjectCard
-        budget={status({ held: 2 })}
-        project={project({ budget: { dailyRuns: 1 } })}
-      />,
+      <ProjectCard budget={status({ held: 2 })} project={project({ budget: { dailyRuns: 1 } })} />,
     );
     expect(screen.getByText("2")).toBeInTheDocument();
   });

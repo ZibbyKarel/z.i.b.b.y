@@ -1,20 +1,20 @@
-import { type ChildProcess, spawn } from "node:child_process"
-import { randomBytes } from "node:crypto"
-import { EventEmitter } from "node:events"
-import { type WriteStream, createWriteStream } from "node:fs"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts"
-import { writeFileAtomic } from "../shared/file-storage"
-import type { ScopedLogger } from "../shared/logging/logger.service"
-import { detectLimit } from "./detect-limit"
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { type WriteStream, createWriteStream } from "node:fs";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
+import { writeFileAtomic } from "../shared/file-storage";
+import type { ScopedLogger } from "../shared/logging/logger.service";
+import { detectLimit } from "./detect-limit";
 import type {
   BaseRun,
   KindStrategy,
   RunLogChunk,
   RunSpec,
   RunnerRunStatus,
-} from "./runner-core.types"
+} from "./runner-core.types";
 
 /**
  * Called when a live run announces a mid-run action with an external effect (a
@@ -23,10 +23,14 @@ import type {
  * / {@link RunnerCore.holdForApproval}; the child blocks on a decision file until it
  * does. Wired by the agent runner (the core is entity-agnostic); other runners omit it.
  */
-export type IntentHandler = (runId: string, action: IntendedAction, cwd: string) => void | Promise<void>
+export type IntentHandler = (
+  runId: string,
+  action: IntendedAction,
+  cwd: string,
+) => void | Promise<void>;
 
 /** The decision file a paused child polls for, written into its sandbox `cwd`. */
-const INTENT_DECISION_FILE = "intent-decision.json"
+const INTENT_DECISION_FILE = "intent-decision.json";
 
 /**
  * The request file a real `claude -p` run's PreToolUse approval hook writes into the
@@ -34,7 +38,7 @@ const INTENT_DECISION_FILE = "intent-decision.json"
  * of the stdout `INTENT` line a demo child prints). {@link wire} watches that dir for
  * it and routes it through the same {@link IntentHandler}.
  */
-const INTENT_REQUEST_FILE = "intent-request.json"
+const INTENT_REQUEST_FILE = "intent-request.json";
 
 /**
  * Env var naming the directory the approval hook and the core exchange their
@@ -44,13 +48,13 @@ const INTENT_REQUEST_FILE = "intent-request.json"
  * operates on), so the hook would otherwise drop the request where the core never
  * watches, stranding the gate. The hook reads this first (see claude-approval-hook.mjs).
  */
-export const INTENT_DIR_ENV = "ZIBBY_INTENT_DIR"
+export const INTENT_DIR_ENV = "ZIBBY_INTENT_DIR";
 
 /** A run id may only contain the safe characters our filenames are built from. */
-const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/
+const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 /** Finished runs stay in the list (and in memory) for this long after they start. */
-const RETENTION_MS = 30 * 60 * 1000
+const RETENTION_MS = 30 * 60 * 1000;
 
 /**
  * Conservative fallback for a limit pause's `resumeAt` when neither the run's
@@ -58,44 +62,44 @@ const RETENTION_MS = 30 * 60 * 1000
  * enough that a same-window retry won't instantly re-exhaust, short enough that an
  * idle operator's run still finishes itself.
  */
-const RESUME_FALLBACK_MS = 30 * 60 * 1000
+const RESUME_FALLBACK_MS = 30 * 60 * 1000;
 
 /** Phase 12.9: grace after SIGTERM before a shutdown reap escalates a child to SIGKILL. */
-const SHUTDOWN_GRACE_MS = 5000
+const SHUTDOWN_GRACE_MS = 5000;
 
 /** Hard cap on how many runs the list returns, newest first. */
-const MAX_LISTED = 50
+const MAX_LISTED = 50;
 
 /** Thrown when a run id is unknown or unsafe — controllers map it to a 404. */
 export class RunNotFoundError extends Error {
   constructor(runId: string) {
-    super(`Run "${runId}" not found`)
-    this.name = "RunNotFoundError"
+    super(`Run "${runId}" not found`);
+    this.name = "RunNotFoundError";
   }
 }
 
 interface RunHandle<R extends BaseRun> {
-  run: R
+  run: R;
   /** The live process, when this run was started in *this* backend process. A run
    * reconstructed from disk after a restart has no child (it cannot be resumed). */
-  child?: ChildProcess
-  log?: WriteStream
+  child?: ChildProcess;
+  log?: WriteStream;
   /** For an `awaiting-approval` run: the spec to spawn once it is approved. */
-  pendingSpec?: RunSpec
+  pendingSpec?: RunSpec;
   /**
    * The spec this run was spawned from, kept on the live handle (Phase 9). When the
    * child dies on a usage limit, classification stashes it as a `pendingSpec` so the
    * existing spawn-boundary machinery gives restart survival + respawn for free.
    */
-  spec?: RunSpec
+  spec?: RunSpec;
   /**
    * Set when a run is being torn down on purpose (a denied / rejected mid-run
    * intent). The child exits non-zero in response, but its terminal state is
    * `interrupted`, not the `error` a non-zero exit normally means.
    */
-  interrupting?: boolean
+  interrupting?: boolean;
   /** Poll timer watching `cwd` for the hook's `intent-request.json` (Variant B). */
-  intentTimer?: ReturnType<typeof setInterval>
+  intentTimer?: ReturnType<typeof setInterval>;
 }
 
 /**
@@ -126,8 +130,8 @@ interface RunHandle<R extends BaseRun> {
  * in exactly one place.
  */
 export class RunnerCore<R extends BaseRun> {
-  private readonly dir: string
-  private readonly runs = new Map<string, RunHandle<R>>()
+  private readonly dir: string;
+  private readonly runs = new Map<string, RunHandle<R>>();
   /**
    * Push channel behind the SSE endpoints (logs + status). Plain Node events keep
    * the core DI-free: a `status` event fires the full record on every lifecycle
@@ -135,7 +139,7 @@ export class RunnerCore<R extends BaseRun> {
    * Subscribers (the per-kind wrappers' controllers) turn these into one
    * `Observable<MessageEvent>` each, replacing the old per-client interval polls.
    */
-  private readonly events = new EventEmitter()
+  private readonly events = new EventEmitter();
 
   constructor(
     dir: string,
@@ -178,10 +182,10 @@ export class RunnerCore<R extends BaseRun> {
      */
     private readonly resolveResumeAt?: (detected: number | null) => Promise<number>,
   ) {
-    this.dir = path.resolve(dir)
+    this.dir = path.resolve(dir);
     // One listener pair is added per open SSE connection; with many concurrent
     // log streams the default cap of 10 would log a false "leak" warning.
-    this.events.setMaxListeners(0)
+    this.events.setMaxListeners(0);
   }
 
   /**
@@ -190,8 +194,8 @@ export class RunnerCore<R extends BaseRun> {
    * it to its contract shape. Returns an unsubscribe to call on stream teardown.
    */
   onStatus(listener: (run: R) => void): () => void {
-    this.events.on("status", listener)
-    return () => this.events.off("status", listener)
+    this.events.on("status", listener);
+    return () => this.events.off("status", listener);
   }
 
   /**
@@ -202,76 +206,76 @@ export class RunnerCore<R extends BaseRun> {
    */
   onLog(runId: string, listener: () => void): () => void {
     const scoped = (id: string) => {
-      if (id === runId) listener()
-    }
-    this.events.on("log", scoped)
-    return () => this.events.off("log", scoped)
+      if (id === runId) listener();
+    };
+    this.events.on("log", scoped);
+    return () => this.events.off("log", scoped);
   }
 
   private emitStatus(run: R): void {
-    this.events.emit("status", run)
+    this.events.emit("status", run);
   }
 
   private emitLog(runId: string): void {
-    this.events.emit("log", runId)
+    this.events.emit("log", runId);
   }
 
   /** Rebuild the registry from disk so runs survive a backend restart. */
   async init(): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
+    await fs.mkdir(this.dir, { recursive: true });
+    const entries = await fs.readdir(this.dir).catch(() => [] as string[]);
     for (const entry of entries) {
-      if (!entry.endsWith(".json") || entry.endsWith(".pending.json")) continue
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
-      if (raw === null) continue
-      let data: unknown
+      if (!entry.endsWith(".json") || entry.endsWith(".pending.json")) continue;
+      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null);
+      if (raw === null) continue;
+      let data: unknown;
       try {
-        data = JSON.parse(raw)
+        data = JSON.parse(raw);
       } catch {
-        continue
+        continue;
       }
-      const parsed = this.strategy.schema.safeParse(data)
-      if (!parsed.success) continue
-      let run = parsed.data
+      const parsed = this.strategy.schema.safeParse(data);
+      if (!parsed.success) continue;
+      let run = parsed.data;
       if (run.status === "running") {
         // Phase 6: a run left "running" may be a live orphan that survived a hard
         // crash (kill -9 reparents a detached child to init). Probe its process
         // group before relabelling — if it's still alive, DON'T mark it
         // interrupted; reattach exit-detection via pgid polling instead.
         if (run.pgid && isAlive(run.pgid)) {
-          const handle: RunHandle<R> = { run }
-          this.runs.set(run.runId, handle)
-          this.monitorPgid(handle)
-          continue
+          const handle: RunHandle<R> = { run };
+          this.runs.set(run.runId, handle);
+          this.monitorPgid(handle);
+          continue;
         }
         run = {
           ...run,
           status: "interrupted",
           pct: await this.readLastProgress(run.logFile, run.pct),
-        }
-        await this.writeSidecar(run)
-        this.runs.set(run.runId, { run })
+        };
+        await this.writeSidecar(run);
+        this.runs.set(run.runId, { run });
         this.logger?.warn("run reconciled after restart", {
           runId: run.runId,
           from: "running",
           to: "interrupted",
-        })
+        });
       } else if (run.status === "awaiting-approval") {
-        const pendingSpec = await this.readPendingSpec(run.runId)
+        const pendingSpec = await this.readPendingSpec(run.runId);
         if (pendingSpec) {
           // Spawn-boundary pause: the stashed spec lets it resume after a restart.
-          this.runs.set(run.runId, { run, pendingSpec })
+          this.runs.set(run.runId, { run, pendingSpec });
         } else {
           // Variant B mid-run pause: its blocking child was a child of the previous
           // backend and died with it; nothing to resume → reconcile to interrupted.
-          run = { ...run, status: "interrupted" }
-          await this.writeSidecar(run)
-          this.runs.set(run.runId, { run })
+          run = { ...run, status: "interrupted" };
+          await this.writeSidecar(run);
+          this.runs.set(run.runId, { run });
           this.logger?.warn("run reconciled after restart", {
             runId: run.runId,
             from: "awaiting-approval",
             to: "interrupted",
-          })
+          });
         }
       } else if (run.status === "paused-limit") {
         // Phase 9: a limit pause stashes its spawn spec exactly like an approval
@@ -279,21 +283,21 @@ export class RunnerCore<R extends BaseRun> {
         // paused-limit record WITHOUT a spec is a real orphan (its child died
         // unclassified mid-write) → reconcile to interrupted, same as a spec-less
         // approval pause.
-        const pendingSpec = await this.readPendingSpec(run.runId)
+        const pendingSpec = await this.readPendingSpec(run.runId);
         if (pendingSpec) {
-          this.runs.set(run.runId, { run, pendingSpec, spec: pendingSpec })
+          this.runs.set(run.runId, { run, pendingSpec, spec: pendingSpec });
         } else {
-          run = { ...run, status: "interrupted", resumeAt: null }
-          await this.writeSidecar(run)
-          this.runs.set(run.runId, { run })
+          run = { ...run, status: "interrupted", resumeAt: null };
+          await this.writeSidecar(run);
+          this.runs.set(run.runId, { run });
           this.logger?.warn("run reconciled after restart", {
             runId: run.runId,
             from: "paused-limit",
             to: "interrupted",
-          })
+          });
         }
       } else {
-        this.runs.set(run.runId, { run })
+        this.runs.set(run.runId, { run });
       }
     }
   }
@@ -307,52 +311,52 @@ export class RunnerCore<R extends BaseRun> {
    * hangs shutdown.
    */
   async shutdown(): Promise<void> {
-    await Promise.all([...this.runs.values()].map((handle) => this.reapOnShutdown(handle)))
+    await Promise.all([...this.runs.values()].map((handle) => this.reapOnShutdown(handle)));
   }
 
   /** Kill one live run's process group and await its exit + log flush (Phase 12.9). */
   private reapOnShutdown(handle: RunHandle<R>): Promise<void> {
     // A run held at `awaiting-approval` (Variant B) still has a live child blocking
     // on its decision file — kill it too so we don't orphan a node process.
-    const live = handle.run.status === "running" || handle.run.status === "awaiting-approval"
-    const child = handle.child
-    if (!child || !live) return Promise.resolve()
+    const live = handle.run.status === "running" || handle.run.status === "awaiting-approval";
+    const child = handle.child;
+    if (!child || !live) return Promise.resolve();
     // We are stopping the run, not failing it: flag it so the kill's non-zero exit
     // reconciles to `interrupted`, not `error`.
-    handle.interrupting = true
-    const pgid = handle.run.pgid ?? handle.run.pid
-    killGroup(pgid)
+    handle.interrupting = true;
+    const pgid = handle.run.pgid ?? handle.run.pid;
+    killGroup(pgid);
 
     return new Promise<void>((resolve) => {
-      let settled = false
+      let settled = false;
       const settle = () => {
-        if (settled) return
-        settled = true
-        clearTimeout(timer)
-        resolve()
-      }
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
       // On the child's `exit` the run's `finalize` (wired earlier) has already called
       // `log.end()`; wait for the log stream's `finish` so the `.log` is fully flushed
       // to disk before we return (then a teardown `fs.rm` can't race the write).
       const afterExit = () => {
-        const log = handle.log
-        if (!log || log.writableFinished) return settle()
-        log.once("finish", settle)
-        if (log.writableFinished) settle()
-      }
-      if (child.exitCode !== null || child.signalCode !== null) afterExit()
-      else child.once("exit", afterExit)
+        const log = handle.log;
+        if (!log || log.writableFinished) return settle();
+        log.once("finish", settle);
+        if (log.writableFinished) settle();
+      };
+      if (child.exitCode !== null || child.signalCode !== null) afterExit();
+      else child.once("exit", afterExit);
       // SIGTERM ignored past the grace → SIGKILL the group and resolve (never hang).
       const timer = setTimeout(() => {
         try {
-          process.kill(-pgid, "SIGKILL")
+          process.kill(-pgid, "SIGKILL");
         } catch {
           // already gone
         }
-        settle()
-      }, SHUTDOWN_GRACE_MS)
-      timer.unref?.()
-    })
+        settle();
+      }, SHUTDOWN_GRACE_MS);
+      timer.unref?.();
+    });
   }
 
   /**
@@ -361,9 +365,9 @@ export class RunnerCore<R extends BaseRun> {
    * to its contract shape before returning to a client.
    */
   async start(spec: RunSpec): Promise<R> {
-    const startedMs = spec.startedMs ?? Date.now()
-    await fs.mkdir(this.dir, { recursive: true })
-    await fs.mkdir(spec.cwd, { recursive: true })
+    const startedMs = spec.startedMs ?? Date.now();
+    await fs.mkdir(this.dir, { recursive: true });
+    await fs.mkdir(spec.cwd, { recursive: true });
 
     // `detached` puts the child in its own process group (pgid === pid on Linux),
     // so Phase 6 can probe/kill the whole group and an orphan survives a crash.
@@ -380,19 +384,19 @@ export class RunnerCore<R extends BaseRun> {
       env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
-    })
-    const pid = child.pid ?? 0
-    const runId = `${spec.ownerId}_${startedMs}_${pid}`
-    const logFile = path.join(this.dir, `${runId}.log`)
-    const log = createWriteStream(logFile, { flags: "a" })
+    });
+    const pid = child.pid ?? 0;
+    const runId = `${spec.ownerId}_${startedMs}_${pid}`;
+    const logFile = path.join(this.dir, `${runId}.log`);
+    const log = createWriteStream(logFile, { flags: "a" });
 
-    const base = this.baseRun(spec, runId, startedMs, pid, logFile)
-    base.pgid = pid
-    const run = this.strategy.assemble(base, spec)
-    const handle: RunHandle<R> = { run, child, log, spec }
-    this.runs.set(runId, handle)
-    await this.writeSidecar(run)
-    this.wire(handle)
+    const base = this.baseRun(spec, runId, startedMs, pid, logFile);
+    base.pgid = pid;
+    const run = this.strategy.assemble(base, spec);
+    const handle: RunHandle<R> = { run, child, log, spec };
+    this.runs.set(runId, handle);
+    await this.writeSidecar(run);
+    this.wire(handle);
     this.logger?.info("run spawned", {
       runId,
       kind: spec.kind,
@@ -400,9 +404,9 @@ export class RunnerCore<R extends BaseRun> {
       pid,
       command: spec.command,
       cwd: spec.cwd,
-    })
-    this.emitStatus(run)
-    return run
+    });
+    this.emitStatus(run);
+    return run;
   }
 
   /**
@@ -411,19 +415,19 @@ export class RunnerCore<R extends BaseRun> {
    * once a decision arrives — even across a restart.
    */
   async createPending(spec: RunSpec): Promise<R> {
-    const startedMs = spec.startedMs ?? Date.now()
-    await fs.mkdir(this.dir, { recursive: true })
+    const startedMs = spec.startedMs ?? Date.now();
+    await fs.mkdir(this.dir, { recursive: true });
     // No pid yet; a short random suffix keeps the id unique and filename-safe.
-    const runId = `${spec.ownerId}_${startedMs}_p${randomBytes(3).toString("hex")}`
-    const logFile = path.join(this.dir, `${runId}.log`)
-    const base = this.baseRun(spec, runId, startedMs, 0, logFile)
-    base.status = "awaiting-approval"
-    const run = this.strategy.assemble(base, spec)
-    this.runs.set(runId, { run, pendingSpec: spec })
-    await this.writeSidecar(run)
-    await this.writePendingSpec(runId, spec)
-    this.emitStatus(run)
-    return run
+    const runId = `${spec.ownerId}_${startedMs}_p${randomBytes(3).toString("hex")}`;
+    const logFile = path.join(this.dir, `${runId}.log`);
+    const base = this.baseRun(spec, runId, startedMs, 0, logFile);
+    base.status = "awaiting-approval";
+    const run = this.strategy.assemble(base, spec);
+    this.runs.set(runId, { run, pendingSpec: spec });
+    await this.writeSidecar(run);
+    await this.writePendingSpec(runId, spec);
+    this.emitStatus(run);
+    return run;
   }
 
   /**
@@ -433,52 +437,52 @@ export class RunnerCore<R extends BaseRun> {
    * - Spawn-boundary pause (a stashed spec, no child): spawn the spec now.
    */
   async resume(runId: string): Promise<R> {
-    const handle = this.runs.get(runId)
-    if (!handle) throw new RunNotFoundError(runId)
+    const handle = this.runs.get(runId);
+    if (!handle) throw new RunNotFoundError(runId);
     // Phase 9: `paused-limit` resumes the same way an approval-parked run does —
     // its child died (no live process), so it always takes the stashed-spec respawn
     // path below, never the Variant-B "release the blocked child" branch.
     if (handle.run.status !== "awaiting-approval" && handle.run.status !== "paused-limit") {
-      return handle.run
+      return handle.run;
     }
 
     if (handle.child) {
       // Variant B: release the blocked child.
-      await this.writeIntentDecision(handle.run.cwd, "allow")
-      handle.run.status = "running"
-      await this.writeSidecar(handle.run)
-      this.emitStatus(handle.run)
-      this.logger?.info("run resumed (intent released)", { runId })
-      return handle.run
+      await this.writeIntentDecision(handle.run.cwd, "allow");
+      handle.run.status = "running";
+      await this.writeSidecar(handle.run);
+      this.emitStatus(handle.run);
+      this.logger?.info("run resumed (intent released)", { runId });
+      return handle.run;
     }
 
-    if (!handle.pendingSpec) return handle.run
+    if (!handle.pendingSpec) return handle.run;
 
-    const spec = handle.pendingSpec
-    handle.pendingSpec = undefined
-    await this.clearPendingSpec(runId)
+    const spec = handle.pendingSpec;
+    handle.pendingSpec = undefined;
+    await this.clearPendingSpec(runId);
 
-    await fs.mkdir(spec.cwd, { recursive: true })
+    await fs.mkdir(spec.cwd, { recursive: true });
     const child = spawn(spec.command, spec.args, {
       cwd: spec.spawnCwd ?? spec.cwd,
       // Same per-run env + coordination-dir pin as the initial spawn (see {@link start}).
       env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
-    })
-    handle.child = child
-    handle.log = createWriteStream(handle.run.logFile, { flags: "a" })
-    handle.spec = spec
-    handle.run.pid = child.pid ?? 0
-    handle.run.pgid = child.pid ?? 0
-    handle.run.status = "running"
+    });
+    handle.child = child;
+    handle.log = createWriteStream(handle.run.logFile, { flags: "a" });
+    handle.spec = spec;
+    handle.run.pid = child.pid ?? 0;
+    handle.run.pgid = child.pid ?? 0;
+    handle.run.status = "running";
     // A respawn clears any prior limit-pause marker; a fresh pause re-stamps it.
-    handle.run.resumeAt = null
-    await this.writeSidecar(handle.run)
-    this.wire(handle)
-    this.emitStatus(handle.run)
-    this.logger?.info("run resumed (spawned)", { runId, pid: handle.run.pid })
-    return handle.run
+    handle.run.resumeAt = null;
+    await this.writeSidecar(handle.run);
+    this.wire(handle);
+    this.emitStatus(handle.run);
+    this.logger?.info("run resumed (spawned)", { runId, pid: handle.run.pid });
+    return handle.run;
   }
 
   /**
@@ -486,8 +490,8 @@ export class RunnerCore<R extends BaseRun> {
    * action (reject path) → `interrupted`; a live run is killed.
    */
   cancel(runId: string): R {
-    const handle = this.runs.get(runId)
-    if (!handle) throw new RunNotFoundError(runId)
+    const handle = this.runs.get(runId);
+    if (!handle) throw new RunNotFoundError(runId);
     if (handle.run.status === "awaiting-approval") {
       if (handle.child) {
         // Variant B: a live child is blocking on its decision file. Tell it to abort
@@ -496,28 +500,28 @@ export class RunnerCore<R extends BaseRun> {
         // `claude` session may keep going (and could raise a *new* gate request via a
         // retried `rm`). Stop the watcher and the process so a cancelled run is truly
         // dead — no phantom approval on an already-rejected run.
-        handle.interrupting = true
-        void this.writeIntentDecision(handle.run.cwd, "deny")
-        this.stopIntentWatch(handle)
-        killGroup(handle.run.pgid ?? handle.run.pid)
+        handle.interrupting = true;
+        void this.writeIntentDecision(handle.run.cwd, "deny");
+        this.stopIntentWatch(handle);
+        killGroup(handle.run.pgid ?? handle.run.pid);
       } else {
         // Spawn-boundary pause: it never spawned, so just mark it interrupted.
-        void this.clearPendingSpec(runId)
+        void this.clearPendingSpec(runId);
       }
-      handle.run.status = "interrupted"
-      handle.pendingSpec = undefined
-      void this.writeSidecar(handle.run)
-      this.emitStatus(handle.run)
+      handle.run.status = "interrupted";
+      handle.pendingSpec = undefined;
+      void this.writeSidecar(handle.run);
+      this.emitStatus(handle.run);
     } else if (handle.child && handle.run.status === "running") {
       // The kill's `exit` lands in `finalize`. Flag it as a deliberate teardown so the
       // non-zero exit reconciles to `interrupted` (operator intent), not `error` — and,
       // Phase 9, so a run that printed a usage-limit line before the operator killed it
       // is NOT reclassified as `paused-limit` and auto-respawned (the watch-out).
-      handle.interrupting = true
-      handle.child.kill()
+      handle.interrupting = true;
+      handle.child.kill();
     }
-    this.logger?.info("run cancelled", { runId, status: handle.run.status })
-    return handle.run
+    this.logger?.info("run cancelled", { runId, status: handle.run.status });
+    return handle.run;
   }
 
   /**
@@ -525,9 +529,9 @@ export class RunnerCore<R extends BaseRun> {
    * child unblocks and performs the action. The run stays `running`.
    */
   async allowIntent(runId: string): Promise<void> {
-    const handle = this.runs.get(runId)
-    if (!handle) return
-    await this.writeIntentDecision(handle.run.cwd, "allow")
+    const handle = this.runs.get(runId);
+    if (!handle) return;
+    await this.writeIntentDecision(handle.run.cwd, "allow");
   }
 
   /**
@@ -536,15 +540,15 @@ export class RunnerCore<R extends BaseRun> {
    * reconciles to `interrupted` rather than `error`.
    */
   async denyIntent(runId: string): Promise<void> {
-    const handle = this.runs.get(runId)
-    if (!handle) return
-    handle.interrupting = true
-    await this.writeIntentDecision(handle.run.cwd, "deny")
+    const handle = this.runs.get(runId);
+    if (!handle) return;
+    handle.interrupting = true;
+    await this.writeIntentDecision(handle.run.cwd, "deny");
     // As with a reject: a real `claude` session won't necessarily exit on the deny,
     // so stop watching and kill the group to land on `interrupted` deterministically
     // and block any follow-up gate request from a retried destructive command.
-    this.stopIntentWatch(handle)
-    if (handle.child) killGroup(handle.run.pgid ?? handle.run.pid)
+    this.stopIntentWatch(handle);
+    if (handle.child) killGroup(handle.run.pgid ?? handle.run.pid);
   }
 
   /**
@@ -553,11 +557,11 @@ export class RunnerCore<R extends BaseRun> {
    * {@link resume}/{@link cancel} writes the decision that unblocks or aborts it.
    */
   async holdForApproval(runId: string): Promise<void> {
-    const handle = this.runs.get(runId)
-    if (!handle) return
-    handle.run.status = "awaiting-approval"
-    await this.writeSidecar(handle.run)
-    this.emitStatus(handle.run)
+    const handle = this.runs.get(runId);
+    if (!handle) return;
+    handle.run.status = "awaiting-approval";
+    await this.writeSidecar(handle.run);
+    this.emitStatus(handle.run);
   }
 
   /**
@@ -568,23 +572,23 @@ export class RunnerCore<R extends BaseRun> {
    * so a subscriber never sees a `paused-limit` run that lacks its resume time.
    */
   private async completeLimitPause(handle: RunHandle<R>, detected: number | null): Promise<void> {
-    const { run } = handle
-    let resumeAt: number
+    const { run } = handle;
+    let resumeAt: number;
     try {
       resumeAt = this.resolveResumeAt
         ? await this.resolveResumeAt(detected)
-        : (detected ?? Date.now() + RESUME_FALLBACK_MS)
+        : (detected ?? Date.now() + RESUME_FALLBACK_MS);
     } catch {
-      resumeAt = detected ?? Date.now() + RESUME_FALLBACK_MS
+      resumeAt = detected ?? Date.now() + RESUME_FALLBACK_MS;
     }
-    run.resumeAt = resumeAt
-    run.limitResumeCycles = run.limitResumeCycles ?? 0
+    run.resumeAt = resumeAt;
+    run.limitResumeCycles = run.limitResumeCycles ?? 0;
     if (handle.spec) {
-      handle.pendingSpec = handle.spec
-      await this.writePendingSpec(run.runId, handle.spec)
+      handle.pendingSpec = handle.spec;
+      await this.writePendingSpec(run.runId, handle.spec);
     }
-    await this.writeSidecar(run)
-    this.emitStatus(run)
+    await this.writeSidecar(run);
+    this.emitStatus(run);
   }
 
   /**
@@ -593,14 +597,17 @@ export class RunnerCore<R extends BaseRun> {
    * window exhausted even though no limit line was printed. No-op unless the run is
    * still `error` (idempotent against repeated status emissions).
    */
-  async reclassifyErrorAsPausedLimit(runId: string, detected: number | null): Promise<R | undefined> {
-    const handle = this.runs.get(runId)
-    if (!handle || handle.run.status !== "error") return undefined
-    handle.run.status = "paused-limit"
-    handle.child = undefined
-    await this.completeLimitPause(handle, detected)
-    this.logger?.warn("run reclassified to paused-limit (window exhausted)", { runId })
-    return handle.run
+  async reclassifyErrorAsPausedLimit(
+    runId: string,
+    detected: number | null,
+  ): Promise<R | undefined> {
+    const handle = this.runs.get(runId);
+    if (!handle || handle.run.status !== "error") return undefined;
+    handle.run.status = "paused-limit";
+    handle.child = undefined;
+    await this.completeLimitPause(handle, detected);
+    this.logger?.warn("run reclassified to paused-limit (window exhausted)", { runId });
+    return handle.run;
   }
 
   /**
@@ -609,11 +616,11 @@ export class RunnerCore<R extends BaseRun> {
    * re-pause (the re-pause's {@link completeLimitPause} preserves the existing value).
    */
   async markResumeCycle(runId: string): Promise<number> {
-    const handle = this.runs.get(runId)
-    if (!handle) return 0
-    handle.run.limitResumeCycles = (handle.run.limitResumeCycles ?? 0) + 1
-    await this.writeSidecar(handle.run)
-    return handle.run.limitResumeCycles
+    const handle = this.runs.get(runId);
+    if (!handle) return 0;
+    handle.run.limitResumeCycles = (handle.run.limitResumeCycles ?? 0) + 1;
+    await this.writeSidecar(handle.run);
+    return handle.run.limitResumeCycles;
   }
 
   /**
@@ -624,14 +631,14 @@ export class RunnerCore<R extends BaseRun> {
    * spec; leaves the sandbox (its handoff/marker files) untouched.
    */
   async discardPausedLimit(runId: string): Promise<void> {
-    const handle = this.runs.get(runId)
-    if (!handle || handle.run.status !== "paused-limit") return
-    handle.run.status = "interrupted"
-    handle.run.resumeAt = null
-    handle.pendingSpec = undefined
-    await this.clearPendingSpec(runId)
-    await this.writeSidecar(handle.run)
-    this.emitStatus(handle.run)
+    const handle = this.runs.get(runId);
+    if (!handle || handle.run.status !== "paused-limit") return;
+    handle.run.status = "interrupted";
+    handle.run.resumeAt = null;
+    handle.pendingSpec = undefined;
+    await this.clearPendingSpec(runId);
+    await this.writeSidecar(handle.run);
+    this.emitStatus(handle.run);
   }
 
   /**
@@ -640,38 +647,38 @@ export class RunnerCore<R extends BaseRun> {
    * Appends the reason to the log and clears the stashed spec.
    */
   async failLimit(runId: string, reason: string): Promise<R | undefined> {
-    const handle = this.runs.get(runId)
-    if (!handle || handle.run.status !== "paused-limit") return undefined
-    handle.run.status = "error"
-    handle.run.resumeAt = null
-    handle.pendingSpec = undefined
-    await this.clearPendingSpec(runId)
-    await fs.appendFile(handle.run.logFile, `\n${reason}\n`, "utf8").catch(() => {})
-    await this.writeSidecar(handle.run)
-    this.emitStatus(handle.run)
-    this.logger?.warn("run failed after usage-limit flap", { runId, reason })
-    return handle.run
+    const handle = this.runs.get(runId);
+    if (!handle || handle.run.status !== "paused-limit") return undefined;
+    handle.run.status = "error";
+    handle.run.resumeAt = null;
+    handle.pendingSpec = undefined;
+    await this.clearPendingSpec(runId);
+    await fs.appendFile(handle.run.logFile, `\n${reason}\n`, "utf8").catch(() => {});
+    await this.writeSidecar(handle.run);
+    this.emitStatus(handle.run);
+    this.logger?.warn("run failed after usage-limit flap", { runId, reason });
+    return handle.run;
   }
 
   has(runId: string): boolean {
-    return this.runs.has(runId)
+    return this.runs.has(runId);
   }
 
   /** Running runs, plus any finished within the retention window; newest first. */
   list(): R[] {
-    const cutoff = Date.now() - RETENTION_MS
-    const out: R[] = []
+    const cutoff = Date.now() - RETENTION_MS;
+    const out: R[] = [];
     for (const [id, handle] of this.runs) {
-      const finished = handle.run.status === "done" || handle.run.status === "error"
+      const finished = handle.run.status === "done" || handle.run.status === "error";
       // Drop long-finished runs from memory (their files stay on disk). Keep
       // `awaiting-approval` (and `interrupted`) regardless of age.
       if (finished && Date.parse(handle.run.startedAt) < cutoff) {
-        this.runs.delete(id)
-        continue
+        this.runs.delete(id);
+        continue;
       }
-      out.push(handle.run)
+      out.push(handle.run);
     }
-    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED)
+    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED);
   }
 
   /**
@@ -681,35 +688,35 @@ export class RunnerCore<R extends BaseRun> {
    * view, whereas {@link list} backs the live panel. Newest first.
    */
   async listAll(): Promise<R[]> {
-    const byId = new Map<string, R>()
-    const entries = await fs.readdir(this.dir).catch(() => [] as string[])
+    const byId = new Map<string, R>();
+    const entries = await fs.readdir(this.dir).catch(() => [] as string[]);
     for (const entry of entries) {
-      if (!entry.endsWith(".json") || entry.endsWith(".pending.json")) continue
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null)
-      if (raw === null) continue
-      let data: unknown
+      if (!entry.endsWith(".json") || entry.endsWith(".pending.json")) continue;
+      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null);
+      if (raw === null) continue;
+      let data: unknown;
       try {
-        data = JSON.parse(raw)
+        data = JSON.parse(raw);
       } catch {
-        continue
+        continue;
       }
-      const parsed = this.strategy.schema.safeParse(data)
-      if (!parsed.success) continue
-      byId.set(parsed.data.runId, parsed.data)
+      const parsed = this.strategy.schema.safeParse(data);
+      if (!parsed.success) continue;
+      byId.set(parsed.data.runId, parsed.data);
     }
     // In-memory wins: a live run's pct only hits disk on a state transition.
-    for (const [id, handle] of this.runs) byId.set(id, handle.run)
-    return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    for (const [id, handle] of this.runs) byId.set(id, handle.run);
+    return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
   get(runId: string): R {
-    const handle = this.runs.get(runId)
-    if (!handle) throw new RunNotFoundError(runId)
-    return handle.run
+    const handle = this.runs.get(runId);
+    if (!handle) throw new RunNotFoundError(runId);
+    return handle.run;
   }
 
   stop(runId: string): R {
-    return this.cancel(runId)
+    return this.cancel(runId);
   }
 
   /**
@@ -721,46 +728,46 @@ export class RunnerCore<R extends BaseRun> {
    * trace of the run exists.
    */
   async delete(runId: string): Promise<void> {
-    if (typeof runId !== "string" || !RUN_ID_REGEX.test(runId)) throw new RunNotFoundError(runId)
-    const handle = this.runs.get(runId)
-    const sidecar = this.resolveInDir(`${runId}.json`)
+    if (typeof runId !== "string" || !RUN_ID_REGEX.test(runId)) throw new RunNotFoundError(runId);
+    const handle = this.runs.get(runId);
+    const sidecar = this.resolveInDir(`${runId}.json`);
 
-    let cwd = handle?.run.cwd
-    let existed = handle !== undefined
+    let cwd = handle?.run.cwd;
+    let existed = handle !== undefined;
 
-    const raw = await fs.readFile(sidecar, "utf8").catch(() => null)
+    const raw = await fs.readFile(sidecar, "utf8").catch(() => null);
     if (raw !== null) {
-      existed = true
+      existed = true;
       if (!cwd) {
         try {
-          const parsed = this.strategy.schema.safeParse(JSON.parse(raw))
-          if (parsed.success) cwd = parsed.data.cwd
+          const parsed = this.strategy.schema.safeParse(JSON.parse(raw));
+          if (parsed.success) cwd = parsed.data.cwd;
         } catch {
           // Malformed sidecar: still delete the files, just can't recover the cwd.
         }
       }
     }
 
-    if (!existed) throw new RunNotFoundError(runId)
+    if (!existed) throw new RunNotFoundError(runId);
 
     if (handle) {
       // An `awaiting-approval` run (Variant B) still has a live child blocking on its
       // decision file — kill it too, or deleting the run would orphan the process.
-      const live = handle.run.status === "running" || handle.run.status === "awaiting-approval"
+      const live = handle.run.status === "running" || handle.run.status === "awaiting-approval";
       if (handle.child && live) {
-        handle.interrupting = true
-        killGroup(handle.run.pgid ?? handle.run.pid)
+        handle.interrupting = true;
+        killGroup(handle.run.pgid ?? handle.run.pid);
       }
-      this.stopIntentWatch(handle)
-      handle.log?.end()
-      this.runs.delete(runId)
+      this.stopIntentWatch(handle);
+      handle.log?.end();
+      this.runs.delete(runId);
     }
 
-    await fs.rm(sidecar, { force: true }).catch(() => {})
-    await fs.rm(this.resolveInDir(`${runId}.log`), { force: true }).catch(() => {})
-    await fs.rm(this.resolveInDir(`${runId}.pending.json`), { force: true }).catch(() => {})
+    await fs.rm(sidecar, { force: true }).catch(() => {});
+    await fs.rm(this.resolveInDir(`${runId}.log`), { force: true }).catch(() => {});
+    await fs.rm(this.resolveInDir(`${runId}.pending.json`), { force: true }).catch(() => {});
     if (cwd && this.isInsideDir(cwd)) {
-      await fs.rm(cwd, { recursive: true, force: true }).catch(() => {})
+      await fs.rm(cwd, { recursive: true, force: true }).catch(() => {});
     }
   }
 
@@ -770,35 +777,35 @@ export class RunnerCore<R extends BaseRun> {
    * still-empty file for a live (or pending) run yields an empty, not-done chunk.
    */
   async readLog(runId: string, offset: number): Promise<RunLogChunk> {
-    const handle = this.runs.get(runId)
-    const file = this.resolveLogFile(runId)
+    const handle = this.runs.get(runId);
+    const file = this.resolveLogFile(runId);
 
-    let content = ""
-    let size = offset
+    let content = "";
+    let size = offset;
     try {
-      const fd = await fs.open(file, "r")
+      const fd = await fs.open(file, "r");
       try {
-        const stat = await fd.stat()
-        size = stat.size
+        const stat = await fd.stat();
+        size = stat.size;
         if (offset < size) {
-          const length = size - offset
-          const buf = Buffer.alloc(length)
-          await fd.read(buf, 0, length, offset)
-          content = buf.toString("utf8")
+          const length = size - offset;
+          const buf = Buffer.alloc(length);
+          await fd.read(buf, 0, length, offset);
+          content = buf.toString("utf8");
         }
       } finally {
-        await fd.close()
+        await fd.close();
       }
     } catch (error) {
       if (isErrnoException(error) && error.code === "ENOENT") {
-        if (handle) return { content: "", nextOffset: offset, done: false }
-        throw new RunNotFoundError(runId)
+        if (handle) return { content: "", nextOffset: offset, done: false };
+        throw new RunNotFoundError(runId);
       }
-      throw error
+      throw error;
     }
 
-    const done = handle ? handle.run.status === "done" || handle.run.status === "error" : true
-    return { content, nextOffset: size, done }
+    const done = handle ? handle.run.status === "done" || handle.run.status === "error" : true;
+    return { content, nextOffset: size, done };
   }
 
   /** Build the kind-agnostic base fields for a run record. */
@@ -818,7 +825,7 @@ export class RunnerCore<R extends BaseRun> {
       startedAt: new Date(startedMs).toISOString(),
       pid,
       logFile,
-    }
+    };
   }
 
   /**
@@ -827,62 +834,62 @@ export class RunnerCore<R extends BaseRun> {
    * finalize when it dies — done if it reached 100%, else interrupted.
    */
   private monitorPgid(handle: RunHandle<R>): void {
-    const pgid = handle.run.pgid ?? handle.run.pid
-    if (!pgid) return
+    const pgid = handle.run.pgid ?? handle.run.pid;
+    if (!pgid) return;
     const timer = setInterval(() => {
-      if (isAlive(pgid)) return
-      clearInterval(timer)
+      if (isAlive(pgid)) return;
+      clearInterval(timer);
       void this.readLastProgress(handle.run.logFile, handle.run.pct).then((pct) => {
-        handle.run.pct = pct
-        handle.run.status = pct >= 100 ? "done" : "interrupted"
-        void this.writeSidecar(handle.run)
-        this.emitStatus(handle.run)
-      })
-    }, 200)
-    timer.unref?.()
+        handle.run.pct = pct;
+        handle.run.status = pct >= 100 ? "done" : "interrupted";
+        void this.writeSidecar(handle.run);
+        this.emitStatus(handle.run);
+      });
+    }, 200);
+    timer.unref?.();
   }
 
   /** Attach output capture + exit handling to a live handle. */
   private wire(handle: RunHandle<R>): void {
-    const { child, log, run } = handle
-    if (!child || !log) return
+    const { child, log, run } = handle;
+    if (!child || !log) return;
 
-    let limitSeen = false
+    let limitSeen = false;
     // The reset epoch (ms) the first limit line named, stashed for classification.
-    let limitResetsAt: number | null = null
+    let limitResetsAt: number | null = null;
     // Buffer partial lines across chunks: a control line (PROGRESS / INTENT) split
     // over a chunk boundary must still be parsed whole — a missed INTENT would
     // strand the child blocking on its decision file indefinitely.
-    let residual = ""
+    let residual = "";
     const onChunk = (buf: Buffer) => {
-      const text = buf.toString("utf8")
+      const text = buf.toString("utf8");
       // Without a formatter the raw buffer is the log, written verbatim (partial tail
       // included). With one, the log is written per complete line below — the trailing
       // partial line is held in `residual` until it completes (or `finalize` flushes it).
-      if (!this.formatLine) log.write(text)
-      residual += text
-      const lines = residual.split(/\r?\n/)
-      residual = lines.pop() ?? ""
+      if (!this.formatLine) log.write(text);
+      residual += text;
+      const lines = residual.split(/\r?\n/);
+      residual = lines.pop() ?? "";
       for (const raw of lines) {
         if (this.formatLine) {
-          const formatted = this.formatLine(raw)
-          if (formatted !== null) log.write(`${formatted}\n`)
+          const formatted = this.formatLine(raw);
+          if (formatted !== null) log.write(`${formatted}\n`);
         }
-        const line = raw.trim()
-        const progress = /^PROGRESS\s+(\d+)/.exec(line)
+        const line = raw.trim();
+        const progress = /^PROGRESS\s+(\d+)/.exec(line);
         if (progress?.[1] !== undefined) {
-          run.pct = Math.min(100, Math.max(0, Number(progress[1])))
-          continue
+          run.pct = Math.min(100, Math.max(0, Number(progress[1])));
+          continue;
         }
         // Variant B: the child announced an external-effect action and is now
         // blocking on its decision file. Parse it as an IntendedAction and hand it
         // to the gate (which writes the file). A malformed line is ignored.
-        const intent = /^INTENT\s+(\{.*\})$/.exec(line)
+        const intent = /^INTENT\s+(\{.*\})$/.exec(line);
         if (intent?.[1] && this.onIntent) {
-          let action: IntendedAction | undefined
+          let action: IntendedAction | undefined;
           try {
-            const parsed = IntendedActionSchema.safeParse(JSON.parse(intent[1]))
-            if (parsed.success) action = parsed.data
+            const parsed = IntendedActionSchema.safeParse(JSON.parse(intent[1]));
+            if (parsed.success) action = parsed.data;
           } catch {
             // Not JSON / not an IntendedAction — leave it as ordinary output.
           }
@@ -891,8 +898,8 @@ export class RunnerCore<R extends BaseRun> {
               runId: run.runId,
               action: action.action,
               tool: action.tool,
-            })
-            void this.onIntent(run.runId, action, run.cwd)
+            });
+            void this.onIntent(run.runId, action, run.cwd);
           }
         }
       }
@@ -901,40 +908,40 @@ export class RunnerCore<R extends BaseRun> {
       // it as `paused-limit` rather than `error`. Run detection whenever either
       // consumer is wired (the pipeline runner now wires onLimitHit too).
       if (!limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
-        const { hit, resetsAt } = detectLimit(text)
+        const { hit, resetsAt } = detectLimit(text);
         if (hit) {
-          limitSeen = true
-          limitResetsAt = resetsAt
-          this.onLimitHit?.(resetsAt)
+          limitSeen = true;
+          limitResetsAt = resetsAt;
+          this.onLimitHit?.(resetsAt);
         }
       }
       // Nudge any open log stream to read the freshly-appended bytes.
-      this.emitLog(run.runId)
-    }
-    child.stdout?.on("data", onChunk)
-    child.stderr?.on("data", onChunk)
+      this.emitLog(run.runId);
+    };
+    child.stdout?.on("data", onChunk);
+    child.stderr?.on("data", onChunk);
 
     // Variant B (real claude): the gate is a PreToolUse hook that writes an
     // `intent-request.json` into the sandbox rather than printing an INTENT line
     // (a hook's stdout never reaches this pipe). Watch for it alongside the stdout
     // path so both demo and real runs route through the same {@link IntentHandler}.
-    this.watchIntentRequest(handle)
+    this.watchIntentRequest(handle);
 
     // Flush a final line the child emitted without a trailing newline (only the
     // formatted path buffers it; the raw path already wrote it as part of the chunk).
     const flushResidual = () => {
       if (this.formatLine && residual) {
-        const formatted = this.formatLine(residual)
-        if (formatted !== null) log.write(`${formatted}\n`)
-        residual = ""
+        const formatted = this.formatLine(residual);
+        if (formatted !== null) log.write(`${formatted}\n`);
+        residual = "";
       }
-    }
+    };
 
     const finalize = (status: RunnerRunStatus) => {
       // A child that exits while the run is still `awaiting-approval` ended without
       // the gate ever being decided (e.g. its blocking hook died) — that must never
       // surface as `done`, which would read as "completed as if approved".
-      if (run.status === "awaiting-approval") status = "interrupted"
+      if (run.status === "awaiting-approval") status = "interrupted";
       // Phase 9: a child that died on the error path AND saw a usage-limit line is a
       // *pause*, not a failure. An operator cancel routes here as `interrupted`
       // (handle.interrupting) and is left untouched above — intent wins over a limit.
@@ -942,40 +949,40 @@ export class RunnerCore<R extends BaseRun> {
       // the error path reclassifies). The async tail resolves `resumeAt`, stashes the
       // spawn spec (restart survival + respawn), and emits the paused status.
       if (status === "error" && limitSeen) {
-        run.status = "paused-limit"
-        this.stopIntentWatch(handle)
-        flushResidual()
-        log.end(() => this.emitLog(run.runId))
+        run.status = "paused-limit";
+        this.stopIntentWatch(handle);
+        flushResidual();
+        log.end(() => this.emitLog(run.runId));
         // The child is dead; clear it so {@link resume} respawns from the stashed spec
         // (the Variant-B "release a live blocked child" branch must not fire here).
-        handle.child = undefined
-        void this.completeLimitPause(handle, limitResetsAt)
-        this.logger?.warn("run paused on usage limit", { runId: run.runId })
-        return
+        handle.child = undefined;
+        void this.completeLimitPause(handle, limitResetsAt);
+        this.logger?.warn("run paused on usage limit", { runId: run.runId });
+        return;
       }
-      run.status = status
-      if (status === "done") run.pct = 100
-      this.stopIntentWatch(handle)
-      flushResidual()
+      run.status = status;
+      if (status === "done") run.pct = 100;
+      this.stopIntentWatch(handle);
+      flushResidual();
       // Signal the final log read only once the stream has flushed and closed, so a
       // tail the child emitted right before exit can't be lost to the done event
       // racing the buffered write to disk.
-      log.end(() => this.emitLog(run.runId))
-      void this.writeSidecar(run)
+      log.end(() => this.emitLog(run.runId));
+      void this.writeSidecar(run);
       // Status is already terminal in memory, so the channel can fire immediately
       // (it doesn't depend on the log file being flushed).
-      this.emitStatus(run)
-      const meta = { runId: run.runId, status, pct: run.pct }
-      if (status === "error") this.logger?.error("run finished", meta)
-      else this.logger?.info("run finished", meta)
-    }
-    child.on("error", () => finalize("error"))
+      this.emitStatus(run);
+      const meta = { runId: run.runId, status, pct: run.pct };
+      if (status === "error") this.logger?.error("run finished", meta);
+      else this.logger?.info("run finished", meta);
+    };
+    child.on("error", () => finalize("error"));
     child.on("exit", (code) => {
       // A run torn down on purpose (denied / rejected mid-run intent) exits non-zero
       // but its terminal state is `interrupted`, not `error`.
-      if (handle.interrupting) return finalize("interrupted")
-      finalize(code === 0 ? "done" : "error")
-    })
+      if (handle.interrupting) return finalize("interrupted");
+      finalize(code === 0 ? "done" : "error");
+    });
   }
 
   /**
@@ -987,17 +994,17 @@ export class RunnerCore<R extends BaseRun> {
    * destructive command in the same run raise a fresh request.
    */
   private watchIntentRequest(handle: RunHandle<R>): void {
-    if (!this.onIntent) return
-    const reqFile = path.join(handle.run.cwd, INTENT_REQUEST_FILE)
+    if (!this.onIntent) return;
+    const reqFile = path.join(handle.run.cwd, INTENT_REQUEST_FILE);
     const timer = setInterval(() => {
       void fs
         .readFile(reqFile, "utf8")
         .then(async (raw) => {
-          await fs.rm(reqFile, { force: true }).catch(() => {})
-          let action: IntendedAction | undefined
+          await fs.rm(reqFile, { force: true }).catch(() => {});
+          let action: IntendedAction | undefined;
           try {
-            const parsed = IntendedActionSchema.safeParse(JSON.parse(raw))
-            if (parsed.success) action = parsed.data
+            const parsed = IntendedActionSchema.safeParse(JSON.parse(raw));
+            if (parsed.success) action = parsed.data;
           } catch {
             // Malformed request → ignore; the hook will time out to a safe deny.
           }
@@ -1006,23 +1013,23 @@ export class RunnerCore<R extends BaseRun> {
               runId: handle.run.runId,
               action: action.action,
               tool: action.tool,
-            })
-            await this.onIntent?.(handle.run.runId, action, handle.run.cwd)
+            });
+            await this.onIntent?.(handle.run.runId, action, handle.run.cwd);
           }
         })
         .catch(() => {
           // No request file yet (ENOENT) — the common case between polls.
-        })
-    }, 200)
-    timer.unref?.()
-    handle.intentTimer = timer
+        });
+    }, 200);
+    timer.unref?.();
+    handle.intentTimer = timer;
   }
 
   /** Stop the intent-request watcher for a run (on terminal status / teardown). */
   private stopIntentWatch(handle: RunHandle<R>): void {
     if (handle.intentTimer) {
-      clearInterval(handle.intentTimer)
-      handle.intentTimer = undefined
+      clearInterval(handle.intentTimer);
+      handle.intentTimer = undefined;
     }
   }
 
@@ -1035,14 +1042,14 @@ export class RunnerCore<R extends BaseRun> {
   private async writeSidecar(run: R): Promise<void> {
     await writeFileAtomic(path.join(this.dir, `${run.runId}.json`), JSON.stringify(run)).catch(
       () => {},
-    )
+    );
   }
 
   /** Write the decision a Variant B child is polling for, into its sandbox `cwd`. */
   private async writeIntentDecision(cwd: string, decision: "allow" | "deny"): Promise<void> {
     await fs
       .writeFile(path.join(cwd, INTENT_DECISION_FILE), JSON.stringify({ decision }), "utf8")
-      .catch(() => {})
+      .catch(() => {});
   }
 
   private async writePendingSpec(runId: string, spec: RunSpec): Promise<void> {
@@ -1050,35 +1057,35 @@ export class RunnerCore<R extends BaseRun> {
     // approval-parked run that can't be resumed after a restart.
     await writeFileAtomic(path.join(this.dir, `${runId}.pending.json`), JSON.stringify(spec)).catch(
       () => {},
-    )
+    );
   }
 
   private async readPendingSpec(runId: string): Promise<RunSpec | undefined> {
     const raw = await fs
       .readFile(path.join(this.dir, `${runId}.pending.json`), "utf8")
-      .catch(() => null)
-    if (raw === null) return undefined
+      .catch(() => null);
+    if (raw === null) return undefined;
     try {
-      return JSON.parse(raw) as RunSpec
+      return JSON.parse(raw) as RunSpec;
     } catch {
-      return undefined
+      return undefined;
     }
   }
 
   private async clearPendingSpec(runId: string): Promise<void> {
-    await fs.rm(path.join(this.dir, `${runId}.pending.json`), { force: true }).catch(() => {})
+    await fs.rm(path.join(this.dir, `${runId}.pending.json`), { force: true }).catch(() => {});
   }
 
   /** Last `PROGRESS <n>` seen in a log, or `fallback` if none/unreadable. */
   private async readLastProgress(logFile: string, fallback: number): Promise<number> {
-    const content = await fs.readFile(logFile, "utf8").catch(() => null)
-    if (content === null) return fallback
-    let pct = fallback
+    const content = await fs.readFile(logFile, "utf8").catch(() => null);
+    if (content === null) return fallback;
+    let pct = fallback;
     for (const line of content.split(/\r?\n/)) {
-      const match = /^PROGRESS\s+(\d+)/.exec(line.trim())
-      if (match?.[1] !== undefined) pct = Math.min(100, Math.max(0, Number(match[1])))
+      const match = /^PROGRESS\s+(\d+)/.exec(line.trim());
+      if (match?.[1] !== undefined) pct = Math.min(100, Math.max(0, Number(match[1])));
     }
-    return pct
+    return pct;
   }
 
   /**
@@ -1087,53 +1094,53 @@ export class RunnerCore<R extends BaseRun> {
    */
   private resolveLogFile(runId: string): string {
     if (typeof runId !== "string" || !RUN_ID_REGEX.test(runId)) {
-      throw new RunNotFoundError(runId)
+      throw new RunNotFoundError(runId);
     }
-    const file = path.resolve(this.dir, `${runId}.log`)
+    const file = path.resolve(this.dir, `${runId}.log`);
     if (path.dirname(file) !== this.dir) {
-      throw new RunNotFoundError(runId)
+      throw new RunNotFoundError(runId);
     }
-    return file
+    return file;
   }
 
   /** Resolve a sidecar file name directly inside the runs dir, rejecting escapes. */
   private resolveInDir(name: string): string {
-    const file = path.resolve(this.dir, name)
-    if (path.dirname(file) !== this.dir) throw new RunNotFoundError(name)
-    return file
+    const file = path.resolve(this.dir, name);
+    if (path.dirname(file) !== this.dir) throw new RunNotFoundError(name);
+    return file;
   }
 
   /** Is `target` the runs dir itself or a path nested inside it? (rm guard) */
   private isInsideDir(target: string): boolean {
-    const resolved = path.resolve(target)
-    return resolved === this.dir || resolved.startsWith(this.dir + path.sep)
+    const resolved = path.resolve(target);
+    return resolved === this.dir || resolved.startsWith(this.dir + path.sep);
   }
 }
 
 function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error
+  return error instanceof Error && "code" in error;
 }
 
 /** Is a process (group leader) still alive? `kill(pid, 0)` probes without signalling. */
 export function isAlive(pid: number): boolean {
-  if (!pid || pid <= 1) return false
+  if (!pid || pid <= 1) return false;
   try {
-    process.kill(pid, 0)
-    return true
+    process.kill(pid, 0);
+    return true;
   } catch (error) {
     // ESRCH = no such process; EPERM = exists but not ours (still "alive").
-    return isErrnoException(error) && error.code === "EPERM"
+    return isErrnoException(error) && error.code === "EPERM";
   }
 }
 
 /** Terminate a whole detached process group (negative pid targets the group). */
 export function killGroup(pgid: number): void {
-  if (!pgid || pgid <= 1) return
+  if (!pgid || pgid <= 1) return;
   try {
-    process.kill(-pgid, "SIGTERM")
+    process.kill(-pgid, "SIGTERM");
   } catch {
     try {
-      process.kill(pgid, "SIGTERM")
+      process.kill(pgid, "SIGTERM");
     } catch {
       // Already gone.
     }

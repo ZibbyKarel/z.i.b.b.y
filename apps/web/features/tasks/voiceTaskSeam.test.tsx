@@ -14,7 +14,13 @@ function Probe() {
   const { open } = useNewTask();
   const { toggle } = useVoice();
   return (
-    <button onClick={() => { toggle(); open("from voice"); }} type="button">
+    <button
+      onClick={() => {
+        toggle();
+        open("from voice");
+      }}
+      type="button"
+    >
       probe
     </button>
   );

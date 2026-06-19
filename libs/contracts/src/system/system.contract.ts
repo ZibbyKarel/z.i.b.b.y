@@ -1,7 +1,7 @@
-import { initContract } from "@ts-rest/core"
-import { SystemConfigSchema } from "./system.schema"
+import { initContract } from "@ts-rest/core";
+import { SystemConfigSchema } from "./system.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Runtime system config (formerly start-only env vars). Operator-owned and
@@ -27,5 +27,5 @@ export const systemContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type SystemContract = typeof systemContract
+);
+export type SystemContract = typeof systemContract;

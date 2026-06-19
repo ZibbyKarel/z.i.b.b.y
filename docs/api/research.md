@@ -8,14 +8,14 @@ overlap, and folds a digest into the morning briefing. It is **operator-level**
 
 ## Pieces
 
-| Piece | File | Role |
-| ----- | ---- | ---- |
-| Contract | `libs/contracts/src/research/` | `ResearchConfig`, `ResearchDigest`, `ResearchItem` schemas + the `research` router |
-| Config store | `apps/api/src/research/research-config.store.ts` | reads/writes `data/research-config.json` (committed, operator-owned) |
-| Source seam | `apps/api/src/research/research-source.adapter.ts` | `ResearchSourceAdapter` — one impl per source kind (real RSS/HN/PH fetchers are deferred) |
-| Fake adapter | `apps/api/src/research/fake.adapter.ts` | reads `data/research/fixtures/<sourceId>.json`; the floor today, dependency-free |
-| Ranking | `apps/api/src/research/research-ranking.ts` | pure: `relevanceOf` (interest-overlap in [0,1]) + `rankSourceItems` |
-| Service | `apps/api/src/research/research.service.ts` | digest pass: fetch → rank → persist JSON + vault note → record activity |
+| Piece        | File                                               | Role                                                                                      |
+| ------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Contract     | `libs/contracts/src/research/`                     | `ResearchConfig`, `ResearchDigest`, `ResearchItem` schemas + the `research` router        |
+| Config store | `apps/api/src/research/research-config.store.ts`   | reads/writes `data/research-config.json` (committed, operator-owned)                      |
+| Source seam  | `apps/api/src/research/research-source.adapter.ts` | `ResearchSourceAdapter` — one impl per source kind (real RSS/HN/PH fetchers are deferred) |
+| Fake adapter | `apps/api/src/research/fake.adapter.ts`            | reads `data/research/fixtures/<sourceId>.json`; the floor today, dependency-free          |
+| Ranking      | `apps/api/src/research/research-ranking.ts`        | pure: `relevanceOf` (interest-overlap in [0,1]) + `rankSourceItems`                       |
+| Service      | `apps/api/src/research/research.service.ts`        | digest pass: fetch → rank → persist JSON + vault note → record activity                   |
 
 ## Endpoints (`/api/research`)
 

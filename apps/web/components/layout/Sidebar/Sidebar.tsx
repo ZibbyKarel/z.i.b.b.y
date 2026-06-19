@@ -20,16 +20,10 @@ export interface SidebarProps {
 
 export function Sidebar({ navItems, activeNav, footerItem }: SidebarProps) {
   return (
-     
     <Stack grow style={{ minHeight: 0 }}>
       <List>
         {navItems.map((item) => (
-           
-          <Link
-            href={item.href ?? "/"}
-            key={item.id}
-            style={{ display: "block" }}
-          >
+          <Link href={item.href ?? "/"} key={item.id} style={{ display: "block" }}>
             <ListItem active={item.id === activeNav}>
               <ListItemIcon glyph={item.glyph} />
               <ListItemText>{item.label}</ListItemText>
@@ -46,7 +40,7 @@ export function Sidebar({ navItems, activeNav, footerItem }: SidebarProps) {
           <Container>
             <Divider />
             <Container padding={["75", "0", "0", "0"]}>
-              { }
+              {}
               <Link href={footerItem.href ?? "/"} style={{ display: "block" }}>
                 <ListItem active={footerItem.id === activeNav}>
                   <ListItemIcon glyph={footerItem.glyph} />

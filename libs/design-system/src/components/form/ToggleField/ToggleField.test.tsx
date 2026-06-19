@@ -17,14 +17,7 @@ describe("ToggleField", () => {
   });
 
   it("shows a hint linked to the switch", () => {
-    render(
-      <ToggleField
-        checked
-        hint="Spustí se po uložení"
-        label="Auto-run"
-        onChange={vi.fn()}
-      />,
-    );
+    render(<ToggleField checked hint="Spustí se po uložení" label="Auto-run" onChange={vi.fn()} />);
     const hint = screen.getByTestId(FieldTestId.Hint);
     expect(hint).toHaveTextContent("Spustí se po uložení");
     expect(screen.getByTestId(ToggleFieldTestId.Control)).toHaveAttribute(

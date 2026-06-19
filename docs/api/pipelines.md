@@ -14,17 +14,17 @@ phases:
   - id: architekt
     type: agent
     agent: architekt
-    model: opus          # přepisuje default model agenta pro tuto fázi
+    model: opus # přepisuje default model agenta pro tuto fázi
     thinking: high
-    produces: spec.md    # handoff soubor pro další fázi
+    produces: spec.md # handoff soubor pro další fázi
 
   - id: kodér
     type: agent
     agent: kodér
-    consumes: spec.md    # vstup z předchozí fáze
+    consumes: spec.md # vstup z předchozí fáze
     produces: diff.patch
     loop:
-      to: code-review    # zpětná hrana při selhání
+      to: code-review # zpětná hrana při selhání
       maxRetries: 3
       escalation:
         - rung: 1
@@ -39,11 +39,11 @@ phases:
     agent: code-reviewer
     consumes: diff.patch
     then:
-      pass: tester       # při OK → jdi na tester
-      fail: kodér        # při FAIL → zpět na kodér
+      pass: tester # při OK → jdi na tester
+      fail: kodér # při FAIL → zpět na kodér
 
   - id: tester
-    type: verify          # deterministická fáze, žádné tokeny
+    type: verify # deterministická fáze, žádné tokeny
     commands:
       - pnpm typecheck
       - pnpm test
@@ -56,10 +56,10 @@ phases:
     agent: dokumentátor
     produces: docs.md
 
-outputs:                 # co se stane s hotovou prací (delivery sinks)
-  - type: pr             # otevře PR z docs.md (gated — „PR je brána")
+outputs: # co se stane s hotovou prací (delivery sinks)
+  - type: pr # otevře PR z docs.md (gated — „PR je brána")
     from: docs.md
-  - type: file           # zapíše review.md do projektu (jede na zibby/* branchi)
+  - type: file # zapíše review.md do projektu (jede na zibby/* branchi)
     from: review.md
     dest: project
     to: reports/review.md
@@ -76,9 +76,9 @@ agent, žádný model, žádné tokeny; výstupní obdoba `verify` fáze). Pipel
 mít víc (otevřít PR _a_ zároveň zapsat report). Každý sink čerpá z `from` — relativní
 cesty, kterou některá fáze `produces`.
 
-| `type` | Pole | Co dělá |
-|--------|------|---------|
-| `pr` | `from` | Z `from` (Markdown `# titulek` + tělo) složí PR a otevře ho přes `git push && gh pr create`. **Vždy zaparkuje na schválení** — PR je brána, vynucená strukturálně systémem (Law 3), ne configem agenta. |
+| `type` | Pole                 | Co dělá                                                                                                                                                                                                                |
+| ------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr`   | `from`               | Z `from` (Markdown `# titulek` + tělo) složí PR a otevře ho přes `git push && gh pr create`. **Vždy zaparkuje na schválení** — PR je brána, vynucená strukturálně systémem (Law 3), ne configem agenta.                |
 | `file` | `from`, `dest`, `to` | Zkopíruje `from` do `to` — do projektového worktree (`dest: project`, jede na `zibby/*` branchi) nebo jako poznámku ve vaultu (`dest: vault`, trvalý druhý mozek pro pipeline, jejichž výsledek je informace, ne kód). |
 
 PR sink zaparkuje aggregate s `parkedReason: "output"` (durable přes restart — fázová
@@ -174,6 +174,7 @@ Fáze selhala + má loop.to
 ```
 
 **Escalation ladder** — postupné "rungs":
+
 - rung 1 po prvním selhání: například `sonnet` + `medium`
 - rung 2 po druhém selhání: například `opus` + `high`
 
@@ -182,6 +183,7 @@ Rung definice jsou volitelné — pokud chybí, fáze se opakuje se stejným mod
 ### Handoff soubory (consumes / produces)
 
 Soubory sdílené mezi fázemi pipeline runu:
+
 - Uloženy v sandbox adresáři pipeline runu
 - `produces: spec.md` → tato fáze zapíše `spec.md`
 - `consumes: spec.md` → tato fáze přečte `spec.md` jako vstup
@@ -189,10 +191,12 @@ Soubory sdílené mezi fázemi pipeline runu:
 ### Parking
 
 Parked stav nastane když:
+
 - smyčka (`loop`) se vyčerpá (`maxRetries` dosaženo) a není `then.fail`
 - nebo explicitně v `then: { fail: park }`
 
 Parked pipeline run:
+
 - Je durable (přežije restart API)
 - Zobrazí se v UI s možností human review
 - Operátor může ručně rozhodnout (resume / abandon)

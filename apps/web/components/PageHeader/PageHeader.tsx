@@ -21,12 +21,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
       <Stack wrap align="start" direction="row" gap="200" justify="between">
         <Container minW0>
           <Stack gap="75">
-            <Typography
-              leading="tight"
-              tracking="tighter"
-              type="pageTitle"
-              weight="semibold"
-            >
+            <Typography leading="tight" tracking="tighter" type="pageTitle" weight="semibold">
               {title}
             </Typography>
             {subtitle && (

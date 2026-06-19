@@ -1,4 +1,4 @@
-import type { CatalogTaskTarget, ClassifyTaskInput, TaskRouting } from "@zibby/contracts"
+import type { CatalogTaskTarget, ClassifyTaskInput, TaskRouting } from "@zibby/contracts";
 
 /**
  * A routable destination: a {@link CatalogTaskTarget} (a stored agent or
@@ -9,8 +9,8 @@ import type { CatalogTaskTarget, ClassifyTaskInput, TaskRouting } from "@zibby/c
  * target, so {@link toTaskTarget} strips the internal `search`.
  */
 export type RoutableTarget = CatalogTaskTarget & {
-  search: string
-}
+  search: string;
+};
 
 /** Project a routable candidate down to the contract's wire shape (drops `search`). */
 export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget {
@@ -20,7 +20,7 @@ export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget {
     name: candidate.name,
     glyph: candidate.glyph,
     category: candidate.category,
-  }
+  };
 }
 
 /**
@@ -33,8 +33,8 @@ export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget {
  * service then falls back to the keyword scorer (which never returns null).
  */
 export interface TaskRouter {
-  route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null>
+  route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null>;
 }
 
 /** DI token for the primary {@link TaskRouter} (the LLM router in production). */
-export const TASK_ROUTER = Symbol("TASK_ROUTER")
+export const TASK_ROUTER = Symbol("TASK_ROUTER");

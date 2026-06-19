@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  type Agent,
-  DEFAULT_VERIFY_CHECKS,
-} from "@zibby/contracts";
+import { type Agent, DEFAULT_VERIFY_CHECKS } from "@zibby/contracts";
 import {
   Card,
   Container,
@@ -17,21 +14,9 @@ import {
 import { useTranslations } from "next-intl";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
-import {
-  type Pipeline,
-  type PipelinePhase,
-  glyphForPhase,
-} from "../../../domain";
+import { type Pipeline, type PipelinePhase, glyphForPhase } from "../../../domain";
 
-function IoRow({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
+function IoRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <Stack align="center" direction="row" gap="75">
       <Container shrink={false} width="30px">
@@ -96,13 +81,7 @@ function PhaseNode({
           <Stack align="center" direction="row" gap="100">
             <IconTile glyph={glyphForPhase(phase, agents)} size="sm" />
             <Container minW0>
-              <Typography
-                mono
-                size="2xs"
-                tracking="wider"
-                type="note"
-                variant="tertiary"
-              >
+              <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
                 {t("phaseLabel", { n: idx + 1 })}
               </Typography>
               <Typography mono nowrap size="base" type="note" weight="semibold">
@@ -138,11 +117,7 @@ function PhaseNode({
               <Divider />
               <Stack gap="75">
                 <IoRow label={t("input")} value={phase.consumes ?? ""} />
-                <IoRow
-                  accent
-                  label={t("output")}
-                  value={phase.produces ?? ""}
-                />
+                <IoRow accent label={t("output")} value={phase.produces ?? ""} />
               </Stack>
             </>
           )}
@@ -169,9 +144,7 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
   const loopIdx = phases.findIndex((p) => p.loop);
   const loopPhase = loopIdx >= 0 ? phases[loopIdx] : undefined;
   const cx = (i: number) => ((i + 0.5) / Math.max(n, 1)) * 100;
-  let targetIdx = loopPhase?.loop
-    ? phases.findIndex((p) => p.id === loopPhase.loop!.to)
-    : -1;
+  let targetIdx = loopPhase?.loop ? phases.findIndex((p) => p.id === loopPhase.loop!.to) : -1;
   if (loopPhase && targetIdx < 0) targetIdx = Math.max(loopIdx - 1, 0);
   const x1 = cx(loopIdx);
   const x2 = cx(targetIdx);
@@ -186,9 +159,7 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
     const max = el.scrollWidth - el.clientWidth;
     const left = el.scrollLeft > 2;
     const right = el.scrollLeft < max - 2;
-    setEdge((prev) =>
-      prev.left === left && prev.right === right ? prev : { left, right },
-    );
+    setEdge((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
   }, []);
   useEffect(() => {
     checkEdges();
@@ -276,13 +247,7 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
                   >
                     <Container padding={["0", "50"]}>
                       <Stack align="center" gap="50">
-                        <Typography
-                          mono
-                          nowrap
-                          size="2xs"
-                          type="note"
-                          variant="tertiary"
-                        >
+                        <Typography mono nowrap size="2xs" type="note" variant="tertiary">
                           {phases[i + 1]!.consumes ?? ""}
                         </Typography>
                         <Icon name="arrow" size="md" tone="faint" />
@@ -305,8 +270,7 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
         style={{
           opacity: edge.left ? 1 : 0,
           transition: "opacity .15s",
-          background:
-            "linear-gradient(to right, var(--color-surface), transparent)",
+          background: "linear-gradient(to right, var(--color-surface), transparent)",
         }}
         top="0"
         width="56px"
@@ -321,18 +285,13 @@ export function PhaseChain({ pipeline, agents, attempts }: PhaseChainProps) {
         style={{
           opacity: edge.right ? 1 : 0,
           transition: "opacity .15s",
-          background:
-            "linear-gradient(to left, var(--color-surface), transparent)",
+          background: "linear-gradient(to left, var(--color-surface), transparent)",
         }}
         top="0"
         width="56px"
         zIndex={3}
       >
-        <Stack
-          align="center"
-          justify="end"
-          style={{ height: "100%", paddingRight: 4 }}
-        >
+        <Stack align="center" justify="end" style={{ height: "100%", paddingRight: 4 }}>
           <Container
             height="22px"
             style={{

@@ -1,9 +1,9 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { channelsContract } from "@zibby/contracts"
-import { IntegrationNotFoundError } from "../integrations/integrations.storage.service"
-import { ChannelItemStore } from "./channel-item.store"
-import { JiraIssueFlowService } from "./jira-issue-flow.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { channelsContract } from "@zibby/contracts";
+import { IntegrationNotFoundError } from "../integrations/integrations.storage.service";
+import { ChannelItemStore } from "./channel-item.store";
+import { JiraIssueFlowService } from "./jira-issue-flow.service";
 
 /**
  * Read-only access to ingested channel items (items are created/transitioned only by
@@ -26,23 +26,23 @@ export class ChannelsController {
       }),
 
       getChannelItem: async ({ params: { id } }) => {
-        const item = await this.store.findById(id)
+        const item = await this.store.findById(id);
         return item
           ? { status: 200 as const, body: item }
-          : { status: 404 as const, body: { message: `Channel item "${id}" not found` } }
+          : { status: 404 as const, body: { message: `Channel item "${id}" not found` } };
       },
 
       createJiraIssue: async ({ params: { id }, body }) => {
         try {
-          const approval = await this.jira.propose({ integrationId: id, ...body })
-          return { status: 202 as const, body: { approvalId: approval.id } }
+          const approval = await this.jira.propose({ integrationId: id, ...body });
+          return { status: 202 as const, body: { approvalId: approval.id } };
         } catch (err) {
           if (err instanceof IntegrationNotFoundError) {
-            return { status: 404 as const, body: { message: err.message } }
+            return { status: 404 as const, body: { message: err.message } };
           }
-          return { status: 422 as const, body: { message: (err as Error).message } }
+          return { status: 422 as const, body: { message: (err as Error).message } };
         }
       },
-    })
+    });
   }
 }

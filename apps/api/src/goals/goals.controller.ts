@@ -1,25 +1,25 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { goalsContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { goalsContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   GoalConflictError,
   GoalNotFoundError,
   InvalidGoalError,
   InvalidGoalIdError,
-} from "./goals.errors"
-import { GoalsStorageService } from "./goals.storage.service"
+} from "./goals.errors";
+import { GoalsStorageService } from "./goals.storage.service";
 
 const errors = makeErrorMapper("Goal", {
   missing: [GoalNotFoundError, InvalidGoalIdError],
   conflict: [GoalConflictError],
-})
+});
 
 /** A structurally-invalid goal definition (e.g. bad verifier spec) maps to a 422. */
 const invalid = (error: unknown) =>
   error instanceof InvalidGoalError
     ? ({ status: 422, body: { message: error.message } } as const)
-    : undefined
+    : undefined;
 
 /** Implements `goalsContract` against the file-backed storage service. */
 @Controller()
@@ -40,9 +40,9 @@ export class GoalsController {
 
       deleteGoal: ({ params: { id } }) =>
         errors.or404(id, async () => {
-          await this.storage.delete(id)
-          return { id }
+          await this.storage.delete(id);
+          return { id };
         }),
-    })
+    });
   }
 }

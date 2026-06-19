@@ -48,13 +48,7 @@ function Pat({ children }: { children: string }) {
 }
 
 /** Render the rule's AND-ed match conditions as human-readable text. */
-export function MatcherText({
-  match,
-  andLabel,
-}: {
-  match: MatchCondition[];
-  andLabel: string;
-}) {
+export function MatcherText({ match, andLabel }: { match: MatchCondition[]; andLabel: string }) {
   return (
     <Stack
       inline
@@ -70,13 +64,7 @@ export function MatcherText({
         return (
           <Fragment key={i}>
             {i > 0 && (
-              <Typography
-                mono
-                size="2xs"
-                type="note"
-                variant="tertiary"
-                weight="bold"
-              >
+              <Typography mono size="2xs" type="note" variant="tertiary" weight="bold">
                 {andLabel}
               </Typography>
             )}
@@ -87,9 +75,7 @@ export function MatcherText({
               {pattern && (
                 <>
                   {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <span style={{ color: "var(--color-foreground-faint)" }}>
-                    →
-                  </span>
+                  <span style={{ color: "var(--color-foreground-faint)" }}>→</span>
                   <Pat>{pattern}</Pat>
                 </>
               )}
@@ -116,35 +102,17 @@ export function ResolveChips({
       {leaves.map((leaf, i) => (
         <Fragment key={i}>
           {i > 0 && (
-            <Typography
-              mono
-              size="2xs"
-              type="note"
-              variant="tertiary"
-              weight="bold"
-            >
+            <Typography mono size="2xs" type="note" variant="tertiary" weight="bold">
               {mode === "all" ? "AND" : "OR"}
             </Typography>
           )}
           <Tag
             size="sm"
-            tone={
-              leaf.kind === "check"
-                ? "ok"
-                : leaf.kind === "agent"
-                  ? "accent"
-                  : "neutral"
-            }
+            tone={leaf.kind === "check" ? "ok" : leaf.kind === "agent" ? "accent" : "neutral"}
           >
             <Stack inline align="center" as="span" direction="row" gap="50">
               <Icon
-                name={
-                  leaf.kind === "agent"
-                    ? "bot"
-                    : leaf.kind === "check"
-                      ? "check"
-                      : "shield"
-                }
+                name={leaf.kind === "agent" ? "bot" : leaf.kind === "check" ? "check" : "shield"}
                 size="xs"
               />
               {leaf.kind === "human" ? youLabel : leaf.name}

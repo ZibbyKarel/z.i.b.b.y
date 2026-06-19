@@ -20,7 +20,13 @@ import {
 } from "@zibby/design-system";
 import type { Automation, Target, Trigger } from "@zibby/contracts";
 import { slug } from "../../../utils/slug";
-import { DEFAULT_SCHEDULE, cronToSchedule, dayName, dayNameShort, scheduleToCron } from "../schedule";
+import {
+  DEFAULT_SCHEDULE,
+  cronToSchedule,
+  dayName,
+  dayNameShort,
+  scheduleToCron,
+} from "../schedule";
 import { useCronLabel } from "../useCronLabel";
 
 /** Testids for the automation form dialog. */
@@ -155,7 +161,11 @@ export function AutomationFormDialog({
     }
     const target: Target =
       targetType === "agent"
-        ? { type: "agent", agentId: targetValue, ...(prompt.trim() ? { prompt: prompt.trim() } : {}) }
+        ? {
+            type: "agent",
+            agentId: targetValue,
+            ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
+          }
         : targetType === "pipeline"
           ? { type: "pipeline", pipelineId: targetValue }
           : targetType === "discovery"

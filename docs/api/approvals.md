@@ -7,14 +7,14 @@ před pokračováním. Přežije restart API — `ApprovalsStorageService` čte 
 
 ## Druhy schválení (ApprovalKind)
 
-| Kind | Kdy vznikne |
-|------|-------------|
-| `agent` | Gate pravidlo rozhodlo `ask` uprostřed runu agenta |
-| `pipeline-stage` | Gate uvnitř fáze pipeline |
-| `pipeline-output` | Pipeline `pr` output čeká na schválení, než otevře PR (runId = pipelineRunId; bez agenta — vlastní systém) |
-| `task-output` | Directed task se zvoleným `pr` výstupem čeká, než otevře PR z branche hotového agent/orchestrátor runu (runId = taskId; durable `ScheduledTask` record drží stav, bez živého dítěte) |
-| `channel` | ZIBBY připravil draft odpovědi na zprávu (Tier 3) |
-| `task` | Task překročil budget cap (`spend-past-cap`) |
+| Kind              | Kdy vznikne                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `agent`           | Gate pravidlo rozhodlo `ask` uprostřed runu agenta                                                                                                                                   |
+| `pipeline-stage`  | Gate uvnitř fáze pipeline                                                                                                                                                            |
+| `pipeline-output` | Pipeline `pr` output čeká na schválení, než otevře PR (runId = pipelineRunId; bez agenta — vlastní systém)                                                                           |
+| `task-output`     | Directed task se zvoleným `pr` výstupem čeká, než otevře PR z branche hotového agent/orchestrátor runu (runId = taskId; durable `ScheduledTask` record drží stav, bez živého dítěte) |
+| `channel`         | ZIBBY připravil draft odpovědi na zprávu (Tier 3)                                                                                                                                    |
+| `task`            | Task překročil budget cap (`spend-past-cap`)                                                                                                                                         |
 
 ## Lifecycle
 
@@ -29,17 +29,17 @@ Jednou rozhodnuté Approval se nezmění.
 
 ```typescript
 interface Approval {
-  id: string
-  kind: ApprovalKind         // agent | pipeline-stage | channel | task
-  runId?: string             // korelace s runem
-  skill?: string             // agent/skill ID
-  action?: string            // záměr (např. "git.push")
-  detail?: string            // lidsky čitelný popis
-  risk?: "low" | "medium" | "high"
-  status: "pending" | "approved" | "rejected"
-  requestedAt: string        // ISO datetime
-  decidedAt?: string         // ISO datetime
-  resolve?: Resolve          // jak se má rozhodnutí vyřešit (z gate pravidla)
+  id: string;
+  kind: ApprovalKind; // agent | pipeline-stage | channel | task
+  runId?: string; // korelace s runem
+  skill?: string; // agent/skill ID
+  action?: string; // záměr (např. "git.push")
+  detail?: string; // lidsky čitelný popis
+  risk?: "low" | "medium" | "high";
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string; // ISO datetime
+  decidedAt?: string; // ISO datetime
+  resolve?: Resolve; // jak se má rozhodnutí vyřešit (z gate pravidla)
 }
 ```
 
@@ -60,7 +60,7 @@ approvalsService.create({
   detail: "Push feature/xyz → main",
   risk: "medium",
   resolve: { type: "human" },
-})
+});
 ```
 
 Uloží JSON do `apps/api/data/approvals/<id>.json`.
@@ -68,6 +68,7 @@ Uloží JSON do `apps/api/data/approvals/<id>.json`.
 ### Runner integrace
 
 Když gate rozhodne `ask`:
+
 1. `ApprovalsService.create(...)` → vytvoří `Approval` se statusem `pending`
 2. `RunnerCore` přejde na status `awaiting-approval` (pozastavení bez kill procesu)
 3. Agent čeká (polling sidecar)
@@ -79,8 +80,8 @@ Když gate rozhodne `ask`:
 
 ```typescript
 interface ResumableRunner {
-  resume(approvalId: string): Promise<void>
-  reject(approvalId: string): Promise<void>
+  resume(approvalId: string): Promise<void>;
+  reject(approvalId: string): Promise<void>;
 }
 ```
 
@@ -100,6 +101,7 @@ Tím se zabraňuje podvádění (Law 4).
 ## Zobrazení v UI
 
 Stránka `/approvals` zobrazuje pending queue s:
+
 - Druhem schválení
 - Popis záměru (`action`, `detail`)
 - Risk indikátor (low/medium/high)
@@ -109,8 +111,8 @@ Stránka `/approvals` zobrazuje pending queue s:
 
 ## Activity záznamy
 
-| Event | Kdy |
-|-------|-----|
+| Event                | Kdy                |
+| -------------------- | ------------------ |
 | `approval-requested` | Approval vytvořeno |
-| `approval-approved` | Operátor schválil |
-| `approval-rejected` | Operátor zamítl |
+| `approval-approved`  | Operátor schválil  |
+| `approval-rejected`  | Operátor zamítl    |

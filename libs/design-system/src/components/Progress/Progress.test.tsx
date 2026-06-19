@@ -13,10 +13,7 @@ describe("Progress", () => {
 
   it("clamps values to 0–100", () => {
     render(<Progress label="over" value={150} />);
-    expect(screen.getByTestId(ProgressTestId.Root)).toHaveAttribute(
-      "aria-valuenow",
-      "100",
-    );
+    expect(screen.getByTestId(ProgressTestId.Root)).toHaveAttribute("aria-valuenow", "100");
   });
 
   it("renders no progressbar role without a label", () => {

@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto"
-import { EventEmitter } from "node:events"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
+import { randomUUID } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
   DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
@@ -19,44 +19,44 @@ import {
   type StageRun,
   type TaskOutput,
   type Workspace,
-} from "@zibby/contracts"
-import { AgentsStorageService } from "../agents/agents.storage.service"
-import { ApprovalsService } from "../approvals/approvals.service"
-import { GateEvaluatorService } from "../gates/gate-evaluator.service"
-import { GroundingService } from "../memory/grounding.service"
-import { DuplicateNoteError, VaultService } from "../memory/vault.service"
-import { ClaudePreflightService } from "../runner/claude-preflight.service"
-import { ClaudeRunCommandService } from "../runner/claude-run-command.service"
-import { CommandMaterializerService } from "../runner/command-materializer.service"
-import { RunnerCore } from "../runner/runner-core"
-import { LimitsService } from "../limits/limits.service"
-import { ProjectSecretsStore } from "../projects/project-secrets.store"
-import { ProjectsStorageService } from "../projects/projects.storage.service"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { TraceContextService } from "../shared/logging/trace-context.service"
-import { prepareWorktreeDir } from "../shared/worktree-root"
-import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
-import { PipelinesStorageService } from "./pipelines.storage.service"
-import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record"
-import { renderProgress } from "./progress"
-import { buildResumeContext } from "./resume-context"
-import { buildVerifyCommand } from "./verify-command"
+} from "@zibby/contracts";
+import { AgentsStorageService } from "../agents/agents.storage.service";
+import { ApprovalsService } from "../approvals/approvals.service";
+import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import { GroundingService } from "../memory/grounding.service";
+import { DuplicateNoteError, VaultService } from "../memory/vault.service";
+import { ClaudePreflightService } from "../runner/claude-preflight.service";
+import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
+import { CommandMaterializerService } from "../runner/command-materializer.service";
+import { RunnerCore } from "../runner/runner-core";
+import { LimitsService } from "../limits/limits.service";
+import { ProjectSecretsStore } from "../projects/project-secrets.store";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { TraceContextService } from "../shared/logging/trace-context.service";
+import { prepareWorktreeDir } from "../shared/worktree-root";
+import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service";
+import { PipelinesStorageService } from "./pipelines.storage.service";
+import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record";
+import { renderProgress } from "./progress";
+import { buildResumeContext } from "./resume-context";
+import { buildVerifyCommand } from "./verify-command";
 
 /** DI token carrying the absolute path of the directory that holds pipeline run artifacts. */
-export const PIPELINE_RUNS_DIR = "PIPELINE_RUNS_DIR"
+export const PIPELINE_RUNS_DIR = "PIPELINE_RUNS_DIR";
 
-const RETENTION_MS = 30 * 60 * 1000
-const MAX_LISTED = 50
-const AGGREGATE_FILE = "run.json"
+const RETENTION_MS = 30 * 60 * 1000;
+const MAX_LISTED = 50;
+const AGGREGATE_FILE = "run.json";
 
 // Re-exported so the controller can map it to a 404 without importing the core.
-export { RunNotFoundError } from "../runner/runner-core"
+export { RunNotFoundError } from "../runner/runner-core";
 
 /** Raised when a pipeline run id is unknown — controllers map it to a 404. */
 export class PipelineRunNotFoundError extends Error {
   constructor(id: string) {
-    super(`Pipeline run "${id}" not found`)
-    this.name = "PipelineRunNotFoundError"
+    super(`Pipeline run "${id}" not found`);
+    this.name = "PipelineRunNotFoundError";
   }
 }
 
@@ -67,8 +67,8 @@ export class PipelineRunNotFoundError extends Error {
  */
 export class RunNotRetriesParkedError extends Error {
   constructor(id: string) {
-    super(`Pipeline run "${id}" is not retries-parked`)
-    this.name = "RunNotRetriesParkedError"
+    super(`Pipeline run "${id}" is not retries-parked`);
+    this.name = "RunNotRetriesParkedError";
   }
 }
 
@@ -87,17 +87,17 @@ export class RunNotRetriesParkedError extends Error {
  */
 @Injectable()
 export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
-  private readonly dir: string
-  private readonly core: RunnerCore<PipelineStageRecord>
-  private readonly runs = new Map<string, PipelineRun>()
-  private readonly log: ScopedLogger
+  private readonly dir: string;
+  private readonly core: RunnerCore<PipelineStageRecord>;
+  private readonly runs = new Map<string, PipelineRun>();
+  private readonly log: ScopedLogger;
   /**
    * Push channel for aggregate transitions. Unlike agent runs (whose lifecycle the
    * core owns), the pipeline aggregate lives here, so the event fires from
    * {@link writeAggregate} — every persisted transition (stage advance, finish)
    * notifies the `/api/events` SSE channel, replacing the FE's 1s aggregate poll.
    */
-  private readonly events = new EventEmitter()
+  private readonly events = new EventEmitter();
 
   constructor(
     @Inject(PIPELINE_RUNS_DIR) dir: string,
@@ -117,10 +117,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly trace: TraceContextService,
     private readonly projectSecrets: ProjectSecretsStore,
   ) {
-    this.dir = path.resolve(dir)
-    this.log = logger.child(PipelineRunnerService.name)
+    this.dir = path.resolve(dir);
+    this.log = logger.child(PipelineRunnerService.name);
     // One listener per open SSE connection; lift the default cap of 10.
-    this.events.setMaxListeners(0)
+    this.events.setMaxListeners(0);
     // Variant B for stages: a live claude stage announcing a destructive action
     // (via the hook's intent-request.json) routes through the gate evaluator.
     this.core = new RunnerCore(
@@ -135,7 +135,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // Phase 9: resolve a limit-paused stage's resume epoch so the core stamps it on
       // the stage record (the aggregate copies it up).
       (detected) => this.limits.resolveResumeAt(detected),
-    )
+    );
   }
 
   async onModuleInit(): Promise<void> {
@@ -145,40 +145,40 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     this.approvals.register("pipeline-stage", {
       resume: async (stageRunId) => {
         try {
-          await this.core.resume(stageRunId)
-          await this.setAggregateStatus(stageRunId, "running")
+          await this.core.resume(stageRunId);
+          await this.setAggregateStatus(stageRunId, "running");
         } catch (error) {
           // The run may have been deleted while its approval sat in the queue.
           this.log.warn("pipeline-stage resume skipped (run not found)", {
             stageRunId,
             err: error instanceof Error ? error.message : String(error),
-          })
+          });
         }
       },
       cancel: (stageRunId) => {
         try {
-          this.core.cancel(stageRunId)
+          this.core.cancel(stageRunId);
         } catch (error) {
           this.log.warn("pipeline-stage cancel skipped (run not found)", {
             stageRunId,
             err: error instanceof Error ? error.message : String(error),
-          })
+          });
         }
       },
-    })
+    });
     // A pipeline-level `pr` output sink parks the whole aggregate (no live child).
     // The approval's runId IS the pipelineRunId: approve → run the gated push and
     // finish the run; reject → leave the branch work without a PR (still `done`).
     this.approvals.register("pipeline-output", {
       resume: (pipelineRunId) => this.resumeOutput(pipelineRunId, "approved"),
       cancel: (pipelineRunId) => void this.resumeOutput(pipelineRunId, "rejected"),
-    })
-    await this.core.init()
-    await this.reconstruct()
+    });
+    await this.core.init();
+    await this.reconstruct();
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.core.shutdown()
+    await this.core.shutdown();
   }
 
   /**
@@ -207,22 +207,22 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     taskOutput?: TaskOutput,
   ): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
-    const pipeline = await this.pipelines.get(pipelineId)
+    const pipeline = await this.pipelines.get(pipelineId);
 
     // Claude-mode stages spawn real `claude -p` sessions — refuse the whole run
     // up front when the CLI can't start one (→ 503). Demo pipelines keep working.
     if (process.env.AGENT_RUNNER_MODE === "claude") {
-      await this.preflight.assertAvailable()
+      await this.preflight.assertAvailable();
     }
 
-    const project = await this.resolveProject(projectRef)
+    const project = await this.resolveProject(projectRef);
 
-    const startedMs = Date.now()
-    const pipelineRunId = `${pipelineId}_${startedMs}`
-    const root = path.join(this.dir, pipelineRunId)
-    await fs.mkdir(root, { recursive: true })
+    const startedMs = Date.now();
+    const pipelineRunId = `${pipelineId}_${startedMs}`;
+    const root = path.join(this.dir, pipelineRunId);
+    await fs.mkdir(root, { recursive: true });
 
-    const firstPhase = pipeline.phases[0]
+    const firstPhase = pipeline.phases[0];
     const run: PipelineRun = {
       pipelineRunId,
       pipelineId,
@@ -239,9 +239,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // A directed task's output choice overrides the definition's `outputs:` for this
       // run (void → [] suppresses even a declared PR). Absent = inherit.
       ...(taskOutput ? { outputsOverride: this.toOutputsOverride(taskOutput, pipeline) } : {}),
-    }
-    this.runs.set(pipelineRunId, run)
-    await this.writeAggregate(run)
+    };
+    this.runs.set(pipelineRunId, run);
+    await this.writeAggregate(run);
 
     // Phase 3.1: a git project gets a dedicated worktree under the run dir so every
     // stage works on the run's own `zibby/*` branch (the operator's checkout is
@@ -251,8 +251,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // failed (no driver) with the reason logged.
     if (externalWorkspace) {
       // Phase 10: spawn every stage on the goal's branch; the goal owns the worktree.
-      run.workspace = externalWorkspace
-      await this.writeAggregate(run)
+      run.workspace = externalWorkspace;
+      await this.writeAggregate(run);
     } else if (project && (await this.workspace.isGitRepo(project.path))) {
       try {
         run.workspace = await this.workspace.createWorktree({
@@ -261,19 +261,19 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           slug: pipelineId,
           // Phase 12.7: worktree OUTSIDE the repo/data tree (only artifacts stay under root).
           dir: await prepareWorktreeDir(pipelineRunId),
-        })
-        await this.writeAggregate(run)
+        });
+        await this.writeAggregate(run);
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError)) throw error
-        run.status = "failed"
-        run.currentStage = null
-        await this.writeAggregate(run)
+        if (!(error instanceof WorkspaceSetupError)) throw error;
+        run.status = "failed";
+        run.currentStage = null;
+        await this.writeAggregate(run);
         this.log.error("pipeline run failed: worktree setup", {
           pipelineRunId,
           projectPath: project.path,
           err: error.message,
-        })
-        return run
+        });
+        return run;
       }
     }
 
@@ -283,14 +283,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       phases: pipeline.phases.length,
       projectPath: project?.path,
       branch: run.workspace?.branch,
-    })
+    });
 
     // Fire-and-forget driver; the FE polls getRun for progress. The driver runs
     // after this request returns, so re-open a logging scope keyed by the run id
     // (carrying the originating trace id) for every line the background work emits.
-    const traceId = this.trace.getTraceId() ?? randomUUID()
-    void this.trace.run({ traceId, runId: pipelineRunId }, () => this.drive(run, pipeline, project))
-    return run
+    const traceId = this.trace.getTraceId() ?? randomUUID();
+    void this.trace.run({ traceId, runId: pipelineRunId }, () =>
+      this.drive(run, pipeline, project),
+    );
+    return run;
   }
 
   /**
@@ -299,12 +301,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * never throws (the project is an enhancement, not a precondition).
    */
   private async resolveProject(projectRef: string | undefined): Promise<Project | null> {
-    if (!projectRef) return null
+    if (!projectRef) return null;
     try {
-      return await this.projects.get(projectRef)
+      return await this.projects.get(projectRef);
     } catch {
-      const all = await this.projects.list().catch((): Project[] => [])
-      return all.find((p) => p.name === projectRef) ?? null
+      const all = await this.projects.list().catch((): Project[] => []);
+      return all.find((p) => p.name === projectRef) ?? null;
     }
   }
 
@@ -315,15 +317,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * back to the defaults.
    */
   private async projectForRun(run: PipelineRun): Promise<Project | null> {
-    if (!run.projectPath) return null
-    const all = await this.projects.list().catch((): Project[] => [])
+    if (!run.projectPath) return null;
+    const all = await this.projects.list().catch((): Project[] => []);
     return (
       all.find((p) => p.path === run.projectPath) ?? {
         id: "unregistered",
         name: "unregistered",
         path: run.projectPath,
       }
-    )
+    );
   }
 
   /**
@@ -334,84 +336,80 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * Throws {@link RunNotRetriesParkedError} (→ 409) for any other state.
    */
   async resumeParked(pipelineRunId: string, note?: string): Promise<PipelineRun> {
-    let run = this.runs.get(pipelineRunId)
+    let run = this.runs.get(pipelineRunId);
     if (!run) {
-      const fromDisk = await this.readAggregate(pipelineRunId)
-      if (!fromDisk) throw new PipelineRunNotFoundError(pipelineRunId)
-      this.runs.set(pipelineRunId, fromDisk)
-      run = fromDisk
+      const fromDisk = await this.readAggregate(pipelineRunId);
+      if (!fromDisk) throw new PipelineRunNotFoundError(pipelineRunId);
+      this.runs.set(pipelineRunId, fromDisk);
+      run = fromDisk;
     }
     // Phase 9 widens the resumable parkings from `retries`-only to `retries | limit`.
-    const isLimit = run.parkedReason === "limit"
-    if (
-      run.status !== "parked" ||
-      (run.parkedReason !== "retries" && !isLimit) ||
-      !run.parked
-    ) {
-      throw new RunNotRetriesParkedError(pipelineRunId)
+    const isLimit = run.parkedReason === "limit";
+    if (run.status !== "parked" || (run.parkedReason !== "retries" && !isLimit) || !run.parked) {
+      throw new RunNotRetriesParkedError(pipelineRunId);
     }
-    const pipeline = await this.pipelines.get(run.pipelineId)
-    const parked = run.parked
-    const phase = pipeline.phases.find((p) => p.id === parked.phaseId)
+    const pipeline = await this.pipelines.get(run.pipelineId);
+    const parked = run.parked;
+    const phase = pipeline.phases.find((p) => p.id === parked.phaseId);
     // A retries-parking re-enters the loop back-edge (needs a loop); a limit-parking
     // re-runs the parked phase itself, so it only needs the phase to still exist.
-    if (!phase) throw new RunNotRetriesParkedError(pipelineRunId)
-    if (!isLimit && !phase.loop) throw new RunNotRetriesParkedError(pipelineRunId)
+    if (!phase) throw new RunNotRetriesParkedError(pipelineRunId);
+    if (!isLimit && !phase.loop) throw new RunNotRetriesParkedError(pipelineRunId);
 
-    const trimmed = note?.trim()
+    const trimmed = note?.trim();
     if (trimmed) {
       await fs
         .writeFile(path.join(run.cwd, `${parked.phaseId}.note.md`), `${trimmed}\n`, "utf8")
-        .catch(() => {})
+        .catch(() => {});
       await fs
         .appendFile(parked.failureFile, `\n\n## Operator note\n\n${trimmed}\n`, "utf8")
-        .catch(() => {})
+        .catch(() => {});
     }
 
-    const retries = new Map(Object.entries(run.retries ?? {}))
+    const retries = new Map(Object.entries(run.retries ?? {}));
     // A limit-parking does NOT reset the loop retry map (the pause never consumed it);
     // a retries-parking resets the parked phase's counter so the loop gets a fresh run.
-    if (!isLimit) retries.set(parked.phaseId, 0)
+    if (!isLimit) retries.set(parked.phaseId, 0);
 
     // Limit: re-run the parked phase in place; retries: take the loop back-edge.
-    const cursor = isLimit ? parked.phaseId : (phase.loop as NonNullable<typeof phase.loop>).to
+    const cursor = isLimit ? parked.phaseId : (phase.loop as NonNullable<typeof phase.loop>).to;
     // Limit: the failure file is just a flap note — feed the real upstream handoff;
     // retries: the failure context IS the handoff the retried phase consumes.
     const handoffSource = isLimit
       ? this.recomputeHandoff(run, pipeline, cursor)
-      : parked.failureFile
+      : parked.failureFile;
 
-    run.status = "running"
-    delete run.parkedReason
-    delete run.parked
-    run.retries = Object.fromEntries(retries)
-    run.currentStage = cursor
-    await this.writeAggregate(run)
+    run.status = "running";
+    delete run.parkedReason;
+    delete run.parked;
+    run.retries = Object.fromEntries(retries);
+    run.currentStage = cursor;
+    await this.writeAggregate(run);
     this.log.info("parked pipeline run resumed", {
       pipelineRunId,
       phase: parked.phaseId,
       reason: isLimit ? "limit" : "retries",
       resumeTo: cursor,
       withNote: Boolean(trimmed),
-    })
+    });
 
-    const project = await this.projectForRun(run)
+    const project = await this.projectForRun(run);
     // Phase 9.3: the retried/resumed phase carries the resume-context (progress +
     // committed checkpoints + the operator note, when given). A retries-parking also
     // carries its failure context; a limit-parking's "flap note" file isn't a failure.
     const failureTail = isLimit
       ? undefined
-      : await fs.readFile(parked.failureFile, "utf8").catch(() => undefined)
+      : await fs.readFile(parked.failureFile, "utf8").catch(() => undefined);
     const resumeContext = await this.composeResumeContext(
       run,
       pipeline.phases.map((p) => p.id),
       { note: trimmed, failureTail },
-    )
-    const traceId = this.trace.getTraceId() ?? randomUUID()
+    );
+    const traceId = this.trace.getTraceId() ?? randomUUID();
     void this.trace.run({ traceId, runId: pipelineRunId }, () =>
       this.drive(run, pipeline, project, { cursor, handoffSource, retries, resumeContext }),
-    )
-    return run
+    );
+    return run;
   }
 
   /**
@@ -420,7 +418,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * tick and resumes the due ones.
    */
   listLimitPaused(): PipelineRun[] {
-    return this.list().filter((r) => r.status === "paused-limit")
+    return this.list().filter((r) => r.status === "paused-limit");
   }
 
   /**
@@ -431,37 +429,41 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * boundary check re-pauses it immediately (cheap, no token), burning one cycle.
    */
   async resumeLimitPaused(pipelineRunId: string): Promise<PipelineRun> {
-    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
-    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
-    this.runs.set(pipelineRunId, run)
-    if (run.status !== "paused-limit") return run
-    const pipeline = await this.pipelines.get(run.pipelineId)
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId);
+    this.runs.set(pipelineRunId, run);
+    if (run.status !== "paused-limit") return run;
+    const pipeline = await this.pipelines.get(run.pipelineId);
     for (const s of run.stageRuns) {
-      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {})
+      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {});
     }
-    run.limitResumeCycles = (run.limitResumeCycles ?? 0) + 1
-    run.status = "running"
-    run.resumeAt = null
-    await this.writeAggregate(run)
-    const project = await this.projectForRun(run)
-    const cursor = run.currentStage ?? pipeline.phases[0]?.id ?? null
-    const retries = new Map(Object.entries(run.retries ?? {}))
+    run.limitResumeCycles = (run.limitResumeCycles ?? 0) + 1;
+    run.status = "running";
+    run.resumeAt = null;
+    await this.writeAggregate(run);
+    const project = await this.projectForRun(run);
+    const cursor = run.currentStage ?? pipeline.phases[0]?.id ?? null;
+    const retries = new Map(Object.entries(run.retries ?? {}));
     this.log.info("auto-resumed limit-paused pipeline run", {
       pipelineRunId,
       phase: cursor,
       cycle: run.limitResumeCycles,
-    })
+    });
     if (cursor) {
-      const handoffSource = this.recomputeHandoff(run, pipeline, cursor)
+      const handoffSource = this.recomputeHandoff(run, pipeline, cursor);
       // Phase 9.3: the resumed phase is a continuation — prefix it with what's already
       // done + committed so it doesn't re-implement completed work.
-      const resumeContext = await this.composeResumeContext(run, pipeline.phases.map((p) => p.id), {})
-      const traceId = this.trace.getTraceId() ?? randomUUID()
+      const resumeContext = await this.composeResumeContext(
+        run,
+        pipeline.phases.map((p) => p.id),
+        {},
+      );
+      const traceId = this.trace.getTraceId() ?? randomUUID();
       void this.trace.run({ traceId, runId: pipelineRunId }, () =>
         this.drive(run, pipeline, project, { cursor, handoffSource, retries, resumeContext }),
-      )
+      );
     }
-    return run
+    return run;
   }
 
   /**
@@ -471,31 +473,30 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * paused stage record.
    */
   async parkLimitFlapped(pipelineRunId: string): Promise<PipelineRun> {
-    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
-    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
-    this.runs.set(pipelineRunId, run)
-    const phaseId =
-      run.currentStage ?? run.stageRuns[run.stageRuns.length - 1]?.phaseId ?? "?"
-    const cycles = run.limitResumeCycles ?? 0
-    const failureFile = path.join(run.cwd, `${phaseId}.limit.txt`)
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId);
+    this.runs.set(pipelineRunId, run);
+    const phaseId = run.currentStage ?? run.stageRuns[run.stageRuns.length - 1]?.phaseId ?? "?";
+    const cycles = run.limitResumeCycles ?? 0;
+    const failureFile = path.join(run.cwd, `${phaseId}.limit.txt`);
     await fs
       .writeFile(
         failureFile,
         `Pipeline "${run.pipelineId}" paused on the usage limit; auto-resume flapped ${cycles} time(s) and was parked for review.\n`,
         "utf8",
       )
-      .catch(() => {})
+      .catch(() => {});
     for (const s of run.stageRuns) {
-      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {})
+      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {});
     }
-    run.status = "parked"
-    run.parkedReason = "limit"
-    run.parked = { phaseId, attempts: Math.max(1, cycles), failureFile }
-    run.resumeAt = null
-    run.currentStage = phaseId
-    await this.writeAggregate(run)
-    this.log.warn("pipeline run parked after usage-limit flap", { pipelineRunId, phaseId, cycles })
-    return run
+    run.status = "parked";
+    run.parkedReason = "limit";
+    run.parked = { phaseId, attempts: Math.max(1, cycles), failureFile };
+    run.resumeAt = null;
+    run.currentStage = phaseId;
+    await this.writeAggregate(run);
+    this.log.warn("pipeline run parked after usage-limit flap", { pipelineRunId, phaseId, cycles });
+    return run;
   }
 
   /**
@@ -505,62 +506,62 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * in-memory `handoffSource`. Null when no upstream phase produces anything.
    */
   private recomputeHandoff(run: PipelineRun, pipeline: Pipeline, cursor: string): string | null {
-    const order = pipeline.phases
-    const idx = order.findIndex((p) => p.id === cursor)
+    const order = pipeline.phases;
+    const idx = order.findIndex((p) => p.id === cursor);
     for (let i = idx - 1; i >= 0; i--) {
-      const ph = order[i]
-      if (ph?.produces) return path.join(run.cwd, ph.id, ph.produces)
+      const ph = order[i];
+      if (ph?.produces) return path.join(run.cwd, ph.id, ph.produces);
     }
-    return null
+    return null;
   }
 
   list(): PipelineRun[] {
-    const cutoff = Date.now() - RETENTION_MS
-    const out: PipelineRun[] = []
+    const cutoff = Date.now() - RETENTION_MS;
+    const out: PipelineRun[] = [];
     for (const [id, run] of this.runs) {
       // Parked runs stay in memory regardless of age: a retries-parked run may
       // sit for days and must remain resumable without a restart round-trip. A
       // `paused-limit` run (Phase 9) is the same — it must stay resumable by the tick.
       const finished =
-        run.status !== "running" && run.status !== "parked" && run.status !== "paused-limit"
+        run.status !== "running" && run.status !== "parked" && run.status !== "paused-limit";
       if (finished && Date.parse(run.startedAt) < cutoff) {
-        this.runs.delete(id)
-        continue
+        this.runs.delete(id);
+        continue;
       }
-      out.push(run)
+      out.push(run);
     }
-    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED)
+    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, MAX_LISTED);
   }
 
   /** The full run history (on disk + in memory), newest first; no age cutoff. */
   async listAll(): Promise<PipelineRun[]> {
-    const byId = new Map<string, PipelineRun>()
-    const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => [])
+    const byId = new Map<string, PipelineRun>();
+    const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => []);
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue
+      if (!entry.isDirectory()) continue;
       const raw = await fs
         .readFile(path.join(this.dir, entry.name, AGGREGATE_FILE), "utf8")
-        .catch(() => null)
-      if (raw === null) continue
-      let data: unknown
+        .catch(() => null);
+      if (raw === null) continue;
+      let data: unknown;
       try {
-        data = JSON.parse(raw)
+        data = JSON.parse(raw);
       } catch {
-        continue
+        continue;
       }
-      const parsed = PipelineRunSchema.safeParse(data)
-      if (!parsed.success) continue
-      byId.set(parsed.data.pipelineRunId, parsed.data)
+      const parsed = PipelineRunSchema.safeParse(data);
+      if (!parsed.success) continue;
+      byId.set(parsed.data.pipelineRunId, parsed.data);
     }
     // In-memory wins: it carries the live `currentStage`/`status` of an active run.
-    for (const [id, run] of this.runs) byId.set(id, run)
-    return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    for (const [id, run] of this.runs) byId.set(id, run);
+    return [...byId.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
   get(pipelineRunId: string): PipelineRun {
-    const run = this.runs.get(pipelineRunId)
-    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
-    return run
+    const run = this.runs.get(pipelineRunId);
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId);
+    return run;
   }
 
   /**
@@ -570,17 +571,17 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * folder (aggregate + per-phase sandboxes). Throws if the run is unknown.
    */
   async delete(pipelineRunId: string): Promise<void> {
-    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
-    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId);
     for (const stage of run.stageRuns) {
       // Escalation markers have no real run behind them; a missing sidecar is fine.
-      await this.core.delete(stage.runId).catch(() => {})
+      await this.core.delete(stage.runId).catch(() => {});
     }
-    this.runs.delete(pipelineRunId)
+    this.runs.delete(pipelineRunId);
     // An `output`-parked run owns a pending `pipeline-output` approval keyed on this
     // pipelineRunId — resolve it (rejected, not routed back) so the queue doesn't keep
     // a card for a run that no longer exists.
-    await this.approvals.cancelPendingForRun(pipelineRunId).catch(() => {})
+    await this.approvals.cancelPendingForRun(pipelineRunId).catch(() => {});
     // Phase 3.1: drop the git worktree (and prune its metadata) BEFORE the folder
     // rm — rm-first would strand stale `.git/worktrees/*` in the project repo. The
     // branch is left intact (it may carry the PR). Best-effort; tolerant of a
@@ -588,25 +589,25 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     if (run.workspace && run.projectPath) {
       await this.workspace
         .removeWorktree({ projectPath: run.projectPath, worktreePath: run.workspace.path })
-        .catch(() => {})
+        .catch(() => {});
     }
-    const root = this.resolveRunDir(pipelineRunId)
-    if (root) await fs.rm(root, { recursive: true, force: true }).catch(() => {})
+    const root = this.resolveRunDir(pipelineRunId);
+    if (root) await fs.rm(root, { recursive: true, force: true }).catch(() => {});
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */
   readStageLog(pipelineRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
-    const run = this.runs.get(pipelineRunId)
-    if (!run) throw new PipelineRunNotFoundError(pipelineRunId)
+    const run = this.runs.get(pipelineRunId);
+    if (!run) throw new PipelineRunNotFoundError(pipelineRunId);
     // The in-flight stage isn't in `stageRuns` yet (that append is terminal-only),
     // so while this phase is the one executing, tail it by the live
     // `currentStageRunId` — that is the running attempt, not a stale earlier one.
     if (run.currentStage === phaseId && run.currentStageRunId) {
-      return this.core.readLog(run.currentStageRunId, offset)
+      return this.core.readLog(run.currentStageRunId, offset);
     }
-    const stage = [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId)
-    if (!stage) throw new PipelineRunNotFoundError(`${pipelineRunId}/${phaseId}`)
-    return this.core.readLog(stage.runId, offset)
+    const stage = [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId);
+    if (!stage) throw new PipelineRunNotFoundError(`${pipelineRunId}/${phaseId}`);
+    return this.core.readLog(stage.runId, offset);
   }
 
   /**
@@ -620,30 +621,30 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     pipelineRunId: string,
     name: string,
   ): Promise<{ name: PipelineRunArtifact["name"]; content: string } | null> {
-    if (!(PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name)) return null
-    const allowed = name as PipelineRunArtifact["name"]
-    const root = this.resolveRunDir(pipelineRunId)
-    if (!root) return null
-    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+    if (!(PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name)) return null;
+    const allowed = name as PipelineRunArtifact["name"];
+    const root = this.resolveRunDir(pipelineRunId);
+    if (!root) return null;
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
     // Candidate dirs: the run root (diffstat.txt) + the phase sandboxes. The
     // currently-executing phase is included too — a run parked on the PR gate has
     // already written its `produces` (pr-draft.md) but is not yet in `stageRuns`
     // (that append happens only when the stage reaches a terminal state).
     // Traversal-guarded again via resolveInside, though the allowlist already rules
     // out separators.
-    const phaseDirs = new Set<string>()
+    const phaseDirs = new Set<string>();
     if (run) {
-      if (run.currentStage) phaseDirs.add(run.currentStage)
-      for (const s of run.stageRuns) phaseDirs.add(s.phaseId)
+      if (run.currentStage) phaseDirs.add(run.currentStage);
+      for (const s of run.stageRuns) phaseDirs.add(s.phaseId);
     }
-    const dirs = [root, ...[...phaseDirs].map((id) => path.join(root, id))]
+    const dirs = [root, ...[...phaseDirs].map((id) => path.join(root, id))];
     for (const dir of dirs) {
-      const file = this.resolveInside(dir, allowed)
-      if (!file) continue
-      const content = await fs.readFile(file, "utf8").catch(() => null)
-      if (content !== null) return { name: allowed, content }
+      const file = this.resolveInside(dir, allowed);
+      if (!file) continue;
+      const content = await fs.readFile(file, "utf8").catch(() => null);
+      if (content !== null) return { name: allowed, content };
     }
-    return null
+    return null;
   }
 
   /**
@@ -655,67 +656,67 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     pipeline: Pipeline,
     project: Project | null = null,
     resume?: {
-      cursor: string
-      handoffSource: string | null
-      retries: Map<string, number>
+      cursor: string;
+      handoffSource: string | null;
+      retries: Map<string, number>;
       /** Phase 9.3: resume-context for the FIRST re-driven phase (limit/parked resume). */
-      resumeContext?: string
+      resumeContext?: string;
     },
   ): Promise<void> {
-    const byId = new Map(pipeline.phases.map((p) => [p.id, p]))
-    const order = pipeline.phases
-    const phaseIds = order.map((p) => p.id)
+    const byId = new Map(pipeline.phases.map((p) => [p.id, p]));
+    const order = pipeline.phases;
+    const phaseIds = order.map((p) => p.id);
     // The curated delegation catalog for every stage of this run: the agents THIS
     // pipeline actually uses. Passing the whole agent library into `--agents` would
     // overflow the OS argv limit (spawn E2BIG); a stage may still delegate within its
     // own pipeline's roster (plus ZIBBY's operational core, folded in downstream).
-    const delegates = order.map((p) => p.agent).filter((a): a is string => Boolean(a))
-    const retries = resume?.retries ?? new Map<string, number>()
+    const delegates = order.map((p) => p.agent).filter((a): a is string => Boolean(a));
+    const retries = resume?.retries ?? new Map<string, number>();
     // Absolute path of the file to feed into the next phase's `consumes` input.
-    let handoffSource: string | null = resume?.handoffSource ?? null
-    let cursor: string | null = resume?.cursor ?? order[0]?.id ?? null
+    let handoffSource: string | null = resume?.handoffSource ?? null;
+    let cursor: string | null = resume?.cursor ?? order[0]?.id ?? null;
     // Phase 9.3: a continuation prefix for the next phase to run — set on a re-driven
     // resume (limit/parked) and on a loop back-edge; consumed once, then cleared.
-    let pendingResumeContext: string | null = resume?.resumeContext ?? null
+    let pendingResumeContext: string | null = resume?.resumeContext ?? null;
 
     while (cursor) {
-      const phase = byId.get(cursor)
-      if (!phase) break // defensive; superRefine guarantees targets exist
-      run.currentStage = phase.id
+      const phase = byId.get(cursor);
+      if (!phase) break; // defensive; superRefine guarantees targets exist
+      run.currentStage = phase.id;
 
       // Phase 9 (boundary pause, decision 3b): before spending a stage, halt if the
       // usage window is exhausted — persist the aggregate `paused-limit` with the
       // earliest reset as `resumeAt` and return without spawning. Auto-resume re-drives
       // from this same cursor. Fail-open: a stale/headroom reading just proceeds, and a
       // wrongly-dispatched stage that dies on a limit is caught by the mid-stage path.
-      const boundary = await this.limits.windowExhausted()
+      const boundary = await this.limits.windowExhausted();
       if (boundary.exhausted) {
-        run.status = "paused-limit"
-        run.resumeAt = boundary.resumeAt ?? (await this.limits.resolveResumeAt(null))
-        run.limitResumeCycles = run.limitResumeCycles ?? 0
-        run.retries = Object.fromEntries(retries)
-        await this.writeAggregate(run)
-        await this.writeProgress(run, phaseIds)
+        run.status = "paused-limit";
+        run.resumeAt = boundary.resumeAt ?? (await this.limits.resolveResumeAt(null));
+        run.limitResumeCycles = run.limitResumeCycles ?? 0;
+        run.retries = Object.fromEntries(retries);
+        await this.writeAggregate(run);
+        await this.writeProgress(run, phaseIds);
         this.log.warn("pipeline run paused on usage limit (phase boundary)", {
           phase: phase.id,
           resumeAt: run.resumeAt,
-        })
-        return
+        });
+        return;
       }
 
-      const attempt = (retries.get(phase.id) ?? 0) + 1
-      const stageCwd = path.join(run.cwd, phase.id)
-      await fs.mkdir(stageCwd, { recursive: true })
-      await this.placeHandoff(handoffSource, stageCwd, phase)
+      const attempt = (retries.get(phase.id) ?? 0) + 1;
+      const stageCwd = path.join(run.cwd, phase.id);
+      await fs.mkdir(stageCwd, { recursive: true });
+      await this.placeHandoff(handoffSource, stageCwd, phase);
 
       this.log.info("pipeline phase starting", {
         phase: phase.id,
         type: phase.type,
         agent: phase.agent,
         attempt,
-      })
-      const stageResumeContext = pendingResumeContext ?? undefined
-      pendingResumeContext = null // consumed by this phase only
+      });
+      const stageResumeContext = pendingResumeContext ?? undefined;
+      pendingResumeContext = null; // consumed by this phase only
       const stageRun = await this.runStage(
         run,
         phase,
@@ -724,11 +725,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         project,
         stageResumeContext,
         delegates,
-      )
+      );
       // The stage has reached a terminal/paused state and (when terminal) is about
       // to be appended to `stageRuns` — its log is readable from there now, so drop
       // the live pointer the running attempt used.
-      run.currentStageRunId = undefined
+      run.currentStageRunId = undefined;
 
       // Phase 9 (mid-stage pause, decision 3a): the stage child died on a usage limit.
       // The aggregate pauses WITHOUT touching the retry map — loop budget and the
@@ -736,110 +737,110 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // `resumeAt` is copied up from the paused stage record. The driver returns; the
       // auto-resume path re-enters at this same phase (with resume-context, Phase 9.3).
       if (stageRun.status === "paused-limit") {
-        run.stageRuns.push(stageRun)
-        run.status = "paused-limit"
-        run.currentStage = phase.id
-        const stageRec = this.core.get(stageRun.runId)
-        run.resumeAt = stageRec.resumeAt ?? (await this.limits.resolveResumeAt(null))
-        run.limitResumeCycles = run.limitResumeCycles ?? 0
-        run.retries = Object.fromEntries(retries)
-        await this.writeAggregate(run)
-        await this.writeProgress(run, phaseIds)
+        run.stageRuns.push(stageRun);
+        run.status = "paused-limit";
+        run.currentStage = phase.id;
+        const stageRec = this.core.get(stageRun.runId);
+        run.resumeAt = stageRec.resumeAt ?? (await this.limits.resolveResumeAt(null));
+        run.limitResumeCycles = run.limitResumeCycles ?? 0;
+        run.retries = Object.fromEntries(retries);
+        await this.writeAggregate(run);
+        await this.writeProgress(run, phaseIds);
         this.log.warn("pipeline run paused on usage limit (mid-stage)", {
           phase: phase.id,
           resumeAt: run.resumeAt,
-        })
-        return
+        });
+        return;
       }
       // A rejected approval lands here with the aggregate still "parked" (the
       // cancel path flips only the stage) — un-park before recording the outcome.
       if (run.status === "parked") {
-        run.status = "running"
-        delete run.parkedReason
+        run.status = "running";
+        delete run.parkedReason;
       }
-      run.stageRuns.push(stageRun)
-      await this.writeAggregate(run)
+      run.stageRuns.push(stageRun);
+      await this.writeAggregate(run);
 
       if (stageRun.status === "done") {
-        this.log.info("pipeline phase done", { phase: phase.id, attempt })
+        this.log.info("pipeline phase done", { phase: phase.id, attempt });
         // Phase 12.6: a `verify` phase passed → record the commands it ran (runner-set
         // from real execution, not an agent claim) so a goal maker can skip an identical
         // second verification (goal-runner.makerAlreadyVerified).
         if (phase.type === "verify") {
-          run.verifyCommands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS]
+          run.verifyCommands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS];
         }
         // Phase 9.3: checkpoint the green phase on the run branch (worktree only;
         // a clean tree / non-git run → no-op). Records the sha on the aggregate.
-        await this.checkpointPhase(run, phase, stageCwd, attempt)
+        await this.checkpointPhase(run, phase, stageCwd, attempt);
         // A verify phase transforms nothing: it leaves the handoff untouched, so
         // the next phase consumes the last *producing* phase's output.
-        if (phase.produces) handoffSource = path.join(stageCwd, phase.produces)
-        const idx = order.findIndex((p) => p.id === phase.id)
-        cursor = order[idx + 1]?.id ?? null
-        await this.writeProgress(run, phaseIds)
-        continue
+        if (phase.produces) handoffSource = path.join(stageCwd, phase.produces);
+        const idx = order.findIndex((p) => p.id === phase.id);
+        cursor = order[idx + 1]?.id ?? null;
+        await this.writeProgress(run, phaseIds);
+        continue;
       }
 
       // Stage failed (or was interrupted). Take the back-edge if one remains.
-      const loop = phase.loop
+      const loop = phase.loop;
       if (loop && (retries.get(phase.id) ?? 0) < loop.maxRetries) {
-        retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1)
+        retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1);
         this.log.warn("pipeline phase failed; retrying", {
           phase: phase.id,
           status: stageRun.status,
           attempt,
           retryTo: loop.to,
-        })
-        handoffSource = await this.writeFailureContext(run, phase, stageRun)
+        });
+        handoffSource = await this.writeFailureContext(run, phase, stageRun);
         // Phase 9.3: the retried phase is a continuation — prefix it with the
         // resume-context (what's committed so far + this attempt's failure tail).
         pendingResumeContext = await this.composeResumeContext(run, phaseIds, {
           failureTail: await this.tailLog(stageRun.runId),
-        })
-        cursor = loop.to
-        await this.writeProgress(run, phaseIds)
-        continue
+        });
+        cursor = loop.to;
+        await this.writeProgress(run, phaseIds);
+        continue;
       }
 
       // Retries exhausted with `then: "park"`: durable parking — no synthetic
       // error marker (the parked detail is the surface), no failed status. The
       // driver exits; {@link resumeParked} re-enters this machine with a note.
       if (loop?.then === "park") {
-        const failureFile = await this.writeFailureContext(run, phase, stageRun)
-        run.status = "parked"
-        run.parkedReason = "retries"
-        run.parked = { phaseId: phase.id, attempts: attempt, failureFile }
-        run.retries = Object.fromEntries(retries)
-        run.currentStage = phase.id
-        await this.writeAggregate(run)
-        await this.writeProgress(run, phaseIds)
+        const failureFile = await this.writeFailureContext(run, phase, stageRun);
+        run.status = "parked";
+        run.parkedReason = "retries";
+        run.parked = { phaseId: phase.id, attempts: attempt, failureFile };
+        run.retries = Object.fromEntries(retries);
+        run.currentStage = phase.id;
+        await this.writeAggregate(run);
+        await this.writeProgress(run, phaseIds);
         this.log.warn("pipeline run parked (retries exhausted)", {
           phase: phase.id,
           attempts: attempt,
-        })
-        return
+        });
+        return;
       }
 
       // No loop, or retries exhausted: escalate (surface), then fall through.
       if (loop?.escalate) {
-        this.log.warn("pipeline phase escalated (retries exhausted)", { phase: phase.id, attempt })
+        this.log.warn("pipeline phase escalated (retries exhausted)", { phase: phase.id, attempt });
         run.stageRuns.push({
           phaseId: phase.id,
           runId: `${run.pipelineRunId}.${phase.id}.escalated`,
           attempt,
           status: "error",
-        })
+        });
       }
       if (!loop || loop.then === "fail") {
         this.log.error("pipeline phase failed; failing run", {
           phase: phase.id,
           status: stageRun.status,
-        })
-        run.status = "failed"
-        cursor = null
+        });
+        run.status = "failed";
+        cursor = null;
       } else {
-        handoffSource = await this.writeFailureContext(run, phase, stageRun)
-        cursor = loop.then
+        handoffSource = await this.writeFailureContext(run, phase, stageRun);
+        cursor = loop.then;
       }
     }
 
@@ -847,13 +848,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // Chain finished green — hand off to the pipeline's delivery sinks. A `pr`
       // output parks the run on the PR gate; the run only reaches `done` once every
       // output is delivered (handled inside runOutputs).
-      await this.runOutputs(run, pipeline, 0, phaseIds)
-      return
+      await this.runOutputs(run, pipeline, 0, phaseIds);
+      return;
     }
-    run.currentStage = null
-    await this.writeAggregate(run)
-    await this.writeProgress(run, phaseIds)
-    this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
+    run.currentStage = null;
+    await this.writeAggregate(run);
+    await this.writeProgress(run, phaseIds);
+    this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length });
   }
 
   /**
@@ -870,21 +871,21 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     from: number,
     phaseIds: string[],
   ): Promise<void> {
-    const outputs = run.outputsOverride ?? pipeline.outputs ?? []
+    const outputs = run.outputsOverride ?? pipeline.outputs ?? [];
     for (let i = from; i < outputs.length; i++) {
-      const output = outputs[i]
-      if (!output) continue
+      const output = outputs[i];
+      if (!output) continue;
       if (output.type === "pr") {
-        await this.parkOnPrOutput(run, pipeline, output, i, phaseIds)
-        return // the run is parked; it resumes at index i on approval
+        await this.parkOnPrOutput(run, pipeline, output, i, phaseIds);
+        return; // the run is parked; it resumes at index i on approval
       }
-      await this.deliverFileOutput(run, pipeline, output)
+      await this.deliverFileOutput(run, pipeline, output);
     }
-    run.status = "done"
-    run.currentStage = null
-    await this.writeAggregate(run)
-    await this.writeProgress(run, phaseIds)
-    this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length })
+    run.status = "done";
+    run.currentStage = null;
+    await this.writeAggregate(run);
+    await this.writeProgress(run, phaseIds);
+    this.log.info("pipeline run finished", { status: run.status, stages: run.stageRuns.length });
   }
 
   /**
@@ -896,33 +897,39 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * `[]` (deliver nothing, suppressing even a declared PR).
    */
   private toOutputsOverride(taskOutput: TaskOutput, pipeline: Pipeline): PipelineOutput[] {
-    if (taskOutput.type === "void") return []
-    const from =
-      [...pipeline.phases].reverse().find((p) => p.produces)?.produces ?? "result.md"
-    if (taskOutput.type === "pr") return [{ type: "pr", from }]
-    return [{ type: "file", from, dest: taskOutput.dest, to: taskOutput.to }]
+    if (taskOutput.type === "void") return [];
+    const from = [...pipeline.phases].reverse().find((p) => p.produces)?.produces ?? "result.md";
+    if (taskOutput.type === "pr") return [{ type: "pr", from }];
+    return [{ type: "file", from, dest: taskOutput.dest, to: taskOutput.to }];
   }
 
   /** Absolute path of the artifact a `from` references (the phase that produces it). */
-  private resolveOutputSource(run: PipelineRun, pipeline: Pipeline, fromName: string): string | null {
-    const phase = pipeline.phases.find((p) => p.produces === fromName)
-    if (!phase) return null
-    return path.join(run.cwd, phase.id, fromName)
+  private resolveOutputSource(
+    run: PipelineRun,
+    pipeline: Pipeline,
+    fromName: string,
+  ): string | null {
+    const phase = pipeline.phases.find((p) => p.produces === fromName);
+    if (!phase) return null;
+    return path.join(run.cwd, phase.id, fromName);
   }
 
   /** Split a Markdown artifact into a PR title (first `# ` heading) and the body. */
   private parsePrMarkdown(content: string): { title: string; body: string } {
-    const lines = content.split(/\r?\n/)
-    const headingIdx = lines.findIndex((l) => /^#\s+/.test(l.trim()))
+    const lines = content.split(/\r?\n/);
+    const headingIdx = lines.findIndex((l) => /^#\s+/.test(l.trim()));
     if (headingIdx >= 0) {
-      const heading = lines[headingIdx] ?? ""
+      const heading = lines[headingIdx] ?? "";
       return {
         title: heading.replace(/^#\s+/, "").trim(),
-        body: lines.slice(headingIdx + 1).join("\n").trim(),
-      }
+        body: lines
+          .slice(headingIdx + 1)
+          .join("\n")
+          .trim(),
+      };
     }
-    const firstLine = lines.find((l) => l.trim().length > 0)?.trim() ?? ""
-    return { title: firstLine, body: content.trim() }
+    const firstLine = lines.find((l) => l.trim().length > 0)?.trim() ?? "";
+    return { title: firstLine, body: content.trim() };
   }
 
   /** Deliver a `file` output: write the source artifact into the project or the vault. */
@@ -931,52 +938,60 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     pipeline: Pipeline,
     output: Extract<PipelineOutput, { type: "file" }>,
   ): Promise<void> {
-    const source = this.resolveOutputSource(run, pipeline, output.from)
-    const content = source ? await fs.readFile(source, "utf8").catch(() => null) : null
+    const source = this.resolveOutputSource(run, pipeline, output.from);
+    const content = source ? await fs.readFile(source, "utf8").catch(() => null) : null;
     if (content === null) {
       this.log.warn("file output skipped — source artifact missing", {
         pipelineRunId: run.pipelineRunId,
         from: output.from,
-      })
-      return
+      });
+      return;
     }
     if (output.dest === "vault") {
       // A durable second-brain artifact. Replace on re-delivery (idempotent re-run).
-      await this.vault.createNote({ id: output.to, tier: "knowledge", body: content }).catch(async (error) => {
-        if (error instanceof DuplicateNoteError) {
-          await this.vault.updateNote(output.to, { body: content }).catch(() => {})
-          return
-        }
-        this.log.warn("vault file output failed (soft)", {
-          pipelineRunId: run.pipelineRunId,
-          to: output.to,
-          err: error instanceof Error ? error.message : String(error),
-        })
-      })
-      this.log.info("file output delivered to vault", { pipelineRunId: run.pipelineRunId, to: output.to })
-      return
+      await this.vault
+        .createNote({ id: output.to, tier: "knowledge", body: content })
+        .catch(async (error) => {
+          if (error instanceof DuplicateNoteError) {
+            await this.vault.updateNote(output.to, { body: content }).catch(() => {});
+            return;
+          }
+          this.log.warn("vault file output failed (soft)", {
+            pipelineRunId: run.pipelineRunId,
+            to: output.to,
+            err: error instanceof Error ? error.message : String(error),
+          });
+        });
+      this.log.info("file output delivered to vault", {
+        pipelineRunId: run.pipelineRunId,
+        to: output.to,
+      });
+      return;
     }
     // dest: project — write into the run's worktree (rides the zibby/* branch) or,
     // failing that, the project checkout. No project resolved → nowhere to write.
-    const base = run.workspace?.path ?? run.projectPath
+    const base = run.workspace?.path ?? run.projectPath;
     if (!base) {
       this.log.warn("project file output skipped — run has no project/worktree", {
         pipelineRunId: run.pipelineRunId,
         to: output.to,
-      })
-      return
+      });
+      return;
     }
-    const dest = this.resolveInside(base, output.to)
+    const dest = this.resolveInside(base, output.to);
     if (!dest) {
       this.log.warn("project file output skipped — destination escapes the project", {
         pipelineRunId: run.pipelineRunId,
         to: output.to,
-      })
-      return
+      });
+      return;
     }
-    await fs.mkdir(path.dirname(dest), { recursive: true })
-    await fs.writeFile(dest, content, "utf8")
-    this.log.info("file output delivered to project", { pipelineRunId: run.pipelineRunId, to: output.to })
+    await fs.mkdir(path.dirname(dest), { recursive: true });
+    await fs.writeFile(dest, content, "utf8");
+    this.log.info("file output delivered to project", {
+      pipelineRunId: run.pipelineRunId,
+      to: output.to,
+    });
   }
 
   /**
@@ -992,27 +1007,32 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     index: number,
     phaseIds: string[],
   ): Promise<void> {
-    run.status = "parked"
-    run.parkedReason = "output"
-    run.pendingOutput = { index }
-    run.currentStage = null
+    run.status = "parked";
+    run.parkedReason = "output";
+    run.pendingOutput = { index };
+    run.currentStage = null;
     // Assemble the Tier-3 decision surface: the branch-vs-base diffstat next to the run.
     if (run.workspace) {
       const diff = await this.workspace
         .diffstat({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
-        .catch(() => "")
-      if (diff) await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {})
+        .catch(() => "");
+      if (diff)
+        await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {});
     }
-    const source = this.resolveOutputSource(run, pipeline, output.from)
-    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : ""
-    const { title } = this.parsePrMarkdown(content)
+    const source = this.resolveOutputSource(run, pipeline, output.from);
+    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
+    const { title } = this.parsePrMarkdown(content);
     // Write the PR draft at PARK time so the gate card can show what's about to be
     // published (the web RunPrGatePanel reads `pr-draft.md`); openPrOutput reuses it.
     await fs
-      .writeFile(path.join(run.cwd, "pr-draft.md"), content.trim() ? content : `# ${title || run.pipelineId}\n`, "utf8")
-      .catch(() => {})
-    await this.writeAggregate(run)
-    await this.writeProgress(run, phaseIds)
+      .writeFile(
+        path.join(run.cwd, "pr-draft.md"),
+        content.trim() ? content : `# ${title || run.pipelineId}\n`,
+        "utf8",
+      )
+      .catch(() => {});
+    await this.writeAggregate(run);
+    await this.writeProgress(run, phaseIds);
     await this.approvals.requestApproval({
       runId: run.pipelineRunId,
       kind: "pipeline-output",
@@ -1020,11 +1040,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       action: "pr.open",
       detail: title || `Otevřít PR pro běh ${run.pipelineRunId}`,
       risk: "medium",
-    })
+    });
     this.log.info("pipeline run parked on PR output gate", {
       pipelineRunId: run.pipelineRunId,
       index,
-    })
+    });
   }
 
   /**
@@ -1038,32 +1058,32 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     decision: "approved" | "rejected",
   ): Promise<void> {
     try {
-      const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId))
+      const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
       if (!run || run.parkedReason !== "output" || !run.pendingOutput) {
-        this.log.warn("output resume skipped (run not output-parked)", { pipelineRunId, decision })
-        return
+        this.log.warn("output resume skipped (run not output-parked)", { pipelineRunId, decision });
+        return;
       }
-      this.runs.set(run.pipelineRunId, run)
-      const pipeline = await this.pipelines.get(run.pipelineId)
-      const phaseIds = pipeline.phases.map((p) => p.id)
-      const index = run.pendingOutput.index
-      const output = (run.outputsOverride ?? pipeline.outputs ?? [])[index]
-      run.status = "running"
-      delete run.parkedReason
-      delete run.pendingOutput
-      await this.writeAggregate(run)
+      this.runs.set(run.pipelineRunId, run);
+      const pipeline = await this.pipelines.get(run.pipelineId);
+      const phaseIds = pipeline.phases.map((p) => p.id);
+      const index = run.pendingOutput.index;
+      const output = (run.outputsOverride ?? pipeline.outputs ?? [])[index];
+      run.status = "running";
+      delete run.parkedReason;
+      delete run.pendingOutput;
+      await this.writeAggregate(run);
       if (decision === "approved" && output?.type === "pr") {
-        await this.openPrOutput(run, pipeline, output)
+        await this.openPrOutput(run, pipeline, output);
       } else {
-        this.log.info("PR output declined — branch work left without a PR", { pipelineRunId })
+        this.log.info("PR output declined — branch work left without a PR", { pipelineRunId });
       }
-      await this.runOutputs(run, pipeline, index + 1, phaseIds)
+      await this.runOutputs(run, pipeline, index + 1, phaseIds);
     } catch (error) {
       this.log.error("output resume failed", {
         pipelineRunId,
         decision,
         err: error instanceof Error ? error.message : String(error),
-      })
+      });
     }
   }
 
@@ -1073,29 +1093,31 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     pipeline: Pipeline,
     output: Extract<PipelineOutput, { type: "pr" }>,
   ): Promise<void> {
-    const source = this.resolveOutputSource(run, pipeline, output.from)
-    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : ""
-    const { title } = this.parsePrMarkdown(content)
+    const source = this.resolveOutputSource(run, pipeline, output.from);
+    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
+    const { title } = this.parsePrMarkdown(content);
     // Keep `pr-draft.md` as the durable run artifact the web detail serves.
-    const bodyFile = path.join(run.cwd, "pr-draft.md")
-    await fs.writeFile(bodyFile, content.trim() ? content : `# ${title || run.pipelineId}\n`, "utf8").catch(() => {})
+    const bodyFile = path.join(run.cwd, "pr-draft.md");
+    await fs
+      .writeFile(bodyFile, content.trim() ? content : `# ${title || run.pipelineId}\n`, "utf8")
+      .catch(() => {});
     if (!run.workspace) {
       this.log.warn("PR output approved but run has no worktree; nothing pushed", {
         pipelineRunId: run.pipelineRunId,
-      })
-      return
+      });
+      return;
     }
     const result = await this.workspace.openPr({
       cwd: run.workspace.path,
       title: title || run.pipelineId,
       bodyFile,
-    })
+    });
     if (result) {
-      this.log.info("PR output opened", { pipelineRunId: run.pipelineRunId, url: result.url })
+      this.log.info("PR output opened", { pipelineRunId: run.pipelineRunId, url: result.url });
     } else {
       this.log.warn("PR output push failed (soft) — branch work is committed and safe", {
         pipelineRunId: run.pipelineRunId,
-      })
+      });
     }
   }
 
@@ -1111,22 +1133,25 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     stageCwd: string,
     attempt: number,
   ): Promise<void> {
-    if (!run.workspace) return
-    let summary = `attempt ${attempt}`
+    if (!run.workspace) return;
+    let summary = `attempt ${attempt}`;
     if (phase.produces) {
-      const body = await fs.readFile(path.join(stageCwd, phase.produces), "utf8").catch(() => "")
-      const firstLine = body.split(/\r?\n/).find((l) => l.trim().length > 0)?.trim()
-      if (firstLine) summary = firstLine.slice(0, 100)
+      const body = await fs.readFile(path.join(stageCwd, phase.produces), "utf8").catch(() => "");
+      const firstLine = body
+        .split(/\r?\n/)
+        .find((l) => l.trim().length > 0)
+        ?.trim();
+      if (firstLine) summary = firstLine.slice(0, 100);
     }
     const result = await this.workspace
       .checkpoint({ worktreePath: run.workspace.path, phaseId: phase.id, summary })
-      .catch(() => null)
-    if (!result) return
+      .catch(() => null);
+    if (!result) return;
     run.checkpoints = [
       ...(run.checkpoints ?? []),
       { phaseId: phase.id, sha: result.sha, at: new Date().toISOString() },
-    ]
-    await this.writeAggregate(run)
+    ];
+    await this.writeAggregate(run);
   }
 
   /** Rewrite `<run cwd>/PROGRESS.md` from the aggregate (pure {@link renderProgress}). */
@@ -1135,14 +1160,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       .writeFile(path.join(run.cwd, "PROGRESS.md"), renderProgress(run, phaseIds), "utf8")
       .catch(() => {
         // Best-effort: a failed PROGRESS write degrades the surface, not the run.
-      })
+      });
   }
 
   /** The tail of a stage's log (the failure context the resume-context summarizes). */
   private async tailLog(stageRunId: string, maxChars = 2000): Promise<string> {
-    const log = await this.core.readLog(stageRunId, 0).catch(() => null)
-    const content = log?.content ?? ""
-    return content.length > maxChars ? content.slice(content.length - maxChars) : content
+    const log = await this.core.readLog(stageRunId, 0).catch(() => null);
+    const content = log?.content ?? "";
+    return content.length > maxChars ? content.slice(content.length - maxChars) : content;
   }
 
   /**
@@ -1157,14 +1182,19 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   ): Promise<string> {
     const progressMd =
       (await fs.readFile(path.join(run.cwd, "PROGRESS.md"), "utf8").catch(() => "")) ||
-      renderProgress(run, phaseIds)
+      renderProgress(run, phaseIds);
     const checkpointLog = run.workspace
       ? await this.workspace.commitLog({
           worktreePath: run.workspace.path,
           baseRef: run.workspace.baseRef,
         })
-      : ""
-    return buildResumeContext({ progressMd, checkpointLog, note: extra.note, failureTail: extra.failureTail })
+      : "";
+    return buildResumeContext({
+      progressMd,
+      checkpointLog,
+      note: extra.note,
+      failureTail: extra.failureTail,
+    });
   }
 
   /**
@@ -1172,9 +1202,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * n applies rung n, later retries clamp to the last rung).
    */
   private escalationFor(phase: PipelinePhase, attempt: number): PhaseEscalation | null {
-    const ladder = phase.loop?.escalation
-    if (!ladder || ladder.length === 0 || attempt <= 1) return null
-    return ladder[Math.min(attempt - 2, ladder.length - 1)] ?? null
+    const ladder = phase.loop?.escalation;
+    if (!ladder || ladder.length === 0 || attempt <= 1) return null;
+    return ladder[Math.min(attempt - 2, ladder.length - 1)] ?? null;
   }
 
   /**
@@ -1186,10 +1216,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   private async resolveProjectEnv(
     project: Project | null,
   ): Promise<Record<string, string> | undefined> {
-    if (!project) return undefined
-    const secrets = await this.projectSecrets.read(project.id).catch(() => null)
-    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) }
-    return Object.keys(merged).length > 0 ? merged : undefined
+    if (!project) return undefined;
+    const secrets = await this.projectSecrets.read(project.id).catch(() => null);
+    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) };
+    return Object.keys(merged).length > 0 ? merged : undefined;
   }
 
   /** Spawn one stage child and wait for it to finish; return its StageRun. */
@@ -1202,9 +1232,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     resumeContext?: string,
     delegates?: readonly string[],
   ): Promise<StageRun> {
-    const escalation = this.escalationFor(phase, attempt)
+    const escalation = this.escalationFor(phase, attempt);
     if (escalation) {
-      this.log.info("applying escalation rung", { phase: phase.id, attempt, ...escalation })
+      this.log.info("applying escalation rung", { phase: phase.id, attempt, ...escalation });
     }
     const { command, args, spawnCwd } = await this.buildStageCommand(
       phase,
@@ -1215,12 +1245,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.matchedTerms,
       resumeContext,
       delegates,
-    )
+    );
     // Materialize enabled custom commands into the stage's working tree (worktree
     // for a project run, else the sandbox) so commands resolve; best-effort.
-    await this.commandMaterializer.materialize(spawnCwd ?? stageCwd)
+    await this.commandMaterializer.materialize(spawnCwd ?? stageCwd);
     // Per-project env + secrets injected into this stage's process (Phase D).
-    const env = await this.resolveProjectEnv(project)
+    const env = await this.resolveProjectEnv(project);
     const rec = await this.core.start({
       kind: "pipeline-stage",
       ownerId: `${run.pipelineRunId}.${phase.id}`,
@@ -1230,14 +1260,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       ...(spawnCwd ? { spawnCwd } : {}),
       ...(env ? { env } : {}),
       extra: { pipelineRunId: run.pipelineRunId, phaseId: phase.id, attempt },
-    })
+    });
     // Expose the in-flight child so the detail timeline can tail its log live,
     // before this attempt lands in `stageRuns` (terminal-only). In-memory mutation
     // is enough for the live UI (it polls the aggregate); the driver clears it once
     // the stage goes terminal.
-    run.currentStageRunId = rec.runId
-    const status = await this.waitForStage(rec.runId)
-    return { phaseId: phase.id, runId: rec.runId, attempt, status }
+    run.currentStageRunId = rec.runId;
+    const status = await this.waitForStage(rec.runId);
+    return { phaseId: phase.id, runId: rec.runId, attempt, status };
   }
 
   /**
@@ -1251,12 +1281,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     runId: string,
   ): Promise<"done" | "error" | "interrupted" | "paused-limit"> {
     for (;;) {
-      const status = this.core.get(runId).status
+      const status = this.core.get(runId).status;
       // `awaiting-approval` rides through (the live child still blocks on its
       // decision); every other non-running state is terminal for this wait —
       // `paused-limit` (Phase 9) included, so the driver can pause the aggregate.
-      if (status !== "running" && status !== "awaiting-approval") return status
-      await new Promise((r) => setTimeout(r, 25))
+      if (status !== "running" && status !== "awaiting-approval") return status;
+      await new Promise((r) => setTimeout(r, 25));
     }
   }
 
@@ -1268,59 +1298,59 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * `pipeline-stage` approval keyed by the STAGE run id. Failures fail safe to deny.
    */
   private onStageIntent(stageRunId: string, action: IntendedAction): Promise<void> {
-    const traceId = this.trace.getTraceId() ?? randomUUID()
+    const traceId = this.trace.getTraceId() ?? randomUUID();
     return this.trace.run({ traceId, runId: stageRunId }, () =>
       this.evaluateStageIntent(stageRunId, action),
-    )
+    );
   }
 
   private async evaluateStageIntent(stageRunId: string, action: IntendedAction): Promise<void> {
     try {
-      const rec = this.core.get(stageRunId)
-      const run = this.runs.get(rec.pipelineRunId)
-      if (!run) throw new PipelineRunNotFoundError(rec.pipelineRunId)
-      const pipeline = await this.pipelines.get(run.pipelineId)
-      const phase = pipeline.phases.find((p) => p.id === rec.phaseId)
-      if (!phase) throw new Error(`Phase "${rec.phaseId}" not found in "${run.pipelineId}"`)
+      const rec = this.core.get(stageRunId);
+      const run = this.runs.get(rec.pipelineRunId);
+      if (!run) throw new PipelineRunNotFoundError(rec.pipelineRunId);
+      const pipeline = await this.pipelines.get(run.pipelineId);
+      const phase = pipeline.phases.find((p) => p.id === rec.phaseId);
+      if (!phase) throw new Error(`Phase "${rec.phaseId}" not found in "${run.pipelineId}"`);
       // Verify phases never spawn claude, so they can't raise intents — an
       // agent-less phase here is a malformed signal; the catch denies it.
-      if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`)
-      const agent = await this.agents.get(phase.agent)
+      if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`);
+      const agent = await this.agents.get(phase.agent);
       const rules = await this.gates.rulesForAgent({
         gates: agent.gates,
         requires_approval: agent.requires_approval,
-      })
-      const evaluation = this.gates.evaluate(rules, action)
+      });
+      const evaluation = this.gates.evaluate(rules, action);
       this.log.info("evaluating mid-run stage intent", {
         pipelineRunId: run.pipelineRunId,
         phaseId: rec.phaseId,
         action: action.action,
         decision: evaluation.decision,
         ruleId: evaluation.ruleId,
-      })
+      });
 
       if (evaluation.decision === "deny") {
-        await this.core.denyIntent(stageRunId)
-        return
+        await this.core.denyIntent(stageRunId);
+        return;
       }
       if (evaluation.decision === "ask") {
         // Hold the stage (its child keeps blocking) and park the aggregate — the
         // web maps parked+approval → awaiting-approval and refetches approvals.
-        await this.core.holdForApproval(stageRunId)
-        run.status = "parked"
-        run.parkedReason = "approval"
+        await this.core.holdForApproval(stageRunId);
+        run.status = "parked";
+        run.parkedReason = "approval";
         // Phase 3.3: the PR gate's Tier-3 decision surface is assembled HERE, at
         // park time (not on demand) — for a push/PR gate on a worktree run, write
         // the branch-vs-base diffstat next to the run so the card can show it.
         if ((action.action === "pr.open" || action.action === "git.push") && run.workspace) {
           const diff = await this.workspace
             .diffstat({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
-            .catch(() => "")
+            .catch(() => "");
           if (diff) {
-            await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {})
+            await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {});
           }
         }
-        await this.writeAggregate(run)
+        await this.writeAggregate(run);
         await this.approvals.requestApproval({
           runId: stageRunId,
           kind: "pipeline-stage",
@@ -1328,18 +1358,18 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           action: action.action,
           detail: action.context ?? `Pipeline "${run.pipelineId}", fáze "${rec.phaseId}"`,
           risk: agent.risk ?? "medium",
-        })
-        return
+        });
+        return;
       }
       // allow / notify: let the action proceed immediately.
-      await this.core.allowIntent(stageRunId)
+      await this.core.allowIntent(stageRunId);
     } catch (error) {
       // Unknown phase/agent or evaluation failure → fail safe: refuse the action.
       this.log.error("stage intent evaluation failed; failing safe to deny", {
         stageRunId,
         err: error instanceof Error ? error.message : String(error),
-      })
-      await this.core.denyIntent(stageRunId).catch(() => {})
+      });
+      await this.core.denyIntent(stageRunId).catch(() => {});
     }
   }
 
@@ -1348,12 +1378,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     stageRunId: string,
     status: PipelineRun["status"],
   ): Promise<void> {
-    const rec = this.core.get(stageRunId)
-    const run = this.runs.get(rec.pipelineRunId)
-    if (!run) return
-    run.status = status
-    if (status !== "parked") delete run.parkedReason
-    await this.writeAggregate(run)
+    const rec = this.core.get(stageRunId);
+    const run = this.runs.get(rec.pipelineRunId);
+    if (!run) return;
+    run.status = status;
+    if (status !== "parked") delete run.parkedReason;
+    await this.writeAggregate(run);
   }
 
   /** Copy the handoff source (if any) into this stage's `consumes` path. */
@@ -1363,13 +1393,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     phase: PipelinePhase,
   ): Promise<void> {
     // A verify phase declares no `consumes` — it checks the project, not a file.
-    if (!source || !phase.consumes) return
-    const dest = this.resolveInside(stageCwd, phase.consumes)
-    if (!dest) return
-    await fs.mkdir(path.dirname(dest), { recursive: true })
+    if (!source || !phase.consumes) return;
+    const dest = this.resolveInside(stageCwd, phase.consumes);
+    if (!dest) return;
+    await fs.mkdir(path.dirname(dest), { recursive: true });
     await fs.copyFile(source, dest).catch(() => {
       // A missing source is not fatal — the stage simply starts without input.
-    })
+    });
   }
 
   /** Write the failed stage's log tail as the handoff context for the retry. */
@@ -1378,21 +1408,21 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     phase: PipelinePhase,
     stageRun: StageRun,
   ): Promise<string> {
-    const file = path.join(run.cwd, `${phase.id}.failure.txt`)
-    const log = await this.core.readLog(stageRun.runId, 0).catch(() => null)
-    const body = `Phase "${phase.id}" failed (attempt ${stageRun.attempt}).\n\n${log?.content ?? ""}`
-    await fs.writeFile(file, body, "utf8").catch(() => {})
-    return file
+    const file = path.join(run.cwd, `${phase.id}.failure.txt`);
+    const log = await this.core.readLog(stageRun.runId, 0).catch(() => null);
+    const body = `Phase "${phase.id}" failed (attempt ${stageRun.attempt}).\n\n${log?.content ?? ""}`;
+    await fs.writeFile(file, body, "utf8").catch(() => {});
+    return file;
   }
 
   /** Resolve a relative path strictly inside `base`, rejecting `..` escapes. */
   private resolveInside(base: string, rel: string): string | null {
-    const resolved = path.resolve(base, rel)
-    const baseResolved = path.resolve(base)
+    const resolved = path.resolve(base, rel);
+    const baseResolved = path.resolve(base);
     if (resolved !== baseResolved && !resolved.startsWith(baseResolved + path.sep)) {
-      return null
+      return null;
     }
-    return resolved
+    return resolved;
   }
 
   private async buildStageCommand(
@@ -1414,7 +1444,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
      *  whole agent library off argv (spawn E2BIG). */
     delegates?: readonly string[],
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
-    const spawnCwd = worktreePath ?? project?.path
+    const spawnCwd = worktreePath ?? project?.path;
     // Verify phases are deterministic shell checks — identical in demo and
     // claude mode (no model, no tokens, no intents, no preflight). They run in
     // the run's worktree (or project checkout) when one was resolved, else the sandbox.
@@ -1425,33 +1455,33 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         commands: phase.commands,
         projectChecks: project?.checks,
         spawnCwd,
-      })
+      });
     }
     if (process.env.AGENT_RUNNER_MODE === "claude") {
       // The phase's agent drives the stage: its instructions become the session
       // system prompt; the task tells it to consume the handoff and produce the
       // next one. The demo path covers the pipeline machinery without tokens.
-      if (!phase.agent) throw new Error(`Agent phase "${phase.id}" carries no agent`)
-      const agent = await this.agents.get(phase.agent)
+      if (!phase.agent) throw new Error(`Agent phase "${phase.id}" carries no agent`);
+      const agent = await this.agents.get(phase.agent);
       // Handoff paths are passed ABSOLUTE: with a project resolved the session
       // spawns inside the checkout (its real CLAUDE.md/.claude context loads),
       // so anything sandbox-relative would silently resolve against the repo.
-      const consumesAbs = phase.consumes ? path.join(cwd, phase.consumes) : null
-      const producesAbs = phase.produces ? path.join(cwd, phase.produces) : null
+      const consumesAbs = phase.consumes ? path.join(cwd, phase.consumes) : null;
+      const producesAbs = phase.produces ? path.join(cwd, phase.produces) : null;
       const task = [
         `Proveď fázi pipeline "${phase.id}".`,
         consumesAbs ? `Vstup (pokud existuje) najdeš v "${consumesAbs}".` : "",
         producesAbs ? `Výstup zapiš do "${producesAbs}".` : "",
       ]
         .filter(Boolean)
-        .join(" ")
+        .join(" ");
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).
       const grounding = await this.grounding.compose({
         task,
         projectId: project?.id,
         matchedTerms,
-      })
+      });
       const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,
@@ -1469,35 +1499,35 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // the run's argv under the OS limit (spawn E2BIG) as the agent library grows.
         ...(delegates ? { delegates } : {}),
         systemPromptDir: cwd,
-      })
-      return spawnCwd ? { ...built, spawnCwd } : built
+      });
+      return spawnCwd ? { ...built, spawnCwd } : built;
     }
     const script =
-      process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs")
+      process.env.PIPELINE_DEMO_STAGE_SCRIPT ?? path.resolve(__dirname, "demo-stage.mjs");
     return {
       command: process.execPath,
       args: [script, cwd, phase.id, phase.produces ?? "", phase.consumes ?? ""],
-    }
+    };
   }
 
   /** The run's folder inside the runs dir, or null if the id would escape it. */
   private resolveRunDir(pipelineRunId: string): string | null {
-    const dir = path.resolve(this.dir, pipelineRunId)
-    if (path.dirname(dir) !== this.dir) return null
-    return dir
+    const dir = path.resolve(this.dir, pipelineRunId);
+    if (path.dirname(dir) !== this.dir) return null;
+    return dir;
   }
 
   /** Read a run's aggregate `run.json` from disk (for a run dropped from memory). */
   private async readAggregate(pipelineRunId: string): Promise<PipelineRun | null> {
-    const root = this.resolveRunDir(pipelineRunId)
-    if (!root) return null
-    const raw = await fs.readFile(path.join(root, AGGREGATE_FILE), "utf8").catch(() => null)
-    if (raw === null) return null
+    const root = this.resolveRunDir(pipelineRunId);
+    if (!root) return null;
+    const raw = await fs.readFile(path.join(root, AGGREGATE_FILE), "utf8").catch(() => null);
+    if (raw === null) return null;
     try {
-      const parsed = PipelineRunSchema.safeParse(JSON.parse(raw))
-      return parsed.success ? parsed.data : null
+      const parsed = PipelineRunSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : null;
     } catch {
-      return null
+      return null;
     }
   }
 
@@ -1507,8 +1537,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * when the stream closes.
    */
   onRunStatus(listener: (run: PipelineRun) => void): () => void {
-    this.events.on("status", listener)
-    return () => this.events.off("status", listener)
+    this.events.on("status", listener);
+    return () => this.events.off("status", listener);
   }
 
   private async writeAggregate(run: PipelineRun): Promise<void> {
@@ -1516,29 +1546,29 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       .writeFile(path.join(run.cwd, AGGREGATE_FILE), JSON.stringify(run), "utf8")
       .catch(() => {
         // Best-effort: a failed write degrades restart fidelity, not the run.
-      })
+      });
     // Persisting is the transition point — notify the status channel after it so a
     // subscriber that refetches sees the same state we just wrote to disk.
-    this.events.emit("status", run)
+    this.events.emit("status", run);
   }
 
   /** Rebuild aggregates from `<runRoot>/run.json` sidecars; a mid-flight run fails. */
   private async reconstruct(): Promise<void> {
-    const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => [])
+    const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => []);
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue
-      const file = path.join(this.dir, entry.name, AGGREGATE_FILE)
-      const raw = await fs.readFile(file, "utf8").catch(() => null)
-      if (raw === null) continue
-      let data: unknown
+      if (!entry.isDirectory()) continue;
+      const file = path.join(this.dir, entry.name, AGGREGATE_FILE);
+      const raw = await fs.readFile(file, "utf8").catch(() => null);
+      if (raw === null) continue;
+      let data: unknown;
       try {
-        data = JSON.parse(raw)
+        data = JSON.parse(raw);
       } catch {
-        continue
+        continue;
       }
-      const parsed = PipelineRunSchema.safeParse(data)
-      if (!parsed.success) continue
-      let run = parsed.data
+      const parsed = PipelineRunSchema.safeParse(data);
+      if (!parsed.success) continue;
+      let run = parsed.data;
       // A run left "running" lost its mid-flight child with the previous backend.
       // An APPROVAL-parked run is the same situation (its blocking child died
       // with the API) → honest reconciliation is `failed`. A RETRIES-parked run
@@ -1550,7 +1580,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // `output` parking (a PR-gate wait after the chain already finished) has no live
       // child either — it is durable like `retries` and survives the restart parked.
       const approvalParked =
-        run.status === "parked" && run.parkedReason !== "retries" && run.parkedReason !== "output"
+        run.status === "parked" && run.parkedReason !== "retries" && run.parkedReason !== "output";
       if (run.status === "running" || approvalParked) {
         run = {
           ...run,
@@ -1558,10 +1588,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           currentStage: null,
           parkedReason: undefined,
           parked: undefined,
-        }
-        await this.writeAggregate(run)
+        };
+        await this.writeAggregate(run);
       }
-      this.runs.set(run.pipelineRunId, run)
+      this.runs.set(run.pipelineRunId, run);
     }
   }
 }

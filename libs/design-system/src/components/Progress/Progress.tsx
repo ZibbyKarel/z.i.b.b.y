@@ -17,10 +17,7 @@ const toneBar: Record<ProgressTone, string> = {
   run: "bg-run",
 };
 
-export interface ProgressProps extends Omit<
-  HTMLAttributes<HTMLDivElement>,
-  "className"
-> {
+export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   /** Fill percentage, 0–100. */
   value: number;
   tone?: ProgressTone;

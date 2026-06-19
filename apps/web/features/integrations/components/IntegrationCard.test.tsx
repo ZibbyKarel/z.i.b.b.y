@@ -18,8 +18,13 @@ const integration = (over: Partial<Integration> = {}): Integration => ({
 
 describe("IntegrationCard enable toggle", () => {
   it("reflects the enabled state on a switch", () => {
-    render(<IntegrationCard integration={integration({ enabled: true })} onToggleEnabled={vi.fn()} />);
-    expect(screen.getByTestId("integration-enabled-toggle")).toHaveAttribute("aria-checked", "true");
+    render(
+      <IntegrationCard integration={integration({ enabled: true })} onToggleEnabled={vi.fn()} />,
+    );
+    expect(screen.getByTestId("integration-enabled-toggle")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 
   it("calls onToggleEnabled with the integration when flipped", async () => {

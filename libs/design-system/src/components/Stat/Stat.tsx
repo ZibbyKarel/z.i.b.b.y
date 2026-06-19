@@ -20,10 +20,7 @@ const toneText: Record<StatTone, string> = {
   neutral: "text-foreground-dim",
 };
 
-export interface StatProps extends Omit<
-  HTMLAttributes<HTMLDivElement>,
-  "className"
-> {
+export interface StatProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   value: string | number;
   label: string;
   icon?: IconName;
@@ -32,14 +29,7 @@ export interface StatProps extends Omit<
 }
 
 /** A single headline metric: glyph + big mono number + caption. */
-export function Stat({
-  value,
-  label,
-  icon,
-  tone = "neutral",
-  ref,
-  ...props
-}: StatProps) {
+export function Stat({ value, label, icon, tone = "neutral", ref, ...props }: StatProps) {
   return (
     <Row data-testid={StatTestId.Root} gap="150" ref={ref} {...props}>
       {icon && (
@@ -48,10 +38,16 @@ export function Stat({
         </span>
       )}
       <Stack gap="50">
-        <div className="whitespace-nowrap font-mono text-4xl font-bold leading-none text-foreground" data-testid={StatTestId.Value}>
+        <div
+          className="whitespace-nowrap font-mono text-4xl font-bold leading-none text-foreground"
+          data-testid={StatTestId.Value}
+        >
           {value}
         </div>
-        <div className="whitespace-nowrap text-sm tracking-wide text-foreground-faint" data-testid={StatTestId.Label}>
+        <div
+          className="whitespace-nowrap text-sm tracking-wide text-foreground-faint"
+          data-testid={StatTestId.Label}
+        >
           {label}
         </div>
       </Stack>

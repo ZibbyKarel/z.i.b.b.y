@@ -1,14 +1,14 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { hooksContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
-import { HookConflictError, HookNotFoundError, InvalidHookIdError } from "./hooks.errors"
-import { HooksStorageService } from "./hooks.storage.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { hooksContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
+import { HookConflictError, HookNotFoundError, InvalidHookIdError } from "./hooks.errors";
+import { HooksStorageService } from "./hooks.storage.service";
 
 const errors = makeErrorMapper("Hook", {
   missing: [HookNotFoundError, InvalidHookIdError],
   conflict: [HookConflictError],
-})
+});
 
 /**
  * Implements `hooksContract` against the file-backed storage service. Mirrors
@@ -33,9 +33,9 @@ export class HooksController {
 
       deleteHook: ({ params: { id } }) =>
         errors.or404(id, async () => {
-          await this.storage.delete(id)
-          return { id }
+          await this.storage.delete(id);
+          return { id };
         }),
-    })
+    });
   }
 }

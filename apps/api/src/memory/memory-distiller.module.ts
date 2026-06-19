@@ -1,11 +1,11 @@
-import { Module } from "@nestjs/common"
-import { AgentsModule } from "../agents/agents.module"
-import { GoalsModule } from "../goals/goals.module"
-import { PipelinesModule } from "../pipelines/pipelines.module"
-import { ProjectsModule } from "../projects/projects.module"
-import { ClaudeCliDistiller } from "./claude-cli-distiller"
-import { MemoryModule } from "./memory.module"
-import { MemoryDistillerService } from "./memory-distiller.service"
+import { Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
+import { GoalsModule } from "../goals/goals.module";
+import { PipelinesModule } from "../pipelines/pipelines.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { ClaudeCliDistiller } from "./claude-cli-distiller";
+import { MemoryModule } from "./memory.module";
+import { MemoryDistillerService } from "./memory-distiller.service";
 
 /**
  * Nightly memory distillation. Consumes the three runners (Agents/Pipelines/Goals)

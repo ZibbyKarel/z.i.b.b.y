@@ -1,9 +1,9 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { ActivityEntrySchema, ActivityQuerySchema } from "./activity.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { ActivityEntrySchema, ActivityQuerySchema } from "./activity.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Activity (Phase 6.1): READ-ONLY access to the append-only activity log. There is
@@ -22,5 +22,5 @@ export const activityContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type ActivityContract = typeof activityContract
+);
+export type ActivityContract = typeof activityContract;

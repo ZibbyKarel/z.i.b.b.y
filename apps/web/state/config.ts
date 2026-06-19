@@ -97,4 +97,3 @@ export const AGENT_GLYPHS: IconName[] = [
 
 /** Tools an agent can be granted in the editor. */
 export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
-

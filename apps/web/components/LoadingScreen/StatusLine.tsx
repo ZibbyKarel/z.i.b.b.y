@@ -11,11 +11,7 @@ export function StatusLine({ status, testId }: StatusLineProps) {
       style={{ animationDelay: "2s" }}
     >
       {status && (
-        <span
-          className="animate-status-in inline-block"
-          data-testid={testId}
-          key={status}
-        >
+        <span className="animate-status-in inline-block" data-testid={testId} key={status}>
           {status}
         </span>
       )}

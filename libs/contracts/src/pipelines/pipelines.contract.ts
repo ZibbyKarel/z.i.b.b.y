@@ -1,16 +1,12 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { PipelineRunSchema } from "./pipeline-run.schema"
-import {
-  CreatePipelineSchema,
-  PipelineSchema,
-  UpdatePipelineSchema,
-} from "./pipeline.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { PipelineRunSchema } from "./pipeline-run.schema";
+import { CreatePipelineSchema, PipelineSchema, UpdatePipelineSchema } from "./pipeline.schema";
 
-const c = initContract()
+const c = initContract();
 
-const PipelineIdParam = z.object({ id: z.string().min(1) })
+const PipelineIdParam = z.object({ id: z.string().min(1) });
 
 /** The names a run artifact may have — the allowlist the artifact endpoint enforces. */
 export const PIPELINE_RUN_ARTIFACTS = [
@@ -24,14 +20,14 @@ export const PIPELINE_RUN_ARTIFACTS = [
   // recorder files this as a knowledge note on a successful delivery, and the
   // web artifact endpoint serves it like any other.
   "learned.md",
-] as const
+] as const;
 
 /** One whitelisted pipeline run artifact: its name and its text content. */
 export const PipelineRunArtifactSchema = z.object({
   name: z.enum(PIPELINE_RUN_ARTIFACTS),
   content: z.string(),
-})
-export type PipelineRunArtifact = z.infer<typeof PipelineRunArtifactSchema>
+});
+export type PipelineRunArtifact = z.infer<typeof PipelineRunArtifactSchema>;
 
 /** CRUD over pipeline definitions (`.pipeline.md` files). Mirrors `agentsContract`. */
 export const pipelinesContract = c.router(
@@ -73,8 +69,8 @@ export const pipelinesContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type PipelinesContract = typeof pipelinesContract
+);
+export type PipelinesContract = typeof pipelinesContract;
 
 /**
  * Pipeline catalog-liveness contract — the one runtime endpoint that survives the
@@ -95,5 +91,5 @@ export const pipelineRunsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type PipelineRunsContract = typeof pipelineRunsContract
+);
+export type PipelineRunsContract = typeof pipelineRunsContract;

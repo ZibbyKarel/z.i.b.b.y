@@ -1,8 +1,8 @@
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join, relative, sep } from "node:path"
-import "reflect-metadata"
-import { TEST_SYSTEM_CONFIG } from "./src/system/system-config.fixture"
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, relative, sep } from "node:path";
+import "reflect-metadata";
+import { TEST_SYSTEM_CONFIG } from "./src/system/system-config.fixture";
 
 /**
  * Phase 12.5 — global e2e isolation barrier (the meta-circular safety net).
@@ -41,37 +41,37 @@ const VOLATILE_SEGMENTS = new Set([
   "proposals",
   "credentials",
   "budget-ledger",
-])
+]);
 
-const cleanups: Array<() => void> = []
+const cleanups: Array<() => void> = [];
 
 if (!process.env.ZIBBY_DATA_DIR) {
-  const realData = join(__dirname, "data")
-  const tempData = mkdtempSync(join(tmpdir(), "zibby-data-"))
+  const realData = join(__dirname, "data");
+  const tempData = mkdtempSync(join(tmpdir(), "zibby-data-"));
   try {
     cpSync(realData, tempData, {
       recursive: true,
       filter: (src) => {
-        const rel = relative(realData, src)
-        if (!rel) return true
-        return !rel.split(sep).some((segment) => VOLATILE_SEGMENTS.has(segment))
+        const rel = relative(realData, src);
+        if (!rel) return true;
+        return !rel.split(sep).some((segment) => VOLATILE_SEGMENTS.has(segment));
       },
-    })
+    });
   } catch {
     // No real data dir (or a partial copy) is fine — suites that need a seed
     // set their own *_DIR; the isolation (an empty temp root) is what matters.
   }
-  process.env.ZIBBY_DATA_DIR = tempData
-  cleanups.push(() => rmSync(tempData, { recursive: true, force: true }))
+  process.env.ZIBBY_DATA_DIR = tempData;
+  cleanups.push(() => rmSync(tempData, { recursive: true, force: true }));
 }
 
 // Phase 12.7: pin a per-file temp worktree root so run worktrees are cut OUTSIDE
 // the data tree AND cleaned up — a test's `fs.rm(runsDir)` can no longer race a
 // live worktree (the standing `ENOTEMPTY` cleanup flake).
 if (!process.env.ZIBBY_WORKTREE_ROOT) {
-  const dir = mkdtempSync(join(tmpdir(), "zibby-worktrees-"))
-  process.env.ZIBBY_WORKTREE_ROOT = dir
-  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+  const dir = mkdtempSync(join(tmpdir(), "zibby-worktrees-"));
+  process.env.ZIBBY_WORKTREE_ROOT = dir;
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
 }
 
 // The runtime system config (tick intervals, goal auto-resume) is now file-backed,
@@ -80,11 +80,11 @@ if (!process.env.ZIBBY_WORKTREE_ROOT) {
 // like ACTIVITY_DIR. A suite that needs a different knob writes this file (merged)
 // before it boots the app.
 if (!process.env.SYSTEM_CONFIG_FILE) {
-  const dir = mkdtempSync(join(tmpdir(), "zibby-system-"))
-  const file = join(dir, "system-config.json")
-  writeFileSync(file, `${JSON.stringify(TEST_SYSTEM_CONFIG, null, 2)}\n`)
-  process.env.SYSTEM_CONFIG_FILE = file
-  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+  const dir = mkdtempSync(join(tmpdir(), "zibby-system-"));
+  const file = join(dir, "system-config.json");
+  writeFileSync(file, `${JSON.stringify(TEST_SYSTEM_CONFIG, null, 2)}\n`);
+  process.env.SYSTEM_CONFIG_FILE = file;
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
 }
 
 // The fake channel adapter is gated on CHANNEL_FAKE_DIR (no operator-facing config knob).
@@ -92,22 +92,22 @@ if (!process.env.SYSTEM_CONFIG_FILE) {
 // for every integration kind — the global default that the old `channelAdapterMode:
 // "fake"` test config used to provide. A suite drives fixtures by overriding this env.
 if (!process.env.CHANNEL_FAKE_DIR) {
-  const dir = mkdtempSync(join(tmpdir(), "zibby-channel-fake-"))
-  process.env.CHANNEL_FAKE_DIR = dir
-  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+  const dir = mkdtempSync(join(tmpdir(), "zibby-channel-fake-"));
+  process.env.CHANNEL_FAKE_DIR = dir;
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
 }
 
 // Neutralise the committed `.env` `AGENT_RUNNER_MODE=claude` leak: tests run on
 // the deterministic demo seam unless a suite explicitly opts into another mode.
-process.env.AGENT_RUNNER_MODE ??= "demo"
+process.env.AGENT_RUNNER_MODE ??= "demo";
 
 // M8: keep the integration-poll retry/backoff effectively instant under test so a
 // failing-poll case exercises the retry path without burning real wall-clock.
-process.env.CHANNEL_POLL_BACKOFF_MS ??= "1"
+process.env.CHANNEL_POLL_BACKOFF_MS ??= "1";
 
 // The agent runner always spawns real `claude` (no demo mode); pin the token-free
 // fake so a reconstructed agent-maker can never reach the real binary.
-process.env.CLAUDE_BIN ??= join(__dirname, "test", "fixtures", "fake-claude.mjs")
+process.env.CLAUDE_BIN ??= join(__dirname, "test", "fixtures", "fake-claude.mjs");
 
 /**
  * Isolate the activity log per test FILE (Phase 6.1). `ActivityLogService` is
@@ -116,17 +116,17 @@ process.env.CLAUDE_BIN ??= join(__dirname, "test", "fixtures", "fake-claude.mjs"
  * before the data-root override above (and stays independent of it).
  */
 if (!process.env.ACTIVITY_DIR) {
-  const dir = mkdtempSync(join(tmpdir(), "zibby-activity-"))
-  process.env.ACTIVITY_DIR = dir
-  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+  const dir = mkdtempSync(join(tmpdir(), "zibby-activity-"));
+  process.env.ACTIVITY_DIR = dir;
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
 }
 
 process.on("exit", () => {
   for (const cleanup of cleanups) {
     try {
-      cleanup()
+      cleanup();
     } catch {
       // best-effort cleanup of the temp dirs
     }
   }
-})
+});

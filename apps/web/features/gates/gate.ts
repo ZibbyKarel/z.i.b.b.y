@@ -1,9 +1,4 @@
-import type {
-  Decision,
-  GateRule,
-  MatchCondition,
-  Resolve,
-} from "@zibby/contracts";
+import type { Decision, GateRule, MatchCondition, Resolve } from "@zibby/contracts";
 import type { IconName, TagTone } from "@zibby/design-system";
 
 /**
@@ -39,13 +34,7 @@ export const MATCHER_ICON: Record<MatchType, IconName> = {
   context: "compass",
 };
 
-export const MATCH_TYPE_ORDER: MatchType[] = [
-  "tool",
-  "action",
-  "threshold",
-  "scope",
-  "context",
-];
+export const MATCH_TYPE_ORDER: MatchType[] = ["tool", "action", "threshold", "scope", "context"];
 
 /** A short human string for one match condition (the value is the emphasized part). */
 export function matchText(c: MatchCondition): {
@@ -88,8 +77,7 @@ export function flattenResolve(r: Resolve | undefined): {
       mode: "any",
     };
   if (r.type === "human") return { leaves: [{ kind: "human" }], mode: "all" };
-  if (r.type === "check")
-    return { leaves: [{ kind: "check", name: r.check }], mode: "all" };
+  if (r.type === "check") return { leaves: [{ kind: "check", name: r.check }], mode: "all" };
   return { leaves: [{ kind: "agent", name: r.agent }], mode: "all" };
 }
 
@@ -98,7 +86,4 @@ export function freshRuleId(): string {
   return `own-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export type EditableRule = Pick<
-  GateRule,
-  "id" | "match" | "decision" | "resolve"
->;
+export type EditableRule = Pick<GateRule, "id" | "match" | "decision" | "resolve">;

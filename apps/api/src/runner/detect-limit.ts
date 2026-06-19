@@ -1,12 +1,12 @@
 /** Outcome of scanning a chunk of run output for a usage-limit signal. */
 export interface LimitDetection {
   /** A usage-limit / rate-limit signal was present in the text. */
-  hit: boolean
+  hit: boolean;
   /** The reset time (epoch ms) when the output carried one, else null. */
-  resetsAt: number | null
+  resetsAt: number | null;
 }
 
-const NO_HIT: LimitDetection = { hit: false, resetsAt: null }
+const NO_HIT: LimitDetection = { hit: false, resetsAt: null };
 
 /**
  * Patterns that mark a usage/rate limit in a `claude` run's output, in priority
@@ -22,7 +22,7 @@ const PATTERNS = [
   /\b(?:rate[- ]?limit(?:ed|ing)?|too\s+many\s+requests)\b/i,
   /** A bare HTTP 429. */
   /\b(?:HTTP\s*)?429\b/,
-] as const
+] as const;
 
 /**
  * Scan a chunk of `claude` run output for a usage-limit signal (Layer 2 of the
@@ -33,13 +33,13 @@ const PATTERNS = [
  */
 export function detectLimit(text: string): LimitDetection {
   for (const pattern of PATTERNS) {
-    const match = pattern.exec(text)
-    if (!match) continue
-    const epochSeconds = match[1]
+    const match = pattern.exec(text);
+    if (!match) continue;
+    const epochSeconds = match[1];
     return {
       hit: true,
       resetsAt: epochSeconds === undefined ? null : Number(epochSeconds) * 1000,
-    }
+    };
   }
-  return NO_HIT
+  return NO_HIT;
 }

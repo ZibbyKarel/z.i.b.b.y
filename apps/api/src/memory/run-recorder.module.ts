@@ -1,9 +1,9 @@
-import { Module } from "@nestjs/common"
-import { AgentsModule } from "../agents/agents.module"
-import { PipelinesModule } from "../pipelines/pipelines.module"
-import { ProjectsModule } from "../projects/projects.module"
-import { MemoryModule } from "./memory.module"
-import { RunRecorderService } from "./run-recorder.service"
+import { Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
+import { PipelinesModule } from "../pipelines/pipelines.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { MemoryModule } from "./memory.module";
+import { RunRecorderService } from "./run-recorder.service";
 
 /**
  * The run recorder (Phase 4): writes a durable trace of every finished run into

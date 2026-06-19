@@ -47,9 +47,7 @@ describe("encodeMaker / decodeMaker", () => {
 
 describe("slugify / makeGoalId", () => {
   it("produces a filename-safe lowercase-kebab slug, stripping diacritics", () => {
-    expect(slugify("Zkontroluj zálohy na Holly!")).toBe(
-      "zkontroluj-zalohy-na-holly",
-    );
+    expect(slugify("Zkontroluj zálohy na Holly!")).toBe("zkontroluj-zalohy-na-holly");
   });
 
   it("falls back to 'loop' and appends a base-36 time suffix for uniqueness", () => {
@@ -84,12 +82,8 @@ describe("canSubmitLoop", () => {
   });
 
   it("requires a reviewer only for the claude verifier", () => {
-    expect(canSubmitLoop(loop({ verifierKind: "claude", reviewer: "" }))).toBe(
-      false,
-    );
-    expect(
-      canSubmitLoop(loop({ verifierKind: "claude", reviewer: "reviewer" })),
-    ).toBe(true);
+    expect(canSubmitLoop(loop({ verifierKind: "claude", reviewer: "" }))).toBe(false);
+    expect(canSubmitLoop(loop({ verifierKind: "claude", reviewer: "reviewer" }))).toBe(true);
   });
 
   it("rejects a non-positive or non-integer iteration cap", () => {

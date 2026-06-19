@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Divider,
-  NumberField,
-  Stack,
-  ToggleField,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Divider, NumberField, Stack, ToggleField, Typography } from "@zibby/design-system";
 import type { SystemConfig } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useSystemConfigQuery } from "../../system/queries";
@@ -48,9 +41,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
 
   const [taskTickMs, setTaskTickMs] = useState<number | null>(config.taskTickMs);
   const [channelTickMs, setChannelTickMs] = useState<number | null>(config.channelTickMs);
-  const [automationTickMs, setAutomationTickMs] = useState<number | null>(
-    config.automationTickMs,
-  );
+  const [automationTickMs, setAutomationTickMs] = useState<number | null>(config.automationTickMs);
   const [limitResumeTickMs, setLimitResumeTickMs] = useState<number | null>(
     config.limitResumeTickMs,
   );
@@ -63,8 +54,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   /** Coerce a possibly-cleared tick to a non-negative integer (empty → 0 = disabled). */
   const tick = (value: number | null) => Math.max(0, Math.floor(value ?? 0));
   /** Coerce a possibly-cleared positive knob to `>= min` (empty/low → min). */
-  const positive = (value: number | null, min: number) =>
-    Math.max(min, Math.floor(value ?? min));
+  const positive = (value: number | null, min: number) => Math.max(min, Math.floor(value ?? min));
 
   const save = () =>
     setConfig.mutate({

@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Button, Container, Stack } from "@zibby/design-system"
-import { PageHeader } from "./PageHeader"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button, Container, Stack } from "@zibby/design-system";
+import { PageHeader } from "./PageHeader";
 
 const meta: Meta<typeof PageHeader> = {
   title: "Dashboard/PageHeader",
@@ -14,12 +14,12 @@ const meta: Meta<typeof PageHeader> = {
     ),
   ],
   args: { title: "Agenti", subtitle: "4 agenti v katalogu" },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof PageHeader>
+type Story = StoryObj<typeof PageHeader>;
 
-export const Default: Story = {}
+export const Default: Story = {};
 
 export const WithActions: Story = {
   args: {
@@ -34,4 +34,4 @@ export const WithActions: Story = {
       </Stack>
     ),
   },
-}
+};

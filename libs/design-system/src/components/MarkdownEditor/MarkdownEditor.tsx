@@ -12,8 +12,7 @@ export enum MarkdownEditorTestId {
   Hint = "markdown-editor-hint",
 }
 
-const labelClass =
-  "font-mono text-sm uppercase tracking-wider text-foreground-faint";
+const labelClass = "font-mono text-sm uppercase tracking-wider text-foreground-faint";
 
 /**
  * Map the third-party editor's GitHub-primer colour variables onto the live
@@ -92,7 +91,10 @@ export function MarkdownEditor({
         />
       </div>
       {hint && (
-        <span className="font-mono text-xs text-foreground-faint" data-testid={MarkdownEditorTestId.Hint}>
+        <span
+          className="font-mono text-xs text-foreground-faint"
+          data-testid={MarkdownEditorTestId.Hint}
+        >
           {hint}
         </span>
       )}

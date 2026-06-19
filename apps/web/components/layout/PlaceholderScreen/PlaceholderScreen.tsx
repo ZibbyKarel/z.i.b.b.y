@@ -1,24 +1,17 @@
 "use client";
-import { useTranslations } from "next-intl"
-import {
-  Container,
-  type IconName,
-  IconTile,
-  Stack,
-  Typography,
-} from "@zibby/design-system"
-import { HudPanel } from "../../HudPanel/HudPanel"
+import { useTranslations } from "next-intl";
+import { Container, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
+import { HudPanel } from "../../HudPanel/HudPanel";
 
 export interface PlaceholderScreenProps {
-  label: string
-  glyph: IconName
+  label: string;
+  glyph: IconName;
 }
 
 /** Graceful placeholder for screens that follow the same card → modal pattern. */
 export function PlaceholderScreen({ label, glyph }: PlaceholderScreenProps) {
-  const t = useTranslations("placeholder")
+  const t = useTranslations("placeholder");
   return (
-     
     <Container maxWidth="1400px" style={{ marginInline: "auto" }}>
       <HudPanel padding="500">
         <Container padding={["500", "0"]} textAlign="center">
@@ -39,5 +32,5 @@ export function PlaceholderScreen({ label, glyph }: PlaceholderScreenProps) {
         </Container>
       </HudPanel>
     </Container>
-  )
+  );
 }

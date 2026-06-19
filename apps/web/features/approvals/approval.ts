@@ -62,8 +62,7 @@ export interface ApprovalEnrichment {
 }
 
 /** A contract approval plus the parsed enrichment (or a plain-text fallback). */
-export interface DashboardApproval
-  extends ContractApproval, ApprovalEnrichment {
+export interface DashboardApproval extends ContractApproval, ApprovalEnrichment {
   /** Plain-text detail when `detail` was not enriched JSON. */
   text?: string;
 }
@@ -84,10 +83,7 @@ export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
   } catch {
     return { ...a, text: a.detail };
   }
-  if (
-    !isRecord(data) ||
-    !("preview" in data || "riskType" in data || "summary" in data)
-  ) {
+  if (!isRecord(data) || !("preview" in data || "riskType" in data || "summary" in data)) {
     return { ...a, text: a.detail };
   }
   const e = data as ApprovalEnrichment;

@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { AGENT_ID_REGEX } from "../agents/agent.schema"
+import { z } from "zod";
+import { AGENT_ID_REGEX } from "../agents/agent.schema";
 
 /**
  * Allowed shape of an MCP server `id` — the same restrictive pattern agents use
@@ -11,11 +11,11 @@ export const McpServerIdSchema = z
   .string()
   .min(1)
   .max(128)
-  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
+  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
 /** Transport an MCP server speaks. `type` is immutable after create (drives config). */
-export const McpTransportSchema = z.enum(["stdio", "http", "sse"])
-export type McpTransport = z.infer<typeof McpTransportSchema>
+export const McpTransportSchema = z.enum(["stdio", "http", "sse"]);
+export type McpTransport = z.infer<typeof McpTransportSchema>;
 
 /**
  * A connected MCP server (managed from the UI). On disk: one `<id>.json` under
@@ -38,8 +38,8 @@ export const McpServerSchema = z.object({
   enabled: z.boolean().default(true),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
-})
-export type McpServer = z.infer<typeof McpServerSchema>
+});
+export type McpServer = z.infer<typeof McpServerSchema>;
 
 /**
  * Create body — id + type + the transport's connection fields. A `stdio` server
@@ -61,13 +61,21 @@ export const CreateMcpServerSchema = z
   })
   .superRefine((val, ctx) => {
     if (val.type === "stdio" && !val.command) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "stdio server requires a command", path: ["command"] })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "stdio server requires a command",
+        path: ["command"],
+      });
     }
     if ((val.type === "http" || val.type === "sse") && !val.url) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "http/sse server requires a url", path: ["url"] })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "http/sse server requires a url",
+        path: ["url"],
+      });
     }
-  })
-export type CreateMcpServerInput = z.infer<typeof CreateMcpServerSchema>
+  });
+export type CreateMcpServerInput = z.infer<typeof CreateMcpServerSchema>;
 
 /**
  * Update body — `id`, `type` (drives the config union) and the computed
@@ -77,8 +85,8 @@ export const UpdateMcpServerSchema = McpServerSchema.omit({
   id: true,
   type: true,
   hasCredentials: true,
-}).partial()
-export type UpdateMcpServerInput = z.infer<typeof UpdateMcpServerSchema>
+}).partial();
+export type UpdateMcpServerInput = z.infer<typeof UpdateMcpServerSchema>;
 
 /**
  * Closed, write-only credentials body. `env` injects secret env vars into a stdio
@@ -92,5 +100,5 @@ export const McpCredentialsInputSchema = z
     headers: z.record(z.string(), z.string()).optional(),
     authToken: z.string().min(1).optional(),
   })
-  .strict()
-export type McpCredentialsInput = z.infer<typeof McpCredentialsInputSchema>
+  .strict();
+export type McpCredentialsInput = z.infer<typeof McpCredentialsInputSchema>;

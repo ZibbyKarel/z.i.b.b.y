@@ -1,18 +1,15 @@
-import { Injectable } from "@nestjs/common"
-import type { ClassifyTaskInput, TaskRouting } from "@zibby/contracts"
-import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router"
+import { Injectable } from "@nestjs/common";
+import type { ClassifyTaskInput, TaskRouting } from "@zibby/contracts";
+import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router";
 
 /** Lowercased word/number tokens, diacritics preserved. */
 export function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
+  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 
 /** Lowercase + strip diacritics so "dokud nepro­jde" matches unaccented interim text. */
 function fold(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 /**
@@ -40,7 +37,7 @@ const LOOP_CUES: readonly string[] = [
   "keep trying until",
   "keep retrying",
   "retry until",
-]
+];
 
 /**
  * True when the task text carries a loop cue — the deterministic loop leg. Pure
@@ -49,19 +46,19 @@ const LOOP_CUES: readonly string[] = [
  * as data (Law 4): a cue only flips the execution shape, it never names an action.
  */
 export function detectLoopCue(text: string): boolean {
-  const folded = fold(text)
-  return LOOP_CUES.some((cue) => folded.includes(cue))
+  const folded = fold(text);
+  return LOOP_CUES.some((cue) => folded.includes(cue));
 }
 
 /** Distinct keyword tokens (length ≥ 3) drawn from a target's catalog blob. */
 function keywordsOf(text: string): string[] {
-  return [...new Set(tokenize(text).filter((token) => token.length >= 3))]
+  return [...new Set(tokenize(text).filter((token) => token.length >= 3))];
 }
 
 interface Scored {
-  candidate: RoutableTarget
-  score: number
-  matched: string[]
+  candidate: RoutableTarget;
+  score: number;
+  matched: string[];
 }
 
 /**
@@ -77,43 +74,43 @@ interface Scored {
 @Injectable()
 export class KeywordScorer implements TaskRouter {
   route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null> {
-    return Promise.resolve(this.score(input, candidates))
+    return Promise.resolve(this.score(input, candidates));
   }
 
   /** Synchronous core — the e2e and unit tests call this directly. */
   score(input: ClassifyTaskInput, candidates: RoutableTarget[]): TaskRouting | null {
-    if (candidates.length === 0) return null
+    if (candidates.length === 0) return null;
 
     // Path segments are strong routing hints ("…/media/…" → the media curator),
     // so they join the description in the term haystack.
-    const haystack = new Set(tokenize([input.text, ...(input.paths ?? [])].join(" ")))
+    const haystack = new Set(tokenize([input.text, ...(input.paths ?? [])].join(" ")));
     const scored: Scored[] = candidates
       .map((candidate) => {
-        const keywords = keywordsOf(candidate.search)
-        const matched = keywords.filter((keyword) => haystack.has(keyword))
-        return { candidate, score: matched.length, matched }
+        const keywords = keywordsOf(candidate.search);
+        const matched = keywords.filter((keyword) => haystack.has(keyword));
+        return { candidate, score: matched.length, matched };
       })
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score);
 
-    const best = scored[0]
-    if (!best) return null
-    const wire = candidates.map(toTaskTarget)
+    const best = scored[0];
+    if (!best) return null;
+    const wire = candidates.map(toTaskTarget);
 
-    const runnerUp = scored[1]?.score ?? 0
-    let confidence: number
+    const runnerUp = scored[1]?.score ?? 0;
+    let confidence: number;
     if (best.score === 0) {
       // Nothing matched — surface the top entry but flag it as a guess so the gate
       // steers the user to the manual picker.
-      confidence = 0.22
+      confidence = 0.22;
     } else {
-      const separation = best.score - runnerUp
-      confidence = Math.min(0.95, 0.42 + 0.13 * best.score + 0.08 * separation)
+      const separation = best.score - runnerUp;
+      confidence = Math.min(0.95, 0.42 + 0.13 * best.score + 0.08 * separation);
     }
 
     const reason =
       best.matched.length > 0
         ? `Matched catalog terms: ${best.matched.join(", ")}`
-        : "Best available match — low confidence, please confirm or pick manually."
+        : "Best available match — low confidence, please confirm or pick manually.";
 
     return {
       target: toTaskTarget(best.candidate),
@@ -126,6 +123,6 @@ export class KeywordScorer implements TaskRouter {
       mode: "single",
       proposedGoal: null,
       paths: [],
-    }
+    };
   }
 }

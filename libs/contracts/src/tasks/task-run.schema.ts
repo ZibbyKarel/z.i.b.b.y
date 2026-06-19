@@ -1,22 +1,22 @@
-import { z } from "zod"
+import { z } from "zod";
 import {
   GoalIterationSchema,
   GoalParkedDetailSchema,
   GoalParkedReasonSchema,
-} from "../goals/goal-run.schema"
+} from "../goals/goal-run.schema";
 import {
   ParkedDetailSchema,
   PipelineCheckpointSchema,
   StageRunSchema,
-} from "../pipelines/pipeline-run.schema"
+} from "../pipelines/pipeline-run.schema";
 
 /**
  * The kind of processor running a task. `scheduled` is a task that has not been
  * dispatched yet (it has no run behind it — its `runId` is the task id), the other
  * three are the live/finished run kinds.
  */
-export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "scheduled"])
-export type RunKind = z.infer<typeof RunKindSchema>
+export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "scheduled"]);
+export type RunKind = z.infer<typeof RunKindSchema>;
 
 /**
  * The feed's status set: the six shared {@link RunStatusSchema} run states plus the
@@ -37,8 +37,8 @@ export const TaskRunStatusSchema = z.enum([
   "parked",
   "held",
   "queued",
-])
-export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>
+]);
+export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>;
 
 /**
  * The processor handling a task: which kind (agent / pipeline / goal), the stored
@@ -51,8 +51,8 @@ export const ProcessorSchema = z.object({
   kind: z.enum(["agent", "pipeline", "goal"]),
   id: z.string().min(1),
   name: z.string().min(1),
-})
-export type Processor = z.infer<typeof ProcessorSchema>
+});
+export type Processor = z.infer<typeof ProcessorSchema>;
 
 /**
  * One row of the unified task feed — the server-side promotion of the web `RunView`.
@@ -118,8 +118,8 @@ export const TaskRunSchema = z.object({
   goalParked: GoalParkedDetailSchema.optional(),
   /** Phase 10 (goal runs): why the goal parked (iterations / budget / limit). */
   goalParkedReason: GoalParkedReasonSchema.optional(),
-})
-export type TaskRun = z.infer<typeof TaskRunSchema>
+});
+export type TaskRun = z.infer<typeof TaskRunSchema>;
 
 /**
  * One whitelisted task-run artifact: its name and text content. The unified
@@ -129,11 +129,11 @@ export type TaskRun = z.infer<typeof TaskRunSchema>
 export const TaskRunArtifactSchema = z.object({
   name: z.string(),
   content: z.string(),
-})
-export type TaskRunArtifact = z.infer<typeof TaskRunArtifactSchema>
+});
+export type TaskRunArtifact = z.infer<typeof TaskRunArtifactSchema>;
 
 /** Body accepted by `resumeTaskRun` — the operator's note for the resumed run. */
 export const ResumeTaskRunSchema = z.object({
   note: z.string().optional(),
-})
-export type ResumeTaskRunInput = z.infer<typeof ResumeTaskRunSchema>
+});
+export type ResumeTaskRunInput = z.infer<typeof ResumeTaskRunSchema>;

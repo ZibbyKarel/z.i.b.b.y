@@ -1,9 +1,20 @@
-import { describe, expect, it } from "vitest"
-import type { ActivityEntry, Approval, ChannelItem, PipelineRun, ScheduledTask } from "@zibby/contracts"
-import { assembleBriefing, buildEngagements, deterministicHeadline, renderBriefingMarkdown } from "./briefing-assembly"
+import { describe, expect, it } from "vitest";
+import type {
+  ActivityEntry,
+  Approval,
+  ChannelItem,
+  PipelineRun,
+  ScheduledTask,
+} from "@zibby/contracts";
+import {
+  assembleBriefing,
+  buildEngagements,
+  deterministicHeadline,
+  renderBriefingMarkdown,
+} from "./briefing-assembly";
 
-const NOW = new Date("2026-06-12T07:00:00.000Z")
-const SINCE = "2026-06-11T07:00:00.000Z"
+const NOW = new Date("2026-06-12T07:00:00.000Z");
+const SINCE = "2026-06-11T07:00:00.000Z";
 
 const approval = (over: Partial<Approval>): Approval => ({
   id: "ap1",
@@ -16,7 +27,7 @@ const approval = (over: Partial<Approval>): Approval => ({
   status: "pending",
   requestedAt: "2026-06-12T06:30:00.000Z",
   ...over,
-})
+});
 
 const parked = (over: Partial<PipelineRun>): PipelineRun =>
   ({
@@ -29,7 +40,7 @@ const parked = (over: Partial<PipelineRun>): PipelineRun =>
     currentStage: null,
     cwd: "/tmp/p1",
     ...over,
-  }) as unknown as PipelineRun
+  }) as unknown as PipelineRun;
 
 const channelItem = (over: Partial<ChannelItem>): ChannelItem =>
   ({
@@ -42,7 +53,7 @@ const channelItem = (over: Partial<ChannelItem>): ChannelItem =>
     raw: {},
     state: "new",
     ...over,
-  }) as ChannelItem
+  }) as ChannelItem;
 
 const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
   id: Math.random().toString(36),
@@ -51,7 +62,7 @@ const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
   summary: "agent x → done",
   refs: { status: "done" },
   ...over,
-})
+});
 
 describe("assembleBriefing", () => {
   it("partitions state into the briefing's sections with correct counts", () => {
@@ -68,25 +79,32 @@ describe("assembleBriefing", () => {
         entry({ kind: "channel-reply", summary: "replied" }),
         entry({ kind: "gate-decision", summary: "gate ask" }), // not a did-kind
       ],
-    })
+    });
 
-    expect(briefing.needsYou).toHaveLength(3) // 2 approvals + 1 parked
-    expect(briefing.nothingNeedsYou).toBe(false)
+    expect(briefing.needsYou).toHaveLength(3); // 2 approvals + 1 parked
+    expect(briefing.nothingNeedsYou).toBe(false);
     expect(briefing.didForYou.map((d) => d.kind)).toEqual(
-      expect.arrayContaining(["task-outcome", "run-finished", "pipeline-finished", "channel-reply"]),
-    )
-    expect(briefing.didForYou.some((d) => d.kind === "gate-decision")).toBe(false)
-    expect(briefing.watching).toEqual([{ integrationId: "team", newItems: 1, lastReceivedAt: "2026-06-12T06:00:00.000Z" }])
+      expect.arrayContaining([
+        "task-outcome",
+        "run-finished",
+        "pipeline-finished",
+        "channel-reply",
+      ]),
+    );
+    expect(briefing.didForYou.some((d) => d.kind === "gate-decision")).toBe(false);
+    expect(briefing.watching).toEqual([
+      { integrationId: "team", newItems: 1, lastReceivedAt: "2026-06-12T06:00:00.000Z" },
+    ]);
     expect(briefing.counts).toEqual({
       runsFinished: 1, // run-finished done (pipeline-finished failed counts as failed)
       runsFailed: 1,
       parked: 1,
       approvalsPending: 2,
       channelItemsNew: 1,
-    })
+    });
     // Newest-first: ap2 (06:50) before ap1 (06:30) before parked (05:00).
-    expect(briefing.needsYou[0]!.id).toBe("ap2")
-  })
+    expect(briefing.needsYou[0]!.id).toBe("ap2");
+  });
 
   it("M8: a dead-lettered task surfaces in needsYou (parked kind) so it never fails silently", () => {
     const briefing = assembleBriefing({
@@ -108,19 +126,19 @@ describe("assembleBriefing", () => {
           attempts: 3,
         },
       ],
-    })
-    expect(briefing.needsYou).toHaveLength(1)
+    });
+    expect(briefing.needsYou).toHaveLength(1);
     expect(briefing.needsYou[0]).toMatchObject({
       kind: "parked",
       id: "t-dead",
       refs: { taskId: "t-dead", status: "dead-letter" },
-    })
-    expect(briefing.needsYou[0]!.summary).toContain("failed repeatedly")
-    expect(briefing.nothingNeedsYou).toBe(false)
-  })
+    });
+    expect(briefing.needsYou[0]!.summary).toContain("failed repeatedly");
+    expect(briefing.nothingNeedsYou).toBe(false);
+  });
 
   it("Phase 9: a paused-limit run joins watching (not needsYou) with its resume epoch", () => {
-    const resumeAt = Date.parse("2026-06-12T08:30:00.000Z")
+    const resumeAt = Date.parse("2026-06-12T08:30:00.000Z");
     const briefing = assembleBriefing({
       now: NOW,
       since: SINCE,
@@ -131,29 +149,34 @@ describe("assembleBriefing", () => {
       ],
       channelItems: [channelItem({})],
       activity: [],
-    })
+    });
     // A pause is Tier 1 — it watches, it does not need the operator.
-    expect(briefing.needsYou).toHaveLength(0)
+    expect(briefing.needsYou).toHaveLength(0);
     // The channel watch item AND the run-pause watch item share the array.
     expect(briefing.watching).toContainEqual({
       runRef: "p9",
       summary: "pipeline delivery paused on the usage limit",
       resumeAt,
-    })
+    });
     // The markdown surfaces the pause line with its resume time.
-    const md = renderBriefingMarkdown(briefing)
-    expect(md).toContain("pipeline delivery paused on the usage limit, resumes")
-  })
+    const md = renderBriefingMarkdown(briefing);
+    expect(md).toContain("pipeline delivery paused on the usage limit, resumes");
+  });
 
   it("emits a calm nothing-needs-you output when nothing is pending", () => {
     const briefing = assembleBriefing({
-      now: NOW, since: SINCE, approvals: [], parkedRuns: [], channelItems: [], activity: [],
-    })
-    expect(briefing.nothingNeedsYou).toBe(true)
-    expect(briefing.needsYou).toHaveLength(0)
-    expect(briefing.headline).toBe("Nothing needs you.")
-  })
-})
+      now: NOW,
+      since: SINCE,
+      approvals: [],
+      parkedRuns: [],
+      channelItems: [],
+      activity: [],
+    });
+    expect(briefing.nothingNeedsYou).toBe(true);
+    expect(briefing.needsYou).toHaveLength(0);
+    expect(briefing.headline).toBe("Nothing needs you.");
+  });
+});
 
 describe("buildEngagements (Phase 8.2)", () => {
   const task = (over: Partial<ScheduledTask>): ScheduledTask =>
@@ -166,7 +189,7 @@ describe("buildEngagements (Phase 8.2)", () => {
       status: "queued",
       createdAt: "2026-06-12T06:00:00.000Z",
       ...over,
-    }) as ScheduledTask
+    }) as ScheduledTask;
 
   it("groups queued/held tasks + attributed activity by project, sorted needsYou desc", () => {
     const engagements = buildEngagements(
@@ -183,45 +206,52 @@ describe("buildEngagements (Phase 8.2)", () => {
       ],
       [],
       { alpha: "Alpha", beta: "Beta" },
-    )
+    );
     expect(engagements).toEqual([
       { projectId: "alpha", name: "Alpha", needsYou: 1, didForYou: 1, queued: 1, held: 1 },
       { projectId: "beta", name: "Beta", needsYou: 0, didForYou: 0, queued: 1, held: 0 },
-    ])
-  })
+    ]);
+  });
 
   it("is empty when nothing carries a projectId", () => {
-    expect(buildEngagements([task({ status: "queued" })], [], [], {})).toEqual([])
-  })
+    expect(buildEngagements([task({ status: "queued" })], [], [], {})).toEqual([]);
+  });
 
   it("falls back to the projectId as the name when none is supplied", () => {
-    const [row] = buildEngagements([task({ status: "held", projectId: "gamma" })], [], [], {})
-    expect(row).toMatchObject({ projectId: "gamma", name: "gamma", held: 1, needsYou: 1 })
-  })
-})
+    const [row] = buildEngagements([task({ status: "held", projectId: "gamma" })], [], [], {});
+    expect(row).toMatchObject({ projectId: "gamma", name: "gamma", held: 1, needsYou: 1 });
+  });
+});
 
 describe("deterministicHeadline", () => {
   it("counts approvals and parked runs", () => {
-    expect(deterministicHeadline([])).toBe("Nothing needs you.")
+    expect(deterministicHeadline([])).toBe("Nothing needs you.");
     expect(
       deterministicHeadline([
         { kind: "approval", id: "a", summary: "", at: "", refs: {} },
         { kind: "parked", id: "p", summary: "", at: "", refs: {} },
       ]),
-    ).toBe("2 things need you — 1 approval, 1 parked run.")
+    ).toBe("2 things need you — 1 approval, 1 parked run.");
     expect(
       deterministicHeadline([{ kind: "approval", id: "a", summary: "", at: "", refs: {} }]),
-    ).toBe("1 thing needs you — 1 approval.")
-  })
-})
+    ).toBe("1 thing needs you — 1 approval.");
+  });
+});
 
 describe("renderBriefingMarkdown", () => {
   it("renders the section headings", () => {
     const md = renderBriefingMarkdown(
-      assembleBriefing({ now: NOW, since: SINCE, approvals: [approval({})], parkedRuns: [], channelItems: [], activity: [] }),
-    )
-    expect(md).toContain("# Briefing")
-    expect(md).toContain("## Needs you")
-    expect(md).toContain("## Counts")
-  })
-})
+      assembleBriefing({
+        now: NOW,
+        since: SINCE,
+        approvals: [approval({})],
+        parkedRuns: [],
+        channelItems: [],
+        activity: [],
+      }),
+    );
+    expect(md).toContain("# Briefing");
+    expect(md).toContain("## Needs you");
+    expect(md).toContain("## Counts");
+  });
+});

@@ -38,9 +38,7 @@ export const Overview: Story = {
           <AccordionItem summary="Sekce A">
             Pouze jedna sekce může být otevřena najednou.
           </AccordionItem>
-          <AccordionItem summary="Sekce B">
-            Otevřením této sekce se zavře předchozí.
-          </AccordionItem>
+          <AccordionItem summary="Sekce B">Otevřením této sekce se zavře předchozí.</AccordionItem>
           <AccordionItem summary="Sekce C">Obsah sekce C.</AccordionItem>
         </Accordion>
       </div>

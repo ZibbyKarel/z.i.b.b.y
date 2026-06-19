@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { RiskSchema } from "../common.schema"
+import { z } from "zod";
+import { RiskSchema } from "../common.schema";
 
 /**
  * Which run kind an approval gates — so a decision can be routed to the right
@@ -31,12 +31,12 @@ export const ApprovalRunKindSchema = z.enum([
   // approval. The runId is the create-request id; approving it performs the gated POST
   // via the Jira adapter, rejecting it drops the request. Outbound write → always Tier-3.
   "jira-issue",
-])
-export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>
+]);
+export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 
 /** Lifecycle of an approval: created `pending`, then a human decides. */
-export const ApprovalStatusSchema = z.enum(["pending", "approved", "rejected"])
-export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>
+export const ApprovalStatusSchema = z.enum(["pending", "approved", "rejected"]);
+export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
 
 /**
  * A request for human sign-off before a gated action runs. Unifies the dashboard's
@@ -59,5 +59,5 @@ export const ApprovalSchema = z.object({
   status: ApprovalStatusSchema,
   requestedAt: z.string().datetime(),
   decidedAt: z.string().datetime().optional(),
-})
-export type Approval = z.infer<typeof ApprovalSchema>
+});
+export type Approval = z.infer<typeof ApprovalSchema>;

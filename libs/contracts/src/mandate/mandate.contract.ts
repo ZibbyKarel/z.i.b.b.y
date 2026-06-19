@@ -1,8 +1,8 @@
-import { initContract } from "@ts-rest/core"
-import { ErrorSchema } from "../common.schema"
-import { MandateSchema, MandateWriteSchema } from "./mandate.schema"
+import { initContract } from "@ts-rest/core";
+import { ErrorSchema } from "../common.schema";
+import { MandateSchema, MandateWriteSchema } from "./mandate.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The autonomy mandate (Phase 5.3): a single operator-owned document. GET returns
@@ -27,5 +27,5 @@ export const mandateContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type MandateContract = typeof mandateContract
+);
+export type MandateContract = typeof mandateContract;

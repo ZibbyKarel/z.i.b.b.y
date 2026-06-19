@@ -1,7 +1,7 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { ErrorSchema } from "../common.schema";
 import {
   AgentGatesSchema,
   GateEvaluationSchema,
@@ -9,9 +9,9 @@ import {
   GateRuleSchema,
   IntendedActionSchema,
   PolicyViolationSchema,
-} from "./gate.schema"
+} from "./gate.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The gate policy engine (Phase 3.5). A read-only system floor (`POLICY.md`,
@@ -51,5 +51,5 @@ export const gatesContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type GatesContract = typeof gatesContract
+);
+export type GatesContract = typeof gatesContract;

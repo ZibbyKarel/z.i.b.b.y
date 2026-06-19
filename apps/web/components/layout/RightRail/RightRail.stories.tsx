@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container } from "@zibby/design-system"
-import { CatalogProvider } from "../../../state/store"
-import { RightRail } from "./RightRail"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container } from "@zibby/design-system";
+import { CatalogProvider } from "../../../state/store";
+import { RightRail } from "./RightRail";
 
 const meta: Meta<typeof RightRail> = {
   title: "Dashboard/Layout/RightRail",
@@ -16,11 +16,11 @@ const meta: Meta<typeof RightRail> = {
       </CatalogProvider>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof RightRail>
+type Story = StoryObj<typeof RightRail>;
 
 // No live API in Storybook — the queries stay pending, so each panel renders its
 // empty/fallback state.
-export const Default: Story = {}
+export const Default: Story = {};

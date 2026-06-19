@@ -41,9 +41,7 @@ describe("AddSkillModal — edit mode", () => {
   });
 
   it("create mode shows no Delete button", () => {
-    render(
-      <AddSkillModal categories={[]} onClose={vi.fn()} onSubmit={vi.fn()} />,
-    );
+    render(<AddSkillModal categories={[]} onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Smazat" })).toBeNull();
   });
 });

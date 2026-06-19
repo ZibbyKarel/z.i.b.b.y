@@ -20,9 +20,9 @@ approval paths.
 An email reply is **both** a `channel-reply` and a `send_email`. The triage flow
 evaluates both actions and takes the stricter decision. `send_email` sits on the
 locked policy floor at `ask:human`, and `validateHardenOnly` forbids an agent rule
-from *softening* a floor rule — so an email reply can never be auto-sent. Even with
+from _softening_ a floor rule — so an email reply can never be auto-sent. Even with
 `mandate.reply` enabled for the channel, an email reply always parks as a Tier-3
 `channel` approval and only goes out after an explicit human decision. This is not
 a bug: it is "no autonomous commit to the outside world" applied to outbound mail.
-Slack replies, which only hit the `channel-reply` `notify` floor, *can* be sent
+Slack replies, which only hit the `channel-reply` `notify` floor, _can_ be sent
 autonomously when the mandate allows.

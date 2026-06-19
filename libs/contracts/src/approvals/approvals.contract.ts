@@ -1,11 +1,11 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { ApprovalSchema } from "./approval.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { ApprovalSchema } from "./approval.schema";
 
-const c = initContract()
+const c = initContract();
 
-const ApprovalIdParam = z.object({ id: z.string().min(1) })
+const ApprovalIdParam = z.object({ id: z.string().min(1) });
 
 /**
  * The approval gate (Phase 3). A gated run pauses at `awaiting-approval` and a
@@ -46,5 +46,5 @@ export const approvalsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type ApprovalsContract = typeof approvalsContract
+);
+export type ApprovalsContract = typeof approvalsContract;

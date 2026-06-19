@@ -2,18 +2,18 @@
 
 ## Proměnné prostředí (API)
 
-| Proměnná | Výchozí | Popis |
-|----------|---------|-------|
-| `PORT` | `3333` | Port na kterém API naslouchá |
-| `LOG_LEVEL` | `info` | Úroveň logování: `debug` / `info` / `warn` / `error` |
-| `CORS_ORIGIN` | `http://localhost:3000` | Povolené origins (comma-separated pro více) |
-| `ZIBBY_DATA_DIR` | `apps/api/data` | Root adresář pro všechna runtime data |
-| `VAULT_DIR` | `$ZIBBY_DATA_DIR/vault` | Cesta k Obsidian vault (memory) |
-| `ZIBBY_BACKUP_DIR` | — | Cíl zálohy (rsync destination) — jen pro backup script |
-| `SYSTEM_CONFIG_FILE` | `$ZIBBY_DATA_DIR/system-config.json` | Cesta k souboru runtime system configu (viz níže) — path/test-isolation knob, ne behaviorální |
-| `AGENT_RUNNER_MODE` | `claude` | `claude` = reálný `claude -p`; `demo` = deterministický stand-in (testy/CI). Patří do **untracked** `.env`, ne do `.env.example` (tam `demo`) |
-| `CLAUDE_BIN` | `claude` | Cesta k `claude` binárce — test seam (fake binárka v e2e) |
-| `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees` | **Phase 12.7** — root pro run worktrees, **mimo** repo/data strom. NEodvozuje se z `ZIBBY_DATA_DIR` (záměrně) |
+| Proměnná              | Výchozí                              | Popis                                                                                                                                         |
+| --------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                | `3333`                               | Port na kterém API naslouchá                                                                                                                  |
+| `LOG_LEVEL`           | `info`                               | Úroveň logování: `debug` / `info` / `warn` / `error`                                                                                          |
+| `CORS_ORIGIN`         | `http://localhost:3000`              | Povolené origins (comma-separated pro více)                                                                                                   |
+| `ZIBBY_DATA_DIR`      | `apps/api/data`                      | Root adresář pro všechna runtime data                                                                                                         |
+| `VAULT_DIR`           | `$ZIBBY_DATA_DIR/vault`              | Cesta k Obsidian vault (memory)                                                                                                               |
+| `ZIBBY_BACKUP_DIR`    | —                                    | Cíl zálohy (rsync destination) — jen pro backup script                                                                                        |
+| `SYSTEM_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/system-config.json` | Cesta k souboru runtime system configu (viz níže) — path/test-isolation knob, ne behaviorální                                                 |
+| `AGENT_RUNNER_MODE`   | `claude`                             | `claude` = reálný `claude -p`; `demo` = deterministický stand-in (testy/CI). Patří do **untracked** `.env`, ne do `.env.example` (tam `demo`) |
+| `CLAUDE_BIN`          | `claude`                             | Cesta k `claude` binárce — test seam (fake binárka v e2e)                                                                                     |
+| `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees`            | **Phase 12.7** — root pro run worktrees, **mimo** repo/data strom. NEodvozuje se z `ZIBBY_DATA_DIR` (záměrně)                                 |
 
 Načítání přes `@nestjs/config` (ConfigModule.forRoot, isGlobal: true).
 
@@ -28,15 +28,15 @@ Změny intervalů a režimu adaptéru se projeví **okamžitě** (schedulery se 
 přearmují přes `SystemConfigStore.onChange`); `goalAutoResume` se uplatní až při
 příštím bootu.
 
-| Klíč | Výchozí | Popis |
-|------|---------|-------|
-| `taskTickMs` | `30000` | Interval task scheduler ticku (0 = vypnuto, test default) |
-| `channelTickMs` | `30000` | Interval heartbeatu channel watcheru (0 = vypnuto) |
-| `automationTickMs` | `0` | Interval automations scheduleru (0 = vypnuto; historický default) |
-| `limitResumeTickMs` | `60000` | Interval skenu limit-resume démona (0 = vypnuto) |
-| `limitResumeMax` | `3` | Max. cyklů obnovy než se limitem pozastavený běh zaparkuje/selže |
-| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline `checks` verifier shellu (pak SIGTERM→SIGKILL) |
-| `goalAutoResume` | `false` | **Phase 12.4** — `true` = na bootu auto-re-drive `running`/`paused-limit` goalů (bezobslužný launchd démon). Default: park `awaiting-resume` (Law 3) |
+| Klíč                  | Výchozí  | Popis                                                                                                                                                |
+| --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `taskTickMs`          | `30000`  | Interval task scheduler ticku (0 = vypnuto, test default)                                                                                            |
+| `channelTickMs`       | `30000`  | Interval heartbeatu channel watcheru (0 = vypnuto)                                                                                                   |
+| `automationTickMs`    | `0`      | Interval automations scheduleru (0 = vypnuto; historický default)                                                                                    |
+| `limitResumeTickMs`   | `60000`  | Interval skenu limit-resume démona (0 = vypnuto)                                                                                                     |
+| `limitResumeMax`      | `3`      | Max. cyklů obnovy než se limitem pozastavený běh zaparkuje/selže                                                                                     |
+| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline `checks` verifier shellu (pak SIGTERM→SIGKILL)                                                                  |
+| `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = na bootu auto-re-drive `running`/`paused-limit` goalů (bezobslužný launchd démon). Default: park `awaiting-resume` (Law 3) |
 
 V testech seeduje `vitest.setup.ts` tento soubor (ticky 0) přes `SYSTEM_CONFIG_FILE`;
 suite, která potřebuje jiný knob, volá `writeSystemConfig()`
@@ -71,6 +71,7 @@ Používá se při `pnpm api:dev` a `pnpm api:start`.
 Přepnutí: `ZIBBY_DATA_DIR=apps/api/data-test`
 
 Příkazy:
+
 ```bash
 pnpm api:dev:test        # dev server s testovacími daty
 pnpm api:start:test      # production server s testovacími daty
@@ -139,12 +140,12 @@ Definovány v `tsconfig.base.json`, používány všude v monorepu:
 ```json
 {
   "paths": {
-    "@zibby/contracts":       ["libs/contracts/src/index.ts"],
-    "@zibby/contracts/*":     ["libs/contracts/src/*"],
-    "@zibby/design-system":   ["libs/design-system/src/index.ts"],
+    "@zibby/contracts": ["libs/contracts/src/index.ts"],
+    "@zibby/contracts/*": ["libs/contracts/src/*"],
+    "@zibby/design-system": ["libs/design-system/src/index.ts"],
     "@zibby/design-system/*": ["libs/design-system/src/*"],
-    "@zibby/forms":           ["libs/forms/src/index.ts"],
-    "@zibby/forms/*":         ["libs/forms/src/*"]
+    "@zibby/forms": ["libs/forms/src/index.ts"],
+    "@zibby/forms/*": ["libs/forms/src/*"]
   }
 }
 ```

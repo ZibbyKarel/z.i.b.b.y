@@ -1,6 +1,6 @@
-import { AgentIdSchema, type AgentRun, AgentRunSchema, WorkspaceSchema } from "@zibby/contracts"
-import { z } from "zod"
-import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types"
+import { AgentIdSchema, type AgentRun, AgentRunSchema, WorkspaceSchema } from "@zibby/contracts";
+import { z } from "zod";
+import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types";
 
 /**
  * The on-disk / in-memory record for an agent run. It is a strict superset of the
@@ -19,20 +19,20 @@ export const AgentRunRecordSchema = AgentRunSchema.extend({
    * with the run to re-link its background logs — surviving an API restart.
    */
   traceId: z.string().optional(),
-})
+});
 
-export type AgentRunRecord = z.infer<typeof AgentRunRecordSchema> & BaseRun
+export type AgentRunRecord = z.infer<typeof AgentRunRecordSchema> & BaseRun;
 
 /** Read the optional workspace off `spec.extra` (set only for git-project agent runs). */
 function workspaceFromExtra(extra: RunSpec["extra"]): AgentRunRecord["workspace"] {
-  const ws = extra.workspace
-  const parsed = WorkspaceSchema.safeParse(ws)
-  return parsed.success ? parsed.data : undefined
+  const ws = extra.workspace;
+  const parsed = WorkspaceSchema.safeParse(ws);
+  return parsed.success ? parsed.data : undefined;
 }
 
 /** Project a runner record down to the contract `AgentRun` (drops `kind`/`pgid`). */
 export function toAgentRun(rec: AgentRunRecord): AgentRun {
-  return AgentRunSchema.parse(rec)
+  return AgentRunSchema.parse(rec);
 }
 
 /** The strategy that teaches {@link RunnerCore} how to handle the `agent` kind. */
@@ -50,6 +50,6 @@ export const agentStrategy: KindStrategy<AgentRunRecord> = {
       ...(spec.extra.taskId ? { taskId: String(spec.extra.taskId) } : {}),
       ...(spec.extra.traceId ? { traceId: String(spec.extra.traceId) } : {}),
       ...(workspaceFromExtra(spec.extra) ? { workspace: workspaceFromExtra(spec.extra) } : {}),
-    }
+    };
   },
-}
+};

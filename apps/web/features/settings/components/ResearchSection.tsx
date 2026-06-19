@@ -58,8 +58,7 @@ function ResearchEditor({ config }: { config: ResearchConfig }) {
   const updateSource = (index: number, patch: Partial<ResearchSource>) =>
     setSources((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
 
-  const removeSource = (index: number) =>
-    setSources((prev) => prev.filter((_, i) => i !== index));
+  const removeSource = (index: number) => setSources((prev) => prev.filter((_, i) => i !== index));
 
   const addSource = () =>
     setSources((prev) => [

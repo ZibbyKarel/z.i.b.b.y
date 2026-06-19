@@ -9,10 +9,7 @@
  * text lives in this module.
  */
 import { useTranslations } from "next-intl";
-import type {
-  EntityFormValues,
-  FieldSchema,
-} from "../components/EntityFormModal/EntityFormModal";
+import type { EntityFormValues, FieldSchema } from "../components/EntityFormModal/EntityFormModal";
 import { MODEL_OPTIONS, THINKING_OPTIONS } from "./config";
 
 const slugPreview = (name: string | undefined, fallback: string) =>
@@ -77,8 +74,7 @@ export function useEntityForm(kind: EntityKind): EntityForm {
             options: THINKING_OPTIONS,
           },
         ],
-        filePreview: (v) =>
-          `~/zibby/agents/${slugPreview(v.name, fallbackName)}.agent.md`,
+        filePreview: (v) => `~/zibby/agents/${slugPreview(v.name, fallbackName)}.agent.md`,
       };
     case "skill":
     default:
@@ -103,8 +99,7 @@ export function useEntityForm(kind: EntityKind): EntityForm {
             placeholder: t("forms.skill.descPlaceholder"),
           },
         ],
-        filePreview: (v) =>
-          `~/zibby/skills/${slugPreview(v.name, fallbackName)}/SKILL.md`,
+        filePreview: (v) => `~/zibby/skills/${slugPreview(v.name, fallbackName)}/SKILL.md`,
       };
   }
 }

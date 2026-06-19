@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /**
  * Utilization of one interactive Claude window (the rolling 5-hour bucket and
@@ -14,8 +14,8 @@ import { z } from "zod"
 export const LimitWindowSchema = z.object({
   usedPct: z.number().min(0).max(100),
   resetsAt: z.number().int().nonnegative().nullable(),
-})
-export type LimitWindow = z.infer<typeof LimitWindowSchema>
+});
+export type LimitWindow = z.infer<typeof LimitWindowSchema>;
 
 /**
  * The interactive-limits readout backing the dashboard panel: the rolling
@@ -31,5 +31,5 @@ export const LimitsSchema = z.object({
   weekly: LimitWindowSchema,
   capturedAt: z.number().int().nonnegative().nullable(),
   stale: z.boolean(),
-})
-export type Limits = z.infer<typeof LimitsSchema>
+});
+export type Limits = z.infer<typeof LimitsSchema>;

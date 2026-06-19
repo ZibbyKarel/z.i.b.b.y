@@ -16,8 +16,8 @@ import { describe, expect, it } from "vitest";
 // Resolve the features dir from the run cwd (repo root or apps/web, depending on
 // how vitest is invoked) — `import.meta.url` is not a file: URL under the transform.
 const FEATURES_DIR =
-  [resolve(process.cwd(), "apps/web/features"), resolve(process.cwd(), "features")].find(
-    (dir) => existsSync(dir),
+  [resolve(process.cwd(), "apps/web/features"), resolve(process.cwd(), "features")].find((dir) =>
+    existsSync(dir),
   ) ?? resolve(process.cwd(), "features");
 const GRANT_HOOK = "useCreateProjectMutation";
 

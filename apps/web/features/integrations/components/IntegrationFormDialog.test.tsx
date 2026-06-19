@@ -69,7 +69,10 @@ describe("IntegrationFormDialog", () => {
     await userEvent.click(screen.getByText("Jira"));
 
     await userEvent.type(screen.getByTestId("integration-id"), "acme-jira");
-    await userEvent.type(screen.getByTestId(IntegrationFormTestId.JiraBaseUrl), "https://acme.atlassian.net");
+    await userEvent.type(
+      screen.getByTestId(IntegrationFormTestId.JiraBaseUrl),
+      "https://acme.atlassian.net",
+    );
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.JiraEmail), "ops@acme.com");
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.JiraProjectKey), "ACME");
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.Secret), "jira-api-token");
@@ -126,7 +129,11 @@ describe("IntegrationFormDialog", () => {
 
     const draft = onSubmit.mock.calls[0]![0];
     expect(draft.create.kind).toBe("calendar");
-    expect(draft.create.config).toEqual({ kind: "calendar", calendarId: "primary", lookaheadDays: 14 });
+    expect(draft.create.config).toEqual({
+      kind: "calendar",
+      calendarId: "primary",
+      lookaheadDays: 14,
+    });
     expect(JSON.stringify(draft.create)).not.toContain("client_email");
   });
 
@@ -141,4 +148,4 @@ describe("IntegrationFormDialog", () => {
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "not-a-repo");
     expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeDisabled();
   });
-})
+});

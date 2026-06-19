@@ -53,12 +53,7 @@ export function TaskComposer({
           <Typography mono size="2xs" tracking="wide" type="note" variant="tertiary">
             {t("pathsTitle")}
           </Typography>
-          <PathChips
-            onGrant={onGrant}
-            onRemove={onRemovePath}
-            paths={paths}
-            resolved={resolved}
-          />
+          <PathChips onGrant={onGrant} onRemove={onRemovePath} paths={paths} resolved={resolved} />
         </Stack>
       )}
 

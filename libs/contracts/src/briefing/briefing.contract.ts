@@ -1,8 +1,8 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { BriefingSchema, GenerateBriefingResultSchema } from "./briefing.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { BriefingSchema, GenerateBriefingResultSchema } from "./briefing.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Briefing (Phase 6.2). `GET` is a PURE read — it assembles the current briefing
@@ -29,5 +29,5 @@ export const briefingContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type BriefingContract = typeof briefingContract
+);
+export type BriefingContract = typeof briefingContract;

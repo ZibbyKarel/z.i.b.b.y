@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { CategoryManifestStore } from "../shared/categories/category-manifest-store"
-import { SKILLS_DIR } from "./skills.storage.service"
+import { Inject, Injectable } from "@nestjs/common";
+import { CategoryManifestStore } from "../shared/categories/category-manifest-store";
+import { SKILLS_DIR } from "./skills.storage.service";
 
 /**
  * Category taxonomy for the skill catalog. Lives in the skills data directory
@@ -11,6 +11,6 @@ import { SKILLS_DIR } from "./skills.storage.service"
 @Injectable()
 export class SkillCategoriesStorageService extends CategoryManifestStore {
   constructor(@Inject(SKILLS_DIR) dir: string) {
-    super(dir)
+    super(dir);
   }
 }

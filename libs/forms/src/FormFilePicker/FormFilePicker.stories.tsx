@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { zodResolver } from "../zodResolver"
-import { z } from "zod"
-import { Stack } from "@zibby/design-system"
-import { Form } from "../Form"
-import { FormFilePicker } from "./FormFilePicker"
+import type { Meta, StoryObj } from "@storybook/react";
+import { zodResolver } from "../zodResolver";
+import { z } from "zod";
+import { Stack } from "@zibby/design-system";
+import { Form } from "../Form";
+import { FormFilePicker } from "./FormFilePicker";
 
 const meta: Meta<typeof FormFilePicker> = {
   title: "Forms/FormFilePicker",
@@ -16,13 +16,13 @@ const meta: Meta<typeof FormFilePicker> = {
       </div>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof FormFilePicker>
+type Story = StoryObj<typeof FormFilePicker>;
 
-const schema = z.object({ files: z.array(z.instanceof(File)).min(1, "Soubor je povinný") })
-type Schema = z.infer<typeof schema>
+const schema = z.object({ files: z.array(z.instanceof(File)).min(1, "Soubor je povinný") });
+type Schema = z.infer<typeof schema>;
 
 export const Overview: Story = {
   render: () => (
@@ -40,16 +40,13 @@ export const Overview: Story = {
       </Stack>
     </Form>
   ),
-}
+};
 
 export const Playground: Story = {
   args: { label: "Dokument", name: "files", hint: "PDF nebo DOCX" },
   render: (args) => (
-    <Form<{ files: File[] }>
-      formOptions={{ defaultValues: { files: [] } }}
-      onSubmit={() => {}}
-    >
+    <Form<{ files: File[] }> formOptions={{ defaultValues: { files: [] } }} onSubmit={() => {}}>
       <FormFilePicker<{ files: File[] }> {...args} name="files" />
     </Form>
   ),
-}
+};

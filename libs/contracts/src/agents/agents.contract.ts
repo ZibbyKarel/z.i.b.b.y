@@ -1,15 +1,10 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import {
-  AgentIdSchema,
-  AgentSchema,
-  CreateAgentSchema,
-  UpdateAgentSchema,
-} from "./agent.schema"
-import { AgentRunSchema } from "./agent-run.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { AgentIdSchema, AgentSchema, CreateAgentSchema, UpdateAgentSchema } from "./agent.schema";
+import { AgentRunSchema } from "./agent-run.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Single source of truth for the agents API. The NestJS backend implements this
@@ -88,9 +83,9 @@ export const agentsContract = c.router(
     pathPrefix: "/api",
     strictStatusCodes: true,
   },
-)
+);
 
-export type AgentsContract = typeof agentsContract
+export type AgentsContract = typeof agentsContract;
 
 /**
  * Agent catalog-liveness contract — the one runtime endpoint that survives the
@@ -117,6 +112,6 @@ export const agentRunsContract = c.router(
     pathPrefix: "/api",
     strictStatusCodes: true,
   },
-)
+);
 
-export type AgentRunsContract = typeof agentRunsContract
+export type AgentRunsContract = typeof agentRunsContract;

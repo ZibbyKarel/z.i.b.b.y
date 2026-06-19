@@ -14,44 +14,44 @@
  * persistence: the badge is a pure function of the live queries.
  */
 
-export type NotificationKind = "approval" | "parked" | "briefing"
+export type NotificationKind = "approval" | "parked" | "briefing";
 
 export interface Notification {
-  kind: NotificationKind
-  id: string
-  label: string
-  href: string
+  kind: NotificationKind;
+  id: string;
+  label: string;
+  href: string;
 }
 
 /** The minimal shapes the selector reads off the three existing queries. */
 export interface NotificationInput {
-  approvals: Array<{ id: string; skill?: string; action?: string }>
-  runs: Array<{ runId: string; status: string; title?: string }>
-  briefing?: { nothingNeedsYou: boolean }
+  approvals: Array<{ id: string; skill?: string; action?: string }>;
+  runs: Array<{ runId: string; status: string; title?: string }>;
+  briefing?: { nothingNeedsYou: boolean };
 }
 
 export function selectNotifications(input: NotificationInput): Notification[] {
-  const out: Notification[] = []
+  const out: Notification[] = [];
 
   for (const a of input.approvals) {
-    out.push({ kind: "approval", id: a.id, label: a.skill ?? a.action ?? a.id, href: "/runs" })
+    out.push({ kind: "approval", id: a.id, label: a.skill ?? a.action ?? a.id, href: "/runs" });
   }
 
   for (const r of input.runs) {
     // RunView already collapses retries-parked to `status: "parked"`.
     if (r.status === "parked") {
-      out.push({ kind: "parked", id: r.runId, label: r.title || r.runId, href: "/runs" })
+      out.push({ kind: "parked", id: r.runId, label: r.title || r.runId, href: "/runs" });
     }
   }
 
   if (input.briefing && !input.briefing.nothingNeedsYou) {
-    out.push({ kind: "briefing", id: "briefing", label: "briefing", href: "/overview" })
+    out.push({ kind: "briefing", id: "briefing", label: "briefing", href: "/overview" });
   }
 
-  return out
+  return out;
 }
 
 /** The count that drives the runs nav badge: pending decisions + parked runs only. */
 export function navBadgeCount(notifications: Notification[]): number {
-  return notifications.filter((n) => n.kind === "approval" || n.kind === "parked").length
+  return notifications.filter((n) => n.kind === "approval" || n.kind === "parked").length;
 }

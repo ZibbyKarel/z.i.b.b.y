@@ -1,8 +1,8 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ProposalSchema } from "./proposal.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ProposalSchema } from "./proposal.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Read-only view of discovery proposals. The gate (the `proposed-task` approvals)
@@ -21,5 +21,5 @@ export const discoveryContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type DiscoveryContract = typeof discoveryContract
+);
+export type DiscoveryContract = typeof discoveryContract;

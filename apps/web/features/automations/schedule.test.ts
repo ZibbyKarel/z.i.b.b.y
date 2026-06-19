@@ -36,12 +36,42 @@ describe("describeCron", () => {
 
 describe("cronToSchedule", () => {
   it("reads the friendly shapes into a Schedule", () => {
-    expect(cronToSchedule("0 7 * * *")).toEqual({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 1, 2, 3, 4, 5, 6], time: "07:00" });
-    expect(cronToSchedule("30 8 * * 1-5")).toEqual({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [1, 2, 3, 4, 5], time: "08:30" });
-    expect(cronToSchedule("0 12 * * 0,6")).toEqual({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 6], time: "12:00" });
-    expect(cronToSchedule("15 10 * * 5")).toEqual({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [5], time: "10:15" });
-    expect(cronToSchedule("0 7 * * 1,3,5")).toEqual({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [1, 3, 5], time: "07:00" });
-    expect(cronToSchedule("0 2 15 * *")).toEqual({ ...DEFAULT_SCHEDULE, repeat: "monthly", monthDay: 15, time: "02:00" });
+    expect(cronToSchedule("0 7 * * *")).toEqual({
+      ...DEFAULT_SCHEDULE,
+      repeat: "weekly",
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      time: "07:00",
+    });
+    expect(cronToSchedule("30 8 * * 1-5")).toEqual({
+      ...DEFAULT_SCHEDULE,
+      repeat: "weekly",
+      weekdays: [1, 2, 3, 4, 5],
+      time: "08:30",
+    });
+    expect(cronToSchedule("0 12 * * 0,6")).toEqual({
+      ...DEFAULT_SCHEDULE,
+      repeat: "weekly",
+      weekdays: [0, 6],
+      time: "12:00",
+    });
+    expect(cronToSchedule("15 10 * * 5")).toEqual({
+      ...DEFAULT_SCHEDULE,
+      repeat: "weekly",
+      weekdays: [5],
+      time: "10:15",
+    });
+    expect(cronToSchedule("0 7 * * 1,3,5")).toEqual({
+      ...DEFAULT_SCHEDULE,
+      repeat: "weekly",
+      weekdays: [1, 3, 5],
+      time: "07:00",
+    });
+    expect(cronToSchedule("0 2 15 * *")).toEqual({
+      ...DEFAULT_SCHEDULE,
+      repeat: "monthly",
+      monthDay: 15,
+      time: "02:00",
+    });
   });
 
   it("returns null for expressions the picker cannot represent", () => {
@@ -53,30 +83,84 @@ describe("cronToSchedule", () => {
 
 describe("scheduleToCron", () => {
   it("renders each cadence to cron", () => {
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 1, 2, 3, 4, 5, 6], time: "07:00" })).toBe("0 7 * * *");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [1, 2, 3, 4, 5], time: "08:30" })).toBe("30 8 * * 1-5");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 6], time: "12:00" })).toBe("0 12 * * 0,6");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [5], time: "07:00" })).toBe("0 7 * * 5");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [1, 3, 5], time: "07:00" })).toBe("0 7 * * 1,3,5");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "monthly", monthDay: 15, time: "02:00" })).toBe("0 2 15 * *");
+    expect(
+      scheduleToCron({
+        ...DEFAULT_SCHEDULE,
+        repeat: "weekly",
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        time: "07:00",
+      }),
+    ).toBe("0 7 * * *");
+    expect(
+      scheduleToCron({
+        ...DEFAULT_SCHEDULE,
+        repeat: "weekly",
+        weekdays: [1, 2, 3, 4, 5],
+        time: "08:30",
+      }),
+    ).toBe("30 8 * * 1-5");
+    expect(
+      scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 6], time: "12:00" }),
+    ).toBe("0 12 * * 0,6");
+    expect(
+      scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [5], time: "07:00" }),
+    ).toBe("0 7 * * 5");
+    expect(
+      scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [1, 3, 5], time: "07:00" }),
+    ).toBe("0 7 * * 1,3,5");
+    expect(
+      scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "monthly", monthDay: 15, time: "02:00" }),
+    ).toBe("0 2 15 * *");
   });
 
   it("collapses an empty or full weekday set to every day", () => {
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [], time: "07:00" })).toBe("0 7 * * *");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 1, 2, 3, 4, 5, 6], time: "07:00" })).toBe("0 7 * * *");
+    expect(
+      scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [], time: "07:00" }),
+    ).toBe("0 7 * * *");
+    expect(
+      scheduleToCron({
+        ...DEFAULT_SCHEDULE,
+        repeat: "weekly",
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        time: "07:00",
+      }),
+    ).toBe("0 7 * * *");
   });
 
   it("normalizes unsorted or duplicated weekdays", () => {
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [5, 1, 3, 1], time: "07:00" })).toBe("0 7 * * 1,3,5");
+    expect(
+      scheduleToCron({
+        ...DEFAULT_SCHEDULE,
+        repeat: "weekly",
+        weekdays: [5, 1, 3, 1],
+        time: "07:00",
+      }),
+    ).toBe("0 7 * * 1,3,5");
   });
 
   it("clamps out-of-range time and day fields", () => {
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "weekly", weekdays: [0, 1, 2, 3, 4, 5, 6], time: "99:99" })).toBe("59 23 * * *");
-    expect(scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "monthly", monthDay: 40, time: "00:00" })).toBe("0 0 31 * *");
+    expect(
+      scheduleToCron({
+        ...DEFAULT_SCHEDULE,
+        repeat: "weekly",
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        time: "99:99",
+      }),
+    ).toBe("59 23 * * *");
+    expect(
+      scheduleToCron({ ...DEFAULT_SCHEDULE, repeat: "monthly", monthDay: 40, time: "00:00" }),
+    ).toBe("0 0 31 * *");
   });
 
   it("round-trips every representable cron through a Schedule", () => {
-    for (const expr of ["0 7 * * *", "30 8 * * 1-5", "0 12 * * 0,6", "15 10 * * 5", "0 7 * * 1,3,5", "0 2 15 * *"]) {
+    for (const expr of [
+      "0 7 * * *",
+      "30 8 * * 1-5",
+      "0 12 * * 0,6",
+      "15 10 * * 5",
+      "0 7 * * 1,3,5",
+      "0 2 15 * *",
+    ]) {
       const schedule = cronToSchedule(expr);
       expect(schedule).not.toBeNull();
       expect(scheduleToCron(schedule!)).toBe(expr);

@@ -29,8 +29,8 @@ runs nightly alongside the other consolidation jobs. Deterministic — no `claud
 
 ## Relationship to the rest of self-modification
 
-The *back half* of self-modification already exists: the classifier routes a
+The _back half_ of self-modification already exists: the classifier routes a
 self-modification intent to the delivery pipeline against ZIBBY's own repo, the goal
 loop builds it in an isolated sibling worktree (builder ≠ subject), and the locked gate
 floor forces every PR through approval (`pr.open → ask`, `pr.merge → deny`). The
-GapDetector supplies the *front half* — noticing what's worth changing in the first place.
+GapDetector supplies the _front half_ — noticing what's worth changing in the first place.

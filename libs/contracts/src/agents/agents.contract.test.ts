@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 import {
   AGENT_ID_REGEX,
   AgentRunSchema,
@@ -8,65 +8,65 @@ import {
   UpdateAgentSchema,
   agentRunsContract,
   agentsContract,
-} from "../index"
+} from "../index";
 
 describe("agentsContract", () => {
   it("exposes the five CRUD routes with the expected methods and paths", () => {
-    expect(agentsContract.createAgent.method).toBe("POST")
-    expect(agentsContract.createAgent.path).toBe("/api/agents")
+    expect(agentsContract.createAgent.method).toBe("POST");
+    expect(agentsContract.createAgent.path).toBe("/api/agents");
 
-    expect(agentsContract.listAgents.method).toBe("GET")
-    expect(agentsContract.listAgents.path).toBe("/api/agents")
+    expect(agentsContract.listAgents.method).toBe("GET");
+    expect(agentsContract.listAgents.path).toBe("/api/agents");
 
-    expect(agentsContract.getAgent.method).toBe("GET")
-    expect(agentsContract.getAgent.path).toBe("/api/agents/:id")
+    expect(agentsContract.getAgent.method).toBe("GET");
+    expect(agentsContract.getAgent.path).toBe("/api/agents/:id");
 
-    expect(agentsContract.updateAgent.method).toBe("PATCH")
-    expect(agentsContract.updateAgent.path).toBe("/api/agents/:id")
+    expect(agentsContract.updateAgent.method).toBe("PATCH");
+    expect(agentsContract.updateAgent.path).toBe("/api/agents/:id");
 
-    expect(agentsContract.deleteAgent.method).toBe("DELETE")
-    expect(agentsContract.deleteAgent.path).toBe("/api/agents/:id")
-  })
+    expect(agentsContract.deleteAgent.method).toBe("DELETE");
+    expect(agentsContract.deleteAgent.path).toBe("/api/agents/:id");
+  });
 
   it("exposes a search route declared before the `:id` route", () => {
-    expect(agentsContract.searchAgents.method).toBe("GET")
-    expect(agentsContract.searchAgents.path).toBe("/api/agents/search")
-    expect(agentsContract.searchAgents.responses).toHaveProperty("200")
+    expect(agentsContract.searchAgents.method).toBe("GET");
+    expect(agentsContract.searchAgents.path).toBe("/api/agents/search");
+    expect(agentsContract.searchAgents.responses).toHaveProperty("200");
 
     // The static `/search` route must precede `/:id` in the contract so the
     // router matches it as its own route rather than capturing it as an id.
-    const keys = Object.keys(agentsContract)
-    expect(keys.indexOf("searchAgents")).toBeLessThan(keys.indexOf("getAgent"))
-  })
+    const keys = Object.keys(agentsContract);
+    expect(keys.indexOf("searchAgents")).toBeLessThan(keys.indexOf("getAgent"));
+  });
 
   it("declares the error responses required by the task", () => {
-    expect(agentsContract.createAgent.responses).toHaveProperty("201")
-    expect(agentsContract.createAgent.responses).toHaveProperty("409")
+    expect(agentsContract.createAgent.responses).toHaveProperty("201");
+    expect(agentsContract.createAgent.responses).toHaveProperty("409");
 
     for (const route of [
       agentsContract.getAgent,
       agentsContract.updateAgent,
       agentsContract.deleteAgent,
     ]) {
-      expect(route.responses).toHaveProperty("404")
+      expect(route.responses).toHaveProperty("404");
     }
-  })
-})
+  });
+});
 
 describe("agentRunsContract", () => {
   it("exposes only the catalog-liveness running list (run lifecycle moved to /api/tasks/runs)", () => {
-    expect(agentRunsContract.listRunning.method).toBe("GET")
-    expect(agentRunsContract.listRunning.path).toBe("/api/agents/running")
+    expect(agentRunsContract.listRunning.method).toBe("GET");
+    expect(agentRunsContract.listRunning.path).toBe("/api/agents/running");
     // The per-kind run routes are gone — a run is started only via a task, and
     // every run operation lives on the unified `taskRuns` contract.
-    expect(agentRunsContract).not.toHaveProperty("startRun")
-    expect(agentRunsContract).not.toHaveProperty("getRun")
-    expect(agentRunsContract).not.toHaveProperty("getRunLogs")
-    expect(agentRunsContract).not.toHaveProperty("stopRun")
-    expect(agentRunsContract).not.toHaveProperty("deleteRun")
-    expect(agentRunsContract).not.toHaveProperty("listRuns")
-  })
-})
+    expect(agentRunsContract).not.toHaveProperty("startRun");
+    expect(agentRunsContract).not.toHaveProperty("getRun");
+    expect(agentRunsContract).not.toHaveProperty("getRunLogs");
+    expect(agentRunsContract).not.toHaveProperty("stopRun");
+    expect(agentRunsContract).not.toHaveProperty("deleteRun");
+    expect(agentRunsContract).not.toHaveProperty("listRuns");
+  });
+});
 
 describe("agent-run schema", () => {
   it("accepts a well-formed run", () => {
@@ -81,9 +81,9 @@ describe("agent-run schema", () => {
       startedAt: new Date().toISOString(),
       pid: 4242,
       logFile: "/tmp/runs/agent-007_1717400000000_4242.log",
-    })
-    expect(parsed.success).toBe(true)
-  })
+    });
+    expect(parsed.success).toBe(true);
+  });
 
   it("rejects an out-of-range pct or an unknown status", () => {
     const base = {
@@ -95,49 +95,49 @@ describe("agent-run schema", () => {
       startedAt: new Date().toISOString(),
       pid: 1,
       logFile: "/tmp/r.log",
-    }
-    expect(AgentRunSchema.safeParse({ ...base, status: "running", pct: 140 }).success).toBe(false)
-    expect(AgentRunSchema.safeParse({ ...base, status: "paused", pct: 10 }).success).toBe(false)
-  })
-})
+    };
+    expect(AgentRunSchema.safeParse({ ...base, status: "running", pct: 140 }).success).toBe(false);
+    expect(AgentRunSchema.safeParse({ ...base, status: "paused", pct: 10 }).success).toBe(false);
+  });
+});
 
 describe("run-log chunk schema", () => {
   it("requires a non-negative nextOffset", () => {
     expect(RunLogChunkSchema.safeParse({ content: "x", nextOffset: 0, done: false }).success).toBe(
       true,
-    )
+    );
     expect(RunLogChunkSchema.safeParse({ content: "x", nextOffset: -1, done: false }).success).toBe(
       false,
-    )
-  })
-})
+    );
+  });
+});
 
 describe("agent schemas", () => {
   it("accepts a well-formed create body", () => {
     const parsed = CreateAgentSchema.safeParse({
       id: "code-reviewer",
       instructions: "Review pull requests.",
-    })
-    expect(parsed.success).toBe(true)
-  })
+    });
+    expect(parsed.success).toBe(true);
+  });
 
   it("treats every update field as optional", () => {
-    expect(UpdateAgentSchema.safeParse({}).success).toBe(true)
-    expect(UpdateAgentSchema.safeParse({ instructions: "x" }).success).toBe(true)
-  })
+    expect(UpdateAgentSchema.safeParse({}).success).toBe(true);
+    expect(UpdateAgentSchema.safeParse({ instructions: "x" }).success).toBe(true);
+  });
 
   it("rejects path-traversal-shaped ids at the schema boundary", () => {
     for (const id of ["../../evil", "foo/bar", "/etc/passwd", "..", "", "a/../b"]) {
-      expect(AGENT_ID_REGEX.test(id)).toBe(false)
-      expect(CreateAgentSchema.safeParse({ id, instructions: "i" }).success).toBe(false)
+      expect(AGENT_ID_REGEX.test(id)).toBe(false);
+      expect(CreateAgentSchema.safeParse({ id, instructions: "i" }).success).toBe(false);
     }
-  })
+  });
 
   it("requires non-empty instructions on the full entity", () => {
-    const ok = AgentSchema.safeParse({ id: "a", instructions: "i" })
-    expect(ok.success).toBe(true)
+    const ok = AgentSchema.safeParse({ id: "a", instructions: "i" });
+    expect(ok.success).toBe(true);
 
-    const bad = AgentSchema.safeParse({ id: "a", instructions: "" })
-    expect(bad.success).toBe(false)
-  })
-})
+    const bad = AgentSchema.safeParse({ id: "a", instructions: "" });
+    expect(bad.success).toBe(false);
+  });
+});

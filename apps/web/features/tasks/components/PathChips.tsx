@@ -36,9 +36,7 @@ export function PathChips({ paths, resolved, onRemove, onGrant }: PathChipsProps
         const entry = byPath.get(path);
         const scoped = entry?.project ?? null;
         const isResolved = entry !== undefined;
-        const label = scoped
-          ? `${path} · ${t("paths.scopedTo", { project: scoped.name })}`
-          : path;
+        const label = scoped ? `${path} · ${t("paths.scopedTo", { project: scoped.name })}` : path;
         return (
           <Stack align="center" direction="row" gap="50" key={path}>
             <Tag size="sm" tone={scoped ? "ok" : "accent"}>
@@ -46,10 +44,7 @@ export function PathChips({ paths, resolved, onRemove, onGrant }: PathChipsProps
               {label}
             </Tag>
             {isResolved && !scoped && onGrant && (
-              <Pressable
-                aria-label={t("paths.grantAria", { path })}
-                onClick={() => onGrant(path)}
-              >
+              <Pressable aria-label={t("paths.grantAria", { path })} onClick={() => onGrant(path)}>
                 <Tag size="sm" tone="warn">
                   <Icon name="shield" size="xs" />
                   {t("paths.grant")}

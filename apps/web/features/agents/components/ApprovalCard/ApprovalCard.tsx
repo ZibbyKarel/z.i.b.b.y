@@ -43,11 +43,7 @@ const highRisk: ReadonlySet<RiskKind> = new Set(["payment", "deletion"]);
  * "order / pay" itself. The card lives in the amber "waiting for you" state;
  * high-risk actions (payment, deletion) confirm via a 0.9s hold.
  */
-export function ApprovalCard({
-  approval,
-  onApprove,
-  onReject,
-}: ApprovalCardProps) {
+export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProps) {
   const t = useTranslations("approval");
   const [done, setDone] = useState<"ok" | "no" | null>(null);
 
@@ -96,23 +92,10 @@ export function ApprovalCard({
 
           <Stack gap="25">
             <Typography size="md" type="note" weight="semibold">
-              <Typography
-                mono
-                as="span"
-                size="md"
-                tone="accent"
-                type="note"
-                weight="semibold"
-              >
+              <Typography mono as="span" size="md" tone="accent" type="note" weight="semibold">
                 {approval.skill}
               </Typography>{" "}
-              <Typography
-                as="span"
-                size="md"
-                type="note"
-                variant="secondary"
-                weight="normal"
-              >
+              <Typography as="span" size="md" type="note" variant="secondary" weight="normal">
                 {t("wants")}
               </Typography>{" "}
               {approval.action}

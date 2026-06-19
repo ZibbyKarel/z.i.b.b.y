@@ -9,7 +9,7 @@
  * sharing a data root. That configuration is explicitly out of scope (docs/ops.md:
  * "one instance per data root"; the launchd KeepAlive label guarantees it).
  */
-const tails = new Map<string, Promise<unknown>>()
+const tails = new Map<string, Promise<unknown>>();
 
 /**
  * Run `fn` with exclusive access to `key`, queued behind any in-flight work on the
@@ -18,19 +18,19 @@ const tails = new Map<string, Promise<unknown>>()
  * waiter still runs.
  */
 export function withPathLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = tails.get(key) ?? Promise.resolve()
+  const prev = tails.get(key) ?? Promise.resolve();
   // Chain after the previous holder settles, success OR failure, so one task's
   // error never strands the queue.
-  const run = prev.then(fn, fn)
+  const run = prev.then(fn, fn);
   // The stored tail swallows errors (so the NEXT caller chaining off it isn't
   // rejected) and self-cleans the map entry once it is the latest settled tail.
   const tail = run.then(
     () => {},
     () => {},
-  )
-  tails.set(key, tail)
+  );
+  tails.set(key, tail);
   void tail.then(() => {
-    if (tails.get(key) === tail) tails.delete(key)
-  })
-  return run
+    if (tails.get(key) === tail) tails.delete(key);
+  });
+  return run;
 }

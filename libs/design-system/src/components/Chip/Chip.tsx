@@ -33,7 +33,14 @@ export interface ChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "classN
  * The "color = state" half of the badge family (the angular {@link Tag} is the
  * "shape = category" half).
  */
-export function Chip({ tone = "idle", dot = false, pulse = false, children, ref, ...props }: ChipProps) {
+export function Chip({
+  tone = "idle",
+  dot = false,
+  pulse = false,
+  children,
+  ref,
+  ...props
+}: ChipProps) {
   return (
     <span
       className={cn(

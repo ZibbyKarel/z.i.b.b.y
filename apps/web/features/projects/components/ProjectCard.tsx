@@ -1,12 +1,5 @@
 import type { Project, ProjectBudgetStatus } from "@zibby/contracts";
-import {
-  Progress,
-  Stack,
-  Stat,
-  Tag,
-  Typography,
-  getUsageTone,
-} from "@zibby/design-system";
+import { Progress, Stack, Stat, Tag, Typography, getUsageTone } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudCard } from "../../../components/HudCard/HudCard";
 
@@ -31,7 +24,12 @@ function BudgetBar({ label, used, cap }: { label: string; used: number; cap?: nu
           {used}/{cap}
         </Typography>
       </Stack>
-      <Progress height="50" label={`${label} ${used}/${cap}`} tone={getUsageTone(pct)} value={pct} />
+      <Progress
+        height="50"
+        label={`${label} ${used}/${cap}`}
+        tone={getUsageTone(pct)}
+        value={pct}
+      />
     </Stack>
   );
 }
@@ -51,8 +49,16 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
       actions={
         hasBudget ? (
           <Stack gap="100">
-            <BudgetBar cap={project.budget?.dailyRuns} label={t("budgetDaily")} used={budget?.daily.used ?? 0} />
-            <BudgetBar cap={project.budget?.weeklyRuns} label={t("budgetWeekly")} used={budget?.weekly.used ?? 0} />
+            <BudgetBar
+              cap={project.budget?.dailyRuns}
+              label={t("budgetDaily")}
+              used={budget?.daily.used ?? 0}
+            />
+            <BudgetBar
+              cap={project.budget?.weeklyRuns}
+              label={t("budgetWeekly")}
+              used={budget?.weekly.used ?? 0}
+            />
             <Stack align="center" direction="row" gap="200">
               <Stat label={t("budgetRunning")} value={String(budget?.running ?? 0)} />
               {(budget?.queued ?? 0) > 0 && (

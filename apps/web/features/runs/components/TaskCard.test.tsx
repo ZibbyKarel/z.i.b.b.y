@@ -34,9 +34,7 @@ describe("TaskCard", () => {
       />,
     );
     expect(screen.getByText("Zkontrolovat zálohy")).toBeInTheDocument();
-    expect(
-      screen.getByText(/projdi \/backups a ověř včerejší snapshot/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/projdi \/backups a ověř včerejší snapshot/)).toBeInTheDocument();
     expect(screen.getByText(/architect · home-ops · před 5 m/)).toBeInTheDocument();
     expect(screen.getByText("běží")).toBeInTheDocument();
   });
@@ -54,9 +52,7 @@ describe("TaskCard", () => {
       />,
     );
     // The text is promoted to the headline, not repeated as a secondary line.
-    expect(
-      screen.getAllByText("projdi /backups a ověř včerejší snapshot"),
-    ).toHaveLength(1);
+    expect(screen.getAllByText("projdi /backups a ověř včerejší snapshot")).toHaveLength(1);
   });
 
   it("renders the task-origin line and the written-back outcome badge", () => {
@@ -102,7 +98,12 @@ describe("TaskCard", () => {
         glyph="bot"
         now={NOW}
         onSelect={() => {}}
-        run={{ ...run, status: "held", heldReason: "daily run cap reached (1/1)", projectId: "alpha" }}
+        run={{
+          ...run,
+          status: "held",
+          heldReason: "daily run cap reached (1/1)",
+          projectId: "alpha",
+        }}
         selected={false}
         startedLabel="teď"
         stateLabel="pozdrženo"

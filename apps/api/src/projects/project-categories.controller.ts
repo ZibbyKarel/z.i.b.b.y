@@ -1,9 +1,9 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { projectCategoriesContract } from "@zibby/contracts"
-import { makeCategoryHandlers } from "../shared/categories/category-handlers"
-import { ProjectCategoriesStorageService } from "./project-categories.storage.service"
-import { ProjectsStorageService } from "./projects.storage.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { projectCategoriesContract } from "@zibby/contracts";
+import { makeCategoryHandlers } from "../shared/categories/category-handlers";
+import { ProjectCategoriesStorageService } from "./project-categories.storage.service";
+import { ProjectsStorageService } from "./projects.storage.service";
 
 /**
  * Implements `projectCategoriesContract` (`/api/projects/categories`). Mounted
@@ -28,6 +28,6 @@ export class ProjectCategoriesController {
           (await this.projects.list()).filter((p) => p.category === name).length,
         noun: "project",
       }),
-    )
+    );
   }
 }

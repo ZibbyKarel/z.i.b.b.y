@@ -19,44 +19,47 @@
 
 Importy v `AppModule` v tomto pořadí:
 
-| Modul | Soubor | Zodpovídá za |
-|-------|--------|--------------|
-| `ConfigModule` | `@nestjs/config` (global) | Načítání `.env` |
-| `LoggingModule` | `shared/logging/` | `LoggerService`, `TraceContextService` |
-| `ActivityLogModule` | `activity/activity-log.module` | Append-only audit log |
-| `AgentsModule` | `agents/agents.module` | CRUD agentů + spouštění runů |
-| `SkillsModule` | `skills/skills.module` | CRUD skills |
-| `ProjectsModule` | `projects/projects.module` | Projekty, kategorie, matchování |
-| `PipelinesModule` | `pipelines/pipelines.module` | Pipeline CRUD + orchestrace |
-| `ApprovalsModule` | `approvals/approvals.module` | Schválení (všechny druhy) |
-| `GateRulesModule` | `gate-rules/gate-rules.module` | Globální katalog pravidel |
-| `MemoryModule` | `memory/memory.module` | Vault CRUD, grounding, search |
-| `RunRecorderModule` | `memory/run-recorder.module` | Záznam outcome runů do vault |
-| `ActivityRecorderModule` | `activity/activity-recorder.module` | Mapování business událostí → activity |
-| `BriefingModule` | `briefing/briefing.module` | Generování briefingů |
-| `AutomationsModule` | `automations/automations.module` | Cron/event triggery |
-| `IntegrationsModule` | `integrations/integrations.module` | Channel adaptery, credentials |
-| `MandateModule` | `mandate/mandate.module` | Operátorův scope autonomie |
-| `ChannelsModule` | `channels/channels.module` | Heartbeat watcher, triage, item store |
-| `HealthModule` | `health/health.module` | Health check endpoint |
-| `LimitsModule` | `limits/limits.module` | Budget display |
-| `EventsModule` | `events/events.module` | Interní event bus |
-| `BudgetModule` | `budget/budget.module` | Budget ledger, spend tracking |
-| `TasksModule` | `tasks/tasks.module` | Deferred task daemon |
+| Modul                    | Soubor                              | Zodpovídá za                           |
+| ------------------------ | ----------------------------------- | -------------------------------------- |
+| `ConfigModule`           | `@nestjs/config` (global)           | Načítání `.env`                        |
+| `LoggingModule`          | `shared/logging/`                   | `LoggerService`, `TraceContextService` |
+| `ActivityLogModule`      | `activity/activity-log.module`      | Append-only audit log                  |
+| `AgentsModule`           | `agents/agents.module`              | CRUD agentů + spouštění runů           |
+| `SkillsModule`           | `skills/skills.module`              | CRUD skills                            |
+| `ProjectsModule`         | `projects/projects.module`          | Projekty, kategorie, matchování        |
+| `PipelinesModule`        | `pipelines/pipelines.module`        | Pipeline CRUD + orchestrace            |
+| `ApprovalsModule`        | `approvals/approvals.module`        | Schválení (všechny druhy)              |
+| `GateRulesModule`        | `gate-rules/gate-rules.module`      | Globální katalog pravidel              |
+| `MemoryModule`           | `memory/memory.module`              | Vault CRUD, grounding, search          |
+| `RunRecorderModule`      | `memory/run-recorder.module`        | Záznam outcome runů do vault           |
+| `ActivityRecorderModule` | `activity/activity-recorder.module` | Mapování business událostí → activity  |
+| `BriefingModule`         | `briefing/briefing.module`          | Generování briefingů                   |
+| `AutomationsModule`      | `automations/automations.module`    | Cron/event triggery                    |
+| `IntegrationsModule`     | `integrations/integrations.module`  | Channel adaptery, credentials          |
+| `MandateModule`          | `mandate/mandate.module`            | Operátorův scope autonomie             |
+| `ChannelsModule`         | `channels/channels.module`          | Heartbeat watcher, triage, item store  |
+| `HealthModule`           | `health/health.module`              | Health check endpoint                  |
+| `LimitsModule`           | `limits/limits.module`              | Budget display                         |
+| `EventsModule`           | `events/events.module`              | Interní event bus                      |
+| `BudgetModule`           | `budget/budget.module`              | Budget ledger, spend tracking          |
+| `TasksModule`            | `tasks/tasks.module`                | Deferred task daemon                   |
 
 ## Sdílená infrastruktura (shared/)
 
 ### LoggerService + TraceContextService
+
 - `LoggerService` poskytuje `child(name)` → `ScopedLogger` s prefixem modulu
 - `TraceContextService` udržuje `traceId` a `runId` v `AsyncLocalStorage` — každý log line a activity entry je automaticky korelována
 - Log level: `LOG_LEVEL` env var (debug / info / warn / error)
 
 ### FileStorage
+
 - `file-storage/file-utils.ts` — `resolveSafeFile`, `writeFileAtomic`, `ensureDir`, `safeJson`
 - `file-storage/file-lock.ts` — `withPathLock(path, fn)` pro per-soubor mutex (in-process)
 - `data-dir.ts` — `ZIBBY_DATA_DIR` resolution + lock soubor zabraňující druhé instanci (in-process only — launchd garantuje jednu instanci přes Label)
 
 ### SSE (Server-Sent Events)
+
 - `shared/sse/` — streaming log chunků na klienta bez WebSocket
 
 ## Datový adresář
@@ -86,13 +89,13 @@ data/
 
 ## Vývoj vs. produkce
 
-| | Vývoj | Produkce |
-|-|-------|---------|
-| Příkaz | `pnpm api:dev` | `pnpm api:start` |
-| Kompilátor | ts-node-dev (hot reload) | esbuild/tsc (compiled) |
-| Log level | `debug` | `info` |
-| Data dir | `apps/api/data` | `apps/api/data` |
-| Testovací data | `pnpm api:dev:test` | — |
+|                | Vývoj                    | Produkce               |
+| -------------- | ------------------------ | ---------------------- |
+| Příkaz         | `pnpm api:dev`           | `pnpm api:start`       |
+| Kompilátor     | ts-node-dev (hot reload) | esbuild/tsc (compiled) |
+| Log level      | `debug`                  | `info`                 |
+| Data dir       | `apps/api/data`          | `apps/api/data`        |
+| Testovací data | `pnpm api:dev:test`      | —                      |
 
 ## Smoke test
 

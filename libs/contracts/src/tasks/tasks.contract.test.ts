@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 import {
   CreateTaskInputSchema,
   ProposedGoalSchema,
@@ -8,16 +8,16 @@ import {
   TaskOutputSchema,
   TaskRoutingSchema,
   tasksContract,
-} from "../index"
+} from "../index";
 
 describe("tasksContract", () => {
   it("exposes a POST /api/tasks/classify route returning 200 and 422", () => {
-    expect(tasksContract.classifyTask.method).toBe("POST")
-    expect(tasksContract.classifyTask.path).toBe("/api/tasks/classify")
-    expect(tasksContract.classifyTask.responses).toHaveProperty("200")
-    expect(tasksContract.classifyTask.responses).toHaveProperty("422")
-  })
-})
+    expect(tasksContract.classifyTask.method).toBe("POST");
+    expect(tasksContract.classifyTask.path).toBe("/api/tasks/classify");
+    expect(tasksContract.classifyTask.responses).toHaveProperty("200");
+    expect(tasksContract.classifyTask.responses).toHaveProperty("422");
+  });
+});
 
 describe("TaskRoutingSchema", () => {
   const valid = {
@@ -26,49 +26,49 @@ describe("TaskRoutingSchema", () => {
     reason: "Matched: média, knihovna",
     matchedTerms: ["média", "knihovna"],
     candidates: [{ kind: "agent", id: "curator", name: "Kurátor" }],
-  }
+  };
 
   it("accepts a well-formed routing verdict", () => {
-    expect(TaskRoutingSchema.safeParse(valid).success).toBe(true)
-  })
+    expect(TaskRoutingSchema.safeParse(valid).success).toBe(true);
+  });
 
   it("rejects a confidence above 1", () => {
-    expect(TaskRoutingSchema.safeParse({ ...valid, confidence: 1.4 }).success).toBe(false)
-  })
+    expect(TaskRoutingSchema.safeParse({ ...valid, confidence: 1.4 }).success).toBe(false);
+  });
 
   it("rejects a missing target", () => {
-    const { confidence, reason, matchedTerms, candidates } = valid
+    const { confidence, reason, matchedTerms, candidates } = valid;
     expect(
       TaskRoutingSchema.safeParse({ confidence, reason, matchedTerms, candidates }).success,
-    ).toBe(false)
-  })
+    ).toBe(false);
+  });
 
   it("rejects an empty candidate list", () => {
-    expect(TaskRoutingSchema.safeParse({ ...valid, candidates: [] }).success).toBe(false)
-  })
+    expect(TaskRoutingSchema.safeParse({ ...valid, candidates: [] }).success).toBe(false);
+  });
 
   it("accepts the orchestrator fallback target (no id, synthetic display)", () => {
     const routing = {
       ...valid,
       target: { kind: "orchestrator", name: "Orchestrator", glyph: "compass" },
-    }
-    expect(TaskRoutingSchema.safeParse(routing).success).toBe(true)
-  })
+    };
+    expect(TaskRoutingSchema.safeParse(routing).success).toBe(true);
+  });
 
   it("rejects an agent target without an id", () => {
-    const routing = { ...valid, target: { kind: "agent", name: "Kurátor" } }
-    expect(TaskRoutingSchema.safeParse(routing).success).toBe(false)
-  })
+    const routing = { ...valid, target: { kind: "agent", name: "Kurátor" } };
+    expect(TaskRoutingSchema.safeParse(routing).success).toBe(false);
+  });
 
   // ── Phase 11: mode / proposedGoal / paths (additive, back-compatible) ──────
   it("applies defaults to an old-shaped response (single / null / [])", () => {
-    const parsed = TaskRoutingSchema.safeParse(valid)
-    expect(parsed.success).toBe(true)
-    if (!parsed.success) return
-    expect(parsed.data.mode).toBe("single")
-    expect(parsed.data.proposedGoal).toBeNull()
-    expect(parsed.data.paths).toEqual([])
-  })
+    const parsed = TaskRoutingSchema.safeParse(valid);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.mode).toBe("single");
+    expect(parsed.data.proposedGoal).toBeNull();
+    expect(parsed.data.paths).toEqual([]);
+  });
 
   it("round-trips a loop verdict carrying a synthesized proposedGoal + resolved paths", () => {
     const loop = {
@@ -85,16 +85,16 @@ describe("TaskRoutingSchema", () => {
         { path: "~/Projects/alpha", project: { id: "alpha", name: "Alpha" } },
         { path: "/tmp/scratch", project: null },
       ],
-    }
-    const parsed = TaskRoutingSchema.safeParse(loop)
-    expect(parsed.success).toBe(true)
-    if (!parsed.success) return
-    expect(parsed.data.mode).toBe("loop")
-    expect(parsed.data.proposedGoal?.maker).toEqual({ kind: "pipeline", id: "delivery" })
-    expect(parsed.data.paths[0]?.project?.name).toBe("Alpha")
-    expect(parsed.data.paths[1]?.project).toBeNull()
-  })
-})
+    };
+    const parsed = TaskRoutingSchema.safeParse(loop);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.mode).toBe("loop");
+    expect(parsed.data.proposedGoal?.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(parsed.data.paths[0]?.project?.name).toBe("Alpha");
+    expect(parsed.data.paths[1]?.project).toBeNull();
+  });
+});
 
 describe("ProposedGoalSchema (Phase 11)", () => {
   const valid = {
@@ -103,82 +103,88 @@ describe("ProposedGoalSchema (Phase 11)", () => {
     verifier: { kind: "checks" as const },
     maxIterations: 6,
     instructions: "keep going until tests pass",
-  }
+  };
 
   it("validates a synthesized goal proposal", () => {
-    expect(ProposedGoalSchema.safeParse(valid).success).toBe(true)
-  })
+    expect(ProposedGoalSchema.safeParse(valid).success).toBe(true);
+  });
 
   it("rejects a non-positive maxIterations", () => {
-    expect(ProposedGoalSchema.safeParse({ ...valid, maxIterations: 0 }).success).toBe(false)
-  })
+    expect(ProposedGoalSchema.safeParse({ ...valid, maxIterations: 0 }).success).toBe(false);
+  });
 
   it("rejects an empty objective", () => {
-    expect(ProposedGoalSchema.safeParse({ ...valid, objective: "" }).success).toBe(false)
-  })
-})
+    expect(ProposedGoalSchema.safeParse({ ...valid, objective: "" }).success).toBe(false);
+  });
+});
 
 describe("ResolvedPathSchema (Phase 11)", () => {
   it("round-trips a path scoped to a project", () => {
     const parsed = ResolvedPathSchema.safeParse({
       path: "~/Projects/alpha/src",
       project: { id: "alpha", name: "Alpha" },
-    })
-    expect(parsed.success).toBe(true)
-  })
+    });
+    expect(parsed.success).toBe(true);
+  });
 
   it("round-trips an unscoped (null-project) path", () => {
-    const parsed = ResolvedPathSchema.safeParse({ path: "/tmp/x", project: null })
-    expect(parsed.success).toBe(true)
-  })
-})
+    const parsed = ResolvedPathSchema.safeParse({ path: "/tmp/x", project: null });
+    expect(parsed.success).toBe(true);
+  });
+});
 
 describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
   it("accepts an optional goal target (scheduled-loop dispatch)", () => {
     const parsed = CreateTaskInputSchema.safeParse({
       text: "loop it",
       target: { kind: "goal", id: "my-goal", name: "My Goal" },
-    })
-    expect(parsed.success).toBe(true)
-  })
+    });
+    expect(parsed.success).toBe(true);
+  });
 
   it("stays valid with no target (the default path)", () => {
-    expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true)
-  })
+    expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true);
+  });
 
   it("accepts each chosen output (pr / file / void)", () => {
-    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "pr" } }).success).toBe(true)
+    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "pr" } }).success).toBe(
+      true,
+    );
     expect(
       CreateTaskInputSchema.safeParse({
         text: "x",
         output: { type: "file", dest: "vault", to: "notes/x.md" },
       }).success,
-    ).toBe(true)
-    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "void" } }).success).toBe(true)
-  })
+    ).toBe(true);
+    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "void" } }).success).toBe(
+      true,
+    );
+  });
 
   it("rejects a file output missing its dest/to", () => {
-    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "file" } }).success).toBe(false)
-  })
-})
+    expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "file" } }).success).toBe(
+      false,
+    );
+  });
+});
 
 describe("TaskOutputSchema", () => {
   it("rejects an unknown output type", () => {
-    expect(TaskOutputSchema.safeParse({ type: "email" }).success).toBe(false)
-  })
+    expect(TaskOutputSchema.safeParse({ type: "email" }).success).toBe(false);
+  });
 
   it("rejects a file dest outside project/vault", () => {
-    expect(
-      TaskOutputSchema.safeParse({ type: "file", dest: "s3", to: "x.md" }).success,
-    ).toBe(false)
-  })
-})
+    expect(TaskOutputSchema.safeParse({ type: "file", dest: "s3", to: "x.md" }).success).toBe(
+      false,
+    );
+  });
+});
 
 describe("ScheduledTask budget statuses (Phase 8)", () => {
   it("includes held + queued in the lifecycle enum", () => {
-    expect(ScheduledTaskStatusSchema.options).toContain("held")
-    expect(ScheduledTaskStatusSchema.options).toContain("queued")
-  })
+    expect(ScheduledTaskStatusSchema.options).toContain("held");
+    expect(ScheduledTaskStatusSchema.options).toContain("queued");
+  });
 
   const base = {
     id: "task_1",
@@ -188,11 +194,11 @@ describe("ScheduledTask budget statuses (Phase 8)", () => {
     scheduledAt: 1_700_000_000_000,
     status: "queued" as const,
     createdAt: new Date().toISOString(),
-  }
+  };
 
   it("accepts a queued task attributed to a project", () => {
-    expect(ScheduledTaskSchema.safeParse({ ...base, projectId: "alpha" }).success).toBe(true)
-  })
+    expect(ScheduledTaskSchema.safeParse({ ...base, projectId: "alpha" }).success).toBe(true);
+  });
 
   it("accepts a held task carrying its approval + reason", () => {
     expect(
@@ -203,11 +209,11 @@ describe("ScheduledTask budget statuses (Phase 8)", () => {
         heldReason: "project-daily cap reached",
         approvalId: "task_1_ab",
       }).success,
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
 
   it("includes awaiting-output and round-trips a task parked at the PR gate", () => {
-    expect(ScheduledTaskStatusSchema.options).toContain("awaiting-output")
+    expect(ScheduledTaskStatusSchema.options).toContain("awaiting-output");
     const parsed = ScheduledTaskSchema.safeParse({
       ...base,
       status: "awaiting-output",
@@ -221,7 +227,7 @@ describe("ScheduledTask budget statuses (Phase 8)", () => {
         title: "Ship it",
         body: "the body",
       },
-    })
-    expect(parsed.success).toBe(true)
-  })
-})
+    });
+    expect(parsed.success).toBe(true);
+  });
+});

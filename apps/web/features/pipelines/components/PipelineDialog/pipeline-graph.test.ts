@@ -12,7 +12,14 @@ import {
 } from "./pipeline-graph";
 
 const agents: Agent[] = [
-  { id: "writer", name: "Writer", glyph: "edit", model: "opus", thinking: "high", instructions: "w" },
+  {
+    id: "writer",
+    name: "Writer",
+    glyph: "edit",
+    model: "opus",
+    thinking: "high",
+    instructions: "w",
+  },
   { id: "tester", name: "Tester", glyph: "flask", instructions: "t" },
 ];
 
@@ -47,8 +54,28 @@ const existing: Pipeline = {
 function chainGraph(): PipelineGraph {
   return {
     nodes: [
-      { id: "a", type: "agent", agent: "writer", produces: "a.md", commands: "", model: "opus", thinking: "high", x: 0, y: 0 },
-      { id: "b", type: "agent", agent: "tester", produces: "b.md", commands: "", model: "sonnet", thinking: "low", x: 300, y: 0 },
+      {
+        id: "a",
+        type: "agent",
+        agent: "writer",
+        produces: "a.md",
+        commands: "",
+        model: "opus",
+        thinking: "high",
+        x: 0,
+        y: 0,
+      },
+      {
+        id: "b",
+        type: "agent",
+        agent: "tester",
+        produces: "b.md",
+        commands: "",
+        model: "sonnet",
+        thinking: "low",
+        x: 300,
+        y: 0,
+      },
     ],
     flow: [{ id: "e1", from: "a", to: "b" }],
     rework: [],
@@ -70,7 +97,13 @@ describe("phasesToGraph (auto-layout)", () => {
   it("turns a phase loop into a rework edge to the loop.to phase", () => {
     const g = phasesToGraph(existing, agents);
     expect(g.rework).toHaveLength(1);
-    expect(g.rework[0]).toMatchObject({ from: "verify", to: "koder", maxRetries: 2, escalate: true, then: "fail" });
+    expect(g.rework[0]).toMatchObject({
+      from: "verify",
+      to: "koder",
+      maxRetries: 2,
+      escalate: true,
+      then: "fail",
+    });
   });
 });
 
@@ -81,7 +114,17 @@ describe("orderNodes", () => {
 
   it("appends orphan nodes (no incoming/outgoing) deterministically", () => {
     const g = chainGraph();
-    g.nodes.push({ id: "orphan", type: "agent", agent: "tester", produces: "o.md", commands: "", model: "opus", thinking: "high", x: 0, y: 0 });
+    g.nodes.push({
+      id: "orphan",
+      type: "agent",
+      agent: "tester",
+      produces: "o.md",
+      commands: "",
+      model: "opus",
+      thinking: "high",
+      x: 0,
+      y: 0,
+    });
     expect(orderNodes(g).map((n) => n.id)).toEqual(["a", "b", "orphan"]);
   });
 });
@@ -96,9 +139,26 @@ describe("graphToPhases", () => {
   it("round-trips an existing pipeline back to a schema-valid, equivalent phases[]", () => {
     const g = phasesToGraph(existing, agents);
     const phases = graphToPhases(g, existing.phases[0]!.consumes!);
-    expect(phases[0]).toMatchObject({ id: "koder", agent: "writer", consumes: "task.md", produces: "implementation.md" });
-    expect(phases[1]).toMatchObject({ id: "verify", type: "verify", commands: ["pnpm test"], loop: { to: "koder", maxRetries: 2, escalate: true, then: "fail" } });
-    const input = { id: "delivery", name: "Delivery", desc: "d", instructions: "d", outputs: [], phases };
+    expect(phases[0]).toMatchObject({
+      id: "koder",
+      agent: "writer",
+      consumes: "task.md",
+      produces: "implementation.md",
+    });
+    expect(phases[1]).toMatchObject({
+      id: "verify",
+      type: "verify",
+      commands: ["pnpm test"],
+      loop: { to: "koder", maxRetries: 2, escalate: true, then: "fail" },
+    });
+    const input = {
+      id: "delivery",
+      name: "Delivery",
+      desc: "d",
+      instructions: "d",
+      outputs: [],
+      phases,
+    };
     expect(CreatePipelineSchema.safeParse(input).success).toBe(true);
   });
 
@@ -112,9 +172,25 @@ describe("graphToPhases", () => {
     const pipeline: Pipeline = {
       ...existing,
       phases: [
-        { id: "a1", type: "agent", agent: "writer", consumes: "task.md", produces: "draft.md", model: "opus", thinking: "high" },
+        {
+          id: "a1",
+          type: "agent",
+          agent: "writer",
+          consumes: "task.md",
+          produces: "draft.md",
+          model: "opus",
+          thinking: "high",
+        },
         { id: "v", type: "verify", commands: ["pnpm test"] },
-        { id: "a2", type: "agent", agent: "tester", consumes: "draft.md", produces: "final.md", model: "sonnet", thinking: "low" },
+        {
+          id: "a2",
+          type: "agent",
+          agent: "tester",
+          consumes: "draft.md",
+          produces: "final.md",
+          model: "sonnet",
+          thinking: "low",
+        },
       ],
     };
     const phases = graphToPhases(phasesToGraph(pipeline, agents), "task.md");
@@ -126,8 +202,21 @@ describe("graphToPhases", () => {
     const pipeline: Pipeline = {
       ...existing,
       phases: [
-        { id: "a1", type: "agent", agent: "writer", consumes: "task.md", produces: "draft.md", model: "opus", thinking: "high" },
-        { id: "v", type: "verify", commands: ["pnpm test"], loop: { to: "fail", maxRetries: 1, escalate: false, then: "fail" } },
+        {
+          id: "a1",
+          type: "agent",
+          agent: "writer",
+          consumes: "task.md",
+          produces: "draft.md",
+          model: "opus",
+          thinking: "high",
+        },
+        {
+          id: "v",
+          type: "verify",
+          commands: ["pnpm test"],
+          loop: { to: "fail", maxRetries: 1, escalate: false, then: "fail" },
+        },
       ],
     };
     const phases = graphToPhases(phasesToGraph(pipeline, agents), "task.md");
@@ -141,7 +230,10 @@ describe("validateGraph", () => {
   });
 
   it("rejects an empty canvas", () => {
-    expect(validateGraph({ nodes: [], flow: [], rework: [] }, "X")).toEqual({ ok: false, reason: "empty" });
+    expect(validateGraph({ nodes: [], flow: [], rework: [] }, "X")).toEqual({
+      ok: false,
+      reason: "empty",
+    });
   });
 
   it("rejects an agent node with no produces", () => {
@@ -152,13 +244,29 @@ describe("validateGraph", () => {
 
   it("accepts a valid upstream rework", () => {
     const g = chainGraph();
-    g.rework.push({ id: "w1", from: "b", to: "a", maxRetries: 3, escalate: true, then: "park", escalation: [] });
+    g.rework.push({
+      id: "w1",
+      from: "b",
+      to: "a",
+      maxRetries: 3,
+      escalate: true,
+      then: "park",
+      escalation: [],
+    });
     expect(validateGraph(g, "X")).toEqual({ ok: true });
   });
 
   it("rejects a forward (downstream) rework target", () => {
     const g = chainGraph();
-    g.rework.push({ id: "w1", from: "a", to: "b", maxRetries: 3, escalate: true, then: "park", escalation: [] });
+    g.rework.push({
+      id: "w1",
+      from: "a",
+      to: "b",
+      maxRetries: 3,
+      escalate: true,
+      then: "park",
+      escalation: [],
+    });
     expect(validateGraph(g, "X")).toEqual({ ok: false, reason: "rework" });
   });
 });

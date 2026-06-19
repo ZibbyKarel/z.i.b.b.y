@@ -3,11 +3,7 @@ import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
-import {
-  type Padding,
-  type Spacing,
-  spacingToPx,
-} from "../../tokens";
+import { type Padding, type Spacing, spacingToPx } from "../../tokens";
 
 export enum CardTestId {
   Root = "card-root",
@@ -34,10 +30,7 @@ export interface CornersProps {
 /** HUD bracket marks — the signature of a live panel; never decorative. */
 export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
   const px = spacingToPx(inset);
-  const base = cn(
-    "pointer-events-none absolute h-2.5 w-2.5 opacity-55",
-    cornersToneClass[tone],
-  );
+  const base = cn("pointer-events-none absolute h-2.5 w-2.5 opacity-55", cornersToneClass[tone]);
   return (
     <>
       <span
@@ -60,10 +53,7 @@ export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
   );
 }
 
-export interface CardProps extends Omit<
-  HTMLAttributes<HTMLDivElement>,
-  "className"
-> {
+export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   background?: "elevated" | "raised" | "surface" | "panel" | "glass" | "background";
   bordered?: boolean;
   borderStyle?: "solid" | "dashed";
@@ -191,7 +181,10 @@ export function Card({
 
 export function CardHeader({ children }: { children: ReactNode }) {
   return (
-    <div className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim" data-testid={CardTestId.Header}>
+    <div
+      className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim"
+      data-testid={CardTestId.Header}
+    >
       {children}
     </div>
   );
@@ -204,7 +197,11 @@ export function CardContent({
   children: ReactNode;
   padding?: Padding;
 }) {
-  return <Container data-testid={CardTestId.Content} padding={padding}>{children}</Container>;
+  return (
+    <Container data-testid={CardTestId.Content} padding={padding}>
+      {children}
+    </Container>
+  );
 }
 
 export function CardFooter({ children }: { children: ReactNode }) {

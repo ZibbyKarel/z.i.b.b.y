@@ -1,21 +1,21 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import {
   ACTIVITY_DATE_RE,
   type ActivityKind,
   ActivityKindSchema,
   activityContract,
-} from "@zibby/contracts"
-import { ActivityLogService } from "./activity-log.service"
+} from "@zibby/contracts";
+import { ActivityLogService } from "./activity-log.service";
 
 /** Parse the comma-separated `kinds` query into a validated kind list (bad values dropped). */
 function parseKinds(raw: string | undefined): ActivityKind[] | undefined {
-  if (!raw) return undefined
+  if (!raw) return undefined;
   const kinds = raw
     .split(",")
     .map((k) => k.trim())
-    .filter((k) => ActivityKindSchema.safeParse(k).success) as ActivityKind[]
-  return kinds.length > 0 ? kinds : undefined
+    .filter((k) => ActivityKindSchema.safeParse(k).success) as ActivityKind[];
+  return kinds.length > 0 ? kinds : undefined;
 }
 
 /** Implements `activityContract` against the {@link ActivityLogService} (read-only). */
@@ -28,7 +28,10 @@ export class ActivityController {
     return tsRestHandler(activityContract, {
       listActivity: async ({ query }) => {
         if (query.date !== undefined && !ACTIVITY_DATE_RE.test(query.date)) {
-          return { status: 422, body: { message: `invalid date "${query.date}" (expected YYYY-MM-DD)` } }
+          return {
+            status: 422,
+            body: { message: `invalid date "${query.date}" (expected YYYY-MM-DD)` },
+          };
         }
         return {
           status: 200,
@@ -37,8 +40,8 @@ export class ActivityController {
             kinds: parseKinds(query.kinds),
             limit: query.limit ?? 50,
           }),
-        }
+        };
       },
-    })
+    });
   }
 }

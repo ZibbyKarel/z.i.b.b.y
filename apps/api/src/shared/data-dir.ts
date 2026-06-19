@@ -1,4 +1,4 @@
-import * as path from "node:path"
+import * as path from "node:path";
 
 /**
  * The single data-root switch. Every file-backed store lives under one base
@@ -13,8 +13,8 @@ import * as path from "node:path"
  * of the default `apps/api/data`.
  */
 export function resolveDataRoot(): string {
-  const root = process.env.ZIBBY_DATA_DIR
-  if (root) return path.resolve(root)
+  const root = process.env.ZIBBY_DATA_DIR;
+  if (root) return path.resolve(root);
 
   // Tripwire (Phase 12.5): under the test runner the global `vitest.setup.ts`
   // always pins `ZIBBY_DATA_DIR` at a temp root. Reaching here without one means
@@ -26,13 +26,13 @@ export function resolveDataRoot(): string {
       "resolveDataRoot: refusing the live apps/api/data anchor under VITEST — " +
         "set ZIBBY_DATA_DIR (vitest.setup.ts does this globally). This guards " +
         "against tests touching real data (Phase 12.5).",
-    )
+    );
   }
 
-  return path.resolve(__dirname, "..", "..", "data")
+  return path.resolve(__dirname, "..", "..", "data");
 }
 
 /** Join sub-path segments onto the resolved data root. */
 export function dataDir(...segments: string[]): string {
-  return path.join(resolveDataRoot(), ...segments)
+  return path.join(resolveDataRoot(), ...segments);
 }

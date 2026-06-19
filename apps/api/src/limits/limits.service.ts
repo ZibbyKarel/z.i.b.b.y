@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common"
-import type { Limits } from "@zibby/contracts"
-import { type RateLimitSnapshot, RateLimitsReader } from "./rate-limits.reader"
-import { UsageFetcher } from "./usage-fetcher"
+import { Injectable } from "@nestjs/common";
+import type { Limits } from "@zibby/contracts";
+import { type RateLimitSnapshot, RateLimitsReader } from "./rate-limits.reader";
+import { UsageFetcher } from "./usage-fetcher";
 
 /** Shape the raw utilization snapshot into the contract payload. Pure. */
 export function buildLimits(snapshot: RateLimitSnapshot): Limits {
@@ -10,7 +10,7 @@ export function buildLimits(snapshot: RateLimitSnapshot): Limits {
     weekly: { usedPct: snapshot.weekly7dPct, resetsAt: snapshot.weekly7dResetsAt },
     capturedAt: snapshot.capturedAt,
     stale: snapshot.stale,
-  }
+  };
 }
 
 /**
@@ -20,14 +20,14 @@ export function buildLimits(snapshot: RateLimitSnapshot): Limits {
  * resets (see {@link LimitsService.refresh}), so the first request after a reset
  * sees fresh numbers.
  */
-export const CACHE_TTL_MS = 5 * 60 * 1000
+export const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /**
  * Conservative fallback for a limit pause's `resumeAt` (Phase 9) when neither the
  * run's output nor any live window named a reset. Half an hour out — long enough a
  * same-window retry won't instantly re-exhaust, short enough an idle run finishes.
  */
-export const RESUME_FALLBACK_MS = 30 * 60 * 1000
+export const RESUME_FALLBACK_MS = 30 * 60 * 1000;
 
 /**
  * Computes the interactive-limits readout backing the dashboard panel.
@@ -45,8 +45,8 @@ export const RESUME_FALLBACK_MS = 30 * 60 * 1000
  */
 @Injectable()
 export class LimitsService {
-  private cache: { snapshot: RateLimitSnapshot; expiresAt: number } | null = null
-  private inflight: Promise<RateLimitSnapshot> | null = null
+  private cache: { snapshot: RateLimitSnapshot; expiresAt: number } | null = null;
+  private inflight: Promise<RateLimitSnapshot> | null = null;
 
   constructor(
     private readonly reader: RateLimitsReader,
@@ -55,16 +55,16 @@ export class LimitsService {
 
   /** Override point for tests; production reads the wall clock. */
   protected now(): number {
-    return Date.now()
+    return Date.now();
   }
 
   async snapshot(): Promise<Limits> {
-    return buildLimits(await this.current())
+    return buildLimits(await this.current());
   }
 
   /** Drop the cached reading so the next request fetches a fresh one. */
   noteLimitHit(): void {
-    this.cache = null
+    this.cache = null;
   }
 
   /**
@@ -75,15 +75,15 @@ export class LimitsService {
    * straight through to the fallback).
    */
   async resolveResumeAt(detected: number | null, now: number = this.now()): Promise<number> {
-    if (detected != null && detected > now) return detected
-    const snap = await this.snapshot().catch(() => null)
+    if (detected != null && detected > now) return detected;
+    const snap = await this.snapshot().catch(() => null);
     const resets = snap
       ? [snap.rolling.resetsAt, snap.weekly.resetsAt].filter(
           (r): r is number => typeof r === "number" && r > now,
         )
-      : []
-    if (resets.length > 0) return Math.min(...resets)
-    return now + RESUME_FALLBACK_MS
+      : [];
+    if (resets.length > 0) return Math.min(...resets);
+    return now + RESUME_FALLBACK_MS;
   }
 
   /**
@@ -93,9 +93,9 @@ export class LimitsService {
    * capture. `hasHeadroom` is true only on a fresh reading with both windows < 100 %.
    */
   async resumeReadiness(): Promise<{ stale: boolean; hasHeadroom: boolean }> {
-    const snap = await this.snapshot().catch(() => null)
-    if (!snap || snap.stale) return { stale: true, hasHeadroom: false }
-    return { stale: false, hasHeadroom: snap.rolling.usedPct < 100 && snap.weekly.usedPct < 100 }
+    const snap = await this.snapshot().catch(() => null);
+    if (!snap || snap.stale) return { stale: true, hasHeadroom: false };
+    return { stale: false, hasHeadroom: snap.rolling.usedPct < 100 && snap.weekly.usedPct < 100 };
   }
 
   /**
@@ -105,36 +105,36 @@ export class LimitsService {
    * only when a non-stale snapshot shows either window at ≥ 100 %.
    */
   async windowExhausted(): Promise<{ exhausted: boolean; resumeAt: number | null }> {
-    const snap = await this.snapshot().catch(() => null)
-    if (!snap || snap.stale) return { exhausted: false, resumeAt: null }
-    const exhausted = snap.rolling.usedPct >= 100 || snap.weekly.usedPct >= 100
-    if (!exhausted) return { exhausted: false, resumeAt: null }
-    const now = this.now()
+    const snap = await this.snapshot().catch(() => null);
+    if (!snap || snap.stale) return { exhausted: false, resumeAt: null };
+    const exhausted = snap.rolling.usedPct >= 100 || snap.weekly.usedPct >= 100;
+    if (!exhausted) return { exhausted: false, resumeAt: null };
+    const now = this.now();
     const resets = [snap.rolling.resetsAt, snap.weekly.resetsAt].filter(
       (r): r is number => typeof r === "number" && r > now,
-    )
-    return { exhausted: true, resumeAt: resets.length > 0 ? Math.min(...resets) : null }
+    );
+    return { exhausted: true, resumeAt: resets.length > 0 ? Math.min(...resets) : null };
   }
 
   /** The current snapshot — cached, in-flight-deduped, or freshly fetched. */
   private async current(): Promise<RateLimitSnapshot> {
-    const now = this.now()
-    if (this.cache && now < this.cache.expiresAt) return this.cache.snapshot
-    if (this.inflight) return this.inflight
+    const now = this.now();
+    if (this.cache && now < this.cache.expiresAt) return this.cache.snapshot;
+    if (this.inflight) return this.inflight;
     this.inflight = this.refresh(now).finally(() => {
-      this.inflight = null
-    })
-    return this.inflight
+      this.inflight = null;
+    });
+    return this.inflight;
   }
 
   /** Fetch live (fallback to the capture), then cache until the soonest of TTL / reset. */
   private async refresh(now: number): Promise<RateLimitSnapshot> {
-    const snapshot = (await this.fetcher.fetch()) ?? (await this.reader.read())
+    const snapshot = (await this.fetcher.fetch()) ?? (await this.reader.read());
     const resets = [snapshot.rolling5hResetsAt, snapshot.weekly7dResetsAt].filter(
       (r): r is number => typeof r === "number" && r > now,
-    )
-    const expiresAt = Math.min(now + CACHE_TTL_MS, ...resets)
-    this.cache = { snapshot, expiresAt }
-    return snapshot
+    );
+    const expiresAt = Math.min(now + CACHE_TTL_MS, ...resets);
+    this.cache = { snapshot, expiresAt };
+    return snapshot;
   }
 }

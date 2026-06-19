@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Stack } from "@zibby/design-system"
-import { Form } from "../Form"
-import { FormMarkdownEditor } from "./FormMarkdownEditor"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Stack } from "@zibby/design-system";
+import { Form } from "../Form";
+import { FormMarkdownEditor } from "./FormMarkdownEditor";
 
 const meta: Meta<typeof FormMarkdownEditor> = {
   title: "Forms/FormMarkdownEditor",
@@ -14,12 +14,12 @@ const meta: Meta<typeof FormMarkdownEditor> = {
       </div>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof FormMarkdownEditor>
+type Story = StoryObj<typeof FormMarkdownEditor>;
 
-const SAMPLE = "# Nadpis\n\nTento text je **tučný** a _kurzíva_."
+const SAMPLE = "# Nadpis\n\nTento text je **tučný** a _kurzíva_.";
 
 export const Overview: Story = {
   render: () => (
@@ -37,16 +37,13 @@ export const Overview: Story = {
       </Stack>
     </Form>
   ),
-}
+};
 
 export const Playground: Story = {
   args: { label: "Obsah", name: "body", hint: "Markdown je podporován" },
   render: (args) => (
-    <Form<{ body: string }>
-      formOptions={{ defaultValues: { body: "" } }}
-      onSubmit={() => {}}
-    >
+    <Form<{ body: string }> formOptions={{ defaultValues: { body: "" } }} onSubmit={() => {}}>
       <FormMarkdownEditor<{ body: string }> {...args} name="body" />
     </Form>
   ),
-}
+};

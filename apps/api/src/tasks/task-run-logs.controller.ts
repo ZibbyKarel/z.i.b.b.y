@@ -1,7 +1,7 @@
-import { Controller, Headers, type MessageEvent, Param, Sse } from "@nestjs/common"
-import type { Observable } from "rxjs"
-import { AgentRunnerService, RunNotFoundError } from "../agents/agent-runner.service"
-import { streamRunLog } from "../shared/sse/sse"
+import { Controller, Headers, type MessageEvent, Param, Sse } from "@nestjs/common";
+import type { Observable } from "rxjs";
+import { AgentRunnerService, RunNotFoundError } from "../agents/agent-runner.service";
+import { streamRunLog } from "../shared/sse/sse";
 
 /**
  * SSE tail for a single task run's log, the push replacement for the FE's 1s offset
@@ -23,18 +23,18 @@ export class TaskRunLogsController {
     @Param("runId") runId: string,
     @Headers("last-event-id") lastEventId?: string,
   ): Observable<MessageEvent> {
-    const parsed = Number(lastEventId)
-    const startOffset = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+    const parsed = Number(lastEventId);
+    const startOffset = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
     return streamRunLog(
       startOffset,
       (offset) =>
         this.agentRunner.readLog(runId, offset).catch((error) => {
           if (error instanceof RunNotFoundError) {
-            return { content: "", nextOffset: offset, done: true }
+            return { content: "", nextOffset: offset, done: true };
           }
-          throw error
+          throw error;
         }),
       (listener) => this.agentRunner.onLogAppend(runId, listener),
-    )
+    );
   }
 }

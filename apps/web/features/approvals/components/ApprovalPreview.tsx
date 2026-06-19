@@ -88,13 +88,7 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
         <div style={{ background: "rgba(240,180,41,0.06)" }}>
           <Container padding={["150", "150"]}>
             <Stack align="baseline" direction="row" justify="between">
-              <Typography
-                mono
-                uppercase
-                size="xs"
-                type="note"
-                variant="secondary"
-              >
+              <Typography mono uppercase size="xs" type="note" variant="secondary">
                 {labels.total}
               </Typography>
               <Typography mono size="lg" tone="warn" type="note" weight="bold">
@@ -123,19 +117,12 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
             <Divider />
             {hunk.lines.map(([kind, text], i) => {
               const m = DIFF_KIND[kind];
-              const toneProps = m.tone
-                ? { tone: m.tone }
-                : ({ variant: "secondary" } as const);
+              const toneProps = m.tone ? { tone: m.tone } : ({ variant: "secondary" } as const);
               return (
                 // eslint-disable-next-line react/forbid-dom-props
                 <div key={i} style={{ background: m.bg }}>
                   <Stack direction="row">
-                    <Container
-                      shrink={false}
-                      textAlign="center"
-                      userSelect="none"
-                      width="22px"
-                    >
+                    <Container shrink={false} textAlign="center" userSelect="none" width="22px">
                       <Typography
                         mono
                         as="span"
@@ -171,11 +158,7 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
 
   if (preview.kind === "command") {
     return (
-      <PreviewShell
-        icon="server"
-        label={`${preview.shell}`}
-        meta={preview.note}
-      >
+      <PreviewShell icon="server" label={`${preview.shell}`} meta={preview.note}>
         <CodeBlock text={`$ ${preview.cmd}`} />
         <Divider />
         <Container padding={["100", "150"]}>
@@ -206,18 +189,9 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
 
   // message
   return (
-    <PreviewShell
-      icon="arrow"
-      label={`${labels.sendTo} ${preview.to}`}
-      meta={preview.subject}
-    >
+    <PreviewShell icon="arrow" label={`${labels.sendTo} ${preview.to}`} meta={preview.subject}>
       <Container padding={["150", "200"]}>
-        <Typography
-          leading="relaxed"
-          size="base"
-          style={{ whiteSpace: "pre-wrap" }}
-          type="text"
-        >
+        <Typography leading="relaxed" size="base" style={{ whiteSpace: "pre-wrap" }} type="text">
           {preview.body}
         </Typography>
       </Container>

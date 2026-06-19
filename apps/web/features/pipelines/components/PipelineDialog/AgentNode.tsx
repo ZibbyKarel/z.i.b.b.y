@@ -93,9 +93,7 @@ export function AgentNode({
           : { left: `${NODE_W / 2 - 7}px`, top: "-7px" };
     return (
       <Container
-        aria-label={t(
-          which === "in" ? "portIn" : which === "out" ? "portOut" : "portRework",
-        )}
+        aria-label={t(which === "in" ? "portIn" : which === "out" ? "portOut" : "portRework")}
         data-testid={`node-port-${which}`}
         height="14px"
         onMouseDown={isIn ? undefined : (e) => onPortDown(which, node.id, e)}

@@ -45,10 +45,7 @@ const alignClass: Record<GridAlign, string> = {
   stretch: "items-stretch",
 };
 
-export interface GridProps extends Omit<
-  HTMLAttributes<HTMLElement>,
-  "className"
-> {
+export interface GridProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   cols?: GridCols;
   sm?: GridCols;
   md?: GridCols;
@@ -98,12 +95,7 @@ export function Grid({
       className={cn(
         sidebar === "right" && "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]",
         sidebar === "left" && "grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]",
-        !sidebar && [
-          baseCols[cols],
-          sm && smCols[sm],
-          md && mdCols[md],
-          lg && lgCols[lg],
-        ],
+        !sidebar && [baseCols[cols], sm && smCols[sm], md && mdCols[md], lg && lgCols[lg]],
         align && alignClass[align],
       )}
       data-testid={GridTestId.Root}

@@ -8,9 +8,7 @@ import { expect, test } from "@playwright/test";
  * *correctness* (handoff, loop fuse) is covered by the fast API e2e; here it's the
  * create → list → detail → dispatch UI path.
  */
-test("open a pipeline, see its phase chain, and run it via the task composer", async ({
-  page,
-}) => {
+test("open a pipeline, see its phase chain, and run it via the task composer", async ({ page }) => {
   await page.goto("/pipelines");
 
   await expect(page.getByText("Demo Pipe").first()).toBeVisible();

@@ -1,6 +1,6 @@
-import { mkdir } from "node:fs/promises"
-import * as os from "node:os"
-import * as path from "node:path"
+import { mkdir } from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 
 /**
  * Phase 12.7 — the base directory for run worktrees, deliberately OUTSIDE the repo
@@ -15,8 +15,8 @@ import * as path from "node:path"
  * (the vitest setup pins a temp one per test file; production defaults to the OS temp).
  */
 export function resolveWorktreeRoot(): string {
-  const root = process.env.ZIBBY_WORKTREE_ROOT
-  return root ? path.resolve(root) : path.join(os.tmpdir(), "zibby-worktrees")
+  const root = process.env.ZIBBY_WORKTREE_ROOT;
+  return root ? path.resolve(root) : path.join(os.tmpdir(), "zibby-worktrees");
 }
 
 /**
@@ -25,7 +25,7 @@ export function resolveWorktreeRoot(): string {
  * run, so leaves never collide; only forensic artifacts stay under `*_RUNS_DIR`.
  */
 export async function prepareWorktreeDir(runId: string): Promise<string> {
-  const root = resolveWorktreeRoot()
-  await mkdir(root, { recursive: true })
-  return path.join(root, runId)
+  const root = resolveWorktreeRoot();
+  await mkdir(root, { recursive: true });
+  return path.join(root, runId);
 }

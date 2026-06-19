@@ -6,7 +6,7 @@ import { initTsrReactQuery } from "@ts-rest/react-query/v5";
  * (must be `NEXT_PUBLIC_` to reach the browser); falls back to the local API
  * dev server. No trailing slash — contract paths start with `/api`.
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL!
+export const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 /**
  * App-wide ts-rest ↔ TanStack Query binding, derived from the `libs/contracts`

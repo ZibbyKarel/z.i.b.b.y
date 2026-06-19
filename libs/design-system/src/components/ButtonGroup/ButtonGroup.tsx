@@ -84,65 +84,67 @@ export function ButtonGroup({
       role="group"
     >
       <Stack inline align="center" direction="row" gap="25">
-      {options.map((o) => {
-        const active = value === o.id;
-        return (
+        {options.map((o) => {
+          const active = value === o.id;
+          return (
+            <button
+              aria-pressed={active}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-sm border-none px-3 py-1.5 font-mono text-base font-semibold transition-all",
+                focusRing,
+                active
+                  ? o.tone
+                    ? toneActive[o.tone]
+                    : "bg-accent text-accent-contrast"
+                  : "bg-transparent text-foreground-dim hover:text-foreground",
+              )}
+              data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
+              key={o.id}
+              onClick={() => onChange(deselectable && active ? "" : o.id)}
+              type="button"
+            >
+              {o.leading && (
+                <span
+                  className="inline-flex items-center"
+                  data-testid={`${ButtonGroupTestId.Leading}-${o.id}`}
+                >
+                  {o.leading}
+                </span>
+              )}
+              {o.tone && (
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    active ? "bg-background opacity-70" : toneSwatch[o.tone],
+                  )}
+                />
+              )}
+              {o.label}
+              {o.trailing && (
+                <span
+                  className="inline-flex items-center"
+                  data-testid={`${ButtonGroupTestId.Trailing}-${o.id}`}
+                >
+                  {o.trailing}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        {onAdd && (
           <button
-            aria-pressed={active}
+            aria-label={addLabel}
             className={cn(
-              "inline-flex items-center gap-2 rounded-sm border-none px-3 py-1.5 font-mono text-base font-semibold transition-all",
+              "flex px-2 py-1.5 text-foreground-faint hover:text-foreground",
               focusRing,
-              active
-                ? (o.tone ? toneActive[o.tone] : "bg-accent text-accent-contrast")
-                : "bg-transparent text-foreground-dim hover:text-foreground",
             )}
-            data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
-            key={o.id}
-            onClick={() => onChange(deselectable && active ? "" : o.id)}
+            data-testid={ButtonGroupTestId.Add}
+            onClick={onAdd}
             type="button"
           >
-            {o.leading && (
-              <span
-                className="inline-flex items-center"
-                data-testid={`${ButtonGroupTestId.Leading}-${o.id}`}
-              >
-                {o.leading}
-              </span>
-            )}
-            {o.tone && (
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  active ? "bg-background opacity-70" : toneSwatch[o.tone],
-                )}
-              />
-            )}
-            {o.label}
-            {o.trailing && (
-              <span
-                className="inline-flex items-center"
-                data-testid={`${ButtonGroupTestId.Trailing}-${o.id}`}
-              >
-                {o.trailing}
-              </span>
-            )}
+            <Icon name="plus" size="sm" />
           </button>
-        );
-      })}
-      {onAdd && (
-        <button
-          aria-label={addLabel}
-          className={cn(
-            "flex px-2 py-1.5 text-foreground-faint hover:text-foreground",
-            focusRing,
-          )}
-          data-testid={ButtonGroupTestId.Add}
-          onClick={onAdd}
-          type="button"
-        >
-          <Icon name="plus" size="sm" />
-        </button>
-      )}
+        )}
       </Stack>
     </div>
   );

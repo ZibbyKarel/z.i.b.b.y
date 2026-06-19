@@ -1,6 +1,6 @@
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
-import { WorkspaceSchema } from "../common.schema"
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { WorkspaceSchema } from "../common.schema";
 
 /**
  * Lifecycle of a whole goal run — a deliberate clone of {@link PipelineStateSchema}
@@ -10,8 +10,8 @@ import { WorkspaceSchema } from "../common.schema"
  * operator must decide, `paused-limit` when an iteration's maker died on a usage
  * limit (a pause, not a failure — and it does NOT burn an iteration).
  */
-export const GoalStateSchema = z.enum(["running", "done", "parked", "failed", "paused-limit"])
-export type GoalState = z.infer<typeof GoalStateSchema>
+export const GoalStateSchema = z.enum(["running", "done", "parked", "failed", "paused-limit"]);
+export type GoalState = z.infer<typeof GoalStateSchema>;
 
 /**
  * Why a goal is `parked` — its own enum so it never pollutes the pipeline's
@@ -37,12 +37,12 @@ export const GoalParkedReasonSchema = z.enum([
   "limit",
   "verifier-scope",
   "awaiting-resume",
-])
-export type GoalParkedReason = z.infer<typeof GoalParkedReasonSchema>
+]);
+export type GoalParkedReason = z.infer<typeof GoalParkedReasonSchema>;
 
 /** Status of one iteration's maker+verifier cycle. */
-export const GoalIterationStatusSchema = z.enum(["running", "done", "failed", "paused-limit"])
-export type GoalIterationStatus = z.infer<typeof GoalIterationStatusSchema>
+export const GoalIterationStatusSchema = z.enum(["running", "done", "failed", "paused-limit"]);
+export type GoalIterationStatus = z.infer<typeof GoalIterationStatusSchema>;
 
 /**
  * One iteration's record: which maker ran (its run ref so its log is pollable), the
@@ -66,8 +66,8 @@ export const GoalIterationSchema = z.object({
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime().optional(),
   status: GoalIterationStatusSchema,
-})
-export type GoalIteration = z.infer<typeof GoalIterationSchema>
+});
+export type GoalIteration = z.infer<typeof GoalIterationSchema>;
 
 /** Detail of a parked goal — the surface the operator resumes from (mirror of ParkedDetail). */
 export const GoalParkedDetailSchema = z.object({
@@ -78,8 +78,8 @@ export const GoalParkedDetailSchema = z.object({
   /** Absolute path of the iteration verdict file (the failure context + note target). */
   verdictFile: z.string(),
   note: z.string().optional(),
-})
-export type GoalParkedDetail = z.infer<typeof GoalParkedDetailSchema>
+});
+export type GoalParkedDetail = z.infer<typeof GoalParkedDetailSchema>;
 
 /**
  * A run of a goal: the outer-loop aggregate, modeled on {@link PipelineRunSchema}
@@ -118,19 +118,19 @@ export const GoalRunSchema = z.object({
   sessionId: z.string().optional(),
   /** Classifier terms (Phase 4) that routed the originating task here. */
   matchedTerms: z.array(z.string()).optional(),
-})
-export type GoalRun = z.infer<typeof GoalRunSchema>
+});
+export type GoalRun = z.infer<typeof GoalRunSchema>;
 
 /** Body accepted by `startGoalRun` (mirror of StartPipelineRunSchema + agent run fields). */
 export const StartGoalRunSchema = z.object({
   project: z.string().optional(),
   files: z.array(z.string()).optional(),
   title: z.string().max(200).optional(),
-})
-export type StartGoalRunInput = z.infer<typeof StartGoalRunSchema>
+});
+export type StartGoalRunInput = z.infer<typeof StartGoalRunSchema>;
 
 /** Body accepted by `resumeGoalRun` — the operator's note for the resumed iteration. */
 export const ResumeGoalRunSchema = z.object({
   note: z.string().optional(),
-})
-export type ResumeGoalRunInput = z.infer<typeof ResumeGoalRunSchema>
+});
+export type ResumeGoalRunInput = z.infer<typeof ResumeGoalRunSchema>;

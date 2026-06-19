@@ -104,19 +104,8 @@ export function FilePickerField({
             className="flex min-w-0 flex-1 items-center gap-2 px-3.5 py-2.5 font-sans text-md"
             data-testid={FilePickerFieldTestId.Display}
           >
-            <Icon
-              aria-hidden
-              name="file"
-              size="sm"
-              stroke="default"
-              tone="faint"
-            />
-            <span
-              className={cn(
-                "truncate",
-                display ? "text-foreground" : "text-foreground-faint",
-              )}
-            >
+            <Icon aria-hidden name="file" size="sm" stroke="default" tone="faint" />
+            <span className={cn("truncate", display ? "text-foreground" : "text-foreground-faint")}>
               {display ?? placeholder}
             </span>
           </span>

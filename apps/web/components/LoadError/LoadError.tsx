@@ -1,11 +1,4 @@
-import {
-  Button,
-  Card,
-  Container,
-  Icon,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Card, Container, Icon, Stack, Typography } from "@zibby/design-system";
 
 export enum LoadErrorTestId {
   Root = "load-error",
@@ -41,7 +34,12 @@ export function LoadError({ title, description, retryLabel, onRetry }: LoadError
             </Typography>
           </Container>
           {retryLabel && onRetry && (
-            <Button data-testid={LoadErrorTestId.Retry} icon="retry" intent="primary" onClick={onRetry}>
+            <Button
+              data-testid={LoadErrorTestId.Retry}
+              icon="retry"
+              intent="primary"
+              onClick={onRetry}
+            >
               {retryLabel}
             </Button>
           )}

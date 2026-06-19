@@ -1,11 +1,13 @@
-import type { Ref } from "react"
-import { type FieldValues, type Path, useController } from "react-hook-form"
-import { ToggleField, type ToggleFieldProps } from "@zibby/design-system"
+import type { Ref } from "react";
+import { type FieldValues, type Path, useController } from "react-hook-form";
+import { ToggleField, type ToggleFieldProps } from "@zibby/design-system";
 
-export interface FormToggleProps<TFieldValues extends FieldValues = FieldValues>
-  extends Omit<ToggleFieldProps, "checked" | "onChange" | "ref"> {
-  name: Path<TFieldValues>
-  defaultValue?: boolean
+export interface FormToggleProps<TFieldValues extends FieldValues = FieldValues> extends Omit<
+  ToggleFieldProps,
+  "checked" | "onChange" | "ref"
+> {
+  name: Path<TFieldValues>;
+  defaultValue?: boolean;
 }
 
 export function FormToggle<TFieldValues extends FieldValues = FieldValues>({
@@ -18,7 +20,7 @@ export function FormToggle<TFieldValues extends FieldValues = FieldValues>({
   const { field, fieldState } = useController<TFieldValues>({
     name,
     defaultValue: (defaultValue ?? false) as never,
-  })
+  });
   return (
     <ToggleField
       {...props}
@@ -28,5 +30,5 @@ export function FormToggle<TFieldValues extends FieldValues = FieldValues>({
       onChange={(next) => field.onChange(next)}
       ref={field.ref as unknown as Ref<HTMLButtonElement>}
     />
-  )
+  );
 }

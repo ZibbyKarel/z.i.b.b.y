@@ -1,10 +1,10 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { IntegrationIdSchema } from "../integrations/integration.schema"
-import { ChannelItemSchema, ChannelItemStateSchema } from "./channel.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { IntegrationIdSchema } from "../integrations/integration.schema";
+import { ChannelItemSchema, ChannelItemStateSchema } from "./channel.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Channels (Phase 5): READ-ONLY access to ingested inbound items. There is
@@ -50,5 +50,5 @@ export const channelsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type ChannelsContract = typeof channelsContract
+);
+export type ChannelsContract = typeof channelsContract;

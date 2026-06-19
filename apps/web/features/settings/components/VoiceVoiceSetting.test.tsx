@@ -42,19 +42,14 @@ describe("VoiceVoiceSetting", () => {
     render(<VoiceVoiceSetting lang="en-US" />);
     screen.getByText("Test").closest("button")?.click();
     // The provider renders the cs catalog; `lang` only sets the spoken locale.
-    expect(speechMock.speak).toHaveBeenCalledWith(
-      "Ahoj, jsem ZIBBY. Takhle zním.",
-      "en-US",
-    );
+    expect(speechMock.speak).toHaveBeenCalledWith("Ahoj, jsem ZIBBY. Takhle zním.", "en-US");
   });
 
   it("degrades to a note when TTS is unsupported", () => {
     speechMock.isSupported = false;
     speechMock.voices = [];
     render(<VoiceVoiceSetting lang="cs-CZ" />);
-    expect(
-      screen.getByText(/nepodporuje hlasový výstup/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/nepodporuje hlasový výstup/i)).toBeInTheDocument();
     expect(screen.queryByText("Test")).toBeNull();
   });
 });

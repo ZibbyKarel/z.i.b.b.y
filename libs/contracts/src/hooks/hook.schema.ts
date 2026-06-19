@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { AGENT_ID_REGEX } from "../agents/agent.schema"
+import { z } from "zod";
+import { AGENT_ID_REGEX } from "../agents/agent.schema";
 
 /**
  * Allowed shape of a hook `id` — the same restrictive pattern agents/skills use
@@ -10,7 +10,7 @@ export const HookIdSchema = z
   .string()
   .min(1)
   .max(128)
-  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
+  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
 /**
  * The Claude Code lifecycle events a hook can register on. A hook is a shell
@@ -28,8 +28,8 @@ export const HookEventSchema = z.enum([
   "PreCompact",
   "SessionStart",
   "SessionEnd",
-])
-export type HookEvent = z.infer<typeof HookEventSchema>
+]);
+export type HookEvent = z.infer<typeof HookEventSchema>;
 
 /**
  * A custom Claude Code hook (managed from the UI, merged into every run's
@@ -53,13 +53,13 @@ export const HookSchema = z.object({
   /** Hard timeout in seconds before Claude Code kills the hook. */
   timeout: z.number().int().positive().optional(),
   enabled: z.boolean().default(true),
-})
-export type Hook = z.infer<typeof HookSchema>
+});
+export type Hook = z.infer<typeof HookSchema>;
 
 /** Body accepted by `createHook` — full entity (`id`, `event`, `command` required). */
-export const CreateHookSchema = HookSchema
-export type CreateHookInput = z.infer<typeof CreateHookSchema>
+export const CreateHookSchema = HookSchema;
+export type CreateHookInput = z.infer<typeof CreateHookSchema>;
 
 /** Body accepted by `updateHook` — every field optional (partial), id excluded. */
-export const UpdateHookSchema = HookSchema.omit({ id: true }).partial()
-export type UpdateHookInput = z.infer<typeof UpdateHookSchema>
+export const UpdateHookSchema = HookSchema.omit({ id: true }).partial();
+export type UpdateHookInput = z.infer<typeof UpdateHookSchema>;

@@ -1,14 +1,14 @@
-import { promises as fs } from "node:fs"
-import path from "node:path"
-import { Injectable, type OnModuleInit } from "@nestjs/common"
-import type { AgentRun, ScheduledTask, TaskOutput } from "@zibby/contracts"
-import { ActivityLogService } from "../activity/activity-log.service"
-import { ApprovalsService } from "../approvals/approvals.service"
-import { DuplicateNoteError, VaultService } from "../memory/vault.service"
-import { ProjectsStorageService } from "../projects/projects.storage.service"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { WorkspaceService } from "../workspace/workspace.service"
-import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
+import type { AgentRun, ScheduledTask, TaskOutput } from "@zibby/contracts";
+import { ActivityLogService } from "../activity/activity-log.service";
+import { ApprovalsService } from "../approvals/approvals.service";
+import { DuplicateNoteError, VaultService } from "../memory/vault.service";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { WorkspaceService } from "../workspace/workspace.service";
+import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 
 /**
  * The directed-task counterpart of the pipeline `outputs:` gate — what happens to an
@@ -31,7 +31,7 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
  */
 @Injectable()
 export class TaskOutputService implements OnModuleInit {
-  private readonly log: ScopedLogger
+  private readonly log: ScopedLogger;
 
   constructor(
     private readonly storage: ScheduledTasksStorageService,
@@ -42,7 +42,7 @@ export class TaskOutputService implements OnModuleInit {
     private readonly activity: ActivityLogService,
     logger: LoggerService,
   ) {
-    this.log = logger.child(TaskOutputService.name)
+    this.log = logger.child(TaskOutputService.name);
   }
 
   onModuleInit(): void {
@@ -53,7 +53,7 @@ export class TaskOutputService implements OnModuleInit {
     this.approvals.register("task-output", {
       resume: (taskId) => this.resolve(taskId, "approved"),
       cancel: (taskId) => void this.resolve(taskId, "rejected"),
-    })
+    });
   }
 
   /**
@@ -65,22 +65,22 @@ export class TaskOutputService implements OnModuleInit {
    * Never throws — a sink failure must not strand the task's terminal write-back.
    */
   async handleTerminal(task: ScheduledTask, run: AgentRun, summary: string): Promise<boolean> {
-    const output = task.output
+    const output = task.output;
     // Absent = inherit (agent/orchestrator inherit "no terminal delivery"); `void` =
     // explicit suppression. Both fall through to the normal outcome write-back.
-    if (!output || output.type === "void") return false
+    if (!output || output.type === "void") return false;
     try {
       if (output.type === "file") {
-        await this.deliverFile(task, run, output, summary)
-        return false // Tier-1, delivered now; the normal outcome still follows
+        await this.deliverFile(task, run, output, summary);
+        return false; // Tier-1, delivered now; the normal outcome still follows
       }
-      return await this.parkOnPr(task, run, summary)
+      return await this.parkOnPr(task, run, summary);
     } catch (error) {
       this.log.warn("task output sink failed (soft) — writing outcome as usual", {
         taskId: task.id,
         err: error instanceof Error ? error.message : String(error),
-      })
-      return false
+      });
+      return false;
     }
   }
 
@@ -93,35 +93,41 @@ export class TaskOutputService implements OnModuleInit {
   ): Promise<void> {
     // A task carries no `from` artifact (unlike a pipeline handoff), so the content is
     // the run's summary — the most faithful thing available without an agent contract.
-    const content = summary.trim() ? `${summary}\n` : ""
+    const content = summary.trim() ? `${summary}\n` : "";
     if (output.dest === "vault") {
       await this.vault
         .createNote({ id: output.to, tier: "knowledge", body: content })
         .catch(async (error) => {
           if (error instanceof DuplicateNoteError) {
-            await this.vault.updateNote(output.to, { body: content }).catch(() => {})
-            return
+            await this.vault.updateNote(output.to, { body: content }).catch(() => {});
+            return;
           }
-          throw error
-        })
-      this.log.info("task file output delivered to vault", { taskId: task.id, to: output.to })
-      return
+          throw error;
+        });
+      this.log.info("task file output delivered to vault", { taskId: task.id, to: output.to });
+      return;
     }
     // dest: project — write into the run's worktree (rides its zibby/* branch). No
     // worktree (non-git / projectless run) → nowhere safe to write; soft-skip.
-    const base = run.workspace?.path
+    const base = run.workspace?.path;
     if (!base) {
-      this.log.warn("project file output skipped — run has no worktree", { taskId: task.id, to: output.to })
-      return
+      this.log.warn("project file output skipped — run has no worktree", {
+        taskId: task.id,
+        to: output.to,
+      });
+      return;
     }
-    const dest = resolveInside(base, output.to)
+    const dest = resolveInside(base, output.to);
     if (!dest) {
-      this.log.warn("project file output skipped — path escapes the worktree", { taskId: task.id, to: output.to })
-      return
+      this.log.warn("project file output skipped — path escapes the worktree", {
+        taskId: task.id,
+        to: output.to,
+      });
+      return;
     }
-    await fs.mkdir(path.dirname(dest), { recursive: true })
-    await fs.writeFile(dest, content, "utf8")
-    this.log.info("task file output delivered to project", { taskId: task.id, to: output.to })
+    await fs.mkdir(path.dirname(dest), { recursive: true });
+    await fs.writeFile(dest, content, "utf8");
+    this.log.info("task file output delivered to project", { taskId: task.id, to: output.to });
   }
 
   /**
@@ -130,30 +136,32 @@ export class TaskOutputService implements OnModuleInit {
    * for (no worktree, or no commits on the branch) — a soft no-op, not a crash.
    */
   private async parkOnPr(task: ScheduledTask, run: AgentRun, summary: string): Promise<boolean> {
-    const ws = run.workspace
+    const ws = run.workspace;
     if (!ws) {
-      this.log.warn("pr output skipped — run has no git worktree", { taskId: task.id })
-      return false
+      this.log.warn("pr output skipped — run has no git worktree", { taskId: task.id });
+      return false;
     }
     // System-owned commit of whatever the agent left uncommitted — so the PR is never
     // empty because a lone agent edited files without committing (commit ≠ push).
-    await this.workspace.checkpoint({ worktreePath: ws.path, phaseId: "task-output", summary })
-    const commits = await this.workspace.commitLog({ worktreePath: ws.path, baseRef: ws.baseRef })
+    await this.workspace.checkpoint({ worktreePath: ws.path, phaseId: "task-output", summary });
+    const commits = await this.workspace.commitLog({ worktreePath: ws.path, baseRef: ws.baseRef });
     if (!commits.trim()) {
-      this.log.info("pr output skipped — no commits on the branch to open a PR for", { taskId: task.id })
-      return false
+      this.log.info("pr output skipped — no commits on the branch to open a PR for", {
+        taskId: task.id,
+      });
+      return false;
     }
 
     // Push at approval time from the repo dir (the branch ref outlives a reaped
     // worktree). Prefer the registered project's path; fall back to the worktree.
     const project = task.projectId
       ? await this.projects.get(task.projectId).catch(() => null)
-      : null
-    const repoPath = project?.path ?? ws.path
+      : null;
+    const repoPath = project?.path ?? ws.path;
 
-    const diffstat = await this.workspace.diffstat({ worktreePath: ws.path, baseRef: ws.baseRef })
-    const title = (task.title?.trim() || firstLine(summary) || ws.branch).slice(0, 120)
-    const body = [summary.trim(), diffstat.trim()].filter(Boolean).join("\n\n")
+    const diffstat = await this.workspace.diffstat({ worktreePath: ws.path, baseRef: ws.baseRef });
+    const title = (task.title?.trim() || firstLine(summary) || ws.branch).slice(0, 120);
+    const body = [summary.trim(), diffstat.trim()].filter(Boolean).join("\n\n");
 
     const approval = await this.approvals.requestApproval({
       runId: task.id,
@@ -162,16 +170,16 @@ export class TaskOutputService implements OnModuleInit {
       action: "pr.open",
       detail: `Otevřít PR z ${ws.branch}${title ? ` — ${title}` : ""}`,
       risk: "medium",
-    })
+    });
     await this.storage.markAwaitingOutput(task.id, {
       branch: ws.branch,
       repoPath,
       approvalId: approval.id,
       title,
       body,
-    })
-    this.log.info("task parked at PR output gate", { taskId: task.id, branch: ws.branch })
-    return true
+    });
+    this.log.info("task parked at PR output gate", { taskId: task.id, branch: ws.branch });
+    return true;
   }
 
   /**
@@ -182,32 +190,32 @@ export class TaskOutputService implements OnModuleInit {
    */
   async resolve(taskId: string, decision: "approved" | "rejected"): Promise<void> {
     try {
-      const task = await this.storage.get(taskId).catch(() => null)
-      if (!task || task.status !== "awaiting-output" || !task.pendingOutput) return
-      const po = task.pendingOutput
+      const task = await this.storage.get(taskId).catch(() => null);
+      if (!task || task.status !== "awaiting-output" || !task.pendingOutput) return;
+      const po = task.pendingOutput;
 
-      let note: string
+      let note: string;
       if (decision === "approved") {
         const result = await this.workspace.openPr({
           cwd: po.repoPath,
           branch: po.branch,
           title: po.title,
           body: po.body,
-        })
+        });
         note = result
           ? `PR otevřen: ${result.url}`
-          : "PR push selhal (soft) — práce je commitnutá na branchi a bezpečná"
+          : "PR push selhal (soft) — práce je commitnutá na branchi a bezpečná";
       } else {
-        note = "PR zamítnut — práce zůstala na branchi bez PR"
+        note = "PR zamítnut — práce zůstala na branchi bez PR";
       }
 
-      await this.storage.resolveOutput(taskId)
+      await this.storage.resolveOutput(taskId);
       const updated = await this.storage.writeOutcome(taskId, {
         status: "done",
         summary: note,
         finishedAt: new Date().toISOString(),
-      })
-      this.log.info("task output gate resolved", { taskId, decision })
+      });
+      this.log.info("task output gate resolved", { taskId, decision });
       void this.activity.record({
         kind: "task-outcome",
         summary: `task done: ${note}`,
@@ -217,24 +225,29 @@ export class TaskOutputService implements OnModuleInit {
           ...(updated.runRef ? { runRef: updated.runRef } : {}),
           ...(updated.projectId ? { projectId: updated.projectId } : {}),
         },
-      })
+      });
     } catch (error) {
       this.log.error("task output resolve failed", {
         taskId,
         err: error instanceof Error ? error.message : String(error),
-      })
+      });
     }
   }
 }
 
 /** First non-empty line of a blob, trimmed — a fallback PR title. */
 function firstLine(text: string): string {
-  return text.split(/\r?\n/).map((l) => l.trim()).find(Boolean) ?? ""
+  return (
+    text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .find(Boolean) ?? ""
+  );
 }
 
 /** Join `rel` under `base`, returning null if it escapes (path-traversal guard). */
 function resolveInside(base: string, rel: string): string | null {
-  const resolved = path.resolve(base, rel)
-  const prefix = path.resolve(base) + path.sep
-  return resolved === path.resolve(base) || resolved.startsWith(prefix) ? resolved : null
+  const resolved = path.resolve(base, rel);
+  const prefix = path.resolve(base) + path.sep;
+  return resolved === path.resolve(base) || resolved.startsWith(prefix) ? resolved : null;
 }

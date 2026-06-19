@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import type { Limits } from "@zibby/contracts";
-import {
-  Card,
-  Container,
-  Divider,
-  Pressable,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, Divider, Pressable, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useLimitsQuery } from "../../../features/limits/queries";
 import { useNow } from "../../../hooks/useNow";

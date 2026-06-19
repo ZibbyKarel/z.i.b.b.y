@@ -1,11 +1,11 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { CreateHookSchema, HookIdSchema, HookSchema, UpdateHookSchema } from "./hook.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { CreateHookSchema, HookIdSchema, HookSchema, UpdateHookSchema } from "./hook.schema";
 
-const c = initContract()
+const c = initContract();
 
-const IdParam = z.object({ id: HookIdSchema })
+const IdParam = z.object({ id: HookIdSchema });
 
 /**
  * CRUD over custom Claude Code hooks. Mirrors `skillsContract`; the backend
@@ -52,5 +52,5 @@ export const hooksContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type HooksContract = typeof hooksContract
+);
+export type HooksContract = typeof hooksContract;

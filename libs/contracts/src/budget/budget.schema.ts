@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { LimitWindowSchema } from "../limits/limits.schema"
+import { z } from "zod";
+import { LimitWindowSchema } from "../limits/limits.schema";
 
 /**
  * The operator-owned global spend ceiling (Phase 8.1) — `data/budget.json`. When
@@ -15,15 +15,15 @@ export const GlobalBudgetSchema = z
     pauseAtRollingPct: z.number().min(0).max(100).optional(),
     pauseAtWeeklyPct: z.number().min(0).max(100).optional(),
   })
-  .strict()
-export type GlobalBudget = z.infer<typeof GlobalBudgetSchema>
+  .strict();
+export type GlobalBudget = z.infer<typeof GlobalBudgetSchema>;
 
 /** A used/cap pair for one window. `cap` absent → unlimited on that axis. */
 export const BudgetWindowUsageSchema = z.object({
   used: z.number().int().nonnegative(),
   cap: z.number().int().positive().optional(),
-})
-export type BudgetWindowUsage = z.infer<typeof BudgetWindowUsageSchema>
+});
+export type BudgetWindowUsage = z.infer<typeof BudgetWindowUsageSchema>;
 
 /** Per-engagement budget status: counts from the ledger + live runner registries. */
 export const ProjectBudgetStatusSchema = z.object({
@@ -40,8 +40,8 @@ export const ProjectBudgetStatusSchema = z.object({
   queued: z.number().int().nonnegative(),
   /** Tasks held over a budget cap, awaiting a spend-past-cap approval. */
   held: z.number().int().nonnegative(),
-})
-export type ProjectBudgetStatus = z.infer<typeof ProjectBudgetStatusSchema>
+});
+export type ProjectBudgetStatus = z.infer<typeof ProjectBudgetStatusSchema>;
 
 /**
  * The whole budget readout backing the dashboard (Phase 8.1): the global account
@@ -60,5 +60,5 @@ export const BudgetStatusSchema = z.object({
     paused: z.boolean(),
   }),
   projects: z.array(ProjectBudgetStatusSchema),
-})
-export type BudgetStatus = z.infer<typeof BudgetStatusSchema>
+});
+export type BudgetStatus = z.infer<typeof BudgetStatusSchema>;

@@ -22,11 +22,7 @@ import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
 import { NoteView } from "./components/NoteView";
 import { type TierFilter, filterGraphByTier } from "./filterGraph";
-import {
-  useMemoryGraphQuery,
-  useMemorySearchQuery,
-  useNoteQuery,
-} from "./queries";
+import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "./queries";
 
 const TIER_FILTERS: TierFilter[] = ["all", "memory", "daily", "knowledge"];
 
@@ -43,9 +39,7 @@ export function Screen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tier, setTier] = useState<TierFilter>("all");
   const [search, setSearch] = useState("");
-  const [editor, setEditor] = useState<{ mode: "create" | "edit" } | null>(
-    null,
-  );
+  const [editor, setEditor] = useState<{ mode: "create" | "edit" } | null>(null);
 
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
@@ -55,10 +49,7 @@ export function Screen() {
     [graph, tier],
   );
   const hits = useMemo(
-    () =>
-      (searchHits?.results ?? []).filter(
-        (h) => tier === "all" || h.tier === tier,
-      ),
+    () => (searchHits?.results ?? []).filter((h) => tier === "all" || h.tier === tier),
     [searchHits, tier],
   );
   const dailyNodes = useMemo(
@@ -72,14 +63,8 @@ export function Screen() {
   const tierChips = (
     <Stack wrap align="center" direction="row" gap="75">
       {TIER_FILTERS.map((value) => (
-        <Pressable
-          data-testid={`memory-tier-${value}`}
-          key={value}
-          onClick={() => setTier(value)}
-        >
-          <Chip tone={tier === value ? "accent" : "idle"}>
-            {t(`tier.${value}`)}
-          </Chip>
+        <Pressable data-testid={`memory-tier-${value}`} key={value} onClick={() => setTier(value)}>
+          <Chip tone={tier === value ? "accent" : "idle"}>{t(`tier.${value}`)}</Chip>
         </Pressable>
       ))}
     </Stack>
@@ -148,11 +133,7 @@ export function Screen() {
     return (
       <PageContainer>
         <Stack align="center" gap="200">
-          <EmptyState
-            description={t("emptyDescription")}
-            glyph="brain"
-            title={t("emptyTitle")}
-          />
+          <EmptyState description={t("emptyDescription")} glyph="brain" title={t("emptyTitle")} />
           <Button
             data-testid="memory-note-new"
             icon="plus"
@@ -173,79 +154,75 @@ export function Screen() {
         {toolbar}
 
         {search.trim().length > 0 && (
-        <HudPanel padding="200" title={t("searchResults")}>
-          {hits.length > 0 ? (
-            <Stack gap="75">
-              {hits.map((hit) => (
-                <Pressable
-                  data-testid={`memory-search-hit-${hit.id}`}
-                  key={hit.id}
-                  onClick={() => setSelected(hit.id)}
-                >
-                  <Stack gap="25">
-                    <Typography mono size="sm" type="note">
-                      {hit.title} · {hit.tier}
-                    </Typography>
-                    <Typography size="caption" type="note" variant="tertiary">
-                      {hit.snippet}
-                    </Typography>
-                  </Stack>
-                </Pressable>
-              ))}
-            </Stack>
-          ) : (
-            <Typography mono size="sm" type="note" variant="secondary">
-              {t("noResults")}
-            </Typography>
-          )}
-        </HudPanel>
-      )}
-
-      <Grid center align="start" gap="250" maxWidth="1400px" sidebar="right">
-        <Container minW0>
-          <Stack gap="250">
-            <HudPanel padding="200" title={t("knowledgeGraph")}>
-              {filteredGraph ? (
-                <MemoryGraph
-                  graph={filteredGraph}
-                  onSelect={setSelected}
-                  selectedId={selected}
-                />
-              ) : (
-                <Typography mono size="sm" type="note" variant="secondary">
-                  {t("loadingGraph")}
-                </Typography>
-              )}
-            </HudPanel>
-
-            {dailyNodes.length > 0 && (
-              <HudPanel padding="200" title={t("dailyTimeline")}>
-                <Stack gap="75">
-                  {dailyNodes.map((n) => (
-                    <Pressable
-                      data-testid={`memory-daily-${n.id}`}
-                      key={n.id}
-                      onClick={() => setSelected(n.id)}
-                    >
+          <HudPanel padding="200" title={t("searchResults")}>
+            {hits.length > 0 ? (
+              <Stack gap="75">
+                {hits.map((hit) => (
+                  <Pressable
+                    data-testid={`memory-search-hit-${hit.id}`}
+                    key={hit.id}
+                    onClick={() => setSelected(hit.id)}
+                  >
+                    <Stack gap="25">
                       <Typography mono size="sm" type="note">
-                        {n.label}
+                        {hit.title} · {hit.tier}
                       </Typography>
-                    </Pressable>
-                  ))}
-                </Stack>
-              </HudPanel>
+                      <Typography size="caption" type="note" variant="tertiary">
+                        {hit.snippet}
+                      </Typography>
+                    </Stack>
+                  </Pressable>
+                ))}
+              </Stack>
+            ) : (
+              <Typography mono size="sm" type="note" variant="secondary">
+                {t("noResults")}
+              </Typography>
             )}
-          </Stack>
-        </Container>
+          </HudPanel>
+        )}
 
-        <Container minW0>
-          <NoteView
-            note={note}
-            onEdit={() => setEditor({ mode: "edit" })}
-            onSelect={setSelected}
-          />
-        </Container>
-      </Grid>
+        <Grid center align="start" gap="250" maxWidth="1400px" sidebar="right">
+          <Container minW0>
+            <Stack gap="250">
+              <HudPanel padding="200" title={t("knowledgeGraph")}>
+                {filteredGraph ? (
+                  <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
+                ) : (
+                  <Typography mono size="sm" type="note" variant="secondary">
+                    {t("loadingGraph")}
+                  </Typography>
+                )}
+              </HudPanel>
+
+              {dailyNodes.length > 0 && (
+                <HudPanel padding="200" title={t("dailyTimeline")}>
+                  <Stack gap="75">
+                    {dailyNodes.map((n) => (
+                      <Pressable
+                        data-testid={`memory-daily-${n.id}`}
+                        key={n.id}
+                        onClick={() => setSelected(n.id)}
+                      >
+                        <Typography mono size="sm" type="note">
+                          {n.label}
+                        </Typography>
+                      </Pressable>
+                    ))}
+                  </Stack>
+                </HudPanel>
+              )}
+            </Stack>
+          </Container>
+
+          <Container minW0>
+            <NoteView
+              note={note}
+              onEdit={() => setEditor({ mode: "edit" })}
+              onSelect={setSelected}
+            />
+          </Container>
+        </Grid>
 
         {editorDialog}
       </Stack>

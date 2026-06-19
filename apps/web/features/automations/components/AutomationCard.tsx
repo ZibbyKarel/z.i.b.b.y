@@ -239,7 +239,11 @@ function FlowBox({
 
 /** Display id for a non-briefing target (used when no resolved name is supplied). */
 function targetIdOf(target: Target): string {
-  return target.type === "agent" ? target.agentId : target.type === "pipeline" ? target.pipelineId : "";
+  return target.type === "agent"
+    ? target.agentId
+    : target.type === "pipeline"
+      ? target.pipelineId
+      : "";
 }
 
 /** i18n key for the target kind label. Exhaustive over the target union. */

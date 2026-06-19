@@ -1,14 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import {
-  List,
-  ListItem,
-  ListItemBadge,
-  ListItemIcon,
-  ListItemText,
-  ListTestId,
-} from "./List";
+import { List, ListItem, ListItemBadge, ListItemIcon, ListItemText, ListTestId } from "./List";
 
 describe("List", () => {
   it("renders the root container", () => {

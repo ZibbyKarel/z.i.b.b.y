@@ -23,11 +23,7 @@ export const Overview: Story = {
         <Typography mono type="subtitle" variant="tertiary">
           with shortcut
         </Typography>
-        <SearchBar
-          ariaLabel="Command or skill"
-          placeholder="Command or skill…"
-          shortcut="⌘K"
-        />
+        <SearchBar ariaLabel="Command or skill" placeholder="Command or skill…" shortcut="⌘K" />
       </div>
       <div className="flex flex-col gap-2">
         <Typography mono type="subtitle" variant="tertiary">

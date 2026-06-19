@@ -1,6 +1,6 @@
-import { z } from "zod"
-import { IntegrationIdSchema, IntegrationKindSchema } from "../integrations/integration.schema"
-import { TaskOutcomeSchema } from "../tasks/task.schema"
+import { z } from "zod";
+import { IntegrationIdSchema, IntegrationKindSchema } from "../integrations/integration.schema";
+import { TaskOutcomeSchema } from "../tasks/task.schema";
 
 /**
  * Triage's verdict on one inbound item — the SHARED schema for 5.2/5.3. It is
@@ -23,12 +23,12 @@ export const TriageVerdictSchema = z
     confidence: z.number().min(0).max(1),
     reason: z.string(),
   })
-  .strict()
-export type TriageVerdict = z.infer<typeof TriageVerdictSchema>
+  .strict();
+export type TriageVerdict = z.infer<typeof TriageVerdictSchema>;
 
 /** Lifecycle of a channel item; mutated only by the watcher/triage/approval paths. */
-export const ChannelItemStateSchema = z.enum(["new", "triaged", "handled", "ignored"])
-export type ChannelItemState = z.infer<typeof ChannelItemStateSchema>
+export const ChannelItemStateSchema = z.enum(["new", "triaged", "handled", "ignored"]);
+export type ChannelItemState = z.infer<typeof ChannelItemStateSchema>;
 
 /** The channel-native identity an item came from (used for replies + dedup). */
 export const ExternalRefSchema = z.object({
@@ -36,8 +36,8 @@ export const ExternalRefSchema = z.object({
   ts: z.string().optional(),
   threadTs: z.string().optional(),
   messageId: z.string().optional(),
-})
-export type ExternalRef = z.infer<typeof ExternalRefSchema>
+});
+export type ExternalRef = z.infer<typeof ExternalRefSchema>;
 
 /**
  * A normalized inbound message. On disk: `data/channels/<integrationId>/<itemId>.json`.
@@ -76,5 +76,5 @@ export const ChannelItemSchema = z.object({
   reply: z.object({ text: z.string(), sentAt: z.string().datetime() }).optional(),
   /** Copied from the dispatched task's outcome once its run finishes (Tier 1). */
   outcome: TaskOutcomeSchema.optional(),
-})
-export type ChannelItem = z.infer<typeof ChannelItemSchema>
+});
+export type ChannelItem = z.infer<typeof ChannelItemSchema>;

@@ -1,18 +1,18 @@
-import { randomUUID } from "node:crypto"
-import { Injectable, type OnModuleInit, Optional } from "@nestjs/common"
-import type { Approval } from "@zibby/contracts"
-import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service"
-import { ActivityLogService } from "../activity/activity-log.service"
-import { CredentialsStore } from "../integrations/credentials.store"
-import { IntegrationsStorageService } from "../integrations/integrations.storage.service"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { JiraChannelAdapter } from "./adapters/jira.adapter"
+import { randomUUID } from "node:crypto";
+import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
+import type { Approval } from "@zibby/contracts";
+import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
+import { ActivityLogService } from "../activity/activity-log.service";
+import { CredentialsStore } from "../integrations/credentials.store";
+import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { JiraChannelAdapter } from "./adapters/jira.adapter";
 
 export interface JiraIssueRequest {
-  integrationId: string
-  summary: string
-  description?: string
-  projectKey?: string
+  integrationId: string;
+  summary: string;
+  description?: string;
+  projectKey?: string;
 }
 
 /**
@@ -29,9 +29,9 @@ export interface JiraIssueRequest {
  */
 @Injectable()
 export class JiraIssueFlowService implements OnModuleInit, ResumableRunner {
-  private readonly log: ScopedLogger
-  private readonly adapter: JiraChannelAdapter
-  private readonly pending = new Map<string, JiraIssueRequest>()
+  private readonly log: ScopedLogger;
+  private readonly adapter: JiraChannelAdapter;
+  private readonly pending = new Map<string, JiraIssueRequest>();
 
   constructor(
     private readonly approvals: ApprovalsService,
@@ -43,20 +43,21 @@ export class JiraIssueFlowService implements OnModuleInit, ResumableRunner {
     // default-constructed; a test injects one with a stub fetch.
     @Optional() adapter?: JiraChannelAdapter,
   ) {
-    this.log = logger.child(JiraIssueFlowService.name)
-    this.adapter = adapter ?? new JiraChannelAdapter()
+    this.log = logger.child(JiraIssueFlowService.name);
+    this.adapter = adapter ?? new JiraChannelAdapter();
   }
 
   onModuleInit(): void {
-    this.approvals.register("jira-issue", this)
+    this.approvals.register("jira-issue", this);
   }
 
   /** Park a Jira-issue create behind a Tier-3 approval. Returns the approval. */
   async propose(req: JiraIssueRequest): Promise<Approval> {
-    const integration = await this.integrations.get(req.integrationId)
-    if (integration.config.kind !== "jira") throw new Error(`integration ${req.integrationId} is not a jira integration`)
-    const runId = randomUUID()
-    this.pending.set(runId, req)
+    const integration = await this.integrations.get(req.integrationId);
+    if (integration.config.kind !== "jira")
+      throw new Error(`integration ${req.integrationId} is not a jira integration`);
+    const runId = randomUUID();
+    this.pending.set(runId, req);
     const approval = await this.approvals.requestApproval({
       runId,
       kind: "jira-issue",
@@ -64,44 +65,51 @@ export class JiraIssueFlowService implements OnModuleInit, ResumableRunner {
       action: "jira.create_issue",
       detail: `Create Jira issue in ${integration.config.projectKey ?? req.integrationId}: ${req.summary}`,
       risk: "low",
-    })
-    this.log.info("jira issue parked for approval", { integrationId: req.integrationId, approvalId: approval.id })
-    return approval
+    });
+    this.log.info("jira issue parked for approval", {
+      integrationId: req.integrationId,
+      approvalId: approval.id,
+    });
+    return approval;
   }
 
   /** Approve → perform the gated Jira-issue create exactly once. */
   async resume(runId: string): Promise<void> {
-    const req = this.pending.get(runId)
+    const req = this.pending.get(runId);
     if (!req) {
-      this.log.warn("jira-issue resume skipped (no pending request)", { runId })
-      return
+      this.log.warn("jira-issue resume skipped (no pending request)", { runId });
+      return;
     }
-    this.pending.delete(runId)
-    const integration = await this.integrations.get(req.integrationId).catch(() => null)
+    this.pending.delete(runId);
+    const integration = await this.integrations.get(req.integrationId).catch(() => null);
     if (!integration || integration.config.kind !== "jira") {
-      this.log.warn("jira-issue resume aborted (integration gone)", { integrationId: req.integrationId })
-      return
+      this.log.warn("jira-issue resume aborted (integration gone)", {
+        integrationId: req.integrationId,
+      });
+      return;
     }
-    const creds = await this.credentials.read(req.integrationId)
+    const creds = await this.credentials.read(req.integrationId);
     if (!creds) {
-      this.log.warn("jira-issue resume aborted (no credentials)", { integrationId: req.integrationId })
-      return
+      this.log.warn("jira-issue resume aborted (no credentials)", {
+        integrationId: req.integrationId,
+      });
+      return;
     }
     const key = await this.adapter.createIssue(integration, creds, {
       summary: req.summary,
       description: req.description,
       projectKey: req.projectKey,
-    })
+    });
     void this.activity.record({
       kind: "channel-approval",
       summary: `created Jira issue ${key} — ${req.summary}`,
       refs: { integrationId: req.integrationId, action: "jira.create_issue", status: key },
-    })
-    this.log.info("jira issue created on approval", { integrationId: req.integrationId, key })
+    });
+    this.log.info("jira issue created on approval", { integrationId: req.integrationId, key });
   }
 
   /** Reject → drop the pending request (no issue is created). */
   cancel(runId: string): void {
-    this.pending.delete(runId)
+    this.pending.delete(runId);
   }
 }

@@ -28,7 +28,12 @@ function fromRows(rows: KeyValueRow[]): Record<string, string> | undefined {
  * back, so the panel only ever shows whether a secret is stored and an editor to
  * set or clear them — moved here from the old project dialog.
  */
-export function ProjectSecretsPanel({ hasSecrets, saving, onSet, onClear }: ProjectSecretsPanelProps) {
+export function ProjectSecretsPanel({
+  hasSecrets,
+  saving,
+  onSet,
+  onClear,
+}: ProjectSecretsPanelProps) {
   const t = useTranslations("projects");
   const [secretRows, setSecretRows] = useState<KeyValueRow[]>([]);
 
@@ -75,13 +80,7 @@ export function ProjectSecretsPanel({ hasSecrets, saving, onSet, onClear }: Proj
             {t("fields.secretsSave")}
           </Button>
           {hasSecrets && (
-            <Button
-              disabled={saving}
-              icon="trash"
-              intent="danger"
-              onClick={onClear}
-              size="sm"
-            >
+            <Button disabled={saving} icon="trash" intent="danger" onClick={onClear} size="sm">
               {t("fields.secretsClear")}
             </Button>
           )}

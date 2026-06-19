@@ -5,11 +5,10 @@ export enum NumberFieldTestId {
   Control = "number-field-control",
 }
 
-export interface NumberFieldProps
-  extends Omit<
-    InputHTMLAttributes<HTMLInputElement>,
-    "id" | "className" | "type" | "value" | "onChange"
-  > {
+export interface NumberFieldProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "id" | "className" | "type" | "value" | "onChange"
+> {
   label: string;
   hint?: string;
   error?: string;

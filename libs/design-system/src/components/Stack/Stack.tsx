@@ -5,10 +5,7 @@ export enum StackTestId {
   Root = "stack-root",
 }
 
-export interface StackProps extends Omit<
-  HTMLAttributes<HTMLElement>,
-  "className"
-> {
+export interface StackProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   direction?: "row" | "col";
   gap?: Spacing;
   align?: "start" | "center" | "end" | "stretch" | "baseline";
@@ -74,16 +71,8 @@ export function Stack({
     ...style,
   };
 
-   
   const Component = Tag as ElementType;
-  return (
-    <Component
-      data-testid={StackTestId.Root}
-      {...rest}
-      ref={ref}
-      style={computedStyle}
-    />
-  );
+  return <Component data-testid={StackTestId.Root} {...rest} ref={ref} style={computedStyle} />;
 }
 
 export interface RowProps extends Omit<StackProps, "direction"> {

@@ -44,7 +44,9 @@ export function VoiceTranscript({ messages, userTag, zibbyTag }: VoiceTranscript
             >
               {isZibby ? zibbyTag : userTag}
             </Typography>
-            <span style={{ color: isZibby ? "var(--color-foreground)" : "var(--color-foreground-dim)" }}>
+            <span
+              style={{ color: isZibby ? "var(--color-foreground)" : "var(--color-foreground-dim)" }}
+            >
               {m.text}
             </span>
           </div>

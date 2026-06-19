@@ -7,10 +7,7 @@ import { DAY_MS, HOUR_MS, MINUTE_MS } from "../../../utils/time";
  * unknown (`resetsAt == null`) or already elapsed — the caller then renders the
  * "unknown" copy instead. Locale-agnostic on purpose (bare numbers + d/h/m).
  */
-export function formatResetIn(
-  resetsAt: number | null,
-  now: number,
-): string | null {
+export function formatResetIn(resetsAt: number | null, now: number): string | null {
   if (resetsAt == null) return null;
   const remaining = resetsAt - now;
   if (remaining <= 0) return null;

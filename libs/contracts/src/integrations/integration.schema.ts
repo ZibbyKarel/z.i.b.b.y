@@ -1,5 +1,5 @@
-import { z } from "zod"
-import { AGENT_ID_REGEX } from "../agents/agent.schema"
+import { z } from "zod";
+import { AGENT_ID_REGEX } from "../agents/agent.schema";
 
 /**
  * Allowed shape of an integration `id` — the same restrictive pattern agents use
@@ -11,11 +11,11 @@ export const IntegrationIdSchema = z
   .string()
   .min(1)
   .max(128)
-  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
+  .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
 /** Which inbound channel an integration speaks. `kind` is immutable after create. */
-export const IntegrationKindSchema = z.enum(["slack", "email", "jira", "github", "calendar"])
-export type IntegrationKind = z.infer<typeof IntegrationKindSchema>
+export const IntegrationKindSchema = z.enum(["slack", "email", "jira", "github", "calendar"]);
+export type IntegrationKind = z.infer<typeof IntegrationKindSchema>;
 
 /**
  * Slack channel config — the conversation ids to poll. Non-secret by construction:
@@ -27,8 +27,8 @@ export const SlackConfigSchema = z
     kind: z.literal("slack"),
     channels: z.array(z.string().min(1)).default([]),
   })
-  .strict()
-export type SlackConfig = z.infer<typeof SlackConfigSchema>
+  .strict();
+export type SlackConfig = z.infer<typeof SlackConfigSchema>;
 
 /**
  * Email (IMAP/SMTP) config. The login `user` is non-secret (an address); the
@@ -44,8 +44,8 @@ export const EmailConfigSchema = z
     user: z.string().min(1),
     mailbox: z.string().min(1).optional(),
   })
-  .strict()
-export type EmailConfig = z.infer<typeof EmailConfigSchema>
+  .strict();
+export type EmailConfig = z.infer<typeof EmailConfigSchema>;
 
 /**
  * Jira config — the site `baseUrl` and the account `email` (both non-secret); the
@@ -60,8 +60,8 @@ export const JiraConfigSchema = z
     projectKey: z.string().min(1).optional(),
     jql: z.string().min(1).optional(),
   })
-  .strict()
-export type JiraConfig = z.infer<typeof JiraConfigSchema>
+  .strict();
+export type JiraConfig = z.infer<typeof JiraConfigSchema>;
 
 /**
  * GitHub config — the `repo` ("owner/name") to monitor; the PAT lives in the
@@ -74,8 +74,8 @@ export const GitHubConfigSchema = z
     repo: z.string().regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'"),
     streams: z.array(z.enum(["issues", "pulls"])).default(["issues", "pulls"]),
   })
-  .strict()
-export type GitHubConfig = z.infer<typeof GitHubConfigSchema>
+  .strict();
+export type GitHubConfig = z.infer<typeof GitHubConfigSchema>;
 
 /**
  * Google Calendar config — which calendar to poll (`calendarId`, defaults to the
@@ -91,8 +91,8 @@ export const CalendarConfigSchema = z
     calendarId: z.string().min(1).default("primary"),
     lookaheadDays: z.number().int().positive().max(365).default(14),
   })
-  .strict()
-export type CalendarConfig = z.infer<typeof CalendarConfigSchema>
+  .strict();
+export type CalendarConfig = z.infer<typeof CalendarConfigSchema>;
 
 /** Discriminated on `kind` so config always matches the integration kind. */
 export const IntegrationConfigSchema = z.discriminatedUnion("kind", [
@@ -101,12 +101,12 @@ export const IntegrationConfigSchema = z.discriminatedUnion("kind", [
   JiraConfigSchema,
   GitHubConfigSchema,
   CalendarConfigSchema,
-])
-export type IntegrationConfig = z.infer<typeof IntegrationConfigSchema>
+]);
+export type IntegrationConfig = z.infer<typeof IntegrationConfigSchema>;
 
 /** Connection health, watcher-stamped (`markSync`), like an automation's lastFiredAt. */
-export const IntegrationStatusSchema = z.enum(["connected", "disconnected", "error"])
-export type IntegrationStatus = z.infer<typeof IntegrationStatusSchema>
+export const IntegrationStatusSchema = z.enum(["connected", "disconnected", "error"]);
+export type IntegrationStatus = z.infer<typeof IntegrationStatusSchema>;
 
 /**
  * A configured inbound channel (Phase 5). On disk: one `<id>.json` under
@@ -133,8 +133,8 @@ export const IntegrationSchema = z.object({
   lastError: z.string().optional(),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
-})
-export type Integration = z.infer<typeof IntegrationSchema>
+});
+export type Integration = z.infer<typeof IntegrationSchema>;
 
 /**
  * Create body — the operator supplies id, kind, config (+ optional name/enabled).
@@ -147,8 +147,8 @@ export const CreateIntegrationSchema = z.object({
   name: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   config: IntegrationConfigSchema,
-})
-export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>
+});
+export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>;
 
 /**
  * Update body — `id` and `kind` are immutable (kind drives the config union and
@@ -162,8 +162,8 @@ export const UpdateIntegrationSchema = IntegrationSchema.omit({
   lastSyncAt: true,
   lastError: true,
   hasCredentials: true,
-}).partial()
-export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>
+}).partial();
+export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>;
 
 /**
  * Closed, per-kind credentials write body. Slack carries a bot `token`, email a
@@ -173,12 +173,12 @@ export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>
 export const CredentialsInputSchema = z.union([
   z.object({ token: z.string().min(1) }).strict(),
   z.object({ password: z.string().min(1) }).strict(),
-])
-export type CredentialsInput = z.infer<typeof CredentialsInputSchema>
+]);
+export type CredentialsInput = z.infer<typeof CredentialsInputSchema>;
 
 /** Result of a connection test — the adapter's verdict + a short human detail. */
 export const TestResultSchema = z.object({
   ok: z.boolean(),
   detail: z.string(),
-})
-export type TestResult = z.infer<typeof TestResultSchema>
+});
+export type TestResult = z.infer<typeof TestResultSchema>;

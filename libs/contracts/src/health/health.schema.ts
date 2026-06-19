@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /**
  * The Claude CLI preflight verdict the health payload carries: whether a
@@ -9,8 +9,8 @@ export const ClaudeHealthSchema = z.object({
   ok: z.boolean(),
   version: z.string().optional(),
   reason: z.string().optional(),
-})
-export type ClaudeHealth = z.infer<typeof ClaudeHealthSchema>
+});
+export type ClaudeHealth = z.infer<typeof ClaudeHealthSchema>;
 
 /**
  * One subsystem's health (M8). `status`: `ok` reachable/healthy, `degraded`
@@ -21,8 +21,8 @@ export const SubsystemHealthSchema = z.object({
   name: z.enum(["backend", "vault", "integrations", "scheduler"]),
   status: z.enum(["ok", "degraded", "down"]),
   detail: z.string().optional(),
-})
-export type SubsystemHealth = z.infer<typeof SubsystemHealthSchema>
+});
+export type SubsystemHealth = z.infer<typeof SubsystemHealthSchema>;
 
 /**
  * Liveness/readiness payload returned by `getHealth`. `status` is `"ok"` when the
@@ -37,5 +37,5 @@ export const HealthSchema = z.object({
   timestamp: z.string().datetime(),
   claude: ClaudeHealthSchema,
   subsystems: z.array(SubsystemHealthSchema),
-})
-export type Health = z.infer<typeof HealthSchema>
+});
+export type Health = z.infer<typeof HealthSchema>;

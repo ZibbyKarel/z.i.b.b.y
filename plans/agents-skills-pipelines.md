@@ -21,7 +21,7 @@ formátu, který validují `libs/contracts/src/{skills,agents,pipelines}/*.schem
 - **Schéma skill** (`<id>.md`): frontmatter `name, glyph, desc, category` + tělo =
   `instructions`. Jen `id` (= název souboru) a `instructions` povinné.
 - **Schéma agent** (`<id>.md`): `name, description, glyph, model(opus|sonnet|haiku),
-  thinking(high|medium|low), tools[], category` + tělo.
+thinking(high|medium|low), tools[], category` + tělo.
 - **Schéma pipeline** (`<id>.pipeline.md`): `name, desc, phases[]`. `agent` fáze
   vyžaduje `agent, model, thinking, consumes, produces`; `verify` fáze běží shell
   checky bez LLM. `loop.to/then` musí ukazovat na existující `id` fáze / `fail` / `park`.
@@ -34,35 +34,35 @@ formátu, který validují `libs/contracts/src/{skills,agents,pipelines}/*.schem
 
 ---
 
-## Fáze 1 — Import skillů  ✅
+## Fáze 1 — Import skillů ✅
 
 Vybrané skilly (kurátorský výběr, ne mechanický dump) z `ecc/skills/<name>/SKILL.md`
 a `everything-claude-code/skills/<name>/SKILL.md`. Transformace frontmatteru na náš
 tvar (`name, glyph, desc, category`), tělo zachovat. Atribuce řádkem v těle.
 
 - [x] **Výzkum & inteligence** (`category: Research`): deep-research, market-research,
-  exa-search, iterative-retrieval, research-ops, scientific-literature-review
+      exa-search, iterative-retrieval, research-ops, scientific-literature-review
 - [x] **Marketing & obsah** (`category: Marketing & Content`): brand-voice,
-  content-engine, seo, article-writing, crosspost, social-publisher, marketing-campaign
+      content-engine, seo, article-writing, crosspost, social-publisher, marketing-campaign
 - [x] **Sales & growth** (`category: Sales & Growth`): lead-intelligence,
-  investor-outreach, investor-materials, product-lens, product-capability
+      investor-outreach, investor-materials, product-lens, product-capability
 - [x] **Koding & delivery** (`category: Coding & Delivery`): tdd-workflow,
-  verification-loop, security-review, e2e-testing, codebase-onboarding, api-design,
-  backend-patterns, frontend-patterns
+      verification-loop, security-review, e2e-testing, codebase-onboarding, api-design,
+      backend-patterns, frontend-patterns
 - [x] **Agentic / meta** (`category: Agentic`): prompt-optimizer, plan-orchestrate
 - [x] `apps/api/data/skills/_categories.json` s těmito kategoriemi
 - [x] commit
 
-## Fáze 2 — Doplnění agentů (marketing & sales)  ✅
+## Fáze 2 — Doplnění agentů (marketing & sales) ✅
 
 Nové agenty v našem stylu (stručné, akční), kategorie `Business & Product`:
 
 - [x] copywriter, marketing-strategist, social-media-manager, email-marketer,
-  brand-strategist (marketing)
+      brand-strategist (marketing)
 - [x] sdr (outreach), account-executive, lead-researcher (sales)
 - [x] commit
 
-## Fáze 3 — Pipeliny  ✅
+## Fáze 3 — Pipeliny ✅
 
 Nové `*.pipeline.md` skládající existující + nové agenty. Lineární s volitelnou
 review-smyčkou; bez `verify` fáze tam, kde nejde o kód.
@@ -75,13 +75,13 @@ review-smyčkou; bez `verify` fáze tam, kde nejde o kód.
 - [x] **produkt**: `product-discovery` (market-researcher → ux-researcher → product-manager → architekt)
 - [x] commit
 
-## Fáze 4 — Validace  ✅
+## Fáze 4 — Validace ✅
 
 - [x] parse-check: každý nový soubor projde příslušným Zod schématem (skript)
 - [x] `pnpm lint` / `pnpm typecheck` (žádné kódové změny → mělo by být beze změny)
 - [x] commit (pokud něco)
 
-## Fáze 5 — Atribuce & docs  ✅
+## Fáze 5 — Atribuce & docs ✅
 
 - [x] `THIRD-PARTY-NOTICES.md` — záznam o obou MIT sbírkách
 - [x] krátký přehled přidaného obsahu (tento plán + commit zprávy)

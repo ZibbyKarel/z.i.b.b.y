@@ -234,7 +234,11 @@ function buildSettings(customHooks: readonly Hook[]): string {
     const group: HookMatcherGroup = {
       ...(matcher ? { matcher } : {}),
       hooks: [
-        { type: "command", command: hook.command, ...(hook.timeout ? { timeout: hook.timeout } : {}) },
+        {
+          type: "command",
+          command: hook.command,
+          ...(hook.timeout ? { timeout: hook.timeout } : {}),
+        },
       ],
     };
     (byEvent[hook.event] ??= []).push(group);
@@ -341,9 +345,7 @@ export class ClaudeRunCommandService {
     private readonly mcpCredentials: McpCredentialsStore,
   ) {}
 
-  async buildClaudeCommand(
-    opts: ClaudeRunOptions,
-  ): Promise<{ command: string; args: string[] }> {
+  async buildClaudeCommand(opts: ClaudeRunOptions): Promise<{ command: string; args: string[] }> {
     // Enabled MCP servers are injected into every run: their tools widen the
     // session allow-list (see buildCatalog) and their connection config rides
     // `--mcp-config`. A listing failure degrades to no MCP (never blocks the run).
@@ -392,8 +394,7 @@ export class ClaudeRunCommandService {
     if (mcpConfig) args.push("--mcp-config", JSON.stringify(mcpConfig));
     // Full-transcript logging: stream every step as JSON (the runner flattens it back
     // to readable log lines). `stream-json` requires `--verbose` in print mode.
-    if (opts.streamTranscript)
-      args.push("--output-format", "stream-json", "--verbose");
+    if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose");
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
     for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir);
     if (opts.model) args.push("--model", opts.model);

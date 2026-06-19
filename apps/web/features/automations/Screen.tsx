@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Container,
-  Icon,
-  type IconName,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import type { Automation } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";

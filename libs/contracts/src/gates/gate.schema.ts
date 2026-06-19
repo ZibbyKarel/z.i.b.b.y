@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /**
  * Risk is a property of (action, arguments/target, context), not of an entity —
@@ -25,12 +25,12 @@ export const MatchConditionSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("scope"), scope: z.string().min(1) }),
   z.object({ type: z.literal("context"), context: z.string().min(1) }),
-])
-export type MatchCondition = z.infer<typeof MatchConditionSchema>
+]);
+export type MatchCondition = z.infer<typeof MatchConditionSchema>;
 
 /** What a matched rule does. `ask` pauses for resolution; the rest are immediate. */
-export const DecisionSchema = z.enum(["allow", "notify", "ask", "deny"])
-export type Decision = z.infer<typeof DecisionSchema>
+export const DecisionSchema = z.enum(["allow", "notify", "ask", "deny"]);
+export type Decision = z.infer<typeof DecisionSchema>;
 
 /**
  * How an `ask` is resolved. Leaves are a human, an automated check (e.g. CI), or a
@@ -41,7 +41,7 @@ export type Resolve =
   | { type: "check"; check: string }
   | { type: "agent"; agent: string }
   | { type: "all"; all: Resolve[] }
-  | { type: "any"; any: Resolve[] }
+  | { type: "any"; any: Resolve[] };
 
 export const ResolveSchema: z.ZodType<Resolve> = z.lazy(() =>
   z.union([
@@ -51,7 +51,7 @@ export const ResolveSchema: z.ZodType<Resolve> = z.lazy(() =>
     z.object({ type: z.literal("all"), all: z.array(ResolveSchema).min(1) }),
     z.object({ type: z.literal("any"), any: z.array(ResolveSchema).min(1) }),
   ]),
-)
+);
 
 /** Refinement shared by rule shapes: `resolve` exists iff the decision is `ask`. */
 function refineResolve(
@@ -59,10 +59,18 @@ function refineResolve(
   ctx: z.RefinementCtx,
 ): void {
   if (rule.decision === "ask" && !rule.resolve) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "an 'ask' rule needs a resolve", path: ["resolve"] })
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "an 'ask' rule needs a resolve",
+      path: ["resolve"],
+    });
   }
   if (rule.decision !== "ask" && rule.resolve) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "resolve is only valid on 'ask'", path: ["resolve"] })
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "resolve is only valid on 'ask'",
+      path: ["resolve"],
+    });
   }
 }
 
@@ -73,8 +81,8 @@ export const GateRuleInputSchema = z
     decision: DecisionSchema,
     resolve: ResolveSchema.optional(),
   })
-  .superRefine(refineResolve)
-export type GateRuleInput = z.infer<typeof GateRuleInputSchema>
+  .superRefine(refineResolve);
+export type GateRuleInput = z.infer<typeof GateRuleInputSchema>;
 
 /** A stored rule: the input plus provenance. `locked` system rules are the floor. */
 export const GateRuleSchema = z
@@ -86,8 +94,8 @@ export const GateRuleSchema = z
     decision: DecisionSchema,
     resolve: ResolveSchema.optional(),
   })
-  .superRefine(refineResolve)
-export type GateRule = z.infer<typeof GateRuleSchema>
+  .superRefine(refineResolve);
+export type GateRule = z.infer<typeof GateRuleSchema>;
 
 /** The concrete action a runner is about to take, evaluated against the rules. */
 export const IntendedActionSchema = z.object({
@@ -98,8 +106,8 @@ export const IntendedActionSchema = z.object({
   context: z.string().optional(),
   /** Numeric facts a `threshold` matcher reads, e.g. `{ "purchase.amount": 540 }`. */
   metrics: z.record(z.string(), z.number()).optional(),
-})
-export type IntendedAction = z.infer<typeof IntendedActionSchema>
+});
+export type IntendedAction = z.infer<typeof IntendedActionSchema>;
 
 /** The result of evaluating an action: the decision and (for `ask`) the resolve. */
 export const GateEvaluationSchema = z.object({
@@ -107,23 +115,23 @@ export const GateEvaluationSchema = z.object({
   /** Id of the rule that matched, or undefined for the default `allow`. */
   ruleId: z.string().optional(),
   resolve: ResolveSchema.optional(),
-})
-export type GateEvaluation = z.infer<typeof GateEvaluationSchema>
+});
+export type GateEvaluation = z.infer<typeof GateEvaluationSchema>;
 
 /** The inherited (locked) floor + an agent's own rules, for the editor. */
 export const AgentGatesSchema = z.object({
   inherited: z.array(GateRuleSchema),
   own: z.array(GateRuleSchema),
-})
-export type AgentGates = z.infer<typeof AgentGatesSchema>
+});
+export type AgentGates = z.infer<typeof AgentGatesSchema>;
 
 /** Why a `replaceAgentGates` was rejected — an agent rule tried to weaken the floor. */
 export const PolicyViolationSchema = z.object({
   message: z.string(),
   ruleIndex: z.number().int(),
   reason: z.string(),
-})
-export type PolicyViolation = z.infer<typeof PolicyViolationSchema>
+});
+export type PolicyViolation = z.infer<typeof PolicyViolationSchema>;
 
 /**
  * The global gate-rule catalog (the "Pravidla schvalování" page) — the middle
@@ -134,12 +142,12 @@ export type PolicyViolation = z.infer<typeof PolicyViolationSchema>
  */
 
 /** Allowed shape of a catalog rule `id` — filename-safe, no path separators/traversal. */
-export const GATE_RULE_ID_REGEX = /^[a-zA-Z0-9._-]+$/
+export const GATE_RULE_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 export const GateRuleIdSchema = z
   .string()
   .min(1)
   .max(128)
-  .regex(GATE_RULE_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
+  .regex(GATE_RULE_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
 /** The editable core of a catalog rule (no provenance id) — what a caller supplies. */
 const GlobalGateRuleBaseSchema = z.object({
@@ -150,14 +158,14 @@ const GlobalGateRuleBaseSchema = z.object({
   match: z.array(MatchConditionSchema).min(1),
   decision: DecisionSchema,
   resolve: ResolveSchema.optional(),
-})
+});
 
 /** Body accepted by `createGateRule` / `updateGateRule` — the server assigns the `id`. */
-export const GlobalGateRuleInputSchema = GlobalGateRuleBaseSchema.superRefine(refineResolve)
-export type GlobalGateRuleInput = z.infer<typeof GlobalGateRuleInputSchema>
+export const GlobalGateRuleInputSchema = GlobalGateRuleBaseSchema.superRefine(refineResolve);
+export type GlobalGateRuleInput = z.infer<typeof GlobalGateRuleInputSchema>;
 
 /** A stored catalog rule: the input plus its stable `id` (referenced by `gateRuleIds`). */
 export const GlobalGateRuleSchema = GlobalGateRuleBaseSchema.extend({
   id: GateRuleIdSchema,
-}).superRefine(refineResolve)
-export type GlobalGateRule = z.infer<typeof GlobalGateRuleSchema>
+}).superRefine(refineResolve);
+export type GlobalGateRule = z.infer<typeof GlobalGateRuleSchema>;

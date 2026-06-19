@@ -1,26 +1,26 @@
-import { execFile } from "node:child_process"
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { promisify } from "node:util"
-import { Injectable, Optional } from "@nestjs/common"
-import type { Workspace } from "@zibby/contracts"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
+import { execFile } from "node:child_process";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { promisify } from "node:util";
+import { Injectable, Optional } from "@nestjs/common";
+import type { Workspace } from "@zibby/contracts";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
-const exec = promisify(execFile)
+const exec = promisify(execFile);
 
 /** Git invocations are local-only (no fetch/pull) — a short timeout bounds a hang. */
-const GIT_TIMEOUT_MS = 10_000
+const GIT_TIMEOUT_MS = 10_000;
 
 /** Hard cap on a sanitized branch slug, leaving room under git's ref-name limits. */
-const SLUG_MAX = 60
+const SLUG_MAX = 60;
 
 /** Raised when worktree creation fails on a *git* project — the run must not silently
  * touch the operator's main checkout, so the caller surfaces this rather than falling
  * back to direct-checkout (which is reserved for non-git projects). */
 export class WorkspaceSetupError extends Error {
   constructor(message: string) {
-    super(message)
-    this.name = "WorkspaceSetupError"
+    super(message);
+    this.name = "WorkspaceSetupError";
   }
 }
 
@@ -37,8 +37,8 @@ export function sanitizeBranchSlug(input: string): string {
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, SLUG_MAX)
-    .replace(/-+$/g, "")
-  return slug || "run"
+    .replace(/-+$/g, "");
+  return slug || "run";
 }
 
 /**
@@ -51,19 +51,19 @@ export function sanitizeBranchSlug(input: string): string {
  */
 @Injectable()
 export class WorkspaceService {
-  private readonly log?: ScopedLogger
+  private readonly log?: ScopedLogger;
 
   constructor(@Optional() logger?: LoggerService) {
-    this.log = logger?.child(WorkspaceService.name)
+    this.log = logger?.child(WorkspaceService.name);
   }
 
   /** Is `dir` inside a git work tree? A cheap `rev-parse` probe (no network). */
   async isGitRepo(dir: string): Promise<boolean> {
     try {
-      await exec("git", ["rev-parse", "--git-dir"], { cwd: dir, timeout: GIT_TIMEOUT_MS })
-      return true
+      await exec("git", ["rev-parse", "--git-dir"], { cwd: dir, timeout: GIT_TIMEOUT_MS });
+      return true;
     } catch {
-      return false
+      return false;
     }
   }
 
@@ -74,29 +74,29 @@ export class WorkspaceService {
    * Throws {@link WorkspaceSetupError} on any git failure (the caller fails the run).
    */
   async createWorktree(opts: {
-    projectPath: string
-    runId: string
-    slug: string
-    dir: string
+    projectPath: string;
+    runId: string;
+    slug: string;
+    dir: string;
   }): Promise<Workspace> {
-    const branch = `zibby/${opts.runId}-${sanitizeBranchSlug(opts.slug)}`
+    const branch = `zibby/${opts.runId}-${sanitizeBranchSlug(opts.slug)}`;
     try {
       const head = await exec("git", ["rev-parse", "HEAD"], {
         cwd: opts.projectPath,
         timeout: GIT_TIMEOUT_MS,
-      })
-      const baseRef = head.stdout.trim()
+      });
+      const baseRef = head.stdout.trim();
       await exec("git", ["worktree", "add", "-b", branch, opts.dir, "HEAD"], {
         cwd: opts.projectPath,
         timeout: GIT_TIMEOUT_MS,
-      })
-      this.log?.info("worktree created", { projectPath: opts.projectPath, branch, dir: opts.dir })
-      return { branch, path: opts.dir, baseRef }
+      });
+      this.log?.info("worktree created", { projectPath: opts.projectPath, branch, dir: opts.dir });
+      return { branch, path: opts.dir, baseRef };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+      const message = error instanceof Error ? error.message : String(error);
       throw new WorkspaceSetupError(
         `Failed to create worktree for branch "${branch}" in "${opts.projectPath}": ${message}`,
-      )
+      );
     }
   }
 
@@ -114,12 +114,12 @@ export class WorkspaceService {
       this.log?.debug("worktree remove failed; pruning metadata", {
         worktreePath: opts.worktreePath,
         err: error instanceof Error ? error.message : String(error),
-      })
-    })
+      });
+    });
     await exec("git", ["worktree", "prune"], {
       cwd: opts.projectPath,
       timeout: GIT_TIMEOUT_MS,
-    }).catch(() => {})
+    }).catch(() => {});
   }
 
   /**
@@ -132,45 +132,49 @@ export class WorkspaceService {
    * push/PR gate (3.2/3.3) is untouched. Returns the short sha on success.
    */
   async checkpoint(opts: {
-    worktreePath: string
-    phaseId: string
-    summary: string
+    worktreePath: string;
+    phaseId: string;
+    summary: string;
   }): Promise<{ sha: string } | null> {
     // A git worktree has a `.git` marker (a file pointing at the main repo). Its
     // absence means this is not a worktree → refuse rather than risk the main checkout.
-    const marker = await fs.stat(path.join(opts.worktreePath, ".git")).catch(() => null)
+    const marker = await fs.stat(path.join(opts.worktreePath, ".git")).catch(() => null);
     if (!marker) {
-      this.log?.debug("checkpoint skipped — not a worktree", { worktreePath: opts.worktreePath })
-      return null
+      this.log?.debug("checkpoint skipped — not a worktree", { worktreePath: opts.worktreePath });
+      return null;
     }
     try {
       const status = await exec("git", ["status", "--porcelain"], {
         cwd: opts.worktreePath,
         timeout: GIT_TIMEOUT_MS,
-      })
-      if (!status.stdout.trim()) return null // clean tree — nothing to checkpoint
-      await exec("git", ["add", "-A"], { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS })
-      const message = `zibby-checkpoint(${opts.phaseId}): ${opts.summary}`
+      });
+      if (!status.stdout.trim()) return null; // clean tree — nothing to checkpoint
+      await exec("git", ["add", "-A"], { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS });
+      const message = `zibby-checkpoint(${opts.phaseId}): ${opts.summary}`;
       // -c identity so the commit works on a worktree with no configured user.
       await exec(
         "git",
         ["-c", "user.email=zibby@local", "-c", "user.name=ZIBBY", "commit", "-m", message],
         { cwd: opts.worktreePath, timeout: GIT_TIMEOUT_MS },
-      )
+      );
       const head = await exec("git", ["rev-parse", "--short", "HEAD"], {
         cwd: opts.worktreePath,
         timeout: GIT_TIMEOUT_MS,
-      })
-      const sha = head.stdout.trim()
-      this.log?.info("checkpoint committed", { worktreePath: opts.worktreePath, phaseId: opts.phaseId, sha })
-      return { sha }
+      });
+      const sha = head.stdout.trim();
+      this.log?.info("checkpoint committed", {
+        worktreePath: opts.worktreePath,
+        phaseId: opts.phaseId,
+        sha,
+      });
+      return { sha };
     } catch (error) {
       this.log?.warn("checkpoint failed (soft)", {
         worktreePath: opts.worktreePath,
         phaseId: opts.phaseId,
         err: error instanceof Error ? error.message : String(error),
-      })
-      return null
+      });
+      return null;
     }
   }
 
@@ -186,7 +190,7 @@ export class WorkspaceService {
       timeout: GIT_TIMEOUT_MS,
     })
       .then((r) => r.stdout.trim())
-      .catch(() => "")
+      .catch(() => "");
   }
 
   /**
@@ -205,17 +209,17 @@ export class WorkspaceService {
    * and safe).
    */
   async openPr(opts: {
-    cwd: string
-    branch?: string
-    title: string
+    cwd: string;
+    branch?: string;
+    title: string;
     /** PR body source: a file (`--body-file`, the pipeline path) or an inline string. */
-    bodyFile?: string
-    body?: string
+    bodyFile?: string;
+    body?: string;
   }): Promise<{ url: string } | null> {
-    const marker = await fs.stat(path.join(opts.cwd, ".git")).catch(() => null)
+    const marker = await fs.stat(path.join(opts.cwd, ".git")).catch(() => null);
     if (!marker) {
-      this.log?.warn("openPr skipped — not a git dir", { cwd: opts.cwd })
-      return null
+      this.log?.warn("openPr skipped — not a git dir", { cwd: opts.cwd });
+      return null;
     }
     try {
       const branch =
@@ -225,30 +229,28 @@ export class WorkspaceService {
             cwd: opts.cwd,
             timeout: GIT_TIMEOUT_MS,
           })
-        ).stdout.trim()
-      if (!branch) throw new Error("detached HEAD; no branch to push")
+        ).stdout.trim();
+      if (!branch) throw new Error("detached HEAD; no branch to push");
       await exec("git", ["push", "-u", "origin", branch], {
         cwd: opts.cwd,
         timeout: GIT_TIMEOUT_MS,
-      })
+      });
       const bodyArgs =
-        opts.bodyFile !== undefined
-          ? ["--body-file", opts.bodyFile]
-          : ["--body", opts.body ?? ""]
+        opts.bodyFile !== undefined ? ["--body-file", opts.bodyFile] : ["--body", opts.body ?? ""];
       const created = await exec(
         "gh",
         ["pr", "create", "--title", opts.title, ...bodyArgs, "--head", branch],
         { cwd: opts.cwd, timeout: GIT_TIMEOUT_MS },
-      )
-      const url = created.stdout.trim().split(/\r?\n/).filter(Boolean).pop() ?? ""
-      this.log?.info("PR opened", { cwd: opts.cwd, branch, url })
-      return { url }
+      );
+      const url = created.stdout.trim().split(/\r?\n/).filter(Boolean).pop() ?? "";
+      this.log?.info("PR opened", { cwd: opts.cwd, branch, url });
+      return { url };
     } catch (error) {
       this.log?.warn("openPr failed (soft)", {
         cwd: opts.cwd,
         err: error instanceof Error ? error.message : String(error),
-      })
-      return null
+      });
+      return null;
     }
   }
 
@@ -263,13 +265,13 @@ export class WorkspaceService {
       timeout: GIT_TIMEOUT_MS,
     })
       .then((r) => r.stdout.trim())
-      .catch(() => "")
+      .catch(() => "");
     const stat = await exec("git", ["diff", "--stat", `${opts.baseRef}...HEAD`], {
       cwd: opts.worktreePath,
       timeout: GIT_TIMEOUT_MS,
     })
       .then((r) => r.stdout.trim())
-      .catch(() => "")
-    return [commits, stat].filter(Boolean).join("\n\n")
+      .catch(() => "");
+    return [commits, stat].filter(Boolean).join("\n\n");
   }
 }

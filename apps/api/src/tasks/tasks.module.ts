@@ -1,25 +1,25 @@
-import { Module } from "@nestjs/common"
-import { AgentsModule } from "../agents/agents.module"
-import { ApprovalsModule } from "../approvals/approvals.module"
-import { BudgetModule } from "../budget/budget.module"
-import { GatesModule } from "../gates/gates.module"
-import { GoalsModule } from "../goals/goals.module"
-import { LimitsModule } from "../limits/limits.module"
-import { MemoryModule } from "../memory/memory.module"
-import { PipelinesModule } from "../pipelines/pipelines.module"
-import { ProjectsModule } from "../projects/projects.module"
-import { WorkspaceModule } from "../workspace/workspace.module"
-import { ClaudeCliRouter } from "./claude-cli-router"
-import { KeywordScorer } from "./keyword-scorer"
-import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module"
-import { TaskClassifierService } from "./task-classifier.service"
-import { TaskOutputService } from "./task-output.service"
-import { TASK_ROUTER } from "./task-router"
-import { TaskRunLogsController } from "./task-run-logs.controller"
-import { TaskRunsController } from "./task-runs.controller"
-import { TaskRunsService } from "./task-runs.service"
-import { TaskSchedulerService } from "./task-scheduler.service"
-import { TasksController } from "./tasks.controller"
+import { Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
+import { ApprovalsModule } from "../approvals/approvals.module";
+import { BudgetModule } from "../budget/budget.module";
+import { GatesModule } from "../gates/gates.module";
+import { GoalsModule } from "../goals/goals.module";
+import { LimitsModule } from "../limits/limits.module";
+import { MemoryModule } from "../memory/memory.module";
+import { PipelinesModule } from "../pipelines/pipelines.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { WorkspaceModule } from "../workspace/workspace.module";
+import { ClaudeCliRouter } from "./claude-cli-router";
+import { KeywordScorer } from "./keyword-scorer";
+import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module";
+import { TaskClassifierService } from "./task-classifier.service";
+import { TaskOutputService } from "./task-output.service";
+import { TASK_ROUTER } from "./task-router";
+import { TaskRunLogsController } from "./task-run-logs.controller";
+import { TaskRunsController } from "./task-runs.controller";
+import { TaskRunsService } from "./task-runs.service";
+import { TaskSchedulerService } from "./task-scheduler.service";
+import { TasksController } from "./tasks.controller";
 
 /**
  * Task routing + the deferred-task scheduler. Reuses the agents and pipelines

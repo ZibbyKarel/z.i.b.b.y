@@ -17,16 +17,15 @@ export default meta;
 
 type Story = StoryObj<typeof Field>;
 
-const sampleInput =
-  (props: { id: string; describedBy: string | undefined; invalid: boolean }) => (
-    <input
-      aria-describedby={props.describedBy}
-      aria-invalid={props.invalid || undefined}
-      className={fieldControlClass}
-      id={props.id}
-      placeholder="…"
-    />
-  );
+const sampleInput = (props: { id: string; describedBy: string | undefined; invalid: boolean }) => (
+  <input
+    aria-describedby={props.describedBy}
+    aria-invalid={props.invalid || undefined}
+    className={fieldControlClass}
+    id={props.id}
+    placeholder="…"
+  />
+);
 
 export const Overview: Story = {
   render: () => (

@@ -29,7 +29,7 @@ gates:
       type: human
 
 gateRuleIds:
-  - push-to-main   # reference na globální katalog
+  - push-to-main # reference na globální katalog
 ```
 
 Vlastní pravidla agenta mají **vyšší prioritu** než floor (first match wins, vlastní pravidla jsou první v seznamu).
@@ -73,12 +73,12 @@ Agent ho odkazuje přes `gateRuleIds: ["push-to-main"]` — pravidlo se aplikuje
 
 ### Decision
 
-| Hodnota | Chování |
-|---------|---------|
-| `allow` | Tiché povolení, žádný záznam |
-| `notify` | Povolení, ale zaznamená se do activity logu |
-| `ask` | Run se pozastaví, vytvoří se `Approval`, čeká na rozhodnutí |
-| `deny` | Run se okamžitě ukončí (`interrupted`) |
+| Hodnota  | Chování                                                     |
+| -------- | ----------------------------------------------------------- |
+| `allow`  | Tiché povolení, žádný záznam                                |
+| `notify` | Povolení, ale zaznamená se do activity logu                 |
+| `ask`    | Run se pozastaví, vytvoří se `Approval`, čeká na rozhodnutí |
+| `deny`   | Run se okamžitě ukončí (`interrupted`)                      |
 
 ### Resolve (jen pro `ask`)
 
@@ -120,6 +120,7 @@ Vrátí `{ decision, ruleId?, resolve? }`.
 ### `validateHardenOnly`
 
 Volá se při `PUT /api/gates/:agentId` (nahrazení vlastních pravidel agenta):
+
 - Projde každé navrhované pravidlo vůči floor
 - Pokud by pravidlo oslabovalo floor pravidlo → `PolicyViolation`
 

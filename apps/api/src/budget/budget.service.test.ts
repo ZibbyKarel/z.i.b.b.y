@@ -1,8 +1,10 @@
-import type { AgentRun, Limits, PipelineRun, Project } from "@zibby/contracts"
-import { describe, expect, it, vi } from "vitest"
-import { BudgetService } from "./budget.service"
+import type { AgentRun, Limits, PipelineRun, Project } from "@zibby/contracts";
+import { describe, expect, it, vi } from "vitest";
+import { BudgetService } from "./budget.service";
 
-const fakeLogger = { child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }) }
+const fakeLogger = {
+  child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+};
 
 const limits = (over: Partial<Limits> = {}): Limits => ({
   rolling: { usedPct: 10, resetsAt: null },
@@ -10,20 +12,20 @@ const limits = (over: Partial<Limits> = {}): Limits => ({
   capturedAt: null,
   stale: false,
   ...over,
-})
+});
 
 interface Deps {
   ledger?: Partial<{
-    countDaily: () => Promise<number>
-    countWeekly: () => Promise<number>
-    countMonthly: () => Promise<number>
-    record: () => Promise<void>
-  }>
-  config?: { read: () => Promise<Record<string, number>> }
-  project?: Project | null
-  limitsSnapshot?: () => Promise<Limits>
-  agentRuns?: AgentRun[]
-  pipelineRuns?: PipelineRun[]
+    countDaily: () => Promise<number>;
+    countWeekly: () => Promise<number>;
+    countMonthly: () => Promise<number>;
+    record: () => Promise<void>;
+  }>;
+  config?: { read: () => Promise<Record<string, number>> };
+  project?: Project | null;
+  limitsSnapshot?: () => Promise<Limits>;
+  agentRuns?: AgentRun[];
+  pipelineRuns?: PipelineRun[];
 }
 
 function build(deps: Deps = {}): BudgetService {
@@ -32,19 +34,19 @@ function build(deps: Deps = {}): BudgetService {
     countWeekly: deps.ledger?.countWeekly ?? (async () => 0),
     countMonthly: deps.ledger?.countMonthly ?? (async () => 0),
     record: deps.ledger?.record ?? (async () => {}),
-  }
-  const config = deps.config ?? { read: async () => ({}) }
+  };
+  const config = deps.config ?? { read: async () => ({}) };
   const projects = {
     get: async (id: string) => {
-      if (deps.project && deps.project.id === id) return deps.project
-      throw new Error("not found")
+      if (deps.project && deps.project.id === id) return deps.project;
+      throw new Error("not found");
     },
     list: async () => (deps.project ? [deps.project] : []),
-  }
-  const limitsService = { snapshot: deps.limitsSnapshot ?? (async () => limits()) }
-  const agentRunner = { listRunning: () => deps.agentRuns ?? [] }
-  const pipelineRunner = { list: () => deps.pipelineRuns ?? [] }
-  const tasks = { list: async () => [] }
+  };
+  const limitsService = { snapshot: deps.limitsSnapshot ?? (async () => limits()) };
+  const agentRunner = { listRunning: () => deps.agentRuns ?? [] };
+  const pipelineRunner = { list: () => deps.pipelineRuns ?? [] };
+  const tasks = { list: async () => [] };
   return new BudgetService(
     ledger as never,
     config as never,
@@ -54,7 +56,7 @@ function build(deps: Deps = {}): BudgetService {
     pipelineRunner as never,
     tasks as never,
     fakeLogger as never,
-  )
+  );
 }
 
 const project = (budget: Project["budget"]): Project => ({
@@ -62,135 +64,175 @@ const project = (budget: Project["budget"]): Project => ({
   name: "Alpha",
   path: "/work/alpha",
   budget,
-})
+});
 
 describe("BudgetService.check — caps arithmetic", () => {
   it("ok when the project has no budget", async () => {
-    const svc = build({ project: project(undefined) })
-    expect(await svc.check("alpha")).toEqual({ ok: true })
-  })
+    const svc = build({ project: project(undefined) });
+    expect(await svc.check("alpha")).toEqual({ ok: true });
+  });
 
   it("ok when under the daily cap", async () => {
-    const svc = build({ project: project({ dailyRuns: 2 }), ledger: { countDaily: async () => 1 } })
-    expect(await svc.check("alpha")).toEqual({ ok: true })
-  })
+    const svc = build({
+      project: project({ dailyRuns: 2 }),
+      ledger: { countDaily: async () => 1 },
+    });
+    expect(await svc.check("alpha")).toEqual({ ok: true });
+  });
 
   it("over when the daily cap is reached", async () => {
-    const svc = build({ project: project({ dailyRuns: 2 }), ledger: { countDaily: async () => 2 } })
-    const result = await svc.check("alpha")
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.over).toBe("project-daily")
-  })
+    const svc = build({
+      project: project({ dailyRuns: 2 }),
+      ledger: { countDaily: async () => 2 },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-daily");
+  });
 
   it("over when the weekly cap is reached", async () => {
-    const svc = build({ project: project({ weeklyRuns: 5 }), ledger: { countWeekly: async () => 5 } })
-    const result = await svc.check("alpha")
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.over).toBe("project-weekly")
-  })
+    const svc = build({
+      project: project({ weeklyRuns: 5 }),
+      ledger: { countWeekly: async () => 5 },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-weekly");
+  });
 
   it("over when the monthly cap is reached", async () => {
-    const svc = build({ project: project({ monthlyRuns: 20 }), ledger: { countMonthly: async () => 20 } })
-    const result = await svc.check("alpha")
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.over).toBe("project-monthly")
-  })
+    const svc = build({
+      project: project({ monthlyRuns: 20 }),
+      ledger: { countMonthly: async () => 20 },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-monthly");
+  });
 
   it("ok when under the monthly cap", async () => {
-    const svc = build({ project: project({ monthlyRuns: 20 }), ledger: { countMonthly: async () => 5 } })
-    expect(await svc.check("alpha")).toEqual({ ok: true })
-  })
+    const svc = build({
+      project: project({ monthlyRuns: 20 }),
+      ledger: { countMonthly: async () => 5 },
+    });
+    expect(await svc.check("alpha")).toEqual({ ok: true });
+  });
 
   it("ok for an unattributed dispatch (no projectId, no global pause)", async () => {
-    const svc = build()
-    expect(await svc.check(undefined)).toEqual({ ok: true })
-  })
-})
+    const svc = build();
+    expect(await svc.check(undefined)).toEqual({ ok: true });
+  });
+});
 
 describe("BudgetService.check — global ceiling", () => {
   it("holds when a non-stale window is at the pause threshold", async () => {
     const svc = build({
       config: { read: async () => ({ pauseAtRollingPct: 80 }) },
       limitsSnapshot: async () => limits({ rolling: { usedPct: 85, resetsAt: null } }),
-    })
-    const result = await svc.check(undefined)
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.over).toBe("global")
-  })
+    });
+    const result = await svc.check(undefined);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("global");
+  });
 
   it("ignores the threshold when the reading is stale", async () => {
     const svc = build({
       config: { read: async () => ({ pauseAtRollingPct: 80 }) },
       limitsSnapshot: async () => limits({ rolling: { usedPct: 95, resetsAt: null }, stale: true }),
-    })
-    expect(await svc.check(undefined)).toEqual({ ok: true })
-  })
-})
+    });
+    expect(await svc.check(undefined)).toEqual({ ok: true });
+  });
+});
 
 describe("BudgetService.check — fail-closed", () => {
   it("holds (over global) when the limits snapshot throws", async () => {
-    const svc = build({ limitsSnapshot: async () => { throw new Error("network down") } })
-    const result = await svc.check("alpha")
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.over).toBe("global")
-  })
+    const svc = build({
+      limitsSnapshot: async () => {
+        throw new Error("network down");
+      },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("global");
+  });
 
   it("holds (over global) when the ledger is unreadable", async () => {
     const svc = build({
       project: project({ dailyRuns: 1 }),
-      ledger: { countDaily: async () => { throw new Error("EACCES") } },
-    })
-    const result = await svc.check("alpha")
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.over).toBe("global")
-  })
-})
+      ledger: {
+        countDaily: async () => {
+          throw new Error("EACCES");
+        },
+      },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("global");
+  });
+});
 
 describe("BudgetService.status — monthly", () => {
   it("includes a month-to-date window with its cap", async () => {
     const svc = build({
       project: project({ monthlyRuns: 30 }),
       ledger: { countMonthly: async () => 7 },
-    })
-    const status = await svc.status()
-    expect(status.projects[0]?.monthly).toEqual({ used: 7, cap: 30 })
-  })
-})
+    });
+    const status = await svc.status();
+    expect(status.projects[0]?.monthly).toEqual({ used: 7, cap: 30 });
+  });
+});
 
 describe("BudgetService.countRunning", () => {
   const agent = (over: Partial<AgentRun>): AgentRun => ({
-    runId: "a1", agentId: "x", status: "running", pct: 0, title: "", prompt: "",
-    project: "alpha", files: [], cwd: "/t", startedAt: new Date().toISOString(), pid: 1, logFile: "/t.log",
+    runId: "a1",
+    agentId: "x",
+    status: "running",
+    pct: 0,
+    title: "",
+    prompt: "",
+    project: "alpha",
+    files: [],
+    cwd: "/t",
+    startedAt: new Date().toISOString(),
+    pid: 1,
+    logFile: "/t.log",
     ...over,
-  })
+  });
   const pipeline = (over: Partial<PipelineRun>): PipelineRun => ({
-    pipelineRunId: "p1", pipelineId: "rel", status: "running", currentStage: null, stageRuns: [],
-    startedAt: new Date().toISOString(), cwd: "/p", projectPath: "/work/alpha", ...over,
-  })
+    pipelineRunId: "p1",
+    pipelineId: "rel",
+    status: "running",
+    currentStage: null,
+    stageRuns: [],
+    startedAt: new Date().toISOString(),
+    cwd: "/p",
+    projectPath: "/work/alpha",
+    ...over,
+  });
 
   it("counts running agent runs + running pipeline runs for the project", async () => {
     const svc = build({
       project: project({ maxConcurrent: 2 }),
       agentRuns: [agent({ runId: "a1" }), agent({ runId: "a2", status: "done" })],
       pipelineRuns: [pipeline({ pipelineRunId: "p1" })],
-    })
-    expect(await svc.countRunning("alpha")).toBe(2) // a1 (running) + p1; a2 done excluded
-  })
+    });
+    expect(await svc.countRunning("alpha")).toBe(2); // a1 (running) + p1; a2 done excluded
+  });
 
   it("excludes runs labelled with a different project", async () => {
     const svc = build({
       project: project({ maxConcurrent: 2 }),
       agentRuns: [agent({ project: "beta" })],
       pipelineRuns: [pipeline({ projectPath: "/work/beta" })],
-    })
-    expect(await svc.countRunning("alpha")).toBe(0)
-  })
+    });
+    expect(await svc.countRunning("alpha")).toBe(0);
+  });
 
   it("counts an awaiting-approval agent run as occupying a slot", async () => {
     const svc = build({
       project: project({ maxConcurrent: 1 }),
       agentRuns: [agent({ status: "awaiting-approval" })],
-    })
-    expect(await svc.countRunning("alpha")).toBe(1)
-  })
-})
+    });
+    expect(await svc.countRunning("alpha")).toBe(1);
+  });
+});

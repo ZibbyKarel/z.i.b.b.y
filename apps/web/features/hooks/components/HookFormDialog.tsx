@@ -80,8 +80,7 @@ export function HookFormDialog({ hook, onClose, onSubmit, onDelete }: HookFormDi
 
   const showMatcher = MATCHER_EVENTS.has(event);
 
-  const canSave =
-    (isNew ? id.trim().length > 0 : true) && command.trim().length > 0;
+  const canSave = (isNew ? id.trim().length > 0 : true) && command.trim().length > 0;
 
   const submit = () => {
     const parsedTimeout = Number.parseInt(timeout.trim(), 10);

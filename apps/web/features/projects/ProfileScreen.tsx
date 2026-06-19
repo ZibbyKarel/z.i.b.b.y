@@ -15,11 +15,7 @@ import {
   Toggle,
   Typography,
 } from "@zibby/design-system";
-import type {
-  ProjectAutonomyPolicy,
-  ProjectDailyRhythm,
-  ProjectPerson,
-} from "@zibby/contracts";
+import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -95,9 +91,7 @@ function PersonRow({
       <TextInputField
         data-testid="person-comms-style"
         label={commsStyleLabel}
-        onChange={(e) =>
-          onChange({ ...person, comms_style: e.target.value || undefined })
-        }
+        onChange={(e) => onChange({ ...person, comms_style: e.target.value || undefined })}
         placeholder={commsStylePlaceholder}
         value={person.comms_style ?? ""}
       />
@@ -151,16 +145,13 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
 
   // Controlled state — null means "follow server data"
   const [people, setPeople] = useState<ProjectPerson[] | null>(null);
-  const effectivePeople: ProjectPerson[] =
-    people ?? profileQ.data?.identity?.people ?? [];
+  const effectivePeople: ProjectPerson[] = people ?? profileQ.data?.identity?.people ?? [];
 
   const [autonomy, setAutonomy] = useState<ProjectAutonomyPolicy | null>(null);
-  const effectiveAutonomy: ProjectAutonomyPolicy =
-    autonomy ?? profileQ.data?.autonomy_policy ?? {};
+  const effectiveAutonomy: ProjectAutonomyPolicy = autonomy ?? profileQ.data?.autonomy_policy ?? {};
 
   const [rhythm, setRhythm] = useState<ProjectDailyRhythm | null>(null);
-  const effectiveRhythm: ProjectDailyRhythm =
-    rhythm ?? profileQ.data?.daily_rhythm ?? {};
+  const effectiveRhythm: ProjectDailyRhythm = rhythm ?? profileQ.data?.daily_rhythm ?? {};
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 

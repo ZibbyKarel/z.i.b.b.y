@@ -31,13 +31,13 @@
 // non-interactive run shape are the real guarantees; this just routes the common
 // idioms to the gate.
 
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import path from "node:path"
-import { pathToFileURL } from "node:url"
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-const REQUEST_FILE = "intent-request.json"
-const DECISION_FILE = "intent-decision.json"
-const POLL_MS = 200
+const REQUEST_FILE = "intent-request.json";
+const DECISION_FILE = "intent-decision.json";
+const POLL_MS = 200;
 
 /**
  * Fallback approval deadline when no argv deadline was passed (a non-RunnerCore
@@ -45,12 +45,12 @@ const POLL_MS = 200
  * default — and treats the kill as a non-decision that lets the command run, so
  * the fallback must deny safely below that default.
  */
-const DEFAULT_DEADLINE_S = 540
+const DEFAULT_DEADLINE_S = 540;
 
 // File-removal binaries invoked directly. The leading class covers command
 // boundaries (start, separators, subshells, command-substitution) so `$(rm …)`
 // and `` `rm …` `` are caught too, not just a bare `rm` at column 0.
-const RM_FAMILY = /(^|[\s;&|(`])(rm|rmdir|unlink|shred|trash|trash-put)(\s|$)/
+const RM_FAMILY = /(^|[\s;&|(`])(rm|rmdir|unlink|shred|trash|trash-put)(\s|$)/;
 
 /**
  * Chain-severity rank: when a command chains several gated segments, we announce
@@ -63,7 +63,7 @@ const ACTION_RANK = {
   "pr.open": 2,
   "git.force_push": 3,
   "pr.merge": 4,
-}
+};
 
 /** Czech presentation per push/PR action (delete carries its own, target-aware copy). */
 const ACTION_META = {
@@ -83,7 +83,7 @@ const ACTION_META = {
     summary: "Sloučit pull request do cílové větve",
     consequence: "Sloučení je nevratná publikace — systémový floor ho zakazuje (deny).",
   },
-}
+};
 
 /**
  * True for shell commands that delete files — one of the families we gate. A
@@ -92,10 +92,10 @@ const ACTION_META = {
  * sweep, no rm token), and `git clean` (removes untracked files).
  */
 function isDestructive(command) {
-  if (RM_FAMILY.test(command)) return true
-  if (/\bfind\b[\s\S]*\s-delete(\s|$)/.test(command)) return true
-  if (/\bgit\s+clean(\s|$)/.test(command)) return true
-  return false
+  if (RM_FAMILY.test(command)) return true;
+  if (/\bfind\b[\s\S]*\s-delete(\s|$)/.test(command)) return true;
+  if (/\bgit\s+clean(\s|$)/.test(command)) return true;
+  return false;
 }
 
 /**
@@ -103,14 +103,14 @@ function isDestructive(command) {
  * was quoted (`"zibby-ascii 2.txt"`) or backslash-escaped (`zibby-ascii\ 2.txt`).
  */
 function tokenize(command) {
-  const tokens = []
-  const re = /"([^"]*)"|'([^']*)'|((?:\\.|[^\s\\])+)/g
-  let m
+  const tokens = [];
+  const re = /"([^"]*)"|'([^']*)'|((?:\\.|[^\s\\])+)/g;
+  let m;
   while ((m = re.exec(command)) !== null) {
-    const unquoted = m[3] === undefined ? undefined : m[3].replace(/\\(.)/g, "$1")
-    tokens.push(m[1] ?? m[2] ?? unquoted)
+    const unquoted = m[3] === undefined ? undefined : m[3].replace(/\\(.)/g, "$1");
+    tokens.push(m[1] ?? m[2] ?? unquoted);
   }
-  return tokens
+  return tokens;
 }
 
 /**
@@ -120,42 +120,42 @@ function tokenize(command) {
  * command-string preview stays the source of truth there.
  */
 function parseTargets(command) {
-  const targets = []
+  const targets = [];
   for (const segment of command.split(/&&|\|\||;|\|/)) {
-    const tokens = tokenize(segment.trim())
-    if (!/^(rm|rmdir|unlink|shred|trash|trash-put)$/.test(tokens[0] ?? "")) continue
+    const tokens = tokenize(segment.trim());
+    if (!/^(rm|rmdir|unlink|shred|trash|trash-put)$/.test(tokens[0] ?? "")) continue;
     for (const tok of tokens.slice(1)) {
-      if (tok && !tok.startsWith("-")) targets.push(tok)
+      if (tok && !tok.startsWith("-")) targets.push(tok);
     }
   }
-  return targets
+  return targets;
 }
 
 /** Normalize subshell/command-substitution boundaries to whitespace so a leading
  * `$(git push` / `` `gh pr merge `` tokenizes to `git`/`gh` as the first token. */
 function normalizeSegment(segment) {
-  return segment.replace(/\$\(|[`()]/g, " ").trim()
+  return segment.replace(/\$\(|[`()]/g, " ").trim();
 }
 
 /** Classify a `git …` segment as a push (with branch) / force-push, or null. */
 function classifyGit(tokens) {
-  if (tokens[0] !== "git") return null
-  let i = 1
+  if (tokens[0] !== "git") return null;
+  let i = 1;
   // Skip git's global options (some take a separate value).
   while (i < tokens.length) {
-    const t = tokens[i]
+    const t = tokens[i];
     if (t === "-C" || t === "-c") {
-      i += 2
-      continue
+      i += 2;
+      continue;
     }
     if (/^--(git-dir|work-tree|namespace)=/.test(t)) {
-      i += 1
-      continue
+      i += 1;
+      continue;
     }
-    break
+    break;
   }
-  if (tokens[i] !== "push") return null
-  const rest = tokens.slice(i + 1)
+  if (tokens[i] !== "push") return null;
+  const rest = tokens.slice(i + 1);
   const isForce = rest.some(
     (t) =>
       t === "--force" ||
@@ -163,42 +163,42 @@ function classifyGit(tokens) {
       t === "--force-with-lease" ||
       t.startsWith("--force-with-lease=") ||
       t.startsWith("+"),
-  )
+  );
   // Positional args after `push` are `[remote?, refspec…]`; the branch is the
   // refspec's destination (after a `:`), with a leading force `+` stripped.
-  const positionals = rest.filter((t) => !t.startsWith("-"))
-  let branch
+  const positionals = rest.filter((t) => !t.startsWith("-"));
+  let branch;
   if (positionals.length >= 2) {
-    let ref = positionals[1].replace(/^\+/, "")
-    if (ref.includes(":")) ref = ref.split(":").pop()
-    branch = ref || undefined
+    let ref = positionals[1].replace(/^\+/, "");
+    if (ref.includes(":")) ref = ref.split(":").pop();
+    branch = ref || undefined;
   }
-  return { action: isForce ? "git.force_push" : "git.push", branch }
+  return { action: isForce ? "git.force_push" : "git.push", branch };
 }
 
 /** Classify a `gh …` segment as opening or merging a PR, or null. */
 function classifyGh(tokens) {
-  if (tokens[0] !== "gh") return null
-  let i = 1
+  if (tokens[0] !== "gh") return null;
+  let i = 1;
   while (i < tokens.length) {
-    const t = tokens[i]
+    const t = tokens[i];
     if (t === "-R" || t === "--repo") {
-      i += 2
-      continue
+      i += 2;
+      continue;
     }
-    break
+    break;
   }
-  if (tokens[i] !== "pr") return null
-  const sub = tokens[i + 1]
-  if (sub === "create") return { action: "pr.open" }
-  if (sub === "merge") return { action: "pr.merge" }
-  return null
+  if (tokens[i] !== "pr") return null;
+  const sub = tokens[i + 1];
+  if (sub === "create") return { action: "pr.open" };
+  if (sub === "merge") return { action: "pr.merge" };
+  return null;
 }
 
 /** Build the full classification (action + display enrichment) for one action. */
 function enrich(action, { branch, command } = {}) {
   if (action === "delete") {
-    const targets = parseTargets(command)
+    const targets = parseTargets(command);
     return {
       action: "delete",
       riskType: "mazani",
@@ -213,9 +213,9 @@ function enrich(action, { branch, command } = {}) {
         note: targets.length ? `${targets.length} cílů` : undefined,
         targets,
       },
-    }
+    };
   }
-  const meta = ACTION_META[action]
+  const meta = ACTION_META[action];
   return {
     action,
     ...(branch ? { branch } : {}),
@@ -223,7 +223,7 @@ function enrich(action, { branch, command } = {}) {
     summary: branch ? `${meta.summary} (${branch})` : meta.summary,
     consequence: meta.consequence,
     preview: { kind: "command", shell: "bash", cmd: command, targets: [] },
-  }
+  };
 }
 
 /**
@@ -232,15 +232,15 @@ function enrich(action, { branch, command } = {}) {
  * operator the real thing, not a fragment.
  */
 function classifySegment(segment, fullCommand) {
-  const normalized = normalizeSegment(segment)
-  if (!normalized) return null
-  const tokens = tokenize(normalized)
-  const git = classifyGit(tokens)
-  if (git) return enrich(git.action, { branch: git.branch, command: fullCommand })
-  const gh = classifyGh(tokens)
-  if (gh) return enrich(gh.action, { command: fullCommand })
-  if (isDestructive(segment)) return enrich("delete", { command: fullCommand })
-  return null
+  const normalized = normalizeSegment(segment);
+  if (!normalized) return null;
+  const tokens = tokenize(normalized);
+  const git = classifyGit(tokens);
+  if (git) return enrich(git.action, { branch: git.branch, command: fullCommand });
+  const gh = classifyGh(tokens);
+  if (gh) return enrich(gh.action, { command: fullCommand });
+  if (isDestructive(segment)) return enrich("delete", { command: fullCommand });
+  return null;
 }
 
 /**
@@ -250,13 +250,13 @@ function classifySegment(segment, fullCommand) {
  * inside a try/catch so a classifier bug fails OPEN (null), never blocks all Bash.
  */
 export function classify(command) {
-  if (typeof command !== "string" || !command.trim()) return null
-  let best = null
+  if (typeof command !== "string" || !command.trim()) return null;
+  let best = null;
   for (const segment of command.split(/&&|\|\||;|\|/)) {
-    const c = classifySegment(segment.trim(), command)
-    if (c && (best === null || ACTION_RANK[c.action] > ACTION_RANK[best.action])) best = c
+    const c = classifySegment(segment.trim(), command);
+    if (c && (best === null || ACTION_RANK[c.action] > ACTION_RANK[best.action])) best = c;
   }
-  return best
+  return best;
 }
 
 /** Emit a PreToolUse decision and exit. `allow` overrides dontAsk; `deny` blocks. */
@@ -269,79 +269,79 @@ function decide(permissionDecision, reason) {
         permissionDecisionReason: reason,
       },
     }),
-  )
-  process.exit(0)
+  );
+  process.exit(0);
 }
 
 function waitForDecision(decisionFile, deadlineMs) {
-  const startedAt = Date.now()
+  const startedAt = Date.now();
   for (;;) {
     if (existsSync(decisionFile)) {
-      let decision = "deny"
+      let decision = "deny";
       try {
         decision =
-          JSON.parse(readFileSync(decisionFile, "utf8")).decision === "allow" ? "allow" : "deny"
+          JSON.parse(readFileSync(decisionFile, "utf8")).decision === "allow" ? "allow" : "deny";
       } catch {
-        decision = "deny"
+        decision = "deny";
       }
-      rmSync(decisionFile, { force: true })
-      return decision
+      rmSync(decisionFile, { force: true });
+      return decision;
     }
-    if (Date.now() - startedAt >= deadlineMs) return "timeout"
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, POLL_MS)
+    if (Date.now() - startedAt >= deadlineMs) return "timeout";
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, POLL_MS);
   }
 }
 
 function main() {
-  let input
+  let input;
   try {
-    input = JSON.parse(readFileSync(0, "utf8"))
+    input = JSON.parse(readFileSync(0, "utf8"));
   } catch {
     // Can't parse the event → don't gate; let Claude's own permissions decide.
-    process.exit(0)
+    process.exit(0);
   }
 
-  const command = input?.tool_input?.command ?? ""
+  const command = input?.tool_input?.command ?? "";
   // Fail OPEN: a classifier exception must never block all Bash (it is in the spawn
   // path of every run) — an unclassified command falls through to Claude's perms.
-  let cls = null
+  let cls = null;
   try {
-    if (input?.tool_name === "Bash") cls = classify(command)
+    if (input?.tool_name === "Bash") cls = classify(command);
   } catch {
-    cls = null
+    cls = null;
   }
-  if (!cls) process.exit(0)
+  if (!cls) process.exit(0);
 
   // The sandbox RunnerCore watches — pinned via env, not the command's cwd.
-  const cwd = process.env.ZIBBY_INTENT_DIR || input.cwd || process.cwd()
+  const cwd = process.env.ZIBBY_INTENT_DIR || input.cwd || process.cwd();
   const context = JSON.stringify({
     riskType: cls.riskType,
     summary: cls.summary,
     consequence: cls.consequence,
     preview: cls.preview,
-  })
+  });
 
   writeFileSync(
     path.join(cwd, REQUEST_FILE),
     JSON.stringify({ action: cls.action, ...(cls.branch ? { branch: cls.branch } : {}), context }),
     "utf8",
-  )
+  );
 
-  const deadlineS = Number(process.argv[2])
+  const deadlineS = Number(process.argv[2]);
   const deadlineMs =
-    (Number.isFinite(deadlineS) && deadlineS > 0 ? deadlineS : DEFAULT_DEADLINE_S) * 1000
+    (Number.isFinite(deadlineS) && deadlineS > 0 ? deadlineS : DEFAULT_DEADLINE_S) * 1000;
 
-  const decision = waitForDecision(path.join(cwd, DECISION_FILE), deadlineMs)
-  if (decision === "allow") decide("allow", "Approved by the gate.")
+  const decision = waitForDecision(path.join(cwd, DECISION_FILE), deadlineMs);
+  if (decision === "allow") decide("allow", "Approved by the gate.");
   if (decision === "timeout") {
-    rmSync(path.join(cwd, REQUEST_FILE), { force: true })
-    decide("deny", "Approval window elapsed with no decision — denied fail-safe.")
+    rmSync(path.join(cwd, REQUEST_FILE), { force: true });
+    decide("deny", "Approval window elapsed with no decision — denied fail-safe.");
   }
-  decide("deny", "Blocked by the gate (denied).")
+  decide("deny", "Blocked by the gate (denied).");
 }
 
 // Run only as a CLI entry point; an `import` (the classifier unit tests) does not
 // trigger the blocking gate flow.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main()
+  main();
 }

@@ -10,12 +10,7 @@ export interface RunStateBadgeProps {
 }
 
 /** Run-state badge — Czech label up front, canonical contract name in the tooltip. */
-export function RunStateBadge({
-  status,
-  canonTitle,
-  label,
-  size = "sm",
-}: RunStateBadgeProps) {
+export function RunStateBadge({ status, canonTitle, label, size = "sm" }: RunStateBadgeProps) {
   const meta = RUN_STATE[status];
   return (
     <span title={canonTitle ?? status}>

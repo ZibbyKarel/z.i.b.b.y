@@ -19,7 +19,13 @@ export function PopoverRow({ label, window, now }: PopoverRowProps) {
     <Stack gap="75">
       <Stack align="baseline" direction="row" justify="between">
         <Typography type="label">{t(label)}</Typography>
-        <Typography mono size="sm" tone={tone === "ok" ? undefined : tone} type="note" weight="semibold">
+        <Typography
+          mono
+          size="sm"
+          tone={tone === "ok" ? undefined : tone}
+          type="note"
+          weight="semibold"
+        >
           {window.usedPct}%
         </Typography>
       </Stack>

@@ -1,4 +1,4 @@
-import { type Agent, ORCHESTRATOR_ID, ORCHESTRATOR_TARGET } from "@zibby/contracts"
+import { type Agent, ORCHESTRATOR_ID, ORCHESTRATOR_TARGET } from "@zibby/contracts";
 
 /**
  * The synthetic agent behind `kind: "orchestrator"` task routing — the terminal
@@ -44,4 +44,4 @@ export const ORCHESTRATOR_AGENT: Agent = {
     "Never reply that no suitable agent exists — you are the suitable agent of last",
     "resort. Complete the task.",
   ].join("\n"),
-}
+};

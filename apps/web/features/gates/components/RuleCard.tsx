@@ -40,7 +40,11 @@ export function RuleCard({
         <Container padding="150">
           <Stack gap="100">
             <Stack align="center" direction="row" gap="100">
-              <Icon name={locked ? "shield" : matcherIcon} size="sm" tone={locked ? "warn" : "faint"} />
+              <Icon
+                name={locked ? "shield" : matcherIcon}
+                size="sm"
+                tone={locked ? "warn" : "faint"}
+              />
               <Container grow minW0>
                 <MatcherText andLabel={andLabel} match={rule.match} />
               </Container>
@@ -49,17 +53,31 @@ export function RuleCard({
               ) : (
                 <Stack align="center" direction="row" gap="50">
                   {onEdit && (
-                    <Button aria-label={editLabel} icon="edit" intent="ghost" onClick={() => onEdit(rule)} size="sm" />
+                    <Button
+                      aria-label={editLabel}
+                      icon="edit"
+                      intent="ghost"
+                      onClick={() => onEdit(rule)}
+                      size="sm"
+                    />
                   )}
                   {onDelete && (
-                    <Button aria-label={deleteLabel} icon="x" intent="ghost" onClick={() => onDelete(rule.id)} size="sm" />
+                    <Button
+                      aria-label={deleteLabel}
+                      icon="x"
+                      intent="ghost"
+                      onClick={() => onDelete(rule.id)}
+                      size="sm"
+                    />
                   )}
                 </Stack>
               )}
             </Stack>
             <Stack wrap align="center" direction="row" gap="100">
               <DecisionBadge decision={rule.decision} label={decisionLabel} />
-              {rule.decision === "ask" && <ResolveChips resolve={rule.resolve} youLabel={youLabel} />}
+              {rule.decision === "ask" && (
+                <ResolveChips resolve={rule.resolve} youLabel={youLabel} />
+              )}
               {rule.decision === "notify" && (
                 <Typography mono size="2xs" type="note" variant="tertiary">
                   {notifyHint}

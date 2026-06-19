@@ -1,10 +1,10 @@
-import { randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto";
 import {
   Injectable,
   type OnApplicationBootstrap,
   type OnModuleDestroy,
   type OnModuleInit,
-} from "@nestjs/common"
+} from "@nestjs/common";
 import type {
   AgentRun,
   CreateTaskInput,
@@ -16,50 +16,50 @@ import type {
   TaskOutcome,
   TaskOutput,
   TaskTarget,
-} from "@zibby/contracts"
-import { ActivityLogService } from "../activity/activity-log.service"
-import { AgentRunnerService } from "../agents/agent-runner.service"
-import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service"
-import { BudgetService } from "../budget/budget.service"
-import { GateEvaluatorService } from "../gates/gate-evaluator.service"
-import { LimitsService } from "../limits/limits.service"
-import { GoalRunnerService } from "../goals/goal-runner.service"
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
-import { ProjectsStorageService } from "../projects/projects.storage.service"
-import { matchProject } from "../projects/project-matcher"
-import { withPathLock } from "../shared/file-storage"
-import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-import { TraceContextService } from "../shared/logging/trace-context.service"
-import { SystemConfigStore } from "../system/system-config.store"
-import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
-import { TaskClassifierService } from "./task-classifier.service"
-import { TaskOutputService } from "./task-output.service"
+} from "@zibby/contracts";
+import { ActivityLogService } from "../activity/activity-log.service";
+import { AgentRunnerService } from "../agents/agent-runner.service";
+import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
+import { BudgetService } from "../budget/budget.service";
+import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import { LimitsService } from "../limits/limits.service";
+import { GoalRunnerService } from "../goals/goal-runner.service";
+import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { matchProject } from "../projects/project-matcher";
+import { withPathLock } from "../shared/file-storage";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { TraceContextService } from "../shared/logging/trace-context.service";
+import { SystemConfigStore } from "../system/system-config.store";
+import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import { TaskClassifierService } from "./task-classifier.service";
+import { TaskOutputService } from "./task-output.service";
 
 /** Thrown when there is nothing to route to (empty catalog) → the controller maps it to 422. */
 export class EmptyCatalogError extends Error {
   constructor() {
-    super("No agents or pipelines available to route to")
-    this.name = "EmptyCatalogError"
+    super("No agents or pipelines available to route to");
+    this.name = "EmptyCatalogError";
   }
 }
 
 /** Outcome summaries keep to one short, readable line. */
-const SUMMARY_MAX_CHARS = 200
+const SUMMARY_MAX_CHARS = 200;
 
 /** The action name the spend-past-cap floor rule keys on (decision 5). */
-const SPEND_PAST_CAP = "spend-past-cap"
+const SPEND_PAST_CAP = "spend-past-cap";
 
 /** M8: total dispatch attempts for a transient failure before the task dead-letters. */
-const MAX_DISPATCH_ATTEMPTS = 3
+const MAX_DISPATCH_ATTEMPTS = 3;
 /** M8: base backoff (ms) for a retried dispatch; the nth retry waits `base * 2^(n-1)`. */
-const DISPATCH_BACKOFF_MS = 30_000
+const DISPATCH_BACKOFF_MS = 30_000;
 
 /** Agent run statuses that free a concurrency slot. */
-const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"])
+const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
 /** Pipeline run statuses that free a concurrency slot. */
-const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"])
+const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
 /** Goal run statuses that free a concurrency slot (Phase 10). */
-const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"])
+const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
 
 /**
  * The deferred-task daemon. {@link createTask} is the single action behind the New
@@ -80,9 +80,9 @@ const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"])
  */
 @Injectable()
 export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy {
-  private timer: ReturnType<typeof setInterval> | null = null
-  private readonly unsubscribes: Array<() => void> = []
-  private readonly log: ScopedLogger
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private readonly unsubscribes: Array<() => void> = [];
+  private readonly log: ScopedLogger;
   /**
    * Task ids the operator has approved to spend past budget (release-once). A
    * released task that has to wait for a concurrency slot re-enters the queue, and
@@ -90,7 +90,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * for ids in this set, then clears the id once it actually dispatches. In-memory
    * by design: the approval record is the durable source of truth across restart.
    */
-  private readonly budgetApproved = new Set<string>()
+  private readonly budgetApproved = new Set<string>();
 
   constructor(
     private readonly storage: ScheduledTasksStorageService,
@@ -109,7 +109,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly taskOutput: TaskOutputService,
     private readonly systemConfig: SystemConfigStore,
   ) {
-    this.log = logger.child(TaskSchedulerService.name)
+    this.log = logger.child(TaskSchedulerService.name);
   }
 
   onModuleInit(): void {
@@ -118,18 +118,18 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     // run frees a slot that a queued task for the same engagement can take.
     this.unsubscribes.push(
       this.agentRunner.onRunStatus((run) => {
-        if (run.taskId) void this.writeAgentOutcome(run.taskId, run)
-        if (TERMINAL_AGENT.has(run.status)) void this.drainQueues()
+        if (run.taskId) void this.writeAgentOutcome(run.taskId, run);
+        if (TERMINAL_AGENT.has(run.status)) void this.drainQueues();
       }),
       this.pipelineRunner.onRunStatus((run) => {
-        if (run.taskId) void this.writePipelineOutcome(run.taskId, run)
-        if (TERMINAL_PIPELINE.has(run.status)) void this.drainQueues()
+        if (run.taskId) void this.writePipelineOutcome(run.taskId, run);
+        if (TERMINAL_PIPELINE.has(run.status)) void this.drainQueues();
       }),
       this.goalRunner.onRunStatus((run) => {
-        if (run.taskId) void this.writeGoalOutcome(run.taskId, run)
-        if (TERMINAL_GOAL.has(run.status)) void this.drainQueues()
+        if (run.taskId) void this.writeGoalOutcome(run.taskId, run);
+        if (TERMINAL_GOAL.has(run.status)) void this.drainQueues();
       }),
-    )
+    );
 
     // The kind-"task" runner: a held task's `spend-past-cap` approval resumes it
     // (dispatch once, past the cap) or cancels it. Registered here so approving a
@@ -137,28 +137,28 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const runner: ResumableRunner = {
       resume: (taskId) => this.releaseHeld(taskId),
       cancel: (taskId) => void this.storage.cancel(taskId),
-    }
-    this.approvals.register("task", runner)
+    };
+    this.approvals.register("task", runner);
 
     // Heartbeat from the operator-owned system config (default 30s; `0` disables it,
     // the test default). Re-arm live when the config changes (no restart needed).
-    this.arm()
-    this.unsubscribes.push(this.systemConfig.onChange(() => this.arm()))
+    this.arm();
+    this.unsubscribes.push(this.systemConfig.onChange(() => this.arm()));
   }
 
   /** (Re-)arm the heartbeat from `systemConfig.taskTickMs`; `0` leaves it disabled. */
   private arm(): void {
     if (this.timer) {
-      clearInterval(this.timer)
-      this.timer = null
+      clearInterval(this.timer);
+      this.timer = null;
     }
-    const tickMs = this.systemConfig.current().taskTickMs
+    const tickMs = this.systemConfig.current().taskTickMs;
     if (tickMs > 0) {
-      this.timer = setInterval(() => void this.tick(), tickMs)
-      this.timer.unref?.()
-      this.log.info("task scheduler started", { tickMs })
+      this.timer = setInterval(() => void this.tick(), tickMs);
+      this.timer.unref?.();
+      this.log.info("task scheduler started", { tickMs });
     } else {
-      this.log.debug("task scheduler tick disabled (taskTickMs <= 0)")
+      this.log.debug("task scheduler tick disabled (taskTickMs <= 0)");
     }
   }
 
@@ -168,12 +168,12 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * a slot may have freed while the API was down, so drain every project's queue once.
    */
   onApplicationBootstrap(): void {
-    void this.sweepOutcomes().then(() => this.drainQueues())
+    void this.sweepOutcomes().then(() => this.drainQueues());
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer)
-    for (const unsubscribe of this.unsubscribes) unsubscribe()
+    if (this.timer) clearInterval(this.timer);
+    for (const unsubscribe of this.unsubscribes) unsubscribe();
   }
 
   /**
@@ -203,89 +203,106 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     // Phase 11: the unified composer carries a pre-chosen target on the wire (a
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
-    const target = explicitTarget ?? input.target
+    const target = explicitTarget ?? input.target;
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
       : matchProject(await this.projects.list().catch((): Project[] => []), {
           text: input.text,
           paths: input.paths,
-        })
+        });
 
     if (input.scheduledAt != null && input.scheduledAt > now) {
       const task = await this.storage.create(
         { ...input, scheduledAt: input.scheduledAt },
         new Date(now).toISOString(),
         project?.id,
-      )
-      this.log.info("task scheduled", { id: task.id, scheduledAt: task.scheduledAt, projectId: project?.id })
+      );
+      this.log.info("task scheduled", {
+        id: task.id,
+        scheduledAt: task.scheduledAt,
+        projectId: project?.id,
+      });
       void this.activity.record({
         kind: "task-created",
         summary: `task scheduled${task.title ? `: ${task.title}` : ""}`,
-        refs: { taskId: task.id, status: "scheduled", ...(project ? { projectId: project.id } : {}) },
-      })
-      return { outcome: "scheduled", task }
+        refs: {
+          taskId: task.id,
+          status: "scheduled",
+          ...(project ? { projectId: project.id } : {}),
+        },
+      });
+      return { outcome: "scheduled", task };
     }
 
     // Generate the id BEFORE dispatch so the run is born linked to its task.
-    const taskId = this.storage.newId()
+    const taskId = this.storage.newId();
     void this.activity.record({
       kind: "task-created",
       summary: `task created${input.title ? `: ${input.title}` : ""}`,
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
-    })
-    return this.attemptCreate(taskId, input, project, now, target)
+    });
+    return this.attemptCreate(taskId, input, project, now, target);
   }
 
   /** Cancel a still-waiting task. A held task's approval is rejected (single source of truth). */
   async cancel(id: string): Promise<ScheduledTask> {
-    const task = await this.storage.get(id)
+    const task = await this.storage.get(id);
     if (task.status === "held" && task.approvalId) {
       // Route through approvals.reject → the kind-"task" runner cancels the task.
-      await this.approvals.reject(task.approvalId).catch(() => {})
-      return this.storage.get(id)
+      await this.approvals.reject(task.approvalId).catch(() => {});
+      return this.storage.get(id);
     }
-    return this.storage.cancel(id)
+    return this.storage.cancel(id);
   }
 
   /** Fire every scheduled task whose time has come; returns the fired ids. */
   async tick(now: Date = new Date()): Promise<string[]> {
-    const fired: string[] = []
+    const fired: string[] = [];
     for (const task of await this.storage.list()) {
-      if (task.status !== "scheduled") continue
-      if (task.scheduledAt > now.getTime()) continue
+      if (task.status !== "scheduled") continue;
+      if (task.scheduledAt > now.getTime()) continue;
       // Each fired task gets its own trace scope (no request to inherit one), so the
       // run it dispatches links back to this tick.
       await this.trace.run({ traceId: randomUUID() }, async () => {
         try {
           const project = task.projectId
             ? await this.projects.get(task.projectId).catch((): Project | null => null)
-            : null
-          const result = await this.attemptDispatch(task, project, now, { skipBudget: false })
-          if (result === "dispatched") fired.push(task.id)
+            : null;
+          const result = await this.attemptDispatch(task, project, now, { skipBudget: false });
+          if (result === "dispatched") fired.push(task.id);
         } catch (err) {
           // M8: a THROWN dispatch error is transient (infra) — retry it with backoff
           // up to the cap, then dead-letter + notify. (A deterministic "no agents"
           // failure returns "failed" from attemptDispatch and never reaches here, so
           // it stays terminal — the right transient/permanent split, for free.)
-          const message = err instanceof Error ? err.message : String(err)
-          const attempt = (task.attempts ?? 0) + 1
+          const message = err instanceof Error ? err.message : String(err);
+          const attempt = (task.attempts ?? 0) + 1;
           if (attempt >= MAX_DISPATCH_ATTEMPTS) {
-            await this.storage.markDeadLettered(task.id, message)
+            await this.storage.markDeadLettered(task.id, message);
             void this.activity.record({
               kind: "task-dead-lettered",
               summary: `task "${(task.title ?? task.text).slice(0, 80)}" dead-lettered after ${attempt} attempts: ${message}`,
               refs: { taskId: task.id, status: "dead-letter" },
-            })
-            this.log.error("scheduled task dead-lettered", { id: task.id, attempts: attempt, error: message })
+            });
+            this.log.error("scheduled task dead-lettered", {
+              id: task.id,
+              attempts: attempt,
+              error: message,
+            });
           } else {
-            const nextAt = now.getTime() + DISPATCH_BACKOFF_MS * 2 ** (attempt - 1)
-            await this.storage.markRetry(task.id, nextAt, message)
-            this.log.warn("scheduled task dispatch failed — retrying", { id: task.id, attempt, nextAt, error: message })
+            const nextAt = now.getTime() + DISPATCH_BACKOFF_MS * 2 ** (attempt - 1);
+            await this.storage.markRetry(task.id, nextAt, message);
+            this.log.warn("scheduled task dispatch failed — retrying", {
+              id: task.id,
+              attempt,
+              nextAt,
+              error: message,
+            });
           }
         }
-      })
+      });
     }
-    return fired
+    return fired;
   }
 
   /**
@@ -300,27 +317,33 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     now: number,
     explicitTarget?: TaskTarget,
   ): Promise<CreateTaskResult> {
-    const projectId = project?.id
+    const projectId = project?.id;
     // Phase 9: the limit guard runs FIRST (decision 4) — an exhausted usage window
     // means nothing can run, so deferring to the window reset is the right shape
     // (not holding for approval or queueing). Fail-open: a stale/headroom reading
     // falls through to the budget + concurrency guards exactly as before.
-    const deferral = await this.limitDeferral(now)
+    const deferral = await this.limitDeferral(now);
     if (deferral) {
-      const task = await this.storage.createDeferredLimit(taskId, input, projectId, deferral.resumeAt, now)
-      this.recordDeferredLimit(task)
-      return { outcome: "scheduled", task }
+      const task = await this.storage.createDeferredLimit(
+        taskId,
+        input,
+        projectId,
+        deferral.resumeAt,
+        now,
+      );
+      this.recordDeferredLimit(task);
+      return { outcome: "scheduled", task };
     }
-    const check = await this.budget.check(projectId, new Date(now))
+    const check = await this.budget.check(projectId, new Date(now));
     if (!check.ok) {
-      const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now)
-      const held = await this.holdForApproval(task, project, check.detail)
-      return { outcome: "scheduled", task: held }
+      const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now);
+      const held = await this.holdForApproval(task, project, check.detail);
+      return { outcome: "scheduled", task: held };
     }
     if (await this.atCapacity(project)) {
-      const task = await this.storage.createQueued(taskId, input, projectId, now)
-      this.recordQueued(task, project)
-      return { outcome: "scheduled", task }
+      const task = await this.storage.createQueued(taskId, input, projectId, now);
+      this.recordQueued(task, project);
+      return { outcome: "scheduled", task };
     }
     const dispatched = await this.dispatch(
       input.text,
@@ -330,11 +353,11 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       projectId,
       explicitTarget,
       input.output,
-    )
-    if (!dispatched) throw new EmptyCatalogError()
-    const task = await this.persistDispatched(taskId, input, dispatched, projectId, now)
-    void this.reconcileOutcome(task)
-    return { outcome: "dispatched", runRef: dispatched.runRef, target: dispatched.target, task }
+    );
+    if (!dispatched) throw new EmptyCatalogError();
+    const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
+    void this.reconcileOutcome(task);
+    return { outcome: "dispatched", runRef: dispatched.runRef, target: dispatched.target, task };
   }
 
   /**
@@ -349,28 +372,28 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     now: number | Date,
     opts: { skipBudget: boolean },
   ): Promise<"dispatched" | "queued" | "held" | "failed" | "deferred"> {
-    const at = typeof now === "number" ? new Date(now) : now
+    const at = typeof now === "number" ? new Date(now) : now;
     // Phase 9: limit guard first — even an operator-approved overage (`skipBudget`)
     // can't run with the window exhausted, so re-defer to the reset. The existing
     // tick re-fires the now-`scheduled` task; still exhausted → re-defer again.
-    const deferral = await this.limitDeferral(at.getTime())
+    const deferral = await this.limitDeferral(at.getTime());
     if (deferral) {
-      const deferred = await this.storage.markDeferredLimit(task.id, deferral.resumeAt)
-      this.recordDeferredLimit(deferred)
-      return "deferred"
+      const deferred = await this.storage.markDeferredLimit(task.id, deferral.resumeAt);
+      this.recordDeferredLimit(deferred);
+      return "deferred";
     }
     if (!opts.skipBudget) {
-      const check = await this.budget.check(task.projectId, at)
+      const check = await this.budget.check(task.projectId, at);
       if (!check.ok) {
-        await this.storage.markHeld(task.id, check.detail)
-        await this.holdForApproval(task, project, check.detail)
-        return "held"
+        await this.storage.markHeld(task.id, check.detail);
+        await this.holdForApproval(task, project, check.detail);
+        return "held";
       }
     }
     if (await this.atCapacity(project)) {
-      await this.storage.markQueued(task.id)
-      this.recordQueued(task, project)
-      return "queued"
+      await this.storage.markQueued(task.id);
+      this.recordQueued(task, project);
+      return "queued";
     }
     // Phase 10: a task that already carries a target (e.g. a goal, never classifiable)
     // re-dispatches to it; otherwise classify as before.
@@ -382,26 +405,34 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       task.projectId,
       task.target,
       task.output,
-    )
+    );
     if (!dispatched) {
-      await this.storage.markFailed(task.id, "No agents or pipelines available to route to")
-      this.log.warn("task failed: empty catalog", { id: task.id })
-      return "failed"
+      await this.storage.markFailed(task.id, "No agents or pipelines available to route to");
+      this.log.warn("task failed: empty catalog", { id: task.id });
+      return "failed";
     }
-    await this.recordLedger(task.id, task.projectId, dispatched)
-    const updated = await this.storage.markDispatched(task.id, dispatched.runRef, dispatched.target)
-    this.budgetApproved.delete(task.id)
-    void this.reconcileOutcome(updated)
-    this.recordDispatchedActivity(task.id, task.projectId, dispatched)
-    this.log.info("task dispatched", { id: task.id, runRef: dispatched.runRef, projectId: task.projectId })
-    return "dispatched"
+    await this.recordLedger(task.id, task.projectId, dispatched);
+    const updated = await this.storage.markDispatched(
+      task.id,
+      dispatched.runRef,
+      dispatched.target,
+    );
+    this.budgetApproved.delete(task.id);
+    void this.reconcileOutcome(updated);
+    this.recordDispatchedActivity(task.id, task.projectId, dispatched);
+    this.log.info("task dispatched", {
+      id: task.id,
+      runRef: dispatched.runRef,
+      projectId: task.projectId,
+    });
+    return "dispatched";
   }
 
   /** True when the project caps concurrency and is already at its `maxConcurrent`. */
   private async atCapacity(project: Project | null): Promise<boolean> {
-    const max = project?.budget?.maxConcurrent
-    if (project == null || max == null) return false
-    return (await this.budget.countRunning(project.id)) >= max
+    const max = project?.budget?.maxConcurrent;
+    if (project == null || max == null) return false;
+    return (await this.budget.countRunning(project.id)) >= max;
   }
 
   /** Park a held task behind a `spend-past-cap` approval; returns the stamped task. */
@@ -411,7 +442,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     detail: string,
   ): Promise<ScheduledTask> {
     // Evaluate the floor so a `gate-decision` is recorded (the approval IS the gate).
-    this.gates.evaluate(await this.gates.floor(), { action: SPEND_PAST_CAP })
+    this.gates.evaluate(await this.gates.floor(), { action: SPEND_PAST_CAP });
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "task",
@@ -419,8 +450,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       action: SPEND_PAST_CAP,
       detail,
       risk: "medium",
-    })
-    const stamped = await this.storage.setApproval(task.id, approval.id)
+    });
+    const stamped = await this.storage.setApproval(task.id, approval.id);
     void this.activity.record({
       kind: "task-held",
       summary: `task held — ${detail}`,
@@ -429,30 +460,30 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         approvalId: approval.id,
         ...(task.projectId ? { projectId: task.projectId } : {}),
       },
-    })
-    this.log.info("task held over budget", { id: task.id, approvalId: approval.id, detail })
-    return stamped
+    });
+    this.log.info("task held over budget", { id: task.id, approvalId: approval.id, detail });
+    return stamped;
   }
 
   /** The kind-"task" approval resume: dispatch a held task once, past the cap. */
   private async releaseHeld(taskId: string): Promise<void> {
-    let task: ScheduledTask
+    let task: ScheduledTask;
     try {
-      task = await this.storage.get(taskId)
+      task = await this.storage.get(taskId);
     } catch {
-      this.log.warn("release skipped: task gone", { taskId })
-      return
+      this.log.warn("release skipped: task gone", { taskId });
+      return;
     }
     if (task.status !== "held") {
-      this.log.info("release skipped: task no longer held", { taskId, status: task.status })
-      return
+      this.log.info("release skipped: task no longer held", { taskId, status: task.status });
+      return;
     }
     // Mark the overage approved so a wait-for-slot re-queue won't re-hold it.
-    this.budgetApproved.add(taskId)
+    this.budgetApproved.add(taskId);
     const project = task.projectId
       ? await this.projects.get(task.projectId).catch((): Project | null => null)
-      : null
-    await this.attemptDispatch(task, project, Date.now(), { skipBudget: true })
+      : null;
+    await this.attemptDispatch(task, project, Date.now(), { skipBudget: true });
   }
 
   /**
@@ -469,29 +500,29 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     return withPathLock("scheduler:drain", async () => {
       const queued = (await this.storage.list().catch((): ScheduledTask[] => []))
         .filter((t) => t.status === "queued" && t.projectId)
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)) // FIFO
-      if (queued.length === 0) return
-      const byProject = new Map<string, ScheduledTask[]>()
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)); // FIFO
+      if (queued.length === 0) return;
+      const byProject = new Map<string, ScheduledTask[]>();
       for (const task of queued) {
-        const list = byProject.get(task.projectId as string) ?? []
-        list.push(task)
-        byProject.set(task.projectId as string, list)
+        const list = byProject.get(task.projectId as string) ?? [];
+        list.push(task);
+        byProject.set(task.projectId as string, list);
       }
       for (const [projectId, list] of byProject) {
-        const project = await this.projects.get(projectId).catch((): Project | null => null)
+        const project = await this.projects.get(projectId).catch((): Project | null => null);
         for (const task of list) {
-          if (await this.atCapacity(project)) break // no slot free for this project
+          if (await this.atCapacity(project)) break; // no slot free for this project
           // Re-read: a concurrent cancel may have moved it on already.
-          const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null)
-          if (!fresh || fresh.status !== "queued") continue
+          const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
+          if (!fresh || fresh.status !== "queued") continue;
           await this.trace.run({ traceId: randomUUID() }, () =>
             this.attemptDispatch(fresh, project, Date.now(), {
               skipBudget: this.budgetApproved.has(fresh.id),
             }),
-          )
+          );
         }
       }
-    })
+    });
   }
 
   /**
@@ -519,22 +550,30 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      */
     output?: TaskOutput,
   ): Promise<{ runRef: string; target: TaskTarget } | null> {
-    let target: TaskTarget
-    let matchedTerms: string[]
+    let target: TaskTarget;
+    let matchedTerms: string[];
     if (explicitTarget) {
-      target = explicitTarget
-      matchedTerms = []
+      target = explicitTarget;
+      matchedTerms = [];
     } else {
-      const routing = await this.classifier.classify({ text, paths })
-      if (!routing) return null
-      target = routing.target
+      const routing = await this.classifier.classify({ text, paths });
+      if (!routing) return null;
+      target = routing.target;
       // The classifier's matched terms ride into the run so memory grounding selects
       // the same MOCs the routing keyed on (Phase 4).
-      matchedTerms = routing.matchedTerms
+      matchedTerms = routing.matchedTerms;
     }
     if (target.kind === "agent") {
-      const run = await this.agentRunner.start(target.id, text, projectId ?? "", paths, title, taskId, matchedTerms)
-      return { runRef: run.runId, target }
+      const run = await this.agentRunner.start(
+        target.id,
+        text,
+        projectId ?? "",
+        paths,
+        title,
+        taskId,
+        matchedTerms,
+      );
+      return { runRef: run.runId, target };
     }
     if (target.kind === "pipeline") {
       const run = await this.pipelineRunner.start(
@@ -544,8 +583,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         matchedTerms,
         undefined,
         output,
-      )
-      return { runRef: run.pipelineRunId, target }
+      );
+      return { runRef: run.pipelineRunId, target };
     }
     if (target.kind === "goal") {
       // Phase 10: route a goal-targeted task through the outer-loop runner. It flows
@@ -559,14 +598,21 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         title,
         taskId,
         matchedTerms,
-      )
-      return { runRef: run.goalRunId, target }
+      );
+      return { runRef: run.goalRunId, target };
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
     // subagent(s) or does the task directly — a task never no-ops. It carries the
     // projectId too so an orchestrator-dispatched task counts toward concurrency.
-    const run = await this.agentRunner.startOrchestrator(text, paths, title, taskId, matchedTerms, projectId ?? "")
-    return { runRef: run.runId, target }
+    const run = await this.agentRunner.startOrchestrator(
+      text,
+      paths,
+      title,
+      taskId,
+      matchedTerms,
+      projectId ?? "",
+    );
+    return { runRef: run.runId, target };
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */
@@ -577,7 +623,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     projectId: string | undefined,
     now: number,
   ): Promise<ScheduledTask> {
-    await this.recordLedger(taskId, projectId, dispatched, now)
+    await this.recordLedger(taskId, projectId, dispatched, now);
     const task = await this.storage.createDispatched(
       taskId,
       input,
@@ -585,9 +631,9 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       dispatched.target,
       now,
       projectId,
-    )
-    this.recordDispatchedActivity(taskId, projectId, dispatched)
-    return task
+    );
+    this.recordDispatchedActivity(taskId, projectId, dispatched);
+    return task;
   }
 
   /** Append the enforcement ledger line for a started run (awaited). */
@@ -606,7 +652,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         kind: dispatched.target.kind,
       },
       new Date(now),
-    )
+    );
   }
 
   private recordDispatchedActivity(
@@ -624,7 +670,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         ...(projectId ? { projectId } : {}),
         ...refForTarget(dispatched.target),
       },
-    })
+    });
   }
 
   private recordQueued(task: ScheduledTask, project: Project | null): void {
@@ -632,8 +678,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       kind: "task-queued",
       summary: `task queued — waiting for a slot${project ? ` in ${project.name}` : ""}`,
       refs: { taskId: task.id, ...(task.projectId ? { projectId: task.projectId } : {}) },
-    })
-    this.log.info("task queued", { id: task.id, projectId: task.projectId })
+    });
+    this.log.info("task queued", { id: task.id, projectId: task.projectId });
   }
 
   /**
@@ -647,9 +693,9 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
       exhausted: false,
       resumeAt: null,
-    }))
-    if (!exhausted) return null
-    return { resumeAt: resumeAt ?? (await this.limits.resolveResumeAt(null, now)) }
+    }));
+    if (!exhausted) return null;
+    return { resumeAt: resumeAt ?? (await this.limits.resolveResumeAt(null, now)) };
   }
 
   /** Record a window-deferred task (Tier 1 — silent, recorded; the briefing reads it). */
@@ -657,34 +703,38 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     void this.activity.record({
       kind: "task-deferred-limit",
       summary: "task deferred — waiting for the usage window to reset",
-      refs: { taskId: task.id, status: "scheduled", ...(task.projectId ? { projectId: task.projectId } : {}) },
-    })
+      refs: {
+        taskId: task.id,
+        status: "scheduled",
+        ...(task.projectId ? { projectId: task.projectId } : {}),
+      },
+    });
     this.log.info("task deferred on usage limit", {
       id: task.id,
       scheduledAt: task.scheduledAt,
       deferrals: task.limitDeferrals,
-    })
+    });
   }
 
   /** Sweep every dispatched-without-outcome task against its runner once. */
   private async sweepOutcomes(): Promise<void> {
-    const tasks = await this.storage.list().catch((): ScheduledTask[] => [])
+    const tasks = await this.storage.list().catch((): ScheduledTask[] => []);
     for (const task of tasks) {
-      if (task.status !== "dispatched" || task.outcome || !task.runRef) continue
-      await this.reconcileOutcome(task)
+      if (task.status !== "dispatched" || task.outcome || !task.runRef) continue;
+      await this.reconcileOutcome(task);
     }
   }
 
   /** Resolve one task's run; if it already ended, write the outcome now. */
   private async reconcileOutcome(task: ScheduledTask): Promise<void> {
-    if (!task.runRef || task.outcome) return
+    if (!task.runRef || task.outcome) return;
     try {
       if (task.target?.kind === "pipeline") {
-        await this.writePipelineOutcome(task.id, this.pipelineRunner.get(task.runRef))
+        await this.writePipelineOutcome(task.id, this.pipelineRunner.get(task.runRef));
       } else if (task.target?.kind === "goal") {
-        await this.writeGoalOutcome(task.id, this.goalRunner.get(task.runRef))
+        await this.writeGoalOutcome(task.id, this.goalRunner.get(task.runRef));
       } else {
-        await this.writeAgentOutcome(task.id, this.agentRunner.get(task.runRef))
+        await this.writeAgentOutcome(task.id, this.agentRunner.get(task.runRef));
       }
     } catch {
       // Run unknown (deleted / different machine) — leave the task without outcome.
@@ -692,50 +742,59 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   }
 
   private async writeAgentOutcome(taskId: string, run: AgentRun): Promise<void> {
-    if (run.status !== "done" && run.status !== "error" && run.status !== "interrupted") return
+    if (run.status !== "done" && run.status !== "error" && run.status !== "interrupted") return;
     try {
-      const existing = await this.storage.get(taskId)
+      const existing = await this.storage.get(taskId);
       // Already resolved, or parked at the PR output gate (the gate writes the outcome
       // on the operator's decision) — don't re-process / re-park.
-      if (existing.outcome || existing.status === "awaiting-output") return
-      const summary = await this.agentRunSummary(run.runId)
+      if (existing.outcome || existing.status === "awaiting-output") return;
+      const summary = await this.agentRunSummary(run.runId);
       // A successful run with a chosen `pr`/`file` output runs its terminal sink first.
       // A `pr` sink that parks defers the outcome to the gate resolution → stop here.
       if (run.status === "done") {
-        const parked = await this.taskOutput.handleTerminal(existing, run, summary)
-        if (parked) return
+        const parked = await this.taskOutput.handleTerminal(existing, run, summary);
+        if (parked) return;
       }
-      const status = run.status === "done" ? "done" : "error"
+      const status = run.status === "done" ? "done" : "error";
       const task = await this.storage.writeOutcome(taskId, {
         status,
         summary,
         finishedAt: new Date().toISOString(),
-      })
-      this.log.info("task outcome written", { taskId, runRef: run.runId, status: run.status })
+      });
+      this.log.info("task outcome written", { taskId, runRef: run.runId, status: run.status });
       void this.activity.record({
         kind: "task-outcome",
         summary: `task ${status}${summary ? `: ${summary}` : ""}`,
-        refs: { taskId, runRef: run.runId, status, ...(task.projectId ? { projectId: task.projectId } : {}) },
-      })
+        refs: {
+          taskId,
+          runRef: run.runId,
+          status,
+          ...(task.projectId ? { projectId: task.projectId } : {}),
+        },
+      });
     } catch (error) {
       // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
       this.log.debug("task outcome write skipped", {
         taskId,
         err: error instanceof Error ? error.message : String(error),
-      })
+      });
     }
   }
 
   private async writePipelineOutcome(taskId: string, run: PipelineRun): Promise<void> {
-    if (run.status !== "done" && run.status !== "failed") return
+    if (run.status !== "done" && run.status !== "failed") return;
     const outcome: TaskOutcome = {
       status: run.status === "done" ? "done" : "error",
       summary: `${run.stageRuns.length} stages, ${run.status}`,
       finishedAt: new Date().toISOString(),
-    }
+    };
     try {
-      const task = await this.storage.writeOutcome(taskId, outcome)
-      this.log.info("task outcome written", { taskId, runRef: run.pipelineRunId, status: run.status })
+      const task = await this.storage.writeOutcome(taskId, outcome);
+      this.log.info("task outcome written", {
+        taskId,
+        runRef: run.pipelineRunId,
+        status: run.status,
+      });
       void this.activity.record({
         kind: "task-outcome",
         summary: `task ${outcome.status}: ${outcome.summary}`,
@@ -745,26 +804,26 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           status: outcome.status,
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },
-      })
+      });
     } catch (error) {
       this.log.debug("task outcome write skipped", {
         taskId,
         err: error instanceof Error ? error.message : String(error),
-      })
+      });
     }
   }
 
   private async writeGoalOutcome(taskId: string, run: GoalRun): Promise<void> {
-    if (run.status !== "done" && run.status !== "failed") return
-    const verified = run.iterations.filter((i) => i.verifier.satisfied).length
+    if (run.status !== "done" && run.status !== "failed") return;
+    const verified = run.iterations.filter((i) => i.verifier.satisfied).length;
     const outcome: TaskOutcome = {
       status: run.status === "done" ? "done" : "error",
       summary: `${run.iterations.length} iterations, ${run.status}${verified ? `, verified` : ""}`,
       finishedAt: new Date().toISOString(),
-    }
+    };
     try {
-      const task = await this.storage.writeOutcome(taskId, outcome)
-      this.log.info("task outcome written", { taskId, runRef: run.goalRunId, status: run.status })
+      const task = await this.storage.writeOutcome(taskId, outcome);
+      this.log.info("task outcome written", { taskId, runRef: run.goalRunId, status: run.status });
       void this.activity.record({
         kind: "task-outcome",
         summary: `task ${outcome.status}: ${outcome.summary}`,
@@ -774,33 +833,33 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           status: outcome.status,
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },
-      })
+      });
     } catch (error) {
       this.log.debug("task outcome write skipped", {
         taskId,
         err: error instanceof Error ? error.message : String(error),
-      })
+      });
     }
   }
 
   /** Last non-empty log line of an agent run, truncated to one readable line. */
   private async agentRunSummary(runId: string): Promise<string> {
-    const log = await this.agentRunner.readLog(runId, 0).catch(() => null)
-    if (!log) return ""
-    const lines = log.content.split(/\r?\n/).filter((l) => l.trim().length > 0)
-    const last = lines[lines.length - 1] ?? ""
-    return last.length > SUMMARY_MAX_CHARS ? `${last.slice(0, SUMMARY_MAX_CHARS - 1)}…` : last
+    const log = await this.agentRunner.readLog(runId, 0).catch(() => null);
+    if (!log) return "";
+    const lines = log.content.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const last = lines[lines.length - 1] ?? "";
+    return last.length > SUMMARY_MAX_CHARS ? `${last.slice(0, SUMMARY_MAX_CHARS - 1)}…` : last;
   }
 }
 
 /** Display id of a routing target (the orchestrator is synthetic, with no id). */
 function targetIdOf(target: TaskTarget): string {
-  return target.kind === "orchestrator" ? "orchestrator" : target.id
+  return target.kind === "orchestrator" ? "orchestrator" : target.id;
 }
 
 /** The activity ref the target contributes (agentId / pipelineId), if any. */
 function refForTarget(target: TaskTarget): { agentId?: string; pipelineId?: string } {
-  if (target.kind === "agent") return { agentId: target.id }
-  if (target.kind === "pipeline") return { pipelineId: target.id }
-  return {}
+  if (target.kind === "agent") return { agentId: target.id };
+  if (target.kind === "pipeline") return { pipelineId: target.id };
+  return {};
 }

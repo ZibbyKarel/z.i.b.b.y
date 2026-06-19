@@ -27,11 +27,11 @@ Builder a subject **nesmí sdílet** ani pracovní strom, ani `ZIBBY_DATA_DIR`.
 
 Když je target == ZIBBY, kolabují tři věci — Phase 12 každou rozpojila:
 
-| Identita | Kolaps | Fix |
-|----------|--------|-----|
-| **Proces** | verifier `pnpm test` bootne druhý AppModule → `reconstruct()` → re-dispatch téhož goalu | 12.1/12.2 (scope verifieru, nikdy full-repo), 12.4 (gate boot re-dispatch), 12.5 (e2e izolace) |
-| **Filesystem** | worktree + artefakty uvnitř sledovaného/testovaného stromu | 12.7 (worktrees mimo repo přes `ZIBBY_WORKTREE_ROOT`) |
-| **Zdroje** | žádný timeout/kill/cap/reaping → N kopií žere RAM | 12.3 (timeout + detached pgid + cap + reaping), 12.9 (await reaping na shutdownu), 8.1 (budget) |
+| Identita       | Kolaps                                                                                  | Fix                                                                                             |
+| -------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Proces**     | verifier `pnpm test` bootne druhý AppModule → `reconstruct()` → re-dispatch téhož goalu | 12.1/12.2 (scope verifieru, nikdy full-repo), 12.4 (gate boot re-dispatch), 12.5 (e2e izolace)  |
+| **Filesystem** | worktree + artefakty uvnitř sledovaného/testovaného stromu                              | 12.7 (worktrees mimo repo přes `ZIBBY_WORKTREE_ROOT`)                                           |
+| **Zdroje**     | žádný timeout/kill/cap/reaping → N kopií žere RAM                                       | 12.3 (timeout + detached pgid + cap + reaping), 12.9 (await reaping na shutdownu), 8.1 (budget) |
 
 ## Resource-governance jako dimenze autonomy contractu
 

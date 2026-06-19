@@ -38,109 +38,113 @@
   --color-*: initial;
 
   /* ---- Backgrounds (3 surface levels + deep shell layer) ------------------ */
-  --color-background-deep:  #090c11;
-  --color-background:       #0b0e13;
-  --color-surface:          #10151c;
-  --color-elevated:         #151c25;
-  --color-raised:           #151c25;
-  --color-hover:            #151c25;
-  --color-surface-panel:    rgba(16,21,28,0.72);
-  --color-surface-glass:    rgba(16,21,28,0.5);
+  --color-background-deep: #090c11;
+  --color-background: #0b0e13;
+  --color-surface: #10151c;
+  --color-elevated: #151c25;
+  --color-raised: #151c25;
+  --color-hover: #151c25;
+  --color-surface-panel: rgba(16, 21, 28, 0.72);
+  --color-surface-glass: rgba(16, 21, 28, 0.5);
 
   /* ---- Foreground / text ------------------------------------------------- */
-  --color-foreground:       #e6edf3;
-  --color-foreground-dim:   #9aa7b4;
+  --color-foreground: #e6edf3;
+  --color-foreground-dim: #9aa7b4;
   --color-foreground-faint: #66737f;
 
   /* ---- Borders ----------------------------------------------------------- */
-  --color-border:           rgba(255,255,255,0.08);
-  --color-border-strong:    rgba(255,255,255,0.14);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
   /* Darkness of the modal backdrop (Dialog overlay). */
-  --color-overlay:          rgba(5,7,10,0.72);
+  --color-overlay: rgba(5, 7, 10, 0.72);
 
   /* ---- Accent — interaction/selection/brand (NOT the running state) ------ */
-  --color-accent:           #5b8def;
-  --color-accent-dim:       rgba(91,141,239,0.14);
-  --color-accent-contrast:  #0b0e13;
-  --color-accent-glow:      rgba(91,141,239,0.4);
+  --color-accent: #5b8def;
+  --color-accent-dim: rgba(91, 141, 239, 0.14);
+  --color-accent-contrast: #0b0e13;
+  --color-accent-glow: rgba(91, 141, 239, 0.4);
 
   /* ---- Semantic status (the only colors allowed to glow) ----------------- */
-  --color-ok:               #3fcf8e;
-  --color-warn:             #f0b429;
-  --color-bad:              #ff6b6b;
-  --color-run:              #7aa5f8;
-  --color-ok-glow:          #3fcf8e;
-  --color-warn-glow:        #f0b429;
-  --color-bad-glow:         #ff6b6b;
-  --color-run-glow:         #7aa5f8;
+  --color-ok: #3fcf8e;
+  --color-warn: #f0b429;
+  --color-bad: #ff6b6b;
+  --color-run: #7aa5f8;
+  --color-ok-glow: #3fcf8e;
+  --color-warn-glow: #f0b429;
+  --color-bad-glow: #ff6b6b;
+  --color-run-glow: #7aa5f8;
 
   /* ---- Risk categories (the only categorical palette) -------------------- */
-  --color-risk-payment:     #f0b429;
-  --color-risk-deletion:    #ff6b6b;
-  --color-risk-push:        #b07cff;
-  --color-risk-send:        #56c4d6;
+  --color-risk-payment: #f0b429;
+  --color-risk-deletion: #ff6b6b;
+  --color-risk-push: #b07cff;
+  --color-risk-send: #56c4d6;
 
   /* ---- Scene ------------------------------------------------------------- */
   /* Depth comes from the background itself — no scanlines, no grid overlays. */
-  --gradient-scene: radial-gradient(ellipse 120% 90% at 50% -8%, #101722 0%, var(--color-background) 58%);
+  --gradient-scene: radial-gradient(
+    ellipse 120% 90% at 50% -8%,
+    #101722 0%,
+    var(--color-background) 58%
+  );
 
   /* ---- Misc -------------------------------------------------------------- */
-  --color-transparent:      transparent;
-  --color-current:          currentColor;
-  --color-black:            #000000;
-  --color-white:            #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-black: #000000;
+  --color-white: #ffffff;
 
   /* ---- Typography: font families ---------------------------------------- */
-  --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Geist", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* ---- Typography: 8-step scale (11–30px, nothing below 11px) ------------
    * label/micro 11 · data 12 · bodySm 13 · body 14 · title 21 · num 26 · display 30
    * Legacy size names are snapped onto the scale. */
-  --text-2xs:     0.6875rem;     /* 11px */
-  --text-xs:      0.6875rem;     /* 11px — label / micro */
-  --text-sm:      0.75rem;       /* 12px — data */
-  --text-caption: 0.8125rem;     /* 13px — bodySm */
-  --text-base:    0.875rem;      /* 14px — body */
-  --text-md:      0.875rem;      /* 14px */
-  --text-lg:      0.875rem;      /* 14px */
-  --text-xl:      1.3125rem;     /* 21px — title */
-  --text-2xl:     1.3125rem;     /* 21px */
-  --text-3xl:     1.3125rem;     /* 21px */
-  --text-4xl:     1.625rem;      /* 26px — num */
-  --text-5xl:     1.875rem;      /* 30px — display */
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-xs: 0.6875rem; /* 11px — label / micro */
+  --text-sm: 0.75rem; /* 12px — data */
+  --text-caption: 0.8125rem; /* 13px — bodySm */
+  --text-base: 0.875rem; /* 14px — body */
+  --text-md: 0.875rem; /* 14px */
+  --text-lg: 0.875rem; /* 14px */
+  --text-xl: 1.3125rem; /* 21px — title */
+  --text-2xl: 1.3125rem; /* 21px */
+  --text-3xl: 1.3125rem; /* 21px */
+  --text-4xl: 1.625rem; /* 26px — num */
+  --text-5xl: 1.875rem; /* 30px — display */
 
   /* ---- Typography: font weights ----------------------------------------- */
-  --font-weight-normal:   400;
-  --font-weight-medium:   500;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
   --font-weight-semibold: 600;
-  --font-weight-bold:     700;
+  --font-weight-bold: 700;
 
   /* ---- Typography: letter spacing (2 values: 0.14em labels, 0.30em wordmark) */
   --tracking-tighter: -0.01em;
-  --tracking-normal:   0;
-  --tracking-wide:     0.04em;
-  --tracking-wider:    0.14em;
-  --tracking-widest:   0.14em;
-  --tracking-mono:     0.3em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.14em;
+  --tracking-widest: 0.14em;
+  --tracking-mono: 0.3em;
 
   /* ---- Border radius — rCtl 6px (controls), rPanel 10px (panels/modals) -- */
   --radius-none: 0;
-  --radius-sm:   6px;
-  --radius:      6px;
-  --radius-md:   6px;
-  --radius-lg:   10px;
-  --radius-xl:   10px;
-  --radius-2xl:  10px;
+  --radius-sm: 6px;
+  --radius: 6px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 10px;
+  --radius-2xl: 10px;
   --radius-full: 9999px;
 
   /* ---- Shadows (overridden by Provider per theme) ----------------------- */
-  --shadow-hairline:    0 1px 0 rgba(255,255,255,0.02);
-  --shadow-card:        0 6px 22px rgba(0,0,0,0.35);
-  --shadow-elevated:    0 18px 50px rgba(0,0,0,0.45);
-  --shadow-modal:       0 30px 80px rgba(0,0,0,0.6);
-  --shadow-dropdown:    0 18px 50px rgba(0,0,0,0.5);
-  --shadow-glow-accent: 0 0 16px rgba(91,141,239,0.4);
+  --shadow-hairline: 0 1px 0 rgba(255, 255, 255, 0.02);
+  --shadow-card: 0 6px 22px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --shadow-dropdown: 0 18px 50px rgba(0, 0, 0, 0.5);
+  --shadow-glow-accent: 0 0 16px rgba(91, 141, 239, 0.4);
 
   /* ---- Custom spacing overrides (z.i.b.b.y HUD scale differs at 5/6/7) -- */
   --spacing-5: 18px;
@@ -148,22 +152,22 @@
   --spacing-7: 26px;
 
   /* ---- Animations ------------------------------------------------------- */
-  --animate-zpulse:   zpulse 1.8s ease-out infinite;
-  --animate-fade-in:  fade-in 0.16s ease-out;
+  --animate-zpulse: zpulse 1.8s ease-out infinite;
+  --animate-fade-in: fade-in 0.16s ease-out;
   --animate-scale-in: scale-in 0.16s ease-out;
   /* Live-state pulse (2s) — the only ambient motion in the quiet control room. */
-  --animate-live:     zt-live 2s ease-in-out infinite;
-  --animate-spinner:  zt-spin 0.7s linear infinite;
+  --animate-live: zt-live 2s ease-in-out infinite;
+  --animate-spinner: zt-spin 0.7s linear infinite;
 
   /* Boot / loading screen */
-  --animate-orbit-spin:    orbit-spin 12s linear infinite;
-  --animate-ring-pulse:    ring-pulse 2.8s ease-in-out infinite;
-  --animate-logo-breathe:  logo-breathe 3s ease-in-out infinite;
-  --animate-ripple:        ripple 2.8s ease-out infinite;
-  --animate-letter-in:     letter-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  --animate-fade-up:       fade-up 0.5s ease forwards;
-  --animate-status-in:     status-in 0.22s ease forwards;
-  --animate-screen-out:    screen-out 0.55s cubic-bezier(0.4, 0, 1, 1) forwards;
+  --animate-orbit-spin: orbit-spin 12s linear infinite;
+  --animate-ring-pulse: ring-pulse 2.8s ease-in-out infinite;
+  --animate-logo-breathe: logo-breathe 3s ease-in-out infinite;
+  --animate-ripple: ripple 2.8s ease-out infinite;
+  --animate-letter-in: letter-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  --animate-fade-up: fade-up 0.5s ease forwards;
+  --animate-status-in: status-in 0.22s ease forwards;
+  --animate-screen-out: screen-out 0.55s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 /* ---------------------------------------------------------------------------
@@ -193,135 +197,317 @@
   }
 
   ::selection {
-    background: rgba(91,141,239,0.35);
+    background: rgba(91, 141, 239, 0.35);
   }
 
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 0; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* ---------------------------------------------------------------------------
  * Keyframes
  * --------------------------------------------------------------------------- */
 @keyframes zpulse {
-  0%   { transform: scale(0.8); opacity: 0.5; }
-  100% { transform: scale(2.2); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 @keyframes zt-live {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 @keyframes zt-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ---- Boot / loading screen ------------------------------------------------ */
 
 @keyframes orbit-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes ring-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50%      { opacity: 1;   transform: scale(1.03); }
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
 }
 
 @keyframes logo-breathe {
-  0%, 100% { filter: drop-shadow(0 0 28px rgba(91,141,239,0.55)) drop-shadow(0 0 8px rgba(91,141,239,0.4)); }
-  50%      { filter: drop-shadow(0 0 44px rgba(91,141,239,0.8)) drop-shadow(0 0 16px rgba(91,141,239,0.6)); }
+  0%,
+  100% {
+    filter: drop-shadow(0 0 28px rgba(91, 141, 239, 0.55))
+      drop-shadow(0 0 8px rgba(91, 141, 239, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 44px rgba(91, 141, 239, 0.8))
+      drop-shadow(0 0 16px rgba(91, 141, 239, 0.6));
+  }
 }
 
 @keyframes ripple {
-  0%   { transform: scale(1);   opacity: 0.8; }
-  100% { transform: scale(1.7); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
 }
 
 @keyframes letter-in {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes status-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes screen-out {
-  to { opacity: 0; transform: scale(1.02); }
+  to {
+    opacity: 0;
+    transform: scale(1.02);
+  }
 }
 
 @keyframes draw-trace {
-  to { stroke-dashoffset: 0; }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes node-appear {
-  to { opacity: 0.8; }
+  to {
+    opacity: 0.8;
+  }
 }
 
 /* ---- Voice-first mode (JARVIS-style takeover) ----------------------------- */
 
-@keyframes v-orbit-cw  { to { transform: rotate(360deg); } }
-@keyframes v-orbit-ccw { to { transform: rotate(-360deg); } }
+@keyframes v-orbit-cw {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes v-orbit-ccw {
+  to {
+    transform: rotate(-360deg);
+  }
+}
 
 @keyframes v-breath {
-  0%, 100% { transform: scale(0.96); opacity: 0.55; }
-  50%      { transform: scale(1.02); opacity: 0.85; }
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.85;
+  }
 }
 
 @keyframes v-glow-idle {
-  0%, 100% { box-shadow: 0 0 38px rgba(91,141,239,0.12), 0 0 80px rgba(91,141,239,0.06); }
-  50%      { box-shadow: 0 0 60px rgba(91,141,239,0.26), 0 0 120px rgba(91,141,239,0.12); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 38px rgba(91, 141, 239, 0.12),
+      0 0 80px rgba(91, 141, 239, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 60px rgba(91, 141, 239, 0.26),
+      0 0 120px rgba(91, 141, 239, 0.12);
+  }
 }
 
 @keyframes v-glow-hot {
-  0%, 100% { box-shadow: 0 0 60px rgba(91,141,239,0.38), 0 0 120px rgba(91,141,239,0.18); }
-  50%      { box-shadow: 0 0 100px rgba(91,141,239,0.62), 0 0 200px rgba(91,141,239,0.28); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 60px rgba(91, 141, 239, 0.38),
+      0 0 120px rgba(91, 141, 239, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 100px rgba(91, 141, 239, 0.62),
+      0 0 200px rgba(91, 141, 239, 0.28);
+  }
 }
 
 @keyframes v-ripple {
-  0%   { transform: scale(1);   opacity: 0.28; }
-  100% { transform: scale(2);   opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.28;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
-@keyframes v-bar-a { 0%, 100% { height: 5px; }  40% { height: 30px; } }
-@keyframes v-bar-b { 0%, 100% { height: 22px; } 50% { height: 6px; } }
-@keyframes v-bar-c { 0%, 100% { height: 14px; } 33% { height: 36px; } 66% { height: 8px; } }
-@keyframes v-bar-d { 0%, 100% { height: 8px; }  60% { height: 26px; } }
-@keyframes v-bar-e { 0%, 100% { height: 18px; } 25% { height: 8px; }  75% { height: 32px; } }
+@keyframes v-bar-a {
+  0%,
+  100% {
+    height: 5px;
+  }
+  40% {
+    height: 30px;
+  }
+}
+@keyframes v-bar-b {
+  0%,
+  100% {
+    height: 22px;
+  }
+  50% {
+    height: 6px;
+  }
+}
+@keyframes v-bar-c {
+  0%,
+  100% {
+    height: 14px;
+  }
+  33% {
+    height: 36px;
+  }
+  66% {
+    height: 8px;
+  }
+}
+@keyframes v-bar-d {
+  0%,
+  100% {
+    height: 8px;
+  }
+  60% {
+    height: 26px;
+  }
+}
+@keyframes v-bar-e {
+  0%,
+  100% {
+    height: 18px;
+  }
+  25% {
+    height: 8px;
+  }
+  75% {
+    height: 32px;
+  }
+}
 
 @keyframes v-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes v-think-spin {
-  0%   { stroke-dashoffset: 220; }
-  100% { stroke-dashoffset: 0; }
+  0% {
+    stroke-dashoffset: 220;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes v-mode-in {
-  from { opacity: 0; transform: scale(0.985); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes v-dot-blink {
-  0%, 80%, 100% { opacity: 0.25; }
-  40%           { opacity: 1; }
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
 }

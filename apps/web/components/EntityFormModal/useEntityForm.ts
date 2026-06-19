@@ -16,8 +16,7 @@ export function useEntityForm(
 ) {
   const [values, setValues] = useState<EntityFormValues>(() => initialValues(fields));
 
-  const set = (name: string, value: string) =>
-    setValues((v) => ({ ...v, [name]: value }));
+  const set = (name: string, value: string) => setValues((v) => ({ ...v, [name]: value }));
 
   const canSubmit = useMemo(
     () => fields.every((f) => !f.required || (values[f.name] ?? "").trim().length > 0),

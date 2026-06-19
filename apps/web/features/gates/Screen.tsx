@@ -1,18 +1,7 @@
 "use client";
 
-import type {
-  Decision,
-  GlobalGateRule,
-  GlobalGateRuleInput,
-} from "@zibby/contracts";
-import {
-  Button,
-  ButtonGroup,
-  Icon,
-  type IconName,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import type { Decision, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
+import { Button, ButtonGroup, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -61,14 +50,11 @@ export function Screen() {
   const [filter, setFilter] = useState<Decision | null>(null);
   const [editing, setEditing] = useState<GlobalGateRule | "new" | null>(null);
 
-  const byDecision = (d: Decision) =>
-    rules.filter((r) => r.decision === d).length;
+  const byDecision = (d: Decision) => rules.filter((r) => r.decision === d).length;
   const shown = filter ? rules.filter((r) => r.decision === filter) : rules;
   const ids = rules.map((r) => r.id);
 
-  const usersFor = (
-    ruleId: string,
-  ): { agents: RuleUser[]; skills: RuleUser[] } => ({
+  const usersFor = (ruleId: string): { agents: RuleUser[]; skills: RuleUser[] } => ({
     agents: agents
       .filter((a) => a.gateRuleIds?.includes(ruleId))
       .map((a) => ({
@@ -98,11 +84,7 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Button
-              icon="plus"
-              intent="primary"
-              onClick={() => setEditing("new")}
-            >
+            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
               {t("newRule")}
             </Button>
           }
@@ -139,13 +121,7 @@ export function Screen() {
         <HudPanel padding="150">
           <Stack align="center" direction="row" gap="100">
             <Icon name="bolt" size="xs" tone="accent" />
-            <Typography
-              mono
-              leading="snug"
-              size="2xs"
-              type="note"
-              variant="tertiary"
-            >
+            <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
               {t("hierarchyNote")}
             </Typography>
           </Stack>
@@ -189,12 +165,7 @@ export function Screen() {
           </Stack>
         )}
 
-        <Button
-          block
-          icon="plus"
-          intent="ghost"
-          onClick={() => setEditing("new")}
-        >
+        <Button block icon="plus" intent="ghost" onClick={() => setEditing("new")}>
           {t("addRule")}
         </Button>
       </Stack>

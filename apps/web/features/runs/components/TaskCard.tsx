@@ -1,11 +1,4 @@
-import {
-  Card,
-  Container,
-  Icon,
-  type IconName,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { resumeEta } from "../../../utils/time";
 import { type RunView, runTitle } from "../run";
@@ -95,11 +88,7 @@ export function TaskCard({
           )}
           <Stack align="center" direction="row" gap="100" justify="between">
             <Stack align="center" direction="row" gap="100">
-              <RunStateBadge
-                canonTitle={run.status}
-                label={stateLabel}
-                status={run.status}
-              />
+              <RunStateBadge canonTitle={run.status} label={stateLabel} status={run.status} />
               {run.taskOutcome && (
                 <Typography
                   mono

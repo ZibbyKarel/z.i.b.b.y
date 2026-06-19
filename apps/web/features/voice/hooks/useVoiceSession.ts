@@ -2,10 +2,7 @@
 
 import type { VoiceState } from "../components/VoiceOrb";
 import { useVoiceDemoSequence } from "./useVoiceDemoSequence";
-import {
-  type SpeechRecognitionError,
-  useSpeechRecognition,
-} from "./useSpeechRecognition";
+import { type SpeechRecognitionError, useSpeechRecognition } from "./useSpeechRecognition";
 
 export type VoiceMode = "live" | "demo";
 
@@ -46,9 +43,7 @@ export interface UseVoiceSessionOptions {
  * projected onto the unified {@link VoiceSession}. Live mode's orb state is
  * `idle ↔ listening`; `thinking`/`speaking` arrive with TTS in a later phase.
  */
-export function useVoiceSession(
-  options: UseVoiceSessionOptions = {},
-): VoiceSession {
+export function useVoiceSession(options: UseVoiceSessionOptions = {}): VoiceSession {
   const { lang = "en-US" } = options;
   const demo = useVoiceDemoSequence();
   const stt = useSpeechRecognition({ lang });

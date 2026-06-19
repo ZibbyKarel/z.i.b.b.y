@@ -1,16 +1,16 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { AgentIdSchema } from "../agents/agent.schema"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { ErrorSchema } from "../common.schema";
 import {
   AutomationSchema,
   CreateAutomationSchema,
   UpdateAutomationSchema,
-} from "./automation.schema"
+} from "./automation.schema";
 
-const c = initContract()
+const c = initContract();
 
-const IdParam = z.object({ id: AgentIdSchema })
+const IdParam = z.object({ id: AgentIdSchema });
 
 /**
  * Automations (Phase 5): cron/event triggers that start a target run unprompted.
@@ -73,5 +73,5 @@ export const automationsContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type AutomationsContract = typeof automationsContract
+);
+export type AutomationsContract = typeof automationsContract;

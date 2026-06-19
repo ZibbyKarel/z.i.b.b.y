@@ -10,11 +10,11 @@ Přepsatelné přes `VAULT_DIR` env var.
 
 ## Tři tiery
 
-| Tier | Složka | Účel |
-|------|--------|------|
-| `memory` | `vault/memory/` | Trvalé znalosti — fakta, rozhodnutí, kontext projektu |
-| `daily` | `vault/daily/` | Denní log — append-only záznamy co se stalo |
-| `knowledge` | `vault/knowledge/` | Tematické poznámky — hloubkové dokumenty |
+| Tier        | Složka             | Účel                                                  |
+| ----------- | ------------------ | ----------------------------------------------------- |
+| `memory`    | `vault/memory/`    | Trvalé znalosti — fakta, rozhodnutí, kontext projektu |
+| `daily`     | `vault/daily/`     | Denní log — append-only záznamy co se stalo           |
+| `knowledge` | `vault/knowledge/` | Tematické poznámky — hloubkové dokumenty              |
 
 ## Formát poznámky
 
@@ -114,6 +114,7 @@ Volá se na začátku každého runu (fail-open — výpadek vaultu run neblokuj
 **Soubor:** `apps/api/src/memory/run-recorder.module.ts` a `run-recorder.service.ts`
 
 Při dokončení runu (terminal state):
+
 1. Zapíše marker `<!-- run:<runId> -->` do denní poznámky (idempotentní — opakované zápisy jsou bezpečné)
 2. Appenduje outcome summary (1–2 věty co run udělal / selhal)
 3. Aktualizuje relevantní indexy (pokud run produkoval nový kontext)
@@ -156,8 +157,8 @@ běh v A si tak mohl přes shodu termínů natáhnout MOC projektu B.
 
 ## Chybové stavy
 
-| Error | HTTP | Kdy |
-|-------|------|-----|
-| `NoteNotFoundError` | 404 | ID neexistuje v žádném tieru |
-| `InvalidNoteIdError` | 422 | ID obsahuje `/`, `..`, nebo začíná `.` |
-| `DuplicateNoteError` | 409 | ID už existuje (i v jiném tieru) |
+| Error                | HTTP | Kdy                                    |
+| -------------------- | ---- | -------------------------------------- |
+| `NoteNotFoundError`  | 404  | ID neexistuje v žádném tieru           |
+| `InvalidNoteIdError` | 422  | ID obsahuje `/`, `..`, nebo začíná `.` |
+| `DuplicateNoteError` | 409  | ID už existuje (i v jiném tieru)       |

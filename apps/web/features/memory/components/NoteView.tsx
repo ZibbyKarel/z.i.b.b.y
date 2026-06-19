@@ -27,11 +27,7 @@ function LinkChips({
   return (
     <Stack wrap align="center" direction="row" gap="50">
       {ids.map((id) => (
-        <Pressable
-          data-testid={`memory-note-${kind}-${id}`}
-          key={id}
-          onClick={() => onSelect(id)}
-        >
+        <Pressable data-testid={`memory-note-${kind}-${id}`} key={id} onClick={() => onSelect(id)}>
           <Chip tone="idle">{id}</Chip>
         </Pressable>
       ))}

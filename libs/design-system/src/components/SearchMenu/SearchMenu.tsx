@@ -86,16 +86,10 @@ export function SearchMenu({
   const listboxId = useId();
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const visibleSections = useMemo(
-    () => sections.filter((s) => s.items.length > 0),
-    [sections],
-  );
+  const visibleSections = useMemo(() => sections.filter((s) => s.items.length > 0), [sections]);
 
   const flat = useMemo<FlatItem[]>(
-    () =>
-      visibleSections.flatMap((s) =>
-        s.items.map((i) => ({ sectionId: s.id, itemId: i.id })),
-      ),
+    () => visibleSections.flatMap((s) => s.items.map((i) => ({ sectionId: s.id, itemId: i.id }))),
     [visibleSections],
   );
 
@@ -148,9 +142,7 @@ export function SearchMenu({
           "flex items-center gap-2.5 w-full px-3.5 py-2",
           "bg-background border rounded-sm",
           "transition-colors",
-          panelOpen
-            ? "border-border-strong text-foreground"
-            : "border-border text-foreground-dim",
+          panelOpen ? "border-border-strong text-foreground" : "border-border text-foreground-dim",
           "focus-within:border-border-strong focus-within:ring-2 focus-within:ring-accent",
         )}
       >
@@ -206,64 +198,64 @@ export function SearchMenu({
           role="listbox"
         >
           <div className="py-1.5">
-          {showEmpty ? (
-            <p
-              className="px-3.5 py-2 text-base text-foreground-faint"
-              data-testid={SearchMenuTestId.Empty}
-            >
-              {emptyLabel}
-            </p>
-          ) : (
-            visibleSections.map((section) => (
-              <div data-testid={`${SearchMenuTestId.Section}-${section.id}`} key={section.id}>
-                <p
-                  className={cn(
-                    "px-3.5 pt-1.5 pb-1",
-                    "text-xs font-medium uppercase tracking-wide text-foreground-faint",
-                  )}
-                  data-testid={`${SearchMenuTestId.SectionLabel}-${section.id}`}
-                >
-                  {section.label}
-                </p>
-                {section.items.map((item) => {
-                  const index = flat.findIndex(
-                    (f) => f.sectionId === section.id && f.itemId === item.id,
-                  );
-                  const active = index === activeRow;
-                  return (
-                    <button
-                      aria-selected={active}
-                      className={cn(
-                        "flex items-center gap-2.5 w-full px-3.5 py-1.5 text-left",
-                        "transition-colors outline-none",
-                        active ? "bg-raised text-foreground" : "text-foreground-dim",
-                        "hover:bg-raised hover:text-foreground",
-                      )}
-                      data-testid={`${SearchMenuTestId.Item}-${section.id}-${item.id}`}
-                      id={`${listboxId}-${section.id}-${item.id}`}
-                      key={item.id}
-                      onClick={() => onSelect(section.id, item.id)}
-                      onPointerMove={() => setActiveIndex(index)}
-                      role="option"
-                      type="button"
-                    >
-                      {item.glyph ? (
-                        <Icon name={item.glyph} size="sm" tone={active ? "accent" : "faint"} />
-                      ) : null}
-                      <span className="flex-1 min-w-0">
-                        <span className="block truncate text-base">{item.title}</span>
-                        {item.subtitle ? (
-                          <span className="block truncate text-xs text-foreground-faint">
-                            {item.subtitle}
-                          </span>
+            {showEmpty ? (
+              <p
+                className="px-3.5 py-2 text-base text-foreground-faint"
+                data-testid={SearchMenuTestId.Empty}
+              >
+                {emptyLabel}
+              </p>
+            ) : (
+              visibleSections.map((section) => (
+                <div data-testid={`${SearchMenuTestId.Section}-${section.id}`} key={section.id}>
+                  <p
+                    className={cn(
+                      "px-3.5 pt-1.5 pb-1",
+                      "text-xs font-medium uppercase tracking-wide text-foreground-faint",
+                    )}
+                    data-testid={`${SearchMenuTestId.SectionLabel}-${section.id}`}
+                  >
+                    {section.label}
+                  </p>
+                  {section.items.map((item) => {
+                    const index = flat.findIndex(
+                      (f) => f.sectionId === section.id && f.itemId === item.id,
+                    );
+                    const active = index === activeRow;
+                    return (
+                      <button
+                        aria-selected={active}
+                        className={cn(
+                          "flex items-center gap-2.5 w-full px-3.5 py-1.5 text-left",
+                          "transition-colors outline-none",
+                          active ? "bg-raised text-foreground" : "text-foreground-dim",
+                          "hover:bg-raised hover:text-foreground",
+                        )}
+                        data-testid={`${SearchMenuTestId.Item}-${section.id}-${item.id}`}
+                        id={`${listboxId}-${section.id}-${item.id}`}
+                        key={item.id}
+                        onClick={() => onSelect(section.id, item.id)}
+                        onPointerMove={() => setActiveIndex(index)}
+                        role="option"
+                        type="button"
+                      >
+                        {item.glyph ? (
+                          <Icon name={item.glyph} size="sm" tone={active ? "accent" : "faint"} />
                         ) : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))
-          )}
+                        <span className="flex-1 min-w-0">
+                          <span className="block truncate text-base">{item.title}</span>
+                          {item.subtitle ? (
+                            <span className="block truncate text-xs text-foreground-faint">
+                              {item.subtitle}
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
+            )}
           </div>
         </MenuSurface>
       ) : null}

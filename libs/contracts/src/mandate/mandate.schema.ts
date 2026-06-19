@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 /** Per-channel autonomy switches; absent fields fall back to the defaults. */
 export const MandateChannelSchema = z
@@ -6,8 +6,8 @@ export const MandateChannelSchema = z
     dispatch: z.boolean().optional(),
     reply: z.boolean().optional(),
   })
-  .strict()
-export type MandateChannel = z.infer<typeof MandateChannelSchema>
+  .strict();
+export type MandateChannel = z.infer<typeof MandateChannelSchema>;
 
 /**
  * The autonomy mandate (Phase 5.3): what ZIBBY may do unprompted per channel.
@@ -26,8 +26,8 @@ export const MandateSchema = z
       .strict(),
     channels: z.record(z.string(), MandateChannelSchema).default({}),
   })
-  .strict()
-export type Mandate = z.infer<typeof MandateSchema>
+  .strict();
+export type Mandate = z.infer<typeof MandateSchema>;
 
 /**
  * Transport schema for `PUT /api/mandate`. Deliberately `.passthrough()` at every
@@ -41,13 +41,16 @@ export const MandateWriteSchema = z
   .object({
     defaults: z.object({ dispatch: z.boolean(), reply: z.boolean() }).passthrough(),
     channels: z
-      .record(z.string(), z.object({ dispatch: z.boolean().optional(), reply: z.boolean().optional() }).passthrough())
+      .record(
+        z.string(),
+        z.object({ dispatch: z.boolean().optional(), reply: z.boolean().optional() }).passthrough(),
+      )
       .optional(),
   })
-  .passthrough()
+  .passthrough();
 
 /** The seeded floor: dispatch on, reply off (operator opts in per channel). */
 export const DEFAULT_MANDATE: Mandate = {
   defaults: { dispatch: true, reply: false },
   channels: {},
-}
+};

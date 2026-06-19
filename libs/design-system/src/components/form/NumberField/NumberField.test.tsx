@@ -7,9 +7,7 @@ import { NumberField, NumberFieldTestId } from "./NumberField";
 describe("NumberField", () => {
   it("associates the label with the input", () => {
     render(<NumberField label="Tick (ms)" value={30000} />);
-    expect(screen.getByTestId(NumberFieldTestId.Control)).toHaveAccessibleName(
-      "Tick (ms)",
-    );
+    expect(screen.getByTestId(NumberFieldTestId.Control)).toHaveAccessibleName("Tick (ms)");
   });
 
   it("reports the parsed number on change", async () => {
@@ -29,9 +27,6 @@ describe("NumberField", () => {
   it("renders an error and marks the input invalid", () => {
     render(<NumberField error="Musí být kladné" label="Tick" value={-1} />);
     expect(screen.getByTestId(FieldTestId.Error)).toHaveTextContent("Musí být kladné");
-    expect(screen.getByTestId(NumberFieldTestId.Control)).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
+    expect(screen.getByTestId(NumberFieldTestId.Control)).toHaveAttribute("aria-invalid", "true");
   });
 });

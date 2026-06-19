@@ -116,7 +116,15 @@ function MetaCell({ label, value, tone }: { label: string; value: string; tone?:
  * the decision panel with the action summary and Potvrdit/Smazat footer, and
  * collapses the log into an accordion so the decision is what's visible.
  */
-export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deleting }: RunDetailProps) {
+export function RunDetail({
+  run,
+  glyph,
+  now,
+  onStop,
+  stopping,
+  onDelete,
+  deleting,
+}: RunDetailProps) {
   const t = useTranslations("runs");
   const tApprovals = useTranslations("approvals");
   const { data: queue = [] } = useApprovalsQuery();
@@ -124,7 +132,7 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
   // Who is doing the work: an agent run's `owner` is its agent id; the approval
   // (when present) carries the nicer display name. Surfaced in the header so a
   // paused task makes plain which agent is asking.
-  const agentName = run.kind === "agent" ? approval?.skill ?? run.owner : undefined;
+  const agentName = run.kind === "agent" ? (approval?.skill ?? run.owner) : undefined;
 
   const tone: "accent" | "ok" | "warn" | "bad" | undefined =
     run.status === "running"
@@ -136,7 +144,8 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
           : run.status === "error"
             ? "bad"
             : undefined;
-  const ago = (n: number, unit: string) => (n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n }));
+  const ago = (n: number, unit: string) =>
+    n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
   // A waiting scheduled task fires in the future — its time reads "in …".
   const inMin = Math.floor((Date.parse(run.startedAt) - now) / 60000);
@@ -152,7 +161,8 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
   // A pipeline run's `prompt` is only the "fáze: X" progress string, which the stage
   // timeline below already shows — so the header subtitle is the prompt for the other
   // kinds (an agent's prompt), suppressed for pipelines.
-  const subtitle = run.kind === "pipeline" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
+  const subtitle =
+    run.kind === "pipeline" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
   // The task's free-text description, shown (collapsed) only when it adds something
   // beyond the headline and the subtitle — so the task name isn't repeated.
   const descriptionText =
@@ -187,7 +197,12 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
                     <Typography type="subtitle" weight="semibold">
                       {headline}
                     </Typography>
-                    <RunStateBadge canonTitle={run.status} label={t(`state.${run.status}`)} size="md" status={run.status} />
+                    <RunStateBadge
+                      canonTitle={run.status}
+                      label={t(`state.${run.status}`)}
+                      size="md"
+                      status={run.status}
+                    />
                     {agentName && (
                       <Stack align="center" direction="row" gap="50" title={t("metaAgent")}>
                         <Icon name="bot" size="xs" tone="accent" />
@@ -227,7 +242,13 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
             ) : (
               <Stack align="center" direction="row" gap="100">
                 {run.status === "running" && (
-                  <Button disabled={stopping} icon="stop" intent="danger" onClick={onStop} size="sm">
+                  <Button
+                    disabled={stopping}
+                    icon="stop"
+                    intent="danger"
+                    onClick={onStop}
+                    size="sm"
+                  >
                     {t("stop")}
                   </Button>
                 )}
@@ -316,7 +337,10 @@ export function RunDetail({ run, glyph, now, onStop, stopping, onDelete, deletin
           </Accordion>
         </>
       ) : (
-        <HudPanel padding={run.logBase ? "250" : "300"} title={run.logBase ? t("output") : undefined}>
+        <HudPanel
+          padding={run.logBase ? "250" : "300"}
+          title={run.logBase ? t("output") : undefined}
+        >
           {logPanel}
         </HudPanel>
       )}

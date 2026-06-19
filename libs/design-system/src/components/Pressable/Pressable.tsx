@@ -6,10 +6,7 @@ export enum PressableTestId {
   Root = "pressable-root",
 }
 
-export interface PressableProps extends Omit<
-  ButtonHTMLAttributes<HTMLButtonElement>,
-  "className"
-> {
+export interface PressableProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
   ref?: Ref<HTMLButtonElement>;
 }
 

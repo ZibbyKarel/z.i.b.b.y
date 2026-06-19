@@ -1,15 +1,15 @@
-import { describe, expect, it } from "vitest"
-import { ApprovalSchema, approvalsContract } from "../index"
+import { describe, expect, it } from "vitest";
+import { ApprovalSchema, approvalsContract } from "../index";
 
 describe("approvalsContract", () => {
   it("exposes list/get/approve/reject under /api/approvals", () => {
-    expect(approvalsContract.listPendingApprovals.path).toBe("/api/approvals")
-    expect(approvalsContract.getApproval.path).toBe("/api/approvals/:id")
-    expect(approvalsContract.approveApproval.path).toBe("/api/approvals/:id/approve")
-    expect(approvalsContract.rejectApproval.path).toBe("/api/approvals/:id/reject")
-    expect(approvalsContract.approveApproval.method).toBe("POST")
-  })
-})
+    expect(approvalsContract.listPendingApprovals.path).toBe("/api/approvals");
+    expect(approvalsContract.getApproval.path).toBe("/api/approvals/:id");
+    expect(approvalsContract.approveApproval.path).toBe("/api/approvals/:id/approve");
+    expect(approvalsContract.rejectApproval.path).toBe("/api/approvals/:id/reject");
+    expect(approvalsContract.approveApproval.method).toBe("POST");
+  });
+});
 
 describe("approval schema", () => {
   const base = {
@@ -22,24 +22,24 @@ describe("approval schema", () => {
     risk: "high",
     status: "pending",
     requestedAt: new Date().toISOString(),
-  }
+  };
 
   it("accepts a pending approval and an approved one with decidedAt", () => {
-    expect(ApprovalSchema.safeParse(base).success).toBe(true)
+    expect(ApprovalSchema.safeParse(base).success).toBe(true);
     expect(
       ApprovalSchema.safeParse({ ...base, status: "approved", decidedAt: new Date().toISOString() })
         .success,
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
 
   it("rejects an unknown kind or risk", () => {
-    expect(ApprovalSchema.safeParse({ ...base, kind: "wizard" }).success).toBe(false)
-    expect(ApprovalSchema.safeParse({ ...base, risk: "extreme" }).success).toBe(false)
-  })
+    expect(ApprovalSchema.safeParse({ ...base, kind: "wizard" }).success).toBe(false);
+    expect(ApprovalSchema.safeParse({ ...base, risk: "extreme" }).success).toBe(false);
+  });
 
   it("accepts the budget-override kind 'task' (Phase 8.1)", () => {
     expect(
       ApprovalSchema.safeParse({ ...base, kind: "task", action: "spend-past-cap" }).success,
-    ).toBe(true)
-  })
-})
+    ).toBe(true);
+  });
+});

@@ -1,13 +1,13 @@
-import { promises as fs } from "node:fs"
-import * as path from "node:path"
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
-import { type GateRule, GateRuleSchema } from "@zibby/contracts"
-import matter from "gray-matter"
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { type GateRule, GateRuleSchema } from "@zibby/contracts";
+import matter from "gray-matter";
 
 /** DI token for the directory holding the locked system policy floor (`POLICY.md`). */
-export const POLICY_DIR = "POLICY_DIR"
+export const POLICY_DIR = "POLICY_DIR";
 
-const FILE = "POLICY.md"
+const FILE = "POLICY.md";
 
 /**
  * The system policy floor: a single locked `POLICY.md` whose frontmatter carries
@@ -18,54 +18,53 @@ const FILE = "POLICY.md"
  */
 @Injectable()
 export class PolicyStorageService implements OnModuleInit {
-  private readonly dir: string
+  private readonly dir: string;
 
   constructor(@Inject(POLICY_DIR) dir: string) {
-    this.dir = path.resolve(dir)
+    this.dir = path.resolve(dir);
   }
 
   async onModuleInit(): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true })
-    if (!(await this.exists())) await this.seed()
+    await fs.mkdir(this.dir, { recursive: true });
+    if (!(await this.exists())) await this.seed();
   }
 
   /** The locked floor rules. Always tagged `source: "system", locked: true`. */
   async floor(): Promise<GateRule[]> {
-    const raw = await fs.readFile(path.join(this.dir, FILE), "utf8").catch(() => null)
-    if (raw === null) return DEFAULT_FLOOR
-    let data: Record<string, unknown>
+    const raw = await fs.readFile(path.join(this.dir, FILE), "utf8").catch(() => null);
+    if (raw === null) return DEFAULT_FLOOR;
+    let data: Record<string, unknown>;
     try {
-      data = matter(raw).data as Record<string, unknown>
+      data = matter(raw).data as Record<string, unknown>;
     } catch {
-      return DEFAULT_FLOOR
+      return DEFAULT_FLOOR;
     }
-    const list = Array.isArray(data.policy) ? data.policy : []
-    const rules: GateRule[] = []
+    const list = Array.isArray(data.policy) ? data.policy : [];
+    const rules: GateRule[] = [];
     for (const item of list) {
       // Force the locked-system provenance regardless of what's on disk.
       const parsed = GateRuleSchema.safeParse({
         ...(item as object),
         source: "system",
         locked: true,
-      })
-      if (parsed.success) rules.push(parsed.data)
+      });
+      if (parsed.success) rules.push(parsed.data);
     }
-    return rules.length > 0 ? rules : DEFAULT_FLOOR
+    return rules.length > 0 ? rules : DEFAULT_FLOOR;
   }
 
   private async exists(): Promise<boolean> {
     return fs
       .access(path.join(this.dir, FILE))
       .then(() => true)
-      .catch(() => false)
+      .catch(() => false);
   }
 
   private async seed(): Promise<void> {
-    const body = matter.stringify(
-      "\nSystem policy floor. Agents may only harden these rules.\n",
-      { policy: DEFAULT_FLOOR },
-    )
-    await fs.writeFile(path.join(this.dir, FILE), body, "utf8").catch(() => {})
+    const body = matter.stringify("\nSystem policy floor. Agents may only harden these rules.\n", {
+      policy: DEFAULT_FLOOR,
+    });
+    await fs.writeFile(path.join(this.dir, FILE), body, "utf8").catch(() => {});
   }
 }
 
@@ -91,7 +90,7 @@ const ASK_FLOOR_ACTIONS = [
   // the budget guard holds the over-cap task and requests this approval (Law 3:
   // no autonomous spend past budget). Harden-only: an agent may raise it to deny.
   "spend-past-cap",
-] as const
+] as const;
 
 const DEFAULT_FLOOR: GateRule[] = [
   ...ASK_FLOOR_ACTIONS.map((action) => ({
@@ -119,4 +118,4 @@ const DEFAULT_FLOOR: GateRule[] = [
     match: [{ type: "action" as const, action: "channel-reply" }],
     decision: "notify" as const,
   },
-]
+];

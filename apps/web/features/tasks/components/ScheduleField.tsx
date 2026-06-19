@@ -1,11 +1,6 @@
 import { SegmentPickerField } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import {
-  type SchedulePreset,
-  clockLabel,
-  resolveScheduledAt,
-  whenLabel,
-} from "../task";
+import { type SchedulePreset, clockLabel, resolveScheduledAt, whenLabel } from "../task";
 
 export interface ScheduleFieldProps {
   value: SchedulePreset;
@@ -22,12 +17,7 @@ export interface ScheduleFieldProps {
  * reset time is known; a hint below echoes the resolved run time for a deferred
  * choice so the user sees exactly when the task will fire.
  */
-export function ScheduleField({
-  value,
-  onChange,
-  resetsAt,
-  now,
-}: ScheduleFieldProps) {
+export function ScheduleField({ value, onChange, resetsAt, now }: ScheduleFieldProps) {
   const t = useTranslations("tasks.schedule");
 
   const options = [
@@ -45,9 +35,7 @@ export function ScheduleField({
 
   const scheduledAt = resolveScheduledAt(value, now, resetsAt);
   const hint =
-    scheduledAt !== null
-      ? t("willRun", { when: whenLabel(scheduledAt, now) })
-      : undefined;
+    scheduledAt !== null ? t("willRun", { when: whenLabel(scheduledAt, now) }) : undefined;
 
   return (
     <SegmentPickerField

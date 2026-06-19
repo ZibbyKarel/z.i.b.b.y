@@ -1,17 +1,7 @@
 "use client";
 
-import {
-  type CSSProperties,
-  type ReactNode,
-  createContext,
-  useMemo,
-} from "react";
-import {
-  type PartialTheme,
-  type Theme,
-  mergeTheme,
-  tokensToCssVars,
-} from "../tokens";
+import { type CSSProperties, type ReactNode, createContext, useMemo } from "react";
+import { type PartialTheme, type Theme, mergeTheme, tokensToCssVars } from "../tokens";
 import { tokensForTheme } from "./themeRegistry";
 
 // ---------------------------------------------------------------------------
@@ -51,8 +41,7 @@ export function DesignSystemProvider({
   children,
 }: DesignSystemProviderProps) {
   const merged = useMemo(
-    () =>
-      override ? mergeTheme(tokensForTheme(theme), override) : tokensForTheme(theme),
+    () => (override ? mergeTheme(tokensForTheme(theme), override) : tokensForTheme(theme)),
     [theme, override],
   );
 
@@ -65,21 +54,13 @@ export function DesignSystemProvider({
     ...style,
   };
 
-  const classes = [
-    "ds-root",
-    theme === "dark" ? "dark" : "light",
-    className,
-  ]
+  const classes = ["ds-root", theme === "dark" ? "dark" : "light", className]
     .filter(Boolean)
     .join(" ");
 
   return (
     <DesignSystemTokenContext.Provider value={merged}>
-      <div
-        className={classes}
-        data-theme={theme}
-        style={rootStyle}
-      >
+      <div className={classes} data-theme={theme} style={rootStyle}>
         {children}
       </div>
     </DesignSystemTokenContext.Provider>

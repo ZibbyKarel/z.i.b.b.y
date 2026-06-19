@@ -1,9 +1,9 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
-import { GateRuleIdSchema, GlobalGateRuleInputSchema, GlobalGateRuleSchema } from "./gate.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
+import { GateRuleIdSchema, GlobalGateRuleInputSchema, GlobalGateRuleSchema } from "./gate.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The global gate-rule catalog — the "Pravidla schvalování" page. A flat, ordered
@@ -51,5 +51,5 @@ export const gateRulesContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type GateRulesContract = typeof gateRulesContract
+);
+export type GateRulesContract = typeof gateRulesContract;

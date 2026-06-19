@@ -40,20 +40,14 @@ const config: StorybookConfig = {
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
-      "next/link": fileURLToPath(
-        new URL("./next-stubs/link.tsx", import.meta.url),
-      ),
-      "next/navigation": fileURLToPath(
-        new URL("./next-stubs/navigation.ts", import.meta.url),
-      ),
+      "next/link": fileURLToPath(new URL("./next-stubs/link.tsx", import.meta.url)),
+      "next/navigation": fileURLToPath(new URL("./next-stubs/navigation.ts", import.meta.url)),
       // The contracts workspace package resolves to TS source, not a built
       // node_modules entry Rollup can find on its own (used by app data hooks).
       "@zibby/contracts": fileURLToPath(
         new URL("../../../libs/contracts/src/index.ts", import.meta.url),
       ),
-      "@zibby/forms": fileURLToPath(
-        new URL("../../../libs/forms/src/index.ts", import.meta.url),
-      ),
+      "@zibby/forms": fileURLToPath(new URL("../../../libs/forms/src/index.ts", import.meta.url)),
     };
     return config;
   },

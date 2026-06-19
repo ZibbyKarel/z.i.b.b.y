@@ -11,8 +11,7 @@ if (!("ResizeObserver" in globalThis)) {
     unobserve() {}
     disconnect() {}
   }
-  globalThis.ResizeObserver =
-    ResizeObserver as unknown as typeof globalThis.ResizeObserver;
+  globalThis.ResizeObserver = ResizeObserver as unknown as typeof globalThis.ResizeObserver;
 }
 
 // Node 25 exposes an experimental global `localStorage` that throws without a

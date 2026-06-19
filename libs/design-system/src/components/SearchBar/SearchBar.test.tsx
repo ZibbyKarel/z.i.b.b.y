@@ -10,15 +10,11 @@ describe("SearchBar", () => {
     const root = screen.getByTestId(SearchBarTestId.Root);
     expect(root).toHaveRole("button");
     expect(root).toHaveAccessibleName("Command or skill");
-    expect(screen.getByTestId(SearchBarTestId.Placeholder)).toHaveTextContent(
-      "Command or skill…",
-    );
+    expect(screen.getByTestId(SearchBarTestId.Placeholder)).toHaveTextContent("Command or skill…");
   });
 
   it("renders the shortcut hint when provided", () => {
-    render(
-      <SearchBar ariaLabel="Command" placeholder="Command…" shortcut="⌘K" />,
-    );
+    render(<SearchBar ariaLabel="Command" placeholder="Command…" shortcut="⌘K" />);
     expect(screen.getByTestId(SearchBarTestId.Shortcut)).toHaveTextContent("⌘K");
   });
 
@@ -29,9 +25,7 @@ describe("SearchBar", () => {
 
   it("calls onClick when activated", async () => {
     const onClick = vi.fn();
-    render(
-      <SearchBar ariaLabel="Command" onClick={onClick} placeholder="Command…" />,
-    );
+    render(<SearchBar ariaLabel="Command" onClick={onClick} placeholder="Command…" />);
     await userEvent.click(screen.getByTestId(SearchBarTestId.Root));
     expect(onClick).toHaveBeenCalledOnce();
   });

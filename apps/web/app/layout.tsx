@@ -34,10 +34,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
   const messages = await getMessages();
 
   return (
-    <html
-      className={`${geist.variable} ${jetbrainsMono.variable}`}
-      lang={locale}
-    >
+    <html className={`${geist.variable} ${jetbrainsMono.variable}`} lang={locale}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>

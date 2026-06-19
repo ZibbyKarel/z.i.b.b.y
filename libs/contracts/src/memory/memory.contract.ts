@@ -1,6 +1,6 @@
-import { initContract } from "@ts-rest/core"
-import { z } from "zod"
-import { ErrorSchema } from "../common.schema"
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   AppendDailySchema,
   AppendNoteSchema,
@@ -11,9 +11,9 @@ import {
   SearchHitSchema,
   UpdateIndexLinkSchema,
   UpdateNoteSchema,
-} from "./memory.schema"
+} from "./memory.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * The memory layer (Phase 4): read access to the Obsidian vault, index-first
@@ -89,5 +89,5 @@ export const memoryContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type MemoryContract = typeof memoryContract
+);
+export type MemoryContract = typeof memoryContract;

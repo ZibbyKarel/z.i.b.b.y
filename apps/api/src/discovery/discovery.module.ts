@@ -1,17 +1,17 @@
-import { Module } from "@nestjs/common"
-import { ApprovalsModule } from "../approvals/approvals.module"
-import { MemoryModule } from "../memory/memory.module"
-import { ProjectsModule } from "../projects/projects.module"
-import { TasksModule } from "../tasks/tasks.module"
-import { dataDir } from "../shared/data-dir"
-import { DiscoveryController } from "./discovery.controller"
-import { DiscoveryTriageService } from "./discovery-triage.service"
-import { ProposedTaskFlowService } from "./proposed-task-flow.service"
-import { PROPOSALS_DIR, ProposalsStorageService } from "./proposals.storage.service"
+import { Module } from "@nestjs/common";
+import { ApprovalsModule } from "../approvals/approvals.module";
+import { MemoryModule } from "../memory/memory.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { TasksModule } from "../tasks/tasks.module";
+import { dataDir } from "../shared/data-dir";
+import { DiscoveryController } from "./discovery.controller";
+import { DiscoveryTriageService } from "./discovery-triage.service";
+import { ProposedTaskFlowService } from "./proposed-task-flow.service";
+import { PROPOSALS_DIR, ProposalsStorageService } from "./proposals.storage.service";
 
 /** Default proposals dir, anchored to `apps/api/data/proposals`. */
 export function resolveProposalsDir(): string {
-  return process.env.PROPOSALS_DIR ?? dataDir("proposals")
+  return process.env.PROPOSALS_DIR ?? dataDir("proposals");
 }
 
 /**

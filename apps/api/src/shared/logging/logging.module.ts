@@ -1,10 +1,10 @@
-import { Global, type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common"
-import { APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core"
-import { AllExceptionsFilter } from "./all-exceptions.filter"
-import { LoggerService } from "./logger.service"
-import { LoggingInterceptor } from "./logging.interceptor"
-import { TraceContextService } from "./trace-context.service"
-import { createTraceMiddleware } from "./trace.middleware"
+import { Global, type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
+import { APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
+import { AllExceptionsFilter } from "./all-exceptions.filter";
+import { LoggerService } from "./logger.service";
+import { LoggingInterceptor } from "./logging.interceptor";
+import { TraceContextService } from "./trace-context.service";
+import { createTraceMiddleware } from "./trace.middleware";
 
 /**
  * Wires the observability layer once, app-wide:
@@ -32,6 +32,6 @@ export class LoggingModule implements NestModule {
   constructor(private readonly trace: TraceContextService) {}
 
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(createTraceMiddleware(this.trace)).forRoutes("*")
+    consumer.apply(createTraceMiddleware(this.trace)).forRoutes("*");
   }
 }

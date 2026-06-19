@@ -36,6 +36,7 @@ Content-Type: application/problem+json
 ```
 
 **Fields:**
+
 - `type` - URI reference identifying error type
 - `title` - Short, human-readable summary
 - `status` - HTTP status code
@@ -138,6 +139,7 @@ WWW-Authenticate: Bearer realm="api", error="invalid_token"
 ```
 
 **Common auth error codes:**
+
 - `MISSING_TOKEN` - No auth token provided
 - `INVALID_TOKEN` - Token is malformed or invalid
 - `EXPIRED_TOKEN` - Token has expired
@@ -257,6 +259,7 @@ Response: 500 Internal Server Error
 ```
 
 **Never expose:**
+
 - Stack traces
 - Database errors
 - Internal paths
@@ -424,14 +427,14 @@ Document all possible errors for each endpoint:
 /users/{id}:
   get:
     responses:
-      '200':
+      "200":
         description: Success
-      '401':
+      "401":
         description: Authentication failed
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Error'
+              $ref: "#/components/schemas/Error"
             examples:
               missing_token:
                 value:
@@ -443,12 +446,12 @@ Document all possible errors for each endpoint:
                   error:
                     code: INVALID_TOKEN
                     message: Token is invalid or expired
-      '404':
+      "404":
         description: User not found
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Error'
+              $ref: "#/components/schemas/Error"
             examples:
               not_found:
                 value:

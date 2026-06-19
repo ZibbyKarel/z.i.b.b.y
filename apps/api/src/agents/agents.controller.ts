@@ -1,18 +1,14 @@
-import { Controller } from "@nestjs/common"
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest"
-import { agentsContract } from "@zibby/contracts"
-import { makeErrorMapper } from "../shared/http/error-mapping"
-import {
-  AgentConflictError,
-  AgentNotFoundError,
-  InvalidAgentIdError,
-} from "./agents.errors"
-import { AgentsStorageService } from "./agents.storage.service"
+import { Controller } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { agentsContract } from "@zibby/contracts";
+import { makeErrorMapper } from "../shared/http/error-mapping";
+import { AgentConflictError, AgentNotFoundError, InvalidAgentIdError } from "./agents.errors";
+import { AgentsStorageService } from "./agents.storage.service";
 
 const errors = makeErrorMapper("Agent", {
   missing: [AgentNotFoundError, InvalidAgentIdError],
   conflict: [AgentConflictError],
-})
+});
 
 /**
  * Implements `agentsContract` against the file-backed storage service. Request
@@ -42,9 +38,9 @@ export class AgentsController {
 
       deleteAgent: ({ params: { id } }) =>
         errors.or404(id, async () => {
-          await this.storage.delete(id)
-          return { id }
+          await this.storage.delete(id);
+          return { id };
         }),
-    })
+    });
   }
 }

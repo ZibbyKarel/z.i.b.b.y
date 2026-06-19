@@ -1,7 +1,7 @@
-import { initContract } from "@ts-rest/core"
-import { BudgetStatusSchema, GlobalBudgetSchema } from "./budget.schema"
+import { initContract } from "@ts-rest/core";
+import { BudgetStatusSchema, GlobalBudgetSchema } from "./budget.schema";
 
-const c = initContract()
+const c = initContract();
 
 /**
  * Budget (Phase 8.1): a READ of the per-engagement spend position plus the
@@ -34,5 +34,5 @@ export const budgetContract = c.router(
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
-)
-export type BudgetContract = typeof budgetContract
+);
+export type BudgetContract = typeof budgetContract;

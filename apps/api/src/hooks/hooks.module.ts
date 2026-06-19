@@ -1,11 +1,11 @@
-import { Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { HooksController } from "./hooks.controller"
-import { HOOKS_DIR, HooksStorageService } from "./hooks.storage.service"
+import { Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { HooksController } from "./hooks.controller";
+import { HOOKS_DIR, HooksStorageService } from "./hooks.storage.service";
 
 /** Default hooks dir, anchored to `apps/api/data/hooks` (committed config). */
 export function resolveHooksDir(): string {
-  return process.env.HOOKS_DIR ?? dataDir("hooks")
+  return process.env.HOOKS_DIR ?? dataDir("hooks");
 }
 
 /**

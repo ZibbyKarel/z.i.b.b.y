@@ -1,11 +1,4 @@
-import {
-  Card,
-  Container,
-  IconTile,
-  Stack,
-  StatusDot,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { Skill } from "../../../domain";
 
 export interface SkillTileProps {
@@ -24,7 +17,8 @@ export function SkillTile({ skill, onSelect, selectLabel }: SkillTileProps) {
       interactive
       aria-label={onSelect ? selectLabel : undefined}
       as={onSelect ? "button" : "div"}
-      onClick={onSelect}>
+      onClick={onSelect}
+    >
       <Container padding="150">
         <Stack gap="150">
           <Stack align="start" direction="row" gap="150">
@@ -34,12 +28,7 @@ export function SkillTile({ skill, onSelect, selectLabel }: SkillTileProps) {
                 <Typography mono truncate size="md" type="note" weight="semibold">
                   {skill.name}
                 </Typography>
-                <Typography
-                  leading="snug"
-                  size="caption"
-                  type="note"
-                  variant="secondary"
-                >
+                <Typography leading="snug" size="caption" type="note" variant="secondary">
                   {skill.desc}
                 </Typography>
               </Stack>

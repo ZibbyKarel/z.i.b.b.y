@@ -28,8 +28,8 @@ Custom Claude Code slash-commandy (`/<id>`), na kterých stojí stažené skilly
 Připojené MCP servery injektované do **každého** runu (root `.mcp.json` NENÍ napojen).
 
 - **Store:** `mcp.storage.service.ts` (`{ id, type: stdio|http|sse, command?/args?/url?/headers?, enabled }`)
-  + gitignored `mcp-credentials.store.ts` (write-only `{ env?, headers?, authToken? }`,
-  nikdy se nečte ani neloguje; entity nese jen `hasSecrets`-ekvivalent `hasCredentials`).
+  - gitignored `mcp-credentials.store.ts` (write-only `{ env?, headers?, authToken? }`,
+    nikdy se nečte ani neloguje; entity nese jen `hasSecrets`-ekvivalent `hasCredentials`).
 - **Injektáž:** `buildMcpConfig()` sloučí enabled servery + secrety → `--mcp-config <json>`.
 - **allowedTools:** pro každý enabled server se přidá `mcp__<id>__*` (jinak by `dontAsk`
   volání MCP nástroje zamítlo; bare `mcp__<id>` nematchuje).
@@ -57,10 +57,10 @@ Env proměnné a secrety vlité do runů daného projektu (API klíče, DB URL).
 
 ## Datové adresáře / env knoby
 
-| Store | Dir (env override) | Git |
-|-------|--------------------|-----|
-| Commands | `data/commands` (`COMMANDS_DIR`) | committed |
-| MCP servery | `data/mcp-servers` (`MCP_DIR`) | committed |
-| MCP secrety | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`) | gitignored |
-| Hooks | `data/hooks` (`HOOKS_DIR`) | committed |
+| Store           | Dir (env override)                             | Git        |
+| --------------- | ---------------------------------------------- | ---------- |
+| Commands        | `data/commands` (`COMMANDS_DIR`)               | committed  |
+| MCP servery     | `data/mcp-servers` (`MCP_DIR`)                 | committed  |
+| MCP secrety     | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`) | gitignored |
+| Hooks           | `data/hooks` (`HOOKS_DIR`)                     | committed  |
 | Projekt secrety | `data/project-secrets` (`PROJECT_SECRETS_DIR`) | gitignored |

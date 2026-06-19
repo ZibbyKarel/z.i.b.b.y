@@ -1,14 +1,14 @@
-import { Module } from "@nestjs/common"
-import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service"
-import { COMMANDS_DIR, CommandsStorageService } from "../commands/commands.storage.service"
-import { HOOKS_DIR, HooksStorageService } from "../hooks/hooks.storage.service"
-import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "../mcp/mcp-credentials.store"
-import { MCP_DIR, McpServersStorageService } from "../mcp/mcp.storage.service"
-import { dataDir } from "../shared/data-dir"
-import { SKILLS_DIR, SkillsStorageService } from "../skills/skills.storage.service"
-import { ClaudePreflightService } from "./claude-preflight.service"
-import { ClaudeRunCommandService } from "./claude-run-command.service"
-import { CommandMaterializerService } from "./command-materializer.service"
+import { Module } from "@nestjs/common";
+import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service";
+import { COMMANDS_DIR, CommandsStorageService } from "../commands/commands.storage.service";
+import { HOOKS_DIR, HooksStorageService } from "../hooks/hooks.storage.service";
+import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "../mcp/mcp-credentials.store";
+import { MCP_DIR, McpServersStorageService } from "../mcp/mcp.storage.service";
+import { dataDir } from "../shared/data-dir";
+import { SKILLS_DIR, SkillsStorageService } from "../skills/skills.storage.service";
+import { ClaudePreflightService } from "./claude-preflight.service";
+import { ClaudeRunCommandService } from "./claude-run-command.service";
+import { CommandMaterializerService } from "./command-materializer.service";
 
 /**
  * Provides the {@link ClaudeRunCommandService} (the `claude -p` command builder)

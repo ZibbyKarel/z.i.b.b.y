@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { CategoryManifestStore } from "../shared/categories/category-manifest-store"
-import { AGENTS_DIR } from "./agents.storage.service"
+import { Inject, Injectable } from "@nestjs/common";
+import { CategoryManifestStore } from "../shared/categories/category-manifest-store";
+import { AGENTS_DIR } from "./agents.storage.service";
 
 /**
  * Category taxonomy for the agent catalog. Lives in the agents data directory
@@ -11,6 +11,6 @@ import { AGENTS_DIR } from "./agents.storage.service"
 @Injectable()
 export class CategoriesStorageService extends CategoryManifestStore {
   constructor(@Inject(AGENTS_DIR) dir: string) {
-    super(dir)
+    super(dir);
   }
 }

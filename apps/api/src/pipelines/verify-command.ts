@@ -1,10 +1,10 @@
-import { DEFAULT_VERIFY_CHECKS } from "@zibby/contracts"
+import { DEFAULT_VERIFY_CHECKS } from "@zibby/contracts";
 
 /** The spawn spec a deterministic verify run uses (no model, no tokens, no gate). */
 export interface VerifyCommand {
-  command: string
-  args: string[]
-  spawnCwd?: string
+  command: string;
+  args: string[];
+  spawnCwd?: string;
 }
 
 /**
@@ -16,14 +16,14 @@ export interface VerifyCommand {
  * its `checks` behaves identically whether run inside a pipeline or a goal.
  */
 export function buildVerifyCommand(opts: {
-  commands?: string[]
-  projectChecks?: string[]
-  spawnCwd?: string
+  commands?: string[];
+  projectChecks?: string[];
+  spawnCwd?: string;
 }): VerifyCommand {
-  const commands = opts.commands ?? opts.projectChecks ?? [...DEFAULT_VERIFY_CHECKS]
+  const commands = opts.commands ?? opts.projectChecks ?? [...DEFAULT_VERIFY_CHECKS];
   return {
     command: "/bin/sh",
     args: ["-c", commands.join(" && ")],
     ...(opts.spawnCwd ? { spawnCwd: opts.spawnCwd } : {}),
-  }
+  };
 }

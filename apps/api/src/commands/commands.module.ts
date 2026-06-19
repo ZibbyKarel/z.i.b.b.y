@@ -1,11 +1,11 @@
-import { Module } from "@nestjs/common"
-import { dataDir } from "../shared/data-dir"
-import { CommandsController } from "./commands.controller"
-import { COMMANDS_DIR, CommandsStorageService } from "./commands.storage.service"
+import { Module } from "@nestjs/common";
+import { dataDir } from "../shared/data-dir";
+import { CommandsController } from "./commands.controller";
+import { COMMANDS_DIR, CommandsStorageService } from "./commands.storage.service";
 
 /** Default commands dir, anchored to `apps/api/data/commands` (committed config). */
 export function resolveCommandsDir(): string {
-  return process.env.COMMANDS_DIR ?? dataDir("commands")
+  return process.env.COMMANDS_DIR ?? dataDir("commands");
 }
 
 /**

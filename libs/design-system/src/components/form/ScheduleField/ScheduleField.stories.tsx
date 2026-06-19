@@ -28,12 +28,7 @@ export const Overview: Story = {
     return (
       <div className="flex flex-col gap-6">
         <ScheduleField label="Schedule" onValueChange={setA} value={a} />
-        <ScheduleField
-          error="Pick a time"
-          label="With error"
-          onValueChange={setB}
-          value={b}
-        />
+        <ScheduleField error="Pick a time" label="With error" onValueChange={setB} value={b} />
       </div>
     );
   },

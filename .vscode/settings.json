@@ -1,6 +1,3 @@
 {
-	"i18n-ally.localesPaths": [
-		"apps/web/i18n",
-		"apps/web/i18n/messages"
-	]
+  "i18n-ally.localesPaths": ["apps/web/i18n", "apps/web/i18n/messages"]
 }

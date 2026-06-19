@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { zodResolver } from "../zodResolver"
-import { z } from "zod"
-import { Stack } from "@zibby/design-system"
-import { Form } from "../Form"
-import { FormTextInput } from "./FormTextInput"
+import type { Meta, StoryObj } from "@storybook/react";
+import { zodResolver } from "../zodResolver";
+import { z } from "zod";
+import { Stack } from "@zibby/design-system";
+import { Form } from "../Form";
+import { FormTextInput } from "./FormTextInput";
 
 const meta: Meta<typeof FormTextInput> = {
   title: "Forms/FormTextInput",
@@ -16,16 +16,16 @@ const meta: Meta<typeof FormTextInput> = {
       </div>
     ),
   ],
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof FormTextInput>
+type Story = StoryObj<typeof FormTextInput>;
 
 const schema = z.object({
   name: z.string().min(1, "Povinné pole"),
   email: z.string().email("Neplatný e-mail"),
-})
-type Schema = z.infer<typeof schema>
+});
+type Schema = z.infer<typeof schema>;
 
 export const Overview: Story = {
   render: () => (
@@ -49,16 +49,13 @@ export const Overview: Story = {
       </Stack>
     </Form>
   ),
-}
+};
 
 export const Playground: Story = {
   args: { label: "Název", name: "name", hint: "Nápověda", placeholder: "Zadejte hodnotu…" },
   render: (args) => (
-    <Form<{ name: string }>
-      formOptions={{ defaultValues: { name: "" } }}
-      onSubmit={() => {}}
-    >
+    <Form<{ name: string }> formOptions={{ defaultValues: { name: "" } }} onSubmit={() => {}}>
       <FormTextInput<{ name: string }> {...args} name="name" />
     </Form>
   ),
-}
+};

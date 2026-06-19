@@ -1,20 +1,20 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { Container, type NavItem } from "@zibby/design-system"
-import { Sidebar } from "./Sidebar"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Container, type NavItem } from "@zibby/design-system";
+import { Sidebar } from "./Sidebar";
 
 const navItems: NavItem[] = [
   { id: "overview", glyph: "flow", href: "/overview", label: "Přehled" },
   { id: "skills", glyph: "spark", href: "/skills", label: "Skilly" },
   { id: "agents", glyph: "bot", href: "/agents", label: "Agenti", badge: 3 },
   { id: "integrations", glyph: "plug", href: "/integrations", label: "Integrace" },
-]
+];
 
 const footerItem: NavItem = {
   id: "settings",
   glyph: "bot",
   href: "/settings",
   label: "Nastavení",
-}
+};
 
 const meta: Meta<typeof Sidebar> = {
   title: "Dashboard/Layout/Sidebar",
@@ -33,9 +33,9 @@ const meta: Meta<typeof Sidebar> = {
     ),
   ],
   args: { navItems, footerItem, activeNav: "overview" },
-}
-export default meta
+};
+export default meta;
 
-type Story = StoryObj<typeof Sidebar>
+type Story = StoryObj<typeof Sidebar>;
 
-export const Default: Story = {}
+export const Default: Story = {};

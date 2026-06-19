@@ -23,10 +23,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { ProjectCard } from "./components/ProjectCard";
 import { useBudgetQuery, useProjectCategoriesQuery, useProjectsQuery } from "./queries";
-import {
-  useCreateProjectCategoryMutation,
-  useDeleteProjectCategoryMutation,
-} from "./mutations";
+import { useCreateProjectCategoryMutation, useDeleteProjectCategoryMutation } from "./mutations";
 
 export function Screen() {
   const t = useTranslations("projects");

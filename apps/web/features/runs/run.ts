@@ -57,8 +57,7 @@ export function approvalForRun<A extends Pick<Approval, "id" | "runId">>(
   if (run.status !== "awaiting-approval") return undefined;
   return queue.find(
     (a) =>
-      a.runId === run.runId ||
-      (run.kind === "pipeline" && a.runId.startsWith(`${run.runId}.`)),
+      a.runId === run.runId || (run.kind === "pipeline" && a.runId.startsWith(`${run.runId}.`)),
   );
 }
 
@@ -146,9 +145,6 @@ const KIND_GLYPH: Record<RunKind, IconName> = {
 };
 
 /** Resolve a run's display glyph from the catalog (agent), else by kind. */
-export function runGlyph(
-  run: RunView,
-  glyphById: Map<string, IconName>,
-): IconName {
+export function runGlyph(run: RunView, glyphById: Map<string, IconName>): IconName {
   return glyphById.get(run.owner) ?? KIND_GLYPH[run.kind];
 }

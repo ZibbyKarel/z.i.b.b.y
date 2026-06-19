@@ -11,11 +11,11 @@ Vše co přichází ze serveru (API data) je v TanStack Query — žádné globa
 new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,          // 30s cache před re-fetch
+      staleTime: 30_000, // 30s cache před re-fetch
       refetchOnWindowFocus: false, // bez automatického re-fetch při focusu okna
     },
   },
-})
+});
 ```
 
 ### Query hooks — konvence
@@ -25,16 +25,12 @@ new QueryClient({
 ```typescript
 // ✅ Vrátí useQuery výsledek přímo — nekouří do bare value
 export function useAgentsQuery() {
-  return apiClient.agents.list.useQuery(
-    getAgentsQueryKey(),
-    {},
-    { select: selectApiResponseBody },
-  )
+  return apiClient.agents.list.useQuery(getAgentsQueryKey(), {}, { select: selectApiResponseBody });
 }
 
 // ✅ Query key exportován pro invalidaci v mutacích
 export function getAgentsQueryKey() {
-  return ["agents"] as const
+  return ["agents"] as const;
 }
 ```
 
@@ -42,9 +38,10 @@ export function getAgentsQueryKey() {
 envelope — `data` na call site je přímo body.
 
 Call site:
+
 ```typescript
-const { data } = useAgentsQuery()
-const agents = data ?? []   // call site dodává výchozí hodnotu
+const { data } = useAgentsQuery();
+const agents = data ?? []; // call site dodává výchozí hodnotu
 ```
 
 ### Mutation hooks — konvence
@@ -54,16 +51,17 @@ const agents = data ?? []   // call site dodává výchozí hodnotu
 ```typescript
 // ✅ Vrátí useMutation výsledek přímo
 export function useCreateAgentMutation() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return apiClient.agents.create.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getAgentsQueryKey() })
+      queryClient.invalidateQueries({ queryKey: getAgentsQueryKey() });
     },
-  })
+  });
 }
 ```
 
 Call site:
+
 ```typescript
 const mutation = useCreateAgentMutation()
 mutation.mutate({ body: { name, ... } }, { onSuccess: () => navigate(...) })
@@ -81,9 +79,9 @@ Invalidaci drž v hooku, UI feedback (navigace, toast) na call site.
 Každý query soubor exportuje `getXxxQueryKey()` vracející konstantní tuple:
 
 ```typescript
-export const getAgentsQueryKey = () => ["agents"] as const
-export const getAgentQueryKey = (id: string) => ["agents", id] as const
-export const getAgentRunsQueryKey = (agentId: string) => ["agents", agentId, "runs"] as const
+export const getAgentsQueryKey = () => ["agents"] as const;
+export const getAgentQueryKey = (id: string) => ["agents", id] as const;
+export const getAgentRunsQueryKey = (agentId: string) => ["agents", agentId, "runs"] as const;
 ```
 
 Mutace importují key ze query souboru — žádné duplikování string literálů.
@@ -98,6 +96,7 @@ Mutace importují key ze query souboru — žádné duplikování string literá
 **Soubor:** `features/runs/runEvents.tsx`
 
 Provider pro real-time polling run logů:
+
 - Udržuje polling interval pro každý aktivní run
 - Poskytuje `useRunLog(runId)` hook → aktuální log chunks + status
 - Pull model (opakované GET `/api/.../log?offset=N`) bez SSE
@@ -108,8 +107,8 @@ Provider pro real-time polling run logů:
 
 ```typescript
 // Generováno ts-restem z contract
-apiClient.agents.list.useQuery(key, queryParams, queryOptions)
-apiClient.agents.create.useMutation(mutationOptions)
+apiClient.agents.list.useQuery(key, queryParams, queryOptions);
+apiClient.agents.create.useMutation(mutationOptions);
 ```
 
 Typy jsou odvozeny přímo z Zod schémat v `@zibby/contracts` — žádný codegen krok.
@@ -129,5 +128,5 @@ DS primitives pro fieldy: `TextInput`, `Select`, `Textarea` z `@zibby/design-sys
 ```typescript
 const form = useForm<CreateAgentInput>({
   resolver: zodResolver(CreateAgentInputSchema),
-})
+});
 ```
