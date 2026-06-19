@@ -25,16 +25,15 @@ describe("SystemConfigStore", () => {
       limitResumeTickMs: 60_000,
       limitResumeMax: 3,
       goalVerifyTimeoutMs: 600_000,
-      channelAdapterMode: "real",
       goalAutoResume: false,
     })
   })
 
   it("reads a persisted file synchronously at construction", async () => {
-    await fs.writeFile(file, JSON.stringify({ taskTickMs: 0, channelAdapterMode: "fake" }))
+    await fs.writeFile(file, JSON.stringify({ taskTickMs: 0, goalAutoResume: true }))
     const store = new SystemConfigStore(file)
     expect(store.current().taskTickMs).toBe(0)
-    expect(store.current().channelAdapterMode).toBe("fake")
+    expect(store.current().goalAutoResume).toBe(true)
     // Unspecified keys fall back to schema defaults.
     expect(store.current().limitResumeMax).toBe(3)
   })

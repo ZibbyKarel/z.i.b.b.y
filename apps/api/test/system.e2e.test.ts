@@ -36,7 +36,6 @@ describe("System config API (e2e)", () => {
       limitResumeTickMs: 60_000,
       limitResumeMax: 3,
       goalVerifyTimeoutMs: 600_000,
-      channelAdapterMode: "real",
       goalAutoResume: false,
     })
   })
@@ -51,14 +50,12 @@ describe("System config API (e2e)", () => {
         limitResumeTickMs: 0,
         limitResumeMax: 5,
         goalVerifyTimeoutMs: 120_000,
-        channelAdapterMode: "fake",
         goalAutoResume: true,
       })
       .expect(200)
 
     const res = await request(app.getHttpServer()).get("/api/system/config").expect(200)
     expect(res.body.limitResumeMax).toBe(5)
-    expect(res.body.channelAdapterMode).toBe("fake")
     expect(res.body.goalAutoResume).toBe(true)
     // Persisted to disk.
     const onDisk = JSON.parse(await fs.readFile(configFile, "utf8"))
@@ -77,7 +74,6 @@ describe("System config API (e2e)", () => {
         limitResumeTickMs: 0,
         limitResumeMax: 3,
         goalVerifyTimeoutMs: 600_000,
-        channelAdapterMode: "real",
         goalAutoResume: false,
         sneaky: true,
       })
@@ -94,7 +90,6 @@ describe("System config API (e2e)", () => {
         limitResumeTickMs: 0,
         limitResumeMax: 3,
         goalVerifyTimeoutMs: 600_000,
-        channelAdapterMode: "real",
         goalAutoResume: false,
       })
       .expect(400)

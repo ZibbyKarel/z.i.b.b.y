@@ -11,8 +11,8 @@ import { ChannelEventsService } from "./channel-events.service"
 import { ChannelItemStore } from "./channel-item.store"
 import { ChannelWatcherService } from "./channel-watcher.service"
 
-/** A registry on the fake adapter (channelAdapterMode defaults to "fake" in tests). */
-const makeRegistry = () => new AdapterRegistry(fakeSystemConfigStore())
+/** A registry on the fake adapter (CHANNEL_FAKE_DIR is set per-test → fake mode). */
+const makeRegistry = () => new AdapterRegistry()
 
 const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),

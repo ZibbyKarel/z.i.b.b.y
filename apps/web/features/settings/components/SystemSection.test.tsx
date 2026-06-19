@@ -11,7 +11,6 @@ const DEFAULTS: SystemConfig = {
   limitResumeTickMs: 60000,
   limitResumeMax: 3,
   goalVerifyTimeoutMs: 600000,
-  channelAdapterMode: "real",
   goalAutoResume: false,
 };
 

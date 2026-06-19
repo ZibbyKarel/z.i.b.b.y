@@ -34,11 +34,12 @@ const apiEnv: Record<string, string> = {
   INTEGRATIONS_DIR: dir("integrations"),
   CREDENTIALS_DIR: dir("credentials"),
   CHANNELS_DIR: dir("channels"),
+  // CHANNEL_FAKE_DIR being set selects the fake channel adapter for every kind (the
+  // test-only seam; there is no operator-facing adapter-mode knob).
   CHANNEL_FAKE_DIR: dir("channel-fake"),
   MANDATE_FILE: path.join(E2E_DATA, "mandate.json"),
-  // Fake adapter + a modest live tick so the channels throughline runs unprompted
-  // without adding constant load to the shared single-process dev server.
-  CHANNEL_ADAPTER_MODE: "fake",
+  // A modest live tick so the channels throughline runs unprompted without adding
+  // constant load to the shared single-process dev server.
   CHANNEL_TICK_MS: "1000",
   TASK_TICK_MS: "0",
   AGENT_DEMO_STEPS: "3",

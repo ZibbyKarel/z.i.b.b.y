@@ -1,1 +1,0 @@
-{"id":"zibby-gh","kind":"github","projectId":"acme-app","name":"acme/storefront","enabled":false,"config":{"kind":"github","repo":"acme/storefront","streams":["issues","pulls"]},"status":"error","lastSyncAt":"2026-06-18T08:02:00.000Z","lastError":"github issues: HTTP 401"}

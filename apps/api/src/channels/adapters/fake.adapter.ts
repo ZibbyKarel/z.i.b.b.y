@@ -6,9 +6,9 @@ import type { ChannelAdapter, InboundMessage, PollResult } from "./adapter"
 
 /**
  * Kind-agnostic test double for the channel seam (the `gh`-shim precedent from
- * Phase 3.3). Under `channelAdapterMode: "fake"` it stands in for every integration
- * kind, so the 5.2/5.3 suites — and the 5.4 email re-run — drive ingestion, triage
- * and replies without a network.
+ * Phase 3.3). When the harness sets `CHANNEL_FAKE_DIR`, {@link AdapterRegistry}
+ * substitutes this for every integration kind, so the 5.2/5.3 suites — and the 5.4
+ * email re-run — drive ingestion, triage and replies without a network.
  *
  * Fixtures live as JSON files under `CHANNEL_FAKE_DIR/<integrationId>/*.json`
  * (falling back to the dir root), sorted lexically and consumed once via the

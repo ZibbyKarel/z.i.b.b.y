@@ -27,11 +27,11 @@ export interface PollResult {
 
 /**
  * The channel seam — one implementation per kind (Slack now, email in 5.4), plus a
- * kind-agnostic fake for the e2e suite. Mirrors the demo-runner seam: selection is
- * by `systemConfig.channelAdapterMode` (`real` picks by integration.kind, `fake`
- * substitutes the FakeChannelAdapter for every kind). No method may throw out of a
- * heartbeat tick — a transient failure is surfaced as a stamped `lastError`, never
- * an exception that stops the other integrations.
+ * kind-agnostic fake for the e2e suite. In production selection is always by
+ * `integration.kind`; the FakeChannelAdapter is substituted for every kind ONLY in the
+ * test harness, gated on the `CHANNEL_FAKE_DIR` env (never operator-facing config). No
+ * method may throw out of a heartbeat tick — a transient failure is surfaced as a
+ * stamped `lastError`, never an exception that stops the other integrations.
  */
 export interface ChannelAdapter {
   readonly kind: Integration["kind"] | "fake"

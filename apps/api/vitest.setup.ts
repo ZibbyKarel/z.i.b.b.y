@@ -74,16 +74,26 @@ if (!process.env.ZIBBY_WORKTREE_ROOT) {
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
 }
 
-// The runtime system config (tick intervals, channel adapter mode, goal auto-resume)
-// is now file-backed, not env-driven. Seed a config file with the test defaults
-// (every heartbeat OFF, fake channel adapter) and point SYSTEM_CONFIG_FILE at it —
-// independent of any per-suite ZIBBY_DATA_DIR override, like ACTIVITY_DIR. A suite
-// that needs a different knob writes this file (merged) before it boots the app.
+// The runtime system config (tick intervals, goal auto-resume) is now file-backed,
+// not env-driven. Seed a config file with the test defaults (every heartbeat OFF) and
+// point SYSTEM_CONFIG_FILE at it — independent of any per-suite ZIBBY_DATA_DIR override,
+// like ACTIVITY_DIR. A suite that needs a different knob writes this file (merged)
+// before it boots the app.
 if (!process.env.SYSTEM_CONFIG_FILE) {
   const dir = mkdtempSync(join(tmpdir(), "zibby-system-"))
   const file = join(dir, "system-config.json")
   writeFileSync(file, `${JSON.stringify(TEST_SYSTEM_CONFIG, null, 2)}\n`)
   process.env.SYSTEM_CONFIG_FILE = file
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+}
+
+// The fake channel adapter is gated on CHANNEL_FAKE_DIR (no operator-facing config knob).
+// Seed a per-file temp dir so every booted AppModule resolves the offline fake adapter
+// for every integration kind — the global default that the old `channelAdapterMode:
+// "fake"` test config used to provide. A suite drives fixtures by overriding this env.
+if (!process.env.CHANNEL_FAKE_DIR) {
+  const dir = mkdtempSync(join(tmpdir(), "zibby-channel-fake-"))
+  process.env.CHANNEL_FAKE_DIR = dir
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
 }
 

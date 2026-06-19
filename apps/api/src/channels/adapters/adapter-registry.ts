@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { CredentialsInput, Integration, TestResult } from "@zibby/contracts"
 import type { ConnectionTester } from "../../integrations/connection-tester"
-import { SystemConfigStore } from "../../system/system-config.store"
 import type { ChannelAdapter } from "./adapter"
 import { CalendarChannelAdapter } from "./calendar.adapter"
 import { EmailChannelAdapter } from "./email.adapter"
@@ -11,12 +10,12 @@ import { JiraChannelAdapter } from "./jira.adapter"
 import { SlackChannelAdapter } from "./slack.adapter"
 
 /**
- * Resolves the {@link ChannelAdapter} for an integration, honoring the operator-owned
- * `systemConfig.channelAdapterMode`: `"real"` (default) picks by `integration.kind`,
- * `"fake"` substitutes the kind-agnostic {@link FakeChannelAdapter} for every kind (the
- * e2e mode). This is ALSO the integrations module's {@link ConnectionTester} — the 5.1
- * stub is gone; `test()` now performs the real (or faked) probe through the resolved
- * adapter.
+ * Resolves the {@link ChannelAdapter} for an integration. In production it always picks
+ * the real adapter by `integration.kind`. The kind-agnostic {@link FakeChannelAdapter}
+ * is a test-only seam: it is substituted for every kind ONLY when `CHANNEL_FAKE_DIR` is
+ * set (the offline e2e/unit mode), an env the harness owns — never operator-facing config.
+ * This is ALSO the integrations module's {@link ConnectionTester} — the 5.1 stub is gone;
+ * `test()` now performs the real (or faked) probe through the resolved adapter.
  */
 @Injectable()
 export class AdapterRegistry implements ConnectionTester {
@@ -27,10 +26,9 @@ export class AdapterRegistry implements ConnectionTester {
   private readonly calendar = new CalendarChannelAdapter()
   private readonly fake = new FakeChannelAdapter()
 
-  constructor(private readonly systemConfig: SystemConfigStore) {}
-
+  /** Test-only fake-channel seam — on iff the harness set `CHANNEL_FAKE_DIR`. */
   private fakeMode(): boolean {
-    return this.systemConfig.current().channelAdapterMode === "fake"
+    return Boolean(process.env.CHANNEL_FAKE_DIR)
   }
 
   /** The adapter that should service this integration this run. */

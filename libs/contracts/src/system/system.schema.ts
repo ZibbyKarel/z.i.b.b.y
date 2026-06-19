@@ -2,8 +2,8 @@ import { z } from "zod"
 
 /**
  * Operator-owned runtime system config — `data/system-config.json`. These knobs were
- * formerly start-only environment variables (`TASK_TICK_MS`, `CHANNEL_ADAPTER_MODE`,
- * `GOAL_AUTO_RESUME`, …); they are now file-backed and editable from `/settings`, in
+ * formerly start-only environment variables (`TASK_TICK_MS`, `GOAL_AUTO_RESUME`, …);
+ * they are now file-backed and editable from `/settings`, in
  * keeping with the Law "files are the source of truth". A missing/garbage file reads
  * as the schema default — every field has one, so `{}` parses to a complete config and
  * the defaults reproduce the historical "env unset" behaviour exactly.
@@ -24,11 +24,6 @@ export const SystemConfigSchema = z
     limitResumeMax: z.number().int().min(1).default(3),
     /** Verifier shell wall-clock deadline (ms) for a goal `checks` verifier. */
     goalVerifyTimeoutMs: z.number().int().positive().default(600_000),
-    /**
-     * Channel adapter selection: `"real"` picks by integration kind (Slack/email/…),
-     * `"fake"` substitutes the kind-agnostic fake adapter for every kind (the e2e mode).
-     */
-    channelAdapterMode: z.enum(["real", "fake"]).default("real"),
     /**
      * On boot, auto-re-dispatch `running`/`paused-limit` goals (unattended/headless
      * mode). Default `false` → goals are parked `awaiting-resume` for an explicit

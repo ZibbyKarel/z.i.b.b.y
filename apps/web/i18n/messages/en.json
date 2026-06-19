@@ -782,10 +782,6 @@
       "limitResumeMaxHint": "How many times a limit-paused run is retried before it is parked/failed.",
       "goalVerifyTimeout": "Goal verifier timeout (ms)",
       "goalVerifyTimeoutHint": "Wall-clock deadline for a goal verifier shell, then SIGTERM→SIGKILL.",
-      "adapterMode": "Channel adapter mode",
-      "adapterModeHint": "Real = Slack/email/… by integration kind. Fake = a test double for every kind.",
-      "adapterReal": "Real",
-      "adapterFake": "Fake (test)",
       "goalAutoResume": "Auto-resume goals on boot",
       "goalAutoResumeHint": "Enable for unattended (launchd) mode — running/limit-paused goals re-dispatch on restart. Off = they park and wait for approval (Law 3).",
       "save": "Save"

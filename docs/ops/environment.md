@@ -36,12 +36,15 @@ příštím bootu.
 | `limitResumeTickMs` | `60000` | Interval skenu limit-resume démona (0 = vypnuto) |
 | `limitResumeMax` | `3` | Max. cyklů obnovy než se limitem pozastavený běh zaparkuje/selže |
 | `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline `checks` verifier shellu (pak SIGTERM→SIGKILL) |
-| `channelAdapterMode` | `real` | `real` = adaptér dle typu integrace; `fake` = testovací dvojník (e2e) |
 | `goalAutoResume` | `false` | **Phase 12.4** — `true` = na bootu auto-re-drive `running`/`paused-limit` goalů (bezobslužný launchd démon). Default: park `awaiting-resume` (Law 3) |
 
-V testech seeduje `vitest.setup.ts` tento soubor (ticky 0, `channelAdapterMode: fake`)
-přes `SYSTEM_CONFIG_FILE`; suite, která potřebuje jiný knob, volá `writeSystemConfig()`
+V testech seeduje `vitest.setup.ts` tento soubor (ticky 0) přes `SYSTEM_CONFIG_FILE`;
+suite, která potřebuje jiný knob, volá `writeSystemConfig()`
 (`apps/api/src/system/system-config.fixture.ts`) před bootem appky.
+
+Channelové adaptéry jsou v produkci vždy reálné (dle typu integrace). Fake adaptér je
+jen testovací seam — `AdapterRegistry` ho vybere pro všechny typy, jakmile je nastaven
+env `CHANNEL_FAKE_DIR` (seeduje ho `vitest.setup.ts`); není to operátorský config.
 
 ## .env soubor
 

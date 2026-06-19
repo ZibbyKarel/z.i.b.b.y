@@ -79,7 +79,7 @@ Set in the plist's `EnvironmentVariables` (or a `.env` the API loads).
 | `VAULT_DIR` | `$ZIBBY_DATA_DIR/vault` | Obsidian vault (second brain) |
 | `BUDGET_LEDGER_DIR` | `$ZIBBY_DATA_DIR/budget-ledger` | Dispatch ledger (enforcement; gitignored) |
 | `BUDGET_CONFIG_FILE` | `$ZIBBY_DATA_DIR/budget.json` | Operator global pause thresholds (committed) |
-| `SYSTEM_CONFIG_FILE` | `$ZIBBY_DATA_DIR/system-config.json` | Runtime system config (tick intervals, channel adapter mode, goal auto-resume) — file-backed, editable from `/settings`. Path knob only; see `docs/ops/environment.md` |
+| `SYSTEM_CONFIG_FILE` | `$ZIBBY_DATA_DIR/system-config.json` | Runtime system config (tick intervals, goal auto-resume) — file-backed, editable from `/settings`. Path knob only; see `docs/ops/environment.md` |
 | `CLAUDE_BIN` | `claude` on `PATH` | Claude CLI; point at `fake-claude.mjs` for token-free runs |
 | `ZIBBY_BACKUP_DIR` | _(unset)_ | rsync destination root for `backup.sh` |
 
@@ -166,7 +166,8 @@ to guard a single-operator repo). Register this machine as a runner:
 ```
 
 The suite is token-free: `playwright.config.ts` boots both servers with isolated
-`.e2e-data` dirs and demo knobs (`AGENT_DEMO_STEPS=3`, `CHANNEL_ADAPTER_MODE=fake`).
+`.e2e-data` dirs and demo knobs (`AGENT_DEMO_STEPS=3`, `CHANNEL_FAKE_DIR` set → fake
+channel adapter).
 Prove it locally first with `CLAUDE_BIN` unset; if a spec truly needs the binary,
 point `CLAUDE_BIN` at `e2e/fake-claude.mjs` in the config's `apiEnv`. Keep the runner
 user's environment free of real credentials (the suite sets its own isolated dirs;

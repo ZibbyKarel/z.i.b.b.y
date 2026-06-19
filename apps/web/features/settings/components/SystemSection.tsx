@@ -6,7 +6,6 @@ import {
   Button,
   Divider,
   NumberField,
-  SelectField,
   Stack,
   ToggleField,
   Typography,
@@ -59,7 +58,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const [goalVerifyTimeoutMs, setGoalVerifyTimeoutMs] = useState<number | null>(
     config.goalVerifyTimeoutMs,
   );
-  const [channelAdapterMode, setChannelAdapterMode] = useState(config.channelAdapterMode);
   const [goalAutoResume, setGoalAutoResume] = useState(config.goalAutoResume);
 
   /** Coerce a possibly-cleared tick to a non-negative integer (empty → 0 = disabled). */
@@ -77,7 +75,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         limitResumeTickMs: tick(limitResumeTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
-        channelAdapterMode,
         goalAutoResume,
       },
     });
@@ -148,16 +145,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
 
         <Divider />
 
-        <SelectField
-          hint={t("runtime.adapterModeHint")}
-          label={t("runtime.adapterMode")}
-          onValueChange={(v) => setChannelAdapterMode(v as SystemConfig["channelAdapterMode"])}
-          options={[
-            { value: "real", label: t("runtime.adapterReal") },
-            { value: "fake", label: t("runtime.adapterFake") },
-          ]}
-          value={channelAdapterMode}
-        />
         <ToggleField
           checked={goalAutoResume}
           data-testid={SystemSectionTestId.GoalAutoResume}

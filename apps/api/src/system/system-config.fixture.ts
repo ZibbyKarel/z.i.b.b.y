@@ -4,16 +4,16 @@ import type { SystemConfigListener, SystemConfigStore } from "./system-config.st
 
 /**
  * Test defaults for the runtime system config: every heartbeat OFF (suites drive
- * `tick()` directly) and the fake channel adapter (no real Slack/IMAP from a test).
- * The global `vitest.setup.ts` seeds these into a file so every booted `AppModule`
- * reads them; unit tests use {@link fakeSystemConfigStore}.
+ * `tick()` directly). The fake channel adapter is no longer a config knob — it is
+ * selected by the `CHANNEL_FAKE_DIR` env that the global `vitest.setup.ts` seeds. The
+ * setup also seeds these defaults into a file so every booted `AppModule` reads them;
+ * unit tests use {@link fakeSystemConfigStore}.
  */
 export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   taskTickMs: 0,
   channelTickMs: 0,
   automationTickMs: 0,
   limitResumeTickMs: 0,
-  channelAdapterMode: "fake",
 })
 
 /**
