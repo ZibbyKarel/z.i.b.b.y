@@ -21,7 +21,6 @@ const ENV_KEYS = [
   "BUDGET_LEDGER_DIR",
   "BUDGET_CONFIG_FILE",
   "ACTIVITY_DIR",
-  "TASK_TICK_MS",
   "CLAUDE_BIN",
   "FAKE_CLAUDE_STEPS",
   "FAKE_CLAUDE_DELAY_MS",
@@ -74,7 +73,6 @@ describe("Parallel engagements (e2e)", () => {
     process.env.BUDGET_LEDGER_DIR = dirs.ledger
     process.env.BUDGET_CONFIG_FILE = path.join(dirs.ledger!, "budget.json")
     process.env.ACTIVITY_DIR = dirs.activity
-    process.env.TASK_TICK_MS = "0"
     process.env.CLAUDE_BIN = FAKE_CLAUDE
     // Long enough that A's first run is reliably still running when A's second
     // task is posted (queue trigger), short enough to keep the test snappy.

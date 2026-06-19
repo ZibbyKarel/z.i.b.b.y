@@ -29,8 +29,6 @@ describe("Integrations API (e2e)", () => {
     process.env.CREDENTIALS_DIR = credentialsDir
     // The connection tester routes through the adapter registry; fake mode keeps the
     // test endpoint off the network.
-    process.env.CHANNEL_ADAPTER_MODE = "fake"
-    process.env.CHANNEL_TICK_MS = "0"
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleRef.createNestApplication()
     await app.init()
@@ -40,7 +38,7 @@ describe("Integrations API (e2e)", () => {
     await app.close()
     await fs.rm(integrationsDir, { recursive: true, force: true })
     await fs.rm(credentialsDir, { recursive: true, force: true })
-    for (const k of ["INTEGRATIONS_DIR", "CREDENTIALS_DIR", "CHANNEL_ADAPTER_MODE", "CHANNEL_TICK_MS"]) {
+    for (const k of ["INTEGRATIONS_DIR", "CREDENTIALS_DIR"]) {
       delete process.env[k]
     }
   })

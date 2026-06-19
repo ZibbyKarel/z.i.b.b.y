@@ -9,6 +9,7 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
+import { writeSystemConfig } from "../src/system/system-config.fixture"
 import { GoalRunnerService } from "../src/goals/goal-runner.service"
 import { TaskSchedulerService } from "../src/tasks/task-scheduler.service"
 import { ScheduledTasksStorageService } from "../src/tasks/scheduled-tasks.storage.service"
@@ -106,10 +107,10 @@ describe("Goal loop API (e2e, demo maker)", () => {
   }
 
   async function boot(autoResume = false): Promise<INestApplication> {
-    // Phase 12.4: by default the boot gate parks live goals `awaiting-resume`
-    // instead of auto-re-dispatching; `GOAL_AUTO_RESUME=1` restores auto-reconcile.
-    if (autoResume) process.env.GOAL_AUTO_RESUME = "1"
-    else delete process.env.GOAL_AUTO_RESUME
+    // Phase 12.4: by default the boot gate parks live goals `awaiting-resume` instead
+    // of auto-re-dispatching; `goalAutoResume` restores auto-reconcile. The config is
+    // file-backed now — seed it (merged with the test defaults) before the app boots.
+    writeSystemConfig({ goalAutoResume: autoResume })
     process.env.GOALS_DIR = goalsDir
     process.env.GOAL_RUNS_DIR = goalRunsDir
     process.env.PIPELINES_DIR = pipelinesDir
@@ -117,8 +118,6 @@ describe("Goal loop API (e2e, demo maker)", () => {
     process.env.PROJECTS_DIR = projectsDir
     process.env.TASKS_DIR = tasksDir
     process.env.VAULT_DIR = vaultDir
-    process.env.TASK_TICK_MS = "0"
-    process.env.AUTOMATION_TICK_MS = "0"
     process.env.AGENT_DEMO_STEPS = "1"
     process.env.AGENT_DEMO_DELAY_MS = "10"
     process.env.AGENT_RUNNER_MODE = "demo"
@@ -160,8 +159,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
     }
     for (const k of [
       "GOALS_DIR", "GOAL_RUNS_DIR", "PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR",
-      "TASKS_DIR", "VAULT_DIR", "TASK_TICK_MS", "AUTOMATION_TICK_MS", "AGENT_DEMO_STEPS",
-      "AGENT_DEMO_DELAY_MS", "AGENT_RUNNER_MODE", "GOAL_AUTO_RESUME",
+      "TASKS_DIR", "VAULT_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "AGENT_RUNNER_MODE",
     ]) {
       delete process.env[k]
     }
@@ -441,7 +439,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(done.status).toBe("done")
   })
 
-  it("survives an API restart mid-loop with GOAL_AUTO_RESUME=1 — reconstruct continues to done", async () => {
+  it("survives an API restart mid-loop with goalAutoResume on — reconstruct continues to done", async () => {
     await makeGoal("restartgoal", 0, 3)
     const goalRunId = await runGoal("restartgoal")
 

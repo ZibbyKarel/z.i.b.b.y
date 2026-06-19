@@ -39,8 +39,8 @@ Autonomy contract (CLAUDE.md "Laws") dosud řešil autonomii **úsudku** (tiers,
 approval-first). Phase 12 přidává autonomii **exekuce** — kolik výpočtu smí jeden běh
 spotřebovat — jako rovnocennou dimenzi floor:
 
-- **Per-call ceiling:** `GOAL_VERIFY_TIMEOUT_MS` (12.3) + output cap; každý verifier
-  shell je detached process-group, killnutý na deadline (SIGTERM→SIGKILL).
+- **Per-call ceiling:** `goalVerifyTimeoutMs` (12.3, runtime system config) + output
+  cap; každý verifier shell je detached process-group, killnutý na deadline (SIGTERM→SIGKILL).
 - **Per-run/per-goal budget:** Phase 8.1 `BudgetService` — daily/weekly token/run-count
   cap; překročení parkuje dispatch za Tier 3 approval.
 - **OS-level ceiling (doporučeno, mimo proces):** subjektův verifier spouštěj pod
@@ -57,7 +57,7 @@ spotřebovat — jako rovnocennou dimenzi floor:
 2. **Worktree-per-run mimo repo** (12.7) — subjektovy commity nikdy nesahají na builder.
 3. **Scoped verifier** (12.1/12.2) — nikdy full-monorepo suita zevnitř repa.
 4. **Reaping + timeout** (12.3/12.9) — žádný orphan, žádný hung shell.
-5. **Boot gate** (12.4) — restart nedispatchne goal bez `GOAL_AUTO_RESUME=1`.
+5. **Boot gate** (12.4) — restart nedispatchne goal bez `goalAutoResume: true` (runtime system config).
 6. **Budget cap** (8.1) — bounded spend.
 7. **Test izolace** (12.5) — `pnpm test` se nedotkne živých dat ani reálného claude.
 
@@ -66,9 +66,9 @@ spotřebovat — jako rovnocennou dimenzi floor:
 ```bash
 # 1) Builder: pinned běh z odděleného checkoutu (NE ts-node-dev --respawn)
 #    s vlastním data-dir a worktrees mimo subject.
+#    (goalVerifyTimeoutMs nastav v data/system-config.json nebo přes /settings)
 ZIBBY_DATA_DIR=/var/zibby/builder-data \
 ZIBBY_WORKTREE_ROOT=/var/zibby/worktrees \
-GOAL_VERIFY_TIMEOUT_MS=600000 \
 AGENT_RUNNER_MODE=claude \
 pnpm --filter @zibby/api serve
 

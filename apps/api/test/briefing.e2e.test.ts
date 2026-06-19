@@ -38,10 +38,6 @@ describe("Briefing (e2e)", () => {
     fakeDir = path.join(root, "fake")
     process.env.ZIBBY_DATA_DIR = root
     process.env.CHANNEL_FAKE_DIR = fakeDir
-    process.env.CHANNEL_ADAPTER_MODE = "fake"
-    process.env.CHANNEL_TICK_MS = "0"
-    process.env.AUTOMATION_TICK_MS = "0"
-    process.env.TASK_TICK_MS = "0"
     process.env.CLAUDE_BIN = FAKE_CLAUDE
     process.env.FAKE_CLAUDE_STEPS = "4"
     process.env.FAKE_CLAUDE_DELAY_MS = "30"
@@ -80,8 +76,8 @@ describe("Briefing (e2e)", () => {
     // (same transient as runner-core.test.ts:90-96); retry the rm on ENOTEMPTY.
     await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
     for (const k of [
-      "ZIBBY_DATA_DIR", "CHANNEL_FAKE_DIR", "CHANNEL_ADAPTER_MODE", "CHANNEL_TICK_MS",
-      "AUTOMATION_TICK_MS", "TASK_TICK_MS", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS", "FAKE_CLAUDE_INTENT",
+      "ZIBBY_DATA_DIR", "CHANNEL_FAKE_DIR", 
+      "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS", "FAKE_CLAUDE_INTENT",
     ]) {
       delete process.env[k]
     }

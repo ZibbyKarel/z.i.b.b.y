@@ -14,7 +14,7 @@ export const IntegrationIdSchema = z
   .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'")
 
 /** Which inbound channel an integration speaks. `kind` is immutable after create. */
-export const IntegrationKindSchema = z.enum(["slack", "email", "jira", "github"])
+export const IntegrationKindSchema = z.enum(["slack", "email", "jira", "github", "calendar"])
 export type IntegrationKind = z.infer<typeof IntegrationKindSchema>
 
 /**
@@ -77,12 +77,30 @@ export const GitHubConfigSchema = z
   .strict()
 export type GitHubConfig = z.infer<typeof GitHubConfigSchema>
 
+/**
+ * Google Calendar config — which calendar to poll (`calendarId`, defaults to the
+ * service account's `primary`) and how far ahead to look (`lookaheadDays`). Auth is
+ * a Google service account: the SA JSON key lives in the credentials store as the
+ * single `token`, never here; the operator shares the calendar with the SA's email
+ * (no domain-wide delegation needed for a personal calendar). `.strict()` — same
+ * containment as the other configs.
+ */
+export const CalendarConfigSchema = z
+  .object({
+    kind: z.literal("calendar"),
+    calendarId: z.string().min(1).default("primary"),
+    lookaheadDays: z.number().int().positive().max(365).default(14),
+  })
+  .strict()
+export type CalendarConfig = z.infer<typeof CalendarConfigSchema>
+
 /** Discriminated on `kind` so config always matches the integration kind. */
 export const IntegrationConfigSchema = z.discriminatedUnion("kind", [
   SlackConfigSchema,
   EmailConfigSchema,
   JiraConfigSchema,
   GitHubConfigSchema,
+  CalendarConfigSchema,
 ])
 export type IntegrationConfig = z.infer<typeof IntegrationConfigSchema>
 

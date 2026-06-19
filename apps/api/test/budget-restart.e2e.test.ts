@@ -20,7 +20,6 @@ const ENV_KEYS = [
   "BUDGET_LEDGER_DIR",
   "BUDGET_CONFIG_FILE",
   "ACTIVITY_DIR",
-  "TASK_TICK_MS",
   "CLAUDE_BIN",
   "FAKE_CLAUDE_STEPS",
   "FAKE_CLAUDE_DELAY_MS",
@@ -76,7 +75,6 @@ describe("Budget restart (e2e)", () => {
     process.env.BUDGET_LEDGER_DIR = dirs.ledger
     process.env.BUDGET_CONFIG_FILE = path.join(dirs.ledger!, "budget.json")
     process.env.ACTIVITY_DIR = dirs.activity
-    process.env.TASK_TICK_MS = "0"
     process.env.CLAUDE_BIN = FAKE_CLAUDE
     process.env.FAKE_CLAUDE_STEPS = "8"
     process.env.FAKE_CLAUDE_DELAY_MS = "90"

@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import { fakeSystemConfigStore } from "../system/system-config.fixture"
 import { LimitResumeService } from "./limit-resume.service"
 
 const fakeLogger = {
@@ -32,21 +33,13 @@ function makeService(over: {
     limits as never,
     agentRunner as never,
     pipelineRunner as never,
+    fakeSystemConfigStore(),
     fakeLogger as never,
   )
   return { service, limits, agentRunner, pipelineRunner }
 }
 
 describe("LimitResumeService", () => {
-  beforeEach(() => {
-    process.env.LIMIT_RESUME_TICK_MS = "0"
-    process.env.LIMIT_RESUME_MAX = "3"
-  })
-  afterEach(() => {
-    delete process.env.LIMIT_RESUME_TICK_MS
-    delete process.env.LIMIT_RESUME_MAX
-  })
-
   it("skips a run whose resumeAt has not yet passed", async () => {
     const { service, agentRunner, pipelineRunner } = makeService({
       pipelinePaused: [{ pipelineRunId: "p1", resumeAt: FUTURE }],

@@ -3,6 +3,7 @@ import * as os from "node:os"
 import * as path from "node:path"
 import type { AgentRun, PipelineRun } from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { fakeSystemConfigStore } from "../system/system-config.fixture"
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskSchedulerService } from "./task-scheduler.service"
 
@@ -73,12 +74,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     resolveResumeAt: ReturnType<typeof vi.fn>
   }
   let service: TaskSchedulerService
+  let systemConfig: ReturnType<typeof fakeSystemConfigStore>
 
   /** A fixed near-future window-reset epoch the limit guard defers to. */
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z")
 
   beforeEach(async () => {
-    process.env.TASK_TICK_MS = "0"
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-unit-"))
     storage = new ScheduledTasksStorageService(dir)
     await storage.onModuleInit()
@@ -156,6 +157,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // The output gate is exercised in task-output.service.test.ts; here it never
       // parks (a `done` run with no chosen output) → returns false, normal outcome.
       { handleTerminal: async () => false } as never,
+      (systemConfig = fakeSystemConfigStore()),
     )
     service.onModuleInit()
   })
@@ -163,7 +165,25 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   afterEach(async () => {
     service.onModuleDestroy()
     await fs.rm(dir, { recursive: true, force: true })
-    delete process.env.TASK_TICK_MS
+  })
+
+  it("re-arms the heartbeat live when the system config changes (no restart)", async () => {
+    // The scheduler booted with taskTickMs 0 → no timer. Saving a positive interval
+    // must arm one (the operator's /settings save applies without a restart).
+    const setSpy = vi.spyOn(globalThis, "setInterval")
+    const clearSpy = vi.spyOn(globalThis, "clearInterval")
+
+    await systemConfig.write({ ...systemConfig.current(), taskTickMs: 50_000 })
+    expect(setSpy).toHaveBeenCalledWith(expect.any(Function), 50_000)
+
+    // Saving 0 again disarms it (clears, no new interval at 0).
+    setSpy.mockClear()
+    await systemConfig.write({ ...systemConfig.current(), taskTickMs: 0 })
+    expect(clearSpy).toHaveBeenCalled()
+    expect(setSpy).not.toHaveBeenCalled()
+
+    setSpy.mockRestore()
+    clearSpy.mockRestore()
   })
 
   it("persists an immediate dispatch and the run is born linked to the task id", async () => {

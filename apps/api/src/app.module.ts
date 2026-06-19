@@ -27,12 +27,14 @@ import { ProjectsModule } from "./projects/projects.module"
 import { ResearchModule } from "./research/research.module"
 import { LoggingModule } from "./shared/logging/logging.module"
 import { SkillsModule } from "./skills/skills.module"
+import { SystemModule } from "./system/system.module"
 import { TasksModule } from "./tasks/tasks.module"
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggingModule,
+    SystemModule,
     ActivityLogModule,
     AgentsModule,
     SkillsModule,

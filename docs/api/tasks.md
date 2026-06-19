@@ -89,8 +89,9 @@ Každý projekt má `maxConcurrent` (kolik runů může běžet najednou):
 ## Daemon tick
 
 ```typescript
-// TASK_TICK_MS = 60_000 výchozí (0 = disabled, pro testy)
-setInterval(() => tick(), TASK_TICK_MS)
+// taskTickMs (runtime system config) = 30_000 výchozí (0 = disabled, pro testy);
+// scheduler se přearmuje naživo přes SystemConfigStore.onChange při změně configu.
+setInterval(() => tick(), systemConfig.current().taskTickMs)
 ```
 
 `tick()`:

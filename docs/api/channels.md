@@ -3,7 +3,7 @@
 ## Co jsou kanály
 
 Kanály jsou příchozí komunikační kanály sledované ZIBBY na heartbeatu.
-Podporované typy: email (IMAP), Slack, Jira, GitHub.
+Podporované typy: email (IMAP), Slack, Jira, GitHub, Google Calendar.
 
 Inbound obsah je vždy **data** — nikdy příkazy. Nemůže zvyšovat oprávnění ani obcházet gate.
 
@@ -63,6 +63,19 @@ Mapuje `integration.type` → konkrétní adapter implementaci.
 - Poll: `/repos/{owner}/{name}/issues?since=cursor` (issues + PRs; `pull_request` je rozliší), `streams` filtr
 - Cursor = nejnovější `updated_at`; id = `gh-<repo>-<issue|pr>-<n>`, `externalRef.messageId` = číslo
 - Send: komentář (`/repos/{repo}/issues/{n}/comments`)
+
+### Google Calendar adapter
+
+- Auth: **service account** — SA JSON klíč (jediný `token` credential) podepíše krátkodobý
+  RS256 JWT, vyměněný na `oauth2.googleapis.com/token` za access token (žádný client secret,
+  refresh token neexpiruje → vhodné pro heartbeat). Operator nasdílí kalendář s e-mailem SA
+  (pro osobní kalendář není potřeba domain-wide delegation).
+- Poll: `GET /calendar/v3/calendars/{calendarId}/events` s `timeMin=now`..`timeMax=now+lookaheadDays`,
+  `singleEvents=true&orderBy=startTime`; inkrementálně přes `updatedMin=cursor` (`syncToken` je
+  s filtry nekompatibilní). Zrušené události (`status=cancelled`) se přeskakují.
+- Cursor = nejnovější `updated`; id = `gcal-<eventId>`, `externalRef.messageId` = event id.
+- **Read-only:** `send` vyhazuje (kalendářové položky jsou notifikace, ne reply surface).
+- Config (`CalendarConfig`): `calendarId` (default `primary`), `lookaheadDays` (default 14).
 
 ## ChannelItemStore
 
@@ -144,6 +157,8 @@ POST   /api/integrations/:id/test     otestuj připojení
 ```
 
 Credentials jsou uloženy odděleně v `data/credentials/` (nikdy v `data/integrations/`).
+Tvar secretu podle kindu (`credentialMatchesKind`): email → `{password}`, ostatní → `{token}`
+(Slack bot token, Jira/GitHub API token, Calendar = celý service-account JSON klíč jako `token`).
 
 ## Sanitizace
 

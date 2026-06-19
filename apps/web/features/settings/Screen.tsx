@@ -22,6 +22,7 @@ import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { MandateSection } from "./components/MandateSection";
 import { ResearchSection } from "./components/ResearchSection";
 import { SettingsSubnav } from "./components/SettingsSubnav";
+import { SystemSection } from "./components/SystemSection";
 import { VoiceVoiceSetting } from "./components/VoiceVoiceSetting";
 
 type Locale = "cs" | "en";
@@ -184,6 +185,8 @@ export function Screen() {
         <MandateSection />
 
         <ResearchSection />
+
+        <SystemSection />
 
         <HudPanel padding="300" title={t("system")}>
           <Stack gap="150">

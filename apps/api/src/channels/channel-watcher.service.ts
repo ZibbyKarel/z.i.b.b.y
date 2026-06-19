@@ -11,6 +11,7 @@ import { CredentialsStore } from "../integrations/credentials.store"
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { SystemConfigStore } from "../system/system-config.store"
 import { withRetry } from "../shared/retry"
 import { randomUUID } from "node:crypto"
 import { AdapterRegistry } from "./adapters/adapter-registry"
@@ -33,8 +34,8 @@ export interface ChannelTriageFlow {
 export const CHANNEL_TRIAGE_FLOW = Symbol("CHANNEL_TRIAGE_FLOW")
 
 /**
- * The inbound heartbeat (Phase 5.2). CHANNEL_TICK_MS (default 30s, ≤ 0 disables —
- * the TASK_TICK_MS semantics; every e2e sets "0" and drives {@link tick} directly).
+ * The inbound heartbeat (Phase 5.2). `systemConfig.channelTickMs` (default 30s, `0`
+ * disables; every e2e seeds "0" and drives {@link tick} directly).
  * Per enabled, credentialled integration: adapter.poll → persist new items (state
  * `new`, sanitized text) → hand each to the triage flow (5.3) → advance the cursor
  * AFTER items persist, so a crash re-polls rather than drops (dedup-by-id makes the
@@ -44,6 +45,7 @@ export const CHANNEL_TRIAGE_FLOW = Symbol("CHANNEL_TRIAGE_FLOW")
 @Injectable()
 export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null
+  private unsubscribe: (() => void) | null = null
   private readonly log: ScopedLogger
 
   constructor(
@@ -55,25 +57,37 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
+    private readonly systemConfig: SystemConfigStore,
     @Optional() @Inject(CHANNEL_TRIAGE_FLOW) private readonly flow?: ChannelTriageFlow,
   ) {
     this.log = logger.child(ChannelWatcherService.name)
   }
 
   onModuleInit(): void {
-    const raw = process.env.CHANNEL_TICK_MS
-    const tickMs = raw === undefined ? 30_000 : Number(raw)
+    // Poll interval from the operator-owned system config; `0` disables (re-arm live).
+    this.arm()
+    this.unsubscribe = this.systemConfig.onChange(() => this.arm())
+  }
+
+  /** (Re-)arm the poll loop from `systemConfig.channelTickMs`; `0` leaves it disabled. */
+  private arm(): void {
+    if (this.timer) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+    const tickMs = this.systemConfig.current().channelTickMs
     if (tickMs > 0) {
       this.timer = setInterval(() => void this.tick(), tickMs)
       this.timer.unref?.()
       this.log.info("channel watcher started", { tickMs })
     } else {
-      this.log.debug("channel watcher tick disabled (CHANNEL_TICK_MS <= 0)")
+      this.log.debug("channel watcher tick disabled (channelTickMs <= 0)")
     }
   }
 
   onModuleDestroy(): void {
     if (this.timer) clearInterval(this.timer)
+    this.unsubscribe?.()
   }
 
   /** Poll every enabled, credentialled integration once; return the ingested item ids. */

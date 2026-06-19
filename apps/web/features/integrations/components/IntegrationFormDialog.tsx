@@ -38,6 +38,8 @@ export enum IntegrationFormTestId {
   GithubRepo = "integration-github-repo",
   GithubStreamIssues = "integration-github-stream-issues",
   GithubStreamPulls = "integration-github-stream-pulls",
+  CalendarId = "integration-calendar-id",
+  CalendarLookahead = "integration-calendar-lookahead",
   Secret = "integration-secret",
   Submit = "integration-submit",
 }
@@ -85,6 +87,7 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
   const emailCfg = integration?.config.kind === "email" ? integration.config : undefined;
   const jiraCfg = integration?.config.kind === "jira" ? integration.config : undefined;
   const githubCfg = integration?.config.kind === "github" ? integration.config : undefined;
+  const calendarCfg = integration?.config.kind === "calendar" ? integration.config : undefined;
 
   const [channels, setChannels] = useState((slackCfg?.channels ?? []).join(", "));
   const [imapHost, setImapHost] = useState(emailCfg?.imapHost ?? "");
@@ -100,6 +103,8 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
   const [repo, setRepo] = useState(githubCfg?.repo ?? "");
   const [streamIssues, setStreamIssues] = useState(githubCfg ? githubCfg.streams.includes("issues") : true);
   const [streamPulls, setStreamPulls] = useState(githubCfg ? githubCfg.streams.includes("pulls") : true);
+  const [calendarId, setCalendarId] = useState(calendarCfg?.calendarId ?? "");
+  const [lookaheadDays, setLookaheadDays] = useState(String(calendarCfg?.lookaheadDays ?? 14));
 
   const buildConfig = (): CreateIntegrationInput["config"] => {
     switch (kind) {
@@ -136,6 +141,12 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
         ];
         return { kind: "github", repo: repo.trim(), streams };
       }
+      case "calendar":
+        return {
+          kind: "calendar",
+          calendarId: calendarId.trim() || "primary",
+          lookaheadDays: Number(lookaheadDays) || 14,
+        };
     }
   };
 
@@ -150,6 +161,8 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
         return baseUrl.trim().length > 0 && jiraEmail.trim().length > 0;
       case "github":
         return /^[^/]+\/[^/]+$/.test(repo.trim());
+      case "calendar":
+        return Number(lookaheadDays) > 0;
     }
   };
 
@@ -185,7 +198,9 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
       ? t("integrations.password")
       : kind === "slack"
         ? t("integrations.botToken")
-        : t("integrations.apiToken");
+        : kind === "calendar"
+          ? t("integrations.serviceAccountKey")
+          : t("integrations.apiToken");
   const secretPlaceholder =
     integration?.hasCredentials ? t("integrations.credentialsStored") : t("integrations.credentialsNone");
 
@@ -224,6 +239,7 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
               { value: "email", label: t("integrations.kindEmail") },
               { value: "jira", label: t("integrations.kindJira") },
               { value: "github", label: t("integrations.kindGithub") },
+              { value: "calendar", label: t("integrations.kindCalendar") },
             ]}
             value={kind}
           />
@@ -345,6 +361,27 @@ export function IntegrationFormDialog({ projectId, integration, onClose, onSubmi
               label={t("integrations.jiraJql")}
               onChange={(e) => setJql(e.target.value)}
               value={jql}
+            />
+          </>
+        )}
+
+        {kind === "calendar" && (
+          <>
+            <TextInputField
+              data-testid={IntegrationFormTestId.CalendarId}
+              hint={t("integrations.calendarIdHint")}
+              label={t("integrations.calendarId")}
+              onChange={(e) => setCalendarId(e.target.value)}
+              placeholder="primary"
+              value={calendarId}
+            />
+            <TextInputField
+              data-testid={IntegrationFormTestId.CalendarLookahead}
+              hint={t("integrations.calendarLookaheadHint")}
+              label={t("integrations.calendarLookahead")}
+              onChange={(e) => setLookaheadDays(e.target.value)}
+              type="number"
+              value={lookaheadDays}
             />
           </>
         )}

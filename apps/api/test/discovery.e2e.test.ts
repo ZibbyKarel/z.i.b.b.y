@@ -41,8 +41,6 @@ describe("Discovery triage API (e2e)", () => {
       PIPELINES_DIR: dirs.pipelines,
       PIPELINE_RUNS_DIR: dirs.pipelineRuns,
       AUTOMATIONS_DIR: dirs.automations,
-      TASK_TICK_MS: "0",
-      AUTOMATION_TICK_MS: "0",
       CLAUDE_BIN: FAKE_CLAUDE,
       FAKE_CLAUDE_STEPS: "1",
       FAKE_CLAUDE_DELAY_MS: "10",
@@ -87,7 +85,7 @@ describe("Discovery triage API (e2e)", () => {
     for (const k of [
       "PROJECTS_DIR", "PROPOSALS_DIR", "APPROVALS_DIR", "TASKS_DIR", "VAULT_DIR", "GOALS_DIR",
       "GOAL_RUNS_DIR", "AGENTS_DIR", "AGENT_RUNS_DIR", "PIPELINES_DIR", "PIPELINE_RUNS_DIR",
-      "AUTOMATIONS_DIR", "TASK_TICK_MS", "AUTOMATION_TICK_MS", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS",
+      "AUTOMATIONS_DIR", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS",
       "FAKE_CLAUDE_DELAY_MS",
     ]) {
       delete process.env[k]

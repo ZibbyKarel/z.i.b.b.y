@@ -28,6 +28,7 @@ import { isAlive, killGroup } from "../runner/runner-core"
 import { prepareWorktreeDir } from "../shared/worktree-root"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { SystemConfigStore } from "../system/system-config.store"
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service"
 import { GoalsStorageService } from "./goals.storage.service"
 import { decideStop, renderGoalProgress } from "./goal-stop"
@@ -113,14 +114,12 @@ const AGGREGATE_FILE = "run.json"
  * A hung command (a runaway suite, a watcher that never exits) must not wedge the
  * outer loop or accumulate RAM forever, and a kill/respawn must reap it.
  */
-/** Hard wall-clock deadline for one verifier shell; override with `GOAL_VERIFY_TIMEOUT_MS`. */
-const DEFAULT_SHELL_TIMEOUT_MS = 10 * 60 * 1000
 /** Grace after SIGTERM before escalating the process group to SIGKILL. */
 const SHELL_KILL_GRACE_MS = 5000
 /** Cap the captured output (rolling tail); the verdict keeps only {@link VERDICT_MAX_CHARS} anyway. */
 const SHELL_OUTPUT_CAP = 1_000_000
 
-/** Exit code recorded for a verifier shell killed by the {@link DEFAULT_SHELL_TIMEOUT_MS} deadline. */
+/** Exit code recorded for a verifier shell killed by the `goalVerifyTimeoutMs` deadline. */
 const SHELL_TIMEOUT_CODE = 124
 
 /**
@@ -158,6 +157,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly activity: ActivityLogService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
+    private readonly systemConfig: SystemConfigStore,
   ) {
     this.dir = path.resolve(dir)
     this.log = logger.child(GoalRunnerService.name)
@@ -590,10 +590,9 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     return { kind: "claude", runRef: r.runId, satisfied: status === "done", output: tailOf(log?.content ?? "") }
   }
 
-  /** The verifier shell deadline (env-overridable so tests can use a short one). */
+  /** The verifier shell deadline (operator-owned config; tests seed a short one). */
   private shellTimeoutMs(): number {
-    const raw = Number(process.env.GOAL_VERIFY_TIMEOUT_MS)
-    return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SHELL_TIMEOUT_MS
+    return this.systemConfig.current().goalVerifyTimeoutMs
   }
 
   /**
@@ -989,9 +988,9 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     // goal is NOT auto-re-dispatched on boot — under `ts-node-dev --respawn` + claude
     // mode a restart alone would spawn a real `claude` with no operator approval
     // (Tier 3). Instead it is parked `awaiting-resume` and surfaced for an explicit
-    // operator resume. `GOAL_AUTO_RESUME=1` restores auto-reconcile for the eventual
-    // headless launchd daemon (Phase 8.3).
-    const autoResume = process.env.GOAL_AUTO_RESUME === "1"
+    // operator resume. The operator-owned `systemConfig.goalAutoResume` restores
+    // auto-reconcile for the headless launchd daemon (Phase 8.3).
+    const autoResume = this.systemConfig.current().goalAutoResume
     for (const run of await this.readAllAggregates()) {
       this.runs.set(run.goalRunId, run)
       if (run.status !== "running" && run.status !== "paused-limit") continue

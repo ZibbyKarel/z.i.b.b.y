@@ -46,13 +46,12 @@
     <key>PATH</key>
     <string>⟨/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin⟩</string>
 
-    <!-- Phase 13.3 — unattended-builder resume. Installing this daemon IS the operator's
-         explicit opt-in to unattended operation, so GOAL_AUTO_RESUME=1 lets a restart
-         re-drive running/paused-limit goals (the Phase 12.4 gate; without it they park
-         `awaiting-resume` for a human). This is the ONE legitimate place for auto-resume —
-         an attended dev server should NOT set it. Remove it to keep restarts hands-off. -->
-    <key>GOAL_AUTO_RESUME</key>
-    <string>1</string>
+    <!-- Unattended-builder resume is no longer an env var — it's the file-backed
+         `goalAutoResume` knob in the runtime system config (set it via /settings, or in
+         `data/system-config.json`). Installing this daemon IS the operator's opt-in to
+         unattended operation, so enable `goalAutoResume` there to let a restart re-drive
+         running/paused-limit goals (the Phase 12.4 gate; otherwise they park
+         `awaiting-resume` for a human). An attended dev server should leave it off. -->
 
     <!-- Phase 12.7 — run worktrees OUTSIDE the repo/data tree (must not live under the
          checkout if a goal ever targets this repo). Pin it explicitly for the daemon. -->

@@ -16,7 +16,7 @@ export interface IntegrationCardProps {
   togglingEnabled?: boolean;
 }
 
-const KIND_GLYPH = { slack: "plug", email: "server", jira: "checkpoint", github: "branch" } as const;
+const KIND_GLYPH = { slack: "plug", email: "server", jira: "checkpoint", github: "branch", calendar: "clock" } as const;
 
 /** Format a sync timestamp as a short, locale-agnostic caption (or a dash). */
 function lastSyncCaption(iso: string | undefined): string {
@@ -50,7 +50,9 @@ export function IntegrationCard({
         ? config.user
         : config.kind === "jira"
           ? (config.projectKey ?? config.baseUrl)
-          : config.repo;
+          : config.kind === "github"
+            ? config.repo
+            : config.calendarId;
 
   return (
     <HudCard

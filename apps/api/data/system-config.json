@@ -1,0 +1,10 @@
+{
+  "taskTickMs": 30000,
+  "channelTickMs": 30000,
+  "automationTickMs": 0,
+  "limitResumeTickMs": 60000,
+  "limitResumeMax": 3,
+  "goalVerifyTimeoutMs": 600000,
+  "channelAdapterMode": "real",
+  "goalAutoResume": false
+}

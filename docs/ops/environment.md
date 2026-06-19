@@ -10,16 +10,38 @@
 | `ZIBBY_DATA_DIR` | `apps/api/data` | Root adresář pro všechna runtime data |
 | `VAULT_DIR` | `$ZIBBY_DATA_DIR/vault` | Cesta k Obsidian vault (memory) |
 | `ZIBBY_BACKUP_DIR` | — | Cíl zálohy (rsync destination) — jen pro backup script |
-| `CHANNEL_TICK_MS` | `30000` | Interval heartbeatu pro channel watcher (0 = disabled) |
-| `TASK_TICK_MS` | `60000` | Interval task scheduler ticku (0 = disabled pro testy) |
-| `AUTOMATION_TICK_MS` | `60000` | Interval automations scheduler ticku (0 = disabled) |
+| `SYSTEM_CONFIG_FILE` | `$ZIBBY_DATA_DIR/system-config.json` | Cesta k souboru runtime system configu (viz níže) — path/test-isolation knob, ne behaviorální |
 | `AGENT_RUNNER_MODE` | `claude` | `claude` = reálný `claude -p`; `demo` = deterministický stand-in (testy/CI). Patří do **untracked** `.env`, ne do `.env.example` (tam `demo`) |
 | `CLAUDE_BIN` | `claude` | Cesta k `claude` binárce — test seam (fake binárka v e2e) |
 | `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees` | **Phase 12.7** — root pro run worktrees, **mimo** repo/data strom. NEodvozuje se z `ZIBBY_DATA_DIR` (záměrně) |
-| `GOAL_VERIFY_TIMEOUT_MS` | `600000` (10 min) | **Phase 12.3** — wall-clock deadline pro deterministický `checks` verifier shell (pak SIGTERM→SIGKILL) |
-| `GOAL_AUTO_RESUME` | _unset_ | **Phase 12.4** — `1` = na bootu auto-re-drive `running`/`paused-limit` goalů (jen headless launchd démon). Default: rehydrace + park `awaiting-resume` (Law 3) |
 
 Načítání přes `@nestjs/config` (ConfigModule.forRoot, isGlobal: true).
+
+## Runtime system config (`data/system-config.json`)
+
+Behaviorální „knoby", které dřív byly start-only proměnné prostředí, jsou teď
+**file-backed** a editovatelné z `/settings` (zákon _Files are the source of truth_).
+Žádný env override — soubor je jediný zdroj; chybějící soubor = schema defaulty
+(reprodukují historické chování „env unset"). Endpoint `GET/PUT /api/system/config`.
+
+Změny intervalů a režimu adaptéru se projeví **okamžitě** (schedulery se naživo
+přearmují přes `SystemConfigStore.onChange`); `goalAutoResume` se uplatní až při
+příštím bootu.
+
+| Klíč | Výchozí | Popis |
+|------|---------|-------|
+| `taskTickMs` | `30000` | Interval task scheduler ticku (0 = vypnuto, test default) |
+| `channelTickMs` | `30000` | Interval heartbeatu channel watcheru (0 = vypnuto) |
+| `automationTickMs` | `0` | Interval automations scheduleru (0 = vypnuto; historický default) |
+| `limitResumeTickMs` | `60000` | Interval skenu limit-resume démona (0 = vypnuto) |
+| `limitResumeMax` | `3` | Max. cyklů obnovy než se limitem pozastavený běh zaparkuje/selže |
+| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline `checks` verifier shellu (pak SIGTERM→SIGKILL) |
+| `channelAdapterMode` | `real` | `real` = adaptér dle typu integrace; `fake` = testovací dvojník (e2e) |
+| `goalAutoResume` | `false` | **Phase 12.4** — `true` = na bootu auto-re-drive `running`/`paused-limit` goalů (bezobslužný launchd démon). Default: park `awaiting-resume` (Law 3) |
+
+V testech seeduje `vitest.setup.ts` tento soubor (ticky 0, `channelAdapterMode: fake`)
+přes `SYSTEM_CONFIG_FILE`; suite, která potřebuje jiný knob, volá `writeSystemConfig()`
+(`apps/api/src/system/system-config.fixture.ts`) před bootem appky.
 
 ## .env soubor
 

@@ -20,7 +20,6 @@ describe("Automations API (e2e)", () => {
       dirs[key] = await fs.mkdtemp(path.join(os.tmpdir(), `auto-${key}-`))
       process.env[key] = dirs[key]
     }
-    process.env.AUTOMATION_TICK_MS = "0" // disable the background loop; drive tick() directly
     process.env.CLAUDE_BIN = FAKE_CLAUDE
     process.env.FAKE_CLAUDE_STEPS = "2"
     process.env.FAKE_CLAUDE_DELAY_MS = "30"
@@ -38,7 +37,7 @@ describe("Automations API (e2e)", () => {
   afterAll(async () => {
     await app.close()
     for (const d of Object.values(dirs)) await fs.rm(d, { recursive: true, force: true })
-    for (const k of ["AGENTS_DIR", "AGENT_RUNS_DIR", "AUTOMATIONS_DIR", "APPROVALS_DIR", "AUTOMATION_TICK_MS", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS"]) {
+    for (const k of ["AGENTS_DIR", "AGENT_RUNS_DIR", "AUTOMATIONS_DIR", "APPROVALS_DIR", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS"]) {
       delete process.env[k]
     }
   })

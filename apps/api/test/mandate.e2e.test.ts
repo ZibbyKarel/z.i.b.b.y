@@ -15,7 +15,6 @@ describe("Mandate API (e2e)", () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mandate-e2e-"))
     mandateFile = path.join(dir, "mandate.json")
     process.env.MANDATE_FILE = mandateFile
-    process.env.CHANNEL_TICK_MS = "0"
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     app = moduleRef.createNestApplication()
     await app.init()
@@ -25,7 +24,6 @@ describe("Mandate API (e2e)", () => {
     await app.close()
     await fs.rm(path.dirname(mandateFile), { recursive: true, force: true })
     delete process.env.MANDATE_FILE
-    delete process.env.CHANNEL_TICK_MS
   })
 
   it("GET returns the seeded conservative default (dispatch on, reply off)", async () => {

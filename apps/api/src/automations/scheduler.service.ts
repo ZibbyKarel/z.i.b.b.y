@@ -12,6 +12,7 @@ import { IdeaGeneratorService } from "../ideas/idea-generator.service"
 import { ResearchService } from "../research/research.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { SystemConfigStore } from "../system/system-config.store"
 import { AutomationsStorageService } from "./automations.storage.service"
 import { matchesCron } from "./cron"
 
@@ -26,6 +27,7 @@ import { matchesCron } from "./cron"
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null
+  private unsubscribe: (() => void) | null = null
   /** Wall-clock of the last tick — the heartbeat the /health probe reads (M8). */
   private lastTickAt: string | null = null
   private tickMs = 0
@@ -44,26 +46,39 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly research: ResearchService,
     private readonly gaps: GapDetectorService,
     private readonly ideas: IdeaGeneratorService,
+    private readonly systemConfig: SystemConfigStore,
   ) {
     this.log = logger.child(SchedulerService.name)
   }
 
   onModuleInit(): void {
-    const tickMs = Number(process.env.AUTOMATION_TICK_MS)
-    this.tickMs = Number.isFinite(tickMs) ? tickMs : 0
-    // A tick of 0 disables the loop (tests drive `tick()` directly).
+    // Loop interval from the operator-owned system config; `0` disables it (the test
+    // default — tests drive `tick()` directly). Re-arm live when the config changes.
+    this.arm()
+    this.unsubscribe = this.systemConfig.onChange(() => this.arm())
+  }
+
+  /** (Re-)arm the loop from `systemConfig.automationTickMs`; `0` leaves it disabled. */
+  private arm(): void {
+    if (this.timer) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+    const tickMs = this.systemConfig.current().automationTickMs
+    this.tickMs = tickMs
     if (tickMs > 0) {
       this.timer = setInterval(() => void this.tick(), tickMs)
       // Don't keep the event loop alive just for the scheduler.
       this.timer.unref?.()
       this.log.info("scheduler started", { tickMs })
     } else {
-      this.log.debug("scheduler tick disabled (AUTOMATION_TICK_MS <= 0)")
+      this.log.debug("scheduler tick disabled (automationTickMs <= 0)")
     }
   }
 
   onModuleDestroy(): void {
     if (this.timer) clearInterval(this.timer)
+    this.unsubscribe?.()
   }
 
   /**

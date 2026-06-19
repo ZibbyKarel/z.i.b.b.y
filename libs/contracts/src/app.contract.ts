@@ -27,6 +27,7 @@ import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.c
 import { goalsContract } from "./goals/goals.contract"
 import { projectsContract } from "./projects/projects.contract"
 import { skillsContract } from "./skills/skills.contract"
+import { systemContract } from "./system/system.contract"
 import { tasksContract } from "./tasks/tasks.contract"
 import { taskRunsContract } from "./tasks/task-runs.contract"
 
@@ -67,6 +68,7 @@ export const appContract = c.router({
   limits: limitsContract,
   tasks: tasksContract,
   taskRuns: taskRunsContract,
+  system: systemContract,
   activity: activityContract,
   briefing: briefingContract,
   budget: budgetContract,

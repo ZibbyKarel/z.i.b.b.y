@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { Goal, Project } from "@zibby/contracts"
 import type { LoggerService } from "../shared/logging/logger.service"
 import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
+import { fakeSystemConfigStore } from "../system/system-config.fixture"
 import { GoalRunnerService } from "./goal-runner.service"
 
 /**
@@ -30,6 +31,7 @@ function makeService(pipelineRun: { verifyCommands?: string[] } | "throw"): Goal
     null as never, // activity
     logger,
     null as never, // trace
+    fakeSystemConfigStore(),
   )
 }
 

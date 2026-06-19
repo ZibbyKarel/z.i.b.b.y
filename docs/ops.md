@@ -79,8 +79,7 @@ Set in the plist's `EnvironmentVariables` (or a `.env` the API loads).
 | `VAULT_DIR` | `$ZIBBY_DATA_DIR/vault` | Obsidian vault (second brain) |
 | `BUDGET_LEDGER_DIR` | `$ZIBBY_DATA_DIR/budget-ledger` | Dispatch ledger (enforcement; gitignored) |
 | `BUDGET_CONFIG_FILE` | `$ZIBBY_DATA_DIR/budget.json` | Operator global pause thresholds (committed) |
-| `TASK_TICK_MS` | `30000` | Scheduler heartbeat; `0` disables (tests drive it) |
-| `CHANNEL_TICK_MS` | watcher default | Channel poll heartbeat |
+| `SYSTEM_CONFIG_FILE` | `$ZIBBY_DATA_DIR/system-config.json` | Runtime system config (tick intervals, channel adapter mode, goal auto-resume) — file-backed, editable from `/settings`. Path knob only; see `docs/ops/environment.md` |
 | `CLAUDE_BIN` | `claude` on `PATH` | Claude CLI; point at `fake-claude.mjs` for token-free runs |
 | `ZIBBY_BACKUP_DIR` | _(unset)_ | rsync destination root for `backup.sh` |
 

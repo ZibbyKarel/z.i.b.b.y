@@ -112,6 +112,24 @@ describe("IntegrationFormDialog", () => {
     expect(draft.secret).toBe("ghp-token");
   });
 
+  it("emits a calendar create payload, defaulting the calendar id, with the SA key separate", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+
+    await userEvent.click(screen.getByTestId("dropdown-trigger"));
+    await userEvent.click(screen.getByText("Kalendář"));
+
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-cal");
+    // Leave the calendar id blank → defaults to "primary"; secret holds the SA JSON.
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.Secret), '{{"client_email":"x"}');
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    const draft = onSubmit.mock.calls[0]![0];
+    expect(draft.create.kind).toBe("calendar");
+    expect(draft.create.config).toEqual({ kind: "calendar", calendarId: "primary", lookaheadDays: 14 });
+    expect(JSON.stringify(draft.create)).not.toContain("client_email");
+  });
+
   it("blocks save until a github repo is owner/name shaped", async () => {
     const onSubmit = vi.fn();
     render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);

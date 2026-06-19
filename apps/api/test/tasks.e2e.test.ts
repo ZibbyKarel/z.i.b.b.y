@@ -40,7 +40,6 @@ describe("Tasks API (e2e)", () => {
     process.env.AGENT_RUNS_DIR = runsDir
     process.env.TASKS_DIR = tasksDir
     process.env.PROJECTS_DIR = projectsDir
-    process.env.TASK_TICK_MS = "0" // disable the background loop; drive tick() directly
     // A dispatch spawns a run; use the stub instead of the real claude CLI.
     process.env.CLAUDE_BIN = FAKE_CLAUDE
     process.env.FAKE_CLAUDE_STEPS = "2"
@@ -70,7 +69,6 @@ describe("Tasks API (e2e)", () => {
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
       "PROJECTS_DIR",
-      "TASK_TICK_MS",
       "CLAUDE_BIN",
       "FAKE_CLAUDE_STEPS",
       "FAKE_CLAUDE_DELAY_MS",

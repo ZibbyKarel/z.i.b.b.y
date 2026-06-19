@@ -1,7 +1,8 @@
-import { cpSync, mkdtempSync, rmSync } from "node:fs"
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, relative, sep } from "node:path"
 import "reflect-metadata"
+import { TEST_SYSTEM_CONFIG } from "./src/system/system-config.fixture"
 
 /**
  * Phase 12.5 — global e2e isolation barrier (the meta-circular safety net).
@@ -70,6 +71,19 @@ if (!process.env.ZIBBY_DATA_DIR) {
 if (!process.env.ZIBBY_WORKTREE_ROOT) {
   const dir = mkdtempSync(join(tmpdir(), "zibby-worktrees-"))
   process.env.ZIBBY_WORKTREE_ROOT = dir
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+}
+
+// The runtime system config (tick intervals, channel adapter mode, goal auto-resume)
+// is now file-backed, not env-driven. Seed a config file with the test defaults
+// (every heartbeat OFF, fake channel adapter) and point SYSTEM_CONFIG_FILE at it —
+// independent of any per-suite ZIBBY_DATA_DIR override, like ACTIVITY_DIR. A suite
+// that needs a different knob writes this file (merged) before it boots the app.
+if (!process.env.SYSTEM_CONFIG_FILE) {
+  const dir = mkdtempSync(join(tmpdir(), "zibby-system-"))
+  const file = join(dir, "system-config.json")
+  writeFileSync(file, `${JSON.stringify(TEST_SYSTEM_CONFIG, null, 2)}\n`)
+  process.env.SYSTEM_CONFIG_FILE = file
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
 }
 

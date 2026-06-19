@@ -214,6 +214,12 @@ export {
 export type { TextInputFieldProps } from "./components/form/TextInputField/TextInputField";
 
 export {
+  NumberField,
+  NumberFieldTestId,
+} from "./components/form/NumberField/NumberField";
+export type { NumberFieldProps } from "./components/form/NumberField/NumberField";
+
+export {
   TextAreaField,
   TextAreaFieldTestId,
 } from "./components/form/TextAreaField/TextAreaField";

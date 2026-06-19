@@ -5,10 +5,14 @@ import type { CreateIntegrationInput } from "@zibby/contracts"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CredentialsStore } from "../integrations/credentials.store"
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service"
+import { fakeSystemConfigStore } from "../system/system-config.fixture"
 import { AdapterRegistry } from "./adapters/adapter-registry"
 import { ChannelEventsService } from "./channel-events.service"
 import { ChannelItemStore } from "./channel-item.store"
 import { ChannelWatcherService } from "./channel-watcher.service"
+
+/** A registry on the fake adapter (channelAdapterMode defaults to "fake" in tests). */
+const makeRegistry = () => new AdapterRegistry(fakeSystemConfigStore())
 
 const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -44,13 +48,11 @@ describe("ChannelWatcherService", () => {
     store = new ChannelItemStore(channelsDir)
     events = new ChannelEventsService()
     await Promise.all([integrations.onModuleInit(), credentials.onModuleInit(), store.onModuleInit()])
-    process.env.CHANNEL_ADAPTER_MODE = "fake"
-    process.env.CHANNEL_TICK_MS = "0"
     process.env.CHANNEL_FAKE_DIR = fakeDir
   })
   afterEach(async () => {
     await fs.rm(root, { recursive: true, force: true })
-    for (const k of ["CHANNEL_ADAPTER_MODE", "CHANNEL_TICK_MS", "CHANNEL_FAKE_DIR"]) delete process.env[k]
+    delete process.env.CHANNEL_FAKE_DIR
   })
 
   /** Seed a fixture message file for an integration under the fake dir. */
@@ -70,6 +72,7 @@ describe("ChannelWatcherService", () => {
       fakeLogger as never,
       fakeTrace as never,
       { record: async () => {} } as never,
+      fakeSystemConfigStore(),
     )
   }
 
@@ -77,7 +80,7 @@ describe("ChannelWatcherService", () => {
     await integrations.create(slack("team"))
     await credentials.write("team", { token: "xoxb-1" })
     await seed("team", "001.json", "bug report")
-    const watcher = makeWatcher(new AdapterRegistry())
+    const watcher = makeWatcher(makeRegistry())
 
     const ids = await watcher.tick()
     expect(ids.length).toBe(1)
@@ -91,7 +94,7 @@ describe("ChannelWatcherService", () => {
     await integrations.create(slack("team"))
     await credentials.write("team", { token: "xoxb-1" })
     await seed("team", "001.json", "first")
-    const watcher = makeWatcher(new AdapterRegistry())
+    const watcher = makeWatcher(makeRegistry())
 
     await watcher.tick()
     const second = await watcher.tick()
@@ -107,7 +110,7 @@ describe("ChannelWatcherService", () => {
     await integrations.create(slack("nocreds"))
     await seed("nocreds", "001.json", "ignored")
 
-    const watcher = makeWatcher(new AdapterRegistry())
+    const watcher = makeWatcher(makeRegistry())
     expect(await watcher.tick()).toEqual([])
     expect((await store.list()).length).toBe(0)
   })
@@ -120,7 +123,7 @@ describe("ChannelWatcherService", () => {
     await seed("good", "001.json", "works")
 
     // A registry whose adapter throws for "bad" but is the real fake for "good".
-    const real = new AdapterRegistry()
+    const real = makeRegistry()
     const registry = {
       resolve: (kind: "slack" | "email") => {
         const adapter = real.resolve(kind)

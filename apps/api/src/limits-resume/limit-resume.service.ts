@@ -3,13 +3,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service"
 import { LimitsService } from "../limits/limits.service"
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
-
-/** How many auto-resume cycles a limit-paused run gets before it is parked/failed. */
-export function limitResumeMax(): number {
-  const raw = process.env.LIMIT_RESUME_MAX
-  const n = raw === undefined ? 3 : Number(raw)
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 3
-}
+import { SystemConfigStore } from "../system/system-config.store"
 
 /** A limit-paused run the scan considers, normalized across the two runner kinds. */
 interface PausedEntry {
@@ -33,15 +27,16 @@ interface PausedEntry {
  *   the remaining due runs are left for the next tick rather than flapping.
  * - **Bounded cycles** (decision 6): a run that keeps becoming due without ever
  *   getting headroom (a genuine flap) burns one cycle per such attempt; past
- *   {@link limitResumeMax} it is parked (pipelines, operator-resumable) or failed with
- *   a readable reason (agent runs, which have no parked state).
+ *   the operator-owned `limitResumeMax` it is parked (pipelines, operator-resumable)
+ *   or failed with a readable reason (agent runs, which have no parked state).
  *
- * The heartbeat mirrors the other daemons: `LIMIT_RESUME_TICK_MS` (default 60s); `"0"`
- * disables it so tests drive {@link tick} directly with a fake clock.
+ * The heartbeat mirrors the other daemons: `systemConfig.limitResumeTickMs` (default
+ * 60s); `0` disables it so tests drive {@link tick} directly with a fake clock.
  */
 @Injectable()
 export class LimitResumeService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null
+  private unsubscribe: (() => void) | null = null
   private readonly log: ScopedLogger
   /** Run refs being resumed right now, so a restart-then-tick can't double-resume one. */
   private readonly inflight = new Set<string>()
@@ -50,30 +45,45 @@ export class LimitResumeService implements OnModuleInit, OnModuleDestroy {
     private readonly limits: LimitsService,
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
+    private readonly systemConfig: SystemConfigStore,
     logger: LoggerService,
   ) {
     this.log = logger.child(LimitResumeService.name)
   }
 
   onModuleInit(): void {
-    const raw = process.env.LIMIT_RESUME_TICK_MS
-    const tickMs = raw === undefined ? 60_000 : Number(raw)
+    // Scan interval from the operator-owned system config; `0` disables (re-arm live).
+    this.arm()
+    this.unsubscribe = this.systemConfig.onChange(() => this.arm())
+  }
+
+  /** (Re-)arm the scan from `systemConfig.limitResumeTickMs`; `0` leaves it disabled. */
+  private arm(): void {
+    if (this.timer) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+    const tickMs = this.systemConfig.current().limitResumeTickMs
     if (tickMs > 0) {
       this.timer = setInterval(() => void this.tick(), tickMs)
       this.timer.unref?.()
-      this.log.info("limit-resume scan started", { tickMs, max: limitResumeMax() })
+      this.log.info("limit-resume scan started", {
+        tickMs,
+        max: this.systemConfig.current().limitResumeMax,
+      })
     } else {
-      this.log.debug("limit-resume scan disabled (LIMIT_RESUME_TICK_MS <= 0)")
+      this.log.debug("limit-resume scan disabled (limitResumeTickMs <= 0)")
     }
   }
 
   onModuleDestroy(): void {
     if (this.timer) clearInterval(this.timer)
+    this.unsubscribe?.()
   }
 
   /** Resume (or park) every limit-paused run whose `resumeAt` has passed. */
   async tick(now: Date = new Date()): Promise<void> {
-    const max = limitResumeMax()
+    const max = this.systemConfig.current().limitResumeMax
     const due = this.collectDue(now.getTime())
     if (due.length === 0) return
 

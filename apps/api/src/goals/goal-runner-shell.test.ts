@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import type { LoggerService } from "../shared/logging/logger.service"
+import { fakeSystemConfigStore } from "../system/system-config.fixture"
 import { GoalRunnerService } from "./goal-runner.service"
 
 /**
@@ -9,7 +10,7 @@ import { GoalRunnerService } from "./goal-runner.service"
  * output accumulator is capped, and shutdown reaps any in-flight child. These touch
  * only `this.liveShells` + `this.shellTimeoutMs()`, so a minimal instance suffices.
  */
-function makeService(): GoalRunnerService {
+function makeService(goalVerifyTimeoutMs = 200): GoalRunnerService {
   const noop = () => {}
   const logger = { child: () => ({ info: noop, warn: noop, error: noop }) } as unknown as LoggerService
   return new GoalRunnerService(
@@ -23,6 +24,7 @@ function makeService(): GoalRunnerService {
     null as never, // activity
     logger,
     null as never, // trace
+    fakeSystemConfigStore({ goalVerifyTimeoutMs }),
   )
 }
 
@@ -39,16 +41,6 @@ function alive(pid: number): boolean {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 describe("GoalRunnerService verifier shell governance (12.3)", () => {
-  const original = process.env.GOAL_VERIFY_TIMEOUT_MS
-
-  beforeEach(() => {
-    process.env.GOAL_VERIFY_TIMEOUT_MS = "200"
-  })
-  afterEach(() => {
-    if (original === undefined) delete process.env.GOAL_VERIFY_TIMEOUT_MS
-    else process.env.GOAL_VERIFY_TIMEOUT_MS = original
-  })
-
   it("times out and kills a hung command, returning the timeout code", async () => {
     const svc = makeService()
     const start = Date.now()
@@ -65,8 +57,7 @@ describe("GoalRunnerService verifier shell governance (12.3)", () => {
   })
 
   it("caps the captured output to a rolling tail", async () => {
-    delete process.env.GOAL_VERIFY_TIMEOUT_MS // let it run to completion
-    const svc = makeService()
+    const svc = makeService(600_000) // a long deadline; let it run to completion
     // Emit ~1.4 MB — past the 1 MB cap — and assert the accumulator stayed bounded.
     const result = await (
       svc as unknown as { runShell: (c: string, a: string[], cwd: string) => Promise<{ code: number; output: string }> }

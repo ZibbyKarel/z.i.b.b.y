@@ -87,9 +87,6 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
     process.env.FAKE_CLAUDE_DELAY_MS = "10"
     process.env.AGENT_DEMO_STEPS = "1"
     process.env.AGENT_DEMO_DELAY_MS = "10"
-    process.env.TASK_TICK_MS = "0"
-    process.env.LIMIT_RESUME_TICK_MS = "0" // drive the scan manually
-    process.env.LIMIT_RESUME_MAX = "3"
     // Start with plenty of headroom so the phase-boundary guard never pauses; only the
     // demo limit line (mid-stage) does.
     await writeLimits(configDir, 5, Math.floor(Date.now() / 1000) + 3600)
@@ -103,8 +100,8 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
     for (const k of [
       "AGENT_RUNNER_MODE", "CLAUDE_BIN", "FAKE_CLAUDE_STEPS", "FAKE_CLAUDE_DELAY_MS",
       "CLAUDE_CONFIG_DIR", "PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR", "VAULT_DIR",
-      "TASKS_DIR", "AGENTS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "TASK_TICK_MS",
-      "LIMIT_RESUME_TICK_MS", "LIMIT_RESUME_MAX", "PIPELINE_DEMO_LIMIT_PHASES",
+      "TASKS_DIR", "AGENTS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", 
+      "PIPELINE_DEMO_LIMIT_PHASES",
     ]) {
       delete process.env[k]
     }
@@ -211,7 +208,6 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     process.env.AGENTS_DIR = dirs.agents
     process.env.AGENT_DEMO_STEPS = "1"
     process.env.AGENT_DEMO_DELAY_MS = "10"
-    process.env.LIMIT_RESUME_TICK_MS = "0"
   })
 
   afterAll(async () => {
@@ -219,7 +215,7 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     await fs.rm(configDir, { recursive: true, force: true })
     for (const k of [
       "AGENT_RUNNER_MODE", "CLAUDE_CONFIG_DIR", "PIPELINES_DIR", "PIPELINE_RUNS_DIR", "PROJECTS_DIR", "VAULT_DIR",
-      "AGENTS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", "LIMIT_RESUME_TICK_MS",
+      "AGENTS_DIR", "AGENT_DEMO_STEPS", "AGENT_DEMO_DELAY_MS", 
     ]) {
       delete process.env[k]
     }

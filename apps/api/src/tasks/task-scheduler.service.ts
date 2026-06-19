@@ -30,6 +30,7 @@ import { matchProject } from "../projects/project-matcher"
 import { withPathLock } from "../shared/file-storage"
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service"
 import { TraceContextService } from "../shared/logging/trace-context.service"
+import { SystemConfigStore } from "../system/system-config.store"
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service"
 import { TaskOutputService } from "./task-output.service"
@@ -106,6 +107,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly gates: GateEvaluatorService,
     private readonly limits: LimitsService,
     private readonly taskOutput: TaskOutputService,
+    private readonly systemConfig: SystemConfigStore,
   ) {
     this.log = logger.child(TaskSchedulerService.name)
   }
@@ -138,15 +140,25 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     }
     this.approvals.register("task", runner)
 
-    // Default to a 30s heartbeat in real runs; tests set TASK_TICK_MS=0 to disable it.
-    const raw = process.env.TASK_TICK_MS
-    const tickMs = raw === undefined ? 30_000 : Number(raw)
+    // Heartbeat from the operator-owned system config (default 30s; `0` disables it,
+    // the test default). Re-arm live when the config changes (no restart needed).
+    this.arm()
+    this.unsubscribes.push(this.systemConfig.onChange(() => this.arm()))
+  }
+
+  /** (Re-)arm the heartbeat from `systemConfig.taskTickMs`; `0` leaves it disabled. */
+  private arm(): void {
+    if (this.timer) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+    const tickMs = this.systemConfig.current().taskTickMs
     if (tickMs > 0) {
       this.timer = setInterval(() => void this.tick(), tickMs)
       this.timer.unref?.()
       this.log.info("task scheduler started", { tickMs })
     } else {
-      this.log.debug("task scheduler tick disabled (TASK_TICK_MS <= 0)")
+      this.log.debug("task scheduler tick disabled (taskTickMs <= 0)")
     }
   }
 
