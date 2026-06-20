@@ -14,22 +14,26 @@ type Story = StoryObj<typeof Tabs>;
 
 export const Overview: Story = {
   render: () => (
-    <Tabs defaultValue="overview">
-      <TabList>
-        <Tab value="overview">Přehled</Tab>
-        <Tab value="agents">Agenti</Tab>
-        <Tab value="logs">Logy</Tab>
-      </TabList>
-      <TabPanel value="overview">
-        <div className="p-4 text-sm text-foreground-dim">Obsah přehledu</div>
-      </TabPanel>
-      <TabPanel value="agents">
-        <div className="p-4 text-sm text-foreground-dim">Seznam agentů</div>
-      </TabPanel>
-      <TabPanel value="logs">
-        <div className="p-4 text-sm text-foreground-dim">Záznamy aktivit</div>
-      </TabPanel>
-    </Tabs>
+    <Stack direction="col" gap="200">
+      {(["horizontal", "vertical"] as const).map((direction) => (
+        <Tabs defaultValue="overview" direction={direction} key={direction}>
+          <TabList>
+            <Tab value="overview">Přehled</Tab>
+            <Tab value="agents">Agenti</Tab>
+            <Tab value="logs">Logy</Tab>
+          </TabList>
+          <TabPanel value="overview">
+            <div className="p-4 text-sm text-foreground-dim">Obsah přehledu</div>
+          </TabPanel>
+          <TabPanel value="agents">
+            <div className="p-4 text-sm text-foreground-dim">Seznam agentů</div>
+          </TabPanel>
+          <TabPanel value="logs">
+            <div className="p-4 text-sm text-foreground-dim">Záznamy aktivit</div>
+          </TabPanel>
+        </Tabs>
+      ))}
+    </Stack>
   ),
 };
 

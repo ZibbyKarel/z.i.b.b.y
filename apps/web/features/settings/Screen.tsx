@@ -23,9 +23,9 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { useHealthQuery } from "../health/queries";
 import { useVoice } from "../voice";
 import { ShortcutCapture } from "../voice/components/ShortcutCapture";
+import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { MandateSection } from "./components/MandateSection";
 import { ResearchSection } from "./components/ResearchSection";
-import { SettingsSubnav } from "./components/SettingsSubnav";
 import { SystemSection } from "./components/SystemSection";
 import { VoiceVoiceSetting } from "./components/VoiceVoiceSetting";
 
@@ -118,11 +118,10 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader subtitle={`${DAEMON} · ${t("daemonOn")} ${HOST}`} title={t("title")} />
 
-        <SettingsSubnav />
-
         <Tabs defaultValue="preferences" direction="vertical">
           <TabList>
             <Tab value="preferences">{t("preferences")}</Tab>
+            <Tab value="gates">{t("subnav.gates")}</Tab>
             <Tab value="mandate">{t("mandate.title")}</Tab>
             <Tab value="research">{t("research.title")}</Tab>
             <Tab value="runtime">{t("runtime.title")}</Tab>
@@ -173,6 +172,10 @@ export function Screen() {
                 />
               </Stack>
             </HudPanel>
+          </TabPanel>
+
+          <TabPanel value="gates">
+            <GateRulesSection />
           </TabPanel>
 
           <TabPanel value="mandate">

@@ -18,6 +18,7 @@ import type {
   IntegrationKind,
   UpdateIntegrationInput,
 } from "@zibby/contracts";
+import { IntegrationIdSchema } from "@zibby/contracts";
 
 /** Testids for the integration form dialog (the screen + tests select via these). */
 export enum IntegrationFormTestId {
@@ -174,7 +175,12 @@ export function IntegrationFormDialog({
     }
   };
 
-  const canSave = (isNew ? id.trim().length > 0 : true) && configReady();
+  const idError =
+    isNew && id.trim().length > 0
+      ? (IntegrationIdSchema.safeParse(id.trim()).error?.issues?.[0]?.message ?? null)
+      : null;
+
+  const canSave = (isNew ? id.trim().length > 0 && idError === null : true) && configReady();
 
   const submit = () => {
     const trimmedSecret = secret.trim() || undefined;
@@ -265,6 +271,7 @@ export function IntegrationFormDialog({
         {isNew && (
           <TextInputField
             data-testid="integration-id"
+            error={idError ?? undefined}
             label={t("integrations.idLabel")}
             onChange={(e) => setId(e.target.value)}
             placeholder="team-slack"
