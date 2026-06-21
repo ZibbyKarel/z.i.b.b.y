@@ -75,6 +75,7 @@ function base64url(input: string | Buffer): string {
  */
 export class CalendarChannelAdapter implements ChannelAdapter {
   readonly kind = "calendar" as const;
+  readonly readOnly = true as const;
 
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 

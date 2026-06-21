@@ -41,6 +41,9 @@ export const ActivityKindSchema = z.enum([
   "channel-reply",
   "channel-approval",
   "channel-ignored",
+  // Read-only integrations (calendar) produce inbound items but have no reply surface;
+  // the item is noted as handled silently rather than parked in the approval queue.
+  "channel-noted",
   "briefing-generated",
   // M6 (research / intelligence, Tier 1 — silent + recorded). A digest pass ran and
   // mirrored its result to the vault; the morning briefing reads the digest note.

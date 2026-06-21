@@ -51,6 +51,7 @@ describe("ChannelTriageFlowService", () => {
     projects?: Project[];
     jiraIntegrations?: Array<{ id: string; kind: string; enabled: boolean }>;
     jiraPropose?: ReturnType<typeof vi.fn>;
+    readOnly?: boolean;
   }) {
     createTask = vi.fn(async () => ({
       outcome: "dispatched",
@@ -77,7 +78,7 @@ describe("ChannelTriageFlowService", () => {
     };
     const projects = { list: async () => opts.projects ?? [] };
     const credentials = { read: async () => ({ token: "xoxb-1" }) };
-    const registry = { resolve: () => ({ send }) };
+    const registry = { resolve: () => ({ send, ...(opts.readOnly ? { readOnly: true as const } : {}) }) };
     const approvals = { register, requestApproval };
     const jiraFlow = opts.jiraPropose ? { propose: opts.jiraPropose } : undefined;
 
@@ -267,6 +268,15 @@ describe("ChannelTriageFlowService", () => {
 
     // missing item: resolves without throwing
     await expect(flow.resume("team/none")).resolves.toBeUndefined();
+  });
+
+  it("read-only integration (calendar): item is noted as handled — no approval, no task, no send", async () => {
+    const flow = makeFlow({ verdict: scope, readOnly: true });
+    const out = await flow.handle(item({ kind: "calendar" }));
+    expect(out.state).toBe("handled");
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(createTask).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("sweepOutcomes copies a finished task's outcome onto the item", async () => {

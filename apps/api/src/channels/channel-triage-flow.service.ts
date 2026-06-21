@@ -163,6 +163,24 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       await this.maybeFileJiraBug(triaged);
     }
 
+    // Read-only adapters (e.g. calendar) have no reply surface — note the item and
+    // return without creating an approval or dispatching a task.
+    if (this.registry.resolve(item.kind).readOnly) {
+      const noted: ChannelItem = { ...triaged, state: "handled" };
+      await this.store.update(noted);
+      this.log.info("read-only channel: item noted", { itemId: item.id, kind: item.kind });
+      void this.activity.record({
+        kind: "channel-noted",
+        summary: `noted ${effectiveVerdict.category} from ${item.integrationId}`,
+        refs: {
+          itemId: item.id,
+          integrationId: item.integrationId,
+          ...(matched ? { projectId: matched.id } : {}),
+        },
+      });
+      return noted;
+    }
+
     const dispatchAllowed = this.allowed(mandate, item.integrationId, "dispatch");
     const replyAllowed = this.allowed(mandate, item.integrationId, "reply");
 

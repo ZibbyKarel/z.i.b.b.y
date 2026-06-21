@@ -41,6 +41,8 @@ export interface PollResult {
  */
 export interface ChannelAdapter {
   readonly kind: Integration["kind"] | "fake";
+  /** True when the adapter has no outbound reply surface (e.g. calendar). */
+  readonly readOnly?: true;
   /** Probe credentials (Slack `auth.test`, IMAP login). Pure check, no side effects. */
   test(integration: Integration, creds: CredentialsInput): Promise<TestResult>;
   /** Fetch messages newer than `cursor`; return them + the advanced cursor. */
