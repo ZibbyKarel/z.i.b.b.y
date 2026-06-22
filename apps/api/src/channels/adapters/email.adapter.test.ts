@@ -34,6 +34,7 @@ interface FakeMsg {
 function fakeImap(messages: FakeMsg[]) {
   const flagsAdd = vi.fn(async () => true);
   const logout = vi.fn(async () => undefined);
+  const close = vi.fn(() => undefined);
   const client: ImapClientLike = {
     connect: vi.fn(async () => undefined),
     getMailboxLock: vi.fn(async () => ({ release: vi.fn() })),
@@ -43,8 +44,9 @@ function fakeImap(messages: FakeMsg[]) {
     },
     messageFlagsAdd: flagsAdd,
     logout,
+    close,
   };
-  return { client, flagsAdd, logout };
+  return { client, flagsAdd, logout, close };
 }
 
 const msg = (uid: number, over: Partial<FakeMsg> = {}): FakeMsg => ({
@@ -79,6 +81,63 @@ describe("EmailChannelAdapter", () => {
     const adapter = new EmailChannelAdapter(() => client);
     await adapter.poll(email, { password: "pw" }, "11");
     expect(flagsAdd).toHaveBeenCalledWith({ uid: "1:11" }, ["\\Seen"], { uid: true });
+  });
+
+  it("caps a poll at 50 messages and advances the cursor, so a stalled cursor can't load the whole inbox", async () => {
+    // 120 unread messages; an unbounded poll would hold all 120 full bodies at once
+    // (the multi-GB spike under a stalled cursor). The cap takes the 50 newest UIDs
+    // and advances the cursor so the next tick continues the drain.
+    const many = Array.from({ length: 120 }, (_, i) => msg(i + 1));
+    const { client } = fakeImap(many);
+    const adapter = new EmailChannelAdapter(() => client);
+    const { items, cursor } = await adapter.poll(email, { password: "pw" }, undefined);
+    expect(items).toHaveLength(50);
+    expect(cursor).toBe("50");
+  });
+
+  it("force-closes the client after a successful poll (graceful logout + close)", async () => {
+    const { client, logout, close } = fakeImap([msg(10)]);
+    const adapter = new EmailChannelAdapter(() => client);
+    await adapter.poll(email, { password: "pw" }, undefined);
+    expect(logout).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes the client even when connect() rejects — no abandoned ImapFlow (leak guard)", async () => {
+    // Gmail `* BYE [OVERQUOTA]` drops the socket post-auth; connect() rejects on
+    // every tick. The instance MUST still be torn down or each failed poll leaks a
+    // socket + parser buffers + timers, the gradual-OOM signature.
+    const close = vi.fn(() => undefined);
+    const client: ImapClientLike = {
+      connect: vi.fn(async () => {
+        throw new Error("OVERQUOTA");
+      }),
+      getMailboxLock: vi.fn(),
+      async *fetch() {},
+      messageFlagsAdd: vi.fn(),
+      logout: vi.fn(async () => undefined),
+      close,
+    };
+    const adapter = new EmailChannelAdapter(() => client);
+    await expect(adapter.poll(email, { password: "pw" }, undefined)).rejects.toThrow("OVERQUOTA");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes the client even when getMailboxLock() rejects (leak guard)", async () => {
+    const close = vi.fn(() => undefined);
+    const client: ImapClientLike = {
+      connect: vi.fn(async () => undefined),
+      getMailboxLock: vi.fn(async () => {
+        throw new Error("mailbox gone");
+      }),
+      async *fetch() {},
+      messageFlagsAdd: vi.fn(),
+      logout: vi.fn(async () => undefined),
+      close,
+    };
+    const adapter = new EmailChannelAdapter(() => client);
+    await expect(adapter.poll(email, { password: "pw" }, undefined)).rejects.toThrow("mailbox gone");
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("does not mark anything seen on the first poll (no cursor)", async () => {

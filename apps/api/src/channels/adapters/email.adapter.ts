@@ -14,6 +14,13 @@ export interface ImapClientLike {
   ): AsyncIterable<{ uid: number; envelope?: ImapEnvelope; source?: Buffer }>;
   messageFlagsAdd(range: string | object, flags: string[], opts?: object): Promise<boolean>;
   logout(): Promise<void>;
+  /**
+   * Force-destroy the socket, parser buffers and internal timers. Safe to call
+   * repeatedly and after {@link logout}. Optional so a minimal test mock can omit
+   * it — production's real `ImapFlow` always provides it, and it is the teardown
+   * that makes a failed connect/lock non-leaking.
+   */
+  close?(): void;
 }
 interface ImapEnvelope {
   from?: Array<{ address?: string; name?: string }>;
@@ -38,6 +45,19 @@ function passwordOf(creds: CredentialsInput): string | null {
 function emailItemId(messageId: string | undefined, uid: number): string {
   return messageId ? createHash("sha1").update(messageId).digest("hex") : `uid-${uid}`;
 }
+
+/**
+ * Hard cap on messages ingested per poll. Every other adapter bounds its fetch
+ * (Slack `limit: 50`, calendar `maxResults: 250` + a page cap); email's UID range
+ * `${sinceUid + 1}:*` is otherwise UNBOUNDED, and with `source: true` each message
+ * pulls its full raw body into memory. If the cursor ever stalls (e.g. a `* BYE
+ * [OVERQUOTA]` aborts a poll before the watcher advances it), an unbounded poll
+ * re-loads the entire inbox's bodies every tick — a multi-GB heap/RSS spike. The
+ * cap turns a backlog into a bounded drain: each poll takes the next `BATCH` newest
+ * UIDs and advances the cursor, so progress stays monotonic across ticks (UIDs only
+ * increase) with at most `BATCH` full bodies resident at once.
+ */
+const MAX_MESSAGES_PER_POLL = 50;
 
 /** Extract a plain-text body from the raw source (everything after the first blank line). */
 function bodyText(source: Buffer | undefined): string {
@@ -93,40 +113,58 @@ export class EmailChannelAdapter implements ChannelAdapter {
     const sinceUid = cursor ? Number(cursor) : 0;
 
     const client = this.imapFactory(integration, creds);
-    await client.connect();
-    const lock = await client.getMailboxLock(mailbox);
     const items: InboundMessage[] = [];
     let maxUid = sinceUid;
+    // connect() and getMailboxLock() are INSIDE the try so a failure there can never
+    // abandon the ImapFlow instance. An abandoned client keeps its socket, parser
+    // buffers and internal timers reachable (a live timer pins the object, so GC
+    // never reclaims it) — and Gmail's `* BYE [OVERQUOTA]` drops the socket right
+    // after auth, so connect()/lock reject on every tick. The watcher polls each
+    // enabled integration on a 30s heartbeat (× withRetry), so that per-tick
+    // abandonment is a steady heap/RSS leak that survives compaction. The outer
+    // finally force-closes on EVERY exit path; graceful logout() stays best-effort.
     try {
-      // Mark \Seen everything already persisted (uid <= cursor) — seen only AFTER
-      // persist, since the cursor advanced only after the prior tick stored them.
-      if (sinceUid > 0) {
-        await client
-          .messageFlagsAdd({ uid: `1:${sinceUid}` }, ["\\Seen"], { uid: true })
-          .catch(() => {});
+      await client.connect();
+      const lock = await client.getMailboxLock(mailbox);
+      try {
+        // Mark \Seen everything already persisted (uid <= cursor) — seen only AFTER
+        // persist, since the cursor advanced only after the prior tick stored them.
+        if (sinceUid > 0) {
+          await client
+            .messageFlagsAdd({ uid: `1:${sinceUid}` }, ["\\Seen"], { uid: true })
+            .catch(() => {});
+        }
+        const range = `${sinceUid + 1}:*`;
+        for await (const msg of client.fetch(
+          { uid: range },
+          { uid: true, envelope: true, source: true },
+        )) {
+          if (msg.uid <= sinceUid) continue;
+          const env = msg.envelope ?? {};
+          const from = env.from?.[0]?.address;
+          const subject = env.subject ?? "(no subject)";
+          items.push({
+            id: emailItemId(env.messageId, msg.uid),
+            externalRef: { messageId: env.messageId, channel: mailbox },
+            from,
+            receivedAt: (env.date ?? new Date(0)).toISOString(),
+            text: `${subject}\n\n${bodyText(msg.source)}`.trim(),
+            raw: { uid: msg.uid, subject, from },
+          });
+          if (msg.uid > maxUid) maxUid = msg.uid;
+          // Stop after BATCH so a stalled cursor can't re-load the whole inbox into
+          // memory; the advanced cursor resumes the drain on the next tick.
+          if (items.length >= MAX_MESSAGES_PER_POLL) break;
+        }
+      } finally {
+        lock.release();
       }
-      const range = `${sinceUid + 1}:*`;
-      for await (const msg of client.fetch(
-        { uid: range },
-        { uid: true, envelope: true, source: true },
-      )) {
-        if (msg.uid <= sinceUid) continue;
-        const env = msg.envelope ?? {};
-        const from = env.from?.[0]?.address;
-        const subject = env.subject ?? "(no subject)";
-        items.push({
-          id: emailItemId(env.messageId, msg.uid),
-          externalRef: { messageId: env.messageId, channel: mailbox },
-          from,
-          receivedAt: (env.date ?? new Date(0)).toISOString(),
-          text: `${subject}\n\n${bodyText(msg.source)}`.trim(),
-          raw: { uid: msg.uid, subject, from },
-        });
-        if (msg.uid > maxUid) maxUid = msg.uid;
-      }
+      // Graceful logout on the happy path; best-effort so a socket that died at the
+      // very end doesn't throw away an otherwise-complete poll (close() below still
+      // tears the instance down regardless).
+      await client.logout().catch(() => {});
     } finally {
-      lock.release();
-      await client.logout();
+      client.close?.();
     }
     return { items, cursor: maxUid > 0 ? String(maxUid) : cursor };
   }

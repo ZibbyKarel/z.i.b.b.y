@@ -1,7 +1,7 @@
-# Graph Report - /Users/zibby/Workspace/z.i.b.b.y/apps/api  (2026-06-21)
+# Graph Report - /Users/zibby/Workspace/z.i.b.b.y/apps/api  (2026-06-22)
 
 ## Corpus Check
-- 331 files · ~652,079 words
+- 331 files · ~655,444 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -1155,9 +1155,9 @@ Nodes (0):
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `resolveDataRoot()` connect `Community 6` to `Community 4`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
-- **Why does `ensureDir()` connect `Community 0` to `Community 1`, `Community 3`, `Community 5`, `Community 8`, `Community 11`, `Community 13`, `Community 19`, `Community 20`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+  _High betweenness centrality (0.080) - this node is a cross-community bridge._
+- **Why does `writeFile()` connect `Community 10` to `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 7`, `Community 9`, `Community 11`, `Community 15`, `Community 16`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Are the 45 inferred relationships involving `writeEntity()` (e.g. with `.create()` and `.createHeld()`) actually correct?**
   _`writeEntity()` has 45 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 33 inferred relationships involving `writeFile()` (e.g. with `seed()` and `writeLimits()`) actually correct?**
