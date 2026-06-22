@@ -3,3 +3,4 @@ export { useUpdateIntegrationMutation } from "./useUpdateIntegrationMutation";
 export { useDeleteIntegrationMutation } from "./useDeleteIntegrationMutation";
 export { useTestIntegrationMutation } from "./useTestIntegrationMutation";
 export { useSetCredentialsMutation } from "./useSetCredentialsMutation";
+export { useDismissChannelItemMutation } from "./useDismissChannelItemMutation";

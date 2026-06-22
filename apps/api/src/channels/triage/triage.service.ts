@@ -33,15 +33,29 @@ export class TriageService {
   }
 
   async triage(text: string, mandateSummary?: string): Promise<TriageVerdict> {
+    return (await this.triageDetailed(text, mandateSummary)).verdict;
+  }
+
+  /**
+   * Triage AND report the source. `degraded` is true when the primary router was
+   * unavailable/errored/incoherent and the deterministic keyword fallback produced the
+   * verdict. A notify-only channel uses this to fail SAFE during a router outage (e.g.
+   * OVERQUOTA): it surfaces a degraded item for the operator rather than trusting the
+   * keyword heuristic to silently drop it — a missed-but-visible item beats a lost one.
+   */
+  async triageDetailed(
+    text: string,
+    mandateSummary?: string,
+  ): Promise<{ verdict: TriageVerdict; degraded: boolean }> {
     try {
       const verdict = await this.router.triage({ text, mandate: mandateSummary });
-      if (verdict) return this.applyConfidenceFloor(verdict);
+      if (verdict) return { verdict: this.applyConfidenceFloor(verdict), degraded: false };
     } catch (err) {
       this.log.warn("triage router failed, using keyword fallback", {
         error: (err as Error).message,
       });
     }
-    return this.fallback.score(text);
+    return { verdict: this.fallback.score(text), degraded: true };
   }
 
   /** A low-confidence verdict is escalated one tier (never lowered). */

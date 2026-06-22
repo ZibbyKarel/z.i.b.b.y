@@ -110,6 +110,13 @@ export class EmailChannelAdapter implements ChannelAdapter {
     if (!passwordOf(creds)) throw new Error("no email password configured");
     if (integration.config.kind !== "email") throw new Error("not an email integration");
     const mailbox = integration.config.mailbox ?? "INBOX";
+    // First enable (no persisted cursor): seed the high-water mark to the newest
+    // existing UID and ingest NOTHING, so we only ever process mail that arrives AFTER
+    // connecting — "initial sync = now". Without this, an empty cursor means range
+    // `1:*` and the watcher drains the entire historical mailbox (capped at BATCH/tick)
+    // through triage — exactly the runaway this guard prevents. A persisted cursor of
+    // "0" (e.g. a mailbox that was empty at first enable) is NOT a first run.
+    const firstRun = cursor === undefined;
     const sinceUid = cursor ? Number(cursor) : 0;
 
     const client = this.imapFactory(integration, creds);
@@ -127,6 +134,17 @@ export class EmailChannelAdapter implements ChannelAdapter {
       await client.connect();
       const lock = await client.getMailboxLock(mailbox);
       try {
+        if (firstRun) {
+          // Seed-only pass: find the newest existing UID (`*` is the last message) and
+          // make it the cursor without ingesting any body. Nothing is fetched with
+          // `source: true`, so this is O(1) memory even on a huge mailbox. Returning here
+          // exits through the inner `finally` (releases the lock) and the outer `finally`
+          // (closes the client) — no double-release, no leaked socket.
+          for await (const msg of client.fetch("*", { uid: true })) {
+            if (msg.uid > maxUid) maxUid = msg.uid;
+          }
+          return { items, cursor: String(maxUid) };
+        }
         // Mark \Seen everything already persisted (uid <= cursor) — seen only AFTER
         // persist, since the cursor advanced only after the prior tick stored them.
         if (sinceUid > 0) {

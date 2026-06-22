@@ -9,7 +9,7 @@ import { useAgentsQuery } from "../agents/queries";
 import { useIntegrationsQuery } from "../integrations/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { useSkillsQuery } from "../skills/queries";
-import { InboxPanel } from "../integrations/components/InboxPanel";
+import { NeedsAttentionPanel } from "../integrations/components/NeedsAttentionPanel";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { useActivityQuery } from "./queries";
@@ -43,8 +43,9 @@ export function Screen() {
 
         <BriefingCard />
 
-        {/* Global inbox — recent channel items across every project, with project tags */}
-        <InboxPanel />
+        {/* "Needs your attention" — notify-only items ZIBBY surfaced (inbound mail that
+            wants a reply or a decision) as summary cards linking to the original. */}
+        <NeedsAttentionPanel />
 
         {activity.length > 0 && (
           <HudPanel title={t("overview.activity")}>

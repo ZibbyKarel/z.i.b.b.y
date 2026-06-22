@@ -39,7 +39,14 @@ function fakeImap(messages: FakeMsg[]) {
     connect: vi.fn(async () => undefined),
     getMailboxLock: vi.fn(async () => ({ release: vi.fn() })),
 
-    async *fetch() {
+    // Honour the IMAP `*` sequence (newest message only) so the first-run seed test
+    // actually exercises the range logic; a UID range object yields the full set.
+    async *fetch(range: string | object) {
+      if (range === "*") {
+        const last = messages[messages.length - 1];
+        if (last) yield last;
+        return;
+      }
       for (const m of messages) yield m;
     },
     messageFlagsAdd: flagsAdd,
@@ -62,10 +69,21 @@ const msg = (uid: number, over: Partial<FakeMsg> = {}): FakeMsg => ({
 });
 
 describe("EmailChannelAdapter", () => {
-  it("polls UID-newer-than-cursor messages, normalizes, and advances the cursor", async () => {
+  it("seeds the cursor to the newest UID and ingests NOTHING on the first poll (no cursor)", async () => {
+    // First enable must NOT drain history — it only records the high-water mark so that
+    // subsequent polls see new mail only. With messages up to UID 11, the cursor lands
+    // at "11" and zero items are returned.
     const { client } = fakeImap([msg(10), msg(11)]);
     const adapter = new EmailChannelAdapter(() => client);
     const { items, cursor } = await adapter.poll(email, { password: "pw" }, undefined);
+    expect(items).toHaveLength(0);
+    expect(cursor).toBe("11");
+  });
+
+  it("polls UID-newer-than-cursor messages, normalizes, and advances the cursor", async () => {
+    const { client } = fakeImap([msg(10), msg(11)]);
+    const adapter = new EmailChannelAdapter(() => client);
+    const { items, cursor } = await adapter.poll(email, { password: "pw" }, "9");
 
     expect(items).toHaveLength(2);
     expect(items[0]!.from).toBe("alice@example.com");
@@ -90,7 +108,8 @@ describe("EmailChannelAdapter", () => {
     const many = Array.from({ length: 120 }, (_, i) => msg(i + 1));
     const { client } = fakeImap(many);
     const adapter = new EmailChannelAdapter(() => client);
-    const { items, cursor } = await adapter.poll(email, { password: "pw" }, undefined);
+    // A real (non-first-run) cursor of "0" drains from the start, capped at the batch.
+    const { items, cursor } = await adapter.poll(email, { password: "pw" }, "0");
     expect(items).toHaveLength(50);
     expect(cursor).toBe("50");
   });
@@ -98,7 +117,7 @@ describe("EmailChannelAdapter", () => {
   it("force-closes the client after a successful poll (graceful logout + close)", async () => {
     const { client, logout, close } = fakeImap([msg(10)]);
     const adapter = new EmailChannelAdapter(() => client);
-    await adapter.poll(email, { password: "pw" }, undefined);
+    await adapter.poll(email, { password: "pw" }, "9");
     expect(logout).toHaveBeenCalledOnce();
     expect(close).toHaveBeenCalledOnce();
   });

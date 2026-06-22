@@ -52,6 +52,7 @@ describe("ChannelTriageFlowService", () => {
     jiraIntegrations?: Array<{ id: string; kind: string; enabled: boolean }>;
     jiraPropose?: ReturnType<typeof vi.fn>;
     readOnly?: boolean;
+    degraded?: boolean;
   }) {
     createTask = vi.fn(async () => ({
       outcome: "dispatched",
@@ -63,7 +64,10 @@ describe("ChannelTriageFlowService", () => {
     send = vi.fn(async () => undefined);
     const register = vi.fn();
 
-    const triage = { triage: async () => opts.verdict };
+    const triage = {
+      triage: async () => opts.verdict,
+      triageDetailed: async () => ({ verdict: opts.verdict, degraded: opts.degraded ?? false }),
+    };
     const mandate = { read: async () => opts.mandate ?? MANDATE_ALL };
     const tasks = { createTask };
     const scheduledTasks = { get: async () => ({ outcome: opts.taskOutcome }) };
@@ -277,6 +281,44 @@ describe("ChannelTriageFlowService", () => {
     expect(requestApproval).not.toHaveBeenCalled();
     expect(createTask).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
+  });
+
+  // ---- Notify-only (email): surface relevant mail, never act ------------------
+
+  const bulk: TriageVerdict = {
+    actionable: false,
+    tier: 3,
+    category: "other",
+    summary: "Alza newsletter — weekend deals",
+    confidence: 0.9,
+    reason: "bulk/transactional mail",
+  };
+
+  it("email notify-only: an actionable item is surfaced (triaged) — no task, no reply, no approval", async () => {
+    const flow = makeFlow({ verdict: question });
+    const out = await flow.handle(item({ kind: "email" }));
+    expect(out.state).toBe("triaged");
+    expect(out.taskId).toBeUndefined();
+    expect(out.approvalId).toBeUndefined();
+    expect(createTask).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("email notify-only: bulk/transactional mail is suppressed silently (ignored)", async () => {
+    const flow = makeFlow({ verdict: bulk });
+    const out = await flow.handle(item({ kind: "email" }));
+    expect(out.state).toBe("ignored");
+    expect(createTask).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
+  it("email notify-only: a degraded verdict (router down) is surfaced anyway — never silently lost", async () => {
+    // Even bulk-looking, because under a router outage we can't trust the heuristic to
+    // drop it. Fail toward visibility.
+    const flow = makeFlow({ verdict: bulk, degraded: true });
+    const out = await flow.handle(item({ kind: "email" }));
+    expect(out.state).toBe("triaged");
   });
 
   it("sweepOutcomes copies a finished task's outcome onto the item", async () => {

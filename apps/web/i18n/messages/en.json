@@ -468,6 +468,11 @@
       "question": "question",
       "request": "request",
       "other": "other"
+    },
+    "attention": {
+      "title": "Needs your attention",
+      "openEmail": "Open in Gmail ↗",
+      "dismiss": "Dismiss"
     }
   },
   "pipelines": {

@@ -32,6 +32,18 @@ export class ChannelsController {
           : { status: 404 as const, body: { message: `Channel item "${id}" not found` } };
       },
 
+      // Operator acknowledged a surfaced item — move it to `ignored` so it drops off the
+      // overview. The only client-driven state change, and a benign one: it can't forge a
+      // verdict or resurrect an item, only retire a surfaced one.
+      dismissChannelItem: async ({ params: { id } }) => {
+        const item = await this.store.findById(id);
+        if (!item) {
+          return { status: 404 as const, body: { message: `Channel item "${id}" not found` } };
+        }
+        const dismissed = await this.store.update({ ...item, state: "ignored" });
+        return { status: 200 as const, body: dismissed };
+      },
+
       createJiraIssue: async ({ params: { id }, body }) => {
         try {
           const approval = await this.jira.propose({ integrationId: id, ...body });

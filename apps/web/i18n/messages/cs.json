@@ -468,6 +468,11 @@
       "question": "dotaz",
       "request": "požadavek",
       "other": "jiné"
+    },
+    "attention": {
+      "title": "Vyžaduje vaši pozornost",
+      "openEmail": "Otevřít v Gmailu ↗",
+      "dismiss": "Vyřídit"
     }
   },
   "pipelines": {

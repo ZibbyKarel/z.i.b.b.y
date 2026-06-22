@@ -7,11 +7,12 @@ import { ChannelItemSchema, ChannelItemStateSchema } from "./channel.schema";
 const c = initContract();
 
 /**
- * Channels (Phase 5): READ-ONLY access to ingested inbound items. There is
- * deliberately NO write endpoint — items are created and mutated only by the
- * watcher / triage / approval paths inside the API, never by a client (Law 4: a
- * client can't forge a `triaged` state or inject an item). The UI inbox and the
- * e2e suite read through these two routes.
+ * Channels (Phase 5): mostly READ-ONLY access to ingested inbound items. A client can
+ * never CREATE an item or forge its triage verdict (Law 4) — those are stamped only by
+ * the watcher / triage paths inside the API. The one client write is `dismiss`: an
+ * operator acknowledging a surfaced notify-only item, exactly like approving/rejecting
+ * an approval. It only moves a `triaged` item to `ignored`; it cannot inject content or
+ * raise privilege.
  */
 export const channelsContract = c.router(
   {
@@ -31,6 +32,16 @@ export const channelsContract = c.router(
       pathParams: z.object({ id: z.string().min(1) }),
       responses: { 200: ChannelItemSchema, 404: ErrorSchema },
       summary: "Get one channel item by id",
+    },
+    // Operator dismiss of a surfaced notify-only item: moves `triaged` → `ignored` so it
+    // leaves the overview "needs your attention" list. Idempotent-ish; 404 if unknown.
+    dismissChannelItem: {
+      method: "POST",
+      path: "/channels/items/:id/dismiss",
+      pathParams: z.object({ id: z.string().min(1) }),
+      body: z.object({}).optional(),
+      responses: { 200: ChannelItemSchema, 404: ErrorSchema },
+      summary: "Dismiss a surfaced channel item (operator acknowledged it)",
     },
     // The finished-day "creates a Jira task": parks an outbound Jira-issue create
     // behind a Tier-3 `jira-issue` approval (never creates directly). Returns the

@@ -36,6 +36,14 @@ const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, d
 const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly.";
 
 /**
+ * Channel kinds handled notify-only: ZIBBY never dispatches a run or auto-replies for
+ * them, it only surfaces a summary for the operator. Email is the first (decision: a
+ * mailbox is a firehose — autonomous action on inbound mail burns budget and the gate
+ * belongs to the human). Slack/Jira/GitHub keep their act-by-tier behaviour.
+ */
+const NOTIFY_ONLY_KINDS: ReadonlySet<ChannelItem["kind"]> = new Set(["email"]);
+
+/**
  * The tier executor (the heart of 5.3) AND the kind-"channel" {@link ResumableRunner}.
  * For each `new` item it triages, records the verdict, and acts by tier within the
  * mandate (decision 12):
@@ -114,7 +122,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
   /** Triage a `new` item and act by tier; returns the transitioned item. */
   async handle(item: ChannelItem): Promise<ChannelItem> {
     const mandate = await this.mandate.read();
-    const verdict = await this.triage.triage(
+    const { verdict, degraded } = await this.triage.triageDetailed(
       item.text,
       this.mandateSummary(mandate, item.integrationId),
     );
@@ -156,6 +164,14 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       },
     });
 
+    // Notify-only channels (email): NEVER dispatch a run, file a Jira issue, or auto-
+    // reply. ZIBBY only decides whether the item needs the operator and, if so, surfaces
+    // a one-line summary they can act on — inbound mail is data to be triaged for
+    // attention, not a command to execute (the autonomy contract: surface and wait).
+    if (this.isNotifyOnly(item.kind)) {
+      return this.handleNotifyOnly(triaged, effectiveVerdict, degraded);
+    }
+
     // Finished-day "a bug report arrives — ZIBBY ... creates a Jira task": a bug
     // verdict also files a GATED Jira issue (propose only parks an approval — never
     // creates autonomously). Best-effort: a failure here never blocks triage.
@@ -192,6 +208,62 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     }
     // Tier 3, or a non-actionable/edge case → surface for the operator.
     return this.parkForApproval(triaged, effectiveVerdict);
+  }
+
+  // ---- Notify-only channels (email): surface, never act -----------------------
+
+  /** True for kinds ZIBBY only notifies on (no dispatch, no auto-reply). */
+  private isNotifyOnly(kind: ChannelItem["kind"]): boolean {
+    return NOTIFY_ONLY_KINDS.has(kind);
+  }
+
+  /**
+   * Does this item need the operator personally? A reply they must write or work they
+   * must decide on — i.e. an actionable, non-"other" verdict. Bulk/transactional mail
+   * (newsletters, receipts, shipping/login notifications) is `actionable:false` /
+   * "other" and stays silent. Confidence is intentionally NOT gated here: surfacing is
+   * cheap and safe (it commits the operator to nothing), so we err toward visibility.
+   */
+  private isOperatorRelevant(verdict: TriageVerdict): boolean {
+    return verdict.actionable && verdict.category !== "other";
+  }
+
+  /**
+   * Triage outcome for a notify-only item. Relevant → surface (state `triaged`, no
+   * approval, carrying the one-line summary for the overview). Not relevant → suppress
+   * silently (`ignored`, no activity line — quiet competence). When triage is `degraded`
+   * (the LLM router was down and only the keyword heuristic ran — e.g. during OVERQUOTA),
+   * we surface REGARDLESS: a visible maybe-irrelevant item beats a silently-lost one.
+   */
+  private async handleNotifyOnly(
+    item: ChannelItem,
+    verdict: TriageVerdict,
+    degraded: boolean,
+  ): Promise<ChannelItem> {
+    if (!degraded && !this.isOperatorRelevant(verdict)) {
+      const ignored: ChannelItem = { ...item, state: "ignored" };
+      await this.store.update(ignored);
+      this.log.info("notify-only item suppressed (not operator-relevant)", {
+        itemId: item.id,
+        category: verdict.category,
+      });
+      return ignored;
+    }
+    const surfaced: ChannelItem = { ...item, state: "triaged" };
+    await this.store.update(surfaced);
+    this.log.info("notify-only item surfaced for operator", { itemId: item.id, degraded });
+    void this.activity.record({
+      kind: "channel-needs-attention",
+      // Operator-owned fields only (kind/integration/category) — the untrusted summary
+      // rides on the item for the UI, never into this record's text (Law 4).
+      summary: `${item.kind} item from ${item.integrationId} needs your attention (${verdict.category})`,
+      refs: {
+        itemId: item.id,
+        integrationId: item.integrationId,
+        ...(item.projectId ? { projectId: item.projectId } : {}),
+      },
+    });
+    return surfaced;
   }
 
   // ---- Project autonomy policy enforcement (M2) --------------------------------

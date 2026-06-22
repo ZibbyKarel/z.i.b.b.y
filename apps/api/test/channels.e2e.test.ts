@@ -215,11 +215,11 @@ describe("Channels triage throughline (e2e)", () => {
     });
   });
 
-  // The fake adapter is kind-agnostic, so re-running the ingest+triage+reply flow
-  // against an EMAIL integration proves the abstraction — and exercises the one
-  // email-specific rule: a reply is also a `send_email`, so it's structurally
-  // approval-gated (Law 3) even with reply mandate on.
-  it("email Tier 2 reply is structurally approval-gated (send_email floor), then approve → sent", async () => {
+  // Email is notify-only: ZIBBY NEVER dispatches a run or auto-replies for inbound mail.
+  // An actionable email is surfaced (state `triaged`, no approval, no reply) for the
+  // operator, who dismisses it once handled. This is the gate applied to a firehose —
+  // the operator acts, ZIBBY only flags what needs them.
+  it("email is notify-only: actionable mail is surfaced (no task, no reply, no approval), then dismissed", async () => {
     await request(app.getHttpServer())
       .post("/api/integrations")
       .send({
@@ -241,34 +241,37 @@ describe("Channels triage throughline (e2e)", () => {
       .put("/api/integrations/support/credentials")
       .send({ password: "pw" })
       .expect(200);
-    // mandate.reply is already true from the slack Tier-2 test above.
+    // mandate.reply is already true from the slack Tier-2 test above — yet email STILL
+    // never replies, because notify-only is structural, not a mandate setting.
 
+    const sentBefore = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length;
     await seed(fakeDir, "support", "001.json", "Can you share the latest status please?");
     await app.get(ChannelWatcherService).tick();
 
     const item = await findItem((i) => i.text.includes("share the latest status please"));
-    expect(item.triage.tier).toBe(2);
-    // NOT sent despite reply mandate on — the send_email ask-floor parks it.
+    // Surfaced for the operator — never dispatched, never replied, never parked.
     expect(item.state).toBe("triaged");
     expect(item.reply).toBeFalsy();
+    expect(item.taskId).toBeFalsy();
+    expect(item.approvalId).toBeFalsy();
 
     const pending = await request(app.getHttpServer())
       .get("/api/approvals?status=pending")
       .expect(200);
-    const approval = pending.body.find(
+    const channelApproval = pending.body.find(
       (a: { kind: string; runId: string }) =>
         a.kind === "channel" && a.runId === `support/${item.id}`,
     );
-    expect(approval).toBeTruthy();
-
-    const sentBefore = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length;
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200);
-    await until(async () => {
-      const found = (await items()).body.find((i: { id: string }) => i.id === item.id);
-      return found?.state === "handled" ? found : null;
-    });
+    expect(channelApproval).toBeFalsy();
+    // No outbound mail was sent.
     const sentAfter = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length;
-    expect(sentAfter).toBe(sentBefore + 1);
+    expect(sentAfter).toBe(sentBefore);
+
+    // Operator dismisses it → leaves the "needs attention" list (state `ignored`).
+    const dismissed = await request(app.getHttpServer())
+      .post(`/api/channels/items/${item.id}/dismiss`)
+      .expect(200);
+    expect(dismissed.body.state).toBe("ignored");
   });
 
   it("a restart over the same data dir does not re-ingest (dedup + cursor)", async () => {

@@ -44,6 +44,9 @@ export const ActivityKindSchema = z.enum([
   // Read-only integrations (calendar) produce inbound items but have no reply surface;
   // the item is noted as handled silently rather than parked in the approval queue.
   "channel-noted",
+  // Notify-only channels (email): an inbound item was surfaced for the operator's
+  // attention — ZIBBY flagged it (reply/decision needed) but took no action itself.
+  "channel-needs-attention",
   "briefing-generated",
   // M6 (research / intelligence, Tier 1 — silent + recorded). A digest pass ran and
   // mirrored its result to the vault; the morning briefing reads the digest note.

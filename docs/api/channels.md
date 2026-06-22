@@ -38,9 +38,14 @@ Mapuje `integration.type` → konkrétní adapter implementaci.
 ### Email adapter (IMAP)
 
 - Knihovna: `imapflow`
-- Poll: IMAP FETCH nových zpráv od cursor (UID)
+- Poll: IMAP FETCH zpráv s UID > cursor (`${cursor+1}:*`), strop **50 zpráv / poll**
+  (`MAX_MESSAGES_PER_POLL`) — backlog se odčerpává po dávkách, cursor roste monotónně.
 - Cursor = UID posledního zpracovaného emailu
-- Vrátí `ChannelItem[]` s `from`, `subject`, `text`, `html` (stripped)
+- **Initial sync = „od teď"**: při prvním enable (žádný cursor) adapter NEodčerpá celou
+  historii — jen najde nejvyšší existující UID (`*`) a nastaví na něj cursor, **0 položek**.
+  Zpracovávají se tedy jen e-maily doručené PO připojení integrace. (Bez tohoto by prázdný
+  cursor znamenal rozsah `1:*` = celá schránka přes triage — runaway.)
+- Vrátí `ChannelItem[]` s `from`, `subject`, `text` (stripped)
 
 ### Slack adapter
 
@@ -111,6 +116,28 @@ Implementuje `ChannelTriageFlow` interface:
 3. Dispatch příslušné akce
 4. Zapiš do activity logu (`channel-triage`)
 
+### Email = notify-only (žádná autonomní akce)
+
+Inbound e-mail je **notify-only** (`NOTIFY_ONLY_KINDS`): ZIBBY pro něj NIKDY nedispatchuje
+běh, nezakládá Jira issue ani neodpovídá. Místo toho jen rozhodne, zda položka potřebuje
+operátora (odpověď nebo rozhodnutí), a pokud ano, **vyplave** jako jednořádkové summary na
+přehledu („Vyžaduje vaši pozornost") s odkazem na originál v Gmailu. Schránka je firehose —
+gate patří člověku (autonomy contract: surface and wait).
+
+- **Relevantní** (`actionable` && kategorie ≠ `other`) → stav `triaged`, bez approvalu,
+  s `triage.summary` pro kartu na přehledu.
+- **Bulk/transakční** (newslettery, účtenky, doručenky, login alerts → triager je značí
+  `actionable:false` / `other`) → stav `ignored`, ticho.
+- **Degraded triage** (LLM router spadl, např. OVERQUOTA → jen keyword fallback) → položka
+  vyplave VŽDY (fail-safe: viditelná „možná nepodstatná" je lepší než tiše ztracená).
+
+Summary + relevance dělá Haiku triager (`claude-cli-triager.ts`); `TriageService.triageDetailed`
+vrací i příznak `degraded`. Slack/Jira/GitHub si ponechávají chování act-by-tier.
+
+**Dismiss:** operátor vyřídí vyplavené summary přes
+`POST /api/channels/items/:id/dismiss` → `triaged` → `ignored` (jediný klientský zápis;
+nemůže zfalšovat verdikt, jen retirovat vyplavenou položku).
+
 **Atribuce k projektu:** položka se přiřadí k projektu podle uloženého
 `integration.projectId` (autoritativní vlastník); textová/jménová heuristika
 `matchProject` je už jen fallback pro integrace bez uloženého projektu. `projectId`
@@ -179,3 +206,4 @@ Tvar secretu podle kindu (`credentialMatchesKind`): email → `{password}`, osta
 | `channel-reply`    | Draft odpovědi připraven           |
 | `channel-approval` | Schválení odpovědi (Tier 3)        |
 | `channel-ignored`  | Položka záměrně přeskočena         |
+| `channel-needs-attention` | Notify-only položka vyplavena operátorovi (email) |

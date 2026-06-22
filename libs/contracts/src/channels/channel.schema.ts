@@ -20,6 +20,12 @@ export const TriageVerdictSchema = z
     suggestedTaskText: z.string().optional(),
     /** Draft reply (Tier 2/3); sent or parked as an approval, never auto-trusted. */
     suggestedReply: z.string().optional(),
+    /**
+     * One-line, operator-facing summary of the item (notify-only channels surface this
+     * on the overview instead of dispatching). Triager-produced over untrusted text, so
+     * it is length-capped and display-only — never executed or fed back as instructions.
+     */
+    summary: z.string().max(280).optional(),
     confidence: z.number().min(0).max(1),
     reason: z.string(),
   })
