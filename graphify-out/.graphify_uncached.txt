@@ -1,5 +1,0 @@
-THIRD-PARTY-NOTICES.md
-README.md
-CLAUDE.md
-graphify-out/graph.html
-graphify-out/GRAPH_REPORT.md

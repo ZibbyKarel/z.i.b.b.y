@@ -5,6 +5,10 @@ node_modules/
 dist/
 .next/
 out/
+*.tsbuildinfo
+
+# graphify knowledge-graph output (regenerated via `graphify update .`, not versioned)
+graphify-out/
 
 # Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
 apps/api/data-test/
@@ -19,6 +23,7 @@ apps/api/data/budget-ledger
 apps/api/data/research-digest.json
 apps/api/data/mcp-credentials
 apps/api/data/project-secrets
+apps/api/data/_purged
 
 !apps/api/data/agents
 !apps/api/data/automations
