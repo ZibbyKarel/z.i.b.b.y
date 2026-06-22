@@ -9,6 +9,7 @@ import {
   Dialog,
   Divider,
   Pressable,
+  SelectField,
   Stack,
   Tag,
   TextInputField,
@@ -40,6 +41,41 @@ import {
   useUpdateProjectMutation,
   useUpdateProjectProfileMutation,
 } from "./mutations";
+
+// ---------------------------------------------------------------------------
+// Autonomy action vocabulary
+// ---------------------------------------------------------------------------
+
+/**
+ * Curated action-verb vocabulary offered in the autonomy policy multi-selects.
+ * Mirrors the gate's ask-floor actions plus the routine verbs ZIBBY can handle on
+ * its own. The schema stores free-form strings, so a project's already-saved custom
+ * verbs are unioned in at render time (see {@link actionOptions}) — never dropped.
+ */
+const AUTONOMY_ACTIONS = [
+  "reply",
+  "create_task",
+  "summarize",
+  "investigate",
+  "draft",
+  "run_pipeline",
+  "post_status",
+  "send_email",
+  "pr.open",
+  "git.push",
+  "git.force_push",
+  "pr.merge",
+  "delete",
+  "purchase",
+  "payment",
+  "jira.create_issue",
+] as const;
+
+/** Curated verbs first, then any custom values already on the policy, de-duped. */
+function actionOptions(current: string[]): { value: string; label: string }[] {
+  const values = Array.from(new Set<string>([...AUTONOMY_ACTIONS, ...current]));
+  return values.map((value) => ({ value, label: value }));
+}
 
 // ---------------------------------------------------------------------------
 // Person row editor
@@ -358,20 +394,19 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                   <Typography size="xs" type="note" variant="tertiary">
                     {t("autonomy.canDoAloneHint")}
                   </Typography>
-                  <TextInputField
-                    data-testid="can-do-alone"
+                  <SelectField
+                    multi
+                    showSelectAll
+                    deselectAllLabel={t("autonomy.deselectAll")}
                     label={t("autonomy.canDoAlone")}
-                    onChange={(e) =>
-                      setAutonomy({
-                        ...effectiveAutonomy,
-                        can_do_alone: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
+                    onValueChange={(can_do_alone) =>
+                      setAutonomy({ ...effectiveAutonomy, can_do_alone })
                     }
-                    placeholder="reply, create_task, summarize"
-                    value={(effectiveAutonomy.can_do_alone ?? []).join(", ")}
+                    options={actionOptions(effectiveAutonomy.can_do_alone ?? [])}
+                    placeholder={t("autonomy.actionsPlaceholder")}
+                    removeLabel={t("autonomy.removeAction")}
+                    selectAllLabel={t("autonomy.selectAll")}
+                    value={effectiveAutonomy.can_do_alone ?? []}
                   />
                 </Stack>
 
@@ -379,20 +414,19 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                   <Typography size="xs" type="note" variant="tertiary">
                     {t("autonomy.alwaysAskHint")}
                   </Typography>
-                  <TextInputField
-                    data-testid="always-ask"
+                  <SelectField
+                    multi
+                    showSelectAll
+                    deselectAllLabel={t("autonomy.deselectAll")}
                     label={t("autonomy.alwaysAsk")}
-                    onChange={(e) =>
-                      setAutonomy({
-                        ...effectiveAutonomy,
-                        always_ask: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
+                    onValueChange={(always_ask) =>
+                      setAutonomy({ ...effectiveAutonomy, always_ask })
                     }
-                    placeholder="send_email, merge, delete"
-                    value={(effectiveAutonomy.always_ask ?? []).join(", ")}
+                    options={actionOptions(effectiveAutonomy.always_ask ?? [])}
+                    placeholder={t("autonomy.actionsPlaceholder")}
+                    removeLabel={t("autonomy.removeAction")}
+                    selectAllLabel={t("autonomy.selectAll")}
+                    value={effectiveAutonomy.always_ask ?? []}
                   />
                 </Stack>
               </Stack>

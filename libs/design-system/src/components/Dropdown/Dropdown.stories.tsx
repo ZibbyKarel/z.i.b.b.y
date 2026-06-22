@@ -53,6 +53,59 @@ export const FieldVariant: Story = {
   },
 };
 
+export const Multi: Story = {
+  render: () => {
+    const [values, setValues] = useState<string[]>(["reply"]);
+    return (
+      <div className="w-96 p-4">
+        <Dropdown
+          multi
+          aria-label="Akce"
+          onChange={setValues}
+          options={[
+            { value: "reply", label: "reply" },
+            { value: "create_task", label: "create_task" },
+            { value: "summarize", label: "summarize" },
+            { value: "send_email", label: "send_email" },
+            { value: "merge", label: "merge" },
+          ]}
+          placeholder="Vyber akce…"
+          value={values}
+          variant="field"
+        />
+      </div>
+    );
+  },
+};
+
+export const MultiSelectAll: Story = {
+  render: () => {
+    const [values, setValues] = useState<string[]>(["reply"]);
+    return (
+      <div className="w-96 p-4">
+        <Dropdown
+          multi
+          showSelectAll
+          aria-label="Akce"
+          deselectAllLabel="Zrušit všechny položky"
+          onChange={setValues}
+          options={[
+            { value: "reply", label: "reply" },
+            { value: "create_task", label: "create_task" },
+            { value: "summarize", label: "summarize" },
+            { value: "send_email", label: "send_email" },
+            { value: "merge", label: "merge" },
+          ]}
+          placeholder="Vyber akce…"
+          selectAllLabel="Vybrat všechny položky"
+          value={values}
+          variant="field"
+        />
+      </div>
+    );
+  },
+};
+
 export const WithoutCodes: Story = {
   render: () => {
     const [value, setValue] = useState("a");

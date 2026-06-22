@@ -1,7 +1,8 @@
-import { Controller, Headers, type MessageEvent, Param, Sse } from "@nestjs/common";
+import { Controller, Headers, type MessageEvent, Param, Req, Sse } from "@nestjs/common";
+import type { Request } from "express";
 import type { Observable } from "rxjs";
 import { AgentRunnerService, RunNotFoundError } from "../agents/agent-runner.service";
-import { streamRunLog } from "../shared/sse/sse";
+import { type WriteGate, streamRunLog } from "../shared/sse/sse";
 
 /**
  * SSE tail for a single task run's log, the push replacement for the FE's 1s offset
@@ -20,6 +21,7 @@ export class TaskRunLogsController {
 
   @Sse("api/tasks/runs/:runId/logs/stream")
   streamLogs(
+    @Req() req: Request,
     @Param("runId") runId: string,
     @Headers("last-event-id") lastEventId?: string,
   ): Observable<MessageEvent> {
@@ -35,6 +37,26 @@ export class TaskRunLogsController {
           throw error;
         }),
       (listener) => this.agentRunner.onLogAppend(runId, listener),
+      writeGateFor(req),
     );
   }
+}
+
+/**
+ * Bridge the Express response behind an `@Sse()` handler to the pump's backpressure
+ * gate. `res.writableNeedDrain` flips true the moment a `res.write()` (NestJS's, on
+ * our behalf) leaves the socket buffer over its high-water mark; `drain` fires when
+ * it empties. `req.res` is always present for an in-flight request — the `undefined`
+ * guard is only for the (test) case of a bare request object with no socket.
+ */
+function writeGateFor(req: Request): WriteGate | undefined {
+  const res = req.res;
+  if (!res) return undefined;
+  return {
+    needsDrain: () => res.writableNeedDrain,
+    onceDrain: (cb) => {
+      res.once("drain", cb);
+      return () => res.off("drain", cb);
+    },
+  };
 }

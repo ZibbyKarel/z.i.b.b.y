@@ -27,6 +27,7 @@ const OPTIONS = [
 export const Overview: Story = {
   render: () => {
     const [model, setModel] = useState("opus");
+    const [models, setModels] = useState<string[]>(["opus", "haiku"]);
     return (
       <div className="flex flex-col gap-6">
         <SelectField label="Model" onValueChange={setModel} options={OPTIONS} value={model} />
@@ -36,6 +37,15 @@ export const Overview: Story = {
           onValueChange={() => {}}
           options={OPTIONS}
           value="opus"
+        />
+        <SelectField
+          multi
+          hint="Vyber jeden či více"
+          label="Modely (multi)"
+          onValueChange={setModels}
+          options={OPTIONS}
+          placeholder="Vyber modely…"
+          value={models}
         />
       </div>
     );

@@ -1194,9 +1194,13 @@
         "draftOnly": "Jen návrh",
         "vipEscalation": "Eskalovat zprávy od VIP (vynutit Tier 3)",
         "canDoAlone": "Může sám",
-        "canDoAloneHint": "Akce, které ZIBBY smí provést bez ptaní — čárkami oddělené.",
+        "canDoAloneHint": "Akce, které ZIBBY smí provést bez ptaní.",
         "alwaysAsk": "Vždy ptát se",
-        "alwaysAskHint": "Akce, které vždy vyžadují schválení v tomto projektu — čárkami oddělené."
+        "alwaysAskHint": "Akce, které vždy vyžadují schválení v tomto projektu.",
+        "actionsPlaceholder": "Vyber akce…",
+        "removeAction": "Odebrat akci",
+        "selectAll": "Vybrat všechny položky",
+        "deselectAll": "Zrušit všechny položky"
       },
       "rhythm": {
         "title": "Denní rytmus",

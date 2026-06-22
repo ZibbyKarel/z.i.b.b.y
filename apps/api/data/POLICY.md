@@ -6,7 +6,7 @@ policy:
     match:
       - type: action
         action: purchase
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-payment
@@ -15,7 +15,7 @@ policy:
     match:
       - type: action
         action: payment
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-git.force_push
@@ -24,7 +24,7 @@ policy:
     match:
       - type: action
         action: git.force_push
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-git.push
@@ -33,7 +33,7 @@ policy:
     match:
       - type: action
         action: git.push
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-pr.merge
@@ -49,7 +49,7 @@ policy:
     match:
       - type: action
         action: send_email
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-jira.create_issue
@@ -58,7 +58,7 @@ policy:
     match:
       - type: action
         action: jira.create_issue
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-spend-past-cap
@@ -67,7 +67,7 @@ policy:
     match:
       - type: action
         action: spend-past-cap
-    decision: ask
+    decision: allow
     resolve:
       type: human
   - id: floor-channel-reply

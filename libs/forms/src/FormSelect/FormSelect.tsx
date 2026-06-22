@@ -1,10 +1,10 @@
 import { type FieldValues, type Path, useController } from "react-hook-form";
-import { SelectField, type SelectFieldProps } from "@zibby/design-system";
+import { SelectField, type SelectFieldSingleProps } from "@zibby/design-system";
 
 export interface FormSelectProps<
   T extends string = string,
   TFieldValues extends FieldValues = FieldValues,
-> extends Omit<SelectFieldProps<T>, "value" | "onValueChange"> {
+> extends Omit<SelectFieldSingleProps<T>, "value" | "onValueChange" | "multi"> {
   name: Path<TFieldValues>;
   defaultValue?: T;
 }

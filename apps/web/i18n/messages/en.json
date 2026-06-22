@@ -1194,9 +1194,13 @@
         "draftOnly": "Draft only",
         "vipEscalation": "Escalate messages from VIPs (force Tier 3)",
         "canDoAlone": "Can do alone",
-        "canDoAloneHint": "Action verbs ZIBBY may perform without asking, comma-separated.",
+        "canDoAloneHint": "Action verbs ZIBBY may perform without asking.",
         "alwaysAsk": "Always ask",
-        "alwaysAskHint": "Action verbs that always require approval in this project, comma-separated."
+        "alwaysAskHint": "Action verbs that always require approval in this project.",
+        "actionsPlaceholder": "Pick actions…",
+        "removeAction": "Remove action",
+        "selectAll": "Select all items",
+        "deselectAll": "Clear all items"
       },
       "rhythm": {
         "title": "Daily rhythm",

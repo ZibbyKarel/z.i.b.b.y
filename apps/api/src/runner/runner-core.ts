@@ -129,6 +129,18 @@ interface RunHandle<R extends BaseRun> {
  * own the DI surface and delegate here, so liveness/restart/approval logic lives
  * in exactly one place.
  */
+/**
+ * Upper bound on the bytes a single {@link RunnerCore.readLog} returns. A run's
+ * `.log` can grow without limit (a chatty or runaway child writes megabytes), and
+ * reading `offset..EOF` in one shot meant `Buffer.alloc(size - offset)` +
+ * `buf.toString("utf8")` of the whole tail — an unbounded allocation that ran the
+ * heap out of memory (a several-hundred-MB tail crashed the process; a >512MB one
+ * exceeds V8's max string length outright). The streaming/poll callers already
+ * loop on `nextOffset` until `done`, so capping each read just drains a large
+ * backlog in 1 MiB steps instead of one fatal allocation.
+ */
+export const MAX_LOG_READ_BYTES = 1024 * 1024;
+
 export class RunnerCore<R extends BaseRun> {
   private readonly dir: string;
   private readonly runs = new Map<string, RunHandle<R>>();
@@ -781,17 +793,23 @@ export class RunnerCore<R extends BaseRun> {
     const file = this.resolveLogFile(runId);
 
     let content = "";
-    let size = offset;
+    // Where this chunk ends — and so where the caller resumes next read. Capped to
+    // at most MAX_LOG_READ_BYTES past `offset`, which may be short of EOF.
+    let nextOffset = offset;
+    let fileSize = offset;
     try {
       const fd = await fs.open(file, "r");
       try {
         const stat = await fd.stat();
-        size = stat.size;
-        if (offset < size) {
-          const length = size - offset;
+        fileSize = stat.size;
+        if (offset < fileSize) {
+          // Read a bounded window, never the whole `offset..EOF` tail: an unbounded
+          // Buffer/string of a large log is what OOM-crashed the process.
+          const length = Math.min(fileSize - offset, MAX_LOG_READ_BYTES);
           const buf = Buffer.alloc(length);
-          await fd.read(buf, 0, length, offset);
-          content = buf.toString("utf8");
+          const { bytesRead } = await fd.read(buf, 0, length, offset);
+          content = buf.toString("utf8", 0, bytesRead);
+          nextOffset = offset + bytesRead;
         }
       } finally {
         await fd.close();
@@ -804,8 +822,12 @@ export class RunnerCore<R extends BaseRun> {
       throw error;
     }
 
-    const done = handle ? handle.run.status === "done" || handle.run.status === "error" : true;
-    return { content, nextOffset: size, done };
+    // Only "done" once the caller has actually reached EOF — a terminal (or
+    // historical, handle-less) run with bytes still past this capped chunk must
+    // keep the stream open so the rest drains, never truncate at the cap.
+    const atEof = nextOffset >= fileSize;
+    const runDone = handle ? handle.run.status === "done" || handle.run.status === "error" : true;
+    return { content, nextOffset, done: atEof && runDone };
   }
 
   /** Build the kind-agnostic base fields for a run record. */

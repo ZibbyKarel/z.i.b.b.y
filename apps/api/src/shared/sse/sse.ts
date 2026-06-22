@@ -15,6 +15,24 @@ import { Observable } from "rxjs";
 const HEARTBEAT_MS = 25_000;
 
 /**
+ * The backpressure seam between {@link streamRunLog} and the socket it ultimately
+ * writes to. NestJS owns the `res.write()` for an `@Sse()` handler, so the pump
+ * can't see a write's return value directly — but it CAN observe, right after
+ * emitting, whether that write filled the kernel buffer (`res.writableNeedDrain`)
+ * and wait for the socket to flush before pumping the next chunk. Without this the
+ * pump reads a large `.log` end-to-end as fast as the disk allows and shovels every
+ * chunk into the socket's write queue regardless of how slowly the client reads —
+ * a single stalled `EventSource` buffered hundreds of MB in seconds in testing.
+ * Gating on it bounds the in-flight buffer to roughly one chunk per stream.
+ */
+export interface WriteGate {
+  /** True when the last write left the socket buffer above its high-water mark. */
+  needsDrain(): boolean;
+  /** Run `cb` once the socket drains; returns an unregister for teardown. */
+  onceDrain(cb: () => void): () => void;
+}
+
+/**
  * Stream one run's log as offset-keyed deltas. `read(offset)` returns the bytes
  * after `offset` (the very call the poll endpoint makes, so the streamed text is
  * byte-identical); `subscribe` registers a listener fired whenever new bytes are
@@ -31,15 +49,20 @@ export function streamRunLog(
   startOffset: number,
   read: (offset: number) => Promise<RunLogChunk>,
   subscribe: (listener: () => void) => () => void,
+  gate?: WriteGate,
 ): Observable<MessageEvent> {
   return new Observable<MessageEvent>((subscriber) => {
     let offset = startOffset;
     let dirty = true;
     let pumping = false;
     let closed = false;
+    let cancelDrain: (() => void) | undefined;
 
     const pump = async (): Promise<void> => {
       if (pumping || closed) return;
+      // Already parked waiting for the socket to flush — the drain callback will
+      // re-enter pump(); racing ahead now would defeat the backpressure gate.
+      if (cancelDrain) return;
       pumping = true;
       try {
         while (dirty && !closed) {
@@ -58,6 +81,16 @@ export function streamRunLog(
             });
             // More may have landed while we awaited the read above.
             dirty = true;
+            // If that write filled the socket buffer, stop reading and wait for the
+            // client to catch up — otherwise a slow reader makes us buffer the whole
+            // log in memory. `dirty` stays true so the drain callback resumes here.
+            if (gate?.needsDrain()) {
+              cancelDrain = gate.onceDrain(() => {
+                cancelDrain = undefined;
+                void pump();
+              });
+              return;
+            }
           }
           if (chunk.done) {
             // A run already finished (or finishing with no tail) still needs a final
@@ -96,6 +129,7 @@ export function streamRunLog(
     return () => {
       closed = true;
       clearInterval(heartbeat);
+      cancelDrain?.();
       unsubscribe();
     };
   });

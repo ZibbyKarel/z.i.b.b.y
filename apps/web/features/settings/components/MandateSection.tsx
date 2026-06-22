@@ -1,12 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { Divider, Stack, Toggle, Typography } from "@zibby/design-system";
 import type { Mandate } from "@zibby/contracts";
+import { Divider, Stack, Toggle, Typography } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useIntegrationsQuery } from "../../integrations/queries";
-import { useMandateQuery } from "../queries";
 import { useSetMandateMutation } from "../mutations";
+import { useMandateQuery } from "../queries";
 
 type MandateKey = "dispatch" | "reply";
 
@@ -74,9 +74,19 @@ export function MandateSection() {
   return (
     <HudPanel padding="300" title={t("mandate.title")}>
       <Stack gap="200">
-        <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
-          {t("mandate.hint")}
-        </Typography>
+        <Stack direction="row" justify="between">
+          <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+            {t("mandate.hint")}
+          </Typography>
+          <Stack direction="row" gap="400">
+            <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+              dispatch
+            </Typography>
+            <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+              reply
+            </Typography>
+          </Stack>
+        </Stack>
         {renderRow("default", t("mandate.defaults"), "settings-mandate-default", null, setDefault)}
         {integrations.length > 0 && <Divider />}
         {integrations.map((i) =>

@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { StatusDotTestId } from "../StatusDot/StatusDot";
 import { Chip, ChipTestId } from "./Chip";
 
@@ -56,5 +57,24 @@ describe("Chip", () => {
     expect(
       within(screen.getByTestId(ChipTestId.Root)).getByTestId(StatusDotTestId.Dot).className,
     ).not.toContain("animate-live");
+  });
+
+  it("shows no close button by default", () => {
+    render(<Chip>plain</Chip>);
+    expect(screen.queryByTestId(ChipTestId.Close)).not.toBeInTheDocument();
+  });
+
+  it("renders a close button with an accessible name and fires onClose", async () => {
+    const onClose = vi.fn();
+    render(
+      <Chip closable closeLabel="Remove reply" onClose={onClose}>
+        reply
+      </Chip>,
+    );
+    const close = screen.getByTestId(ChipTestId.Close);
+    expect(close).toHaveRole("button");
+    expect(close).toHaveAccessibleName("Remove reply");
+    await userEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -94,6 +94,50 @@ describe("streamRunLog", () => {
     expect(completed).toBe(true);
   });
 
+  it("parks the pump while the socket is backpressured, then resumes on drain", async () => {
+    // A chatty log read 2 bytes at a time, so several emits are needed to drain it.
+    const full = "ABCDEF";
+    const read = async (offset: number): Promise<RunLogChunk> => {
+      const next = Math.min(offset + 2, full.length);
+      return { content: full.slice(offset, next), nextOffset: next, done: next >= full.length };
+    };
+
+    // Gate is "full" until the test releases it; capture the drain callbacks.
+    let full_ = true;
+    const drainCbs: Array<() => void> = [];
+    const gate = {
+      needsDrain: () => full_,
+      onceDrain: (cb: () => void) => {
+        drainCbs.push(cb);
+        return () => {};
+      },
+    };
+
+    const events: MessageEvent[] = [];
+    let completed = false;
+    streamRunLog(0, read, () => () => {}, gate).subscribe({
+      next: (e) => events.push(e),
+      complete: () => {
+        completed = true;
+      },
+    });
+    await sleep(10);
+
+    // First chunk went out; the gate reported backpressure, so the pump parked
+    // instead of shovelling the whole log into the socket buffer.
+    expect(logChunks(events).map((c) => c.content)).toEqual(["AB"]);
+    expect(completed).toBe(false);
+
+    // Socket drained — release the gate and fire the parked callback; the pump
+    // resumes from where it stopped and delivers the rest, then completes.
+    full_ = false;
+    drainCbs.shift()?.();
+    await sleep(10);
+
+    expect(logChunks(events).map((c) => c.content)).toEqual(["AB", "CD", "EF"]);
+    expect(completed).toBe(true);
+  });
+
   it("unsubscribes the underlying listener on teardown", async () => {
     let unsubscribed = false;
     const read = async (): Promise<RunLogChunk> => ({ content: "", nextOffset: 0, done: false });

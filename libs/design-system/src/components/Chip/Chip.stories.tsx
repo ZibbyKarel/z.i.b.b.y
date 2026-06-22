@@ -10,6 +10,7 @@ const meta: Meta<typeof Chip> = {
     tone: { control: "select", options: ["ok", "run", "wait", "bad", "idle", "accent"] },
     dot: { control: "boolean" },
     pulse: { control: "boolean" },
+    closable: { control: "boolean" },
   },
   args: { children: "running", tone: "run", dot: true, pulse: true },
 };
@@ -56,6 +57,22 @@ export const Overview: Story = {
           </Chip>
           <Chip dot pulse tone="wait">
             waiting for you
+          </Chip>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography mono type="subtitle" variant="tertiary">
+          closable (removable selection)
+        </Typography>
+        <div className="flex flex-wrap gap-2">
+          <Chip closable tone="idle">
+            reply
+          </Chip>
+          <Chip closable tone="idle">
+            create_task
+          </Chip>
+          <Chip closable tone="accent">
+            send_email
           </Chip>
         </div>
       </div>

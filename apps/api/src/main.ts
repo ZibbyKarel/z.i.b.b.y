@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { writeHeapSnapshot } from "node:v8";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { initContract } from "@ts-rest/core";
@@ -79,6 +80,27 @@ async function bootstrap(): Promise<void> {
     const err = reason instanceof Error ? reason : new Error(String(reason));
     log.error("unhandled promise rejection", { error: err.message, stack: err.stack });
   });
+
+  // Opt-in heap-snapshot trigger for diagnosing a live retention leak. With
+  // `HEAP_SNAPSHOT_ON_SIGUSR2=1`, `kill -USR2 <pid>` writes a `.heapsnapshot` to
+  // the cwd; two snapshots a few minutes apart, diffed in Chrome DevTools by
+  // retained size, name what is actually being held — the decisive step for a
+  // gradual leak that survives compaction. Gated (and off by default) because
+  // `ts-node-dev --respawn` claims SIGUSR2 for its own restart; attach this only
+  // on the compiled production process (the launchd/`node dist` path).
+  if (process.env.HEAP_SNAPSHOT_ON_SIGUSR2 === "1") {
+    const snap = app.get(LoggerService).child("HeapSnapshot");
+    process.on("SIGUSR2", () => {
+      try {
+        const file = writeHeapSnapshot();
+        snap.warn("wrote heap snapshot", { file });
+      } catch (err) {
+        snap.error("heap snapshot failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
+  }
 
   // Default to 3333 (Phase 8.3) so the launchd plist can omit PORT and dev keeps
   // working — `Number(undefined)` was NaN. An explicit PORT (or a .env value) wins.

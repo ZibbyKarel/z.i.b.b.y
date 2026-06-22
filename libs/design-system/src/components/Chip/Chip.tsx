@@ -1,5 +1,7 @@
 import type { HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRing } from "../../utils/focus";
+import { Icon } from "../Icon/Icon";
 import { type DotTone, StatusDot } from "../StatusDot/StatusDot";
 
 /** Chip tones mirror the status palette so the optional dot stays in sync. */
@@ -17,6 +19,7 @@ const toneClass: Record<ChipTone, string> = {
 export enum ChipTestId {
   Root = "chip-root",
   Dot = "chip-dot",
+  Close = "chip-close",
 }
 
 export interface ChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
@@ -25,6 +28,12 @@ export interface ChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "classN
   dot?: boolean;
   /** Live — the dot glows and pulses (only meaningful with `dot`). */
   pulse?: boolean;
+  /** Show a trailing close (✕) button. Fires {@link ChipProps.onClose} on click. */
+  closable?: boolean;
+  /** Called when the close button is clicked (only meaningful with `closable`). */
+  onClose?: () => void;
+  /** Accessible name for the close button (icon-only). Defaults to "Remove". */
+  closeLabel?: string;
   ref?: Ref<HTMLSpanElement>;
 }
 
@@ -37,6 +46,9 @@ export function Chip({
   tone = "idle",
   dot = false,
   pulse = false,
+  closable = false,
+  onClose,
+  closeLabel = "Remove",
   children,
   ref,
   ...props
@@ -45,7 +57,8 @@ export function Chip({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border py-[3px]",
-        dot ? "pl-2 pr-2.5" : "px-2.5",
+        dot ? "pl-2" : "pl-2.5",
+        closable ? "pr-1.5" : "pr-2.5",
         "font-mono text-xs whitespace-nowrap",
         toneClass[tone],
       )}
@@ -55,6 +68,26 @@ export function Chip({
     >
       {dot && <StatusDot data-testid={ChipTestId.Dot} pulse={pulse} size="75" tone={tone} />}
       {children}
+      {closable && (
+        <button
+          aria-label={closeLabel}
+          className={cn(
+            "-mr-0.5 inline-flex items-center justify-center rounded-full",
+            "cursor-pointer opacity-70 transition-opacity duration-100 hover:opacity-100",
+            focusRing,
+          )}
+          data-testid={ChipTestId.Close}
+          // Removing a chip is a discrete action — don't let the click bubble to
+          // an interactive ancestor (e.g. a multi-select trigger that opens a menu).
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose?.();
+          }}
+          type="button"
+        >
+          <Icon name="x" size="xs" stroke="medium" />
+        </button>
+      )}
     </span>
   );
 }

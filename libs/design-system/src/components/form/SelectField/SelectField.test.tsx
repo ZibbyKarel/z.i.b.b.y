@@ -47,4 +47,26 @@ describe("SelectField", () => {
       error.id,
     );
   });
+
+  it("supports multi mode: reports the next value set when an option is toggled", async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    render(
+      <SelectField
+        multi
+        label="Models"
+        onValueChange={onValueChange}
+        options={OPTIONS}
+        value={["opus"]}
+      />,
+    );
+    // The multi trigger is a combobox named by its label.
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    expect(trigger).toHaveRole("combobox");
+    expect(trigger).toHaveAccessibleName("Models");
+
+    await user.click(trigger);
+    await user.click(screen.getAllByTestId(DropdownTestId.Option)[1]!);
+    expect(onValueChange).toHaveBeenCalledWith(["opus", "sonnet"]);
+  });
 });

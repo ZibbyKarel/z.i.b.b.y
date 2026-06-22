@@ -5,7 +5,7 @@ import type { IntendedAction } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { formatClaudeStreamLine } from "./claude-stream-format";
-import { INTENT_DIR_ENV, RunNotFoundError, RunnerCore } from "./runner-core";
+import { INTENT_DIR_ENV, MAX_LOG_READ_BYTES, RunNotFoundError, RunnerCore } from "./runner-core";
 import type { BaseRun, KindStrategy } from "./runner-core.types";
 
 // A minimal record + strategy mirroring how a real wrapper plugs into the core.
@@ -315,6 +315,44 @@ describe("RunnerCore", () => {
       await sleep(20);
     }
     expect(log).toContain(`DIR=${cwd}`);
+  });
+
+  it("caps each readLog to MAX_LOG_READ_BYTES so a huge log never OOMs the process", async () => {
+    // A runaway child can write a multi-hundred-MB log; reading `offset..EOF` in one
+    // `Buffer.alloc` + `toString` of the whole tail crashed the heap. Read must chunk.
+    const core = new RunnerCore(dir, strategy);
+    await core.init();
+
+    // Durable-replay path: a bare `<runId>.log` on disk (no live handle) is read as a
+    // finished run. Make it span 2.5 chunks so the cap forces ≥3 reads.
+    const runId = "biglog_1700000000000_4242";
+    const total = MAX_LOG_READ_BYTES * 2 + MAX_LOG_READ_BYTES / 2;
+    // A repeating, ASCII (1 byte/char) pattern — byte offset == char offset, so the
+    // cap boundary can't split a multibyte char and the reassembly is exact.
+    const pattern = "zibby-runaway-log-0123456789-";
+    const payload = pattern.repeat(Math.ceil(total / pattern.length)).slice(0, total);
+    await fs.writeFile(path.join(dir, `${runId}.log`), payload, "utf8");
+
+    // First read is capped, not the whole file, and NOT done (bytes remain past it).
+    const first = await core.readLog(runId, 0);
+    expect(first.content.length).toBe(MAX_LOG_READ_BYTES);
+    expect(first.nextOffset).toBe(MAX_LOG_READ_BYTES);
+    expect(first.done).toBe(false);
+
+    // Draining via the nextOffset loop reassembles the file byte-for-byte and ends done.
+    let offset = 0;
+    let reassembled = "";
+    let reads = 0;
+    for (;;) {
+      const chunk = await core.readLog(runId, offset);
+      reassembled += chunk.content;
+      offset = chunk.nextOffset;
+      reads += 1;
+      if (chunk.done) break;
+      if (reads > 100) throw new Error("readLog never reported done");
+    }
+    expect(reads).toBeGreaterThanOrEqual(3); // 2.5 chunks ⇒ at least three reads
+    expect(reassembled).toBe(payload);
   });
 
   it("throws RunNotFoundError for an unknown or unsafe run id", async () => {

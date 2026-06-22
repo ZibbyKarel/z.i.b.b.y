@@ -82,6 +82,9 @@ export type { DividerProps } from "./components/Divider/Divider";
 export { Chip, ChipTestId } from "./components/Chip/Chip";
 export type { ChipProps, ChipTone } from "./components/Chip/Chip";
 
+export { Checkbox, CheckboxTestId } from "./components/Checkbox/Checkbox";
+export type { CheckboxProps, CheckboxSize } from "./components/Checkbox/Checkbox";
+
 export { Tag, TagTestId, riskIcon } from "./components/Tag/Tag";
 export type { RiskKind, TagProps, TagTone } from "./components/Tag/Tag";
 
@@ -172,7 +175,11 @@ export { TextAreaField, TextAreaFieldTestId } from "./components/form/TextAreaFi
 export type { TextAreaFieldProps } from "./components/form/TextAreaField/TextAreaField";
 
 export { SelectField } from "./components/form/SelectField/SelectField";
-export type { SelectFieldProps } from "./components/form/SelectField/SelectField";
+export type {
+  SelectFieldMultiProps,
+  SelectFieldProps,
+  SelectFieldSingleProps,
+} from "./components/form/SelectField/SelectField";
 
 export { SegmentPickerField } from "./components/form/SegmentPickerField/SegmentPickerField";
 export type { SegmentPickerFieldProps } from "./components/form/SegmentPickerField/SegmentPickerField";
@@ -223,8 +230,10 @@ export type {
 
 export { Dropdown, DropdownTestId } from "./components/Dropdown/Dropdown";
 export type {
+  DropdownMultiProps,
   DropdownOption,
   DropdownProps,
+  DropdownSingleProps,
   DropdownVariant,
 } from "./components/Dropdown/Dropdown";
 

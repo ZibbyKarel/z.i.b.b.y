@@ -122,7 +122,8 @@ form/
 ├── Select/
 ├── SegmentPicker/  (segmentovaný přepínač)
 ├── SchedulePicker/ (opakování + dny v týdnu / den v měsíci + čas → Schedule; cron v appce)
-├── Toggle/       (checkbox/switch)
+├── Toggle/       (on/off switch)
+├── Checkbox/     (čtvercový check; `presentational` mód pro vložení do interaktivního rodiče)
 ├── FilePicker/
 └── DropZone/
 ```
@@ -150,7 +151,7 @@ form/
 | `Tabs`        | Tab navigace             |
 | `Accordion`   | Collapsible sekce        |
 | `List`        | Strukturovaný seznam     |
-| `Dropdown`    | Dropdown menu            |
+| `Dropdown`    | Dropdown menu (single nebo `multi` — checkboxy v options + closable chipy ve fieldu; `showSelectAll` přidá řádek „vybrat/zrušit vše") |
 | `MenuSurface` | Surface pro menu overlay |
 | `SearchBar`   | Input pro search         |
 | `SearchMenu`  | Search s výsledky        |
@@ -166,7 +167,7 @@ form/
 | `CodeBlock`      | Code block s highlighting                    |
 | `MarkdownEditor` | Markdown editor + preview                    |
 | `Tag`            | Barevný tag/badge                            |
-| `Chip`           | Interaktivní chip                            |
+| `Chip`           | Interaktivní chip (`closable` → křížek + `onClose`)   |
 | `Kbd`            | Klávesová zkratka                            |
 | `Divider`        | Horizontální/vertikální oddělovač            |
 
