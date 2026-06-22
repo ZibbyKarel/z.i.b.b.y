@@ -26,4 +26,26 @@ describe("KeywordTriager", () => {
     expect(v).toMatchObject({ actionable: true, tier: 3, category: "other" });
     expect(v.confidence).toBeLessThan(0.5);
   });
+
+  it("does not fire on CS transactional link-fallback boilerplate (Samsung/DocuSign pattern)", () => {
+    // "If the button above doesn't work, enter the address below in the browser."
+    const v = t.score(
+      "Pokud výše uvedené tlačítko nefunguje, zadejte do prohlížeče níže uvedenou adresu.",
+    );
+    expect(v.tier).not.toBe(1);
+    expect(v.category).not.toBe("bug");
+  });
+
+  it("does not fire on EN transactional link-fallback boilerplate", () => {
+    const v = t.score(
+      "If the link above doesn't work, copy and paste the URL into your browser.",
+    );
+    expect(v.tier).not.toBe(1);
+    expect(v.category).not.toBe("bug");
+  });
+
+  it("still routes a genuine CS bug report containing nefunguje to Tier 1", () => {
+    const v = t.score("Aplikace nefunguje po posledním update, stránka se nenačítá.");
+    expect(v).toMatchObject({ actionable: true, tier: 1, category: "bug" });
+  });
 });

@@ -2,6 +2,15 @@ import { Injectable } from "@nestjs/common";
 import type { TriageVerdict } from "@zibby/contracts";
 import type { TriageInput, TriageRouter } from "./triage-router";
 
+/**
+ * Transactional-email link-fallback boilerplate (cs + en).
+ * "Pokud tlačítko/odkaz nefunguje, zadejte adresu…" and the English equivalent
+ * appear in password-reset / account-verification emails and must not be treated
+ * as bug signals.  Strip before running BUG_RE.
+ */
+const LINK_BOILERPLATE_RE =
+  /\bpokud\b.{0,120}\bnefunguje\b|\bif\b.{0,120}\b(doesn'?t|does not)\s+work\b/gi;
+
 /** A stack-trace / error / bug report → actionable, Tier 1 investigate. */
 const BUG_RE =
   /\b(bug|crash(?:es|ed|ing)?|error|exception|stack ?trace|traceback|nullpointer|undefined is not|rozbit\w*|nefunguje|spadl\w*|chyba)\b/i;
@@ -27,7 +36,8 @@ export class KeywordTriager implements TriageRouter {
 
   /** Synchronous core — the unit tests call this directly. */
   score(text: string): TriageVerdict {
-    if (BUG_RE.test(text)) {
+    const cleaned = text.replace(LINK_BOILERPLATE_RE, " ");
+    if (BUG_RE.test(cleaned)) {
       return {
         actionable: true,
         tier: 1,
@@ -38,7 +48,7 @@ export class KeywordTriager implements TriageRouter {
         reason: "Matched a bug/error/stack-trace signal.",
       };
     }
-    if (SCOPE_RE.test(text)) {
+    if (SCOPE_RE.test(cleaned)) {
       return {
         actionable: true,
         tier: 3,
@@ -48,7 +58,7 @@ export class KeywordTriager implements TriageRouter {
         reason: "Matched scope/commercial/commitment terms — a decision that commits the operator.",
       };
     }
-    if (QUESTION_RE.test(text)) {
+    if (QUESTION_RE.test(cleaned)) {
       return {
         actionable: true,
         tier: 2,
