@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { SearchMenuSection } from "@zibby/design-system";
@@ -29,6 +29,29 @@ export function useGlobalSearch() {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const query = useDebouncedValue(value, DEBOUNCE_MS);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Remember the last non-empty query so re-focusing the (cleared) bar restores
+  // it — the cached results reappear instead of an empty panel.
+  const lastQueryRef = useRef("");
+  useEffect(() => {
+    if (value.trim() !== "") lastQueryRef.current = value;
+  }, [value]);
+
+  // Restore the last query when the bar opens empty (a focus/⌘K, not typing —
+  // typing makes `value` non-empty so this no-ops). Keeps the prior results up.
+  const handleOpenChange = useCallback((next: boolean) => {
+    if (next) {
+      setValue((v) => (v.trim() === "" && lastQueryRef.current !== "" ? lastQueryRef.current : v));
+    }
+    setOpen(next);
+  }, []);
+
+  // Focus the input — wired to a global ⌘K / Ctrl+K shortcut in GlobalSearch.
+  const focusSearch = useCallback(() => {
+    inputRef.current?.focus();
+    handleOpenChange(true);
+  }, [handleOpenChange]);
 
   const agents = useAgentsSearchQuery(query);
   const skills = useSkillsSearchQuery(query);
@@ -119,10 +142,12 @@ export function useGlobalSearch() {
     value,
     setValue,
     open,
-    setOpen,
+    setOpen: handleOpenChange,
     sections,
     loading,
     handleSelect,
+    inputRef,
+    focusSearch,
     placeholder: t("placeholder"),
     ariaLabel: t("ariaLabel"),
     emptyLabel: t("empty"),

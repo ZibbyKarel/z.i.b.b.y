@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { type Ref, useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
+import { mergeRefs } from "../../utils/refs";
 import { Icon, type IconName } from "../Icon/Icon";
 import { Kbd } from "../Kbd/Kbd";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
@@ -54,6 +55,8 @@ export interface SearchMenuProps {
   loading?: boolean;
   /** Message shown when the query is non-empty but produced no hits. */
   emptyLabel?: string;
+  /** Forwarded ref to the underlying input — e.g. to focus it from a ⌘K handler. */
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 interface FlatItem {
@@ -80,9 +83,10 @@ export function SearchMenu({
   shortcut,
   loading = false,
   emptyLabel,
+  inputRef,
 }: SearchMenuProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const internalInputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -116,7 +120,7 @@ export function SearchMenu({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       onOpenChange(false);
-      inputRef.current?.blur();
+      internalInputRef.current?.blur();
       return;
     }
     if (!panelOpen || flat.length === 0) return;
@@ -171,7 +175,7 @@ export function SearchMenu({
           onFocus={() => onOpenChange(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          ref={inputRef}
+          ref={mergeRefs(internalInputRef, inputRef)}
           role="combobox"
           type="text"
           value={value}

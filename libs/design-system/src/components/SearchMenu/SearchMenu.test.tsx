@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type Ref, useState } from "react";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -27,11 +27,13 @@ function Harness({
   onSelect = vi.fn(),
   loading = false,
   emptyLabel,
+  inputRef,
 }: {
   sections?: SearchMenuSection[];
   onSelect?: (sectionId: string, itemId: string) => void;
   loading?: boolean;
   emptyLabel?: string;
+  inputRef?: Ref<HTMLInputElement>;
 }) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -39,6 +41,7 @@ function Harness({
     <SearchMenu
       ariaLabel="Search"
       emptyLabel={emptyLabel}
+      inputRef={inputRef}
       loading={loading}
       onOpenChange={setOpen}
       onSelect={onSelect}
@@ -59,6 +62,14 @@ describe("SearchMenu", () => {
     expect(input).toHaveRole("combobox");
     expect(input).toHaveAccessibleName("Search");
     expect(input).toHaveAttribute("placeholder", "Search…");
+  });
+
+  it("forwards inputRef to the underlying input (so a ⌘K handler can focus it)", () => {
+    const ref = { current: null as HTMLInputElement | null };
+    render(<Harness inputRef={ref} />);
+    expect(ref.current).toBe(screen.getByTestId(SearchMenuTestId.Input));
+    ref.current?.focus();
+    expect(screen.getByTestId(SearchMenuTestId.Input)).toHaveFocus();
   });
 
   it("keeps the panel closed until there is a query", async () => {
