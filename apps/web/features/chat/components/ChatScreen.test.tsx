@@ -13,8 +13,25 @@ vi.mock("../mutations/useSendChatMessageMutation", () => ({
   useSendChatMessageMutation: () => ({ mutate, isPending: false }),
 }));
 
-import { ChatScreen } from "./ChatScreen";
+import { useState } from "react";
+import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
+import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { ChatComposerTestId } from "./ChatComposer";
+
+// The transcript lives in the provider; this harness supplies the lifted state so the
+// component behaves exactly as it does under ChatProvider.
+function ChatScreenHarness() {
+  const [messages, setMessages] = useState<ChatMessageType[]>([]);
+  return (
+    <ChatScreen
+      conversationId="c1"
+      messages={messages}
+      onClose={() => {}}
+      onMessagesChange={setMessages}
+      onNewChat={() => setMessages([])}
+    />
+  );
+}
 
 describe("ChatScreen", () => {
   let mock: ReturnType<typeof installEventSourceMock>;
@@ -29,7 +46,7 @@ describe("ChatScreen", () => {
 
   it("keeps the operator's question on screen after the reply lands (no disappear)", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ChatScreen conversationId="c1" onClose={() => {}} />);
+    renderWithProviders(<ChatScreenHarness />);
 
     await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
     await user.click(screen.getByTestId(ChatComposerTestId.Send));
@@ -49,5 +66,22 @@ describe("ChatScreen", () => {
     // exactly once (the live bubble gave way to the committed message).
     expect(screen.getByText("Jak se máš")).toBeInTheDocument();
     expect(screen.getByText("Mám se dobře.")).toBeInTheDocument();
+  });
+
+  it("hides New chat on an empty thread and clears the transcript when used", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ChatScreenHarness />);
+
+    // No turns yet → nothing to reset, so the New chat affordance is absent.
+    expect(screen.queryByTestId(ChatScreenTestId.NewChat)).not.toBeInTheDocument();
+
+    await user.type(screen.getByTestId(ChatComposerTestId.Input), "Ahoj");
+    await user.click(screen.getByTestId(ChatComposerTestId.Send));
+    expect(screen.getByText("Ahoj")).toBeInTheDocument();
+
+    // Once there's a transcript, New chat appears and wipes it back to the greeting.
+    await user.click(screen.getByTestId(ChatScreenTestId.NewChat));
+    expect(screen.queryByText("Ahoj")).not.toBeInTheDocument();
+    expect(screen.getByTestId(ChatScreenTestId.Greeting)).toBeInTheDocument();
   });
 });

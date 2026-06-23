@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ChatPersonaSchema } from "../chat/chat.schema";
 
 /**
  * Operator-owned runtime system config — `data/system-config.json`. These knobs were
@@ -30,6 +31,12 @@ export const SystemConfigSchema = z
      * operator resume (Law 3). The operator enables this for a launchd daemon.
      */
     goalAutoResume: z.boolean().default(false),
+    /**
+     * The conversational personality of the chat butler. Only ZIBBY's tone varies;
+     * the answer/ask/act governor is constant. Read at chat-turn time (live, no
+     * restart); applies to the next conversation. Default `"jarvis"`.
+     */
+    chatPersona: ChatPersonaSchema.default("jarvis"),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

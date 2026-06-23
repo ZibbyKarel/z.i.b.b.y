@@ -12,6 +12,7 @@ const DEFAULTS: SystemConfig = {
   limitResumeMax: 3,
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
+  chatPersona: "jarvis",
 };
 
 let config: SystemConfig = { ...DEFAULTS };

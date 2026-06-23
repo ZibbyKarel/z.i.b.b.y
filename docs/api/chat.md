@@ -62,9 +62,20 @@ stateless), takže služby jsou injektované — žádný druhý proces. Server 
 | `recall_memory` | `VaultService.search` | Index-first hledání ve vaultu. |
 | `get_status` | `BriefingService.assemble` | Shrnutí "co se děje" (read-only). |
 
-**Dispatch je prompt-governed** (persona v `chat-persona.ts`), ne vynucený — stejná
-vrstva, kde žil starý voice bug ("jak se máš" → spustil úkol). Hlídá to opt-in eval
+**Dispatch je prompt-governed** (`chat-persona.ts`), ne vynucený — stejná vrstva,
+kde žil starý voice bug ("jak se máš" → spustil úkol). Hlídá to opt-in eval
 `chat-dispatch.eval.test.ts` (`CHAT_EVAL=1`, potřebuje živou api + tokeny).
+
+Prompt má **dvě části**: swappable **persona** (jen tón — `CHAT_PERSONAS`) +
+konstantní **governor** (`CHAT_GOVERNOR_PROMPT`, rozhodování odpověz/doptej/jednej +
+nástroje). Každá persona se přidá nad **tentýž** governor, takže dispatch discipline
+je invariantní napříč osobnostmi (to je to, co eval hlídá). `buildChatPrompt(persona)`
+je složí; `buildArgs()` čte personu živě z `SystemConfigStore`.
+
+**Volitelná osobnost:** operátor vybírá personu v `/settings` → uloží se jako
+`chatPersona` na file-backed `SystemConfig` (`jarvis` (výchozí) / `concise` /
+`formal`). Čte se per turn, takže se projeví v další konverzaci bez restartu (mění se
+jen tón, ne chování). Změna se neaplikuje doprostřed běžícího `--resume` vlákna.
 
 ## Persistence + paměť
 

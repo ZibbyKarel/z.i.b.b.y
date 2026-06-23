@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
+import { ChatMarkdown } from "./ChatMarkdown";
 
 export enum ChatMessageTestId {
   Root = "chat-message",
@@ -76,20 +77,30 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
         radius="lg"
       >
         <Container maxWidth="68ch" padding={["100", "150"]}>
-          <Typography data-testid={ChatMessageTestId.Text} type="text">
-            {text}
-            {streaming && (
-              <Typography
-                aria-label={t("streaming")}
-                as="span"
-                data-testid={ChatMessageTestId.StreamingCursor}
-                type="text"
-                variant="tertiary"
-              >
-                {" █"}
-              </Typography>
-            )}
-          </Typography>
+          {isUser ? (
+            // The operator's own turn is plain text — render it verbatim.
+            <Typography data-testid={ChatMessageTestId.Text} type="text">
+              {text}
+            </Typography>
+          ) : (
+            // ZIBBY's turn is GitHub-flavoured markdown — format it. The live cursor
+            // is a sibling, never part of the markdown string (so a half-typed `**`
+            // can't break the parse).
+            <>
+              <ChatMarkdown text={text} />
+              {streaming && (
+                <Typography
+                  aria-label={t("streaming")}
+                  as="span"
+                  data-testid={ChatMessageTestId.StreamingCursor}
+                  type="text"
+                  variant="tertiary"
+                >
+                  {" █"}
+                </Typography>
+              )}
+            </>
+          )}
         </Container>
       </Card>
 

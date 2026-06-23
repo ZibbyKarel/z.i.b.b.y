@@ -37,6 +37,7 @@ příštím bootu.
 | `limitResumeMax`      | `3`      | Max. cyklů obnovy než se limitem pozastavený běh zaparkuje/selže                                                                                     |
 | `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline `checks` verifier shellu (pak SIGTERM→SIGKILL)                                                                  |
 | `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = na bootu auto-re-drive `running`/`paused-limit` goalů (bezobslužný launchd démon). Default: park `awaiting-resume` (Law 3) |
+| `chatPersona`         | `jarvis` | Osobnost chat butlera (`jarvis`/`concise`/`formal`) — mění jen tón, ne dispatch governor. Čte se per turn, nastavuje se v `/settings`                |
 
 V testech seeduje `vitest.setup.ts` tento soubor (ticky 0) přes `SYSTEM_CONFIG_FILE`;
 suite, která potřebuje jiný knob, volá `writeSystemConfig()`

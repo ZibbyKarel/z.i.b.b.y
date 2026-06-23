@@ -11,6 +11,20 @@ export const ChatRoleSchema = z.enum(["user", "assistant"]);
 export type ChatRole = z.infer<typeof ChatRoleSchema>;
 
 /**
+ * The operator-selectable conversational personality. Only ZIBBY's *tone* changes
+ * between these — the answer/ask/act governor (`CHAT_GOVERNOR_PROMPT`, guarded by
+ * `chat-dispatch.eval.test`) is constant across all of them. Stored on the
+ * file-backed `SystemConfig` (`chatPersona`); read at turn time so a change applies
+ * to the next conversation without a restart.
+ *
+ * - `jarvis`  — the default butler: warm, dry wit, predictive, Czech-primary.
+ * - `concise` — minimal words, no pleasantries, straight to the point.
+ * - `formal`  — neutral and professional, no humour.
+ */
+export const ChatPersonaSchema = z.enum(["jarvis", "concise", "formal"]);
+export type ChatPersona = z.infer<typeof ChatPersonaSchema>;
+
+/**
  * A tool ZIBBY invoked mid-turn (e.g. `create_task`). Surfaced inline in the
  * transcript so a dispatch is announced, never invisible (autonomy contract).
  */

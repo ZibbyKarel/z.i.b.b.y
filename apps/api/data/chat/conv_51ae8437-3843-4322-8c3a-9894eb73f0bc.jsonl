@@ -1,0 +1,2 @@
+{"id":"msg_1782244057860_019483","role":"user","text":"Pro test formátování mi odpověz přesně: jeden řádek s **tučným** slovem, pak číslovaný seznam tří kroků, a nakonec krátký blok kódu v ```ts. Žádné dlouhé úvody.","at":"2026-06-23T19:47:37.859Z"}
+{"id":"msg_1782244062325_592c59","role":"assistant","text":"**Hotovo.**\n\n1. Přidej závislost\n2. Napiš test\n3. Pushni branch\n\n```ts\nconst x: string = \"zibby\";\n```","at":"2026-06-23T19:47:37.861Z"}

@@ -22,6 +22,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { useHealthQuery } from "../health/queries";
 import { GateRulesSection } from "../gates/components/GateRulesSection";
+import { ChatSection } from "./components/ChatSection";
 import { MandateSection } from "./components/MandateSection";
 import { ResearchSection } from "./components/ResearchSection";
 import { SystemSection } from "./components/SystemSection";
@@ -118,6 +119,7 @@ export function Screen() {
           <TabList>
             <Tab value="preferences">{t("preferences")}</Tab>
             <Tab value="gates">{t("subnav.gates")}</Tab>
+            <Tab value="chat">{t("chat.title")}</Tab>
             <Tab value="mandate">{t("mandate.title")}</Tab>
             <Tab value="research">{t("research.title")}</Tab>
             <Tab value="runtime">{t("runtime.title")}</Tab>
@@ -160,6 +162,10 @@ export function Screen() {
 
           <TabPanel value="gates">
             <GateRulesSection />
+          </TabPanel>
+
+          <TabPanel value="chat">
+            <ChatSection />
           </TabPanel>
 
           <TabPanel value="mandate">

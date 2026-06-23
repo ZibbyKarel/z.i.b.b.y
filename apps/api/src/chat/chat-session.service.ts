@@ -7,7 +7,8 @@ import {
   type SendChatMessageResult,
 } from "@zibby/contracts";
 import { collisionResistantId } from "../shared/file-storage";
-import { CHAT_PERSONA_PROMPT } from "./chat-persona";
+import { SystemConfigStore } from "../system/system-config.store";
+import { buildChatPrompt } from "./chat-persona";
 import { ChatEventsService } from "./chat-events.service";
 import { type ChatStreamEvent, parseChatStreamLine } from "./chat-stream-parser";
 import { ChatTranscriptStore } from "./chat-transcript.store";
@@ -48,6 +49,7 @@ export class ChatSessionService {
   constructor(
     private readonly store: ChatTranscriptStore,
     private readonly events: ChatEventsService,
+    private readonly systemConfig: SystemConfigStore,
   ) {}
 
   /**
@@ -88,8 +90,10 @@ export class ChatSessionService {
       // tries to build things itself with Bash/Write instead of dispatching a task.
       "--tools",
       "",
+      // Persona (tone) is operator-selectable and read live from SystemConfig; the
+      // answer/ask/act governor inside is constant across personas.
       "--append-system-prompt",
-      CHAT_PERSONA_PROMPT,
+      buildChatPrompt(this.systemConfig.current().chatPersona),
       "--output-format",
       "stream-json",
       "--include-partial-messages",

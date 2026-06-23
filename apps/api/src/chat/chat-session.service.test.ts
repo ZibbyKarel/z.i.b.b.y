@@ -4,6 +4,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { ChatPersona } from "@zibby/contracts";
+import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
 import { ChatSessionService, type ClaudeProcess } from "./chat-session.service";
 import { ChatTranscriptStore } from "./chat-transcript.store";
@@ -30,8 +33,9 @@ class TestSession extends ChatSessionService {
     store: ChatTranscriptStore,
     events: ChatEventsService,
     private readonly lines: string[],
+    persona: ChatPersona = "jarvis",
   ) {
-    super(store, events);
+    super(store, events, fakeSystemConfigStore({ chatPersona: persona }));
   }
   protected createProcess(args: string[]): ClaudeProcess {
     this.lastArgs = args;
@@ -98,6 +102,22 @@ describe("ChatSessionService", () => {
     const svc = new TestSession(store, events, []);
     const args = svc.buildArgs("ahoj", "sess-7");
     expect(args[args.indexOf("--resume") + 1]).toBe("sess-7");
+  });
+
+  it("appends the selected persona tone, always over the constant governor", () => {
+    const jarvis = new TestSession(store, events, [], "jarvis").buildArgs("ahoj", null);
+    const concise = new TestSession(store, events, [], "concise").buildArgs("ahoj", null);
+
+    const jarvisPrompt = jarvis[jarvis.indexOf("--append-system-prompt") + 1] ?? "";
+    const concisePrompt = concise[concise.indexOf("--append-system-prompt") + 1] ?? "";
+
+    // The tone block swaps with the persona…
+    expect(jarvisPrompt).toContain(CHAT_PERSONAS.jarvis);
+    expect(concisePrompt).toContain(CHAT_PERSONAS.concise);
+    expect(jarvisPrompt).not.toContain(CHAT_PERSONAS.concise);
+    // …but the answer/ask/act governor is invariant across personas.
+    expect(jarvisPrompt).toContain(CHAT_GOVERNOR_PROMPT);
+    expect(concisePrompt).toContain(CHAT_GOVERNOR_PROMPT);
   });
 
   it("streams deltas, persists the assistant turn and the session id", async () => {

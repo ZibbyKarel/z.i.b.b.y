@@ -66,6 +66,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         limitResumeMax: positive(limitResumeMax, 1),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
+        // Not edited here — passed through so a runtime save can't reset the operator's
+        // chosen chat persona (the whole document is PUT). Owned by the Chat section.
+        chatPersona: config.chatPersona,
       },
     });
 

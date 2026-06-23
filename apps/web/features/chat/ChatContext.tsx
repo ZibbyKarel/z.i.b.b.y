@@ -1,5 +1,6 @@
 "use client";
 
+import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ChatScreen } from "./components/ChatScreen";
 
@@ -26,16 +27,27 @@ const ChatContext = createContext<ChatStore | null>(null);
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  // The conversation owned by the current open session. Minting a fresh id on every
-  // open is what makes close + reopen a clean reset: a new id has no `claude` session
-  // to `--resume`, so ZIBBY starts the thread over rather than remembering it.
+  // The conversation owned by the current thread. It is minted once (lazily, on the
+  // first open) and then PRESERVED across close + reopen, so the operator can dip in
+  // and out without losing the thread — the same id keeps `--resume`-ing ZIBBY's
+  // `claude` session. Only `newChat` mints a fresh id to start over.
   const [conversationId, setConversationId] = useState<string | null>(null);
+  // The transcript lives here (above {@link ChatScreen}) so it survives the overlay
+  // unmounting on close — reopening shows the same conversation rather than a blank.
+  const [messages, setMessages] = useState<ChatMessageType[]>([]);
 
   const open = useCallback(() => {
-    setConversationId(`conv_${crypto.randomUUID()}`);
+    // Mint only if we have no thread yet; an existing one is reused on reopen.
+    setConversationId((id) => id ?? `conv_${crypto.randomUUID()}`);
     setIsOpen(true);
   }, []);
   const close = useCallback(() => setIsOpen(false), []);
+  // "New chat" — drop the transcript and mint a fresh id so the next turn starts a
+  // clean `claude` session (no `--resume`). The overlay stays open.
+  const newChat = useCallback(() => {
+    setMessages([]);
+    setConversationId(`conv_${crypto.randomUUID()}`);
+  }, []);
   const toggle = useCallback(() => {
     if (isOpen) {
       setIsOpen(false);
@@ -63,7 +75,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   return (
     <ChatContext.Provider value={value}>
       {children}
-      {isOpen && <ChatScreen conversationId={conversationId} onClose={close} />}
+      {isOpen && (
+        <ChatScreen
+          conversationId={conversationId}
+          messages={messages}
+          onClose={close}
+          onMessagesChange={setMessages}
+          onNewChat={newChat}
+        />
+      )}
     </ChatContext.Provider>
   );
 }

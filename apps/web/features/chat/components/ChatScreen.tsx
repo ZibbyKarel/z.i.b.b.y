@@ -4,14 +4,14 @@
    inline styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
-import { Container, Icon, Stack, Typography } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
+import { Container, Icon, Stack, Typography } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
-import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
+import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { ChatComposer } from "./ChatComposer";
 import { ChatOrb } from "./ChatOrb";
 import { ChatTranscript } from "./ChatTranscript";
@@ -23,14 +23,21 @@ export enum ChatScreenTestId {
   ScrollArea = "chat-screen-scroll",
   Greeting = "chat-screen-greeting",
   Close = "chat-screen-close",
+  NewChat = "chat-screen-new-chat",
 }
 
 export interface ChatScreenProps {
   /**
-   * The conversation this overlay session owns. Minted fresh by {@link ChatProvider}
-   * on each open, so closing + reopening starts a clean thread (no `--resume`).
+   * The conversation this thread owns. Minted once by {@link ChatProvider} and
+   * preserved across close + reopen; only "New chat" mints a fresh one.
    */
   conversationId: string | null;
+  /** The transcript, owned by {@link ChatProvider} so it survives close + reopen. */
+  messages: ChatMessageType[];
+  /** Append/replace transcript turns (lifted setter from the provider). */
+  onMessagesChange: Dispatch<SetStateAction<ChatMessageType[]>>;
+  /** Start a fresh thread: clears the transcript and mints a new conversation. */
+  onNewChat: () => void;
   /** Close the overlay (Esc / header close). */
   onClose: () => void;
 }
@@ -41,20 +48,28 @@ export interface ChatScreenProps {
  * scrollable transcript that fades into nothing at the top (scroll up to read back
  * to the start), and the text composer pinned at the bottom.
  *
- * The conversation lives entirely in this component's client state for the overlay
- * session: the operator's turn is appended optimistically on send, and the
- * assistant's turn is appended from the stream's `done` (authoritative text +
- * accumulated tool events). The backend still writes every message to the JSONL
- * transcript — the UI just renders what the stream produced rather than refetching,
- * which is what removed the "history disappears after a reply" flash. Closing the
- * overlay unmounts this component (state gone) and the next open mints a new
- * conversation, so reopening is a clean reset.
+ * The conversation lives in the provider's client state (passed in via `messages` /
+ * `onMessagesChange`) so it survives this overlay unmounting on close: the operator's
+ * turn is appended optimistically on send, and the assistant's turn is appended from
+ * the stream's `done` (authoritative text + accumulated tool events). The backend
+ * still writes every message to the JSONL transcript — the UI just renders what the
+ * stream produced rather than refetching, which is what removed the "history
+ * disappears after a reply" flash. Reopening shows the same thread; "New chat" is the
+ * only reset.
  */
-export function ChatScreen({ conversationId, onClose }: ChatScreenProps) {
+export function ChatScreen({
+  conversationId,
+  messages,
+  onMessagesChange,
+  onNewChat,
+  onClose,
+}: ChatScreenProps) {
   const t = useTranslations("chat");
   const now = useNow(MINUTE_MS);
 
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
+  // The lifted setter is a stable useState dispatcher from the provider; alias it so
+  // the append helpers read like the original local-state version.
+  const setMessages = onMessagesChange;
   const sendMessage = useSendChatMessageMutation();
 
   const appendAssistant = useCallback(({ turnId, text, toolEvents }: CompletedTurn) => {
@@ -69,16 +84,24 @@ export function ChatScreen({ conversationId, onClose }: ChatScreenProps) {
         ...(toolEvents.length > 0 ? { toolEvents } : {}),
       },
     ]);
-  }, []);
+  }, [setMessages]);
 
   const appendError = useCallback((message: string) => {
     setMessages((prev) => [
       ...prev,
-      { id: `err-${crypto.randomUUID()}`, role: "assistant", text: message, at: new Date().toISOString() },
+      {
+        id: `err-${crypto.randomUUID()}`,
+        role: "assistant",
+        text: message,
+        at: new Date().toISOString(),
+      },
     ]);
-  }, []);
+  }, [setMessages]);
 
-  const stream = useChatStream(conversationId, { onComplete: appendAssistant, onError: appendError });
+  const stream = useChatStream(conversationId, {
+    onComplete: appendAssistant,
+    onError: appendError,
+  });
 
   const send = (text: string) => {
     if (!conversationId) return;
@@ -163,19 +186,32 @@ export function ChatScreen({ conversationId, onClose }: ChatScreenProps) {
           {timeStr}
         </Typography>
 
-        <button
-          className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
-          data-testid={ChatScreenTestId.Close}
-          onClick={onClose}
-          type="button"
-        >
-          <Icon name="grid" size="xs" />
-          {t("close")}
-        </button>
+        <Stack align="center" direction="row" gap="100">
+          {messages.length > 0 && (
+            <button
+              className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
+              data-testid={ChatScreenTestId.NewChat}
+              onClick={onNewChat}
+              type="button"
+            >
+              <Icon name="plus" size="xs" />
+              {t("newChat")}
+            </button>
+          )}
+          <button
+            className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
+            data-testid={ChatScreenTestId.Close}
+            onClick={onClose}
+            type="button"
+          >
+            <Icon name="grid" size="xs" />
+            {t("close")}
+          </button>
+        </Stack>
       </div>
 
       {/* ── Main area: orb behind, scrollable conversation over it ───── */}
-      <div className="relative z-10 flex min-h-0 flex-1 justify-center">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
         {/* Ambient orb — centered, behind the conversation, dimmed so text reads. */}
         <div
           aria-hidden="true"
@@ -186,35 +222,44 @@ export function ChatScreen({ conversationId, onClose }: ChatScreenProps) {
         </div>
 
         <div
-          className="relative z-10 w-full max-w-[720px] overflow-y-auto px-5 py-8"
+          className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
           ref={scrollRef}
           style={{
-            // Fade the top edge: older turns dissolve as they scroll up, but the
-            // area still scrolls all the way back to the start of the conversation.
-            maskImage: "linear-gradient(to bottom, transparent 0%, #000 12%, #000 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 12%, #000 100%)",
+            // A stable half-height box pinned to the bottom (right above the composer):
+            // the conversation grows UP from the input — newest turn always at the
+            // bottom — and `mt-auto` keeps a short thread bottom-anchored. The mask
+            // fades the box's top third into nothing so turns dissolve into the orb's
+            // band as they rise (the logo is never overrun) while the lower two-thirds
+            // stay fully readable. It still scrolls all the way back to the start —
+            // turns near the orb just stay ghosted (declarative mask, scroll intact).
+            maskImage: "linear-gradient(to bottom, transparent 0%, #000 34%, #000 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 34%, #000 100%)",
           }}
         >
-          {isEmpty ? (
-            <Container data-testid={ChatScreenTestId.Greeting}>
-              <Stack align="center" gap="100">
-                <Typography align="center" tone="accent" type="subtitle" weight="medium">
-                  {t("greetingTitle")}
-                </Typography>
-                <Typography align="center" type="note" variant="tertiary">
-                  {t("greetingHint")}
-                </Typography>
-              </Stack>
-            </Container>
-          ) : (
-            <ChatTranscript
-              liveText={stream.text}
-              liveToolEvents={stream.toolEvents}
-              messages={messages}
-              streaming={stream.streaming}
-            />
-          )}
+          {/* `mt-auto` pins short conversations to the bottom (first turn sits just
+              above the composer); a tall one overflows and scrolls normally. */}
+          <div className="mt-auto">
+            {isEmpty ? (
+              <Container data-testid={ChatScreenTestId.Greeting}>
+                <Stack align="center" gap="100">
+                  <Typography align="center" tone="accent" type="subtitle" weight="medium">
+                    {t("greetingTitle")}
+                  </Typography>
+                  <Typography align="center" type="note" variant="tertiary">
+                    {t("greetingHint")}
+                  </Typography>
+                </Stack>
+              </Container>
+            ) : (
+              <ChatTranscript
+                liveText={stream.text}
+                liveToolEvents={stream.toolEvents}
+                messages={messages}
+                streaming={stream.streaming}
+              />
+            )}
+          </div>
         </div>
       </div>
 

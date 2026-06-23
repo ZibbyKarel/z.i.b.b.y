@@ -748,6 +748,20 @@
       "dispatch": "Dispatch",
       "reply": "Odpověď"
     },
+    "chat": {
+      "title": "Osobnost chatu",
+      "hint": "Jak ZIBBY zní, když si s ním povídáš. Mění se jen tón — pravidla, kdy odpovědět / doptat se / spustit úkol, zůstávají stejná. Projeví se v další konverzaci.",
+      "persona": {
+        "jarvis": "JARVIS",
+        "concise": "Stručný",
+        "formal": "Profesionální"
+      },
+      "personaDesc": {
+        "jarvis": "Butler s osobností — vřele, lidsky, se suchým humorem a předvídavostí. Výchozí.",
+        "concise": "Minimum slov, žádná vata, rovnou k věci.",
+        "formal": "Neutrální a profesionální, věcně a zdvořile, bez humoru."
+      }
+    },
     "research": {
       "title": "Výzkum & rozhled",
       "hint": "Co ZIBBY sleduje za tebe. Noční digest seřadí každý zdroj podle tvých zájmů a nejlepší položky vloží do ranního briefingu.",
@@ -1266,6 +1280,7 @@
     "title": "Chat se ZIBBY",
     "modeLabel": "CHAT",
     "close": "Zavřít",
+    "newChat": "Nový chat",
     "greetingTitle": "Jsem tu, pane.",
     "greetingHint": "O čem si popovídáme?",
     "triggerLabel": "Chat",

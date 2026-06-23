@@ -748,6 +748,20 @@
       "dispatch": "Dispatch",
       "reply": "Reply"
     },
+    "chat": {
+      "title": "Chat personality",
+      "hint": "How ZIBBY sounds when you talk to it. Only the tone changes — the rules for when to answer / ask / dispatch a task stay the same. Applies to the next conversation.",
+      "persona": {
+        "jarvis": "JARVIS",
+        "concise": "Concise",
+        "formal": "Professional"
+      },
+      "personaDesc": {
+        "jarvis": "A butler with character — warm, human, dry wit and foresight. Default.",
+        "concise": "Minimal words, no filler, straight to the point.",
+        "formal": "Neutral and professional, matter-of-fact and polite, no humour."
+      }
+    },
     "research": {
       "title": "Research & intelligence",
       "hint": "What ZIBBY watches for you. The nightly digest ranks each source against your interests and folds the top items into the morning briefing.",
@@ -1266,6 +1280,7 @@
     "title": "Chat with ZIBBY",
     "modeLabel": "CHAT",
     "close": "Close",
+    "newChat": "New chat",
     "greetingTitle": "I'm here, sir.",
     "greetingHint": "What shall we talk about?",
     "triggerLabel": "Chat",
