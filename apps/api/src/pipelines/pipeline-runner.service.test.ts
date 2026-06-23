@@ -399,6 +399,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         task: string;
         grantDirs?: readonly string[];
         model?: string;
+        streamTranscript?: boolean;
       };
       expect(opts.grantDirs).toEqual(["/sandbox/stage"]);
       // Handoff paths are absolute — sandbox-relative would resolve in the repo.
@@ -406,6 +407,9 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(opts.task).toContain(path.join("/sandbox/stage", "out.md"));
       // The phase-level model wins over the agent's default.
       expect(opts.model).toBe("sonnet");
+      // Stream-json so the stage log captures the agent's whole run, not just the
+      // final message (the per-phase "complete log" fix).
+      expect(opts.streamTranscript).toBe(true);
     });
 
     it("claude: without a project the stage stays in its sandbox (no grant)", async () => {

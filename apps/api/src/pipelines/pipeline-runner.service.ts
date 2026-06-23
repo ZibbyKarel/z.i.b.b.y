@@ -27,6 +27,7 @@ import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
+import { formatClaudeStreamLine } from "../runner/claude-stream-format";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
 import { RunnerCore } from "../runner/runner-core";
 import { LimitsService } from "../limits/limits.service";
@@ -131,7 +132,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       () => this.limits.noteLimitHit(),
       (stageRunId, action) => this.onStageIntent(stageRunId, action),
       logger.child("RunnerCore:pipeline"),
-      undefined,
+      // Flatten each claude stream-json event back into readable log text, so a
+      // stage's log shows the agent's whole run (thinking + tool calls), not just
+      // its final message. Pass-through on any non-stream-json line, so verify
+      // shell stages and demo stages are unaffected (mirrors the agent runner).
+      formatClaudeStreamLine,
       // Phase 9: resolve a limit-paused stage's resume epoch so the core stamps it on
       // the stage record (the aggregate copies it up).
       (detected) => this.limits.resolveResumeAt(detected),
@@ -1506,6 +1511,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // the run's argv under the OS limit (spawn E2BIG) as the agent library grows.
         ...(delegates ? { delegates } : {}),
         systemPromptDir: cwd,
+        // Spawn in stream-json mode so the stage log captures the agent's whole
+        // run (thinking + tool calls), flattened by the core's formatLine — not
+        // just claude's final message. Mirrors the agent runner.
+        streamTranscript: true,
       });
       return spawnCwd ? { ...built, spawnCwd } : built;
     }
