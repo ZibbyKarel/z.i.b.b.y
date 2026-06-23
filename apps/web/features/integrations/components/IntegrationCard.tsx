@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Button, Container, Stack, StatusDot, Tag, Toggle, Typography } from "@zibby/design-system";
+import { Button, Stack, StatusDot, Tag, Toggle, Typography } from "@zibby/design-system";
 import type { Integration } from "@zibby/contracts";
 import { HudCard } from "../../../components/HudCard/HudCard";
 import { INTEGRATION_STATUS } from "../integrationStatus";
@@ -63,14 +63,15 @@ export function IntegrationCard({
   return (
     <HudCard
       actions={
-        <Stack align="center" direction="row" justify="between">
-          <Container minW0 maxWidth="160px">
-            <Typography mono truncate size="xs" type="note" variant="tertiary">
-              {t("integrations.lastSync")}: {lastSyncCaption(integration.lastSyncAt)}
-            </Typography>
-          </Container>
-          <Stack align="center" direction="row" gap="75">
-            {onToggleEnabled && (
+        // Compact two-row footer so the card reads cleanly in a narrow grid column:
+        // the last-sync time always on its own line, then the controls (test/configure
+        // are icon-only with a title — labels would overflow a ~1/3-width card).
+        <Stack gap="75">
+          <Typography mono truncate size="xs" type="note" variant="tertiary">
+            {t("integrations.lastSync")}: {lastSyncCaption(integration.lastSyncAt)}
+          </Typography>
+          <Stack align="center" direction="row" gap="75" justify="between">
+            {onToggleEnabled ? (
               <Toggle
                 checked={integration.enabled}
                 data-testid="integration-enabled-toggle"
@@ -83,28 +84,38 @@ export function IntegrationCard({
                 onChange={() => onToggleEnabled(integration)}
                 size="sm"
               />
+            ) : (
+              <span />
             )}
-            <Button
-              disabled={testing || !integration.hasCredentials}
-              icon="link"
-              intent="ghost"
-              onClick={() => onTest?.(integration)}
-              size="sm"
-            >
-              {t("integrations.testConnection")}
-            </Button>
-            <Button icon="gear" intent="ghost" onClick={() => onConfigure?.(integration)} size="sm">
-              {t("common.configure")}
-            </Button>
-            {onDelete && (
+            <Stack align="center" direction="row" gap="50">
               <Button
-                aria-label={t("common.delete")}
-                icon="trash"
+                aria-label={t("integrations.testConnection")}
+                disabled={testing || !integration.hasCredentials}
+                icon="link"
                 intent="ghost"
-                onClick={() => onDelete(integration)}
+                onClick={() => onTest?.(integration)}
                 size="sm"
+                title={t("integrations.testConnection")}
               />
-            )}
+              <Button
+                aria-label={t("common.configure")}
+                icon="gear"
+                intent="ghost"
+                onClick={() => onConfigure?.(integration)}
+                size="sm"
+                title={t("common.configure")}
+              />
+              {onDelete && (
+                <Button
+                  aria-label={t("common.delete")}
+                  icon="trash"
+                  intent="ghost"
+                  onClick={() => onDelete(integration)}
+                  size="sm"
+                  title={t("common.delete")}
+                />
+              )}
+            </Stack>
           </Stack>
         </Stack>
       }

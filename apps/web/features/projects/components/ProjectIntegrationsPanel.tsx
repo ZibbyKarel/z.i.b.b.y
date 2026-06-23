@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, Button, Stack, Typography } from "@zibby/design-system";
+import { Alert, Button, Grid, Stack, Typography } from "@zibby/design-system";
 import type { Integration } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { IntegrationCard } from "../../integrations/components/IntegrationCard";
@@ -126,23 +126,29 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
           </Typography>
         )}
 
-        {integrations.map((i) => (
-          <IntegrationCard
-            integration={i}
-            key={i.id}
-            onConfigure={(integration) => setEditing(integration)}
-            onDelete={onDelete}
-            onTest={onTest}
-            onToggleEnabled={(integration) =>
-              update.mutate({
-                params: { id: integration.id },
-                body: { enabled: !integration.enabled },
-              })
-            }
-            testing={test.isPending}
-            togglingEnabled={update.isPending}
-          />
-        ))}
+        {integrations.length > 0 && (
+          // Three columns on wide screens (collapsing to two / one) so the cards
+          // stay compact instead of stretching the full panel width.
+          <Grid align="stretch" cols={1} gap="150" lg={3} md={2}>
+            {integrations.map((i) => (
+              <IntegrationCard
+                integration={i}
+                key={i.id}
+                onConfigure={(integration) => setEditing(integration)}
+                onDelete={onDelete}
+                onTest={onTest}
+                onToggleEnabled={(integration) =>
+                  update.mutate({
+                    params: { id: integration.id },
+                    body: { enabled: !integration.enabled },
+                  })
+                }
+                testing={test.isPending}
+                togglingEnabled={update.isPending}
+              />
+            ))}
+          </Grid>
+        )}
       </Stack>
 
       {editing !== null && (
