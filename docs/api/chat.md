@@ -76,6 +76,24 @@ vrstva, kde žil starý voice bug ("jak se máš" → spustil úkol). Hlídá to
   `<id>.distilled.json` (počet zpráv) a kurzor posune. Důležité fakty putují do
   vault markdownu jako u běhů.
 
+## Web overlay (JARVIS styl)
+
+Chat je fullscreen takeover ve stylu původního Voice UI (`apps/web/features/chat/`):
+radiální pozadí + scanline/grid, ambientní orb (`ChatOrb`, převzatý z Voice UI) za
+konverzací a scrollovatelný přepis, jehož horní hrana se vytrácí (maska-gradient) —
+starší zprávy mizí, ale jde scrollovat až k začátku.
+
+- **Konverzace žije v klient-state overlaye** (ne refetch z `/transcript`): operátorův
+  turn se přidá optimisticky při odeslání, asistentův turn se přidá z `done` streamu
+  (autoritativní `done.text` + nasbírané tool eventy). Backend stále zapisuje každou
+  zprávu do JSONL — UI jen renderuje, co stream/POST vyprodukoval. Tím zmizel flash
+  „historie zmizela po odpovědi" (nebylo už okno na refetch).
+- **Reset při zavření + otevření:** `ChatProvider` razí nové `conversationId` při
+  každém otevření, takže nový thread nemá `claude` session na `--resume` → ZIBBY
+  začíná nanovo. Zavření overlaye odmountuje obrazovku (klient-state zmizí).
+- `GET /transcript` zůstává pro budoucí resume/odbočky; aktuální overlay ho nečte.
+
 ## MVP rozsah
 
-Jedno průběžné vlákno. Odbočky/podvlákna jsou odložený increment (spec §2).
+Jedno průběžné vlákno per otevření overlaye (efemérní). Odbočky/podvlákna a obnovení
+dřívějšího vlákna jsou odložený increment (spec §2).

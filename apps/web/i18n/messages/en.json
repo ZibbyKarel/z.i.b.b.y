@@ -1264,11 +1264,14 @@
   },
   "chat": {
     "title": "Chat with ZIBBY",
+    "modeLabel": "CHAT",
+    "close": "Close",
+    "greetingTitle": "I'm here, sir.",
+    "greetingHint": "What shall we talk about?",
     "triggerLabel": "Chat",
     "triggerAria": "Open chat with ZIBBY",
     "triggerTitle": "Chat with ZIBBY",
     "streaming": "ZIBBY is typing…",
-    "empty": "Send a message to start the conversation.",
     "composer": {
       "label": "Message",
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",

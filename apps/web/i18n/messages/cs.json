@@ -1264,11 +1264,14 @@
   },
   "chat": {
     "title": "Chat se ZIBBY",
+    "modeLabel": "CHAT",
+    "close": "Zavřít",
+    "greetingTitle": "Jsem tu, pane.",
+    "greetingHint": "O čem si popovídáme?",
     "triggerLabel": "Chat",
     "triggerAria": "Otevřít chat se ZIBBY",
     "triggerTitle": "Chat se ZIBBY",
     "streaming": "ZIBBY píše…",
-    "empty": "Napište zprávu a začněte konverzaci.",
     "composer": {
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",

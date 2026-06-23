@@ -1,18 +1,16 @@
-import { useTranslations } from "next-intl";
-import { Container, Stack, Typography } from "@zibby/design-system";
+import { Stack } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { ChatMessage } from "./ChatMessage";
 
 export enum ChatTranscriptTestId {
   Root = "chat-transcript",
-  Empty = "chat-transcript-empty",
   LiveTurn = "chat-transcript-live-turn",
 }
 
 export interface ChatTranscriptProps {
-  /** Persisted, append-only transcript turns (the source of truth). */
+  /** The conversation so far, oldest first (held in the overlay's client state). */
   messages: ChatMessageType[];
-  /** Live assistant text accumulating from the SSE stream (pre-persist). */
+  /** Live assistant text accumulating from the SSE stream (pre-commit). */
   liveText?: string;
   /** Live tool-dispatch announcements for the in-progress turn. */
   liveToolEvents?: ChatToolEvent[];
@@ -21,10 +19,11 @@ export interface ChatTranscriptProps {
 }
 
 /**
- * The scrollable conversation. Renders the persisted turns, then — while a turn is
- * streaming — an extra live assistant bubble fed by the SSE deltas. On `done` the
- * transcript refetch replaces the live bubble with the persisted message (which
- * carries the authoritative text + toolEvents), so there's no duplicate.
+ * The conversation column. Renders the committed turns oldest-first, then — while a
+ * turn is streaming — an extra live assistant bubble fed by the SSE deltas. On
+ * `done` the stream hook hands the finished turn to the overlay (which appends it
+ * to `messages`) and resets the live buffer in the same update, so the live bubble
+ * gives way to the committed message with no flash and no duplicate.
  */
 export function ChatTranscript({
   messages,
@@ -32,19 +31,10 @@ export function ChatTranscript({
   liveToolEvents,
   streaming,
 }: ChatTranscriptProps) {
-  const t = useTranslations("chat");
-  const hasLive = Boolean(streaming) && ((liveText ?? "").length > 0 || (liveToolEvents?.length ?? 0) > 0);
-  const isEmpty = messages.length === 0 && !hasLive;
+  const hasLive =
+    Boolean(streaming) && ((liveText ?? "").length > 0 || (liveToolEvents?.length ?? 0) > 0);
 
-  if (isEmpty) {
-    return (
-      <Container data-testid={ChatTranscriptTestId.Empty} padding="200">
-        <Typography type="note" variant="tertiary">
-          {t("empty")}
-        </Typography>
-      </Container>
-    );
-  }
+  if (messages.length === 0 && !hasLive) return null;
 
   return (
     <Stack data-testid={ChatTranscriptTestId.Root} direction="col" gap="200">
@@ -58,14 +48,14 @@ export function ChatTranscript({
       ))}
 
       {hasLive && (
-        <Container data-testid={ChatTranscriptTestId.LiveTurn}>
+        <div data-testid={ChatTranscriptTestId.LiveTurn}>
           <ChatMessage
             role="assistant"
             streaming={streaming}
             text={liveText ?? ""}
             toolEvents={liveToolEvents}
           />
-        </Container>
+        </div>
       )}
     </Stack>
   );

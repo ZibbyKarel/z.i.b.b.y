@@ -1,26 +1,43 @@
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import type { ChatToolEvent } from "@zibby/contracts";
 import { API_URL } from "../../../state/api";
-import { getChatTranscriptQueryKey } from "../queries/useChatTranscriptQuery";
 
 /**
  * The live state of the assistant's in-progress turn, accumulated from the SSE
  * token stream. Consumers render `text` as a streaming bubble while `streaming`
- * is true; `toolEvents` are inline dispatch announcements; `error` is a terminal
- * stream failure.
+ * is true; `toolEvents` are inline dispatch announcements. Once a turn finishes
+ * the buffer resets to {@link EMPTY} and the finished turn is handed to
+ * {@link ChatStreamHandlers.onComplete} — there is no persisted refetch.
  */
 export interface ChatStreamState {
   /** The turn currently streaming, or `null` between turns. */
   turnId: string | null;
-  /** Accumulated assistant text for the current turn (final on `done`). */
+  /** Accumulated assistant text for the current turn. */
   text: string;
   /** Tool events announced during the current turn, in arrival order. */
   toolEvents: ChatToolEvent[];
   /** True between the first delta/tool and the terminal `done`/`error`. */
   streaming: boolean;
-  /** Terminal stream error message, if the turn failed. */
+  /** Terminal stream error for the just-ended turn, if it failed. */
   error: string | null;
+}
+
+/** The finished assistant turn, handed to {@link ChatStreamHandlers.onComplete}. */
+export interface CompletedTurn {
+  turnId: string;
+  text: string;
+  toolEvents: ChatToolEvent[];
+}
+
+/**
+ * Side-effect callbacks fired once per turn. The conversation lives in the
+ * caller's client state (the chat overlay is ephemeral — reset on reopen), so the
+ * hook hands the finished turn back rather than invalidating a query. `onComplete`
+ * fires on the terminal `done`; `onError` on a terminal `error`.
+ */
+export interface ChatStreamHandlers {
+  onComplete?: (turn: CompletedTurn) => void;
+  onError?: (message: string) => void;
 }
 
 /**
@@ -47,26 +64,38 @@ const EMPTY: ChatStreamState = {
  * configurable `API_URL` the rest of the app uses (see `state/api.ts`), exactly as
  * `runEvents.tsx` resolves `/api/events`.
  *
- * Deltas are appended into a per-turn buffer keyed by `turnId` — a new turn resets
- * the buffer, and the terminal `done.text` is treated as authoritative (deltas can
- * drop). On `done` the persisted transcript is invalidated so the finished turn
- * (with its `toolEvents`) reloads from the source of truth; the live buffer then
- * gives way to the persisted message.
+ * Deltas accumulate into a per-turn buffer (mirrored in a ref so the terminal
+ * frame can hand back the whole turn without reading React state). On `done` the
+ * authoritative `done.text` plus the accumulated tool events are handed to
+ * `onComplete` and the live buffer resets in the SAME update — so the streaming
+ * bubble vanishes exactly as the caller commits the persisted message, with no
+ * empty frame in between (this is what fixed "history zmizela": there is no
+ * refetch window to flash through).
  *
  * The stream is scoped to the hook's lifetime: it opens when a `conversationId` is
- * known and closes on unmount (the overlay closing), which is lighter than an
- * always-on provider — on reopen the transcript refetch already carries the final
- * text. A `null` conversationId is inert (nothing to stream yet).
+ * known and closes on unmount (the overlay closing). A `null` conversationId is
+ * inert (nothing to stream yet).
  */
-export function useChatStream(conversationId: string | null): ChatStreamState {
-  const qc = useQueryClient();
-  // The buffered state is tagged with the conversation it belongs to, so a frame
-  // from a freshly-opened stream (a different conversation) resets it inside the
-  // functional update — no synchronous setState in the effect.
+export function useChatStream(
+  conversationId: string | null,
+  handlers: ChatStreamHandlers = {},
+): ChatStreamState {
   const [tagged, setState] = useState<{ forConversation: string | null } & ChatStreamState>({
     forConversation: null,
     ...EMPTY,
   });
+
+  // The terminal frame commits via the caller's handlers; keep them in a ref so a
+  // changed handler identity doesn't tear down and re-open the stream. Synced in an
+  // effect (a ref must not be written during render).
+  const handlersRef = useRef(handlers);
+  useEffect(() => {
+    handlersRef.current = handlers;
+  });
+
+  // A mutable mirror of the in-flight turn so `done`/`error` can hand back the full
+  // accumulated text + tools without depending on the async React state.
+  const bufferRef = useRef<CompletedTurn>({ turnId: "", text: "", toolEvents: [] });
 
   useEffect(() => {
     if (!conversationId || !API_URL || typeof EventSource === "undefined") return;
@@ -83,52 +112,66 @@ export function useChatStream(conversationId: string | null): ChatStreamState {
         return;
       }
 
-      setState((prev) => {
-        // A frame for a new conversation, or a new turn, starts a fresh buffer;
-        // carry-over of the prior turn's text/tools would bleed across bubbles.
-        const fresh = prev.forConversation !== conversationId || prev.turnId !== parsed.turnId;
-        const base: { forConversation: string } & ChatStreamState = fresh
-          ? {
-              forConversation: conversationId,
-              turnId: parsed.turnId,
-              text: "",
-              toolEvents: [],
-              streaming: true,
-              error: null,
-            }
-          : { ...prev, forConversation: conversationId };
+      // A new turn id starts a fresh accumulation buffer.
+      if (bufferRef.current.turnId !== parsed.turnId) {
+        bufferRef.current = { turnId: parsed.turnId, text: "", toolEvents: [] };
+      }
+      const buf = bufferRef.current;
 
-        switch (parsed.type) {
-          case "delta":
-            return { ...base, streaming: true, text: base.text + parsed.text };
-          case "tool":
-            return { ...base, streaming: true, toolEvents: [...base.toolEvents, parsed.tool] };
-          case "done":
-            // `done.text` is the authoritative final text (deltas can drop).
-            return { ...base, streaming: false, text: parsed.text };
-          case "error":
-            return { ...base, streaming: false, error: parsed.message };
-          default:
-            return base;
+      switch (parsed.type) {
+        case "delta":
+          buf.text += parsed.text;
+          setState({
+            forConversation: conversationId,
+            turnId: parsed.turnId,
+            text: buf.text,
+            toolEvents: buf.toolEvents,
+            streaming: true,
+            error: null,
+          });
+          break;
+        case "tool":
+          buf.toolEvents = [...buf.toolEvents, parsed.tool];
+          setState({
+            forConversation: conversationId,
+            turnId: parsed.turnId,
+            text: buf.text,
+            toolEvents: buf.toolEvents,
+            streaming: true,
+            error: null,
+          });
+          break;
+        case "done": {
+          // `done.text` is authoritative (deltas can drop). Hand the finished turn
+          // to the caller and reset the live buffer in the same React batch.
+          const finalText = parsed.text || buf.text;
+          handlersRef.current.onComplete?.({
+            turnId: parsed.turnId,
+            text: finalText,
+            toolEvents: buf.toolEvents,
+          });
+          bufferRef.current = { turnId: "", text: "", toolEvents: [] };
+          setState({ forConversation: conversationId, ...EMPTY });
+          break;
         }
-      });
-
-      if (parsed.type === "done") {
-        // The turn is persisted now — reload the transcript so the finished message
-        // (with its toolEvents) renders from the source of truth.
-        void qc.invalidateQueries({ queryKey: getChatTranscriptQueryKey(conversationId) });
-        void qc.invalidateQueries({ queryKey: getChatTranscriptQueryKey() });
+        case "error":
+          handlersRef.current.onError?.(parsed.message);
+          bufferRef.current = { turnId: "", text: "", toolEvents: [] };
+          setState({ forConversation: conversationId, ...EMPTY, error: parsed.message });
+          break;
+        default:
+          break;
       }
     };
 
     source.onerror = () => {
-      // EventSource reconnects itself; we only surface a hard failure if a turn was
+      // EventSource reconnects itself; we only drop the streaming flag if a turn was
       // mid-flight (a transient blip between turns is silent).
       setState((prev) => (prev.streaming ? { ...prev, streaming: false } : prev));
     };
 
     return () => source.close();
-  }, [conversationId, qc]);
+  }, [conversationId]);
 
   // Expose EMPTY until a frame for the current conversation has tagged the buffer
   // (covers the null id and the gap right after a conversation switch).

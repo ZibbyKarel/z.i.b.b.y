@@ -26,9 +26,23 @@ const ChatContext = createContext<ChatStore | null>(null);
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const open = useCallback(() => setIsOpen(true), []);
+  // The conversation owned by the current open session. Minting a fresh id on every
+  // open is what makes close + reopen a clean reset: a new id has no `claude` session
+  // to `--resume`, so ZIBBY starts the thread over rather than remembering it.
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const open = useCallback(() => {
+    setConversationId(`conv_${crypto.randomUUID()}`);
+    setIsOpen(true);
+  }, []);
   const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen((v) => !v), []);
+  const toggle = useCallback(() => {
+    if (isOpen) {
+      setIsOpen(false);
+    } else {
+      open();
+    }
+  }, [isOpen, open]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -37,19 +51,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
       if (e.key.toLowerCase() === CHAT_SHORTCUT_KEY) {
         e.preventDefault();
-        setIsOpen((v) => !v);
+        toggle();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [toggle]);
 
   const value = useMemo<ChatStore>(() => ({ isOpen, open, close, toggle }), [isOpen, open, close, toggle]);
 
   return (
     <ChatContext.Provider value={value}>
       {children}
-      {isOpen && <ChatScreen onClose={close} />}
+      {isOpen && <ChatScreen conversationId={conversationId} onClose={close} />}
     </ChatContext.Provider>
   );
 }
