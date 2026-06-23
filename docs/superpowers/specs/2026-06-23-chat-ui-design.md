@@ -221,19 +221,27 @@ CLI version 2.1.186. Findings:
 **Confirmed engine recipe:**
 ```
 claude -p "<message>" [--resume <sid>] \
+  --setting-sources "" \
+  --append-system-prompt "<ZIBBY persona>" \
   --output-format stream-json --include-partial-messages --verbose \
-  --model sonnet --mcp-config <chat-tools> --allowedTools mcp__zibby__*
+  --model sonnet --permission-mode dontAsk \
+  --mcp-config <chat-tools-json> --allowedTools mcp__zibby__*
 ```
 Parse stdout JSONL: capture `session_id` from the `system/init` event; forward only
 `content_block_delta` with `delta.type=="text_delta"` to SSE (skip `thinking` /
 `signature_delta`); capture `tool_use` events for dispatch announcements; the final
 `result` event carries full text + cost for persistence.
 
-> ⚠️ **Isolation gotcha:** a bare `claude -p` spawn fires the operator's **global
-> SessionStart hooks** (e.g. superpowers injected "You have superpowers" context) —
-> foreign context that would pollute ZIBBY's persona. The chat engine must spawn with
-> an isolated config (clean `CLAUDE_CONFIG_DIR`/settings, no global hooks) the same way
-> the existing runner isolates its spawns, and set the persona via system prompt.
+> ⚠️ **Isolation — solved via `--setting-sources ""` (verified), NOT `CLAUDE_CONFIG_DIR`.**
+> A bare `claude -p` spawn fires the operator's **global hooks/plugins** (superpowers
+> injected "You have superpowers" context) — foreign context that pollutes ZIBBY's
+> persona. Spiked two isolation options:
+> - `CLAUDE_CONFIG_DIR=<clean>` → **breaks auth** ("Not logged in"); credentials live
+>   in the operator's config dir / macOS keychain. ✗
+> - `--setting-sources ""` → loads **no** user/project/local settings (skips hooks,
+>   plugins, skills, CLAUDE.md) but **keeps auth** (keychain) and honors explicit
+>   `--mcp-config` / `--append-system-prompt`. Verified: 0 hook events, token deltas
+>   still flow, auth intact. ✓ **This is the isolation mechanism.**
 
 ## 8. Testing
 
