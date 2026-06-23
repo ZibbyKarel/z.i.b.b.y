@@ -215,8 +215,16 @@ CLI version 2.1.186. Findings:
 3. **Latency** — cold spawn TTFT ~2.7–4.4s on Opus (incl. thinking + SessionStart
    hooks). Pin `--model sonnet` for the chat to cut latency/cost; consider suppressing
    extended thinking for snappier turns.
-4. **MCP tool-call** — not re-spiked; already proven by the repo's run-extensibility
-   work (`--mcp-config` + `mcp__id__*` allow, api suite green). Align with that code.
+4. **MCP tool-call — CONFIRMED under the isolated chat config (re-spiked 2026-06-23).**
+   run-extensibility uses the heavy `ClaudeRunCommandService` path WITH full
+   `--settings`; the chat uses `--setting-sources ""`, so the tool path needed its own
+   proof. Ran the exact chat recipe (`--setting-sources "" --permission-mode dontAsk
+   --allowedTools mcp__everything__* --mcp-config <stdio npx server>`) against the MCP
+   reference `@modelcontextprotocol/server-everything`: the model called
+   `mcp__everything__echo`, the tool result returned, and the model used it in its
+   reply. tool-use round-trips under isolation. Tools server itself = HTTP transport
+   hosted in the api (`@modelcontextprotocol/sdk`, `{type:"http",url}` mcp-config) so
+   `TasksService`/`BriefingService`/`VaultService` inject directly — no second process.
 
 **Confirmed engine recipe:**
 ```
