@@ -7,6 +7,7 @@ import { ApprovalsModule } from "./approvals/approvals.module";
 import { AutomationsModule } from "./automations/automations.module";
 import { BriefingModule } from "./briefing/briefing.module";
 import { BudgetModule } from "./budget/budget.module";
+import { ChatModule } from "./chat/chat.module";
 import { ChannelsModule } from "./channels/channels.module";
 import { CommandsModule } from "./commands/commands.module";
 import { DiscoveryModule } from "./discovery/discovery.module";
@@ -61,6 +62,7 @@ import { TasksModule } from "./tasks/tasks.module";
     LimitResumeModule,
     EventsModule,
     BudgetModule,
+    ChatModule,
     TasksModule,
   ],
 })

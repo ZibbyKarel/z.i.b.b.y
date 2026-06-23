@@ -55,4 +55,6 @@ export * from "./briefing/briefing.schema";
 export * from "./briefing/briefing.contract";
 export * from "./budget/budget.schema";
 export * from "./budget/budget.contract";
+export * from "./chat/chat.schema";
+export * from "./chat/chat.contract";
 export * from "./app.contract";

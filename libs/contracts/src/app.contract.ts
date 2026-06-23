@@ -3,6 +3,7 @@ import { activityContract } from "./activity/activity.contract";
 import { agentRunsContract, agentsContract } from "./agents/agents.contract";
 import { briefingContract } from "./briefing/briefing.contract";
 import { budgetContract } from "./budget/budget.contract";
+import { chatContract } from "./chat/chat.contract";
 import { approvalsContract } from "./approvals/approvals.contract";
 import { discoveryContract } from "./discovery/discovery.contract";
 import { researchContract } from "./research/research.contract";
@@ -72,6 +73,7 @@ export const appContract = c.router({
   activity: activityContract,
   briefing: briefingContract,
   budget: budgetContract,
+  chat: chatContract,
 });
 
 export type AppContract = typeof appContract;
