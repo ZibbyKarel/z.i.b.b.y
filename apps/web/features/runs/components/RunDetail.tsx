@@ -16,6 +16,7 @@ import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useNewTask } from "../../tasks/TaskContext";
 import { relativeTime, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals/queries";
+import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { type RunView, approvalForRun, runTitle } from "../run";
@@ -115,31 +116,74 @@ function firstUrl(text: string | undefined): string | undefined {
   return text?.match(/https?:\/\/\S+/)?.[0];
 }
 
+/** How much produced output is folded into a follow-up task's context (8000-char cap). */
+const CONTINUE_CONTEXT_MAX = 1500;
+
 /**
- * A completed task's produced output (items: "open output" + "continue in a new
- * task"). Shown only for a `done` run whose task chose a `pr`/`file` output — its
- * `taskOutcomeSummary` carries the reference (a PR url, or a written-file note). The
- * PR url opens in a new tab; "continue" seeds a fresh task with this output folded
- * into its context.
+ * A completed task's produced output ("open output" + "continue in a new task"). Two
+ * shapes, by where the output lives:
+ *  - agent/orchestrator tasks with a chosen `pr`/`file` output → `taskOutcomeSummary`
+ *    carries the reference (a PR url opens in a new tab, a file note is shown);
+ *  - a done pipeline run → its `pr-draft.md` + `diffstat.txt` artifacts (the delivery
+ *    loop's actual output), reusing {@link RunPrGatePanel}.
+ * Either way, "continue" seeds a fresh task with the output folded into its context.
+ * Renders nothing when there is no surfaced output.
  */
 function RunOutputPanel({ run }: { run: RunView }) {
   const t = useTranslations("runs");
   const { open: openNewTask } = useNewTask();
+
   const summary = run.taskOutcomeSummary;
-  const hasOutput =
+  const agentOutput =
     run.status === "done" &&
     !!summary &&
     (run.taskOutputKind === "pr" || run.taskOutputKind === "file");
-  if (!hasOutput || !summary) return null;
+  const pipelineDone = run.status === "done" && run.kind === "pipeline";
 
-  const url = firstUrl(summary);
+  // The pipeline's produced PR draft — shown by RunPrGatePanel below and reused as the
+  // continue-context. Same query key, so this shares RunPrGatePanel's cache (no extra
+  // fetch); gated so non-pipeline runs never request it.
+  const { data: prDraft } = useRunArtifactQuery(run.runId, "pr-draft.md", pipelineDone);
+  const pipelineOutput = pipelineDone && !!prDraft?.content;
+
+  if (!agentOutput && !pipelineOutput) return null;
+
+  const rawOutput = agentOutput ? (summary ?? "") : (prDraft?.content ?? "");
+  const output =
+    rawOutput.length > CONTINUE_CONTEXT_MAX ? `${rawOutput.slice(0, CONTINUE_CONTEXT_MAX)}…` : rawOutput;
   const context = [
     run.taskTitle ? t("continueContextTask", { title: run.taskTitle }) : null,
-    t("continueContextOutput", { output: summary }),
+    t("continueContextOutput", { output }),
   ]
     .filter(Boolean)
     .join("\n");
 
+  const continueButton = (
+    <Button
+      data-testid="continue-task"
+      icon="plus"
+      intent="ghost"
+      onClick={() => openNewTask(undefined, undefined, context)}
+      size="sm"
+    >
+      {t("continueTask")}
+    </Button>
+  );
+
+  // Pipeline: the artifact view IS the openable output; "continue" sits beneath it.
+  if (pipelineOutput) {
+    return (
+      <Stack gap="100">
+        <RunPrGatePanel pipelineRunId={run.runId} title={t("producedOutputTitle")} />
+        <Stack align="center" direction="row" gap="100">
+          {continueButton}
+        </Stack>
+      </Stack>
+    );
+  }
+
+  // Agent/orchestrator: the summary reference, with a PR url opened in a new tab.
+  const url = firstUrl(summary);
   return (
     <HudPanel padding="250" title={t("producedOutputTitle")}>
       <Stack gap="100">
@@ -158,15 +202,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
               {t("openOutput")}
             </Button>
           )}
-          <Button
-            data-testid="continue-task"
-            icon="plus"
-            intent="ghost"
-            onClick={() => openNewTask(undefined, undefined, context)}
-            size="sm"
-          >
-            {t("continueTask")}
-          </Button>
+          {continueButton}
         </Stack>
       </Stack>
     </HudPanel>

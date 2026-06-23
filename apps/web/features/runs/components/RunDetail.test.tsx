@@ -18,6 +18,13 @@ const { openNewTask } = vi.hoisted(() => ({ openNewTask: vi.fn() }));
 vi.mock("../../tasks/TaskContext", () => ({
   useNewTask: () => ({ open: openNewTask, close: vi.fn(), isOpen: false }),
 }));
+// The pipeline output panel reads the run's pr-draft artifact; return a draft so a
+// done pipeline run surfaces it (and none when the query is gated off).
+vi.mock("../queries/useRunArtifactQuery", () => ({
+  useRunArtifactQuery: (_runId: string, name: string, enabled = true) => ({
+    data: enabled && name === "pr-draft.md" ? { name, content: "# Add login fix\n\nDetails…" } : undefined,
+  }),
+}));
 
 const LONG_DESC =
   "Refaktoruj detail běhu pipeliny tak, aby nezobrazoval název úkolu dvakrát, " +
@@ -130,5 +137,18 @@ describe("RunDetail — task output", () => {
   it("hides the output panel while the run is still running", () => {
     renderDetail({ ...doneWithPr, status: "running" });
     expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
+  });
+
+  it("surfaces a done pipeline run's PR draft as its output and offers continue", async () => {
+    openNewTask.mockClear();
+    renderDetail({ ...pipelineRun, status: "done", taskOutcome: "done" });
+    // The produced PR draft (artifact) is shown as the output.
+    expect(screen.getByText(/Add login fix/)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("continue-task"));
+    expect(openNewTask).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.stringContaining("Add login fix"),
+    );
   });
 });
