@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { Agent } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
-import { Container, Icon, IconTile, Pressable, Stack, Typography } from "@zibby/design-system";
+import { Container, Icon, IconTile, Pressable, Stack, Tag, Typography } from "@zibby/design-system";
 import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import { ACCENT, BAD, SURFACE, SURFACE_HI, mix } from "./canvas-tokens";
 import { type GraphNode, NODE_H, NODE_W } from "./pipeline-graph";
@@ -28,6 +28,12 @@ export interface AgentNodeProps {
   dragging: boolean;
   /** Whether the node already feeds a successor (hides the terminal output chip). */
   hasOutgoing: boolean;
+  /** Detail view: render the node as a static card (no ports, drag, edit affordances). */
+  readOnly?: boolean;
+  /** Live-run attempt count for a loop node, shown as a tag in the read-only detail view. */
+  attempt?: number;
+  /** Max attempts (maxRetries + 1) for the "n/m" attempt tag. */
+  maxAttempts?: number;
   onPortDown: (which: PortKind, nodeId: string, e: MouseEvent) => void;
   onNodeDown: (nodeId: string, e: MouseEvent) => void;
   onDelete: (nodeId: string) => void;
@@ -59,6 +65,9 @@ export function AgentNode({
   hover,
   dragging,
   hasOutgoing,
+  readOnly = false,
+  attempt,
+  maxAttempts,
   onPortDown,
   onNodeDown,
   onDelete,
@@ -81,6 +90,8 @@ export function AgentNode({
   const borderColor = nodeLit ? BAD : reworkTarget ? mix(BAD, 33) : mix(ACCENT, 33);
 
   const port = (which: PortKind) => {
+    // Ports are wiring affordances — a static detail card has none.
+    if (readOnly) return null;
     const isTop = which === "top";
     const isIn = which === "in";
     const c = isTop ? BAD : ACCENT;
@@ -117,13 +128,13 @@ export function AgentNode({
 
   return (
     <Container
-      cursor={dragging ? "grabbing" : "grab"}
+      cursor={readOnly ? "default" : dragging ? "grabbing" : "grab"}
       data-testid="pipeline-node"
       height={`${NODE_H}px`}
       left={`${node.x}px`}
-      onMouseDown={(e) => onNodeDown(node.id, e)}
-      onMouseEnter={() => onNodeEnter(node.id)}
-      onMouseLeave={() => onNodeLeave(node.id)}
+      onMouseDown={readOnly ? undefined : (e) => onNodeDown(node.id, e)}
+      onMouseEnter={readOnly ? undefined : () => onNodeEnter(node.id)}
+      onMouseLeave={readOnly ? undefined : () => onNodeLeave(node.id)}
       padding={["100", "100"]}
       position="absolute"
       style={{
@@ -140,18 +151,20 @@ export function AgentNode({
       userSelect="none"
       width={`${NODE_W}px`}
     >
-      <Pressable
-        aria-label={t("removeNodeAria", { agent: label })}
-        data-testid="node-delete"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(node.id);
-        }}
-        onMouseDown={stop}
-        style={{ position: "absolute", top: -9, right: -9 }}
-      >
-        <IconTile glyph="x" shape="circle" size="sm" tone="neutral" />
-      </Pressable>
+      {!readOnly && (
+        <Pressable
+          aria-label={t("removeNodeAria", { agent: label })}
+          data-testid="node-delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(node.id);
+          }}
+          onMouseDown={stop}
+          style={{ position: "absolute", top: -9, right: -9 }}
+        >
+          <IconTile glyph="x" shape="circle" size="sm" tone="neutral" />
+        </Pressable>
+      )}
 
       <Stack align="center" direction="row" gap="75">
         <IconTile glyph={glyphOf(node, agents)} size="sm" />
@@ -160,30 +173,44 @@ export function AgentNode({
             {label}
           </Typography>
         </Container>
+        {readOnly && attempt !== undefined && (
+          <Tag tone="warn">
+            {maxAttempts !== undefined ? `${attempt}/${maxAttempts}` : `${attempt}`}
+          </Tag>
+        )}
       </Stack>
 
       {node.type === "agent" ? (
         <Stack direction="row" gap="50" style={{ marginTop: 6 }}>
-          <Pressable
-            aria-label={t("cycleModelAria", { agent: node.agent })}
-            onClick={(e) => {
-              e.stopPropagation();
-              onCycleModel(node.id);
-            }}
-            onMouseDown={stop}
-          >
-            <ModelBadge model={node.model} />
-          </Pressable>
-          <Pressable
-            aria-label={t("cycleThinkAria", { agent: node.agent })}
-            onClick={(e) => {
-              e.stopPropagation();
-              onCycleThink(node.id);
-            }}
-            onMouseDown={stop}
-          >
-            <ThinkBadge level={node.thinking} />
-          </Pressable>
+          {readOnly ? (
+            <>
+              <ModelBadge model={node.model} />
+              <ThinkBadge level={node.thinking} />
+            </>
+          ) : (
+            <>
+              <Pressable
+                aria-label={t("cycleModelAria", { agent: node.agent })}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCycleModel(node.id);
+                }}
+                onMouseDown={stop}
+              >
+                <ModelBadge model={node.model} />
+              </Pressable>
+              <Pressable
+                aria-label={t("cycleThinkAria", { agent: node.agent })}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCycleThink(node.id);
+                }}
+                onMouseDown={stop}
+              >
+                <ThinkBadge level={node.thinking} />
+              </Pressable>
+            </>
+          )}
         </Stack>
       ) : (
         <Typography mono size="2xs" style={{ marginTop: 6 }} type="note" variant="tertiary">
@@ -195,14 +222,20 @@ export function AgentNode({
       {node.type === "agent" && !hasOutgoing && (
         <Stack align="center" direction="row" gap="25" style={{ marginTop: 6 }}>
           <Icon name="file" size="xs" tone="faint" />
-          <input
-            aria-label={t("outputFileAria", { agent: node.agent })}
-            className="min-w-0 flex-1 border-none bg-transparent font-mono text-[10px] text-accent outline-none"
-            onChange={(e) => onSetProduces(node.id, e.target.value)}
-            onMouseDown={stop}
-            spellCheck={false}
-            value={node.produces}
-          />
+          {readOnly ? (
+            <Typography mono truncate size="2xs" tone="accent" type="note">
+              {node.produces}
+            </Typography>
+          ) : (
+            <input
+              aria-label={t("outputFileAria", { agent: node.agent })}
+              className="min-w-0 flex-1 border-none bg-transparent font-mono text-[10px] text-accent outline-none"
+              onChange={(e) => onSetProduces(node.id, e.target.value)}
+              onMouseDown={stop}
+              spellCheck={false}
+              value={node.produces}
+            />
+          )}
         </Stack>
       )}
 

@@ -3,7 +3,7 @@
 import { Button, Container, Divider, Grid, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
@@ -14,9 +14,10 @@ import type { Pipeline } from "../../domain";
 import { useAgentsQuery } from "../agents/queries";
 import { useNewTask } from "../tasks/TaskContext";
 import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
-import { PhaseChain, attemptsFromStageRuns } from "./components/PhaseChain";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
+import { PipelineCanvas } from "./components/PipelineDialog/PipelineCanvas";
 import { PipelineDialog } from "./components/PipelineDialog/PipelineDialog";
+import { attemptsFromStageRuns, phasesToGraph } from "./components/PipelineDialog/pipeline-graph";
 import {
   duplicatePipelineBody,
   useCreatePipelineMutation,
@@ -29,6 +30,9 @@ export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
   selectedId?: string;
 }
+
+/** Read-only canvas: the editing callbacks are never invoked, so they no-op. */
+const noop = () => {};
 
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
@@ -51,6 +55,10 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const { data: liveRuns = [] } = usePipelineRunsQuery();
   const currentRun = selected ? liveRuns.find((r) => r.pipelineId === selected.id) : undefined;
   const attempts = currentRun ? attemptsFromStageRuns(currentRun.stageRuns) : undefined;
+
+  // The detail view renders the *same* node-graph the editor builds on open
+  // (read-only) — identical by construction since both call `phasesToGraph`.
+  const detailGraph = useMemo(() => phasesToGraph(selected, agents), [selected, agents]);
 
   const addModal = adding && (
     <NewPipelineDialog
@@ -210,7 +218,21 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
               </HudPanel>
 
               <HudPanel padding="250" title={t("pipelines.chainTitle")}>
-                <PhaseChain agents={agents} attempts={attempts} pipeline={selected} />
+                <Container
+                  height="460px"
+                  overflow="hidden"
+                  position="relative"
+                  style={{ borderRadius: 6, border: "1px solid var(--color-border)" }}
+                >
+                  <PipelineCanvas
+                    readOnly
+                    agents={agents}
+                    attempts={attempts}
+                    graph={detailGraph}
+                    onAddAgent={noop}
+                    setGraph={noop}
+                  />
+                </Container>
               </HudPanel>
 
               {selected.outputs.length > 0 && (

@@ -48,6 +48,10 @@ export interface PipelineCanvasProps {
   agents: Agent[];
   /** Add an agent node (palette drop with canvas coords). */
   onAddAgent: (agentId: string, x: number, y: number) => void;
+  /** Detail view: render the exact same graph as a static, non-editable canvas. */
+  readOnly?: boolean;
+  /** Live-run attempt counts (phase/node id → count) to overlay on loop nodes. */
+  attempts?: Record<string, number>;
 }
 
 /**
@@ -55,8 +59,16 @@ export interface PipelineCanvasProps {
  * by dragging from the output port (flow) or top port (rework). All edge geometry
  * and the live drag preview are drawn in one SVG layer behind the node DOM.
  */
-export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: PipelineCanvasProps) {
+export function PipelineCanvas({
+  graph,
+  setGraph,
+  agents,
+  onAddAgent,
+  readOnly = false,
+  attempts,
+}: PipelineCanvasProps) {
   const t = useTranslations("forms.pipeline");
+  const reworkByFrom = new Map(graph.rework.map((r) => [r.from, r] as const));
   const [pending, setPending] = useState<PendingEdge | null>(null);
   const [nodeDrag, setNodeDrag] = useState<{ id: string } | null>(null);
   const [hover, setHoverState] = useState<HoverTarget | null>(null);
@@ -173,6 +185,8 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
 
   // ---- global drag tracking -----------------------------------------------
   useEffect(() => {
+    // A read-only canvas wires no edges and drags no nodes.
+    if (readOnly) return;
     if (!pending && !nodeDrag) return;
     const mm = (e: globalThis.MouseEvent) => {
       const c = toCanvas(e.clientX, e.clientY);
@@ -223,17 +237,25 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
       grow
       height="100%"
       minHeight="0"
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        const id = e.dataTransfer.getData(AGENT_DND_TYPE);
-        if (!id) return;
-        const c = toCanvas(e.clientX, e.clientY);
-        onAddAgent(id, c.x - NODE_W / 2, c.y - NODE_H / 2);
-      }}
+      onDragOver={
+        readOnly
+          ? undefined
+          : (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }
+      }
+      onDrop={
+        readOnly
+          ? undefined
+          : (e) => {
+              e.preventDefault();
+              const id = e.dataTransfer.getData(AGENT_DND_TYPE);
+              if (!id) return;
+              const c = toCanvas(e.clientX, e.clientY);
+              onAddAgent(id, c.x - NODE_W / 2, c.y - NODE_H / 2);
+            }
+      }
       overflow="auto"
       position="relative"
       style={{ background: "var(--color-background)" }}
@@ -319,27 +341,33 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
           )}
         </svg>
 
-        {graph.nodes.map((n) => (
-          <AgentNode
-            agents={agents}
-            dragging={nodeDrag?.id === n.id}
-            hasOutgoing={hasOutgoing(n.id)}
-            hover={hover}
-            key={n.id}
-            node={n}
-            onCycleModel={cycleModel}
-            onCycleThink={cycleThink}
-            onDelete={delNode}
-            onNodeDown={onNodeDown}
-            onNodeEnter={onNodeEnter}
-            onNodeLeave={onNodeLeave}
-            onPortDown={onPortDown}
-            onPortEnter={onPortEnter}
-            onPortLeave={onPortLeave}
-            onSetProduces={setProduces}
-            pending={pending}
-          />
-        ))}
+        {graph.nodes.map((n) => {
+          const loop = reworkByFrom.get(n.id) ?? n.looseLoop;
+          return (
+            <AgentNode
+              agents={agents}
+              attempt={loop ? attempts?.[n.id] : undefined}
+              dragging={nodeDrag?.id === n.id}
+              hasOutgoing={hasOutgoing(n.id)}
+              hover={hover}
+              key={n.id}
+              maxAttempts={loop ? loop.maxRetries + 1 : undefined}
+              node={n}
+              onCycleModel={cycleModel}
+              onCycleThink={cycleThink}
+              onDelete={delNode}
+              onNodeDown={onNodeDown}
+              onNodeEnter={onNodeEnter}
+              onNodeLeave={onNodeLeave}
+              onPortDown={onPortDown}
+              onPortEnter={onPortEnter}
+              onPortLeave={onPortLeave}
+              onSetProduces={setProduces}
+              pending={pending}
+              readOnly={readOnly}
+            />
+          );
+        })}
 
         {graph.flow.map((e) => {
           const from = nodeById(e.from);
@@ -353,6 +381,7 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
               left={(a.x + b.x) / 2}
               onChange={(v) => setProduces(from.id, v)}
               onDelete={() => delFlow(e.id)}
+              readOnly={readOnly}
               top={(a.y + b.y) / 2 - FLOW_LABEL_LIFT}
               value={from.produces}
             />
@@ -374,6 +403,7 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
               onDelete={() => delRework(r.id)}
               onEscalate={(on) => patchRework(r.id, { escalate: on })}
               onMaxRetries={(n) => patchRework(r.id, { maxRetries: n })}
+              readOnly={readOnly}
               top={Math.min(a.y, b.y) - 56}
             />
           );
@@ -393,9 +423,11 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
               <Typography mono size="sm" type="note" variant="tertiary">
                 {t("canvasEmpty")}
               </Typography>
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {t("canvasEmptyHint")}
-              </Typography>
+              {!readOnly && (
+                <Typography mono size="xs" type="note" variant="tertiary">
+                  {t("canvasEmptyHint")}
+                </Typography>
+              )}
             </Stack>
           </Container>
         )}

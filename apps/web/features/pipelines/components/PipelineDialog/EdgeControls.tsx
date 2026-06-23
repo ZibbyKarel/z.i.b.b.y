@@ -45,34 +45,51 @@ export interface FlowFileControlProps {
   value: string;
   onChange: (value: string) => void;
   onDelete: () => void;
+  /** Detail view: render the filename as static text (no edit input, no disconnect). */
+  readOnly?: boolean;
 }
 
-/** The editable hand-off filename floating on a flow edge (output → input). */
-export function FlowFileControl({ left, top, value, onChange, onDelete }: FlowFileControlProps) {
+/** The hand-off filename floating on a flow edge (output → input); editable unless readOnly. */
+export function FlowFileControl({
+  left,
+  top,
+  value,
+  onChange,
+  onDelete,
+  readOnly = false,
+}: FlowFileControlProps) {
   const t = useTranslations("forms.pipeline");
   return (
     <FloatingControl left={left} testId="flow-file-control" top={top}>
       <Stack align="center" direction="row" gap="50">
         <Icon name="file" size="xs" tone="faint" />
-        <input
-          aria-label={t("handoffFileAria")}
-          className="border-none bg-transparent font-mono text-[10px] text-accent outline-none"
-          onChange={(e) => onChange(e.target.value)}
-          // Auto-width to the filename (monospace `size` = char count) so the pill grows
-          // with the name instead of clipping at a fixed width; floored so it stays usable.
-          size={Math.max(value.length, 6)}
-          spellCheck={false}
-          title={t("handoffHint")}
-          value={value}
-        />
-        <button
-          aria-label={t("disconnectAria")}
-          className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint hover:text-foreground"
-          onClick={onDelete}
-          type="button"
-        >
-          <Icon name="x" size="xs" />
-        </button>
+        {readOnly ? (
+          <Typography mono size="2xs" tone="accent" type="note">
+            {value}
+          </Typography>
+        ) : (
+          <>
+            <input
+              aria-label={t("handoffFileAria")}
+              className="border-none bg-transparent font-mono text-[10px] text-accent outline-none"
+              onChange={(e) => onChange(e.target.value)}
+              // Auto-width to the filename (monospace `size` = char count) so the pill grows
+              // with the name instead of clipping at a fixed width; floored so it stays usable.
+              size={Math.max(value.length, 6)}
+              spellCheck={false}
+              title={t("handoffHint")}
+              value={value}
+            />
+            <button
+              aria-label={t("disconnectAria")}
+              className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint hover:text-foreground"
+              onClick={onDelete}
+              type="button"
+            >
+              <Icon name="x" size="xs" />
+            </button>
+          </>
+        )}
       </Stack>
     </FloatingControl>
   );
@@ -86,6 +103,8 @@ export interface ReworkControlProps {
   onMaxRetries: (n: number) => void;
   onEscalate: (on: boolean) => void;
   onDelete: () => void;
+  /** Detail view: render retries/escalate as static text (no steppers/toggle/remove). */
+  readOnly?: boolean;
 }
 
 const STEP =
@@ -100,8 +119,26 @@ export function ReworkControl({
   onMaxRetries,
   onEscalate,
   onDelete,
+  readOnly = false,
 }: ReworkControlProps) {
   const t = useTranslations("forms.pipeline");
+  if (readOnly) {
+    return (
+      <FloatingControl borderColor={mix(BAD, 33)} left={left} testId="rework-control" top={top}>
+        <Stack align="center" direction="row" gap="75">
+          <Icon name="retry" size="sm" tone="bad" />
+          <Typography mono size="2xs" tone="bad" type="note">
+            {t("loopMax")} {maxRetries}
+          </Typography>
+          {escalate && (
+            <Typography mono size="2xs" tone="warn" type="note">
+              ↑ {t("escalateEffort")}
+            </Typography>
+          )}
+        </Stack>
+      </FloatingControl>
+    );
+  }
   return (
     <FloatingControl borderColor={mix(BAD, 33)} left={left} testId="rework-control" top={top}>
       <Stack align="center" direction="row" gap="75">

@@ -4,6 +4,7 @@ import type { Pipeline } from "../../../../domain";
 import {
   INITIAL_ASSIGNMENT,
   type PipelineGraph,
+  attemptsFromStageRuns,
   graphToPhases,
   isUpstreamRework,
   orderNodes,
@@ -277,5 +278,21 @@ describe("isUpstreamRework", () => {
     expect(isUpstreamRework(g, "b", "a")).toBe(true);
     expect(isUpstreamRework(g, "a", "b")).toBe(false);
     expect(isUpstreamRework(g, "a", "a")).toBe(false);
+  });
+});
+
+describe("attemptsFromStageRuns", () => {
+  it("tallies runs per phase, ignoring escalation markers", () => {
+    const counts = attemptsFromStageRuns([
+      { phaseId: "koder", runId: "r1" },
+      { phaseId: "koder", runId: "r2" },
+      { phaseId: "koder", runId: "r2.escalated" },
+      { phaseId: "verify", runId: "r3" },
+    ]);
+    expect(counts).toEqual({ koder: 2, verify: 1 });
+  });
+
+  it("is empty for no runs", () => {
+    expect(attemptsFromStageRuns([])).toEqual({});
   });
 });

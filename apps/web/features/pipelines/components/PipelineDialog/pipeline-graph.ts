@@ -286,6 +286,22 @@ export function validateGraph(graph: PipelineGraph, name: string): GraphValidity
   return { ok: true };
 }
 
+// ---- live-run attempt tally ----------------------------------------------
+/**
+ * Stage-run tally per phase id (escalation markers excluded) for the "attempt
+ * n/m" overlay the detail canvas shows on a loop node during a live run.
+ */
+export function attemptsFromStageRuns(
+  stageRuns: ReadonlyArray<{ phaseId: string; runId: string }>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const s of stageRuns) {
+    if (s.runId.endsWith(".escalated")) continue;
+    out[s.phaseId] = (out[s.phaseId] ?? 0) + 1;
+  }
+  return out;
+}
+
 /** True when wiring a rework edge `from → to` would point upstream (legal). */
 export function isUpstreamRework(graph: PipelineGraph, from: string, to: string): boolean {
   if (from === to) return false;
