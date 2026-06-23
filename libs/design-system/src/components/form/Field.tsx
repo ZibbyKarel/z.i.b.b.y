@@ -34,6 +34,8 @@ export interface FieldControl {
 
 export interface FieldProps {
   label: string;
+  /** Optional node rendered inline after the label — e.g. a help `Tooltip` trigger. */
+  labelHint?: ReactNode;
   hint?: string;
   /** When present, replaces the hint and marks the control invalid. */
   error?: string;
@@ -60,7 +62,15 @@ export const fieldControlClass =
  * concrete control is supplied as a render function so `Field` can hand it the
  * `id`, `labelId`, `describedBy` and `invalid` it needs to stay accessible.
  */
-export function Field({ label, hint, error, layout = "column", children, ref }: FieldProps) {
+export function Field({
+  label,
+  labelHint,
+  hint,
+  error,
+  layout = "column",
+  children,
+  ref,
+}: FieldProps) {
   const id = useId();
   const labelId = `${id}-label`;
   const messageId = `${id}-message`;
@@ -72,10 +82,18 @@ export function Field({ label, hint, error, layout = "column", children, ref }: 
     invalid: Boolean(error),
   });
 
-  const labelEl = (
+  const labelText = (
     <label className={labelClass} data-testid={FieldTestId.Label} htmlFor={id} id={labelId}>
       {label}
     </label>
+  );
+  const labelEl = labelHint ? (
+    <Stack align="center" direction="row" gap="75">
+      {labelText}
+      {labelHint}
+    </Stack>
+  ) : (
+    labelText
   );
 
   const messageEl = error ? (

@@ -14,6 +14,7 @@ import {
   Tag,
   TextInputField,
   Toggle,
+  Tooltip,
   Typography,
 } from "@zibby/design-system";
 import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@zibby/contracts";
@@ -87,6 +88,7 @@ interface PersonRowProps {
   nameLabel: string;
   roleLabel: string;
   commsStyleLabel: string;
+  commsStyleHelp: string;
   commsStylePlaceholder: string;
   removeLabel: string;
   vipLabel: string;
@@ -101,6 +103,7 @@ function PersonRow({
   nameLabel,
   roleLabel,
   commsStyleLabel,
+  commsStyleHelp,
   commsStylePlaceholder,
   removeLabel,
   vipLabel,
@@ -128,6 +131,11 @@ function PersonRow({
       <TextInputField
         data-testid="person-comms-style"
         label={commsStyleLabel}
+        labelHint={
+          <Tooltip content={commsStyleHelp}>
+            <Button aria-label={commsStyleHelp} icon="help" intent="ghost" size="sm" />
+          </Tooltip>
+        }
         onChange={(e) => onChange({ ...person, comms_style: e.target.value || undefined })}
         placeholder={commsStylePlaceholder}
         value={person.comms_style ?? ""}
@@ -304,6 +312,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                 )}
                 {effectivePeople.map((person, i) => (
                   <PersonRow
+                    commsStyleHelp={t("team.commsStyleHelp")}
                     commsStyleLabel={t("team.commsStyle")}
                     commsStylePlaceholder={t("team.commsStylePlaceholder")}
                     key={i}

@@ -143,6 +143,8 @@ export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 
 export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";
 export type { ToggleProps, ToggleSize } from "./components/Toggle/Toggle";
+export { Tooltip, TooltipTestId } from "./components/Tooltip/Tooltip";
+export type { TooltipProps, TooltipSide } from "./components/Tooltip/Tooltip";
 
 export { Panel, PanelTestId } from "./components/Panel/Panel";
 export type { PanelProps } from "./components/Panel/Panel";

@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, Ref } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 import { Field, fieldControlClass } from "../Field";
 
 export enum TextInputFieldTestId {
@@ -10,15 +10,24 @@ export interface TextInputFieldProps extends Omit<
   "id" | "className"
 > {
   label: string;
+  /** Optional node rendered inline after the label — e.g. a help `Tooltip` trigger. */
+  labelHint?: ReactNode;
   hint?: string;
   error?: string;
   ref?: Ref<HTMLInputElement>;
 }
 
 /** Labelled single-line text input. */
-export function TextInputField({ label, hint, error, ref, ...props }: TextInputFieldProps) {
+export function TextInputField({
+  label,
+  labelHint,
+  hint,
+  error,
+  ref,
+  ...props
+}: TextInputFieldProps) {
   return (
-    <Field error={error} hint={hint} label={label}>
+    <Field error={error} hint={hint} label={label} labelHint={labelHint}>
       {({ id, describedBy, invalid }) => (
         <input
           aria-describedby={describedBy}

@@ -4,8 +4,6 @@
 
 - stránka detailu projektu je moc chaotická. Použij taby a rozděl obsah do několika stránek. Každá z ze stránek by měla být přístupná přes URL přímo
 
-- projekt - Styl komunikace - potřebuji k tomu dodat nějakou vysvětlivku (ideálně zobrazit ikonku "?" a po hover se zobrazí tooltip - udělej DS komponenty které nemáme)
-
 - běhy a aktivita - detail běhu pipeline po nějaké době nezobrazuje logy, které jsem původně viděl
 
 ````
@@ -26,3 +24,5 @@ PipelineRunNotFoundError: Pipeline run "delivery_1782245075542" not found
 - search bar nahoře zobrazuje zkratku cmd+k ale neexistuje na ní listener. Také by měl ukazovat vždy poslední výsledky pokud ho znovu focusnu
 
 - Běhy a aktivita - pokud nějaký task dojede v pořádku a existuje výstup (některé tasky nemusejí mít výstup) pak bychom u běhu měli vidět tlačítko "pokračovat v novém úkolu" (klidně vymysli lepší label), které otevře new task dialog kam uživatel vyplní standartní popis co se má dělat. Task se zpracuje uplně normálně a navíc se do kontextu běhu vezme ten výstup původního tasku. (to bychom také měli vidět v otevřeném new task dialogu že se přidává i ten kontext)
+
+- Běhy a aktivity - pokud má nějaký task výstup měli bychom mít způsob jak ho otevřít

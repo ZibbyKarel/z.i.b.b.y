@@ -1117,6 +1117,7 @@
         "rolePlaceholder": "Produktový manažer",
         "vip": "VIP — vynutí eskalaci",
         "commsStyle": "Styl komunikace",
+        "commsStyleHelp": "Jak s tímto člověkem komunikovat — tón a forma (např. stručně, formálně, odrážky). ZIBBY se tím řídí, když mu píše nebo odpovídá.",
         "commsStylePlaceholder": "Stručně, preferuje odrážky"
       },
       "autonomy": {

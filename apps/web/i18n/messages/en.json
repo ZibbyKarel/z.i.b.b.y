@@ -1117,6 +1117,7 @@
         "rolePlaceholder": "Product Manager",
         "vip": "VIP — forces escalation",
         "commsStyle": "Comms style",
+        "commsStyleHelp": "How to communicate with this person — tone and form (e.g. terse, formal, bullet points). ZIBBY follows it when writing to or replying to them.",
         "commsStylePlaceholder": "Terse, prefers bullet points"
       },
       "autonomy": {
