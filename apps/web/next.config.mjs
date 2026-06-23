@@ -10,6 +10,11 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@zibby/design-system"],
+  // Statically typed links: `<Link href>` / `router.push()` and our route
+  // constants (state/config.ts) are checked against the real app routes, so a
+  // typo like "/overviw" fails `tsc`. Generated into `.next/types` (already on
+  // the tsconfig `include`); run `next typegen` or any dev/build to refresh.
+  typedRoutes: true,
 };
 
 export default withNextIntl(nextConfig);

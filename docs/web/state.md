@@ -117,6 +117,11 @@ Typy jsou odvozeny přímo z Zod schémat v `@zibby/contracts` — žádný code
 
 - **API data** → TanStack Query (nikdy useState + useEffect na fetch)
 - **URL state** → `useSearchParams` + `useRouter` z Next.js
+- **Routy** → staticky typované přes Next `typedRoutes: true` (`next.config.mjs`).
+  Konstanty rout (`state/config.ts` — `NAV_ITEMS`, `SETTINGS_ITEM`, …) mají `href`
+  typu `Route` z `next`, takže překlep ve `<Link href>` / `router.push()` spadne na
+  `tsc`. Typy se generují do `.next/types` (`next typegen` nebo libovolný dev/build);
+  pro nelitéralové stringy z kontraktů se castuje `as Route`.
 - **Form state** → React Hook Form (přes `@zibby/forms`)
 - **Theme** → `DesignSystemProvider` kontext
 

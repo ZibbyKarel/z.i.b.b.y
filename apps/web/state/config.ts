@@ -4,6 +4,7 @@
  * integrations, agents and pipelines all start empty and are created by the
  * user (see store.tsx). Files are the source of truth.
  */
+import type { Route } from "next";
 import type { IconName, SelectOption } from "@zibby/design-system";
 
 /**
@@ -14,7 +15,8 @@ import type { IconName, SelectOption } from "@zibby/design-system";
 export interface NavConfig {
   id: string;
   glyph: IconName;
-  href: string;
+  /** A statically-typed app route (Next `typedRoutes`) — a typo fails `tsc`. */
+  href: Route;
 }
 
 export const NAV_ITEMS = [

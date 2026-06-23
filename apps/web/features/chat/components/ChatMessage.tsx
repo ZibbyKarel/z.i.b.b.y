@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
@@ -46,7 +47,7 @@ function ToolEventRow({ event }: { event: ChatToolEvent }) {
   return (
     <Link
       data-testid={ChatMessageTestId.ToolEventLink}
-      href={event.href}
+      href={event.href as Route}
       style={{ display: "block", textDecoration: "none" }}
     >
       {body}
