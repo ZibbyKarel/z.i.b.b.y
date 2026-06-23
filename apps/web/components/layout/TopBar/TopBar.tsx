@@ -7,10 +7,9 @@ export interface TopBarProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
   taskSlot?: ReactNode;
-  voiceSlot?: ReactNode;
 }
 
-export function TopBar({ breadcrumb, walletSlot, taskSlot, voiceSlot }: TopBarProps) {
+export function TopBar({ breadcrumb, walletSlot, taskSlot }: TopBarProps) {
   return (
     <Container as="header" position="relative" zIndex={20}>
       <Container height="64px" padding={["0", "300"]} position="relative">
@@ -27,7 +26,6 @@ export function TopBar({ breadcrumb, walletSlot, taskSlot, voiceSlot }: TopBarPr
             <GlobalSearch />
           </Container>
           {taskSlot}
-          {voiceSlot}
           <LanguageSwitcher />
           <Divider orientation="vertical" />
           {walletSlot}

@@ -20,8 +20,8 @@ interface TaskStore {
   isOpen: boolean;
   /**
    * Open the New Task dialog. An optional `initialText` seeds the description field
-   * — Phase 11.4: a voice transcript (or any external trigger) fills the one field,
-   * then the operator confirms the inferred plan behind the same gate. An optional
+   * — an external trigger fills the one field, then the operator confirms the
+   * inferred plan behind the same gate. An optional
    * `initialTarget` locks the destination (e.g. "Run pipeline" pre-chooses a
    * pipeline), bypassing classification.
    */
@@ -33,8 +33,8 @@ const TaskContext = createContext<TaskStore | null>(null);
 
 /**
  * Owns the New Task dialog's open state and a global `N` shortcut (ignored while
- * typing), and mounts the dialog as an overlay above the HUD. Mirrors
- * {@link VoiceProvider}; mount once, high in the client tree (see {@link AppShell}).
+ * typing), and mounts the dialog as an overlay above the HUD. Mount once, high in
+ * the client tree (see {@link AppShell}).
  */
 export function NewTaskProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);

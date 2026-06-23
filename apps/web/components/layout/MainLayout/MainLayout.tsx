@@ -13,7 +13,6 @@ export interface MainLayoutProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
   taskSlot?: ReactNode;
-  voiceSlot?: ReactNode;
   /**
    * Persistent right rail, mirrored on the left navigation: when provided it
    * renders as a fixed-width aside that stays visible on every page.
@@ -29,7 +28,6 @@ export function MainLayout({
   breadcrumb,
   walletSlot,
   taskSlot,
-  voiceSlot,
   railSlot,
   children,
 }: MainLayoutProps) {
@@ -56,12 +54,7 @@ export function MainLayout({
 
       {}
       <Stack grow style={{ minWidth: 0 }}>
-        <TopBar
-          breadcrumb={breadcrumb}
-          taskSlot={taskSlot}
-          voiceSlot={voiceSlot}
-          walletSlot={walletSlot}
-        />
+        <TopBar breadcrumb={breadcrumb} taskSlot={taskSlot} walletSlot={walletSlot} />
         <Container grow overflow="auto" padding={["300", "350"]} position="relative">
           {children}
         </Container>

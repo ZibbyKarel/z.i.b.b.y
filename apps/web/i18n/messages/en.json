@@ -72,10 +72,7 @@
     "commandHint": "Command or skill (⌘K)",
     "commandAriaLabel": "Command or skill",
     "commandPlaceholder": "Command or skill…",
-    "langSwitcherLabel": "Interface language",
-    "voice": "VOICE",
-    "voiceLabel": "Open voice mode",
-    "voiceTitle": "Voice Mode"
+    "langSwitcherLabel": "Interface language"
   },
   "tasks": {
     "triggerLabel": "TASK",
@@ -796,17 +793,6 @@
     "languageHint": "Full interface translation is rolling out gradually — Czech and English are available for now.",
     "caffeinate": "Keep Mac awake (caffeinate)",
     "caffeinateHint": "Keeps the daemon running overnight for scheduled agent runs.",
-    "voiceShortcut": "Keyboard shortcut — Voice Mode",
-    "voiceShortcutHint": "Press the assigned key combination from anywhere in the cockpit to switch to voice mode. Esc always returns to the HUD.",
-    "voiceShortcutChange": "Change shortcut",
-    "voiceShortcutCapturing": "↩ press a key…",
-    "voiceShortcutReset": "reset",
-    "voiceVoice": "ZIBBY's voice",
-    "voiceVoiceHint": "Which voice ZIBBY speaks in (TTS). \"Automatic\" picks by language.",
-    "voiceVoiceAuto": "Automatic",
-    "voiceVoiceUnsupported": "This browser has no voice output.",
-    "voiceTest": "Test",
-    "voiceTestSample": "Hi, I'm ZIBBY. This is how I sound.",
     "system": "System",
     "daemon": "Daemon",
     "host": "Host",
@@ -819,81 +805,6 @@
       "ariaLabel": "Settings sections",
       "general": "General",
       "gates": "Approval rules"
-    }
-  },
-  "voice": {
-    "modeLabel": "VOICE MODE",
-    "exit": "HUD",
-    "state": {
-      "idle": "Waiting for your command…",
-      "listening": "Listening…",
-      "thinking": "Thinking…",
-      "speaking": "ZIBBY is answering…"
-    },
-    "speakNow": "// speak now",
-    "panel": {
-      "agents": "Active agents",
-      "approvals": "Awaiting approval",
-      "activity": "Recent activity",
-      "actions": "Quick actions",
-      "noAgents": "No agents running",
-      "noApprovals": "Nothing awaiting approval",
-      "noActivity": "No recent activity",
-      "noActions": "No skills yet"
-    },
-    "tag": {
-      "user": "YOU",
-      "zibby": "ZIBBY"
-    },
-    "demo": {
-      "user1": "Prepare my standup for today",
-      "zibby1": "Done. 3 PRs since yesterday, 1 flaky test fixed in auth-svc. Standup saved to work/daily/2026-06-09.md.",
-      "user2": "Run the Build Feature pipeline for auth-svc",
-      "zibby2": "Pipeline started. The architect is working on design.md — estimated 8 minutes. Track progress in Orchestration."
-    },
-    "micStart": "Start demo (click)",
-    "micStop": "Stop (click)",
-    "micStartLive": "Start listening",
-    "micStopLive": "Stop listening",
-    "volume": "Volume",
-    "mute": "Mute ZIBBY's voice",
-    "unmute": "Unmute ZIBBY's voice",
-    "send": "Dispatch",
-    "briefMe": "Brief me",
-    "hint": "click the mic for a demo · Esc for HUD",
-    "hintLive": "click the mic and speak · Esc for HUD",
-    "unsupported": "Live voice isn't available in this browser — showing the demo.",
-    "error": {
-      "mic-denied": "Microphone access was denied.",
-      "network": "Speech service unavailable — check your connection.",
-      "service-denied": "The speech service refused the request.",
-      "unsupported": "Live voice isn't available in this browser."
-    },
-    "ack": {
-      "approved": "Approved.",
-      "nothingToApprove": "Nothing is awaiting approval.",
-      "rejected": "Rejected.",
-      "nothingToReject": "Nothing is awaiting approval.",
-      "stopped": "Stopping the run.",
-      "nothingToStop": "No running agent to stop.",
-      "navigating": "Navigating…",
-      "closing": "Closing VOICE MODE.",
-      "briefing": "Briefing.",
-      "dispatching": "Heard: {task}",
-      "started": "It's running — watch it in the HUD.",
-      "clarify": "I'm not sure — can you clarify? For example: {options}.",
-      "clarifyGeneric": "I'm not sure — can you clarify that?",
-      "dispatchFailed": "I couldn't start that.",
-      "heard": "I didn't catch that."
-    },
-    "speak": {
-      "briefing": "{agents} agents running, {approvals} approvals waiting.",
-      "topApproval": "Latest approval: {skill}.",
-      "recent": "Recently: {done} done, {failed} failed.",
-      "nothing": "Nothing needs you right now.",
-      "outcomeDone": "{owner} finished.",
-      "outcomeFailed": "{owner} failed.",
-      "outcomeMany": "{count} runs finished."
     }
   },
   "runs": {

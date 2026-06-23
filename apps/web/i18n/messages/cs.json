@@ -72,10 +72,7 @@
     "commandHint": "Příkaz nebo skill (⌘K)",
     "commandAriaLabel": "Příkaz nebo skill",
     "commandPlaceholder": "Příkaz nebo skill…",
-    "langSwitcherLabel": "Jazyk rozhraní",
-    "voice": "VOICE",
-    "voiceLabel": "Otevřít hlasový režim",
-    "voiceTitle": "Hlasový režim"
+    "langSwitcherLabel": "Jazyk rozhraní"
   },
   "tasks": {
     "triggerLabel": "TASK",
@@ -796,17 +793,6 @@
     "languageHint": "Plný překlad rozhraní se postupně dopisuje — zatím je dostupná čeština a angličtina.",
     "caffeinate": "Držet Mac vzhůru (caffeinate)",
     "caffeinateHint": "Nechá démona běžet i v noci pro naplánované běhy agentů.",
-    "voiceShortcut": "Klávesová zkratka — Voice Mode",
-    "voiceShortcutHint": "Stiskni přiřazenou kombinaci odkudkoliv ve velínu pro přepnutí do hlasového režimu. Esc vždy vrátí zpět do HUD.",
-    "voiceShortcutChange": "Změnit zkratku",
-    "voiceShortcutCapturing": "↩ stiskni klávesu…",
-    "voiceShortcutReset": "reset",
-    "voiceVoice": "Hlas ZIBBYho",
-    "voiceVoiceHint": "Kterým hlasem ZIBBY mluví (TTS). Automaticky = výběr podle jazyka.",
-    "voiceVoiceAuto": "Automaticky",
-    "voiceVoiceUnsupported": "Tento prohlížeč nepodporuje hlasový výstup.",
-    "voiceTest": "Test",
-    "voiceTestSample": "Ahoj, jsem ZIBBY. Takhle zním.",
     "system": "Systém",
     "daemon": "Démon",
     "host": "Stroj",
@@ -819,81 +805,6 @@
       "ariaLabel": "Sekce nastavení",
       "general": "Obecné",
       "gates": "Pravidla schvalování"
-    }
-  },
-  "voice": {
-    "modeLabel": "VOICE MODE",
-    "exit": "HUD",
-    "state": {
-      "idle": "Čekám na tvůj příkaz…",
-      "listening": "Poslouchám…",
-      "thinking": "Přemýšlím…",
-      "speaking": "ZIBBY odpovídá…"
-    },
-    "speakNow": "// mluvte nyní",
-    "panel": {
-      "agents": "Aktivní agenti",
-      "approvals": "Čekají na schválení",
-      "activity": "Nedávná aktivita",
-      "actions": "Rychlé akce",
-      "noAgents": "Žádní agenti nespuštěni",
-      "noApprovals": "Nic nečeká na schválení",
-      "noActivity": "Žádná nedávná aktivita",
-      "noActions": "Zatím žádné skilly"
-    },
-    "tag": {
-      "user": "TY",
-      "zibby": "ZIBBY"
-    },
-    "demo": {
-      "user1": "Připrav mi dnešní standup",
-      "zibby1": "Hotovo. 3 PR od včera, 1 opravený flaky test v auth-svc. Standup uložen do work/daily/2026-06-09.md.",
-      "user2": "Spusť Build Feature pipeline pro auth-svc",
-      "zibby2": "Pipeline spuštěna. Architekt pracuje na design.md — odhadovaný čas dokončení 8 minut. Sleduj průběh v Orchestraci."
-    },
-    "micStart": "Spustit demo (klikni)",
-    "micStop": "Zastavit (klikni)",
-    "micStartLive": "Začni poslouchat",
-    "micStopLive": "Přestaň poslouchat",
-    "volume": "Hlasitost",
-    "mute": "Ztlumit hlas ZIBBYho",
-    "unmute": "Zapnout hlas ZIBBYho",
-    "send": "Spustit",
-    "briefMe": "Briefing",
-    "hint": "klikni mikrofon pro demo · Esc pro HUD",
-    "hintLive": "klikni mikrofon a mluv · Esc pro HUD",
-    "unsupported": "Hlasový vstup není v tomto prohlížeči dostupný — zobrazuji demo.",
-    "error": {
-      "mic-denied": "Přístup k mikrofonu byl odepřen.",
-      "network": "Hlasová služba není dostupná — zkontroluj připojení.",
-      "service-denied": "Hlasová služba odmítla požadavek.",
-      "unsupported": "Hlasový vstup není v tomto prohlížeči dostupný."
-    },
-    "ack": {
-      "approved": "Schváleno.",
-      "nothingToApprove": "Nic nečeká na schválení.",
-      "rejected": "Odmítnuto.",
-      "nothingToReject": "Nic nečeká na schválení.",
-      "stopped": "Zastavuji běh.",
-      "nothingToStop": "Žádný běžící agent k zastavení.",
-      "navigating": "Přecházím…",
-      "closing": "Zavírám VOICE MODE.",
-      "briefing": "Briefing.",
-      "dispatching": "Slyším: {task}",
-      "started": "Běží to. Sleduj v HUD.",
-      "clarify": "Nejsem si jistý — můžeš upřesnit? Třeba: {options}.",
-      "clarifyGeneric": "Nejsem si jistý — můžeš to upřesnit?",
-      "dispatchFailed": "Nepodařilo se to spustit.",
-      "heard": "Nezachytil jsem zadání."
-    },
-    "speak": {
-      "briefing": "Běží {agents} agentů, čeká {approvals} schválení.",
-      "topApproval": "Nejnovější schválení: {skill}.",
-      "recent": "Nedávno: {done} dokončeno, {failed} selhalo.",
-      "nothing": "Nic tě teď nepotřebuje.",
-      "outcomeDone": "{owner} dokončeno.",
-      "outcomeFailed": "{owner} selhalo.",
-      "outcomeMany": "{count} běhů dokončeno."
     }
   },
   "runs": {

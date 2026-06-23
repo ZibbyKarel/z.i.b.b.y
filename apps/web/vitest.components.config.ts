@@ -27,7 +27,7 @@ export default defineConfig({
       "features/**/components/**/*.test.{ts,tsx}",
       // Feature-root unit tests (pure view-model/presentation helpers).
       "features/*/*.test.{ts,tsx}",
-      // Feature hooks (client-side browser-API wrappers, e.g. speech recognition).
+      // Feature hooks (client-side browser-API wrappers).
       "features/*/hooks/**/*.test.{ts,tsx}",
     ],
   },

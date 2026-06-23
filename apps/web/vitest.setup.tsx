@@ -16,7 +16,7 @@ if (!("ResizeObserver" in globalThis)) {
 
 // Node 25 exposes an experimental global `localStorage` that throws without a
 // `--localstorage-file`, shadowing jsdom's working Storage. Install a minimal
-// in-memory Storage so client preferences (caffeinate, voice) are testable.
+// in-memory Storage so client preferences (e.g. caffeinate) are testable.
 if (typeof window.localStorage?.setItem !== "function") {
   const store = new Map<string, string>();
   const memoryStorage: Storage = {

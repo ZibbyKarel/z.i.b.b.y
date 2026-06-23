@@ -21,13 +21,10 @@ import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { useHealthQuery } from "../health/queries";
-import { useVoice } from "../voice";
-import { ShortcutCapture } from "../voice/components/ShortcutCapture";
 import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { MandateSection } from "./components/MandateSection";
 import { ResearchSection } from "./components/ResearchSection";
 import { SystemSection } from "./components/SystemSection";
-import { VoiceVoiceSetting } from "./components/VoiceVoiceSetting";
 
 type Locale = "cs" | "en";
 
@@ -98,7 +95,6 @@ export function Screen() {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const { data: health, isSuccess } = useHealthQuery();
-  const { shortcut, setShortcut } = useVoice();
 
   const [caffeinate, setCaffeinate] = useState(() =>
     typeof window === "undefined" ? true : localStorage.getItem(CAFFEINATE_KEY) !== "false",
@@ -157,18 +153,6 @@ export function Screen() {
                   }
                   hint={t("caffeinateHint")}
                   label={t("caffeinate")}
-                />
-                <Divider />
-                <SettingRow
-                  control={<ShortcutCapture onChange={setShortcut} value={shortcut} />}
-                  hint={t("voiceShortcutHint")}
-                  label={t("voiceShortcut")}
-                />
-                <Divider />
-                <SettingRow
-                  control={<VoiceVoiceSetting lang={locale === "cs" ? "cs-CZ" : "en-US"} />}
-                  hint={t("voiceVoiceHint")}
-                  label={t("voiceVoice")}
                 />
               </Stack>
             </HudPanel>

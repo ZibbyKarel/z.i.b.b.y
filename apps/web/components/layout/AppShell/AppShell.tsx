@@ -9,7 +9,6 @@ import { LimitsRings } from "../LimitsRings/LimitsRings";
 import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
-import { VoiceButton, VoiceProvider } from "../../../features/voice";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
 import { navBadgeCount, useNotifications } from "../../../features/notifications";
 
@@ -57,7 +56,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
       navItems={navItems}
       railSlot={activeNav === "overview" ? <RightRail /> : undefined}
       taskSlot={<NewTaskButton />}
-      voiceSlot={<VoiceButton />}
       walletSlot={<LimitsRings />}
     >
       {children}
@@ -68,14 +66,10 @@ function AppShellInner({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
-      {/* NewTaskProvider is the OUTER provider so the voice takeover (rendered by
-          VoiceProvider) can reach `useNewTask().open(transcript)` — Phase 11.4. */}
       <NewTaskProvider>
-        <VoiceProvider>
-          <Suspense>
-            <AppShellInner>{children}</AppShellInner>
-          </Suspense>
-        </VoiceProvider>
+        <Suspense>
+          <AppShellInner>{children}</AppShellInner>
+        </Suspense>
       </NewTaskProvider>
     </CatalogProvider>
   );
