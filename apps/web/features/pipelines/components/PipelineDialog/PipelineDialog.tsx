@@ -49,6 +49,7 @@ export function PipelineDialog({
   const t = useTranslations();
   const [name, setName] = useState(initial?.name ?? "");
   const [desc, setDesc] = useState(initial?.desc ?? "");
+  const [fullscreen, setFullscreen] = useState(false);
   const [graph, setGraph] = useState<PipelineGraph>(() => phasesToGraph(initial, agents));
 
   // First-phase assignment is ZIBBY-internal convention; an edited pipeline keeps
@@ -131,6 +132,7 @@ export function PipelineDialog({
       ariaLabel={title}
       closeLabel={t("common.close")}
       description={t("forms.pipeline.subtitle")}
+      fullscreen={fullscreen}
       onClose={onClose}
       title={title}
       width="full"
@@ -163,6 +165,14 @@ export function PipelineDialog({
             placeholder={t("forms.pipeline.descPlaceholder")}
             spellCheck={false}
             value={desc}
+          />
+          <Button
+            aria-label={fullscreen ? t("forms.pipeline.exitFullscreen") : t("forms.pipeline.enterFullscreen")}
+            icon={fullscreen ? "collapse" : "expand"}
+            intent="ghost"
+            onClick={() => setFullscreen((v) => !v)}
+            size="sm"
+            title={fullscreen ? t("forms.pipeline.exitFullscreen") : t("forms.pipeline.enterFullscreen")}
           />
         </Stack>
 

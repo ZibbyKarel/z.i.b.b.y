@@ -2,4 +2,4 @@
 
 - pipelines detail dialog stejné view pipeliny jako v edit dialogu - sjednotit na jednu komponentu (přidat propsu readOnly)
 
-- pipelines v edit dialogu udělat možnost fullscreenu
+- agenti/skilly a další entity které jsou napsané v markdown souborech by v detailu měli zobrazovat naformátovaný MD místo plain MD přepisu. Pokud možno sjednoť to s tím co používáme v chatu

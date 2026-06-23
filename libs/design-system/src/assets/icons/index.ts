@@ -45,6 +45,8 @@ import { butlerSign } from "./butlerSign";
 import { pin } from "./pin";
 import { mic } from "./mic";
 import { trash } from "./trash";
+import { expand } from "./expand";
+import { collapse } from "./collapse";
 
 /** Every glyph available in the dashboard icon set. */
 export const iconNames = [
@@ -93,6 +95,8 @@ export const iconNames = [
   "pin",
   "mic",
   "trash",
+  "expand",
+  "collapse",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -144,4 +148,6 @@ export const paths: Record<IconName, ReactNode> = {
   pin,
   mic,
   trash,
+  expand,
+  collapse,
 };

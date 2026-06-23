@@ -657,6 +657,8 @@
       "outputFileAria": "Output file · {agent}",
       "checksDefault": "default checks",
       "handoffFileAria": "Hand-off filename",
+      "enterFullscreen": "Fullscreen",
+      "exitFullscreen": "Exit fullscreen",
       "disconnectAria": "Disconnect",
       "loopMax": "max",
       "retriesDownAria": "Decrease max retries",

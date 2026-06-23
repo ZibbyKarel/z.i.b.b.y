@@ -50,6 +50,16 @@ describe("Dialog", () => {
     expect(root.style.height).not.toBe("");
   });
 
+  it("fills the viewport when fullscreen, overriding width", () => {
+    render(
+      <Dialog fullscreen open width="md">
+        x
+      </Dialog>,
+    );
+    const root = screen.getByTestId(DialogTestId.Root);
+    expect(root).toHaveStyle({ width: "calc(100vw - 32px)", height: "calc(100vh - 64px)" });
+  });
+
   it("leaves non-full widths height-unset (hug content)", () => {
     render(
       <Dialog open width="md">

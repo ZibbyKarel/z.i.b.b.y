@@ -44,6 +44,11 @@ export interface DialogProps {
   description?: ReactNode;
   actions?: ReactNode;
   width?: DialogWidth;
+  /**
+   * Expand to fill the viewport (minus the standard margins), overriding `width`.
+   * For canvas-style dialogs that benefit from maximum working area.
+   */
+  fullscreen?: boolean;
   /** Accessible name override (use when `title` is non-string content). */
   ariaLabel?: string;
   /** Accessible label for the header close button. */
@@ -58,6 +63,7 @@ export function Dialog({
   description,
   actions,
   width = "md",
+  fullscreen = false,
   ariaLabel,
   closeLabel = "Close dialog",
   children,
@@ -105,9 +111,9 @@ export function Dialog({
         ref={dialogRef}
         role="dialog"
         style={{
-          width: dialogWidthPx[width],
+          width: fullscreen ? "calc(100vw - 32px)" : dialogWidthPx[width],
           maxWidth: "calc(100vw - 32px)",
-          height: dialogHeight[width],
+          height: fullscreen ? "calc(100vh - 64px)" : dialogHeight[width],
         }}
         tabIndex={-1}
       >

@@ -62,4 +62,28 @@ export const FullCanvas: Story = {
   ),
 };
 
+export const Fullscreen: Story = {
+  name: "Fullscreen",
+  render: () => (
+    <Dialog
+      fullscreen
+      open
+      actions={
+        <>
+          <Button intent="ghost">Zrušit</Button>
+          <Button icon="collapse" intent="primary">
+            Zmenšit
+          </Button>
+        </>
+      }
+      title="Editor pipeline"
+      width="full"
+    >
+      <DialogBody>
+        <p>Fills the viewport (minus margins) — overrides `width` for max working area.</p>
+      </DialogBody>
+    </Dialog>
+  ),
+};
+
 export const Playground: Story = {};

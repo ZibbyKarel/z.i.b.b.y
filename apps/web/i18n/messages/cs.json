@@ -657,6 +657,8 @@
       "outputFileAria": "Výstupní soubor · {agent}",
       "checksDefault": "výchozí kontroly",
       "handoffFileAria": "Název předávacího souboru",
+      "enterFullscreen": "Na celou obrazovku",
+      "exitFullscreen": "Zmenšit",
       "disconnectAria": "Odpojit",
       "loopMax": "max",
       "retriesDownAria": "Snížit max. opakování",
