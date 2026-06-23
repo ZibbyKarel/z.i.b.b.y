@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { Button, Container, Stack, Tag, Typography } from "@zibby/design-system";
 import type { Briefing, BriefingNeedsYouItem } from "@zibby/contracts";
+import { Button, Container, Stack, Tag, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { HudPanel } from "../../../../components/HudPanel/HudPanel";
-import { useBriefingQuery } from "../../queries";
 import { useGenerateBriefingMutation } from "../../mutations";
+import { useBriefingQuery } from "../../queries";
 
 export enum BriefingCardTestId {
   Root = "briefing-card",
