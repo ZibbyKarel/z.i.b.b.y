@@ -1261,5 +1261,18 @@
     "emptyTitle": "Zatím žádné příkazy",
     "emptyDescription": "Příkazy jsou vlastní slash-příkazy (/<id>) s Markdown tělem. Při každém běhu se materializují do .claude/commands/.",
     "emptyHint": "// vytvoří ~/zibby/commands/'<id>'.md"
+  },
+  "chat": {
+    "title": "Chat se ZIBBY",
+    "triggerLabel": "Chat",
+    "triggerAria": "Otevřít chat se ZIBBY",
+    "triggerTitle": "Chat se ZIBBY",
+    "streaming": "ZIBBY píše…",
+    "empty": "Napište zprávu a začněte konverzaci.",
+    "composer": {
+      "label": "Zpráva",
+      "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
+      "send": "Odeslat"
+    }
   }
 }

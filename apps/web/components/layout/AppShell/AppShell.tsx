@@ -10,6 +10,7 @@ import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
+import { ChatButton, ChatProvider } from "../../../features/chat";
 import { navBadgeCount, useNotifications } from "../../../features/notifications";
 
 const NAV_IDS = new Set<NavId>([
@@ -52,6 +53,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
     <MainLayout
       activeNav={activeNav}
       breadcrumb={breadcrumb}
+      chatSlot={<ChatButton />}
       footerItem={footerItem}
       navItems={navItems}
       railSlot={activeNav === "overview" ? <RightRail /> : undefined}
@@ -66,10 +68,14 @@ function AppShellInner({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
+      {/* NewTaskProvider stays the OUTER provider (the position the removed
+          VoiceProvider held), so the chat overlay can reach the task flow later. */}
       <NewTaskProvider>
-        <Suspense>
-          <AppShellInner>{children}</AppShellInner>
-        </Suspense>
+        <ChatProvider>
+          <Suspense>
+            <AppShellInner>{children}</AppShellInner>
+          </Suspense>
+        </ChatProvider>
       </NewTaskProvider>
     </CatalogProvider>
   );

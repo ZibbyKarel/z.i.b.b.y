@@ -1261,5 +1261,18 @@
     "emptyTitle": "No commands yet",
     "emptyDescription": "Commands are custom slash commands (/<id>) with a Markdown body. They materialize into each run’s .claude/commands/.",
     "emptyHint": "// creates ~/zibby/commands/'<id>'.md"
+  },
+  "chat": {
+    "title": "Chat with ZIBBY",
+    "triggerLabel": "Chat",
+    "triggerAria": "Open chat with ZIBBY",
+    "triggerTitle": "Chat with ZIBBY",
+    "streaming": "ZIBBY is typing…",
+    "empty": "Send a message to start the conversation.",
+    "composer": {
+      "label": "Message",
+      "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
+      "send": "Send"
+    }
   }
 }
