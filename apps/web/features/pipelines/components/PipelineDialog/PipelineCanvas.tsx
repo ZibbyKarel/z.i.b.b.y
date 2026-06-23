@@ -24,6 +24,8 @@ const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"];
 const cycle = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!;
 
 type Pt = { x: number; y: number };
+/** Lift the hand-off filename pill above the flow line so it never sits on the arrow. */
+const FLOW_LABEL_LIFT = 16;
 const portPt = (n: GraphNode | undefined, which: PortKind): Pt => {
   if (!n) return { x: 0, y: 0 };
   if (which === "in") return { x: n.x, y: n.y + NODE_H / 2 };
@@ -351,7 +353,7 @@ export function PipelineCanvas({ graph, setGraph, agents, onAddAgent }: Pipeline
               left={(a.x + b.x) / 2}
               onChange={(v) => setProduces(from.id, v)}
               onDelete={() => delFlow(e.id)}
-              top={(a.y + b.y) / 2}
+              top={(a.y + b.y) / 2 - FLOW_LABEL_LIFT}
               value={from.produces}
             />
           );

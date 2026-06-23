@@ -3,5 +3,3 @@
 - pipelines detail dialog stejné view pipeliny jako v edit dialogu - sjednotit na jednu komponentu (přidat propsu readOnly)
 
 - pipelines v edit dialogu udělat možnost fullscreenu
-
-- pipelines v edit view názvy handoff souborů překrývají šipky mezi agenty a pole okolo jména handoff souboru by měla mít auto width

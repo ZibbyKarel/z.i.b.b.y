@@ -56,8 +56,11 @@ export function FlowFileControl({ left, top, value, onChange, onDelete }: FlowFi
         <Icon name="file" size="xs" tone="faint" />
         <input
           aria-label={t("handoffFileAria")}
-          className="w-24 border-none bg-transparent font-mono text-[10px] text-accent outline-none"
+          className="border-none bg-transparent font-mono text-[10px] text-accent outline-none"
           onChange={(e) => onChange(e.target.value)}
+          // Auto-width to the filename (monospace `size` = char count) so the pill grows
+          // with the name instead of clipping at a fixed width; floored so it stays usable.
+          size={Math.max(value.length, 6)}
           spellCheck={false}
           title={t("handoffHint")}
           value={value}
