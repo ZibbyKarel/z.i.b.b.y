@@ -200,6 +200,41 @@ spike (precedent: the verified "Claude runner flags" spike) to confirm:
 **Pivot criterion:** if (1) fails (no token streaming), reconsider the engine
 (streaming SDK vs. accepting message-level chunks) before building UI on top.
 
+### 7.1 Spike results (2026-06-23) — engine STANDS, no pivot
+
+CLI version 2.1.186. Findings:
+
+1. **Token streaming — CONFIRMED, but requires `--include-partial-messages`.**
+   Default `--output-format stream-json` emits *block/message-level* events (the whole
+   assistant text arrives in one event). Adding `--include-partial-messages` produces
+   true token-level `stream_event` → `content_block_delta` → `text_delta` chunks.
+2. **Session continuity — CONFIRMED.** Turn 1 returns a `session_id`; `--resume <sid>`
+   on turn 2 threads context (remembered a fact) and returns the **same** session id.
+   Clean stateless-server pattern: persist one session id per conversation, resume each
+   turn.
+3. **Latency** — cold spawn TTFT ~2.7–4.4s on Opus (incl. thinking + SessionStart
+   hooks). Pin `--model sonnet` for the chat to cut latency/cost; consider suppressing
+   extended thinking for snappier turns.
+4. **MCP tool-call** — not re-spiked; already proven by the repo's run-extensibility
+   work (`--mcp-config` + `mcp__id__*` allow, api suite green). Align with that code.
+
+**Confirmed engine recipe:**
+```
+claude -p "<message>" [--resume <sid>] \
+  --output-format stream-json --include-partial-messages --verbose \
+  --model sonnet --mcp-config <chat-tools> --allowedTools mcp__zibby__*
+```
+Parse stdout JSONL: capture `session_id` from the `system/init` event; forward only
+`content_block_delta` with `delta.type=="text_delta"` to SSE (skip `thinking` /
+`signature_delta`); capture `tool_use` events for dispatch announcements; the final
+`result` event carries full text + cost for persistence.
+
+> ⚠️ **Isolation gotcha:** a bare `claude -p` spawn fires the operator's **global
+> SessionStart hooks** (e.g. superpowers injected "You have superpowers" context) —
+> foreign context that would pollute ZIBBY's persona. The chat engine must spawn with
+> an isolated config (clean `CLAUDE_CONFIG_DIR`/settings, no global hooks) the same way
+> the existing runner isolates its spawns, and set the persona via system prompt.
+
 ## 8. Testing
 
 - Pure logic (transcript reducer, dispatch-eval harness) unit-tested.
