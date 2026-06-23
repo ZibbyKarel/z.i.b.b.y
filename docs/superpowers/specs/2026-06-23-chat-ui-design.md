@@ -1,6 +1,10 @@
 # Chat UI — Design Spec
 
-> Date: 2026-06-23 · Status: approved (brainstorm) · Replaces: Voice UI
+> Date: 2026-06-23 · Status: IMPLEMENTED (branch feat/chat-ui) · Replaces: Voice UI
+>
+> Shipped: Voice UI removed; chat backend (streaming claude session, SSE, JSONL
+> transcript), MCP tools (create_task/recall_memory/get_status over in-process HTTP),
+> chat overlay UI (⌘/Ctrl+J), incremental vault distillation. API doc: `docs/api/chat.md`.
 
 ## 1. Goal
 

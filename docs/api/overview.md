@@ -15,7 +15,7 @@
 3. Generuje OpenAPI dokument ze všech ts-rest contracts (jen pro `/docs`, není source of truth)
 4. Naslouchá na portu z `process.env.PORT ?? 3333`
 
-## Moduly (22 feature modulů)
+## Moduly (23 feature modulů)
 
 Importy v `AppModule` v tomto pořadí:
 
@@ -42,6 +42,7 @@ Importy v `AppModule` v tomto pořadí:
 | `LimitsModule`           | `limits/limits.module`              | Budget display                         |
 | `EventsModule`           | `events/events.module`              | Interní event bus                      |
 | `BudgetModule`           | `budget/budget.module`              | Budget ledger, spend tracking          |
+| `ChatModule`             | `chat/chat.module`                  | Chat-first konverzace (streaming claude session, SSE, MCP nástroje) |
 | `TasksModule`            | `tasks/tasks.module`                | Deferred task daemon                   |
 
 ## Sdílená infrastruktura (shared/)
