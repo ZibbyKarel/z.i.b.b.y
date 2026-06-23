@@ -6,76 +6,76 @@
 @source "./app";
 @source "./features";
 
-/* Markdown prose for assistant chat turns (`features/chat/components/ChatMarkdown`).
+/* Markdown prose shared by chat turns and entity detail bodies (`components/MarkdownProse/MarkdownProse`).
    Tailwind v4 preflight strips UA defaults (list markers, heading sizes, margins),
-   so the structure markdown needs is restored here, scoped to `.chat-md` and driven
+   so the structure markdown needs is restored here, scoped to `.md-prose` and driven
    entirely by design-system tokens. Keeps `apps/web` free of inline element styles
    while still rendering bold/italic/lists/headings/code the way the operator expects. */
-.chat-md {
+.md-prose {
   color: var(--color-foreground);
   font-size: var(--text-lg);
   line-height: 1.6;
 }
-.chat-md > * + * {
+.md-prose > * + * {
   margin-top: 0.7em;
 }
-.chat-md p {
+.md-prose p {
   margin: 0;
 }
-.chat-md strong {
+.md-prose strong {
   font-weight: 600;
 }
-.chat-md em {
+.md-prose em {
   font-style: italic;
 }
-.chat-md a {
+.md-prose a {
   color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.chat-md ul,
-.chat-md ol {
+.md-prose ul,
+.md-prose ol {
   margin: 0;
   padding-left: 1.4em;
 }
-.chat-md ul {
+.md-prose ul {
   list-style: disc;
 }
-.chat-md ol {
+.md-prose ol {
   list-style: decimal;
 }
-.chat-md li {
+.md-prose li {
   margin-top: 0.25em;
 }
-.chat-md li::marker {
+.md-prose li::marker {
   color: var(--color-foreground-faint);
 }
-.chat-md h1,
-.chat-md h2,
-.chat-md h3,
-.chat-md h4 {
+.md-prose h1,
+.md-prose h2,
+.md-prose h3,
+.md-prose h4 {
   margin: 0;
   font-weight: 600;
   line-height: 1.3;
 }
-.chat-md h1 {
+.md-prose h1 {
   font-size: var(--text-xl);
 }
-.chat-md h2 {
+.md-prose h2 {
   font-size: var(--text-lg);
 }
-.chat-md h3,
-.chat-md h4 {
+.md-prose h3,
+.md-prose h4 {
   font-size: var(--text-md);
 }
-.chat-md code {
+.md-prose code {
   font-family: var(--font-mono);
   font-size: 0.88em;
   background: var(--color-surface);
   padding: 0.1em 0.35em;
   border-radius: 4px;
 }
-.chat-md pre {
+.md-prose pre {
   margin: 0;
   padding: 0.7em 0.9em;
   overflow-x: auto;
@@ -83,27 +83,27 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
 }
-.chat-md pre code {
+.md-prose pre code {
   padding: 0;
   background: transparent;
   font-size: 0.85em;
   line-height: 1.5;
 }
-.chat-md blockquote {
+.md-prose blockquote {
   margin: 0;
   padding-left: 0.8em;
   border-left: 2px solid var(--color-border);
   color: var(--color-foreground-dim);
 }
-.chat-md hr {
+.md-prose hr {
   border: none;
   border-top: 1px solid var(--color-border);
 }
-.chat-md table {
+.md-prose table {
   border-collapse: collapse;
 }
-.chat-md th,
-.chat-md td {
+.md-prose th,
+.md-prose td {
   border: 1px solid var(--color-border);
   padding: 0.3em 0.6em;
   text-align: left;

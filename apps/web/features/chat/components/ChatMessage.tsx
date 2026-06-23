@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
-import { ChatMarkdown } from "./ChatMarkdown";
+import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
 
 export enum ChatMessageTestId {
   Root = "chat-message",
@@ -87,7 +87,7 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
             // is a sibling, never part of the markdown string (so a half-typed `**`
             // can't break the parse).
             <>
-              <ChatMarkdown text={text} />
+              <MarkdownProse text={text} />
               {streaming && (
                 <Typography
                   aria-label={t("streaming")}

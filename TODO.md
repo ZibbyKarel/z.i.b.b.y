@@ -1,5 +1,3 @@
-- agenti/skilly a další entity které jsou napsané v markdown souborech by v detailu měli zobrazovat naformátovaný MD místo plain MD přepisu. Pokud možno sjednoť to s tím co používáme v chatu
-
 - stránka detailu projektu je moc chaotická. Použij taby a rozděl obsah do několika stránek. Každá z ze stránek by měla být přístupná přes URL přímo
 
 - běhy a aktivita - detail běhu pipeline logy u jednotlivých fází pipeliny jsou jen "výstupy" z dané fáze. Potřebuji ale vidět kompletní log od začátku do konce, jak agent přemýšlel a co dělal než sepsal "Hotovo..."
