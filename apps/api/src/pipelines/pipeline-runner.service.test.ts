@@ -285,6 +285,34 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       await h.service.readStageLog(PIPELINE_RUN_ID, "build", 5);
       expect(h.core.readLog).toHaveBeenCalledWith("release_100.build_1", 5);
     });
+
+    it("falls back to the on-disk aggregate for a run evicted from memory", async () => {
+      // A finished run aged past RETENTION_MS is dropped from the in-memory registry,
+      // but its aggregate + stage logs persist on disk — the detail view must still
+      // tail them instead of 404ing (PipelineRunNotFoundError).
+      const goneId = "evicted_1780000000099";
+      const root = path.join(dir, goneId);
+      await fs.mkdir(root, { recursive: true });
+      await fs.writeFile(
+        path.join(root, "run.json"),
+        JSON.stringify({
+          pipelineRunId: goneId,
+          pipelineId: "release",
+          status: "done",
+          currentStage: null,
+          stageRuns: [
+            { phaseId: "build", runId: `${goneId}.build_1`, attempt: 1, status: "done" },
+          ],
+          startedAt: new Date().toISOString(),
+          cwd: root,
+        }),
+        "utf8",
+      );
+      // Not in memory — the registry only has PIPELINE_RUN_ID.
+      expect(h.runs.has(goneId)).toBe(false);
+      await h.service.readStageLog(goneId, "build", 0);
+      expect(h.core.readLog).toHaveBeenCalledWith(`${goneId}.build_1`, 0);
+    });
   });
 
   describe("buildStageCommand", () => {

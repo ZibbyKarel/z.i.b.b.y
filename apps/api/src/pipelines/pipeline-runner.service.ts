@@ -596,8 +596,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */
-  readStageLog(pipelineRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
-    const run = this.runs.get(pipelineRunId);
+  async readStageLog(
+    pipelineRunId: string,
+    phaseId: string,
+    offset: number,
+  ): Promise<RunLogChunk> {
+    // Fall back to the on-disk aggregate (like delete/readArtifact/resume): a finished
+    // run is evicted from the in-memory registry once it ages past RETENTION_MS, but
+    // its aggregate + per-stage logs persist — so the detail view can still tail them.
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
     if (!run) throw new PipelineRunNotFoundError(pipelineRunId);
     // The in-flight stage isn't in `stageRuns` yet (that append is terminal-only),
     // so while this phase is the one executing, tail it by the live
