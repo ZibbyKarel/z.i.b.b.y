@@ -163,6 +163,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // parks (a `done` run with no chosen output) → returns false, normal outcome.
       { handleTerminal: async () => false } as never,
       (systemConfig = fakeSystemConfigStore()),
+      // Namer double: returns null so title derivation falls back to the deterministic
+      // slice (the Haiku CLI path never spawns under test).
+      { name: async () => null } as never,
     );
     service.onModuleInit();
   });

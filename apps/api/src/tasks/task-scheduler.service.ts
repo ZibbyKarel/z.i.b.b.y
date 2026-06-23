@@ -31,6 +31,7 @@ import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { SystemConfigStore } from "../system/system-config.store";
+import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskOutputService } from "./task-output.service";
@@ -108,6 +109,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly limits: LimitsService,
     private readonly taskOutput: TaskOutputService,
     private readonly systemConfig: SystemConfigStore,
+    private readonly namer: ClaudeCliTaskNamer,
   ) {
     this.log = logger.child(TaskSchedulerService.name);
   }
@@ -200,6 +202,9 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      */
     explicitTarget?: TaskTarget,
   ): Promise<CreateTaskResult> {
+    // A task with no operator-given name gets one derived from its description (Haiku,
+    // with a deterministic fallback) so the feed never shows an untitled task.
+    input = await this.ensureTitle(input);
     // Phase 11: the unified composer carries a pre-chosen target on the wire (a
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
@@ -242,6 +247,17 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     });
     return this.attemptCreate(taskId, input, project, now, target);
+  }
+
+  /**
+   * Resolve a task's title: keep an operator-given one; otherwise derive it from the
+   * description via the Haiku namer, falling back to a deterministic slice when the
+   * namer is unavailable or rejects (it never blocks task creation).
+   */
+  private async ensureTitle(input: CreateTaskInput): Promise<CreateTaskInput> {
+    if (input.title?.trim()) return input;
+    const derived = (await this.namer.name(input.text)) ?? deriveTitleFallback(input.text);
+    return { ...input, title: derived };
   }
 
   /** Cancel a still-waiting task. A held task's approval is rejected (single source of truth). */

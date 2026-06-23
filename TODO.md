@@ -1,7 +1,5 @@
 - agenti/skilly a další entity které jsou napsané v markdown souborech by v detailu měli zobrazovat naformátovaný MD místo plain MD přepisu. Pokud možno sjednoť to s tím co používáme v chatu
 
-- pokud task nemá jméno použijme haiku na jeho odvození z popisu tasku.
-
 - stránka detailu projektu je moc chaotická. Použij taby a rozděl obsah do několika stránek. Každá z ze stránek by měla být přístupná přes URL přímo
 
 - běhy a aktivita - detail běhu pipeline po nějaké době nezobrazuje logy, které jsem původně viděl

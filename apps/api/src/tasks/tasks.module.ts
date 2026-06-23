@@ -10,6 +10,7 @@ import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { ClaudeCliRouter } from "./claude-cli-router";
+import { ClaudeCliTaskNamer } from "./claude-cli-task-namer";
 import { KeywordScorer } from "./keyword-scorer";
 import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module";
 import { TaskClassifierService } from "./task-classifier.service";
@@ -50,6 +51,7 @@ import { TasksController } from "./tasks.controller";
     TaskRunsService,
     TaskClassifierService,
     TaskOutputService,
+    ClaudeCliTaskNamer,
     KeywordScorer,
     { provide: TASK_ROUTER, useClass: ClaudeCliRouter },
   ],
