@@ -12,6 +12,12 @@ vi.mock("../../approvals/queries", () => ({ useApprovalsQuery: () => ({ data: []
 vi.mock("./PipelineStageTimeline", () => ({
   PipelineStageTimeline: () => <div data-testid="stage-timeline" />,
 }));
+// The output panel's "continue in a new task" reads the New Task provider; these
+// header/meta tests render RunDetail in isolation, so stub it with a shared spy.
+const { openNewTask } = vi.hoisted(() => ({ openNewTask: vi.fn() }));
+vi.mock("../../tasks/TaskContext", () => ({
+  useNewTask: () => ({ open: openNewTask, close: vi.fn(), isOpen: false }),
+}));
 
 const LONG_DESC =
   "Refaktoruj detail běhu pipeliny tak, aby nezobrazoval název úkolu dvakrát, " +
@@ -70,5 +76,59 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.getByText(LONG_DESC)).toBeInTheDocument();
     await userEvent.click(screen.getByText("zobrazit méně"));
     expect(screen.queryByText(LONG_DESC)).not.toBeInTheDocument();
+  });
+});
+
+describe("RunDetail — task output", () => {
+  const doneWithPr: RunView = {
+    runId: "writer_7",
+    kind: "agent",
+    owner: "writer",
+    status: "done",
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "z.i.b.b.y",
+    startedAt: new Date("2026-06-14T10:00:00Z").toISOString(),
+    logBase: "agents",
+    taskTitle: "Fix the login bug",
+    taskText: "Fix the login bug",
+    taskOutcome: "done",
+    taskOutputKind: "pr",
+    taskOutcomeSummary: "PR otevřen: https://github.com/acme/app/pull/42",
+  };
+
+  it("opens the PR url from the outcome summary in a new tab", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderDetail(doneWithPr);
+    await userEvent.click(screen.getByTestId("open-output"));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://github.com/acme/app/pull/42",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    openSpy.mockRestore();
+  });
+
+  it("continues in a new task with the prior output folded into context", async () => {
+    openNewTask.mockClear();
+    renderDetail(doneWithPr);
+    await userEvent.click(screen.getByTestId("continue-task"));
+    expect(openNewTask).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.stringContaining("https://github.com/acme/app/pull/42"),
+    );
+  });
+
+  it("hides the output panel for a void-output run", () => {
+    renderDetail({ ...doneWithPr, taskOutputKind: "void" });
+    expect(screen.queryByTestId("open-output")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
+  });
+
+  it("hides the output panel while the run is still running", () => {
+    renderDetail({ ...doneWithPr, status: "running" });
+    expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
   });
 });

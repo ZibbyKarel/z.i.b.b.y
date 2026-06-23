@@ -90,6 +90,14 @@ export const TaskRunSchema = z.object({
   taskText: z.string().optional(),
   /** Enriched from the task record: the written-back run outcome. */
   taskOutcome: z.enum(["done", "error"]).optional(),
+  /**
+   * Enriched from the task record: the outcome summary — for a produced output it
+   * carries the reference (a PR url, or a "file written" note), so the run detail can
+   * surface an "open output" affordance and seed a follow-up task with it.
+   */
+  taskOutcomeSummary: z.string().optional(),
+  /** Enriched from the task record: the operator's chosen terminal output kind. */
+  taskOutputKind: z.enum(["pr", "file", "void"]).optional(),
   /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
   parked: ParkedDetailSchema.optional(),
   /** The engagement a task is attributed to (Phase 8) — drives the queued caption. */

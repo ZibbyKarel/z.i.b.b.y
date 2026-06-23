@@ -114,6 +114,11 @@
       "label": "Title (optional)",
       "placeholder": "Short task name…"
     },
+    "context": {
+      "label": "Continuing from a previous run",
+      "note": "The previous task's output is added to this task's context.",
+      "heading": "Context from the previous run:"
+    },
     "project": {
       "label": "Project (optional)",
       "hint": "Scope the task to a project — its folder joins the context, exactly like a path you type.",
@@ -848,6 +853,11 @@
     "metaTask": "task",
     "showMore": "show more",
     "showLess": "show less",
+    "producedOutputTitle": "Task output",
+    "openOutput": "Open output",
+    "continueTask": "Continue in a new task",
+    "continueContextTask": "Previous task: {title}",
+    "continueContextOutput": "Output: {output}",
     "heldCaption": "Held — {reason}. Approve the budget override to dispatch.",
     "queuedCaption": "Waiting for a slot in {project}.",
     "pausedLimitCaption": "Paused on the usage limit — resumes {eta}.",

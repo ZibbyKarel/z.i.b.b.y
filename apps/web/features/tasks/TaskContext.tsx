@@ -23,9 +23,11 @@ interface TaskStore {
    * — an external trigger fills the one field, then the operator confirms the
    * inferred plan behind the same gate. An optional
    * `initialTarget` locks the destination (e.g. "Run pipeline" pre-chooses a
-   * pipeline), bypassing classification.
+   * pipeline), bypassing classification. An optional `initialContext` carries a
+   * prior run's output into the new task — shown as a read-only "context added"
+   * panel and folded into the dispatched text ("Continue in a new task").
    */
-  open: (initialText?: string, initialTarget?: TaskTarget) => void;
+  open: (initialText?: string, initialTarget?: TaskTarget, initialContext?: string) => void;
   close: () => void;
 }
 
@@ -40,15 +42,18 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [initialText, setInitialText] = useState<string | undefined>(undefined);
   const [initialTarget, setInitialTarget] = useState<TaskTarget | undefined>(undefined);
-  const open = useCallback((text?: string, target?: TaskTarget) => {
+  const [initialContext, setInitialContext] = useState<string | undefined>(undefined);
+  const open = useCallback((text?: string, target?: TaskTarget, context?: string) => {
     setInitialText(text);
     setInitialTarget(target);
+    setInitialContext(context);
     setIsOpen(true);
   }, []);
   const close = useCallback(() => {
     setIsOpen(false);
     setInitialText(undefined);
     setInitialTarget(undefined);
+    setInitialContext(undefined);
   }, []);
 
   useEffect(() => {
@@ -62,6 +67,7 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
         // The keyboard entry opens a blank composer (no seed text, no locked target).
         setInitialText(undefined);
         setInitialTarget(undefined);
+        setInitialContext(undefined);
         setIsOpen((v) => !v);
       }
     };
@@ -79,9 +85,10 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
           props on mount). */}
       {isOpen && (
         <NewTaskDialog
+          initialContext={initialContext}
           initialTarget={initialTarget}
           initialText={initialText}
-          key={`${initialTarget?.kind === "orchestrator" ? "orchestrator" : (initialTarget?.id ?? "")}:${initialText ?? ""}`}
+          key={`${initialTarget?.kind === "orchestrator" ? "orchestrator" : (initialTarget?.id ?? "")}:${initialText ?? ""}:${initialContext ?? ""}`}
           onClose={close}
         />
       )}

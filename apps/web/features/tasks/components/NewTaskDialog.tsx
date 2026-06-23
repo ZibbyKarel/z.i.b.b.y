@@ -5,6 +5,7 @@ import {
   Button,
   Container,
   Dialog,
+  Icon,
   IconTile,
   Panel,
   SelectField,
@@ -58,6 +59,12 @@ export interface NewTaskDialogProps {
    * a pre-fill, not a lock.
    */
   initialTarget?: TaskTarget;
+  /**
+   * Prior-run output carried into this task ("Continue in a new task"): shown as a
+   * read-only "context added" panel and folded into the dispatched description, so
+   * the new run sees what the previous one produced.
+   */
+  initialContext?: string;
 }
 
 /** How long the scheduled confirmation lingers before the dialog closes itself. */
@@ -100,7 +107,12 @@ function toApiTarget(target: TaskTarget) {
  * goal and starts its run (scheduled loops defer through the task scheduler). Risky
  * actions are still caught later by the approval gate.
  */
-export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDialogProps) {
+export function NewTaskDialog({
+  onClose,
+  initialText,
+  initialTarget,
+  initialContext,
+}: NewTaskDialogProps) {
   const t = useTranslations("tasks");
   const router = useRouter();
   const { mutate: createTask, isPending: creatingTask } = useCreateTaskMutation();
@@ -251,6 +263,17 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
     return undefined;
   }, [outputType, fileDest, fileTo]);
 
+  // The dispatched description: the operator's text plus, when continuing from a
+  // prior run, that run's output appended as a labelled context block — so the new
+  // run sees what the previous one produced without the operator re-typing it.
+  const composedText = useMemo(
+    () =>
+      initialContext
+        ? `${text.trim()}\n\n---\n${t("context.heading")}\n${initialContext}`
+        : text,
+    [text, initialContext, t],
+  );
+
   const submitSingle = useCallback(() => {
     // An explicit pick (pre-selected or chosen) sends a target; auto omits it so the
     // backend classifies — byte-for-byte the un-seeded behaviour.
@@ -258,7 +281,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
       {
         body: {
           title: title.trim() || undefined,
-          text,
+          text: composedText,
           paths,
           scheduledAt,
           ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
@@ -267,7 +290,16 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
       },
       { onSuccess: handleCreateTaskSuccess },
     );
-  }, [chosenTarget, createTask, title, text, paths, scheduledAt, output, handleCreateTaskSuccess]);
+  }, [
+    chosenTarget,
+    createTask,
+    title,
+    composedText,
+    paths,
+    scheduledAt,
+    output,
+    handleCreateTaskSuccess,
+  ]);
 
   const submitLoop = useCallback(() => {
     const seed = title.trim() || loop.objective;
@@ -284,7 +316,7 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
             {
               body: {
                 title: title.trim() || undefined,
-                text,
+                text: composedText,
                 paths,
                 scheduledAt,
                 target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
@@ -295,7 +327,17 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
         },
       },
     );
-  }, [loop, title, now, scheduledAt, text, paths, createGoal, createTask, handleCreateTaskSuccess]);
+  }, [
+    loop,
+    title,
+    now,
+    scheduledAt,
+    composedText,
+    paths,
+    createGoal,
+    createTask,
+    handleCreateTaskSuccess,
+  ]);
 
   const handleSubmit = useCallback(() => {
     if (busy) return;
@@ -458,6 +500,32 @@ export function NewTaskDialog({ onClose, initialText, initialTarget }: NewTaskDi
           placeholder={t("title.placeholder")}
           value={title}
         />
+
+        {initialContext && (
+          <Panel
+            data-testid="task-context-panel"
+            header={
+              <Stack align="center" direction="row" gap="75">
+                <Icon name="link" size="sm" tone="accent" />
+                <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
+                  {t("context.label")}
+                </Typography>
+              </Stack>
+            }
+            padding="100"
+          >
+            <Stack gap="50">
+              <Typography leading="snug" size="xs" type="note" variant="tertiary">
+                {t("context.note")}
+              </Typography>
+              <Container maxHeight="8rem" overflow="auto">
+                <Typography mono size="2xs" type="note" variant="secondary">
+                  {initialContext}
+                </Typography>
+              </Container>
+            </Stack>
+          </Panel>
+        )}
 
         {(projects ?? []).length > 0 && (
           <SelectField

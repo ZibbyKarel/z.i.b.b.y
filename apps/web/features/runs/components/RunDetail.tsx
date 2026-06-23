@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { useNewTask } from "../../tasks/TaskContext";
 import { relativeTime, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
@@ -106,6 +107,69 @@ function MetaCell({ label, value, tone }: { label: string; value: string; tone?:
         {value}
       </Typography>
     </Stack>
+  );
+}
+
+/** The first URL in a string — a PR link inside the outcome summary, if any. */
+function firstUrl(text: string | undefined): string | undefined {
+  return text?.match(/https?:\/\/\S+/)?.[0];
+}
+
+/**
+ * A completed task's produced output (items: "open output" + "continue in a new
+ * task"). Shown only for a `done` run whose task chose a `pr`/`file` output — its
+ * `taskOutcomeSummary` carries the reference (a PR url, or a written-file note). The
+ * PR url opens in a new tab; "continue" seeds a fresh task with this output folded
+ * into its context.
+ */
+function RunOutputPanel({ run }: { run: RunView }) {
+  const t = useTranslations("runs");
+  const { open: openNewTask } = useNewTask();
+  const summary = run.taskOutcomeSummary;
+  const hasOutput =
+    run.status === "done" &&
+    !!summary &&
+    (run.taskOutputKind === "pr" || run.taskOutputKind === "file");
+  if (!hasOutput || !summary) return null;
+
+  const url = firstUrl(summary);
+  const context = [
+    run.taskTitle ? t("continueContextTask", { title: run.taskTitle }) : null,
+    t("continueContextOutput", { output: summary }),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    <HudPanel padding="250" title={t("producedOutputTitle")}>
+      <Stack gap="100">
+        <Typography size="sm" type="text" variant="secondary">
+          {summary}
+        </Typography>
+        <Stack wrap align="center" direction="row" gap="100">
+          {url && (
+            <Button
+              data-testid="open-output"
+              icon="link"
+              intent="primary"
+              onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+              size="sm"
+            >
+              {t("openOutput")}
+            </Button>
+          )}
+          <Button
+            data-testid="continue-task"
+            icon="plus"
+            intent="ghost"
+            onClick={() => openNewTask(undefined, undefined, context)}
+            size="sm"
+          >
+            {t("continueTask")}
+          </Button>
+        </Stack>
+      </Stack>
+    </HudPanel>
   );
 }
 
@@ -294,6 +358,8 @@ export function RunDetail({
           </Stack>
         </Stack>
       </HudPanel>
+
+      <RunOutputPanel run={run} />
 
       {approval ? (
         <>

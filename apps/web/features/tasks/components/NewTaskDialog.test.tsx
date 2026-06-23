@@ -218,6 +218,24 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
   });
 
+  it("shows a prior-run context panel and folds it into the dispatched text", async () => {
+    render(
+      <NewTaskDialog
+        initialContext="Výstup: https://github.com/acme/app/pull/42"
+        onClose={() => {}}
+      />,
+    );
+    // The "context added" panel is visible up front.
+    expect(screen.getByTestId("task-context-panel")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Zadání/), "navaž na PR");
+    await screen.findByText(/ZIBBY to předá/);
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+
+    const sentText = createTask.mock.calls[0]?.[0].body.text as string;
+    expect(sentText).toContain("navaž na PR");
+    expect(sentText).toContain("https://github.com/acme/app/pull/42");
+  });
+
   it("carries a chosen file output (dest + filename) into the dispatched task", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
