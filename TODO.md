@@ -1,5 +1,3 @@
-- vidět log toho, které emaily byly zpracovány. A ne jenom emaily ale všechny integrace by měli vést log toho co se jimi zpracovalo. Na detailu projektu, musíme vidět záznam toho, co se zpracovalo z integrací tzn pokud je zapnutá integrace emailu tak tam uvidím "11:00 [název integrace] - zpracován email [link na email] - nerelevantní/task zadán [link na task]/...."
-
 - agenti/skilly a další entity které jsou napsané v markdown souborech by v detailu měli zobrazovat naformátovaný MD místo plain MD přepisu. Pokud možno sjednoť to s tím co používáme v chatu
 
 - pokud task nemá jméno použijme haiku na jeho odvození z popisu tasku.
@@ -24,3 +22,7 @@ PipelineRunNotFoundError: Pipeline run "delivery_1782245075542" not found
 ````
 
 - běhy a aktivita - detail běhu pipeline logy u jednotlivých fází pipeliny jsou jen "výstupy" z dané fáze. Potřebuji ale vidět kompletní log od začátku do konce, jak agent přemýšlel a co dělal než sepsal "Hotovo..."
+
+- odkazy na pages jsou plain string ("/overview", "/runs", ...) viz NAV_ITEMS. Nemá next.js nějakou podporu pro typování rout ? pokud ano udělej to standartním způsobem pro Next.js pokud ne vymysli způsob jak mít routy typované abychom nemohli udělat typo v odkazu na stránku
+
+- search bar nahoře zobrazuje zkratku cmd+k ale neexistuje na ní listener. Také by měl ukazovat vždy poslední výsledky pokud ho znovu focusnu

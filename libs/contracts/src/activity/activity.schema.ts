@@ -117,10 +117,18 @@ export const ACTIVITY_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * is a comma-separated allow-list of {@link ActivityKind}; `limit` is clamped to
  * [1, 500]. `date` is a plain string here (not regex-gated) so a malformed value
  * reaches the handler and maps to a 422 rather than ts-rest's generic 400.
+ *
+ * `projectId`/`integrationId` filter by the entry's `refs` (used by the per-project
+ * integration-activity log). When either is given the server reads a multi-day
+ * window (`days`, default 14, clamped to [1, 90]) instead of just today, so a sparse
+ * processing history is still visible; `date` then takes precedence if also given.
  */
 export const ActivityQuerySchema = z.object({
   date: z.string().optional(),
   kinds: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
+  projectId: z.string().optional(),
+  integrationId: z.string().optional(),
+  days: z.coerce.number().int().min(1).max(90).optional(),
 });
 export type ActivityQuery = z.infer<typeof ActivityQuerySchema>;

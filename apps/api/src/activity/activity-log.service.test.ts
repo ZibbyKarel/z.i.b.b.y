@@ -75,6 +75,44 @@ describe("ActivityLogService", () => {
     expect(capped[0]!.summary).toBe("3");
   });
 
+  it("filters by refs.projectId across a multi-day window (no explicit date)", async () => {
+    const now = new Date("2026-06-13T08:00:00.000Z");
+    await service.record(
+      { kind: "channel-item", summary: "acme yesterday", refs: { projectId: "acme", integrationId: "mail" } },
+      new Date("2026-06-12T09:00:00.000Z"),
+    );
+    await service.record(
+      { kind: "channel-triage", summary: "other today", refs: { projectId: "other", integrationId: "slack" } },
+      new Date("2026-06-13T07:00:00.000Z"),
+    );
+    await service.record(
+      { kind: "channel-ignored", summary: "acme today", refs: { projectId: "acme", integrationId: "mail" } },
+      now,
+    );
+
+    // projectId filter spans the window (today + yesterday here), newest-first.
+    const acme = await service.list({ projectId: "acme" }, now);
+    expect(acme.map((e) => e.summary)).toEqual(["acme today", "acme yesterday"]);
+
+    // integrationId narrows further still.
+    const slack = await service.list({ integrationId: "slack" }, now);
+    expect(slack.map((e) => e.summary)).toEqual(["other today"]);
+  });
+
+  it("an explicit date pins the read to that one day even with a refs filter", async () => {
+    const now = new Date("2026-06-13T08:00:00.000Z");
+    await service.record(
+      { kind: "channel-item", summary: "acme yesterday", refs: { projectId: "acme" } },
+      new Date("2026-06-12T09:00:00.000Z"),
+    );
+    await service.record(
+      { kind: "channel-item", summary: "acme today", refs: { projectId: "acme" } },
+      now,
+    );
+    const pinned = await service.list({ projectId: "acme", date: "2026-06-12" }, now);
+    expect(pinned.map((e) => e.summary)).toEqual(["acme yesterday"]);
+  });
+
   it("readSince spans yesterday + today and filters by timestamp", async () => {
     const now = new Date("2026-06-13T08:00:00.000Z");
     await service.record(

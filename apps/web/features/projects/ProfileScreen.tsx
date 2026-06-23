@@ -24,6 +24,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { slug } from "../../utils/slug";
 import { InboxPanel } from "../integrations/components/InboxPanel";
+import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
@@ -499,6 +500,9 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
 
             {/* Inbox — this project's recent channel items */}
             <InboxPanel projectId={id} />
+
+            {/* Integration activity — what the project's integrations processed + outcome */}
+            <ProjectIntegrationActivityPanel projectId={id} />
 
             {standupQ.data && (
               <>

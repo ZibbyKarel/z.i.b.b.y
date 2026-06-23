@@ -29,6 +29,15 @@ export interface ActivityListOptions {
   kinds?: ActivityKind[];
   /** Newest-first cap (the controller defaults this to 50). */
   limit?: number;
+  /** Keep only entries whose `refs.projectId` matches (per-project activity log). */
+  projectId?: string;
+  /** Keep only entries whose `refs.integrationId` matches. */
+  integrationId?: string;
+  /**
+   * Look back this many days (today inclusive) instead of a single day. Ignored when
+   * `date` is given. Used by the project/integration log so a sparse history shows.
+   */
+  days?: number;
 }
 
 const YYYY_MM_DD = (d: Date): string => d.toISOString().slice(0, 10);
@@ -90,15 +99,35 @@ export class ActivityLogService {
     }
   }
 
-  /** Read one day's entries, newest-first, optionally filtered by kind and capped. */
+  /**
+   * Read activity newest-first, optionally filtered by kind and `refs`, and capped.
+   * Reads a single day by default; a `projectId`/`integrationId` filter (or an
+   * explicit `days`) widens the read to a multi-day window so a sparse per-project
+   * history is still visible. An explicit `date` always pins to that one day.
+   */
   async list(opts: ActivityListOptions = {}, now: Date = new Date()): Promise<ActivityEntry[]> {
-    const date = opts.date ?? YYYY_MM_DD(now);
-    let entries = (await this.readDay(date)).reverse();
+    const windowed = opts.date === undefined && (opts.days !== undefined || this.hasRefFilter(opts));
+    let entries: ActivityEntry[];
+    if (windowed) {
+      const since = new Date(now.getTime() - ((opts.days ?? 14) - 1) * 24 * 60 * 60 * 1000);
+      since.setUTCHours(0, 0, 0, 0);
+      entries = await this.readRange(since, now); // already newest-first
+    } else {
+      entries = (await this.readDay(opts.date ?? YYYY_MM_DD(now))).reverse();
+    }
     if (opts.kinds && opts.kinds.length > 0) {
       const set = new Set(opts.kinds);
       entries = entries.filter((e) => set.has(e.kind));
     }
+    if (opts.projectId) entries = entries.filter((e) => e.refs.projectId === opts.projectId);
+    if (opts.integrationId) {
+      entries = entries.filter((e) => e.refs.integrationId === opts.integrationId);
+    }
     return opts.limit !== undefined ? entries.slice(0, opts.limit) : entries;
+  }
+
+  private hasRefFilter(opts: ActivityListOptions): boolean {
+    return opts.projectId !== undefined || opts.integrationId !== undefined;
   }
 
   /**

@@ -1144,6 +1144,10 @@
       },
       "standup": {
         "title": "Tahák pro standup"
+      },
+      "integrationActivity": {
+        "title": "Aktivita integrací",
+        "empty": "Za posledních 14 dní se z integrací tohoto projektu nic nezpracovalo."
       }
     }
   },

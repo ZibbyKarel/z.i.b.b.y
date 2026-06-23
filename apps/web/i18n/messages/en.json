@@ -1144,6 +1144,10 @@
       },
       "standup": {
         "title": "Standup cheat sheet"
+      },
+      "integrationActivity": {
+        "title": "Integration activity",
+        "empty": "Nothing processed from this project's integrations in the last 14 days."
       }
     }
   },

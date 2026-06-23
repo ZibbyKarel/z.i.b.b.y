@@ -39,6 +39,9 @@ export class ActivityController {
             date: query.date,
             kinds: parseKinds(query.kinds),
             limit: query.limit ?? 50,
+            projectId: query.projectId,
+            integrationId: query.integrationId,
+            days: query.days,
           }),
         };
       },
