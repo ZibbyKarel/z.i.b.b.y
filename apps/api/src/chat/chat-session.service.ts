@@ -98,12 +98,22 @@ export class ChatSessionService {
     return args;
   }
 
+  /** The base URL the spawned `claude` reaches the in-process MCP server at. */
+  protected mcpBaseUrl(): string {
+    const base = process.env.ZIBBY_API_BASE ?? `http://localhost:${process.env.PORT ?? 3333}`;
+    return `${base}/api/chat/mcp`;
+  }
+
   /**
-   * MCP tool wiring (`--mcp-config` + `--allowedTools`). Empty until the chat tools
-   * server lands; the dispatch path (create_task etc.) plugs in here.
+   * MCP tool wiring (`--mcp-config` + `--allowedTools`): point the turn at the
+   * in-process HTTP MCP server (server id `zibby`) and allow its three tools. The CLI
+   * round-trips tool-use against this under the verified chat spawn config.
    */
   protected toolArgs(): string[] {
-    return [];
+    const config = {
+      mcpServers: { zibby: { type: "http", url: this.mcpBaseUrl() } },
+    };
+    return ["--mcp-config", JSON.stringify(config), "--allowedTools", "mcp__zibby__*"];
   }
 
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */

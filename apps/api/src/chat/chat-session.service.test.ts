@@ -83,6 +83,15 @@ describe("ChatSessionService", () => {
     expect(args).not.toContain("--resume");
   });
 
+  it("wires the zibby MCP tool server (--mcp-config + --allowedTools)", () => {
+    const svc = new TestSession(store, events, []);
+    const args = svc.buildArgs("ahoj", null);
+    expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*");
+    const config = JSON.parse(args[args.indexOf("--mcp-config") + 1] ?? "{}");
+    expect(config.mcpServers.zibby.type).toBe("http");
+    expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp$/);
+  });
+
   it("adds --resume with the threaded session id", () => {
     const svc = new TestSession(store, events, []);
     const args = svc.buildArgs("ahoj", "sess-7");
