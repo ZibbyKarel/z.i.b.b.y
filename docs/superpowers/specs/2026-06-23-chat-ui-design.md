@@ -233,7 +233,7 @@ CLI version 2.1.186. Findings:
 **Confirmed engine recipe:**
 ```
 claude -p "<message>" [--resume <sid>] \
-  --setting-sources "" \
+  --setting-sources "" --tools "" \
   --append-system-prompt "<ZIBBY persona>" \
   --output-format stream-json --include-partial-messages --verbose \
   --model sonnet --permission-mode dontAsk \

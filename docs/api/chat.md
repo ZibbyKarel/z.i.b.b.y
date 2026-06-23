@@ -32,7 +32,7 @@ Ověřený recept (spike, viz spec §7):
 
 ```
 claude -p <msg> [--resume <sid>] \
-  --setting-sources "" --append-system-prompt <persona> \
+  --setting-sources "" --tools "" --append-system-prompt <persona> \
   --output-format stream-json --include-partial-messages --verbose \
   --model sonnet --permission-mode dontAsk \
   --mcp-config {zibby:{type:http,url:.../api/chat/mcp}} --allowedTools mcp__zibby__*
@@ -45,6 +45,10 @@ claude -p <msg> [--resume <sid>] \
 - **Izolace:** `--setting-sources ""` nenačte žádné user/project/local settings →
   globální hooky/pluginy (které by injektovaly cizí kontext) nevyskočí, ale auth
   (keychain) zůstává. (`CLAUDE_CONFIG_DIR` auth rozbíjí — nepoužívat.)
+- **`--tools ""`** vypne všechny vestavěné nástroje (Bash/Write/Edit/…). ZIBBY chat
+  je konverzační butler, ne coding agent — jednat smí JEN přes `zibby` MCP nástroje
+  (`create_task` deleguje práci pipeline). Bez toho se model snaží appku postavit sám
+  přes Bash/Write místo dispatche. (Ověřeno živým evalem.)
 - Model přepsatelný přes `ZIBBY_CHAT_MODEL` (výchozí `sonnet`).
 
 ## Nástroje (`chat-tools.service.ts` + `chat-mcp.controller.ts`)
