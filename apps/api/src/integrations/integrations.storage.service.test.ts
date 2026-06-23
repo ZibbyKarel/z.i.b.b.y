@@ -21,23 +21,29 @@ const fileFor = (dir: string, id: string) => path.join(dir, `${id}.json`);
 
 describe("IntegrationsStorageService", () => {
   let dir: string;
+  let stateDir: string;
   let service: IntegrationsStorageService;
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "integrations-test-"));
-    service = new IntegrationsStorageService(dir);
+    stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "integration-state-test-"));
+    service = new IntegrationsStorageService(dir, stateDir);
     await service.onModuleInit();
   });
   afterEach(async () => {
     await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(stateDir, { recursive: true, force: true });
   });
 
-  it("persists with defaulted status/enabled and never writes hasCredentials", async () => {
+  it("persists config only — never writes hasCredentials or volatile sync fields", async () => {
     const created = await service.create(sample);
     expect(created.status).toBe("disconnected");
     expect(created.enabled).toBe(true);
     const onDisk = JSON.parse(await fs.readFile(fileFor(dir, "team-slack"), "utf8"));
     expect(onDisk).not.toHaveProperty("hasCredentials");
+    expect(onDisk).not.toHaveProperty("status");
+    expect(onDisk).not.toHaveProperty("lastSyncAt");
+    expect(onDisk).not.toHaveProperty("lastError");
     expect((await service.get("team-slack")).hasCredentials).toBe(false);
   });
 
@@ -63,6 +69,26 @@ describe("IntegrationsStorageService", () => {
     expect(ok.status).toBe("connected");
     expect(ok.lastError).toBeUndefined();
     expect(ok.lastSyncAt).toBe("2026-06-12T00:00:00.000Z");
+  });
+
+  it("keeps sync state in the gitignored sidecar, re-attached on read", async () => {
+    await service.create(sample);
+    await service.markSync("team-slack", {
+      status: "connected",
+      lastSyncAt: "2026-06-12T00:00:00.000Z",
+    });
+    // The volatile state lives only in the sidecar, never in the versioned entity file.
+    const sidecar = JSON.parse(await fs.readFile(fileFor(stateDir, "team-slack"), "utf8"));
+    expect(sidecar.status).toBe("connected");
+    expect(sidecar.lastSyncAt).toBe("2026-06-12T00:00:00.000Z");
+    const onDisk = JSON.parse(await fs.readFile(fileFor(dir, "team-slack"), "utf8"));
+    expect(onDisk).not.toHaveProperty("status");
+    expect(onDisk).not.toHaveProperty("lastSyncAt");
+    // Re-attached on read so the wire entity still carries it.
+    const got = await service.get("team-slack");
+    expect(got.status).toBe("connected");
+    expect(got.lastSyncAt).toBe("2026-06-12T00:00:00.000Z");
+    expect((await service.list())[0]?.status).toBe("connected");
   });
 
   it("keeps kind immutable on update", async () => {

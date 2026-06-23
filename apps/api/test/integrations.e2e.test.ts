@@ -21,12 +21,15 @@ describe("Integrations API (e2e)", () => {
   let app: INestApplication;
   let integrationsDir: string;
   let credentialsDir: string;
+  let stateDir: string;
 
   beforeAll(async () => {
     integrationsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-INTEGRATIONS_DIR-"));
     credentialsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-CREDENTIALS_DIR-"));
+    stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-INTEGRATION_STATE_DIR-"));
     process.env.INTEGRATIONS_DIR = integrationsDir;
     process.env.CREDENTIALS_DIR = credentialsDir;
+    process.env.INTEGRATION_STATE_DIR = stateDir;
     // The connection tester routes through the adapter registry; fake mode keeps the
     // test endpoint off the network.
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -38,7 +41,8 @@ describe("Integrations API (e2e)", () => {
     await app.close();
     await fs.rm(integrationsDir, { recursive: true, force: true });
     await fs.rm(credentialsDir, { recursive: true, force: true });
-    for (const k of ["INTEGRATIONS_DIR", "CREDENTIALS_DIR"]) {
+    await fs.rm(stateDir, { recursive: true, force: true });
+    for (const k of ["INTEGRATIONS_DIR", "CREDENTIALS_DIR", "INTEGRATION_STATE_DIR"]) {
       delete process.env[k];
     }
   });

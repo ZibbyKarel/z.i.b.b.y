@@ -5,5 +5,3 @@
 - pipelines v edit dialogu udělat možnost fullscreenu
 
 - pipelines v edit view názvy handoff souborů překrývají šipky mezi agenty a pole okolo jména handoff souboru by měla mít auto width
-
-- lastSyncAt zibbycalendar.json se furt mění. Tyhle timestampy by neměly být v souborech, které se verzují stejně tak jako runs tasků

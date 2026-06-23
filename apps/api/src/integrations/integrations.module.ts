@@ -5,11 +5,24 @@ import { dataDir } from "../shared/data-dir";
 import { CONNECTION_TESTER } from "./connection-tester";
 import { CREDENTIALS_DIR, CredentialsStore } from "./credentials.store";
 import { IntegrationsController } from "./integrations.controller";
-import { INTEGRATIONS_DIR, IntegrationsStorageService } from "./integrations.storage.service";
+import {
+  INTEGRATIONS_DIR,
+  INTEGRATION_STATE_DIR,
+  IntegrationsStorageService,
+} from "./integrations.storage.service";
 
 /** Default integrations dir, anchored to `apps/api/data/integrations`. */
 export function resolveIntegrationsDir(): string {
   return process.env.INTEGRATIONS_DIR ?? dataDir("integrations");
+}
+
+/**
+ * Default integration sync-state dir (gitignored), anchored to
+ * `apps/api/data/integration-state`. Holds the volatile status/lastSyncAt/lastError
+ * stamped on every poll, so the versioned integration config never churns.
+ */
+export function resolveIntegrationStateDir(): string {
+  return process.env.INTEGRATION_STATE_DIR ?? dataDir("integration-state");
 }
 
 /** Default credentials dir (gitignored), anchored to `apps/api/data/credentials`. */
@@ -28,6 +41,7 @@ export function resolveCredentialsDir(): string {
   controllers: [IntegrationsController],
   providers: [
     { provide: INTEGRATIONS_DIR, useFactory: resolveIntegrationsDir },
+    { provide: INTEGRATION_STATE_DIR, useFactory: resolveIntegrationStateDir },
     { provide: CREDENTIALS_DIR, useFactory: resolveCredentialsDir },
     IntegrationsStorageService,
     CredentialsStore,
