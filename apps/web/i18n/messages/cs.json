@@ -1102,6 +1102,12 @@
       "duplicate": "Kategorie „{name}“ už existuje."
     },
     "profile": {
+      "tabs": {
+        "overview": "Přehled",
+        "profile": "Profil",
+        "secrets": "Tajemství",
+        "integrations": "Integrace"
+      },
       "basics": {
         "title": "Projekt",
         "newHint": "Po uložení projektu nastavíš jeho tým, integrace a tajemství."

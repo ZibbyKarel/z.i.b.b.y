@@ -79,10 +79,20 @@ vi.mock("../integrations/mutations", () => ({
   useTestIntegrationMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-// next/navigation — router.push/replace are no-ops in tests
+// The `?tab=` the mocked URL reports; a deep-link test sets it before render.
+let searchTab = "";
+
+// next/navigation — router.push/replace are no-ops in tests; the detail reads the
+// initial tab from `?tab=` (default empty → "overview" tab).
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
+  useSearchParams: () => new URLSearchParams(searchTab ? `tab=${searchTab}` : ""),
 }));
+
+/** The Team/Autonomy/Rhythm/Standup sections live under the "Profile" tab. */
+async function openProfileTab() {
+  await userEvent.click(screen.getByTestId("tabs-tab-profile"));
+}
 
 beforeEach(() => {
   updateMutate.mockReset();
@@ -93,6 +103,7 @@ beforeEach(() => {
   deleteSecretsMutate.mockReset();
   replace.mockReset();
   push.mockReset();
+  searchTab = "";
 });
 
 describe("ProfileScreen", () => {
@@ -101,13 +112,15 @@ describe("ProfileScreen", () => {
     expect(screen.getByText("media-vault")).toBeInTheDocument();
   });
 
-  it("shows the person's name from the profile", () => {
+  it("shows the person's name from the profile", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
     expect(screen.getByDisplayValue("Jana")).toBeInTheDocument();
   });
 
-  it("shows the standup time from the profile", () => {
+  it("shows the standup time from the profile", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
     expect(screen.getByDisplayValue("09:30")).toBeInTheDocument();
   });
 
@@ -130,6 +143,7 @@ describe("ProfileScreen", () => {
 
   it("saves team on button click", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
     await userEvent.click(screen.getByTestId("save-team"));
     expect(updateMutate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -142,6 +156,7 @@ describe("ProfileScreen", () => {
 
   it("saves a person's comms style into the identity body", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
     await userEvent.type(screen.getByTestId("person-comms-style"), "Terse");
     await userEvent.click(screen.getByTestId("save-team"));
     expect(updateMutate).toHaveBeenCalledWith(
@@ -158,19 +173,22 @@ describe("ProfileScreen", () => {
 
   it("adds a new person row", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
     const nameInputsBefore = screen.getAllByTestId("person-name").length;
     await userEvent.click(screen.getByTestId("add-person"));
     expect(screen.getAllByTestId("person-name")).toHaveLength(nameInputsBefore + 1);
   });
 
-  it("lists the project's integrations with an add control", () => {
+  it("lists the project's integrations with an add control", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await userEvent.click(screen.getByTestId("tabs-tab-integrations"));
     expect(screen.getByText("Team Slack")).toBeInTheDocument();
     expect(screen.getByTestId("add-integration")).toBeInTheDocument();
   });
 
   it("saves rhythm on button click", async () => {
     render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
     await userEvent.click(screen.getByTestId("save-rhythm"));
     expect(updateMutate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -179,6 +197,20 @@ describe("ProfileScreen", () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it("deep-links straight to a tab from the ?tab= URL", async () => {
+    searchTab = "integrations";
+    render(<ProfileScreen projectId="media-vault" />);
+    // Lands on the integrations tab without a click — the URL is the source of truth.
+    expect(await screen.findByText("Team Slack")).toBeInTheDocument();
+    expect(screen.queryByTestId("save-team")).not.toBeInTheDocument();
+  });
+
+  it("writes the chosen tab back to the URL for shareability", async () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    await openProfileTab();
+    expect(replace).toHaveBeenCalledWith("/projects/media-vault?tab=profile");
   });
 
   describe("new project mode", () => {

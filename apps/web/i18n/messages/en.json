@@ -1102,6 +1102,12 @@
       "duplicate": "Category “{name}” already exists."
     },
     "profile": {
+      "tabs": {
+        "overview": "Overview",
+        "profile": "Profile",
+        "secrets": "Secrets",
+        "integrations": "Integrations"
+      },
       "basics": {
         "title": "Project",
         "newHint": "Save the project to set up its team, integrations and secrets."
