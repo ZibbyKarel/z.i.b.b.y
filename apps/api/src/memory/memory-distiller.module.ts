@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
+import { ChatModule } from "../chat/chat.module";
 import { GoalsModule } from "../goals/goals.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
@@ -16,7 +17,7 @@ import { MemoryDistillerService } from "./memory-distiller.service";
  * nothing here imports AutomationsModule, so there is no cycle.
  */
 @Module({
-  imports: [MemoryModule, AgentsModule, PipelinesModule, GoalsModule, ProjectsModule],
+  imports: [MemoryModule, AgentsModule, PipelinesModule, GoalsModule, ProjectsModule, ChatModule],
   providers: [ClaudeCliDistiller, MemoryDistillerService],
   exports: [MemoryDistillerService],
 })

@@ -8,7 +8,7 @@ const DISTILLER_TIMEOUT_MS = 30_000;
 
 /** A finished run reduced to what the distiller model needs to see. */
 export interface RunDigest {
-  kind: "pipeline" | "agent" | "goal";
+  kind: "pipeline" | "agent" | "goal" | "chat";
   /** The run id (forensic; the model shouldn't echo it back as a learning). */
   id: string;
   /** pipelineId / agentId / goalId — the reusable identity. */

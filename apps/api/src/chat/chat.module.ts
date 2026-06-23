@@ -17,9 +17,11 @@ export function resolveChatDir(): string {
 
 /**
  * Chat (chat-first conversational layer, replaces the Voice UI). Owns the streaming
- * `claude` session engine, the append-only JSONL transcript store, and the live
- * token event bus. Self-contained: it depends only on shared file-storage and the
- * `claude` CLI, so it slots into the root module with no cross-feature imports.
+ * `claude` session engine, the append-only JSONL transcript store, the live token
+ * event bus, and the in-process HTTP MCP tool server. Imports Tasks/Memory/Briefing
+ * so the chat tools (`create_task` / `recall_memory` / `get_status`) delegate to the
+ * real services. Exports the transcript store so the nightly distiller can read
+ * conversations.
  */
 @Module({
   imports: [TasksModule, MemoryModule, BriefingModule],

@@ -6,6 +6,7 @@ import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
+import type { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import type { ClaudeCliDistiller, Learning } from "./claude-cli-distiller";
 import { MemoryDistillerService } from "./memory-distiller.service";
 import { DuplicateNoteError, type VaultService } from "./vault.service";
@@ -46,6 +47,7 @@ function makeService(over: {
   agents?: Partial<AgentRunnerService>;
   goals?: Partial<GoalRunnerService>;
   projects?: Partial<ProjectsStorageService>;
+  chat?: Partial<ChatTranscriptStore>;
   learnings?: Learning[];
 }) {
   const distiller = {
@@ -59,6 +61,14 @@ function makeService(over: {
         throw new Error("none");
       },
     } as unknown as ProjectsStorageService);
+  const chat =
+    over.chat ??
+    ({
+      listConversationIds: async () => [],
+      distilledCount: async () => 0,
+      readTranscript: async () => ({ conversationId: "", sessionId: null, messages: [] }),
+      markDistilled: async () => undefined,
+    } as unknown as ChatTranscriptStore);
   return new MemoryDistillerService(
     over.vault as unknown as VaultService,
     distiller,
@@ -66,6 +76,7 @@ function makeService(over: {
     (over.pipelines ?? { listAll: async () => [] }) as unknown as PipelineRunnerService,
     (over.goals ?? { listAll: async () => [] }) as unknown as GoalRunnerService,
     projects as ProjectsStorageService,
+    chat as ChatTranscriptStore,
   );
 }
 
@@ -182,6 +193,59 @@ describe("MemoryDistillerService", () => {
     expect(await service.distill(now)).toBe("memory-distill:1");
     expect(vault.createNote).not.toHaveBeenCalled();
     await expect(fs.access(marker(dir))).resolves.toBeUndefined();
+  });
+
+  it("distils a chat conversation's fresh tail and advances its marker", async () => {
+    const vault = makeVault();
+    const marked: Array<{ id: string; count: number }> = [];
+    const service = makeService({
+      vault,
+      learnings: [{ title: "operator prefers pnpm", body: "Always pnpm." }],
+      chat: {
+        listConversationIds: async () => ["conv-1"],
+        distilledCount: async () => 1, // first message already distilled
+        readTranscript: async () => ({
+          conversationId: "conv-1",
+          sessionId: "s",
+          messages: [
+            { id: "m1", role: "user", text: "ahoj", at: "2026-06-16T01:00:00.000Z" },
+            { id: "m2", role: "user", text: "vždycky používej pnpm", at: "2026-06-16T02:00:00.000Z" },
+          ],
+        }),
+        markDistilled: async (id: string, count: number) => {
+          marked.push({ id, count });
+        },
+      } as unknown as ChatTranscriptStore,
+    });
+
+    expect(await service.distill(now)).toBe("memory-distill:1");
+    expect(vault.notes.has("distilled-2026-06-16")).toBe(true);
+    // marker advanced to the full message count (2), not the cwd path
+    expect(marked).toEqual([{ id: "conv-1", count: 2 }]);
+  });
+
+  it("skips a chat conversation with no new messages since the marker", async () => {
+    const vault = makeVault();
+    const service = makeService({
+      vault,
+      learnings: [{ title: "t", body: "b" }],
+      chat: {
+        listConversationIds: async () => ["conv-1"],
+        distilledCount: async () => 2,
+        readTranscript: async () => ({
+          conversationId: "conv-1",
+          sessionId: "s",
+          messages: [
+            { id: "m1", role: "user", text: "a", at: "2026-06-16T01:00:00.000Z" },
+            { id: "m2", role: "assistant", text: "b", at: "2026-06-16T02:00:00.000Z" },
+          ],
+        }),
+        markDistilled: async () => undefined,
+      } as unknown as ChatTranscriptStore,
+    });
+
+    expect(await service.distill(now)).toBe("memory-distill:0");
+    expect(vault.createNote).not.toHaveBeenCalled();
   });
 
   it("is fail-open: a throwing runner does not break the pass", async () => {

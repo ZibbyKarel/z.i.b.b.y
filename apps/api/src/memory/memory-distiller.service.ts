@@ -5,6 +5,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
 import { DuplicateNoteError, VaultService } from "./vault.service";
@@ -27,6 +28,10 @@ interface Candidate {
   cwd: string;
   projectId: string | null;
   summary: RunDigest;
+  /** Set for chat conversations (no run `cwd`); drives the incremental marker. */
+  chatId?: string;
+  /** Message count distilled through, persisted on the chat marker after filing. */
+  chatCount?: number;
 }
 
 /**
@@ -52,6 +57,7 @@ export class MemoryDistillerService {
     private readonly pipelines: PipelineRunnerService,
     private readonly goals: GoalRunnerService,
     private readonly projects: ProjectsStorageService,
+    private readonly chat: ChatTranscriptStore,
   ) {}
 
   /**
@@ -70,7 +76,13 @@ export class MemoryDistillerService {
       // Mark only AFTER the digest is filed: a crash before this re-considers the
       // batch next pass (at-least-once — a duplicated digest line is harmless, a
       // silently dropped learning is not).
-      await Promise.all(candidates.map((c) => this.markDistilled(c.cwd)));
+      await Promise.all(
+        candidates.map((c) =>
+          c.chatId !== undefined
+            ? this.chat.markDistilled(c.chatId, c.chatCount ?? 0, now)
+            : this.markDistilled(c.cwd),
+        ),
+      );
       this.logger.log(`distilled ${candidates.length} run(s) → ${learnings.length} learning(s)`);
       return `memory-distill:${candidates.length}`;
     } catch (error) {
@@ -111,6 +123,18 @@ export class MemoryDistillerService {
       if (!TERMINAL_GOAL.has(run.status)) continue;
       const projectId = await this.byPath(run.projectPath);
       await consider(run.cwd, projectId, async () => this.summarizeGoal(run, projectId));
+    }
+    // Chat conversations distill INCREMENTALLY (a thread is long-lived): only messages
+    // past the marker's count are fed, and the count is advanced after filing.
+    for (const id of await this.chat.listConversationIds().catch((): string[] => [])) {
+      const distilled = await this.chat.distilledCount(id);
+      const summary = await this.summarizeChat(id, distilled);
+      if (!summary) continue;
+      if (out.length >= MAX_RUNS_PER_PASS) {
+        deferred++;
+        continue;
+      }
+      out.push({ cwd: "", projectId: null, chatId: id, chatCount: summary.count, summary: summary.digest });
     }
 
     if (deferred > 0) {
@@ -166,6 +190,27 @@ export class MemoryDistillerService {
       status: run.status,
       ...(projectId ? { project: projectId } : {}),
       excerpt: verdict.slice(0, EXCERPT_LIMIT),
+    };
+  }
+
+  /**
+   * Reduce the not-yet-distilled tail of a conversation to a digest. Returns null when
+   * there are no new messages (nothing to distill) so the pass skips it cheaply.
+   */
+  private async summarizeChat(
+    id: string,
+    distilledCount: number,
+  ): Promise<{ digest: RunDigest; count: number } | null> {
+    const transcript = await this.chat.readTranscript(id).catch(() => null);
+    if (!transcript || transcript.messages.length <= distilledCount) return null;
+    const fresh = transcript.messages.slice(distilledCount);
+    const excerpt = fresh
+      .map((m) => `${m.role === "user" ? "Operátor" : "ZIBBY"}: ${m.text}`)
+      .join("\n")
+      .slice(-EXCERPT_LIMIT);
+    return {
+      digest: { kind: "chat", id, name: "konverzace", status: "done", excerpt },
+      count: transcript.messages.length,
     };
   }
 

@@ -70,4 +70,22 @@ describe("ChatTranscriptStore", () => {
     const transcript = await store.readTranscript("missing");
     expect(transcript).toEqual({ conversationId: "missing", sessionId: null, messages: [] });
   });
+
+  it("lists conversation ids from transcript files only", async () => {
+    await store.ensureConversation("c-a");
+    await store.appendMessage("c-a", msg());
+    await store.ensureConversation("c-b");
+    await store.appendMessage("c-b", msg());
+    const ids = (await store.listConversationIds()).sort();
+    // .meta.json / .distilled.json / active.json must not appear
+    expect(ids).toEqual(["c-a", "c-b"]);
+  });
+
+  it("tracks the incremental distilled-through cursor", async () => {
+    expect(await store.distilledCount("c1")).toBe(0);
+    await store.markDistilled("c1", 3);
+    expect(await store.distilledCount("c1")).toBe(3);
+    await store.markDistilled("c1", 7);
+    expect(await store.distilledCount("c1")).toBe(7);
+  });
 });

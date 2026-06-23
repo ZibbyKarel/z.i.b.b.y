@@ -83,6 +83,43 @@ export class ChatTranscriptStore {
     await this.writeMeta({ ...meta, sessionId, updatedAt: now.toISOString() });
   }
 
+  /** Every conversation id with a transcript on disk (newest intake order not implied). */
+  async listConversationIds(): Promise<string[]> {
+    const entries = await fs.readdir(this.dir).catch(() => [] as string[]);
+    return entries
+      .filter((name) => name.endsWith(".jsonl"))
+      .map((name) => name.slice(0, -".jsonl".length));
+  }
+
+  /**
+   * How many messages of this conversation have already been distilled. A chat thread
+   * is long-lived (unlike a terminal run), so distillation is INCREMENTAL: the nightly
+   * pass only feeds messages past this count, then advances it via {@link markDistilled}.
+   */
+  async distilledCount(conversationId: string): Promise<number> {
+    const raw = await fs.readFile(this.distilledFile(conversationId), "utf8").catch(() => null);
+    if (raw === null) return 0;
+    const parsed = safeJson(raw);
+    if (parsed && typeof parsed === "object" && "messageCount" in parsed) {
+      const n = (parsed as { messageCount: unknown }).messageCount;
+      return typeof n === "number" ? n : 0;
+    }
+    return 0;
+  }
+
+  /** Advance the distilled-through cursor to `messageCount` for this conversation. */
+  async markDistilled(
+    conversationId: string,
+    messageCount: number,
+    now: Date = new Date(),
+  ): Promise<void> {
+    await ensureDir(this.dir);
+    await writeFileAtomic(
+      this.distilledFile(conversationId),
+      `${JSON.stringify({ distilledAt: now.toISOString(), messageCount })}\n`,
+    );
+  }
+
   /** The active (single ongoing) conversation, or null if none exists yet. */
   async readActive(): Promise<string | null> {
     const raw = await fs.readFile(this.activeFile(), "utf8").catch(() => null);
@@ -141,6 +178,10 @@ export class ChatTranscriptStore {
 
   private metaFile(conversationId: string): string {
     return path.join(this.dir, `${conversationId}.meta.json`);
+  }
+
+  private distilledFile(conversationId: string): string {
+    return path.join(this.dir, `${conversationId}.distilled.json`);
   }
 
   private activeFile(): string {
