@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { CHAT_PERSONA_PROMPT } from "./chat-persona";
 
 /**
  * Dispatch-discipline eval (opt-in: `CHAT_EVAL=1`, needs a live api + real `claude`
@@ -27,6 +28,12 @@ function runTurn(message: string): Promise<string> {
         message,
         "--setting-sources",
         "",
+        // Match the engine: built-ins off (act only via zibby tools) + the real persona
+        // (governs answer/ask/act). Without these the eval isn't testing ZIBBY.
+        "--tools",
+        "",
+        "--append-system-prompt",
+        CHAT_PERSONA_PROMPT,
         "--permission-mode",
         "dontAsk",
         "--allowedTools",
@@ -49,7 +56,43 @@ function runTurn(message: string): Promise<string> {
   });
 }
 
-const calledCreateTask = (stdout: string): boolean => stdout.includes("mcp__zibby__create_task");
+/**
+ * True iff the model actually INVOKED create_task — i.e. an assistant message carried
+ * a `tool_use` block for it. (Substring-matching stdout false-positives: the init
+ * event lists every registered tool name, create_task among them, whether called or
+ * not.)
+ */
+function calledCreateTask(stdout: string): boolean {
+  for (const line of stdout.split("\n")) {
+    if (!line.trim()) continue;
+    let d: unknown;
+    try {
+      d = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (
+      typeof d === "object" &&
+      d !== null &&
+      (d as { type?: unknown }).type === "assistant"
+    ) {
+      const content = (d as { message?: { content?: unknown } }).message?.content;
+      if (Array.isArray(content)) {
+        for (const block of content) {
+          if (
+            block &&
+            typeof block === "object" &&
+            (block as { type?: unknown }).type === "tool_use" &&
+            String((block as { name?: unknown }).name).includes("create_task")
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
 
 describe.skipIf(!process.env.CHAT_EVAL)("chat dispatch discipline (eval)", () => {
   it("does NOT dispatch a task for casual conversation", async () => {

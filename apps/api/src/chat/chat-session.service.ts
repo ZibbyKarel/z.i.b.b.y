@@ -82,6 +82,12 @@ export class ChatSessionService {
       text,
       "--setting-sources",
       "",
+      // Disable ALL built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
+      // butler, not a coding agent: its only way to ACT is the `zibby` MCP tools
+      // (create_task delegates real work to the pipeline). Without this the model
+      // tries to build things itself with Bash/Write instead of dispatching a task.
+      "--tools",
+      "",
       "--append-system-prompt",
       CHAT_PERSONA_PROMPT,
       "--output-format",

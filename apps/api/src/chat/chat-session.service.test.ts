@@ -80,6 +80,8 @@ describe("ChatSessionService", () => {
     expect(args[args.indexOf("--permission-mode") + 1]).toBe("dontAsk");
     // isolation: --setting-sources with an empty value
     expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    // built-in tools disabled — chat acts only via the zibby MCP tools
+    expect(args[args.indexOf("--tools") + 1]).toBe("");
     expect(args).not.toContain("--resume");
   });
 

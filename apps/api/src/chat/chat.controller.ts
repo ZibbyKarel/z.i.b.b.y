@@ -29,10 +29,11 @@ export class ChatController {
         body: await this.session.sendMessage(body),
       }),
       getTranscript: async ({ query }) => {
-        const conversationId = query.conversationId ?? (await this.store.readActive());
-        if (!conversationId) {
-          return { status: 200, body: { conversationId: "", sessionId: null, messages: [] } };
-        }
+        // No explicit id → ensure (create if absent) the single active conversation,
+        // so the response always carries a real conversationId. The chat overlay opens
+        // its SSE stream off this id BEFORE the first send, so the first turn streams
+        // (a "" id left the stream closed and the first reply invisible).
+        const conversationId = query.conversationId ?? (await this.store.ensureConversation());
         return { status: 200, body: await this.store.readTranscript(conversationId) };
       },
     });
