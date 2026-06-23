@@ -7,7 +7,7 @@
     "apps/*"
   ],
   "scripts": {
-    "web:dev": "next dev apps/web",
+    "web:dev": "cd apps/web && next dev --turbopack",
     "web:start": "next start apps/web",
     "web:build": "next build apps/web",
     "web:test": "vitest run --project web",
