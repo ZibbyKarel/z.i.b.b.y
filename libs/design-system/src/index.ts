@@ -179,6 +179,15 @@ export type { NumberFieldProps } from "./components/form/NumberField/NumberField
 export { TextAreaField, TextAreaFieldTestId } from "./components/form/TextAreaField/TextAreaField";
 export type { TextAreaFieldProps } from "./components/form/TextAreaField/TextAreaField";
 
+export {
+  HighlightTextAreaField,
+  HighlightTextAreaFieldTestId,
+} from "./components/form/HighlightTextAreaField/HighlightTextAreaField";
+export type {
+  HighlightRange,
+  HighlightTextAreaFieldProps,
+} from "./components/form/HighlightTextAreaField/HighlightTextAreaField";
+
 export { SelectField } from "./components/form/SelectField/SelectField";
 export type {
   SelectFieldMultiProps,

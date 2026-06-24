@@ -1,17 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
 import { getRunningAgentsQueryKey } from "../../agents/queries/useRunningAgentsQuery";
+import { allTaskRunsKey } from "../../runs/queries/keys";
 import { getScheduledTasksQueryKey } from "../queries/useScheduledTasksQuery";
 
 /**
- * Create a task (`POST /api/tasks`): classify + dispatch now, or schedule for a
- * future `scheduledAt`. Refreshes the running-agents list (an immediate dispatch
- * starts a run) and the scheduled-task queue (a deferred one adds to it).
+ * Create a task (`POST /api/tasks`): the interactive path returns an immediate
+ * `pending` task (its run spawns in the background), or schedules for a future
+ * `scheduledAt`. Refreshes the unified runs feed (so the pending card shows up the
+ * moment we redirect to `/runs`), the running-agents list and the scheduled-task queue.
  */
 export function useCreateTaskMutation() {
   const qc = useQueryClient();
   return apiClient.tasks.createTask.useMutation({
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: allTaskRunsKey });
       qc.invalidateQueries({ queryKey: getRunningAgentsQueryKey() });
       qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
     },

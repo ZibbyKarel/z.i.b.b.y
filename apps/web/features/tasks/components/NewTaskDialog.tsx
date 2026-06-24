@@ -1,50 +1,31 @@
 "use client";
 import {
-  Accordion,
-  AccordionItem,
   Button,
   Container,
   Dialog,
-  Icon,
   IconTile,
-  Panel,
   SelectField,
   Stack,
   TextInputField,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import type { TaskOutput } from "@zibby/contracts";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
-import { useCreateGoalMutation } from "../../goals";
+import { useMemo, useState } from "react";
 import { useLimitsQuery } from "../../limits";
-import { useCreateProjectMutation, useProjectsQuery } from "../../projects";
-import {
-  INITIAL_LOOP_STATE,
-  type LoopFormState,
-  buildCreateGoalBody,
-  canSubmitLoop,
-  makeGoalId,
-  proposedGoalToLoopState,
-  slugify,
-} from "../loop";
-import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
-import {
-  type SchedulePreset,
-  type TaskRouting,
-  type TaskTarget,
-  basename,
-  extractPaths,
-  resolveScheduledAt,
-  toClientRouting,
-  whenLabel,
-} from "../task";
+import { useProjectsQuery } from "../../projects";
+import { useTaskClassification } from "../hooks/useTaskClassification";
+import { useTaskOutput } from "../hooks/useTaskOutput";
+import { useTaskSchedule } from "../hooks/useTaskSchedule";
+import { useTaskSubmit } from "../hooks/useTaskSubmit";
+import { canSubmitLoop } from "../loop";
+import { type TaskTarget, extractPathRanges, extractPaths, targetKey } from "../task";
 import { LoopComposer } from "./LoopComposer";
 import { PlanPreview } from "./PlanPreview";
 import { ScheduleField } from "./ScheduleField";
+import { ScheduledConfirmation } from "./ScheduledConfirmation";
 import { TaskComposer } from "./TaskComposer";
+import { TaskContextPanel } from "./TaskContextPanel";
+import { TaskOutputField } from "./TaskOutputField";
 
 export interface NewTaskDialogProps {
   onClose: () => void;
@@ -66,45 +47,20 @@ export interface NewTaskDialogProps {
   initialContext?: string;
 }
 
-/** How long the scheduled confirmation lingers before the dialog closes itself. */
-const CONFIRM_LINGER_MS = 1600;
-
-/** Debounce before the live classify preview fires while the operator types. */
-const CLASSIFY_DEBOUNCE_MS = 350;
-
-/** A stable key for a target, used to pre-select and dedupe entries in the picker. */
-function targetKey(target: TaskTarget): string {
-  return target.kind === "orchestrator" ? "orchestrator" : `${target.kind}:${target.id}`;
-}
-
-/** Project a client target onto the wire shape `createTask` accepts (drops nothing). */
-function toApiTarget(target: TaskTarget) {
-  if (target.kind === "orchestrator") {
-    return {
-      kind: "orchestrator" as const,
-      name: target.name,
-      glyph: target.glyph,
-      category: target.category,
-    };
-  }
-  return {
-    kind: target.kind,
-    id: target.id,
-    name: target.name,
-    glyph: target.glyph,
-    category: target.category,
-  };
-}
-
 /**
  * The whole New Task flow in one modal (Phase 11): a single described intent. The
  * operator says what they want; a debounced classify shows a compact "ZIBBY will…"
  * {@link PlanPreview} — the *how* (single dispatch vs a synthesized loop) is inferred,
- * not chosen on a form. Advanced control survives behind an "Edit" disclosure
- * (the goal {@link LoopComposer} for a loop, a manual target picker for a
- * low-confidence single). Submitting dispatches a task or — for a loop — creates the
- * goal and starts its run (scheduled loops defer through the task scheduler). Risky
- * actions are still caught later by the approval gate.
+ * not chosen on a form. Advanced control survives behind an "Edit" disclosure (the
+ * goal {@link LoopComposer} for a loop, a manual target picker for a low-confidence
+ * single). File/folder paths referenced in the description are highlighted inline and
+ * folded into the run's allowed directories automatically. Submitting dispatches a
+ * task or — for a loop — creates the goal and starts its run. Risky actions are still
+ * caught later by the approval gate.
+ *
+ * The heavy lifting lives in cohesive hooks ({@link useTaskClassification},
+ * {@link useTaskOutput}, {@link useTaskSchedule}, {@link useTaskSubmit}) and the
+ * composer / output / context subcomponents — this component just wires them together.
  */
 export function NewTaskDialog({
   onClose,
@@ -113,43 +69,17 @@ export function NewTaskDialog({
   initialContext,
 }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
-  const router = useRouter();
-  const { mutate: createTask, isPending: creatingTask } = useCreateTaskMutation();
-  const { mutate: classify } = useClassifyTaskMutation();
-  const { mutate: createGoal, isPending: creatingGoal } = useCreateGoalMutation();
-  const { mutate: createProject, isPending: granting } = useCreateProjectMutation();
   const { data: limits } = useLimitsQuery();
   const { data: projects } = useProjectsQuery();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState(initialText ?? "");
-  const [removedPaths, setRemovedPaths] = useState<Set<string>>(new Set());
-  /** Selected project id (its `path` is folded into `paths` like a typed path), or "" for none. */
+  /** Selected project id (its `path` is folded into `paths`), or "" for none. */
   const [projectId, setProjectId] = useState<string>("");
-  const [preset, setPreset] = useState<SchedulePreset>("now");
-  const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
 
-  // The terminal output the operator wants for this task (the dialog selector). "" =
-  // inherit (the default — a pipeline keeps its own outputs, an agent delivers nothing).
-  const [outputType, setOutputType] = useState<"" | "pr" | "file" | "void">("");
-  const [fileDest, setFileDest] = useState<"project" | "vault">("project");
-  const [fileTo, setFileTo] = useState("");
-
-  const [routing, setRouting] = useState<TaskRouting | null>(null);
-  const [loop, setLoop] = useState<LoopFormState>(INITIAL_LOOP_STATE);
-  const [loopEdited, setLoopEdited] = useState(false);
-  const [seededKey, setSeededKey] = useState<string | null>(null);
-  /**
-   * The chosen single-dispatch target, as a {@link targetKey}. "" = auto (let the
-   * classifier decide). Seeded from `initialTarget` so "Run pipeline" pre-selects the
-   * pipeline; the operator can switch it to another candidate or back to auto.
-   */
-  const [chosenKey, setChosenKey] = useState<string>(initialTarget ? targetKey(initialTarget) : "");
-  /** Phase 11.3: the out-of-project path awaiting an explicit "grant access" confirm. */
-  const [pendingGrant, setPendingGrant] = useState<string | null>(null);
-
-  // A stable "now" for the dialog's lifetime: presets resolve against it, the
-  // limit-reset option gates on it, and the goal id's uniqueness suffix uses it.
+  // A stable "now" for the dialog's lifetime (lazy — Date.now() in render is lint-banned):
+  // presets resolve against it, the limit-reset option gates on it, and the goal id's
+  // uniqueness suffix uses it.
   const [now] = useState(() => Date.now());
   const resetsAt = limits?.rolling.resetsAt ?? null;
 
@@ -159,232 +89,61 @@ export function NewTaskDialog({
     [projects, projectId],
   );
 
-  // Detected paths plus the selected project's path — the project's folder is used
-  // exactly like a path the operator typed into the description (dedup, removable).
+  // Every path referenced in the description — plus the selected project's folder — is
+  // folded into the task's allowed directories. The typed ones are highlighted inline
+  // in the composer; the project's folder is owned by the picker (deselect to drop it).
   const paths = useMemo(() => {
     const detected = extractPaths(text);
     const all = selectedProject ? [selectedProject.path, ...detected] : detected;
-    return [...new Set(all)].filter((p) => !removedPaths.has(p));
-  }, [text, removedPaths, selectedProject]);
-  const busy = creatingTask || creatingGoal || granting;
-  const scheduledAt = resolveScheduledAt(preset, now, resetsAt);
-  // Gate the preview on a long-enough query so a stale verdict never lingers after
-  // the field is cleared (no setState-in-effect needed to reset it).
-  const hasQuery = text.trim().length > 2;
-  const activeRouting = hasQuery ? routing : null;
+    return [...new Set(all)];
+  }, [text, selectedProject]);
+  const highlights = useMemo(() => extractPathRanges(text), [text]);
 
-  // The targets the picker offers: the pre-selected one (if any) plus the live
-  // classify candidates, deduped — the seeded target is always present, so it never
-  // falls out of the list when candidates change.
-  const allTargets = useMemo(() => {
-    const list: TaskTarget[] = [];
-    const seen = new Set<string>();
-    for (const target of [
-      ...(initialTarget ? [initialTarget] : []),
-      ...(activeRouting?.candidates ?? []),
-    ]) {
-      const key = targetKey(target);
-      if (!seen.has(key)) {
-        seen.add(key);
-        list.push(target);
-      }
-    }
-    return list;
-  }, [initialTarget, activeRouting]);
+  const {
+    activeRouting,
+    previewRouting,
+    allTargets,
+    chosenKey,
+    setChosenKey,
+    chosenTarget,
+    isLoop,
+    loop,
+    patchLoop,
+  } = useTaskClassification({ text, paths, initialTarget });
 
-  // The effective single-dispatch target: an explicit pick, or null (auto → classify).
-  const chosenTarget = chosenKey
-    ? (allTargets.find((target) => targetKey(target) === chosenKey) ?? null)
-    : null;
-  // An explicit pick is always a one-shot dispatch — a loop is only inferred in auto mode.
-  const isLoop = !chosenTarget && activeRouting?.mode === "loop";
+  const output = useTaskOutput();
+  const { preset, setPreset, scheduledAt, scheduledWhen, setScheduledWhen } = useTaskSchedule({
+    now,
+    resetsAt,
+  });
 
-  // The side-effect-free verdict (the backend never starts a run here). Reused by the
-  // debounce below and by the grant flow (re-resolve a path once it's a project).
-  const runClassify = useCallback(() => {
-    classify(
-      { body: { text, paths } },
-      { onSuccess: (res) => setRouting(toClientRouting(selectApiResponseBody(res))) },
-    );
-  }, [classify, text, paths]);
-
-  // ── Live classify preview ───────────────────────────────────────────────
-  // Runs even with a pre-selected target: it populates the alternatives the picker
-  // offers (so the choice stays changeable) and resolves the typed paths.
-  useEffect(() => {
-    if (text.trim().length <= 2) return;
-    const handle = setTimeout(runClassify, CLASSIFY_DEBOUNCE_MS);
-    return () => clearTimeout(handle);
-  }, [text, runClassify]);
-
-  // Seed the Loop form from a fresh proposal during render (the React-sanctioned
-  // "adjust state on prop change" pattern, guarded against re-running) — unless the
-  // operator has already edited it.
-  const proposedGoalKey = activeRouting?.proposedGoal
-    ? JSON.stringify(activeRouting.proposedGoal)
-    : null;
-  if (proposedGoalKey && proposedGoalKey !== seededKey) {
-    setSeededKey(proposedGoalKey);
-    if (!loopEdited && activeRouting?.proposedGoal) {
-      setLoop(proposedGoalToLoopState(activeRouting.proposedGoal));
-    }
-  }
-
-  const patchLoop = useCallback((patch: Partial<LoopFormState>) => {
-    setLoopEdited(true);
-    setLoop((prev) => ({ ...prev, ...patch }));
-  }, []);
-
-  const handleCreateTaskSuccess = useCallback(
-    (res: Parameters<typeof selectApiResponseBody>[0]) => {
-      const result = selectApiResponseBody(res) as
-        | { outcome: "dispatched"; runRef: string }
-        | { outcome: "scheduled"; task: { scheduledAt: number } };
-      if (result.outcome === "dispatched") {
-        router.push(`/runs?run=${encodeURIComponent(result.runRef)}`);
-        onClose();
-        return;
-      }
-      setScheduledWhen(whenLabel(result.task.scheduledAt, now));
-      setTimeout(onClose, CONFIRM_LINGER_MS);
-    },
-    [router, onClose, now],
-  );
-
-  // Project the selector onto the wire `output`. "" = inherit (omit the field). A
-  // `file` with no name yet projects to nothing — the submit guard blocks that case so
-  // the choice is never silently dropped.
-  const output: TaskOutput | undefined = useMemo(() => {
-    if (outputType === "pr") return { type: "pr" };
-    if (outputType === "void") return { type: "void" };
-    if (outputType === "file" && fileTo.trim())
-      return { type: "file", dest: fileDest, to: fileTo.trim() };
-    return undefined;
-  }, [outputType, fileDest, fileTo]);
-
-  // The dispatched description: the operator's text plus, when continuing from a
-  // prior run, that run's output appended as a labelled context block — so the new
-  // run sees what the previous one produced without the operator re-typing it.
+  // The dispatched description: the operator's text plus, when continuing from a prior
+  // run, that run's output appended as a labelled context block — so the new run sees
+  // what the previous one produced without the operator re-typing it.
   const composedText = useMemo(
     () =>
-      initialContext
-        ? `${text.trim()}\n\n---\n${t("context.heading")}\n${initialContext}`
-        : text,
+      initialContext ? `${text.trim()}\n\n---\n${t("context.heading")}\n${initialContext}` : text,
     [text, initialContext, t],
   );
 
-  const submitSingle = useCallback(() => {
-    // An explicit pick (pre-selected or chosen) sends a target; auto omits it so the
-    // backend classifies — byte-for-byte the un-seeded behaviour.
-    createTask(
-      {
-        body: {
-          title: title.trim() || undefined,
-          text: composedText,
-          paths,
-          scheduledAt,
-          ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
-          ...(output ? { output } : {}),
-        },
-      },
-      { onSuccess: handleCreateTaskSuccess },
-    );
-  }, [
+  const { handleSubmit, busy } = useTaskSubmit({
+    title,
+    composedText,
+    paths,
+    scheduledAt,
+    output: output.output,
     chosenTarget,
-    createTask,
-    title,
-    composedText,
-    paths,
-    scheduledAt,
-    output,
-    handleCreateTaskSuccess,
-  ]);
-
-  const submitLoop = useCallback(() => {
-    const seed = title.trim() || loop.objective;
-    const goalId = makeGoalId(seed, now);
-    const body = buildCreateGoalBody(loop, goalId, title);
-    createGoal(
-      { body },
-      {
-        onSuccess: () => {
-          // Every loop enters through a task carrying its goal target — the scheduler's
-          // defer/limit/budget machinery owns the dispatch (immediate when scheduledAt is
-          // null, deferred otherwise). There is no direct goal-run start: only a task runs.
-          createTask(
-            {
-              body: {
-                title: title.trim() || undefined,
-                text: composedText,
-                paths,
-                scheduledAt,
-                target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
-              },
-            },
-            { onSuccess: handleCreateTaskSuccess },
-          );
-        },
-      },
-    );
-  }, [
+    isLoop,
     loop,
-    title,
     now,
-    scheduledAt,
-    composedText,
-    paths,
-    createGoal,
-    createTask,
-    handleCreateTaskSuccess,
-  ]);
-
-  const handleSubmit = useCallback(() => {
-    if (busy) return;
-    if (isLoop) {
-      if (!canSubmitLoop(loop)) return;
-      submitLoop();
-      return;
-    }
-    if (text.trim().length <= 2) return;
-    submitSingle();
-  }, [busy, isLoop, loop, text, submitLoop, submitSingle]);
-
-  const handleRemovePath = useCallback(
-    (path: string) => {
-      // The project's own path is owned by the selector — removing its chip
-      // deselects the project (keeps chip + dropdown in sync, re-selectable).
-      if (path === selectedProject?.path) {
-        setProjectId("");
-        return;
-      }
-      setRemovedPaths((prev) => new Set(prev).add(path));
-    },
-    [selectedProject],
-  );
-
-  // ── Grant a folder (Phase 11.3, Law 1) ───────────────────────────────────
-  // The "grant access" chip surfaces the path; the operator's CONFIRM is the act
-  // that registers it as a workspace root (createProject). No autonomous surface can
-  // reach this — the run simply has no folder scope until the operator grants it.
-  const confirmGrant = useCallback(() => {
-    if (pendingGrant === null) return;
-    const path = pendingGrant;
-    const name = basename(path) || path;
-    createProject(
-      { body: { id: slugify(name) || "workspace", name, path } },
-      {
-        onSuccess: () => {
-          setPendingGrant(null);
-          // Re-resolve so the chip flips from "grant access" to "scoped to <name>".
-          runClassify();
-        },
-      },
-    );
-  }, [pendingGrant, createProject, runClassify]);
+    text,
+    onClose,
+    setScheduledWhen,
+  });
 
   // A chosen `file` output needs a filename — else block, so the selection can't be
   // silently dropped on submit.
-  const outputReady = isLoop || outputType !== "file" || fileTo.trim().length > 0;
+  const outputReady = isLoop || output.outputReady;
   const canSubmit = (isLoop ? canSubmitLoop(loop) : text.trim().length > 2) && outputReady;
 
   const dialogAria = t("dialogTitle");
@@ -402,22 +161,6 @@ export function NewTaskDialog({
     </Stack>
   );
 
-  // The "ZIBBY will…" preview reflects the *effective* target: an explicit pick (the
-  // pre-selected pipeline or a chosen candidate) shown as a one-shot dispatch; else
-  // the live classify verdict as-is. So the preview and the dispatch never drift.
-  const previewRouting: TaskRouting | null = chosenTarget
-    ? {
-        target: chosenTarget,
-        confidence: 1,
-        reason: t("target.chosenReason"),
-        matchedTerms: [],
-        candidates: activeRouting?.candidates ?? [chosenTarget],
-        mode: "single",
-        proposedGoal: null,
-        paths: activeRouting?.paths ?? [],
-      }
-    : activeRouting;
-
   if (scheduledWhen !== null) {
     return (
       <Dialog
@@ -428,15 +171,7 @@ export function NewTaskDialog({
         title={header}
         width="lg"
       >
-        <Stack align="center" gap="100">
-          <IconTile glyph="bolt" size="lg" tone="accent" />
-          <Typography size="md" type="text" weight="medium">
-            {t("confirm.accepted")}
-          </Typography>
-          <Typography mono size="sm" type="note" variant="secondary">
-            {t("confirm.scheduled", { when: scheduledWhen })}
-          </Typography>
-        </Stack>
+        <ScheduledConfirmation when={scheduledWhen} />
       </Dialog>
     );
   }
@@ -500,31 +235,7 @@ export function NewTaskDialog({
           value={title}
         />
 
-        {initialContext && (
-          <Panel
-            data-testid="task-context-panel"
-            header={
-              <Stack align="center" direction="row" gap="75">
-                <Icon name="link" size="sm" tone="accent" />
-                <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
-                  {t("context.label")}
-                </Typography>
-              </Stack>
-            }
-            padding="100"
-          >
-            <Stack gap="50">
-              <Typography leading="snug" size="xs" type="note" variant="tertiary">
-                {t("context.note")}
-              </Typography>
-              <Container maxHeight="8rem" overflow="auto">
-                <Typography mono size="2xs" type="note" variant="secondary">
-                  {initialContext}
-                </Typography>
-              </Container>
-            </Stack>
-          </Panel>
-        )}
+        {initialContext && <TaskContextPanel context={initialContext} />}
 
         {(projects ?? []).length > 0 && (
           <SelectField
@@ -537,87 +248,36 @@ export function NewTaskDialog({
         )}
 
         <TaskComposer
+          highlights={highlights}
           onChange={setText}
-          onGrant={setPendingGrant}
-          onRemovePath={handleRemovePath}
           onSubmit={handleSubmit}
-          paths={paths}
-          resolved={activeRouting?.paths}
           value={text}
         />
 
-        {pendingGrant !== null && (
-          <Panel padding="100">
-            <Stack gap="100">
-              <Typography size="sm" type="text">
-                {t("paths.grantConfirm", { folder: basename(pendingGrant) || pendingGrant })}
-              </Typography>
-              <Stack align="center" direction="row" gap="100" justify="end">
-                <Button icon="x" intent="ghost" onClick={() => setPendingGrant(null)}>
-                  {t("paths.grantCancel")}
-                </Button>
-                <Button icon="shield" intent="primary" loading={granting} onClick={confirmGrant}>
-                  {t("paths.grantConfirmYes")}
-                </Button>
-              </Stack>
-            </Stack>
-          </Panel>
-        )}
-
         {previewRouting && <PlanPreview routing={previewRouting} />}
 
-        {(activeRouting || initialTarget) && (
-          <Accordion>
-            <AccordionItem defaultExpanded={!!initialTarget} summary={t("edit.label")}>
-              {isLoop ? (
-                <LoopComposer onChange={patchLoop} state={loop} />
-              ) : (
-                <SelectField
-                  hint={t("override.hint")}
-                  label={t("override.label")}
-                  onValueChange={setChosenKey}
-                  options={targetOptions}
-                  value={chosenKey}
-                />
-              )}
-            </AccordionItem>
-          </Accordion>
-        )}
+        {(activeRouting || initialTarget) &&
+          (isLoop ? (
+            <LoopComposer onChange={patchLoop} state={loop} />
+          ) : (
+            <SelectField
+              hint={t("override.hint")}
+              label={t("override.label")}
+              onValueChange={setChosenKey}
+              options={targetOptions}
+              value={chosenKey}
+            />
+          ))}
 
         {!isLoop && (
-          <Stack gap="100">
-            <SelectField
-              hint={t("output.hint")}
-              label={t("output.label")}
-              onValueChange={(v) => setOutputType(v as typeof outputType)}
-              options={[
-                { value: "", label: t("output.auto") },
-                { value: "pr", label: t("output.pr") },
-                { value: "file", label: t("output.file") },
-                { value: "void", label: t("output.void") },
-              ]}
-              value={outputType}
-            />
-            {outputType === "file" && (
-              <>
-                <SelectField
-                  label={t("output.destLabel")}
-                  onValueChange={(v) => setFileDest(v as "project" | "vault")}
-                  options={[
-                    { value: "project", label: t("output.destProject") },
-                    { value: "vault", label: t("output.destVault") },
-                  ]}
-                  value={fileDest}
-                />
-                <TextInputField
-                  label={t("output.toLabel")}
-                  onChange={(e) => setFileTo(e.target.value)}
-                  placeholder={t("output.toPlaceholder")}
-                  value={fileTo}
-                />
-              </>
-            )}
-          </Stack>
+          <TaskOutputField
+            fileDest={output.fileDest}
+            fileTo={output.fileTo}
+            onFileDestChange={output.setFileDest}
+            onFileToChange={output.setFileTo}
+            onOutputTypeChange={output.setOutputType}
+            outputType={output.outputType}
+          />
         )}
 
         <ScheduleField now={now} onChange={setPreset} resetsAt={resetsAt} value={preset} />

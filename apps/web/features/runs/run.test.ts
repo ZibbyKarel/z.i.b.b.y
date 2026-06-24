@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Approval } from "@zibby/contracts";
-import { type RunView, approvalForRun, runTitle } from "./run";
+import { type RunView, approvalForRun, findSelectedRun, runTitle } from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -97,5 +97,30 @@ describe("runTitle (task name, not the phase)", () => {
 
   it("titles an agent run by its prompt when it has no task name", () => {
     expect(runTitle(mkRun({ kind: "agent", owner: "writer", prompt: "do it" }))).toBe("do it");
+  });
+});
+
+describe("findSelectedRun (selection survives pending → dispatched)", () => {
+  const TASK_ID = "task_7";
+
+  it("selects a pending task by its task id (runId === taskId)", () => {
+    // A pending task's feed row is keyed by its own task id; the dialog redirects there.
+    const pending = mkRun({ runId: TASK_ID, kind: "scheduled", status: "pending", taskId: TASK_ID });
+    expect(findSelectedRun([pending], TASK_ID)?.runId).toBe(TASK_ID);
+  });
+
+  it("keeps the same selection once the task dispatches to a run (taskId match)", () => {
+    // The pending row is gone; the dispatched run is keyed by its run ref but still
+    // carries the task id, so the `?run=<taskId>` selection follows it.
+    const dispatched = mkRun({ runId: "writer_99", kind: "agent", taskId: TASK_ID });
+    const other = mkRun({ runId: "delivery_2", taskId: "task_other" });
+    expect(findSelectedRun([dispatched, other], TASK_ID)?.runId).toBe("writer_99");
+  });
+
+  it("falls back to the first row when nothing matches, and null on an empty list", () => {
+    const first = mkRun({ runId: "a" });
+    expect(findSelectedRun([first, mkRun({ runId: "b" })], "missing")?.runId).toBe("a");
+    expect(findSelectedRun([], "x")).toBeNull();
+    expect(findSelectedRun([first], null)?.runId).toBe("a");
   });
 });

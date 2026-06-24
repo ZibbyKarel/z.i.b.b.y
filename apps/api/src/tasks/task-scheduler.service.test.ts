@@ -217,6 +217,81 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(persisted.outcome).toBeUndefined();
   });
 
+  it("background path: returns a pending task immediately, then dispatches off the response path", async () => {
+    // The interactive (dialog) path: `background` defers classify + spawn so the
+    // submit returns at once with a `pending` task to redirect to.
+    const result = await service.createTask(
+      { text: "do the thing", title: "Thing" },
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    expect(result.outcome).toBe("pending");
+    if (result.outcome !== "pending") return;
+    // The record returned to the dialog is `pending` with no run yet — proof the
+    // submit didn't block on the spawn (createPending persists this before dispatch).
+    expect(result.task.status).toBe("pending");
+    expect(result.task.runRef).toBeUndefined();
+
+    // The background dispatch then flips it to `dispatched`, born linked to the task id.
+    await vi.waitFor(async () => {
+      const task = await storage.get(result.task.id);
+      expect(task.status).toBe("dispatched");
+      expect(task.runRef).toBe("writer_1_1");
+    });
+    expect(agentRunner.start).toHaveBeenCalledWith(
+      "writer",
+      "do the thing",
+      "",
+      [],
+      "Thing",
+      result.task.id,
+      [],
+    );
+  });
+
+  it("background path: a dispatch with nothing to route to flips the pending task to failed (never silent)", async () => {
+    classifier.classify.mockResolvedValueOnce(null); // empty catalog
+    const result = await service.createTask(
+      { text: "do the thing", title: "Thing" },
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    expect(result.outcome).toBe("pending");
+    if (result.outcome !== "pending") return;
+
+    await vi.waitFor(async () => {
+      const task = await storage.get(result.task.id);
+      expect(task.status).toBe("failed");
+      expect(task.error).toContain("No agents or pipelines");
+    });
+    expect(agentRunner.start).not.toHaveBeenCalled();
+  });
+
+  it("boot recovery: re-drives a task left pending by a restart (no stranded work)", async () => {
+    // Simulate a crash mid-dispatch: a task sits on disk as `pending`, its background
+    // dispatch never finished. Boot must re-drive it — neither sweep (skips non-
+    // dispatched) nor drain (skips non-queued) would.
+    const taskId = storage.newId();
+    await storage.createPending(
+      taskId,
+      { text: "do the thing", title: "Thing" },
+      undefined,
+      Date.now(),
+    );
+
+    service.onApplicationBootstrap();
+
+    await vi.waitFor(async () => {
+      const task = await storage.get(taskId);
+      expect(task.status).toBe("dispatched");
+      expect(task.runRef).toBe("writer_1_1");
+    });
+  });
+
   it("fast path: a terminal agent run writes outcome done + last log line as summary", async () => {
     const result = await service.createTask({ text: "do" });
     if (result.outcome !== "dispatched") throw new Error("expected dispatched");

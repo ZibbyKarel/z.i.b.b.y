@@ -18,7 +18,7 @@ const POLL_MS = 2_000;
 /** A feed row that is still progressing — a live run (`running`/`awaiting-approval`/
  * `parked`) or a still-waiting `scheduled` task whose due time can arrive any moment.
  * Both ride the one feed now, so one gate covers them. */
-const LIVE_STATES = new Set(["running", "awaiting-approval", "parked", "scheduled"]);
+const LIVE_STATES = new Set(["running", "pending", "awaiting-approval", "parked", "scheduled"]);
 
 /** Keep polling while anything is still live/waiting; otherwise idle (the final poll
  * still catches the done transition). The cache holds the raw `{ status, body }`

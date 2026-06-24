@@ -102,14 +102,6 @@
     "target": {
       "chosenReason": "Cíl zvolený ručně — task půjde rovnou sem."
     },
-    "paths": {
-      "scopedTo": "v projektu {project}",
-      "grant": "povolit přístup",
-      "grantAria": "Povolit ZIBBY přístup k {path}",
-      "grantConfirm": "Povolit ZIBBY přístup k {folder} jako pracovnímu adresáři?",
-      "grantConfirmYes": "Povolit přístup",
-      "grantCancel": "Zrušit"
-    },
     "title": {
       "label": "Název (volitelný)",
       "placeholder": "Krátký název tasku…"
@@ -152,8 +144,6 @@
     "composer": {
       "label": "Zadání",
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
-      "pathsTitle": "Detekované cesty · přidány do kontextu",
-      "removePathAria": "Odebrat cestu {path}",
       "submitHint": "⌘↩ zařadit"
     },
     "loop": {
@@ -879,6 +869,7 @@
     "scheduledNote": "Task čeká na naplánovaný čas — log se objeví po spuštění.",
     "state": {
       "running": "běží",
+      "pending": "spouští se…",
       "awaiting-approval": "čeká na tebe",
       "scheduled": "naplánováno",
       "held": "pozdrženo",

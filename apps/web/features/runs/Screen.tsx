@@ -17,12 +17,13 @@ import {
   useStopAgentMutation,
 } from "./mutations";
 import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
-import { type FeedStatus, type RunView, runGlyph } from "./run";
+import { type FeedStatus, type RunView, findSelectedRun, runGlyph } from "./run";
 
 type Filter = "all" | FeedStatus;
 const FILTERS: Filter[] = [
   "all",
   "running",
+  "pending",
   "awaiting-approval",
   "paused-limit",
   "parked",
@@ -61,9 +62,11 @@ export function Screen() {
 
   const list = filter === "all" ? runs : runs.filter((r) => r.status === filter);
   // Keep the detail in sync with the filtered list: a selection only counts when
-  // it's actually visible, and we fall back to the first row of the *current*
-  // filter — never to runs[0], which would show an out-of-filter run's detail.
-  const selected = list.find((r) => r.runId === selId) ?? list[0] ?? null;
+  // it's actually visible, and we fall back to the first row of the *current* filter —
+  // never to runs[0], which would show an out-of-filter run's detail. Matching on
+  // `taskId` too keeps the selection through the `pending → dispatched` identity shift
+  // (see findSelectedRun).
+  const selected = findSelectedRun(list, selId);
 
   const count = (f: Filter) =>
     f === "all" ? runs.length : runs.filter((r) => r.status === f).length;

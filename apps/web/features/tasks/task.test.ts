@@ -1,6 +1,12 @@
 import type { TaskRouting as ApiTaskRouting } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
-import { confidenceBand, extractPaths, isLowConfidence, toClientRouting } from "./task";
+import {
+  confidenceBand,
+  extractPathRanges,
+  extractPaths,
+  isLowConfidence,
+  toClientRouting,
+} from "./task";
 
 describe("extractPaths", () => {
   it("detects ~, ./ and absolute paths and de-duplicates", () => {
@@ -10,6 +16,27 @@ describe("extractPaths", () => {
 
   it("ignores prose without paths", () => {
     expect(extractPaths("zkontroluj zálohy")).toEqual([]);
+  });
+});
+
+describe("extractPathRanges", () => {
+  it("returns each occurrence with its character span", () => {
+    const text = "ulož do ~/zibby/x.md";
+    expect(extractPathRanges(text)).toEqual([{ path: "~/zibby/x.md", start: 8, end: 20 }]);
+    // The span slices back to the path verbatim.
+    const [r] = extractPathRanges(text);
+    expect(text.slice(r?.start, r?.end)).toBe("~/zibby/x.md");
+  });
+
+  it("marks repeated paths once per occurrence (positional, not deduped)", () => {
+    const text = "~/a/b a ~/a/b";
+    const ranges = extractPathRanges(text);
+    expect(ranges).toHaveLength(2);
+    expect(ranges.map((r) => r.start)).toEqual([0, 8]);
+  });
+
+  it("returns nothing for prose without paths", () => {
+    expect(extractPathRanges("zkontroluj zálohy")).toEqual([]);
   });
 });
 

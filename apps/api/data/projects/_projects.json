@@ -46,5 +46,11 @@
       "format": "yesterday / today / blockers",
       "active_hours": "09:00-19:00"
     }
+  },
+  {
+    "id": "test-project",
+    "name": "Test Project",
+    "path": "~/Workspace/test",
+    "category": "Internal"
   }
 ]

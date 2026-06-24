@@ -37,6 +37,10 @@ export const TaskRunStatusSchema = z.enum([
   "parked",
   "held",
   "queued",
+  // A task accepted by the interactive create path whose dispatch (classify + spawn)
+  // is still running in the background — it has no run behind it yet (its `runId` is
+  // the task id), and flips to `running` in place once the spawn completes.
+  "pending",
 ]);
 export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>;
 

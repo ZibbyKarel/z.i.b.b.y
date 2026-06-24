@@ -218,6 +218,13 @@ export const ScheduledTaskStatusSchema = z.enum([
   "scheduled",
   "queued",
   "held",
+  // The task was accepted and persisted, and its dispatch (Haiku titling + classify +
+  // spawn) is running in the BACKGROUND — the interactive create path returns this
+  // immediately so the New Task dialog can redirect to the run without waiting on the
+  // spawn. It flips to `dispatched` once the run starts, or to `failed` if the
+  // background dispatch can't route (no silent no-op — Law: a described task always
+  // executes). Only the web dialog path produces it; server callers stay synchronous.
+  "pending",
   "dispatched",
   "cancelled",
   "failed",
@@ -360,8 +367,11 @@ export const CreateTaskInputSchema = z.object({
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 
 /**
- * Outcome of `createTask`: either the task was dispatched right away (→ a live run
- * the client can open) or parked for later (→ the persisted scheduled task).
+ * Outcome of `createTask`: the task was dispatched right away (→ a live run the
+ * client can open), accepted with its dispatch still running in the background (→ a
+ * `pending` task the client redirects to by id), or parked for later (→ the persisted
+ * scheduled task). The interactive (dialog) path returns `pending`; synchronous
+ * server callers return `dispatched`/`scheduled` exactly as before.
  */
 export const CreateTaskResultSchema = z.discriminatedUnion("outcome", [
   z.object({
@@ -369,6 +379,15 @@ export const CreateTaskResultSchema = z.discriminatedUnion("outcome", [
     runRef: z.string().min(1),
     target: TaskTargetSchema,
     /** The persisted task record the run was born linked to (outcome lands on it). */
+    task: ScheduledTaskSchema,
+  }),
+  z.object({
+    outcome: z.literal("pending"),
+    /**
+     * The persisted `pending` task whose dispatch is running in the background. It has
+     * no `runRef` yet — the client redirects to `/runs?run=<task.id>` and the feed
+     * row flips from this task to its run in place (selection follows `taskId`).
+     */
     task: ScheduledTaskSchema,
   }),
   z.object({

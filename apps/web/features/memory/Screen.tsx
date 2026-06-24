@@ -14,9 +14,9 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { MemoryGraph } from "./components/MemoryGraph";
@@ -149,7 +149,7 @@ export function Screen() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer stretch>
       <Stack gap="250">
         {header}
         {toolbar}
@@ -183,48 +183,20 @@ export function Screen() {
           </HudPanel>
         )}
 
-        <Grid center align="start" gap="250" maxWidth="1400px" sidebar="right">
-          <Container minW0>
-            <Stack gap="250">
-              <HudPanel padding="200" title={t("knowledgeGraph")}>
-                {filteredGraph ? (
-                  <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
-                ) : (
-                  <Container padding={["500", "0"]}>
-                    <Stack align="center">
-                      <OrbitLoader label={t("loadingGraph")} />
-                    </Stack>
-                  </Container>
-                )}
-              </HudPanel>
+        <Grid align="start" gap="250" sidebar="right">
+          <HudPanel padding="200" title={t("knowledgeGraph")}>
+            {filteredGraph ? (
+              <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
+            ) : (
+              <Container padding={["500", "0"]}>
+                <Stack align="center">
+                  <OrbitLoader label={t("loadingGraph")} />
+                </Stack>
+              </Container>
+            )}
+          </HudPanel>
 
-              {dailyNodes.length > 0 && (
-                <HudPanel padding="200" title={t("dailyTimeline")}>
-                  <Stack gap="75">
-                    {dailyNodes.map((n) => (
-                      <Pressable
-                        data-testid={`memory-daily-${n.id}`}
-                        key={n.id}
-                        onClick={() => setSelected(n.id)}
-                      >
-                        <Typography mono size="sm" type="note">
-                          {n.label}
-                        </Typography>
-                      </Pressable>
-                    ))}
-                  </Stack>
-                </HudPanel>
-              )}
-            </Stack>
-          </Container>
-
-          <Container minW0>
-            <NoteView
-              note={note}
-              onEdit={() => setEditor({ mode: "edit" })}
-              onSelect={setSelected}
-            />
-          </Container>
+          <NoteView note={note} onEdit={() => setEditor({ mode: "edit" })} onSelect={setSelected} />
         </Grid>
 
         {editorDialog}

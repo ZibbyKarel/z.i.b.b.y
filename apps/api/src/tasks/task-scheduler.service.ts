@@ -170,7 +170,30 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * a slot may have freed while the API was down, so drain every project's queue once.
    */
   onApplicationBootstrap(): void {
-    void this.sweepOutcomes().then(() => this.drainQueues());
+    void this.sweepOutcomes()
+      .then(() => this.drainQueues())
+      .then(() => this.recoverPending());
+  }
+
+  /**
+   * Re-drive any task left `pending` by a restart. A `pending` task's dispatch runs in
+   * the background ({@link dispatchPending}); if the API died inside that seconds-long
+   * window the task is stranded on disk — never dispatched, never failed. Like the
+   * queued-drain and the scheduled-tick recover their own waiting states, this re-runs
+   * the classify+spawn so the work still executes (Law 5: a described task is never
+   * silently dropped). The title is already persisted, so it dispatches as-is (no
+   * re-titling); a pre-chosen `target` (a goal loop) rides along exactly as on create.
+   */
+  private async recoverPending(): Promise<void> {
+    const tasks = await this.storage.list().catch((): ScheduledTask[] => []);
+    for (const task of tasks) {
+      if (task.status !== "pending") continue;
+      const project = task.projectId
+        ? await this.projects.get(task.projectId).catch((): Project | null => null)
+        : null;
+      this.log.info("recovering pending task stranded by restart", { id: task.id });
+      void this.dispatchPending(task, project, task.target, false);
+    }
   }
 
   onModuleDestroy(): void {
@@ -201,10 +224,22 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      * dispatch path routes straight to it; absent → classify as before.
      */
     explicitTarget?: TaskTarget,
+    /**
+     * When set (the interactive New Task dialog path), the heavy dispatch — Haiku
+     * titling, classification and the run spawn — is deferred to the BACKGROUND: the
+     * task is persisted `pending` and returned immediately so the dialog can redirect
+     * to its run without waiting on the spawn. Synchronous server callers (chat,
+     * channel triage, proposed-task) leave it `false`, keeping their existing
+     * fail-fast (`EmptyCatalogError`/`runRef`) semantics intact.
+     */
+    background = false,
   ): Promise<CreateTaskResult> {
     // A task with no operator-given name gets one derived from its description (Haiku,
-    // with a deterministic fallback) so the feed never shows an untitled task.
-    input = await this.ensureTitle(input);
+    // with a deterministic fallback) so the feed never shows an untitled task. The
+    // background path can't block the submit on an 8s namer — it takes the instant
+    // fallback now and refines via Haiku off the response path (see `refineTitle`).
+    const titleAuto = !input.title?.trim();
+    input = background ? this.withFallbackTitle(input) : await this.ensureTitle(input);
     // Phase 11: the unified composer carries a pre-chosen target on the wire (a
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
@@ -236,6 +271,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           ...(project ? { projectId: project.id } : {}),
         },
       });
+      if (background && titleAuto) this.refineTitle(task.id, input.text);
       return { outcome: "scheduled", task };
     }
 
@@ -246,7 +282,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       summary: `task created${input.title ? `: ${input.title}` : ""}`,
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     });
-    return this.attemptCreate(taskId, input, project, now, target);
+    return this.attemptCreate(taskId, input, project, now, target, background, titleAuto);
   }
 
   /**
@@ -258,6 +294,28 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     if (input.title?.trim()) return input;
     const derived = (await this.namer.name(input.text)) ?? deriveTitleFallback(input.text);
     return { ...input, title: derived };
+  }
+
+  /**
+   * Give a title-less input an INSTANT deterministic title — the background path's
+   * stand-in until {@link refineTitle} swaps in the Haiku name. A provided title is
+   * kept untouched.
+   */
+  private withFallbackTitle(input: CreateTaskInput): CreateTaskInput {
+    if (input.title?.trim()) return input;
+    return { ...input, title: deriveTitleFallback(input.text) };
+  }
+
+  /**
+   * Refine a background task's fallback title via the Haiku namer, off the response
+   * path, patching the record when the namer returns one. Never throws — a namer miss
+   * (or the `VITEST` guard) leaves the deterministic fallback title in place.
+   */
+  private refineTitle(taskId: string, text: string): void {
+    void (async () => {
+      const derived = await this.namer.name(text).catch(() => null);
+      if (derived) await this.storage.setTitle(taskId, derived).catch(() => {});
+    })();
   }
 
   /** Cancel a still-waiting task. A held task's approval is rejected (single source of truth). */
@@ -332,6 +390,10 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     project: Project | null,
     now: number,
     explicitTarget?: TaskTarget,
+    /** Defer the classify+spawn to {@link dispatchPending} (the interactive path). */
+    background = false,
+    /** The title was auto-derived (refine it via Haiku off the response path). */
+    titleAuto = false,
   ): Promise<CreateTaskResult> {
     const projectId = project?.id;
     // Phase 9: the limit guard runs FIRST (decision 4) — an exhausted usage window
@@ -348,18 +410,28 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         now,
       );
       this.recordDeferredLimit(task);
+      if (background && titleAuto) this.refineTitle(task.id, input.text);
       return { outcome: "scheduled", task };
     }
     const check = await this.budget.check(projectId, new Date(now));
     if (!check.ok) {
       const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now);
       const held = await this.holdForApproval(task, project, check.detail);
+      if (background && titleAuto) this.refineTitle(task.id, input.text);
       return { outcome: "scheduled", task: held };
     }
     if (await this.atCapacity(project)) {
       const task = await this.storage.createQueued(taskId, input, projectId, now);
       this.recordQueued(task, project);
+      if (background && titleAuto) this.refineTitle(task.id, input.text);
       return { outcome: "scheduled", task };
+    }
+    // The interactive path returns here without blocking on the spawn: persist the
+    // task `pending` and run classify+spawn in the background (→ `dispatched`/`failed`).
+    if (background) {
+      const task = await this.storage.createPending(taskId, input, projectId, now, explicitTarget);
+      void this.dispatchPending(task, project, explicitTarget, titleAuto);
+      return { outcome: "pending", task };
     }
     const dispatched = await this.dispatch(
       input.text,
@@ -374,6 +446,79 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
     void this.reconcileOutcome(task);
     return { outcome: "dispatched", runRef: dispatched.runRef, target: dispatched.target, task };
+  }
+
+  /**
+   * The background dispatch behind a `pending` task (the interactive create path). In
+   * its own trace scope: refine the fallback title (Haiku, off the response path) so
+   * the run and task record share it, then classify + spawn exactly like the
+   * synchronous path. Success flips the task `pending → dispatched`; an empty catalog
+   * or any thrown error flips it `pending → failed` with a visible reason and a
+   * `task-outcome` activity — a described task never silently no-ops (Law 5).
+   */
+  private dispatchPending(
+    task: ScheduledTask,
+    project: Project | null,
+    explicitTarget: TaskTarget | undefined,
+    titleAuto: boolean,
+  ): Promise<void> {
+    return this.trace.run({ traceId: randomUUID() }, async () => {
+      const projectId = project?.id;
+      try {
+        let title = task.title;
+        if (titleAuto) {
+          const derived = await this.namer.name(task.text).catch(() => null);
+          if (derived) {
+            title = derived;
+            await this.storage.setTitle(task.id, derived).catch(() => {});
+          }
+        }
+        const dispatched = await this.dispatch(
+          task.text,
+          task.paths,
+          title,
+          task.id,
+          projectId,
+          explicitTarget,
+          task.output,
+        );
+        if (!dispatched) {
+          await this.failPending(task.id, projectId, "No agents or pipelines available to route to");
+          return;
+        }
+        await this.recordLedger(task.id, projectId, dispatched);
+        const updated = await this.storage.markDispatched(
+          task.id,
+          dispatched.runRef,
+          dispatched.target,
+        );
+        this.recordDispatchedActivity(task.id, projectId, dispatched);
+        this.log.info("task dispatched (background)", {
+          id: task.id,
+          runRef: dispatched.runRef,
+          projectId,
+        });
+        void this.reconcileOutcome(updated);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await this.failPending(task.id, projectId, message);
+        this.log.error("background task dispatch failed", { id: task.id, error: message });
+      }
+    });
+  }
+
+  /** Flip a pending task to `failed` with a visible reason + activity (never silent). */
+  private async failPending(
+    taskId: string,
+    projectId: string | undefined,
+    reason: string,
+  ): Promise<void> {
+    await this.storage.markFailed(taskId, reason).catch(() => {});
+    void this.activity.record({
+      kind: "task-outcome",
+      summary: `task dispatch failed: ${reason}`,
+      refs: { taskId, status: "error", ...(projectId ? { projectId } : {}) },
+    });
   }
 
   /**

@@ -361,9 +361,11 @@ function scheduledTaskToView(t: ScheduledTask): TaskRun | null {
         ? "queued"
         : t.status === "held"
           ? "held"
-          : t.status === "cancelled"
-            ? "interrupted"
-            : "error";
+          : t.status === "pending"
+            ? "pending"
+            : t.status === "cancelled"
+              ? "interrupted"
+              : "error";
   const processor = scheduledProcessor(t.target);
   return {
     runId: t.id,

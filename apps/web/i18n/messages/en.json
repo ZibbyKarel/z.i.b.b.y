@@ -102,14 +102,6 @@
     "target": {
       "chosenReason": "Manually chosen target — the task goes straight here."
     },
-    "paths": {
-      "scopedTo": "scoped to {project}",
-      "grant": "grant access",
-      "grantAria": "Grant ZIBBY access to {path}",
-      "grantConfirm": "Give ZIBBY access to {folder} as a workspace root?",
-      "grantConfirmYes": "Grant access",
-      "grantCancel": "Cancel"
-    },
     "title": {
       "label": "Title (optional)",
       "placeholder": "Short task name…"
@@ -152,8 +144,6 @@
     "composer": {
       "label": "Task",
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
-      "pathsTitle": "Detected paths · added to context",
-      "removePathAria": "Remove path {path}",
       "submitHint": "⌘↩ to classify"
     },
     "loop": {
@@ -879,6 +869,7 @@
     "scheduledNote": "The task waits for its scheduled time — the log appears once it starts.",
     "state": {
       "running": "running",
+      "pending": "starting…",
       "awaiting-approval": "awaiting you",
       "scheduled": "scheduled",
       "held": "held",

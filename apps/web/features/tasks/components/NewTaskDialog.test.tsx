@@ -109,12 +109,21 @@ const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
       },
     });
   } else {
+    // The interactive path returns a `pending` task (its run spawns in the
+    // background); the dialog redirects to `/runs` keyed by the task id.
     opts?.onSuccess?.({
       status: 201,
       body: {
-        outcome: "dispatched",
-        runRef: "zibby_123_42",
-        target: { kind: "agent", id: "zibby", name: "ZIBBY", glyph: "bot" },
+        outcome: "pending",
+        task: {
+          id: "task_1",
+          title: "",
+          text,
+          paths: [],
+          scheduledAt: 0,
+          status: "pending",
+          createdAt: new Date(0).toISOString(),
+        },
       },
     });
   }
@@ -180,14 +189,23 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(screen.getByLabelText(/Zadání/)).toBeInTheDocument();
   });
 
-  it("surfaces detected paths as removable context chips", async () => {
+  it("highlights a referenced path inline in the description", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "Srovnej média v ~/Projects/media-vault");
-    const remove = await screen.findByRole("button", {
-      name: "Odebrat cestu ~/Projects/media-vault",
-    });
-    await userEvent.click(remove);
-    expect(screen.queryByRole("button", { name: /Odebrat cestu/ })).not.toBeInTheDocument();
+    // The path is marked inline (on the highlight backdrop), not listed as a chip below.
+    const marks = await screen.findAllByTestId("highlight-text-area-mark");
+    expect(marks.map((m) => m.textContent).join("")).toContain("~/Projects/media-vault");
+  });
+
+  it("folds a referenced path into the dispatched task's allowed directories — no grant step", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/Zadání/), "uprav /tmp/scratch/widget a otestuj");
+    await screen.findByText(/ZIBBY to předá/);
+    // There is no "grant access" action — a referenced path is added automatically.
+    expect(screen.queryByRole("button", { name: /Povolit ZIBBY/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/tmp/scratch/widget");
   });
 
   it("classifies a one-shot task and dispatches on one click", async () => {
@@ -202,7 +220,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
     // No output chosen → the field is omitted (inherit), not sent as void.
     expect(createTask.mock.calls[0]?.[0].body.output).toBeUndefined();
-    expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
+    expect(push).toHaveBeenCalledWith("/runs?run=task_1");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -278,17 +296,16 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     const taskBody = createTask.mock.calls[0]?.[0].body;
     expect(taskBody?.target?.kind).toBe("goal");
     expect(taskBody?.scheduledAt).toBeFalsy();
-    expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
+    expect(push).toHaveBeenCalledWith("/runs?run=task_1");
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("Edit disclosure pre-fills from the proposal and carries an edited maxIterations", async () => {
+  it("pre-fills the loop composer from the proposal and carries an edited maxIterations", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "retry the build until it works");
     expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
 
-    // Open "Edit" → the LoopComposer is pre-filled; bump the iteration cap.
-    await userEvent.click(screen.getByRole("button", { name: /Upravit/ }));
+    // The LoopComposer renders pre-filled with the proposal; bump the iteration cap.
     const iterations = screen.getByLabelText(/Max\. iterací/);
     await userEvent.clear(iterations);
     await userEvent.type(iterations, "9");
@@ -306,8 +323,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     await userEvent.type(screen.getByLabelText(/Zadání/), "vague request");
     expect(await screen.findByText(/nízká jistota/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Upravit/ }));
-    // The override picker is offered (the candidate list is reachable).
+    // The override picker is offered directly (the candidate list is reachable).
     expect(screen.getByLabelText(/Předat/)).toBeInTheDocument();
   });
 
@@ -328,38 +344,6 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(taskBody?.scheduledAt).toBeGreaterThan(Date.now());
   });
 
-  it("shows a scoped badge for an in-project path and a grant action for an out-of-project one", async () => {
-    render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(
-      screen.getByLabelText(/Zadání/),
-      "touch ~/Projects/alpha/x and /tmp/scratch/y",
-    );
-    // In-project path → "scoped to Alpha"; out-of-project path → "grant access".
-    expect(await screen.findByText(/v projektu Alpha/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Povolit ZIBBY přístup k /tmp/scratch/y" }),
-    ).toBeInTheDocument();
-  });
-
-  it("grants access via an explicit confirm → createProject with the slugified folder", async () => {
-    render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "work in /tmp/scratch/widget");
-    const grant = await screen.findByRole("button", {
-      name: "Povolit ZIBBY přístup k /tmp/scratch/widget",
-    });
-    await userEvent.click(grant);
-    // The confirm is the operator's act (Law 1) — nothing registers before it.
-    expect(createProject).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "Povolit přístup" }));
-
-    expect(createProject).toHaveBeenCalledTimes(1);
-    expect(createProject.mock.calls[0]?.[0].body).toEqual({
-      id: "widget",
-      name: "widget",
-      path: "/tmp/scratch/widget",
-    });
-  });
-
   it("folds a selected project's path into the dispatched task, exactly like a typed path", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
@@ -376,16 +360,15 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
   });
 
-  it("removing the project's path chip deselects the project (no orphaned path)", async () => {
+  it("deselecting the project drops its path from the dispatched task", async () => {
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
     await userEvent.click(screen.getByLabelText(/Projekt/));
     await userEvent.click(await screen.findByRole("option", { name: "Beta" }));
 
-    const remove = await screen.findByRole("button", {
-      name: "Odebrat cestu /Users/zibby/Projects/beta",
-    });
-    await userEvent.click(remove);
+    // Switch the picker back to "no project" — its path is no longer folded in.
+    await userEvent.click(screen.getByLabelText(/Projekt/));
+    await userEvent.click(await screen.findByRole("option", { name: /Žádný projekt/ }));
 
     await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
     expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/beta");
@@ -435,7 +418,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
       name: "Delivery",
       glyph: "flow",
     });
-    expect(push).toHaveBeenCalledWith("/runs?run=zibby_123_42");
+    expect(push).toHaveBeenCalledWith("/runs?run=task_1");
     expect(onClose).toHaveBeenCalled();
   });
 

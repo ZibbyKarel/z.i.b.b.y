@@ -9,12 +9,14 @@ export {
 export { getScheduledTasksQueryKey, useScheduledTasksQuery } from "./queries";
 export {
   type ConfidenceBand,
+  type PathRange,
   type SchedulePreset,
   type TaskRouting,
   type TaskTarget,
   type TaskTargetKind,
   clockLabel,
   confidenceBand,
+  extractPathRanges,
   extractPaths,
   isLowConfidence,
   resolveScheduledAt,

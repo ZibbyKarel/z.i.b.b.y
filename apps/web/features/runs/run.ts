@@ -25,6 +25,22 @@ export type { RunKind };
 export type FeedStatus = TaskRunStatus;
 
 /**
+ * The feed row a selection (`?run=<id>`) points at, falling back to the first row of
+ * the (already filtered) list. Matches `runId` OR `taskId` so a selection survives the
+ * feed identity shift when a `pending` task (keyed by its task id) flips to its
+ * dispatched run (keyed by the run ref): the New Task dialog redirects with the task
+ * id, and both the pending card (`runId === taskId`) and the later run (`taskId` set)
+ * match it. Returns null when the list is empty.
+ */
+export function findSelectedRun(list: readonly RunView[], selId: string | null): RunView | null {
+  return (
+    list.find((r) => r.runId === selId || (selId != null && r.taskId === selId)) ??
+    list[0] ??
+    null
+  );
+}
+
+/**
  * Task-first display name: the explicit task title, else (for runs born from a
  * task) the task's own name, else the run's prompt, else the routed target id.
  * A pipeline run's `prompt` is the "fáze: X" progress string — a subtitle, never
@@ -77,6 +93,15 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
     dot: "idle",
     glyph: "clock",
     pulse: false,
+  },
+  // Accepted; its run is spawning in the background. Reads as live (pulses) — it
+  // flips to `running` in place the moment the run starts.
+  pending: {
+    key: "pending",
+    badge: "neutral",
+    dot: "run",
+    glyph: "pulse",
+    pulse: true,
   },
   running: {
     key: "running",

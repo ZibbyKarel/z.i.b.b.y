@@ -1,40 +1,33 @@
-import { Stack, TextAreaField, Typography } from "@zibby/design-system";
+import { HighlightTextAreaField, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import type { ResolvedPath } from "../task";
-import { PathChips } from "./PathChips";
+import type { PathRange } from "../task";
 
 export interface TaskComposerProps {
   value: string;
   onChange: (value: string) => void;
   /** Fired on ⌘/Ctrl+Enter — the keyboard submit. */
   onSubmit: () => void;
-  paths: string[];
-  onRemovePath: (path: string) => void;
-  /** Phase 11.3: backend-resolved attribution for the detected paths. */
-  resolved?: ResolvedPath[];
-  /** Phase 11.3: grant access to an out-of-project path (registers a workspace root). */
-  onGrant?: (path: string) => void;
+  /**
+   * Character spans of the file/folder paths detected in the text. Each is highlighted
+   * inline in the description and auto-added to the run's allowed directories — no
+   * separate chip list, no grant step.
+   */
+  highlights: PathRange[];
 }
 
 /**
- * The task description input: a large textarea whose placeholder hints that
- * file/folder paths can be referenced, with the live-detected paths shown below
- * as removable context chips.
+ * The task description input: a large textarea that highlights any referenced
+ * file/folder paths inline as the operator types. A detected path lights up where it
+ * is written and is folded into the dispatched task's `paths` (the run's allowed
+ * directories) automatically.
  */
-export function TaskComposer({
-  value,
-  onChange,
-  onSubmit,
-  paths,
-  onRemovePath,
-  resolved,
-  onGrant,
-}: TaskComposerProps) {
+export function TaskComposer({ value, onChange, onSubmit, highlights }: TaskComposerProps) {
   const t = useTranslations("tasks.composer");
   return (
-    <Stack gap="150">
-      <TextAreaField
+    <Stack gap="100">
+      <HighlightTextAreaField
         autoFocus
+        highlights={highlights}
         label={t("label")}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
@@ -47,15 +40,6 @@ export function TaskComposer({
         rows={6}
         value={value}
       />
-
-      {paths.length > 0 && (
-        <Stack gap="75">
-          <Typography mono size="2xs" tracking="wide" type="note" variant="tertiary">
-            {t("pathsTitle")}
-          </Typography>
-          <PathChips onGrant={onGrant} onRemove={onRemovePath} paths={paths} resolved={resolved} />
-        </Stack>
-      )}
 
       <Typography mono size="2xs" type="note" variant="tertiary">
         {t("submitHint")}

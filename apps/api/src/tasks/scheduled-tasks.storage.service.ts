@@ -117,6 +117,49 @@ export class ScheduledTasksStorageService
     return task;
   }
 
+  /**
+   * Persist a freshly-accepted task as `pending`: its guards (limit/budget/capacity)
+   * already passed synchronously, and its dispatch (classify + spawn) is about to run
+   * in the BACKGROUND. The `id` is pre-generated so the run is born linked, and the
+   * chosen `target` (a goal loop, an approved proposal) rides along so the background
+   * dispatch routes to it instead of re-classifying. Flips to `dispatched` on success
+   * or `failed` if it can't route.
+   */
+  async createPending(
+    id: string,
+    input: CreateTaskInput,
+    projectId: string | undefined,
+    now: number,
+    target?: TaskTarget,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      scheduledAt: now,
+      status: "pending",
+      createdAt: new Date(now).toISOString(),
+      ...(projectId ? { projectId } : {}),
+      ...(input.output ? { output: input.output } : {}),
+      ...(target ? { target } : {}),
+    };
+    await this.writeEntity(task);
+    return task;
+  }
+
+  /**
+   * Patch a task's title in place. Used by the background dispatch path: the task is
+   * persisted with a synchronous fallback title for an instant card, then the Haiku
+   * namer refines it off the response path before the run starts.
+   */
+  async setTitle(id: string, title: string): Promise<ScheduledTask> {
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, title };
+    await this.writeEntity(merged);
+    return merged;
+  }
+
   /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
   async createQueued(
     id: string,

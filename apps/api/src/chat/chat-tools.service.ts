@@ -40,6 +40,12 @@ export class ChatToolsService {
         result.task.scheduledAt,
       ).toISOString()}.`;
     }
+    // The chat tool calls the scheduler synchronously (no `background`), so it always
+    // gets `dispatched`/`scheduled` — never the dialog's `pending`. Guard it anyway so
+    // the union stays exhaustive.
+    if (result.outcome === "pending") {
+      return `Spustil jsem úkol (${result.task.id}) — připravuje se na pozadí.`;
+    }
     const target = describeTarget(result.target);
     return `Spustil jsem úkol (${result.task.id}) — ${target}. Běh: ${result.runRef}.`;
   }

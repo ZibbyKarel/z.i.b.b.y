@@ -14,6 +14,7 @@ scheduled    ← vytvořen s budoucím scheduledAt
     ↓
 queued       ← projekt dosáhl maxConcurrent (FIFO, bez schválení)
 held         ← výdaj přesáhl budget cap (čeká na approve-override)
+pending      ← interaktivní cesta (dialog): přijato, klasifikace + spawn běží NA POZADÍ
 dispatched   ← přiřazen runneru
     ↓
 awaiting-output ← run doběhl `done` a zvolený `pr` výstup čeká na bránu
@@ -22,6 +23,21 @@ success | failed | cancelled
 ```
 
 `TaskSchedulerService` spravuje celý lifecycle.
+
+### `pending` — background dispatch (interaktivní cesta)
+
+Aby New Task dialog nečekal na celý spawn (Haiku pojmenování + klasifikace + start
+runneru může trvat sekundy), interaktivní cesta (`POST /api/tasks` z dialogu) běží s
+`background = true`: rychlé guardy (limit / budget / kapacita) proběhnou synchronně,
+pak se úloha uloží jako `pending` a **okamžitě se vrátí** `{ outcome: "pending", task }`.
+Klasifikace a spawn dobíhají na pozadí (`dispatchPending`) → úloha přepne na
+`dispatched` (born linked na `taskId`), nebo na `failed` s důvodem, když není kam
+routovat (žádný silent no-op — Zákon 5). Dialog přesměruje na `/runs?run=<task.id>` a
+feed řádek se přímo přepne z `pending` na běh (výběr sleduje `taskId`).
+
+Serveroví volající (chat, channel triage, proposed-task) `background` nenastavují —
+zůstávají synchronní a zachovávají si původní `dispatched` / `EmptyCatalogError`
+sémantiku.
 
 ## Vytvoření úlohy
 
@@ -42,7 +58,9 @@ Body: {
 }
 ```
 
-`scheduledAt` bez hodnoty nebo v minulosti → `createTask` spustí okamžitou klasifikaci + dispatch.
+`scheduledAt` bez hodnoty nebo v minulosti → `createTask` spustí okamžitou klasifikaci +
+dispatch. Z dialogu (`background = true`) se dispatch odehraje na pozadí a endpoint
+vrátí hned `pending` (viz „`pending` — background dispatch" výše).
 
 ## Klasifikace (TaskClassifierService)
 

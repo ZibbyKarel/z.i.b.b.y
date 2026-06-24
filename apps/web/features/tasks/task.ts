@@ -23,6 +23,27 @@ export function extractPaths(text: string): string[] {
   return [...new Set(matches)];
 }
 
+/** A detected path together with its `[start, end)` character span in the source text. */
+export interface PathRange {
+  path: string;
+  start: number;
+  end: number;
+}
+
+/**
+ * Every path occurrence in the text with its character span — used to highlight the
+ * paths inline in the composer (each occurrence is marked, so a path written twice
+ * lights up twice). Unlike {@link extractPaths} this is positional and not deduped.
+ */
+export function extractPathRanges(text: string): PathRange[] {
+  const ranges: PathRange[] = [];
+  for (const match of text.matchAll(TASK_PATH_RE)) {
+    if (match.index === undefined) continue;
+    ranges.push({ path: match[0], start: match.index, end: match.index + match[0].length });
+  }
+  return ranges;
+}
+
 /**
  * The trailing segment of a path — the folder/file name used to derive a granted
  * project's `name`/`id` (Phase 11.3). Strips a trailing slash; "~/Projects/alpha"
@@ -36,6 +57,30 @@ export function basename(path: string): string {
 
 /** A destination for a task — an agent, a pipeline, a goal, or the orchestrator fallback. */
 export type TaskTargetKind = "agent" | "pipeline" | "goal" | "orchestrator";
+
+/** A stable key for a target, used to pre-select and dedupe entries in the picker. */
+export function targetKey(target: TaskTarget): string {
+  return target.kind === "orchestrator" ? "orchestrator" : `${target.kind}:${target.id}`;
+}
+
+/** Project a client target onto the wire shape `createTask` accepts (drops nothing). */
+export function toApiTarget(target: TaskTarget) {
+  if (target.kind === "orchestrator") {
+    return {
+      kind: "orchestrator" as const,
+      name: target.name,
+      glyph: target.glyph,
+      category: target.category,
+    };
+  }
+  return {
+    kind: target.kind,
+    id: target.id,
+    name: target.name,
+    glyph: target.glyph,
+    category: target.category,
+  };
+}
 
 interface TaskTargetDisplay {
   /** Display name. */

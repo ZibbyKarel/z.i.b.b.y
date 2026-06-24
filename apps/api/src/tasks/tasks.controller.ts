@@ -45,7 +45,16 @@ export class TasksController {
 
       createTask: async ({ body }) => {
         try {
-          return { status: 201, body: await this.scheduler.createTask(body) };
+          // The interactive path: classify + spawn run in the BACKGROUND so the dialog
+          // gets an immediate `pending` task to redirect to (the run starts off the
+          // response path). A dispatch failure there — empty catalog, claude
+          // unavailable, anything thrown — flips the pending task to `failed` with the
+          // reason (visible in the feed), so it never silently no-ops. The sync 422/503
+          // mapping is kept for the non-background server callers that still throw.
+          return {
+            status: 201,
+            body: await this.scheduler.createTask(body, undefined, undefined, undefined, true),
+          };
         } catch (error) {
           if (error instanceof EmptyCatalogError) {
             return { status: 422, body: { message: error.message } };
