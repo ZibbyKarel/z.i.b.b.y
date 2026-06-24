@@ -40,6 +40,9 @@ const config: StorybookConfig = {
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
+      // `@/…` → apps/web root, mirroring the tsconfig `@/*` path so app-level
+      // dashboard stories resolve their absolute imports under the Vite builder.
+      "@": fileURLToPath(new URL("../../../apps/web", import.meta.url)),
       "next/link": fileURLToPath(new URL("./next-stubs/link.tsx", import.meta.url)),
       "next/navigation": fileURLToPath(new URL("./next-stubs/navigation.ts", import.meta.url)),
       // The contracts workspace package resolves to TS source, not a built

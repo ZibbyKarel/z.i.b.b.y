@@ -12,6 +12,9 @@ export default defineConfig({
     // path mappings the Next app builds with (contracts has no node_modules entry
     // Vite can resolve on its own).
     alias: {
+      // `@/…` → apps/web root, mirroring the tsconfig `@/*` path (Vite doesn't
+      // read tsconfig `paths`/`baseUrl`, so it needs the alias spelled out).
+      "@": fileURLToPath(new URL(".", import.meta.url)).replace(/\/$/, ""),
       "@zibby/contracts": fileURLToPath(
         new URL("../../libs/contracts/src/index.ts", import.meta.url),
       ),

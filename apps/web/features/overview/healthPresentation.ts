@@ -1,6 +1,6 @@
 import type { DotTone } from "@zibby/design-system";
 import type { SubsystemHealth } from "@zibby/contracts";
-import type { MessageKey } from "apps/web/i18n/keys";
+import type { MessageKey } from "@/i18n/keys";
 
 /** The HudPanel tones the health banner uses. */
 export type HealthTone = "ok" | "warn" | "bad";

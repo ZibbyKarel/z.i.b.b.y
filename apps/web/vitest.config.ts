@@ -1,6 +1,14 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    // `@/…` → apps/web root, mirroring the tsconfig `@/*` path (Vite doesn't
+    // read tsconfig `paths`/`baseUrl`, so it needs the alias spelled out).
+    alias: {
+      "@": fileURLToPath(new URL(".", import.meta.url)).replace(/\/$/, ""),
+    },
+  },
   test: {
     name: "web",
     environment: "node",

@@ -18,6 +18,7 @@
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["apps/web/*"],
       "@zibby/design-system": ["libs/design-system/src/index.ts"],
       "@zibby/design-system/*": ["libs/design-system/src/*"],
       "@zibby/contracts": ["libs/contracts/src/index.ts"],
