@@ -142,6 +142,62 @@ features/<domain>/
   components/   ← domain composites (nikdy DS primitives)
 ```
 
+## Importy a hranice modulů
+
+**Veřejný povrch feature = její barrel.** Každá feature, kterou konzumují jiné
+features, vystavuje `features/<domain>/index.ts`, který re-exportuje její **datovou
+vrstvu** (`queries` + `mutations`; `runs` navíc re-exportuje SSE/log hooky z
+`runEvents`/`useRunLogStream`). Cross-feature import jde přes barrel:
+
+```ts
+// ✅ přes veřejný povrch
+import { useAgentsQuery } from "../agents";
+// ❌ sahání do vnitřností cizí feature
+import { useAgentsQuery } from "../agents/queries/useAgentsQuery";
+```
+
+Barrel **nikdy** nere-exportuje `Screen` — stáhl by celý view-graf do každého
+konzumenta a vrátil cykly (přesně jako DS `CodeBlock ↔ index`).
+
+**Záměrné úzké deep importy se ponechávají:** dependency-free soubory s cache
+klíči (`agents`/`pipelines`/`runs` `queries/keys.ts`) a SSE fan-out v
+`runs/runEvents.tsx`. Existují právě proto, aby zůstaly cycle-safe — proto se
+importují napřímo, ne přes barrel.
+
+**Path alias `@/*` → `apps/web/*`** (definováno v `tsconfig.base.json`, zrcadleno
+jako Vite alias v obou vitest configech a ve Storybooku, protože Vite nečte
+tsconfig `paths`). Nové importy mimo vlastní feature pište přes `@/…`; stávající
+relativní `../../…` se ponechávají, dokud se na ně nesáhne.
+
+**Cycle guard:** `pnpm check:cycles` (madge přes `apps/web`, ignoruje type-only
+importy a `libs/`, viz `.madgerc`) + CI job `cycles`. Graf `apps/web` je acyklický
+a má takový zůstat. (`eslint-plugin-import-x` `no-cycle` v téhle ESLint 9
+flat-config sestavě tiše nefunguje — proto madge.)
+
+### Feature vs. service
+
+„Feature" je přetížený pojem — ne každá má vlastní route:
+
+- **Route features** (mají `Screen.tsx` + segment v `(dashboard)/`): agents,
+  automations, gates, memory, overview, pipelines, projects, runs, settings,
+  skills (+ `gates` je route-only, bez nav položky).
+- **Shared services** (bez `Screen`, konzumované jinými features / mountované v
+  chrome): approvals, goals, health, integrations, limits, research, system,
+  chat, tasks, notifications.
+
+### Otevřené následné úklidy
+
+- **Enforcement hranic** (`no-restricted-paths` / `eslint-plugin-boundaries`)
+  zatím není — migrace je záměrně neúplná (část sites žije v rozpracované práci
+  + úzké key importy). Zavést, až se strom usadí.
+- **Umístění feature-local hooků** je nejednotné: `hooks/` subdir (chat, skills)
+  vs. flat v rootu feature (runs, automations, projects, notifications). Vybrat
+  jeden směr.
+- `state/forms.ts` nese `// TODO: split this file into correct module`.
+- `@/*` je v `tsconfig.base.json` (sdíleném) → i `libs/` by `@/` resolvovaly na
+  apps/web; čistší domov je `apps/web/tsconfig.json` (za cenu duplikace `@zibby/*`
+  paths). Drobnost, ne blocker.
+
 ## Testování
 
 Vitest project: `web`  
