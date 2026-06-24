@@ -126,11 +126,11 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
   /** Start the target run via the appropriate runner; return its id reference. */
   private async dispatch(automation: Automation): Promise<string> {
-    const { target } = automation;
+    const { target, prompt } = automation;
     this.log.info("dispatching automation", { id: automation.id, target: target.type });
     switch (target.type) {
       case "agent": {
-        const run = await this.agentRunner.start(target.agentId, target.prompt ?? "", "automation");
+        const run = await this.agentRunner.start(target.agentId, prompt ?? "", "automation");
         return run.runId;
       }
       case "pipeline": {
@@ -139,8 +139,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       }
       case "briefing": {
         // Deterministic assembly, not a claude run — dispatch straight to the
-        // briefing service and return the vault note id as the run ref.
-        const { noteId } = await this.briefing.generate();
+        // briefing service and return the vault note id as the run ref. The prompt
+        // steers the optional butler-voice headline ("how to write the briefing").
+        const { noteId } = await this.briefing.generate(new Date(), prompt);
         return noteId;
       }
       case "discovery": {
@@ -163,8 +164,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       }
       case "research-digest": {
         // M6: fetch + rank the operator's research sources, mirror the digest to the
-        // vault for the morning briefing. Deterministic; ref = `research:<count>`.
-        const digest = await this.research.refresh();
+        // vault for the morning briefing. Deterministic; ref = `research:<count>`. The
+        // prompt narrows the ranking ("what to research") on top of the saved interests.
+        const digest = await this.research.refresh(new Date(), prompt);
         return `research:${digest.items.length}`;
       }
       case "gap-detect": {

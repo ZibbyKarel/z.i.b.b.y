@@ -29,11 +29,31 @@ describe("automation schema", () => {
     expect(
       AutomationSchema.safeParse({
         id: "on-push",
-        trigger: { type: "event", event: "git.push" },
-        target: { type: "agent", agentId: "reviewer", prompt: "review it" },
+        trigger: { type: "event", events: ["git.push", "pr.opened"] },
+        target: { type: "agent", agentId: "reviewer" },
+        prompt: "review it",
         enabled: false,
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects an event trigger with an unknown event or an empty list", () => {
+    expect(
+      AutomationSchema.safeParse({
+        id: "x",
+        trigger: { type: "event", events: ["not.a.real.event"] },
+        target: { type: "briefing" },
+        enabled: true,
+      }).success,
+    ).toBe(false);
+    expect(
+      AutomationSchema.safeParse({
+        id: "y",
+        trigger: { type: "event", events: [] },
+        target: { type: "briefing" },
+        enabled: true,
+      }).success,
+    ).toBe(false);
   });
 
   it("accepts a briefing target (no agent/pipeline picker)", () => {

@@ -25,6 +25,7 @@ apps/api/data/research-digest.json
 apps/api/data/mcp-credentials
 apps/api/data/project-secrets
 apps/api/data/_purged
+apps/api/data/chat
 
 !apps/api/data/agents
 !apps/api/data/automations

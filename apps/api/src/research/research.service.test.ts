@@ -121,6 +121,40 @@ describe("ResearchService", () => {
     expect(digest.items.map((i) => i.id)).toEqual(["f"]);
   });
 
+  describe("focus (an automation's prompt) narrows the digest", () => {
+    beforeEach(async () => {
+      // No saved interests → without a focus, every item scores a neutral 0.5 and survives.
+      await writeConfig({
+        interests: [],
+        sources: [{ id: "hn", kind: "hn", label: "HN", enabled: true }],
+      });
+      await writeFixture("hn", [
+        { id: "ag", title: "AI agents are here", summary: "autonomous" },
+        { id: "rs", title: "rust release", summary: "memory safety" },
+      ]);
+    });
+
+    it("keeps every item when there is no focus", async () => {
+      const digest = await service.refresh(now);
+      expect(digest.items.map((i) => i.id).sort()).toEqual(["ag", "rs"]);
+    });
+
+    it("narrows to focus-matching items and drops the rest", async () => {
+      const digest = await service.refresh(now, "agents");
+      expect(digest.items.map((i) => i.id)).toEqual(["ag"]);
+    });
+
+    it("honours a 2-char focus term (e.g. 'AI'), not just long ones", async () => {
+      const digest = await service.refresh(now, "AI");
+      expect(digest.items.map((i) => i.id)).toEqual(["ag"]);
+    });
+
+    it("a focus that matches nothing yields an empty digest (honest 'nothing relevant')", async () => {
+      const digest = await service.refresh(now, "kubernetes");
+      expect(digest.items).toEqual([]);
+    });
+  });
+
   it("skips a disabled source", async () => {
     await writeConfig({
       sources: [{ id: "hn", kind: "hn", label: "HN", enabled: false }],

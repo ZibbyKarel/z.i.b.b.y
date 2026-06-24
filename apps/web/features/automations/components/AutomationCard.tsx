@@ -74,7 +74,8 @@ export function AutomationCard({
   const { trigger, target, enabled } = automation;
   const name = automation.name ?? automation.id;
 
-  const scheduleText = trigger.type === "cron" ? cronLabel(trigger.expr) : trigger.event;
+  const scheduleText =
+    trigger.type === "cron" ? cronLabel(trigger.expr) : trigger.events.join(", ");
 
   const next = useMemo(
     () => (trigger.type === "cron" ? nextCronRun(trigger.expr, new Date()) : null),

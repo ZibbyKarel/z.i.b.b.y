@@ -18,6 +18,7 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
+import { AUTOMATION_EVENTS, type AutomationEvent } from "@zibby/contracts";
 import type { Automation, Target, Trigger } from "@zibby/contracts";
 import { slug } from "../../../utils/slug";
 import {
@@ -32,7 +33,6 @@ import { useCronLabel } from "../useCronLabel";
 /** Testids for the automation form dialog. */
 export enum AutomationFormTestId {
   Name = "automation-form-name",
-  Event = "automation-form-event",
   Prompt = "automation-form-prompt",
   Submit = "automation-form-submit",
 }
@@ -89,8 +89,8 @@ export function AutomationFormDialog({
       ? (cronToSchedule(automation.trigger.expr) ?? DEFAULT_SCHEDULE)
       : DEFAULT_SCHEDULE,
   );
-  const [event, setEvent] = useState(
-    automation?.trigger.type === "event" ? automation.trigger.event : "",
+  const [events, setEvents] = useState<AutomationEvent[]>(
+    automation?.trigger.type === "event" ? automation.trigger.events : [],
   );
   const [targetType, setTargetType] = useState<TargetType>(automation?.target.type ?? "pipeline");
   const [targetId, setTargetId] = useState(
@@ -100,9 +100,11 @@ export function AutomationFormDialog({
         ? automation.target.pipelineId
         : "",
   );
-  const [prompt, setPrompt] = useState(
-    automation?.target.type === "agent" ? (automation.target.prompt ?? "") : "",
-  );
+  const [prompt, setPrompt] = useState(automation?.prompt ?? "");
+
+  // The closed event catalog → multi-select options (the value IS the label: these are
+  // self-descriptive signal ids the operator picks from, not free text).
+  const eventOptions = AUTOMATION_EVENTS.map((e) => ({ value: e, label: e }));
 
   const targetList = targetType === "agent" ? agents : targetType === "pipeline" ? pipelines : [];
   const options = [
@@ -117,7 +119,7 @@ export function AutomationFormDialog({
   const scheduleOk =
     schedule.time.trim().length > 0 &&
     (schedule.repeat === "monthly" || schedule.weekdays.length > 0);
-  const triggerOk = triggerType === "cron" ? scheduleOk : event.trim().length > 0;
+  const triggerOk = triggerType === "cron" ? scheduleOk : events.length > 0;
   const targetOk =
     targetType === "briefing" || targetType === "discovery" || targetValue.length > 0;
   // System automations only edit the schedule, so the only gate is a valid trigger.
@@ -145,27 +147,24 @@ export function AutomationFormDialog({
   const submit = () => {
     if (!canSave) return;
     const trigger: Trigger =
-      triggerType === "cron" ? { type: "cron", expr } : { type: "event", event: event.trim() };
-    // System automation: only the schedule moves. Echo the seeded target/name/enabled
-    // back unchanged so the target builder below can't rebuild (and corrupt, e.g.
-    // memory-distill → briefing) a field the user was never allowed to touch.
+      triggerType === "cron" ? { type: "cron", expr } : { type: "event", events };
+    // System automation: only the schedule moves. Echo the seeded target/name/prompt/
+    // enabled back unchanged so the target builder below can't rebuild (and corrupt,
+    // e.g. memory-distill → briefing) a field the user was never allowed to touch.
     if (automation && isSystem) {
       onSubmit({
         id: automation.id,
         ...(automation.name !== undefined ? { name: automation.name } : {}),
         trigger,
         target: automation.target,
+        ...(automation.prompt !== undefined ? { prompt: automation.prompt } : {}),
         enabled: automation.enabled,
       });
       return;
     }
     const target: Target =
       targetType === "agent"
-        ? {
-            type: "agent",
-            agentId: targetValue,
-            ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
-          }
+        ? { type: "agent", agentId: targetValue }
         : targetType === "pipeline"
           ? { type: "pipeline", pipelineId: targetValue }
           : targetType === "discovery"
@@ -178,6 +177,9 @@ export function AutomationFormDialog({
       name: name.trim(),
       trigger,
       target,
+      // Top-level: always forwarded to whatever the target runs (agent prompt,
+      // research focus, briefing voice). Always sent (empty string clears it on edit).
+      prompt: prompt.trim(),
       enabled: automation?.enabled ?? true,
     });
   };
@@ -251,13 +253,15 @@ export function AutomationFormDialog({
             value={schedule}
           />
         ) : (
-          <TextInputField
-            data-testid={AutomationFormTestId.Event}
+          <SelectField<AutomationEvent>
+            multi
             hint={t("eventHint")}
             label={t("eventLabel")}
-            onChange={(e) => setEvent(e.target.value)}
+            onValueChange={setEvents}
+            options={eventOptions}
             placeholder={t("eventPlaceholder")}
-            value={event}
+            removeLabel={t("eventRemove")}
+            value={events}
           />
         )}
 
@@ -300,17 +304,17 @@ export function AutomationFormDialog({
               />
             )}
 
-            {targetType === "agent" && (
-              <TextAreaField
-                data-testid={AutomationFormTestId.Prompt}
-                hint={t("promptHint")}
-                label={t("promptLabel")}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={t("promptPlaceholder")}
-                rows={3}
-                value={prompt}
-              />
-            )}
+            {/* Always shown and always forwarded as input to whatever the automation
+                runs — agent prompt, research focus, or briefing voice. */}
+            <TextAreaField
+              data-testid={AutomationFormTestId.Prompt}
+              hint={t("promptHint")}
+              label={t("promptLabel")}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={t("promptPlaceholder")}
+              rows={3}
+              value={prompt}
+            />
           </>
         )}
       </Stack>

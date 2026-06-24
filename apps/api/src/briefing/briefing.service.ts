@@ -110,10 +110,14 @@ export class BriefingService {
    * Generate, persist and record a briefing. Returns the briefing plus the vault
    * note id (`briefing-<YYYY-MM-DD>`).
    */
-  async generate(now: Date = new Date()): Promise<{ briefing: Briefing; noteId: string }> {
+  async generate(
+    now: Date = new Date(),
+    focus?: string,
+  ): Promise<{ briefing: Briefing; noteId: string }> {
     const assembled = await this.assemble(now);
-    // Optional butler voice; never blocks — the deterministic headline stands in.
-    const voiced = await this.briefer.headline(assembled).catch(() => null);
+    // Optional butler voice; never blocks — the deterministic headline stands in. The
+    // `focus` (an automation's prompt) steers the voice, e.g. "keep it terse".
+    const voiced = await this.briefer.headline(assembled, focus).catch(() => null);
     const briefing: Briefing = voiced ? { ...assembled, headline: voiced } : assembled;
 
     const noteId = `briefing-${now.toISOString().slice(0, 10)}`;

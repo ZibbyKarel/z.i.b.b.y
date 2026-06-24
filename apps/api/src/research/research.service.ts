@@ -54,15 +54,25 @@ export class ResearchService {
    * Run a digest pass: fetch + rank every enabled source, keep the top items,
    * persist the JSON + vault note, record activity, and return the digest.
    */
-  async refresh(now: Date = new Date()): Promise<ResearchDigest> {
+  async refresh(now: Date = new Date(), focus?: string): Promise<ResearchDigest> {
     const config = await this.config.read();
     const sources = config.sources.filter(
       (s) => s.enabled && (s.kind !== "finance" || config.financeWatch),
     );
+    // An automation's prompt ("what to research") narrows the digest on top of the
+    // saved interests: its words join the interest set so matching items rank higher,
+    // and items matching nothing drop out (a focus that matches nothing → empty digest,
+    // which is the honest "nothing relevant" answer). Keep 2-char tokens ("AI", "ML",
+    // "Go", "UX" are real topics); only 1-char noise is dropped.
+    const focusTerms = (focus ?? "")
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2);
+    const interests = focusTerms.length ? [...config.interests, ...focusTerms] : config.interests;
     const ranked: ResearchItem[] = [];
     for (const source of sources) {
       const raw = await this.adapter.fetch(source).catch(() => []);
-      ranked.push(...rankSourceItems(source, raw, config.interests));
+      ranked.push(...rankSourceItems(source, raw, interests));
     }
     const items = ranked
       .sort((a, b) => b.relevance - a.relevance || a.title.localeCompare(b.title))

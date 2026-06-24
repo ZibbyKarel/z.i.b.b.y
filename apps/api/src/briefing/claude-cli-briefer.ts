@@ -36,13 +36,17 @@ export class ClaudeCliBriefer {
     this.log = logger.child(ClaudeCliBriefer.name);
   }
 
-  /** Returns a butler-voiced headline, or null to fall back to the deterministic one. */
-  async headline(briefing: Briefing): Promise<string | null> {
+  /**
+   * Returns a butler-voiced headline, or null to fall back to the deterministic one.
+   * An optional `focus` (from the briefing automation's prompt) steers the voice —
+   * tone, emphasis, how to write it — without ever touching the deterministic data.
+   */
+  async headline(briefing: Briefing, focus?: string): Promise<string | null> {
     if (process.env.VITEST) return null;
 
     let raw: string;
     try {
-      raw = await this.runClaude(this.buildPrompt(briefing));
+      raw = await this.runClaude(this.buildPrompt(briefing, focus));
     } catch (err) {
       this.log.debug("briefer CLI call failed", { error: (err as Error).message });
       return null;
@@ -59,14 +63,19 @@ export class ClaudeCliBriefer {
   }
 
   /** Operator-system data only (counts + first lines) — never raw inbound text. */
-  private buildPrompt(b: Briefing): string {
+  private buildPrompt(b: Briefing, focus?: string): string {
     const sections = {
       counts: b.counts,
       needsYou: b.needsYou.slice(0, 5).map((n) => ({ kind: n.kind, summary: n.summary })),
       didForYou: b.didForYou.slice(0, 5).map((d) => d.summary),
       watching: b.watching,
     };
-    return [BRIEFER_SYSTEM_PROMPT, "", "SECTIONS:", JSON.stringify(sections)].join("\n");
+    // Operator steering (e.g. "keep it terse", "lead with what needs me"). It's
+    // system-authored config, not inbound channel data, so it can shape the voice.
+    const steer = focus?.trim()
+      ? ["", `OPERATOR PREFERENCE (shape the voice, never the facts): ${focus.trim()}`]
+      : [];
+    return [BRIEFER_SYSTEM_PROMPT, ...steer, "", "SECTIONS:", JSON.stringify(sections)].join("\n");
   }
 
   protected runClaude(prompt: string): Promise<string> {

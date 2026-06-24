@@ -56,7 +56,13 @@ export function Screen() {
       // we never even attempt the target/enabled changes the server would reject.
       const patch = editing.system
         ? { trigger: body.trigger }
-        : { name: body.name, trigger: body.trigger, target: body.target, enabled: body.enabled };
+        : {
+            name: body.name,
+            trigger: body.trigger,
+            target: body.target,
+            prompt: body.prompt,
+            enabled: body.enabled,
+          };
       update.mutate(
         { params: { id: editing.id }, body: patch },
         { onSuccess: () => setEditing(null) },

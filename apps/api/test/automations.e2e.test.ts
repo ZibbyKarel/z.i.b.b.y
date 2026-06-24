@@ -60,7 +60,8 @@ describe("Automations API (e2e)", () => {
         id: "morning",
         name: "Morning briefing",
         trigger: { type: "cron", expr: "* * * * *" },
-        target: { type: "agent", agentId: "briefer", prompt: "summarise overnight" },
+        target: { type: "agent", agentId: "briefer" },
+        prompt: "summarise overnight",
         enabled: true,
       })
       .expect(201);

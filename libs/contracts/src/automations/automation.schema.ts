@@ -1,10 +1,33 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 
-/** A cron trigger (5-field expr, evaluated in Europe/Prague) or a named event. */
+/**
+ * The closed catalog of named events an automation can listen for. A closed set (not
+ * free text) so the operator picks from known signals instead of guessing a string —
+ * the UI renders it as a multi-select. (No event bus auto-fires these yet; an event
+ * automation fires via the manual trigger path. Extend this list as real emitters land.)
+ */
+export const AUTOMATION_EVENTS = [
+  "file.created",
+  "file.changed",
+  "git.push",
+  "pr.opened",
+  "pr.merged",
+  "run.completed",
+  "run.failed",
+  "email.received",
+  "slack.message",
+] as const;
+export const AutomationEventSchema = z.enum(AUTOMATION_EVENTS);
+export type AutomationEvent = z.infer<typeof AutomationEventSchema>;
+
+/**
+ * A cron trigger (5-field expr, evaluated in Europe/Prague) or one-or-more named
+ * events — the automation fires when *any* listed event arrives.
+ */
 export const TriggerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("cron"), expr: z.string().min(1) }),
-  z.object({ type: z.literal("event"), event: z.string().min(1) }),
+  z.object({ type: z.literal("event"), events: z.array(AutomationEventSchema).min(1) }),
 ]);
 export type Trigger = z.infer<typeof TriggerSchema>;
 
@@ -17,7 +40,7 @@ export type Trigger = z.infer<typeof TriggerSchema>;
  */
 export const TargetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pipeline"), pipelineId: AgentIdSchema }),
-  z.object({ type: z.literal("agent"), agentId: AgentIdSchema, prompt: z.string().optional() }),
+  z.object({ type: z.literal("agent"), agentId: AgentIdSchema }),
   z.object({ type: z.literal("briefing") }),
   // Phase 10.3: scan git/tests/vault for work and emit task CANDIDATES into the
   // approvals queue (a `proposed-task` per candidate). Deterministic assembly, not
@@ -56,6 +79,13 @@ export const AutomationSchema = z.object({
   name: z.string().min(1).optional(),
   trigger: TriggerSchema,
   target: TargetSchema,
+  /**
+   * Free-text steering passed as input to whatever the automation runs — the agent's
+   * prompt, the research focus ("what to research"), or the briefing voice ("how to
+   * write the morning briefing"). Top-level (not per-target) so it always applies and
+   * is always forwarded, whatever the target. Optional.
+   */
+  prompt: z.string().optional(),
   enabled: z.boolean(),
   /**
    * Server-owned: a system automation is seeded by ZIBBY and cannot be deleted; only

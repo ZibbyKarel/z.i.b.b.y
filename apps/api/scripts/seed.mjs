@@ -659,7 +659,7 @@ const AUTOMATIONS = [
   {
     id: "au-media",
     name: "Po stažení srovnej média",
-    trigger: { type: "event", event: "file.created" },
+    trigger: { type: "event", events: ["file.created"] },
     target: { type: "agent", agentId: "curator" },
     enabled: true,
     lastFiredAt: iso(3 * MIN),
@@ -683,7 +683,7 @@ const AUTOMATIONS = [
   {
     id: "au-pr",
     name: "Hlídač PR",
-    trigger: { type: "event", event: "pr.opened" },
+    trigger: { type: "event", events: ["pr.opened"] },
     target: { type: "pipeline", pipelineId: "pr-guard" },
     enabled: false,
   },

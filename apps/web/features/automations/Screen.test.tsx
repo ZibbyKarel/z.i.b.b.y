@@ -15,6 +15,18 @@ const automation: Automation = {
   lastFiredAt: "2026-06-12T07:00:00.000Z",
 };
 
+const eventAutomation: Automation = {
+  id: "on-file",
+  name: "Po události",
+  trigger: { type: "event", events: ["file.created", "pr.opened"] },
+  // A briefing target (no agent picker) so the round-trip doesn't depend on the
+  // mocked-empty agents list — and it proves the prompt shows for a non-agent target.
+  target: { type: "briefing" },
+  prompt: "Piš stručně",
+  enabled: true,
+  system: false,
+};
+
 const systemAutomation: Automation = {
   id: "memory-distill",
   name: "Destilace paměti",
@@ -79,10 +91,25 @@ describe("Automations Screen", () => {
     expect(screen.getByTestId(AutomationFormTestId.Name)).toHaveValue("Ranní standup");
   });
 
-  it("opens the create dialog from the header action", () => {
+  it("opens the create dialog from the header action with the prompt always visible", () => {
     render(<Screen />);
     fireEvent.click(screen.getByRole("button", { name: "Nová automatizace" }));
     expect(screen.getByTestId(AutomationFormTestId.Submit)).toBeInTheDocument();
+    // The prompt is no longer agent-only — it's shown for every new automation.
+    expect(screen.getByTestId(AutomationFormTestId.Prompt)).toBeInTheDocument();
+  });
+
+  it("edits an event automation: prompt is shown and round-trips with trigger.events", () => {
+    automations = [eventAutomation];
+    render(<Screen />);
+    fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
+    // Prompt is always visible (not only for agent targets) and prefilled from top-level.
+    expect(screen.getByTestId(AutomationFormTestId.Prompt)).toHaveValue("Piš stručně");
+    fireEvent.click(screen.getByTestId(AutomationFormTestId.Submit));
+    expect(update).toHaveBeenCalledTimes(1);
+    const body = update.mock.calls[0]?.[0]?.body;
+    expect(body.trigger).toEqual({ type: "event", events: ["file.created", "pr.opened"] });
+    expect(body.prompt).toBe("Piš stručně");
   });
 });
 
