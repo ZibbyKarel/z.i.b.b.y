@@ -1,5 +1,6 @@
 [
-  { "name": "Test", "glyph": "code" },
-  { "name": "Client", "glyph": "briefcase" },
-  { "name": "Internal", "glyph": "server" }
+  {
+    "name": "Internal",
+    "glyph": "server"
+  }
 ]

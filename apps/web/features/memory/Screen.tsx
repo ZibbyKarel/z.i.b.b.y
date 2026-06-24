@@ -5,6 +5,7 @@ import {
   Chip,
   Container,
   Grid,
+  OrbitLoader,
   Pressable,
   Stack,
   TextInputField,
@@ -189,9 +190,11 @@ export function Screen() {
                 {filteredGraph ? (
                   <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
                 ) : (
-                  <Typography mono size="sm" type="note" variant="secondary">
-                    {t("loadingGraph")}
-                  </Typography>
+                  <Container padding={["500", "0"]}>
+                    <Stack align="center">
+                      <OrbitLoader label={t("loadingGraph")} />
+                    </Stack>
+                  </Container>
                 )}
               </HudPanel>
 

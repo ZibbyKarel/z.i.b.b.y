@@ -3,8 +3,7 @@
    with state, SVG dash/animation values, radial gradients). Every one is a
    genuinely dynamic or brand value with no DS prop equivalent, so it uses the
    sanctioned style escape hatch — file-level rather than per-line. */
-import Image from "next/image";
-import { Typography } from "@zibby/design-system";
+import { BrandIcon } from "../../../components/BrandIcon";
 
 const ACCENT = "var(--color-accent)";
 const S = 264;
@@ -150,25 +149,7 @@ export function ChatOrb({ thinking = false }: ChatOrbProps) {
             : "v-breath 3.8s ease-in-out infinite, v-glow-idle 3.8s ease-in-out infinite",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <Image
-            alt="ZIBBY"
-            height={40}
-            src="/z.i.b.b.y-icon.png"
-            style={{ borderRadius: "50%", opacity: thinking ? 1 : 0.85 }}
-            width={40}
-          />
-          <Typography
-            mono
-            size="2xs"
-            style={{ opacity: thinking ? 0.9 : 0.5 }}
-            tone="accent"
-            tracking="mono"
-            type="note"
-          >
-            Z·I·B·B·Y
-          </Typography>
-        </div>
+        <BrandIcon opacity={thinking ? 1 : 0.85} size={150} />
       </div>
     </div>
   );

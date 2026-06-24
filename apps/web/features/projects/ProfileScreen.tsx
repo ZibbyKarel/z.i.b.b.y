@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
+import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@zibby/contracts";
 import {
   Button,
   CodeBlock,
@@ -21,24 +19,20 @@ import {
   Tooltip,
   Typography,
 } from "@zibby/design-system";
-import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@zibby/contracts";
-import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { useTranslations } from "next-intl";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
 import { InboxPanel } from "../integrations/components/InboxPanel";
-import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
+import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
-import {
-  useProjectCategoriesQuery,
-  useProjectProfileQuery,
-  useProjectQuery,
-  useProjectStandupQuery,
-} from "./queries";
 import {
   useCreateProjectMutation,
   useDeleteProjectMutation,
@@ -47,6 +41,12 @@ import {
   useUpdateProjectMutation,
   useUpdateProjectProfileMutation,
 } from "./mutations";
+import {
+  useProjectCategoriesQuery,
+  useProjectProfileQuery,
+  useProjectQuery,
+  useProjectStandupQuery,
+} from "./queries";
 
 // ---------------------------------------------------------------------------
 // Autonomy action vocabulary
@@ -586,11 +586,16 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
               <Button
                 icon="x"
                 intent="danger"
+                loading={deleteProject.isPending}
                 onClick={() => {
-                  setConfirmDelete(false);
                   deleteProject.mutate(
                     { params: { id } },
-                    { onSuccess: () => router.push("/projects") },
+                    {
+                      onSuccess: () => {
+                        setConfirmDelete(false);
+                        router.push("/projects");
+                      },
+                    },
                   );
                 }}
               >

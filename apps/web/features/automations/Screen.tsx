@@ -1,23 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import type { Automation } from "@zibby/contracts";
+import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import { Collection } from "@/components/Collection/Collection";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
-import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { useAgentsQuery } from "../agents/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
 import { AutomationCard } from "./components/AutomationCard";
 import { AutomationFormDialog } from "./components/AutomationFormDialog";
-import { useAutomationsQuery } from "./queries";
 import {
   useCreateAutomationMutation,
   useTriggerAutomationMutation,
   useUpdateAutomationMutation,
 } from "./mutations";
+import { useAutomationsQuery } from "./queries";
 
 /** Which automation the form dialog is open for: "new", an entity, or closed. */
 type Editing = "new" | Automation | null;
@@ -128,7 +129,15 @@ export function Screen() {
                     <Icon name="clock" size="sm" tone="accent" /> {t("cronSection")}
                   </Stack>
                 </SectionLabel>
-                <Stack gap="150">{cronAutomations.map(renderCard)}</Stack>
+                <Collection
+                  empty={{
+                    description: "",
+                    glyph: "clock",
+                    title: "",
+                  }}
+                  items={cronAutomations}
+                  renderItem={renderCard}
+                />
               </Container>
             )}
             {eventAutomations.length > 0 && (
