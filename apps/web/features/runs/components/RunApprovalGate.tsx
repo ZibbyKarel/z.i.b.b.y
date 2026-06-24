@@ -6,7 +6,7 @@ import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import type { DashboardApproval } from "../../approvals/approval";
 import { HIGH_RISK_TYPES, SEVERITY } from "../../approvals/approval";
 import { ApprovalPreview } from "../../approvals/components/ApprovalPreview";
-import { useApproveMutation, useRejectMutation } from "../../approvals/mutations";
+import { useApproveMutation, useRejectMutation } from "../../approvals";
 
 export interface RunApprovalGateProps {
   approval: DashboardApproval;

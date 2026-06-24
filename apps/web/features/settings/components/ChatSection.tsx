@@ -5,8 +5,7 @@ import { useTranslations } from "next-intl";
 import { ButtonGroup, Stack, Typography } from "@zibby/design-system";
 import type { ChatPersona, SystemConfig } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useSystemConfigQuery } from "../../system/queries";
-import { useSetSystemConfigMutation } from "../../system/mutations";
+import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
 /** The personas offered, in display order. Labels/descriptions come from i18n. */
 const PERSONAS: ChatPersona[] = ["jarvis", "concise", "formal"];

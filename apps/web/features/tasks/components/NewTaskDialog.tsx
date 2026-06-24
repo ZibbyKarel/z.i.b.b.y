@@ -18,10 +18,9 @@ import { useRouter } from "next/navigation";
 import type { TaskOutput } from "@zibby/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
-import { useCreateGoalMutation } from "../../goals/mutations";
-import { useLimitsQuery } from "../../limits/queries/useLimitsQuery";
-import { useCreateProjectMutation } from "../../projects/mutations";
-import { useProjectsQuery } from "../../projects/queries/useProjectsQuery";
+import { useCreateGoalMutation } from "../../goals";
+import { useLimitsQuery } from "../../limits";
+import { useCreateProjectMutation, useProjectsQuery } from "../../projects";
 import {
   INITIAL_LOOP_STATE,
   type LoopFormState,

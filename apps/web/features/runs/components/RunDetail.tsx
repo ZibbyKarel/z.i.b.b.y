@@ -13,9 +13,9 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useNewTask } from "../../tasks/TaskContext";
+import { useNewTask } from "../../tasks";
 import { relativeTime, resumeEta } from "../../../utils/time";
-import { useApprovalsQuery } from "../../approvals/queries";
+import { useApprovalsQuery } from "../../approvals";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";

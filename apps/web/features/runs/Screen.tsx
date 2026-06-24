@@ -8,7 +8,7 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { useCancelScheduledTaskMutation } from "../tasks/mutations";
+import { useCancelScheduledTaskMutation } from "../tasks";
 import { RunDetail } from "./components/RunDetail";
 import { TaskCard } from "./components/TaskCard";
 import {

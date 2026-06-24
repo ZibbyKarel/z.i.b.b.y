@@ -5,8 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, Divider, NumberField, Stack, ToggleField, Typography } from "@zibby/design-system";
 import type { SystemConfig } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useSystemConfigQuery } from "../../system/queries";
-import { useSetSystemConfigMutation } from "../../system/mutations";
+import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
 /** Testids for the system config editor (the screen + tests select via these). */
 export enum SystemSectionTestId {

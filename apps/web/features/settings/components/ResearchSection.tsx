@@ -13,8 +13,7 @@ import {
 } from "@zibby/design-system";
 import type { ResearchConfig, ResearchSource, ResearchSourceKind } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useResearchConfigQuery } from "../../research/queries";
-import { useSetResearchConfigMutation } from "../../research/mutations";
+import { useResearchConfigQuery, useSetResearchConfigMutation } from "../../research";
 
 /** Testids for the research config editor (the screen + tests select via these). */
 export enum ResearchSectionTestId {

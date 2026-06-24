@@ -20,7 +20,7 @@ import { useState } from "react";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { useHealthQuery } from "../health/queries";
+import { useHealthQuery } from "../health";
 import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { ChatSection } from "./components/ChatSection";
 import { MandateSection } from "./components/MandateSection";

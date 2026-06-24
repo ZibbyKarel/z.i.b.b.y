@@ -10,14 +10,14 @@ import {
   type IntegrationDraft,
   IntegrationFormDialog,
 } from "../../integrations/components/IntegrationFormDialog";
-import { useIntegrationsQuery } from "../../integrations/queries";
 import {
   useCreateIntegrationMutation,
   useDeleteIntegrationMutation,
+  useIntegrationsQuery,
   useSetCredentialsMutation,
   useTestIntegrationMutation,
   useUpdateIntegrationMutation,
-} from "../../integrations/mutations";
+} from "../../integrations";
 
 /** Which integration the form dialog is open for: "new", an entity, or closed. */
 type Editing = "new" | Integration | null;

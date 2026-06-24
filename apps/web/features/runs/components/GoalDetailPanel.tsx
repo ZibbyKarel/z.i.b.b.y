@@ -12,9 +12,8 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useGoalsQuery } from "../../goals/queries";
-import { useResumeGoalRunMutation } from "../../goals/mutations";
-import { usePipelineRunQuery } from "../../pipelines/queries";
+import { useGoalsQuery, useResumeGoalRunMutation } from "../../goals";
+import { usePipelineRunQuery } from "../../pipelines";
 import type { RunView } from "../run";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
 import { RunLogStream } from "./RunLogStream";

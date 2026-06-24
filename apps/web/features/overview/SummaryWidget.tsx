@@ -3,13 +3,13 @@
 import { Container, Divider, Stack, Stat, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { useIntegrationsQuery } from "../integrations/queries";
-import { useAgentsQuery } from "../agents/queries";
-import { useApprovalsQuery } from "../approvals/queries/useApprovalsQuery";
-import { useHealthQuery } from "../health/queries";
-import { usePipelinesQuery } from "../pipelines/queries";
-import { useRunsQuery } from "../runs/queries/useRunsQuery";
-import { useSkillsQuery } from "../skills/queries";
+import { useIntegrationsQuery } from "../integrations";
+import { useAgentsQuery } from "../agents";
+import { useApprovalsQuery } from "../approvals";
+import { useHealthQuery } from "../health";
+import { usePipelinesQuery } from "../pipelines";
+import { useRunsQuery } from "../runs";
+import { useSkillsQuery } from "../skills";
 import { SUBSYSTEM_LABEL, deriveHealthPresentation, subsystemDotTone } from "./healthPresentation";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");

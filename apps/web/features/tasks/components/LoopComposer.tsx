@@ -8,8 +8,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
-import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
-import { usePipelinesQuery } from "../../pipelines/queries/usePipelinesQuery";
+import { useAgentsQuery } from "../../agents";
+import { usePipelinesQuery } from "../../pipelines";
 import { type LoopFormState, type VerifierKind, encodeMaker } from "../loop";
 
 export interface LoopComposerProps {

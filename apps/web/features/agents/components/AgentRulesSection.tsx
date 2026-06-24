@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import { useGateRulesQuery, useSystemPolicyQuery } from "../../gates/queries";
+import { useGateRulesQuery, useSystemPolicyQuery } from "../../gates";
 import { RuleCard } from "../../gates/components/RuleCard";
 import { DecisionBadge, MatcherText, ResolveChips } from "../../gates/components/RuleParts";
 import { MATCHER_ICON } from "../../gates/gate";

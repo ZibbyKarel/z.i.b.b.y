@@ -4,7 +4,7 @@ import type { Mandate } from "@zibby/contracts";
 import { Divider, Stack, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useIntegrationsQuery } from "../../integrations/queries";
+import { useIntegrationsQuery } from "../../integrations";
 import { useSetMandateMutation } from "../mutations";
 import { useMandateQuery } from "../queries";
 

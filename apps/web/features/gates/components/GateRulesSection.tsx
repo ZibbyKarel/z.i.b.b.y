@@ -8,8 +8,8 @@ import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useAgentsQuery } from "../../agents/queries";
-import { useSkillsQuery } from "../../skills/queries";
+import { useAgentsQuery } from "../../agents";
+import { useSkillsQuery } from "../../skills";
 import { DECISION_META, DECISION_ORDER } from "../gate";
 import {
   useCreateGateRuleMutation,
