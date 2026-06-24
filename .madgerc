@@ -1,0 +1,9 @@
+{
+  "fileExtensions": ["ts", "tsx"],
+  "tsConfig": "apps/web/tsconfig.json",
+  "detectiveOptions": {
+    "ts": { "skipTypeImports": true },
+    "tsx": { "skipTypeImports": true }
+  },
+  "excludeRegExp": ["(^|/)libs/", "(^|/)node_modules/"]
+}

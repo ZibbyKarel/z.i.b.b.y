@@ -30,6 +30,15 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm run typecheck
 
+  cycles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Fail the build on any circular import inside apps/web (madge). The app's
+      # feature graph is currently acyclic; this keeps it that way.
+      - run: pnpm run check:cycles
+
   test:
     runs-on: ubuntu-latest
     steps:

@@ -26,6 +26,7 @@
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006 -c libs/design-system/.storybook",
     "typecheck": "tsc -p tsconfig.base.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "check:cycles": "madge --circular apps/web",
     "e2e": "playwright test",
     "e2e:report": "playwright show-report"
   },
@@ -63,6 +64,7 @@
     "eslint-config-next": "^16.2.7",
     "eslint-plugin-react": "^7.37.5",
     "jsdom": "^25.0.1",
+    "madge": "^8.0.0",
     "postcss": "^8.4.49",
     "prettier": "^3.8.4",
     "storybook": "^8.4.7",
