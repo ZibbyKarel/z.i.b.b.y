@@ -2,16 +2,16 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
-import { getRunningAgentsQueryKey } from "../agents/queries/useRunningAgentsQuery";
+import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
 import { getBudgetQueryKey } from "../projects/queries/useBudgetQuery";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
 import { getBriefingQueryKey } from "../overview/queries/useBriefingQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
-import { getPipelineRunQueryKey } from "../pipelines/queries/usePipelineRunQuery";
+import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { API_URL } from "../../state/api";
-import { allTaskRunsKey } from "./queries/useRunsQuery";
+import { allTaskRunsKey } from "./queries/keys";
 
 /**
  * Payload mirror of the API's events (see apps/api/src/shared/sse/sse.ts and the

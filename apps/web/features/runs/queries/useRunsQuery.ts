@@ -7,12 +7,13 @@ import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import { useRunEventsConnected } from "../runEvents";
 import type { RunView } from "../run";
+import { allTaskRunsKey } from "./keys";
+
+// Re-exported so existing deep importers keep resolving the key from here; the
+// canonical home is the dependency-free `./keys` module (see its header).
+export { allTaskRunsKey };
 
 const POLL_MS = 2_000;
-
-/** Cache key for the unified task-run feed. Exported so the stop/resume/delete
- * mutations and the SSE channel invalidate exactly what this feed reads. */
-export const allTaskRunsKey = ["taskRuns", "all"] as const;
 
 /** A feed row that is still progressing — a live run (`running`/`awaiting-approval`/
  * `parked`) or a still-waiting `scheduled` task whose due time can arrive any moment.

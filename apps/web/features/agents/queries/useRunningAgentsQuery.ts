@@ -1,14 +1,11 @@
 import { useRunEventsConnected } from "../../runs/runEvents";
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
+import { getRunningAgentsQueryKey } from "./keys";
 
-/**
- * Shared cache key for the live running-agents list. Exported so the run
- * mutations can target it for invalidation.
- */
-export function getRunningAgentsQueryKey() {
-  return ["agents", "running"] as const;
-}
+// Re-exported so existing deep importers keep resolving the key from here; the
+// canonical home is the dependency-free `./keys` module (see its header).
+export { getRunningAgentsQueryKey };
 
 /** Running runs are short-lived; poll often enough to feel live. */
 const RUNNING_POLL_MS = 2_000;
