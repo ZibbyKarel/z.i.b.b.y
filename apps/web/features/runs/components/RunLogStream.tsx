@@ -1,5 +1,6 @@
-import { CodeBlock, Icon, Panel, Typography } from "@zibby/design-system";
+import { Icon, Panel, Typography } from "@zibby/design-system";
 import { useRunLog } from "../useRunLog";
+import { RunTranscript } from "./RunTranscript";
 
 export interface RunLogStreamProps {
   /** The run whose log to tail (an agent run id, or a goal child's runRef). */
@@ -37,9 +38,8 @@ export function RunLogStream({ runId, live, liveLabel, logLabel, linesLabel }: R
         </Typography>
       }
     >
-      <CodeBlock
-        followTail
-        caret={live && !done}
+      <RunTranscript
+        live={live && !done}
         maxHeight="viewport"
         placeholder={`${liveLabel}…`}
         scrollKey={text}

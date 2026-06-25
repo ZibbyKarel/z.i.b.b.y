@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, CodeBlock, Stack, Typography } from "@zibby/design-system";
+import { Button, Stack, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import type { RunView } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
+import { RunTranscript } from "./RunTranscript";
 
 export interface PipelineStageTimelineProps {
   /** The pipeline run whose stages to show (its own runId, or a goal's pipeline maker ref). */
@@ -50,7 +51,7 @@ function StageLog({
     );
   }
   return text ? (
-    <CodeBlock followTail caret={live} maxHeight="viewport" scrollKey={text} text={text} />
+    <RunTranscript live={live} maxHeight="viewport" scrollKey={text} text={text} />
   ) : (
     <Typography mono size="2xs" type="note" variant="tertiary">
       {live ? `${t("liveLog")}…` : t("stageNoLog")}
