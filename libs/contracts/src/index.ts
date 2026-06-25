@@ -16,6 +16,7 @@ export * from "./projects/project.schema";
 export * from "./projects/projects.contract";
 export * from "./pipelines/pipeline.schema";
 export * from "./pipelines/pipeline-run.schema";
+export * from "./pipelines/stage-verdict.schema";
 export * from "./pipelines/pipelines.contract";
 export * from "./goals/goal.schema";
 export * from "./goals/goal-run.schema";
