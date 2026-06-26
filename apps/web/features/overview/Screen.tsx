@@ -10,7 +10,9 @@ import { useIntegrationsQuery } from "../integrations";
 import { usePipelinesQuery } from "../pipelines";
 import { useSkillsQuery } from "../skills";
 import { NeedsAttentionPanel } from "../integrations/components/NeedsAttentionPanel";
+import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
+import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { useActivityQuery } from "./queries";
 import { SummaryWidget } from "./SummaryWidget";
@@ -42,6 +44,12 @@ export function Screen() {
         <SummaryWidget />
 
         <BriefingCard />
+
+        {/* Approvals + parked runs — the needs-you queue that used to live in the
+            right rail. The rail is now a pure live activity log. */}
+        <ApprovalsPanel />
+
+        <ParkedRunsPanel />
 
         {/* "Needs your attention" — notify-only items ZIBBY surfaced (inbound mail that
             wants a reply or a decision) as summary cards linking to the original. */}

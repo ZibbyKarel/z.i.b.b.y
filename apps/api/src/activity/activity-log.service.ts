@@ -5,6 +5,7 @@ import {
   type ActivityEntry,
   ActivityEntrySchema,
   type ActivityKind,
+  type ActivityPage,
   type ActivityRefs,
 } from "@zibby/contracts";
 import { collisionResistantId, ensureDir, safeJson } from "../shared/file-storage";
@@ -40,7 +41,41 @@ export interface ActivityListOptions {
   days?: number;
 }
 
+/** Options for {@link ActivityLogService.page}. */
+export interface ActivityPageOptions {
+  /** Opaque `<at>|<id>` cursor — return entries strictly older than this one. */
+  before?: string;
+  /** Page size, clamped to [1, 200] (defaults to 50). */
+  limit?: number;
+  /** Restrict to these kinds. */
+  kinds?: ActivityKind[];
+}
+
+/** The parsed keyset cursor — the `at`/`id` of the previous page's oldest entry. */
+interface PageCursor {
+  at: string;
+  id: string;
+}
+
 const YYYY_MM_DD = (d: Date): string => d.toISOString().slice(0, 10);
+
+/** Newest-first total order: by `at`, then `id` as a stable tiebreak. */
+const byNewest = (a: ActivityEntry, b: ActivityEntry): number =>
+  b.at.localeCompare(a.at) || b.id.localeCompare(a.id);
+
+/** Parse a `<at>|<id>` cursor; a malformed/absent value means "from the newest". */
+function parseCursor(before: string | undefined): PageCursor | null {
+  if (!before) return null;
+  const sep = before.lastIndexOf("|");
+  if (sep <= 0 || sep === before.length - 1) return null;
+  return { at: before.slice(0, sep), id: before.slice(sep + 1) };
+}
+
+/** True when `entry` sorts strictly after the cursor in newest-first order. */
+function isOlderThanCursor(entry: ActivityEntry, cursor: PageCursor): boolean {
+  if (entry.at !== cursor.at) return entry.at < cursor.at;
+  return entry.id < cursor.id;
+}
 
 /**
  * The append-only activity log (Phase 6.1) — ZIBBY's accountability record. One
@@ -93,7 +128,7 @@ export class ActivityLogService {
         `${JSON.stringify(entry)}\n`,
         "utf8",
       );
-      this.events.emit({ kind: entry.kind, at: entry.at });
+      this.events.emit({ kind: entry.kind, at: entry.at, entry });
     } catch (error) {
       this.logger.warn(`activity record dropped (${input.kind}): ${String(error)}`);
     }
@@ -128,6 +163,49 @@ export class ActivityLogService {
 
   private hasRefFilter(opts: ActivityListOptions): boolean {
     return opts.projectId !== undefined || opts.integrationId !== undefined;
+  }
+
+  /**
+   * Keyset (cursor) page over the WHOLE on-disk history, newest-first — the
+   * RightRail live log's infinite query. `before` is the opaque `<at>|<id>` cursor
+   * of the previous page's oldest entry; entries strictly older than it are
+   * returned (the `id` tiebreak makes the order a total order so a same-`at` burst
+   * never drops or repeats an entry across the boundary). Reads only day files that
+   * exist (via {@link listDayFilesDesc}) and stops as soon as `limit + 1` matches
+   * are collected, so a deep history costs at most one extra day-file read.
+   */
+  async page(opts: ActivityPageOptions = {}): Promise<ActivityPage> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+    const cursor = parseCursor(opts.before);
+    const kinds = opts.kinds && opts.kinds.length > 0 ? new Set(opts.kinds) : undefined;
+    const days = await this.listDayFilesDesc();
+    const collected: ActivityEntry[] = [];
+    for (const day of days) {
+      // A whole day newer than the cursor's day can hold nothing older than it.
+      if (cursor && day > cursor.at.slice(0, 10)) continue;
+      const dayEntries = (await this.readDay(day)).sort(byNewest);
+      for (const entry of dayEntries) {
+        if (cursor && !isOlderThanCursor(entry, cursor)) continue;
+        if (kinds && !kinds.has(entry.kind)) continue;
+        collected.push(entry);
+        if (collected.length > limit) break;
+      }
+      if (collected.length > limit) break;
+    }
+    const hasMore = collected.length > limit;
+    const entries = collected.slice(0, limit);
+    const oldest = entries[entries.length - 1];
+    const nextCursor = hasMore && oldest ? `${oldest.at}|${oldest.id}` : null;
+    return { entries, nextCursor };
+  }
+
+  /** Existing `<YYYY-MM-DD>.jsonl` day files, newest-first — bounds the page scan. */
+  private async listDayFilesDesc(): Promise<string[]> {
+    const names = await fs.readdir(this.dir).catch(() => [] as string[]);
+    return names
+      .filter((n) => /^\d{4}-\d{2}-\d{2}\.jsonl$/.test(n))
+      .map((n) => n.slice(0, 10))
+      .sort((a, b) => b.localeCompare(a));
   }
 
   /**

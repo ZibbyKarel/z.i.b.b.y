@@ -136,3 +136,29 @@ export const ActivityQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).optional(),
 });
 export type ActivityQuery = z.infer<typeof ActivityQuerySchema>;
+
+/**
+ * Query for `GET /api/activity/page` — keyset (cursor) pagination over the WHOLE
+ * on-disk history, newest-first, spanning day-file boundaries. The RightRail live
+ * log reads through this and an infinite query: the first page is the newest
+ * entries, each `nextCursor` walks strictly further back. `before` is an opaque
+ * cursor (`<at>|<id>` of the previous page's oldest entry); `limit` is clamped to
+ * [1, 200]. `kinds` is accepted for symmetry but the rail filters client-side.
+ */
+export const ActivityPageQuerySchema = z.object({
+  before: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  kinds: z.string().optional(),
+});
+export type ActivityPageQuery = z.infer<typeof ActivityPageQuerySchema>;
+
+/**
+ * One page of the activity log. `entries` are newest-first; `nextCursor` is the
+ * opaque cursor to pass back as `before` for the following (older) page, or `null`
+ * when the history is exhausted.
+ */
+export const ActivityPageSchema = z.object({
+  entries: z.array(ActivityEntrySchema),
+  nextCursor: z.string().nullable(),
+});
+export type ActivityPage = z.infer<typeof ActivityPageSchema>;

@@ -83,6 +83,17 @@ Client component (`"use client"`):
 - Mountuje `CatalogProvider`, `VoiceProvider`, `NewTaskProvider`
 - Renderuje `MainLayout` s nav/rail/voice/task sloty
 
+### RightRail = živý log (global)
+
+`RightRail` (`components/layout/RightRail/`) je teď **čistě živý log toho, co server právě dělá**
+(`> 10:03  Integration gmail checked for changes`) — viditelný na **každé** stránce. Data jdou přes
+SSE (entry se prependuje, viz `prependActivityEntry`) + `useActivityFeedInfiniteQuery` ("Load older"
+stránkuje historii dozadu). Co je viditelné / seskupené / skryté řídí **Settings → Activity** config
+(`useActivityViewQuery`), grouping je čistá funkce `features/overview/activityLog.ts`.
+
+Approvals + parked runs se přesunuly **z railu do obsahu `/overview`** (`ApprovalsPanel`,
+`ParkedRunsPanel`); `/runs` tab i badge u `/runs` zůstávají beze změny.
+
 ## Internacionalizace (next-intl)
 
 - Locale v cookie (bez prefix v URL ceste)

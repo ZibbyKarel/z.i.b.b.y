@@ -3,9 +3,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/keys";
+import type { ActivityEntry } from "@zibby/contracts";
 import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
 import { getBudgetQueryKey } from "../projects/queries/useBudgetQuery";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
+import { prependActivityEntry } from "../overview/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../overview/queries/useBriefingQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
@@ -25,6 +27,8 @@ interface RunStatusEvent {
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
   kind?: string;
+  /** Activity-scope only: the full entry, prepended onto the live-log feed. */
+  entry?: ActivityEntry;
 }
 
 /**
@@ -97,10 +101,12 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         void qc.invalidateQueries({ queryKey: getChannelItemsQueryKey() });
         void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
       } else if (parsed.scope === "activity") {
-        // A new activity entry was recorded — refresh the overview feed AND the
-        // briefing card: the GET briefing is a live assembly of pending approvals,
+        // A new activity entry was recorded. The rail's live-log feed gets the full
+        // entry prepended (no refetch); the small overview feed AND the briefing
+        // card invalidate — the GET briefing is a live assembly of pending approvals,
         // parked runs and channel items, all of which emit activity entries, so any
         // recorded action can change what the card should show.
+        if (parsed.entry) prependActivityEntry(qc, parsed.entry);
         void qc.invalidateQueries({ queryKey: getActivityQueryKey() });
         void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
       }

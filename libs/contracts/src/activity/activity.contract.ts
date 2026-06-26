@@ -1,7 +1,12 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
-import { ActivityEntrySchema, ActivityQuerySchema } from "./activity.schema";
+import {
+  ActivityEntrySchema,
+  ActivityPageQuerySchema,
+  ActivityPageSchema,
+  ActivityQuerySchema,
+} from "./activity.schema";
 
 const c = initContract();
 
@@ -19,6 +24,13 @@ export const activityContract = c.router(
       query: ActivityQuerySchema,
       responses: { 200: z.array(ActivityEntrySchema), 422: ErrorSchema },
       summary: "List recorded activity (newest-first, defaulting to today)",
+    },
+    pageActivity: {
+      method: "GET",
+      path: "/activity/page",
+      query: ActivityPageQuerySchema,
+      responses: { 200: ActivityPageSchema, 422: ErrorSchema },
+      summary: "Cursor-paginated activity over the whole history (newest-first)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

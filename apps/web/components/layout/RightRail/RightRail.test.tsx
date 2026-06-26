@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
-import { CatalogProvider } from "../../../state/store";
 import { RightRail } from "./RightRail";
 
 describe("RightRail", () => {
-  it("renders the rail panels (approvals queue + running agents)", () => {
-    // No live API under test, so the queries stay pending and each panel renders
-    // its empty/fallback state — enough to assert the rail is wired up.
-    renderWithProviders(
-      <CatalogProvider>
-        <RightRail />
-      </CatalogProvider>,
-    );
-    expect(screen.getByText("fronta schválení")).toBeInTheDocument();
+  it("renders the live activity log header and empty state", () => {
+    // No live API under test, so the feed query stays pending and the rail shows
+    // its title + empty state — enough to assert the log is wired up. (Approvals
+    // moved to the Overview page; the rail is now a pure log.)
+    renderWithProviders(<RightRail />);
+    expect(screen.getByText("Živý log")).toBeInTheDocument();
+    expect(screen.getByText("Zatím žádná aktivita.")).toBeInTheDocument();
   });
 });

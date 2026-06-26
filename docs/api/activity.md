@@ -76,16 +76,29 @@ interface ActivityRefs {
 
 - `record({ kind, summary, refs })` — **nikdy nehází** (accountability nesmí přerušit actuaci)
 - `list({ date?, kinds?, limit? })` — čte JSONL po řádcích; špatný řádek po crash přeskočí (neshodí celý den)
+- `page({ before?, limit?, kinds? })` — **keyset (cursor) stránkování přes celou historii**,
+  newest-first, napříč denními soubory. Cursor je neprůhledný `<at>|<id>` nejstaršího záznamu
+  předchozí stránky; vrací `{ entries, nextCursor }` (`nextCursor === null` = konec historie).
+  Čte jen existující denní soubory (`fs.readdir`) a zastaví se po `limit + 1` shodách → hluboká
+  historie stojí max. jeden denní soubor navíc. Pohání RightRail živý log (infinite query).
 - `traceId` / `runId` jsou razítkovány automaticky z `TraceContextService` (AsyncLocalStorage)
 
 ### API
 
 ```
 GET /api/activity?date=YYYY-MM-DD&kinds=run-started,run-finished&limit=50
+GET /api/activity/page?before=<cursor>&limit=50          # newest-first, cursor stránkování
 ```
 
-Výchozí: dnešní den, limit 50. Max limit: 500.  
-`kinds` je comma-separated allow-list `ActivityKind` hodnot.
+`GET /api/activity` — výchozí dnešní den, limit 50, max 500. `kinds` je comma-separated allow-list.  
+`GET /api/activity/page` — celá historie po stránkách (limit 1–200, default 50); `before` je
+`nextCursor` z předchozí odpovědi.
+
+### SSE — `activity` scope (fat event)
+
+`ActivityEventsService.emit` nese **celý `ActivityEntry`**; events controller publikuje
+`{ scope: "activity", kind, at, entry }` na `/api/events`. Web RightRail entry **prependuje** do
+infinite-query cache (bez refetchu); malý overview feed + briefing card se invalidují jako dřív.
 
 ## ActivityRecorderModule
 
@@ -93,6 +106,25 @@ Výchozí: dnešní den, limit 50. Max limit: 500.
 
 Mapovací vrstva — přijímá interní business události (EventsService) a zapisuje je jako activity entries.
 Odděluje business logiku od formátu logu.
+
+## Activity view — RightRail live-log config
+
+Operátorem vlastněný dokument (twin `mandate.json`) řídí, jak se activity log zobrazuje v pravém
+panelu (živý log). Každá **skupina** kindů (`tasks · runs · pipelines · goals · approvals · channels
+· integrations · research · briefing`) má režim `visible` (každý záznam zvlášť) / `grouped` (sloučené
+do jednoho řádku s počtem) / `hidden` (v logu vůbec). Mapa kind → skupina a defaulty žijí v
+`libs/contracts/src/activity/activity-view.schema.ts` (`ACTIVITY_GROUP_OF`, `DEFAULT_ACTIVITY_VIEW`).
+
+**Soubory:** `apps/api/src/activity-view/` (storage + controller + module), uloženo do
+`apps/api/data/activity-view.json` (atomicky, tolerantní read → default). Filtrování/seskupování
+probíhá **client-side** (malá data, okamžitá změna konfigurace).
+
+```
+GET /api/activity/view          # aktuální config (seeded default když chybí)
+PUT /api/activity/view          # nahradí — strict, 422 na neznámý klíč skupiny (Law 4)
+```
+
+Edituje se v UI v **Settings → Activity**.
 
 ## Briefing systém
 

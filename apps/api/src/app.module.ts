@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ActivityLogModule } from "./activity/activity-log.module";
 import { ActivityRecorderModule } from "./activity/activity-recorder.module";
+import { ActivityViewModule } from "./activity-view/activity-view.module";
 import { AgentsModule } from "./agents/agents.module";
 import { ApprovalsModule } from "./approvals/approvals.module";
 import { AutomationsModule } from "./automations/automations.module";
@@ -37,6 +38,7 @@ import { TasksModule } from "./tasks/tasks.module";
     LoggingModule,
     SystemModule,
     ActivityLogModule,
+    ActivityViewModule,
     AgentsModule,
     SkillsModule,
     ProjectsModule,

@@ -45,6 +45,15 @@ export class ActivityController {
           }),
         };
       },
+
+      pageActivity: async ({ query }) => ({
+        status: 200,
+        body: await this.activity.page({
+          before: query.before,
+          limit: query.limit,
+          kinds: parseKinds(query.kinds),
+        }),
+      }),
     });
   }
 }
