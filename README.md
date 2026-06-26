@@ -133,9 +133,9 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 
 ### Data storage
 
-| Variable         | Default         | Description                                                                                                                                                                                                                                                           |
-| ---------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ZIBBY_DATA_DIR` | `apps/api/data` | Root for all file-backed stores. Relative paths resolve from the repo root. Every `*_DIR` variable below can still override an individual store on top of this. The `:test` scripts (`api:dev:test`, `api:start:test`, `seed:test`) set this to `apps/api/data-test`. |
+| Variable         | Default         | Description                                                                                                                                                                                                                                                         |
+| ---------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ZIBBY_DATA_DIR` | `apps/api/data` | Root for all file-backed stores. Relative paths resolve from the repo root. Every `*_DIR` variable below can still override an individual store on top of this. The `:test` scripts (`api:dev:test`, `api:start:test`, `seed:test`) set this to `.zibby/data-test`. |
 
 Individual store directories default to the corresponding subfolder of `ZIBBY_DATA_DIR` but can each be overridden independently:
 

@@ -1,0 +1,5 @@
+00:00 spuštěn skill ci-doctor · projekt auth-svc
+00:40 staženy logy posledního běhu CI
+01:30 nalezen flaky test: auth.spec.ts „refresh token”
+02:30 navržen fix · seed náhodného času → fixed clock
+02:40 hotovo · report v test-report.md

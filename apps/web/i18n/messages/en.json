@@ -937,7 +937,12 @@
     "stageAttempt": "attempt {n}",
     "stageNoLog": "This stage has no log yet.",
     "stageNone": "This run has no stages yet.",
-    "stageLoading": "Loading maker stages…"
+    "stageLoading": "Loading maker stages…",
+    "verdict": {
+      "pass": "Approved",
+      "gap": "Incomplete",
+      "drift": "Off-track"
+    }
   },
   "gates": {
     "title": "Approval rules",

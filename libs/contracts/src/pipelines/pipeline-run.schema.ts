@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { WorkspaceSchema } from "../common.schema";
 import { PipelineOutputSchema } from "./pipeline.schema";
+import { StageVerdictSchema } from "./stage-verdict.schema";
 
 /**
  * Status of a single stage's underlying run. The runner's full set, including
@@ -47,6 +48,8 @@ export const StageRunSchema = z.object({
   runId: z.string().min(1),
   attempt: z.number().int().min(1),
   status: StageRunStatusSchema,
+  /** A qualify phase's parsed verdict (Phase 45); absent on non-qualify phases. */
+  verdict: StageVerdictSchema.optional(),
 });
 export type StageRun = z.infer<typeof StageRunSchema>;
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack, Typography } from "@zibby/design-system";
+import { Button, Stack, Tag, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import type { RunView } from "../run";
@@ -81,7 +81,7 @@ export function PipelineStageTimeline({
   // terminal-only), so synthesize a live row for it — its attempt is one past the
   // terminal attempts already recorded for that phase. Without this the running
   // phase (and its growing log) would be invisible until it finished.
-  const liveRow =
+  const liveRow: (typeof terminalStages)[number] | null =
     live && currentStage
       ? {
           phaseId: currentStage,
@@ -143,6 +143,15 @@ export function PipelineStageTimeline({
                     )}
                   </Stack>
                   <Stack align="center" direction="row" gap="100">
+                    {s.verdict && (
+                      <Tag
+                        data-testid={`stage-verdict-${s.verdict}`}
+                        size="sm"
+                        tone={s.verdict === "pass" ? "ok" : "warn"}
+                      >
+                        {t(`verdict.${s.verdict}`)}
+                      </Tag>
+                    )}
                     <RunStateBadge
                       canonTitle={s.status}
                       label={t(`state.${s.status}`)}

@@ -1,0 +1,14 @@
+{
+  "id": "au-backup",
+  "name": "Záloha vaultu",
+  "trigger": {
+    "type": "cron",
+    "expr": "0 4 * * *"
+  },
+  "target": {
+    "type": "skill",
+    "skillId": "nas-backup"
+  },
+  "enabled": true,
+  "lastFiredAt": "2026-06-04T00:57:27.162Z"
+}

@@ -17,9 +17,11 @@ import {
   type Project,
   type RunLogChunk,
   type StageRun,
+  type StageVerdict,
   type TaskOutput,
   type Workspace,
 } from "@zibby/contracts";
+import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
@@ -37,10 +39,12 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { prepareWorktreeDir } from "../shared/worktree-root";
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service";
+import { buildStageTask } from "./build-stage-task";
 import { PipelinesStorageService } from "./pipelines.storage.service";
 import { type PipelineStageRecord, pipelineStageStrategy } from "./pipeline-stage.record";
 import { renderProgress } from "./progress";
 import { buildResumeContext } from "./resume-context";
+import { parseStageVerdict } from "./stage-verdict";
 import { buildVerifyCommand } from "./verify-command";
 
 /** DI token carrying the absolute path of the directory that holds pipeline run artifacts. */
@@ -117,6 +121,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly projectSecrets: ProjectSecretsStore,
+    private readonly activity: ActivityLogService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(PipelineRunnerService.name);
@@ -773,7 +778,26 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.stageRuns.push(stageRun);
       await this.writeAggregate(run);
 
-      if (stageRun.status === "done") {
+      // Phase 45: a `qualify` agent phase that ran clean is graded on the verdict it
+      // wrote into its artifact. pass advances; gap/drift/absent take the back-edge
+      // (fail-closed). The verdict is recorded on the stage for surfacing + activity.
+      let qualifyFail: { verdict: StageVerdict } | null = null;
+      if (stageRun.status === "done" && phase.qualify && phase.produces) {
+        const artifact = await fs
+          .readFile(path.join(stageCwd, phase.produces), "utf8")
+          .catch(() => "");
+        const verdict = parseStageVerdict(artifact) ?? "gap"; // fail-closed
+        stageRun.verdict = verdict;
+        await this.writeAggregate(run); // surface the verdict on the live timeline at once
+        await this.activity.record({
+          kind: "stage-verdict",
+          summary: `qualify "${phase.id}" → ${verdict}`,
+          refs: { pipelineId: run.pipelineId, status: verdict },
+        });
+        if (verdict !== "pass") qualifyFail = { verdict };
+      }
+
+      if (stageRun.status === "done" && !qualifyFail) {
         this.log.info("pipeline phase done", { phase: phase.id, attempt });
         // Phase 12.6: a `verify` phase passed → record the commands it ran (runner-set
         // from real execution, not an agent claim) so a goal maker can skip an identical
@@ -793,23 +817,31 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
 
-      // Stage failed (or was interrupted). Take the back-edge if one remains.
+      // Stage failed, was interrupted, OR a qualify phase returned gap/drift.
       const loop = phase.loop;
+      // drift re-plans (Architekt) via driftTo; gap / a real error fix in place (Kodér).
+      const retryTarget =
+        qualifyFail?.verdict === "drift" ? (loop?.driftTo ?? loop?.to) : loop?.to;
       if (loop && (retries.get(phase.id) ?? 0) < loop.maxRetries) {
         retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1);
         this.log.warn("pipeline phase failed; retrying", {
           phase: phase.id,
           status: stageRun.status,
+          verdict: qualifyFail?.verdict,
           attempt,
-          retryTo: loop.to,
+          retryTo: retryTarget,
         });
         handoffSource = await this.writeFailureContext(run, phase, stageRun);
         // Phase 9.3: the retried phase is a continuation — prefix it with the
         // resume-context (what's committed so far + this attempt's failure tail).
+        // Phase 45: a qualify verdict carries WHY into that handoff so Kodér/Architekt
+        // learn what the gate found, not just that they were re-dispatched.
         pendingResumeContext = await this.composeResumeContext(run, phaseIds, {
-          failureTail: await this.tailLog(stageRun.runId),
+          failureTail: qualifyFail
+            ? `verdict=${qualifyFail.verdict}\n${await this.tailLog(stageRun.runId)}`
+            : await this.tailLog(stageRun.runId),
         });
-        cursor = loop.to;
+        cursor = retryTarget!;
         await this.writeProgress(run, phaseIds);
         continue;
       }
@@ -1480,13 +1512,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // so anything sandbox-relative would silently resolve against the repo.
       const consumesAbs = phase.consumes ? path.join(cwd, phase.consumes) : null;
       const producesAbs = phase.produces ? path.join(cwd, phase.produces) : null;
-      const task = [
-        `Proveď fázi pipeline "${phase.id}".`,
-        consumesAbs ? `Vstup (pokud existuje) najdeš v "${consumesAbs}".` : "",
-        producesAbs ? `Výstup zapiš do "${producesAbs}".` : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
+      const task = buildStageTask({
+        phaseId: phase.id,
+        consumesAbs,
+        producesAbs,
+        qualify: phase.qualify,
+      });
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).
       const grounding = await this.grounding.compose({

@@ -78,6 +78,8 @@ async function makeService(
     fakeLogger as never,
     fakeTrace as never,
     { read: vi.fn(async () => null), has: vi.fn(async () => false) } as never,
+    // Activity log double (Phase 45).
+    { record: vi.fn(async () => {}) } as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {
     init: vi.fn(),

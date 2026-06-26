@@ -9,7 +9,7 @@ import * as path from "node:path";
  * Anchored to `apps/api/data` via this file's location rather than the process
  * cwd, so dev (`ts-node`, cwd `apps/api`) and the test runner (cwd = repo root)
  * resolve to the same place. A relative `ZIBBY_DATA_DIR` is resolved against the
- * cwd, so `ZIBBY_DATA_DIR=apps/api/data-test` from the repo root lands a sibling
+ * cwd, so `ZIBBY_DATA_DIR=.zibby/data-test` from the repo root lands a sibling
  * of the default `apps/api/data`.
  */
 export function resolveDataRoot(): string {

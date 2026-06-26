@@ -45,6 +45,18 @@ describe("ActivityEntrySchema", () => {
     expect(ActivityEntrySchema.safeParse(base).success).toBe(true);
   });
 
+  it("accepts a Phase 45 stage-verdict entry", () => {
+    expect(
+      ActivityEntrySchema.safeParse({
+        ...base,
+        kind: "stage-verdict",
+        summary: 'qualify "review" → gap',
+        refs: { pipelineId: "delivery", status: "gap" },
+      }).success,
+    ).toBe(true);
+    expect(ActivityKindSchema.options).toContain("stage-verdict");
+  });
+
   it("rejects an unknown kind (closed enum)", () => {
     expect(ActivityEntrySchema.safeParse({ ...base, kind: "made-up" }).success).toBe(false);
   });

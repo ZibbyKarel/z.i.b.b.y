@@ -11,28 +11,28 @@ out/
 graphify-out/
 
 # Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
-apps/api/data-test/
-apps/api/data/**/runs
-apps/api/data/approvals
-apps/api/data/tasks
-apps/api/data/vault/daily
-apps/api/data/credentials
-apps/api/data/channels
-apps/api/data/integration-state
-apps/api/data/activity
-apps/api/data/budget-ledger
-apps/api/data/research-digest.json
-apps/api/data/mcp-credentials
-apps/api/data/project-secrets
-apps/api/data/_purged
-apps/api/data/chat
+.zibby/data-test/
+.zibby/data/**/runs
+.zibby/data/approvals
+.zibby/data/tasks
+.zibby/data/vault/daily
+.zibby/data/credentials
+.zibby/data/channels
+.zibby/data/integration-state
+.zibby/data/activity
+.zibby/data/budget-ledger
+.zibby/data/research-digest.json
+.zibby/data/mcp-credentials
+.zibby/data/project-secrets
+.zibby/data/_purged
+.zibby/data/chat
 
-!apps/api/data/agents
-!apps/api/data/automations
-!apps/api/data/skills
-!apps/api/data/hooks
-!apps/api/data/commands
-!apps/api/data/mcp-servers
+.!zibby/data/agents
+.!zibby/data/automations
+.!zibby/data/skills
+.!zibby/data/hooks
+.!zibby/data/commands
+.!zibby/data/mcp-servers
 
 
 # Env / secrets — never commit

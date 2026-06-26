@@ -120,4 +120,21 @@ describe("PipelineStageTimeline (28)", () => {
     render(timeline({ owner: "", stageRuns: [] }));
     expect(screen.queryByRole("button", { name: /pipeline/i })).not.toBeInTheDocument();
   });
+
+  it("renders a verdict chip on a graded qualify stage (Phase 45) and none otherwise", () => {
+    render(
+      timeline({
+        stageRuns: [
+          { phaseId: "review", runId: "d_1.review_1", attempt: 1, status: "done", verdict: "gap" },
+          { phaseId: "review", runId: "d_1.review_2", attempt: 2, status: "done", verdict: "pass" },
+          { phaseId: "koder", runId: "d_1.koder_1", attempt: 1, status: "done" },
+        ],
+      }),
+    );
+    expect(screen.getByTestId("stage-verdict-gap")).toHaveTextContent("Chybí část");
+    expect(screen.getByTestId("stage-verdict-pass")).toHaveTextContent("Schváleno");
+    // The non-qualify koder stage carries no verdict chip.
+    expect(screen.queryByTestId("stage-verdict-drift")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/^stage-verdict-/)).toHaveLength(2);
+  });
 });

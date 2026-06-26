@@ -8,7 +8,10 @@
 // Tunables: AGENT_DEMO_STEPS, AGENT_DEMO_DELAY_MS,
 //           PIPELINE_DEMO_FAIL_PHASES (comma-separated phase ids that exit 1),
 //           PIPELINE_DEMO_EMIT_LEARNED (phase id that also writes learned.md, so
-//           the memory recorder's delivery trace is exercisable without an LLM).
+//           the memory recorder's delivery trace is exercisable without an LLM),
+//           PIPELINE_DEMO_GAP_PHASES (qualify phases that emit <verdict>gap</verdict>
+//           once then <verdict>pass</verdict>), PIPELINE_DEMO_DRIFT_PHASES (always
+//           emit <verdict>drift</verdict>) — exercising the Phase 45 qualify back-edge.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
@@ -24,6 +27,18 @@ const failPhases = (process.env.PIPELINE_DEMO_FAIL_PHASES || "")
 // (marker-file in the stage cwd, which is stable across the respawn), so the
 // auto-resumed stage succeeds — exercising the pause → resume → finish loop.
 const limitPhases = (process.env.PIPELINE_DEMO_LIMIT_PHASES || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+// Phase 45: phases that emit a <verdict>gap</verdict> on the FIRST attempt (marker in
+// the stable stage cwd), then <verdict>pass</verdict> — exercising the qualify back-edge.
+const gapPhases = (process.env.PIPELINE_DEMO_GAP_PHASES || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+// Phase 45: phases that ALWAYS emit a <verdict>drift</verdict> — exercising the
+// drift → loop.driftTo (re-plan) route. Distinct from gapPhases (which flip to pass).
+const driftPhases = (process.env.PIPELINE_DEMO_DRIFT_PHASES || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -62,7 +77,19 @@ async function main() {
   if (producesRel) {
     const out = path.join(cwd, producesRel);
     await mkdir(path.dirname(out), { recursive: true });
-    await writeFile(out, `output of ${phaseId} @ ${new Date().toISOString()}\n`, "utf8");
+    // Phase 45: append a <verdict> tag the runner's qualify gate parses. gapPhases
+    // emit `gap` once (marker in the stable stage cwd) then `pass`; driftPhases always
+    // emit `drift`. A phase in neither set produces no tag → runner fails closed to gap.
+    let verdict = "";
+    if (gapPhases.includes(phaseId)) {
+      const marker = path.join(cwd, `.verdict-${phaseId}`);
+      const already = await readFile(marker, "utf8").catch(() => null);
+      verdict = `\n<verdict>${already === null ? "gap" : "pass"}</verdict>\n`;
+      if (already === null) await writeFile(marker, "1", "utf8");
+    } else if (driftPhases.includes(phaseId)) {
+      verdict = `\n<verdict>drift</verdict>\n`;
+    }
+    await writeFile(out, `output of ${phaseId} @ ${new Date().toISOString()}\n${verdict}`, "utf8");
     console.log(`Stage ${phaseId} produced ${producesRel}`);
   }
 

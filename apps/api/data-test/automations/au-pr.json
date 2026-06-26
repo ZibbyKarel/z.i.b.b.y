@@ -1,0 +1,13 @@
+{
+  "id": "au-pr",
+  "name": "Hlídač PR",
+  "trigger": {
+    "type": "event",
+    "event": "pr.opened"
+  },
+  "target": {
+    "type": "pipeline",
+    "pipelineId": "pr-guard"
+  },
+  "enabled": false
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Vývoj",
+    "glyph": "code"
+  },
+  {
+    "name": "Kvalita",
+    "glyph": "shield"
+  },
+  {
+    "name": "Výzkum",
+    "glyph": "search"
+  },
+  {
+    "name": "Dokumentace",
+    "glyph": "spark"
+  },
+  {
+    "name": "Média",
+    "glyph": "film"
+  },
+  {
+    "name": "Domácnost",
+    "glyph": "cart"
+  },
+  {
+    "name": "Psaní",
+    "glyph": "doc"
+  }
+]

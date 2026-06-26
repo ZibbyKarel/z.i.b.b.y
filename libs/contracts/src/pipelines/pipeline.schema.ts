@@ -27,6 +27,8 @@ export const PhaseLoopSchema = z.object({
   then: z.string().min(1),
   /** Per-retry model/thinking ladder (rung n → retry n; clamps to the last rung). */
   escalation: z.array(PhaseEscalationSchema).optional(),
+  /** A qualify phase's `drift` verdict routes here instead of `to` (default: `to`). */
+  driftTo: z.string().min(1).optional(),
 });
 export type PhaseLoop = z.infer<typeof PhaseLoopSchema>;
 
@@ -65,6 +67,8 @@ export const PipelinePhaseSchema = z.object({
   thinking: AgentThinkingSchema.optional(),
   /** Verify phases only: shell commands run with `&&` (override project checks). */
   commands: z.array(z.string().min(1)).optional(),
+  /** Agent phase only: parse a <verdict> from `produces`; non-`pass` takes the back-edge. */
+  qualify: z.boolean().optional(),
   loop: PhaseLoopSchema.optional(),
 });
 export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>;
@@ -148,6 +152,28 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
         });
       }
     }
+    // A qualify gate is meaningless without a back-edge to take, makes no sense on a
+    // deterministic verify phase, and its drift target must resolve like to/then.
+    if (ph.qualify) {
+      if (ph.type !== "agent")
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "qualify is for agent phases only",
+          path: ["phases", i, "qualify"],
+        });
+      if (!ph.loop)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "a qualify phase requires a loop",
+          path: ["phases", i, "qualify"],
+        });
+    }
+    if (ph.loop?.driftTo && !idSet.has(ph.loop.driftTo))
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `loop.driftTo "${ph.loop.driftTo}" is not an existing phase id`,
+        path: ["phases", i, "loop", "driftTo"],
+      });
     if (!ph.loop) return;
     for (const [key, target] of [
       ["to", ph.loop.to],

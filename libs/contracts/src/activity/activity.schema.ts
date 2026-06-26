@@ -18,6 +18,10 @@ export const ActivityKindSchema = z.enum([
   "pipeline-started",
   "pipeline-finished",
   "pipeline-parked",
+  // Phase 45 (qualify gate, Tier 1 — silent + recorded). A `qualify` agent phase's
+  // parsed verdict (pass/gap/drift): pass advances, gap/drift loop the work back. The
+  // briefing reads the eventual run finish; the verdict surfaces on the stage timeline.
+  "stage-verdict",
   // Phase 9 (limit resilience, Tier 1 — silent + recorded). A run halted on the
   // subscription usage limit, auto-resumed when the window reset, or a task was
   // re-deferred because the window was exhausted at dispatch. None notify; the

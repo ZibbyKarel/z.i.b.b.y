@@ -1,0 +1,1 @@
+{"id":"au-standup","name":"Ranní standup","trigger":{"type":"cron","expr":"0 8 * * 1-5"},"target":{"type":"skill","skillId":"standup-gen"},"enabled":true,"lastFiredAt":"2026-06-05T06:00:11.336Z"}

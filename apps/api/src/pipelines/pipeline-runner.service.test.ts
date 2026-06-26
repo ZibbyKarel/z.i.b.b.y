@@ -116,6 +116,8 @@ async function makeHarness(dir: string): Promise<Harness> {
     fakeLogger as never,
     fakeTrace as never,
     { read: vi.fn(async () => null), has: vi.fn(async () => false) } as never,
+    // Activity log double (Phase 45): record() is fire-and-forget and never throws.
+    { record: vi.fn(async () => {}) } as never,
   );
 
   // Swap the real core (which spawns processes) for a scriptable double.
@@ -639,6 +641,159 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       await expect(h.service.resumeParked(PIPELINE_RUN_ID)).rejects.toMatchObject({
         name: "RunNotRetriesParkedError",
       });
+    });
+  });
+
+  describe("qualify gate (Phase 45)", () => {
+    // A plain phase literal (untyped, like `parkedPipeline` above) so it can be cast
+    // to `unknown` when passed to drive(); each phase produces `<id>.md`.
+    const phase = (id: string, extra: Record<string, unknown> = {}) => ({
+      id,
+      type: "agent",
+      agent: "writer",
+      consumes: "in.md",
+      produces: `${id}.md`,
+      model: "sonnet",
+      thinking: "medium",
+      ...extra,
+    });
+
+    /**
+     * Replace runStage with a scriptable double: each call records the executed phase
+     * id, writes the phase's `produces` artifact with an optional `<verdict>` tag (so
+     * drive()'s real grading runs against on-disk artifacts), and returns `done`.
+     */
+    function scriptRunStage(
+      order: string[],
+      verdictFor: (phaseId: string, attempt: number) => string | null,
+    ): void {
+      (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
+        async (_run: unknown, p: { id: string; produces?: string }, cwd: string, attempt: number) => {
+          order.push(p.id);
+          const verdict = verdictFor(p.id, attempt);
+          const tag = verdict ? `\n<verdict>${verdict}</verdict>\n` : "";
+          if (p.produces) await fs.writeFile(path.join(cwd, p.produces), `out${tag}`, "utf8");
+          return {
+            phaseId: p.id,
+            runId: `${PIPELINE_RUN_ID}.${p.id}_${attempt}`,
+            attempt,
+            status: "done" as const,
+          };
+        },
+      );
+    }
+
+    const drive = (run: PipelineRun, pipeline: unknown) =>
+      (
+        h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }
+      ).drive(run, pipeline);
+
+    it("gap loops the work back, then pass advances to the end", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const pipeline = {
+        id: "release",
+        phases: [
+          phase("a"),
+          phase("review", {
+            qualify: true,
+            loop: { to: "a", driftTo: "a", maxRetries: 1, escalate: false, then: "park" },
+          }),
+          phase("z"),
+        ],
+        instructions: "ship",
+      };
+      const order: string[] = [];
+      scriptRunStage(order, (id, attempt) =>
+        id === "review" ? (attempt === 1 ? "gap" : "pass") : null,
+      );
+
+      await drive(run, pipeline);
+
+      expect(run.status).toBe("done");
+      const reviews = run.stageRuns.filter((s) => s.phaseId === "review");
+      expect(reviews).toHaveLength(2);
+      expect(reviews[0]?.verdict).toBe("gap");
+      expect(reviews[1]?.verdict).toBe("pass");
+      expect(order).toEqual(["a", "review", "a", "review", "z"]);
+    });
+
+    it("a missing verdict on a qualify phase fails closed to gap (back-edge, not advance)", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const pipeline = {
+        id: "release",
+        phases: [
+          phase("a"),
+          phase("review", {
+            qualify: true,
+            loop: { to: "a", maxRetries: 0, escalate: false, then: "park" },
+          }),
+          phase("z"),
+        ],
+        instructions: "ship",
+      };
+      const order: string[] = [];
+      scriptRunStage(order, () => null); // a qualify phase that never emits a tag
+
+      await drive(run, pipeline);
+
+      expect(run.status).toBe("parked");
+      expect(run.parkedReason).toBe("retries");
+      const review = run.stageRuns.find((s) => s.phaseId === "review");
+      expect(review?.verdict).toBe("gap");
+      expect(order).not.toContain("z"); // never advanced past the gate
+    });
+
+    it("drift routes the back-edge to loop.driftTo, not loop.to", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const pipeline = {
+        id: "release",
+        phases: [
+          phase("architekt"),
+          phase("koder"),
+          phase("review", {
+            qualify: true,
+            loop: {
+              to: "koder",
+              driftTo: "architekt",
+              maxRetries: 1,
+              escalate: false,
+              then: "park",
+            },
+          }),
+        ],
+        instructions: "ship",
+      };
+      const order: string[] = [];
+      scriptRunStage(order, (id) => (id === "review" ? "drift" : null));
+
+      await drive(run, pipeline);
+
+      // First review's drift re-plans via driftTo (architekt), NOT loop.to (koder).
+      expect(order).toEqual(["architekt", "koder", "review", "architekt", "koder", "review"]);
+      const review = run.stageRuns.find((s) => s.phaseId === "review");
+      expect(review?.verdict).toBe("drift");
+      expect(run.status).toBe("parked"); // exhausted at maxRetries:1
+    });
+
+    it("a non-qualify pipeline behaves exactly as before (no grading)", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const pipeline = {
+        id: "release",
+        phases: [phase("a"), phase("b")],
+        instructions: "ship",
+      };
+      const order: string[] = [];
+      scriptRunStage(order, () => null);
+
+      await drive(run, pipeline);
+
+      expect(run.status).toBe("done");
+      expect(order).toEqual(["a", "b"]);
+      expect(run.stageRuns.every((s) => s.verdict === undefined)).toBe(true);
     });
   });
 });

@@ -19,31 +19,31 @@
 
 Importy v `AppModule` v tomto pořadí:
 
-| Modul                    | Soubor                              | Zodpovídá za                           |
-| ------------------------ | ----------------------------------- | -------------------------------------- |
-| `ConfigModule`           | `@nestjs/config` (global)           | Načítání `.env`                        |
-| `LoggingModule`          | `shared/logging/`                   | `LoggerService`, `TraceContextService` |
-| `ActivityLogModule`      | `activity/activity-log.module`      | Append-only audit log                  |
-| `AgentsModule`           | `agents/agents.module`              | CRUD agentů + spouštění runů           |
-| `SkillsModule`           | `skills/skills.module`              | CRUD skills                            |
-| `ProjectsModule`         | `projects/projects.module`          | Projekty, kategorie, matchování        |
-| `PipelinesModule`        | `pipelines/pipelines.module`        | Pipeline CRUD + orchestrace            |
-| `ApprovalsModule`        | `approvals/approvals.module`        | Schválení (všechny druhy)              |
-| `GateRulesModule`        | `gate-rules/gate-rules.module`      | Globální katalog pravidel              |
-| `MemoryModule`           | `memory/memory.module`              | Vault CRUD, grounding, search          |
-| `RunRecorderModule`      | `memory/run-recorder.module`        | Záznam outcome runů do vault           |
-| `ActivityRecorderModule` | `activity/activity-recorder.module` | Mapování business událostí → activity  |
-| `BriefingModule`         | `briefing/briefing.module`          | Generování briefingů                   |
-| `AutomationsModule`      | `automations/automations.module`    | Cron/event triggery                    |
-| `IntegrationsModule`     | `integrations/integrations.module`  | Channel adaptery, credentials          |
-| `MandateModule`          | `mandate/mandate.module`            | Operátorův scope autonomie             |
-| `ChannelsModule`         | `channels/channels.module`          | Heartbeat watcher, triage, item store  |
-| `HealthModule`           | `health/health.module`              | Health check endpoint                  |
-| `LimitsModule`           | `limits/limits.module`              | Budget display                         |
-| `EventsModule`           | `events/events.module`              | Interní event bus                      |
-| `BudgetModule`           | `budget/budget.module`              | Budget ledger, spend tracking          |
+| Modul                    | Soubor                              | Zodpovídá za                                                        |
+| ------------------------ | ----------------------------------- | ------------------------------------------------------------------- |
+| `ConfigModule`           | `@nestjs/config` (global)           | Načítání `.env`                                                     |
+| `LoggingModule`          | `shared/logging/`                   | `LoggerService`, `TraceContextService`                              |
+| `ActivityLogModule`      | `activity/activity-log.module`      | Append-only audit log                                               |
+| `AgentsModule`           | `agents/agents.module`              | CRUD agentů + spouštění runů                                        |
+| `SkillsModule`           | `skills/skills.module`              | CRUD skills                                                         |
+| `ProjectsModule`         | `projects/projects.module`          | Projekty, kategorie, matchování                                     |
+| `PipelinesModule`        | `pipelines/pipelines.module`        | Pipeline CRUD + orchestrace                                         |
+| `ApprovalsModule`        | `approvals/approvals.module`        | Schválení (všechny druhy)                                           |
+| `GateRulesModule`        | `gate-rules/gate-rules.module`      | Globální katalog pravidel                                           |
+| `MemoryModule`           | `memory/memory.module`              | Vault CRUD, grounding, search                                       |
+| `RunRecorderModule`      | `memory/run-recorder.module`        | Záznam outcome runů do vault                                        |
+| `ActivityRecorderModule` | `activity/activity-recorder.module` | Mapování business událostí → activity                               |
+| `BriefingModule`         | `briefing/briefing.module`          | Generování briefingů                                                |
+| `AutomationsModule`      | `automations/automations.module`    | Cron/event triggery                                                 |
+| `IntegrationsModule`     | `integrations/integrations.module`  | Channel adaptery, credentials                                       |
+| `MandateModule`          | `mandate/mandate.module`            | Operátorův scope autonomie                                          |
+| `ChannelsModule`         | `channels/channels.module`          | Heartbeat watcher, triage, item store                               |
+| `HealthModule`           | `health/health.module`              | Health check endpoint                                               |
+| `LimitsModule`           | `limits/limits.module`              | Budget display                                                      |
+| `EventsModule`           | `events/events.module`              | Interní event bus                                                   |
+| `BudgetModule`           | `budget/budget.module`              | Budget ledger, spend tracking                                       |
 | `ChatModule`             | `chat/chat.module`                  | Chat-first konverzace (streaming claude session, SSE, MCP nástroje) |
-| `TasksModule`            | `tasks/tasks.module`                | Deferred task daemon                   |
+| `TasksModule`            | `tasks/tasks.module`                | Deferred task daemon                                                |
 
 ## Sdílená infrastruktura (shared/)
 
@@ -66,7 +66,7 @@ Importy v `AppModule` v tomto pořadí:
 ## Datový adresář
 
 Výchozí: `apps/api/data/`  
-Testovací: `apps/api/data-test/` (přepnutí přes `ZIBBY_DATA_DIR=apps/api/data-test`)
+Testovací: `.zibby/data-test/` (přepnutí přes `ZIBBY_DATA_DIR=.zibby/data-test`)
 
 ```
 data/

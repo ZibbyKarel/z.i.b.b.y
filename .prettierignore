@@ -8,7 +8,7 @@ package-lock.json
 graphify-out
 design-ref
 apps/api/data
-apps/api/data-test
+.zibby/data-test
 .playwright-mcp
 test-results
 playwright-report

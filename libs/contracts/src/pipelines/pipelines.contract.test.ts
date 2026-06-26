@@ -121,6 +121,81 @@ describe("pipeline schema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a qualify review phase with a loop.driftTo to an existing phase (Phase 45)", () => {
+    const result = PipelineSchema.safeParse({
+      id: "delivery",
+      phases: [
+        phase("architekt"),
+        phase("koder"),
+        phase("review", {
+          qualify: true,
+          loop: {
+            to: "koder",
+            driftTo: "architekt",
+            maxRetries: 3,
+            escalate: true,
+            then: "park",
+          },
+        }),
+      ],
+      instructions: "x",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects qualify on a verify phase (qualify is for agent phases only)", () => {
+    const result = PipelineSchema.safeParse({
+      id: "delivery",
+      phases: [
+        phase("koder"),
+        {
+          id: "verify",
+          type: "verify",
+          qualify: true,
+          loop: { to: "koder", maxRetries: 1, escalate: false, then: "fail" },
+        },
+      ],
+      instructions: "x",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(result.error.issues.some((i) => i.message === "qualify is for agent phases only")).toBe(
+        true,
+      );
+  });
+
+  it("rejects a qualify phase with no loop", () => {
+    const result = PipelineSchema.safeParse({
+      id: "delivery",
+      phases: [phase("koder"), phase("review", { qualify: true })],
+      instructions: "x",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(result.error.issues.some((i) => i.message === "a qualify phase requires a loop")).toBe(
+        true,
+      );
+  });
+
+  it("rejects a loop.driftTo that names no existing phase", () => {
+    const result = PipelineSchema.safeParse({
+      id: "delivery",
+      phases: [
+        phase("koder"),
+        phase("review", {
+          qualify: true,
+          loop: { to: "koder", driftTo: "ghost", maxRetries: 1, escalate: false, then: "fail" },
+        }),
+      ],
+      instructions: "x",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(
+        result.error.issues.some((i) => i.message.includes('loop.driftTo "ghost"')),
+      ).toBe(true);
+  });
 });
 
 describe("pipeline run schema", () => {
@@ -137,5 +212,28 @@ describe("pipeline run schema", () => {
       cwd: "/tmp/release_1",
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("accepts a stage run carrying a qualify verdict, and a legacy run without one (Phase 45)", () => {
+    const base = {
+      pipelineRunId: "release_1",
+      pipelineId: "release",
+      status: "running" as const,
+      currentStage: "review",
+      startedAt: new Date().toISOString(),
+      cwd: "/tmp/release_1",
+    };
+    const withVerdict = PipelineRunSchema.safeParse({
+      ...base,
+      stageRuns: [
+        { phaseId: "review", runId: "release_1.review_1", attempt: 1, status: "done", verdict: "gap" },
+      ],
+    });
+    expect(withVerdict.success).toBe(true);
+    const legacy = PipelineRunSchema.safeParse({
+      ...base,
+      stageRuns: [{ phaseId: "review", runId: "release_1.review_1", attempt: 1, status: "done" }],
+    });
+    expect(legacy.success).toBe(true);
   });
 });

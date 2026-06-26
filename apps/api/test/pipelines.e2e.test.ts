@@ -89,6 +89,7 @@ describe("Pipelines API (e2e)", () => {
       "AGENT_DEMO_STEPS",
       "AGENT_DEMO_DELAY_MS",
       "PIPELINE_DEMO_FAIL_PHASES",
+      "PIPELINE_DEMO_GAP_PHASES",
       "PIPELINE_DEMO_EMIT_LEARNED",
     ]) {
       delete process.env[k];
@@ -97,6 +98,7 @@ describe("Pipelines API (e2e)", () => {
 
   afterEach(() => {
     delete process.env.PIPELINE_DEMO_FAIL_PHASES;
+    delete process.env.PIPELINE_DEMO_GAP_PHASES;
   });
 
   it("creates a pipeline; a dangling loop target is rejected (400 at the contract, 422 on update)", async () => {
@@ -468,11 +470,16 @@ describe("Pipelines API (e2e)", () => {
       await fs.copyFile(DELIVERY_SEED, path.join(pipelinesDir, "delivery.pipeline.md"));
     });
 
-    it("runs the chain, parks on the PR output gate, finishes done on approval", async () => {
+    it("runs the chain through verify + the qualify review, finishing done", async () => {
+      // This pipeline declares no `outputs:`, so a green chain finishes `done` directly
+      // (the `pr` sink behaviour is covered by pipeline-runner.outputs.test.ts). A project
+      // with a trivially-passing check lets the deterministic `verify` phase go green; the
+      // GAP lever makes the qualify `review` return gap once (loop back to Kodér) then pass.
+      process.env.PIPELINE_DEMO_GAP_PHASES = "review";
       const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"));
       await request(app.getHttpServer())
         .post("/api/projects")
-        .send({ id: "delivery-proj", name: "Delivery project", path: projectDir })
+        .send({ id: "delivery-proj", name: "Delivery project", path: projectDir, checks: ["true"] })
         .expect(201);
 
       const start = await app
@@ -480,50 +487,48 @@ describe("Pipelines API (e2e)", () => {
         .start("delivery", undefined, "delivery-proj");
       const { pipelineRunId } = start as { pipelineRunId: string };
 
-      // The chain (architekt → koder → review → dokumentator; Kodér self-checks, no
-      // separate verify phase) finishes green, then the `pr` output parks the run on
-      // the PR gate — "PR is the gate", system-owned, no agent.
-      const parked = await until(async () => {
-        const res = app.get(PipelineRunnerService).get(pipelineRunId);
-        return res.status === "parked" ? res : null;
-      });
-      expect(parked.parkedReason).toBe("output");
-      expect(parked.pendingOutput).toEqual({ index: 0 });
-
-      // The full handoff chain exists in the run tree.
-      for (const [phase, file] of [
-        ["architekt", "plan.md"],
-        ["koder", "implementation.md"],
-        ["review", "review.md"],
-        ["dokumentator", "docs.md"],
-      ] as const) {
-        await fs.access(path.join(parked.cwd, phase, file));
-      }
-
-      // A pipeline-output approval is queued; approving it opens the PR (a non-git
-      // project has no worktree, so the push is a soft no-op) and finishes the run.
-      const pending = await request(app.getHttpServer())
-        .get("/api/approvals")
-        .query({ status: "pending" })
-        .expect(200);
-      const card = (
-        pending.body as Array<{ id: string; runId: string; kind: string; action: string }>
-      ).find((a) => a.runId === pipelineRunId && a.kind === "pipeline-output");
-      expect(card?.action).toBe("pr.open");
-      await request(app.getHttpServer()).post(`/api/approvals/${card?.id}/approve`).expect(200);
-
+      // architekt → koder → verify → review (qualify) → n-9 → dokumentator, green → done.
       const done = await until(async () => {
         const res = app.get(PipelineRunnerService).get(pipelineRunId);
         return res.status === "done" ? res : null;
       });
       expect(done.status).toBe("done");
 
+      // The full handoff chain exists in the run tree (verify produces nothing).
+      for (const [phase, file] of [
+        ["architekt", "plan.md"],
+        ["koder", "implementation.md"],
+        ["review", "review.md"],
+        ["n-9", "test-automator.md"],
+        ["dokumentator", "docs.md"],
+      ] as const) {
+        await fs.access(path.join(done.cwd, phase, file));
+      }
+      // The qualify review looped once on gap, then passed.
+      const reviews = done.stageRuns.filter((s) => s.phaseId === "review");
+      expect(reviews.map((s) => s.verdict)).toEqual(["gap", "pass"]);
+
       await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }, 15_000);
 
     it("a persistently failing review exhausts its retries and parks", async () => {
+      // verify passes (trivial project check) so the run reaches review; review then
+      // fails on every attempt and exhausts its loop → durable park at review.
       process.env.PIPELINE_DEMO_FAIL_PHASES = "review";
-      const start = await app.get(PipelineRunnerService).start("delivery", undefined, undefined);
+      const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-park-"));
+      await request(app.getHttpServer())
+        .post("/api/projects")
+        .send({
+          id: "delivery-proj-park",
+          name: "Delivery park",
+          path: projectDir,
+          checks: ["true"],
+        })
+        .expect(201);
+
+      const start = await app
+        .get(PipelineRunnerService)
+        .start("delivery", undefined, "delivery-proj-park");
       const { pipelineRunId } = start as { pipelineRunId: string };
 
       const parked = await until(async () => {
@@ -532,6 +537,8 @@ describe("Pipelines API (e2e)", () => {
       });
       expect(parked.parkedReason).toBe("retries");
       expect(parked.parked).toMatchObject({ phaseId: "review", attempts: 4 });
+
+      await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }, 15_000);
   });
 

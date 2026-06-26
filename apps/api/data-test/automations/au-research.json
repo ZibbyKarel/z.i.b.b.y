@@ -1,0 +1,14 @@
+{
+  "id": "au-research",
+  "name": "Noční research",
+  "trigger": {
+    "type": "cron",
+    "expr": "40 2 * * *"
+  },
+  "target": {
+    "type": "pipeline",
+    "pipelineId": "nightly-research"
+  },
+  "enabled": true,
+  "lastFiredAt": "2026-06-03T22:57:27.162Z"
+}

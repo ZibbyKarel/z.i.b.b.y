@@ -41,7 +41,7 @@ Verified ground truth that shapes the design:
   updatePipeline/deletePipeline contract endpoints exist; there is no duplicate
   endpoint and no useUpdate/useDelete/useDuplicate mutations.
 - Pipelines are committed `.pipeline.md` files discovered at runtime (no seed
-  script); e2e isolates via ZIBBY_DATA_DIR=apps/api/data-test. Classifier builds
+  script); e2e isolates via ZIBBY_DATA_DIR=.zibby/data-test. Classifier builds
   its catalog dynamically from pipelines.list() — desc is the routable signal
   (task-classifier.service.ts:104). Classifier tests live in
   keyword-scorer.test.ts (no task-classifier.service.test.ts).
@@ -218,7 +218,7 @@ one failure, assert the retry visualization (attempt count on the node).
 2.4 The delivery pipeline, seeded — ✅ HOTOVO
 
 - Seed apps/api/data/pipelines/delivery.pipeline.md (and a copy in
-  apps/api/data-test/pipelines/ for deterministic e2e):
+  .zibby/data-test/pipelines/ for deterministic e2e):
   task.md → architekt (plan.md, opus/high) → koder (implementation.md,
   sonnet/medium) → review (review.md, opus/high, loop { to: koder, maxRetries: 3,
   escalate + ladder, then: park }) → verify stage (type: verify, project checks,

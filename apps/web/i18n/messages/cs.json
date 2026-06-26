@@ -937,7 +937,12 @@
     "stageAttempt": "pokus {n}",
     "stageNoLog": "Tato fáze zatím nemá žádný log.",
     "stageNone": "Tento běh zatím nemá žádné fáze.",
-    "stageLoading": "Načítám fáze makera…"
+    "stageLoading": "Načítám fáze makera…",
+    "verdict": {
+      "pass": "Schváleno",
+      "gap": "Chybí část",
+      "drift": "Mimo zadání"
+    }
   },
   "gates": {
     "title": "Pravidla schvalování",

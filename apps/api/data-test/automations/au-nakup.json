@@ -1,0 +1,14 @@
+{
+  "id": "au-nakup",
+  "name": "Nedělní nákup",
+  "trigger": {
+    "type": "cron",
+    "expr": "0 18 * * 0"
+  },
+  "target": {
+    "type": "skill",
+    "skillId": "rohlik"
+  },
+  "enabled": true,
+  "lastFiredAt": "2026-06-04T06:55:27.162Z"
+}

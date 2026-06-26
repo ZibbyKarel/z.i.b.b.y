@@ -162,14 +162,35 @@ Deterministické příkazy — žádný agent, žádné tokeny, žádné záměr
 2. Exit code 0 = pass, jinak fail
 3. Logy příkazů přidávány do pipeline run logu
 
+### Fáze: qualify (verdikt agenta řídí smyčku, Phase 45)
+
+Agentní fáze s `qualify: true` je _subjektivní_ brána (doplněk objektivní `verify`).
+Když fáze doběhne `done`, runner z jejího `produces` artefaktu vyparsuje poslední tag
+`<verdict>pass|gap|drift</verdict>` (case-insensitive) a podle něj řídí **existující**
+zpětnou hranu:
+
+- `pass` → kurzor postoupí dál (beze změny chování).
+- `gap` → zpětná hrana na `loop.to` (Kodér dopracuje chybějící část zadání).
+- `drift` → zpětná hrana na `loop.driftTo` (Architekt přeplánuje; default `loop.to`).
+- chybějící/nečitelný verdikt → bere se jako `gap` (**fail-closed** — označená brána
+  nikdy mlčky neprojde).
+
+Pravidla schématu (superRefine): `qualify` je jen pro `agent` fáze a vyžaduje `loop`;
+`loop.driftTo` musí být existující phase id. Vyparsovaný verdikt se uloží na
+`StageRun.verdict` (volitelné pole, žádná migrace), zapíše se `stage-verdict` do
+activity logu a přibalí se do failure-context handoffu, aby Kodér/Architekt věděli
+proč byli znovu spuštěni. `qualify` na erroru fáze se neuplatní (jen na `done`) —
+spadlá fáze jde běžnou failure cestou.
+
 ### Smyčka (loop) a eskalace
 
 ```
-Fáze selhala + má loop.to
+Fáze selhala (nebo qualify: gap/drift/chybí) + má loop.to
   → počet retry < loop.maxRetries?
       Ano → najdi escalation rung pro aktuální retry count
-            přidej failure context do promptu
+            přidej failure context do promptu (u qualify i verdikt)
             znovu spusť fázi s (možná vyšším) model/thinking
+            (drift jde na loop.driftTo, gap/error na loop.to)
       Ne  → PARKED nebo then.fail (pokud existuje)
 ```
 

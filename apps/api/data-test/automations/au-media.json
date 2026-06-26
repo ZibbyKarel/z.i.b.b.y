@@ -1,0 +1,14 @@
+{
+  "id": "au-media",
+  "name": "Po stažení srovnej média",
+  "trigger": {
+    "type": "event",
+    "event": "file.created"
+  },
+  "target": {
+    "type": "skill",
+    "skillId": "tmdb-renamer"
+  },
+  "enabled": true,
+  "lastFiredAt": "2026-06-04T06:54:27.162Z"
+}

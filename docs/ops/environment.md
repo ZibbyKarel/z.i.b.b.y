@@ -67,9 +67,9 @@ ZIBBY_DATA_DIR=apps/api/data
 
 Používá se při `pnpm api:dev` a `pnpm api:start`.
 
-### Testovací (`apps/api/data-test/`)
+### Testovací (`.zibby/data-test/`)
 
-Přepnutí: `ZIBBY_DATA_DIR=apps/api/data-test`
+Přepnutí: `ZIBBY_DATA_DIR=.zibby/data-test`
 
 Příkazy:
 
@@ -130,7 +130,7 @@ Poznámka: `apps/web` není v workspace pro globální `pnpm test` — nutno vol
 ### Playwright (playwright.config.ts)
 
 - Chromium + Firefox + WebKit
-- Testovací API server na separátním portu s `ZIBBY_DATA_DIR=apps/api/data-test`
+- Testovací API server na separátním portu s `ZIBBY_DATA_DIR=.zibby/data-test`
 - `TASK_TICK_MS=0` pro deterministické testy (tick drivenmanually)
 - `.playwright-mcp/` output adresář je gitignored (rozbil by Next.js Fast Refresh)
 
