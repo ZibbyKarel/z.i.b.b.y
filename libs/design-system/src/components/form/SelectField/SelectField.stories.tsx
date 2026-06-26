@@ -55,7 +55,9 @@ export const Overview: Story = {
 export const Playground: Story = {
   render: (args) => {
     const [value, setValue] = useState("opus");
-    return <SelectField {...args} onValueChange={setValue} options={OPTIONS} value={value} />;
+    return (
+      <SelectField {...args} multi={false} onValueChange={setValue} options={OPTIONS} value={value} />
+    );
   },
   args: { label: "Model", hint: "Vyber jazykový model" },
 };
