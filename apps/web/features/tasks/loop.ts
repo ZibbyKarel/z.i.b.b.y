@@ -1,4 +1,5 @@
 import type { CreateGoalInput, ProposedGoal } from "@zibby/contracts";
+import { slug } from "../../utils/slug";
 
 /** The two kinds of work a loop iteration can run — an agent or a whole pipeline. */
 export type MakerKind = "agent" | "pipeline";
@@ -75,13 +76,7 @@ export function decodeMaker(value: string): { kind: MakerKind; id: string } | nu
  * `AgentIdSchema` caps ids at 128 chars; we leave room for the uniqueness suffix.
  */
 export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "") // strip combining diacritical marks
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
+  return slug(input, { maxLength: 64 });
 }
 
 /**
