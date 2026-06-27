@@ -463,7 +463,7 @@ describe("Pipelines API (e2e)", () => {
   describe("seeded delivery pipeline", () => {
     const DELIVERY_SEED = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
-      "../data/pipelines/delivery.pipeline.md",
+      "../data-test/pipelines/delivery.pipeline.md",
     );
 
     beforeAll(async () => {

@@ -25,8 +25,10 @@ phases:
     produces: review.md
     model: opus
     thinking: high
+    qualify: true
     loop:
       to: koder
+      driftTo: architekt
       maxRetries: 3
       escalate: true
       then: park
