@@ -46,7 +46,7 @@ const VOLATILE_SEGMENTS = new Set([
 const cleanups: Array<() => void> = [];
 
 if (!process.env.ZIBBY_DATA_DIR) {
-  const realData = join(__dirname, "data");
+  const realData = join(__dirname, "data-test");
   const tempData = mkdtempSync(join(tmpdir(), "zibby-data-"));
   try {
     cpSync(realData, tempData, {

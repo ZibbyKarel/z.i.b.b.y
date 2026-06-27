@@ -74,7 +74,7 @@ describe("TaskOutputService", () => {
       status: "done",
       startedAt: new Date().toISOString(),
       ...(workspacePath !== null ? { workspace: { ...WS, path: workspacePath } } : {}),
-    } as AgentRun;
+    } as unknown as AgentRun;
   }
 
   async function seed(output: TaskOutput, projectId = "p1"): Promise<ScheduledTask> {

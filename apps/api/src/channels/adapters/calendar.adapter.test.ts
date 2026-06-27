@@ -142,18 +142,7 @@ describe("CalendarChannelAdapter", () => {
     );
     await expect(limited.poll(cal, creds, undefined)).rejects.toThrow(/rate limited/);
 
-    const item = {
-      id: "gcal-evt1",
-      integrationId: "acme-cal",
-      kind: "calendar" as const,
-      externalRef: { channel: "primary", messageId: "evt1" },
-      receivedAt: "2026-06-17T00:00:00.000Z",
-      text: "x",
-      raw: {},
-      state: "triaged" as const,
-    };
-    await expect(
-      new CalendarChannelAdapter(sequenceFetch()).send(cal, creds, item, "hi"),
-    ).rejects.toThrow(/read-only/);
+    // Calendar is read-only: send() takes no arguments and always rejects.
+    await expect(new CalendarChannelAdapter(sequenceFetch()).send()).rejects.toThrow(/read-only/);
   });
 });

@@ -21,7 +21,12 @@ const phase = (id: string, extra: Record<string, unknown> = {}) => ({
   thinking: "medium" as const,
   ...extra,
 });
-const sample = { id: "release", phases: [phase("a"), phase("b")], instructions: "ship it" };
+const sample = {
+  id: "release",
+  phases: [phase("a"), phase("b")],
+  instructions: "ship it",
+  outputs: [],
+};
 const fileFor = (dir: string, id: string) => path.join(dir, `${id}.pipeline.md`);
 
 describe("PipelinesStorageService", () => {
@@ -81,6 +86,7 @@ describe("PipelinesStorageService", () => {
           phase("x", { loop: { to: "ghost", maxRetries: 1, escalate: false, then: "fail" } }),
         ],
         instructions: "y",
+        outputs: [],
       }),
     ).rejects.toBeInstanceOf(InvalidPipelineError);
   });
@@ -105,7 +111,7 @@ describe("PipelinesStorageService", () => {
   it("refuses unsafe ids (path traversal)", async () => {
     for (const id of ["../evil", "a/b", ".."]) {
       await expect(
-        service.create({ id, phases: [phase("a")], instructions: "i" }),
+        service.create({ id, phases: [phase("a")], instructions: "i", outputs: [] }),
       ).rejects.toBeInstanceOf(InvalidPipelineIdError);
     }
   });

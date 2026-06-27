@@ -301,7 +301,11 @@
         "sub": "zřetězení agentů"
       }
     },
-    "allApprovals": "celá fronta →"
+    "allApprovals": "celá fronta →",
+    "liveLog": "Živý log",
+    "liveLogEmpty": "Zatím žádná aktivita.",
+    "loadOlder": "Načíst starší",
+    "groupedCount": "{count}× {group}"
   },
   "skills": {
     "addSkill": "Přidat skill",
@@ -816,6 +820,26 @@
       "ariaLabel": "Sekce nastavení",
       "general": "Obecné",
       "gates": "Pravidla schvalování"
+    },
+    "activity": {
+      "title": "Aktivita",
+      "hint": "Co se zobrazuje v živém logu vpravo. Viditelné = každý záznam zvlášť, Seskupené = sloučené do jednoho řádku s počtem, Skryté = v logu vůbec.",
+      "modes": {
+        "visible": "Viditelné",
+        "grouped": "Seskupené",
+        "hidden": "Skryté"
+      },
+      "groups": {
+        "tasks": "Úkoly",
+        "runs": "Běhy",
+        "pipelines": "Pipeline",
+        "goals": "Cíle",
+        "approvals": "Schválení",
+        "channels": "Kanály",
+        "integrations": "Integrace",
+        "research": "Výzkum",
+        "briefing": "Briefing"
+      }
     }
   },
   "runs": {

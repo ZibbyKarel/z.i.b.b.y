@@ -152,7 +152,9 @@ describe("ChannelTriageFlowService", () => {
   });
 
   it("a bug verdict autonomously files a GATED Jira issue into the operator's Jira integration", async () => {
-    const jiraPropose = vi.fn(async () => ({ id: "appr_jira" }));
+    const jiraPropose = vi.fn<
+      (input: { integrationId: string; summary: string }) => Promise<{ id: string }>
+    >(async () => ({ id: "appr_jira" }));
     const flow = makeFlow({
       verdict: bug,
       jiraPropose,

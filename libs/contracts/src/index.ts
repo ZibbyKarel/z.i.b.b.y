@@ -52,6 +52,8 @@ export * from "./tasks/task-run.schema";
 export * from "./tasks/task-runs.contract";
 export * from "./activity/activity.schema";
 export * from "./activity/activity.contract";
+export * from "./activity/activity-view.schema";
+export * from "./activity/activity-view.contract";
 export * from "./briefing/briefing.schema";
 export * from "./briefing/briefing.contract";
 export * from "./budget/budget.schema";

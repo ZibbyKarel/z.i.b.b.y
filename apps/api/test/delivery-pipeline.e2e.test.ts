@@ -6,7 +6,7 @@ import { PipelinesStorageService } from "../src/pipelines/pipelines.storage.serv
 /** The committed production pipelines dir (not the per-suite temp data dir). */
 const DATA_PIPELINES_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../data/pipelines",
+  "../data-test/pipelines",
 );
 
 /**

@@ -301,7 +301,11 @@
         "sub": "chaining of agents"
       }
     },
-    "allApprovals": "full queue →"
+    "allApprovals": "full queue →",
+    "liveLog": "Live log",
+    "liveLogEmpty": "No activity yet.",
+    "loadOlder": "Load older",
+    "groupedCount": "{count}× {group}"
   },
   "skills": {
     "addSkill": "Add skill",
@@ -816,6 +820,26 @@
       "ariaLabel": "Settings sections",
       "general": "General",
       "gates": "Approval rules"
+    },
+    "activity": {
+      "title": "Activity",
+      "hint": "What shows in the live log on the right. Visible = each entry on its own line, Grouped = collapsed into one counted row, Hidden = not shown in the log at all.",
+      "modes": {
+        "visible": "Visible",
+        "grouped": "Grouped",
+        "hidden": "Hidden"
+      },
+      "groups": {
+        "tasks": "Tasks",
+        "runs": "Runs",
+        "pipelines": "Pipelines",
+        "goals": "Goals",
+        "approvals": "Approvals",
+        "channels": "Channels",
+        "integrations": "Integrations",
+        "research": "Research",
+        "briefing": "Briefing"
+      }
     }
   },
   "runs": {

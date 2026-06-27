@@ -56,7 +56,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       chatSlot={<ChatButton />}
       footerItem={footerItem}
       navItems={navItems}
-      railSlot={activeNav === "overview" ? <RightRail /> : undefined}
+      railSlot={<RightRail />}
       taskSlot={<NewTaskButton />}
       walletSlot={<LimitsRings />}
     >

@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { activityContract } from "./activity/activity.contract";
+import { activityViewContract } from "./activity/activity-view.contract";
 import { agentRunsContract, agentsContract } from "./agents/agents.contract";
 import { briefingContract } from "./briefing/briefing.contract";
 import { budgetContract } from "./budget/budget.contract";
@@ -71,6 +72,7 @@ export const appContract = c.router({
   taskRuns: taskRunsContract,
   system: systemContract,
   activity: activityContract,
+  activityView: activityViewContract,
   briefing: briefingContract,
   budget: budgetContract,
   chat: chatContract,

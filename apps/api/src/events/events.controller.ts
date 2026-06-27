@@ -62,7 +62,7 @@ export class EventsController {
       this.activity.stream().pipe(
         map(
           (e): MessageEvent => ({
-            data: JSON.stringify({ scope: "activity", kind: e.kind, at: e.at }),
+            data: JSON.stringify({ scope: "activity", kind: e.kind, at: e.at, entry: e.entry }),
           }),
         ),
       ),

@@ -142,6 +142,36 @@ describe("ActivityLogService", () => {
     expect(entry!.runId).toBe("run-1");
   });
 
+  it("page() walks the whole history newest-first via the keyset cursor", async () => {
+    await service.record({ kind: "task-created", summary: "a" }, new Date("2026-06-12T07:00:00.000Z"));
+    await service.record({ kind: "run-started", summary: "b" }, new Date("2026-06-12T08:00:00.000Z"));
+    await service.record({ kind: "task-queued", summary: "c" }, new Date("2026-06-13T09:00:00.000Z"));
+
+    const first = await service.page({ limit: 2 });
+    expect(first.entries.map((e) => e.summary)).toEqual(["c", "b"]); // newest-first
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await service.page({ before: first.nextCursor ?? undefined, limit: 2 });
+    expect(second.entries.map((e) => e.summary)).toEqual(["a"]); // the remaining (older) entry
+    expect(second.nextCursor).toBeNull(); // history exhausted
+  });
+
+  it("page() honours the kinds filter and never repeats across pages", async () => {
+    await service.record({ kind: "task-created", summary: "a" }, new Date("2026-06-12T07:00:00.000Z"));
+    await service.record({ kind: "run-started", summary: "b" }, new Date("2026-06-12T08:00:00.000Z"));
+    await service.record({ kind: "task-created", summary: "c" }, new Date("2026-06-13T09:00:00.000Z"));
+
+    const tasks = await service.page({ kinds: ["task-created"] });
+    expect(tasks.entries.map((e) => e.summary)).toEqual(["c", "a"]);
+    expect(tasks.nextCursor).toBeNull();
+  });
+
+  it("page() returns an empty page (null cursor) when there is no history", async () => {
+    const empty = await service.page({ limit: 10 });
+    expect(empty.entries).toEqual([]);
+    expect(empty.nextCursor).toBeNull();
+  });
+
   it("never throws when the dir is unwritable (accountability never breaks actuation)", async () => {
     // Point the dir at a path under a regular file so ensureDir/appendFile fail.
     const file = path.join(dir, "afile");
