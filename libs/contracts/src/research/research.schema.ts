@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 
 /**
  * The research / intelligence layer (M6) — "ZIBBY brings the world to the operator".
@@ -59,7 +60,7 @@ export type ResearchItem = z.infer<typeof ResearchItemSchema>;
 
 /** The assembled digest — ranked items, newest pass wins (one note per day). */
 export const ResearchDigestSchema = z.object({
-  generatedAt: z.string().datetime(),
+  generatedAt: IsoDateTimeSchema,
   items: z.array(ResearchItemSchema),
 });
 export type ResearchDigest = z.infer<typeof ResearchDigestSchema>;

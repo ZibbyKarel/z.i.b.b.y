@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 
 /**
  * The Claude CLI preflight verdict the health payload carries: whether a
@@ -34,7 +35,7 @@ export type SubsystemHealth = z.infer<typeof SubsystemHealthSchema>;
 export const HealthSchema = z.object({
   status: z.enum(["ok", "degraded"]),
   uptime: z.number().nonnegative(),
-  timestamp: z.string().datetime(),
+  timestamp: IsoDateTimeSchema,
   claude: ClaudeHealthSchema,
   subsystems: z.array(SubsystemHealthSchema),
 });

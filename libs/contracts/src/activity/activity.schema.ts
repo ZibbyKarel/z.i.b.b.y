@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 
 /**
  * The closed vocabulary of recordable activity (Phase 6.1). One kind per real,
@@ -104,7 +105,7 @@ export type ActivityRefs = z.infer<typeof ActivityRefsSchema>;
  */
 export const ActivityEntrySchema = z.object({
   id: z.string().min(1),
-  at: z.string().datetime(),
+  at: IsoDateTimeSchema,
   kind: ActivityKindSchema,
   summary: z.string(),
   traceId: z.string().optional(),
