@@ -11,15 +11,14 @@
 import { useTranslations } from "next-intl";
 import type { EntityFormValues, FieldSchema } from "../components/EntityFormModal/EntityFormModal";
 import { MODEL_OPTIONS, THINKING_OPTIONS } from "./config";
+import { slug } from "../utils/slug";
 
-const slugPreview = (name: string | undefined, fallback: string) =>
-  (name ?? "").trim()
-    ? (name as string)
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "")
-    : fallback;
+/**
+ * Preview the filesystem id a "+ Add …" form will produce. Delegates to the
+ * shared {@link slug} so the preview matches the id the API actually persists
+ * (including diacritic stripping, e.g. "Nový" → "novy").
+ */
+const slugPreview = (name: string | undefined, fallback: string) => slug(name ?? "", fallback);
 
 export type EntityKind = "skill" | "agent";
 

@@ -13,6 +13,7 @@ import {
 } from "@zibby/design-system";
 import type { MemoryTier, Note } from "@zibby/contracts";
 import { useCreateNoteMutation, useUpdateNoteMutation } from "../mutations";
+import { slug } from "../../../utils/slug";
 
 export enum NoteEditorDialogTestId {
   Root = "note-editor-dialog",
@@ -34,15 +35,7 @@ export interface NoteEditorDialogProps {
 const TIERS: MemoryTier[] = ["memory", "daily", "knowledge"];
 
 /** Slug a title into a filesystem-safe note id (matches the API's NoteIdSchema). */
-function slugify(s: string): string {
-  const base = s
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return base || "note";
-}
+const slugify = (s: string): string => slug(s, "note");
 
 /**
  * Create or edit a vault note. Mounted fresh per open (the parent renders it only
