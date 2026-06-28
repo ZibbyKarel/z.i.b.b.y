@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type Agent,
@@ -29,7 +29,7 @@ export const AGENTS_DIR = "AGENTS_DIR";
  * the agent's id. There is intentionally no database.
  */
 @Injectable()
-export class AgentsStorageService extends MarkdownEntityStore<Agent> implements OnModuleInit {
+export class AgentsStorageService extends MarkdownEntityStore<Agent> {
   protected readonly fileExt = ".md";
   protected readonly idRegex = AGENT_ID_REGEX;
 
@@ -38,10 +38,6 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> implements 
   }
 
   /** Ensure the data directory exists before the app starts serving traffic. */
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
-  }
-
   async create(input: CreateAgentInput): Promise<Agent> {
     const file = this.resolveFile(input.id);
     if (await this.fileExists(file)) {

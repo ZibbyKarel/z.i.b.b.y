@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type Automation,
@@ -6,7 +6,7 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "@zibby/contracts";
-import { EntityFileStore, safeJson, searchByText } from "../shared/file-storage";
+import { EntityFileStore, searchByText } from "../shared/file-storage";
 
 export const AUTOMATIONS_DIR = "AUTOMATIONS_DIR";
 
@@ -59,7 +59,7 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
 
 /** Durable, file-backed persistence for automations — one `<id>.json` each. */
 @Injectable()
-export class AutomationsStorageService extends EntityFileStore<Automation> implements OnModuleInit {
+export class AutomationsStorageService extends EntityFileStore<Automation> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
 
@@ -68,7 +68,7 @@ export class AutomationsStorageService extends EntityFileStore<Automation> imple
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureDir();
+    await super.onModuleInit();
     await this.seedSystem();
   }
 
@@ -147,8 +147,7 @@ export class AutomationsStorageService extends EntityFileStore<Automation> imple
   }
 
   protected tryParse(raw: string): Automation | null {
-    const parsed = AutomationSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(AutomationSchema, raw);
   }
 
   protected compare(a: Automation, b: Automation): number {

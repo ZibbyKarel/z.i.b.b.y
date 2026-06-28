@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { AGENT_ID_REGEX } from "../agents/agent.schema";
 
 /**
@@ -129,7 +130,7 @@ export const IntegrationSchema = z.object({
   enabled: z.boolean().default(true),
   config: IntegrationConfigSchema,
   status: IntegrationStatusSchema.default("disconnected"),
-  lastSyncAt: z.string().datetime().optional(),
+  lastSyncAt: IsoDateTimeSchema.optional(),
   lastError: z.string().optional(),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),

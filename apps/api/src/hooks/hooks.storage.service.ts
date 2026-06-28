@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateHookInput,
@@ -6,7 +6,7 @@ import {
   HookSchema,
   type UpdateHookInput,
 } from "@zibby/contracts";
-import { EntityFileStore, safeJson } from "../shared/file-storage";
+import { EntityFileStore } from "../shared/file-storage";
 import { HookConflictError, HookNotFoundError, InvalidHookIdError } from "./hooks.errors";
 
 /** DI token carrying the absolute path of the directory that holds hook files. */
@@ -20,16 +20,12 @@ export const HOOKS_DIR = "HOOKS_DIR";
  * `--settings`; the locked approval hook always wins (Law 1).
  */
 @Injectable()
-export class HooksStorageService extends EntityFileStore<Hook> implements OnModuleInit {
+export class HooksStorageService extends EntityFileStore<Hook> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(HOOKS_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateHookInput): Promise<Hook> {
@@ -57,8 +53,7 @@ export class HooksStorageService extends EntityFileStore<Hook> implements OnModu
   }
 
   protected tryParse(raw: string): Hook | null {
-    const parsed = HookSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(HookSchema, raw);
   }
 
   protected compare(a: Hook, b: Hook): number {

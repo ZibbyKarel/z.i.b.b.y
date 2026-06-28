@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
@@ -48,6 +49,6 @@ export const ProposalSchema = z.object({
   state: ProposalStateSchema,
   /** The `proposed-task` approval gating this proposal (set on park). */
   approvalId: z.string().optional(),
-  createdAt: z.string().datetime(),
+  createdAt: IsoDateTimeSchema,
 });
 export type Proposal = z.infer<typeof ProposalSchema>;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
@@ -94,7 +95,7 @@ export const AutomationSchema = z.object({
    */
   system: z.boolean().default(false),
   /** ISO timestamp of the last fire, for idempotence + display. */
-  lastFiredAt: z.string().datetime().optional(),
+  lastFiredAt: IsoDateTimeSchema.optional(),
 });
 export type Automation = z.infer<typeof AutomationSchema>;
 

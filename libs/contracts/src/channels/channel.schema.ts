@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { IntegrationIdSchema, IntegrationKindSchema } from "../integrations/integration.schema";
 import { TaskOutcomeSchema } from "../tasks/task.schema";
 
@@ -59,7 +60,7 @@ export const ChannelItemSchema = z.object({
   kind: IntegrationKindSchema,
   externalRef: ExternalRefSchema,
   from: z.string().optional(),
-  receivedAt: z.string().datetime(),
+  receivedAt: IsoDateTimeSchema,
   /** Sanitized, length-capped message text (never enters a prompt except enveloped). */
   text: z.string(),
   /** The original, untouched provider payload (kept for the audit record). */
@@ -79,7 +80,7 @@ export const ChannelItemSchema = z.object({
   /** Set when a Tier-3 reply was parked as an approval. */
   approvalId: z.string().optional(),
   /** Set once a reply was actually sent. */
-  reply: z.object({ text: z.string(), sentAt: z.string().datetime() }).optional(),
+  reply: z.object({ text: z.string(), sentAt: IsoDateTimeSchema }).optional(),
   /** Copied from the dispatched task's outcome once its run finishes (Tier 1). */
   outcome: TaskOutcomeSchema.optional(),
 });

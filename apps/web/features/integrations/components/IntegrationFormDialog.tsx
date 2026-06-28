@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Button,
   Dialog,
   Field,
   SelectField,
@@ -19,6 +18,7 @@ import type {
   UpdateIntegrationInput,
 } from "@zibby/contracts";
 import { IntegrationIdSchema } from "@zibby/contracts";
+import { DialogFormFooter } from "../../../components/DialogFormFooter/DialogFormFooter";
 
 /** Testids for the integration form dialog (the screen + tests select via these). */
 export enum IntegrationFormTestId {
@@ -223,20 +223,14 @@ export function IntegrationFormDialog({
     <Dialog
       open
       actions={
-        <>
-          <Button intent="ghost" onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            data-testid={IntegrationFormTestId.Submit}
-            disabled={!canSave}
-            icon={isNew ? "plus" : "check"}
-            intent="primary"
-            onClick={submit}
-          >
-            {isNew ? t("integrations.create") : t("common.save")}
-          </Button>
-        </>
+        <DialogFormFooter
+          canSave={canSave}
+          createLabel={t("integrations.create")}
+          isNew={isNew}
+          onClose={onClose}
+          onSubmit={submit}
+          submitTestId={IntegrationFormTestId.Submit}
+        />
       }
       ariaLabel={isNew ? t("integrations.addIntegration") : (integration.name ?? integration.id)}
       closeLabel={t("common.close")}

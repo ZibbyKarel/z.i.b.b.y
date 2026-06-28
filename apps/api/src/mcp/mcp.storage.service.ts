@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateMcpServerInput,
@@ -6,7 +6,7 @@ import {
   McpServerSchema,
   type UpdateMcpServerInput,
 } from "@zibby/contracts";
-import { EntityFileStore, safeJson } from "../shared/file-storage";
+import { EntityFileStore } from "../shared/file-storage";
 import {
   InvalidMcpServerIdError,
   McpServerConflictError,
@@ -23,16 +23,12 @@ export const MCP_DIR = "MCP_DIR";
  * store pattern as integrations; there is intentionally no database.
  */
 @Injectable()
-export class McpServersStorageService extends EntityFileStore<McpServer> implements OnModuleInit {
+export class McpServersStorageService extends EntityFileStore<McpServer> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(MCP_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {
@@ -63,8 +59,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> impleme
   }
 
   protected tryParse(raw: string): McpServer | null {
-    const parsed = McpServerSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(McpServerSchema, raw);
   }
 
   protected compare(a: McpServer, b: McpServer): number {

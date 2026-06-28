@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
@@ -249,7 +250,7 @@ export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>;
 export const TaskOutcomeSchema = z.object({
   status: z.enum(["done", "error"]),
   summary: z.string(),
-  finishedAt: z.string().datetime(),
+  finishedAt: IsoDateTimeSchema,
 });
 export type TaskOutcome = z.infer<typeof TaskOutcomeSchema>;
 
@@ -266,7 +267,7 @@ export const ScheduledTaskSchema = z.object({
   /** Absolute epoch ms the task should fire at. */
   scheduledAt: z.number().int().positive(),
   status: ScheduledTaskStatusSchema,
-  createdAt: z.string().datetime(),
+  createdAt: IsoDateTimeSchema,
   /**
    * The engagement this task was attributed to (Phase 8), resolved
    * deterministically by `matchProject` before dispatch. Drives the budget guard,

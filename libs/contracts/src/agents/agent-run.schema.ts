@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "./agent.schema";
-import { RunStatusSchema, WorkspaceSchema } from "../common.schema";
+import { IsoDateTimeSchema, RunStatusSchema, WorkspaceSchema } from "../common.schema";
 
 /**
  * A single execution of an agent. The backend keeps these in an in-memory
@@ -73,7 +73,7 @@ export const AgentRunSchema = z.object({
    * sandbox as before). Persisted so deletion can prune the worktree.
    */
   workspace: WorkspaceSchema.optional(),
-  startedAt: z.string().datetime(),
+  startedAt: IsoDateTimeSchema,
   pid: z.number().int(),
   logFile: z.string(),
 });

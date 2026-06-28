@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getChannelItemsQueryKey } from "../queries/useChannelItemsQuery";
 
 /**
@@ -8,9 +8,7 @@ import { getChannelItemsQueryKey } from "../queries/useChannelItemsQuery";
  * list. Invalidates the inbox query so the card disappears immediately; the SSE
  * `channel-items` scope keeps other clients in sync.
  */
-export function useDismissChannelItemMutation() {
-  const qc = useQueryClient();
-  return apiClient.channels.dismissChannelItem.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getChannelItemsQueryKey() }),
-  });
-}
+export const useDismissChannelItemMutation = makeInvalidatingMutation(
+  apiClient.channels.dismissChannelItem.useMutation,
+  getChannelItemsQueryKey,
+);

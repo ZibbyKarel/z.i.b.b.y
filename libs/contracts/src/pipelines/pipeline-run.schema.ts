@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
-import { WorkspaceSchema } from "../common.schema";
+import { IsoDateTimeSchema, WorkspaceSchema } from "../common.schema";
 import { PipelineOutputSchema } from "./pipeline.schema";
 import { StageVerdictSchema } from "./stage-verdict.schema";
 
@@ -80,7 +80,7 @@ export const PipelineCheckpointSchema = z.object({
   phaseId: z.string().min(1),
   /** Abbreviated commit sha on the run branch. */
   sha: z.string().min(1),
-  at: z.string().datetime(),
+  at: IsoDateTimeSchema,
 });
 export type PipelineCheckpoint = z.infer<typeof PipelineCheckpointSchema>;
 
@@ -114,7 +114,7 @@ export const PipelineRunSchema = z.object({
    */
   currentStageRunId: z.string().optional(),
   stageRuns: z.array(StageRunSchema),
-  startedAt: z.string().datetime(),
+  startedAt: IsoDateTimeSchema,
   /** Absolute shared root dir holding the per-phase sandboxes for this run. */
   cwd: z.string(),
   /**

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RiskSchema } from "../common.schema";
+import { IsoDateTimeSchema, RiskSchema } from "../common.schema";
 
 /**
  * Which run kind an approval gates — so a decision can be routed to the right
@@ -57,7 +57,7 @@ export const ApprovalSchema = z.object({
   detail: z.string(),
   risk: RiskSchema,
   status: ApprovalStatusSchema,
-  requestedAt: z.string().datetime(),
-  decidedAt: z.string().datetime().optional(),
+  requestedAt: IsoDateTimeSchema,
+  decidedAt: IsoDateTimeSchema.optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema";
 
 /**
@@ -10,7 +11,7 @@ export const BriefingNeedsYouItemSchema = z.object({
   kind: z.enum(["approval", "parked"]),
   id: z.string(),
   summary: z.string(),
-  at: z.string().datetime(),
+  at: IsoDateTimeSchema,
   refs: ActivityRefsSchema,
   /** The engagement this item belongs to (Phase 8.2) — drives the card grouping. */
   projectId: z.string().optional(),
@@ -21,7 +22,7 @@ export type BriefingNeedsYouItem = z.infer<typeof BriefingNeedsYouItemSchema>;
 export const BriefingDidItemSchema = z.object({
   kind: ActivityKindSchema,
   summary: z.string(),
-  at: z.string().datetime(),
+  at: IsoDateTimeSchema,
   /** The engagement this item belongs to (Phase 8.2), when the activity carried one. */
   projectId: z.string().optional(),
 });
@@ -55,7 +56,7 @@ export type BriefingEngagement = z.infer<typeof BriefingEngagementSchema>;
 export const BriefingWatchItemSchema = z.object({
   integrationId: z.string().optional(),
   newItems: z.number().int().nonnegative().optional(),
-  lastReceivedAt: z.string().datetime().optional(),
+  lastReceivedAt: IsoDateTimeSchema.optional(),
   /** Phase 9 run-pause watch: the paused run, a butler-voice line, and its resume epoch. */
   runRef: z.string().optional(),
   summary: z.string().optional(),
@@ -81,8 +82,8 @@ export type BriefingCounts = z.infer<typeof BriefingCountsSchema>;
  * activity entries since the last briefing, so assembly is snapshot-testable.
  */
 export const BriefingSchema = z.object({
-  generatedAt: z.string().datetime(),
-  since: z.string().datetime(),
+  generatedAt: IsoDateTimeSchema,
+  since: IsoDateTimeSchema,
   headline: z.string(),
   nothingNeedsYou: z.boolean(),
   needsYou: z.array(BriefingNeedsYouItemSchema),

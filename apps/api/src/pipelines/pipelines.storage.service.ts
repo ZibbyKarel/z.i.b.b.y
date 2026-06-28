@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreatePipelineInput,
@@ -27,16 +27,12 @@ export const PIPELINES_DIR = "PIPELINES_DIR";
  * pipeline corrupt rather than silently dropping a stage).
  */
 @Injectable()
-export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> implements OnModuleInit {
+export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
   protected readonly fileExt = ".pipeline.md";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(PIPELINES_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreatePipelineInput): Promise<Pipeline> {

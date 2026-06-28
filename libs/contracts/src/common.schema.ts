@@ -10,6 +10,15 @@ export const ErrorSchema = z.object({ message: z.string() });
 export type ErrorBody = z.infer<typeof ErrorSchema>;
 
 /**
+ * An ISO 8601 date-time string (e.g. `2026-06-28T04:30:00Z`). The single shape
+ * for every timestamp field across the contracts — `startedAt`, `createdAt`,
+ * `lastSyncAt`, … — so the validation rule lives in one place. Chain `.optional()`
+ * / `.nullable()` at the use site as before.
+ */
+export const IsoDateTimeSchema = z.string().datetime();
+export type IsoDateTime = z.infer<typeof IsoDateTimeSchema>;
+
+/**
  * The shared lifecycle states a run can be in, across every run kind (agent,
  * skill, pipeline stage). Two *safe paused states with no live child* — each
  * survives a restart unchanged rather than being reconciled to `interrupted`:

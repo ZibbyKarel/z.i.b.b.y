@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
@@ -162,7 +163,7 @@ export type ProjectSecretsInput = z.infer<typeof ProjectSecretsInputSchema>;
 export const ProjectStandupSchema = z.object({
   projectId: z.string(),
   date: z.string(),
-  generatedAt: z.string().datetime(),
+  generatedAt: IsoDateTimeSchema,
   text: z.string(),
 });
 export type ProjectStandup = z.infer<typeof ProjectStandupSchema>;

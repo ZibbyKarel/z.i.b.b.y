@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
-import { WorkspaceSchema } from "../common.schema";
+import { IsoDateTimeSchema, WorkspaceSchema } from "../common.schema";
 
 /**
  * Lifecycle of a whole goal run — a deliberate clone of {@link PipelineStateSchema}
@@ -63,8 +63,8 @@ export const GoalIterationSchema = z.object({
     /** The failing-check tail or the claude verdict text (feeds the next iteration). */
     output: z.string(),
   }),
-  startedAt: z.string().datetime(),
-  endedAt: z.string().datetime().optional(),
+  startedAt: IsoDateTimeSchema,
+  endedAt: IsoDateTimeSchema.optional(),
   status: GoalIterationStatusSchema,
 });
 export type GoalIteration = z.infer<typeof GoalIterationSchema>;
@@ -96,7 +96,7 @@ export const GoalRunSchema = z.object({
   /** Iteration currently executing, or null once the run has finished/parked. */
   currentIteration: z.number().int().nonnegative().nullable(),
   iterations: z.array(GoalIterationSchema),
-  startedAt: z.string().datetime(),
+  startedAt: IsoDateTimeSchema,
   /** Absolute shared root dir holding this run's per-iteration artifacts. */
   cwd: z.string(),
   /** Absolute path of the resolved target project, when started with one. */

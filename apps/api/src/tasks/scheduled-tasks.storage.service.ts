@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   type CreateTaskInput,
   type ScheduledTask,
@@ -6,7 +6,7 @@ import {
   type TaskOutcome,
   type TaskTarget,
 } from "@zibby/contracts";
-import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
+import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 
 export const TASKS_DIR = "TASKS_DIR";
 
@@ -38,17 +38,13 @@ export class InvalidScheduledTaskIdError extends Error {
 @Injectable()
 export class ScheduledTasksStorageService
   extends EntityFileStore<ScheduledTask>
-  implements OnModuleInit
+ 
 {
   protected readonly fileExt = ".json";
   protected readonly idRegex = TASK_ID_REGEX;
 
   constructor(@Inject(TASKS_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   /** A fresh collision-resistant task id (exposed so a run can be born linked). */
@@ -389,8 +385,7 @@ export class ScheduledTasksStorageService
   }
 
   protected tryParse(raw: string): ScheduledTask | null {
-    const parsed = ScheduledTaskSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(ScheduledTaskSchema, raw);
   }
 
   /** Newest first — the queue reads most-recent at the top. */

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Button,
   Dialog,
   Field,
   SelectField,
@@ -13,6 +12,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { CreateHookInput, Hook, HookEvent, UpdateHookInput } from "@zibby/contracts";
+import { DialogFormFooter } from "../../../components/DialogFormFooter/DialogFormFooter";
 
 /** Testids for the hook form dialog (the screen + tests select via these). */
 export enum HookFormTestId {
@@ -120,25 +120,15 @@ export function HookFormDialog({ hook, onClose, onSubmit, onDelete }: HookFormDi
     <Dialog
       open
       actions={
-        <>
-          {!isNew && onDelete && (
-            <Button icon="trash" intent="danger" onClick={onDelete}>
-              {t("common.delete")}
-            </Button>
-          )}
-          <Button intent="ghost" onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            data-testid={HookFormTestId.Submit}
-            disabled={!canSave}
-            icon={isNew ? "plus" : "check"}
-            intent="primary"
-            onClick={submit}
-          >
-            {isNew ? t("hooks.create") : t("common.save")}
-          </Button>
-        </>
+        <DialogFormFooter
+          canSave={canSave}
+          createLabel={t("hooks.create")}
+          isNew={isNew}
+          onClose={onClose}
+          onDelete={onDelete}
+          onSubmit={submit}
+          submitTestId={HookFormTestId.Submit}
+        />
       }
       ariaLabel={isNew ? t("hooks.addHook") : (hook.name ?? hook.id)}
       closeLabel={t("common.close")}
