@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Button,
   Dialog,
   Field,
   SelectField,
@@ -18,6 +17,7 @@ import type {
   McpTransport,
   UpdateMcpServerInput,
 } from "@zibby/contracts";
+import { DialogFormFooter } from "../../../components/DialogFormFooter/DialogFormFooter";
 
 /** Testids for the MCP server form dialog (the screen + tests select via these). */
 export enum McpServerFormTestId {
@@ -156,25 +156,15 @@ export function McpServerFormDialog({
     <Dialog
       open
       actions={
-        <>
-          {!isNew && onDelete && (
-            <Button icon="trash" intent="danger" onClick={onDelete}>
-              {t("common.delete")}
-            </Button>
-          )}
-          <Button intent="ghost" onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            data-testid={McpServerFormTestId.Submit}
-            disabled={!canSave}
-            icon={isNew ? "plus" : "check"}
-            intent="primary"
-            onClick={submit}
-          >
-            {isNew ? t("mcp.create") : t("common.save")}
-          </Button>
-        </>
+        <DialogFormFooter
+          canSave={canSave}
+          createLabel={t("mcp.create")}
+          isNew={isNew}
+          onClose={onClose}
+          onDelete={onDelete}
+          onSubmit={submit}
+          submitTestId={McpServerFormTestId.Submit}
+        />
       }
       ariaLabel={isNew ? t("mcp.addServer") : (server.name ?? server.id)}
       closeLabel={t("common.close")}
