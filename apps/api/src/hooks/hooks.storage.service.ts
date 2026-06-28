@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateHookInput,
@@ -20,16 +20,12 @@ export const HOOKS_DIR = "HOOKS_DIR";
  * `--settings`; the locked approval hook always wins (Law 1).
  */
 @Injectable()
-export class HooksStorageService extends EntityFileStore<Hook> implements OnModuleInit {
+export class HooksStorageService extends EntityFileStore<Hook> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(HOOKS_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateHookInput): Promise<Hook> {

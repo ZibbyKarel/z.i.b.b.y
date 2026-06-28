@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type Command,
@@ -25,16 +25,12 @@ export const COMMANDS_DIR = "COMMANDS_DIR";
  * {@link SkillsStorageService}; there is intentionally no database.
  */
 @Injectable()
-export class CommandsStorageService extends MarkdownEntityStore<Command> implements OnModuleInit {
+export class CommandsStorageService extends MarkdownEntityStore<Command> {
   protected readonly fileExt = ".md";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(COMMANDS_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateCommandInput): Promise<Command> {

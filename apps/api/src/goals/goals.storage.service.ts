@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateGoalInput,
@@ -29,16 +29,12 @@ export const GOALS_DIR = "GOALS_DIR";
  * goal corrupt (it can't loop without them) rather than silently dropping it.
  */
 @Injectable()
-export class GoalsStorageService extends MarkdownEntityStore<Goal> implements OnModuleInit {
+export class GoalsStorageService extends MarkdownEntityStore<Goal> {
   protected readonly fileExt = ".goal.md";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(GOALS_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateGoalInput): Promise<Goal> {

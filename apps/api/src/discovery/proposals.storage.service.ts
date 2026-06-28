@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { type Proposal, ProposalSchema } from "@zibby/contracts";
 import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
 
@@ -29,16 +29,12 @@ export class InvalidProposalIdError extends Error {
  * same atomic-write / tolerant-parse way as approval/run sidecars.
  */
 @Injectable()
-export class ProposalsStorageService extends EntityFileStore<Proposal> implements OnModuleInit {
+export class ProposalsStorageService extends EntityFileStore<Proposal> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = ID_REGEX;
 
   constructor(@Inject(PROPOSALS_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(proposal: Proposal): Promise<Proposal> {

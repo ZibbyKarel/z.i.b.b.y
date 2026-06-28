@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateMcpServerInput,
@@ -23,16 +23,12 @@ export const MCP_DIR = "MCP_DIR";
  * store pattern as integrations; there is intentionally no database.
  */
 @Injectable()
-export class McpServersStorageService extends EntityFileStore<McpServer> implements OnModuleInit {
+export class McpServersStorageService extends EntityFileStore<McpServer> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
 
   constructor(@Inject(MCP_DIR) dir: string) {
     super(dir);
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {

@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateIntegrationInput,
@@ -70,7 +70,7 @@ export interface SyncStamp {
 @Injectable()
 export class IntegrationsStorageService
   extends EntityFileStore<Integration>
-  implements OnModuleInit
+ 
 {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
@@ -82,10 +82,6 @@ export class IntegrationsStorageService
   ) {
     super(dir);
     this.stateDir = stateDir;
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.ensureDir();
   }
 
   async create(input: CreateIntegrationInput): Promise<Integration> {

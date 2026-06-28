@@ -65,6 +65,15 @@ export abstract class EntityFileStore<T> {
     await ensureDir(this.dir);
   }
 
+  /**
+   * NestJS lifecycle hook — ensures the data directory exists before traffic.
+   * Every file-backed store needs this, so it lives on the base; a subclass with
+   * extra startup work (e.g. seeding) overrides and calls `super.onModuleInit()`.
+   */
+  async onModuleInit(): Promise<void> {
+    await this.ensureDir();
+  }
+
   /** Resolve an id to a safe absolute path, throwing the domain invalid-id error. */
   protected resolveFile(id: string): string {
     const file = resolveSafeFile(this.dir, id, this.fileExt, this.idRegex);
