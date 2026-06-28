@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getGateRulesQueryKey } from "../queries/useGateRulesQuery";
 
 /**
@@ -7,9 +7,7 @@ import { getGateRulesQueryKey } from "../queries/useGateRulesQuery";
  * evaluation order (first match wins), so it is a first-class operation — the body
  * is the full list of ids in the new order.
  */
-export function useReorderGateRulesMutation() {
-  const qc = useQueryClient();
-  return apiClient.gateRules.reorderGateRules.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getGateRulesQueryKey() }),
-  });
-}
+export const useReorderGateRulesMutation = makeInvalidatingMutation(
+  apiClient.gateRules.reorderGateRules.useMutation,
+  getGateRulesQueryKey,
+);

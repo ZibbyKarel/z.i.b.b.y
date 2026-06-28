@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getMcpServersQueryKey } from "../queries/useMcpServersQuery";
 
 /**
@@ -7,9 +7,7 @@ import { getMcpServersQueryKey } from "../queries/useMcpServersQuery";
  * — the secret is never read back; the catalog is refreshed so `hasCredentials`
  * flips to true.
  */
-export function useSetMcpCredentialsMutation() {
-  const qc = useQueryClient();
-  return apiClient.mcpServers.setMcpCredentials.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getMcpServersQueryKey() }),
-  });
-}
+export const useSetMcpCredentialsMutation = makeInvalidatingMutation(
+  apiClient.mcpServers.setMcpCredentials.useMutation,
+  getMcpServersQueryKey,
+);

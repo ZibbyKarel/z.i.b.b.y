@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getIntegrationsQueryKey } from "../queries/useIntegrationsQuery";
 
 /**
@@ -7,9 +7,7 @@ import { getIntegrationsQueryKey } from "../queries/useIntegrationsQuery";
  * stamps `status` from the result, so the catalog is refreshed on success to pick
  * up the new connection state.
  */
-export function useTestIntegrationMutation() {
-  const qc = useQueryClient();
-  return apiClient.integrations.testIntegration.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getIntegrationsQueryKey() }),
-  });
-}
+export const useTestIntegrationMutation = makeInvalidatingMutation(
+  apiClient.integrations.testIntegration.useMutation,
+  getIntegrationsQueryKey,
+);

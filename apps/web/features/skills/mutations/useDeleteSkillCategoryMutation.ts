@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getSkillCategoriesQueryKey } from "../queries/useSkillCategoriesQuery";
 
 /**
@@ -7,9 +7,7 @@ import { getSkillCategoriesQueryKey } from "../queries/useSkillCategoriesQuery";
  * (409) while any skill still references it, so only empty categories are
  * removable; refreshes the taxonomy on success.
  */
-export function useDeleteSkillCategoryMutation() {
-  const qc = useQueryClient();
-  return apiClient.skillCategories.deleteCategory.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getSkillCategoriesQueryKey() }),
-  });
-}
+export const useDeleteSkillCategoryMutation = makeInvalidatingMutation(
+  apiClient.skillCategories.deleteCategory.useMutation,
+  getSkillCategoriesQueryKey,
+);

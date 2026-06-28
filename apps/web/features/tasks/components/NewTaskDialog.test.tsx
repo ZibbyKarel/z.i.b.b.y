@@ -155,9 +155,15 @@ vi.mock("../../projects/queries/useProjectsQuery", () => ({
 
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "koder", name: "Kodér", instructions: "x" }] }),
+  // useCreateAgentMutation (pulled in via the agents/mutations barrel) reads this
+  // key at module load, so the mock must provide it.
+  getAgentsQueryKey: () => ["agents"],
 }));
 vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [{ id: "delivery", name: "Delivery" }] }),
+  // useCreate/UpdatePipelineMutation (via the pipelines/mutations barrel) read this
+  // key at module load, so the mock must provide it.
+  getPipelinesQueryKey: () => ["pipelines"],
 }));
 
 const RESET_AT = Date.now() + 3 * 60 * 60 * 1000;

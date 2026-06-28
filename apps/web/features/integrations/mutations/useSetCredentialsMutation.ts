@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getIntegrationsQueryKey } from "../queries/useIntegrationsQuery";
 
 /**
@@ -7,9 +7,7 @@ import { getIntegrationsQueryKey } from "../queries/useIntegrationsQuery";
  * — the secret is never read back; the catalog is refreshed so `hasCredentials`
  * flips to true.
  */
-export function useSetCredentialsMutation() {
-  const qc = useQueryClient();
-  return apiClient.integrations.setCredentials.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getIntegrationsQueryKey() }),
-  });
-}
+export const useSetCredentialsMutation = makeInvalidatingMutation(
+  apiClient.integrations.setCredentials.useMutation,
+  getIntegrationsQueryKey,
+);

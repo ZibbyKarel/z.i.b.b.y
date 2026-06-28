@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutation";
 import { getProjectCategoriesQueryKey } from "../queries/useProjectCategoriesQuery";
 
 /**
@@ -7,9 +7,7 @@ import { getProjectCategoriesQueryKey } from "../queries/useProjectCategoriesQue
  * refuses (409) while any project still references it, so only empty categories
  * are removable; refreshes the taxonomy on success.
  */
-export function useDeleteProjectCategoryMutation() {
-  const qc = useQueryClient();
-  return apiClient.projectCategories.deleteCategory.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: getProjectCategoriesQueryKey() }),
-  });
-}
+export const useDeleteProjectCategoryMutation = makeInvalidatingMutation(
+  apiClient.projectCategories.deleteCategory.useMutation,
+  getProjectCategoriesQueryKey,
+);
