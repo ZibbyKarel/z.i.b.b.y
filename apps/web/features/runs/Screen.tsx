@@ -98,7 +98,6 @@ export function Screen() {
 
   const running = count("running");
   const awaiting = count("awaiting-approval");
-
   return (
     <PageContainer>
       <Stack gap="250">

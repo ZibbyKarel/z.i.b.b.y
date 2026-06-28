@@ -1,0 +1,11 @@
+{
+  "tasks": "visible",
+  "runs": "visible",
+  "pipelines": "visible",
+  "goals": "visible",
+  "approvals": "visible",
+  "channels": "grouped",
+  "integrations": "visible",
+  "research": "grouped",
+  "briefing": "grouped"
+}

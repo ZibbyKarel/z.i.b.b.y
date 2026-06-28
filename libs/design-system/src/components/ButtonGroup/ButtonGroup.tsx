@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
-import { Stack } from "../Stack/Stack";
 import { Icon } from "../Icon/Icon";
+import { Stack } from "../Stack/Stack";
 
 export enum ButtonGroupTestId {
   Root = "button-group-root",
@@ -120,7 +120,7 @@ export function ButtonGroup({
                 />
               )}
               {o.label}
-              {o.trailing && (
+              {!!o.trailing && (
                 <span
                   className="inline-flex items-center"
                   data-testid={`${ButtonGroupTestId.Trailing}-${o.id}`}
