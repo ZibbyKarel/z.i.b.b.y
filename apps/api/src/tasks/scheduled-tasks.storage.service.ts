@@ -6,7 +6,7 @@ import {
   type TaskOutcome,
   type TaskTarget,
 } from "@zibby/contracts";
-import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
+import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 
 export const TASKS_DIR = "TASKS_DIR";
 
@@ -385,8 +385,7 @@ export class ScheduledTasksStorageService
   }
 
   protected tryParse(raw: string): ScheduledTask | null {
-    const parsed = ScheduledTaskSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(ScheduledTaskSchema, raw);
   }
 
   /** Newest first — the queue reads most-recent at the top. */

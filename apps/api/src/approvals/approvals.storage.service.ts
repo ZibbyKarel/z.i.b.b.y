@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { type Approval, ApprovalSchema } from "@zibby/contracts";
-import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
+import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 import { ApprovalNotFoundError, InvalidApprovalIdError } from "./approvals.errors";
 
 /** DI token carrying the absolute path of the directory that holds approval files. */
@@ -47,8 +47,7 @@ export class ApprovalsStorageService extends EntityFileStore<Approval> {
   }
 
   protected tryParse(raw: string): Approval | null {
-    const parsed = ApprovalSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(ApprovalSchema, raw);
   }
 
   protected compare(a: Approval, b: Approval): number {

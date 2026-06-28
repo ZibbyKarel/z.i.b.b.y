@@ -1,10 +1,12 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
+import { type ZodType } from "zod";
 import {
   ensureDir,
   fileExists,
   isErrnoException,
   resolveSafeFile,
+  safeJson,
   writeFileAtomic,
 } from "./file-utils";
 
@@ -45,6 +47,17 @@ export abstract class EntityFileStore<T> {
    * that key on the file name; ignored by stores that carry the id in-band).
    */
   protected abstract tryParse(raw: string, id: string): T | null;
+
+  /**
+   * Parse a JSON file body against a Zod schema, tolerant of malformed input
+   * (returns null rather than throwing). The shared shape of every plain-JSON
+   * store's {@link tryParse}; Markdown stores parse frontmatter instead.
+   */
+  protected parseJson<U>(schema: ZodType<U>, raw: string): U | null {
+    const parsed = schema.safeParse(safeJson(raw));
+    return parsed.success ? parsed.data : null;
+  }
+
   /** Ordering for {@link list}. */
   protected abstract compare(a: T, b: T): number;
   /** Error thrown when an entity is missing. */

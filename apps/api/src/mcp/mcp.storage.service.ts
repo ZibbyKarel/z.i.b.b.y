@@ -6,7 +6,7 @@ import {
   McpServerSchema,
   type UpdateMcpServerInput,
 } from "@zibby/contracts";
-import { EntityFileStore, safeJson } from "../shared/file-storage";
+import { EntityFileStore } from "../shared/file-storage";
 import {
   InvalidMcpServerIdError,
   McpServerConflictError,
@@ -59,8 +59,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
   }
 
   protected tryParse(raw: string): McpServer | null {
-    const parsed = McpServerSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(McpServerSchema, raw);
   }
 
   protected compare(a: McpServer, b: McpServer): number {

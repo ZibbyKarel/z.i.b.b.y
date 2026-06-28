@@ -6,7 +6,7 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "@zibby/contracts";
-import { EntityFileStore, safeJson, searchByText } from "../shared/file-storage";
+import { EntityFileStore, searchByText } from "../shared/file-storage";
 
 export const AUTOMATIONS_DIR = "AUTOMATIONS_DIR";
 
@@ -147,8 +147,7 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
   }
 
   protected tryParse(raw: string): Automation | null {
-    const parsed = AutomationSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(AutomationSchema, raw);
   }
 
   protected compare(a: Automation, b: Automation): number {

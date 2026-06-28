@@ -191,8 +191,7 @@ export class IntegrationsStorageService
   }
 
   protected tryParse(raw: string): Integration | null {
-    const parsed = IntegrationSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(IntegrationSchema, raw);
   }
 
   protected compare(a: Integration, b: Integration): number {

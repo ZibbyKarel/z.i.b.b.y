@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { type Proposal, ProposalSchema } from "@zibby/contracts";
-import { EntityFileStore, collisionResistantId, safeJson } from "../shared/file-storage";
+import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 
 /** DI token carrying the absolute path of the directory that holds proposal files. */
 export const PROPOSALS_DIR = "PROPOSALS_DIR";
@@ -61,8 +61,7 @@ export class ProposalsStorageService extends EntityFileStore<Proposal> {
   }
 
   protected tryParse(raw: string): Proposal | null {
-    const parsed = ProposalSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(ProposalSchema, raw);
   }
 
   protected compare(a: Proposal, b: Proposal): number {

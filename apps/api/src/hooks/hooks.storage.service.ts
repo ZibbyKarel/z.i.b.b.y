@@ -6,7 +6,7 @@ import {
   HookSchema,
   type UpdateHookInput,
 } from "@zibby/contracts";
-import { EntityFileStore, safeJson } from "../shared/file-storage";
+import { EntityFileStore } from "../shared/file-storage";
 import { HookConflictError, HookNotFoundError, InvalidHookIdError } from "./hooks.errors";
 
 /** DI token carrying the absolute path of the directory that holds hook files. */
@@ -53,8 +53,7 @@ export class HooksStorageService extends EntityFileStore<Hook> {
   }
 
   protected tryParse(raw: string): Hook | null {
-    const parsed = HookSchema.safeParse(safeJson(raw));
-    return parsed.success ? parsed.data : null;
+    return this.parseJson(HookSchema, raw);
   }
 
   protected compare(a: Hook, b: Hook): number {
