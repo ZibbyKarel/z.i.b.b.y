@@ -136,22 +136,32 @@ describe("Parallel engagements (e2e)", () => {
   });
 
   it("queues A's second task at maxConcurrent, runs B immediately, and drains the queue on terminal", async () => {
-    // A's first task dispatches (occupies A's single slot).
+    // A's first task dispatches (occupies A's single slot). POST returns `pending`
+    // (background dispatch) — wait for the record to land before the next create.
     const a1 = await request(server()).post("/api/tasks").send({ text: "alpha first job" });
-    expect(a1.body.outcome).toBe("dispatched");
-    expect(a1.body.task.projectId).toBe("alpha");
+    const a1Task = await poll(
+      () => taskById(a1.body.task.id as string),
+      (t) => t?.status === "dispatched",
+    );
+    expect(a1Task?.projectId).toBe("alpha");
 
     // A's second task — A is at capacity → queued (FIFO, no approval).
     const a2 = await request(server()).post("/api/tasks").send({ text: "alpha second job" });
-    expect(a2.body.outcome).toBe("scheduled");
-    expect(a2.body.task.status).toBe("queued");
-    expect(a2.body.task.projectId).toBe("alpha");
     const a2Id = a2.body.task.id as string;
+    const a2Task = await poll(
+      () => taskById(a2Id),
+      (t) => t?.status === "queued",
+    );
+    expect(a2Task?.status).toBe("queued");
+    expect(a2Task?.projectId).toBe("alpha");
 
     // B's task runs immediately — a different engagement, its own slot.
     const b1 = await request(server()).post("/api/tasks").send({ text: "beta first job" });
-    expect(b1.body.outcome).toBe("dispatched");
-    expect(b1.body.task.projectId).toBe("beta");
+    const b1Task = await poll(
+      () => taskById(b1.body.task.id as string),
+      (t) => t?.status === "dispatched",
+    );
+    expect(b1Task?.projectId).toBe("beta");
 
     // The budget readout shows A with one queued task.
     expect((await budgetRow("alpha"))?.queued).toBe(1);

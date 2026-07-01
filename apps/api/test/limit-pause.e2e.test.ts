@@ -176,10 +176,23 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
 
   it("defers a task when the window is exhausted, and dispatches it once there is headroom", async () => {
     const limits = app.get(LimitsService);
+    // POST /api/tasks returns `pending`; the limit guard runs in the background —
+    // poll the record for the state it lands in.
+    const taskInStatus = (id: string, status: string) =>
+      until(async () => {
+        const res = await request(app.getHttpServer()).get("/api/tasks/scheduled").expect(200);
+        const found = (
+          res.body as Array<{ id: string; status: string; deferredReason?: string }>
+        ).find((t) => t.id === id);
+        return found?.status === status ? found : null;
+      });
+
     // Exhaust the window and bust the 5-min limits cache so the next read sees it.
     await writeLimits(configDir, 100, Math.floor(Date.now() / 1000) + 3600);
     limits.noteLimitHit();
 
+    // The limit guard runs synchronously even on the background path (only the
+    // classify+spawn is deferred), so the deferral is already on the response.
     const deferred = await request(app.getHttpServer())
       .post("/api/tasks")
       .send({ text: "build the thing", title: "Thing" })
@@ -195,7 +208,7 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
       .post("/api/tasks")
       .send({ text: "build the other thing" })
       .expect(201);
-    expect(dispatched.body.outcome).toBe("dispatched");
+    await taskInStatus(dispatched.body.task.id as string, "dispatched");
   });
 });
 

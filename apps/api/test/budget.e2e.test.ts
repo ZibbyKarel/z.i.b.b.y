@@ -112,27 +112,35 @@ describe("Budget API (e2e)", () => {
   });
 
   it("dispatches the first task, holds the second behind a spend-past-cap approval, and accounts for it", async () => {
-    // 1. First matching task dispatches and writes a ledger line.
+    // 1. First matching task dispatches (in the background — POST returns `pending`)
+    //    and writes a ledger line.
     const first = await request(server())
       .post("/api/tasks")
       .send({ text: "fix the alpha login bug" });
     expect(first.status).toBe(201);
-    expect(first.body.outcome).toBe("dispatched");
-    expect(first.body.task.projectId).toBe("alpha");
+    expect(first.body.outcome).toBe("pending");
+    const firstTask = await poll(
+      () => scheduled(first.body.task.id as string),
+      (t) => t?.status === "dispatched",
+    );
+    expect(firstTask?.projectId).toBe("alpha");
 
     let budget = (await request(server()).get("/api/budget")).body;
     const alpha = budget.projects.find((p: { projectId: string }) => p.projectId === "alpha");
     expect(alpha.daily).toEqual({ used: 1, cap: 1 });
 
-    // 2. Second matching task is over the daily cap → held behind an approval.
+    // 2. Second matching task is over the daily cap → held behind an approval
+    //    (the hold too happens off the response path).
     const second = await request(server())
       .post("/api/tasks")
       .send({ text: "refactor alpha auth module" });
     expect(second.status).toBe(201);
-    expect(second.body.outcome).toBe("scheduled");
-    expect(second.body.task.status).toBe("held");
     const heldTaskId = second.body.task.id as string;
-    expect(second.body.task.approvalId).toBeTruthy();
+    const heldTask = await poll(
+      () => scheduled(heldTaskId),
+      (t) => t?.status === "held",
+    );
+    expect(heldTask?.approvalId).toBeTruthy();
 
     // The approval is kind "task" / action "spend-past-cap".
     const approvals = (await request(server()).get("/api/approvals?status=pending")).body as Array<{
@@ -166,9 +174,13 @@ describe("Budget API (e2e)", () => {
     const res = await request(server())
       .post("/api/tasks")
       .send({ text: "yet another alpha chore" });
-    expect(res.body.task.status).toBe("held");
     const taskId = res.body.task.id as string;
-    const approvalId = res.body.task.approvalId as string;
+    const held = await poll(
+      () => scheduled(taskId),
+      (t) => t?.status === "held",
+    );
+    expect(held?.status).toBe("held");
+    const approvalId = held?.approvalId as string;
 
     const reject = await request(server()).post(`/api/approvals/${approvalId}/reject`);
     expect(reject.status).toBe(200);

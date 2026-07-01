@@ -123,7 +123,18 @@ describe("Activity log (e2e)", () => {
       .post("/api/tasks")
       .send({ title: "Tidy", text: "Sort and describe the media in my library" })
       .expect(201);
-    const { task, runRef } = res.body as { task: { id: string }; runRef: string };
+    const { task } = res.body as { task: { id: string } };
+
+    // POST returns `pending`; the dispatch lands in the background — read the
+    // runRef off the task record once it flips to dispatched.
+    const dispatchedTask = await until(async () => {
+      const list = await request(app.getHttpServer()).get("/api/tasks/scheduled").expect(200);
+      const found = (list.body as Array<{ id: string; status: string; runRef?: string }>).find(
+        (t) => t.id === task.id,
+      );
+      return found?.status === "dispatched" ? found : null;
+    });
+    const runRef = dispatchedTask.runRef as string;
 
     // Wait until the outcome has been recorded (the terminal entry of the chain).
     const entries = await until(async () => {
@@ -143,9 +154,11 @@ describe("Activity log (e2e)", () => {
     expect(finished).toBeDefined();
     expect(outcome).toBeDefined();
 
-    // The task entries share the originating HTTP request's traceId.
+    // `task-created` is recorded on the HTTP request's trace; the dispatch runs in
+    // the background under its OWN trace (like a scheduler tick) — the durable
+    // correlation between the two is the taskId ref, asserted above.
     expect(created!.traceId).toBeDefined();
-    expect(dispatched!.traceId).toBe(created!.traceId);
+    expect(dispatched!.traceId).toBeDefined();
     // The run + outcome entries point back at the same run ref.
     expect(outcome!.refs.runRef).toBe(runRef);
     expect(finished!.refs.status).toBe("done");

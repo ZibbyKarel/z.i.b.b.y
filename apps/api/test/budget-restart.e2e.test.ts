@@ -128,13 +128,23 @@ describe("Budget restart (e2e)", () => {
   });
 
   it("a held task survives a reboot and is still resumable via its approval", async () => {
-    // First task consumes the daily cap.
-    await request(server()).post("/api/tasks").send({ text: "alpha cap filler" });
-    // Second task is held over the daily cap.
+    // First task consumes the daily cap. Dispatch happens off the response path
+    // (POST returns `pending`) — wait for it so the second create reliably sees
+    // the cap already spent.
+    const filler = await request(server()).post("/api/tasks").send({ text: "alpha cap filler" });
+    await poll(
+      () => taskById(filler.body.task.id as string),
+      (t) => t?.status === "dispatched",
+    );
+    // Second task is held over the daily cap (the hold too lands in the background).
     const held = await request(server()).post("/api/tasks").send({ text: "alpha held job" });
-    expect(held.body.task.status).toBe("held");
     const heldId = held.body.task.id as string;
-    const approvalId = held.body.task.approvalId as string;
+    const heldTask = await poll(
+      () => taskById(heldId),
+      (t) => t?.status === "held",
+    );
+    expect(heldTask?.status).toBe("held");
+    const approvalId = heldTask?.approvalId as string;
 
     await reboot();
 
@@ -156,16 +166,25 @@ describe("Budget restart (e2e)", () => {
   });
 
   it("a queued task drains on the bootstrap sweep after its blocking run is gone", async () => {
-    // beta caps concurrency at 1 (no daily cap): the blocker takes the slot, running.
+    // beta caps concurrency at 1 (no daily cap): the blocker takes the slot, running
+    // (dispatch lands in the background — wait for it so the next task queues).
     const blocker = await request(server()).post("/api/tasks").send({ text: "beta blocker run" });
-    expect(blocker.body.task.status).toBe("dispatched");
+    const blockerTask = await poll(
+      () => taskById(blocker.body.task.id as string),
+      (t) => t?.status === "dispatched",
+    );
+    expect(blockerTask?.status).toBe("dispatched");
 
     // The next beta task queues behind it.
     const queued = await request(server())
       .post("/api/tasks")
       .send({ text: "beta queued behind blocker" });
-    expect(queued.body.task.status).toBe("queued");
     const queuedId = queued.body.task.id as string;
+    const queuedTask = await poll(
+      () => taskById(queuedId),
+      (t) => t?.status === "queued",
+    );
+    expect(queuedTask?.status).toBe("queued");
 
     // Reboot: the blocker's child dies with the API → on bootstrap the slot is free,
     // and the queue-drain sweep dispatches the waiting task.

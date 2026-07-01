@@ -487,7 +487,9 @@ describe("Pipelines API (e2e)", () => {
         .start("delivery", undefined, "delivery-proj");
       const { pipelineRunId } = start as { pipelineRunId: string };
 
-      // architekt → koder → verify → review (qualify) → n-9 → dokumentator, green → done.
+      // architekt → koder → review (qualify) → verify → dokumentator → pr-autor,
+      // green → done (the current seed: verify IS the deterministic Tester; the old
+      // n-9 test-automator phase no longer exists).
       const done = await until(async () => {
         const res = app.get(PipelineRunnerService).get(pipelineRunId);
         return res.status === "done" ? res : null;
@@ -499,8 +501,8 @@ describe("Pipelines API (e2e)", () => {
         ["architekt", "plan.md"],
         ["koder", "implementation.md"],
         ["review", "review.md"],
-        ["n-9", "test-automator.md"],
         ["dokumentator", "docs.md"],
+        ["pr-autor", "pr-draft.md"],
       ] as const) {
         await fs.access(path.join(done.cwd, phase, file));
       }

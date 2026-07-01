@@ -80,6 +80,27 @@ describe("Tasks API (e2e)", () => {
     }
   });
 
+  /**
+   * Poll the scheduled-tasks record until the background dispatch lands it in the
+   * expected status (POST /api/tasks returns `pending` immediately; classify +
+   * spawn happen off the response path).
+   */
+  const untilTaskStatus = (
+    id: string,
+    status: string,
+  ): Promise<{
+    id: string;
+    status: string;
+    runRef?: string;
+    error?: string;
+    target?: { kind: string; id?: string };
+  }> =>
+    until(async () => {
+      const list = await request(app.getHttpServer()).get(SCHEDULED).expect(200);
+      const found = list.body.find((t: { id: string }) => t.id === id);
+      return found?.status === status ? found : null;
+    });
+
   const seedCatalog = async () => {
     await request(app.getHttpServer()).post("/api/agents").send({
       id: "curator",
@@ -154,19 +175,24 @@ describe("Tasks API (e2e)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("createTask with no scheduledAt classifies and dispatches a run immediately", async () => {
+  it("createTask with no scheduledAt returns a pending task and dispatches it in the background", async () => {
     await seedCatalog();
     const res = await request(app.getHttpServer())
       .post(CREATE)
       .send({ title: "Vault sync", text: "Srovnej a popiš média v mé knihovně" });
 
+    // The interactive path returns at once with a `pending` task (the dialog
+    // redirects to it); classify + spawn happen off the response path.
     expect(res.status).toBe(201);
-    expect(res.body.outcome).toBe("dispatched");
-    expect(res.body.target.id).toBe("curator");
-    expect(typeof res.body.runRef).toBe("string");
+    expect(res.body.outcome).toBe("pending");
+    expect(res.body.task.status).toBe("pending");
+
+    const task = await untilTaskStatus(res.body.task.id, "dispatched");
+    expect(task.target?.id).toBe("curator");
+    expect(typeof task.runRef).toBe("string");
 
     // The dispatched agent run exists and carries the title through.
-    const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${res.body.runRef}`);
+    const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${task.runRef}`);
     expect(run.status).toBe(200);
     expect(run.body.title).toBe("Vault sync");
   });
@@ -178,12 +204,13 @@ describe("Tasks API (e2e)", () => {
       .send({ title: "Mystery", text: "qqq zzz xyzzy" });
 
     expect(res.status).toBe(201);
-    expect(res.body.outcome).toBe("dispatched");
-    expect(res.body.target.kind).toBe("orchestrator");
-    expect(typeof res.body.runRef).toBe("string");
+    expect(res.body.outcome).toBe("pending");
+    const task = await untilTaskStatus(res.body.task.id, "dispatched");
+    expect(task.target?.kind).toBe("orchestrator");
+    expect(typeof task.runRef).toBe("string");
 
     // The orchestrator run is a normal agent-feed run under the reserved owner id.
-    const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${res.body.runRef}`);
+    const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${task.runRef}`);
     expect(run.status).toBe(200);
     expect(run.body.owner).toBe("orchestrator");
     expect(run.body.title).toBe("Mystery");
@@ -252,9 +279,14 @@ describe("Tasks API (e2e)", () => {
     await request(app.getHttpServer()).delete(`${SCHEDULED}/ghost`).expect(404);
   });
 
-  it("createTask returns 422 when the catalog is empty (immediate dispatch)", async () => {
+  it("createTask with an empty catalog flips the pending task to failed (never silent)", async () => {
+    // The background path can't 422 on the response; the failure lands on the task
+    // record with its reason, so the feed shows WHY nothing ran (Law 5).
     const res = await request(app.getHttpServer()).post(CREATE).send({ text: "do something now" });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(201);
+    expect(res.body.outcome).toBe("pending");
+    const task = await untilTaskStatus(res.body.task.id, "failed");
+    expect(task.error).toContain("No agents or pipelines");
   });
 
   it("an immediate task is persisted, its run carries the taskId, and the outcome lands as done", async () => {
@@ -263,13 +295,13 @@ describe("Tasks API (e2e)", () => {
       .post(CREATE)
       .send({ title: "Outcome check", text: "Srovnej a popiš média v mé knihovně" })
       .expect(201);
-    expect(res.body.outcome).toBe("dispatched");
-    expect(res.body.task.status).toBe("dispatched");
-    expect(res.body.task.runRef).toBe(res.body.runRef);
+    expect(res.body.outcome).toBe("pending");
+    const dispatched = await untilTaskStatus(res.body.task.id, "dispatched");
+    expect(typeof dispatched.runRef).toBe("string");
 
     // The run was born linked to the task record.
     const run = await request(app.getHttpServer())
-      .get(`/api/tasks/runs/${res.body.runRef}`)
+      .get(`/api/tasks/runs/${dispatched.runRef}`)
       .expect(200);
     expect(run.body.taskId).toBe(res.body.task.id);
 
@@ -374,9 +406,10 @@ describe("Tasks API (e2e)", () => {
         .send({ text: "Implementuj funkce podle zadání", paths: [`${folder}/feature.ts`] });
 
       expect(res.status).toBe(201);
-      expect(res.body.outcome).toBe("dispatched");
-      expect(typeof res.body.runRef).toBe("string");
-      const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${res.body.runRef}`);
+      expect(res.body.outcome).toBe("pending");
+      const task = await untilTaskStatus(res.body.task.id, "dispatched");
+      expect(typeof task.runRef).toBe("string");
+      const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${task.runRef}`);
       expect(run.status).toBe(200);
       // The run is attributed to the granted project (no WorkspaceSetupError thrown).
       expect(run.body.project).toBe("nongit");

@@ -7,8 +7,9 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 
-// Integrations are owned by a project (one project = one company); `acme-app` is a
-// seeded project in the test data root (see vitest.setup.ts).
+// Integrations are owned by a project (one project = one company); the suite seeds
+// its own `acme-app` + `zibby-self` projects below (self-contained — the shared
+// `data-test/` seed root carries no project registry).
 const SLACK = {
   id: "team-slack",
   kind: "slack",
@@ -22,19 +23,34 @@ describe("Integrations API (e2e)", () => {
   let integrationsDir: string;
   let credentialsDir: string;
   let stateDir: string;
+  let projectsDir: string;
+  let projectPath: string;
 
   beforeAll(async () => {
     integrationsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-INTEGRATIONS_DIR-"));
     credentialsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-CREDENTIALS_DIR-"));
     stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-INTEGRATION_STATE_DIR-"));
+    projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-PROJECTS_DIR-"));
+    projectPath = await fs.mkdtemp(path.join(os.tmpdir(), "int-project-path-"));
     process.env.INTEGRATIONS_DIR = integrationsDir;
     process.env.CREDENTIALS_DIR = credentialsDir;
     process.env.INTEGRATION_STATE_DIR = stateDir;
+    process.env.PROJECTS_DIR = projectsDir;
     // The connection tester routes through the adapter registry; fake mode keeps the
     // test endpoint off the network.
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
+
+    // The projectId FK is validated on create — seed the owning projects.
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "acme-app", name: "Acme App", path: projectPath })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "zibby-self", name: "ZIBBY Self", path: projectPath })
+      .expect(201);
   });
 
   afterAll(async () => {
@@ -42,7 +58,14 @@ describe("Integrations API (e2e)", () => {
     await fs.rm(integrationsDir, { recursive: true, force: true });
     await fs.rm(credentialsDir, { recursive: true, force: true });
     await fs.rm(stateDir, { recursive: true, force: true });
-    for (const k of ["INTEGRATIONS_DIR", "CREDENTIALS_DIR", "INTEGRATION_STATE_DIR"]) {
+    await fs.rm(projectsDir, { recursive: true, force: true });
+    await fs.rm(projectPath, { recursive: true, force: true });
+    for (const k of [
+      "INTEGRATIONS_DIR",
+      "CREDENTIALS_DIR",
+      "INTEGRATION_STATE_DIR",
+      "PROJECTS_DIR",
+    ]) {
       delete process.env[k];
     }
   });
