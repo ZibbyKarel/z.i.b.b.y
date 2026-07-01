@@ -793,6 +793,7 @@
       "tickHint": "Interval v milisekundách. 0 = vypnuto.",
       "taskTick": "Tick plánovače úloh (ms)",
       "channelTick": "Tick sledování kanálů (ms)",
+      "monitorTick": "Tick CI monitoringu (ms)",
       "automationTick": "Tick automatizací (ms)",
       "limitResumeTick": "Tick obnovy po limitu (ms)",
       "limitResumeMax": "Max. cyklů obnovy po limitu",

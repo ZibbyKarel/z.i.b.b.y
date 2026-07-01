@@ -793,6 +793,7 @@
       "tickHint": "Interval in milliseconds. 0 = disabled.",
       "taskTick": "Task scheduler tick (ms)",
       "channelTick": "Channel watcher tick (ms)",
+      "monitorTick": "Monitor watcher tick (ms)",
       "automationTick": "Automation scheduler tick (ms)",
       "limitResumeTick": "Limit-resume scan tick (ms)",
       "limitResumeMax": "Max limit-resume cycles",

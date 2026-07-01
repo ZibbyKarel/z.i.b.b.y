@@ -7,6 +7,7 @@ import { SystemSection, SystemSectionTestId } from "./SystemSection";
 const DEFAULTS: SystemConfig = {
   taskTickMs: 30000,
   channelTickMs: 30000,
+  monitorTickMs: 60000,
   automationTickMs: 0,
   limitResumeTickMs: 60000,
   limitResumeMax: 3,

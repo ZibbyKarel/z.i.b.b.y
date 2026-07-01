@@ -17,6 +17,8 @@ export const SystemConfigSchema = z
     taskTickMs: z.number().int().min(0).default(30_000),
     /** Channel watcher poll interval (ms). `0` disables. */
     channelTickMs: z.number().int().min(0).default(30_000),
+    /** Monitor watcher poll interval (ms) — CI status alerts (N3). `0` disables. */
+    monitorTickMs: z.number().int().min(0).default(60_000),
     /** Automation scheduler loop interval (ms). `0` disables (the historical default). */
     automationTickMs: z.number().int().min(0).default(0),
     /** Limit-resume daemon scan interval (ms). `0` disables. */

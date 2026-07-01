@@ -1,0 +1,124 @@
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable } from "@nestjs/common";
+import {
+  type MonitorEvent,
+  MonitorEventSchema,
+  type MonitorEventsQuery,
+} from "@zibby/contracts";
+import { EntityFileStore, resolveSafeFile, writeFileAtomic } from "../shared/file-storage";
+
+export const MONITOR_EVENTS_DIR = "MONITOR_EVENTS_DIR";
+
+/** Event ids are adapter-derived (`ci-<repo>-<runId>-<attempt>`). */
+const EVENT_ID_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+
+export class MonitorEventNotFoundError extends Error {
+  constructor(public readonly id: string) {
+    super(`Monitor event "${id}" not found`);
+    this.name = "MonitorEventNotFoundError";
+  }
+}
+export class InvalidMonitorEventIdError extends Error {
+  constructor(public readonly id: string) {
+    super(`Invalid monitor event id: "${id}"`);
+    this.name = "InvalidMonitorEventIdError";
+  }
+}
+
+/**
+ * File-backed monitor events (N3) — one `<id>.json` per alert plus a cursor
+ * sidecar per (integration, adapter kind) pair under `cursors/`. The
+ * deterministic event id makes `putNew` a pure dedup check: a re-poll of the
+ * same red run is a no-op, so the cursor can safely advance only after events
+ * persist (crash → re-poll, replay-safe — the channel watcher's posture).
+ */
+@Injectable()
+export class MonitorEventStore extends EntityFileStore<MonitorEvent> {
+  protected readonly fileExt = ".json";
+  protected readonly idRegex = EVENT_ID_REGEX;
+  private readonly cursorsDir: string;
+
+  constructor(@Inject(MONITOR_EVENTS_DIR) dir: string) {
+    super(dir);
+    this.cursorsDir = path.join(path.resolve(dir), "cursors");
+  }
+
+  protected idOf(event: MonitorEvent): string {
+    return event.id;
+  }
+
+  protected serialize(event: MonitorEvent): string {
+    return `${JSON.stringify(event, null, 2)}\n`;
+  }
+
+  protected tryParse(raw: string): MonitorEvent | null {
+    return this.parseJson(MonitorEventSchema, raw);
+  }
+
+  protected compare(a: MonitorEvent, b: MonitorEvent): number {
+    return b.occurredAt.localeCompare(a.occurredAt);
+  }
+
+  protected notFound(id: string): Error {
+    return new MonitorEventNotFoundError(id);
+  }
+
+  protected invalidId(id: string): Error {
+    return new InvalidMonitorEventIdError(id);
+  }
+
+  /** Persist a NEW event; an existing id is a dedup hit → returns null. */
+  async putNew(event: MonitorEvent): Promise<MonitorEvent | null> {
+    const file = this.resolveFile(event.id);
+    if (await this.fileExists(file)) return null;
+    await this.writeEntity(event);
+    return event;
+  }
+
+  /** Patch an event (state/taskId transitions) — read-merge-write. */
+  async patch(id: string, patch: Partial<MonitorEvent>): Promise<MonitorEvent> {
+    const existing = await this.get(id);
+    const merged = { ...existing, ...patch, id: existing.id };
+    await this.writeEntity(merged);
+    return merged;
+  }
+
+  /** List newest-first, optionally filtered by project and/or state. */
+  async listFiltered(query: MonitorEventsQuery = {}): Promise<MonitorEvent[]> {
+    const all = await this.list();
+    return all.filter(
+      (e) =>
+        (!query.projectId || e.projectId === query.projectId) &&
+        (!query.state || e.state === query.state),
+    );
+  }
+
+  /** The per-(integration, adapter) poll cursor — opaque to the store. */
+  async readCursor(integrationId: string, adapterKind: string): Promise<string | undefined> {
+    const file = this.cursorFile(integrationId, adapterKind);
+    if (!file) return undefined;
+    const raw = await fs.readFile(file, "utf8").catch(() => null);
+    return raw?.trim() || undefined;
+  }
+
+  async writeCursor(
+    integrationId: string,
+    adapterKind: string,
+    cursor: string | undefined,
+  ): Promise<void> {
+    const file = this.cursorFile(integrationId, adapterKind);
+    if (!file || cursor === undefined) return;
+    await fs.mkdir(this.cursorsDir, { recursive: true });
+    await writeFileAtomic(file, cursor);
+  }
+
+  private cursorFile(integrationId: string, adapterKind: string): string | null {
+    return resolveSafeFile(
+      this.cursorsDir,
+      `${integrationId}--${adapterKind}`,
+      ".cursor",
+      EVENT_ID_REGEX,
+    );
+  }
+}

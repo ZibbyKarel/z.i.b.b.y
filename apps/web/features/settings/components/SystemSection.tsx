@@ -11,6 +11,7 @@ import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 export enum SystemSectionTestId {
   TaskTick = "system-task-tick",
   ChannelTick = "system-channel-tick",
+  MonitorTick = "system-monitor-tick",
   AutomationTick = "system-automation-tick",
   LimitResumeTick = "system-limit-resume-tick",
   LimitResumeMax = "system-limit-resume-max",
@@ -40,6 +41,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
 
   const [taskTickMs, setTaskTickMs] = useState<number | null>(config.taskTickMs);
   const [channelTickMs, setChannelTickMs] = useState<number | null>(config.channelTickMs);
+  const [monitorTickMs, setMonitorTickMs] = useState<number | null>(config.monitorTickMs);
   const [automationTickMs, setAutomationTickMs] = useState<number | null>(config.automationTickMs);
   const [limitResumeTickMs, setLimitResumeTickMs] = useState<number | null>(
     config.limitResumeTickMs,
@@ -60,6 +62,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
       body: {
         taskTickMs: tick(taskTickMs),
         channelTickMs: tick(channelTickMs),
+        monitorTickMs: tick(monitorTickMs),
         automationTickMs: tick(automationTickMs),
         limitResumeTickMs: tick(limitResumeTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
@@ -95,6 +98,15 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           onValueChange={setChannelTickMs}
           step={1000}
           value={channelTickMs}
+        />
+        <NumberField
+          data-testid={SystemSectionTestId.MonitorTick}
+          hint={t("runtime.tickHint")}
+          label={t("runtime.monitorTick")}
+          min={0}
+          onValueChange={setMonitorTickMs}
+          step={1000}
+          value={monitorTickMs}
         />
         <NumberField
           data-testid={SystemSectionTestId.AutomationTick}

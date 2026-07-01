@@ -66,14 +66,16 @@ export type JiraConfig = z.infer<typeof JiraConfigSchema>;
 
 /**
  * GitHub config — the `repo` ("owner/name") to monitor; the PAT lives in the
- * credentials store. `kinds` selects which event streams to ingest (issues and/or
- * pull requests); defaults to both. `.strict()`.
+ * credentials store. `streams` selects which event streams to ingest: `issues`
+ * and/or `pulls` (the conversational channel), plus `ci` — which opts the repo
+ * into the N3 CI monitor (workflow-run status alerts, not messages; the channel
+ * adapter ignores it). Defaults to the conversational pair. `.strict()`.
  */
 export const GitHubConfigSchema = z
   .object({
     kind: z.literal("github"),
     repo: z.string().regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'"),
-    streams: z.array(z.enum(["issues", "pulls"])).default(["issues", "pulls"]),
+    streams: z.array(z.enum(["issues", "pulls", "ci"])).default(["issues", "pulls"]),
   })
   .strict();
 export type GitHubConfig = z.infer<typeof GitHubConfigSchema>;

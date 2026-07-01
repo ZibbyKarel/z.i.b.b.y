@@ -12,6 +12,7 @@ import type { SystemConfigListener, SystemConfigStore } from "./system-config.st
 export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   taskTickMs: 0,
   channelTickMs: 0,
+  monitorTickMs: 0,
   automationTickMs: 0,
   limitResumeTickMs: 0,
 });

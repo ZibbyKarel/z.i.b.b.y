@@ -65,6 +65,8 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "channel-noted": "channels",
   "channel-needs-attention": "channels",
   "integration-retry-exhausted": "integrations",
+  // N3: a monitor alert rides the integration that watches the source (same PAT/config).
+  "monitor-alert": "integrations",
   "research-digest": "research",
   "app-ideas-generated": "research",
   "briefing-generated": "briefing",

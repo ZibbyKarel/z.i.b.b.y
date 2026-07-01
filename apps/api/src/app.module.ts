@@ -26,6 +26,7 @@ import { MandateModule } from "./mandate/mandate.module";
 import { McpModule } from "./mcp/mcp.module";
 import { MemoryModule } from "./memory/memory.module";
 import { RunRecorderModule } from "./memory/run-recorder.module";
+import { MonitorsModule } from "./monitors/monitors.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { ResearchModule } from "./research/research.module";
@@ -61,6 +62,7 @@ import { TasksModule } from "./tasks/tasks.module";
     CommandsModule,
     MandateModule,
     ChannelsModule,
+    MonitorsModule,
     DiscoveryModule,
     ResearchModule,
     HealthModule,

@@ -53,6 +53,13 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly runs = new Map<string, ChainRun>();
   private readonly log: ScopedLogger;
   private unsubscribe: (() => void) | null = null;
+  /**
+   * Transition queue: pipeline-run events are handled strictly one at a time.
+   * Two near-simultaneous terminal events (or a boot reconcile racing a live
+   * event) would otherwise interleave their read-modify-persist on the same
+   * chain run. Also the test/shutdown seam ({@link settle}).
+   */
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     @Inject(CHAIN_RUNS_DIR) dir: string,
@@ -72,21 +79,31 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
     await fs.mkdir(this.dir, { recursive: true });
     await this.loadPersisted();
     this.unsubscribe = this.pipelineRunner.onRunStatus((run) => {
-      void this.onPipelineTransition(run).catch((error) => {
-        this.log.error("chain transition handler failed", {
-          runRef: run.pipelineRunId,
-          err: error instanceof Error ? error.message : String(error),
-        });
-      });
+      this.enqueue(() => this.onPipelineTransition(run), run.pipelineRunId);
     });
     // Boot reconcile: a step that finished while the API was down left its
-    // artifact record — advance from it. Fire-and-forget; parking is the
-    // fallback inside, never a crash.
+    // artifact record — advance from it. Queued like any transition; parking is
+    // the fallback inside, never a crash.
     for (const run of this.runs.values()) {
       if (run.status === "running") {
-        void this.reconcile(run).catch(() => {});
+        this.enqueue(() => this.reconcile(run), run.chainRunId);
       }
     }
+  }
+
+  /** Serialize a transition onto the queue; a failure logs and never breaks the chain of work. */
+  private enqueue(work: () => Promise<void>, ref: string): void {
+    this.queue = this.queue.then(work).catch((error) => {
+      this.log.error("chain transition handler failed", {
+        ref,
+        err: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
+  /** Await every queued transition — the deterministic test/shutdown seam. */
+  async settle(): Promise<void> {
+    await this.queue;
   }
 
   onModuleDestroy(): void {

@@ -62,8 +62,9 @@ function makeService(dir: string): { service: ChainRunnerService; d: Doubles } {
     activity: { record: vi.fn(async () => {}) },
     emit: async (run) => {
       listener?.(run as PipelineRun);
-      // The subscription handler is fire-and-forget async — let it settle.
-      await new Promise((r) => setTimeout(r, 0));
+      // Transitions are serialized on the runner's queue; settle drains it
+      // deterministically (no sleep-and-hope under load).
+      await service.settle();
     },
   };
   const service = new ChainRunnerService(
@@ -259,7 +260,7 @@ describe("ChainRunnerService", () => {
     const second = makeService(dir);
     second.d.artifacts.list.mockResolvedValue([vaultArtifact(step0Ref)]);
     await second.service.onModuleInit();
-    await new Promise((r) => setTimeout(r, 0));
+    await second.service.settle();
 
     const revived = second.service.get(run.chainRunId);
     expect(revived.currentStep).toBe(1);
@@ -284,7 +285,7 @@ describe("ChainRunnerService", () => {
 
     const second = makeService(dir);
     await second.service.onModuleInit();
-    await new Promise((r) => setTimeout(r, 0));
+    await second.service.settle();
 
     const revived = second.service.get(run.chainRunId);
     expect(revived.status).toBe("parked");

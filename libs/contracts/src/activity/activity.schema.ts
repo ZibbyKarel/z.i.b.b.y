@@ -59,6 +59,10 @@ export const ActivityKindSchema = z.enum([
   // M8 (hardening). An integration poll exhausted its retry/backoff budget — surfaced
   // (not just stamped as lastError) so a persistently failing channel never fails silently.
   "integration-retry-exhausted",
+  // N3 (CI/CD monitoring, Tier 1/2). A monitor ingested a status alert (a red CI run)
+  // and dispatched the investigation task riding its `taskId` ref — act-then-report:
+  // the fix run surfaces on the runs feed and, when parked at the PR gate, in needs-you.
+  "monitor-alert",
   // M8 (hardening). A task's dispatch exhausted its retry budget and was dead-lettered —
   // surfaced in the briefing's needs-you so a repeatedly-failing task never fails silently.
   "task-dead-lettered",
