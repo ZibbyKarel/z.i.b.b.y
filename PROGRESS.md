@@ -4,6 +4,17 @@
 
 ## Poslední dokončená fáze
 
+**N4a — Chains UI** — 2026-07-02, commit `feat(web): chains section …`
+
+- Sekce `/chains` (nav za pipelines): karty → detail route, Run/Delete vpravo
+  nahoře, dialog jen create (NewChainDialog: název→slug id, brief, kroky
+  v pořadí). Runs panel: status tag, per-krok stav, parkedReason.
+- Data layer dle konvencí; chain-runs invalidace na `pipeline-runs` SSE scope
+  (poll jen při výpadku). Gotcha: `rtk npx next typegen` tiše nic nevygeneruje —
+  nutno `rtk proxy npx next typegen`. NC deflake: rejected-PR test přes
+  vi.waitFor. Suita 2010/0. Detail: `docs/plans/phase-n4a-chains-ui.md`.
+
+
 **N3 — CI/CD monitoring + MonitorAdapter seam** — 2026-07-02, commit `feat(monitors): …`
 
 - `MonitorAdapter` seam (alerty, ne zprávy; `wants()` opt-in; druhý adapter = jen
@@ -57,13 +68,8 @@
 
 ## Další fáze (návrh)
 
-**N4 — UI/UX konzistence** (design, audit-driven, po sekcích — NE big-bang):
-1. **N4a — audit inventura + odložené povrchy**: projít sekce apps/web proti
-   interakčnímu kontraktu (edit vpravo nahoře; karta → detail page; dialogy jen
-   create/confirm; nic bez accessible name — asserce rolí + jmen, ne selector
-   churn). Zapsat nálezy jako burn-down. Prioritně dodat odložené povrchy:
-   chains UI (autorování + běhy), CI chip v project HUD, briefing „main je
-   červený od…".
-2. Další N4x fáze = migrace sekcí podle auditu.
-Vzor: heuristická evaluace + pattern inventory; enforcement přes
-Testing Library accessible-name asserce (research 2026-07-02).
+**N4b — CI health povrch**: chip na project detailu (barva + symbol + text
+„CI červené od HH:MM" — tři indikátory, a11y) čtený z GET /api/monitors/events;
+briefing needs-you věta jen dokud je červeno (žádné redundantní re-alerty —
+research: alert fatigue). Pak **N4c+ — audit inventura + migrace sekcí** proti
+interakčnímu kontraktu (accessible-name asserce).
