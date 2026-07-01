@@ -112,7 +112,16 @@ real-time where it matters.
 
 ---
 
-## N2 — Pipeline Chaining (artifact out → in)
+## N2 — Pipeline Chaining (artifact out → in) ✅ DELIVERED 2026-07-01/02
+
+> Delivered in two bounded phases. **N2a** (`docs/plans/phase-n2a-artifact-registry.md`):
+> the durable artifact registry — a plain-JSON provenance record per delivered output
+> (`vault-note`/`project-file`/`pr`), written by the delivery sinks, read-only over
+> `GET /api/artifacts`. **N2b** (`docs/plans/phase-n2b-chain-primitive.md`): the chain
+> primitive — operator-authored linear chains, completion-driven advance with the
+> artifact as the handoff medium, park on any broken handoff, restart reconcile from
+> the registry; reference chain `nightly-research → build-feature` proven in e2e.
+> Chain-authoring UI intentionally deferred to N4 (the interface phase).
 
 **Why second:** the highest-leverage new capability, and it reuses machinery that already
 exists — the north-star's _"research overnight → build an app from it"_ scenario.

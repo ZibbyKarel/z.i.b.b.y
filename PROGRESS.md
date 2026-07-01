@@ -4,6 +4,18 @@
 
 ## Poslední dokončená fáze
 
+**N2b — chain primitivum (uzavírá N2)** — 2026-07-02, commit `feat(chains): …`
+
+- Contract-first `chainsContract` + `chainRunsContract`; `ChainRunnerService` —
+  completion-driven advance: done krok → jeho N2a artifact record → obsah (vault
+  body / project file) → vstupní handoff dalšího kroku
+  (`PipelineRunnerService.start(..., input)` → `<run>/input.md` → `consumes`).
+- Park na rozbitý handoff (chybějící/nečitelný/pr-only artefakt); failed krok →
+  chain failed; parked krok → chain parked, pozdější done resumuje. Boot
+  rekonciliace z registru artefaktů (ztracený run bez artefaktu → park, nehádá).
+- Referenční chain `nightly-research → build-feature` prokázán e2e (demo mode).
+  Activity kinds chain-*. Suita 1983/0. Detail: `docs/plans/phase-n2b-chain-primitive.md`.
+
 **N2a — durable artifact registry** — 2026-07-01, commit `feat(artifacts): …`
 
 - Contract-first `artifactsContract` (read-only GET /api/artifacts + /:id) +
@@ -33,10 +45,10 @@
 
 ## Další fáze (návrh)
 
-**N2b — chain primitivum** (funkcionalita, dokončí N2): operátorem autorovaný chain
-(explicitní kompozice, žádné implicitní event subscriptions — north-star: "Composition
-is the operator's to author"). Completion-driven handoff s artefaktem jako médiem
-(Union.ai reactive-workflows vzor): krok N doběhne → jeho artifact record z registru
-(N2a) se materializuje jako `consumes` vstup kroku N+1. Contract-first chain entita;
-resume po restartu čte artifact record (idempotentní); chybějící/nevalidní artefakt
-→ park, ne crash. Reference chain `nightly-research → build-feature`.
+**N3 — CI/CD monitor + MonitorAdapter seam** (funkcionalita): GitHub adapter dnes
+polluje jen issues; červený CI run je neviditelný. Nový `MonitorAdapter` seam
+(status/alert eventy, ne konverzační zprávy; fixture-testable jako ChannelAdapter).
+První monitor: GitHub Actions — poll `GET /repos/{repo}/actions/runs?branch=…`,
+dedup přes (workflow id, head_sha, run_attempt), `conclusion: failure` → monitor
+event → triage → tier (fix na vlastní branchi = Tier-3 gated PR). CI health do
+per-project HUD + briefingu. Seam dokumentovaný pro drop-in Sentry.
