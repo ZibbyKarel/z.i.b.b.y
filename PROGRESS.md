@@ -4,28 +4,28 @@
 
 ## Poslední dokončená fáze
 
-**N1 — DNA alignment (SSE + explicit-target override)** — 2026-07-01, commit `feat(n1): …`
+**N1b — e2e realignment (21 → 0 failures)** — 2026-07-01, commit `test(e2e): …`
 
-- Explicit-target bypass byl už implementovaný end-to-end; dostal pojmenovaný regresní
-  test (dispatch s targetem nikdy nevolá classifier; bez targetu klasifikuje).
-- SSE audit: živý stage log streamuje (`…/stages/:phaseId/logs/stream` + `useLogTail`),
-  approvals/budget pollují jen při výpadku streamu, `approval-*` activity invaliduje
-  approvals. Klíče extrahované do `queries/keys.ts` (acyklické runEvents).
-- Detail: `docs/plans/phase-n1.md`.
+- Žádná změna chování; stale testy srovnány na shipped kontrakt: background-first
+  `createTask` (201 `pending`, guardy limit/budget/capacity zůstávají synchronní,
+  classify+spawn na pozadí → testy pollují task record), integrations si sídlují
+  vlastní projekty (projectId FK), delivery seed bez `n-9` (+ `pr-autor`).
+- `task-created` (HTTP trace) a `task-dispatched` (vlastní background trace) korelují
+  přes `refs.taskId` — traceId se záměrně liší.
+- Celá suita zelená: 1949 passed / 0 failed. Detail: `docs/plans/phase-n1b-e2e-realign.md`.
+
+**N1 — DNA alignment (SSE + explicit-target override)** — 2026-07-01 —
+`docs/plans/phase-n1.md` (stage-log SSE tail, SSE-gated polls, classifier-bypass test).
 
 ## Zaparkováno / známé dluhy
 
-- **21 pre-existing API e2e failures na HEAD** (ověřeno čistým worktree — nulové regrese
-  z N1): stale testy vs. záměrné změny (background-first `createTask` vrací `pending`;
-  integrations přesunuté pod projekty → 404 na starých cestách). Soubory: tasks, budget,
-  budget-restart, integrations, activity, limit-pause, parallel, pipelines (e2e).
-  → NEJBLIŽŠÍ FÁZE: realign e2e na shipped chování (priorita 4 — tvrdě blokuje
-  verifikační bránu všech dalších fází).
+- (nic)
 
 ## Další fáze (návrh)
 
-1. **E2E realignment** (bug fix) — viz výše.
-2. **N2 — pipeline chaining** (funkcionalita): durable artifact record na disku
-   (path + kind + producing run) + chain primitivum contract-first; vzor = Airflow
-   Datasets / Union.ai artifacts (data-aware trigger nad artefaktem), lift existujících
-   `consumes/produces` na run boundary. Reference chain `nightly-research → build-feature`.
+**N2 — pipeline chaining** (funkcionalita): durable artifact record na disku
+(id + kind + path + producing run + timestamp, plain JSON — žádná graph DB;
+vzor in-toto/SLSA provenance + Airflow Datasets) + chain primitivum contract-first;
+lift existujících `consumes/produces` na run boundary. Reference chain
+`nightly-research → build-feature`; chain přežije restart z artifact recordu;
+chybějící artefakt parkuje, nepadá.
