@@ -149,7 +149,17 @@ pipeline's brief — unattended overnight.
 
 ---
 
-## N3 — CI/CD Monitoring + Pluggable Monitor Seam
+## N3 — CI/CD Monitoring + Pluggable Monitor Seam ✅ DELIVERED 2026-07-02
+
+> Delivered — see `docs/plans/phase-n3-monitor-seam.md` + `docs/api/monitors.md`.
+> `MonitorAdapter` seam (alerts, not messages; `wants()` opt-in; a second adapter
+> registers with zero runtime change — the Sentry test passes). GitHub Actions monitor
+> rides the existing github integration (`streams: ["ci"]`), dedupes per run attempt,
+> and a red run dispatches an investigation task on the ordinary tier path (guards +
+> PR gate included); a failed dispatch retries next tick. Heartbeat
+> `systemConfig.monitorTickMs` + /settings field; read-only `GET /api/monitors/events`.
+> Deferred to N4 (recorded): per-project HUD CI chip + the briefing's "main is red
+> since 08:12" line — the event data is queryable now.
 
 **Why third:** closes the north-star's "monitors CI/CD" and leaves the clean seam for Sentry.
 

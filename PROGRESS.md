@@ -4,6 +4,18 @@
 
 ## Poslední dokončená fáze
 
+**N3 — CI/CD monitoring + MonitorAdapter seam** — 2026-07-02, commit `feat(monitors): …`
+
+- `MonitorAdapter` seam (alerty, ne zprávy; `wants()` opt-in; druhý adapter = jen
+  `registry.register()` — Sentry-ready, prokázáno testem). GitHub Actions monitor:
+  jede na existující github integraci (`streams: ["ci"]`), dedup
+  `ci-<repo>-<runId>-<attempt>`, kurzor per (integrace × adapter).
+- Červený run → event → activity `monitor-alert` → dispatch vyšetřovacího tasku
+  běžným schedulerem (trustedProjectId, guardy, PR brána). Selhaný dispatch →
+  event `new`, další tick retry. Heartbeat `monitorTickMs` (+ /settings pole).
+- NC vedlejší: chain transitions serializované na frontě + `settle()` (odstraněn
+  under-load flake). Suita 2002/0. Detail: `docs/plans/phase-n3-monitor-seam.md`.
+
 **N2b — chain primitivum (uzavírá N2)** — 2026-07-02, commit `feat(chains): …`
 
 - Contract-first `chainsContract` + `chainRunsContract`; `ChainRunnerService` —
@@ -45,10 +57,13 @@
 
 ## Další fáze (návrh)
 
-**N3 — CI/CD monitor + MonitorAdapter seam** (funkcionalita): GitHub adapter dnes
-polluje jen issues; červený CI run je neviditelný. Nový `MonitorAdapter` seam
-(status/alert eventy, ne konverzační zprávy; fixture-testable jako ChannelAdapter).
-První monitor: GitHub Actions — poll `GET /repos/{repo}/actions/runs?branch=…`,
-dedup přes (workflow id, head_sha, run_attempt), `conclusion: failure` → monitor
-event → triage → tier (fix na vlastní branchi = Tier-3 gated PR). CI health do
-per-project HUD + briefingu. Seam dokumentovaný pro drop-in Sentry.
+**N4 — UI/UX konzistence** (design, audit-driven, po sekcích — NE big-bang):
+1. **N4a — audit inventura + odložené povrchy**: projít sekce apps/web proti
+   interakčnímu kontraktu (edit vpravo nahoře; karta → detail page; dialogy jen
+   create/confirm; nic bez accessible name — asserce rolí + jmen, ne selector
+   churn). Zapsat nálezy jako burn-down. Prioritně dodat odložené povrchy:
+   chains UI (autorování + běhy), CI chip v project HUD, briefing „main je
+   červený od…".
+2. Další N4x fáze = migrace sekcí podle auditu.
+Vzor: heuristická evaluace + pattern inventory; enforcement přes
+Testing Library accessible-name asserce (research 2026-07-02).
