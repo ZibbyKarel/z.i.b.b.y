@@ -33,6 +33,7 @@ interface Doubles {
     removeWorktree: ReturnType<typeof vi.fn>;
   };
   vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
+  artifacts: { record: ReturnType<typeof vi.fn> };
   registered: Map<string, ResumableRunner>;
 }
 
@@ -57,6 +58,8 @@ async function makeService(
     createNote: vi.fn(async () => ({})),
     updateNote: vi.fn(async () => ({})),
   };
+  // N2a: the durable artifact registry — a delivered sink writes one record.
+  const artifacts = { record: vi.fn(async () => {}) };
   const service = new PipelineRunnerService(
     dir,
     { get: vi.fn(async () => pipeline) } as never,
@@ -80,6 +83,7 @@ async function makeService(
     { read: vi.fn(async () => null), has: vi.fn(async () => false) } as never,
     // Activity log double (Phase 45).
     { record: vi.fn(async () => {}) } as never,
+    artifacts as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {
     init: vi.fn(),
@@ -87,7 +91,7 @@ async function makeService(
   } as never;
   // Registers the pipeline-output (and pipeline-stage) resumable runners.
   await service.onModuleInit();
-  return { service, d: { pipeline, approvals, workspace, vault, registered } };
+  return { service, d: { pipeline, approvals, workspace, vault, artifacts, registered } };
 }
 
 /** Seed a run aggregate plus the on-disk artifacts its phases "produced". */
@@ -179,6 +183,36 @@ describe("PipelineRunnerService — output sinks", () => {
       body: "# Audit\n\nFindings.",
     });
     expect(run.status).toBe("done");
+    // N2a: the delivery left a durable provenance record in the registry.
+    expect(d.artifacts.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `${RUN_ID}_vault-note_docs-md`,
+        kind: "vault-note",
+        locator: "audit-2026-06-16",
+        from: "docs.md",
+        producedBy: expect.objectContaining({ runRef: RUN_ID, pipelineId: "audit" }),
+      }),
+    );
+  });
+
+  it("file sink → vault: a FAILED delivery records no artifact", async () => {
+    const pipeline: Pipeline = {
+      id: "audit",
+      phases: [docPhase],
+      outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
+      instructions: "x",
+    };
+    const { service, d } = await makeService(dir, pipeline);
+    d.vault.createNote.mockRejectedValueOnce(new Error("vault down"));
+    const run = await seedRun(service, dir, pipeline, {
+      a: { phaseId: "dok", file: "docs.md", content: "body" },
+    });
+
+    await runOutputs(service, run, pipeline);
+
+    // The delivery failed soft (run still finishes) — no provenance is forged.
+    expect(run.status).toBe("done");
+    expect(d.artifacts.record).not.toHaveBeenCalled();
   });
 
   it("file sink → vault: replaces an existing note instead of failing on duplicate", async () => {
@@ -224,6 +258,37 @@ describe("PipelineRunnerService — output sinks", () => {
 
     expect(await fs.readFile(path.join(wt, "reports/out.md"), "utf8")).toBe("report body");
     expect(run.status).toBe("done");
+  });
+
+  it("file sink → project: records a project-file artifact with the delivered path", async () => {
+    const pipeline: Pipeline = {
+      id: "report",
+      phases: [docPhase],
+      outputs: [{ type: "file", from: "docs.md", dest: "project", to: "reports/out.md" }],
+      instructions: "x",
+    };
+    const wt = path.join(dir, "worktree");
+    await fs.mkdir(wt, { recursive: true });
+    const { service, d } = await makeService(dir, pipeline);
+    const run = await seedRun(
+      service,
+      dir,
+      pipeline,
+      { a: { phaseId: "dok", file: "docs.md", content: "report body" } },
+      wt,
+    );
+
+    await runOutputs(service, run, pipeline);
+
+    expect(d.artifacts.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `${RUN_ID}_project-file_docs-md`,
+        kind: "project-file",
+        locator: "reports/out.md",
+        from: "docs.md",
+        producedBy: expect.objectContaining({ runRef: RUN_ID, pipelineId: "report" }),
+      }),
+    );
   });
 
   it("pr sink: parks the run on the PR gate and requests a pipeline-output approval", async () => {
@@ -300,6 +365,16 @@ describe("PipelineRunnerService — output sinks", () => {
     expect(run.status).toBe("done");
     expect(run.parkedReason).toBeUndefined();
     expect(run.pendingOutput).toBeUndefined();
+    // N2a: the opened PR left a durable provenance record (locator = PR URL).
+    expect(d.artifacts.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `${RUN_ID}_pr_docs-md`,
+        kind: "pr",
+        locator: "https://example.test/pr/1",
+        from: "docs.md",
+        producedBy: expect.objectContaining({ runRef: RUN_ID, pipelineId: "delivery" }),
+      }),
+    );
   });
 
   it("pr sink resume — rejected: leaves the branch without a PR, run still done", async () => {

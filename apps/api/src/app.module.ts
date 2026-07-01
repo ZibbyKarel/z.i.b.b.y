@@ -5,6 +5,7 @@ import { ActivityRecorderModule } from "./activity/activity-recorder.module";
 import { ActivityViewModule } from "./activity-view/activity-view.module";
 import { AgentsModule } from "./agents/agents.module";
 import { ApprovalsModule } from "./approvals/approvals.module";
+import { ArtifactsModule } from "./artifacts/artifacts.module";
 import { AutomationsModule } from "./automations/automations.module";
 import { BriefingModule } from "./briefing/briefing.module";
 import { BudgetModule } from "./budget/budget.module";
@@ -45,6 +46,7 @@ import { TasksModule } from "./tasks/tasks.module";
     PipelinesModule,
     GoalsModule,
     ApprovalsModule,
+    ArtifactsModule,
     GateRulesModule,
     MemoryModule,
     RunRecorderModule,

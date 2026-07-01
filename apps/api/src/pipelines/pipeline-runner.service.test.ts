@@ -121,6 +121,8 @@ async function makeHarness(dir: string): Promise<Harness> {
     { read: vi.fn(async () => null), has: vi.fn(async () => false) } as never,
     // Activity log double (Phase 45): record() is fire-and-forget and never throws.
     { record: vi.fn(async () => {}) } as never,
+    // Artifact registry double (N2a): delivery sinks write provenance records.
+    { record: vi.fn(async () => {}) } as never,
   );
 
   // Swap the real core (which spawns processes) for a scriptable double.

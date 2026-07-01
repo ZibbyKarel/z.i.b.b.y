@@ -23,6 +23,8 @@ export * from "./goals/goal-run.schema";
 export * from "./goals/goals.contract";
 export * from "./approvals/approval.schema";
 export * from "./approvals/approvals.contract";
+export * from "./artifacts/artifact.schema";
+export * from "./artifacts/artifacts.contract";
 export * from "./discovery/proposal.schema";
 export * from "./discovery/discovery.contract";
 export * from "./research/research.schema";

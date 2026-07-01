@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
+  type ArtifactKind,
   DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
   PIPELINE_RUN_ARTIFACTS,
@@ -24,6 +25,7 @@ import {
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
@@ -122,6 +124,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly trace: TraceContextService,
     private readonly projectSecrets: ProjectSecretsStore,
     private readonly activity: ActivityLogService,
+    private readonly artifacts: ArtifactsStorageService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(PipelineRunnerService.name);
@@ -1012,23 +1015,30 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     }
     if (output.dest === "vault") {
       // A durable second-brain artifact. Replace on re-delivery (idempotent re-run).
-      await this.vault
+      const delivered = await this.vault
         .createNote({ id: output.to, tier: "knowledge", body: content })
+        .then(() => true)
         .catch(async (error) => {
           if (error instanceof DuplicateNoteError) {
-            await this.vault.updateNote(output.to, { body: content }).catch(() => {});
-            return;
+            return this.vault
+              .updateNote(output.to, { body: content })
+              .then(() => true)
+              .catch(() => false);
           }
           this.log.warn("vault file output failed (soft)", {
             pipelineRunId: run.pipelineRunId,
             to: output.to,
             err: error instanceof Error ? error.message : String(error),
           });
+          return false;
         });
-      this.log.info("file output delivered to vault", {
-        pipelineRunId: run.pipelineRunId,
-        to: output.to,
-      });
+      if (delivered) {
+        this.log.info("file output delivered to vault", {
+          pipelineRunId: run.pipelineRunId,
+          to: output.to,
+        });
+        await this.recordArtifact(run, "vault-note", output.from, output.to);
+      }
       return;
     }
     // dest: project — write into the run's worktree (rides the zibby/* branch) or,
@@ -1055,6 +1065,44 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       pipelineRunId: run.pipelineRunId,
       to: output.to,
     });
+    await this.recordArtifact(run, "project-file", output.from, output.to);
+  }
+
+  /**
+   * Write the durable provenance record for a delivered output (N2a). Best-effort
+   * by contract — the registry must never fail an (already-green) delivery; a
+   * write error is logged and the delivery stands. Stable id ⇒ an idempotent
+   * re-delivery replaces its record instead of duplicating it.
+   */
+  private async recordArtifact(
+    run: PipelineRun,
+    kind: ArtifactKind,
+    from: string,
+    locator: string,
+  ): Promise<void> {
+    const project = await this.projectForRun(run).catch((): Project | null => null);
+    const projectId = project && project.id !== "unregistered" ? project.id : undefined;
+    await this.artifacts
+      .record({
+        id: artifactRecordId(run.pipelineRunId, kind, from),
+        kind,
+        locator,
+        from,
+        producedBy: {
+          runRef: run.pipelineRunId,
+          pipelineId: run.pipelineId,
+          ...(run.taskId ? { taskId: run.taskId } : {}),
+          ...(projectId ? { projectId } : {}),
+        },
+        createdAt: new Date().toISOString(),
+      })
+      .catch((error) => {
+        this.log.warn("artifact record failed (soft) — delivery stands", {
+          pipelineRunId: run.pipelineRunId,
+          from,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      });
   }
 
   /**
@@ -1177,6 +1225,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     });
     if (result) {
       this.log.info("PR output opened", { pipelineRunId: run.pipelineRunId, url: result.url });
+      await this.recordArtifact(run, "pr", output.from, result.url);
     } else {
       this.log.warn("PR output push failed (soft) — branch work is committed and safe", {
         pipelineRunId: run.pipelineRunId,

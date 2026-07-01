@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
+import { ArtifactsModule } from "../artifacts/artifacts.module";
 import { GatesModule } from "../gates/gates.module";
 import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
@@ -29,6 +30,7 @@ export function resolvePipelineRunsDir(): string {
   // mid-run stage gate (intent evaluation → parked aggregate → approval card).
   imports: [
     AgentsModule,
+    ArtifactsModule,
     ClaudeRunModule,
     GatesModule,
     ApprovalsModule,

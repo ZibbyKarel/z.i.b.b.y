@@ -93,6 +93,26 @@ deklarované `outputs:` pro daný běh: uloží se jako `PipelineRun.outputsOver
 (`void` → `[]`, potlačí i deklarovaný PR) a runner čte `outputsOverride ?? outputs`.
 `from` se dopočítá z posledního `produces` pipeline (task žádné `from` nenese).
 
+### Registr artefaktů (N2a) — provenance záznamy
+
+Každá úspěšná delivery zapíše **trvalý provenance záznam** do registru artefaktů —
+jeden plain-JSON soubor v `ARTIFACTS_DIR` (default `ZIBBY_DATA_DIR/artifacts`),
+`ArtifactsStorageService` (modul `artifacts/`). Záznam nese `kind`
+(`vault-note` | `project-file` | `pr`), `locator` (id poznámky / projektová cesta /
+URL PR), `from` (handoff jméno) a `producedBy` (`runRef`, `pipelineId`, `taskId?`,
+`projectId?`). Id záznamu je stabilní `<runRef>_<kind>_<slug(from)>` — idempotentní
+re-delivery záznam nahradí, neduplikuje. Zápis je best-effort: selhání registru nikdy
+neshodí (už zelenou) delivery. Selhaná delivery žádný záznam nezapisuje — provenance
+se nefalšuje. Registr je read-only přes HTTP:
+
+```
+GET /api/artifacts                    seznam záznamů (newest-first; ?projectId= &pipelineId=)
+GET /api/artifacts/:id                jeden záznam
+```
+
+Registr je základ pro řetězení pipeline (N2b): downstream pipeline naváže svůj vstup
+na záznam upstream výstupu, takže chain přežije restart i evikci runu z paměti.
+
 ### CRUD API
 
 ```
