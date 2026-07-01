@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { id: "agents", glyph: "bot", href: "/agents" },
   { id: "projects", glyph: "code", href: "/projects" },
   { id: "pipelines", glyph: "flow", href: "/pipelines" },
+  { id: "chains", glyph: "link", href: "/chains" },
   { id: "mcp", glyph: "server", href: "/mcp" },
   { id: "commands", glyph: "bolt", href: "/commands" },
   { id: "hooks", glyph: "checkpoint", href: "/hooks" },

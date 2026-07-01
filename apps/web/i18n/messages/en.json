@@ -14,7 +14,8 @@
     "projects": "Projects",
     "mcp": "MCP servers",
     "commands": "Commands",
-    "hooks": "Hooks"
+    "hooks": "Hooks",
+    "chains": "Chains"
   },
   "notifications": {
     "attention": "{count} items need attention"
@@ -1336,6 +1337,41 @@
       "label": "Message",
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
       "send": "Send"
+    }
+  },
+  "chains": {
+    "title": "Chains",
+    "countSummary": "{count, plural, =0 {no chains} one {# chain} other {# chains}}",
+    "addChain": "New chain",
+    "newTitle": "New chain",
+    "cancel": "Cancel",
+    "create": "Create",
+    "nameLabel": "Name",
+    "nameHint": "ID: {id}",
+    "namePlaceholder": "Research → Build",
+    "instructionsLabel": "Brief for the first step",
+    "instructionsHint": "Text the first pipeline receives as its input handoff.",
+    "instructionsPlaceholder": "Research topic X…",
+    "stepsLabel": "Steps (pipelines in order)",
+    "stepLabel": "Step {n}",
+    "addStep": "Add step",
+    "remove": "Remove",
+    "removeStep": "Remove step {n}",
+    "handoffHint": "Step N+1 receives the artifact step N delivered (vault note / project file) as its input.",
+    "emptyTitle": "No chains yet",
+    "emptyDescription": "A chain links pipelines in sequence — one step's delivered artifact becomes the next step's input.",
+    "emptyHint": "“Research topic X overnight, then build an app from the result.”",
+    "openChain": "Open chain {name}",
+    "stepsSummary": "{count, plural, one {# step} other {# steps}}",
+    "delete": "Delete",
+    "runChain": "Run chain",
+    "runsTitle": "Runs",
+    "noRuns": "This chain has not run yet.",
+    "state": {
+      "running": "running",
+      "parked": "parked",
+      "done": "done",
+      "failed": "failed"
     }
   }
 }

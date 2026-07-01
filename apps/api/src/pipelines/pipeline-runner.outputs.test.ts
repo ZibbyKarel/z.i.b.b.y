@@ -400,11 +400,11 @@ describe("PipelineRunnerService — output sinks", () => {
     const runner = d.registered.get("pipeline-output");
 
     await runner?.cancel(RUN_ID);
-    // cancel is fire-and-forget (void); let the async resume settle.
-    await new Promise((r) => setTimeout(r, 0));
+    // cancel is fire-and-forget (void); poll until the async resume settles —
+    // a fixed one-tick sleep flakes when the suite runs under full-parallel load.
+    await vi.waitFor(() => expect(run.status).toBe("done"));
 
     expect(d.workspace.openPr).not.toHaveBeenCalled();
-    expect(run.status).toBe("done");
     expect(run.parkedReason).toBeUndefined();
   });
 });

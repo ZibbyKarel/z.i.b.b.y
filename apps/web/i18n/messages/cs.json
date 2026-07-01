@@ -14,7 +14,8 @@
     "projects": "Projekty",
     "mcp": "MCP servery",
     "commands": "Příkazy",
-    "hooks": "Hooky"
+    "hooks": "Hooky",
+    "chains": "Řetězce"
   },
   "notifications": {
     "attention": "{count} položek vyžaduje pozornost"
@@ -1336,6 +1337,41 @@
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
       "send": "Odeslat"
+    }
+  },
+  "chains": {
+    "title": "Řetězce",
+    "countSummary": "{count, plural, =0 {žádný řetězec} one {# řetězec} few {# řetězce} other {# řetězců}}",
+    "addChain": "Nový řetězec",
+    "newTitle": "Nový řetězec",
+    "cancel": "Zrušit",
+    "create": "Vytvořit",
+    "nameLabel": "Název",
+    "nameHint": "ID: {id}",
+    "namePlaceholder": "Research → Build",
+    "instructionsLabel": "Zadání pro první krok",
+    "instructionsHint": "Text, který dostane první pipeline jako vstupní handoff.",
+    "instructionsPlaceholder": "Prozkoumej téma X…",
+    "stepsLabel": "Kroky (pipeline v pořadí)",
+    "stepLabel": "Krok {n}",
+    "addStep": "Přidat krok",
+    "remove": "Odebrat",
+    "removeStep": "Odebrat krok {n}",
+    "handoffHint": "Krok N+1 dostane jako vstup artefakt doručený krokem N (vault poznámka / soubor v projektu).",
+    "emptyTitle": "Zatím žádné řetězce",
+    "emptyDescription": "Řetězec spojí pipeline za sebe — výstupní artefakt jednoho kroku je vstupem dalšího.",
+    "emptyHint": "„Přes noc prozkoumej téma X, pak z výsledku postav aplikaci.“",
+    "openChain": "Otevřít řetězec {name}",
+    "stepsSummary": "{count, plural, one {# krok} few {# kroky} other {# kroků}}",
+    "delete": "Smazat",
+    "runChain": "Spustit řetězec",
+    "runsTitle": "Běhy",
+    "noRuns": "Tento řetězec zatím neběžel.",
+    "state": {
+      "running": "běží",
+      "parked": "zaparkováno",
+      "done": "hotovo",
+      "failed": "selhalo"
     }
   }
 }

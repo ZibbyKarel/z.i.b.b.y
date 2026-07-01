@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
+import { getChainRunsQueryKey } from "../chains/queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
 vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
@@ -52,5 +53,12 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "agent-runs", runId: "writer_1", status: "awaiting-approval" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+  });
+
+  it("a pipeline-runs event refreshes the chain runs (a chain advances on step transitions)", () => {
+    act(() => {
+      mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getChainRunsQueryKey() });
   });
 });

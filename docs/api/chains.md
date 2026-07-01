@@ -59,4 +59,6 @@ GET    /api/chains/runs/:id      jeden běh
 ```
 
 Pojmenování chainu = explicitní cíl — classifier se na této ploše nikde neúčastní
-(DNA: explicit target overrides). UI pro autorování chainů přijde s N4.
+(DNA: explicit target overrides). UI: sekce `/chains` (N4a) — karty → detail,
+dialog jen pro create, Run/Delete vpravo nahoře; běhy se osvěžují přes
+`pipeline-runs` SSE scope (poll jen při výpadku streamu).

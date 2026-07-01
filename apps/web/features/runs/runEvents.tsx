@@ -5,6 +5,7 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from "
 import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import type { ActivityEntry } from "@zibby/contracts";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
+import { getChainRunsQueryKey } from "../chains/queries/keys";
 import { getBudgetQueryKey } from "../projects/queries/keys";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
 import { prependActivityEntry } from "../overview/queries/useActivityFeedInfiniteQuery";
@@ -84,6 +85,8 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // The single-run aggregate (a goal's pipeline maker timeline) is keyed by id.
         void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
+        // A chain advances exactly when a pipeline run transitions (N4a).
+        void qc.invalidateQueries({ queryKey: getChainRunsQueryKey() });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
