@@ -45,6 +45,11 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "pipeline-finished": "pipelines",
   "pipeline-parked": "pipelines",
   "stage-verdict": "pipelines",
+  // N2b: a chain is pipeline composition — its lifecycle reads with the pipelines.
+  "chain-started": "pipelines",
+  "chain-advanced": "pipelines",
+  "chain-parked": "pipelines",
+  "chain-finished": "pipelines",
   "goal-dispatched": "goals",
   "goal-verdict": "goals",
   "goal-parked": "goals",

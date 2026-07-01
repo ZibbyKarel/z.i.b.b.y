@@ -218,6 +218,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
      * declared `pr`. Absent = inherit the definition (every existing caller).
      */
     taskOutput?: TaskOutput,
+    /**
+     * N2b: initial input content for the FIRST phase's `consumes` handoff — an
+     * upstream chain artifact (or a chain's instructions). Written to
+     * `<run>/input.md` (durable, files-as-truth) and threaded as the initial
+     * handoff source, exactly like an inner-pipeline `produces` → `consumes` copy.
+     * Absent for every existing caller (no behaviour change).
+     */
+    input?: string,
   ): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId);
@@ -298,12 +306,28 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       branch: run.workspace?.branch,
     });
 
+    // N2b: materialize the chain/operator input as the first phase's handoff. The
+    // file lives in the run root (durable), and drive() copies it into the first
+    // stage's `consumes` via the same placeHandoff path as any inner handoff.
+    let initialHandoff: string | null = null;
+    if (input !== undefined && pipeline.phases[0]?.consumes) {
+      initialHandoff = path.join(root, "input.md");
+      await fs.writeFile(initialHandoff, input, "utf8");
+    }
+
     // Fire-and-forget driver; the FE polls getRun for progress. The driver runs
     // after this request returns, so re-open a logging scope keyed by the run id
     // (carrying the originating trace id) for every line the background work emits.
     const traceId = this.trace.getTraceId() ?? randomUUID();
+    const firstCursor = pipeline.phases[0]?.id;
     void this.trace.run({ traceId, runId: pipelineRunId }, () =>
-      this.drive(run, pipeline, project),
+      initialHandoff && firstCursor
+        ? this.drive(run, pipeline, project, {
+            cursor: firstCursor,
+            handoffSource: initialHandoff,
+            retries: new Map(),
+          })
+        : this.drive(run, pipeline, project),
     );
     return run;
   }

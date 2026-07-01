@@ -65,6 +65,13 @@ export const ActivityKindSchema = z.enum([
   // M6 (proposes app ideas, Tier 1 — silent + recorded). A weekly pass paired interests
   // with trends into prototype pitches in the vault; the morning briefing surfaces them.
   "app-ideas-generated",
+  // N2b (pipeline chaining, Tier 1 — silent + recorded). An operator-authored chain
+  // started, handed an artifact to its next step, parked on a broken/gated handoff,
+  // or reached a terminal state (done/failed — the `status` ref carries which).
+  "chain-started",
+  "chain-advanced",
+  "chain-parked",
+  "chain-finished",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 
@@ -83,6 +90,9 @@ export const ActivityRefsSchema = z
     /** Phase 10: the goal run and goal definition a goal-loop entry is attributed to. */
     goalRunId: z.string().optional(),
     goalId: z.string().optional(),
+    /** N2b: the chain run and chain definition a chain entry is attributed to. */
+    chainRunId: z.string().optional(),
+    chainId: z.string().optional(),
     /** The engagement an entry is attributed to (Phase 8) — grouping, not authz. */
     projectId: z.string().optional(),
     approvalId: z.string().optional(),
