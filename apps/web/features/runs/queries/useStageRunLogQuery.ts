@@ -7,22 +7,17 @@ export function getStageRunLogQueryKey(pipelineRunId: string, phaseId: string) {
 }
 
 /**
- * Read a pipeline stage's log from offset 0
- * (`GET /api/tasks/runs/:runId/stages/:phaseId/logs`). For a terminal stage this
- * is a one-shot read (nothing appends); pass `live` for the phase that is still
- * executing to re-read on an interval so the running log grows in place. The
- * backend resolves a live phase to its in-flight child (`currentStageRunId`).
+ * Read a **terminal** pipeline stage's log from offset 0
+ * (`GET /api/tasks/runs/:runId/stages/:phaseId/logs`) — a one-shot read of state;
+ * nothing appends to a finished phase. The phase that is still executing is a live
+ * stream and is tailed over SSE instead (`useStageRunLogStream` — DNA: SSE for
+ * live streams, polling for state).
  */
-export function useStageRunLogQuery(
-  pipelineRunId: string,
-  phaseId: string | undefined,
-  live = false,
-) {
+export function useStageRunLogQuery(pipelineRunId: string, phaseId: string | undefined) {
   return apiClient.taskRuns.getTaskRunStageLogs.useQuery({
     queryKey: getStageRunLogQueryKey(pipelineRunId, phaseId ?? "none"),
     queryData: { params: { runId: pipelineRunId, phaseId: phaseId ?? "" } },
     enabled: Boolean(phaseId),
     select: selectApiResponseBody,
-    refetchInterval: live ? 1000 : false,
   });
 }

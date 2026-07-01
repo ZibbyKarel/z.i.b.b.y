@@ -111,6 +111,17 @@ export class TaskRunsService {
     return this.pipelineRunner.readStageLog(runId, phaseId, offset);
   }
 
+  /**
+   * Subscribe to append signals for a pipeline stage's log (the SSE tail's wake
+   * signal; reads still go through {@link getStageLog}). Synchronous by design —
+   * the stream pump subscribes before its first read — so there is no kind check
+   * here: a non-pipeline id never matches a pipeline run and simply never fires,
+   * while the read path keeps owning the 404.
+   */
+  onStageLogAppend(runId: string, phaseId: string, listener: () => void): () => void {
+    return this.pipelineRunner.onStageLogAppend(runId, phaseId, listener);
+  }
+
   /** Read one whitelisted run artifact (the owning runner enforces its allowlist). */
   async getArtifact(
     runId: string,

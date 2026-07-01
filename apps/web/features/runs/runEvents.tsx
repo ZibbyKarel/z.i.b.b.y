@@ -4,8 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import type { ActivityEntry } from "@zibby/contracts";
-import { getApprovalsQueryKey } from "../approvals/queries/useApprovalsQuery";
-import { getBudgetQueryKey } from "../projects/queries/useBudgetQuery";
+import { getApprovalsQueryKey } from "../approvals/queries/keys";
+import { getBudgetQueryKey } from "../projects/queries/keys";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
 import { prependActivityEntry } from "../overview/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../overview/queries/useBriefingQuery";
@@ -109,6 +109,12 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.entry) prependActivityEntry(qc, parsed.entry);
         void qc.invalidateQueries({ queryKey: getActivityQueryKey() });
         void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
+        // An approval born outside a run transition (e.g. a task held on budget)
+        // announces itself only as `approval-requested` activity — refresh the
+        // pending queue off it so the gate surfaces without waiting for a poll.
+        if (parsed.kind?.startsWith("approval-")) {
+          void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+        }
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh
       // the deferred queue so the waiting card swaps for its run instead of doubling.

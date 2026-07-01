@@ -2,7 +2,9 @@ import { Controller, Headers, type MessageEvent, Param, Req, Sse } from "@nestjs
 import type { Request } from "express";
 import type { Observable } from "rxjs";
 import { AgentRunnerService, RunNotFoundError } from "../agents/agent-runner.service";
+import { PipelineRunNotFoundError } from "../pipelines/pipeline-runner.service";
 import { type WriteGate, streamRunLog } from "../shared/sse/sse";
+import { TaskRunNotFoundError, TaskRunsService } from "./task-runs.service";
 
 /**
  * SSE tail for a single task run's log, the push replacement for the FE's 1s offset
@@ -17,7 +19,10 @@ import { type WriteGate, streamRunLog } from "../shared/sse/sse";
  */
 @Controller()
 export class TaskRunLogsController {
-  constructor(private readonly agentRunner: AgentRunnerService) {}
+  constructor(
+    private readonly agentRunner: AgentRunnerService,
+    private readonly taskRuns: TaskRunsService,
+  ) {}
 
   @Sse("api/tasks/runs/:runId/logs/stream")
   streamLogs(
@@ -25,8 +30,7 @@ export class TaskRunLogsController {
     @Param("runId") runId: string,
     @Headers("last-event-id") lastEventId?: string,
   ): Observable<MessageEvent> {
-    const parsed = Number(lastEventId);
-    const startOffset = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    const startOffset = parseOffset(lastEventId);
     return streamRunLog(
       startOffset,
       (offset) =>
@@ -40,6 +44,43 @@ export class TaskRunLogsController {
       writeGateFor(req),
     );
   }
+
+  /**
+   * SSE tail for one pipeline stage's log — the push replacement for the stage
+   * timeline's 1s offset poll (the contract's `…/stages/:phaseId/logs` endpoint
+   * stays as the graceful fallback). The read path re-resolves the tailed attempt
+   * on every chunk (live `currentStageRunId`, else the last attempt of the phase),
+   * so the stream follows a retry without reconnecting. An unknown/non-pipeline
+   * run or a phase with no attempt yet ends the stream cleanly (done chunk), so
+   * the browser doesn't reconnect-loop against a log that will never exist.
+   */
+  @Sse("api/tasks/runs/:runId/stages/:phaseId/logs/stream")
+  streamStageLogs(
+    @Req() req: Request,
+    @Param("runId") runId: string,
+    @Param("phaseId") phaseId: string,
+    @Headers("last-event-id") lastEventId?: string,
+  ): Observable<MessageEvent> {
+    const startOffset = parseOffset(lastEventId);
+    return streamRunLog(
+      startOffset,
+      (offset) =>
+        this.taskRuns.getStageLog(runId, phaseId, offset).catch((error) => {
+          if (error instanceof TaskRunNotFoundError || error instanceof PipelineRunNotFoundError) {
+            return { content: "", nextOffset: offset, done: true };
+          }
+          throw error;
+        }),
+      (listener) => this.taskRuns.onStageLogAppend(runId, phaseId, listener),
+      writeGateFor(req),
+    );
+  }
+}
+
+/** The resume offset carried by EventSource's `Last-Event-ID` reconnect header. */
+function parseOffset(lastEventId?: string): number {
+  const parsed = Number(lastEventId);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 /**

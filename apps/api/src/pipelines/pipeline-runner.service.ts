@@ -628,6 +628,25 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Subscribe to append signals for one stage's log — the push counterpart of
+   * {@link readStageLog}. Each core append is filtered against the attempt read
+   * would resolve *now* (the live `currentStageRunId` while the phase executes,
+   * else a `stageRuns` entry of the phase), so a retry that swaps the attempt
+   * keeps signalling without resubscription. Only in-flight runs append, so the
+   * in-memory registry is the whole universe here (no aggregate fallback); an
+   * unknown run simply never fires. Returns an unsubscribe for stream teardown.
+   */
+  onStageLogAppend(pipelineRunId: string, phaseId: string, listener: () => void): () => void {
+    return this.core.onLogAny((runId) => {
+      const run = this.runs.get(pipelineRunId);
+      if (!run) return;
+      const live = run.currentStage === phaseId && run.currentStageRunId === runId;
+      const past = run.stageRuns.some((s) => s.phaseId === phaseId && s.runId === runId);
+      if (live || past) listener();
+    });
+  }
+
+  /**
    * Read one whitelisted run artifact (Phase 3.3) by name. `name` must be on the
    * allowlist ({@link PIPELINE_RUN_ARTIFACTS}) — anything else (incl. any traversal
    * attempt) returns null → 404; there is no generic file browser. The diffstat

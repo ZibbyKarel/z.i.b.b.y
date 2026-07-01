@@ -32,6 +32,7 @@ interface FakeCore {
   allowIntent: ReturnType<typeof vi.fn>;
   denyIntent: ReturnType<typeof vi.fn>;
   readLog: ReturnType<typeof vi.fn>;
+  onLogAny: ReturnType<typeof vi.fn>;
   shutdown: ReturnType<typeof vi.fn>;
 }
 
@@ -42,6 +43,8 @@ interface Harness {
   gates: { rulesForAgent: ReturnType<typeof vi.fn>; evaluate: ReturnType<typeof vi.fn> };
   runs: Map<string, PipelineRun>;
   registered: Map<string, ResumableRunner>;
+  /** Fire the fake core's "bytes appended" signal for one child run id. */
+  emitLog: (runId: string) => void;
   dir: string;
 }
 
@@ -121,6 +124,7 @@ async function makeHarness(dir: string): Promise<Harness> {
   );
 
   // Swap the real core (which spawns processes) for a scriptable double.
+  const logListeners = new Set<(runId: string) => void>();
   const core: FakeCore = {
     init: vi.fn(async () => {}),
     get: vi.fn(() => ({
@@ -135,6 +139,10 @@ async function makeHarness(dir: string): Promise<Harness> {
     allowIntent: vi.fn(async () => {}),
     denyIntent: vi.fn(async () => {}),
     readLog: vi.fn(async () => ({ content: "tail of the failure", nextOffset: 0, done: true })),
+    onLogAny: vi.fn((l: (runId: string) => void) => {
+      logListeners.add(l);
+      return () => logListeners.delete(l);
+    }),
     shutdown: vi.fn(),
   };
   (service as unknown as { core: FakeCore }).core = core;
@@ -153,7 +161,18 @@ async function makeHarness(dir: string): Promise<Harness> {
   const runs = (service as unknown as { runs: Map<string, PipelineRun> }).runs;
   runs.set(PIPELINE_RUN_ID, run);
 
-  return { service, core, approvals, gates, runs, registered, dir };
+  return {
+    service,
+    core,
+    approvals,
+    gates,
+    runs,
+    registered,
+    emitLog: (runId: string) => {
+      for (const l of logListeners) l(runId);
+    },
+    dir,
+  };
 }
 
 const intent: IntendedAction = { action: "delete" };
@@ -314,6 +333,49 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(h.runs.has(goneId)).toBe(false);
       await h.service.readStageLog(goneId, "build", 0);
       expect(h.core.readLog).toHaveBeenCalledWith(`${goneId}.build_1`, 0);
+    });
+  });
+
+  describe("onStageLogAppend (the SSE stage tail's wake signal)", () => {
+    it("fires for the phase's resolved attempt, follows a retry swap, ignores everything else", () => {
+      const run = h.runs.get(PIPELINE_RUN_ID)!;
+      run.currentStage = "build";
+      run.currentStageRunId = "release_100.build_1";
+      run.stageRuns = [];
+      const listener = vi.fn();
+      const unsub = h.service.onStageLogAppend(PIPELINE_RUN_ID, "build", listener);
+
+      // The live attempt appends → signal.
+      h.emitLog("release_100.build_1");
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // An unrelated run's append is filtered out.
+      h.emitLog("other_run.x_1");
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // A retry swaps the attempt mid-stream — the same subscription keeps
+      // signalling (the reader re-resolves the attempt per chunk).
+      run.stageRuns = [
+        { phaseId: "build", runId: "release_100.build_1", attempt: 1, status: "error" },
+      ];
+      run.currentStageRunId = "release_100.build_2";
+      h.emitLog("release_100.build_2");
+      expect(listener).toHaveBeenCalledTimes(2);
+
+      // A recorded (terminal) attempt of the phase still counts.
+      h.emitLog("release_100.build_1");
+      expect(listener).toHaveBeenCalledTimes(3);
+
+      unsub();
+      h.emitLog("release_100.build_2");
+      expect(listener).toHaveBeenCalledTimes(3);
+    });
+
+    it("an unknown pipeline run never fires (no aggregate fallback needed for appends)", () => {
+      const listener = vi.fn();
+      h.service.onStageLogAppend("nope_1", "build", listener);
+      h.emitLog("release_100.build_1");
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 

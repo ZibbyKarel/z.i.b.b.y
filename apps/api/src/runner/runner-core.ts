@@ -224,6 +224,17 @@ export class RunnerCore<R extends BaseRun> {
     return () => this.events.off("log", scoped);
   }
 
+  /**
+   * Subscribe to append notifications across ALL runs this core owns. A pipeline
+   * stage tail needs this: the tailed attempt can change mid-stream (a retry swaps
+   * `currentStageRunId`), so the subscriber filters by the *currently resolved*
+   * attempt on each signal instead of pinning one run id at subscribe time.
+   */
+  onLogAny(listener: (runId: string) => void): () => void {
+    this.events.on("log", listener);
+    return () => this.events.off("log", listener);
+  }
+
   private emitStatus(run: R): void {
     this.events.emit("status", run);
   }

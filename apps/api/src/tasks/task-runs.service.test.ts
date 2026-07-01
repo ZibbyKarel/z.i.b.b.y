@@ -112,6 +112,7 @@ function build() {
       return pipeP;
     }),
     readStageLog: vi.fn(async () => ({ content: "stage", nextOffset: 5, done: false })),
+    onStageLogAppend: vi.fn(() => () => {}),
     readArtifact: vi.fn(async () => ({ name: "pr-draft.md", content: "PR" })),
     resumeParked: vi.fn(async () => pipeP),
     delete: vi.fn(async () => {}),
@@ -214,6 +215,15 @@ describe("TaskRunsService", () => {
       const { service, pipelineRunner } = build();
       await service.getStageLog("delivery_3", "kodér", 0);
       expect(pipelineRunner.readStageLog).toHaveBeenCalledWith("delivery_3", "kodér", 0);
+    });
+
+    it("routes stage-log append subscriptions to the pipeline runner (SSE tail wake signal)", () => {
+      const { service, pipelineRunner } = build();
+      const listener = () => {};
+      const unsub = () => {};
+      pipelineRunner.onStageLogAppend.mockReturnValue(unsub);
+      expect(service.onStageLogAppend("delivery_3", "kodér", listener)).toBe(unsub);
+      expect(pipelineRunner.onStageLogAppend).toHaveBeenCalledWith("delivery_3", "kodér", listener);
     });
 
     it("routes artifacts to the goal runner for a goal run", async () => {

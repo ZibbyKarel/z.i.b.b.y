@@ -215,6 +215,31 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     const persisted = await storage.get(result.task.id);
     expect(persisted.status).toBe("dispatched");
     expect(persisted.outcome).toBeUndefined();
+    // Pure intent (no target) is exactly what the classifier routes.
+    expect(classifier.classify).toHaveBeenCalledTimes(1);
+  });
+
+  it("an explicit target on the wire bypasses the classifier entirely (DNA: explicit target overrides)", async () => {
+    // N1: naming a pipeline/agent is a hard override — the named unit runs and the
+    // classifier is never consulted, so an explicit run is fully deterministic.
+    const result = await service.createTask({
+      text: "run exactly this",
+      title: "Direct",
+      target: { kind: "pipeline", id: "release", name: "Release" },
+    });
+    expect(result.outcome).toBe("dispatched");
+    if (result.outcome !== "dispatched") return;
+
+    expect(classifier.classify).not.toHaveBeenCalled();
+    expect(pipelineRunner.start).toHaveBeenCalledWith(
+      "release",
+      result.task.id,
+      undefined,
+      [],
+      undefined,
+      undefined,
+    );
+    expect(result.task.target).toEqual({ kind: "pipeline", id: "release", name: "Release" });
   });
 
   it("background path: returns a pending task immediately, then dispatches off the response path", async () => {

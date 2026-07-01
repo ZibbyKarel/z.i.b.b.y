@@ -75,7 +75,18 @@ NC Simplification / architecture / bug sweep ── CONTINUOUS, threaded through
 
 ---
 
-## N1 — DNA Alignment: SSE + Classifier Override
+## N1 — DNA Alignment: SSE + Classifier Override ✅ DELIVERED 2026-07-01
+
+> Delivered — see `docs/plans/phase-n1.md`. The code-level audit found the override half
+> already shipped (web sends `target`, the scheduler's dispatch skips the classifier;
+> the ROADMAP's "classifier still runs" referred to the side-effect-free preview, which
+> stays by design) — it gained its named regression test. The SSE audit found and fixed
+> three genuine violations: the live stage log (1s poll → SSE tail with poll fallback),
+> `useApprovalsQuery` and `useBudgetQuery` (unconditional polls → SSE-invalidated,
+> poll only while the stream is down), plus approvals invalidation on `approval-*`
+> activity. Discovered en route: 21 pre-existing API e2e failures (stale vs the
+> intentional background-dispatch + integrations-under-projects changes) — queued as
+> the next bug-fix phase.
 
 **Why first:** cheap, unblocks the rest, and removes the two live contradictions between the
 oracle and the code before anything measures against it.

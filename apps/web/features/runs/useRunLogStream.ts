@@ -23,18 +23,44 @@ const RUN_LOG_POLL_MS = 1_000;
  * runner. A `null` run id renders nothing.
  */
 export function useRunLogStream(runId: string | null): { text: string; done: boolean } {
+  return useLogTail(
+    runId ? `${API_URL}/api/tasks/runs/${encodeURIComponent(runId)}/logs` : null,
+  );
+}
+
+/**
+ * Tail one pipeline stage's log over SSE (`…/stages/:phaseId/logs/stream`), with
+ * the same offset-poll fallback as {@link useRunLogStream} — the push replacement
+ * for the stage timeline's 1s interval refetch (DNA: a log is a live stream). The
+ * backend re-resolves the tailed attempt per chunk, so a retry mid-phase keeps
+ * streaming. A `null` phase renders nothing.
+ */
+export function useStageRunLogStream(
+  pipelineRunId: string,
+  phaseId: string | null,
+): { text: string; done: boolean } {
+  return useLogTail(
+    phaseId
+      ? `${API_URL}/api/tasks/runs/${encodeURIComponent(pipelineRunId)}/stages/${encodeURIComponent(phaseId)}/logs`
+      : null,
+  );
+}
+
+/**
+ * The shared tail engine: SSE stream at `${logsBase}/stream` preferred, 1s offset
+ * poll against `${logsBase}` when the stream never opens. A `null` base is idle.
+ */
+function useLogTail(logsBase: string | null): { text: string; done: boolean } {
   const [text, setText] = useState("");
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!runId) return;
+    if (!logsBase) return;
     let active = true;
     let offset = 0;
     let opened = false;
     let source: EventSource | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-    const logsBase = `${API_URL}/api/tasks/runs/${encodeURIComponent(runId)}/logs`;
 
     const apply = (chunk: { content: string; nextOffset: number; done: boolean }) => {
       if (!active) return;
@@ -104,7 +130,7 @@ export function useRunLogStream(runId: string | null): { text: string; done: boo
 
     startStreaming();
     return cleanup;
-  }, [runId]);
+  }, [logsBase]);
 
   return { text, done };
 }

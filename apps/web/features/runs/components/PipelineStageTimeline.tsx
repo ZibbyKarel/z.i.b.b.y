@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, Stack, Tag, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
+import { useStageRunLogStream } from "../useRunLogStream";
 import type { RunView } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunTranscript } from "./RunTranscript";
@@ -24,12 +25,11 @@ export interface PipelineStageTimelineProps {
 }
 
 /**
- * One pipeline stage's log — read on demand from the per-phase endpoint
- * (`GET /api/pipelines/runs/:id/stages/:phaseId/logs`), the same source the parked
- * panel uses for the failing-phase tail. Mounted only while the row is expanded, so
- * a collapsed stage costs nothing. A `live` (still-running) phase re-reads on an
- * interval and follows the tail, so the log grows in place instead of appearing only
- * once the phase finishes.
+ * One pipeline stage's log, mounted only while the row is expanded so a collapsed
+ * stage costs nothing. A `live` (still-executing) phase tails over SSE
+ * ({@link useStageRunLogStream} — DNA: a log is a live stream, never an interval
+ * poll), so the log grows in place; a terminal phase is a one-shot read of state
+ * from the contract's `…/stages/:phaseId/logs` endpoint.
  */
 function StageLog({
   pipelineRunId,
@@ -40,8 +40,37 @@ function StageLog({
   phaseId: string;
   live: boolean;
 }) {
+  return live ? (
+    <LiveStageLog phaseId={phaseId} pipelineRunId={pipelineRunId} />
+  ) : (
+    <TerminalStageLog phaseId={phaseId} pipelineRunId={pipelineRunId} />
+  );
+}
+
+/** The SSE tail of the phase executing right now — pushed, not polled. */
+function LiveStageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phaseId: string }) {
   const t = useTranslations("runs");
-  const { data, isPending } = useStageRunLogQuery(pipelineRunId, phaseId, live);
+  const { text: streamed } = useStageRunLogStream(pipelineRunId, phaseId);
+  const text = streamed.replace(/\n$/, "");
+  return text ? (
+    <RunTranscript live maxHeight="viewport" scrollKey={text} text={text} />
+  ) : (
+    <Typography mono size="2xs" type="note" variant="tertiary">
+      {t("liveLog")}…
+    </Typography>
+  );
+}
+
+/** A finished phase's log — immutable state, read once. */
+function TerminalStageLog({
+  pipelineRunId,
+  phaseId,
+}: {
+  pipelineRunId: string;
+  phaseId: string;
+}) {
+  const t = useTranslations("runs");
+  const { data, isPending } = useStageRunLogQuery(pipelineRunId, phaseId);
   const text = (data?.content ?? "").replace(/\n$/, "");
   if (isPending) {
     return (
@@ -51,10 +80,10 @@ function StageLog({
     );
   }
   return text ? (
-    <RunTranscript live={live} maxHeight="viewport" scrollKey={text} text={text} />
+    <RunTranscript live={false} maxHeight="viewport" scrollKey={text} text={text} />
   ) : (
     <Typography mono size="2xs" type="note" variant="tertiary">
-      {live ? `${t("liveLog")}…` : t("stageNoLog")}
+      {t("stageNoLog")}
     </Typography>
   );
 }

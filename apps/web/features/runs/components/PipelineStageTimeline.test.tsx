@@ -7,15 +7,22 @@ import { PipelineStageTimeline } from "./PipelineStageTimeline";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-// The stage log is read on demand from the per-phase endpoint; stub it so the test
-// needs no backend and can assert which phase each row opens.
-const { stageLogMock } = vi.hoisted(() => ({
+// The stage log is read on demand from the per-phase endpoint; stub both surfaces
+// (the terminal one-shot query and the live SSE tail) so the test needs no backend
+// and can assert which phase each row opens — and over which transport (N1 DNA:
+// a live log streams, a finished log is a one-shot state read).
+const { stageLogMock, stageStreamMock } = vi.hoisted(() => ({
   stageLogMock: vi.fn((_id: string, phaseId: string | undefined) => ({
     data: phaseId ? { content: `LOG for ${phaseId}` } : undefined,
     isPending: false,
   })),
+  stageStreamMock: vi.fn((_id: string, phaseId: string | null) => ({
+    text: phaseId ? `STREAM for ${phaseId}` : "",
+    done: false,
+  })),
 }));
 vi.mock("../queries/useStageRunLogQuery", () => ({ useStageRunLogQuery: stageLogMock }));
+vi.mock("../useRunLogStream", () => ({ useStageRunLogStream: stageStreamMock }));
 
 const stages: RunView["stageRuns"] = [
   { phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "done" },
@@ -44,6 +51,7 @@ const logToggles = () => screen.getAllByRole("button", { name: /^log$/i });
 describe("PipelineStageTimeline (28)", () => {
   beforeEach(() => {
     stageLogMock.mockClear();
+    stageStreamMock.mockClear();
     push.mockClear();
   });
 
@@ -58,23 +66,26 @@ describe("PipelineStageTimeline (28)", () => {
   it("fetches no stage log until a row is expanded", () => {
     render(timeline());
     expect(stageLogMock).not.toHaveBeenCalled();
+    expect(stageStreamMock).not.toHaveBeenCalled();
   });
 
   it("opens a stage's log (by phaseId) on its log toggle — terminal stage reads once", async () => {
     render(timeline());
     await userEvent.click(logToggles()[0]!);
-    // A terminal (done) stage is not live → no interval polling.
-    expect(stageLogMock).toHaveBeenCalledWith("delivery_1", "build", false);
+    // A terminal (done) stage is immutable state → the one-shot query, never the stream.
+    expect(stageLogMock).toHaveBeenCalledWith("delivery_1", "build");
+    expect(stageStreamMock).not.toHaveBeenCalled();
     expect(screen.getByText("LOG for build")).toBeInTheDocument();
   });
 
-  it("shows the running phase as a live row and streams its log without a click", () => {
+  it("shows the running phase as a live row and tails it over SSE without a click", () => {
     // A run still executing its first phase: no terminal stages yet, but the live
-    // phase row appears and its log is open + polled live (3rd arg true).
+    // phase row appears and its log is open + streamed (SSE), not interval-polled.
     render(timeline({ currentStage: "build", live: true, stageRuns: [] }));
     expect(screen.getByText("build")).toBeInTheDocument();
-    expect(stageLogMock).toHaveBeenCalledWith("delivery_1", "build", true);
-    expect(screen.getByText("LOG for build")).toBeInTheDocument();
+    expect(stageStreamMock).toHaveBeenCalledWith("delivery_1", "build");
+    expect(stageLogMock).not.toHaveBeenCalled();
+    expect(screen.getByText("STREAM for build")).toBeInTheDocument();
   });
 
   it("surfaces a running phase even when an earlier attempt already failed", () => {
@@ -89,7 +100,7 @@ describe("PipelineStageTimeline (28)", () => {
     );
     // The live attempt is #2 (one past the recorded terminal attempt).
     expect(screen.getByText("pokus 2")).toBeInTheDocument();
-    expect(stageLogMock).toHaveBeenCalledWith("delivery_1", "build", true);
+    expect(stageStreamMock).toHaveBeenCalledWith("delivery_1", "build");
   });
 
   it("keeps a single stage open — opening another collapses the first", async () => {
@@ -97,8 +108,9 @@ describe("PipelineStageTimeline (28)", () => {
     await userEvent.click(logToggles()[0]!);
     expect(screen.getByText("LOG for build")).toBeInTheDocument();
 
+    // The verify row is status "running" → it opens over the SSE tail.
     await userEvent.click(logToggles()[1]!);
-    expect(screen.getByText("LOG for verify")).toBeInTheDocument();
+    expect(screen.getByText("STREAM for verify")).toBeInTheDocument();
     // The first stage's log is gone — only one open at a time.
     expect(screen.queryByText("LOG for build")).not.toBeInTheDocument();
   });
