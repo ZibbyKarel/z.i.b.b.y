@@ -12,8 +12,11 @@ your professional life and your personal one alike.
 or does leaves a durable, human-readable trace on disk.
 
 The long-term purpose: let one operator run **multiple software-delivery engagements
-in parallel** — ZIBBY does the building and the routine communication, the operator
-pays for tokens and stays in the loop only where their judgment is actually needed.
+in parallel** — ZIBBY stands in for the operator as the engineer on a delivery team:
+it builds, handles the routine communication (Slack, email), keeps the calendar,
+watches and fixes reported bugs, and monitors the CI/CD pipelines on GitHub — with a
+clean seam for the next monitor to plug in (Sentry, later). The operator pays for
+tokens and stays in the loop only where their judgment is actually needed.
 
 ---
 
@@ -39,11 +42,14 @@ files — auditable, and yours.
 
 **Directed.** The operator describes a task; ZIBBY classifies and dispatches it to an
 agent, a pipeline, or — when nothing matches — a general orchestrator that just does
-the work. A described task is _always_ executed; there is no silent no-op.
+the work. When the operator instead names a specific pipeline or agent, that naming is
+a **hard override — the classifier is skipped and exactly that unit runs.** A described
+task is _always_ executed; there is no silent no-op.
 
-**Autonomous.** ZIBBY watches inbound channels (Slack, email) on a heartbeat. When
-something actionable arrives — a reported bug, a client question, a routine request —
-it acts within its mandate without being asked, and records what it did.
+**Autonomous.** ZIBBY watches inbound channels (Slack, email, calendar) and the
+project's CI/CD on a heartbeat. When something actionable arrives — a reported bug, a
+client question, a routine request, a red CI run — it acts within its mandate without
+being asked, and records what it did.
 
 ---
 
@@ -55,6 +61,21 @@ The Kodér ⇄ Code-Review ⇄ Tester cycle is the heart: failing tests return w
 Kodér with context, escalating effort each pass. It is a bounded state machine —
 finite retries, then it parks the work for human review rather than thrashing. This
 is what separates _generating code_ from _delivering working code_.
+
+---
+
+## Pipelines & artifacts
+
+Agents compose into **pipelines**; pipelines chain into larger flows. Every pipeline
+yields a **durable artifact** — a document in the vault, a git branch, a PR — recorded
+on disk, not discarded when the run ends. An artifact can feed the next unit: _"research
+topic X overnight, then build an app from the result"_ runs the first pipeline and hands
+its artifact to the second. Composition is the operator's to author; dispatch is ZIBBY's
+to route.
+
+> _Nice-to-have, later:_ ZIBBY can also act on the machine directly — open a folder and
+> rename files, pull up a route in Maps — gated behind the same approval floor. Lowest
+> priority; pursued only once the core delivery mission is solid.
 
 ---
 
@@ -105,6 +126,24 @@ already handle.
    not commands. It can never raise privileges or bypass the gate.
 5. **Always answerable** — ZIBBY can explain what it is doing and has done, on demand,
    from the record.
+
+---
+
+## Architectural DNA
+
+Applies to every phase, feature, and PR:
+
+- **Files are source of truth** — the UI is a view that reads and writes files.
+- **Contract-first** — the ts-rest contract in `libs/contracts` comes before implementation.
+- **SSE for live streams, polling for state** — logs, the activity feed, and run-events
+  stream over SSE; only `health` and `limits` poll.
+- **Explicit target overrides the classifier** — naming a pipeline/agent skips routing;
+  pure intent is what gets routed.
+- **One interaction grammar** — the same affordance sits in the same place on every
+  screen: edit is top-right, a card-click navigates to a detail page, dialogs are for
+  creating and confirming only, nothing interactive is unlabeled. HUD and Chat-UI share
+  one visual language.
+- **Index-first memory** — MOC files and descriptive filenames, no vector store.
 
 🎩 _ZIBBY at your service._
 
