@@ -4,6 +4,17 @@
 
 ## Poslední dokončená fáze
 
+**N4f — Automations na gramatiku** — 2026-07-02, commit `feat(web): N4f automations …`
+
+- Poslední velký edit dialog: Edit na kartě naviguje na `/automations/[id]`;
+  stránka = editační plocha (sdílené `useAutomationFormState` +
+  `AutomationFormFields`), akce vpravo nahoře Uložit / Spustit teď / Smazat
+  (confirm). System zámek přesunut na detail beze změny sémantiky (patch JEN
+  {trigger}, žádný Delete — server 409). Dialog create-only → naviguje na
+  detail. NOVĚ zapojen `deleteAutomation` kontrakt — web neměl žádnou delete
+  plochu (settability díra zavřena).
+- Suita 2049/0. Detail: `docs/plans/phase-n4f-automations-grammar.md`.
+
 **N4e — Hooks + MCP na gramatiku** — 2026-07-02, commit `feat(web): N4e hooks + MCP …`
 
 - Třetí dávka na šabloně N4c: „Konfigurovat" na kartě naviguje na `/hooks/[id]`
@@ -115,10 +126,10 @@
 
 ## Další fáze (návrh)
 
-**N4f — Automations na gramatiku**: poslední velký edit dialog
-(AutomationFormDialog — trigger builder cron/event, target picker, system
-automatizace se zamčeným vším kromě schedule). Detail stránka
-`/automations/[id]` na N4c šabloně; research potvrzuje: multi-step konfigurace
-s validací/preview (cron label) patří na stránku, ne do modalu. Pak zbývá
-integrations edit dialog (na project detailu) + memory editor mode a N4
-gramatická řada je kompletní.
+**N4g — poslední dva porušitelé (integrations + memory) UZAVÍRÁ gramatickou
+řadu**: (a) IntegrationFormDialog na project detailu (create+edit) — GROUND
+rozhodne detail route vs. konformní plocha v rámci projektu; (b) memory note
+editor dialog s mode create/edit — pro velká markdown těla je vzor view→edit
+toggle přímo na note ploše (edit vpravo nahoře), dialog jen pro create
+(research: inline edit nepatří na velké texty, ale edit-mode na stejné ploše
+ano). Pak N4 zbývá jen HUD ⇄ Chat-UI vizuální sjednocení, případně N5/NC.

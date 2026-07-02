@@ -201,8 +201,11 @@ rewrite.
 > `docs/plans/phase-n4d-skills-commands-grammar.md`).
 > ✅ **N4e DELIVERED 2026-07-02** — hooks + MCP detail pages (`/hooks/[id]`,
 > `/mcp/[id]`, create-only dialogs, confirm-gated delete;
-> `docs/plans/phase-n4e-hooks-mcp-grammar.md`). Remaining offenders:
-> automations (N4f), then integrations + memory editor.
+> `docs/plans/phase-n4e-hooks-mcp-grammar.md`).
+> ✅ **N4f DELIVERED 2026-07-02** — automations detail page (`/automations/[id]`,
+> system schedule-only lock preserved, create-only dialog, FIRST delete surface;
+> `docs/plans/phase-n4f-automations-grammar.md`). Remaining offenders:
+> integrations edit dialog + memory editor edit mode (N4g closes the series).
 
 **Why fourth:** the system _works_ but does not yet feel like one product. This is a
 first-class goal (north-star _"The Interface — One Language, Everywhere"_), not end-of-run

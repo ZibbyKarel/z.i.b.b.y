@@ -18,7 +18,9 @@ app/
     │   ├── page.tsx        Katalog agentů
     │   └── [id]/page.tsx   Detail agenta (editace, pravidla, used-by; N4c)
     ├── hooks/[id]/page.tsx Detail hooku (editace; N4e — mcp/[id] stejně)
-    ├── automations/page.tsx Automatizace
+    ├── automations/
+    │   ├── page.tsx        Automatizace
+    │   └── [id]/page.tsx   Detail automatizace (editace, run-now, delete; N4f)
     ├── gates/page.tsx      Gate pravidla
     ├── memory/page.tsx     Vault browser
     ├── overview/page.tsx   Přehled (briefing + aktivita)
