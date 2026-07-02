@@ -14,7 +14,9 @@ app/
 └── (dashboard)/            Route group — dashboard shell
     ├── layout.tsx          Dashboard server layout (AppShell)
     ├── loading.tsx         Suspense fallback
-    ├── agents/page.tsx     Katalog agentů
+    ├── agents/
+    │   ├── page.tsx        Katalog agentů
+    │   └── [id]/page.tsx   Detail agenta (editace, pravidla, used-by; N4c)
     ├── automations/page.tsx Automatizace
     ├── gates/page.tsx      Gate pravidla
     ├── memory/page.tsx     Vault browser

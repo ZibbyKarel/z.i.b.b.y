@@ -4,6 +4,19 @@
 
 ## Poslední dokončená fáze
 
+**N4c — Agents na interakční gramatiku** — 2026-07-02, commit `feat(web): N4c agents …`
+
+- Plný audit sekcí proti gramatice (tabulka v `docs/plans/phase-n4c-agents-grammar.md`);
+  nejhorší porušitel zmigrován: karta agenta NAVIGUJE na novou `/agents/[id]`
+  detail stránku (dřív view/edit dialog), stránka = editační plocha (jeden
+  formulář nad panely Základy + Pravidla), akce vpravo nahoře — Uložit / Spustit
+  (první skutečné zapojení mrtvé Run afordance; NewTask pre-fill = explicitní
+  cíl) / Smazat (confirm). Dialog jen create (`NewAgentDialog`);
+  `AgentDetailModal` + `AgentViewDetails` smazány. Zbylí porušitelé: skills,
+  commands, automations, hooks, mcp, integrations, memory (dialogy create+edit).
+- Gotcha: `npx next typegen` musí běžet s cwd=apps/web (z rootu spadne).
+  Suita 2028/0.
+
 **N4b — CI health povrch** — 2026-07-02, commit `feat(monitors): N4b CI health surface …`
 
 - CI zdraví jako STAV (ne událost): `GithubCiMonitor` počítá červená/zelená z celé
@@ -79,9 +92,9 @@
 
 ## Další fáze (návrh)
 
-**N4c — UI grammar audit + migrace**: inventura sekcí proti interakčnímu
-kontraktu (edit vpravo nahoře, karta → detail, dialogy jen create/confirm, nic
-interaktivního bez labelu) metodou design-system auditu (inventory → categorize
-→ inconsistencies → fix; research: Nielsen konzistence + DS audit steps).
-Výstup: tabulka odchylek v plánu fáze, migrace nejhorších sekcí s
-accessible-name asercemi. Pak zbytek N4 odchylek po dávkách, N5 až nakonec.
+**N4d — skills + commands na gramatiku**: stejný vzor jako N4c (šablona =
+agents migrace): `/skills/[id]` a `/commands/[id]` detail stránky, tile
+naviguje, dialogy create-only. Research potvrzuje: editace s víc poli /
+markdown tělem (>6 s) patří na stránku, ne do modalu (modal jen self-contained
+quick task). Pak N4e — automations/hooks/mcp/integrations/memory edit dialogy
+po dávkách.
