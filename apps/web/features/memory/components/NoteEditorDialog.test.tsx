@@ -1,30 +1,30 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Note } from "@zibby/contracts";
 import { NoteEditorDialog, NoteEditorDialogTestId } from "./NoteEditorDialog";
 
-type MutateVars = { params?: { id: string }; body: Record<string, unknown> };
+type MutateVars = { body: Record<string, unknown> };
 type MutateOpts = { onSuccess?: () => void };
 
 const createNote = vi.fn((_vars: MutateVars, opts?: MutateOpts) => opts?.onSuccess?.());
-const updateNote = vi.fn((_vars: MutateVars, opts?: MutateOpts) => opts?.onSuccess?.());
 
 vi.mock("../mutations", () => ({
   useCreateNoteMutation: () => ({ mutate: createNote, isPending: false }),
-  useUpdateNoteMutation: () => ({ mutate: updateNote, isPending: false }),
 }));
 
-describe("NoteEditorDialog", () => {
+/**
+ * The dialog is CREATE-ONLY (N4g — editing happens in place on the note panel):
+ * it slugs the id from the title and POSTs the new note.
+ */
+describe("NoteEditorDialog — create-only", () => {
   beforeEach(() => {
     createNote.mockClear();
-    updateNote.mockClear();
   });
 
-  it("create: slugs the id from the title and POSTs {id,tier,title,body}", async () => {
+  it("slugs the id from the title and POSTs {id,tier,title,body}", async () => {
     const onSaved = vi.fn();
     const onClose = vi.fn();
-    render(<NoteEditorDialog mode="create" onClose={onClose} onSaved={onSaved} />);
+    render(<NoteEditorDialog onClose={onClose} onSaved={onSaved} />);
 
     await userEvent.type(screen.getByTestId(NoteEditorDialogTestId.Title), "My New Note");
     // The id field auto-fills from the title.
@@ -43,35 +43,11 @@ describe("NoteEditorDialog", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("edit: prefills, and PATCHes title/body without id or tier", async () => {
-    const note: Note = {
-      id: "rohlik",
-      path: "knowledge/rohlik.md",
-      tier: "knowledge",
-      title: "Rohlik",
-      frontmatter: { title: "Rohlik" },
-      links: [],
-      backlinks: [],
-      body: "Old body.",
-    };
-    const onSaved = vi.fn();
-    render(<NoteEditorDialog mode="edit" note={note} onClose={() => {}} onSaved={onSaved} />);
-
-    const title = screen.getByTestId(NoteEditorDialogTestId.Title);
-    expect(title).toHaveValue("Rohlik");
-    // No id field in edit mode (id is immutable).
-    expect(screen.queryByTestId(NoteEditorDialogTestId.Id)).not.toBeInTheDocument();
-
-    await userEvent.clear(title);
-    await userEvent.type(title, "Rohlik 2");
-    await userEvent.click(screen.getByTestId(NoteEditorDialogTestId.Save));
-
-    expect(updateNote).toHaveBeenCalledTimes(1);
-    const call = updateNote.mock.calls[0]?.[0];
-    expect(call?.params).toEqual({ id: "rohlik" });
-    expect(call?.body).toEqual({ title: "Rohlik 2", body: "Old body." });
-    expect(call?.body).not.toHaveProperty("id");
-    expect(call?.body).not.toHaveProperty("tier");
-    expect(onSaved).toHaveBeenCalledWith("rohlik");
+  it("a hand-edited id stops following the title", async () => {
+    render(<NoteEditorDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    const id = screen.getByTestId(NoteEditorDialogTestId.Id);
+    await userEvent.type(id, "custom-id");
+    await userEvent.type(screen.getByTestId(NoteEditorDialogTestId.Title), "Whatever Title");
+    expect(id).toHaveValue("custom-id");
   });
 });

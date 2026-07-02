@@ -11,8 +11,8 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
-import type { MemoryTier, Note } from "@zibby/contracts";
-import { useCreateNoteMutation, useUpdateNoteMutation } from "../mutations";
+import type { MemoryTier } from "@zibby/contracts";
+import { useCreateNoteMutation } from "../mutations";
 import { slug } from "../../../utils/slug";
 
 export enum NoteEditorDialogTestId {
@@ -24,11 +24,8 @@ export enum NoteEditorDialogTestId {
 }
 
 export interface NoteEditorDialogProps {
-  mode: "create" | "edit";
-  /** The note to edit (edit mode only); the parent loads it before opening. */
-  note?: Note;
   onClose: () => void;
-  /** Called with the saved note's id so the screen can select it. */
+  /** Called with the created note's id so the screen can select it. */
   onSaved: (id: string) => void;
 }
 
@@ -38,47 +35,32 @@ const TIERS: MemoryTier[] = ["memory", "daily", "knowledge"];
 const slugify = (s: string): string => slug(s, "note");
 
 /**
- * Create or edit a vault note. Mounted fresh per open (the parent renders it only
- * while editing), so local state initialises from the passed note with no effect.
- * Create mode auto-slugs the id from the title (editable until first save); edit
- * mode shows id/tier read-only (immutable — there is no move op in Phase 4). The
- * body is the DS MarkdownEditor; frontmatter is assembled by the API.
+ * The CREATE-ONLY vault note dialog (N4g) — grammar: dialogs create and
+ * confirm, nothing else. Editing an existing note happens IN PLACE on the note
+ * panel ({@link NoteView}'s view⇄edit toggle). The id auto-slugs from the title
+ * (editable until first save); the body is the DS MarkdownEditor; frontmatter
+ * is assembled by the API.
  */
-export function NoteEditorDialog({ mode, note, onClose, onSaved }: NoteEditorDialogProps) {
+export function NoteEditorDialog({ onClose, onSaved }: NoteEditorDialogProps) {
   const t = useTranslations("memory");
   const tk = useTranslations();
-  const isEdit = mode === "edit";
 
   const createMut = useCreateNoteMutation();
-  const updateMut = useUpdateNoteMutation();
 
-  const [title, setTitle] = useState(note?.title ?? "");
-  const [id, setId] = useState(note?.id ?? "");
-  const [idDirty, setIdDirty] = useState(isEdit);
-  const [tier, setTier] = useState<MemoryTier>(note?.tier ?? "knowledge");
-  const [body, setBody] = useState(note?.body ?? "");
+  const [title, setTitle] = useState("");
+  const [id, setId] = useState("");
+  const [idDirty, setIdDirty] = useState(false);
+  const [tier, setTier] = useState<MemoryTier>("knowledge");
+  const [body, setBody] = useState("");
 
   const onTitleChange = (value: string) => {
     setTitle(value);
-    if (!isEdit && !idDirty) setId(slugify(value));
+    if (!idDirty) setId(slugify(value));
   };
 
-  const pending = createMut.isPending || updateMut.isPending;
-  const canSave = isEdit ? Boolean(note) : id.trim().length > 0;
+  const canSave = id.trim().length > 0;
 
   const save = () => {
-    if (isEdit && note) {
-      updateMut.mutate(
-        { params: { id: note.id }, body: { title: title || undefined, body } },
-        {
-          onSuccess: () => {
-            onSaved(note.id);
-            onClose();
-          },
-        },
-      );
-      return;
-    }
     const newId = id.trim();
     createMut.mutate(
       { body: { id: newId, tier, title: title || undefined, body } },
@@ -99,8 +81,8 @@ export function NoteEditorDialog({ mode, note, onClose, onSaved }: NoteEditorDia
       <Button
         data-testid={NoteEditorDialogTestId.Save}
         disabled={!canSave}
-        icon={isEdit ? "check" : "plus"}
-        loading={pending}
+        icon="plus"
+        loading={createMut.isPending}
         onClick={save}
       >
         {t("save")}
@@ -112,10 +94,10 @@ export function NoteEditorDialog({ mode, note, onClose, onSaved }: NoteEditorDia
     <Dialog
       open
       actions={actions}
-      ariaLabel={isEdit ? t("editNote") : t("newNote")}
+      ariaLabel={t("newNote")}
       closeLabel={tk("common.close")}
       onClose={onClose}
-      title={isEdit ? t("editNote") : t("newNote")}
+      title={t("newNote")}
       width="lg"
     >
       <Stack data-testid={NoteEditorDialogTestId.Root} gap="200">
@@ -127,36 +109,30 @@ export function NoteEditorDialog({ mode, note, onClose, onSaved }: NoteEditorDia
           value={title}
         />
 
-        {isEdit ? (
-          <Typography mono size="caption" type="note" variant="tertiary">
-            {id} · {tier}
-          </Typography>
-        ) : (
-          <Stack gap="150">
-            <TextInputField
-              data-testid={NoteEditorDialogTestId.Id}
-              hint={t("idHint")}
-              label={t("idLabel")}
-              onChange={(e) => {
-                setIdDirty(true);
-                setId(e.target.value);
-              }}
-              value={id}
+        <Stack gap="150">
+          <TextInputField
+            data-testid={NoteEditorDialogTestId.Id}
+            hint={t("idHint")}
+            label={t("idLabel")}
+            onChange={(e) => {
+              setIdDirty(true);
+              setId(e.target.value);
+            }}
+            value={id}
+          />
+          <Stack data-testid={NoteEditorDialogTestId.Tier} gap="75">
+            <Typography mono size="sm" type="note" variant="secondary">
+              {t("tierLabel")}
+            </Typography>
+            <Dropdown<MemoryTier>
+              aria-label={t("tierLabel")}
+              onChange={setTier}
+              options={TIERS.map((value) => ({ value, label: t(`tier.${value}`) }))}
+              value={tier}
+              variant="field"
             />
-            <Stack data-testid={NoteEditorDialogTestId.Tier} gap="75">
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("tierLabel")}
-              </Typography>
-              <Dropdown<MemoryTier>
-                aria-label={t("tierLabel")}
-                onChange={setTier}
-                options={TIERS.map((value) => ({ value, label: t(`tier.${value}`) }))}
-                value={tier}
-                variant="field"
-              />
-            </Stack>
           </Stack>
-        )}
+        </Stack>
 
         <MarkdownEditor
           ariaLabel={t("bodyLabel")}

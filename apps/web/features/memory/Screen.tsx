@@ -40,7 +40,7 @@ export function Screen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tier, setTier] = useState<TierFilter>("all");
   const [search, setSearch] = useState("");
-  const [editor, setEditor] = useState<{ mode: "create" | "edit" } | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
@@ -53,14 +53,6 @@ export function Screen() {
     () => (searchHits?.results ?? []).filter((h) => tier === "all" || h.tier === tier),
     [searchHits, tier],
   );
-  const dailyNodes = useMemo(
-    () =>
-      (graph?.nodes ?? [])
-        .filter((n) => n.tier === "daily")
-        .sort((a, b) => b.id.localeCompare(a.id)),
-    [graph],
-  );
-
   const tierChips = (
     <Stack wrap align="center" direction="row" gap="75">
       {TIER_FILTERS.map((value) => (
@@ -78,7 +70,7 @@ export function Screen() {
           data-testid="memory-note-new"
           icon="plus"
           intent="primary"
-          onClick={() => setEditor({ mode: "create" })}
+          onClick={() => setCreating(true)}
         >
           {t("newNote")}
         </Button>
@@ -103,13 +95,9 @@ export function Screen() {
     </Stack>
   );
 
-  const editorDialog = editor && (
-    <NoteEditorDialog
-      mode={editor.mode}
-      note={editor.mode === "edit" ? note : undefined}
-      onClose={() => setEditor(null)}
-      onSaved={(id) => setSelected(id)}
-    />
+  // Create-only (N4g): editing happens in place on the note panel below.
+  const editorDialog = creating && (
+    <NoteEditorDialog onClose={() => setCreating(false)} onSaved={(id) => setSelected(id)} />
   );
 
   if (graphQuery.isPending) {
@@ -135,11 +123,7 @@ export function Screen() {
       <PageContainer>
         <Stack align="center" gap="200">
           <EmptyState description={t("emptyDescription")} glyph="brain" title={t("emptyTitle")} />
-          <Button
-            data-testid="memory-note-new"
-            icon="plus"
-            onClick={() => setEditor({ mode: "create" })}
-          >
+          <Button data-testid="memory-note-new" icon="plus" onClick={() => setCreating(true)}>
             {t("newNote")}
           </Button>
         </Stack>
@@ -196,7 +180,8 @@ export function Screen() {
             )}
           </HudPanel>
 
-          <NoteView note={note} onEdit={() => setEditor({ mode: "edit" })} onSelect={setSelected} />
+          {/* Keyed by note so switching notes resets any in-progress edit (N4g). */}
+          <NoteView key={note?.id ?? "none"} note={note} onSelect={setSelected} />
         </Grid>
 
         {editorDialog}
