@@ -63,6 +63,9 @@ export const ActivityKindSchema = z.enum([
   // and dispatched the investigation task riding its `taskId` ref — act-then-report:
   // the fix run surfaces on the runs feed and, when parked at the PR gate, in needs-you.
   "monitor-alert",
+  // N5a: an approved machine action was executed (or failed) — the gate's
+  // act-then-report line; the proposal itself rides approval-requested.
+  "machine-action",
   // M8 (hardening). A task's dispatch exhausted its retry budget and was dead-lettered —
   // surfaced in the briefing's needs-you so a repeatedly-failing task never fails silently.
   "task-dead-lettered",

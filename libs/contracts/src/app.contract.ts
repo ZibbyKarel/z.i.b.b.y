@@ -19,6 +19,7 @@ import { integrationsContract } from "./integrations/integrations.contract";
 import { mandateContract } from "./mandate/mandate.contract";
 import { mcpContract } from "./mcp/mcp.contract";
 import { memoryContract } from "./memory/memory.contract";
+import { machineContract } from "./machine/machine.contract";
 import { monitorsContract } from "./monitors/monitors.contract";
 import {
   categoriesContract,
@@ -67,6 +68,7 @@ export const appContract = c.router({
   gates: gatesContract,
   gateRules: gateRulesContract,
   memory: memoryContract,
+  machine: machineContract,
   monitors: monitorsContract,
   automations: automationsContract,
   integrations: integrationsContract,

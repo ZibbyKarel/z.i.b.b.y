@@ -36,6 +36,8 @@ export * from "./gates/gate.contract";
 export * from "./gates/gate-rules.contract";
 export * from "./memory/memory.schema";
 export * from "./memory/memory.contract";
+export * from "./machine/machine.schema";
+export * from "./machine/machine.contract";
 export * from "./monitors/monitor.schema";
 export * from "./monitors/monitors.contract";
 export * from "./automations/automation.schema";

@@ -31,6 +31,10 @@ export const ApprovalRunKindSchema = z.enum([
   // approval. The runId is the create-request id; approving it performs the gated POST
   // via the Jira adapter, rejecting it drops the request. Outbound write → always Tier-3.
   "jira-issue",
+  // N5a "controlling the machine": a machine action (e.g. rename files in a named
+  // folder) parked with its dry-run preview. The runId is the MachineActionRecord id;
+  // approving executes the preview exactly once, rejecting leaves the disk untouched.
+  "machine",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 
