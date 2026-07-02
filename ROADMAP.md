@@ -214,6 +214,9 @@ rewrite.
 > (N4c–N4h) is COMPLETE** — every section conforms: cards navigate, dialogs
 > only create/confirm, edit top-right, deletes confirm. N4's remainder:
 > HUD ⇄ Chat-UI visual unification.
+> ✅ **N4i VERIFIED 2026-07-02** — the Chat-UI is COMPLETE (overlay, streaming,
+> markdown, tools, ⌘J, persona picker in settings — all DS-composed, grammar
+> conformant). **N4 is DONE.**
 
 **Why fourth:** the system _works_ but does not yet feel like one product. This is a
 first-class goal (north-star _"The Interface — One Language, Everywhere"_), not end-of-run
@@ -253,6 +256,12 @@ does or where the edit button went.
 ## N5 — Controlling the Machine _(nice-to-have, last)_
 
 **Why last:** explicitly a stretch goal; pursued only once N1–N4 are solid.
+
+> ✅ **N5a DELIVERED 2026-07-02** — file ops behind the gate: propose computes a
+> dry-run preview + parks a HIGH-risk `machine` approval (durable record; the
+> preview is the old→new audit map); approve executes exactly once, fail-closed;
+> NO execute endpoint exists (`docs/plans/phase-n5a-machine-fileops.md`,
+> `docs/api/machine.md`). Next: N5b — chat tool entry + the maps lookup.
 
 **Reality:** none. ZIBBY cannot act on the OS directly.
 

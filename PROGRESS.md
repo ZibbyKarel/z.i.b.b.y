@@ -4,6 +4,21 @@
 
 ## Poslední dokončená fáze
 
+**N5a — Controlling the Machine: file ops za bránou** — 2026-07-02,
+commit `feat(machine): N5a …`
+
+- N4i ověřilo: Chat-UI je KOMPLETNÍ včetně persona pickeru (ChatSection
+  v settings existuje) → **celé N4 hotové**, N5 legitimně na řadě.
+- Referenční úloha „přejmenuj soubory ve jmenované složce", Tier-3 by
+  construction: POST /api/machine/actions spočítá dry-run preview + zaparkuje
+  HIGH-risk approval `kind: machine`; approve vykoná preview přesně jednou
+  (re-verify každý rename, fail-closed → `failed`); reject nechá disk netknutý.
+  Vzor jira-issue ResumableRunner, ale pending stav DURABLE (MachineActionStore;
+  preview = auditní mapa starý→nový). Žádný execute endpoint — jediná cesta je
+  brána. Guardy: absolutní existující adresář, žádné oddělovače cest, kolize →
+  422. Suita 2065/0. Detail: `docs/plans/phase-n5a-machine-fileops.md` +
+  `docs/api/machine.md`.
+
 **N4h — Integrations na gramatiku (UZAVÍRÁ řadu N4c–N4h)** — 2026-07-02,
 commit `feat(web): N4h integrations …`
 
@@ -151,11 +166,10 @@ commit `feat(web): N4h integrations …`
 
 ## Další fáze (návrh)
 
-**N4i — HUD ⇄ Chat-UI sjednocení (poslední kus N4)**: GROUND zjistí reálný
-stav chat plochy (apps/api/src/chat existuje; web chat surface?) a srovná ji
-s DS + gramatikou — vzor: embedded assistant panel vedle strukturované plochy
-(Notion styl), bubliny/streaming komponované VÝHRADNĚ z DS primitiv, jeden
-vizuální jazyk s HUD (research: constrain to component library; a11y streaming
-announcements). Pokud chat web surface neexistuje, fáze = postavit ji na
-`docs/plans`/chat-engine recipe (memory: project_chat_engine_recipe). Pak N5
-(computer use, nice-to-have) / NC.
+**N5b — machine chat tool + druhá referenční úloha (maps lookup)**: (a) chat
+tool `machine_rename` v ChatToolsService — operátor řekne „přejmenuj soubory
+v X" v chatu a ZIBBY zaparkuje návrh (propose je bezpečný — nikdy nevykonává);
+(b) akce `open-maps` `{query | daddr}` — `open "maps://?q=…"` (Apple Maps URL
+scheme; research potvrzeno) — nízké riziko (jen otevře okno), ale pořád za
+bránou (Tier-3 default; „when unsure, higher tier"). (c) web: approval karta
+pro kind machine ukáže preview čitelně (detail je víceřádkový). Pak NC sweep.
