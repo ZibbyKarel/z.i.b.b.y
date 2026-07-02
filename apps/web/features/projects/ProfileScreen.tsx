@@ -4,7 +4,6 @@ import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@
 import {
   Button,
   CodeBlock,
-  Dialog,
   Divider,
   Pressable,
   SelectField,
@@ -22,6 +21,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
@@ -581,41 +581,26 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
       ) : null}
 
       {confirmDelete && project && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {tk("common.cancel")}
-              </Button>
-              <Button
-                icon="x"
-                intent="danger"
-                loading={deleteProject.isPending}
-                onClick={() => {
-                  deleteProject.mutate(
-                    { params: { id } },
-                    {
-                      onSuccess: () => {
-                        setConfirmDelete(false);
-                        router.push("/projects");
-                      },
-                    },
-                  );
-                }}
-              >
-                {tp("delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={tp("deleteBody", { name: project.name })}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={tp("delete")}
+          icon="x"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteProject.mutate(
+              { params: { id } },
+              {
+                onSuccess: () => {
+                  setConfirmDelete(false);
+                  router.push("/projects");
+                },
+              },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteProject.isPending}
           title={tp("deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {tp("deleteBody", { name: project.name })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>
   );

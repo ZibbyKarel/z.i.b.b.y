@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, Stack, Tag, Typography } from "@zibby/design-system";
+import { Button, Stack, Tag, Typography } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Agent, GateRuleInput } from "@zibby/contracts";
 import { useFormControls } from "@zibby/forms";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -181,36 +182,21 @@ function AgentEditor({ agent }: { agent: Agent }) {
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {tk("common.cancel")}
-              </Button>
-              <Button
-                icon="x"
-                intent="danger"
-                loading={deleteAgent.isPending}
-                onClick={() =>
-                  deleteAgent.mutate(
-                    { params: { id: agent.id } },
-                    { onSuccess: () => router.push("/agents") },
-                  )
-                }
-              >
-                {t("delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("deleteBody", { name, file: agentFile(agent.id) })}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={t("delete")}
+          icon="x"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteAgent.mutate(
+              { params: { id: agent.id } },
+              { onSuccess: () => router.push("/agents") },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteAgent.isPending}
           title={t("deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("deleteBody", { name, file: agentFile(agent.id) })}
-          </Typography>
-        </Dialog>
+        />
       )}
 
       {editingRule !== null && (

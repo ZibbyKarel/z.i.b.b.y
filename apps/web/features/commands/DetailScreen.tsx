@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, Stack, Typography } from "@zibby/design-system";
+import { Button, Stack } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Command } from "@zibby/contracts";
 import { useFormControls, zodResolver } from "@zibby/forms";
 import { z } from "zod";
@@ -134,36 +135,20 @@ function CommandEditor({ command }: { command: Command }) {
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {tk("common.cancel")}
-              </Button>
-              <Button
-                icon="trash"
-                intent="danger"
-                loading={deleteCommand.isPending}
-                onClick={() =>
-                  deleteCommand.mutate(
-                    { params: { id: command.id } },
-                    { onSuccess: () => router.push("/commands") },
-                  )
-                }
-              >
-                {tk("common.delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("deleteBody", { id: command.id })}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={tk("common.delete")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteCommand.mutate(
+              { params: { id: command.id } },
+              { onSuccess: () => router.push("/commands") },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteCommand.isPending}
           title={t("deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("deleteBody", { id: command.id })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>,
   );

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, Stack, Typography } from "@zibby/design-system";
+import { Button, Stack } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Automation } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -143,36 +144,20 @@ function AutomationEditor({ automation }: { automation: Automation }) {
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {tk("common.cancel")}
-              </Button>
-              <Button
-                icon="trash"
-                intent="danger"
-                loading={deleteAutomation.isPending}
-                onClick={() =>
-                  deleteAutomation.mutate(
-                    { params: { id: automation.id } },
-                    { onSuccess: () => router.push("/automations") },
-                  )
-                }
-              >
-                {tk("common.delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("deleteBody", { name })}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={tk("common.delete")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteAutomation.mutate(
+              { params: { id: automation.id } },
+              { onSuccess: () => router.push("/automations") },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteAutomation.isPending}
           title={t("deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("deleteBody", { name })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>
   );

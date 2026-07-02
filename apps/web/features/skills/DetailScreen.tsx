@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, type IconName, Stack, Typography } from "@zibby/design-system";
+import { Button, type IconName, Stack } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Skill } from "@zibby/contracts";
 import { useFormControls, zodResolver } from "@zibby/forms";
 import { z } from "zod";
@@ -138,36 +139,20 @@ function SkillEditor({ skill }: { skill: Skill }) {
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {tk("common.cancel")}
-              </Button>
-              <Button
-                icon="trash"
-                intent="danger"
-                loading={deleteSkill.isPending}
-                onClick={() =>
-                  deleteSkill.mutate(
-                    { params: { id: skill.id } },
-                    { onSuccess: () => router.push("/skills") },
-                  )
-                }
-              >
-                {tk("common.delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("deleteBody", { name, file: skillFile(skill.id) })}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={tk("common.delete")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteSkill.mutate(
+              { params: { id: skill.id } },
+              { onSuccess: () => router.push("/skills") },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteSkill.isPending}
           title={t("deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("deleteBody", { name, file: skillFile(skill.id) })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>,
   );

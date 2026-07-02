@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, Stack, Typography } from "@zibby/design-system";
+import { Button, Stack } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Hook } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -93,36 +94,20 @@ function HookEditor({ hook }: { hook: Hook }) {
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                icon="trash"
-                intent="danger"
-                loading={deleteHook.isPending}
-                onClick={() =>
-                  deleteHook.mutate(
-                    { params: { id: hook.id } },
-                    { onSuccess: () => router.push("/hooks") },
-                  )
-                }
-              >
-                {t("common.delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("hooks.deleteBody", { name })}
+          cancelLabel={t("common.cancel")}
+          confirmLabel={t("common.delete")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteHook.mutate(
+              { params: { id: hook.id } },
+              { onSuccess: () => router.push("/hooks") },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteHook.isPending}
           title={t("hooks.deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("hooks.deleteBody", { name })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>
   );

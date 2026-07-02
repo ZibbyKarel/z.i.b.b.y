@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, Stack, Typography } from "@zibby/design-system";
+import { Button, Stack } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { McpServer } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -108,36 +109,20 @@ function McpServerEditor({ server }: { server: McpServer }) {
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                icon="trash"
-                intent="danger"
-                loading={deleteServer.isPending}
-                onClick={() =>
-                  deleteServer.mutate(
-                    { params: { id: server.id } },
-                    { onSuccess: () => router.push("/mcp") },
-                  )
-                }
-              >
-                {t("common.delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("mcp.deleteBody", { name })}
+          cancelLabel={t("common.cancel")}
+          confirmLabel={t("common.delete")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteServer.mutate(
+              { params: { id: server.id } },
+              { onSuccess: () => router.push("/mcp") },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteServer.isPending}
           title={t("mcp.deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("mcp.deleteBody", { name })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>
   );

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Dialog, Stack, Typography } from "@zibby/design-system";
+import { Alert, Button, Stack } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Integration } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -167,36 +168,20 @@ function IntegrationEditor({
       </Stack>
 
       {confirmDelete && (
-        <Dialog
-          open
-          actions={
-            <>
-              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                icon="trash"
-                intent="danger"
-                loading={deleteIntegration.isPending}
-                onClick={() =>
-                  deleteIntegration.mutate(
-                    { params: { id: integration.id } },
-                    { onSuccess: () => router.push(backHref) },
-                  )
-                }
-              >
-                {t("common.delete")}
-              </Button>
-            </>
+        <ConfirmDeleteDialog
+          body={t("integrations.deleteBody", { name })}
+          cancelLabel={t("common.cancel")}
+          confirmLabel={t("common.delete")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() =>
+            deleteIntegration.mutate(
+              { params: { id: integration.id } },
+              { onSuccess: () => router.push(backHref) },
+            )
           }
-          onClose={() => setConfirmDelete(false)}
+          pending={deleteIntegration.isPending}
           title={t("integrations.deleteTitle")}
-          width="sm"
-        >
-          <Typography size="base" type="note" variant="secondary">
-            {t("integrations.deleteBody", { name })}
-          </Typography>
-        </Dialog>
+        />
       )}
     </PageContainer>
   );
