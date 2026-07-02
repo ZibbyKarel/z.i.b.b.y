@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    "apps/api": {
+      "entry": ["src/main.ts", "src/**/*.test.ts", "test/**/*.ts", "scripts/*.mjs"],
+      "project": "src/**/*.ts"
+    },
+    "apps/web": {
+      "entry": [
+        "app/**/{page,layout,loading,error,not-found}.tsx",
+        "app/providers.tsx",
+        "middleware.ts",
+        "i18n/request.ts",
+        "**/*.test.{ts,tsx}",
+        "e2e/**/*.ts",
+        "playwright.config.ts"
+      ],
+      "project": "**/*.{ts,tsx}"
+    },
+    "libs/contracts": {
+      "entry": ["src/index.ts", "src/**/*.test.ts"],
+      "project": "src/**/*.ts"
+    },
+    "libs/design-system": {
+      "entry": ["src/index.ts", "src/**/*.{test,stories}.{ts,tsx}", ".storybook/*.ts"],
+      "project": "src/**/*.{ts,tsx}"
+    },
+    "libs/forms": {
+      "entry": ["src/index.ts", "src/**/*.test.{ts,tsx}"],
+      "project": "src/**/*.{ts,tsx}"
+    }
+  }
+}

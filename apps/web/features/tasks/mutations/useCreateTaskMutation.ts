@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
-import { getRunningAgentsQueryKey } from "../../agents/queries/useRunningAgentsQuery";
+import { getRunningAgentsQueryKey } from "../../agents/queries/keys";
 import { allTaskRunsKey } from "../../runs/queries/keys";
 import { getScheduledTasksQueryKey } from "../queries/useScheduledTasksQuery";
 
