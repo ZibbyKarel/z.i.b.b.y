@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, HoldButton, Icon, Stack, Typography } from "@zibby/design-system";
+import { Button, CodeBlock, HoldButton, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import type { DashboardApproval } from "../../approvals/approval";
@@ -65,11 +65,16 @@ export function RunApprovalGate({ approval }: RunApprovalGateProps) {
             preview={approval.preview}
           />
         ) : (
-          approval.text && (
+          approval.text &&
+          // A multi-line detail (N5b: a machine action's rename preview, one
+          // old → new per line) keeps its line breaks; a one-liner stays prose.
+          (approval.text.includes("\n") ? (
+            <CodeBlock text={approval.text} />
+          ) : (
             <Typography mono size="sm" type="note" variant="secondary">
               {approval.text}
             </Typography>
-          )
+          ))
         )}
 
         {approval.consequence && (

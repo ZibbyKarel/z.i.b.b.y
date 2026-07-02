@@ -123,6 +123,38 @@ export class ChatMcpController {
       async () => text(await this.tools.getStatus()),
     );
 
+    server.registerTool(
+      "machine_rename",
+      {
+        description:
+          "PROPOSE renaming files in a folder on the operator's machine (find/replace a " +
+          "substring in file names). This NEVER renames anything itself — it computes a " +
+          "preview and parks a Tier-3 approval; only the operator's approve in the queue " +
+          "executes it. Use when the operator asks to rename files in a named folder.",
+        inputSchema: {
+          folder: z.string().describe("Absolute path to the folder the operator named."),
+          find: z.string().describe("Literal substring to find in file names."),
+          replace: z.string().describe("Replacement (may be empty)."),
+        },
+      },
+      async ({ folder, find, replace }) =>
+        text(await this.tools.proposeRename({ folder, find, replace })),
+    );
+
+    server.registerTool(
+      "open_maps",
+      {
+        description:
+          "PROPOSE opening Apple Maps with a search (a place, an address, 'nearest X'). " +
+          "Only opens a Maps window and is still approval-gated — nothing runs on the " +
+          "operator's machine silently. Use when the operator asks to look something up in Maps.",
+        inputSchema: {
+          query: z.string().describe("The Maps search query in the operator's words."),
+        },
+      },
+      async ({ query }) => text(await this.tools.proposeOpenMaps(query)),
+    );
+
     return server;
   }
 }

@@ -1,6 +1,7 @@
 import type { Briefing, CreateTaskResult, SearchHit } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { BriefingService } from "../briefing/briefing.service";
+import type { MachineService } from "../machine/machine.service";
 import type { VaultService } from "../memory/vault.service";
 import type { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { ChatToolsService } from "./chat-tools.service";
@@ -10,11 +11,13 @@ function makeService(overrides: {
   createTask?: TaskSchedulerService["createTask"];
   search?: VaultService["search"];
   assemble?: BriefingService["assemble"];
+  propose?: MachineService["propose"];
 }): ChatToolsService {
   const scheduler = { createTask: overrides.createTask ?? vi.fn() } as unknown as TaskSchedulerService;
   const vault = { search: overrides.search ?? vi.fn() } as unknown as VaultService;
   const briefing = { assemble: overrides.assemble ?? vi.fn() } as unknown as BriefingService;
-  return new ChatToolsService(scheduler, vault, briefing);
+  const machine = { propose: overrides.propose ?? vi.fn() } as unknown as MachineService;
+  return new ChatToolsService(scheduler, vault, briefing, machine);
 }
 
 const DISPATCHED: CreateTaskResult = {
@@ -137,5 +140,47 @@ describe("ChatToolsService", () => {
       const out = await svc.getStatus();
       expect(out).toContain("Nic teď nepotřebuje tvou pozornost.");
     });
+  });
+});
+
+describe("machine tools (N5b) — propose only, never execute", () => {
+  it("proposeRename parks the action and confirms with the preview count", async () => {
+    const propose = vi.fn().mockResolvedValue({
+      id: "machine-1",
+      preview: [
+        { from: "IMG_1.jpg", to: "vylet-1.jpg" },
+        { from: "IMG_2.jpg", to: "vylet-2.jpg" },
+      ],
+      state: "proposed",
+    });
+    const svc = makeService({ propose });
+    const out = await svc.proposeRename({ folder: "/tmp/fotky", find: "IMG_", replace: "vylet-" });
+    expect(propose).toHaveBeenCalledWith({
+      kind: "rename-files",
+      folder: "/tmp/fotky",
+      find: "IMG_",
+      replace: "vylet-",
+    });
+    expect(out).toContain("2 souborů");
+    expect(out).toContain("schválení");
+  });
+
+  it("proposeOpenMaps parks the lookup and confirms", async () => {
+    const propose = vi.fn().mockResolvedValue({ id: "machine-2", preview: [], state: "proposed" });
+    const svc = makeService({ propose });
+    const out = await svc.proposeOpenMaps("nejbližší lékárna");
+    expect(propose).toHaveBeenCalledWith({ kind: "open-maps", query: "nejbližší lékárna" });
+    expect(out).toContain("schválení");
+  });
+
+  it("a refused guard comes back as the message, not a crash", async () => {
+    const { MachineActionRejectedError } = await import("../machine/machine.service");
+    const propose = vi
+      .fn()
+      .mockRejectedValue(new MachineActionRejectedError("folder must be an absolute path: fotky"));
+    const svc = makeService({ propose });
+    const out = await svc.proposeRename({ folder: "fotky", find: "a", replace: "b" });
+    expect(out).toContain("odmítl");
+    expect(out).toContain("absolute path");
   });
 });

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { MachineModule } from "../machine/machine.module";
 import { BriefingModule } from "../briefing/briefing.module";
 import { MemoryModule } from "../memory/memory.module";
 import { TasksModule } from "../tasks/tasks.module";
@@ -24,7 +25,7 @@ export function resolveChatDir(): string {
  * conversations.
  */
 @Module({
-  imports: [TasksModule, MemoryModule, BriefingModule],
+  imports: [TasksModule, MemoryModule, BriefingModule, MachineModule],
   controllers: [ChatController, ChatMcpController],
   providers: [
     { provide: CHAT_DIR, useFactory: resolveChatDir },

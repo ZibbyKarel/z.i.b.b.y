@@ -18,7 +18,23 @@ export const RenameFilesActionSchema = z.object({
 });
 export type RenameFilesAction = z.infer<typeof RenameFilesActionSchema>;
 
-export const MachineActionSchema = z.discriminatedUnion("kind", [RenameFilesActionSchema]);
+/**
+ * The second reference task (N5b): open Apple Maps with a search query
+ * (`open "maps://?q=…"`). Execution only opens a window — reversible and
+ * low-risk — but it still goes through the gate: nothing executes on the
+ * operator's machine silently.
+ */
+export const OpenMapsActionSchema = z.object({
+  kind: z.literal("open-maps"),
+  /** What to search for — a place, an address, "nearest pharmacy", … */
+  query: z.string().min(1),
+});
+export type OpenMapsAction = z.infer<typeof OpenMapsActionSchema>;
+
+export const MachineActionSchema = z.discriminatedUnion("kind", [
+  RenameFilesActionSchema,
+  OpenMapsActionSchema,
+]);
 export type MachineAction = z.infer<typeof MachineActionSchema>;
 
 /**

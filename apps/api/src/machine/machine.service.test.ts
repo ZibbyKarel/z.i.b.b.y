@@ -120,6 +120,45 @@ describe("MachineService (N5a — file ops behind the gate)", () => {
     expect(approvals.requestApproval).not.toHaveBeenCalled();
   });
 
+  it("open-maps (N5b): proposes low-risk with empty preview; approve calls the opener", async () => {
+    const opener = vi.fn(async () => {});
+    const withOpener = new MachineService(
+      store,
+      approvals as never,
+      activity as never,
+      fakeLogger as never,
+      opener,
+    );
+    const record = await withOpener.propose({ kind: "open-maps", query: "nejbližší lékárna" });
+    expect(record.preview).toEqual([]);
+    expect(approvals.requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "machine", action: "maps.open", risk: "low" }),
+    );
+    expect(opener).not.toHaveBeenCalled(); // propose never executes
+
+    await withOpener.resume(record.id);
+    expect(opener).toHaveBeenCalledWith(`maps://?q=${encodeURIComponent("nejbližší lékárna")}`);
+    expect((await store.get(record.id)).state).toBe("executed");
+  });
+
+  it("open-maps reject never opens anything", async () => {
+    const opener = vi.fn(async () => {});
+    const withOpener = new MachineService(
+      store,
+      approvals as never,
+      activity as never,
+      fakeLogger as never,
+      opener,
+    );
+    const record = await withOpener.propose({ kind: "open-maps", query: "Brno" });
+    withOpener.cancel(record.id);
+    await vi.waitFor(async () => {
+      expect((await store.get(record.id)).state).toBe("rejected");
+    });
+    await withOpener.resume(record.id);
+    expect(opener).not.toHaveBeenCalled();
+  });
+
   it("an approved action whose source vanished fails with a recorded error, never throws", async () => {
     const record = await service.propose(action());
     await fs.rm(path.join(folder, "IMG_1.jpg"));

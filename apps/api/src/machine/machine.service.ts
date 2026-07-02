@@ -1,8 +1,16 @@
+import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { MachineAction, MachineActionRecord, RenamePreviewEntry } from "@zibby/contracts";
+import { promisify } from "node:util";
+import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
+import type {
+  MachineAction,
+  MachineActionRecord,
+  RenameFilesAction,
+  RenamePreviewEntry,
+  Risk,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -26,17 +34,29 @@ export class MachineActionRejectedError extends Error {
  * separator in find/replace, an empty preview or a target collision refuses the
  * proposal outright, and execution re-verifies each rename before performing it.
  */
+/** Open a URL on the operator's machine (macOS `open`); tests inject a stub. */
+export type UrlOpener = (url: string) => Promise<void>;
+
+const defaultOpener: UrlOpener = async (url) => {
+  await promisify(execFile)("open", [url]);
+};
+
 @Injectable()
 export class MachineService implements OnModuleInit, ResumableRunner {
   private readonly log: ScopedLogger;
+  private readonly opener: UrlOpener;
 
   constructor(
     private readonly store: MachineActionStore,
     private readonly approvals: ApprovalsService,
     private readonly activity: ActivityLogService,
     logger: LoggerService,
+    // Optional so Nest doesn't DI-resolve it — production uses the real `open`;
+    // tests inject a stub so nothing launches (the jira-adapter pattern).
+    @Optional() opener?: UrlOpener,
   ) {
     this.log = logger.child(MachineService.name);
+    this.opener = opener ?? defaultOpener;
   }
 
   onModuleInit(): void {
@@ -45,11 +65,11 @@ export class MachineService implements OnModuleInit, ResumableRunner {
 
   /** Park a machine action behind a Tier-3 approval; returns the durable record. */
   async propose(action: MachineAction): Promise<MachineActionRecord> {
-    const preview = await this.previewRenames(action);
+    const plan = await this.plan(action);
     const record: MachineActionRecord = {
       id: `machine-${Date.now()}-${randomUUID().slice(0, 8)}`,
       action,
-      preview,
+      preview: plan.preview,
       state: "proposed",
       requestedAt: new Date().toISOString(),
     };
@@ -58,19 +78,45 @@ export class MachineService implements OnModuleInit, ResumableRunner {
       runId: record.id,
       kind: "machine",
       skill: "machine",
-      action: "fs.rename",
-      detail:
-        `${action.folder}: ${preview.length} file(s), "${action.find}" → "${action.replace}"\n` +
-        preview.map((p) => `${p.from} → ${p.to}`).join("\n"),
-      risk: "high",
+      action: plan.gateAction,
+      detail: plan.detail,
+      risk: plan.risk,
     });
     const updated = await this.store.put({ ...record, approvalId: approval.id });
     this.log.info("machine action parked for approval", {
       id: record.id,
       approvalId: approval.id,
-      files: preview.length,
+      kind: action.kind,
     });
     return updated;
+  }
+
+  /** Per-kind dry-run: what would happen, what the gate shows, how risky it reads. */
+  private async plan(
+    action: MachineAction,
+  ): Promise<{ preview: RenamePreviewEntry[]; gateAction: string; detail: string; risk: Risk }> {
+    switch (action.kind) {
+      case "rename-files": {
+        const preview = await this.previewRenames(action);
+        return {
+          preview,
+          gateAction: "fs.rename",
+          detail:
+            `${action.folder}: ${preview.length} file(s), "${action.find}" → "${action.replace}"\n` +
+            preview.map((p) => `${p.from} → ${p.to}`).join("\n"),
+          risk: "high",
+        };
+      }
+      case "open-maps":
+        // Only opens a window — reversible, low risk — but still gated: nothing
+        // executes on the operator's machine silently.
+        return {
+          preview: [],
+          gateAction: "maps.open",
+          detail: `Open Maps: "${action.query}"`,
+          risk: "low",
+        };
+    }
   }
 
   /** Approve → execute the persisted preview exactly once (fail-closed, never throws out). */
@@ -81,36 +127,50 @@ export class MachineService implements OnModuleInit, ResumableRunner {
       this.log.warn("machine resume skipped (no proposed record)", { runId });
       return;
     }
-    const folder = record.action.folder;
     try {
-      for (const entry of record.preview) {
-        const from = path.join(folder, entry.from);
-        const to = path.join(folder, entry.to);
-        // Re-verify right before acting — the world may have moved since the preview.
-        await fs.access(from);
-        const targetTaken = await fs.access(to).then(
-          () => true,
-          () => false,
-        );
-        if (targetTaken) throw new Error(`target already exists: ${entry.to}`);
-        await fs.rename(from, to);
-      }
+      const summary = await this.execute(record);
       await this.store.put({ ...record, state: "executed", executedAt: new Date().toISOString() });
       void this.activity.record({
         kind: "machine-action",
-        summary: `renamed ${record.preview.length} file(s) in ${folder} ("${record.action.find}" → "${record.action.replace}")`,
-        refs: { runRef: record.id, action: "fs.rename", status: "executed" },
+        summary,
+        refs: { runRef: record.id, action: record.action.kind, status: "executed" },
       });
-      this.log.info("machine action executed", { id: record.id, files: record.preview.length });
+      this.log.info("machine action executed", { id: record.id, kind: record.action.kind });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await this.store.put({ ...record, state: "failed", error: message });
       void this.activity.record({
         kind: "machine-action",
-        summary: `machine action failed in ${folder}: ${message}`,
-        refs: { runRef: record.id, action: "fs.rename", status: "failed" },
+        summary: `machine action ${record.action.kind} failed: ${message}`,
+        refs: { runRef: record.id, action: record.action.kind, status: "failed" },
       });
       this.log.warn("machine action failed", { id: record.id, error: message });
+    }
+  }
+
+  /** Perform the approved action; returns the activity summary line. */
+  private async execute(record: MachineActionRecord): Promise<string> {
+    const { action } = record;
+    switch (action.kind) {
+      case "rename-files": {
+        for (const entry of record.preview) {
+          const from = path.join(action.folder, entry.from);
+          const to = path.join(action.folder, entry.to);
+          // Re-verify right before acting — the world may have moved since the preview.
+          await fs.access(from);
+          const targetTaken = await fs.access(to).then(
+            () => true,
+            () => false,
+          );
+          if (targetTaken) throw new Error(`target already exists: ${entry.to}`);
+          await fs.rename(from, to);
+        }
+        return `renamed ${record.preview.length} file(s) in ${action.folder} ("${action.find}" → "${action.replace}")`;
+      }
+      case "open-maps": {
+        await this.opener(`maps://?q=${encodeURIComponent(action.query)}`);
+        return `opened Maps for "${action.query}"`;
+      }
     }
   }
 
@@ -130,7 +190,7 @@ export class MachineService implements OnModuleInit, ResumableRunner {
    * Dry-run: compute the rename plan without touching anything. Guards fail
    * closed — see {@link MachineActionRejectedError} call sites.
    */
-  private async previewRenames(action: MachineAction): Promise<RenamePreviewEntry[]> {
+  private async previewRenames(action: RenameFilesAction): Promise<RenamePreviewEntry[]> {
     const { folder, find, replace } = action;
     if (!path.isAbsolute(folder)) {
       throw new MachineActionRejectedError(`folder must be an absolute path: ${folder}`);

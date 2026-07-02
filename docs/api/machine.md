@@ -8,10 +8,10 @@ jednou. Vzor = jira-issue flow (`ResumableRunner` registry), ale pending stav je
 DURABLE soubor: restart bránu neztratí a preview zůstává jako auditní mapa
 starý→nový (reversible-by-default).
 
-## v1 slovník akcí (uzavřený, roste explicitně)
+## Slovník akcí (uzavřený, roste explicitně)
 
 - `rename-files` `{folder, find, replace}` — přejmenuj soubory ve JMENOVANÉ
-  složce: literal substring v basename. Guardy (fail-closed):
+  složce: literal substring v basename. Risk high. Guardy (fail-closed):
   - `folder` absolutní existující adresář;
   - `find`/`replace` bez oddělovačů cest (žádný traversal);
   - prázdné preview → 422; kolize cílů → 422;
@@ -33,7 +33,18 @@ GET  /api/machine/actions        seznam záznamů (newest-first)
 GET  /api/machine/actions/:id    jeden záznam
 ```
 
+- `open-maps` `{query}` (N5b) — otevři Apple Maps s hledáním
+  (`open "maps://?q=<enc>"`). Jen otevře okno (reversibilní, risk low), ale
+  POŘÁD za bránou — na stroji se nic nevykonává tiše. Opener je injektovatelný
+  (testy nic nespouští).
+
+## Operátorský vstup: chat tools (N5b)
+
+`machine_rename {folder, find, replace}` a `open_maps {query}` v chat MCP
+(`ChatToolsService.proposeRename/proposeOpenMaps`) — chat smí jen NAVRHOVAT
+(propose nikdy nevykonává); odmítnutý guard se vrací jako zpráva, ne crash.
+Víceřádkový preview machine approvalu renderuje brána přes `CodeBlock`
+(zachované řádky starý → nový).
+
 Žádný execute endpoint neexistuje — jediná cesta k vykonání je approval brána
 (Law 1: brána je strukturální). Approval se objeví v běžné frontě schvalování.
-Follow-up (N5b): chat tool `machine_rename` jako operátorský vstup + druhá
-referenční úloha (maps lookup).

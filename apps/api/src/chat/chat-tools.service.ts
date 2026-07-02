@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Briefing, CreateTaskResult, SearchHit, TaskTarget } from "@zibby/contracts";
 import { BriefingService } from "../briefing/briefing.service";
+import { MachineActionRejectedError, MachineService } from "../machine/machine.service";
 import { VaultService } from "../memory/vault.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 
@@ -23,6 +24,7 @@ export class ChatToolsService {
     private readonly scheduler: TaskSchedulerService,
     private readonly vault: VaultService,
     private readonly briefing: BriefingService,
+    private readonly machine: MachineService,
   ) {}
 
   /**
@@ -66,6 +68,35 @@ export class ChatToolsService {
   async getStatus(): Promise<string> {
     const briefing: Briefing = await this.briefing.assemble();
     return summarizeBriefing(briefing);
+  }
+
+  /**
+   * N5b: park a rename-files machine action behind the gate. Safe to expose to
+   * chat — propose NEVER executes; the operator's approve in the queue does. A
+   * refused guard (bad folder, collision, …) comes back as the message, not a crash.
+   */
+  async proposeRename(input: { folder: string; find: string; replace: string }): Promise<string> {
+    try {
+      const record = await this.machine.propose({ kind: "rename-files", ...input });
+      return (
+        `Připravil jsem přejmenování ${record.preview.length} souborů v ${input.folder} ` +
+        `(„${input.find}" → „${input.replace}") — čeká na tvé schválení ve frontě.`
+      );
+    } catch (err) {
+      if (err instanceof MachineActionRejectedError) return `Návrh jsem odmítl: ${err.message}`;
+      throw err;
+    }
+  }
+
+  /** N5b: park an open-Maps lookup behind the gate (opens a window only — still gated). */
+  async proposeOpenMaps(query: string): Promise<string> {
+    try {
+      await this.machine.propose({ kind: "open-maps", query });
+      return `Připravil jsem otevření Map s hledáním „${query}" — čeká na tvé schválení ve frontě.`;
+    } catch (err) {
+      if (err instanceof MachineActionRejectedError) return `Návrh jsem odmítl: ${err.message}`;
+      throw err;
+    }
   }
 }
 

@@ -2,6 +2,7 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { DashboardApproval } from "../../approvals/approval";
+import { CodeBlockTestId } from "@zibby/design-system";
 import { RunApprovalGate } from "./RunApprovalGate";
 
 const approve = vi.fn();
@@ -68,5 +69,26 @@ describe("RunApprovalGate (30) — the gate's no rejects, it never deletes the r
   it("also gates a payment approval behind hold-to-confirm", () => {
     render(<RunApprovalGate approval={{ ...approval, riskType: "platba" }} />);
     expect(screen.getByTestId("hold-button-root")).toBeInTheDocument();
+  });
+
+  it("keeps a multi-line detail's line breaks (N5b: a machine rename preview)", () => {
+    render(
+      <RunApprovalGate
+        approval={{
+          ...approval,
+          action: "fs.rename",
+          text: '/tmp/fotky: 2 file(s), "IMG_" → "vylet-"\nIMG_1.jpg → vylet-1.jpg\nIMG_2.jpg → vylet-2.jpg',
+        }}
+      />,
+    );
+    const block = screen.getByTestId(CodeBlockTestId.Root);
+    expect(block).toHaveTextContent("IMG_1.jpg → vylet-1.jpg");
+    expect(block).toHaveTextContent("IMG_2.jpg → vylet-2.jpg");
+  });
+
+  it("a one-line detail stays prose (no code block)", () => {
+    render(<RunApprovalGate approval={{ ...approval, text: "push to origin" }} />);
+    expect(screen.queryByTestId(CodeBlockTestId.Root)).toBeNull();
+    expect(screen.getByText("push to origin")).toBeInTheDocument();
   });
 });

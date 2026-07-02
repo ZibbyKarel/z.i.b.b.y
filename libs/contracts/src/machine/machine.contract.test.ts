@@ -23,6 +23,9 @@ describe("machine.schema (N5a)", () => {
       requestedAt: "2026-07-02T10:00:00.000Z",
     };
     expect(MachineActionRecordSchema.parse(record)).toEqual(record);
+    // N5b: the second reference task joins the closed union.
+    expect(MachineActionSchema.safeParse({ kind: "open-maps", query: "Brno" }).success).toBe(true);
+    expect(MachineActionSchema.safeParse({ kind: "open-maps", query: "" }).success).toBe(false);
     expect(MachineActionSchema.safeParse({ ...ACTION, kind: "format-disk" }).success).toBe(false);
     expect(MachineActionRecordSchema.safeParse({ ...record, state: "pending" }).success).toBe(
       false,
