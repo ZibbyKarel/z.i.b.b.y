@@ -15,5 +15,9 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.0.0",
     "zod": "^4.0.0"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "react-hook-form": "^7.77.0"
   }
 }

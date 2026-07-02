@@ -1,4 +1,4 @@
-/** @type {import('postcss-load-config').Config} */
+// PostCSS config — Tailwind v4 handles vendor prefixing itself.
 export default {
   plugins: {
     "@tailwindcss/postcss": {},
