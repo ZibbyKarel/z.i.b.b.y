@@ -4,6 +4,18 @@
 
 ## Poslední dokončená fáze
 
+**N5b — machine chat tools + maps lookup + čitelná brána** — 2026-07-02,
+commit `feat(machine): N5b …` — **obě referenční úlohy N5 doručeny → delta
+fáze N1–N5 KOMPLETNÍ.**
+
+- Chat tools `machine_rename` + `open_maps` (chat smí jen NAVRHOVAT — propose
+  nikdy nevykonává; guard error → zpráva, ne crash). Akce `open-maps`
+  (`open "maps://?q=…"`) — jen otevře okno, risk low, ale pořád za bránou;
+  opener injektovatelný. Brána renderuje víceřádkový preview přes CodeBlock
+  (gotcha: CodeBlock nepropouští data-testid — selektuj CodeBlockTestId.Root).
+  MachineService refaktor na per-kind plan()/execute(). Suita 2072/0.
+  Detail: `docs/plans/phase-n5b-machine-chat-maps.md` + `docs/api/machine.md`.
+
 **N5a — Controlling the Machine: file ops za bránou** — 2026-07-02,
 commit `feat(machine): N5a …`
 
@@ -166,10 +178,10 @@ commit `feat(web): N4h integrations …`
 
 ## Další fáze (návrh)
 
-**N5b — machine chat tool + druhá referenční úloha (maps lookup)**: (a) chat
-tool `machine_rename` v ChatToolsService — operátor řekne „přejmenuj soubory
-v X" v chatu a ZIBBY zaparkuje návrh (propose je bezpečný — nikdy nevykonává);
-(b) akce `open-maps` `{query | daddr}` — `open "maps://?q=…"` (Apple Maps URL
-scheme; research potvrzeno) — nízké riziko (jen otevře okno), ale pořád za
-bránou (Tier-3 default; „when unsure, higher tier"). (c) web: approval karta
-pro kind machine ukáže preview čitelně (detail je víceřádkový). Pak NC sweep.
+**NC — entity ID refactor, GROUND & rozhodnutí**: delta fáze N1–N5 jsou
+kompletní; zbývá standing NC track. Nejstarší PLÁNOVANÝ architektonický dluh:
+`docs/plans/entity-id-refactor.md` (opaque ULID+prefix id vs human slug;
+slug=filename). Research potvrzuje best practice „obojí — stabilní id interně,
+slug externě". PŘÍŠTÍ iterace: ground na plánu, poctivě posoudit rozsah proti
+zákazu big-bang refaktorů — buď nakrájet na malé fáze (per-entita?), nebo
+zdůvodněně descopovat a vybrat jiný NC cíl (duplicity/dead code sweep).

@@ -261,7 +261,12 @@ does or where the edit button went.
 > dry-run preview + parks a HIGH-risk `machine` approval (durable record; the
 > preview is the old→new audit map); approve executes exactly once, fail-closed;
 > NO execute endpoint exists (`docs/plans/phase-n5a-machine-fileops.md`,
-> `docs/api/machine.md`). Next: N5b — chat tool entry + the maps lookup.
+> `docs/api/machine.md`).
+> ✅ **N5b DELIVERED 2026-07-02** — chat tools (machine_rename, open_maps;
+> propose-only) + the open-maps reference task + readable gate preview
+> (`docs/plans/phase-n5b-machine-chat-maps.md`). **Both reference tasks shipped
+> — N5 is DONE. All delta phases N1–N5 are COMPLETE; NC continues as the
+> standing track.**
 
 **Reality:** none. ZIBBY cannot act on the OS directly.
 
