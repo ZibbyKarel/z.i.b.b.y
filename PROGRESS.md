@@ -4,6 +4,14 @@
 
 ## Poslední dokončená fáze
 
+**NC3 — triage závislostí** — 2026-07-02, commit `chore(deps): NC3 …`
+
+- react-hook-form + @hookform/resolvers přesunuty z rootu do
+  `libs/forms.dependencies` (jediný importér); smazány mrtvé root devDeps
+  autoprefixer (Tailwind v4 prefixuje sám) a @eslint/eslintrc (flat config);
+  postcss-load-config JSDoc typ nahrazen komentářem. knip re-run: všechny
+  4 dep nálezy pryč. Suita 2075/0. Detail: `docs/plans/phase-nc3-deps-triage.md`.
+
 **NC2 — knip dead-code sweep (verifikovaný)** — 2026-07-02, commit
 `chore(web): NC2 …` — net −343 řádků.
 
@@ -205,9 +213,8 @@ commit `feat(web): N4h integrations …`
 
 ## Další fáze (návrh)
 
-**NC3 — triage závislostí z knip nálezů**: root package.json hoisty
-(react-hook-form + @hookform/resolvers — patří libs/forms?), autoprefixer,
-@eslint/eslintrc, unlisted postcss-load-config. pnpm strict model dělá triage
-bezpečnou (balík vidí jen deklarované deps); verifikace = install + build +
-testy. POZNÁMKA PRO OPERÁTORA: north-star nese kompletní N1–N5 + NC1 + NC2
-(~27 commitů) — vhodný okamžik otevřít PR a projít bránou.
+**PARKOVÁNO NA PR BRÁNĚ (doporučení)**: north-star nese kompletní N1–N5 +
+NC1–NC3 (~30 commitů, vše zelené). Roadmapa je vyčerpaná; zbylé NC kandidáty
+(root deps deep-audit — next-intl/@uiw→správné balíky; docs/web P4 follow-ups;
+entity-id po merge) jsou nejlépe startované na čerstvé větvi po review.
+Doporučený další krok je OPERÁTORŮV: otevřít PR z north-star → main.
