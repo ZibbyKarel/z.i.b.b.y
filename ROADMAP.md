@@ -158,8 +158,10 @@ pipeline's brief — unattended overnight.
 > and a red run dispatches an investigation task on the ordinary tier path (guards +
 > PR gate included); a failed dispatch retries next tick. Heartbeat
 > `systemConfig.monitorTickMs` + /settings field; read-only `GET /api/monitors/events`.
-> Deferred to N4 (recorded): per-project HUD CI chip + the briefing's "main is red
-> since 08:12" line — the event data is queryable now.
+> The deferred surfaces landed as **N4b (2026-07-02)**: CI health as STATE
+> (`GET /api/monitors/status`, sidecar per integration × adapter), the briefing's
+> `ci-red` needs-you line (only while red — no re-alerts), and the project-detail
+> three-indicator chip ("CI červené od HH:MM").
 
 **Why third:** closes the north-star's "monitors CI/CD" and leaves the clean seam for Sentry.
 
@@ -186,6 +188,12 @@ rewrite.
 ---
 
 ## N4 — UI/UX Consistency (HUD + Chat-UI, one language)
+
+> ✅ **N4a DELIVERED 2026-07-02** — `/chains` section (compose/run/watch chains;
+> `docs/plans/phase-n4a-chains-ui.md`).
+> ✅ **N4b DELIVERED 2026-07-02** — CI health surface (status endpoint + briefing
+> red line + project chip; `docs/plans/phase-n4b-ci-health.md`). Next: N4c+
+> section-by-section grammar audit + migrations.
 
 **Why fourth:** the system _works_ but does not yet feel like one product. This is a
 first-class goal (north-star _"The Interface — One Language, Everywhere"_), not end-of-run

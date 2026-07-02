@@ -4,6 +4,17 @@
 
 ## Poslední dokončená fáze
 
+**N4b — CI health povrch** — 2026-07-02, commit `feat(monitors): N4b CI health surface …`
+
+- CI zdraví jako STAV (ne událost): `GithubCiMonitor` počítá červená/zelená z celé
+  stažené stránky (`sinceAt` = začátek série), watcher přepisuje atribuovaný
+  sidecar `status/<integrace>--<adapter>.json`, read-only
+  `GET /api/monitors/status`. Briefing: needs-you kind `ci-red` jen dokud je
+  červeno (anti alert-fatigue — linka zmizí sama, nikdy re-alert). Web: chip na
+  project detailu — tři indikátory (tone + glyph + „CI červené od HH:MM"),
+  invalidace na `monitor-alert` SSE + pomalý stavový poll (zotavení do zelena
+  nemá event). Suita 2022/0. Detail: `docs/plans/phase-n4b-ci-health.md`.
+
 **N4a — Chains UI** — 2026-07-02, commit `feat(web): chains section …`
 
 - Sekce `/chains` (nav za pipelines): karty → detail route, Run/Delete vpravo
@@ -68,8 +79,9 @@
 
 ## Další fáze (návrh)
 
-**N4b — CI health povrch**: chip na project detailu (barva + symbol + text
-„CI červené od HH:MM" — tři indikátory, a11y) čtený z GET /api/monitors/events;
-briefing needs-you věta jen dokud je červeno (žádné redundantní re-alerty —
-research: alert fatigue). Pak **N4c+ — audit inventura + migrace sekcí** proti
-interakčnímu kontraktu (accessible-name asserce).
+**N4c — UI grammar audit + migrace**: inventura sekcí proti interakčnímu
+kontraktu (edit vpravo nahoře, karta → detail, dialogy jen create/confirm, nic
+interaktivního bez labelu) metodou design-system auditu (inventory → categorize
+→ inconsistencies → fix; research: Nielsen konzistence + DS audit steps).
+Výstup: tabulka odchylek v plánu fáze, migrace nejhorších sekcí s
+accessible-name asercemi. Pak zbytek N4 odchylek po dávkách, N5 až nakonec.
