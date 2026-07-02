@@ -1,7 +1,12 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
-import { MonitorEventSchema, MonitorEventsQuerySchema } from "./monitor.schema";
+import {
+  CiStatusQuerySchema,
+  CiStatusSchema,
+  MonitorEventSchema,
+  MonitorEventsQuerySchema,
+} from "./monitor.schema";
 
 const c = initContract();
 
@@ -25,6 +30,15 @@ export const monitorsContract = c.router(
       path: "/monitors/events/:id",
       responses: { 200: MonitorEventSchema, 404: ErrorSchema },
       summary: "One monitor event by id",
+    },
+    // N4b: CI health is state, not an event — the last known red/green per
+    // watched source, written only by the monitor watcher.
+    listCiStatus: {
+      method: "GET",
+      path: "/monitors/status",
+      query: CiStatusQuerySchema,
+      responses: { 200: z.array(CiStatusSchema) },
+      summary: "Last known CI status per watched source",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

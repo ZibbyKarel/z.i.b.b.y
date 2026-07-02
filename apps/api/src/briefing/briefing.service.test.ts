@@ -54,6 +54,7 @@ describe("BriefingService", () => {
     const activity = { readSince: vi.fn().mockResolvedValue([]), record };
     const tasks = { list: vi.fn().mockResolvedValue([]) };
     const projects = { list: vi.fn().mockResolvedValue([]) };
+    const monitorEvents = { listStatuses: vi.fn().mockResolvedValue([]) };
 
     service = new BriefingService(
       approvals as never,
@@ -65,6 +66,7 @@ describe("BriefingService", () => {
       vault as never,
       tasks as never,
       projects as never,
+      monitorEvents as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );

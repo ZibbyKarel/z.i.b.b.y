@@ -6,7 +6,7 @@ import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import type { ActivityEntry } from "@zibby/contracts";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getChainRunsQueryKey } from "../chains/queries/keys";
-import { getBudgetQueryKey } from "../projects/queries/keys";
+import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
 import { getActivityQueryKey } from "../overview/queries/useActivityQuery";
 import { prependActivityEntry } from "../overview/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../overview/queries/useBriefingQuery";
@@ -117,6 +117,12 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // pending queue off it so the gate surfaces without waiting for a poll.
         if (parsed.kind?.startsWith("approval-")) {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+        }
+        // N4b: a monitor alert means the watcher just refreshed the CI status
+        // sidecar too — refresh the project-detail chip without waiting for its
+        // slow interval (which exists for the silent green recovery).
+        if (parsed.kind === "monitor-alert") {
+          void qc.invalidateQueries({ queryKey: getCiStatusQueryKey() });
         }
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh

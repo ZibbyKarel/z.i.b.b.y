@@ -103,6 +103,60 @@ describe("GithubCiMonitor", () => {
     expect(events).toHaveLength(2);
   });
 
+  it("N4b status: the newest decisive run sets red; sinceAt walks the red streak", async () => {
+    const monitor = new GithubCiMonitor(
+      fetchWith([
+        // Newest-first, as GitHub returns them.
+        run({ id: 3, updated_at: "2026-07-02T10:00:00Z" }),
+        run({ id: 2, status: "in_progress", conclusion: null }), // decides nothing
+        run({ id: 1, updated_at: "2026-07-02T09:00:00Z" }),
+        run({ id: 0, conclusion: "success", updated_at: "2026-07-02T08:00:00Z" }),
+      ]),
+    );
+    const { status } = await monitor.poll(INTEGRATION, CREDS, undefined);
+    expect(status).toMatchObject({
+      state: "red",
+      sinceAt: "2026-07-02T09:00:00.000Z", // oldest run of the red streak, not the newest
+      summary: "build.yml failed on main",
+      url: "https://github.com/acme/app/actions/runs/42",
+    });
+  });
+
+  it("N4b status: green when the newest decisive run succeeded — even with old reds behind it", async () => {
+    const monitor = new GithubCiMonitor(
+      fetchWith([
+        run({ id: 2, conclusion: "success", updated_at: "2026-07-02T10:00:00Z" }),
+        run({ id: 1, updated_at: "2026-07-02T09:00:00Z" }), // red, older → streak broken
+      ]),
+    );
+    const { status } = await monitor.poll(INTEGRATION, CREDS, undefined);
+    expect(status).toMatchObject({ state: "green", sinceAt: "2026-07-02T10:00:00.000Z" });
+    expect(status?.summary).toContain("passing");
+  });
+
+  it("N4b status: undefined when no run is decisive (cancelled/in-progress/empty page)", async () => {
+    const cases = [
+      [],
+      [run({ status: "in_progress", conclusion: null }), run({ conclusion: "cancelled" })],
+    ];
+    for (const runs of cases) {
+      const { status } = await new GithubCiMonitor(fetchWith(runs)).poll(
+        INTEGRATION,
+        CREDS,
+        undefined,
+      );
+      expect(status).toBeUndefined();
+    }
+  });
+
+  it("N4b status: computed from the WHOLE page, so a cursored re-poll still refreshes it", async () => {
+    const monitor = new GithubCiMonitor(fetchWith([run({})]));
+    // Cursor at the run's created_at → no new alert, but the status still reads red.
+    const { events, status } = await monitor.poll(INTEGRATION, CREDS, "2026-07-02T08:00:00Z");
+    expect(events).toHaveLength(0);
+    expect(status?.state).toBe("red");
+  });
+
   it("a rate limit throws (the watcher's retry/backoff owns it)", async () => {
     const monitor = new GithubCiMonitor(fetchWith([], 403));
     await expect(monitor.poll(INTEGRATION, CREDS, undefined)).rejects.toThrow("rate limited");

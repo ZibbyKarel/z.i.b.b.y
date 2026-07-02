@@ -1076,6 +1076,10 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "newProject": "Nový projekt",
+    "ci": {
+      "red": "CI červené od {since}",
+      "green": "CI zelené"
+    },
     "create": "Vytvořit projekt",
     "save": "Uložit změny",
     "delete": "Smazat",

@@ -16,10 +16,30 @@ export interface MonitorAlert {
   occurredAt: string;
 }
 
-/** What one monitor poll returns: new alerts plus the advanced opaque cursor. */
+/**
+ * The source's current health as one poll saw it (N4b) — STATE, not an event.
+ * Unattributed like {@link MonitorAlert} (the watcher owns integration/project
+ * attribution and persistence). Computed from the WHOLE fetched page, not the
+ * cursor-filtered slice, so a re-poll always refreshes it.
+ */
+export interface MonitorStatusSnapshot {
+  state: "red" | "green";
+  /** When the current streak began (oldest same-state occurrence in the page). */
+  sinceAt: string;
+  checkedAt: string;
+  /** One-line context: which workflow/branch decided the state. */
+  summary: string;
+  url?: string;
+}
+
+/**
+ * What one monitor poll returns: new alerts plus the advanced opaque cursor,
+ * plus (when the source exposes one) its current health snapshot.
+ */
 export interface MonitorPollResult {
   events: MonitorAlert[];
   cursor: string | undefined;
+  status?: MonitorStatusSnapshot;
 }
 
 /**

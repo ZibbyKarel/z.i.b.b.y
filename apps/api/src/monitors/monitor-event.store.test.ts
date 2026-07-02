@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { MonitorEvent } from "@zibby/contracts";
+import type { CiStatus, MonitorEvent } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MonitorEventNotFoundError, MonitorEventStore } from "./monitor-event.store";
 
@@ -56,6 +56,28 @@ describe("MonitorEventStore", () => {
     await store.writeCursor("acme-github", "fake", "OTHER");
     expect(await store.readCursor("acme-github", "github-ci")).toBe("2026-07-02T08:00:00Z");
     expect(await store.readCursor("acme-github", "fake")).toBe("OTHER");
+  });
+
+  it("N4b: status sidecars overwrite per (integration, adapter); list filters by project", async () => {
+    const status = (over: Partial<CiStatus>): CiStatus => ({
+      integrationId: "acme-github",
+      projectId: "acme",
+      adapterKind: "github-ci",
+      state: "red",
+      sinceAt: "2026-07-02T08:00:00.000Z",
+      checkedAt: "2026-07-02T08:12:00.000Z",
+      summary: "build.yml failed on main",
+      ...over,
+    });
+    expect(await store.listStatuses()).toEqual([]);
+    await store.writeStatus(status({}));
+    await store.writeStatus(status({ integrationId: "beta-github", projectId: "beta" }));
+    // Same pair again → overwrite, not a second entry (state, not history).
+    await store.writeStatus(status({ state: "green", sinceAt: "2026-07-02T09:00:00.000Z" }));
+
+    expect(await store.listStatuses()).toHaveLength(2);
+    const [acme] = await store.listStatuses({ projectId: "acme" });
+    expect(acme).toMatchObject({ state: "green", sinceAt: "2026-07-02T09:00:00.000Z" });
   });
 
   it("a corrupt event file is skipped by list; get maps it to not-found", async () => {

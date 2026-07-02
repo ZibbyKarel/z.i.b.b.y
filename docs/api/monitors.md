@@ -29,13 +29,34 @@ dispatch nechá event `new`; další tick ho re-dispatchne (alert se nikdy tiše
 neztratí). Heartbeat: `systemConfig.monitorTickMs` (default 60 s, `0` vypíná;
 testovací fixture pinuje 0).
 
+## CI health = stav, ne událost (N4b)
+
+Vedle alertů (event path výše) si každý poll spočítá **aktuální stav zdroje**:
+`GithubCiMonitor` z CELÉ stažené stránky (ne kurzorem filtrovaného výseku) určí
+červená/zelená podle nejnovějšího rozhodného runu (`success` vs.
+red-conclusions; cancelled/in-progress nerozhodují) a `sinceAt` = začátek
+souvislé série stejného stavu. Watcher snapshot atribuuje
+(integrationId/projectId) a PŘEPÍŠE sidecar
+`MONITOR_EVENTS_DIR/status/<integrationId>--<adapterKind>.json` — poslední známý
+stav přežije restart; žádná historie, žádný dedup.
+
+Povrchy (anti alert-fatigue: stavová linka existuje, dokud stav trvá, a zmizí
+sama — jednorázová notifikace zůstává alertem N3):
+
+- **Briefing**: needs-you položka kindu `ci-red` („CI red since …"), jen dokud
+  je červeno; zezelenání nic nehlásí, linka prostě zmizí.
+- **Web**: chip na project detailu (`ProjectCiStatusChip` v PageHeader) — tři
+  indikátory (tone bad/ok + glyph x/check + text „CI červené od HH:MM"), a11y
+  nikdy jen barvou. Bez sledovaného CI se nerenderuje. Červená se propíše hned
+  (invalidace na `monitor-alert` activity SSE); zotavení do zelena pokryje
+  pomalý interval (CI status je skutečně pollovaný STAV — posture health/limits).
+
 ## HTTP (read-only)
 
 ```
 GET /api/monitors/events          seznam alertů (?projectId= &state=new|handled|ignored)
 GET /api/monitors/events/:id      jeden alert
+GET /api/monitors/status          poslední známý CI stav per zdroj (?projectId=)
 ```
 
-Eventy se rodí jen uvnitř API — klient alert nezfalšuje. Odloženo do N4
-(zaznamenáno): CI chip v per-project HUD a věta „main je červený od 08:12"
-v briefingu (data jsou už dotazovatelná tady).
+Eventy i statusy se rodí jen uvnitř API — klient je nezfalšuje.

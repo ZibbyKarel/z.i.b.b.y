@@ -27,6 +27,11 @@ export class MonitorsController {
           return { status: 404, body: { message: `Monitor event "${id}" not found` } };
         }
       },
+
+      listCiStatus: async ({ query }) => ({
+        status: 200,
+        body: await this.store.listStatuses(query),
+      }),
     });
   }
 }

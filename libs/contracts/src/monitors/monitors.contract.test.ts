@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MonitorEventSchema, MonitorEventsQuerySchema } from "./monitor.schema";
+import { CiStatusSchema, MonitorEventSchema, MonitorEventsQuerySchema } from "./monitor.schema";
 import { monitorsContract } from "./monitors.contract";
 
 const VALID = {
@@ -25,13 +25,34 @@ describe("monitor.schema", () => {
     expect(MonitorEventsQuerySchema.parse({})).toEqual({});
     expect(MonitorEventsQuerySchema.safeParse({ projectId: "" }).success).toBe(false);
   });
+
+  it("N4b: CiStatus round-trips; state is a closed red/green vocabulary", () => {
+    const status = {
+      integrationId: "acme-github",
+      projectId: "acme",
+      adapterKind: "github-ci",
+      state: "red",
+      sinceAt: "2026-07-02T08:00:00.000Z",
+      checkedAt: "2026-07-02T08:12:00.000Z",
+      summary: "build.yml failed on main",
+      url: "https://github.com/acme/app/actions/runs/42",
+    };
+    expect(CiStatusSchema.parse(status)).toEqual(status);
+    expect(CiStatusSchema.safeParse({ ...status, state: "amber" }).success).toBe(false);
+  });
 });
 
 describe("monitorsContract", () => {
-  it("is read-only under /api/monitors/events (alerts are born only inside the API)", () => {
-    expect(Object.keys(monitorsContract)).toEqual(["listMonitorEvents", "getMonitorEvent"]);
+  it("is read-only under /api/monitors (alerts and statuses are born only inside the API)", () => {
+    expect(Object.keys(monitorsContract)).toEqual([
+      "listMonitorEvents",
+      "getMonitorEvent",
+      "listCiStatus",
+    ]);
     expect(monitorsContract.listMonitorEvents.method).toBe("GET");
     expect(monitorsContract.listMonitorEvents.path).toBe("/api/monitors/events");
     expect(monitorsContract.getMonitorEvent.path).toBe("/api/monitors/events/:id");
+    expect(monitorsContract.listCiStatus.method).toBe("GET");
+    expect(monitorsContract.listCiStatus.path).toBe("/api/monitors/status");
   });
 });

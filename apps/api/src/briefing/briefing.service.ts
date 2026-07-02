@@ -7,6 +7,7 @@ import { ApprovalsService } from "../approvals/approvals.service";
 import { ChannelItemStore } from "../channels/channel-item.store";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
+import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
@@ -46,6 +47,7 @@ export class BriefingService {
     private readonly vault: VaultService,
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projects: ProjectsStorageService,
+    private readonly monitorEvents: MonitorEventStore,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -55,7 +57,7 @@ export class BriefingService {
   /** Assemble the current briefing from the record — pure, no persistence. */
   async assemble(now: Date = new Date()): Promise<Briefing> {
     const since = await this.readCursor(now);
-    const [approvals, allRuns, allGoalRuns, channelItems, activity, allTasks, projects] =
+    const [approvals, allRuns, allGoalRuns, channelItems, activity, allTasks, projects, ciStatuses] =
       await Promise.all([
         this.approvals.list("pending"),
         this.pipelines.listAll(),
@@ -64,6 +66,8 @@ export class BriefingService {
         this.activity.readSince(since, now),
         this.tasks.list().catch(() => []),
         this.projects.list().catch(() => []),
+        // N4b: last known CI health — a red one becomes a needs-you state line.
+        this.monitorEvents.listStatuses().catch(() => []),
       ]);
     // Phase 10: in-flight (running/paused) goals feed "watching"; parked goals "needs you".
     const goalRuns = allGoalRuns.filter(
@@ -97,6 +101,7 @@ export class BriefingService {
       activity,
       tasks,
       deadLetteredTasks,
+      ciStatuses,
       projectNames,
       trend7d,
       learnedPatterns,

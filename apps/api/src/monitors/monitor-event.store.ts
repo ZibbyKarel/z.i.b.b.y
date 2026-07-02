@@ -2,6 +2,9 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
 import {
+  type CiStatus,
+  type CiStatusQuery,
+  CiStatusSchema,
   type MonitorEvent,
   MonitorEventSchema,
   type MonitorEventsQuery,
@@ -38,10 +41,12 @@ export class MonitorEventStore extends EntityFileStore<MonitorEvent> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = EVENT_ID_REGEX;
   private readonly cursorsDir: string;
+  private readonly statusDir: string;
 
   constructor(@Inject(MONITOR_EVENTS_DIR) dir: string) {
     super(dir);
     this.cursorsDir = path.join(path.resolve(dir), "cursors");
+    this.statusDir = path.join(path.resolve(dir), "status");
   }
 
   protected idOf(event: MonitorEvent): string {
@@ -118,6 +123,43 @@ export class MonitorEventStore extends EntityFileStore<MonitorEvent> {
       this.cursorsDir,
       `${integrationId}--${adapterKind}`,
       ".cursor",
+      EVENT_ID_REGEX,
+    );
+  }
+
+  /**
+   * The last known CI status per (integration, adapter) — a sidecar the watcher
+   * OVERWRITES every tick (N4b). State, not an event: no dedup, no history; the
+   * newest snapshot is the whole truth and survives a restart.
+   */
+  async writeStatus(status: CiStatus): Promise<void> {
+    const file = this.statusFile(status.integrationId, status.adapterKind);
+    if (!file) return;
+    await fs.mkdir(this.statusDir, { recursive: true });
+    await writeFileAtomic(file, `${JSON.stringify(status, null, 2)}\n`);
+  }
+
+  /** All last-known statuses, optionally filtered by project; garbage skipped. */
+  async listStatuses(query: CiStatusQuery = {}): Promise<CiStatus[]> {
+    const names = await fs.readdir(this.statusDir).catch(() => [] as string[]);
+    const statuses: CiStatus[] = [];
+    for (const name of names) {
+      if (!name.endsWith(".json")) continue;
+      const raw = await fs.readFile(path.join(this.statusDir, name), "utf8").catch(() => null);
+      if (raw === null) continue;
+      const parsed = this.parseJson(CiStatusSchema, raw);
+      if (parsed) statuses.push(parsed);
+    }
+    return statuses
+      .filter((s) => !query.projectId || s.projectId === query.projectId)
+      .sort((a, b) => a.integrationId.localeCompare(b.integrationId));
+  }
+
+  private statusFile(integrationId: string, adapterKind: string): string | null {
+    return resolveSafeFile(
+      this.statusDir,
+      `${integrationId}--${adapterKind}`,
+      ".json",
       EVENT_ID_REGEX,
     );
   }

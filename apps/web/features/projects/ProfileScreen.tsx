@@ -30,6 +30,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
 import { InboxPanel } from "../integrations/components/InboxPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
+import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
 import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
@@ -512,9 +513,13 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
     <PageContainer>
       <PageHeader
         actions={
-          <Button intent="ghost" onClick={() => router.push("/projects")} size="sm">
-            {tk("common.back")}
-          </Button>
+          <>
+            {/* CI health chip (N4b) — state readout, renders nothing without a watched CI */}
+            {!isNew && <ProjectCiStatusChip projectId={id} />}
+            <Button intent="ghost" onClick={() => router.push("/projects")} size="sm">
+              {tk("common.back")}
+            </Button>
+          </>
         }
         subtitle={isNew ? undefined : project?.path}
         title={isNew ? tp("newProject") : (project?.name ?? "")}

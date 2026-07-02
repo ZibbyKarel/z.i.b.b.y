@@ -1076,6 +1076,10 @@
     "deleteEmptyCategory": "Delete",
     "deleteEmptyCategoryAria": "Delete empty category {name}",
     "newProject": "New project",
+    "ci": {
+      "red": "CI red since {since}",
+      "green": "CI green"
+    },
     "create": "Create project",
     "save": "Save changes",
     "delete": "Delete",

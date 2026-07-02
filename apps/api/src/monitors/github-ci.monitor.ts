@@ -1,5 +1,10 @@
 import type { CredentialsInput, Integration } from "@zibby/contracts";
-import type { MonitorAdapter, MonitorAlert, MonitorPollResult } from "./monitor-adapter";
+import type {
+  MonitorAdapter,
+  MonitorAlert,
+  MonitorPollResult,
+  MonitorStatusSnapshot,
+} from "./monitor-adapter";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -90,6 +95,43 @@ export class GithubCiMonitor implements MonitorAdapter {
         occurredAt: new Date(run.updated_at ?? created).toISOString(),
       });
     }
-    return { events, cursor: newest };
+    const status = computeStatus(runs);
+    return { events, cursor: newest, ...(status ? { status } : {}) };
   }
+}
+
+/**
+ * Current health from the WHOLE fetched page (N4b) — state, not an event, so it
+ * ignores the cursor. Only decisive conclusions count: red (`RED_CONCLUSIONS`)
+ * or green (`success`); cancelled/skipped/in-progress runs decide nothing. The
+ * newest decisive run sets the state; `sinceAt` walks the consecutive same-state
+ * streak (newest-first input) to its oldest run — "red since HH:MM".
+ */
+function computeStatus(runs: WorkflowRun[]): MonitorStatusSnapshot | undefined {
+  const stateOf = (run: WorkflowRun): "red" | "green" | null => {
+    if (run.status !== "completed") return null;
+    if (RED_CONCLUSIONS.has(run.conclusion ?? "")) return "red";
+    return run.conclusion === "success" ? "green" : null;
+  };
+  const decisive = runs
+    .map((run) => ({ run, state: stateOf(run) }))
+    .filter((d): d is { run: WorkflowRun; state: "red" | "green" } => d.state !== null);
+  const newest = decisive[0];
+  if (!newest) return undefined;
+  let oldestInStreak = newest.run;
+  for (const d of decisive) {
+    if (d.state !== newest.state) break;
+    oldestInStreak = d.run;
+  }
+  const at = (run: WorkflowRun): string =>
+    new Date(run.updated_at ?? run.created_at ?? 0).toISOString();
+  return {
+    state: newest.state,
+    sinceAt: at(oldestInStreak),
+    checkedAt: new Date().toISOString(),
+    summary: `${newest.run.name ?? "workflow"} ${
+      newest.state === "red" ? "failed" : "passing"
+    } on ${newest.run.head_branch ?? "?"}`,
+    ...(newest.run.html_url ? { url: newest.run.html_url } : {}),
+  };
 }

@@ -7,6 +7,7 @@ import type {
   BriefingNeedsYouItem,
   BriefingWatchItem,
   ChannelItem,
+  CiStatus,
   GoalRun,
   PipelineRun,
   ScheduledTask,
@@ -32,6 +33,8 @@ export interface BriefingInput {
   tasks?: ScheduledTask[];
   /** M8: dead-lettered tasks (dispatch exhausted its retries) — each a needs-you. */
   deadLetteredTasks?: ScheduledTask[];
+  /** N4b: last known CI statuses — a red one is a needs-you STATE line (no re-alerts). */
+  ciStatuses?: CiStatus[];
   /** projectId → display name, so the rollup reads in the operator's terms. */
   projectNames?: Record<string, string>;
   /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
@@ -71,6 +74,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     input.parkedRuns,
     goalRuns,
     input.deadLetteredTasks ?? [],
+    input.ciStatuses ?? [],
   );
   const didForYou = buildDidForYou(input.activity);
   const watching = buildWatching(input.channelItems, input.pausedLimitRuns ?? [], goalRuns);
@@ -160,6 +164,7 @@ function buildNeedsYou(
   parkedRuns: PipelineRun[],
   goalRuns: GoalRun[],
   deadLetteredTasks: ScheduledTask[],
+  ciStatuses: CiStatus[],
 ): BriefingNeedsYouItem[] {
   const fromApprovals: BriefingNeedsYouItem[] = approvals.map((a) => ({
     kind: "approval",
@@ -200,9 +205,25 @@ function buildNeedsYou(
       ...(t.projectId ? { projectId: t.projectId } : {}),
     },
   }));
+  // N4b: a currently-red CI is a needs-you STATE line — it exists while the state
+  // lasts and disappears when the build goes green (alert-fatigue discipline: the
+  // one-time notification is the N3 monitor-alert; this line never re-alerts).
+  const fromRedCi: BriefingNeedsYouItem[] = ciStatuses
+    .filter((s) => s.state === "red")
+    .map((s) => ({
+      kind: "ci-red",
+      id: `${s.integrationId}--${s.adapterKind}`,
+      summary: `CI red since ${s.sinceAt} — ${s.summary}`,
+      at: s.sinceAt,
+      refs: {
+        integrationId: s.integrationId,
+        ...(s.projectId ? { projectId: s.projectId } : {}),
+      },
+      ...(s.projectId ? { projectId: s.projectId } : {}),
+    }));
   // Newest first so the most recent decision tops the list.
-  return [...fromApprovals, ...fromParked, ...fromParkedGoals, ...fromDeadLetter].sort((a, b) =>
-    b.at.localeCompare(a.at),
+  return [...fromApprovals, ...fromParked, ...fromParkedGoals, ...fromDeadLetter, ...fromRedCi].sort(
+    (a, b) => b.at.localeCompare(a.at),
   );
 }
 
@@ -283,9 +304,11 @@ export function deterministicHeadline(needsYou: BriefingNeedsYouItem[]): string 
   if (needsYou.length === 0) return "Nothing needs you.";
   const approvals = needsYou.filter((n) => n.kind === "approval").length;
   const parked = needsYou.filter((n) => n.kind === "parked").length;
+  const redCi = needsYou.filter((n) => n.kind === "ci-red").length;
   const parts: string[] = [];
   if (approvals > 0) parts.push(`${approvals} ${plural(approvals, "approval", "approvals")}`);
   if (parked > 0) parts.push(`${parked} parked ${plural(parked, "run", "runs")}`);
+  if (redCi > 0) parts.push(`${redCi} red CI`);
   const n = needsYou.length;
   const verb = n === 1 ? "needs" : "need";
   return `${n} ${plural(n, "thing", "things")} ${verb} you — ${parts.join(", ")}.`;

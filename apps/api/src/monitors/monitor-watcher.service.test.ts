@@ -131,6 +131,35 @@ describe("MonitorWatcherService", () => {
     expect((await store.get(ALERT.id)).state).toBe("handled");
   });
 
+  it("N4b: a poll's status snapshot persists attributed to the integration/project", async () => {
+    const adapter = fakeAdapter("github-ci", () => true);
+    adapter.poll.mockResolvedValue({
+      events: [],
+      cursor: "C1",
+      status: {
+        state: "red" as const,
+        sinceAt: "2026-07-02T08:00:00.000Z",
+        checkedAt: "2026-07-02T08:12:00.000Z",
+        summary: "build.yml failed on main",
+      },
+    });
+    registry.register(adapter);
+
+    await makeWatcher().tick();
+
+    expect(await store.listStatuses()).toEqual([
+      expect.objectContaining({
+        integrationId: GH.id,
+        projectId: "acme",
+        adapterKind: "github-ci",
+        state: "red",
+      }),
+    ]);
+    // Status is silent Tier-1 state — no alert, no activity, no task.
+    expect(activity.record).not.toHaveBeenCalled();
+    expect(scheduler.createTask).not.toHaveBeenCalled();
+  });
+
   it("a second monitor plugs into the registry without touching the watcher (Sentry seam)", async () => {
     const ci = fakeAdapter("github-ci", () => true);
     const sentry = fakeAdapter("fake-sentry", () => true);

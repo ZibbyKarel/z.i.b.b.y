@@ -164,6 +164,36 @@ describe("assembleBriefing", () => {
     expect(md).toContain("pipeline delivery paused on the usage limit, resumes");
   });
 
+  it("N4b: a red CI status is a needs-you STATE line; a green one surfaces nothing", () => {
+    const ciStatus = (state: "red" | "green") => ({
+      integrationId: "acme-github",
+      projectId: "acme",
+      adapterKind: "github-ci",
+      state,
+      sinceAt: "2026-06-12T06:20:00.000Z",
+      checkedAt: "2026-06-12T06:55:00.000Z",
+      summary: "build.yml failed on main",
+    });
+    const base = { now: NOW, since: SINCE, approvals: [], parkedRuns: [], channelItems: [], activity: [] };
+
+    const red = assembleBriefing({ ...base, ciStatuses: [ciStatus("red")] });
+    expect(red.needsYou).toEqual([
+      expect.objectContaining({
+        kind: "ci-red",
+        id: "acme-github--github-ci",
+        projectId: "acme",
+        refs: { integrationId: "acme-github", projectId: "acme" },
+      }),
+    ]);
+    expect(red.needsYou[0]!.summary).toContain("CI red since 2026-06-12T06:20:00.000Z");
+    expect(red.headline).toBe("1 thing needs you — 1 red CI.");
+
+    // Green (or absent) CI never re-alerts — the line simply disappears.
+    const green = assembleBriefing({ ...base, ciStatuses: [ciStatus("green")] });
+    expect(green.needsYou).toHaveLength(0);
+    expect(green.nothingNeedsYou).toBe(true);
+  });
+
   it("emits a calm nothing-needs-you output when nothing is pending", () => {
     const briefing = assembleBriefing({
       now: NOW,

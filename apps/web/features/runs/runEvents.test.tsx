@@ -4,6 +4,7 @@ import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } fr
 import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getChainRunsQueryKey } from "../chains/queries/keys";
+import { getCiStatusQueryKey } from "../projects/queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
 vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
@@ -46,6 +47,13 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "activity", kind: "task-created", at: "2026-07-01" });
     });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+  });
+
+  it("a monitor-alert activity event refreshes the CI status chip family (N4b)", () => {
+    act(() => {
+      mock.last().emit({ scope: "activity", kind: "monitor-alert", at: "2026-07-02" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getCiStatusQueryKey() });
   });
 
   it("an awaiting-approval run transition refreshes the approvals queue (existing path)", () => {

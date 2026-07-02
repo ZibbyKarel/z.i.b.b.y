@@ -1,4 +1,5 @@
 export { getBudgetQueryKey, useBudgetQuery } from "./useBudgetQuery";
+export { getCiStatusQueryKey, useCiStatusQuery } from "./useCiStatusQuery";
 export { getProjectQueryKey, useProjectQuery } from "./useProjectQuery";
 export { getProjectProfileQueryKey, useProjectProfileQuery } from "./useProjectProfileQuery";
 export { getProjectStandupQueryKey, useProjectStandupQuery } from "./useProjectStandupQuery";

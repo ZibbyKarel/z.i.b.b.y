@@ -3,12 +3,13 @@ import { IsoDateTimeSchema } from "../common.schema";
 import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema";
 
 /**
- * One thing that needs the operator (Law 5 "surface and wait"): a pending approval
- * or a retries-parked run. `refs` carries the trace links so the card can deep-link
- * to /runs or the approval.
+ * One thing that needs the operator (Law 5 "surface and wait"): a pending approval,
+ * a retries-parked run, or a currently-red CI (N4b — a STATE line: it exists while
+ * the build is red and disappears when it goes green, never re-alerting). `refs`
+ * carries the trace links so the card can deep-link to /runs or the approval.
  */
 export const BriefingNeedsYouItemSchema = z.object({
-  kind: z.enum(["approval", "parked"]),
+  kind: z.enum(["approval", "parked", "ci-red"]),
   id: z.string(),
   summary: z.string(),
   at: IsoDateTimeSchema,

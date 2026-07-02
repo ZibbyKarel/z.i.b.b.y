@@ -11,3 +11,12 @@
 export function getBudgetQueryKey() {
   return ["budget"] as const;
 }
+
+/**
+ * Cache key family for the CI health chip (N4b). Called with a projectId it keys
+ * one project's statuses; called without it names the family prefix `runEvents`
+ * invalidates on a `monitor-alert` activity entry.
+ */
+export function getCiStatusQueryKey(projectId?: string) {
+  return projectId ? (["ci-status", projectId] as const) : (["ci-status"] as const);
+}

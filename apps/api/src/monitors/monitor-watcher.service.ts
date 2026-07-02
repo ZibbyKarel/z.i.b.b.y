@@ -107,7 +107,7 @@ export class MonitorWatcherService implements OnModuleInit, OnModuleDestroy {
     adapter: MonitorAdapter,
   ): Promise<string[]> {
     const cursor = await this.store.readCursor(integration.id, adapter.kind);
-    const { events, cursor: nextCursor } = await withRetry(
+    const { events, cursor: nextCursor, status } = await withRetry(
       () => adapter.poll(integration, creds, cursor),
       {
         retries: intEnv("MONITOR_POLL_RETRIES", 2),
@@ -143,6 +143,16 @@ export class MonitorWatcherService implements OnModuleInit, OnModuleDestroy {
 
     // Cursor AFTER events persist — crash re-polls (dedup-safe) rather than drops.
     await this.store.writeCursor(integration.id, adapter.kind, nextCursor);
+    // N4b: the source's health snapshot is state, not an event — overwrite the
+    // sidecar every tick (silent Tier-1; the alert path above owns notification).
+    if (status) {
+      await this.store.writeStatus({
+        integrationId: integration.id,
+        ...(integration.projectId ? { projectId: integration.projectId } : {}),
+        adapterKind: adapter.kind,
+        ...status,
+      });
+    }
     return ingested;
   }
 
