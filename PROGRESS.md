@@ -4,6 +4,20 @@
 
 ## Poslední dokončená fáze
 
+**NC1 — jeden ConfirmDeleteDialog místo 8 kopií + entity-id DESCOPE** —
+2026-07-02, commit `refactor(web): NC1 …`
+
+- N4 řada zanechala 8 identických confirm-delete Dialogů → extrahováno do
+  `components/ConfirmDeleteDialog`, všech 8 míst zmigrováno; všechny stávající
+  confirm-then-delete testy prošly s NEZMĚNĚNÝMI asercemi (důkaz zachování
+  chování). Suita 2075/0 (2 under-load socket flaky v approvals.e2e se na
+  čistém běhu nereprodukovaly).
+- **Entity-id refaktor DESCOPED se zdůvodněním** (v plánu fáze): celosystémová
+  migrace identity = zakázaný big-bang; aditivní půlkrok = dual-identity limbo;
+  rename stabilita není urgentní; ~20 nezreviewovaných commitů má nejdřív
+  projít PR bránou. Plán zůstává „planned" pro čistou větev po merge.
+  Detail: `docs/plans/phase-nc1-confirm-delete-dialog.md`.
+
 **N5b — machine chat tools + maps lookup + čitelná brána** — 2026-07-02,
 commit `feat(machine): N5b …` — **obě referenční úlohy N5 doručeny → delta
 fáze N1–N5 KOMPLETNÍ.**
@@ -178,10 +192,9 @@ commit `feat(web): N4h integrations …`
 
 ## Další fáze (návrh)
 
-**NC — entity ID refactor, GROUND & rozhodnutí**: delta fáze N1–N5 jsou
-kompletní; zbývá standing NC track. Nejstarší PLÁNOVANÝ architektonický dluh:
-`docs/plans/entity-id-refactor.md` (opaque ULID+prefix id vs human slug;
-slug=filename). Research potvrzuje best practice „obojí — stabilní id interně,
-slug externě". PŘÍŠTÍ iterace: ground na plánu, poctivě posoudit rozsah proti
-zákazu big-bang refaktorů — buď nakrájet na malé fáze (per-entita?), nebo
-zdůvodněně descopovat a vybrat jiný NC cíl (duplicity/dead code sweep).
+**NC2 — dead-code sweep s knip**: jednorázový audit mrtvého kódu/závislostí
+(knip zvládá monorepa nativně; research: ~40 % hlášení bývají false positives —
+knip je signál, ne soudce; ignore list s komentáři). Fáze = spustit, ručně
+verifikovat každý nález proti kódu, smazat jen potvrzené, testy zelené.
+POZNÁMKA PRO OPERÁTORA: větev north-star nese ~25 checkpoint commitů (N1–N5
+kompletní + NC1) — vhodný okamžik otevřít PR a projít bránou.
