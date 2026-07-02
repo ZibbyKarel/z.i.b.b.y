@@ -204,8 +204,10 @@ rewrite.
 > `docs/plans/phase-n4e-hooks-mcp-grammar.md`).
 > ✅ **N4f DELIVERED 2026-07-02** — automations detail page (`/automations/[id]`,
 > system schedule-only lock preserved, create-only dialog, FIRST delete surface;
-> `docs/plans/phase-n4f-automations-grammar.md`). Remaining offenders:
-> integrations edit dialog + memory editor edit mode (N4g closes the series).
+> `docs/plans/phase-n4f-automations-grammar.md`).
+> ✅ **N4g DELIVERED 2026-07-02** — memory notes edit IN PLACE (NoteView
+> view⇄edit, create-only dialog; `docs/plans/phase-n4g-memory-grammar.md`).
+> Last offender: integrations edit dialog (N4h closes the series).
 
 **Why fourth:** the system _works_ but does not yet feel like one product. This is a
 first-class goal (north-star _"The Interface — One Language, Everywhere"_), not end-of-run

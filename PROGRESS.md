@@ -4,6 +4,16 @@
 
 ## Poslední dokončená fáze
 
+**N4g — Memory note editing in place** — 2026-07-02, commit `feat(web): N4g memory …`
+
+- Editace velkého markdown těla už neotvírá dialog: `NoteView` je view⇄edit
+  plocha (Editovat vpravo nahoře v hlavičce panelu; edit mode = title input +
+  MarkdownEditor, Uložit/Zrušit v hlavičce; id/tier neměnné). `NoteEditorDialog`
+  create-only (slug id z titulu + tier picker zůstávají); Screen keyuje NoteView
+  podle note id (přepnutí poznámky zahodí rozdělanou editaci).
+- NC: smazán nepoužívaný `dailyNodes` memo — poslední lint warning v repu pryč
+  (ESLint: 0 issues). Suita 2052/0. Detail: `docs/plans/phase-n4g-memory-grammar.md`.
+
 **N4f — Automations na gramatiku** — 2026-07-02, commit `feat(web): N4f automations …`
 
 - Poslední velký edit dialog: Edit na kartě naviguje na `/automations/[id]`;
@@ -126,10 +136,10 @@
 
 ## Další fáze (návrh)
 
-**N4g — poslední dva porušitelé (integrations + memory) UZAVÍRÁ gramatickou
-řadu**: (a) IntegrationFormDialog na project detailu (create+edit) — GROUND
-rozhodne detail route vs. konformní plocha v rámci projektu; (b) memory note
-editor dialog s mode create/edit — pro velká markdown těla je vzor view→edit
-toggle přímo na note ploše (edit vpravo nahoře), dialog jen pro create
-(research: inline edit nepatří na velké texty, ale edit-mode na stejné ploše
-ano). Pak N4 zbývá jen HUD ⇄ Chat-UI vizuální sjednocení, případně N5/NC.
+**N4h — Integrations na gramatiku UZAVÍRÁ řadu**: poslední porušitel —
+IntegrationFormDialog (15K kind-switching form, create+edit, write-only
+secret) na project detailu. GROUND rozhodne umístění edit plochy: GitLab
+precedens = nested route pod rodičem (Settings → Webhooks → webhook page),
+tzn. `/projects/[id]/integrations/[integrationId]`, vs. flat
+`/integrations/[id]` (globální /integrations page ale neexistuje — integrace
+patří projektům). Pak z N4 zbývá HUD ⇄ Chat-UI vizuální sjednocení.
