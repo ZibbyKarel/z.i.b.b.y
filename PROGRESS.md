@@ -4,6 +4,19 @@
 
 ## Poslední dokončená fáze
 
+**NC2 — knip dead-code sweep (verifikovaný)** — 2026-07-02, commit
+`chore(web): NC2 …` — net −343 řádků.
+
+- knip spuštěn (config commitnut jako `knip.json`), každý nález ručně ověřen.
+  Smazán potvrzený mrtvý cluster: před-N4 running-agents plocha (AgentRow,
+  RunLogModal, RunningAgentsPanel) + privátní hooky (useRunningAgentsQuery,
+  useRunLogQuery, useStopAgentRunMutation), useRunTargetProjects, state/forms.ts.
+  `getRunningAgentsQueryKey` zůstává v keys.ts (runEvents). Gotcha: grep filtr
+  na „vlastní soubor" umí schovat CIZÍ deep import — po smazání vždy typecheck
+  (odhalil stale import v useCreateTaskMutation). False positives
+  triažovány v plánu (resolveXxxDir factories, barrel re-exporty, vitest
+  configs, deps). Suita 2075/0. Detail: `docs/plans/phase-nc2-knip-sweep.md`.
+
 **NC1 — jeden ConfirmDeleteDialog místo 8 kopií + entity-id DESCOPE** —
 2026-07-02, commit `refactor(web): NC1 …`
 
@@ -192,9 +205,9 @@ commit `feat(web): N4h integrations …`
 
 ## Další fáze (návrh)
 
-**NC2 — dead-code sweep s knip**: jednorázový audit mrtvého kódu/závislostí
-(knip zvládá monorepa nativně; research: ~40 % hlášení bývají false positives —
-knip je signál, ne soudce; ignore list s komentáři). Fáze = spustit, ručně
-verifikovat každý nález proti kódu, smazat jen potvrzené, testy zelené.
-POZNÁMKA PRO OPERÁTORA: větev north-star nese ~25 checkpoint commitů (N1–N5
-kompletní + NC1) — vhodný okamžik otevřít PR a projít bránou.
+**NC3 — triage závislostí z knip nálezů**: root package.json hoisty
+(react-hook-form + @hookform/resolvers — patří libs/forms?), autoprefixer,
+@eslint/eslintrc, unlisted postcss-load-config. pnpm strict model dělá triage
+bezpečnou (balík vidí jen deklarované deps); verifikace = install + build +
+testy. POZNÁMKA PRO OPERÁTORA: north-star nese kompletní N1–N5 + NC1 + NC2
+(~27 commitů) — vhodný okamžik otevřít PR a projít bránou.
