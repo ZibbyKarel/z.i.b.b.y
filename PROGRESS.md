@@ -4,6 +4,17 @@
 
 ## Poslední dokončená fáze
 
+**N4d — Skills + Commands na gramatiku** — 2026-07-02, commit `feat(web): N4d skills + commands …`
+
+- Druhá dávka na šabloně N4c: tiles navigují na `/skills/[id]` a
+  `/commands/[id]` detail stránky (dřív create+edit dialogy); Save/Delete
+  vpravo nahoře, mazání za confirm dialogem (dřív bez potvrzení). Dialogy
+  create-only; formulářová těla extrahována do `SkillFormFields` /
+  `CommandFormFields` (dialog i detail renderují totéž); create naviguje na
+  nový detail. Stale edit-mode test modalu srovnán na create-only kontrakt.
+- Suita 2037/0 (jednorázový under-load flake v rtk-filtrovaném běhu se na
+  čistém běhu nereprodukoval). Detail: `docs/plans/phase-n4d-skills-commands-grammar.md`.
+
 **N4c — Agents na interakční gramatiku** — 2026-07-02, commit `feat(web): N4c agents …`
 
 - Plný audit sekcí proti gramatice (tabulka v `docs/plans/phase-n4c-agents-grammar.md`);
@@ -92,9 +103,9 @@
 
 ## Další fáze (návrh)
 
-**N4d — skills + commands na gramatiku**: stejný vzor jako N4c (šablona =
-agents migrace): `/skills/[id]` a `/commands/[id]` detail stránky, tile
-naviguje, dialogy create-only. Research potvrzuje: editace s víc poli /
-markdown tělem (>6 s) patří na stránku, ne do modalu (modal jen self-contained
-quick task). Pak N4e — automations/hooks/mcp/integrations/memory edit dialogy
-po dávkách.
+**N4e — zbylé edit dialogy (automations, hooks, mcp)**: tři FormDialogy s edit
+modem (AutomationFormDialog, HookFormDialog, McpServerFormDialog) na gramatiku.
+Gramatika váží víc než per-entita optimalizace (stejná afordance na stejném
+místě) — GROUND příští iterace rozhodne detail stránka vs. konformní
+inline-edit na místě (entity jsou kompaktní config; karta možná není
+navigační). Pak integrations + memory editor dialog.

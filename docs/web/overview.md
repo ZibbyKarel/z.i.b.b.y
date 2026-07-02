@@ -29,7 +29,9 @@ app/
     │   └── [id]/page.tsx   Detail projektu (tým, autonomie, integrace + inbox)
     ├── runs/page.tsx       Historie runů
     ├── settings/page.tsx   Nastavení workspace
-    └── skills/page.tsx     Inventář skills
+    └── skills/
+        ├── page.tsx        Inventář skills
+        └── [id]/page.tsx   Detail skillu (editace; N4d — commands/[id] stejně)
 ```
 
 Žádné `/approvals`, `/tasks`, `/limits` jako samostatné route — tyto funkce jsou

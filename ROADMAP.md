@@ -195,9 +195,11 @@ rewrite.
 > red line + project chip; `docs/plans/phase-n4b-ci-health.md`).
 > ✅ **N4c DELIVERED 2026-07-02** — full grammar audit (deviation table in
 > `docs/plans/phase-n4c-agents-grammar.md`) + agents migrated: `/agents/[id]`
-> detail page, card navigates, create-only dialog, Run wired. Remaining
-> offenders: skills, commands, automations, hooks, mcp, integrations, memory
-> (create+edit dialogs) — N4d/N4e batches.
+> detail page, card navigates, create-only dialog, Run wired.
+> ✅ **N4d DELIVERED 2026-07-02** — skills + commands on the same template
+> (`/skills/[id]`, `/commands/[id]`, create-only dialogs, confirm-gated delete;
+> `docs/plans/phase-n4d-skills-commands-grammar.md`). Remaining offenders:
+> automations, hooks, mcp, integrations, memory (edit dialogs) — N4e batches.
 
 **Why fourth:** the system _works_ but does not yet feel like one product. This is a
 first-class goal (north-star _"The Interface — One Language, Everywhere"_), not end-of-run
