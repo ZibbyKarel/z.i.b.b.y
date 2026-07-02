@@ -1,3 +1,4 @@
+export { getAgentQueryKey, useAgentQuery } from "./useAgentQuery";
 export { getAgentsQueryKey, useAgentsQuery } from "./useAgentsQuery";
 export { getAgentsSearchQueryKey, useAgentsSearchQuery } from "./useAgentsSearchQuery";
 export { getCategoriesQueryKey, useCategoriesQuery } from "./useCategoriesQuery";

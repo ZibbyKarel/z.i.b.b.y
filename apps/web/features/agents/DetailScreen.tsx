@@ -1,0 +1,235 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { Button, Dialog, Stack, Tag, Typography } from "@zibby/design-system";
+import type { Agent, GateRuleInput } from "@zibby/contracts";
+import { useFormControls } from "@zibby/forms";
+import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { RuleModal } from "../gates/components/RuleModal";
+import { usePipelinesQuery } from "../pipelines";
+import { useNewTask } from "../tasks";
+import { agentFile } from "./agentDraft";
+import { AgentEditBasics } from "./components/AgentEditBasics";
+import { AgentRulesSection } from "./components/AgentRulesSection";
+import {
+  type AgentEditValues,
+  applyFormValues,
+  ownRuleToInitial,
+  toFormValues,
+} from "./components/agentEditValues";
+import { useDeleteAgentMutation, useUpdateAgentMutation } from "./mutations";
+import { useAgentQuery, useCategoriesQuery } from "./queries";
+
+export enum AgentDetailScreenTestId {
+  Save = "agent-detail-save",
+  Run = "agent-detail-run",
+  Delete = "agent-detail-delete",
+}
+
+export interface AgentDetailScreenProps {
+  agentId: string;
+}
+
+/**
+ * The `/agents/:id` detail page (N4c) — the grammar-conformant replacement for
+ * the old view/edit dialog: a card click NAVIGATES here, the page IS the edit
+ * surface (one form over the Basics + Rules panels) and every action sits
+ * top-right in the header — Save (primary), Run (New-Task pre-fill; the target
+ * stays changeable, the classifier still runs) and Delete (confirm dialog, the
+ * one dialog this page keeps).
+ */
+export function DetailScreen({ agentId }: AgentDetailScreenProps) {
+  const query = useAgentQuery(agentId);
+  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <QueryLoading />;
+  if (!query.data) return null;
+  // The form captures its defaults at mount — key by agent so a different id remounts.
+  return <AgentEditor agent={query.data} key={query.data.id} />;
+}
+
+function AgentEditor({ agent }: { agent: Agent }) {
+  const t = useTranslations("agents");
+  const tk = useTranslations();
+  const router = useRouter();
+  const { data: categories = [] } = useCategoriesQuery();
+  const { data: pipelines = [] } = usePipelinesQuery();
+  const updateAgent = useUpdateAgentMutation();
+  const deleteAgent = useDeleteAgentMutation();
+  const { open: openNewTask } = useNewTask();
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  /** The own-rule being edited: an index, "new", or null when the editor is closed. */
+  const [editingRule, setEditingRule] = useState<number | "new" | null>(null);
+
+  const name = agent.name ?? agent.id;
+  const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
+
+  const { renderForm, submit, form } = useFormControls<AgentEditValues>({
+    defaultValues: toFormValues(agent),
+    onSubmit: (values) => {
+      const { id, ...body } = applyFormValues(agent, values);
+      updateAgent.mutate({ params: { id }, body });
+    },
+  });
+
+  const [watchedName, watchedInstructions] = form.watch(["name", "instructions"]);
+  const canSave =
+    (watchedName ?? "").trim().length > 0 && (watchedInstructions ?? "").trim().length > 0;
+
+  const watchedGates = form.watch("gates") ?? [];
+  const watchedGateRuleIds = form.watch("gateRuleIds") ?? [];
+  const setGates = (next: GateRuleInput[]) => form.setValue("gates", next, { shouldDirty: true });
+
+  /** Save one own-rule from the rule editor (append for "new", replace by index). */
+  const saveRule = (gate: GateRuleInput) => {
+    setGates(
+      editingRule === "new"
+        ? [...watchedGates, gate]
+        : watchedGates.map((g, i) => (i === editingRule ? gate : g)),
+    );
+    setEditingRule(null);
+  };
+
+  return renderForm(
+    <PageContainer>
+      <Stack gap="250">
+        <PageHeader
+          actions={
+            <>
+              <Button
+                data-testid={AgentDetailScreenTestId.Run}
+                icon="play"
+                intent="ghost"
+                onClick={() =>
+                  openNewTask(undefined, {
+                    kind: "agent",
+                    id: agent.id,
+                    name,
+                    glyph: "bot",
+                  })
+                }
+                size="sm"
+              >
+                {t("run")}
+              </Button>
+              <Button
+                data-testid={AgentDetailScreenTestId.Delete}
+                icon="x"
+                intent="danger"
+                onClick={() => setConfirmDelete(true)}
+                size="sm"
+              >
+                {t("delete")}
+              </Button>
+              <Button
+                data-testid={AgentDetailScreenTestId.Save}
+                disabled={!canSave}
+                icon="check"
+                intent="primary"
+                loading={updateAgent.isPending}
+                onClick={() => void submit()}
+                size="sm"
+              >
+                {t("save")}
+              </Button>
+              <Button intent="ghost" onClick={() => router.push("/agents")} size="sm">
+                {tk("common.back")}
+              </Button>
+            </>
+          }
+          subtitle={agentFile(agent.id)}
+          title={name}
+        />
+
+        <HudPanel title={t("tabBasics")}>
+          <AgentEditBasics categories={categories} control={form.control} />
+        </HudPanel>
+
+        <HudPanel title={t("tabRules")}>
+          <AgentRulesSection
+            agentName={watchedName || name}
+            gateRuleIds={watchedGateRuleIds}
+            gates={watchedGates}
+            onAddRule={() => setEditingRule("new")}
+            onDeleteRule={(i) => setGates(watchedGates.filter((_, j) => j !== i))}
+            onEditRule={(i) => setEditingRule(i)}
+            onLinkedChange={(ids) => form.setValue("gateRuleIds", ids, { shouldDirty: true })}
+          />
+        </HudPanel>
+
+        <HudPanel title={t("usedInPipelines")}>
+          {usedBy.length === 0 ? (
+            <Typography size="sm" type="note" variant="tertiary">
+              {t("notInPipeline")}
+            </Typography>
+          ) : (
+            <Stack wrap direction="row" gap="100">
+              {usedBy.map((p) => (
+                <Tag key={p.id} tone="accent">
+                  {p.name ?? p.id} · {t("phaseCount", { count: p.phases.length })}
+                </Tag>
+              ))}
+            </Stack>
+          )}
+        </HudPanel>
+      </Stack>
+
+      {confirmDelete && (
+        <Dialog
+          open
+          actions={
+            <>
+              <Button intent="ghost" onClick={() => setConfirmDelete(false)}>
+                {tk("common.cancel")}
+              </Button>
+              <Button
+                icon="x"
+                intent="danger"
+                loading={deleteAgent.isPending}
+                onClick={() =>
+                  deleteAgent.mutate(
+                    { params: { id: agent.id } },
+                    { onSuccess: () => router.push("/agents") },
+                  )
+                }
+              >
+                {t("delete")}
+              </Button>
+            </>
+          }
+          onClose={() => setConfirmDelete(false)}
+          title={t("deleteTitle")}
+          width="sm"
+        >
+          <Typography size="base" type="note" variant="secondary">
+            {t("deleteBody", { name, file: agentFile(agent.id) })}
+          </Typography>
+        </Dialog>
+      )}
+
+      {editingRule !== null && (
+        <RuleModal
+          initial={
+            typeof editingRule === "number"
+              ? ownRuleToInitial(watchedGates[editingRule]!)
+              : undefined
+          }
+          onClose={() => setEditingRule(null)}
+          onSave={(rule) =>
+            saveRule({
+              match: rule.match,
+              decision: rule.decision,
+              ...(rule.resolve ? { resolve: rule.resolve } : {}),
+            })
+          }
+        />
+      )}
+    </PageContainer>,
+  );
+}

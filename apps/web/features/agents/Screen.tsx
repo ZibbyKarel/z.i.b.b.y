@@ -12,6 +12,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -22,33 +23,26 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { slug } from "../../utils/slug";
 import { usePipelinesQuery } from "../pipelines";
-import { useNewTask } from "../tasks";
-import { newAgentDraft } from "./agentDraft";
 import { AgentCard } from "./components/AgentCard";
-import { AgentDetailModal } from "./components/AgentDetailModal";
+import { NewAgentDialog } from "./components/NewAgentDialog";
 import {
   useCreateAgentMutation,
   useCreateCategoryMutation,
-  useDeleteAgentMutation,
   useDeleteCategoryMutation,
-  useUpdateAgentMutation,
 } from "./mutations";
 import { useAgentsQuery, useCategoriesQuery } from "./queries";
 
 export function Screen() {
   const ta = useTranslations("agents");
+  const router = useRouter();
   const agentsQuery = useAgentsQuery();
   const agents = agentsQuery.data ?? [];
   const { data: categories = [] } = useCategoriesQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const createAgent = useCreateAgentMutation();
-  const updateAgent = useUpdateAgentMutation();
-  const deleteAgent = useDeleteAgentMutation();
   const createCategory = useCreateCategoryMutation();
   const deleteCategory = useDeleteCategoryMutation();
-  const { open: openNewTask } = useNewTask();
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Agent | null>(null);
+  const [creating, setCreating] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
 
   const list = agents;
@@ -61,17 +55,19 @@ export function Screen() {
   const pipelineCount = (a: Agent) =>
     pipelines.filter((p) => p.phases.some((ph) => ph.agent === a.name)).length;
 
-  const openAgent = openId ? (agents.find((a) => a.id === openId) ?? null) : null;
-
-  const save = (d: Agent, isNew: boolean) => {
-    if (isNew) {
-      const id = slug(d.name ?? "") || `agent-${Date.now()}`;
-      createAgent.mutate({ body: { ...d, id } }, { onSuccess: () => setOpenId(id) });
-      setDraft(null);
-    } else {
-      const { id, ...body } = d;
-      updateAgent.mutate({ params: { id }, body });
-    }
+  // Grammar (N4c): the dialog only births the draft; the new detail page is
+  // where the agent lives — navigate straight to it after the create lands.
+  const create = (d: Agent) => {
+    const id = slug(d.name ?? "") || `agent-${Date.now()}`;
+    createAgent.mutate(
+      { body: { ...d, id } },
+      {
+        onSuccess: () => {
+          setCreating(false);
+          router.push(`/agents/${id}`);
+        },
+      },
+    );
   };
 
   const renderSection = (key: string, label: string, glyph: IconName, items: Agent[]) => {
@@ -118,7 +114,7 @@ export function Screen() {
               <AgentCard
                 agent={a}
                 key={a.id}
-                onClick={(x) => setOpenId(x.id)}
+                onClick={(x) => router.push(`/agents/${x.id}`)}
                 pipelineCount={pipelineCount(a)}
               />
             ))}
@@ -137,11 +133,7 @@ export function Screen() {
               <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
                 {ta("addCategory")}
               </Button>
-              <Button
-                icon="plus"
-                intent="primary"
-                onClick={() => setDraft(newAgentDraft(categories[0]?.name))}
-              >
+              <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
                 {ta("addAgent")}
               </Button>
             </>
@@ -167,7 +159,7 @@ export function Screen() {
             description={ta("emptyDescription")}
             glyph="bot"
             hint={ta("emptyHint")}
-            onAction={() => setDraft(newAgentDraft())}
+            onAction={() => setCreating(true)}
             title={ta("emptyTitle")}
           />
         ) : (
@@ -186,40 +178,12 @@ export function Screen() {
         )}
       </Stack>
 
-      {openAgent && (
-        <AgentDetailModal
-          agent={openAgent}
+      {creating && (
+        <NewAgentDialog
           categories={categories}
-          key={openAgent.id}
-          mode="view"
-          onClose={() => setOpenId(null)}
-          onDelete={(id) => {
-            deleteAgent.mutate({ params: { id } }, { onSuccess: () => setOpenId(null) });
-          }}
-          onRun={(a) => {
-            if (!a.id) return;
-            // Only a task runs: pre-select the agent in the New Task dialog (the
-            // classifier still runs and the target stays changeable) instead of
-            // starting an agent run directly.
-            openNewTask(undefined, { kind: "agent", id: a.id, name: a.name ?? a.id, glyph: "bot" });
-            setOpenId(null);
-          }}
-          onSave={save}
-          pipelines={pipelines}
-        />
-      )}
-
-      {draft && (
-        <AgentDetailModal
-          agent={draft}
-          categories={categories}
-          key="new-agent"
-          mode="new"
-          onClose={() => setDraft(null)}
-          onDelete={() => setDraft(null)}
-          onRun={() => {}}
-          onSave={save}
-          pipelines={pipelines}
+          onClose={() => setCreating(false)}
+          onCreate={create}
+          pending={createAgent.isPending}
         />
       )}
 
