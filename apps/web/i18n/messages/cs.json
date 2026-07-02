@@ -447,7 +447,10 @@
     "credentialsStored": "Secret je uložen — zadej nový pro výměnu",
     "credentialsNone": "Zatím bez secretu",
     "enabledLabel": "Aktivní",
-    "create": "Vytvořit"
+    "create": "Vytvořit",
+    "detailPanel": "Konfigurace integrace",
+    "deleteTitle": "Smazat integraci?",
+    "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
   },
   "inbox": {
     "title": "Příchozí zprávy",

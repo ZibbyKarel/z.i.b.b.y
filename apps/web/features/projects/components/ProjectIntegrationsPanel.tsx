@@ -2,25 +2,22 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Alert, Button, Grid, Stack, Typography } from "@zibby/design-system";
 import type { Integration } from "@zibby/contracts";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { IntegrationCard } from "../../integrations/components/IntegrationCard";
 import {
-  type IntegrationDraft,
+  type IntegrationCreateDraft,
   IntegrationFormDialog,
 } from "../../integrations/components/IntegrationFormDialog";
 import {
   useCreateIntegrationMutation,
-  useDeleteIntegrationMutation,
   useIntegrationsQuery,
   useSetCredentialsMutation,
   useTestIntegrationMutation,
   useUpdateIntegrationMutation,
 } from "../../integrations";
-
-/** Which integration the form dialog is open for: "new", an entity, or closed. */
-type Editing = "new" | Integration | null;
 
 export interface ProjectIntegrationsPanelProps {
   /** The project that owns the integrations shown here (one project = one company). */
@@ -29,52 +26,44 @@ export interface ProjectIntegrationsPanelProps {
 
 /**
  * The integrations section on the project detail. Integrations are owned by a
- * project now (there is no global integrations page); this panel lists the
- * project's channels and lets the operator add, configure, test, set credentials
- * for, or remove one — all scoped to `projectId` (the create payload carries it,
- * the list query filters by it).
+ * project (there is no global integrations page); this panel lists the
+ * project's channels with labeled quick actions (test, enable toggle) — while
+ * Configure NAVIGATES to the project-nested integration detail page (N4h
+ * grammar), which also owns delete (behind a confirm; the card used to delete
+ * unconfirmed). The create dialog is create-only and lands on the new detail.
  */
 export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanelProps) {
   const t = useTranslations();
+  const router = useRouter();
   const integrationsQuery = useIntegrationsQuery(projectId);
   const integrations = integrationsQuery.data ?? [];
-  const [editing, setEditing] = useState<Editing>(null);
+  const [creating, setCreating] = useState(false);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; detail: string } | null>(
     null,
   );
 
   const create = useCreateIntegrationMutation();
   const update = useUpdateIntegrationMutation();
-  const remove = useDeleteIntegrationMutation();
   const setCredentials = useSetCredentialsMutation();
   const test = useTestIntegrationMutation();
 
-  /** Persist a freshly entered secret (if any) for an integration. */
-  const persistSecret = (id: string, kind: Integration["kind"], secret: string | undefined) => {
-    if (!secret) return;
-    setCredentials.mutate({
-      params: { id },
-      // Email authenticates with a password; Slack/Jira/GitHub all carry a token.
-      body: kind === "email" ? { password: secret } : { token: secret },
-    });
-  };
-
-  const onSubmit = (draft: IntegrationDraft) => {
-    if (draft.create) {
-      const { id, kind } = draft.create;
-      create.mutate(
-        { body: draft.create },
-        { onSuccess: () => persistSecret(id, kind, draft.secret) },
-      );
-    } else if (draft.update) {
-      const { id, patch } = draft.update;
-      const kind = (editing !== "new" && editing?.kind) || "slack";
-      update.mutate(
-        { params: { id }, body: patch },
-        { onSuccess: () => persistSecret(id, kind, draft.secret) },
-      );
-    }
-    setEditing(null);
+  const onCreate = ({ create: body, secret }: IntegrationCreateDraft) => {
+    create.mutate(
+      { body },
+      {
+        onSuccess: () => {
+          if (secret) {
+            setCredentials.mutate({
+              params: { id: body.id },
+              // Email authenticates with a password; Slack/Jira/GitHub all carry a token.
+              body: body.kind === "email" ? { password: secret } : { token: secret },
+            });
+          }
+          setCreating(false);
+          router.push(`/projects/${projectId}/integrations/${body.id}`);
+        },
+      },
+    );
   };
 
   const onTest = (integration: Integration) => {
@@ -90,10 +79,6 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
     );
   };
 
-  const onDelete = (integration: Integration) => {
-    remove.mutate({ params: { id: integration.id } });
-  };
-
   return (
     <HudPanel
       action={
@@ -101,7 +86,7 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
           data-testid="add-integration"
           icon="plus"
           intent="primary"
-          onClick={() => setEditing("new")}
+          onClick={() => setCreating(true)}
           size="sm"
         >
           {t("projects.integrations.add")}
@@ -134,8 +119,9 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
               <IntegrationCard
                 integration={i}
                 key={i.id}
-                onConfigure={(integration) => setEditing(integration)}
-                onDelete={onDelete}
+                onConfigure={(integration) =>
+                  router.push(`/projects/${projectId}/integrations/${integration.id}`)
+                }
                 onTest={onTest}
                 onToggleEnabled={(integration) =>
                   update.mutate({
@@ -151,11 +137,10 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
         )}
       </Stack>
 
-      {editing !== null && (
+      {creating && (
         <IntegrationFormDialog
-          integration={editing === "new" ? undefined : editing}
-          onClose={() => setEditing(null)}
-          onSubmit={onSubmit}
+          onClose={() => setCreating(false)}
+          onCreate={onCreate}
           projectId={projectId}
         />
       )}

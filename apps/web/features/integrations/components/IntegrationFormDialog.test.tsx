@@ -4,15 +4,16 @@ import { describe, expect, it, vi } from "vitest";
 import { IntegrationFormDialog, IntegrationFormTestId } from "./IntegrationFormDialog";
 
 /**
- * The dialog is a pure controlled form: it emits a `{ create | update, secret }`
- * draft and never touches the network. These tests pin the kind-specific create
+ * The dialog is a pure controlled CREATE-ONLY form (N4h — editing lives on the
+ * project-nested detail page): it emits a `{ create, secret }` draft and never
+ * touches the network. These tests pin the kind-specific create
  * payload and that a freshly entered secret rides alongside (the screen persists
  * it through the separate credentials mutation).
  */
 describe("IntegrationFormDialog", () => {
   it("emits a slack create payload with parsed channels and the secret separately", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     await userEvent.type(screen.getByTestId("integration-id"), "team-slack");
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.Name), "Team Slack");
@@ -37,7 +38,7 @@ describe("IntegrationFormDialog", () => {
 
   it("switches to email config when the kind dropdown changes", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     // Open the kind dropdown and pick the email option (cs catalog → "E-mail").
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
@@ -63,7 +64,7 @@ describe("IntegrationFormDialog", () => {
 
   it("emits a jira create payload with the non-secret config and the token separately", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("Jira"));
@@ -93,7 +94,7 @@ describe("IntegrationFormDialog", () => {
 
   it("emits a github create payload, dropping a disabled stream", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("GitHub"));
@@ -117,7 +118,7 @@ describe("IntegrationFormDialog", () => {
 
   it("emits a calendar create payload, defaulting the calendar id, with the SA key separate", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("Kalendář"));
@@ -139,7 +140,7 @@ describe("IntegrationFormDialog", () => {
 
   it("blocks save until a github repo is owner/name shaped", async () => {
     const onSubmit = vi.fn();
-    render(<IntegrationFormDialog onClose={vi.fn()} onSubmit={onSubmit} projectId="acme-app" />);
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("GitHub"));

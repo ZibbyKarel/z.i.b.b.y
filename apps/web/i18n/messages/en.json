@@ -447,7 +447,10 @@
     "credentialsStored": "Secret stored — enter a new one to replace it",
     "credentialsNone": "No secret yet",
     "enabledLabel": "Enabled",
-    "create": "Create"
+    "create": "Create",
+    "detailPanel": "Integration configuration",
+    "deleteTitle": "Delete integration?",
+    "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone."
   },
   "inbox": {
     "title": "Inbox",
