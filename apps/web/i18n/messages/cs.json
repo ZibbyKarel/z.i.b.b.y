@@ -1291,7 +1291,10 @@
     "commandHint": "Shellový příkaz, který se spustí",
     "timeoutLabel": "Timeout (s)",
     "timeoutHint": "Tvrdý limit v sekundách",
-    "enabledLabel": "Aktivní"
+    "enabledLabel": "Aktivní",
+    "detailPanel": "Konfigurace hooku",
+    "deleteTitle": "Smazat hook?",
+    "deleteBody": "Opravdu smazat hook {name}? Tuto akci nelze vrátit."
   },
   "mcp": {
     "title": "MCP servery",
@@ -1317,7 +1320,10 @@
     "authTokenHint": "Write-only — uloží se do odděleného úložiště",
     "credentialsStored": "Secret je uložen — zadej nový pro výměnu",
     "credentialsNone": "Zatím bez secretu",
-    "enabledLabel": "Aktivní"
+    "enabledLabel": "Aktivní",
+    "detailPanel": "Konfigurace serveru",
+    "deleteTitle": "Smazat MCP server?",
+    "deleteBody": "Opravdu smazat server {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
   },
   "commands": {
     "title": "Příkazy",

@@ -2,53 +2,42 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button, Stack } from "@zibby/design-system";
-import type { McpServer } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Collection } from "../../components/Collection/Collection";
 import { McpServerCard } from "./components/McpServerCard";
-import { type McpServerDraft, McpServerFormDialog } from "./components/McpServerFormDialog";
+import { type McpServerCreateDraft, McpServerFormDialog } from "./components/McpServerFormDialog";
 import { useMcpServersQuery } from "./queries";
-import {
-  useCreateMcpServerMutation,
-  useDeleteMcpServerMutation,
-  useSetMcpCredentialsMutation,
-  useUpdateMcpServerMutation,
-} from "./mutations";
-
-/** Which server the form dialog is open for: "new", an entity, or closed. */
-type Editing = "new" | McpServer | null;
+import { useCreateMcpServerMutation, useSetMcpCredentialsMutation } from "./mutations";
 
 export function Screen() {
   const t = useTranslations();
+  const router = useRouter();
   const serversQuery = useMcpServersQuery();
   const servers = serversQuery.data ?? [];
-  const [editing, setEditing] = useState<Editing>(null);
+  const [creating, setCreating] = useState(false);
 
   const create = useCreateMcpServerMutation();
-  const update = useUpdateMcpServerMutation();
-  const remove = useDeleteMcpServerMutation();
   const setCredentials = useSetMcpCredentialsMutation();
 
-  /** Persist a freshly entered auth token (if any) for a server. */
-  const persistToken = (id: string, token: string | undefined) => {
-    if (!token) return;
-    setCredentials.mutate({ params: { id }, body: { authToken: token } });
-  };
-
-  const onSubmit = (draft: McpServerDraft) => {
-    if (draft.create) {
-      const { id } = draft.create;
-      create.mutate({ body: draft.create }, { onSuccess: () => persistToken(id, draft.authToken) });
-    } else if (draft.update) {
-      const { id, patch } = draft.update;
-      update.mutate(
-        { params: { id }, body: patch },
-        { onSuccess: () => persistToken(id, draft.authToken) },
-      );
-    }
-    setEditing(null);
+  const onCreate = ({ create: body, authToken }: McpServerCreateDraft) => {
+    create.mutate(
+      { body },
+      {
+        onSuccess: () => {
+          // The token rides out-of-band — persisted through the SEPARATE
+          // credentials endpoint, never inside the stored config.
+          if (authToken) {
+            setCredentials.mutate({ params: { id: body.id }, body: { authToken } });
+          }
+          setCreating(false);
+          // The dialog only births the server; editing lives on the detail page.
+          router.push(`/mcp/${body.id}`);
+        },
+      },
+    );
   };
 
   return (
@@ -56,7 +45,7 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
               {t("mcp.addServer")}
             </Button>
           }
@@ -71,7 +60,7 @@ export function Screen() {
             description: t("mcp.emptyDescription"),
             actionLabel: t("mcp.addServer"),
             hint: t("mcp.emptyHint"),
-            onAction: () => setEditing("new"),
+            onAction: () => setCreating(true),
           }}
           error={
             serversQuery.isError
@@ -86,26 +75,17 @@ export function Screen() {
           items={servers}
           loading={serversQuery.isPending ? { label: t("common.loading") } : undefined}
           renderItem={(s) => (
-            <McpServerCard key={s.id} onConfigure={(server) => setEditing(server)} server={s} />
+            // Grammar (N4e): Configure NAVIGATES to the detail page — no edit dialog.
+            <McpServerCard
+              key={s.id}
+              onConfigure={(server) => router.push(`/mcp/${server.id}`)}
+              server={s}
+            />
           )}
         />
       </Stack>
 
-      {editing !== null && (
-        <McpServerFormDialog
-          onClose={() => setEditing(null)}
-          onDelete={
-            editing === "new"
-              ? undefined
-              : () => {
-                  remove.mutate({ params: { id: editing.id } });
-                  setEditing(null);
-                }
-          }
-          onSubmit={onSubmit}
-          server={editing === "new" ? undefined : editing}
-        />
-      )}
+      {creating && <McpServerFormDialog onClose={() => setCreating(false)} onCreate={onCreate} />}
     </PageContainer>
   );
 }

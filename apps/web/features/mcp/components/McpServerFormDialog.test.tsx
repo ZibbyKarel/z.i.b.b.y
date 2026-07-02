@@ -4,15 +4,16 @@ import { describe, expect, it, vi } from "vitest";
 import { McpServerFormDialog, McpServerFormTestId } from "./McpServerFormDialog";
 
 /**
- * The dialog is a pure controlled form: it emits a `{ create | update, authToken }`
- * draft and never touches the network. These tests pin the stdio create payload
- * and that a freshly entered token rides alongside (the screen persists it through
- * the separate credentials mutation) — never folded into the create body.
+ * The dialog is a pure controlled CREATE-ONLY form (N4e — editing lives on the
+ * /mcp/:id detail page): it emits a `{ create, authToken }` draft and never
+ * touches the network. These tests pin the stdio create payload and that a
+ * freshly entered token rides alongside (the screen persists it through the
+ * separate credentials mutation) — never folded into the create body.
  */
 describe("McpServerFormDialog", () => {
   it("emits a stdio create payload with parsed args and the token separately", async () => {
     const onSubmit = vi.fn();
-    render(<McpServerFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<McpServerFormDialog onClose={vi.fn()} onCreate={onSubmit} />);
 
     // stdio is the default transport, so command/args fields are present.
     await userEvent.type(screen.getByTestId(McpServerFormTestId.Id), "github");
@@ -41,7 +42,7 @@ describe("McpServerFormDialog", () => {
 
   it("switches to url/headers fields when the transport is http", async () => {
     const onSubmit = vi.fn();
-    render(<McpServerFormDialog onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<McpServerFormDialog onClose={vi.fn()} onCreate={onSubmit} />);
 
     await userEvent.click(screen.getByTestId("dropdown-trigger"));
     await userEvent.click(screen.getByText("HTTP"));

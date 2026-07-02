@@ -15,7 +15,10 @@ const hook: Hook = {
 };
 
 const createMutate = vi.fn();
+const push = vi.fn();
 let listData: Hook[] = [];
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 vi.mock("./queries", () => ({
   useHooksQuery: () => ({ data: listData }),
@@ -23,12 +26,11 @@ vi.mock("./queries", () => ({
 
 vi.mock("./mutations", () => ({
   useCreateHookMutation: () => ({ mutate: createMutate, isPending: false }),
-  useUpdateHookMutation: () => ({ mutate: vi.fn(), isPending: false }),
-  useDeleteHookMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 beforeEach(() => {
   createMutate.mockReset();
+  push.mockClear();
   listData = [];
 });
 
@@ -37,6 +39,14 @@ describe("Hooks Screen", () => {
     listData = [hook];
     render(<Screen />);
     expect(screen.getByText("Audit Log")).toBeInTheDocument();
+  });
+
+  it("Configure NAVIGATES to the hook detail route (N4e grammar) — no dialog", async () => {
+    listData = [hook];
+    render(<Screen />);
+    await userEvent.click(screen.getByRole("button", { name: "Konfigurovat" }));
+    expect(push).toHaveBeenCalledWith("/hooks/audit-log");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("creates a hook through the create mutation", async () => {

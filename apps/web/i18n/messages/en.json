@@ -1291,7 +1291,10 @@
     "commandHint": "Shell command that runs",
     "timeoutLabel": "Timeout (s)",
     "timeoutHint": "Hard limit in seconds",
-    "enabledLabel": "Enabled"
+    "enabledLabel": "Enabled",
+    "detailPanel": "Hook configuration",
+    "deleteTitle": "Delete hook?",
+    "deleteBody": "Really delete hook {name}? This cannot be undone."
   },
   "mcp": {
     "title": "MCP servers",
@@ -1317,7 +1320,10 @@
     "authTokenHint": "Write-only — stored in a separate vault",
     "credentialsStored": "A secret is stored — enter a new one to replace it",
     "credentialsNone": "No secret yet",
-    "enabledLabel": "Enabled"
+    "enabledLabel": "Enabled",
+    "detailPanel": "Server configuration",
+    "deleteTitle": "Delete MCP server?",
+    "deleteBody": "Really delete server {name}? Stored credentials are deleted too. This cannot be undone."
   },
   "commands": {
     "title": "Commands",

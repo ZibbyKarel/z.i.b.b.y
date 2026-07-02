@@ -17,7 +17,10 @@ const server: McpServer = {
 
 const createMutate = vi.fn();
 const setCredentialsMutate = vi.fn();
+const push = vi.fn();
 let listData: McpServer[] = [];
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 vi.mock("./queries", () => ({
   useMcpServersQuery: () => ({ data: listData }),
@@ -25,14 +28,13 @@ vi.mock("./queries", () => ({
 
 vi.mock("./mutations", () => ({
   useCreateMcpServerMutation: () => ({ mutate: createMutate, isPending: false }),
-  useUpdateMcpServerMutation: () => ({ mutate: vi.fn(), isPending: false }),
-  useDeleteMcpServerMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useSetMcpCredentialsMutation: () => ({ mutate: setCredentialsMutate, isPending: false }),
 }));
 
 beforeEach(() => {
   createMutate.mockReset();
   setCredentialsMutate.mockReset();
+  push.mockClear();
   listData = [];
 });
 
@@ -41,6 +43,14 @@ describe("MCP Screen", () => {
     listData = [server];
     render(<Screen />);
     expect(screen.getByText("GitHub")).toBeInTheDocument();
+  });
+
+  it("Configure NAVIGATES to the server detail route (N4e grammar) — no dialog", async () => {
+    listData = [server];
+    render(<Screen />);
+    await userEvent.click(screen.getByRole("button", { name: "Konfigurovat" }));
+    expect(push).toHaveBeenCalledWith("/mcp/github");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("creates a server then persists the token via the credentials mutation", async () => {

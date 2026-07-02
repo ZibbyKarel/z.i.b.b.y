@@ -2,45 +2,31 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button, Stack } from "@zibby/design-system";
-import type { Hook } from "@zibby/contracts";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Collection } from "../../components/Collection/Collection";
 import { HookCard } from "./components/HookCard";
-import { type HookDraft, HookFormDialog } from "./components/HookFormDialog";
+import { HookFormDialog } from "./components/HookFormDialog";
 import { useHooksQuery } from "./queries";
-import { useCreateHookMutation, useDeleteHookMutation, useUpdateHookMutation } from "./mutations";
-
-/** Which hook the form dialog is open for: "new", an entity, or closed. */
-type Editing = "new" | Hook | null;
+import { useCreateHookMutation } from "./mutations";
 
 export function Screen() {
   const t = useTranslations();
+  const router = useRouter();
   const hooksQuery = useHooksQuery();
   const hooks = hooksQuery.data ?? [];
-  const [editing, setEditing] = useState<Editing>(null);
+  const [creating, setCreating] = useState(false);
 
   const create = useCreateHookMutation();
-  const update = useUpdateHookMutation();
-  const remove = useDeleteHookMutation();
-
-  const onSubmit = (draft: HookDraft) => {
-    if (draft.create) {
-      create.mutate({ body: draft.create });
-    } else if (draft.update) {
-      const { id, patch } = draft.update;
-      update.mutate({ params: { id }, body: patch });
-    }
-    setEditing(null);
-  };
 
   return (
     <PageContainer>
       <Stack gap="250">
         <PageHeader
           actions={
-            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
               {t("hooks.addHook")}
             </Button>
           }
@@ -55,7 +41,7 @@ export function Screen() {
             description: t("hooks.emptyDescription"),
             actionLabel: t("hooks.addHook"),
             hint: t("hooks.emptyHint"),
-            onAction: () => setEditing("new"),
+            onAction: () => setCreating(true),
           }}
           error={
             hooksQuery.isError
@@ -70,24 +56,27 @@ export function Screen() {
           items={hooks}
           loading={hooksQuery.isPending ? { label: t("common.loading") } : undefined}
           renderItem={(h) => (
-            <HookCard hook={h} key={h.id} onConfigure={(hook) => setEditing(hook)} />
+            // Grammar (N4e): Configure NAVIGATES to the detail page — no edit dialog.
+            <HookCard hook={h} key={h.id} onConfigure={(hook) => router.push(`/hooks/${hook.id}`)} />
           )}
         />
       </Stack>
 
-      {editing !== null && (
+      {creating && (
         <HookFormDialog
-          hook={editing === "new" ? undefined : editing}
-          onClose={() => setEditing(null)}
-          onDelete={
-            editing === "new"
-              ? undefined
-              : () => {
-                  remove.mutate({ params: { id: editing.id } });
-                  setEditing(null);
-                }
+          onClose={() => setCreating(false)}
+          onCreate={(body) =>
+            create.mutate(
+              { body },
+              {
+                // The dialog only births the hook; editing lives on the detail page.
+                onSuccess: () => {
+                  setCreating(false);
+                  router.push(`/hooks/${body.id}`);
+                },
+              },
+            )
           }
-          onSubmit={onSubmit}
         />
       )}
     </PageContainer>
