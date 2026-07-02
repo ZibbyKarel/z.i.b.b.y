@@ -4,6 +4,18 @@
 
 ## Poslední dokončená fáze
 
+**N4e — Hooks + MCP na gramatiku** — 2026-07-02, commit `feat(web): N4e hooks + MCP …`
+
+- Třetí dávka na šabloně N4c: „Konfigurovat" na kartě naviguje na `/hooks/[id]`
+  a `/mcp/[id]` detail stránky (dřív create+edit dialogy); Save/Delete vpravo
+  nahoře, id/transport zamčené, mazání za confirm dialogem (dřív bez
+  potvrzení). Dialogy create-only; controlled form state + pole extrahovány do
+  `useHookFormState`/`HookFormFields` a `useMcpFormState`/`McpServerFormFields`.
+  MCP auth token dál jede out-of-band přes credentials mutaci na obou plochách.
+- Typing gotcha: `UpdateXInput` je partial — sdílený builder polí nechat
+  INFEROVANÝ (neanotovat partial typem), jinak create body ztratí required
+  fields. Suita 2045/0. Detail: `docs/plans/phase-n4e-hooks-mcp-grammar.md`.
+
 **N4d — Skills + Commands na gramatiku** — 2026-07-02, commit `feat(web): N4d skills + commands …`
 
 - Druhá dávka na šabloně N4c: tiles navigují na `/skills/[id]` a
@@ -103,9 +115,10 @@
 
 ## Další fáze (návrh)
 
-**N4e — zbylé edit dialogy (automations, hooks, mcp)**: tři FormDialogy s edit
-modem (AutomationFormDialog, HookFormDialog, McpServerFormDialog) na gramatiku.
-Gramatika váží víc než per-entita optimalizace (stejná afordance na stejném
-místě) — GROUND příští iterace rozhodne detail stránka vs. konformní
-inline-edit na místě (entity jsou kompaktní config; karta možná není
-navigační). Pak integrations + memory editor dialog.
+**N4f — Automations na gramatiku**: poslední velký edit dialog
+(AutomationFormDialog — trigger builder cron/event, target picker, system
+automatizace se zamčeným vším kromě schedule). Detail stránka
+`/automations/[id]` na N4c šabloně; research potvrzuje: multi-step konfigurace
+s validací/preview (cron label) patří na stránku, ne do modalu. Pak zbývá
+integrations edit dialog (na project detailu) + memory editor mode a N4
+gramatická řada je kompletní.

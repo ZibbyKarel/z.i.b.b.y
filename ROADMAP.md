@@ -198,8 +198,11 @@ rewrite.
 > detail page, card navigates, create-only dialog, Run wired.
 > ✅ **N4d DELIVERED 2026-07-02** — skills + commands on the same template
 > (`/skills/[id]`, `/commands/[id]`, create-only dialogs, confirm-gated delete;
-> `docs/plans/phase-n4d-skills-commands-grammar.md`). Remaining offenders:
-> automations, hooks, mcp, integrations, memory (edit dialogs) — N4e batches.
+> `docs/plans/phase-n4d-skills-commands-grammar.md`).
+> ✅ **N4e DELIVERED 2026-07-02** — hooks + MCP detail pages (`/hooks/[id]`,
+> `/mcp/[id]`, create-only dialogs, confirm-gated delete;
+> `docs/plans/phase-n4e-hooks-mcp-grammar.md`). Remaining offenders:
+> automations (N4f), then integrations + memory editor.
 
 **Why fourth:** the system _works_ but does not yet feel like one product. This is a
 first-class goal (north-star _"The Interface — One Language, Everywhere"_), not end-of-run
