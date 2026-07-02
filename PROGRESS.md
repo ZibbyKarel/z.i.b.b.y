@@ -4,6 +4,21 @@
 
 ## Poslední dokončená fáze
 
+**N4h — Integrations na gramatiku (UZAVÍRÁ řadu N4c–N4h)** — 2026-07-02,
+commit `feat(web): N4h integrations …`
+
+- Poslední porušitel: Konfigurovat na kartě naviguje na nested
+  `/projects/[id]/integrations/[integrationId]` (GitLab precedens — integrace
+  patří projektu). Stránka = editační plocha (kind+id zamčené), Uložit / Test
+  spojení (Alert) / Smazat (confirm; z karty odstraněno — mazala bez potvrzení)
+  vpravo nahoře. Dialog create-only → naviguje na detail; kind-switching
+  formulář extrahován do `useIntegrationFormState`/`IntegrationFormFields`;
+  write-only secret dál out-of-band (email→password, jinak token).
+- Gotcha: typed routes neodvodí template s query stringem uložený do const —
+  explicitní `as Route`. **Gramatická řada KOMPLETNÍ**: agents, skills,
+  commands, hooks, mcp, automations, memory, integrations konformní.
+- Suita 2056/0, ESLint 0. Detail: `docs/plans/phase-n4h-integrations-grammar.md`.
+
 **N4g — Memory note editing in place** — 2026-07-02, commit `feat(web): N4g memory …`
 
 - Editace velkého markdown těla už neotvírá dialog: `NoteView` je view⇄edit
@@ -136,10 +151,11 @@
 
 ## Další fáze (návrh)
 
-**N4h — Integrations na gramatiku UZAVÍRÁ řadu**: poslední porušitel —
-IntegrationFormDialog (15K kind-switching form, create+edit, write-only
-secret) na project detailu. GROUND rozhodne umístění edit plochy: GitLab
-precedens = nested route pod rodičem (Settings → Webhooks → webhook page),
-tzn. `/projects/[id]/integrations/[integrationId]`, vs. flat
-`/integrations/[id]` (globální /integrations page ale neexistuje — integrace
-patří projektům). Pak z N4 zbývá HUD ⇄ Chat-UI vizuální sjednocení.
+**N4i — HUD ⇄ Chat-UI sjednocení (poslední kus N4)**: GROUND zjistí reálný
+stav chat plochy (apps/api/src/chat existuje; web chat surface?) a srovná ji
+s DS + gramatikou — vzor: embedded assistant panel vedle strukturované plochy
+(Notion styl), bubliny/streaming komponované VÝHRADNĚ z DS primitiv, jeden
+vizuální jazyk s HUD (research: constrain to component library; a11y streaming
+announcements). Pokud chat web surface neexistuje, fáze = postavit ji na
+`docs/plans`/chat-engine recipe (memory: project_chat_engine_recipe). Pak N5
+(computer use, nice-to-have) / NC.

@@ -29,7 +29,8 @@ app/
     │   └── [id]/page.tsx   Detail pipeline + history runů
     ├── projects/
     │   ├── page.tsx        Portfolio projektů
-    │   └── [id]/page.tsx   Detail projektu (tým, autonomie, integrace + inbox)
+    │   ├── [id]/page.tsx   Detail projektu (tým, autonomie, integrace + inbox)
+    │   └── [id]/integrations/[integrationId]/page.tsx  Detail integrace (N4h)
     ├── runs/page.tsx       Historie runů
     ├── settings/page.tsx   Nastavení workspace
     └── skills/
