@@ -1270,7 +1270,9 @@
       "weekday": "{day} at {time}",
       "days": "{days} at {time}",
       "monthly": "Monthly on day {day} at {time}"
-    }
+    },
+    "deleteTitle": "Delete automation?",
+    "deleteBody": "Really delete automation {name}? This cannot be undone."
   },
   "hooks": {
     "title": "Hooks",

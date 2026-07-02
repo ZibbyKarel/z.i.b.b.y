@@ -1270,7 +1270,9 @@
       "weekday": "{day} v {time}",
       "days": "{days} v {time}",
       "monthly": "Měsíčně {day}. v {time}"
-    }
+    },
+    "deleteTitle": "Smazat automatizaci?",
+    "deleteBody": "Opravdu smazat automatizaci {name}? Tuto akci nelze vrátit."
   },
   "hooks": {
     "title": "Hooky",

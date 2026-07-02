@@ -15,18 +15,6 @@ const automation: Automation = {
   lastFiredAt: "2026-06-12T07:00:00.000Z",
 };
 
-const eventAutomation: Automation = {
-  id: "on-file",
-  name: "Po události",
-  trigger: { type: "event", events: ["file.created", "pr.opened"] },
-  // A briefing target (no agent picker) so the round-trip doesn't depend on the
-  // mocked-empty agents list — and it proves the prompt shows for a non-agent target.
-  target: { type: "briefing" },
-  prompt: "Piš stručně",
-  enabled: true,
-  system: false,
-};
-
 const systemAutomation: Automation = {
   id: "memory-distill",
   name: "Destilace paměti",
@@ -39,8 +27,10 @@ const systemAutomation: Automation = {
 const trigger = vi.fn();
 const update = vi.fn();
 const create = vi.fn();
+const push = vi.fn();
 let automations: Automation[] = [automation];
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("./queries", () => ({
   useAutomationsQuery: () => ({ data: automations }),
 }));
@@ -58,6 +48,7 @@ describe("Automations Screen", () => {
     trigger.mockClear();
     update.mockClear();
     create.mockClear();
+    push.mockClear();
   });
 
   it("renders the cron automation with a human-readable schedule (not raw cron)", () => {
@@ -84,11 +75,11 @@ describe("Automations Screen", () => {
     });
   });
 
-  it("opens the edit dialog prefilled for an existing automation", () => {
+  it("Edit NAVIGATES to the automation detail route (N4f grammar) — no dialog", () => {
     render(<Screen />);
     fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
-    expect(screen.getByText("Upravit automatizaci")).toBeInTheDocument();
-    expect(screen.getByTestId(AutomationFormTestId.Name)).toHaveValue("Ranní standup");
+    expect(push).toHaveBeenCalledWith("/automations/morning-standup");
+    expect(screen.queryByText("Upravit automatizaci")).toBeNull();
   });
 
   it("opens the create dialog from the header action with the prompt always visible", () => {
@@ -99,18 +90,6 @@ describe("Automations Screen", () => {
     expect(screen.getByTestId(AutomationFormTestId.Prompt)).toBeInTheDocument();
   });
 
-  it("edits an event automation: prompt is shown and round-trips with trigger.events", () => {
-    automations = [eventAutomation];
-    render(<Screen />);
-    fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
-    // Prompt is always visible (not only for agent targets) and prefilled from top-level.
-    expect(screen.getByTestId(AutomationFormTestId.Prompt)).toHaveValue("Piš stručně");
-    fireEvent.click(screen.getByTestId(AutomationFormTestId.Submit));
-    expect(update).toHaveBeenCalledTimes(1);
-    const body = update.mock.calls[0]?.[0]?.body;
-    expect(body.trigger).toEqual({ type: "event", events: ["file.created", "pr.opened"] });
-    expect(body.prompt).toBe("Piš stručně");
-  });
 });
 
 describe("Automations Screen — system automation", () => {
@@ -119,6 +98,7 @@ describe("Automations Screen — system automation", () => {
     trigger.mockClear();
     update.mockClear();
     create.mockClear();
+    push.mockClear();
   });
 
   it("shows the system badge and renders the memory-distill target label", () => {
@@ -135,15 +115,10 @@ describe("Automations Screen — system automation", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("on edit, persists only the schedule (trigger) — never target/enabled", () => {
+  it("Edit navigates to the detail (the schedule-only lock lives there now)", () => {
     render(<Screen />);
     fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
-    // The schedule-only form has no target picker; submit saves trigger alone.
-    fireEvent.click(screen.getByTestId(AutomationFormTestId.Submit));
-    expect(update).toHaveBeenCalledTimes(1);
-    const call = update.mock.calls[0]?.[0];
-    expect(call.params).toEqual({ id: "memory-distill" });
-    expect(Object.keys(call.body)).toEqual(["trigger"]);
-    expect(call.body.trigger).toEqual({ type: "cron", expr: "0 3 * * *" });
+    expect(push).toHaveBeenCalledWith("/automations/memory-distill");
+    expect(update).not.toHaveBeenCalled();
   });
 });

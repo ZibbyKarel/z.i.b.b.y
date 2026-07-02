@@ -4,6 +4,7 @@ import type { Automation } from "@zibby/contracts";
 import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { Collection } from "@/components/Collection/Collection";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -20,18 +21,16 @@ import {
 } from "./mutations";
 import { useAutomationsQuery } from "./queries";
 
-/** Which automation the form dialog is open for: "new", an entity, or closed. */
-type Editing = "new" | Automation | null;
-
 export function Screen() {
   const t = useTranslations("automations");
+  const router = useRouter();
   const { data: automations = [] } = useAutomationsQuery();
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const create = useCreateAutomationMutation();
   const update = useUpdateAutomationMutation();
   const trigger = useTriggerAutomationMutation();
-  const [editing, setEditing] = useState<Editing>(null);
+  const [creating, setCreating] = useState(false);
 
   /** Resolve a target id to its display name + glyph for the card. */
   const resolveTarget = (automation: Automation): { name?: string; glyph?: IconName } => {
@@ -49,26 +48,18 @@ export function Screen() {
     return { glyph: "spark" };
   };
 
-  const onSubmit = (body: Omit<Automation, "lastFiredAt" | "system">) => {
-    if (editing === "new") {
-      create.mutate({ body }, { onSuccess: () => setEditing(null) });
-    } else if (editing) {
-      // A system automation may only change its schedule — send the trigger alone so
-      // we never even attempt the target/enabled changes the server would reject.
-      const patch = editing.system
-        ? { trigger: body.trigger }
-        : {
-            name: body.name,
-            trigger: body.trigger,
-            target: body.target,
-            prompt: body.prompt,
-            enabled: body.enabled,
-          };
-      update.mutate(
-        { params: { id: editing.id }, body: patch },
-        { onSuccess: () => setEditing(null) },
-      );
-    }
+  // Grammar (N4f): the dialog only births the automation; editing lives on the
+  // detail page — navigate straight to it after the create lands.
+  const onCreate = (body: Omit<Automation, "lastFiredAt" | "system">) => {
+    create.mutate(
+      { body },
+      {
+        onSuccess: () => {
+          setCreating(false);
+          router.push(`/automations/${body.id}`);
+        },
+      },
+    );
   };
 
   const renderCard = (automation: Automation) => {
@@ -77,7 +68,7 @@ export function Screen() {
       <AutomationCard
         automation={automation}
         key={automation.id}
-        onEdit={() => setEditing(automation)}
+        onEdit={() => router.push(`/automations/${automation.id}`)}
         onToggle={() =>
           update.mutate({ params: { id: automation.id }, body: { enabled: !automation.enabled } })
         }
@@ -98,7 +89,7 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Button icon="plus" intent="primary" onClick={() => setEditing("new")}>
+            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
               {t("addAutomation")}
             </Button>
           }
@@ -117,7 +108,7 @@ export function Screen() {
             actionLabel={t("addAutomation")}
             description={t("emptyDescription")}
             glyph="clock"
-            onAction={() => setEditing("new")}
+            onAction={() => setCreating(true)}
             title={t("emptyTitle")}
           />
         ) : (
@@ -154,12 +145,11 @@ export function Screen() {
         )}
       </Stack>
 
-      {editing !== null && (
+      {creating && (
         <AutomationFormDialog
           agents={agents}
-          automation={editing === "new" ? undefined : editing}
-          onClose={() => setEditing(null)}
-          onSubmit={onSubmit}
+          onClose={() => setCreating(false)}
+          onCreate={onCreate}
           pipelines={pipelines}
         />
       )}
