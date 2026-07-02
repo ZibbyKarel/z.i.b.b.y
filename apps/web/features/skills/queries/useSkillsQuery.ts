@@ -8,6 +8,11 @@ export function getSkillsQueryKey() {
   return ["skills"] as const;
 }
 
+/** Display-only backing file path for a skill id (the tiles and detail header show it). */
+export function skillFile(id: string): string {
+  return `~/zibby/skills/${id}/SKILL.md`;
+}
+
 /**
  * Map the contract `Skill` onto the dashboard's domain `Skill`: defaults the glyph
  * to the skill icon and derives the display-only `file` path the tiles show. This
@@ -21,7 +26,7 @@ function selectSkills(response: { body: ContractSkill[] }): Skill[] {
     glyph: (s.glyph as IconName | undefined) ?? "spark",
     desc: s.desc ?? "",
     category: s.category,
-    file: `~/zibby/skills/${s.id}/SKILL.md`,
+    file: skillFile(s.id),
     gateRuleIds: s.gateRuleIds,
   }));
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Card,
@@ -22,32 +23,26 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { AddSkillModal } from "./components/AddSkillModal/AddSkillModal";
 import { SkillTile } from "./components/SkillTile";
-import { useSkillCategoriesQuery, useSkillQuery, useSkillsQuery } from "./queries";
+import { useSkillCategoriesQuery, useSkillsQuery } from "./queries";
 import {
   useCreateSkillCategoryMutation,
   useCreateSkillMutation,
   useDeleteSkillCategoryMutation,
-  useDeleteSkillMutation,
-  useUpdateSkillMutation,
 } from "./mutations";
 import { slug } from "../../utils/slug";
 
 export function Screen() {
   const t = useTranslations("skills");
   const tk = useTranslations();
+  const router = useRouter();
   const skillsQuery = useSkillsQuery();
   const skills = skillsQuery.data ?? [];
   const { data: categories = [] } = useSkillCategoriesQuery();
   const createSkill = useCreateSkillMutation();
-  const updateSkill = useUpdateSkillMutation();
-  const deleteSkill = useDeleteSkillMutation();
   const createCategory = useCreateSkillCategoryMutation();
   const deleteCategory = useDeleteSkillCategoryMutation();
   const [adding, setAdding] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
-  // The skill being edited — its full body is fetched lazily (the list omits it).
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const { data: editing } = useSkillQuery(editingId);
 
   // Skills whose category was deleted (or never set) surface in a trailing
   // fallback section instead of vanishing from the catalog.
@@ -97,8 +92,8 @@ export function Screen() {
             {items.map((s) => (
               <SkillTile
                 key={s.id}
-                onSelect={() => setEditingId(s.id)}
-                selectLabel={t("editSkillAria", { name: s.name })}
+                onSelect={() => router.push(`/skills/${s.id}`)}
+                selectLabel={t("openSkillAria", { name: s.name })}
                 skill={s}
               />
             ))}
@@ -175,48 +170,17 @@ export function Screen() {
                   instructions: instructions || safeDesc,
                 },
               },
-              { onSuccess: () => setAdding(false) },
+              {
+                // Grammar (N4d): the dialog only births the skill; editing lives
+                // on the detail page — navigate straight to it.
+                onSuccess: () => {
+                  setAdding(false);
+                  router.push(`/skills/${id}`);
+                },
+              },
             );
           }}
           pending={createSkill.isPending}
-        />
-      )}
-
-      {editing && (
-        <AddSkillModal
-          categories={categories.map((c) => c.name)}
-          initial={{
-            name: editing.name ?? editing.id,
-            desc: editing.desc ?? "",
-            category: editing.category,
-            glyph: (editing.glyph as IconName | undefined) ?? "spark",
-            instructions: editing.instructions,
-          }}
-          key={editing.id}
-          onClose={() => setEditingId(null)}
-          onDelete={() =>
-            deleteSkill.mutate(
-              { params: { id: editing.id } },
-              { onSuccess: () => setEditingId(null) },
-            )
-          }
-          onSubmit={({ name, desc, category, glyph, instructions }) => {
-            const safeDesc = desc || tk("defaults.skill");
-            updateSkill.mutate(
-              {
-                params: { id: editing.id },
-                body: {
-                  name: name || editing.id,
-                  glyph,
-                  desc: safeDesc,
-                  category,
-                  instructions: instructions || safeDesc,
-                },
-              },
-              { onSuccess: () => setEditingId(null) },
-            );
-          }}
-          pending={updateSkill.isPending}
         />
       )}
 

@@ -310,7 +310,6 @@
   },
   "skills": {
     "addSkill": "Add skill",
-    "editSkillAria": "Edit skill {name}",
     "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card. Agents invoke skills from their catalog.",
@@ -332,7 +331,10 @@
     "deleteEmptyCategory": "Delete",
     "deleteEmptyCategoryAria": "Delete empty category {name}",
     "emptyCategory": "Empty category — add a skill or delete it.",
-    "uncategorized": "Uncategorized"
+    "uncategorized": "Uncategorized",
+    "openSkillAria": "Open skill {name}",
+    "deleteTitle": "Delete skill?",
+    "deleteBody": "Really delete skill {name}? Its file {file} is deleted too. This cannot be undone."
   },
   "agents": {
     "addAgent": "Add agent",
@@ -1320,11 +1322,13 @@
   "commands": {
     "title": "Commands",
     "addCommand": "Add command",
-    "editCommandAria": "Edit command {name}",
     "countSummary": "{count, plural, one {# command} other {# commands}}",
     "emptyTitle": "No commands yet",
     "emptyDescription": "Commands are custom slash commands (/<id>) with a Markdown body. They materialize into each run’s .claude/commands/.",
-    "emptyHint": "// creates ~/zibby/commands/'<id>'.md"
+    "emptyHint": "// creates ~/zibby/commands/'<id>'.md",
+    "openCommandAria": "Open command /{name}",
+    "deleteTitle": "Delete command?",
+    "deleteBody": "Really delete command /{id}? Its definition file is deleted too. This cannot be undone."
   },
   "chat": {
     "title": "Chat with ZIBBY",

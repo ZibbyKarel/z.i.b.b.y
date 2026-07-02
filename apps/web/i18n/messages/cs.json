@@ -310,7 +310,6 @@
   },
   "skills": {
     "addSkill": "Přidat skill",
-    "editSkillAria": "Upravit skill {name}",
     "sectionLabel": "Skilly",
     "emptyTitle": "Zatím žádné skilly",
     "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta. Skilly volají agenti ze svého katalogu.",
@@ -332,7 +331,10 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "emptyCategory": "Prázdná kategorie — přidej sem skill, nebo ji smaž.",
-    "uncategorized": "Bez kategorie"
+    "uncategorized": "Bez kategorie",
+    "openSkillAria": "Otevřít skill {name}",
+    "deleteTitle": "Smazat skill?",
+    "deleteBody": "Opravdu smazat skill {name}? Smaže se i soubor {file}. Tuto akci nelze vrátit."
   },
   "agents": {
     "addAgent": "Přidat agenta",
@@ -1320,11 +1322,13 @@
   "commands": {
     "title": "Příkazy",
     "addCommand": "Přidat příkaz",
-    "editCommandAria": "Upravit příkaz {name}",
     "countSummary": "{count, plural, one {# příkaz} few {# příkazy} other {# příkazů}}",
     "emptyTitle": "Zatím žádné příkazy",
     "emptyDescription": "Příkazy jsou vlastní slash-příkazy (/<id>) s Markdown tělem. Při každém běhu se materializují do .claude/commands/.",
-    "emptyHint": "// vytvoří ~/zibby/commands/'<id>'.md"
+    "emptyHint": "// vytvoří ~/zibby/commands/'<id>'.md",
+    "openCommandAria": "Otevřít příkaz /{name}",
+    "deleteTitle": "Smazat příkaz?",
+    "deleteBody": "Opravdu smazat příkaz /{id}? Smaže se i jeho definiční soubor. Tuto akci nelze vrátit."
   },
   "chat": {
     "title": "Chat se ZIBBY",

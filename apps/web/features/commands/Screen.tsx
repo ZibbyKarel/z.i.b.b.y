@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button, Grid, Stack } from "@zibby/design-system";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
@@ -10,25 +11,17 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { CommandTile } from "./components/CommandTile";
 import { AddCommandModal } from "./components/AddCommandModal/AddCommandModal";
-import { useCommandQuery, useCommandsQuery } from "./queries";
-import {
-  useCreateCommandMutation,
-  useDeleteCommandMutation,
-  useUpdateCommandMutation,
-} from "./mutations";
+import { useCommandsQuery } from "./queries";
+import { useCreateCommandMutation } from "./mutations";
 
 export function Screen() {
   const t = useTranslations("commands");
   const tk = useTranslations();
+  const router = useRouter();
   const commandsQuery = useCommandsQuery();
   const commands = commandsQuery.data ?? [];
   const createCommand = useCreateCommandMutation();
-  const updateCommand = useUpdateCommandMutation();
-  const deleteCommand = useDeleteCommandMutation();
   const [adding, setAdding] = useState(false);
-  // The command being edited — fetched lazily so it always edits the latest body.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const { data: editing } = useCommandQuery(editingId);
 
   return (
     <PageContainer>
@@ -62,8 +55,8 @@ export function Screen() {
               <CommandTile
                 command={c}
                 key={c.id}
-                onSelect={() => setEditingId(c.id)}
-                selectLabel={t("editCommandAria", { name: c.id })}
+                onSelect={() => router.push(`/commands/${c.id}`)}
+                selectLabel={t("openCommandAria", { name: c.id })}
               />
             ))}
           </Grid>
@@ -96,59 +89,17 @@ export function Screen() {
                   instructions: instructions || tk("defaults.command"),
                 },
               },
-              { onSuccess: () => setAdding(false) },
+              {
+                // Grammar (N4d): the dialog only births the command; editing
+                // lives on the detail page — navigate straight to it.
+                onSuccess: () => {
+                  setAdding(false);
+                  router.push(`/commands/${id}`);
+                },
+              },
             )
           }
           pending={createCommand.isPending}
-        />
-      )}
-
-      {editing && (
-        <AddCommandModal
-          initial={{
-            id: editing.id,
-            description: editing.description,
-            argumentHint: editing["argument-hint"],
-            allowedTools: editing["allowed-tools"],
-            model: editing.model,
-            disableModelInvocation: editing["disable-model-invocation"],
-            enabled: editing.enabled,
-            instructions: editing.instructions,
-          }}
-          key={editing.id}
-          onClose={() => setEditingId(null)}
-          onDelete={() =>
-            deleteCommand.mutate(
-              { params: { id: editing.id } },
-              { onSuccess: () => setEditingId(null) },
-            )
-          }
-          onSubmit={({
-            description,
-            argumentHint,
-            allowedTools,
-            model,
-            disableModelInvocation,
-            enabled,
-            instructions,
-          }) =>
-            updateCommand.mutate(
-              {
-                params: { id: editing.id },
-                body: {
-                  description,
-                  "argument-hint": argumentHint,
-                  "allowed-tools": allowedTools,
-                  model,
-                  "disable-model-invocation": disableModelInvocation,
-                  enabled,
-                  instructions: instructions || tk("defaults.command"),
-                },
-              },
-              { onSuccess: () => setEditingId(null) },
-            )
-          }
-          pending={updateCommand.isPending}
         />
       )}
     </PageContainer>
