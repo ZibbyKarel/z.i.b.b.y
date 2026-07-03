@@ -32,6 +32,8 @@ export default defineConfig({
       "features/*/*.test.{ts,tsx}",
       // Feature hooks (client-side browser-API wrappers).
       "features/*/hooks/**/*.test.{ts,tsx}",
+      // Feature mutation hooks (TanStack Query mutations; renderHook needs jsdom).
+      "features/*/mutations/**/*.test.{ts,tsx}",
     ],
   },
 });
