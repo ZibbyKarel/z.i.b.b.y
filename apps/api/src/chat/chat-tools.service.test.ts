@@ -29,6 +29,7 @@ const DISPATCHED: CreateTaskResult = {
     title: "",
     text: "postav appku",
     paths: [],
+    attachments: [],
     scheduledAt: 1,
     status: "dispatched",
     createdAt: "2026-06-23T10:00:00.000Z",

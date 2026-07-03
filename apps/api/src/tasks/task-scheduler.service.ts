@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import type {
   AgentRun,
+  Attachment,
   CreateTaskInput,
   CreateTaskResult,
   GoalRun,
@@ -31,10 +32,14 @@ import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { SystemConfigStore } from "../system/system-config.store";
+import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskOutputService } from "./task-output.service";
+
+/** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
+type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
 
 /** Thrown when there is nothing to route to (empty catalog) → the controller maps it to 422. */
 export class EmptyCatalogError extends Error {
@@ -110,6 +115,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly taskOutput: TaskOutputService,
     private readonly systemConfig: SystemConfigStore,
     private readonly namer: ClaudeCliTaskNamer,
+    private readonly attachmentStorage: AttachmentStorageService,
   ) {
     this.log = logger.child(TaskSchedulerService.name);
   }
@@ -240,6 +246,14 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     // fallback now and refines via Haiku off the response path (see `refineTitle`).
     const titleAuto = !input.title?.trim();
     input = background ? this.withFallbackTitle(input) : await this.ensureTitle(input);
+    // Task 6: resolve the referenced attachment set ONCE, up front — both the
+    // scheduled path (`storage.create`) and the immediate path (`attemptCreate`)
+    // persist the resolved metadata (not just the id), so a restart or a UI read
+    // never has to re-list the set.
+    const attachments: Attachment[] = input.attachmentSetId
+      ? await this.attachmentStorage.list(input.attachmentSetId)
+      : [];
+    const resolvedInput: CreateTaskInputResolved = { ...input, attachments };
     // Phase 11: the unified composer carries a pre-chosen target on the wire (a
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
@@ -253,7 +267,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
 
     if (input.scheduledAt != null && input.scheduledAt > now) {
       const task = await this.storage.create(
-        { ...input, scheduledAt: input.scheduledAt },
+        { ...resolvedInput, scheduledAt: input.scheduledAt },
         new Date(now).toISOString(),
         project?.id,
       );
@@ -282,7 +296,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       summary: `task created${input.title ? `: ${input.title}` : ""}`,
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     });
-    return this.attemptCreate(taskId, input, project, now, target, background, titleAuto);
+    return this.attemptCreate(taskId, resolvedInput, project, now, target, background, titleAuto);
   }
 
   /**
@@ -386,7 +400,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    */
   private async attemptCreate(
     taskId: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputResolved,
     project: Project | null,
     now: number,
     explicitTarget?: TaskTarget,
@@ -779,7 +793,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   /** Persist an immediately-dispatched task + its activity (the create path). */
   private async persistDispatched(
     taskId: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputResolved,
     dispatched: { runRef: string; target: TaskTarget },
     projectId: string | undefined,
     now: number,

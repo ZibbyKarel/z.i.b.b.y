@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { AgentRun, PipelineRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 
@@ -75,6 +76,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   };
   let service: TaskSchedulerService;
   let systemConfig: ReturnType<typeof fakeSystemConfigStore>;
+  let attachmentStorage: AttachmentStorageService;
 
   /** A fixed near-future window-reset epoch the limit guard defers to. */
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
@@ -83,6 +85,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-unit-"));
     storage = new ScheduledTasksStorageService(dir);
     await storage.onModuleInit();
+    attachmentStorage = new AttachmentStorageService();
 
     agentRunner = {
       start: vi.fn(async () => agentRun({})),
@@ -166,6 +169,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // Namer double: returns null so title derivation falls back to the deterministic
       // slice (the Haiku CLI path never spawns under test).
       { name: async () => null } as never,
+      attachmentStorage,
     );
     service.onModuleInit();
   });
@@ -217,6 +221,25 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(persisted.outcome).toBeUndefined();
     // Pure intent (no target) is exactly what the classifier routes.
     expect(classifier.classify).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves and persists attachments from the set id on create", async () => {
+    const setId = (
+      await attachmentStorage.save([
+        { originalname: "a.txt", size: 2, mimetype: "text/plain", buffer: Buffer.from("hi") },
+      ])
+    ).attachmentSetId;
+    const res = await service.createTask(
+      { text: "use it", attachmentSetId: setId, scheduledAt: Date.now() + 60_000 },
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+    expect(res.outcome).toBe("scheduled");
+    const task = (res as { task: { attachments: unknown[]; attachmentSetId?: string } }).task;
+    expect(task.attachmentSetId).toBe(setId);
+    expect(task.attachments).toEqual([{ name: "a.txt", size: 2, mediaType: "text/plain" }]);
   });
 
   it("an explicit target on the wire bypasses the classifier entirely (DNA: explicit target overrides)", async () => {

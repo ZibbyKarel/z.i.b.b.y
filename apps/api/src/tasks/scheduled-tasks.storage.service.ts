@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
+  type Attachment,
   type CreateTaskInput,
   type ScheduledTask,
   ScheduledTaskSchema,
@@ -7,6 +8,9 @@ import {
   type TaskTarget,
 } from "@zibby/contracts";
 import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
+
+/** A create input carrying its attachment set's resolved metadata (Task 6). */
+type CreateTaskInputWithAttachments = CreateTaskInput & { attachments?: Attachment[] };
 
 export const TASKS_DIR = "TASKS_DIR";
 
@@ -54,7 +58,7 @@ export class ScheduledTasksStorageService
 
   /** Persist a fresh `scheduled` task built from the create input. */
   async create(
-    input: CreateTaskInput & { scheduledAt: number },
+    input: CreateTaskInputWithAttachments & { scheduledAt: number },
     createdAt: string,
     projectId?: string,
   ): Promise<ScheduledTask> {
@@ -63,10 +67,12 @@ export class ScheduledTasksStorageService
       title: input.title ?? "",
       text: input.text,
       paths: input.paths ?? [],
+      attachments: input.attachments ?? [],
       scheduledAt: input.scheduledAt,
       status: "scheduled",
       createdAt,
       ...(projectId ? { projectId } : {}),
+      ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
       // Phase 11: a scheduled loop carries its `{ kind: "goal", id }` target so the
       // tick re-dispatches to it instead of re-classifying (goals are never routed).
@@ -79,7 +85,7 @@ export class ScheduledTasksStorageService
   /** Shared base for a pre-dispatch hold (`held` / `queued`): a task with no run yet. */
   private parkedTask(
     id: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputWithAttachments,
     status: "held" | "queued",
     projectId: string | undefined,
     now: number,
@@ -89,10 +95,12 @@ export class ScheduledTasksStorageService
       title: input.title ?? "",
       text: input.text,
       paths: input.paths ?? [],
+      attachments: input.attachments ?? [],
       scheduledAt: now,
       status,
       createdAt: new Date(now).toISOString(),
       ...(projectId ? { projectId } : {}),
+      ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
     };
   }
@@ -100,7 +108,7 @@ export class ScheduledTasksStorageService
   /** Persist a task held over a budget cap (Phase 8.1), carrying the reason. */
   async createHeld(
     id: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputWithAttachments,
     projectId: string | undefined,
     heldReason: string,
     now: number,
@@ -123,7 +131,7 @@ export class ScheduledTasksStorageService
    */
   async createPending(
     id: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputWithAttachments,
     projectId: string | undefined,
     now: number,
     target?: TaskTarget,
@@ -133,10 +141,12 @@ export class ScheduledTasksStorageService
       title: input.title ?? "",
       text: input.text,
       paths: input.paths ?? [],
+      attachments: input.attachments ?? [],
       scheduledAt: now,
       status: "pending",
       createdAt: new Date(now).toISOString(),
       ...(projectId ? { projectId } : {}),
+      ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
       ...(target ? { target } : {}),
     };
@@ -159,7 +169,7 @@ export class ScheduledTasksStorageService
   /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
   async createQueued(
     id: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputWithAttachments,
     projectId: string | undefined,
     now: number,
   ): Promise<ScheduledTask> {
@@ -175,7 +185,7 @@ export class ScheduledTasksStorageService
    */
   async createDeferredLimit(
     id: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputWithAttachments,
     projectId: string | undefined,
     resumeAt: number,
     now: number,
@@ -185,12 +195,14 @@ export class ScheduledTasksStorageService
       title: input.title ?? "",
       text: input.text,
       paths: input.paths ?? [],
+      attachments: input.attachments ?? [],
       scheduledAt: resumeAt,
       status: "scheduled",
       createdAt: new Date(now).toISOString(),
       deferredReason: "limit",
       limitDeferrals: 1,
       ...(projectId ? { projectId } : {}),
+      ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
     };
     await this.writeEntity(task);
@@ -246,7 +258,7 @@ export class ScheduledTasksStorageService
    */
   async createDispatched(
     id: string,
-    input: CreateTaskInput,
+    input: CreateTaskInputWithAttachments,
     runRef: string,
     target: TaskTarget,
     now: number,
@@ -257,12 +269,14 @@ export class ScheduledTasksStorageService
       title: input.title ?? "",
       text: input.text,
       paths: input.paths ?? [],
+      attachments: input.attachments ?? [],
       scheduledAt: now,
       status: "dispatched",
       createdAt: new Date(now).toISOString(),
       runRef,
       target,
       ...(projectId ? { projectId } : {}),
+      ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
     };
     await this.writeEntity(task);

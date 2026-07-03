@@ -120,6 +120,7 @@ describe("assembleBriefing", () => {
           text: "ship the thing",
           title: "Ship it",
           paths: [],
+          attachments: [],
           status: "dead-letter",
           scheduledAt: 1,
           createdAt: "2026-06-12T06:40:00.000Z",
