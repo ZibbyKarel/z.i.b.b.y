@@ -27,6 +27,12 @@ import { ORCHESTRATOR_AGENT } from "./orchestrator.agent";
 /** DI token carrying the absolute path of the directory that holds run artifacts. */
 export const RUNS_DIR = "RUNS_DIR";
 
+/** A run's attachment reference dir (already absolute) plus the filenames inside it. */
+export interface RunAttachments {
+  dir: string;
+  names: string[];
+}
+
 // Re-exported so existing importers (the controller) keep their import path.
 export { RunNotFoundError } from "../runner/runner-core";
 
@@ -147,10 +153,27 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * (this run never prunes it). Absent for every existing caller (no behaviour change).
      */
     workspace?: Workspace,
+    /**
+     * Task attachments: an absolute reference dir plus the filenames in it. The dir
+     * gets its own `--add-dir` grant (never the "operate on" target) and a manifest
+     * line naming the files is appended to the task text. Absent for every existing
+     * caller (no behaviour change).
+     */
+    attachments?: RunAttachments,
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId);
-    return this.launch(agent, prompt, project, files, title, taskId, matchedTerms, workspace);
+    return this.launch(
+      agent,
+      prompt,
+      project,
+      files,
+      title,
+      taskId,
+      matchedTerms,
+      workspace,
+      attachments,
+    );
   }
 
   /**
@@ -169,8 +192,19 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     taskId?: string,
     matchedTerms?: string[],
     project = "",
+    attachments?: RunAttachments,
   ): Promise<AgentRun> {
-    return this.launch(ORCHESTRATOR_AGENT, prompt, project, files, title, taskId, matchedTerms);
+    return this.launch(
+      ORCHESTRATOR_AGENT,
+      prompt,
+      project,
+      files,
+      title,
+      taskId,
+      matchedTerms,
+      undefined,
+      attachments,
+    );
   }
 
   /** Shared spawn path: build the command for `agent` and hand it to the core. */
@@ -183,6 +217,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     taskId?: string,
     matchedTerms?: string[],
     externalWorkspace?: Workspace,
+    attachments?: RunAttachments,
   ): Promise<AgentRun> {
     const agentId = agent.id;
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
@@ -207,7 +242,14 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       projectId: resolved?.id,
       matchedTerms,
     });
-    const { command, args } = await this.buildCommand(agent, prompt, grantDirs, grounding, cwd);
+    const { command, args } = await this.buildCommand(
+      agent,
+      prompt,
+      grantDirs,
+      grounding,
+      cwd,
+      attachments,
+    );
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
     // sandbox; the session spawns there (its first `spawnCwd` ever) so its commits
@@ -539,17 +581,33 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     grantDirs: string[],
     grounding?: string,
     sandboxCwd?: string,
+    attachments?: RunAttachments,
   ): Promise<{ command: string; args: string[] }> {
-    const task = grantDirs.length
-      ? `${prompt}\n\nOperate on this directory: ${grantDirs[0]}`.trim()
+    // The work directory (the run's `files`, if any) stays the "operate on" target;
+    // the attachments dir is reference material, never the thing to act on.
+    const operate = grantDirs.length
+      ? `${prompt}\n\nOperate on this directory: ${grantDirs[0]}`
       : prompt;
+    // Only grant/announce an absolute attachments dir: a relative path would root
+    // against the API cwd (`apps/api`), pointing the manifest at a directory the
+    // session was never actually granted. Drop it defensively (matches resolveGrantDirs).
+    const attachDir =
+      attachments?.dir && path.isAbsolute(attachments.dir) ? attachments.dir : undefined;
+    // Append a manifest line so the model knows the operator's reference files exist
+    // and where — the dir itself is reachable via the extra `--add-dir` grant below.
+    const manifest =
+      attachDir && attachments && attachments.names.length
+        ? `${operate}\n\nThe operator attached reference files in ${attachDir}: ${attachments.names.join(", ")}`
+        : operate;
+    const task = manifest.trim();
+    const grants = attachDir ? [...grantDirs, attachDir] : grantDirs;
     return this.claude.buildClaudeCommand({
       instructions: agent.instructions,
       task,
       tools: agent.tools,
       model: agent.model,
       thinking: agent.thinking,
-      grantDirs,
+      grantDirs: grants,
       grounding,
       // Capture the full transcript so the run log shows every step, not just the
       // final summary (the core flattens the stream-json events back to text).
