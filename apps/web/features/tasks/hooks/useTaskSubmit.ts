@@ -20,6 +20,7 @@ export interface UseTaskSubmitArgs {
   /** The dispatched description (operator text plus any folded-in prior context). */
   composedText: string;
   paths: string[];
+  attachmentSetId?: string;
   scheduledAt: number | null;
   output: TaskOutput | undefined;
   /** An explicit single-dispatch target, or null for auto (the backend classifies). */
@@ -49,6 +50,7 @@ export function useTaskSubmit({
   title,
   composedText,
   paths,
+  attachmentSetId,
   scheduledAt,
   output,
   chosenTarget,
@@ -98,6 +100,7 @@ export function useTaskSubmit({
           title: title.trim() || undefined,
           text: composedText,
           paths,
+          ...(attachmentSetId ? { attachmentSetId } : {}),
           scheduledAt,
           ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
           ...(output ? { output } : {}),
@@ -111,6 +114,7 @@ export function useTaskSubmit({
     title,
     composedText,
     paths,
+    attachmentSetId,
     scheduledAt,
     output,
     handleCreateTaskSuccess,
@@ -133,6 +137,7 @@ export function useTaskSubmit({
                 title: title.trim() || undefined,
                 text: composedText,
                 paths,
+                ...(attachmentSetId ? { attachmentSetId } : {}),
                 scheduledAt,
                 target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
               },
@@ -149,6 +154,7 @@ export function useTaskSubmit({
     scheduledAt,
     composedText,
     paths,
+    attachmentSetId,
     createGoal,
     createTask,
     handleCreateTaskSuccess,

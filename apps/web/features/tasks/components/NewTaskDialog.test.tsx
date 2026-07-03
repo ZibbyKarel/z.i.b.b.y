@@ -17,6 +17,25 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+// Task 12: stub the real TaskAttachments composite (Task 11 already tests it in
+// isolation) so this suite only proves the threading — NewTaskDialog actually
+// mounts it, and a chosen set's attachmentSetId reaches the create body.
+vi.mock("./TaskAttachments", () => ({
+  TaskAttachments: ({
+    onChange,
+  }: {
+    onChange: (v: { attachmentSetId?: string; files: unknown[] }) => void;
+  }) => (
+    <button
+      data-testid="attach-stub"
+      onClick={() => onChange({ attachmentSetId: "set_1", files: [{ name: "a.txt", size: 2 }] })}
+      type="button"
+    >
+      attach
+    </button>
+  ),
+}));
+
 const CANDIDATES = [
   { kind: "agent", id: "koder", name: "Kodér" },
   { kind: "pipeline", id: "delivery", name: "Delivery" },
@@ -87,6 +106,7 @@ type CreateVars = {
     scheduledAt?: number | null;
     target?: { kind: string; id?: string };
     output?: { type: string; dest?: string; to?: string };
+    attachmentSetId?: string;
   };
 };
 type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
@@ -462,5 +482,21 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
 
     expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("pipeline");
     expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
+  });
+
+  it("threads an attached set's attachmentSetId into the dispatched task", async () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    // Proves TaskAttachments is actually mounted — if NewTaskDialog forgot to
+    // render it, this stub button wouldn't exist.
+    await userEvent.click(screen.getByTestId("attach-stub"));
+
+    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await screen.findByText(/ZIBBY to předá/);
+    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.objectContaining({ attachmentSetId: "set_1" }) }),
+      expect.anything(),
+    );
   });
 });

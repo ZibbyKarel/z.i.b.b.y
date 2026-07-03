@@ -9,6 +9,7 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
+import type { Attachment } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useLimitsQuery } from "../../limits";
@@ -23,6 +24,7 @@ import { LoopComposer } from "./LoopComposer";
 import { PlanPreview } from "./PlanPreview";
 import { ScheduleField } from "./ScheduleField";
 import { ScheduledConfirmation } from "./ScheduledConfirmation";
+import { TaskAttachments } from "./TaskAttachments";
 import { TaskComposer } from "./TaskComposer";
 import { TaskContextPanel } from "./TaskContextPanel";
 import { TaskOutputField } from "./TaskOutputField";
@@ -76,6 +78,10 @@ export function NewTaskDialog({
   const [text, setText] = useState(initialText ?? "");
   /** Selected project id (its `path` is folded into `paths`), or "" for none. */
   const [projectId, setProjectId] = useState<string>("");
+  const [attachments, setAttachments] = useState<{
+    attachmentSetId?: string;
+    files: Attachment[];
+  }>({ files: [] });
 
   // A stable "now" for the dialog's lifetime (lazy — Date.now() in render is lint-banned):
   // presets resolve against it, the limit-reset option gates on it, and the goal id's
@@ -130,6 +136,7 @@ export function NewTaskDialog({
     title,
     composedText,
     paths,
+    attachmentSetId: attachments.attachmentSetId,
     scheduledAt,
     output: output.output,
     chosenTarget,
@@ -236,6 +243,8 @@ export function NewTaskDialog({
         />
 
         {initialContext && <TaskContextPanel context={initialContext} />}
+
+        <TaskAttachments onChange={setAttachments} value={attachments} />
 
         {(projects ?? []).length > 0 && (
           <SelectField
