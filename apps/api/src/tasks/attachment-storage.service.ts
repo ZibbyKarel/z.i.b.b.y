@@ -15,6 +15,10 @@ export class AttachmentStorageService {
 
   dir(setId: string): string { return path.join(this.root(), path.basename(setId)); }
 
+  private metaPath(setId: string): string {
+    return path.join(this.root(), `${path.basename(setId)}.meta.json`);
+  }
+
   async save(files: UploadedFile[]): Promise<{ attachmentSetId: string; files: Attachment[] }> {
     const attachmentSetId = this.newSetId();
     const dir = this.dir(attachmentSetId);
@@ -25,17 +29,18 @@ export class AttachmentStorageService {
       await fs.writeFile(path.join(dir, name), f.buffer);
       metas.push({ name, size: f.size, ...(f.mimetype ? { mediaType: f.mimetype } : {}) });
     }
-    await fs.writeFile(path.join(dir, "meta.json"), JSON.stringify(metas), "utf8");
+    await fs.writeFile(this.metaPath(attachmentSetId), JSON.stringify(metas), "utf8");
     return { attachmentSetId, files: metas };
   }
 
   async list(setId: string): Promise<Attachment[]> {
-    const raw = await fs.readFile(path.join(this.dir(setId), "meta.json"), "utf8").catch(() => null);
+    const raw = await fs.readFile(this.metaPath(setId), "utf8").catch(() => null);
     return raw ? (JSON.parse(raw) as Attachment[]) : [];
   }
 
   async remove(setId: string): Promise<void> {
     await fs.rm(this.dir(setId), { recursive: true, force: true });
+    await fs.rm(this.metaPath(setId), { force: true });
   }
 
   async listSetIds(): Promise<{ id: string; mtimeMs: number }[]> {

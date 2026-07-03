@@ -26,7 +26,7 @@ describe("AttachmentStorageService", () => {
     const { attachmentSetId, files } = await svc.save([file("../../etc/passwd", "x")]);
     expect(files[0]?.name).toBe("passwd");
     const entries = await fs.readdir(svc.dir(attachmentSetId));
-    expect(entries).toEqual(["meta.json", "passwd"]);
+    expect(entries).toEqual(["passwd"]);
   });
 
   it("lists and removes a set", async () => {
@@ -34,5 +34,14 @@ describe("AttachmentStorageService", () => {
     expect(await svc.list(attachmentSetId)).toHaveLength(1);
     await svc.remove(attachmentSetId);
     expect(await svc.list(attachmentSetId)).toEqual([]);
+  });
+
+  it("does not let an attachment literally named meta.json collide with the metadata sidecar", async () => {
+    const { attachmentSetId } = await svc.save([file("meta.json", "USER_BYTES")]);
+    const listed = await svc.list(attachmentSetId);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.name).toBe("meta.json");
+    const dir = svc.dir(attachmentSetId);
+    expect(await fs.readFile(path.join(dir, "meta.json"), "utf8")).toBe("USER_BYTES");
   });
 });
