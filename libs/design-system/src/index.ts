@@ -224,6 +224,9 @@ export type { FilePickerFieldProps } from "./components/form/FilePickerField/Fil
 export { DropZone, DropZoneTestId } from "./components/DropZone/DropZone";
 export type { DropZoneProps, FileAccept, FileRejection } from "./components/DropZone/DropZone";
 
+export { FilePreview, FilePreviewTestId, iconForFile } from "./components/FilePreview/FilePreview";
+export type { FilePreviewProps } from "./components/FilePreview/FilePreview";
+
 export { DropZoneField } from "./components/form/DropZoneField/DropZoneField";
 export type { DropZoneFieldProps } from "./components/form/DropZoneField/DropZoneField";
 
