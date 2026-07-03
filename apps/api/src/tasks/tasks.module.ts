@@ -9,6 +9,7 @@ import { MemoryModule } from "../memory/memory.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
+import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliRouter } from "./claude-cli-router";
 import { ClaudeCliTaskNamer } from "./claude-cli-task-namer";
 import { KeywordScorer } from "./keyword-scorer";
@@ -51,12 +52,13 @@ import { TasksController } from "./tasks.controller";
     TaskRunsService,
     TaskClassifierService,
     TaskOutputService,
+    AttachmentStorageService,
     ClaudeCliTaskNamer,
     KeywordScorer,
     { provide: TASK_ROUTER, useClass: ClaudeCliRouter },
   ],
   // Re-export the storage module + scheduler so the channel triage flow (Phase 5.3)
   // can dispatch a task and read its outcome back onto the channel item.
-  exports: [TaskSchedulerService, ScheduledTasksStorageModule],
+  exports: [TaskSchedulerService, AttachmentStorageService, ScheduledTasksStorageModule],
 })
 export class TasksModule {}
