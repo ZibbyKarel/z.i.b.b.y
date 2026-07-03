@@ -215,6 +215,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       "Thing",
       result.task.id,
       [],
+      undefined,
+      undefined,
     );
     const persisted = await storage.get(result.task.id);
     expect(persisted.status).toBe("dispatched");
@@ -240,6 +242,22 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     const task = (res as { task: { attachments: unknown[]; attachmentSetId?: string } }).task;
     expect(task.attachmentSetId).toBe(setId);
     expect(task.attachments).toEqual([{ name: "a.txt", size: 2, mediaType: "text/plain" }]);
+  });
+
+  it("passes attachments to the agent dispatch", async () => {
+    const { attachmentSetId } = await attachmentStorage.save([
+      { originalname: "a.txt", size: 2, mimetype: "text/plain", buffer: Buffer.from("hi") },
+    ]);
+    await service.createTask(
+      { text: "use it", attachmentSetId, target: { kind: "agent", id: "writer", name: "A" } },
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+    const lastArg = agentRunner.start.mock.calls.at(-1)?.at(-1);
+    expect(lastArg).toMatchObject({ names: ["a.txt"] });
+    expect(String((lastArg as { dir: string }).dir)).toContain(attachmentSetId);
   });
 
   it("an explicit target on the wire bypasses the classifier entirely (DNA: explicit target overrides)", async () => {
@@ -296,6 +314,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       "Thing",
       result.task.id,
       [],
+      undefined,
+      undefined,
     );
   });
 

@@ -18,7 +18,7 @@ import {
   type VerifierSpec,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
-import { AgentRunnerService } from "../agents/agent-runner.service";
+import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { BudgetService } from "../budget/budget.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -196,6 +196,12 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     title = "",
     taskId?: string,
     matchedTerms?: string[],
+    /**
+     * Task 8: the dispatching task's attachments (Task 6/7). Threaded into each
+     * agent-maker iteration so a loop maker sees the operator's reference files.
+     * Absent on resume/reconstruct paths (not persisted across restart — v1 scope).
+     */
+    attachments?: RunAttachments,
   ): Promise<GoalRun> {
     // Throws GoalNotFoundError / InvalidGoalIdError when unknown → 404.
     const goal = await this.goals.get(goalId);
@@ -264,7 +270,9 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
 
     const traceId = this.trace.getTraceId() ?? randomUUID();
     void this.trace
-      .run({ traceId, runId: goalRunId }, () => this.drive(run, goal, resolved, files))
+      .run({ traceId, runId: goalRunId }, () =>
+        this.drive(run, goal, resolved, files, undefined, attachments),
+      )
       .catch((err) => this.onDriveError(run, err));
     return run;
   }
@@ -291,6 +299,12 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     project: Project | null,
     files: string[],
     resume?: { startIndex: number; resumeContext?: string; attachRunRef?: string },
+    /**
+     * Task 8: the dispatching task's attachments, forwarded to each agent-maker
+     * dispatch. Undefined on resume/reconstruct re-entry (not persisted) — acceptable
+     * v1 behaviour: a resumed loop iteration runs without the reference-file grant.
+     */
+    attachments?: RunAttachments,
   ): Promise<void> {
     let index = resume?.startIndex ?? run.currentIteration ?? 0;
     let resumeContext = resume?.resumeContext;
@@ -342,7 +356,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
         iteration.makerRunRef = makerRunRef;
         await this.writeAggregate(run);
       } else {
-        makerRunRef = await this.dispatchMaker(run, goal, project, files, resumeContext);
+        makerRunRef = await this.dispatchMaker(run, goal, project, files, resumeContext, attachments);
         iteration.makerRunRef = makerRunRef;
         await this.writeAggregate(run);
         await this.recordDispatch(run, project, makerRunRef);
@@ -715,6 +729,8 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     project: Project | null,
     files: string[],
     resumeContext?: string,
+    /** Task 8: forwarded to an agent maker's run (pipeline maker has no seam — v1 gap). */
+    attachments?: RunAttachments,
   ): Promise<string> {
     const prompt = this.makerPrompt(run, goal, resumeContext);
     const projectRef = project?.id ?? "";
@@ -728,6 +744,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
         run.taskId,
         run.matchedTerms,
         run.workspace,
+        attachments,
       );
       return r.runId;
     }

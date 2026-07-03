@@ -19,7 +19,7 @@ import type {
   TaskTarget,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
-import { AgentRunnerService } from "../agents/agent-runner.service";
+import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { BudgetService } from "../budget/budget.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
@@ -455,6 +455,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       projectId,
       explicitTarget,
       input.output,
+      input.attachmentSetId,
+      input.attachments,
     );
     if (!dispatched) throw new EmptyCatalogError();
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
@@ -495,6 +497,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           projectId,
           explicitTarget,
           task.output,
+          task.attachmentSetId,
+          task.attachments,
         );
         if (!dispatched) {
           await this.failPending(task.id, projectId, "No agents or pipelines available to route to");
@@ -580,6 +584,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       task.projectId,
       task.target,
       task.output,
+      task.attachmentSetId,
+      task.attachments,
     );
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or pipelines available to route to");
@@ -724,7 +730,20 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      * not needed at dispatch.
      */
     output?: TaskOutput,
+    /**
+     * Task 8: the task's persisted attachment set id + resolved metadata (Task 6).
+     * When present, an absolute reference dir + the filenames are threaded into the
+     * agent/orchestrator/goal runner (Task 7's `--add-dir` grant). Absent → no
+     * attachments (every pre-attachments caller is unaffected).
+     */
+    attachmentSetId?: string,
+    attachments?: Attachment[],
   ): Promise<{ runRef: string; target: TaskTarget } | null> {
+    // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
+    // the filenames, or undefined when the task carries no attachment set.
+    const runAttachments: RunAttachments | undefined = attachmentSetId
+      ? { dir: this.attachmentStorage.dir(attachmentSetId), names: (attachments ?? []).map((a) => a.name) }
+      : undefined;
     let target: TaskTarget;
     let matchedTerms: string[];
     if (explicitTarget) {
@@ -747,10 +766,14 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         title,
         taskId,
         matchedTerms,
+        undefined,
+        runAttachments,
       );
       return { runRef: run.runId, target };
     }
     if (target.kind === "pipeline") {
+      // Task 8: attachments are intentionally NOT passed to a pipeline target in v1 —
+      // the pipeline runner has no attachments seam yet (documented deferred gap).
       const run = await this.pipelineRunner.start(
         target.id,
         taskId,
@@ -773,6 +796,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         title,
         taskId,
         matchedTerms,
+        runAttachments,
       );
       return { runRef: run.goalRunId, target };
     }
@@ -786,6 +810,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       taskId,
       matchedTerms,
       projectId ?? "",
+      runAttachments,
     );
     return { runRef: run.runId, target };
   }
