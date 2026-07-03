@@ -1,6 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { FilePreviewTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
@@ -83,6 +84,20 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.getByText(LONG_DESC)).toBeInTheDocument();
     await userEvent.click(screen.getByText("zobrazit méně"));
     expect(screen.queryByText(LONG_DESC)).not.toBeInTheDocument();
+  });
+
+  it("shows the task's attachments read-only (no remove button)", () => {
+    renderDetail({
+      ...pipelineRun,
+      attachments: [
+        { name: "spec.pdf", size: 100 },
+        { name: "data.csv", size: 200 },
+      ],
+    });
+    expect(screen.getAllByTestId(FilePreviewTestId.Name)).toHaveLength(2);
+    expect(screen.getByText("spec.pdf")).toBeInTheDocument();
+    expect(screen.getByText("data.csv")).toBeInTheDocument();
+    expect(screen.queryByTestId(FilePreviewTestId.Remove)).not.toBeInTheDocument();
   });
 });
 

@@ -9,6 +9,7 @@ import {
   PipelineCheckpointSchema,
   StageRunSchema,
 } from "../pipelines/pipeline-run.schema";
+import { AttachmentSchema } from "./task.schema";
 
 /**
  * The kind of processor running a task. `scheduled` is a task that has not been
@@ -92,6 +93,8 @@ export const TaskRunSchema = z.object({
   taskTitle: z.string().optional(),
   /** Enriched from the task record: its full free-text description. */
   taskText: z.string().optional(),
+  /** Enriched from the task record: its uploaded attachment set (read-only in detail). */
+  attachments: z.array(AttachmentSchema).optional(),
   /** Enriched from the task record: the written-back run outcome. */
   taskOutcome: z.enum(["done", "error"]).optional(),
   /**

@@ -345,6 +345,7 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     taskOutcome: task.outcome?.status,
     taskOutcomeSummary: task.outcome?.summary,
     taskOutputKind: task.output?.type,
+    attachments: task.attachments,
   };
 }
 

@@ -5,6 +5,7 @@ import {
   AccordionItem,
   Button,
   Container,
+  FilePreview,
   Icon,
   type IconName,
   IconTile,
@@ -210,6 +211,25 @@ function RunOutputPanel({ run }: { run: RunView }) {
 }
 
 /**
+ * The task's uploaded attachments, read-only (no remove affordance) — the run detail
+ * only displays what was attached at creation time. Renders nothing when the task
+ * carries no attachments.
+ */
+function RunAttachmentsPanel({ run }: { run: RunView }) {
+  const tAttach = useTranslations("tasks.attachments");
+  if (!run.attachments || run.attachments.length === 0) return null;
+  return (
+    <HudPanel padding="250" title={tAttach("sectionTitle")}>
+      <Stack gap="100">
+        {run.attachments.map((a) => (
+          <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
+        ))}
+      </Stack>
+    </HudPanel>
+  );
+}
+
+/**
  * Run detail: one header + meta strip, then the live log (or, for pipelines, a
  * link out). A run paused on the approval gate folds the approval into this same
  * header (severity + risk type + request meta — there is no second header), shows
@@ -396,6 +416,7 @@ export function RunDetail({
       </HudPanel>
 
       <RunOutputPanel run={run} />
+      <RunAttachmentsPanel run={run} />
 
       {approval ? (
         <>
