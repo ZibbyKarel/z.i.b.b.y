@@ -260,6 +260,30 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(String((lastArg as { dir: string }).dir)).toContain(attachmentSetId);
   });
 
+  it("removes attachment sets older than 24h that no task references", async () => {
+    // Attachment storage's root is real (ZIBBY_DATA_DIR-scoped, isolated per test
+    // FILE not per test) — clear any sets left behind by earlier tests in this file
+    // so the removed-count assertion below is order-independent.
+    for (const s of await attachmentStorage.listSetIds()) await attachmentStorage.remove(s.id);
+    const orphan = (
+      await attachmentStorage.save([{ originalname: "o.txt", size: 1, buffer: Buffer.from("x") }])
+    ).attachmentSetId;
+    const referenced = (
+      await attachmentStorage.save([{ originalname: "r.txt", size: 1, buffer: Buffer.from("y") }])
+    ).attachmentSetId;
+    await service.createTask(
+      { text: "keep", attachmentSetId: referenced, scheduledAt: Date.now() + 60_000 },
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+    const removed = await service.sweepOrphanAttachmentSets(Date.now() + 25 * 60 * 60 * 1000);
+    expect(removed).toBe(1);
+    expect(await attachmentStorage.list(orphan)).toEqual([]);
+    expect(await attachmentStorage.list(referenced)).toHaveLength(1);
+  });
+
   it("an explicit target on the wire bypasses the classifier entirely (DNA: explicit target overrides)", async () => {
     // N1: naming a pipeline/agent is a hard override — the named unit runs and the
     // classifier is never consulted, so an explicit run is fully deterministic.

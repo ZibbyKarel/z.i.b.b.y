@@ -60,6 +60,9 @@ const MAX_DISPATCH_ATTEMPTS = 3;
 /** M8: base backoff (ms) for a retried dispatch; the nth retry waits `base * 2^(n-1)`. */
 const DISPATCH_BACKOFF_MS = 30_000;
 
+/** Task 9: an attachment set with no referencing task is orphaned once past this age. */
+const ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
+
 /** Agent run statuses that free a concurrency slot. */
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
 /** Pipeline run statuses that free a concurrency slot. */
@@ -390,7 +393,33 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         }
       });
     }
+    void this.sweepOrphanAttachmentSets(now.getTime());
     return fired;
+  }
+
+  /**
+   * Task 9: best-effort cleanup of attachment-set dirs no persisted task references,
+   * once they're past the TTL. Never throws — every I/O step is guarded — so it's safe
+   * to fire-and-forget from {@link tick}. Returns the count removed (tests only).
+   */
+  async sweepOrphanAttachmentSets(now: number): Promise<number> {
+    const tasks = await this.storage.list().catch(() => []);
+    const referenced = new Set(
+      tasks.map((t) => t.attachmentSetId).filter((id): id is string => Boolean(id)),
+    );
+    const sets = await this.attachmentStorage.listSetIds().catch(() => []);
+    let removed = 0;
+    for (const s of sets) {
+      if (referenced.has(s.id)) continue;
+      if (now - s.mtimeMs < ATTACHMENT_TTL_MS) continue;
+      await this.attachmentStorage
+        .remove(s.id)
+        .then(() => {
+          removed += 1;
+        })
+        .catch(() => {});
+    }
+    return removed;
   }
 
   /**
