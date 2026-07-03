@@ -187,6 +187,14 @@
         "hint": "Standing instructions handed to the maker each iteration. Empty → the objective is used.",
         "placeholder": "e.g.: Follow CLAUDE.md conventions, don't change the public API"
       }
+    },
+    "attachments": {
+      "label": "Attachments",
+      "dropHint": "Drag files here or click to select",
+      "uploading": "Uploading…",
+      "error": "Upload failed",
+      "sectionTitle": "Attachments",
+      "remove": "Remove attachment"
     }
   },
   "search": {
