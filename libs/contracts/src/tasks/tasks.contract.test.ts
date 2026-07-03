@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  AttachmentSchema,
   CreateTaskInputSchema,
   ProposedGoalSchema,
   ResolvedPathSchema,
@@ -229,5 +230,26 @@ describe("ScheduledTask budget statuses (Phase 8)", () => {
       },
     });
     expect(parsed.success).toBe(true);
+  });
+});
+
+describe("AttachmentSchema (Task attachments — Phase 1)", () => {
+  it("round-trips an attachment", () => {
+    const parsed = AttachmentSchema.safeParse({ name: "spec.pdf", size: 1234, mediaType: "application/pdf" });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("defaults task attachments to [] and accepts attachmentSetId", () => {
+    const task = ScheduledTaskSchema.parse({
+      id: "t1", text: "do it", scheduledAt: 1, status: "scheduled",
+      createdAt: "2026-07-03T00:00:00.000Z", attachmentSetId: "set_1",
+    });
+    expect(task.attachments).toEqual([]);
+    expect(task.attachmentSetId).toBe("set_1");
+  });
+
+  it("accepts attachmentSetId on create input", () => {
+    const input = CreateTaskInputSchema.parse({ text: "x", attachmentSetId: "set_1" });
+    expect(input.attachmentSetId).toBe("set_1");
   });
 });

@@ -5,6 +5,18 @@ import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
 
 /**
+ * Metadata for one uploaded attachment. The bytes live on disk under the set's dir
+ * (`data/tasks/attachments/<setId>/`); this is only what the UI and the run manifest
+ * need — original filename (basename), byte size, and the browser-reported MIME.
+ */
+export const AttachmentSchema = z.object({
+  name: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  mediaType: z.string().optional(),
+});
+export type Attachment = z.infer<typeof AttachmentSchema>;
+
+/**
  * Display fields every routing target carries. `glyph` is a free-form string
  * (the API doesn't know the design system's `IconName` union, exactly as
  * `AgentSchema.glyph` is a plain string); the web client narrows it to an
@@ -264,6 +276,10 @@ export const ScheduledTaskSchema = z.object({
   title: z.string().default(""),
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).default([]),
+  /** Phase: the uploaded attachment set this task references (see AttachmentSchema). */
+  attachmentSetId: z.string().optional(),
+  /** Durable, displayable metadata for the referenced set (empty when none). */
+  attachments: z.array(AttachmentSchema).default([]),
   /** Absolute epoch ms the task should fire at. */
   scheduledAt: z.number().int().positive(),
   status: ScheduledTaskStatusSchema,
@@ -347,6 +363,8 @@ export const CreateTaskInputSchema = z.object({
   title: z.string().max(200).optional(),
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).max(64).optional(),
+  /** Phase: reference a previously-uploaded attachment set (POST /tasks/attachments). */
+  attachmentSetId: z.string().optional(),
   scheduledAt: z.number().int().positive().nullish(),
   /**
    * The operator's chosen terminal output for this task (PR / file / void). Absent =

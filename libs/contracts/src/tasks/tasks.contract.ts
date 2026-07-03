@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
+  AttachmentSchema,
   ClassifyTaskInputSchema,
   CreateTaskInputSchema,
   CreateTaskResultSchema,
@@ -71,6 +72,19 @@ export const tasksContract = c.router(
         404: ErrorSchema,
       },
       summary: "Cancel a still-waiting scheduled task",
+    },
+
+    uploadTaskAttachments: {
+      method: "POST",
+      path: "/tasks/attachments",
+      contentType: "multipart/form-data",
+      body: c.type<{ files: File[] }>(),
+      responses: {
+        201: z.object({ attachmentSetId: z.string(), files: z.array(AttachmentSchema) }),
+        413: ErrorSchema,
+        422: ErrorSchema,
+      },
+      summary: "Upload files as a durable attachment set a task can reference",
     },
   },
   {
