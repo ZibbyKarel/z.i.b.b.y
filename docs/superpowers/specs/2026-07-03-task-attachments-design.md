@@ -103,19 +103,35 @@ uploadTaskAttachments: {
 
 - On `createTask`, if `attachmentSetId` is present, resolve the set, copy its
   `Attachment[]` onto the persisted `ScheduledTask` (`attachments`, `attachmentSetId`).
-- At **launch** (agent, pipeline, orchestrator, **and** the loop/goal maker path —
-  `submitLoop` sends the same task fields), if the task has an `attachmentSetId`:
-  - compute the **absolute** dir `data/tasks/attachments/<setId>/` and pass it as a
-    dedicated attachments grant, **separate** from `files`/`paths` (so it never lands
-    as `grantDirs[0]`). Verify `dataDir(...)` yields an absolute path — a relative
-    path is silently dropped by `resolveGrantDirs` and would grant nothing while the
-    prompt still claims the dir exists.
-  - append a prompt line that lists **filenames**, not just the dir:
-    `Operator attached reference files in <dir>: spec.pdf, data.csv, shot.png`.
-    (A non-exploring agent needs the manifest to know what is there.)
-- Trace the exact seam: `agent-runner.service.ts` `launch()` / `buildCommand()` for the
-  agent + orchestrator paths, and the goal maker's launch for the loop path, so a
-  loop-mode task does not silently lose its attachments.
+- Thread a dedicated optional `attachments?: { dir: string; names: string[] }` param
+  through the launch chain — **separate** from `files`/`paths` so it never lands as
+  `grantDirs[0]` (the agent-runner turns `grantDirs[0]` into *"Operate on this
+  directory: …"*, which must stay the work target, not the attachments folder):
+  - `agent-runner.service.ts`: `start()`, `startOrchestrator()`, `launch()`,
+    `buildCommand()`.
+  - `goal-runner.service.ts`: `start()` → `drive()` → `dispatchMaker()` →
+    `agentRunner.start()`, so a **loop/goal** maker's agent iterations get it too
+    (`files` already flows this chain; the new param rides alongside).
+  - The scheduler's `dispatch()` builds the `attachments` object from the task's
+    `attachmentSetId` and passes it to `agentRunner.start` / `startOrchestrator` /
+    `goalRunner.start`.
+- In `buildCommand()`: compute the **absolute** dir `data/tasks/attachments/<setId>/`,
+  grant it via `--add-dir` **in addition to** the work `grantDirs`, and append a
+  prompt line listing **filenames**, not just the dir:
+  `Operator attached reference files in <dir>: spec.pdf, data.csv, shot.png`.
+  Assert the dir is absolute — a relative path is silently dropped by the grant
+  resolver and would grant nothing while the prompt still claims the dir exists.
+
+### Pipeline target — deferred (documented)
+
+A **pipeline**-routed task (`target.kind === "pipeline"`) does not receive
+attachments in v1. `pipelineRunner.start(id, taskId, projectId, matchedTerms, …)`
+takes neither the free text nor `paths` — pipeline stage prompts come from the
+pipeline definition — so there is no existing seam to grant the dir or inject the
+manifest. Wiring it needs new plumbing into the pipeline runner and each stage's
+prompt, a materially larger change. **Not silent:** attachments are still uploaded,
+stored, and shown in the task/run detail for a pipeline-routed task; only the run's
+`--add-dir` grant + manifest are absent. Follow-up spec.
 
 ### Cleanup
 
@@ -164,8 +180,8 @@ New **`FilePreview`** component (presentational, reusable — belongs in DS, not
   old-shaped task still parses (`attachments` defaults to `[]`).
 - **Backend**: multer limits reject oversize / too-many files (413); filename
   sanitization; the grant dir is absolute and the prompt manifest lists filenames;
-  attachments thread into the **loop** launch path, not just the agent path; orphan
-  sweep deletes unreferenced sets past TTL and keeps referenced ones.
+  attachments thread into the **agent, orchestrator, and goal/loop** launch paths;
+  orphan sweep deletes unreferenced sets past TTL and keeps referenced ones.
 - **DS**: `FilePreview` renders icon/name/size, remove fires `onRemove`,
   `formatFileSize` boundaries (bytes/KB/MB); testid-driven selectors.
 - **Web**: `TaskAttachments` upload + remove flow; `attachmentSetId` reaches both
@@ -173,6 +189,7 @@ New **`FilePreview`** component (presentational, reusable — belongs in DS, not
 
 ## Out of scope (YAGNI)
 
+- **Pipeline-target attachment grant/manifest** (see "Pipeline target — deferred").
 - Inlining file content into the prompt.
 - Image thumbnails / rich previews (icon + name + size only).
 - New file-type icons beyond the existing union.
