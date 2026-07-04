@@ -106,6 +106,17 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.getByText("data.csv")).toBeInTheDocument();
     expect(screen.queryByTestId(FilePreviewTestId.Remove)).not.toBeInTheDocument();
   });
+
+  it("shows a formatted cost meta cell when costUsd is set", () => {
+    renderDetail({ ...pipelineRun, costUsd: 0.2934669 });
+    expect(screen.getByText("cena (odhad)")).toBeInTheDocument();
+    expect(screen.getByText("$0.29")).toBeInTheDocument();
+  });
+
+  it("omits the cost cell entirely when costUsd is absent", () => {
+    renderDetail();
+    expect(screen.queryByText("cena (odhad)")).not.toBeInTheDocument();
+  });
 });
 
 describe("RunDetail — task output", () => {

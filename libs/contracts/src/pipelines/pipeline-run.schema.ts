@@ -59,6 +59,12 @@ export const StageRunSchema = z.object({
   dir: z.string().min(1).optional(),
   /** A qualify phase's parsed verdict (Phase 45); absent on non-qualify phases. */
   verdict: StageVerdictSchema.optional(),
+  /**
+   * Cena téhle fáze (odhad USD), zkopírovaná z dokončeného
+   * `PipelineStageRecord` po `waitForStage()`. Absent na starých bězích z
+   * doby před touhle featurou a na synthetic escalation markerech.
+   */
+  costUsd: z.number().optional(),
 });
 export type StageRun = z.infer<typeof StageRunSchema>;
 

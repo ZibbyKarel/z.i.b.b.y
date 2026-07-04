@@ -265,11 +265,18 @@ function agentRunToView(r: AgentRun): TaskRun {
     taskId: r.taskId,
     resumeAt: r.resumeAt,
     limitResumeCycles: r.limitResumeCycles,
+    costUsd: r.costUsd,
   };
 }
 
 function pipelineRunToView(r: PipelineRun): TaskRun {
   const fileOutput = r.outputsOverride?.find((o) => o.type === "file");
+  // Celková cena pipeline běhu = součet cen fází. Nastav jen když aspoň jedna
+  // fáze cenu má, ať starý běh z doby před touhle featurou neukazuje "$0.00".
+  const stageCosts = r.stageRuns.filter((s) => s.costUsd != null);
+  const costUsd = stageCosts.length
+    ? stageCosts.reduce((sum, s) => sum + (s.costUsd ?? 0), 0)
+    : undefined;
   const status: TaskRun["status"] =
     r.status === "paused-limit"
       ? "paused-limit"
@@ -301,6 +308,7 @@ function pipelineRunToView(r: PipelineRun): TaskRun {
     stageRuns: r.stageRuns,
     currentStage: r.currentStage,
     outputArtifactName: fileOutput?.from,
+    costUsd,
   };
 }
 

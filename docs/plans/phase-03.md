@@ -154,7 +154,7 @@
 
 ## Fáze 1 — Backend: zachytit cenu z výstupu `claude -p`
 
-- [ ] V `apps/api/src/runner/runner-core.types.ts` přidat do `BaseRun`
+- [x] V `apps/api/src/runner/runner-core.types.ts` přidat do `BaseRun`
       (řádky 30-52) nové optional pole:
       ```ts
       /**
@@ -167,7 +167,7 @@
        */
       costUsd?: number;
       ```
-- [ ] V `apps/api/src/runner/runner-core.ts` přidat privátní metodu (blízko
+- [x] V `apps/api/src/runner/runner-core.ts` přidat privátní metodu (blízko
       `wire()`, řádek 886):
       ```ts
       /**
@@ -188,7 +188,7 @@
         }
       }
       ```
-- [ ] V `wire()` (`onChunk`, řádky 897-953) přidat volání vedle
+- [x] V `wire()` (`onChunk`, řádky 897-953) přidat volání vedle
       `PROGRESS`/`INTENT` parsování (po bloku řádků 911-937), jen když je
       `this.formatLine` nastavený (reálný claude běh, ne demo/test):
       ```ts
@@ -197,7 +197,7 @@
         if (cost !== null) run.costUsd = (run.costUsd ?? 0) + cost;
       }
       ```
-- [ ] V `flushResidual()` (řádky 963-971) přidat stejné volání na `residual`
+- [x] V `flushResidual()` (řádky 963-971) přidat stejné volání na `residual`
       **před** jeho vynulováním, aby se nepřišlo o `result` event, který dorazí
       jako poslední řádek bez trailing newline:
       ```ts
@@ -211,22 +211,22 @@
         }
       };
       ```
-- [ ] `pnpm typecheck`.
+- [x] `pnpm typecheck`.
 
 ## Fáze 2 — Persistence napříč restarty (schémata)
 
-- [ ] V `libs/contracts/src/agents/agent-run.schema.ts` přidat do
+- [x] V `libs/contracts/src/agents/agent-run.schema.ts` přidat do
       `AgentRunSchema` (řádky 30-79, vedle `limitResumeCycles`) nové optional
       pole `costUsd: z.number().optional()` s komentářem "Souhrnná cena běhu
       (odhad USD, viz runner-core.types.ts `BaseRun.costUsd`)."
-- [ ] V `apps/api/src/pipelines/pipeline-stage.record.ts` přidat do
+- [x] V `apps/api/src/pipelines/pipeline-stage.record.ts` přidat do
       `PipelineStageRecordSchema` (řádky 10-28, vedle `limitResumeCycles`)
       stejné pole `costUsd: z.number().optional()`.
-- [ ] V `libs/contracts/src/pipelines/pipeline-run.schema.ts` přidat do
+- [x] V `libs/contracts/src/pipelines/pipeline-run.schema.ts` přidat do
       `StageRunSchema` (řádky 46-54, vedle `verdict`) pole
       `costUsd: z.number().optional()` — "Cena téhle fáze (odhad USD),
       zkopírovaná z dokončeného `PipelineStageRecord` po `waitForStage()`."
-- [ ] V `apps/api/src/pipelines/pipeline-runner.service.ts`, `runStage()`
+- [x] V `apps/api/src/pipelines/pipeline-runner.service.ts`, `runStage()`
       (řádky 1362-1407): po `const status = await this.waitForStage(rec.runId);`
       (řádek 1405) načíst dokončený záznam a promítnout cenu do vraceného
       `StageRun`:
@@ -241,17 +241,17 @@
         ...(finishedRec.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
       };
       ```
-- [ ] `pnpm typecheck` — ověřit, že `this.core.get()` (stejná signatura jako na
+- [x] `pnpm typecheck` — ověřit, že `this.core.get()` (stejná signatura jako na
       řádku 806) vrací typ obsahující `costUsd` po úpravě `PipelineStageRecord`.
 
 ## Fáze 3 — Unifikovaný `/runs` feed
 
-- [ ] V `libs/contracts/src/tasks/task-run.schema.ts` přidat do `TaskRunSchema`
+- [x] V `libs/contracts/src/tasks/task-run.schema.ts` přidat do `TaskRunSchema`
       nové optional pole `costUsd: z.number().optional()` — "Souhrnná cena běhu
       (odhad USD): pro agent běh přímo z `AgentRun.costUsd`, pro pipeline běh
       součet `stageRuns[].costUsd`. Absent = žádná data (starý běh před touhle
       featurou), ne nula." Umístit vedle `checkpoints`/`stageRuns`.
-- [ ] V `apps/api/src/tasks/task-runs.service.ts`:
+- [x] V `apps/api/src/tasks/task-runs.service.ts`:
   - `agentRunToView(r)` (řádky 253-269): přidat `costUsd: r.costUsd,`.
   - `pipelineRunToView(r)` (řádky 271-303): před `return` dopočítat
     ```ts
@@ -261,11 +261,11 @@
       : undefined;
     ```
     a do vraceného objektu přidat `costUsd,`.
-- [ ] `pnpm typecheck`.
+- [x] `pnpm typecheck`.
 
 ## Fáze 4 — Frontend: formátování a zobrazení
 
-- [ ] Vytvořit `apps/web/utils/cost.ts` (vzor `time.ts`):
+- [x] Vytvořit `apps/web/utils/cost.ts` (vzor `time.ts`):
       ```ts
       /**
        * Formátuje odhad ceny v USD pro zobrazení: pod half-cent zaokrouhlené
@@ -277,10 +277,10 @@
         return `$${usd.toFixed(2)}`;
       }
       ```
-- [ ] `apps/web/utils/cost.test.ts` (vzor `time.test.ts`): tabulkový test —
+- [x] `apps/web/utils/cost.test.ts` (vzor `time.test.ts`): tabulkový test —
       `0` → `"< $0.01"`, `0.0034` → `"< $0.01"`, `0.2934669` → `"$0.29"`,
       `12.5` → `"$12.50"`.
-- [ ] V `apps/web/features/runs/components/RunDetail.tsx` přidat do meta pruhu
+- [x] V `apps/web/features/runs/components/RunDetail.tsx` přidat do meta pruhu
       hlavičky (`Stack` řádky 382-414, vedle `metaTask`/`metaProject`):
       ```tsx
       {run.costUsd != null && (
@@ -288,7 +288,7 @@
       )}
       ```
       Import `formatCostUsd` z `../../../utils/cost`.
-- [ ] V `apps/web/features/runs/components/TaskCard.tsx` přidat do patičky
+- [x] V `apps/web/features/runs/components/TaskCard.tsx` přidat do patičky
       karty (`Stack` řádky 103-110, vedle `owner`/`project`/`startedLabel`)
       krátký cenový štítek, jen když je hodnota k dispozici:
       ```tsx
@@ -300,7 +300,7 @@
       ```
       (Umístit před stávající `Typography` s `owner`/`project`/`startedLabel`,
       nebo za ni — vizuální doladění při implementaci; funkčně nezáleží.)
-- [ ] V `apps/web/features/runs/components/PipelineStageTimeline.tsx` přidat
+- [x] V `apps/web/features/runs/components/PipelineStageTimeline.tsx` přidat
       do řádku fáze (`Stack` řádky 174-188, vedle `RunStateBadge`) cenu té
       fáze, jen když ji stage má:
       ```tsx
@@ -310,18 +310,18 @@
         </Typography>
       )}
       ```
-- [ ] Do `apps/web/i18n/messages/cs.json` a `en.json` (namespace `runs`,
+- [x] Do `apps/web/i18n/messages/cs.json` a `en.json` (namespace `runs`,
       vedle `metaProject`/`metaPipeline` na řádcích ~875-879) přidat:
       - cs: `"metaCost": "cena (odhad)"`
       - en: `"metaCost": "cost (est.)"`
       (Odhadní charakter musí být v popisku vidět — viz Cíl bod 3; per-fázový
       cenový štítek v `PipelineStageTimeline` žádný vlastní label nepotřebuje,
       čte se v kontextu řádku fáze.)
-- [ ] `pnpm lint && pnpm typecheck`.
+- [x] `pnpm lint && pnpm typecheck`.
 
 ## Fáze 5 — Testy
 
-- [ ] `apps/api/src/runner/runner-core.test.ts` (nebo nejbližší existující
+- [x] `apps/api/src/runner/runner-core.test.ts` (nebo nejbližší existující
       test souboru pro `RunnerCore`): nový test — dvoufázový child (demo/mock),
       který na stdout pošle `result` řádek s `total_cost_usd: 0.1`, pak (po
       simulovaném limit-pause `resume()`) druhý respawn se svým vlastním
@@ -333,26 +333,31 @@
     `flushResidual` opravu).
   - Třetí test: demo/test běh bez `formatLine` → `run.costUsd` zůstává
     `undefined` (žádný false-positive parsing na neformátovaném výstupu).
-- [ ] `apps/api/src/pipelines/pipeline-runner.service.test.ts` (nebo
+- [x] `apps/api/src/pipelines/pipeline-runner.service.test.ts` (nebo
       `pipeline-runner.outputs.test.ts`): stage s doběhlou cenou → vrácený
       `StageRun.costUsd` odpovídá `PipelineStageRecord.costUsd` z `this.core`.
-- [ ] `apps/api/src/tasks/task-runs.service.test.ts` (nebo nejbližší existující
+- [x] `apps/api/src/tasks/task-runs.service.test.ts` (nebo nejbližší existující
       test na `pipelineRunToView`/`agentRunToView`): pipeline run se dvěma
       fázemi, jen jedna má `costUsd` → výsledný `TaskRun.costUsd` je součet jen
       té jedné (ne `NaN`, ne `0`); pipeline run bez jediné fáze s cenou →
       `TaskRun.costUsd` je `undefined`, ne `0`.
-- [ ] `apps/web/utils/cost.test.ts` — viz Fáze 4.
-- [ ] `apps/web/features/runs/components/RunDetail.test.tsx`: nový test —
+- [x] `apps/web/utils/cost.test.ts` — viz Fáze 4.
+- [x] `apps/web/features/runs/components/RunDetail.test.tsx`: nový test —
       `run.costUsd` nastaveno → `MetaCell` s formátovanou cenou v hlavičce;
       `run.costUsd` `undefined` → dlaždice se nerenderuje vůbec (ne prázdná
       hodnota).
-- [ ] `apps/web/features/runs/components/PipelineStageTimeline.test.tsx`:
+- [x] `apps/web/features/runs/components/PipelineStageTimeline.test.tsx`:
       nový test — `stageRuns[i].costUsd` nastaveno → cena vidět v řádku té
       fáze; jiná fáze bez ceny → žádný cenový text v jejím řádku.
-- [ ] `pnpm test` (celá suita), `pnpm typecheck`, `pnpm lint`.
+- [x] `pnpm test` (celá suita), `pnpm typecheck`, `pnpm lint`.
 - [ ] Manuální smoke test: spustit libovolný agent/pipeline task, počkat na
       `done`, otevřít `/runs` → ověřit cenu v hlavičce detailu, na kartě v
       seznamu, a (u pipeline běhu) u každé fáze ve stage timeline.
+  - _Pozn. (2026-07-04): odloženo na operátora — vyžaduje reálný `claude` běh
+    (cena se čte z `total_cost_usd` reálného výstupu); chování kryjí unit testy
+    (runner-core.test.ts: akumulace přes respawn + flush bez newline + žádný
+    parsing bez formatLine; task-runs.service.test.ts: součet cen fází / agent
+    costUsd; RunDetail + PipelineStageTimeline web testy)._
 
 ---
 

@@ -126,6 +126,12 @@ export const TaskRunSchema = z.object({
   deferredLimit: z.boolean().optional(),
   /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
   checkpoints: z.array(PipelineCheckpointSchema).optional(),
+  /**
+   * Souhrnná cena běhu (odhad USD): pro agent běh přímo z `AgentRun.costUsd`,
+   * pro pipeline běh součet `stageRuns[].costUsd`. Absent = žádná data (starý
+   * běh před touhle featurou), ne nula.
+   */
+  costUsd: z.number().optional(),
   /** Phase 28 (pipeline runs): the per-phase stage runs, for the detail's stage timeline. */
   stageRuns: z.array(StageRunSchema).optional(),
   /** Pipeline runs: the phase currently executing, for the timeline's live stage row. */

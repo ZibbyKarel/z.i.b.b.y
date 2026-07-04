@@ -16,6 +16,7 @@ import {
 } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useNewTask } from "../../tasks";
+import { formatCostUsd } from "../../../utils/cost";
 import { relativeTime, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
@@ -431,6 +432,9 @@ export function RunDetail({
                     : run.taskTitle
                 }
               />
+            )}
+            {run.costUsd != null && (
+              <MetaCell label={t("metaCost")} value={formatCostUsd(run.costUsd)} />
             )}
             {approval && (
               <MetaCell

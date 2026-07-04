@@ -205,6 +205,57 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("costUsd projection (Phase 03)", () => {
+    it("sums the stage costs of a pipeline run", async () => {
+      const { service, pipelineRunner } = build();
+      pipelineRunner.listAll.mockResolvedValue([
+        {
+          ...pipeP,
+          stageRuns: [
+            { phaseId: "a", runId: "a_1", attempt: 1, status: "done", costUsd: 0.1 },
+            { phaseId: "b", runId: "b_1", attempt: 1, status: "done", costUsd: 0.25 },
+          ],
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.costUsd).toBeCloseTo(0.35, 10);
+    });
+
+    it("sums only stages that carry a cost (no NaN from a costless stage)", async () => {
+      const { service, pipelineRunner } = build();
+      pipelineRunner.listAll.mockResolvedValue([
+        {
+          ...pipeP,
+          stageRuns: [
+            { phaseId: "a", runId: "a_1", attempt: 1, status: "done", costUsd: 0.2 },
+            { phaseId: "b", runId: "b_1", attempt: 1, status: "done" },
+          ],
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.costUsd).toBeCloseTo(0.2, 10);
+    });
+
+    it("is absent when no stage carries a cost (old run — not $0.00)", async () => {
+      const { service, pipelineRunner } = build();
+      pipelineRunner.listAll.mockResolvedValue([
+        {
+          ...pipeP,
+          stageRuns: [{ phaseId: "a", runId: "a_1", attempt: 1, status: "done" }],
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.costUsd).toBeUndefined();
+    });
+
+    it("carries an agent run's own costUsd through", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([{ ...agentA, costUsd: 0.5 }, makerChild]);
+      const run = await service.getTaskRun(agentA.runId);
+      expect(run.costUsd).toBeCloseTo(0.5, 10);
+    });
+  });
+
   describe("processor resolution", () => {
     it("resolves the human name from the definition store", async () => {
       const { service } = build();

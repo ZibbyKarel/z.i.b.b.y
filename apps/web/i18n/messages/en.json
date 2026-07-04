@@ -877,6 +877,7 @@
     "metaScheduled": "fires",
     "metaTarget": "target",
     "metaPipeline": "pipeline",
+    "metaCost": "cost (est.)",
     "metaAgent": "agent",
     "metaKind": "type",
     "metaTask": "task",

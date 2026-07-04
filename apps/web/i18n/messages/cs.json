@@ -877,6 +877,7 @@
     "metaScheduled": "spustí se",
     "metaTarget": "cíl",
     "metaPipeline": "pipelina",
+    "metaCost": "cena (odhad)",
     "metaAgent": "agent",
     "metaKind": "typ",
     "metaTask": "úkol",

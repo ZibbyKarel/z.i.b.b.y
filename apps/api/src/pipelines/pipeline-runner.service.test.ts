@@ -987,6 +987,31 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(first).not.toBe(second);
     });
 
+    it("copies each finished stage's costUsd onto its StageRun (Phase 03)", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const cwds: string[] = [];
+      // Cost per dispatch order: 1st stage 0.1, 2nd stage no cost (must omit, not 0).
+      const costBySeq = [0.1, undefined];
+      const costByRunId = new Map<string, number | undefined>();
+      h.core.start.mockImplementation(async (spec: { ownerId: string; cwd: string }) => {
+        const runId = `${spec.ownerId}_${cwds.length}`;
+        costByRunId.set(runId, costBySeq[cwds.length]);
+        await fs.writeFile(path.join(spec.cwd, "marker.txt"), runId, "utf8");
+        cwds.push(spec.cwd);
+        return { runId };
+      });
+      h.core.get.mockImplementation((runId: string) => {
+        const costUsd = costByRunId.get(runId);
+        return { runId, status: "done", ...(costUsd != null ? { costUsd } : {}) };
+      });
+
+      await drive(run, loopPipeline);
+
+      expect(run.status).toBe("done");
+      expect(run.stageRuns.map((s) => s.costUsd)).toEqual([0.1, undefined]);
+    });
+
     it("resolveOutputSource (no output/ dir): targets the LATEST numbered folder of the producing phase", async () => {
       const run = h.runs.get(PIPELINE_RUN_ID);
       if (!run) throw new Error("missing run");
