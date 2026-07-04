@@ -306,6 +306,104 @@ describe("Pipelines API (e2e)", () => {
     await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   });
 
+  it("P1-T4 structure smoke: loop + file output — numbered-only tree, own-produces real files, symlinked handoff/context, output/ resolves the canonical artifact", async () => {
+    // review is a qualify phase that gaps once (demo GAP lever) then passes, so the
+    // chain genuinely loops back to developer before finishing — the same shape as
+    // the plan's deferred manual code-audit smoke, at demo-mode determinism.
+    process.env.PIPELINE_DEMO_GAP_PHASES = "review";
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "structure-smoke",
+        phases: [
+          phase("developer"),
+          {
+            id: "review",
+            agent: "writer",
+            consumes: "developer.out",
+            produces: "review.out",
+            model: "sonnet",
+            thinking: "medium",
+            qualify: true,
+            loop: { to: "developer", maxRetries: 1, escalate: false, then: "park" },
+          },
+          phase("finish", { consumes: "review.out", produces: "final.out" }),
+        ],
+        outputs: [{ type: "file", from: "final.out", dest: "vault", to: "structure-smoke-note" }],
+        instructions: "structure smoke",
+      })
+      .expect(201);
+
+    const pipelines = app.get(PipelineRunnerService);
+    const start = await pipelines.start(
+      "structure-smoke",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "chain input for structure smoke",
+    );
+    const { pipelineRunId } = start;
+
+    const final = await until(async () => {
+      const res = pipelines.get(pipelineRunId);
+      return res.status !== "running" ? res : null;
+    });
+    expect(final.status).toBe("done");
+
+    // developer → review(gap) → developer(retry) → review(pass) → finish: five
+    // dispatches, numbered in call order — no flat `developer`/`review`/`finish`
+    // folders alongside them (the audit's original complaint).
+    const stageDirs = ["01_developer", "02_review", "03_developer", "04_review", "05_finish"];
+    const entries = await fs.readdir(final.cwd, { withFileTypes: true });
+    const dirNames = entries
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    expect(dirNames).toEqual([...stageDirs, "context", "output"].sort());
+
+    // Each stage folder holds its OWN produces file as a real file — not a
+    // byte-duplicated copy of a previous phase's output.
+    for (const [d, file] of [
+      ["01_developer", "developer.out"],
+      ["03_developer", "developer.out"],
+      ["04_review", "review.out"],
+      ["05_finish", "final.out"],
+    ] as const) {
+      const st = await fs.lstat(path.join(final.cwd, d, file));
+      expect(st.isSymbolicLink()).toBe(false);
+      expect(st.isFile()).toBe(true);
+    }
+
+    // Consumed input is a symlink into the producing phase's LATEST folder, not a
+    // duplicate — reading it returns the exact same bytes as the source.
+    const consumesLink = path.join(final.cwd, "04_review", "developer.out");
+    expect((await fs.lstat(consumesLink)).isSymbolicLink()).toBe(true);
+    expect(await fs.readFile(consumesLink, "utf8")).toBe(
+      await fs.readFile(path.join(final.cwd, "03_developer", "developer.out"), "utf8"),
+    );
+
+    // context/ holds the pipeline-level input; every stage sees it via a symlink.
+    const contextInput = path.join(final.cwd, "context", "input.md");
+    expect(await fs.readFile(contextInput, "utf8")).toBe("chain input for structure smoke");
+    for (const d of stageDirs) {
+      const ctxLink = path.join(final.cwd, d, "context");
+      expect((await fs.lstat(ctxLink)).isSymbolicLink()).toBe(true);
+      expect(await fs.readFile(path.join(ctxLink, "input.md"), "utf8")).toBe(
+        "chain input for structure smoke",
+      );
+    }
+
+    // output/<name> is the canonical delivery source — a symlink resolving to the
+    // last phase's real produces file.
+    const outputLink = path.join(final.cwd, "output", "final.out");
+    expect((await fs.lstat(outputLink)).isSymbolicLink()).toBe(true);
+    expect(await fs.readFile(outputLink, "utf8")).toBe(
+      await fs.readFile(path.join(final.cwd, "05_finish", "final.out"), "utf8"),
+    );
+  });
+
   it("retries exhaustion with then:'park' parks the run; resume-with-note completes it", async () => {
     process.env.PIPELINE_DEMO_FAIL_PHASES = "b";
     await request(app.getHttpServer())
