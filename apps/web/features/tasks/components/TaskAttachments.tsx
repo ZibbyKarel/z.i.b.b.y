@@ -1,6 +1,6 @@
 "use client";
-import { DropZone, FilePreview, Stack, Typography } from "@zibby/design-system";
 import type { Attachment } from "@zibby/contracts";
+import { DropZone, FilePreview, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useUploadTaskAttachmentsMutation } from "../mutations/useUploadTaskAttachmentsMutation";
@@ -50,7 +50,12 @@ export function TaskAttachments({ value, onChange }: TaskAttachmentsProps) {
       <Typography size="xs" type="note" variant="tertiary">
         {t("label")}
       </Typography>
-      <DropZone multiple maxSize={10 * 1024 * 1024} onDrop={handleDrop} onDropRejected={handleDropRejected} />
+      <DropZone
+        multiple
+        maxSize={10 * 1024 * 1024}
+        onDrop={handleDrop}
+        onDropRejected={handleDropRejected}
+      />
       {upload.isPending && (
         <Typography size="xs" type="note" variant="tertiary">
           {t("uploading")}

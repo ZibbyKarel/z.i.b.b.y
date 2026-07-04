@@ -1,4 +1,5 @@
 "use client";
+import type { Attachment } from "@zibby/contracts";
 import {
   Button,
   Container,
@@ -9,7 +10,6 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
-import type { Attachment } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useLimitsQuery } from "../../limits";
@@ -244,8 +244,6 @@ export function NewTaskDialog({
 
         {initialContext && <TaskContextPanel context={initialContext} />}
 
-        <TaskAttachments onChange={setAttachments} value={attachments} />
-
         {(projects ?? []).length > 0 && (
           <SelectField
             hint={t("project.hint")}
@@ -277,6 +275,8 @@ export function NewTaskDialog({
               value={chosenKey}
             />
           ))}
+
+        <TaskAttachments onChange={setAttachments} value={attachments} />
 
         {!isLoop && (
           <TaskOutputField
