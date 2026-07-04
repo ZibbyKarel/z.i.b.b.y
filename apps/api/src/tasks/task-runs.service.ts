@@ -269,6 +269,7 @@ function agentRunToView(r: AgentRun): TaskRun {
 }
 
 function pipelineRunToView(r: PipelineRun): TaskRun {
+  const fileOutput = r.outputsOverride?.find((o) => o.type === "file");
   const status: TaskRun["status"] =
     r.status === "paused-limit"
       ? "paused-limit"
@@ -299,6 +300,7 @@ function pipelineRunToView(r: PipelineRun): TaskRun {
     checkpoints: r.checkpoints,
     stageRuns: r.stageRuns,
     currentStage: r.currentStage,
+    outputArtifactName: fileOutput?.from,
   };
 }
 

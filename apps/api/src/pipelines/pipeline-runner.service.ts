@@ -696,21 +696,27 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Read one whitelisted run artifact (Phase 3.3) by name. `name` must be on the
-   * allowlist ({@link PIPELINE_RUN_ARTIFACTS}) — anything else (incl. any traversal
-   * attempt) returns null → 404; there is no generic file browser. The diffstat
-   * lives in the run root; every other artifact is a phase's `produces`, found in
-   * its stage sandbox. Returns null when the run is unknown or the file is absent.
+   * Read one whitelisted run artifact (Phase 3.3) by name. `name` must either be on
+   * the global allowlist ({@link PIPELINE_RUN_ARTIFACTS}) or match the run's own
+   * delivered `file` output (`outputsOverride`'s `from`, computed by the runner
+   * itself from `phase.produces` — never request input) — anything else (incl. any
+   * traversal attempt) returns null → 404; there is no generic file browser. The
+   * diffstat lives in the run root; every other artifact is a phase's `produces`,
+   * found in its stage sandbox. Returns null when the run is unknown or the file is
+   * absent.
    */
   async readArtifact(
     pipelineRunId: string,
     name: string,
   ): Promise<{ name: PipelineRunArtifact["name"]; content: string } | null> {
-    if (!(PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name)) return null;
-    const allowed = name as PipelineRunArtifact["name"];
     const root = this.resolveRunDir(pipelineRunId);
     if (!root) return null;
     const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
+    const fileOutputName = run?.outputsOverride?.find((o) => o.type === "file")?.from;
+    const isAllowed =
+      (PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name) || name === fileOutputName;
+    if (!isAllowed) return null;
+    const allowed = name as PipelineRunArtifact["name"];
     // Candidate dirs: the run root (diffstat.txt) + the phase sandboxes. The
     // currently-executing phase is included too — a run parked on the PR gate has
     // already written its `produces` (pr-draft.md) but is not yet in `stageRuns`

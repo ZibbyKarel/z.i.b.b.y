@@ -174,6 +174,37 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("pipelineRunToView — outputArtifactName (P2-T1)", () => {
+    it("appears when outputsOverride contains a file output, carrying its `from`", async () => {
+      const { service, pipelineRunner } = build();
+      pipelineRunner.listAll.mockResolvedValue([
+        {
+          ...pipeP,
+          outputsOverride: [
+            { type: "file", from: "custom-report.md", dest: "project", to: "docs/report.md" },
+          ],
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.outputArtifactName).toBe("custom-report.md");
+    });
+
+    it("is absent when outputsOverride has no file output", async () => {
+      const { service, pipelineRunner } = build();
+      pipelineRunner.listAll.mockResolvedValue([
+        { ...pipeP, outputsOverride: [{ type: "pr", from: "pr-draft.md" }] },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.outputArtifactName).toBeUndefined();
+    });
+
+    it("is absent when outputsOverride is undefined", async () => {
+      const { service } = build();
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.outputArtifactName).toBeUndefined();
+    });
+  });
+
   describe("processor resolution", () => {
     it("resolves the human name from the definition store", async () => {
       const { service } = build();

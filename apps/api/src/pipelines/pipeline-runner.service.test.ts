@@ -1109,6 +1109,32 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "docs.md");
         expect(artifact?.content).toBe("in flight");
       });
+
+      it("P2-T1: a name outside PIPELINE_RUN_ARTIFACTS is allowed when it matches the run's own file output", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [];
+        run.outputsOverride = [
+          { type: "file", from: "custom-report.md", dest: "project", to: "docs/report.md" },
+        ];
+        await fs.writeFile(path.join(run.cwd, "custom-report.md"), "audit findings", "utf8");
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "custom-report.md");
+        expect(artifact?.content).toBe("audit findings");
+      });
+
+      it("P2-T1: a name outside PIPELINE_RUN_ARTIFACTS and outside outputsOverride is still refused", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [];
+        run.outputsOverride = [
+          { type: "file", from: "custom-report.md", dest: "project", to: "docs/report.md" },
+        ];
+        await fs.writeFile(path.join(run.cwd, "some-other-name.md"), "should not leak", "utf8");
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "some-other-name.md");
+        expect(artifact).toBeNull();
+      });
     });
   });
 
