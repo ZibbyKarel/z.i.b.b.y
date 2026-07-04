@@ -4,6 +4,7 @@ import {
   Accordion,
   AccordionItem,
   Button,
+  CodeBlock,
   Container,
   FilePreview,
   Icon,
@@ -135,8 +136,12 @@ function RunOutputPanel({ run }: { run: RunView }) {
   const { open: openNewTask } = useNewTask();
 
   const summary = run.taskOutcomeSummary;
+  // A pipeline run's own artifacts (below) are its output — the agent-shaped branch
+  // (a generic `taskOutcomeSummary` string like "5 stages, done") must never apply to
+  // one, even when its artifact hasn't arrived yet (P2-T2 bugfix).
   const agentOutput =
     run.status === "done" &&
+    run.kind !== "pipeline" &&
     !!summary &&
     (run.taskOutputKind === "pr" || run.taskOutputKind === "file");
   const pipelineDone = run.status === "done" && run.kind === "pipeline";
@@ -145,11 +150,20 @@ function RunOutputPanel({ run }: { run: RunView }) {
   // continue-context. Same query key, so this shares RunPrGatePanel's cache (no extra
   // fetch); gated so non-pipeline runs never request it.
   const { data: prDraft } = useRunArtifactQuery(run.runId, "pr-draft.md", pipelineDone);
-  const pipelineOutput = pipelineDone && !!prDraft?.content;
+  // A `file`-output pipeline run's named artifact (P2-T1's `outputArtifactName`) — no
+  // `pr-draft.md` is written for that shape, so this is the only way its output surfaces.
+  const { data: fileArtifact } = useRunArtifactQuery(
+    run.runId,
+    run.outputArtifactName ?? "",
+    pipelineDone && !!run.outputArtifactName,
+  );
+  const pipelineOutput = pipelineDone && !!(prDraft?.content || fileArtifact?.content);
 
   if (!agentOutput && !pipelineOutput) return null;
 
-  const rawOutput = agentOutput ? (summary ?? "") : (prDraft?.content ?? "");
+  const rawOutput = agentOutput
+    ? (summary ?? "")
+    : (prDraft?.content ?? fileArtifact?.content ?? "");
   const output =
     rawOutput.length > CONTINUE_CONTEXT_MAX ? `${rawOutput.slice(0, CONTINUE_CONTEXT_MAX)}…` : rawOutput;
   const context = [
@@ -171,8 +185,9 @@ function RunOutputPanel({ run }: { run: RunView }) {
     </Button>
   );
 
-  // Pipeline: the artifact view IS the openable output; "continue" sits beneath it.
-  if (pipelineOutput) {
+  // Pipeline with a PR draft: the artifact view IS the openable output (incl. the
+  // diffstat); "continue" sits beneath it.
+  if (prDraft?.content) {
     return (
       <Stack gap="100">
         <RunPrGatePanel pipelineRunId={run.runId} title={t("producedOutputTitle")} />
@@ -183,14 +198,27 @@ function RunOutputPanel({ run }: { run: RunView }) {
     );
   }
 
+  // Pipeline with a `file`-output artifact: no `RunPrGatePanel` (there is no diffstat,
+  // no PR draft) — a lighter block with the same skeleton showing the artifact content.
+  if (fileArtifact?.content) {
+    return (
+      <HudPanel padding="250" title={t("producedOutputTitle")}>
+        <Stack gap="200">
+          <CodeBlock maxHeight="md" text={fileArtifact.content} />
+          <Stack align="center" direction="row" gap="100">
+            {continueButton}
+          </Stack>
+        </Stack>
+      </HudPanel>
+    );
+  }
+
   // Agent/orchestrator: the summary reference, with a PR url opened in a new tab.
   const url = firstUrl(summary);
   return (
     <HudPanel padding="250" title={t("producedOutputTitle")}>
       <Stack gap="100">
-        <Typography size="sm" type="text" variant="secondary">
-          {summary}
-        </Typography>
+        <CodeBlock maxHeight="md" text={summary ?? ""} />
         <Stack wrap align="center" direction="row" gap="100">
           {url && (
             <Button

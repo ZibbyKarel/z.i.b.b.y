@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { FilePreviewTestId } from "@zibby/design-system";
+import { CodeBlockTestId, FilePreviewTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
@@ -19,12 +19,19 @@ const { openNewTask } = vi.hoisted(() => ({ openNewTask: vi.fn() }));
 vi.mock("../../tasks/TaskContext", () => ({
   useNewTask: () => ({ open: openNewTask, close: vi.fn(), isOpen: false }),
 }));
-// The pipeline output panel reads the run's pr-draft artifact; return a draft so a
-// done pipeline run surfaces it (and none when the query is gated off).
+// The pipeline output panel reads the run's pr-draft (or, for a file output, its
+// named artifact) — keyed by `runId:name` so a run only "has" the artifact its test
+// scenario actually gives it (mirroring a real 404 for the artifact that wasn't
+// written), and none when the query is gated off.
+const ARTIFACT_CONTENT: Record<string, string> = {
+  "delivery_42:pr-draft.md": "# Add login fix\n\nDetails…",
+  "delivery_file_43:audit-report.md": "# Audit report\n\nAll green.",
+};
 vi.mock("../queries/useRunArtifactQuery", () => ({
-  useRunArtifactQuery: (_runId: string, name: string, enabled = true) => ({
-    data: enabled && name === "pr-draft.md" ? { name, content: "# Add login fix\n\nDetails…" } : undefined,
-  }),
+  useRunArtifactQuery: (runId: string, name: string, enabled = true) => {
+    const content = ARTIFACT_CONTENT[`${runId}:${name}`];
+    return { data: enabled && content ? { name, content } : undefined };
+  },
 }));
 
 const LONG_DESC =
@@ -132,6 +139,13 @@ describe("RunDetail — task output", () => {
     openSpy.mockRestore();
   });
 
+  it("shows the agent's outcome summary in a scrolled code block, not a bare paragraph", () => {
+    renderDetail(doneWithPr);
+    expect(screen.getByTestId(CodeBlockTestId.Pre)).toHaveTextContent(
+      "PR otevřen: https://github.com/acme/app/pull/42",
+    );
+  });
+
   it("continues in a new task with the prior output folded into context", async () => {
     openNewTask.mockClear();
     renderDetail(doneWithPr);
@@ -165,5 +179,49 @@ describe("RunDetail — task output", () => {
       undefined,
       expect.stringContaining("Add login fix"),
     );
+  });
+
+  it("surfaces a done pipeline run's file output as its output and offers continue (P2-T2)", async () => {
+    openNewTask.mockClear();
+    renderDetail({
+      ...pipelineRun,
+      runId: "delivery_file_43",
+      status: "done",
+      taskOutcome: "done",
+      taskOutputKind: "file",
+      outputArtifactName: "audit-report.md",
+    });
+    // The produced file artifact is shown as the output, in a code block — not the
+    // pr-draft (which doesn't exist for a file-output pipeline run).
+    expect(screen.getByTestId(CodeBlockTestId.Pre)).toHaveTextContent("All green.");
+    await userEvent.click(screen.getByTestId("continue-task"));
+    expect(openNewTask).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.stringContaining("Audit report"),
+    );
+    // Never the generic "N stages, done" pipeline summary.
+    expect(openNewTask).not.toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.stringContaining("stages, done"),
+    );
+  });
+
+  it("renders nothing for a done pipeline file-output run whose artifact hasn't arrived (never falls into the agent-shaped branch)", () => {
+    renderDetail({
+      ...pipelineRun,
+      runId: "delivery_file_44",
+      status: "done",
+      taskOutcome: "done",
+      taskOutputKind: "file",
+      outputArtifactName: "missing-report.md",
+      // A generic pipeline outcome string — if the agent-shaped branch's guard were
+      // missing, this would render as a bogus "continue" context.
+      taskOutcomeSummary: "5 stages, done",
+    });
+    expect(screen.queryByTestId(CodeBlockTestId.Pre)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
+    expect(screen.queryByText(/stages, done/)).not.toBeInTheDocument();
   });
 });
