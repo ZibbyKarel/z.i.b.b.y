@@ -924,6 +924,7 @@
       "agent": "agent",
       "pipeline": "pipeline",
       "goal": "cíl",
+      "chain": "řetězec",
       "scheduled": "naplánovaný task"
     },
     "parkedQueue": "zaparkované běhy",
@@ -978,6 +979,15 @@
     "stageNoLog": "Tato fáze zatím nemá žádný log.",
     "stageNone": "Tento běh zatím nemá žádné fáze.",
     "stageLoading": "Načítám fáze makera…",
+    "chainSteps": "Kroky řetězce",
+    "chainNoSteps": "Tento běh zatím nemá žádné kroky.",
+    "chainStep": "krok {n}",
+    "chainStepStatus": {
+      "pending": "čeká",
+      "running": "běží",
+      "done": "hotovo",
+      "failed": "selhalo"
+    },
     "verdict": {
       "pass": "Schváleno",
       "gap": "Chybí část",

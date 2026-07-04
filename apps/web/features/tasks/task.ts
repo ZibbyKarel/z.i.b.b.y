@@ -55,8 +55,8 @@ export function basename(path: string): string {
   return slash >= 0 ? trimmed.slice(slash + 1) : trimmed;
 }
 
-/** A destination for a task — an agent, a pipeline, a goal, or the orchestrator fallback. */
-export type TaskTargetKind = "agent" | "pipeline" | "goal" | "orchestrator";
+/** A destination for a task — an agent, pipeline, goal, chain, or the orchestrator fallback. */
+export type TaskTargetKind = "agent" | "pipeline" | "goal" | "chain" | "orchestrator";
 
 /** A stable key for a target, used to pre-select and dedupe entries in the picker. */
 export function targetKey(target: TaskTarget): string {
@@ -96,7 +96,7 @@ interface TaskTargetDisplay {
  * (no stored definition, no id) and exists in the UI purely as a name + glyph.
  */
 export type TaskTarget =
-  | (TaskTargetDisplay & { kind: "agent" | "pipeline" | "goal"; id: string })
+  | (TaskTargetDisplay & { kind: "agent" | "pipeline" | "goal" | "chain"; id: string })
   | (TaskTargetDisplay & { kind: "orchestrator" });
 
 /**
@@ -131,6 +131,7 @@ const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
   goal: "retry",
+  chain: "link",
   orchestrator: "compass",
 };
 

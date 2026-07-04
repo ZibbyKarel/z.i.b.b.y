@@ -166,6 +166,7 @@ const KIND_GLYPH: Record<RunKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
   goal: "retry",
+  chain: "link",
   scheduled: "clock",
 };
 

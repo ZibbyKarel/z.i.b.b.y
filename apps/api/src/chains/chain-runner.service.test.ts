@@ -117,6 +117,33 @@ describe("ChainRunnerService", () => {
     service.onModuleDestroy();
   });
 
+  it("start records the dispatching taskId on the run (Phase 05)", async () => {
+    const { service } = makeService(dir);
+    await service.onModuleInit();
+    const run = await service.start("research-then-build", "task-42");
+    expect(run.taskId).toBe("task-42");
+    const persisted = JSON.parse(
+      await fs.readFile(path.join(dir, `${run.chainRunId}.json`), "utf8"),
+    );
+    expect(persisted.taskId).toBe("task-42");
+    service.onModuleDestroy();
+  });
+
+  it("onRunStatus fires on every persisted transition (start + fail)", async () => {
+    const { service, d } = makeService(dir);
+    await service.onModuleInit();
+    const seen: string[] = [];
+    const off = service.onRunStatus((r) => seen.push(r.status));
+    const run = await service.start("research-then-build");
+    // Step 0 fails → chain failed (another persist → another emit).
+    await d.emit({ pipelineRunId: run.steps[0]?.runRef as string, status: "failed" });
+    off();
+    // The start (running) and the terminal (failed) transitions were both emitted.
+    expect(seen).toContain("running");
+    expect(seen).toContain("failed");
+    service.onModuleDestroy();
+  });
+
   it("a done step hands its vault-note artifact's CONTENT to the next step", async () => {
     const { service, d } = makeService(dir);
     await service.onModuleInit();

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
   type AgentRun,
+  type ChainRun,
   type GoalRun,
   ORCHESTRATOR_ID,
   type PipelineRun,
@@ -13,6 +14,8 @@ import {
 } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { ChainRunnerService } from "../chains/chain-runner.service";
+import { ChainsStorageService } from "../chains/chains.storage.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalsStorageService } from "../goals/goals.storage.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
@@ -48,6 +51,7 @@ interface NameMaps {
   agent: ReadonlyMap<string, string>;
   pipeline: ReadonlyMap<string, string>;
   goal: ReadonlyMap<string, string>;
+  chain: ReadonlyMap<string, string>;
 }
 
 /**
@@ -66,9 +70,11 @@ export class TaskRunsService {
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly goalRunner: GoalRunnerService,
+    private readonly chainRunner: ChainRunnerService,
     private readonly agentsStore: AgentsStorageService,
     private readonly pipelinesStore: PipelinesStorageService,
     private readonly goalsStore: GoalsStorageService,
+    private readonly chainsStore: ChainsStorageService,
     private readonly scheduled: ScheduledTasksStorageService,
   ) {}
 
@@ -169,6 +175,7 @@ export class TaskRunsService {
     if (tryGet(() => this.agentRunner.get(runId))) return "agent";
     if (tryGet(() => this.pipelineRunner.get(runId))) return "pipeline";
     if (tryGet(() => this.goalRunner.get(runId))) return "goal";
+    if (tryGet(() => this.chainRunner.get(runId))) return "chain";
     const { runs } = await this.collect();
     const found = runs.find((r) => r.runId === runId);
     if (found && found.kind !== "scheduled") return found.kind;
@@ -181,21 +188,24 @@ export class TaskRunsService {
    * child run ids the feed folds out.
    */
   private async collect(): Promise<{ runs: TaskRun[]; childRunIds: Set<string> }> {
-    const [agents, pipelines, goals, scheduled, agentDefs, pipelineDefs, goalDefs] =
+    const [agents, pipelines, goals, chains, scheduled, agentDefs, pipelineDefs, goalDefs, chainDefs] =
       await Promise.all([
         this.agentRunner.listAll(),
         this.pipelineRunner.listAll(),
         this.goalRunner.listAll(),
+        this.chainRunner.listAll(),
         this.scheduled.list(),
         this.agentsStore.list(),
         this.pipelinesStore.list(),
         this.goalsStore.list(),
+        this.chainsStore.list(),
       ]);
 
     const names: NameMaps = {
       agent: new Map(agentDefs.map((d) => [d.id, d.name ?? d.id])),
       pipeline: new Map(pipelineDefs.map((d) => [d.id, d.name ?? d.id])),
       goal: new Map(goalDefs.map((d) => [d.id, d.name ?? d.id])),
+      chain: new Map(chainDefs.map((d) => [d.id, d.name ?? d.id])),
     };
     const tasksById = new Map(scheduled.map((t) => [t.id, t]));
 
@@ -216,6 +226,9 @@ export class TaskRunsService {
       ),
       ...goals.map((r) =>
         enrichRunWithTask(this.withProcessor(goalRunToView(r), names), tasksById),
+      ),
+      ...chains.map((r) =>
+        enrichRunWithTask(this.withProcessor(chainRunToView(r), names), tasksById),
       ),
       ...scheduled.flatMap((t) => scheduledTaskToView(t) ?? []),
     ];
@@ -241,7 +254,7 @@ function tryGet<T>(fn: () => T): boolean {
 
 /** The processor for a run-kind/owner pair, falling its name back to the id when the definition is gone. */
 function processorFor(kind: RunKind, owner: string, names: NameMaps): Processor | undefined {
-  if (kind === "agent" || kind === "pipeline" || kind === "goal") {
+  if (kind === "agent" || kind === "pipeline" || kind === "goal" || kind === "chain") {
     if (!owner) return undefined;
     return { kind, id: owner, name: names[kind].get(owner) ?? owner };
   }
@@ -341,6 +354,33 @@ function goalRunToView(r: GoalRun): TaskRun {
     iterations: r.iterations,
     goalParked: r.parked,
     goalParkedReason: r.parkedReason,
+  };
+}
+
+function chainRunToView(r: ChainRun): TaskRun {
+  const status: TaskRun["status"] =
+    r.status === "parked"
+      ? "parked"
+      : r.status === "failed"
+        ? "error"
+        : r.status === "done"
+          ? "done"
+          : "running";
+  return {
+    runId: r.chainRunId,
+    kind: "chain",
+    owner: r.chainId,
+    status,
+    pct: null,
+    title: "",
+    // A chain run has no cwd of its own — each step's pipeline run carries its own.
+    prompt: r.currentStep != null ? `krok ${r.currentStep + 1}/${r.steps.length}` : "",
+    project: "",
+    startedAt: r.startedAt,
+    logBase: null,
+    taskId: r.taskId,
+    chainId: r.chainId,
+    steps: r.steps,
   };
 }
 

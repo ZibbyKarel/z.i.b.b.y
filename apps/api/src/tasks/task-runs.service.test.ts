@@ -1,6 +1,8 @@
 import type {
   Agent,
   AgentRun,
+  Chain,
+  ChainRun,
   Goal,
   GoalRun,
   Pipeline,
@@ -10,6 +12,8 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
+import type { ChainRunnerService } from "../chains/chain-runner.service";
+import type { ChainsStorageService } from "../chains/chains.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
 import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
@@ -78,6 +82,19 @@ const goalG: GoalRun = {
   cwd: "/tmp/acme",
 };
 
+const chainC: ChainRun = {
+  chainRunId: "research-then-build_5",
+  chainId: "research-then-build",
+  status: "running",
+  currentStep: 0,
+  steps: [
+    { index: 0, pipeline: "research", runRef: "research_1", status: "running" },
+    { index: 1, pipeline: "delivery", status: "pending" },
+  ],
+  startedAt: "2026-06-16T00:04:00.000Z",
+  taskId: "task-chain",
+};
+
 const scheduledS: ScheduledTask = {
   id: "task9",
   title: "later",
@@ -92,6 +109,7 @@ const scheduledS: ScheduledTask = {
 
 const agentDef = { id: "researcher", name: "Researcher" } as Agent;
 const pipelineDef = { id: "delivery", name: "Delivery Pipeline" } as Pipeline;
+const chainDef = { id: "research-then-build", name: "Research then Build" } as Chain;
 // goal definition intentionally absent → processor.name must fall back to the id
 
 function build() {
@@ -128,21 +146,31 @@ function build() {
     resumeParked: vi.fn(async () => goalG),
     delete: vi.fn(async () => {}),
   };
+  const chainRunner = {
+    listAll: vi.fn(async () => [] as ChainRun[]),
+    get: vi.fn((id: string) => {
+      if (id !== chainC.chainRunId) throw new Error("not found");
+      return chainC;
+    }),
+  };
   const agentsStore = { list: vi.fn(async () => [agentDef]) };
   const pipelinesStore = { list: vi.fn(async () => [pipelineDef]) };
   const goalsStore = { list: vi.fn(async () => [] as Goal[]) };
+  const chainsStore = { list: vi.fn(async () => [chainDef]) };
   const scheduled = { list: vi.fn(async () => [scheduledS]) };
 
   const service = new TaskRunsService(
     agentRunner as unknown as AgentRunnerService,
     pipelineRunner as unknown as PipelineRunnerService,
     goalRunner as unknown as GoalRunnerService,
+    chainRunner as unknown as ChainRunnerService,
     agentsStore as unknown as AgentsStorageService,
     pipelinesStore as unknown as PipelinesStorageService,
     goalsStore as unknown as GoalsStorageService,
+    chainsStore as unknown as ChainsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
   );
-  return { service, agentRunner, pipelineRunner, goalRunner };
+  return { service, agentRunner, pipelineRunner, goalRunner, chainRunner };
 }
 
 describe("TaskRunsService", () => {
@@ -202,6 +230,30 @@ describe("TaskRunsService", () => {
       const { service } = build();
       const run = await service.getTaskRun(pipeP.pipelineRunId);
       expect(run.outputArtifactName).toBeUndefined();
+    });
+  });
+
+  describe("chain runs in the feed (Phase 05)", () => {
+    it("surfaces a chain run as a first-class feed row with kind chain", async () => {
+      const { service, chainRunner } = build();
+      chainRunner.listAll.mockResolvedValue([chainC]);
+      const feed = await service.listTaskRuns();
+      const row = feed.find((r) => r.runId === chainC.chainRunId);
+      expect(row?.kind).toBe("chain");
+      expect(row?.chainId).toBe("research-then-build");
+      expect(row?.steps).toHaveLength(2);
+      expect(row?.processor).toEqual({
+        kind: "chain",
+        id: "research-then-build",
+        name: "Research then Build",
+      });
+    });
+
+    it("kindOf resolves a chain runId via getTaskRun", async () => {
+      const { service, chainRunner } = build();
+      chainRunner.listAll.mockResolvedValue([chainC]);
+      const row = await service.getTaskRun(chainC.chainRunId);
+      expect(row.kind).toBe("chain");
     });
   });
 

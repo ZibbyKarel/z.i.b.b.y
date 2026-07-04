@@ -12,8 +12,9 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { usePipelinesQuery } from "../pipelines";
+import { useNewTask } from "../tasks";
 import { NewChainDialog } from "./components/NewChainDialog";
-import { useCreateChainMutation, useDeleteChainMutation, useStartChainMutation } from "./mutations";
+import { useCreateChainMutation, useDeleteChainMutation } from "./mutations";
 import { useChainRunsQuery, useChainsQuery } from "./queries";
 
 /** Testids for the chains screen (tests select via these). */
@@ -52,7 +53,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const { data: pipelines = [] } = usePipelinesQuery();
   const createChain = useCreateChainMutation();
   const deleteChain = useDeleteChainMutation();
-  const startChain = useStartChainMutation();
+  const { open: openNewTask } = useNewTask();
   const [adding, setAdding] = useState(false);
 
   const selected = (routeId ? chains.find((c) => c.id === routeId) : null) ?? chains[0];
@@ -183,10 +184,16 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                       </Button>
                       <Button
                         data-testid={ChainsScreenTestId.Run}
-                        disabled={startChain.isPending}
                         icon="play"
                         intent="primary"
-                        onClick={() => startChain.mutate({ params: { id: selected.id }, body: {} })}
+                        onClick={() =>
+                          openNewTask(undefined, {
+                            kind: "chain",
+                            id: selected.id,
+                            name: selected.name ?? selected.id,
+                            glyph: "link",
+                          })
+                        }
                       >
                         {t("runChain")}
                       </Button>

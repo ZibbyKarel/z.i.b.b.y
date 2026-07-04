@@ -56,6 +56,18 @@ export const GoalTaskTargetSchema = z.object({
 });
 
 /**
+ * A stored chain as a routing destination (Phase 05). Like a goal it references a
+ * stored definition (`id`) but is NEVER auto-classified — the classifier only routes
+ * to agent/pipeline/orchestrator. A chain-targeted task is created explicitly (the
+ * Run button on `/chains/:id` prefills it into the New Task dialog).
+ */
+export const ChainTaskTargetSchema = z.object({
+  kind: z.literal("chain"),
+  id: AgentIdSchema,
+  ...taskTargetDisplayShape,
+});
+
+/**
  * The terminal routing fallback: a single orchestrator session that has every
  * stored agent available as a delegatable subagent and can also do the task
  * directly — so a task always executes. It is synthetic (no stored definition),
@@ -74,6 +86,7 @@ export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
+  ChainTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ]);
 export type TaskTarget = z.infer<typeof TaskTargetSchema>;

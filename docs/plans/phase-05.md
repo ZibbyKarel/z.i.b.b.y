@@ -227,7 +227,7 @@
 
 ## Fáze 1 — Kontrakt: `chain` jako `TaskTarget` + `ChainRun.taskId`
 
-- [ ] `libs/contracts/src/tasks/task.schema.ts`: přidat vedle
+- [x] `libs/contracts/src/tasks/task.schema.ts`: přidat vedle
       `GoalTaskTargetSchema` (řádky ~33-79):
       ```ts
       export const ChainTaskTargetSchema = z.object({
@@ -239,11 +239,11 @@
       a do `TaskTargetSchema`'s `z.discriminatedUnion("kind", [...])` přidat
       `ChainTaskTargetSchema`. `CatalogTaskTarget` (řádek 83) beze změny —
       chain do katalogu nepatří, stejně jako goal.
-- [ ] `libs/contracts/src/chains/chain.schema.ts`: do `ChainRunSchema`
+- [x] `libs/contracts/src/chains/chain.schema.ts`: do `ChainRunSchema`
       přidat `taskId: z.string().optional()` (vedle `parkedReason`), s
       komentářem "Úkol, ze kterého byl řetězec dispatchnutý — chybí pro
       přímý `POST /chains/:id/run` mimo task flow."
-- [ ] `libs/contracts/src/tasks/task-run.schema.ts`:
+- [x] `libs/contracts/src/tasks/task-run.schema.ts`:
   - `RunKindSchema` (řádek 19): `z.enum(["agent", "pipeline", "goal",
     "chain", "scheduled"])`.
   - `ProcessorSchema.kind` (řádek 56): přidat `"chain"`.
@@ -251,18 +251,18 @@
     `iterations`) analogické `chainId: z.string().optional()` a `steps:
     z.array(ChainRunStepSchema).optional()` (import `ChainRunStepSchema` z
     `../chains/chain.schema`).
-- [ ] `pnpm typecheck` — očekávat chyby v exhaustivních switchích
+- [x] `pnpm typecheck` — očekávat chyby v exhaustivních switchích
       (`chat-tools.service.ts` popsáno níže) — to je záměr, ne regrese.
 
 ## Fáze 2 — Backend: `ChainRunnerService` — `taskId`, `onRunStatus`, `listAll`
 
-- [ ] `apps/api/src/chains/chain-runner.service.ts`: import `EventEmitter`
+- [x] `apps/api/src/chains/chain-runner.service.ts`: import `EventEmitter`
       z `node:events`; přidat `private readonly events = new EventEmitter();`
       vedle `private queue`.
-- [ ] `start(chainId: string, taskId?: string): Promise<ChainRun>` (řádek
+- [x] `start(chainId: string, taskId?: string): Promise<ChainRun>` (řádek
       115) — přidat `taskId` param, uložit na `run.taskId = taskId` v
       konstruovaném objektu (řádky 118-129).
-- [ ] Nová veřejná metoda vedle `list()`/`get()` (řádky 136-144):
+- [x] Nová veřejná metoda vedle `list()`/`get()` (řádky 136-144):
       ```ts
       /** Subscribe to every chain run's status transitions (mirrors PipelineRunnerService.onRunStatus). */
       onRunStatus(listener: (run: ChainRun) => void): () => void {
@@ -275,18 +275,18 @@
         return this.list();
       }
       ```
-- [ ] `persist()` (řádky 302-307): po `writeFileAtomic(...)` přidat
+- [x] `persist()` (řádky 302-307): po `writeFileAtomic(...)` přidat
       `this.events.emit("status", run);` — jediné tranzitní místo, pokrývá
       `start`/`advance`/`onPipelineTransition`/`reconcile` najednou.
-- [ ] `pnpm test` pro `apps/api/src/chains/` (existující chain-runner testy
+- [x] `pnpm test` pro `apps/api/src/chains/` (existující chain-runner testy
       nesmí se rozbít — `onModuleInit`'s `this.pipelineRunner.onRunStatus`
       subscribe zůstává beze změny).
 
 ## Fáze 3 — Backend: `TaskSchedulerService` — dispatch + outcome + DI
 
-- [ ] `apps/api/src/tasks/tasks.module.ts`: přidat `ChainsModule` do
+- [x] `apps/api/src/tasks/tasks.module.ts`: přidat `ChainsModule` do
       `imports` (řádky 36-48, vedle `GoalsModule`).
-- [ ] `apps/api/src/tasks/task-scheduler.service.ts`:
+- [x] `apps/api/src/tasks/task-scheduler.service.ts`:
   - Constructor (řádky 104-121): přidat `private readonly chainRunner:
     ChainRunnerService,` vedle `goalRunner`.
   - `TERMINAL_*` konstanty (řádky 67-71): přidat `const TERMINAL_CHAIN = new
@@ -340,22 +340,22 @@
   - `refForTarget()` (řádky 1090-1094): přidat `if (target.kind === "chain")
     return { chainId: target.id };` (a rozšířit návratový typ o `chainId?:
     string`). `targetIdOf()` beze změny (`target.id` už pokrývá chain).
-- [ ] `pnpm typecheck && pnpm test` pro `apps/api/src/tasks/`.
+- [x] `pnpm typecheck && pnpm test` pro `apps/api/src/tasks/`.
 
 ## Fáze 4 — Backend: unifikovaný `/runs` feed (`TaskRunsService`)
 
-- [ ] Constructor (`task-runs.service.ts:65-73`): přidat `private readonly
+- [x] Constructor (`task-runs.service.ts:65-73`): přidat `private readonly
       chainRunner: ChainRunnerService,` a `private readonly chainsStore:
       ChainsStorageService,` (pro jméno-lookup, vzor `pipelinesStore`).
-- [ ] `NameMaps` (řádky 47-51): přidat `chain: ReadonlyMap<string, string>;`.
-- [ ] `collect()` (řádky 183-223): přidat `this.chainRunner.listAll()` do
+- [x] `NameMaps` (řádky 47-51): přidat `chain: ReadonlyMap<string, string>;`.
+- [x] `collect()` (řádky 183-223): přidat `this.chainRunner.listAll()` do
       `Promise.all(...)`, `this.chainsStore.list()` pro `names.chain`, a
       novou mapovací funkci `chainRunToView` do `runs: TaskRun[]` pole.
-- [ ] `kindOf()` (řádky 168-176): přidat `if (tryGet(() =>
+- [x] `kindOf()` (řádky 168-176): přidat `if (tryGet(() =>
       this.chainRunner.get(runId))) return "chain";` (před fallback na
       `collect()`).
-- [ ] `processorFor()` (řádky 243-249): rozšířit podmínku o `"chain"`.
-- [ ] Nová pure converter funkce (vedle `goalRunToView`, řádky 305-335):
+- [x] `processorFor()` (řádky 243-249): rozšířit podmínku o `"chain"`.
+- [x] Nová pure converter funkce (vedle `goalRunToView`, řádky 305-335):
       ```ts
       function chainRunToView(r: ChainRun): TaskRun {
         const status: TaskRun["status"] =
@@ -380,21 +380,21 @@
       (`project: ""` — na rozdíl od pipeline/goal runů chain run nemá
       vlastní `cwd`; každý krok má svůj vlastní pipeline `cwd`, dostupný
       přes jeho vlastní `kind: "pipeline"` feed položku, pokud je potřeba.)
-- [ ] `getArtifact`/`resume`/`delete`/`stop` (řádky 100-160): **beze
+- [x] `getArtifact`/`resume`/`delete`/`stop` (řádky 100-160): **beze
       změny** — chain run padne do existujícího `throw`/`return null`
       finálního větve (viz Zjištění, "mimo scope").
-- [ ] `pnpm typecheck && pnpm test` pro `apps/api/src/tasks/`.
+- [x] `pnpm typecheck && pnpm test` pro `apps/api/src/tasks/`.
 
 ## Fáze 5 — Backend: zbylé exhaustivní switche + testy
 
-- [ ] `apps/api/src/chat/chat-tools.service.ts`, `describeTarget()` (řádky
+- [x] `apps/api/src/chat/chat-tools.service.ts`, `describeTarget()` (řádky
       103-112): přidat `case "chain": return \`řetězec ${target.name}\`;`.
-- [ ] `apps/api/src/tasks/task-classifier.service.ts`, `isCoherent()`
+- [x] `apps/api/src/tasks/task-classifier.service.ts`, `isCoherent()`
       (řádek 217): rozšířit `if (target.kind === "orchestrator" ||
       target.kind === "goal") return false;` na `|| target.kind ===
       "chain"`, se stejným komentářem "explicit-only, nikdy v routovatelném
       katalogu".
-- [ ] Nové testy:
+- [x] Nové testy:
   - `apps/api/src/tasks/task-scheduler.service.test.ts` (nebo nejbližší
     existující test na `dispatch`): task s `target: {kind: "chain", id}`
     → `chainRunner.start` zavolané s `taskId`; terminální chain run (mock
@@ -407,11 +407,11 @@
     emit po `start`/`advance`/parku/failu (aspoň jeden scénář z každého).
   - `apps/api/src/tasks/task-classifier.service.test.ts`: `isCoherent` s
     `target.kind === "chain"` → `false` (nikdy klasifikováno).
-- [ ] `pnpm test` (celá `apps/api` suita), `pnpm typecheck`.
+- [x] `pnpm test` (celá `apps/api` suita), `pnpm typecheck`.
 
 ## Fáze 6 — Frontend: `task.ts` — `TaskTarget`/`TaskTargetKind` rozšíření
 
-- [ ] `apps/web/features/tasks/task.ts`:
+- [x] `apps/web/features/tasks/task.ts`:
   - `TaskTargetKind` (řádek 59): `"agent" | "pipeline" | "goal" | "chain" |
     "orchestrator"`.
   - `TaskTarget` (řádky 98-100): první union arm rozšířit na `kind: "agent"
@@ -420,11 +420,11 @@
     ikona jako `chains/Screen.tsx:124`/`NewChainDialog.tsx:68`).
   - `targetKey`/`toApiTarget`/`toClientTarget` — **beze změny**, jsou už
     obecné nad `kind !== "orchestrator"`.
-- [ ] `pnpm typecheck` pro `apps/web`.
+- [x] `pnpm typecheck` pro `apps/web`.
 
 ## Fáze 7 — Frontend: Run tlačítko na `/chains/:id` → prefill dialog
 
-- [ ] `apps/web/features/chains/Screen.tsx`:
+- [x] `apps/web/features/chains/Screen.tsx`:
   - Import `useNewTask` z `../tasks` (barrel).
   - Odebrat `useStartChainMutation` import/proměnnou `startChain` (řádky
     16, 55) — po téhle změně je to jediný zbylý spotřebitel v `apps/web`
@@ -433,19 +433,19 @@
     kind: "chain", id: selected.id, name: selected.name ?? selected.id,
     glyph: "link" })}` — `disabled={startChain.isPending}` pryč (dialog
     otevření není async).
-- [ ] `apps/web/features/chains/Screen.test.tsx:85-89`: přepsat test —
+- [x] `apps/web/features/chains/Screen.test.tsx:85-89`: přepsat test —
       mockovat `useNewTask` (vzor `agents/DetailScreen.test.tsx:31,48`:
       `vi.mock("../tasks", () => ({ useNewTask: () => ({ open: hooks.
       openNewTask }) }))`), assert `hooks.openNewTask` zavolané s
       `(undefined, { kind: "chain", id: "research-then-build", name: ...,
       glyph: "link" })`.
-- [ ] `pnpm lint && pnpm typecheck`.
+- [x] `pnpm lint && pnpm typecheck`.
 
 ## Fáze 8 — Frontend: `RunDetail` chain-kind fold + oprava `phase-04.md`
 
-- [ ] `apps/web/features/runs/run.ts`, `KIND_GLYPH` (řádek 165, exhaustivní
+- [x] `apps/web/features/runs/run.ts`, `KIND_GLYPH` (řádek 165, exhaustivní
       `Record<RunKind, IconName>`): přidat `chain: "link",`.
-- [ ] `apps/web/features/runs/components/RunDetail.tsx` (řádky 434-441,
+- [x] `apps/web/features/runs/components/RunDetail.tsx` (řádky 434-441,
       goal/pipeline fold): přidat třetí větev **před** `run.kind ===
       "pipeline"` (chain se jinak nikdy nedostane, protože samo o sobě
       nemá stage log):
@@ -464,7 +464,7 @@
   - Meta řádek (řádky 382-394): `run.owner && run.kind !== "agent"` už
     pokrývá chain (`MetaCell` s `t("metaTarget")`, stejně jako goal) —
     beze změny.
-- [ ] **Opravit `docs/plans/phase-04.md`** — přidat poznámku na začátek
+- [x] **Opravit `docs/plans/phase-04.md`** — přidat poznámku na začátek
       souboru (hned pod nadpis/motivaci), že fáze 05 tohle rozhodnutí ruší,
       a zjednodušit Fáze 6 (`QuickLaunchPanel`) tak, aby chain **nebyl**
       speciální případ — jakmile je `chain` normální `TaskTarget`, RUN na
@@ -473,19 +473,25 @@
       "chain") startChain.mutate(...)` větvení. (Fáze 04 je nekomitovaný
       draft — tahle oprava je bezpečná, nic neimplementovaného se
       "vrací".)
-- [ ] Nové/upravené testy:
+- [x] Nové/upravené testy:
   - `apps/web/features/runs/run.ts`'s `KIND_GLYPH` — pokud existuje
     tabulkový test, doplnit `chain` řádek.
   - `apps/web/features/runs/components/RunDetail.test.tsx`: nový test —
     `run.kind === "chain"` s `run.steps` → `ChainStepsPanel` (nebo její
     obsah) se vyrenderuje, ne `GoalDetailPanel`/stage timeline pro
     pipeline.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` (celá suita).
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` (celá suita).
 - [ ] Manuální smoke test: `/chains/:id` → Run → `NewTaskDialog` se otevře
       s targetem předvyplněným na daný chain (viditelný v "Edit" pickeru) →
       odeslat → task se dispatchne → `/runs` ukáže novou položku s `kind:
       "chain"` → po doběhnutí kroku 0 se prompt/steps aktualizuje → po
       celém řetězci `taskOutcome` na tasku odpovídá `"N steps, done"`.
+  - _Pozn. (2026-07-04): odloženo na operátora — vyžaduje reálný `claude` běh
+    přes celý řetězec pipelin; chování kryjí unit/komponentové testy
+    (task-scheduler: chain dispatch + outcome "N steps, done"; task-runs:
+    chain jako `kind: "chain"` řádek + `kindOf`; chain-runner: `taskId` +
+    `onRunStatus`; classifier: chain je explicit-only; chains/Screen:
+    Run → prefill dialog; RunDetail: chain fold)._
 
 ---
 

@@ -7,6 +7,15 @@
 > změnit popis/target před odesláním); u řetězce RUN spustí chain rovnou, beze
 > dialogu — přesně tak, jak řetězec funguje dnes všude jinde v appce.
 
+> **⚠️ Aktualizace (phase-05): řetězec je teď plnohodnotný `TaskTarget`.**
+> [`docs/plans/phase-05.md`](./phase-05.md) obrátil dřívější rozhodnutí "chain
+> se spouští bez dialogu" — chain je nyní `kind: "chain"` v `TaskTargetSchema` a
+> spouští se **stejnou cestou jako agent/pipeline**: RUN otevře `NewTaskDialog`
+> s předvyplněným targetem. V tomto plánu to znamená: RUN na připnuté chain
+> kartě volá **stejné** `openNewTask(undefined, { kind: "chain", ... })` jako
+> agent/pipeline — žádné zvláštní `if (item.kind === "chain")
+> startChain.mutate(...)` větvení (viz Fáze 6, upraveno níže).
+
 ---
 
 ## Zjištění (současný stav, ověřeno v kódu)
@@ -421,7 +430,7 @@
   import { useTranslations } from "next-intl";
   import { HudPanel } from "../../../../components/HudPanel/HudPanel";
   import { useAgentsQuery } from "../../../agents";
-  import { useChainsQuery, useStartChainMutation } from "../../../chains";
+  import { useChainsQuery } from "../../../chains";
   import { usePipelinesQuery } from "../../../pipelines";
   import { usePinToggle } from "../../../pins";
   import { useNewTask } from "../../../tasks";
@@ -455,7 +464,6 @@
     const { data: pipelines = [] } = usePipelinesQuery();
     const { data: chains = [] } = useChainsQuery();
     const { open: openNewTask } = useNewTask();
-    const startChain = useStartChainMutation();
 
     const resolved: ResolvedPin[] = pins.flatMap((pin) => {
       if (pin.kind === "agent") {
@@ -494,13 +502,10 @@
                 data-testid={QuickLaunchPanelTestId.Run}
                 icon="play"
                 intent="primary"
-                onClick={() => {
-                  if (item.kind === "chain") {
-                    startChain.mutate({ params: { id: item.id }, body: {} });
-                  } else {
-                    openNewTask(undefined, { kind: item.kind, id: item.id, name: item.name, glyph: item.glyph });
-                  }
-                }}
+                onClick={() =>
+                  // phase-05: chain je normální TaskTarget → stejná cesta jako agent/pipeline.
+                  openNewTask(undefined, { kind: item.kind, id: item.id, name: item.name, glyph: item.glyph })
+                }
                 size="sm"
               >
                 {t("run")}
@@ -523,9 +528,8 @@
   (Ověřit při implementaci přesné jméno `Typography`'s `grow` propy / ekvivalentu
   pro vyplnění zbylého prostoru řádku — pokud neexistuje, obalit `Typography`
   do `Container grow minW0` stejně jako `AgentCard`/jiné karty.)
-- [ ] `apps/web/features/chains/mutations/index.ts` — ověřit, že
-      `useStartChainMutation` je odsud exportovaný (dnes ho přímo importuje
-      `chains/Screen.tsx:16` z `./mutations`) — pokud ne, přidat export.
+- [ ] (phase-05 zrušil potřebu `useStartChainMutation` v panelu — chain jede
+      přes `openNewTask` jako agent/pipeline; RUN pro všechny tři je jedna cesta.)
 - [ ] `apps/web/features/overview/Screen.tsx`: přidat `useChainsQuery` import
       (vedle `usePipelinesQuery`, řádek 10) a vykreslit `<QuickLaunchPanel />`
       do hlavního `Stack` (řádky 43-100) — zařadit **za `NeedsAttentionPanel` a
@@ -557,10 +561,8 @@
   - žádné piny → panel se nevykreslí (`null`).
   - pin na existující agenty/pipeliny/řetězce → řádek s jejich jménem/glyphem.
   - pin na neexistující (smazané) id → tichy vypadne ze seznamu, žádná chyba.
-  - klik na RUN u agenta/pipeliny → `openNewTask` zavolané se správným
-    `initialTarget`.
-  - klik na RUN u řetězce → `useStartChainMutation().mutate` zavolané se
-    správným `id`, `openNewTask` se NEVOLÁ.
+  - klik na RUN u agenta/pipeliny/řetězce → `openNewTask` zavolané se správným
+    `initialTarget` (phase-05: chain jede stejnou cestou jako agent/pipeline).
   - klik na odepnutí → `toggle`/mutace zavolaná s danou položkou odebranou.
 - [ ] `apps/web/features/overview/Screen.test.tsx` — rozšířit o assert, že
       `QuickLaunchPanel` je na stránce vykreslený.

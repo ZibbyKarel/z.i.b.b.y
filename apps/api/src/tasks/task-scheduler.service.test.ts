@@ -69,6 +69,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
+  let chainRunner: {
+    start: ReturnType<typeof vi.fn>;
+    onRunStatus: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+  };
+  let chainListener: ((run: { taskId?: string; status: string; steps: unknown[]; chainRunId: string }) => void) | undefined;
   let classifier: { classify: ReturnType<typeof vi.fn> };
   let fakeLimits: {
     windowExhausted: ReturnType<typeof vi.fn>;
@@ -114,6 +120,14 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       onRunStatus: vi.fn(() => () => {}),
       get: vi.fn(() => ({ goalRunId: "goal_1", status: "done", iterations: [] })),
     };
+    chainRunner = {
+      start: vi.fn(async () => ({ chainRunId: "research-then-build_1", steps: [{}, {}] })),
+      onRunStatus: vi.fn((l: typeof chainListener) => {
+        chainListener = l;
+        return () => {};
+      }),
+      get: vi.fn(() => ({ chainRunId: "research-then-build_1", status: "running", steps: [{}, {}] })),
+    };
     classifier = {
       classify: vi.fn(async () => ({
         target: { kind: "agent", id: "writer", name: "Writer" },
@@ -154,6 +168,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       agentRunner as never,
       pipelineRunner as never,
       goalRunner as never,
+      chainRunner as never,
       fakeLogger as never,
       fakeTrace as never,
       { record: async () => {} } as never,
@@ -438,6 +453,38 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     await vi.waitFor(async () => {
       const task = await storage.get(result.task.id);
       expect(task.outcome).toMatchObject({ status: "error", summary: "2 stages, failed" });
+    });
+  });
+
+  it("dispatches a chain-targeted task through the chain runner with the taskId", async () => {
+    const result = await service.createTask({
+      text: "research then build",
+      title: "Chain",
+      target: { kind: "chain", id: "research-then-build", name: "Research then Build" },
+    });
+    expect(result.outcome).toBe("dispatched");
+    if (result.outcome !== "dispatched") return;
+    // Chain is explicit-only — never classified.
+    expect(classifier.classify).not.toHaveBeenCalled();
+    expect(chainRunner.start).toHaveBeenCalledWith("research-then-build", result.task.id);
+    expect(result.task.runRef).toBe("research-then-build_1");
+  });
+
+  it("writes a terminal chain run's outcome back onto the task (N steps, done)", async () => {
+    const result = await service.createTask({
+      text: "research then build",
+      target: { kind: "chain", id: "research-then-build", name: "Research then Build" },
+    });
+    if (result.outcome !== "dispatched") throw new Error("expected dispatched");
+    chainListener?.({
+      chainRunId: "research-then-build_1",
+      status: "done",
+      taskId: result.task.id,
+      steps: [{}, {}, {}],
+    });
+    await vi.waitFor(async () => {
+      const task = await storage.get(result.task.id);
+      expect(task.outcome).toMatchObject({ status: "done", summary: "3 steps, done" });
     });
   });
 

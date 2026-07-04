@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
@@ -60,6 +61,8 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
    * chain run. Also the test/shutdown seam ({@link settle}).
    */
   private queue: Promise<void> = Promise.resolve();
+  /** Status push channel — mirrors PipelineRunnerService's `emit("status", run)`. */
+  private readonly events = new EventEmitter();
 
   constructor(
     @Inject(CHAIN_RUNS_DIR) dir: string,
@@ -112,7 +115,7 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Start a chain: step 0 runs now with the chain's instructions as its input. */
-  async start(chainId: string): Promise<ChainRun> {
+  async start(chainId: string, taskId?: string): Promise<ChainRun> {
     const chain = await this.chains.get(chainId); // throws → 404
     const startedMs = Date.now();
     const run: ChainRun = {
@@ -126,6 +129,7 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
         status: "pending" as const,
       })),
       startedAt: new Date(startedMs).toISOString(),
+      ...(taskId ? { taskId } : {}),
     };
     this.runs.set(run.chainRunId, run);
     await this.startStep(run, 0, chain.instructions ?? "");
@@ -135,6 +139,20 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
 
   list(): ChainRun[] {
     return [...this.runs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  }
+
+  /** Subscribe to every chain run's status transitions (mirrors PipelineRunnerService.onRunStatus). */
+  onRunStatus(listener: (run: ChainRun) => void): () => void {
+    this.events.on("status", listener);
+    return () => this.events.off("status", listener);
+  }
+
+  /**
+   * Chains never evict from memory (loadPersisted keeps every run), so this is
+   * `list()` by another name — the shape TaskRunsService expects from every runner.
+   */
+  listAll(): ChainRun[] {
+    return this.list();
   }
 
   get(chainRunId: string): ChainRun {
@@ -304,6 +322,9 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
       path.join(this.dir, `${run.chainRunId}.json`),
       `${JSON.stringify(run, null, 2)}\n`,
     );
+    // Single transit point for every mutation (start/advance/onPipelineTransition/
+    // reconcile) — emit here so the outcome write-back subscription hears each one.
+    this.events.emit("status", run);
   }
 
   private async loadPersisted(): Promise<void> {

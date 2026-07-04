@@ -23,6 +23,7 @@ import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { type RunView, approvalForRun, runTitle } from "../run";
+import { ChainStepsPanel } from "./ChainStepsPanel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
 import { RunApprovalGate } from "./RunApprovalGate";
@@ -470,6 +471,11 @@ export function RunDetail({
           {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
           <GoalDetailPanel run={run} />
         </>
+      ) : run.kind === "chain" ? (
+        // Phase 05: a chain run folds its steps the same way a goal folds its
+        // maker/verifier iterations — each step's runRef is a pipeline run with its
+        // own stage timeline.
+        <ChainStepsPanel run={run} />
       ) : run.kind === "pipeline" ? (
         // Phase 28: a pipeline run's surface IS its stage timeline (each phase's log is
         // openable). A paused-limit / retries-parked run shows its notice above it.

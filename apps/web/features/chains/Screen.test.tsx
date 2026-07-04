@@ -36,7 +36,7 @@ const { hooks } = vi.hoisted(() => ({
   hooks: {
     chains: { data: [] as Chain[], isPending: false, isError: false, refetch: vi.fn() },
     runs: [] as ChainRun[],
-    start: vi.fn(),
+    openNewTask: vi.fn(),
     del: vi.fn(),
     create: vi.fn(),
   },
@@ -49,8 +49,8 @@ vi.mock("./queries", () => ({
 vi.mock("./mutations", () => ({
   useCreateChainMutation: () => ({ mutate: hooks.create, isPending: false }),
   useDeleteChainMutation: () => ({ mutate: hooks.del, isPending: false }),
-  useStartChainMutation: () => ({ mutate: hooks.start, isPending: false }),
 }));
+vi.mock("../tasks", () => ({ useNewTask: () => ({ open: hooks.openNewTask }) }));
 vi.mock("../pipelines", () => ({
   usePipelinesQuery: () => ({ data: [{ id: "nightly-research", name: "Nightly research" }] }),
 }));
@@ -58,7 +58,7 @@ vi.mock("../pipelines", () => ({
 describe("chains Screen (N4a)", () => {
   beforeEach(() => {
     push.mockClear();
-    hooks.start.mockClear();
+    hooks.openNewTask.mockClear();
     hooks.chains = { data: CHAINS, isPending: false, isError: false, refetch: vi.fn() };
     hooks.runs = RUNS;
   });
@@ -82,10 +82,15 @@ describe("chains Screen (N4a)", () => {
     expect(row).toHaveTextContent("1. nightly-research");
   });
 
-  it("Run starts the chain via the mutation (top-right primary action)", async () => {
+  it("Run prefills the New Task dialog with the chain target (top-right primary action)", async () => {
     render(<Screen selectedId="research-then-build" />);
     await userEvent.click(screen.getByTestId(ChainsScreenTestId.Run));
-    expect(hooks.start).toHaveBeenCalledWith({ params: { id: "research-then-build" }, body: {} });
+    expect(hooks.openNewTask).toHaveBeenCalledWith(undefined, {
+      kind: "chain",
+      id: "research-then-build",
+      name: "Research → Build",
+      glyph: "link",
+    });
   });
 
   it("empty state offers the create action; the dialog is create-only", async () => {
