@@ -5,7 +5,7 @@
   "goals": "visible",
   "approvals": "visible",
   "channels": "grouped",
-  "integrations": "visible",
+  "integrations": "grouped",
   "research": "grouped",
   "briefing": "grouped"
 }
