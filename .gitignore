@@ -10,6 +10,9 @@ out/
 # graphify knowledge-graph output (regenerated via `graphify update .`, not versioned)
 graphify-out/
 
+# superpowers brainstorming visual-companion session files
+.superpowers/
+
 # Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
 .zibby/data-test/
 .zibby/data/**/runs
