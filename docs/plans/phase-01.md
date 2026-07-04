@@ -154,10 +154,10 @@ Vše ověřeno přímo v kódu, `apps/api/src/pipelines/pipeline-runner.service.
 
 ## Fáze 5 — Zpětná kompatibilita a testy
 
-- [ ] Existující doběhlé i rozběhnuté runy na disku zůstávají ve starém tvaru
+- [x] Existující doběhlé i rozběhnuté runy na disku zůstávají ve starém tvaru
       (`phase.id`-only složky, `run.json` bez `dir` polí) — runner je musí umět
       dál číst/resumovat beze změny chování (viz Fáze 1, poslední bod).
-- [ ] Rozšířit `apps/api/src/pipelines/pipeline-runner.service.test.ts` a
+- [x] Rozšířit `apps/api/src/pipelines/pipeline-runner.service.test.ts` a
       `pipeline-runner.outputs.test.ts` o:
   - pipeline se smyčkou (`developer → code-review → developer`) — ověřit
     číslování `01_developer, 02_code-review, 03_developer` a že obě `developer`
@@ -169,6 +169,7 @@ Vše ověřeno přímo v kódu, `apps/api/src/pipelines/pipeline-runner.service.
 - [ ] Manuální smoke test: znovu spustit `code-audit` pipeline nad `kzphoto` a
       ručně zkontrolovat výslednou strukturu adresářů (žádné duplicitní
       `security.md`/`quality.md`/`performance.md` v cizích složkách).
+  - _Pozn. (2026-07-04): odloženo na operátora — vyžaduje reálný `claude` běh; strukturu adresářů mezitím kryje demo-mode e2e smoke test (pipelines.e2e.test.ts, loop + file output: číslované složky, symlink handoff/context, output/)._
 
 ---
 
