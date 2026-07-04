@@ -1,5 +1,25 @@
 [
   {
+    "id": "kzphoto",
+    "name": "kzphoto",
+    "path": "/Users/zibby/Workspace/kzphoto",
+    "desc": "Moje fotografické stránky",
+    "category": "Internal"
+  },
+  {
+    "id": "portfolio",
+    "name": "portfolio",
+    "path": "/Users/zibby/Workspace/portfolio",
+    "desc": "Moje portfolio stránky",
+    "category": "Internal"
+  },
+  {
+    "id": "test-project",
+    "name": "Test Project",
+    "path": "~/Workspace/test",
+    "category": "Testing"
+  },
+  {
     "id": "zibby-self",
     "name": "Z.I.B.B.Y",
     "path": "/Users/zibby/Workspace/z.i.b.b.y",
@@ -46,11 +66,5 @@
       "format": "yesterday / today / blockers",
       "active_hours": "09:00-19:00"
     }
-  },
-  {
-    "id": "test-project",
-    "name": "Test Project",
-    "path": "~/Workspace/test",
-    "category": "Internal"
   }
 ]

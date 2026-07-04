@@ -1,25 +1,31 @@
 ---
 name: Code Audit
-desc: 'Audituj existující kód bez jeho změny — bezpečnost, kvalita a výkon → souhrnná zpráva s prioritami. Audit, security review, code review, performance, prohlídka kódu.'
 phases:
-  - id: security
-    type: agent
-    agent: security-auditor
-    consumes: task.md
-    produces: security.md
-    model: opus
-    thinking: high
   - id: quality
     type: agent
     agent: code-reviewer
-    consumes: security.md
+    consumes: task.md
     produces: quality.md
     model: opus
     thinking: high
+  - id: security
+    type: agent
+    agent: security-auditor
+    consumes: quality.md
+    produces: security.md
+    model: opus
+    thinking: high
+  - id: n-13
+    type: agent
+    agent: accessibility-auditor
+    consumes: security.md
+    produces: accessibility-auditor.md
+    model: sonnet
+    thinking: medium
   - id: performance
     type: agent
     agent: performance-engineer
-    consumes: quality.md
+    consumes: accessibility-auditor.md
     produces: performance.md
     model: sonnet
     thinking: medium
@@ -30,6 +36,10 @@ phases:
     produces: audit-report.md
     model: sonnet
     thinking: low
+desc: >-
+  Audituj existující kód bez jeho změny — bezpečnost, kvalita a výkon → souhrnná
+  zpráva s prioritami. Audit, security review, code review, performance,
+  prohlídka kódu.
 ---
 
 # Code Audit

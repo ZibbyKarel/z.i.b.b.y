@@ -1,0 +1,13 @@
+{
+  "id": "audit-develop",
+  "name": "Audit -> Develop",
+  "steps": [
+    {
+      "pipeline": "code-audit"
+    },
+    {
+      "pipeline": "delivery"
+    }
+  ],
+  "instructions": "Provede hloubkový audit systému a výsledné poznatky předá k implementaci"
+}

@@ -2,5 +2,9 @@
   {
     "name": "Internal",
     "glyph": "server"
+  },
+  {
+    "name": "Testing",
+    "glyph": "flask"
   }
 ]
