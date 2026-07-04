@@ -9,7 +9,10 @@ describe("buildStageTask", () => {
       producesAbs: "/run/koder/impl.md",
     });
     expect(task).toContain('Proveď fázi pipeline "koder".');
-    expect(task).toContain('Vstup (pokud existuje) najdeš v "/run/koder/plan.md".');
+    expect(task).toContain('Vstup (pokud existuje) najdeš v "/run/koder/plan.md"');
+    // P1-T2: the input is now a read-only reference (a symlink), not a working copy.
+    expect(task).toContain("READ-ONLY odkaz");
+    expect(task).toContain("ne o pracovní kopii");
     expect(task).toContain('Výstup zapiš do "/run/koder/impl.md".');
     expect(task).not.toContain("<verdict>");
   });

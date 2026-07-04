@@ -872,7 +872,21 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         }
         // Phase 9.3: checkpoint the green phase on the run branch (worktree only;
         // a clean tree / non-git run → no-op). Records the sha on the aggregate.
+        // checkpointPhase only READS `phase.produces` (for the commit summary's first
+        // line) and commits the WORKTREE, a separate tree from this stage's sandbox —
+        // it never writes the produces file, so ordering the chmod after it is safe
+        // either way; kept after regardless, per the plan's conservative default.
         await this.checkpointPhase(run, phase, stageCwd, attempt);
+        // P1-T2: the produces file is now final for this dispatch — make it read-only
+        // so a later phase can't corrupt it retroactively through the symlink handoff
+        // (each retry/loop dispatch gets its own fresh numbered folder, so this never
+        // blocks re-generating the artifact on a subsequent attempt).
+        if (phase.produces) {
+          await fs.chmod(path.join(stageCwd, phase.produces), 0o444).catch(() => {
+            // A missing produces file (a phase that declared one but didn't write it)
+            // is not fatal here — nothing to protect.
+          });
+        }
         // A verify phase transforms nothing: it leaves the handoff untouched, so
         // the next phase consumes the last *producing* phase's output.
         if (phase.produces) handoffSource = path.join(stageCwd, phase.produces);
@@ -1568,7 +1582,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.writeAggregate(run);
   }
 
-  /** Copy the handoff source (if any) into this stage's `consumes` path. */
+  /**
+   * Link the handoff source (if any) into this stage's `consumes` path — a RELATIVE
+   * symlink (not a copy), so the agent reads the previous phase's actual artifact
+   * instead of an independent byte-for-byte duplicate it (or a careless rewrite) can
+   * silently drift from. Relative so the link survives moving the whole run folder
+   * (`path.relative` is computed from the link's own directory, per POSIX symlink
+   * resolution — not from the process cwd).
+   */
   private async placeHandoff(
     source: string | null,
     stageCwd: string,
@@ -1579,8 +1600,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const dest = this.resolveInside(stageCwd, phase.consumes);
     if (!dest) return;
     await fs.mkdir(path.dirname(dest), { recursive: true });
-    await fs.copyFile(source, dest).catch(() => {
-      // A missing source is not fatal — the stage simply starts without input.
+    const relativeTarget = path.relative(path.dirname(dest), source);
+    await fs.symlink(relativeTarget, dest).catch(() => {
+      // A missing source (or a stale link already at `dest`) is not fatal — the
+      // stage simply starts without input.
     });
   }
 
@@ -1663,6 +1686,19 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         projectId: project?.id,
         matchedTerms,
       });
+      // P1-T2: `cwd` is THIS stage's own sandbox folder, a subdirectory of the run
+      // root (`path.dirname(cwd)`). The handoff into `consumes` is now a relative
+      // SYMLINK whose target can live in a PREVIOUS phase's sibling sandbox — reading
+      // through it needs the whole run root granted, not just this stage's own
+      // folder. With no `consumes` there's nothing cross-folder to read; the
+      // narrower existing grant (just this stage's own sandbox, so the session can
+      // still write `produces` back into it) applies when the session spawns
+      // elsewhere (worktree/project).
+      const grantDirs = phase.consumes
+        ? [path.dirname(cwd)]
+        : spawnCwd
+          ? [cwd]
+          : undefined;
       const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,
@@ -1674,8 +1710,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // Phase 9.3: a continuation phase gets the resume-context in its system prompt.
         ...(resumeContext ? { resumeContext } : {}),
         // The sandbox holds the handoff files; with cwd in the worktree/project the
-        // session still needs write access to it (reverse grant).
-        ...(spawnCwd ? { grantDirs: [cwd] } : {}),
+        // session still needs access to it (reverse grant) — widened to the run root
+        // when a symlinked `consumes` may point at a sibling stage folder.
+        ...(grantDirs ? { grantDirs } : {}),
         // Curated delegation roster + system prompt spilled to the sandbox: both keep
         // the run's argv under the OS limit (spawn E2BIG) as the agent library grows.
         ...(delegates ? { delegates } : {}),

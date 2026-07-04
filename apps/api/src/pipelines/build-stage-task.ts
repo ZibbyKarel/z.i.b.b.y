@@ -15,7 +15,10 @@ export function buildStageTask(opts: {
   const { phaseId, consumesAbs, producesAbs, qualify } = opts;
   return [
     `Proveď fázi pipeline "${phaseId}".`,
-    consumesAbs ? `Vstup (pokud existuje) najdeš v "${consumesAbs}".` : "",
+    consumesAbs
+      ? `Vstup (pokud existuje) najdeš v "${consumesAbs}" — jde o READ-ONLY odkaz na výstup ` +
+        "předchozí fáze, ne o pracovní kopii; neupravuj ho na místě."
+      : "",
     producesAbs ? `Výstup zapiš do "${producesAbs}".` : "",
     qualify
       ? "Na úplný konec výstupu zapiš svůj verdikt přesně jedním tagem: " +

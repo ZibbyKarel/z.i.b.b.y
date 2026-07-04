@@ -450,7 +450,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(cmd.command).toBe("/bin/sh");
     });
 
-    it("claude: a project-targeted stage spawns in the checkout with the sandbox granted", async () => {
+    it("claude: a project-targeted stage with a consumes handoff grants the whole run root (P1-T2)", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({
         command: "claude",
@@ -469,7 +469,11 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         model?: string;
         streamTranscript?: boolean;
       };
-      expect(opts.grantDirs).toEqual(["/sandbox/stage"]);
+      // The `consumes` handoff is now a symlink that may target a PREVIOUS phase's
+      // sibling sandbox folder (a sibling of "/sandbox/stage" under the run root
+      // "/sandbox") — granting only the current stage's own folder would leave that
+      // read outside the sandbox/`--add-dir` grant, so the whole run root is granted.
+      expect(opts.grantDirs).toEqual(["/sandbox"]);
       // Handoff paths are absolute — sandbox-relative would resolve in the repo.
       expect(opts.task).toContain(path.join("/sandbox/stage", "in.md"));
       expect(opts.task).toContain(path.join("/sandbox/stage", "out.md"));
@@ -480,9 +484,9 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(opts.streamTranscript).toBe(true);
     });
 
-    it("claude: without a project the stage stays in its sandbox (no grant)", async () => {
+    it("claude: without a project a consumes handoff still grants the run root (P1-T2)", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
-      const buildClaude = vi.fn(async (opts: { task: string }) => ({
+      const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({
         command: "claude",
         args: ["-p", opts.task],
       }));
@@ -494,7 +498,38 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       const cmd = await build(agentPhase(), null);
       expect(cmd.spawnCwd).toBeUndefined();
       const opts = buildClaude.mock.calls[0]?.[0] as { grantDirs?: readonly string[] };
-      expect(opts.grantDirs).toBeUndefined();
+      // Even without a project the process's own cwd IS the stage sandbox, but a
+      // symlinked `consumes` can still point at a sibling stage folder — so the run
+      // root ("/sandbox", the parent of "/sandbox/stage") is still granted.
+      expect(opts.grantDirs).toEqual(["/sandbox"]);
+    });
+
+    it("claude: a first phase with no consumes keeps the narrow own-sandbox grant (project) / no grant (sandbox-only)", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude";
+      const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({
+        command: "claude",
+        args: ["-p", opts.task],
+      }));
+      (h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude };
+      (h.service as unknown as { agents: unknown }).agents = {
+        get: vi.fn(async () => ({ id: "writer", instructions: "write" })),
+      };
+
+      const firstPhase = agentPhase({ consumes: undefined });
+
+      const projectCmd = await build(firstPhase, PROJECT);
+      expect(projectCmd.spawnCwd).toBe("/srv/checkouts/demo");
+      const projectOpts = buildClaude.mock.calls[0]?.[0] as { grantDirs?: readonly string[] };
+      // Nothing to read cross-folder — just the reverse grant so the session can
+      // still write `produces` back into its own sandbox.
+      expect(projectOpts.grantDirs).toEqual(["/sandbox/stage"]);
+
+      buildClaude.mockClear();
+      const sandboxCmd = await build(firstPhase, null);
+      expect(sandboxCmd.spawnCwd).toBeUndefined();
+      const sandboxOpts = buildClaude.mock.calls[0]?.[0] as { grantDirs?: readonly string[] };
+      // The process's own cwd already IS the sandbox — nothing extra to grant.
+      expect(sandboxOpts.grantDirs).toBeUndefined();
     });
   });
 
@@ -1050,6 +1085,132 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "docs.md");
         expect(artifact?.content).toBe("in flight");
       });
+    });
+  });
+
+  describe("symlink handoff + read-only produces (P1-T2)", () => {
+    const twoPhasePipeline = {
+      id: "release",
+      phases: [
+        {
+          id: "developer",
+          type: "agent",
+          agent: "writer",
+          consumes: "in.md",
+          produces: "out.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+        {
+          id: "code-review",
+          type: "agent",
+          agent: "writer",
+          consumes: "out.md",
+          produces: "review.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+      ],
+      instructions: "ship",
+    };
+
+    /**
+     * Replace `runStage` with a scriptable double that really writes each phase's
+     * `produces` artifact to disk (via the real `write` callback) and reports "done" —
+     * so the REAL `placeHandoff`/chmod code in `drive()` runs against real files.
+     */
+    function scriptRunStage(write: (phaseId: string, cwd: string) => Promise<void>): void {
+      (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
+        async (_run: unknown, p: { id: string }, cwd: string, attempt: number) => {
+          await write(p.id, cwd);
+          return {
+            phaseId: p.id,
+            runId: `${PIPELINE_RUN_ID}.${p.id}_${attempt}`,
+            attempt,
+            status: "done" as const,
+          };
+        },
+      );
+    }
+
+    const drive = (run: PipelineRun, pipeline: unknown) =>
+      (h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }).drive(
+        run,
+        pipeline,
+      );
+
+    it("handoff into the next stage is a relative symlink reading the previous phase's produces", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      scriptRunStage(async (phaseId, cwd) => {
+        if (phaseId === "developer") {
+          await fs.writeFile(path.join(cwd, "out.md"), "developer output", "utf8");
+        }
+      });
+
+      await drive(run, twoPhasePipeline);
+
+      expect(run.status).toBe("done");
+      const dest = path.join(run.cwd, "02_code-review", "out.md");
+
+      const lst = await fs.lstat(dest);
+      expect(lst.isSymbolicLink()).toBe(true);
+
+      // Relative, not absolute — survives moving the whole run folder.
+      const linkTarget = await fs.readlink(dest);
+      expect(path.isAbsolute(linkTarget)).toBe(false);
+      expect(linkTarget).toBe(path.join("..", "01_developer", "out.md"));
+
+      // Reading through the link returns the source's real content.
+      expect(await fs.readFile(dest, "utf8")).toBe("developer output");
+
+      // Moving the run root doesn't break the relative link.
+      const movedRoot = path.join(dir, "moved-run");
+      await fs.rename(run.cwd, movedRoot);
+      const movedContent = await fs.readFile(
+        path.join(movedRoot, "02_code-review", "in.md"),
+        "utf8",
+      );
+      expect(movedContent).toBe("developer output");
+    });
+
+    it("a phase's produces file becomes read-only once the phase completes", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      scriptRunStage(async (phaseId, cwd) => {
+        if (phaseId === "developer") await fs.writeFile(path.join(cwd, "out.md"), "v1", "utf8");
+        if (phaseId === "code-review") {
+          await fs.writeFile(path.join(cwd, "review.md"), "r1", "utf8");
+        }
+      });
+
+      await drive(run, twoPhasePipeline);
+
+      const producesPath = path.join(run.cwd, "01_developer", "out.md");
+      const mode = (await fs.stat(producesPath)).mode;
+      // No write bits for owner/group/other.
+      expect(mode & 0o222).toBe(0);
+      // Real enforcement, not just the bit: a direct write attempt fails.
+      await expect(fs.writeFile(producesPath, "corrupt", "utf8")).rejects.toThrow();
+      // A subsequent phase's own produces file is read-only too.
+      const reviewPath = path.join(run.cwd, "02_code-review", "review.md");
+      expect((await fs.stat(reviewPath)).mode & 0o222).toBe(0);
+    });
+
+    it("read-only produces files don't block removing the whole run directory (cleanup)", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      scriptRunStage(async (phaseId, cwd) => {
+        if (phaseId === "developer") await fs.writeFile(path.join(cwd, "out.md"), "v1", "utf8");
+        if (phaseId === "code-review") {
+          await fs.writeFile(path.join(cwd, "review.md"), "r1", "utf8");
+        }
+      });
+
+      await drive(run, twoPhasePipeline);
+
+      await expect(fs.rm(run.cwd, { recursive: true, force: true })).resolves.toBeUndefined();
+      await expect(fs.access(run.cwd)).rejects.toThrow();
     });
   });
 });
