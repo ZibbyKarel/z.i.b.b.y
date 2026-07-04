@@ -121,24 +121,24 @@ Vše ověřeno přímo v kódu, `apps/api/src/pipelines/pipeline-runner.service.
 
 ## Fáze 3 — `context/` složka pro vstupy pipeline
 
-- [ ] Zjistit/rozhodnout, zda pipeline schema dnes má nějaký koncept
+- [x] Zjistit/rozhodnout, zda pipeline schema dnes má nějaký koncept
       "pipeline-level input" odlišný od fáze-k-fázi `consumes`/`produces`
       (`input.md` v `run.cwd`, runner.ts:314, vypadá jako kandidát — ověřit před
       implementací, ať se nezavádí duplicitní mechanismus).
-- [ ] Při `start()` (runner.ts:~242-244) vytvořit `context/` v kořeni běhu a
+- [x] Při `start()` (runner.ts:~242-244) vytvořit `context/` v kořeni běhu a
       zkopírovat do ní (skutečná kopie, ne symlink — zdroj může být mimo běh,
       např. dočasný upload) vstupní soubory pipeline.
-- [ ] Při vytváření každé `stageCwd` (runner.ts:771) přidat symlink
+- [x] Při vytváření každé `stageCwd` (runner.ts:771) přidat symlink
       `stageCwd/context -> ../context` (relativní symlink na sdílenou složku),
       aby každá fáze měla vstupy pipeline dostupné bez duplikace.
-- [ ] `context/` je read-only pro všechny fáze (chmod po zkopírování) — jsou to
+- [x] `context/` je read-only pro všechny fáze (chmod po zkopírování) — jsou to
       vstupy celého běhu, ne handoff mezi fázemi.
 
 ## Fáze 4 — `output/` složka pro finální výstup
 
-- [ ] Vytvořit `output/` v kořeni běhu (lazy, při prvním `file` výstupu, nebo
+- [x] Vytvořit `output/` v kořeni běhu (lazy, při prvním `file` výstupu, nebo
       rovnou při `start()` pro konzistenci s `context/`).
-- [ ] Rozhodnutí: `output/` je **zdroj pravdy** — poslední fáze, která produkuje
+- [x] Rozhodnutí: `output/` je **zdroj pravdy** — poslední fáze, která produkuje
       finální artefakt, ho zapíše (symlinkem, stejně jako Fáze 2) do
       `output/<jméno>`, a `deliverFileOutput` (runner.ts:1025-1090) i
       `resolveOutputSource()` (runner.ts:997-1005) čtou **z `output/`**, ne
@@ -147,9 +147,9 @@ Vše ověřeno přímo v kódu, `apps/api/src/pipelines/pipeline-runner.service.
   - Alternativa (zamítnuto): `output/` jako čistě archivní kopie vedle
     stávající logiky — zavrhnuto, protože by to znovu zavedlo duplicitní
     soubory přesně toho typu, který tento plán řeší.
-- [ ] `deliverFileOutput` beze změny v logice doručení do vaultu/projektu, jen
+- [x] `deliverFileOutput` beze změny v logice doručení do vaultu/projektu, jen
       změna zdroje čtení.
-- [ ] PR-based výstupy (`openPrOutput`) nejsou touto fází dotčené — nejde o
+- [x] PR-based výstupy (`openPrOutput`) nejsou touto fází dotčené — nejde o
       soubor v `output/`.
 
 ## Fáze 5 — Zpětná kompatibilita a testy
