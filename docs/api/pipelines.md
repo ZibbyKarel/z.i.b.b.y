@@ -226,6 +226,11 @@ Rung definice jsou volitelné — pokud chybí, fáze se opakuje se stejným mod
 Soubory sdílené mezi fázemi pipeline runu:
 
 - Uloženy v sandbox adresáři pipeline runu
+- Každý dispatch fáze dostane vlastní číslovanou složku `NN_<phaseId>`
+  (např. `01_developer`, `02_code-review`, `03_developer`) v pořadí volání —
+  opakovaný běh téže fáze přes `loop` tedy nepřepíše výstup předchozího.
+  Název složky se ukládá na `StageRun.dir`; starší runy bez čísel (`developer/`)
+  zůstávají čitelné (lookup padá zpět na holé `phaseId`).
 - `produces: spec.md` → tato fáze zapíše `spec.md`
 - `consumes: spec.md` → tato fáze přečte `spec.md` jako vstup
 
