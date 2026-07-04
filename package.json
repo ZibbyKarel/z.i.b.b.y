@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev": "concurrently -n api,web -c green,cyan \"pnpm:api:dev\" \"pnpm:web:dev\"",
+    "build": "pnpm web:build",
+    "start": "concurrently -n api,web -c green,cyan \"pnpm:api:start\" \"pnpm:web:start\"",
     "web:dev": "cd apps/web && next dev --turbopack",
     "web:start": "next start apps/web",
     "web:build": "next build apps/web",
