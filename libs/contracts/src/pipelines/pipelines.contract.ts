@@ -22,9 +22,15 @@ export const PIPELINE_RUN_ARTIFACTS = [
   "learned.md",
 ] as const;
 
-/** One whitelisted pipeline run artifact: its name and its text content. */
+/**
+ * One pipeline run artifact: its name and its text content. `name` is widened to
+ * a plain string (rather than `z.enum(PIPELINE_RUN_ARTIFACTS)`) because the
+ * server-side allowlist a run artifact can match is no longer just the global
+ * delivery-loop set — it also accepts a name matching the run's own delivered
+ * `file` output (see `readArtifact` in `pipeline-runner.service.ts`).
+ */
 export const PipelineRunArtifactSchema = z.object({
-  name: z.enum(PIPELINE_RUN_ARTIFACTS),
+  name: z.string(),
   content: z.string(),
 });
 export type PipelineRunArtifact = z.infer<typeof PipelineRunArtifactSchema>;

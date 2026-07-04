@@ -105,6 +105,11 @@ export const TaskRunSchema = z.object({
   taskOutcomeSummary: z.string().optional(),
   /** Enriched from the task record: the operator's chosen terminal output kind. */
   taskOutputKind: z.enum(["pr", "file", "void"]).optional(),
+  /**
+   * Enriched from pipeline run: name of the artifact delivered as `file` output
+   * (see `PipelineOutput`), for frontend preview.
+   */
+  outputArtifactName: z.string().optional(),
   /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
   parked: ParkedDetailSchema.optional(),
   /** The engagement a task is attributed to (Phase 8) — drives the queued caption. */
