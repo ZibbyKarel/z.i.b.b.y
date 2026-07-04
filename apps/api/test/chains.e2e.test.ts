@@ -167,17 +167,18 @@ describe("Chains API (e2e)", () => {
     expect(artifact.body.locator).toBe("research-topic-x");
 
     // The handoff really happened: build-feature's first stage consumed the
-    // research report's content (the vault note body), copied into its sandbox.
+    // research report's content (the vault note body), copied into its sandbox
+    // (stage sandboxes are numbered in dispatch order — P1-T1).
     const buildRunRef = done.steps[1].runRef as string;
     const consumed = await fs.readFile(
-      path.join(dirs.runs as string, buildRunRef, "build", "brief.md"),
+      path.join(dirs.runs as string, buildRunRef, "01_build", "brief.md"),
       "utf8",
     );
     expect(consumed).toContain("output of research"); // the demo stage's report body
     // And step 0's own input was the chain instructions.
     const researchRunRef = done.steps[0].runRef as string;
     const seeded = await fs.readFile(
-      path.join(dirs.runs as string, researchRunRef, "research", "brief.md"),
+      path.join(dirs.runs as string, researchRunRef, "01_research", "brief.md"),
       "utf8",
     );
     expect(seeded).toContain("Research topic X overnight");

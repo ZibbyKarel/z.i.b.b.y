@@ -45,6 +45,12 @@ const driftPhases = (process.env.PIPELINE_DEMO_DRIFT_PHASES || "")
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// "Fired once" markers must survive a re-dispatch of the same phase. Stage
+// sandboxes are numbered per dispatch (P1-T1: 01_developer, 03_developer, …),
+// so the stage cwd is NOT stable across a loop back-edge or a limit resume —
+// the run root (its parent) is.
+const runRoot = path.dirname(cwd);
+
 async function main() {
   console.log(`Stage ${phaseId} starting in ${cwd}`);
   console.log("PROGRESS 0");
@@ -56,10 +62,10 @@ async function main() {
   }
 
   // Phase 9: fire the usage-limit line + exit 1 once, BEFORE producing anything (so
-  // the work product is never created twice). The marker lives in the stage cwd,
-  // which the resume path reuses, so the second attempt skips this and succeeds.
+  // the work product is never created twice). The marker lives in the run root,
+  // which every re-dispatch shares, so the second attempt skips this and succeeds.
   if (limitPhases.includes(phaseId)) {
-    const marker = path.join(cwd, `.limit-fired-${phaseId}`);
+    const marker = path.join(runRoot, `.limit-fired-${phaseId}`);
     const already = await readFile(marker, "utf8").catch(() => null);
     if (already === null) {
       await writeFile(marker, "1", "utf8");
@@ -78,11 +84,11 @@ async function main() {
     const out = path.join(cwd, producesRel);
     await mkdir(path.dirname(out), { recursive: true });
     // Phase 45: append a <verdict> tag the runner's qualify gate parses. gapPhases
-    // emit `gap` once (marker in the stable stage cwd) then `pass`; driftPhases always
+    // emit `gap` once (marker in the stable run root) then `pass`; driftPhases always
     // emit `drift`. A phase in neither set produces no tag → runner fails closed to gap.
     let verdict = "";
     if (gapPhases.includes(phaseId)) {
-      const marker = path.join(cwd, `.verdict-${phaseId}`);
+      const marker = path.join(runRoot, `.verdict-${phaseId}`);
       const already = await readFile(marker, "utf8").catch(() => null);
       verdict = `\n<verdict>${already === null ? "gap" : "pass"}</verdict>\n`;
       if (already === null) await writeFile(marker, "1", "utf8");

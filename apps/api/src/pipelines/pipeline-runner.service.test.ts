@@ -25,6 +25,7 @@ const fakeTrace = {
 
 interface FakeCore {
   init: ReturnType<typeof vi.fn>;
+  start: ReturnType<typeof vi.fn>;
   get: ReturnType<typeof vi.fn>;
   resume: ReturnType<typeof vi.fn>;
   cancel: ReturnType<typeof vi.fn>;
@@ -129,6 +130,7 @@ async function makeHarness(dir: string): Promise<Harness> {
   const logListeners = new Set<(runId: string) => void>();
   const core: FakeCore = {
     init: vi.fn(async () => {}),
+    start: vi.fn(async () => ({ runId: STAGE_RUN_ID })),
     get: vi.fn(() => ({
       runId: STAGE_RUN_ID,
       pipelineRunId: PIPELINE_RUN_ID,
@@ -858,6 +860,196 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(run.status).toBe("done");
       expect(order).toEqual(["a", "b"]);
       expect(run.stageRuns.every((s) => s.verdict === undefined)).toBe(true);
+    });
+  });
+
+  describe("sequential stage folder numbering (P1-T1)", () => {
+    const loopPipeline = {
+      id: "release",
+      phases: [
+        {
+          id: "developer",
+          type: "agent",
+          agent: "writer",
+          consumes: "in.md",
+          produces: "out.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+        {
+          id: "code-review",
+          type: "agent",
+          agent: "writer",
+          consumes: "out.md",
+          produces: "review.md",
+          model: "sonnet",
+          thinking: "medium",
+          loop: { to: "developer", maxRetries: 1, escalate: false, then: "park" },
+        },
+      ],
+      instructions: "ship",
+    };
+
+    /**
+     * Script the fake core so the REAL runStage executes (demo command path, no
+     * child process): start() records each dispatch's cwd and drops a marker file
+     * into it, get() reports the scripted terminal outcome for waitForStage.
+     */
+    function scriptCore(outcomes: readonly string[]): { cwds: string[] } {
+      const cwds: string[] = [];
+      const statusByRunId = new Map<string, string>();
+      h.core.start.mockImplementation(async (spec: { ownerId: string; cwd: string }) => {
+        const runId = `${spec.ownerId}_${cwds.length}`;
+        statusByRunId.set(runId, outcomes[cwds.length] ?? "done");
+        await fs.writeFile(path.join(spec.cwd, "marker.txt"), runId, "utf8");
+        cwds.push(spec.cwd);
+        return { runId };
+      });
+      h.core.get.mockImplementation((runId: string) => ({
+        runId,
+        status: statusByRunId.get(runId) ?? "done",
+      }));
+      return { cwds };
+    }
+
+    const drive = (run: PipelineRun, pipeline: unknown) =>
+      (h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }).drive(
+        run,
+        pipeline,
+      );
+
+    const resolveOutputSource = (run: PipelineRun, pipeline: unknown, fromName: string) =>
+      (
+        h.service as unknown as {
+          resolveOutputSource(r: PipelineRun, p: unknown, f: string): string | null;
+        }
+      ).resolveOutputSource(run, pipeline, fromName);
+
+    it("numbers stage folders in dispatch order — a loop's second run never overwrites the first", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      // developer done → code-review error → back-edge → developer done → code-review done
+      const { cwds } = scriptCore(["done", "error", "done", "done"]);
+
+      await drive(run, loopPipeline);
+
+      expect(run.status).toBe("done");
+      expect(run.stageRuns.map((s) => s.dir)).toEqual([
+        "01_developer",
+        "02_code-review",
+        "03_developer",
+        "04_code-review",
+      ]);
+      expect(cwds.map((c) => path.basename(c))).toEqual([
+        "01_developer",
+        "02_code-review",
+        "03_developer",
+        "04_code-review",
+      ]);
+      // Both developer sandboxes exist independently — nothing was overwritten.
+      const first = await fs.readFile(path.join(run.cwd, "01_developer", "marker.txt"), "utf8");
+      const second = await fs.readFile(path.join(run.cwd, "03_developer", "marker.txt"), "utf8");
+      expect(first).not.toBe(second);
+    });
+
+    it("resolveOutputSource targets the LATEST numbered folder of the producing phase", () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      run.stageRuns = [
+        { phaseId: "developer", runId: "r1", attempt: 1, status: "done", dir: "01_developer" },
+        { phaseId: "code-review", runId: "r2", attempt: 1, status: "error", dir: "02_code-review" },
+        { phaseId: "developer", runId: "r3", attempt: 2, status: "done", dir: "03_developer" },
+      ];
+      expect(resolveOutputSource(run, loopPipeline, "out.md")).toBe(
+        path.join(run.cwd, "03_developer", "out.md"),
+      );
+    });
+
+    it("backcompat: a StageRun record without dir resolves to the old flat phase-id folder", () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      run.stageRuns = [{ phaseId: "developer", runId: "r1", attempt: 1, status: "done" }];
+      expect(resolveOutputSource(run, loopPipeline, "out.md")).toBe(
+        path.join(run.cwd, "developer", "out.md"),
+      );
+    });
+
+    it("a synthetic escalation marker (no dir) does not mask the real latest folder", () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      run.stageRuns = [
+        { phaseId: "developer", runId: "r1", attempt: 1, status: "done", dir: "01_developer" },
+        { phaseId: "developer", runId: "x.developer.escalated", attempt: 1, status: "error" },
+      ];
+      expect(resolveOutputSource(run, loopPipeline, "out.md")).toBe(
+        path.join(run.cwd, "01_developer", "out.md"),
+      );
+    });
+
+    it("recomputeHandoff feeds the latest numbered folder's produces (falls back flat)", () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const recompute = (r: PipelineRun) =>
+        (
+          h.service as unknown as {
+            recomputeHandoff(run: PipelineRun, p: unknown, cursor: string): string | null;
+          }
+        ).recomputeHandoff(r, loopPipeline, "code-review");
+      run.stageRuns = [
+        { phaseId: "developer", runId: "r1", attempt: 1, status: "done", dir: "01_developer" },
+        { phaseId: "developer", runId: "r3", attempt: 2, status: "done", dir: "03_developer" },
+      ];
+      expect(recompute(run)).toBe(path.join(run.cwd, "03_developer", "out.md"));
+      // Pre-numbering records (no dir) keep the old flat shape.
+      run.stageRuns = [{ phaseId: "developer", runId: "r1", attempt: 1, status: "done" }];
+      expect(recompute(run)).toBe(path.join(run.cwd, "developer", "out.md"));
+    });
+
+    describe("readArtifact folder lookup", () => {
+      it("backcompat: finds an artifact in an old flat phase folder (record without dir)", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [{ phaseId: "dok", runId: "r1", attempt: 1, status: "done" }];
+        await fs.mkdir(path.join(run.cwd, "dok"), { recursive: true });
+        await fs.writeFile(path.join(run.cwd, "dok", "docs.md"), "old shape", "utf8");
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "docs.md");
+        expect(artifact?.content).toBe("old shape");
+      });
+
+      it("reads the LATEST numbered folder when a phase ran more than once", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [
+          { phaseId: "dok", runId: "r1", attempt: 1, status: "done", dir: "01_dok" },
+          { phaseId: "dok", runId: "r2", attempt: 2, status: "done", dir: "03_dok" },
+        ];
+        for (const [dir, body] of [
+          ["01_dok", "stale"],
+          ["03_dok", "fresh"],
+        ] as const) {
+          await fs.mkdir(path.join(run.cwd, dir), { recursive: true });
+          await fs.writeFile(path.join(run.cwd, dir, "docs.md"), body, "utf8");
+        }
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "docs.md");
+        expect(artifact?.content).toBe("fresh");
+      });
+
+      it("finds the in-flight phase's numbered folder (not yet in stageRuns)", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        // Two settled stages; the third dispatch is executing → its folder is 03_*.
+        run.currentStage = "dok";
+        run.stageRuns = [
+          { phaseId: "a", runId: "r1", attempt: 1, status: "done", dir: "01_a" },
+          { phaseId: "b", runId: "r2", attempt: 1, status: "done", dir: "02_b" },
+        ];
+        await fs.mkdir(path.join(run.cwd, "03_dok"), { recursive: true });
+        await fs.writeFile(path.join(run.cwd, "03_dok", "docs.md"), "in flight", "utf8");
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "docs.md");
+        expect(artifact?.content).toBe("in flight");
+      });
     });
   });
 });

@@ -145,8 +145,9 @@ describe("Pipelines API (e2e)", () => {
     expect(final.status).toBe("done");
     expect(final.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a", "b"]);
 
-    // The handoff: A's produces (a.out) was copied into B's cwd as B's consumes (b.in).
-    const handoff = await fs.readFile(path.join(final.cwd, "b", "b.in"), "utf8");
+    // The handoff: A's produces (a.out) was copied into B's cwd as B's consumes
+    // (b.in). Stage sandboxes are numbered in dispatch order (P1-T1).
+    const handoff = await fs.readFile(path.join(final.cwd, "02_b", "b.in"), "utf8");
     expect(handoff).toContain("output of a");
   });
 
@@ -297,8 +298,9 @@ describe("Pipelines API (e2e)", () => {
       final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
     ).toEqual(["a:done", "v:error", "a:done", "v:done", "b:done"]);
 
-    // Handoff passthrough: verify transforms nothing, so `b` still consumed `a`'s output.
-    const handoff = await fs.readFile(path.join(final.cwd, "b", "b.in"), "utf8");
+    // Handoff passthrough: verify transforms nothing, so `b` still consumed `a`'s
+    // output. Five dispatches ran before it (a, v, a, v), so `b` is the fifth folder.
+    const handoff = await fs.readFile(path.join(final.cwd, "05_b", "b.in"), "utf8");
     expect(handoff).toContain("output of a");
 
     await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
@@ -497,14 +499,16 @@ describe("Pipelines API (e2e)", () => {
       expect(done.status).toBe("done");
 
       // The full handoff chain exists in the run tree (verify produces nothing).
-      for (const [phase, file] of [
-        ["architekt", "plan.md"],
-        ["koder", "implementation.md"],
-        ["review", "review.md"],
-        ["dokumentator", "docs.md"],
-        ["pr-autor", "pr-draft.md"],
+      // Sandboxes are numbered in dispatch order; the gap loop re-ran koder and
+      // review, so their LATEST folders are 04/05 (03_review holds the gap attempt).
+      for (const [dir, file] of [
+        ["01_architekt", "plan.md"],
+        ["04_koder", "implementation.md"],
+        ["05_review", "review.md"],
+        ["07_dokumentator", "docs.md"],
+        ["08_pr-autor", "pr-draft.md"],
       ] as const) {
-        await fs.access(path.join(done.cwd, phase, file));
+        await fs.access(path.join(done.cwd, dir, file));
       }
       // The qualify review looped once on gap, then passed.
       const reviews = done.stageRuns.filter((s) => s.phaseId === "review");

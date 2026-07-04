@@ -48,6 +48,15 @@ export const StageRunSchema = z.object({
   runId: z.string().min(1),
   attempt: z.number().int().min(1),
   status: StageRunStatusSchema,
+  /**
+   * Folder name of this stage's sandbox under the run root, e.g. `"04_developer"`:
+   * `<seq>_<phaseId>` where `seq` is the run-wide dispatch order, zero-padded to 2
+   * digits (a >99th dispatch simply widens the number). Written at dispatch time,
+   * so a loop's second run of the same phase gets its own folder instead of
+   * overwriting the first. Absent on records from pre-numbering runs (whose folder
+   * is the bare phase id) and on synthetic escalation markers (which own no folder).
+   */
+  dir: z.string().min(1).optional(),
   /** A qualify phase's parsed verdict (Phase 45); absent on non-qualify phases. */
   verdict: StageVerdictSchema.optional(),
 });

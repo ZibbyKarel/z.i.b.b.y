@@ -547,7 +547,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const idx = order.findIndex((p) => p.id === cursor);
     for (let i = idx - 1; i >= 0; i--) {
       const ph = order[i];
-      if (ph?.produces) return path.join(run.cwd, ph.id, ph.produces);
+      if (ph?.produces) {
+        return path.join(run.cwd, this.latestStageDir(run, ph.id), ph.produces);
+      }
     }
     return null;
   }
@@ -697,8 +699,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // out separators.
     const phaseDirs = new Set<string>();
     if (run) {
-      if (run.currentStage) phaseDirs.add(run.currentStage);
-      for (const s of run.stageRuns) phaseDirs.add(s.phaseId);
+      if (run.currentStage) {
+        // The in-flight phase isn't in `stageRuns` yet (that append is
+        // terminal-only), but its folder name is deterministic: the next sequence
+        // number. Keep the bare phase id too as the pre-numbering fallback shape.
+        phaseDirs.add(this.stageDirName(run.stageRuns.length + 1, run.currentStage));
+        phaseDirs.add(run.currentStage);
+      }
+      // One candidate per phase: the folder of its LATEST run (numbered when
+      // recorded, the old flat phase id for pre-numbering records).
+      for (const s of run.stageRuns) phaseDirs.add(this.latestStageDir(run, s.phaseId));
     }
     const dirs = [root, ...[...phaseDirs].map((id) => path.join(root, id))];
     for (const dir of dirs) {
@@ -768,7 +778,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       }
 
       const attempt = (retries.get(phase.id) ?? 0) + 1;
-      const stageCwd = path.join(run.cwd, phase.id);
+      // Sequential sandbox numbering: every dispatch appends exactly one `stageRuns`
+      // entry when it settles (there is no same-entry retry path in this machine),
+      // so `length + 1` numbers the folders in call order — a loop back-edge's
+      // second run of the same phase gets its own folder instead of overwriting the
+      // first. A synthetic escalation marker also occupies a slot, which leaves a
+      // gap in the numbering, never a clash.
+      const stageCwd = path.join(
+        run.cwd,
+        this.stageDirName(run.stageRuns.length + 1, phase.id),
+      );
       await fs.mkdir(stageCwd, { recursive: true });
       await this.placeHandoff(handoffSource, stageCwd, phase);
 
@@ -993,6 +1012,30 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     return [{ type: "file", from, dest: taskOutput.dest, to: taskOutput.to }];
   }
 
+  /**
+   * `NN_<phaseId>` sandbox folder name for the run's `seq`-th stage dispatch —
+   * zero-padded to 2 digits; a >99th dispatch simply widens the number.
+   */
+  private stageDirName(seq: number, phaseId: string): string {
+    return `${String(seq).padStart(2, "0")}_${phaseId}`;
+  }
+
+  /**
+   * Folder name (under the run root) holding the LATEST run of `phaseId` — the
+   * newest `stageRuns` record that carries a `dir`. Records without one are
+   * skipped: a synthetic escalation marker owns no folder, and a pre-numbering
+   * record's folder is the bare phase id — which is also the right answer when no
+   * numbered record exists, so one fallback covers both (backcompat with runs on
+   * disk that predate sequential numbering).
+   */
+  private latestStageDir(run: PipelineRun, phaseId: string): string {
+    for (let i = run.stageRuns.length - 1; i >= 0; i--) {
+      const s = run.stageRuns[i];
+      if (s?.phaseId === phaseId && s.dir) return s.dir;
+    }
+    return phaseId;
+  }
+
   /** Absolute path of the artifact a `from` references (the phase that produces it). */
   private resolveOutputSource(
     run: PipelineRun,
@@ -1001,7 +1044,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   ): string | null {
     const phase = pipeline.phases.find((p) => p.produces === fromName);
     if (!phase) return null;
-    return path.join(run.cwd, phase.id, fromName);
+    return path.join(run.cwd, this.latestStageDir(run, phase.id), fromName);
   }
 
   /** Split a Markdown artifact into a PR title (first `# ` heading) and the body. */
@@ -1403,7 +1446,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // the stage goes terminal.
     run.currentStageRunId = rec.runId;
     const status = await this.waitForStage(rec.runId);
-    return { phaseId: phase.id, runId: rec.runId, attempt, status };
+    // `dir` records the numbered sandbox folder this dispatch ran in (the basename
+    // of the cwd drive() computed), so later lookups find THIS run's folder even
+    // after a loop re-runs the same phase into a new one.
+    return { phaseId: phase.id, runId: rec.runId, attempt, status, dir: path.basename(stageCwd) };
   }
 
   /**
