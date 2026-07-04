@@ -101,21 +101,21 @@ Vše ověřeno přímo v kódu, `apps/api/src/pipelines/pipeline-runner.service.
 
 ## Fáze 2 — Odkaz místo kopie mezi fázemi
 
-- [ ] V `placeHandoff()` (runner.ts:1525-1539) nahradit `fs.copyFile(source, dest)`
+- [x] V `placeHandoff()` (runner.ts:1525-1539) nahradit `fs.copyFile(source, dest)`
       za `fs.symlink(source, dest)` (relativní symlink, aby přežil přesun celé
       run složky).
-- [ ] Po dokončení fáze (jakmile je `produces` finální, fáze má terminální
+- [x] Po dokončení fáze (jakmile je `produces` finální, fáze má terminální
       status) nastavit soubor `produces` na read-only (`fs.chmod(..., 0o444)`),
       aby ho následná fáze nemohla omylem přepsat přes symlink a poškodit tak
       kanonický zdroj zpětně.
-- [ ] Ověřit, že sandbox/`--add-dir` grant (`grantDirs: [cwd]`, runner.ts okolo
+- [x] Ověřit, že sandbox/`--add-dir` grant (`grantDirs: [cwd]`, runner.ts okolo
       1615) pořád umožní čtení skrz symlink, když cíl leží mimo `stageCwd`
       (v předchozí fázi ve stejném `run.cwd`) — `run.cwd` už je v rozsahu, takže
       by to mělo fungovat bez dalšího grantu.
-- [ ] `consumesAbs`/`producesAbs` (runner.ts:~1605-1607) zůstávají beze změny —
+- [x] `consumesAbs`/`producesAbs` (runner.ts:~1605-1607) zůstávají beze změny —
       agent i nadále vidí absolutní cestu v task textu; teď navíc ta cesta
       skutečně jen odkazuje na soubor, nekopíruje ho.
-- [ ] Aktualizovat text v `build-stage-task.ts` (formulace "Vstup najdeš v
+- [x] Aktualizovat text v `build-stage-task.ts` (formulace "Vstup najdeš v
       ⟨path⟩"), aby explicitně říkal, že vstup je **read-only reference**,
       ne pracovní kopie.
 
