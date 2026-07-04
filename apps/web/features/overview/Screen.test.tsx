@@ -19,6 +19,12 @@ vi.mock("../integrations/queries", () => ({
 vi.mock("../skills/queries", () => ({ useSkillsQuery: () => ({ data: [] }) }));
 vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
+// QuickLaunchPanel's own dependencies — one pinned chain so the panel actually renders.
+vi.mock("../pins", () => ({
+  usePinToggle: () => ({ pins: [{ kind: "chain", id: "c1" }], toggle: vi.fn() }),
+}));
+vi.mock("../chains", () => ({ useChainsQuery: () => ({ data: [{ id: "c1", name: "My chain" }] }) }));
+vi.mock("../tasks", () => ({ useNewTask: () => ({ open: vi.fn() }) }));
 
 const activity: ActivityEntry[] = [
   {
@@ -47,6 +53,12 @@ describe("Overview Screen", () => {
     render(<Screen />);
     expect(screen.getByTestId(ActivityFeedTestId.Root)).toBeInTheDocument();
     expect(screen.getByText("agent writer started")).toBeInTheDocument();
+  });
+
+  it("renders the quick-launch panel for the pinned targets", () => {
+    render(<Screen />);
+    expect(screen.getByText("Panel rychlého spuštění")).toBeInTheDocument();
+    expect(screen.getByText("My chain")).toBeInTheDocument();
   });
 
   it("links each fresh-workspace starter card to its dashboard segment", () => {

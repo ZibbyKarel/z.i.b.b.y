@@ -54,6 +54,8 @@ export * from "./limits/limits.schema";
 export * from "./limits/limits.contract";
 export * from "./system/system.schema";
 export * from "./system/system.contract";
+export * from "./pins/pin.schema";
+export * from "./pins/pins.contract";
 export * from "./tasks/task.schema";
 export * from "./tasks/tasks.contract";
 export * from "./tasks/task-run.schema";

@@ -11,6 +11,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { PinButton } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { useNewTask } from "../tasks";
 import { NewChainDialog } from "./components/NewChainDialog";
@@ -167,6 +168,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                       </Stack>
                     </Container>
                     <Stack align="center" direction="row" gap="100">
+                      <PinButton id={selected.id} kind="chain" />
                       <Button
                         data-testid={ChainsScreenTestId.Delete}
                         disabled={deleteChain.isPending}

@@ -93,6 +93,11 @@ describe("chains Screen (N4a)", () => {
     });
   });
 
+  it("shows a pin toggle in the chain's action row (Phase 04)", () => {
+    render(<Screen selectedId="research-then-build" />);
+    expect(screen.getByText("Připnout")).toBeInTheDocument();
+  });
+
   it("empty state offers the create action; the dialog is create-only", async () => {
     hooks.chains = { data: [], isPending: false, isError: false, refetch: vi.fn() };
     hooks.runs = [];

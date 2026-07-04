@@ -12,6 +12,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import type { Pipeline } from "../../domain";
 import { useAgentsQuery } from "../agents";
+import { PinButton } from "../pins";
 import { useNewTask } from "../tasks";
 import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
@@ -163,6 +164,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                       </Stack>
                     </Container>
                     <Stack align="center" direction="row" gap="100">
+                      <PinButton id={selected.id} kind="pipeline" />
                       <Button
                         icon="edit"
                         intent="ghost"

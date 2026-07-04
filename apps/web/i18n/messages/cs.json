@@ -1377,6 +1377,13 @@
       "send": "Odeslat"
     }
   },
+  "pins": {
+    "pin": "Připnout",
+    "unpin": "Odepnout",
+    "quickLaunchTitle": "Panel rychlého spuštění",
+    "run": "Spustit",
+    "unpinAria": "Odepnout {name}"
+  },
   "chains": {
     "title": "Řetězce",
     "countSummary": "{count, plural, =0 {žádný řetězec} one {# řetězec} few {# řetězce} other {# řetězců}}",
