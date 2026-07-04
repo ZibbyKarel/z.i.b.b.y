@@ -104,15 +104,10 @@ describe("Goal loop API (e2e, demo maker)", () => {
     goalRunId: string,
     pred: (run: ReturnType<GoalRunnerService["get"]>) => boolean,
   ): Promise<ReturnType<GoalRunnerService["get"]>> {
-    // A goal run drives real maker/verifier child processes; on a busy CI runner
-    // (the full suite runs in parallel) reaching a terminal/parked state can take
-    // well past the generic 20s `until` default even though it's near-instant
-    // locally. Give goal-run polls a wider window so the wait isn't a false timeout
-    // — it only ever costs extra wall-clock when the predicate never comes true.
     return until(async () => {
       const run = getRun(goalRunId).body;
       return pred(run) ? run : null;
-    }, 45000) as Promise<ReturnType<GoalRunnerService["get"]>>;
+    }) as Promise<ReturnType<GoalRunnerService["get"]>>;
   }
 
   async function boot(autoResume = false): Promise<INestApplication> {
