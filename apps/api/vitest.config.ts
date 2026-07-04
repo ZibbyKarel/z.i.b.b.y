@@ -8,6 +8,9 @@ import { defineConfig } from "vitest/config";
 // requests intermittently exceed the default 5s timeout — a different suite each run,
 // all green in isolation. Cap concurrency to ~half the cores and widen the timeouts so
 // a slow-under-load boot/request doesn't trip. Logic is unchanged; this is contention.
+// A few goal-loop e2e polls (real maker/verifier child processes) reliably exceed 30s
+// on 2-fork ubuntu CI runners while passing near-instantly locally, so the budget is
+// 60s (goal polls cap themselves at 45s, leaving headroom for a clean "until" error).
 const maxForks = Math.max(2, Math.floor(os.cpus().length / 2));
 
 // NestJS relies on `emitDecoratorMetadata` for dependency injection, which
@@ -19,8 +22,8 @@ export default defineConfig({
     globals: true,
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     poolOptions: { forks: { maxForks, minForks: 1 } },
   },
   plugins: [
