@@ -160,7 +160,7 @@
 
 ## Fáze 2 — Frontend: `RunOutputPanel` — preview + continue pro pipeline `file` výstup
 
-- [ ] V `apps/web/features/runs/components/RunDetail.tsx` upravit
+- [x] V `apps/web/features/runs/components/RunDetail.tsx` upravit
       `RunOutputPanel` (řádky 133-211):
   - Přidat druhý dotaz vedle stávajícího `prDraft`:
     ```
@@ -196,11 +196,11 @@
     přepočítat tak, aby pro tuhle větev braly `fileArtifact.content` místo
     `prDraft?.content` (dnes bere `prDraft?.content` natvrdo pro "pipelineOutput"
     případ — potřeba rozlišit, který ze dvou artefaktů skutečně přišel).
-- [ ] `pnpm typecheck && pnpm lint`.
+- [x] `pnpm typecheck && pnpm lint`.
 
 ## Fáze 3 — Frontend: sjednotit preview i pro agent/orchestrator výstup
 
-- [ ] Ve stejné komponentě (agent-shaped větev, řádky 186-210): nahradit
+- [x] Ve stejné komponentě (agent-shaped větev, řádky 186-210): nahradit
       `<Typography size="sm" type="text" variant="secondary">{summary}</Typography>`
       za `<CodeBlock maxHeight="md" text={summary ?? ""} />`, aby dlouhý
       výstup (agentův wrap-up text doručený do vaultu/projektu jako `file`
@@ -208,11 +208,11 @@
       výstup, místo neomezeně rostoucího odstavce.
   - Zachovat "Otevřít výstup" tlačítko (PR case, `firstUrl(summary)`) beze
     změny — jede dál nad/vedle `CodeBlock`.
-- [ ] `pnpm typecheck && pnpm lint`.
+- [x] `pnpm typecheck && pnpm lint`.
 
 ## Fáze 4 — Testy
 
-- [ ] `apps/web/features/runs/components/RunDetail.test.tsx`: rozšířit mock
+- [x] `apps/web/features/runs/components/RunDetail.test.tsx`: rozšířit mock
       `useRunArtifactQuery` (řádky 24-28) tak, aby uměl vracet obsah i pro
       libovolné jiné jméno než `"pr-draft.md"` (test bude parametrizovat jméno
       přes `run.outputArtifactName`).
@@ -226,24 +226,25 @@
     fallback s `"N stages, done"`) — ověřuje opravu vedlejšího bugu z Fáze 2.
   - Upravit/doplnit test agent-shaped větve tak, aby ověřil `CodeBlock`
     (ne `Typography`) jako nositele `summary` textu.
-- [ ] `apps/api/src/pipelines/pipeline-runner.service.test.ts` (nebo
+- [x] `apps/api/src/pipelines/pipeline-runner.service.test.ts` (nebo
       `pipeline-runner.outputs.test.ts`, podle toho, kde dnes žijí testy na
       `deliverFileOutput`/`readArtifact`): nový test — pipeline s `file`
       výstupem a `from` mimo `PIPELINE_RUN_ARTIFACTS` (např. vlastní
       `produces: "custom-report.md"`) → `readArtifact(runId, "custom-report.md")`
       vrátí obsah; `readArtifact(runId, "nejaky-jiny-nazev.md")` (mimo allowlist
       i mimo `outputsOverride`) dál vrací `null`.
-- [ ] `apps/api/src/tasks/task-runs.service.test.ts` (pokud existuje pro
+- [x] `apps/api/src/tasks/task-runs.service.test.ts` (pokud existuje pro
       `pipelineRunToView`) nebo nejbližší existující test na
       `getTaskRun`/`listTaskRuns` pro pipeline: ověřit, že `outputArtifactName`
       se objeví na `TaskRun` právě a jen když `run.outputsOverride` obsahuje
       `type: "file"` položku.
-- [ ] `pnpm test` (celá suita) a `pnpm typecheck`.
+- [x] `pnpm test` (celá suita) a `pnpm typecheck`.
 - [ ] Manuální smoke test: spustit `code-audit` pipeline (nebo jinou
       nedelivery-loop pipelinu) přes New Task dialog s výstupem `file` →
       `dest: vault`, počkat na dokončení, otevřít běh na `/runs`, ověřit že se
       zobrazí preview zprávy a "Pokračovat v novém úkolu" otevře dialog s
       touhle zprávou v kontextu.
+  - _Pozn. (2026-07-04): odloženo na operátora — vyžaduje reálný `claude` běh; chování kryjí web testy (RunDetail.test.tsx: file-artifact preview, continue-context z artefaktu, žádný "N stages, done" fallback)._
 
 ---
 
