@@ -956,7 +956,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     const resolveOutputSource = (run: PipelineRun, pipeline: unknown, fromName: string) =>
       (
         h.service as unknown as {
-          resolveOutputSource(r: PipelineRun, p: unknown, f: string): string | null;
+          resolveOutputSource(r: PipelineRun, p: unknown, f: string): Promise<string | null>;
         }
       ).resolveOutputSource(run, pipeline, fromName);
 
@@ -987,7 +987,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(first).not.toBe(second);
     });
 
-    it("resolveOutputSource targets the LATEST numbered folder of the producing phase", () => {
+    it("resolveOutputSource (no output/ dir): targets the LATEST numbered folder of the producing phase", async () => {
       const run = h.runs.get(PIPELINE_RUN_ID);
       if (!run) throw new Error("missing run");
       run.stageRuns = [
@@ -995,28 +995,52 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         { phaseId: "code-review", runId: "r2", attempt: 1, status: "error", dir: "02_code-review" },
         { phaseId: "developer", runId: "r3", attempt: 2, status: "done", dir: "03_developer" },
       ];
-      expect(resolveOutputSource(run, loopPipeline, "out.md")).toBe(
+      await expect(resolveOutputSource(run, loopPipeline, "out.md")).resolves.toBe(
         path.join(run.cwd, "03_developer", "out.md"),
       );
     });
 
-    it("backcompat: a StageRun record without dir resolves to the old flat phase-id folder", () => {
+    it("backcompat: no output/ dir on disk (pre-P1-T3 run) — old flat phase-id folder lookup", async () => {
       const run = h.runs.get(PIPELINE_RUN_ID);
       if (!run) throw new Error("missing run");
       run.stageRuns = [{ phaseId: "developer", runId: "r1", attempt: 1, status: "done" }];
-      expect(resolveOutputSource(run, loopPipeline, "out.md")).toBe(
+      await expect(resolveOutputSource(run, loopPipeline, "out.md")).resolves.toBe(
         path.join(run.cwd, "developer", "out.md"),
       );
     });
 
-    it("a synthetic escalation marker (no dir) does not mask the real latest folder", () => {
+    it("P1-T3 (Fáze 4): with an output/ dir present, resolveOutputSource links + reads output/<name>", async () => {
+      const run = h.runs.get(PIPELINE_RUN_ID);
+      if (!run) throw new Error("missing run");
+      run.stageRuns = [
+        { phaseId: "developer", runId: "r1", attempt: 1, status: "done", dir: "01_developer" },
+      ];
+      await fs.mkdir(path.join(run.cwd, "01_developer"), { recursive: true });
+      await fs.writeFile(path.join(run.cwd, "01_developer", "out.md"), "canonical", "utf8");
+      await fs.mkdir(path.join(run.cwd, "output"), { recursive: true }); // start() creates this
+
+      const resolved = await resolveOutputSource(run, loopPipeline, "out.md");
+
+      expect(resolved).toBe(path.join(run.cwd, "output", "out.md"));
+      const lst = await fs.lstat(resolved!);
+      expect(lst.isSymbolicLink()).toBe(true);
+      expect(path.isAbsolute(await fs.readlink(resolved!))).toBe(false);
+      expect(await fs.readFile(resolved!, "utf8")).toBe("canonical");
+
+      // A second read is idempotent — the existing link is left alone, not replaced.
+      const resolvedAgain = await resolveOutputSource(run, loopPipeline, "out.md");
+      expect(resolvedAgain).toBe(resolved);
+      expect(await fs.readlink(resolvedAgain!)).toBe(await fs.readlink(resolved!));
+    });
+
+    it("a synthetic escalation marker (no dir) does not mask the real latest folder", async () => {
       const run = h.runs.get(PIPELINE_RUN_ID);
       if (!run) throw new Error("missing run");
       run.stageRuns = [
         { phaseId: "developer", runId: "r1", attempt: 1, status: "done", dir: "01_developer" },
         { phaseId: "developer", runId: "x.developer.escalated", attempt: 1, status: "error" },
       ];
-      expect(resolveOutputSource(run, loopPipeline, "out.md")).toBe(
+      await expect(resolveOutputSource(run, loopPipeline, "out.md")).resolves.toBe(
         path.join(run.cwd, "01_developer", "out.md"),
       );
     });
@@ -1211,6 +1235,109 @@ describe("PipelineRunnerService — stage gates & resume", () => {
 
       await expect(fs.rm(run.cwd, { recursive: true, force: true })).resolves.toBeUndefined();
       await expect(fs.access(run.cwd)).rejects.toThrow();
+    });
+  });
+
+  describe("context/ pipeline-level input folder (P1-T3)", () => {
+    /** Drive start() to completion through a scripted runStage (real fs, no core). */
+    function scriptRunStage(write: (phaseId: string, cwd: string) => Promise<void>): string[] {
+      const cwds: string[] = [];
+      (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
+        async (_run: unknown, p: { id: string; produces?: string }, cwd: string, attempt: number) => {
+          cwds.push(cwd);
+          await write(p.id, cwd);
+          return {
+            phaseId: p.id,
+            runId: `${PIPELINE_RUN_ID}.${p.id}_${attempt}`,
+            attempt,
+            status: "done" as const,
+          };
+        },
+      );
+      return cwds;
+    }
+
+    const twoPhasePipeline = {
+      id: "release",
+      phases: [
+        {
+          id: "a",
+          type: "agent",
+          agent: "writer",
+          consumes: "in.md",
+          produces: "out.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+        {
+          id: "b",
+          type: "agent",
+          agent: "writer",
+          consumes: "out.md",
+          produces: "final.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+      ],
+      instructions: "ship",
+    };
+
+    it("start() creates a shared context/ folder; every stage gets it via a relative symlink", async () => {
+      (
+        h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+      ).pipelines.get.mockResolvedValue(twoPhasePipeline);
+      const cwds = scriptRunStage(async (phaseId, cwd) => {
+        await fs.writeFile(path.join(cwd, phaseId === "a" ? "out.md" : "final.md"), "x", "utf8");
+      });
+
+      const run = await h.service.start("release");
+      await vi.waitFor(() => expect(run.status).toBe("done"));
+
+      const contextDir = path.join(run.cwd, "context");
+      expect((await fs.stat(contextDir)).isDirectory()).toBe(true);
+      expect(cwds).toHaveLength(2);
+      for (const cwd of cwds) {
+        const link = path.join(cwd, "context");
+        const lst = await fs.lstat(link);
+        expect(lst.isSymbolicLink()).toBe(true);
+        // Relative — survives moving the whole run folder, same as the handoff link.
+        expect(path.isAbsolute(await fs.readlink(link))).toBe(false);
+      }
+    });
+
+    it("N2b chain input lands in context/input.md, read-only, symlinked as the first phase's consumes", async () => {
+      const onePhasePipeline = {
+        id: "release",
+        phases: [twoPhasePipeline.phases[0]],
+        instructions: "ship",
+      };
+      (
+        h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+      ).pipelines.get.mockResolvedValue(onePhasePipeline);
+      scriptRunStage(async (_phaseId, cwd) => {
+        await fs.writeFile(path.join(cwd, "out.md"), "done", "utf8");
+      });
+
+      const run = await h.service.start(
+        "release",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "chain content here",
+      );
+      await vi.waitFor(() => expect(run.status).toBe("done"));
+
+      const inputPath = path.join(run.cwd, "context", "input.md");
+      expect(await fs.readFile(inputPath, "utf8")).toBe("chain content here");
+      expect((await fs.stat(inputPath)).mode & 0o222).toBe(0); // read-only
+
+      const consumesLink = path.join(run.cwd, "01_a", "in.md");
+      const lst = await fs.lstat(consumesLink);
+      expect(lst.isSymbolicLink()).toBe(true);
+      expect(path.isAbsolute(await fs.readlink(consumesLink))).toBe(false);
+      expect(await fs.readFile(consumesLink, "utf8")).toBe("chain content here");
     });
   });
 });

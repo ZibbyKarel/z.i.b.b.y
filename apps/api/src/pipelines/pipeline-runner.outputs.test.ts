@@ -377,6 +377,73 @@ describe("PipelineRunnerService — output sinks", () => {
     );
   });
 
+  it("P1-T3 (Fáze 4): output/ is the canonical source — file sink reads through the output/ symlink", async () => {
+    const pipeline: Pipeline = {
+      id: "audit",
+      phases: [docPhase],
+      outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
+      instructions: "x",
+    };
+    const { service, d } = await makeService(dir, pipeline);
+    const run = await seedRun(service, dir, pipeline, {
+      a: { phaseId: "dok", file: "docs.md", content: "canonical body" },
+    });
+    // start() creates this unconditionally; seedRun bypasses start() so it's added here.
+    await fs.mkdir(path.join(run.cwd, "output"), { recursive: true });
+
+    await runOutputs(service, run, pipeline);
+
+    const linkPath = path.join(run.cwd, "output", "docs.md");
+    const lst = await fs.lstat(linkPath);
+    expect(lst.isSymbolicLink()).toBe(true);
+    expect(path.isAbsolute(await fs.readlink(linkPath))).toBe(false);
+    expect(await fs.readFile(linkPath, "utf8")).toBe("canonical body");
+    expect(d.vault.createNote).toHaveBeenCalledWith({
+      id: "audit-note",
+      tier: "knowledge",
+      body: "canonical body",
+    });
+    expect(run.status).toBe("done");
+  });
+
+  it("P1-T3 (Fáze 4): output/ is the canonical source — pr sink park+open both read through it", async () => {
+    const pipeline: Pipeline = {
+      id: "delivery",
+      phases: [docPhase],
+      outputs: [{ type: "pr", from: "docs.md" }],
+      instructions: "x",
+    };
+    const wt = path.join(dir, "worktree");
+    await fs.mkdir(wt, { recursive: true });
+    const { service, d } = await makeService(dir, pipeline);
+    const run = await seedRun(
+      service,
+      dir,
+      pipeline,
+      { a: { phaseId: "dok", file: "docs.md", content: "# Add feature X\n\nDetails." } },
+      wt,
+    );
+    await fs.mkdir(path.join(run.cwd, "output"), { recursive: true });
+
+    await runOutputs(service, run, pipeline); // parks on the PR gate
+
+    const linkPath = path.join(run.cwd, "output", "docs.md");
+    expect((await fs.lstat(linkPath)).isSymbolicLink()).toBe(true);
+    expect(await fs.readFile(path.join(run.cwd, "pr-draft.md"), "utf8")).toBe(
+      "# Add feature X\n\nDetails.",
+    );
+
+    const runner = d.registered.get("pipeline-output");
+    await runner?.resume(RUN_ID);
+
+    expect(d.workspace.openPr).toHaveBeenCalledWith({
+      cwd: wt,
+      title: "Add feature X",
+      bodyFile: path.join(run.cwd, "pr-draft.md"),
+    });
+    expect(run.status).toBe("done");
+  });
+
   it("pr sink resume — rejected: leaves the branch without a PR, run still done", async () => {
     const pipeline: Pipeline = {
       id: "delivery",

@@ -221,9 +221,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     /**
      * N2b: initial input content for the FIRST phase's `consumes` handoff — an
      * upstream chain artifact (or a chain's instructions). Written to
-     * `<run>/input.md` (durable, files-as-truth) and threaded as the initial
-     * handoff source, exactly like an inner-pipeline `produces` → `consumes` copy.
-     * Absent for every existing caller (no behaviour change).
+     * `<run>/context/input.md` (P1-T3: durable, files-as-truth, alongside any other
+     * pipeline-level input) and threaded as the initial handoff source, exactly
+     * like an inner-pipeline `produces` → `consumes` copy. Absent for every
+     * existing caller (no behaviour change).
      */
     input?: string,
   ): Promise<PipelineRun> {
@@ -242,6 +243,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const pipelineRunId = `${pipelineId}_${startedMs}`;
     const root = path.join(this.dir, pipelineRunId);
     await fs.mkdir(root, { recursive: true });
+    // P1-T3 (Fáze 3): pipeline-level inputs live in a shared, read-only `context/`
+    // folder off the run root — every stage symlinks it in (below) so the whole
+    // run's inputs are available everywhere without duplicating them into each
+    // stage's sandbox. Created unconditionally (even when this run carries no
+    // chain input) so every stage's `context` symlink resolves to a real folder.
+    const contextDir = path.join(root, "context");
+    await fs.mkdir(contextDir, { recursive: true });
 
     const firstPhase = pipeline.phases[0];
     const run: PipelineRun = {
@@ -306,14 +314,26 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       branch: run.workspace?.branch,
     });
 
-    // N2b: materialize the chain/operator input as the first phase's handoff. The
-    // file lives in the run root (durable), and drive() copies it into the first
-    // stage's `consumes` via the same placeHandoff path as any inner handoff.
+    // N2b: materialize the chain/operator input as the first phase's handoff. This
+    // IS the pipeline-level input (P1-T3 investigation: no other file plays that
+    // role — `readArtifact`'s allowlist never includes it and no resume path ever
+    // re-derives it from disk, so it is read exactly once, right below, within this
+    // same call). It lives in `context/` (durable, files-as-truth) alongside any
+    // other pipeline-level input, and drive() copies it into the first stage's
+    // `consumes` via the same placeHandoff path as any inner handoff.
     let initialHandoff: string | null = null;
     if (input !== undefined && pipeline.phases[0]?.consumes) {
-      initialHandoff = path.join(root, "input.md");
+      initialHandoff = path.join(contextDir, "input.md");
       await fs.writeFile(initialHandoff, input, "utf8");
+      // Fáze 3: pipeline inputs are read-only for every phase — they are inputs of
+      // the whole run, not a stage's own handoff artifact.
+      await fs.chmod(initialHandoff, 0o444).catch(() => {});
     }
+
+    // P1-T3 (Fáze 4): `output/` is the run's canonical delivery source — created
+    // here for consistency with `context/`, populated lazily by `resolveOutputSource`
+    // the first time a terminal output actually needs it (see there).
+    await fs.mkdir(path.join(root, "output"), { recursive: true });
 
     // Fire-and-forget driver; the FE polls getRun for progress. The driver runs
     // after this request returns, so re-open a logging scope keyed by the run id
@@ -789,6 +809,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         this.stageDirName(run.stageRuns.length + 1, phase.id),
       );
       await fs.mkdir(stageCwd, { recursive: true });
+      // P1-T3 (Fáze 3): every stage gets the run's shared `context/` folder linked
+      // in, relative like the handoff symlink (P1-T2) — pipeline-level inputs are
+      // visible from any stage without copying them into each sandbox. `start()`
+      // creates `context/` unconditionally for every run, so this is unconditional
+      // too; a link left dangling has nothing behind it, same as an unused handoff.
+      await fs
+        .symlink(path.relative(stageCwd, path.join(run.cwd, "context")), path.join(stageCwd, "context"))
+        .catch(() => {});
       await this.placeHandoff(handoffSource, stageCwd, phase);
 
       this.log.info("pipeline phase starting", {
@@ -1050,15 +1078,49 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     return phaseId;
   }
 
-  /** Absolute path of the artifact a `from` references (the phase that produces it). */
-  private resolveOutputSource(
+  /**
+   * Absolute path of the artifact a `from` references. P1-T3 (Fáze 4): `output/`
+   * is the run's canonical, already-materialized delivery source — every caller
+   * (file sink, PR park, PR open) just reads `output/<fromName>`. The first read
+   * of a given `from` in a run lazily links it in (relative symlink, same style as
+   * `placeHandoff`/P1-T2) from the producing phase's latest folder; every read
+   * after that is a plain path join, no phase search. Backcompat: a run on disk
+   * from before this change has no `output/` dir at all — falls back whole to the
+   * original phase-search lookup.
+   */
+  private async resolveOutputSource(
     run: PipelineRun,
     pipeline: Pipeline,
     fromName: string,
-  ): string | null {
-    const phase = pipeline.phases.find((p) => p.produces === fromName);
-    if (!phase) return null;
-    return path.join(run.cwd, this.latestStageDir(run, phase.id), fromName);
+  ): Promise<string | null> {
+    const outputDir = path.join(run.cwd, "output");
+    const hasOutputDir = await fs
+      .stat(outputDir)
+      .then((s) => s.isDirectory())
+      .catch(() => false);
+    if (!hasOutputDir) {
+      // Pre-P1-T3 run on disk: no output/ dir was ever created for it — the
+      // original lookup (search phases by `produces`, then the latest folder).
+      const phase = pipeline.phases.find((p) => p.produces === fromName);
+      if (!phase) return null;
+      return path.join(run.cwd, this.latestStageDir(run, phase.id), fromName);
+    }
+    const dest = path.join(outputDir, fromName);
+    const alreadyLinked = await fs
+      .lstat(dest)
+      .then(() => true)
+      .catch(() => false);
+    if (!alreadyLinked) {
+      const phase = pipeline.phases.find((p) => p.produces === fromName);
+      if (phase) {
+        const source = path.join(run.cwd, this.latestStageDir(run, phase.id), fromName);
+        await fs.symlink(path.relative(outputDir, source), dest).catch(() => {
+          // Missing source (the phase never actually wrote `produces`) isn't fatal —
+          // the caller's `readFile` below fails the same soft way it always has.
+        });
+      }
+    }
+    return dest;
   }
 
   /** Split a Markdown artifact into a PR title (first `# ` heading) and the body. */
@@ -1085,7 +1147,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     pipeline: Pipeline,
     output: Extract<PipelineOutput, { type: "file" }>,
   ): Promise<void> {
-    const source = this.resolveOutputSource(run, pipeline, output.from);
+    const source = await this.resolveOutputSource(run, pipeline, output.from);
     const content = source ? await fs.readFile(source, "utf8").catch(() => null) : null;
     if (content === null) {
       this.log.warn("file output skipped — source artifact missing", {
@@ -1211,7 +1273,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       if (diff)
         await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {});
     }
-    const source = this.resolveOutputSource(run, pipeline, output.from);
+    const source = await this.resolveOutputSource(run, pipeline, output.from);
     const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
     const { title } = this.parsePrMarkdown(content);
     // Write the PR draft at PARK time so the gate card can show what's about to be
@@ -1285,7 +1347,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     pipeline: Pipeline,
     output: Extract<PipelineOutput, { type: "pr" }>,
   ): Promise<void> {
-    const source = this.resolveOutputSource(run, pipeline, output.from);
+    const source = await this.resolveOutputSource(run, pipeline, output.from);
     const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
     const { title } = this.parsePrMarkdown(content);
     // Keep `pr-draft.md` as the durable run artifact the web detail serves.

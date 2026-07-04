@@ -246,6 +246,28 @@ Soubory sdílené mezi fázemi pipeline runu:
   `consumes` handoffu rozšířen na kořen celého runu (ne jen na vlastní sandbox
   fáze), protože symlink může mířit do sourozenecké složky předchozí fáze.
 
+### `context/` a `output/` (P1-T3)
+
+Kromě fázových sandboxů (`NN_<phaseId>`) má kořen runu dvě sdílené složky,
+založené v `start()`:
+
+- **`context/`** — pipeline-level vstupy, sdílené napříč celým runem (ne
+  handoff mezi fázemi). Každá fáze do ní vidí přes relativní symlink
+  `<sandbox>/context -> ../context` (stejný styl jako P1-T2 handoff). Soubory
+  jsou po zapsání `chmod`ované na `0o444` — jsou vstupem celého runu, ne
+  vlastnictvím jedné fáze. Jediný dnešní obsah: `context/input.md` — N2b
+  chain-fed vstup (řetězcový obsah z `chain-runner`, dřív `<run>/input.md`);
+  je to jediný "pipeline-level input" koncept v kódu (žádný jiný soubor tuto
+  roli nehraje), čte se přesně jednou, uvnitř téhož volání `start()`, které ho
+  zapisuje — pro starší běhy tedy neexistuje samostatná READ cesta, kterou by
+  bylo nutné zpětně kompatibilizovat.
+- **`output/`** — kanonický zdroj pro doručení výstupu (`resolveOutputSource`).
+  Namísto hledání fáze podle `produces === from` čte `deliverFileOutput` /
+  `parkOnPrOutput` / `openPrOutput` rovnou `output/<from>` — při prvním čtení se
+  tam lenivě (idempotentně) vytvoří relativní symlink na aktuální `produces`
+  soubor produkující fáze (stejný styl jako handoff). Starší běhy na disku bez
+  `output/` složky (před P1-T3) padají zpět na původní hledání podle fáze.
+
 ### Parking
 
 Parked stav nastane když:

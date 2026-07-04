@@ -27,7 +27,8 @@ Create validuje, že každý krok jmenuje existující pipeline (422).
 ## Běh (`ChainRunnerService`)
 
 - **Start** (`POST /api/chains/:id/run`): krok 0 běží jako běžný pipeline run;
-  `instructions` se zapíší do `<run>/input.md` a runner je vloží do `consumes`
+  `instructions` se zapíší do `<run>/context/input.md` (P1-T3: sdílená,
+  read-only složka pipeline-level vstupů) a runner je vloží do `consumes`
   první fáze (interní `produces` → `consumes` zvednuté na hranici runu —
   `PipelineRunnerService.start(..., input)`).
 - **Advance**: krok doběhne `done` → runner najde jeho provenance záznam v registru,
