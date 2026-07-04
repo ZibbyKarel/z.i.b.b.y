@@ -124,15 +124,15 @@
 
 ## Fáze 1 — Backend: zpřístupnit jméno doručeného artefaktu
 
-- [ ] V `libs/contracts/src/tasks/task-run.schema.ts` přidat do `TaskRunSchema`
+- [x] V `libs/contracts/src/tasks/task-run.schema.ts` přidat do `TaskRunSchema`
       nové optional pole `outputArtifactName: z.string().optional()` — "Enriched
       z pipeline runu: jméno artefaktu doručeného jako `file` výstup (viz
       `PipelineOutput`), pro frontend preview." Umístit vedle `taskOutputKind`.
-- [ ] V `apps/api/src/tasks/task-runs.service.ts`, `pipelineRunToView(r)`
+- [x] V `apps/api/src/tasks/task-runs.service.ts`, `pipelineRunToView(r)`
       (řádky 271-303): dopočítat
       `const fileOutput = r.outputsOverride?.find((o) => o.type === "file");`
       a přidat do vraceného objektu `outputArtifactName: fileOutput?.from`.
-- [ ] V `apps/api/src/pipelines/pipeline-runner.service.ts`, `readArtifact()`
+- [x] V `apps/api/src/pipelines/pipeline-runner.service.ts`, `readArtifact()`
       (řádky 683-711): přehodit pořadí — nejdřív načíst `run`, pak teprve
       kontrolovat allowlist, aby šlo povolit i jméno mimo globální
       `PIPELINE_RUN_ARTIFACTS`:
@@ -147,7 +147,7 @@
       `root`/fázových složkách) zůstává beze změny — `fileOutputName` je vždy
       jméno, které runner sám dopočítal z `phase.produces`, nikdy vstup z
       requestu.
-- [ ] Rozšířit `PipelineRunArtifactSchema.name` (`libs/contracts/src/pipelines/
+- [x] Rozšířit `PipelineRunArtifactSchema.name` (`libs/contracts/src/pipelines/
       pipelines.contract.ts:26-30`) z `z.enum(PIPELINE_RUN_ARTIFACTS)` na
       `z.string()` — jméno teď může být i mimo pevný seznam. Ověřit, že
       `readArtifact`'s návratový typ `Promise<{ name: PipelineRunArtifact["name"]; ... }>`
@@ -155,7 +155,7 @@
       neměla být potřeba) a že se nikde jinde nepattern-matchuje na konkrétní
       literály `PipelineRunArtifact["name"]` (zkontrolovat greppem před
       commitem: `grep -rn "PipelineRunArtifact\[" apps/`).
-- [ ] `pnpm typecheck` — ověřit, že úprava schématu nerozbije žádné jiné
+- [x] `pnpm typecheck` — ověřit, že úprava schématu nerozbije žádné jiné
       místo, které dnes spoléhá na uzavřený enum.
 
 ## Fáze 2 — Frontend: `RunOutputPanel` — preview + continue pro pipeline `file` výstup
