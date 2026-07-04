@@ -78,23 +78,23 @@ Vše ověřeno přímo v kódu, `apps/api/src/pipelines/pipeline-runner.service.
 
 ## Fáze 1 — Sekvenční číslování složek fází
 
-- [ ] Přidat pole `dir` (výsledné jméno složky, např. `"04_developer"`) do
+- [x] Přidat pole `dir` (výsledné jméno složky, např. `"04_developer"`) do
       `StageRunSchema` (`pipeline-run.schema.ts`), zapsané v okamžiku dispatch.
-- [ ] V `runner.ts` počítat pořadové číslo jako `run.stageRuns.length + 1` v
+- [x] V `runner.ts` počítat pořadové číslo jako `run.stageRuns.length + 1` v
       okamžiku, kdy se fáze **poprvé** spouští (ne při retry stejného pokusu —
       viz níže), zero-pad na 2 číslice (`01`, `02`, …).
-- [ ] Nahradit `stageCwd = path.join(run.cwd, phase.id)` (runner.ts:771) za
+- [x] Nahradit `stageCwd = path.join(run.cwd, phase.id)` (runner.ts:771) za
       `stageCwd = path.join(run.cwd, dirName)`, kde `dirName = \`${seq}_${phase.id}\``.
-- [ ] Rozlišit **nový dispatch fáze** (nová položka v `stageRuns`, dostane nové
+- [x] Rozlišit **nový dispatch fáze** (nová položka v `stageRuns`, dostane nové
       číslo) od **retry stejného pokusu** po chybě (stejná položka, stejná
       složka) — ověřit v `runner.ts` kolem `retries.get(phase.id)` (runner.ts:770)
       a míst, kde se `stageRuns.push` volá po chybě vs. po úspěchu/loop
       back-edge, aby retry nekonzumoval číslo navíc.
-- [ ] Upravit `phaseDirs` dedup (runner.ts:~698-702) a `resolveOutputSource()`
+- [x] Upravit `phaseDirs` dedup (runner.ts:~698-702) a `resolveOutputSource()`
       (runner.ts:997-1005): obě dnes hledají složku podle `phase.id` — přepsat
       na hledání podle `stageRun.dir` **posledního** (nejnovějšího) záznamu dané
       `phaseId` v `run.stageRuns`.
-- [ ] Zpětná kompatibilita: staré/rozběhnuté runy na disku mají složky bez čísla
+- [x] Zpětná kompatibilita: staré/rozběhnuté runy na disku mají složky bez čísla
       (`security/`, `quality/`, …) a záznamy `StageRun` bez pole `dir`. Kód pro
       resume/lookup musí při chybějícím `dir` spadnout zpět na starý
       `phase.id`-only tvar cesty.
