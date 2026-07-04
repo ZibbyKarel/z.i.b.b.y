@@ -1168,7 +1168,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       const movedRoot = path.join(dir, "moved-run");
       await fs.rename(run.cwd, movedRoot);
       const movedContent = await fs.readFile(
-        path.join(movedRoot, "02_code-review", "in.md"),
+        path.join(movedRoot, "02_code-review", "out.md"),
         "utf8",
       );
       expect(movedContent).toBe("developer output");

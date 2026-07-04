@@ -233,6 +233,18 @@ Soubory sdílené mezi fázemi pipeline runu:
   zůstávají čitelné (lookup padá zpět na holé `phaseId`).
 - `produces: spec.md` → tato fáze zapíše `spec.md`
 - `consumes: spec.md` → tato fáze přečte `spec.md` jako vstup
+- **P1-T2:** handoff do `consumes` je RELATIVNÍ symlink na zdrojový `produces`
+  soubor předchozí fáze (`placeHandoff()`), ne kopie — agent tak čte skutečný
+  artefakt, ne nezávislý duplikát, který může (třeba neúmyslnou úpravou) zdrojit
+  drift. Relativní cíl (`path.relative` od adresáře symlinku) přežije přesun celé
+  run složky. Jakmile fáze doběhne `done`, její `produces` soubor se `chmod`uje na
+  `0o444` (read-only) — pozdější fáze ho tak nemůže přes symlink omylem přepsat;
+  na `checkpointPhase` (git checkpoint worktree) to nemá vliv, ten soubor jen čte
+  (pro shrnutí commitu) a commituje jinou složku (worktree, ne sandbox). Odemazání
+  celé run složky (`fs.rm`) read-only souborům nevadí — maže se přes oprávnění
+  rodičovského adresáře, ne souboru samotného. Sandbox grant (`--add-dir`) je při
+  `consumes` handoffu rozšířen na kořen celého runu (ne jen na vlastní sandbox
+  fáze), protože symlink může mířit do sourozenecké složky předchozí fáze.
 
 ### Parking
 
