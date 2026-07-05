@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "pipeline",
+    "id": "delivery"
+  },
+  {
+    "kind": "chain",
+    "id": "audit-develop"
+  }
+]

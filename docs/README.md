@@ -12,6 +12,7 @@ a vykoná práci — od "postav tuhle webovou aplikaci" po "sleduj moje kanály 
 ### Architektura
 
 - [Přehled architektury](./architecture.md) — monorepo, vrstvy, datový tok, klíčové principy
+- [Stavy běhu úlohy](./run-states.md) — všech 11 run stavů, jejich rozdíly a proč nejsou sloučené
 
 ### Backend (apps/api)
 

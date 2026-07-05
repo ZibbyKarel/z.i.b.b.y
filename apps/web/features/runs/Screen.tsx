@@ -1,6 +1,6 @@
 "use client";
 
-import { ButtonGroup, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import { Container, Dropdown, Grid, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -19,9 +19,9 @@ import {
 import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
 import { type FeedStatus, type RunView, findSelectedRun, runGlyph } from "./run";
 
-type Filter = "all" | FeedStatus;
-const FILTERS: Filter[] = [
-  "all",
+// No synthetic "all" entry — an empty selection already reads as "every state"
+// (see `list` below), which is what the multi-select's own placeholder communicates.
+const STATUSES: FeedStatus[] = [
   "running",
   "pending",
   "awaiting-approval",
@@ -42,12 +42,14 @@ export function Screen() {
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
 
-  // Deep-link the active tab via `?filter=` (e.g. RunModal points here at "running")
-  // and the selected run via `?run=` (the New Task dialog lands on its fresh run).
+  // Deep-link the active filter via `?filter=` (e.g. ApprovalsPanel/ParkedRunsPanel
+  // point here at a single state — "awaiting-approval" / "parked") and the selected
+  // run via `?run=` (the New Task dialog lands on its fresh run). The multi-select
+  // seeds from that one value; an empty selection means "every state" (see `list`).
   const searchParams = useSearchParams();
   const paramFilter = searchParams.get("filter");
-  const [filter, setFilter] = useState<Filter>(
-    FILTERS.includes(paramFilter as Filter) ? (paramFilter as Filter) : "all",
+  const [filter, setFilter] = useState<FeedStatus[]>(
+    STATUSES.includes(paramFilter as FeedStatus) ? [paramFilter as FeedStatus] : [],
   );
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
@@ -60,7 +62,7 @@ export function Screen() {
   const deletePipeline = useDeletePipelineRunMutation();
   const cancelTask = useCancelScheduledTaskMutation();
 
-  const list = filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  const list = filter.length === 0 ? runs : runs.filter((r) => filter.includes(r.status));
   // Keep the detail in sync with the filtered list: a selection only counts when
   // it's actually visible, and we fall back to the first row of the *current* filter —
   // never to runs[0], which would show an out-of-filter run's detail. Matching on
@@ -68,8 +70,7 @@ export function Screen() {
   // (see findSelectedRun).
   const selected = findSelectedRun(list, selId);
 
-  const count = (f: Filter) =>
-    f === "all" ? runs.length : runs.filter((r) => r.status === f).length;
+  const count = (s: FeedStatus) => runs.filter((r) => r.status === s).length;
   const ago = (n: number, unit: string) =>
     n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
@@ -103,16 +104,24 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <ButtonGroup
-              ariaLabel={t("title")}
-              onChange={(v) => setFilter(v as Filter)}
-              options={FILTERS.map((f) => ({
-                id: f,
-                label: f === "all" ? t("filterAll") : t(`state.${f}`) + " ",
-                trailing: count(f),
-              }))}
-              value={filter}
-            />
+            <Container width="19rem">
+              <Dropdown<FeedStatus>
+                compact
+                multi
+                showSelectAll
+                aria-label={t("title")}
+                deselectAllLabel={t("filterClearAll")}
+                onChange={setFilter}
+                options={STATUSES.map((s) => ({
+                  value: s,
+                  label: `${t(`state.${s}`)} · ${count(s)}`,
+                }))}
+                placeholder={t("filterAll")}
+                removeLabel={t("filterRemove")}
+                selectAllLabel={t("filterSelectAll")}
+                value={filter}
+              />
+            </Container>
           }
           subtitle={t("summary", { running, awaiting, total: runs.length })}
           title={t("title")}

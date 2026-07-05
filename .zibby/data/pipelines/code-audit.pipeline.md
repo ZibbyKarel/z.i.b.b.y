@@ -36,23 +36,32 @@ phases:
     produces: audit-report.md
     model: sonnet
     thinking: low
+outputs:
+  - type: file
+    from: audit-report.md
+    dest: vault
+    to: code-audit-report
 desc: >-
-  Audituj existující kód bez jeho změny — bezpečnost, kvalita a výkon → souhrnná
-  zpráva s prioritami. Audit, security review, code review, performance,
-  prohlídka kódu.
+  Audituj existující kód bez jeho změny — kvalita, bezpečnost, přístupnost a výkon
+  → souhrnná zpráva s prioritami. Audit, security review, code review,
+  accessibility, performance, prohlídka kódu.
 ---
 
 # Code Audit
 
-Read-only audit existujícího kódu — **nikdy ho nemění**. Tři optiky za sebou
-(bezpečnost → kvalita → výkon), nakonec sloučení do jedné prioritizované zprávy.
+Read-only audit existujícího kódu — **nikdy ho nemění**. Čtyři optiky za sebou
+(kvalita → bezpečnost → přístupnost → výkon), nakonec sloučení do jedné
+prioritizované zprávy.
 
 ## Fáze
 
-1. **security** — `task.md` → `security.md`: zranitelnosti, secrets, authz, vstupy.
-2. **quality** — `security.md` → `quality.md`: korektnost, čitelnost, code smells.
-3. **performance** — `quality.md` → `performance.md`: horká místa, alokace, dotazy.
-4. **report** — `performance.md` → `audit-report.md`: nálezy seřazené dle dopadu,
+1. **quality** — `task.md` → `quality.md`: korektnost, čitelnost, code smells.
+2. **security** — `quality.md` → `security.md`: zranitelnosti, secrets, authz, vstupy.
+3. **accessibility** — `security.md` → `accessibility-auditor.md`: WCAG 2.2
+   AA, ARIA, klávesnice, screen reader.
+4. **performance** — `accessibility-auditor.md` → `performance.md`: horká místa,
+   alokace, dotazy.
+5. **report** — `performance.md` → `audit-report.md`: nálezy seřazené dle dopadu,
    s návrhem dalšího kroku (samostatný Delivery běh na opravu).
 
 Žádná `verify` fáze ani smyčka — audit nálezy hlásí, neopravuje. Oprava je vlastní

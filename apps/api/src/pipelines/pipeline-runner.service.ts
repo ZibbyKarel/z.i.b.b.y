@@ -698,12 +698,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Read one whitelisted run artifact (Phase 3.3) by name. `name` must either be on
    * the global allowlist ({@link PIPELINE_RUN_ARTIFACTS}) or match the run's own
-   * delivered `file` output (`outputsOverride`'s `from`, computed by the runner
-   * itself from `phase.produces` — never request input) — anything else (incl. any
-   * traversal attempt) returns null → 404; there is no generic file browser. The
-   * diffstat lives in the run root; every other artifact is a phase's `produces`,
-   * found in its stage sandbox. Returns null when the run is unknown or the file is
-   * absent.
+   * delivered `file` output (a directed task's `outputsOverride`'s `from`, falling
+   * back to the pipeline definition's own `outputs:` — the same fallback
+   * `runOutputs` itself uses — computed by the runner from `phase.produces`, never
+   * request input) — anything else (incl. any traversal attempt) returns null → 404;
+   * there is no generic file browser. The diffstat lives in the run root; every
+   * other artifact is a phase's `produces`, found in its stage sandbox. Returns null
+   * when the run is unknown or the file is absent.
    */
   async readArtifact(
     pipelineRunId: string,
@@ -712,7 +713,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const root = this.resolveRunDir(pipelineRunId);
     if (!root) return null;
     const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
-    const fileOutputName = run?.outputsOverride?.find((o) => o.type === "file")?.from;
+    const pipeline = run ? await this.pipelines.get(run.pipelineId).catch(() => null) : null;
+    const fileOutputName =
+      run?.outputsOverride?.find((o) => o.type === "file")?.from ??
+      pipeline?.outputs?.find((o) => o.type === "file")?.from;
     const isAllowed =
       (PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name) || name === fileOutputName;
     if (!isAllowed) return null;

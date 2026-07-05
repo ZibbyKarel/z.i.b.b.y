@@ -30,6 +30,9 @@ export interface SelectFieldMultiProps<T extends string = string> extends Select
   selectAllLabel?: string;
   /** Label for the select-all row when everything is already selected. */
   deselectAllLabel?: string;
+  /** Never grow past one row: chips that don't fit collapse into a trailing
+   * "+N" indicator instead of wrapping to a second line. */
+  compact?: boolean;
 }
 
 export type SelectFieldProps<T extends string = string> =
@@ -54,6 +57,7 @@ export function SelectField<T extends string = string>(props: SelectFieldProps<T
             // trigger is a combobox `<div>`, so name it directly from the label.
             aria-describedby={describedBy}
             aria-label={label}
+            compact={props.compact}
             deselectAllLabel={props.deselectAllLabel}
             id={id}
             invalid={invalid}

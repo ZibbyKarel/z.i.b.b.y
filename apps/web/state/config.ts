@@ -4,8 +4,8 @@
  * integrations, agents and pipelines all start empty and are created by the
  * user (see store.tsx). Files are the source of truth.
  */
-import type { Route } from "next";
 import type { IconName, SelectOption } from "@zibby/design-system";
+import type { Route } from "next";
 
 /**
  * Navigation entry without a display label — the label is resolved from the
@@ -21,17 +21,17 @@ export interface NavConfig {
 
 export const NAV_ITEMS = [
   { id: "overview", glyph: "grid", href: "/overview" },
-  { id: "skills", glyph: "spark", href: "/skills" },
-  { id: "agents", glyph: "bot", href: "/agents" },
+  { id: "runs", glyph: "pulse", href: "/runs" },
   { id: "projects", glyph: "code", href: "/projects" },
+  { id: "agents", glyph: "bot", href: "/agents" },
   { id: "pipelines", glyph: "flow", href: "/pipelines" },
   { id: "chains", glyph: "link", href: "/chains" },
-  { id: "mcp", glyph: "server", href: "/mcp" },
+  { id: "automations", glyph: "clock", href: "/automations" },
+  { id: "skills", glyph: "spark", href: "/skills" },
   { id: "commands", glyph: "bolt", href: "/commands" },
   { id: "hooks", glyph: "checkpoint", href: "/hooks" },
-  { id: "automations", glyph: "clock", href: "/automations" },
+  { id: "mcp", glyph: "server", href: "/mcp" },
   { id: "memory", glyph: "brain", href: "/memory" },
-  { id: "runs", glyph: "pulse", href: "/runs" },
 ] as const satisfies readonly NavConfig[];
 
 export const SETTINGS_ITEM = {

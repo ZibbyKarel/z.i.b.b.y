@@ -4,6 +4,7 @@ import {
   type ChainRun,
   type GoalRun,
   ORCHESTRATOR_ID,
+  type Pipeline,
   type PipelineRun,
   type Processor,
   type RunKind,
@@ -208,6 +209,7 @@ export class TaskRunsService {
       chain: new Map(chainDefs.map((d) => [d.id, d.name ?? d.id])),
     };
     const tasksById = new Map(scheduled.map((t) => [t.id, t]));
+    const pipelineDefsById = new Map(pipelineDefs.map((d) => [d.id, d]));
 
     const childRunIds = new Set<string>();
     for (const g of goals) {
@@ -222,7 +224,10 @@ export class TaskRunsService {
         enrichRunWithTask(this.withProcessor(agentRunToView(r), names), tasksById),
       ),
       ...pipelines.map((r) =>
-        enrichRunWithTask(this.withProcessor(pipelineRunToView(r), names), tasksById),
+        enrichRunWithTask(
+          this.withProcessor(pipelineRunToView(r, pipelineDefsById.get(r.pipelineId)), names),
+          tasksById,
+        ),
       ),
       ...goals.map((r) =>
         enrichRunWithTask(this.withProcessor(goalRunToView(r), names), tasksById),
@@ -282,8 +287,13 @@ function agentRunToView(r: AgentRun): TaskRun {
   };
 }
 
-function pipelineRunToView(r: PipelineRun): TaskRun {
-  const fileOutput = r.outputsOverride?.find((o) => o.type === "file");
+function pipelineRunToView(r: PipelineRun, pipeline?: Pipeline): TaskRun {
+  // A directed task's per-run override wins; absent that, the pipeline definition's
+  // own `outputs:` is the default sink (mirrors the delivery path's own fallback —
+  // `run.outputsOverride ?? pipeline.outputs` in PipelineRunnerService.runOutputs).
+  const fileOutput =
+    r.outputsOverride?.find((o) => o.type === "file") ??
+    pipeline?.outputs?.find((o) => o.type === "file");
   // Celková cena pipeline běhu = součet cen fází. Nastav jen když aspoň jedna
   // fáze cenu má, ať starý běh z doby před touhle featurou neukazuje "$0.00".
   const stageCosts = r.stageRuns.filter((s) => s.costUsd != null);

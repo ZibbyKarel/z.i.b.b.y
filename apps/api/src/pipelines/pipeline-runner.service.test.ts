@@ -1160,6 +1160,24 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "some-other-name.md");
         expect(artifact).toBeNull();
       });
+
+      it("falls back to the pipeline definition's own `outputs:` when the run has no outputsOverride", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [];
+        (
+          h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+        ).pipelines.get.mockResolvedValueOnce({
+          id: "release",
+          phases: [],
+          instructions: "ship",
+          outputs: [{ type: "file", from: "audit-report.md", dest: "vault", to: "report" }],
+        });
+        await fs.writeFile(path.join(run.cwd, "audit-report.md"), "audit findings", "utf8");
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "audit-report.md");
+        expect(artifact?.content).toBe("audit findings");
+      });
     });
   });
 

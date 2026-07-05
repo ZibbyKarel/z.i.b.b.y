@@ -275,5 +275,99 @@ describe("Dropdown", () => {
         expect(onChange).toHaveBeenCalledWith(["cs", "en"]);
       });
     });
+
+    describe("compact", () => {
+      const MANY = [
+        { value: "a", label: "Alpha" },
+        { value: "b", label: "Bravo" },
+        { value: "c", label: "Charlie" },
+        { value: "d", label: "Delta" },
+      ];
+
+      // The overflow algorithm measures real DOM widths (getBoundingClientRect/
+      // clientWidth), which jsdom always reports as 0 — so tests stub both to
+      // simulate a concrete layout: every chip candidate is 80px, the overflow
+      // chip is 60px, and the visible row is `rowWidth` px wide.
+      const mockLayout = (rowWidth: number) => {
+        vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+          function (this: HTMLElement) {
+            const width = (this.textContent ?? "").startsWith("+") ? 60 : 80;
+            return {
+              width,
+              height: 24,
+              top: 0,
+              left: 0,
+              right: width,
+              bottom: 24,
+              x: 0,
+              y: 0,
+              toJSON: () => {},
+            } as DOMRect;
+          },
+        );
+        vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(rowWidth);
+      };
+
+      it("keeps the trigger to a single row via nowrap classes", () => {
+        render(
+          <Dropdown compact multi onChange={vi.fn()} options={OPTIONS} value={["cs"]} />,
+        );
+        const row = screen.getByTestId(DropdownTestId.ChipsRow);
+        expect(row.className).toContain("flex-nowrap");
+        expect(row.className).not.toContain("flex-wrap");
+      });
+
+      it("shows every chip with no overflow marker when they all fit", () => {
+        mockLayout(1000);
+        render(
+          <Dropdown
+            compact
+            multi
+            onChange={vi.fn()}
+            options={MANY}
+            value={["a", "b", "c", "d"]}
+          />,
+        );
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-a`)).toBeInTheDocument();
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-b`)).toBeInTheDocument();
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-c`)).toBeInTheDocument();
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-d`)).toBeInTheDocument();
+        expect(screen.queryByTestId(DropdownTestId.Overflow)).not.toBeInTheDocument();
+      });
+
+      it("collapses chips that don't fit into a trailing +N chip", () => {
+        // 80px chips + 6px gap + reserved 60px overflow chip: room for exactly two.
+        mockLayout(300);
+        render(
+          <Dropdown
+            compact
+            multi
+            onChange={vi.fn()}
+            options={MANY}
+            value={["a", "b", "c", "d"]}
+          />,
+        );
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-a`)).toBeInTheDocument();
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-b`)).toBeInTheDocument();
+        expect(screen.queryByTestId(`${DropdownTestId.Chip}-c`)).not.toBeInTheDocument();
+        expect(screen.queryByTestId(`${DropdownTestId.Chip}-d`)).not.toBeInTheDocument();
+        expect(screen.getByTestId(DropdownTestId.Overflow)).toHaveTextContent("+2");
+      });
+
+      it("always shows at least one chip even when it alone doesn't fit", () => {
+        mockLayout(10);
+        render(
+          <Dropdown
+            compact
+            multi
+            onChange={vi.fn()}
+            options={MANY}
+            value={["a", "b", "c", "d"]}
+          />,
+        );
+        expect(screen.getByTestId(`${DropdownTestId.Chip}-a`)).toBeInTheDocument();
+        expect(screen.getByTestId(DropdownTestId.Overflow)).toHaveTextContent("+3");
+      });
+    });
   });
 });

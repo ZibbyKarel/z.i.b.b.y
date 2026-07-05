@@ -170,7 +170,7 @@ function build() {
     chainsStore as unknown as ChainsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
   );
-  return { service, agentRunner, pipelineRunner, goalRunner, chainRunner };
+  return { service, agentRunner, pipelineRunner, goalRunner, chainRunner, pipelinesStore };
 }
 
 describe("TaskRunsService", () => {
@@ -226,10 +226,22 @@ describe("TaskRunsService", () => {
       expect(run.outputArtifactName).toBeUndefined();
     });
 
-    it("is absent when outputsOverride is undefined", async () => {
+    it("is absent when outputsOverride is undefined and the pipeline definition has no file output", async () => {
       const { service } = build();
       const run = await service.getTaskRun(pipeP.pipelineRunId);
       expect(run.outputArtifactName).toBeUndefined();
+    });
+
+    it("falls back to the pipeline definition's own `outputs:` when the run has no outputsOverride", async () => {
+      const { service, pipelinesStore } = build();
+      pipelinesStore.list.mockResolvedValue([
+        {
+          ...pipelineDef,
+          outputs: [{ type: "file", from: "audit-report.md", dest: "vault", to: "report" }],
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.outputArtifactName).toBe("audit-report.md");
     });
   });
 
