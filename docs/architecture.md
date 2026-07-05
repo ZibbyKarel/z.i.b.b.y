@@ -1,6 +1,6 @@
-# Architektura Z.I.B.B.Y
+# Z.I.B.B.Y Architecture
 
-## Monorepo struktura
+## Monorepo structure
 
 ```
 z.i.b.b.y/
@@ -8,150 +8,176 @@ z.i.b.b.y/
 │   ├── api/          NestJS backend — port 3333
 │   └── web/          Next.js 15 frontend — port 3000
 ├── libs/
-│   ├── contracts/    @zibby/contracts — Zod schémata + ts-rest router (source of truth)
-│   ├── design-system/ @zibby/design-system — UI primitives, téma, tokeny
-│   └── forms/        @zibby/forms — React Hook Form + Zod adaptér nad DS
-├── e2e/              Playwright end-to-end testy
-├── ops/              launchd plists, backup script, newsyslog konfig
-└── docs/             tato dokumentace
+│   ├── contracts/    @zibby/contracts — Zod schemas + ts-rest router (source of truth)
+│   ├── design-system/ @zibby/design-system — UI primitives, theme, tokens
+│   └── forms/        @zibby/forms — React Hook Form + Zod adapter over DS
+├── e2e/              Playwright end-to-end tests
+├── ops/              launchd plists, backup script, newsyslog config
+└── docs/             this documentation
 ```
 
-Správce balíčků: **pnpm** (workspace: protokol, pnpm-lock.yaml v9). Nikdy `npm` ani `yarn`.
+Package manager: **pnpm** (workspace: protocol, pnpm-lock.yaml v9). Never `npm` or `yarn`.
 
-## Vrstvy a závislosti
+`apps/api/src` today holds ~38 feature modules (agents, pipelines, goals, chains, tasks,
+channels, chat, machine, approvals, gates, gate-rules, mandate, budget, limits,
+limits-resume, integrations, credentials via integrations, memory, activity,
+activity-view, automations, monitors, discovery, briefing, artifacts, projects, system,
+health, events, commands, hooks, mcp, skills, gaps, research, ideas, patterns, pins,
+runner, workspace, shared) alongside `app.module.ts`/`main.ts`. Each is a self-contained
+NestJS module (own `.module.ts`, controller, storage/service, tests); see `docs/api/`
+for a page per module.
+
+## Layers and dependencies
 
 ```
-apps/web  ─── @zibby/contracts (ts-rest client, typy)
-          ─── @zibby/design-system (UI komponenty)
-          ─── @zibby/forms (formuláře)
+apps/web  ─── @zibby/contracts (ts-rest client, types)
+          ─── @zibby/design-system (UI components)
+          ─── @zibby/forms (forms)
 
-apps/api  ─── @zibby/contracts (ts-rest server implementace)
-          ─── NestJS (DI, moduly, controllers)
+apps/api  ─── @zibby/contracts (ts-rest server implementation)
+          ─── NestJS (DI, modules, controllers)
 
-libs/contracts ─── zod (schémata a validace)
-               ─── @ts-rest/core (contract definice)
+libs/contracts ─── zod (schemas and validation)
+               ─── @ts-rest/core (contract definitions)
 
 libs/design-system ─── Tailwind v4 (CSS-first @theme)
                    ─── CVA (variant composition)
 ```
 
-`libs/contracts` je jediný zdroj pravdy pro typy a API tvar — server i klient ho importují,
-nikdy nedochází ke generování kódu.
+`libs/contracts` is the single source of truth for types and API shape — both server
+and client import it, and there is no code generation step.
 
-## Datový tok (typický request)
+## Data flow (typical request)
 
 ```
-Operator klikne v UI
+Operator clicks in the UI
   → Next.js page component
   → TanStack Query hook (useXxxMutation / useXxxQuery)
-  → ts-rest client (apiClient z apps/web/state/api.ts)
-  → HTTP na apps/api :3333
+  → ts-rest client (apiClient from apps/web/state/api.ts)
+  → HTTP to apps/api :3333
   → NestJS controller (@TsRestHandler)
-  → Service vrstva (business logika)
+  → Service layer (business logic)
   → File-based storage (ZIBBY_DATA_DIR / vault)
-  → Response zpět přes ts-rest kontrakt
-  → TanStack Query cache invalidace
+  → Response back through the ts-rest contract
+  → TanStack Query cache invalidation
   → React re-render
 ```
 
-## Persistence — soubory jsou pravda
+## Persistence — files are the source of truth
 
-Všechna data jsou soubory na disku. Není žádná SQL databáze.
+All data is files on disk. There is no SQL database. Every file-backed store resolves
+its base directory from `resolveDataRoot()` (`apps/api/src/shared/data-dir.ts`), which
+defaults to `apps/api/data` and is fully repointed by the `ZIBBY_DATA_DIR` env var (used
+by tests and worktrees to isolate their data root).
 
-| Typ dat                | Formát                      | Umístění                                               |
-| ---------------------- | --------------------------- | ------------------------------------------------------ |
-| Agent definice         | Markdown + YAML frontmatter | `apps/api/data/agents/<id>.md`                         |
-| Pipeline definice      | Markdown + YAML frontmatter | `apps/api/data/pipelines/<id>.pipeline.md`             |
-| Run záznamy (sidecar)  | JSON                        | `apps/api/data/agents/<id>/runs/<runId>/sidecar.json`  |
-| Run logy               | plaintext                   | `apps/api/data/agents/<id>/runs/<runId>/run.log`       |
-| Schválení              | JSON                        | `apps/api/data/approvals/<id>.json`                    |
-| Automatizace           | JSON                        | `apps/api/data/automations/<id>.json`                  |
-| Projekty               | JSON                        | `apps/api/data/projects/<id>.json`                     |
-| Naplánované úlohy      | JSON                        | `apps/api/data/tasks/<id>.json`                        |
-| Activity log           | JSONL (append-only)         | `apps/api/data/activity/YYYY-MM-DD.jsonl`              |
-| Memory vault           | Markdown + frontmatter      | `apps/api/data/vault/{memory,daily,knowledge}/<id>.md` |
-| Integrace              | JSON                        | `apps/api/data/integrations/<id>.json`                 |
-| Credentials            | JSON (odděleno)             | `apps/api/data/credentials/<integrationId>.json`       |
-| Budget ledger          | JSON                        | `apps/api/data/budget-ledger/`                         |
-| Gate floor (POLICY.md) | Markdown                    | `apps/api/data/gates/POLICY.md`                        |
-| Global gate pravidla   | JSON                        | `apps/api/data/gate-rules/<id>.json`                   |
+| Data                    | Format                       | Location                                                |
+| ------------------------ | --------------------------- | -------------------------------------------------------- |
+| Agent definitions        | Markdown + YAML frontmatter | `apps/api/data/agents/<id>.md`                          |
+| Pipeline definitions     | Markdown + YAML frontmatter | `apps/api/data/pipelines/<id>.pipeline.md`              |
+| Run records (sidecar)    | JSON                        | `apps/api/data/agents/<id>/runs/<runId>/sidecar.json`   |
+| Run logs                 | plaintext                   | `apps/api/data/agents/<id>/runs/<runId>/run.log`        |
+| Approvals                | JSON                        | `apps/api/data/approvals/<id>.json`                     |
+| Automations              | JSON                        | `apps/api/data/automations/<id>.json`                   |
+| Projects                 | JSON                        | `apps/api/data/projects/<id>.json`                      |
+| Scheduled tasks          | JSON                        | `apps/api/data/tasks/<id>.json`                         |
+| Activity log             | JSONL (append-only)         | `apps/api/data/activity/YYYY-MM-DD.jsonl`               |
+| Memory vault             | Markdown + frontmatter      | `apps/api/data/vault/{memory,daily,knowledge}/<id>.md`  |
+| Integrations             | JSON                        | `apps/api/data/integrations/<id>.json`                  |
+| Credentials              | JSON (separate)             | `apps/api/data/credentials/<integrationId>.json`        |
+| Budget ledger            | JSON                        | `apps/api/data/budget-ledger/`                          |
+| Gate floor (POLICY.md)   | Markdown                    | `apps/api/data/gates/POLICY.md`                         |
+| Global gate rules        | JSON                        | `apps/api/data/gate-rules/<id>.json`                    |
+| Goal definitions         | Markdown + YAML frontmatter | `apps/api/data/goals/<id>.goal.md`                      |
+| Chain definitions        | JSON                        | `apps/api/data/chains/<id>.json`                        |
+| Artifact provenance      | JSON                        | `apps/api/data/artifacts/<id>.json`                     |
 
-## Spouštění agentů (abstrakce)
+## Running processors (the abstraction)
 
 ```
-TaskSchedulerService   ← naplánovaná/okamžitá úloha
-AgentRunnerService     ← spouštění konkrétního agenta
-PipelineRunnerService  ← orchestrace fází pipeline
-    ↓ vše
+TaskSchedulerService   ← a scheduled / immediate task
+AgentRunnerService     ← runs a single agent
+PipelineRunnerService  ← orchestrates pipeline phases
+GoalRunnerService      ← maker/verifier iteration loop, built on Agent+PipelineRunner
+ChainRunnerService     ← sequences pipeline runs as steps, built on PipelineRunner
+    ↓ agent + pipeline runs
 RunnerCore             ← universal spawn engine
     ↓
-child_process.spawn()  ← claude CLI (nebo jiný příkaz)
+child_process.spawn()  ← claude CLI (or another command)
     ↓
-Log soubor + sidecar JSON
+Log file + sidecar JSON
 ```
 
-`RunnerCore` (`apps/api/src/runner/runner-core.ts`) je centrální spawn engine —
-agent runner, skill runner a pipeline stage runner jsou jen thin wrappers s vlastní
-`KindStrategy` (jak sestavit sidecar record a jak ho validovat při restartu).
+`RunnerCore` (`apps/api/src/runner/runner-core.ts`) is the central spawn engine — the
+agent runner, skill runner, and pipeline stage runner are thin wrappers around it with
+their own `KindStrategy` (how to build the sidecar record and how to validate it on
+restart). `GoalRunnerService` and `ChainRunnerService` sit one layer above: a goal
+iterates a maker (agent or pipeline) followed by a verifier pipeline; a chain runs a
+fixed sequence of pipelines, handing each step's artifact to the next. Task dispatch can
+route to any of the four processor kinds — `agent`, `pipeline`, `goal`, `chain`.
 
-## Autonomní smyčka (dva módy)
+## The autonomous loop (two modes)
 
-### Directed (říjzený)
+### Directed
 
 ```
-Operátor zadá úlohu (UI / API)
+Operator submits a task (UI / API)
   → TaskSchedulerService.createTask()
-  → Klasifikace (TaskClassifierService) → routing target
-  → Dispatch → AgentRunnerService nebo PipelineRunnerService
-  → Gate evaluace (před každým záměrem)
-  → Výsledek zapsán zpět do task record
+  → Classification (TaskClassifierService) → routing target
+  → Dispatch → AgentRunnerService, PipelineRunnerService, GoalRunnerService, or ChainRunnerService
+  → Gate evaluation (before every intended action)
+  → Result written back to the task record
   → Activity log
 ```
 
-### Autonomous (autonomní)
+An explicit target (operator names a specific agent/pipeline/goal/chain) skips
+classification entirely — naming is a hard override.
+
+### Autonomous
 
 ```
-ChannelWatcherService heartbeat (každých 30s)
-  → adapter.poll() → nové položky z emailu / Slacku
+ChannelWatcherService heartbeat (systemConfig.channelTickMs, default 30s)
+  → adapter.poll() → new items from email / Slack
   → Sanitize → persist (ChannelItemStore)
   → ChannelTriageFlowService.handle()
-  → Klasifikace a tier rozhodnutí (mandate)
-  → Tier 1: tiše jednat | Tier 2: jednat + hlásit | Tier 3: sestavit + čekat
+  → Classification and tier decision (mandate)
+  → Tier 1: act silently | Tier 2: act + report | Tier 3: prepare + wait
   → Activity log
 ```
 
-## Gate policy (strukturální ochrana)
+## Gate policy (structural protection)
 
-Každý záměr agenta (tool call, akce) prochází `GateEvaluatorService` **před** spuštěním:
+Every intended action of an agent (tool call, action) passes through
+`GateEvaluatorService` **before** it runs:
 
 ```
 IntendedAction (action, tool, scope, branch, context, metrics)
-  → GateEvaluatorService.evaluate(action, rules)
-  → Iterace pravidel (vlastní agenta → systémový floor)
-  → První shoda → decision (allow | notify | ask | deny)
-  → ask → RunnerCore.pause() → ApprovalService.create() → čekání
+  → GateEvaluatorService.evaluate(rules, action)
+  → Iterate rules (agent's own → system floor)
+  → First match → decision (allow | notify | ask | deny)
+  → ask → RunnerCore.pause() → ApprovalsService.create() → waiting
   → deny → RunnerCore.kill() → status: interrupted
 ```
 
-Systémový floor (`POLICY.md`) je locked — agent ho může jen zpřísnit, nikdy oslabit.
+The system floor (`POLICY.md`) is locked — an agent can only tighten it, never weaken it.
 
-## TypeScript konfigurace
+## TypeScript configuration
 
 - `strict: true` + `noUncheckedIndexedAccess`
-- Žádný `any` — používá se `unknown`, `satisfies`, nebo generika
-- Path aliases v `tsconfig.base.json`:
+- No `any` — use `unknown`, `satisfies`, or generics
+- Path aliases in `tsconfig.base.json`:
   - `@zibby/contracts` → `libs/contracts/src/index.ts`
   - `@zibby/design-system` → `libs/design-system/src/index.ts`
   - `@zibby/forms` → `libs/forms/src/index.ts`
 
-## Testování
+## Testing
 
-| Vrstva                 | Framework                    | Příkaz          |
-| ---------------------- | ---------------------------- | --------------- |
-| API unit + integration | Vitest (project: api)        | `pnpm api:test` |
-| Web components         | Vitest (project: web, jsdom) | `pnpm web:test` |
-| E2E                    | Playwright                   | `pnpm e2e`      |
-| Design system          | Vitest + Storybook           | `pnpm test`     |
+| Layer                   | Framework                     | Command          |
+| ----------------------- | ------------------------------ | --------------- |
+| API unit + integration  | Vitest (project: api)          | `pnpm api:test` |
+| Web components          | Vitest (project: web, jsdom)   | `pnpm web:test` |
+| E2E                     | Playwright                     | `pnpm e2e`      |
+| Design system           | Vitest + Storybook             | `pnpm test`     |
 
-`pnpm typecheck` spouští `tsc --noEmit` pro `tsconfig.base.json` + `apps/web/tsconfig.json`.
-Pozor: `rtk pnpm typecheck` filtruje výstup a maskuje chyby — vždy použít přímé `tsc`.
+`pnpm typecheck` runs `tsc --noEmit` for `tsconfig.base.json` + `apps/web/tsconfig.json`.
+Note: `rtk pnpm typecheck` filters the output and can mask errors — always use direct
+`tsc` when in doubt.
