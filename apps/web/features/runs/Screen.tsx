@@ -8,6 +8,7 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { useProjectsQuery } from "../projects";
 import { useCancelScheduledTaskMutation } from "../tasks";
 import { RunDetail } from "./components/RunDetail";
 import { TaskCard } from "./components/TaskCard";
@@ -38,6 +39,7 @@ const STATUSES: FeedStatus[] = [
 export function Screen() {
   const t = useTranslations("runs");
   const { runs } = useRunsQuery();
+  const { data: projects = [] } = useProjectsQuery();
   const glyphById = useRunGlyphMap();
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
@@ -47,10 +49,18 @@ export function Screen() {
   // run via `?run=` (the New Task dialog lands on its fresh run). The multi-select
   // seeds from that one value; an empty selection means "every state" (see `list`).
   const searchParams = useSearchParams();
+  // `?filter=` seeds the status multi-select. A single value (ApprovalsPanel/
+  // ParkedRunsPanel) and a comma-separated set (a project summary bucket links with
+  // every state in its bucket) both round-trip; unknown tokens are dropped.
   const paramFilter = searchParams.get("filter");
   const [filter, setFilter] = useState<FeedStatus[]>(
-    STATUSES.includes(paramFilter as FeedStatus) ? [paramFilter as FeedStatus] : [],
+    paramFilter
+      ? paramFilter.split(",").filter((s): s is FeedStatus => STATUSES.includes(s as FeedStatus))
+      : [],
   );
+  // `?project=<id>` scopes the whole feed to one engagement (the project detail
+  // summary links here); "" means every project.
+  const [projectFilter, setProjectFilter] = useState<string>(searchParams.get("project") ?? "");
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
   const stopAgent = useStopAgentMutation();
@@ -62,7 +72,11 @@ export function Screen() {
   const deletePipeline = useDeletePipelineRunMutation();
   const cancelTask = useCancelScheduledTaskMutation();
 
-  const list = filter.length === 0 ? runs : runs.filter((r) => filter.includes(r.status));
+  // Project scopes the whole feed; status narrows within that scope. Keeping them
+  // ordered this way means the status counts and header stats read the selected
+  // project, not the global feed.
+  const scoped = projectFilter === "" ? runs : runs.filter((r) => r.projectId === projectFilter);
+  const list = filter.length === 0 ? scoped : scoped.filter((r) => filter.includes(r.status));
   // Keep the detail in sync with the filtered list: a selection only counts when
   // it's actually visible, and we fall back to the first row of the *current* filter —
   // never to runs[0], which would show an out-of-filter run's detail. Matching on
@@ -70,7 +84,7 @@ export function Screen() {
   // (see findSelectedRun).
   const selected = findSelectedRun(list, selId);
 
-  const count = (s: FeedStatus) => runs.filter((r) => r.status === s).length;
+  const count = (s: FeedStatus) => scoped.filter((r) => r.status === s).length;
   const ago = (n: number, unit: string) =>
     n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
@@ -104,26 +118,40 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Container width="19rem">
-              <Dropdown<FeedStatus>
-                compact
-                multi
-                showSelectAll
-                aria-label={t("title")}
-                deselectAllLabel={t("filterClearAll")}
-                onChange={setFilter}
-                options={STATUSES.map((s) => ({
-                  value: s,
-                  label: `${t(`state.${s}`)} · ${count(s)}`,
-                }))}
-                placeholder={t("filterAll")}
-                removeLabel={t("filterRemove")}
-                selectAllLabel={t("filterSelectAll")}
-                value={filter}
-              />
-            </Container>
+            <Stack direction="row" gap="150">
+              <Container width="15rem">
+                <Dropdown<string>
+                  compact
+                  aria-label={t("filterProject")}
+                  onChange={setProjectFilter}
+                  options={[
+                    { value: "", label: t("filterAllProjects") },
+                    ...projects.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                  value={projectFilter}
+                />
+              </Container>
+              <Container width="19rem">
+                <Dropdown<FeedStatus>
+                  compact
+                  multi
+                  showSelectAll
+                  aria-label={t("title")}
+                  deselectAllLabel={t("filterClearAll")}
+                  onChange={setFilter}
+                  options={STATUSES.map((s) => ({
+                    value: s,
+                    label: `${t(`state.${s}`)} · ${count(s)}`,
+                  }))}
+                  placeholder={t("filterAll")}
+                  removeLabel={t("filterRemove")}
+                  selectAllLabel={t("filterSelectAll")}
+                  value={filter}
+                />
+              </Container>
+            </Stack>
           }
-          subtitle={t("summary", { running, awaiting, total: runs.length })}
+          subtitle={t("summary", { running, awaiting, total: scoped.length })}
           title={t("title")}
         />
 

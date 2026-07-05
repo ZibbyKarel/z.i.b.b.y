@@ -864,6 +864,16 @@
     "filterSelectAll": "Vybrat vše",
     "filterClearAll": "Zrušit vše",
     "filterRemove": "Odebrat filtr",
+    "filterProject": "Projekt",
+    "filterAllProjects": "Všechny projekty",
+    "group": {
+      "total": "Celkem",
+      "running": "Běží",
+      "waiting": "Čeká",
+      "done": "Hotovo",
+      "error": "Chyba",
+      "parked": "Zaparkováno"
+    },
     "emptyTitle": "Žádné běhy",
     "emptyDesc": "Zatím tu žádný task neběžel. Zadej nový task a objeví se tady.",
     "emptyFilter": "Žádné tasky v tomto stavu.",
@@ -1091,6 +1101,7 @@
   },
   "projects": {
     "title": "Projekty",
+    "runsPanelTitle": "Běhy",
     "countSummary": "{count, plural, =0 {žádné projekty} one {# projekt} few {# projekty} other {# projektů}} · cílové adresáře pro spouštění agentů a skillů",
     "addProject": "Přidat projekt",
     "addCategory": "Přidat kategorii",

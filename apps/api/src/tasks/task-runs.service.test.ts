@@ -170,7 +170,7 @@ function build() {
     chainsStore as unknown as ChainsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
   );
-  return { service, agentRunner, pipelineRunner, goalRunner, chainRunner, pipelinesStore };
+  return { service, agentRunner, pipelineRunner, goalRunner, chainRunner, pipelinesStore, scheduled };
 }
 
 describe("TaskRunsService", () => {
@@ -348,6 +348,28 @@ describe("TaskRunsService", () => {
       const task = feed.find((r) => r.runId === "task9");
       expect(task?.kind).toBe("scheduled");
       expect(task?.processor).toEqual({ kind: "agent", id: "researcher", name: "Researcher" });
+    });
+  });
+
+  describe("projectId join from the owning task (project filter / summary)", () => {
+    it("attaches the owning task's projectId onto its agent run in the feed", async () => {
+      const { service, scheduled } = build();
+      // The dispatched task that spawned researcher_1 (taskId "task1") carries the
+      // engagement id; a dispatched task is folded out of the feed itself but still
+      // enriches its run. This is what makes `/runs?project=` and the project
+      // summary attributable across all run kinds.
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "task1", status: "dispatched", projectId: "acme" },
+      ]);
+      const feed = await service.listTaskRuns();
+      expect(feed.find((r) => r.runId === "researcher_1")?.projectId).toBe("acme");
+    });
+
+    it("leaves projectId unset when the owning task has none (falls outside every project filter)", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
+      const feed = await service.listTaskRuns();
+      expect(feed.find((r) => r.runId === "researcher_1")?.projectId).toBeUndefined();
     });
   });
 

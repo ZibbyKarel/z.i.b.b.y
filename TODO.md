@@ -1,1 +1,4 @@
--
+- sbalovací log u běhu tasku (potřebujeme mít defaultně sbalenou část logu, která je o tom který nástroj se použil nebo který script běžel)
+- u projektů chceme mít možnost místo glyphu nahrát logo a zobrazit ho na kartě projektu. Glyp bude jako fallback
+- možnost skrýt pravý boční panel
+- v prabém bočním panelu jsou špatné časy. Jsou o dvě hodiny posunuté dozadu

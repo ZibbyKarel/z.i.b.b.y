@@ -158,7 +158,7 @@ export type { CodeBlockHeight, CodeBlockProps } from "./components/CodeBlock/Cod
 export { Corners } from "./components/Card/Card";
 export type { CornersProps, CornersTone } from "./components/Card/Card";
 
-export { Stat } from "./components/Stat/Stat";
+export { Stat, StatTestId } from "./components/Stat/Stat";
 export type { StatProps, StatTone } from "./components/Stat/Stat";
 
 export { Sparkline } from "./components/Sparkline/Sparkline";

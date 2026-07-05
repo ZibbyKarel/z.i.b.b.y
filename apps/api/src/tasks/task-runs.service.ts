@@ -406,6 +406,12 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     taskOutcomeSummary: task.outcome?.summary,
     taskOutputKind: task.output?.type,
     attachments: task.attachments,
+    // The engagement id lives on the scheduled task; agent/pipeline/goal/chain run
+    // views don't carry it themselves, so join it in here (scheduled rows set it
+    // directly). This is what lets the feed be filtered by project and the project
+    // detail summarise its runs. Runs with no owning task (e.g. a self-dev goal)
+    // simply keep no projectId and fall outside every project filter.
+    ...(task.projectId ? { projectId: task.projectId } : {}),
   };
 }
 

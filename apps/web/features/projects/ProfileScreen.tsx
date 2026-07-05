@@ -33,6 +33,7 @@ import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/Project
 import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
 import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
+import { ProjectRunSummary } from "./components/ProjectRunSummary";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
 import {
   useCreateProjectMutation,
@@ -537,7 +538,10 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
           </TabList>
 
           <TabPanel value="overview">
-            <Stack gap="300">{basicsPanel}</Stack>
+            <Stack gap="300">
+              {basicsPanel}
+              <ProjectRunSummary projectId={id} />
+            </Stack>
           </TabPanel>
 
           <TabPanel value="profile">
