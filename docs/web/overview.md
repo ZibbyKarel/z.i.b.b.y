@@ -1,7 +1,7 @@
-# Web aplikace — přehled
+# Web app — overview
 
-**Stack:** Next.js 15 App Router, React 19, TanStack Query v5, Tailwind v4, next-intl  
-**Port:** 3000  
+**Stack:** Next.js 15 App Router, React 19, TanStack Query v5, Tailwind v4, next-intl
+**Port:** 3000
 **Entry point:** `apps/web/app/layout.tsx`
 
 ## Routing (App Router)
@@ -9,222 +9,263 @@
 ```
 app/
 ├── layout.tsx              Root server layout
-├── page.tsx                Landing → redirect na /overview
-├── globals.css             Globální CSS (minimální)
+├── page.tsx                Landing → redirect to /overview
+├── globals.css             Global CSS (minimal)
 └── (dashboard)/            Route group — dashboard shell
     ├── layout.tsx          Dashboard server layout (AppShell)
     ├── loading.tsx         Suspense fallback
     ├── agents/
-    │   ├── page.tsx        Katalog agentů
-    │   └── [id]/page.tsx   Detail agenta (editace, pravidla, used-by; N4c)
-    ├── hooks/[id]/page.tsx Detail hooku (editace; N4e — mcp/[id] stejně)
+    │   ├── page.tsx        Agent catalog
+    │   └── [id]/page.tsx   Agent detail (edit, rules, used-by; N4c)
     ├── automations/
-    │   ├── page.tsx        Automatizace
-    │   └── [id]/page.tsx   Detail automatizace (editace, run-now, delete; N4f)
-    ├── gates/page.tsx      Gate pravidla
+    │   ├── page.tsx        Automations
+    │   └── [id]/page.tsx   Automation detail (edit, run-now, delete; N4f)
+    ├── chains/
+    │   ├── page.tsx        Chain catalog
+    │   └── [id]/page.tsx   Chain detail
+    ├── commands/
+    │   ├── page.tsx        Command catalog
+    │   └── [id]/page.tsx   Command detail (edit; N4d — same pattern as skills/[id])
+    ├── gates/page.tsx      Gate rules
+    ├── hooks/[id]/page.tsx Hook detail (edit; N4e — mcp/[id] follows the same pattern)
+    ├── mcp/
+    │   ├── page.tsx        MCP server catalog
+    │   └── [id]/page.tsx   MCP server detail
     ├── memory/page.tsx     Vault browser
-    ├── overview/page.tsx   Přehled (briefing + aktivita)
+    ├── overview/page.tsx   Overview (briefing + activity)
     ├── pipelines/
-    │   ├── page.tsx        Seznam pipelines
-    │   └── [id]/page.tsx   Detail pipeline + history runů
+    │   ├── page.tsx        Pipeline list
+    │   └── [id]/page.tsx   Pipeline detail + run history
     ├── projects/
-    │   ├── page.tsx        Portfolio projektů
-    │   ├── [id]/page.tsx   Detail projektu (tým, autonomie, integrace + inbox)
-    │   └── [id]/integrations/[integrationId]/page.tsx  Detail integrace (N4h)
-    ├── runs/page.tsx       Historie runů
-    ├── settings/page.tsx   Nastavení workspace
+    │   ├── page.tsx        Project portfolio
+    │   ├── new/page.tsx    Create project
+    │   ├── [id]/page.tsx   Project detail (team, autonomy, integrations + inbox)
+    │   └── [id]/integrations/[integrationId]/page.tsx  Integration detail (N4h)
+    ├── runs/page.tsx       Run history
+    ├── settings/page.tsx  Workspace settings
     └── skills/
-        ├── page.tsx        Inventář skills
-        └── [id]/page.tsx   Detail skillu (editace; N4d — commands/[id] stejně)
+        ├── page.tsx        Skill inventory
+        └── [id]/page.tsx   Skill detail (edit; N4d)
 ```
 
-Žádné `/approvals`, `/tasks`, `/limits` jako samostatné route — tyto funkce jsou
-buď na `/overview` (approvals badge, queued tasks) nebo inline v příslušné doméně.
+There is no standalone `/approvals`, `/tasks`, or `/limits` route — those concerns
+live either on `/overview` (approvals badge, queued tasks) or inline on their
+owning domain page.
 
 ## Root layout (`app/layout.tsx`)
 
-Server component — načítá locale + messages a mountuje:
+Server component — loads the locale + messages and mounts:
 
 1. `next/font/google` — Geist (`--font-sans`) + JetBrains Mono (`--font-mono`)
-2. `NextIntlClientProvider` — internacionalizace
-3. `<Providers>` — všechny client-side providery
+2. `NextIntlClientProvider` — internationalization
+3. `<Providers>` — all client-side providers
 
 ## Providers (`app/providers.tsx`)
 
 Client component (`"use client"`):
 
 ```tsx
-<QueryClientProvider client={queryClient}>
+<QueryClientProvider client={client}>
   {" "}
-  // TanStack Query
+  // TanStack Query, with a global MutationCache.onError → toastBus wiring
   <apiClient.ReactQueryProvider>
     {" "}
     // ts-rest client
     <RunEventsProvider>
       {" "}
-      // SSE/polling pro run logy
+      // single SSE channel driving run/activity query invalidation
       <DesignSystemProvider theme="dark">
         {" "}
         // dark theme
-        <BootSplash>
-          {" "}
-          // loading screen
-          {children}
-        </BootSplash>
+        <BootSplash>{children}</BootSplash>
+        <Toaster /> // renders queued mutation-error toasts
       </DesignSystemProvider>
     </RunEventsProvider>
   </apiClient.ReactQueryProvider>
 </QueryClientProvider>
 ```
 
-`QueryClient` konfigurace: `staleTime: 30_000`, `refetchOnWindowFocus: false`.
+`QueryClient` configuration: `staleTime: 30_000`, `refetchOnWindowFocus: false`.
+The `MutationCache.onError` hook (`state/toastBus`) surfaces every failed
+mutation — network, server, or contract-schema-drift errors — as a toast, so a
+failed create/delete/toggle is never silent.
 
 ## Dashboard layout (`(dashboard)/layout.tsx`)
 
-Server component — renderuje `AppShell` s children.
+Server component — renders `AppShell` with children.
 
 ## AppShell (`components/layout/AppShell/`)
 
 Client component (`"use client"`):
 
-- Použije `usePathname()` pro odvození aktivní navigace
-- Mountuje `CatalogProvider`, `VoiceProvider`, `NewTaskProvider`
-- Renderuje `MainLayout` s nav/rail/voice/task sloty
+- Uses `usePathname()` to derive the active nav item
+- Mounts `CatalogProvider` → `NewTaskProvider` → `ChatProvider` (in that
+  nesting order; `NewTaskProvider` stays the outer provider — the position the
+  now-removed `VoiceProvider` used to hold — so the chat overlay can reach the
+  task flow)
+- Renders `MainLayout` with `navItems`, `railSlot` (`RightRail`), `chatSlot`
+  (`ChatButton`), `taskSlot` (`NewTaskButton`), and `walletSlot`
+  (`LimitsRings`) slots
 
-### RightRail = živý log (global)
+The Voice UI (JARVIS-style takeover, speech-to-text input, TTS read-back) was
+removed in favor of a chat-first interface (`features/chat`); there is no
+`VoiceProvider` and no `features/voice` module anymore.
 
-`RightRail` (`components/layout/RightRail/`) je teď **čistě živý log toho, co server právě dělá**
-(`> 10:03  Integration gmail checked for changes`) — viditelný na **každé** stránce. Data jdou přes
-SSE (entry se prependuje, viz `prependActivityEntry`) + `useActivityFeedInfiniteQuery` ("Load older"
-stránkuje historii dozadu). Co je viditelné / seskupené / skryté řídí **Settings → Activity** config
-(`useActivityViewQuery`), grouping je čistá funkce `features/overview/activityLog.ts`.
+### RightRail = live log (global)
 
-Approvals + parked runs se přesunuly **z railu do obsahu `/overview`** (`ApprovalsPanel`,
-`ParkedRunsPanel`); `/runs` tab i badge u `/runs` zůstávají beze změny.
+`RightRail` (`components/layout/RightRail/`) is now **purely a live log of what
+the server is currently doing** (`> 10:03  Integration gmail checked for
+changes`) — visible on **every** page. Data flows over the same unified SSE
+channel described below (an entry is prepended via `prependActivityEntry`) plus
+`useActivityFeedInfiniteQuery` ("Load older" pages the history backward). What's
+visible / grouped / hidden is controlled by the **Settings → Activity** config
+(`useActivityViewQuery`); grouping is a pure function in
+`features/overview/activityLog.ts`.
 
-## Internacionalizace (next-intl)
+Approvals and parked runs moved **from the rail into the `/overview` content**
+(`ApprovalsPanel`, `ParkedRunsPanel`); the `/runs` tab and its nav badge are
+unchanged.
 
-- Locale v cookie (bez prefix v URL ceste)
-- `i18n/request.ts` čte `cookies().get('locale')`
-- `NextIntlClientProvider` v root layoutu
+## Internationalization (next-intl)
+
+- Locale lives in a cookie (no URL prefix)
+- `i18n/request.ts` reads `cookies().get('locale')`
+- `NextIntlClientProvider` in the root layout
 - Server: `getTranslations()`, client: `useTranslations()`
-- Katalogy: `apps/web/i18n/messages/cs.json` + `apps/web/i18n/messages/en.json`
-- Výchozí locale: `cs` (čeština)
+- Catalogs: `apps/web/i18n/messages/cs.json` + `apps/web/i18n/messages/en.json`
+- Default locale: `cs` (Czech)
 - Flat keys: `t('AgentName', { sub: 1 })`
-- DS je i18n-agnostický — string props s english defaults; app přepisuje `t()`
+- DS is i18n-agnostic — string props with English defaults; the app overrides
+  with `t()`
 
-## Fonty
+## Fonts
 
-| Proměnná      | Font                             | Použití             |
-| ------------- | -------------------------------- | ------------------- |
-| `--font-sans` | Geist                            | UI text             |
-| `--font-mono` | JetBrains Mono (400/500/600/700) | Kód, logy, terminál |
+| Variable      | Font                              | Use              |
+| ------------- | ---------------------------------- | ----------------- |
+| `--font-sans` | Geist                               | UI text            |
+| `--font-mono` | JetBrains Mono (400/500/600/700)    | Code, logs, terminal |
 
-## API klient (`state/api.ts`)
+## API client (`state/api.ts`)
 
-ts-rest klient generovaný z `@zibby/contracts`:
+ts-rest client bound to `@zibby/contracts`:
 
-- Typ-safe HTTP volání
-- Poskytuje `ReactQueryProvider` pro hooky
-- Základní URL: `http://localhost:3333` (konfigurovatelné přes env)
+- Type-safe HTTP calls, validated against the contract's Zod schemas at
+  runtime (`validateResponse: true`) — a payload that drifts from the contract
+  throws and surfaces as a query error
+- Provides `ReactQueryProvider` for the query/mutation hooks
+- Base URL: `NEXT_PUBLIC_API_URL` (must carry the `NEXT_PUBLIC_` prefix to
+  reach the browser); no hardcoded fallback
 
-## Features (domain moduly)
+## Features (domain modules)
 
 ```
 features/
-├── agents/         CRUD agentů, spouštění runů
-├── approvals/      Fronta schválení
-├── automations/    Cron/event triggery
-├── gates/          Katalog gate pravidel
-├── goals/          Loop engine — goal definice + běhy (maker ⇄ verifier)
-├── health/         Systémový zdravotní stav
-├── integrations/   Kanálové adaptery (email, Slack)
-├── limits/         Budget zobrazení
-├── memory/         Editor vault poznámek
-├── notifications/  In-app notifikace
-├── overview/       Briefing + aktivita feed
+├── agents/         Agent CRUD, run launch
+├── approvals/      Approval queue
+├── automations/    Cron/event triggers
+├── chains/         Completion-driven chain primitive (queue + settle)
+├── chat/           Chat-first interface (replaces the old Voice UI)
+├── commands/       Slash-command catalog
+├── gates/          Gate rule catalog
+├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)
+├── health/         System health status
+├── hooks/          Hook catalog
+├── integrations/   Channel adapters (email, Slack), scoped under a project
+├── limits/         Budget display
+├── mcp/            MCP server catalog
+├── memory/         Vault note editor
+├── notifications/  In-app notifications
+├── overview/       Briefing + activity feed
+├── pins/           Quick-launch pins
 ├── pipelines/      Pipeline editor + history
-├── projects/       Portfolio projektů
-├── runs/           Historie runů + log viewer
-├── settings/       Nastavení workspace
-├── skills/         Inventář skills
-├── tasks/          Nový task dialog (taby: Standardní task / Loop) + plánovač
-└── voice/          Voice interaction (hooks)
+├── projects/       Project portfolio
+├── research/       Research pipeline surfacing
+├── runs/           Run history + log viewer, plus the shared SSE hooks
+│                   (`runEvents`, `useRunLogStream`)
+├── settings/       Workspace settings
+├── skills/         Skill inventory
+├── system/         Runtime system-config surface
+└── tasks/          New task dialog (tabs: Standard task / Loop) + scheduler
 ```
 
-Každý feature modul má:
+Each feature module follows:
 
 ```
 features/<domain>/
-  queries/      ← hooks (useXxxQuery.ts), re-export z queries/index.ts
-  mutations/    ← hooks (useXxxMutation.ts), re-export z mutations/index.ts
-  components/   ← domain composites (nikdy DS primitives)
+  queries/      ← hooks (useXxxQuery.ts), re-exported from queries/index.ts
+  mutations/    ← hooks (useXxxMutation.ts), re-exported from mutations/index.ts
+  components/   ← domain composites (never DS primitives)
 ```
 
-## Importy a hranice modulů
+## Imports and module boundaries
 
-**Veřejný povrch feature = její barrel.** Každá feature, kterou konzumují jiné
-features, vystavuje `features/<domain>/index.ts`, který re-exportuje její **datovou
-vrstvu** (`queries` + `mutations`; `runs` navíc re-exportuje SSE/log hooky z
-`runEvents`/`useRunLogStream`). Cross-feature import jde přes barrel:
+**A feature's public surface is its barrel.** Every feature consumed by other
+features exposes `features/<domain>/index.ts`, which re-exports its **data
+layer** (`queries` + `mutations`; `runs` additionally re-exports the SSE/log
+hooks from `runEvents`/`useRunLogStream`). Cross-feature imports go through the
+barrel:
 
 ```ts
-// ✅ přes veřejný povrch
+// ✅ via the public surface
 import { useAgentsQuery } from "../agents";
-// ❌ sahání do vnitřností cizí feature
+// ❌ reaching into another feature's internals
 import { useAgentsQuery } from "../agents/queries/useAgentsQuery";
 ```
 
-Barrel **nikdy** nere-exportuje `Screen` — stáhl by celý view-graf do každého
-konzumenta a vrátil cykly (přesně jako DS `CodeBlock ↔ index`).
+The barrel **never** re-exports `Screen` — that would pull the entire view
+graph into every consumer and reintroduce cycles (exactly like the DS
+`CodeBlock ↔ index` case).
 
-**Záměrné úzké deep importy se ponechávají:** dependency-free soubory s cache
-klíči (`agents`/`pipelines`/`runs` `queries/keys.ts`) a SSE fan-out v
-`runs/runEvents.tsx`. Existují právě proto, aby zůstaly cycle-safe — proto se
-importují napřímo, ne přes barrel.
+**Intentional narrow deep imports are kept:** dependency-free files holding
+cache keys (`agents`/`pipelines`/`runs` `queries/keys.ts`) and the SSE fan-out
+in `runs/runEvents.tsx`. They exist specifically to stay cycle-safe, so they're
+imported directly rather than through the barrel.
 
-**Path alias `@/*` → `apps/web/*`** (definováno v `tsconfig.base.json`, zrcadleno
-jako Vite alias v obou vitest configech a ve Storybooku, protože Vite nečte
-tsconfig `paths`). Nové importy mimo vlastní feature pište přes `@/…`; stávající
-relativní `../../…` se ponechávají, dokud se na ně nesáhne.
+**Path alias `@/*` → `apps/web/*`** (defined in `tsconfig.base.json`, mirrored
+as a Vite alias in both vitest configs and in Storybook, since Vite doesn't
+read tsconfig `paths`). New imports outside a feature's own tree should use
+`@/…`; existing relative `../../…` imports are left alone until touched.
 
-**Cycle guard:** `pnpm check:cycles` (madge přes `apps/web`, ignoruje type-only
-importy a `libs/`, viz `.madgerc`) + CI job `cycles`. Graf `apps/web` je acyklický
-a má takový zůstat. (`eslint-plugin-import-x` `no-cycle` v téhle ESLint 9
-flat-config sestavě tiše nefunguje — proto madge.)
+**Cycle guard:** `pnpm check:cycles` (madge over `apps/web`, ignoring
+type-only imports and `libs/`, see `.madgerc`) plus the CI `cycles` job. The
+`apps/web` graph is acyclic and must stay that way. (`eslint-plugin-import-x`'s
+`no-cycle` silently doesn't work in this ESLint 9 flat-config setup — hence
+madge.)
 
 ### Feature vs. service
 
-„Feature" je přetížený pojem — ne každá má vlastní route:
+"Feature" is an overloaded term — not every one has its own route:
 
-- **Route features** (mají `Screen.tsx` + segment v `(dashboard)/`): agents,
-  automations, gates, memory, overview, pipelines, projects, runs, settings,
-  skills (+ `gates` je route-only, bez nav položky).
-- **Shared services** (bez `Screen`, konzumované jinými features / mountované v
-  chrome): approvals, goals, health, integrations, limits, research, system,
-  chat, tasks, notifications.
+- **Route features** (have a `Screen.tsx` + a segment under `(dashboard)/`):
+  agents, automations, chains, commands, gates, hooks, mcp, memory, overview,
+  pipelines, projects, runs, settings, skills (`gates` is route-only, with no
+  nav item).
+- **Shared services** (no `Screen`, consumed by other features / mounted in
+  chrome): approvals, chat, goals, health, integrations, limits, notifications,
+  pins, research, system, tasks.
 
-### Otevřené následné úklidy
+### Open follow-up cleanups
 
-- **Enforcement hranic** (`no-restricted-paths` / `eslint-plugin-boundaries`)
-  zatím není — migrace je záměrně neúplná (část sites žije v rozpracované práci
-  + úzké key importy). Zavést, až se strom usadí.
-- **Umístění feature-local hooků** je nejednotné: `hooks/` subdir (chat, skills)
-  vs. flat v rootu feature (runs, automations, projects, notifications). Vybrat
-  jeden směr.
-- `state/forms.ts` nese `// TODO: split this file into correct module`.
-- `@/*` je v `tsconfig.base.json` (sdíleném) → i `libs/` by `@/` resolvovaly na
-  apps/web; čistší domov je `apps/web/tsconfig.json` (za cenu duplikace `@zibby/*`
-  paths). Drobnost, ne blocker.
+- **Boundary enforcement** (`no-restricted-paths` / `eslint-plugin-boundaries`)
+  doesn't exist yet — the migration to barrel-only imports is intentionally
+  incomplete (part of the tree is mid-migration, plus the narrow key imports).
+  Introduce once the tree settles.
+- **Feature-local hook placement** is inconsistent: a `hooks/` subdir (chat,
+  skills) vs. flat files in the feature root (runs, automations, projects,
+  notifications). Pick one direction.
+- `state/forms.ts` still carries `// TODO: split this file into correct module`.
+- `@/*` lives in `tsconfig.base.json` (shared) → `libs/` would also resolve
+  `@/` to `apps/web`; the cleaner home is `apps/web/tsconfig.json` (at the cost
+  of duplicating `@zibby/*` paths). Minor, not a blocker.
 
-## Testování
+## Testing
 
-Vitest project: `web`  
-Prostředí: jsdom  
-Harness: `renderWithProviders` (z `apps/web/test-utils/`)  
-Primární selektor: `getByTestId` (podle testId enumů DS komponent)
+Vitest project: `web`
+Environment: jsdom
+Harness: `renderWithProviders` (from `apps/web/test-utils/`)
+Primary selector: `getByTestId` (per DS component testId enums)
 
-Spuštění: `pnpm web:test`
+Run with: `pnpm web:test`
 
-Pozor: `apps/web` **není** v kořenovém vitest workspace — spouštět přes `pnpm web:test`,
-ne `pnpm test` (kořenový workspace by web přeskočil).
+Note: `apps/web` is **not** part of the root vitest workspace — run it via
+`pnpm web:test`, not `pnpm test` (the root workspace would skip it).

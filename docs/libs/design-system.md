@@ -1,21 +1,22 @@
 # Design system (@zibby/design-system)
 
-**Cesta:** `libs/design-system/src/`  
-**Importní alias:** `@zibby/design-system`  
+**Path:** `libs/design-system/src/`
+**Import alias:** `@zibby/design-system`
 **Storybook:** `pnpm storybook` → `http://localhost:6006`
 
-Design system je **výchozí zdroj UI primitiv** pro celou aplikaci.
-`apps/web` komponuje UI z DS — nikdy nepíše vlastní primitiva.
+The design system is the **default source of UI primitives** for the whole
+application. `apps/web` composes UI from the DS — it never writes its own
+primitives.
 
-## Architektura
+## Architecture
 
 ```
 libs/design-system/src/
 ├── tokens.ts                   Spacing, Size, Theme interface, spacingToPx
-├── theme/globals.css            @theme Tailwind v4 CSS-first konfigurace
+├── theme/globals.css           @theme Tailwind v4 CSS-first configuration
 ├── themes/
-│   ├── darkTheme.ts            Výchozí dark tokeny
-│   └── lightTheme.ts           Výchozí light tokeny
+│   ├── darkTheme.ts            Default dark tokens
+│   └── lightTheme.ts           Default light tokens
 ├── DesignSystemContext/
 │   ├── DesignSystemProvider.tsx Provider (theme injection)
 │   ├── hooks.ts                useTokens(), useSpacing()
@@ -24,15 +25,15 @@ libs/design-system/src/
 ├── utils/
 │   ├── cn.ts                   cn() helper (clsx + tailwind-merge)
 │   ├── refs.ts                 mergeRefs()
-│   └── testRender.tsx          renderWithTheme() pro testy
-└── components/                 Všechny komponenty
+│   └── testRender.tsx          renderWithTheme() for tests
+└── components/                 All components
 ```
 
-## Token systém
+## Token system
 
 ### Spacing scale
 
-Named spacing scale (`Spacing` type) → konkrétní px hodnoty:
+Named spacing scale (`Spacing` type) → concrete px values:
 
 | Token   | px   |
 | ------- | ---- |
@@ -56,15 +57,17 @@ Named spacing scale (`Spacing` type) → konkrétní px hodnoty:
 type Size = "xs" | "sm" | "md" | "lg" | "xl";
 ```
 
-Používá ho `Icon`, `Button` a podobné komponenty pro pojmenované velikosti.
+Used by `Icon`, `Button`, and similar components for named sizes.
 
 ### Theme interface
 
-Flat objekt — všechny vizuální tokeny na jednom místě.
-`DesignSystemProvider` injectuje hodnoty jako CSS custom properties.
-`globals.css` `@theme` mapuje Tailwind utility classes na ty samé proměnné.
+A flat object — every visual token in one place.
+`DesignSystemProvider` injects the values as CSS custom properties.
+`globals.css`'s `@theme` maps Tailwind utility classes onto those same
+properties.
 
-Komponenty používají **jen Tailwind classes** — `useTokens()` jen pro SVG/canvas (JS musí raw hodnoty).
+Components use **only Tailwind classes** — `useTokens()` is reserved for
+SVG/canvas, where JS needs raw values.
 
 ## DesignSystemProvider
 
@@ -72,11 +75,11 @@ Komponenty používají **jen Tailwind classes** — `useTokens()` jen pro SVG/c
 <DesignSystemProvider theme="dark">{children}</DesignSystemProvider>
 ```
 
-Nastaveno na `theme="dark"` v `apps/web/app/providers.tsx`.
+Set to `theme="dark"` in `apps/web/app/providers.tsx`.
 
 ## Tailwind v4 (CSS-first)
 
-DS používá Tailwind v4 s `@theme` v `globals.css`:
+The DS uses Tailwind v4 with `@theme` in `globals.css`:
 
 ```css
 @theme {
@@ -86,90 +89,106 @@ DS používá Tailwind v4 s `@theme` v `globals.css`:
 }
 ```
 
-Žádné `tailwind.config.js` — konfigurace je čistě v CSS.
+No `tailwind.config.js` — configuration lives entirely in CSS.
 
-## Komponenty
+## Components
 
 ### Layout primitives
 
-| Komponenta  | Účel                                                       |
-| ----------- | ---------------------------------------------------------- |
-| `Container` | Obal s max-width, padding, overflow, position, grow/shrink |
-| `Stack`     | Flex column/row s gap                                      |
-| `Grid`      | CSS Grid s cols, gap, align                                |
-| `Spacer`    | Flex spacer                                                |
-| `Surface`   | Vrstvená plocha (background tier)                          |
-| `Pressable` | Interaktivní wrapper (keyboard + mouse)                    |
+| Component   | Purpose                                                     |
+| ----------- | ------------------------------------------------------------ |
+| `Container` | Wrapper with max-width, padding, overflow, position, grow/shrink |
+| `Stack`     | Flex column/row with gap                                     |
+| `Grid`      | CSS Grid with cols, gap, align                               |
+| `Spacer`    | Flex spacer                                                  |
+| `Surface`   | Layered surface (background tier)                            |
+| `Pressable` | Interactive wrapper (keyboard + mouse)                       |
 
-### Typografie
+### Typography
 
-`Typography` komponenta pro nadpisy, body text, caption, monospace.
+The `Typography` component covers headings, body text, caption, and
+monospace.
 
-### Tlačítka
+### Buttons
 
-| Komponenta    | Účel                                                        |
-| ------------- | ----------------------------------------------------------- |
-| `Button`      | Hlavní tlačítko (variant: solid/ghost/outline, size: xs-xl) |
-| `ButtonGroup` | Skupinování tlačítek                                        |
-| `HoldButton`  | Tlačítko s potvrzením podržením (pro destruktivní akce)     |
+| Component     | Purpose                                                      |
+| ------------- | -------------------------------------------------------------- |
+| `Button`      | Primary button (variant: solid/ghost/outline, size: xs–xl)     |
+| `ButtonGroup` | Groups buttons together                                         |
+| `HoldButton`  | Hold-to-confirm button (for destructive actions)                |
 
-### Formulářové prvky (form/)
+### Form primitives
+
+A handful of controls exist as bare, standalone components — `Checkbox`,
+`Toggle`, and `DropZone` are used directly outside of forms as well as inside
+them. Everything under `components/form/` is a **labeled field** wrapper: it
+composes the shared `Field` primitive (label + hint + error chrome, with
+`FieldLayout: "column" | "row"`) around the underlying control, for use with
+`@zibby/forms` / React Hook Form:
 
 ```
 form/
-├── TextInput/
-├── Textarea/
-├── Select/
-├── SegmentPicker/  (segmentovaný přepínač)
-├── SchedulePicker/ (opakování + dny v týdnu / den v měsíci + čas → Schedule; cron v appce)
-├── Toggle/       (on/off switch)
-├── Checkbox/     (čtvercový check; `presentational` mód pro vložení do interaktivního rodiče)
-├── FilePicker/
-└── DropZone/
+├── Field.tsx             Shared label/hint/error wrapper (FieldTestId, FieldLayout, SelectOption)
+├── TextInputField/
+├── TextAreaField/
+├── HighlightTextAreaField/  (inline path/[[wikilink]] highlighting)
+├── NumberField/
+├── SelectField/
+├── SegmentPickerField/    (segmented toggle)
+├── SchedulePicker/        (repeat + weekdays / month-day + time → Schedule; cron translation lives in the app)
+├── ScheduleField/         (SchedulePicker wrapped with Field chrome)
+├── ToggleField/           (on/off switch)
+├── DropZoneField/
+└── FilePickerField/
 ```
 
-`SchedulePicker` / `ScheduleField` jsou formátově neutrální — emitují strukturovaný
-`Schedule` (`repeat: "weekly" | "monthly"` + `time` + `weekdays: number[]` (multi-select,
-0 = neděle) + `monthDay`); překlad na cron drží appka
-(`apps/web/features/automations/schedule.ts`: `scheduleToCron` / `cronToSchedule`).
+`SchedulePicker` / `ScheduleField` are format-neutral — they emit a
+structured `Schedule` (`repeat: "weekly" | "monthly"` + `time` +
+`weekdays: number[]` (multi-select, 0 = Sunday) + `monthDay`); translation to
+a cron string is the app's job (`apps/web/features/automations/schedule.ts`:
+`scheduleToCron` / `cronToSchedule`).
 
 ### Feedback
 
-| Komponenta     | Účel                                          |
-| -------------- | --------------------------------------------- |
-| `Alert`        | Informační / warning / error banner           |
-| `StatusDot`    | Stavový indikátor (barva + volitelný pulsing) |
-| `Progress`     | Lineární progress bar                         |
-| `ProgressRing` | Kruhový progress                              |
-| `Sparkline`    | Miniaturní chart                              |
-| `Stat`         | Číslo + label + trend                         |
+| Component      | Purpose                                        |
+| --------------- | ------------------------------------------------ |
+| `Alert`         | Informational / warning / error banner            |
+| `StatusDot`     | Status indicator (color + optional pulsing)       |
+| `Progress`      | Linear progress bar                               |
+| `ProgressRing`  | Circular progress                                 |
+| `Sparkline`     | Miniature chart                                   |
+| `Stat`          | Number + label + trend                           |
+| `OrbitLoader`   | Loading indicator (orbiting dot + label, sizes sm/md/lg) |
 
-### Navigace a data
+### Navigation and data
 
-| Komponenta    | Účel                     |
-| ------------- | ------------------------ |
-| `Tabs`        | Tab navigace             |
-| `Accordion`   | Collapsible sekce        |
-| `List`        | Strukturovaný seznam     |
-| `Dropdown`    | Dropdown menu (single nebo `multi` — checkboxy v options + closable chipy ve fieldu; `showSelectAll` přidá řádek „vybrat/zrušit vše") |
-| `MenuSurface` | Surface pro menu overlay |
-| `SearchBar`   | Input pro search         |
-| `SearchMenu`  | Search s výsledky        |
+| Component     | Purpose                    |
+| ------------- | ---------------------------- |
+| `Tabs`        | Tab navigation                |
+| `Accordion`   | Collapsible section           |
+| `List`        | Structured list                |
+| `Dropdown`    | Dropdown menu (single, or `multi` — checkboxes in the options plus closable chips in the field; `showSelectAll` adds a "select/clear all" row) |
+| `MenuSurface` | Surface for a menu overlay     |
+| `SearchBar`   | Search input                   |
+| `SearchMenu`  | Search with results            |
 
-### Overlays a obsah
+### Overlays and content
 
-| Komponenta       | Účel                                         |
-| ---------------- | -------------------------------------------- |
-| `Dialog`         | Modal dialog (DialogWidth: sm/md/lg/xl/full) |
-| `Panel`          | Drawer/panel                                 |
-| `Card`           | Karta s volitelným header/footer             |
-| `IconTile`       | Ikona v dlaždici (size, color)               |
-| `CodeBlock`      | Code block s highlighting                    |
-| `MarkdownEditor` | Markdown editor + preview                    |
-| `Tag`            | Barevný tag/badge                            |
-| `Chip`           | Interaktivní chip (`closable` → křížek + `onClose`)   |
-| `Kbd`            | Klávesová zkratka                            |
-| `Divider`        | Horizontální/vertikální oddělovač            |
+| Component        | Purpose                                          |
+| ----------------- | --------------------------------------------------- |
+| `Dialog`          | Modal dialog (`DialogWidth`: sm/md/lg/xl/full)      |
+| `Panel`           | Drawer/panel                                        |
+| `Card`            | Card with an optional header/footer                |
+| `IconTile`        | Icon in a tile (size, color)                        |
+| `CodeBlock`       | Code block with syntax highlighting                 |
+| `Markdown`        | Read-only Markdown viewer (`@uiw/react-md-editor` under the hood) |
+| `MarkdownEditor`  | Markdown editor + preview                           |
+| `FilePreview`     | Uploaded/attached file preview (name, size, remove) |
+| `Tooltip`         | Hover/focus tooltip                                 |
+| `Tag`             | Colored tag/badge                                   |
+| `Chip`            | Interactive chip (`closable` → an × + `onClose`)    |
+| `Kbd`             | Keyboard shortcut                                   |
+| `Divider`         | Horizontal/vertical divider                         |
 
 ### Icon
 
@@ -177,36 +196,42 @@ form/
 <Icon name="chevron-right" size="md" />
 ```
 
-`IconName` type je union všech dostupných ikon. Přidání ikony = přidání do `IconName` type.
+`IconName` is a union of every available icon. Adding an icon means adding it
+to the `IconName` type.
 
-## Testování
+## Testing
 
-Každá DS komponenta:
+Every DS component:
 
-- Deklaruje `<Component>TestId` enum pro důležité části
-- Drátem `data-testid` na ty části
-- Testy selektují přes `getByTestId` (primární selektor)
-- Role/ARIA jsou **aserce** (`toHaveRole`, `toHaveAccessibleName`), ne selektory
+- Declares a `<Component>TestId` enum for its important parts
+- Wires `data-testid` onto those parts
+- Is tested via `getByTestId` (the primary selector)
+- Keeps role/ARIA as **assertions** (`toHaveRole`, `toHaveAccessibleName`),
+  never as selectors
 
 ```typescript
-// Špatně ❌
+// Wrong ❌
 const button = container.querySelector("button");
 
-// Správně ✅
+// Right ✅
 const button = getByTestId(ButtonTestId.Root);
 expect(button).toHaveRole("button");
 ```
 
-Test helper: `renderWithTheme(component)` z `utils/testRender.tsx`
+Test helper: `renderWithTheme(component)` from `utils/testRender.tsx`
 
-## Zákazy při práci s DS
+## Rules when working on the DS
 
-- **Žádný `forwardRef`** (React 19 — ref jako prop)
-- **Žádné inline `style={{}}` na DOM elementech v `apps/web`** — ESLint (`react/forbid-dom-props`)
-  - Dynamická hodnota bez DS prop → DS komponent's `style` passthrough
-  - Nebo na raw DOM/SVG za `// eslint-disable-next-line react/forbid-dom-props`
-- **Žádné raw `<button>` mimo DS** (použij `Button` nebo `Pressable`)
-- **Žádné vlastní Tailwind třídy v `apps/web`** — app importuje z DS, sám nepíše
+- **No `forwardRef`** (React 19 — ref as a prop)
+- **No inline `style={{}}` on DOM elements in `apps/web`** — ESLint
+  (`react/forbid-dom-props`) forbids it
+  - A dynamic value with no DS prop → use the DS component's `style`
+    passthrough
+  - Or, on a raw DOM/SVG node only, behind a
+    `// eslint-disable-next-line react/forbid-dom-props`
+- **No raw `<button>` outside the DS** (use `Button` or `Pressable`)
+- **No custom Tailwind classes in `apps/web`** — the app imports from the DS,
+  it never writes its own
 
 ## cn() helper
 
@@ -214,5 +239,5 @@ Test helper: `renderWithTheme(component)` z `utils/testRender.tsx`
 import { cn } from "@zibby/design-system";
 
 cn("base-class", isActive && "active", className);
-// clsx + tailwind-merge: bezpečné kombinování classů bez duplikace
+// clsx + tailwind-merge: safely combines classes without duplication
 ```

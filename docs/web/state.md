@@ -2,54 +2,61 @@
 
 ## TanStack Query (server state)
 
-Verze: v5  
-Vše co přichází ze serveru (API data) je v TanStack Query — žádné global Redux store.
+Version: v5
+Everything that comes from the server (API data) lives in TanStack Query — no
+global Redux store.
 
-### Konfigurace QueryClient
+### QueryClient configuration
 
 ```typescript
 new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000, // 30s cache před re-fetch
-      refetchOnWindowFocus: false, // bez automatického re-fetch při focusu okna
+      staleTime: 30_000, // 30s cache before re-fetch
+      refetchOnWindowFocus: false, // no automatic re-fetch on window focus
     },
   },
+  // Global mutation-error surfacing (Phase 43): any failed mutation — network,
+  // server, or contract-schema-drift — emits a toast via toastBus.
+  mutationCache: new MutationCache({
+    onError: () => toastBus.emit(),
+  }),
 });
 ```
 
-### Query hooks — konvence
+### Query hooks — conventions
 
-**Soubor:** `features/<domain>/queries/useXxxQuery.ts`
+**File:** `features/<domain>/queries/useXxxQuery.ts`
 
 ```typescript
-// ✅ Vrátí useQuery výsledek přímo — nekouří do bare value
+// ✅ Returns the useQuery result directly — never unwrapped to a bare value
 export function useAgentsQuery() {
   return apiClient.agents.list.useQuery(getAgentsQueryKey(), {}, { select: selectApiResponseBody });
 }
 
-// ✅ Query key exportován pro invalidaci v mutacích
+// ✅ Query key exported so mutations can invalidate it
 export function getAgentsQueryKey() {
   return ["agents"] as const;
 }
 ```
 
-`selectApiResponseBody` (z `state/selectApiResponseBody.ts`) stripuje ts-rest `{ status, body }`
-envelope — `data` na call site je přímo body.
+`selectApiResponseBody` (from `state/selectApiResponseBody.ts`) strips the
+ts-rest `{ status, body }` envelope — `data` at the call site is the body
+directly.
 
 Call site:
 
 ```typescript
 const { data } = useAgentsQuery();
-const agents = data ?? []; // call site dodává výchozí hodnotu
+const agents = data ?? []; // call site supplies its own default
 ```
 
-### Mutation hooks — konvence
+### Mutation hooks — conventions
 
-**Soubor:** `features/<domain>/mutations/useXxxMutation.ts`
+**File:** `features/<domain>/mutations/useXxxMutation.ts`
 
 ```typescript
-// ✅ Vrátí useMutation výsledek přímo
+// ✅ Returns the useMutation result directly
 export function useCreateAgentMutation() {
   const queryClient = useQueryClient();
   return apiClient.agents.create.useMutation({
@@ -65,18 +72,19 @@ Call site:
 ```typescript
 const mutation = useCreateAgentMutation()
 mutation.mutate({ body: { name, ... } }, { onSuccess: () => navigate(...) })
-mutation.isPending   // boolean pro loading state
-mutation.error       // chyba
+mutation.isPending   // boolean for loading state
+mutation.error       // error, if any
 ```
 
-**Nikdy:** `{ ...mutation, doThing: () => mutation.mutate(...) }` wrapper.
+**Never:** a `{ ...mutation, doThing: () => mutation.mutate(...) }` wrapper.
 
-Hook's `onSuccess` (invalidace) a call-site `onSuccess` oba proběhnou (hook první).
-Invalidaci drž v hooku, UI feedback (navigace, toast) na call site.
+The hook's own `onSuccess` (invalidation) and a call-site `onSuccess` both
+fire (hook first). Keep invalidation in the hook; keep UI feedback
+(navigation, toast) at the call site.
 
-### Query key konvence
+### Query key conventions
 
-Každý query soubor exportuje `getXxxQueryKey()` vracející konstantní tuple:
+Every query file exports a `getXxxQueryKey()` returning a constant tuple:
 
 ```typescript
 export const getAgentsQueryKey = () => ["agents"] as const;
@@ -84,51 +92,74 @@ export const getAgentQueryKey = (id: string) => ["agents", id] as const;
 export const getAgentRunsQueryKey = (agentId: string) => ["agents", agentId, "runs"] as const;
 ```
 
-Mutace importují key ze query souboru — žádné duplikování string literálů.
+Mutations import the key from the query file — no duplicated string
+literals.
 
 ## Local UI state
 
-`useState` / `useReducer` pro formuláře, modal open state, vybraný tab apod.
-Žádný global store pro UI state.
+`useState` / `useReducer` for forms, modal open state, selected tab, and
+similar. No global store for UI state.
 
-## RunEventsProvider
+## RunEventsProvider — unified SSE channel
 
-**Soubor:** `features/runs/runEvents.tsx`
+**File:** `features/runs/runEvents.tsx`
 
-Provider pro real-time polling run logů:
+`RunEventsProvider` opens a single `EventSource` to the API's multiplexed
+`GET /api/events` endpoint and turns each event into a targeted query
+invalidation, rather than polling:
 
-- Udržuje polling interval pro každý aktivní run
-- Poskytuje `useRunLog(runId)` hook → aktuální log chunks + status
-- Pull model (opakované GET `/api/.../log?offset=N`) bez SSE
+- Merges five scopes into one stream: `agent-runs`, `pipeline-runs`,
+  `goal-runs`, `channel-items`, `activity`
+- Each event is a thin signal (`{ scope, runId, status }` or, for the
+  activity scope, `{ scope: "channel-items"/"activity", ... }` with the full
+  entry) — "this family changed, refetch"; the channel is not the source of
+  truth, the list endpoints are
+- `useRunEventsConnected()` exposes whether the channel is currently
+  connected. While connected, the individual run queries drop their own
+  polling intervals and rely on stream-driven invalidation; when disconnected
+  (no provider, SSE blocked by a proxy, mid-reconnect) they fall back to
+  their original self-gating polls, so the dashboard degrades gracefully
+  instead of going stale
+- `EventSource` handles reconnection itself (resuming via `Last-Event-ID`);
+  the provider only tracks connectivity
+- Mounted once, high in the tree (`app/providers.tsx`)
 
-## ts-rest React Query integrace
+This is the concrete implementation of the "SSE for live streams, polling for
+state" DNA rule — see `docs/api/events.md` for the server side of the channel.
 
-`apiClient` z `state/api.ts` poskytuje type-safe React Query hooky přes `@ts-rest/react-query`:
+## ts-rest React Query integration
+
+`apiClient` from `state/api.ts` provides type-safe React Query hooks via
+`@ts-rest/react-query`:
 
 ```typescript
-// Generováno ts-restem z contract
+// Generated by ts-rest from the contract
 apiClient.agents.list.useQuery(key, queryParams, queryOptions);
 apiClient.agents.create.useMutation(mutationOptions);
 ```
 
-Typy jsou odvozeny přímo z Zod schémat v `@zibby/contracts` — žádný codegen krok.
+Types are derived directly from the Zod schemas in `@zibby/contracts` — no
+codegen step.
 
-## Co nepatří do state
+## What doesn't belong in state
 
-- **API data** → TanStack Query (nikdy useState + useEffect na fetch)
-- **URL state** → `useSearchParams` + `useRouter` z Next.js
-- **Routy** → staticky typované přes Next `typedRoutes: true` (`next.config.mjs`).
-  Konstanty rout (`state/config.ts` — `NAV_ITEMS`, `SETTINGS_ITEM`, …) mají `href`
-  typu `Route` z `next`, takže překlep ve `<Link href>` / `router.push()` spadne na
-  `tsc`. Typy se generují do `.next/types` (`next typegen` nebo libovolný dev/build);
-  pro nelitéralové stringy z kontraktů se castuje `as Route`.
-- **Form state** → React Hook Form (přes `@zibby/forms`)
-- **Theme** → `DesignSystemProvider` kontext
+- **API data** → TanStack Query (never `useState` + `useEffect` for fetching)
+- **URL state** → `useSearchParams` + `useRouter` from Next.js
+- **Routes** → statically typed via Next's `typedRoutes: true`
+  (`next.config.mjs`). Route constants (`state/config.ts` — `NAV_ITEMS`,
+  `SETTINGS_ITEM`, …) have an `href` of type `Route` from `next`, so a typo in
+  `<Link href>` / `router.push()` fails `tsc`. Types are generated into
+  `.next/types` (`next typegen` or any dev/build run); non-literal strings
+  built from contract values are cast `as Route`.
+- **Form state** → React Hook Form (via `@zibby/forms`)
+- **Theme** → `DesignSystemProvider` context
 
-## Formuláře
+## Forms
 
-Knihovna: `@zibby/forms` (React Hook Form + Zod adaptér)  
-DS primitives pro fieldy: `TextInput`, `Select`, `Textarea` z `@zibby/design-system`
+Library: `@zibby/forms` (React Hook Form + a Zod adapter)
+DS field primitives: the `form/` components in `@zibby/design-system`
+(`TextInputField`, `SelectField`, `TextAreaField`, `ToggleField`, and the
+rest — see `docs/libs/design-system.md`)
 
 ```typescript
 const form = useForm<CreateAgentInput>({

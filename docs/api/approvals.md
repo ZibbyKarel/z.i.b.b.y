@@ -1,20 +1,24 @@
-# Approval systém
+# Approval system
 
-## Co je Approval
+## What an Approval is
 
-`Approval` je durable záznam rozhodnutí, kdy ZIBBY potřebuje explicitní souhlas operátora
-před pokračováním. Přežije restart API — `ApprovalsStorageService` čte z disku.
+An `Approval` is a durable record of a decision where ZIBBY needs the
+operator's explicit sign-off before continuing. It survives an API restart —
+`ApprovalsStorageService` reads it from disk.
 
-## Druhy schválení (ApprovalKind)
+## Kinds of approval (ApprovalRunKind)
 
-| Kind              | Kdy vznikne                                                                                                                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `agent`           | Gate pravidlo rozhodlo `ask` uprostřed runu agenta                                                                                                                                   |
-| `pipeline-stage`  | Gate uvnitř fáze pipeline                                                                                                                                                            |
-| `pipeline-output` | Pipeline `pr` output čeká na schválení, než otevře PR (runId = pipelineRunId; bez agenta — vlastní systém)                                                                           |
-| `task-output`     | Directed task se zvoleným `pr` výstupem čeká, než otevře PR z branche hotového agent/orchestrátor runu (runId = taskId; durable `ScheduledTask` record drží stav, bez živého dítěte) |
-| `channel`         | ZIBBY připravil draft odpovědi na zprávu (Tier 3)                                                                                                                                    |
-| `task`            | Task překročil budget cap (`spend-past-cap`)                                                                                                                                         |
+| Kind             | When it is created                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `agent`          | A gate rule resolved to `ask` mid-run for an agent                                                                                                                             |
+| `pipeline-stage` | A gate inside a pipeline stage resolved to `ask`                                                                                                                                |
+| `pipeline-output`| A pipeline's `pr` output sink is waiting for sign-off before it opens the PR (runId = the pipelineRunId itself; no live child — a system-owned, agent-less gate)               |
+| `task-output`    | A directed task with a chosen `pr` output is waiting to open the PR from the finished agent/orchestrator run's branch (runId = the taskId; the durable `ScheduledTask` record holds the gate state, no live child) |
+| `channel`        | ZIBBY prepared a reply draft to a message (Tier 3)                                                                                                                             |
+| `task`           | A task exceeded its budget cap (`spend-past-cap`)                                                                                                                              |
+| `proposed-task`  | A discovery-proposed task is awaiting the operator's go-ahead (runId = the proposal id; approving dispatches it via `createTask` — *proposed ≠ dispatched*)                    |
+| `jira-issue`     | An outbound Jira-issue create is parked for approval (runId = the create-request id; approving performs the gated POST via the Jira adapter)                                  |
+| `machine`        | An N5a machine action (e.g. renaming files in a named folder) is parked with its dry-run preview (runId = the `MachineActionRecord` id; approving executes the preview exactly once) |
 
 ## Lifecycle
 
@@ -23,96 +27,121 @@ pending → approved
         → rejected
 ```
 
-Jednou rozhodnuté Approval se nezmění.
+Once decided, an Approval never changes.
 
-## Schéma Approval
+## Approval schema
+
+**File:** `libs/contracts/src/approvals/approval.schema.ts`
 
 ```typescript
 interface Approval {
   id: string;
-  kind: ApprovalKind; // agent | pipeline-stage | channel | task
-  runId?: string; // korelace s runem
-  skill?: string; // agent/skill ID
-  action?: string; // záměr (např. "git.push")
-  detail?: string; // lidsky čitelný popis
-  risk?: "low" | "medium" | "high";
+  runId: string; // correlates back to the paused run/record
+  kind: ApprovalRunKind;
+  skill: string; // the acting agent/skill name
+  action: string; // the intent (e.g. "git.push", "spend-past-cap")
+  detail: string; // human-readable description
+  risk: "low" | "medium" | "high";
   status: "pending" | "approved" | "rejected";
   requestedAt: string; // ISO datetime
   decidedAt?: string; // ISO datetime
-  resolve?: Resolve; // jak se má rozhodnutí vyřešit (z gate pravidla)
 }
 ```
+
+There is no client-settable "how to resolve" field — routing a decision back to
+the paused work is entirely the concern of the runner that registered for that
+`kind` (see `ResumableRunner` below).
 
 ## ApprovalsService
 
-**Soubor:** `apps/api/src/approvals/approvals.service.ts`
+**File:** `apps/api/src/approvals/approvals.service.ts`
 
-### Vytvoření schválení (server-side)
+### Runner registry
 
-Volá runner (`RunnerCore`) nebo `ChannelTriageFlowService`:
-
-```typescript
-approvalsService.create({
-  kind: "agent",
-  runId: "...",
-  skill: "kodér",
-  action: "git.push",
-  detail: "Push feature/xyz → main",
-  risk: "medium",
-  resolve: { type: "human" },
-});
-```
-
-Uloží JSON do `apps/api/data/approvals/<id>.json`.
-
-### Runner integrace
-
-Když gate rozhodne `ask`:
-
-1. `ApprovalsService.create(...)` → vytvoří `Approval` se statusem `pending`
-2. `RunnerCore` přejde na status `awaiting-approval` (pozastavení bez kill procesu)
-3. Agent čeká (polling sidecar)
-4. Operátor zavolá `POST /api/approvals/:id/approve` nebo `.../reject`
-5. `ApprovalsService` zapíše decision → notifikuje runner přes `ResumableRunner` interface
-6. Runner pokračuje (approve) nebo ukončí run (reject → `interrupted`)
-
-### ResumableRunner interface
+`ApprovalsService` keeps a runtime map of `ApprovalRunKind → ResumableRunner`.
+Every module that can pause a run on the gate registers its own runner at
+startup — there is one registration per kind, each pointing at the module that
+knows how to resume or cancel that kind of paused work:
 
 ```typescript
 interface ResumableRunner {
-  resume(approvalId: string): Promise<void>;
-  reject(approvalId: string): Promise<void>;
+  resume(runId: string): Promise<void> | void; // spawn the approved, previously-paused run
+  cancel(runId: string): void; // terminate a rejected run without performing its action
 }
 ```
 
-Implementace: `AgentRunnerService` a `PipelineRunnerService`.
+Registrations today: `agent` → `AgentRunnerService`, `pipeline-stage` /
+`pipeline-output` → `PipelineRunnerService`, `task` → `TaskSchedulerService`,
+`task-output` → `TaskOutputService`, `proposed-task` → `ProposedTaskFlowService`,
+`channel` → `ChannelTriageFlowService`, `jira-issue` → `JiraIssueFlowService`,
+`machine` → `MachineService`.
+
+### Creating an approval (server-side)
+
+Called by whichever runner is pausing on the gate:
+
+```typescript
+approvalsService.requestApproval({
+  runId: "...",
+  kind: "agent",
+  skill: "coder",
+  action: "git.push",
+  detail: "Push feature/xyz → main",
+  risk: "medium",
+});
+```
+
+Stores JSON at `apps/api/data/approvals/<id>.json` and records an
+`approval-requested` activity entry.
+
+### Runner integration
+
+When a gate rule resolves to `ask`:
+
+1. The owning runner calls `ApprovalsService.requestApproval(...)` → creates a
+   pending `Approval`
+2. The run/record pauses (e.g. `RunnerCore` moves to status
+   `awaiting-approval` — no process is killed)
+3. The client polls for the decision
+4. The operator calls `POST /api/approvals/:id/approve` or `.../reject`
+5. `ApprovalsService` records the decision (`approval-approved` /
+   `approval-rejected`) and looks up the registered runner for that `kind`
+6. The runner's `resume(runId)` (approve) or `cancel(runId)` (reject) is called
+
+Deciding an already-decided approval returns `409`
+(`ApprovalAlreadyDecidedError`).
 
 ## API
 
 ```
-GET  /api/approvals              seznam (filtrovatelný pending/all)
-POST /api/approvals/:id/approve  schválit
-POST /api/approvals/:id/reject   zamítnout
+GET  /api/approvals              list (optional ?status=pending|approved|rejected)
+GET  /api/approvals/:id          get one approval
+POST /api/approvals/:id/approve  approve (resumes the gated run) — 404 | 409
+POST /api/approvals/:id/reject   reject (terminates the gated run, no action taken) — 404 | 409
 ```
 
-Klient nemůže vytvářet Approval přímo — jen server (runner, triage) je generuje.
-Tím se zabraňuje podvádění (Law 4).
+A client can never create an Approval directly — only the server (a runner or
+triage flow) generates them. This prevents forging a decision (Law 4).
 
-## Zobrazení v UI
+## Surfaced in the UI
 
-Stránka `/approvals` zobrazuje pending queue s:
+There is no standalone `/approvals` queue page; a pending approval surfaces
+wherever the thing it gates is already visible:
 
-- Druhem schválení
-- Popis záměru (`action`, `detail`)
-- Risk indikátor (low/medium/high)
-- Tlačítka Schválit / Zamítnout
+- **Run detail** — `RunApprovalGate` shows the exact action, its structured
+  preview, and its consequence, with Confirm / Reject. High-risk actions
+  (`HIGH_RISK_TYPES`, currently payment and deletion) require a deliberate
+  ~0.9s hold-to-confirm (`HoldButton`) instead of a single click; rejecting
+  records the denial and terminates the run without erasing it, so it stays in
+  the feed and answerable.
+- **Overview** — an `ApprovalsPanel` lists pending approvals across the
+  system, and the overview page shows a pending-count badge.
+- **Agent detail** — `ApprovalCard` surfaces an approval tied to that agent.
 
-`overview` stránka zobrazuje počet pending jako odznak upozornění.
+## Activity records
 
-## Activity záznamy
-
-| Event                | Kdy                |
-| -------------------- | ------------------ |
-| `approval-requested` | Approval vytvořeno |
-| `approval-approved`  | Operátor schválil  |
-| `approval-rejected`  | Operátor zamítl    |
+| Event                 | When                    |
+| --------------------- | ----------------------- |
+| `approval-requested`  | An approval was created |
+| `approval-approved`   | The operator approved   |
+| `approval-rejected`   | The operator rejected   |

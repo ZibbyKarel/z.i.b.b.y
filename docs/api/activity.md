@@ -2,26 +2,33 @@
 
 ## Activity log
 
-Append-only accountability record — ZIBBY může vysvětlit co dělá a udělal, z logu, kdykoliv.
+Append-only accountability record — ZIBBY can explain what it is doing and has
+done, from the log, at any time.
 
-### Formát
+### Format
 
-Jeden soubor per den: `apps/api/data/activity/YYYY-MM-DD.jsonl`  
-Každý řádek je `JSON.stringify(ActivityEntry) + "\n"` — jeden `fs.appendFile` syscall.
+One file per day: `apps/api/data/activity/YYYY-MM-DD.jsonl`
+Each line is `JSON.stringify(ActivityEntry) + "\n"` — a single `fs.appendFile`
+syscall.
 
 ```typescript
 interface ActivityEntry {
   id: string; // collision-resistant UUID
   at: string; // ISO datetime
-  kind: ActivityKind; // uzavřený výčet (viz níže)
-  summary: string; // jedna lidsky čitelná věta
-  traceId?: string; // z AsyncLocalStorage (automaticky)
-  runId?: string; // z AsyncLocalStorage (automaticky)
-  refs: ActivityRefs; // strukturované linky (strict object)
+  kind: ActivityKind; // closed enum (see below)
+  summary: string; // one human-readable sentence
+  traceId?: string; // from AsyncLocalStorage (stamped automatically)
+  runId?: string; // from AsyncLocalStorage (stamped automatically)
+  refs: ActivityRefs; // structured links (strict object)
 }
 ```
 
-### ActivityKind — uzavřený výčet
+### ActivityKind — closed enum
+
+The vocabulary has grown a lot since Phase 6.1's original list, as new phases
+added their own recordable events. It stays a WHOLE alphabet by design — a new
+kind is added here explicitly, never smuggled through a free-form field
+(`libs/contracts/src/activity/activity.schema.ts`):
 
 ```typescript
 type ActivityKind =
@@ -35,6 +42,13 @@ type ActivityKind =
   | "pipeline-started"
   | "pipeline-finished"
   | "pipeline-parked"
+  | "stage-verdict" // a qualify-gate phase verdict (pass/gap/drift)
+  | "run-paused-limit" // a run halted on the subscription usage limit
+  | "run-resumed-limit" // ...and auto-resumed when the window reset
+  | "task-deferred-limit" // a task was re-deferred at dispatch (window exhausted)
+  | "goal-dispatched" // a goal's maker/verifier loop dispatched an iteration
+  | "goal-verdict"
+  | "goal-parked" // bounded effort exhausted
   | "approval-requested"
   | "approval-approved"
   | "approval-rejected"
@@ -44,10 +58,22 @@ type ActivityKind =
   | "channel-reply"
   | "channel-approval"
   | "channel-ignored"
-  | "briefing-generated";
+  | "channel-noted" // a read-only integration's item (no reply surface)
+  | "channel-needs-attention" // a notify-only channel item surfaced (email)
+  | "briefing-generated"
+  | "research-digest" // a research pass mirrored its result to the vault
+  | "integration-retry-exhausted" // a channel poll exhausted its retry budget
+  | "monitor-alert" // a CI/CD monitor ingested a red status
+  | "machine-action" // an approved machine action executed (or failed)
+  | "task-dead-lettered" // a task's dispatch exhausted its retry budget
+  | "app-ideas-generated" // a weekly pass proposed app ideas to the vault
+  | "chain-started" // an operator-authored chain started
+  | "chain-advanced" // ...handed an artifact to its next step
+  | "chain-parked" // ...parked on a broken/gated handoff
+  | "chain-finished"; // ...reached a terminal state (done/failed)
 ```
 
-Žádný volný text — nový kind se přidá explicitně do schématu.
+No free text — a new kind is added explicitly to the schema.
 
 ### ActivityRefs — strict structured links
 
@@ -57,7 +83,11 @@ interface ActivityRefs {
   runRef?: string;
   pipelineId?: string;
   agentId?: string;
-  projectId?: string; // přiřazení k projektu (Phase 8)
+  goalRunId?: string;
+  goalId?: string;
+  chainRunId?: string;
+  chainId?: string;
+  projectId?: string; // project attribution (Phase 8)
   approvalId?: string;
   integrationId?: string;
   itemId?: string;
@@ -68,123 +98,101 @@ interface ActivityRefs {
 }
 ```
 
-`.strict()` — žádná extra pole. Pokud nový kind potřebuje nový ref, schéma se rozrůstá záměrně.
+`.strict()` — no extra fields. If a new kind needs a new ref, the schema grows
+on purpose.
 
 ### ActivityLogService
 
-**Soubor:** `apps/api/src/activity/activity-log.service.ts`
+**File:** `apps/api/src/activity/activity-log.service.ts`
 
-- `record({ kind, summary, refs })` — **nikdy nehází** (accountability nesmí přerušit actuaci)
-- `list({ date?, kinds?, limit? })` — čte JSONL po řádcích; špatný řádek po crash přeskočí (neshodí celý den)
-- `page({ before?, limit?, kinds? })` — **keyset (cursor) stránkování přes celou historii**,
-  newest-first, napříč denními soubory. Cursor je neprůhledný `<at>|<id>` nejstaršího záznamu
-  předchozí stránky; vrací `{ entries, nextCursor }` (`nextCursor === null` = konec historie).
-  Čte jen existující denní soubory (`fs.readdir`) a zastaví se po `limit + 1` shodách → hluboká
-  historie stojí max. jeden denní soubor navíc. Pohání RightRail živý log (infinite query).
-- `traceId` / `runId` jsou razítkovány automaticky z `TraceContextService` (AsyncLocalStorage)
+- `record({ kind, summary, refs })` — **never throws** (accountability must not
+  interrupt the actual action)
+- `list({ date?, kinds?, limit?, projectId?, integrationId?, days? })` — reads
+  the JSONL line by line; a bad line after a crash is skipped (doesn't take
+  down the whole day). When `projectId` or `integrationId` is given, the server
+  reads a multi-day window (`days`, default 14, clamped to `[1, 90]`) instead of
+  just today, so a sparse per-project/integration history is still visible.
+- `page({ before?, limit?, kinds? })` — **keyset (cursor) pagination across the
+  entire history**, newest-first, spanning day-file boundaries. The cursor is
+  the opaque `<at>|<id>` of the previous page's oldest entry; returns
+  `{ entries, nextCursor }` (`nextCursor === null` = end of history). Only reads
+  existing day files (`fs.readdir`) and stops after `limit + 1` matches, so deep
+  history costs at most one extra day file. Powers the RightRail live log
+  (infinite query).
+- `traceId` / `runId` are stamped automatically from `TraceContextService`
+  (AsyncLocalStorage)
 
 ### API
 
 ```
-GET /api/activity?date=YYYY-MM-DD&kinds=run-started,run-finished&limit=50
-GET /api/activity/page?before=<cursor>&limit=50          # newest-first, cursor stránkování
+GET /api/activity?date=YYYY-MM-DD&kinds=run-started,run-finished&limit=50&projectId=<id>&integrationId=<id>&days=14
+GET /api/activity/page?before=<cursor>&limit=50          # newest-first, cursor pagination
 ```
 
-`GET /api/activity` — výchozí dnešní den, limit 50, max 500. `kinds` je comma-separated allow-list.  
-`GET /api/activity/page` — celá historie po stránkách (limit 1–200, default 50); `before` je
-`nextCursor` z předchozí odpovědi.
+`GET /api/activity` — defaults to today, limit 50, max 500; a malformed `date`
+returns `422`. `kinds` is a comma-separated allow-list.
+`GET /api/activity/page` — the whole history, paged (limit 1–200, default 50);
+`before` is the `nextCursor` from the previous response.
 
 ### SSE — `activity` scope (fat event)
 
-`ActivityEventsService.emit` nese **celý `ActivityEntry`**; events controller publikuje
-`{ scope: "activity", kind, at, entry }` na `/api/events`. Web RightRail entry **prependuje** do
-infinite-query cache (bez refetchu); malý overview feed + briefing card se invalidují jako dřív.
+`ActivityEventsService.emit` carries the **whole `ActivityEntry`**; the events
+controller publishes `{ scope: "activity", kind, at, entry }` on `/api/events`.
+The web RightRail **prepends** the entry into its infinite-query cache (no
+refetch); the small overview feed and briefing card invalidate as before.
 
 ## ActivityRecorderModule
 
-**Soubor:** `apps/api/src/activity/activity-recorder.module.ts`
+**File:** `apps/api/src/activity/activity-recorder.module.ts`
 
-Mapovací vrstva — přijímá interní business události (EventsService) a zapisuje je jako activity entries.
-Odděluje business logiku od formátu logu.
+A mapping layer — consumes internal business events (`EventsService`) and
+writes them as activity entries. Keeps business logic separate from the log
+format.
 
 ## Activity view — RightRail live-log config
 
-Operátorem vlastněný dokument (twin `mandate.json`) řídí, jak se activity log zobrazuje v pravém
-panelu (živý log). Každá **skupina** kindů (`tasks · runs · pipelines · goals · approvals · channels
-· integrations · research · briefing`) má režim `visible` (každý záznam zvlášť) / `grouped` (sloučené
-do jednoho řádku s počtem) / `hidden` (v logu vůbec). Mapa kind → skupina a defaulty žijí v
-`libs/contracts/src/activity/activity-view.schema.ts` (`ACTIVITY_GROUP_OF`, `DEFAULT_ACTIVITY_VIEW`).
+An operator-owned document (twin of `mandate.json`) controls how the activity
+log is rendered in the right rail (the live log). Every **group** of kinds
+(`tasks · runs · pipelines · goals · approvals · channels · integrations ·
+research · briefing`) has a mode: `visible` (each entry shown individually),
+`grouped` (merged into one row with a count), or `hidden` (left out of the log
+entirely). The kind → group map and defaults live in
+`libs/contracts/src/activity/activity-view.schema.ts` (`ACTIVITY_GROUP_OF`,
+`DEFAULT_ACTIVITY_VIEW`).
 
-**Soubory:** `apps/api/src/activity-view/` (storage + controller + module), uloženo do
-`apps/api/data/activity-view.json` (atomicky, tolerantní read → default). Filtrování/seskupování
-probíhá **client-side** (malá data, okamžitá změna konfigurace).
-
-```
-GET /api/activity/view          # aktuální config (seeded default když chybí)
-PUT /api/activity/view          # nahradí — strict, 422 na neznámý klíč skupiny (Law 4)
-```
-
-Edituje se v UI v **Settings → Activity**.
-
-## Briefing systém
-
-### Co je briefing
-
-Deterministická syntéza actuality logu a vault poznámek — **žádný model, žádné tokeny**.
-Butler's briefing, ne firehose:
-
-> "Přes noc přišly dva bugy — oba opraveny, PRs nahoru na review. Firma X se ptala na feature Y; odpověděl jsem. Nic jiného nečeká."
-
-### BriefingService
-
-**Soubor:** `apps/api/src/briefing/briefing.service.ts`
-
-Načte activity log za daný den a sestaví `BriefingItem[]`:
-
-```typescript
-interface BriefingItem {
-  kind: BriefingItemKind; // "tasks" | "approvals" | "runs" | "channels" | "insights"
-  title: string;
-  items: string[];
-  count: number;
-}
-```
-
-### BriefingAssembly
-
-**Soubor:** `apps/api/src/briefing/briefing-assembly.ts`
-
-Pure funkce: `activityEntries → BriefingSection[]`
-
-1. Seskupí podle druhu (task outcomes, approvals, channel akce, ...)
-2. Filtruje triviální (allowed gates, tiché Tier 1 akce)
-3. Zvýrazní co potřebuje pozornost (pending approvals, parked pipelines)
-
-### API
+**Files:** `apps/api/src/activity-view/` (storage + controller + module),
+persisted to `apps/api/data/activity-view.json` (atomic write, tolerant read →
+default). Filtering/grouping happens **client-side** (small data set, config
+changes apply instantly).
 
 ```
-GET /api/briefing/{date}   briefing pro datum (YYYY-MM-DD)
+GET /api/activity/view          # current config (seeded default when absent)
+PUT /api/activity/view          # replace — strict, 422 on an unknown group key (Law 4)
 ```
 
-Vrátí `{ date, sections: BriefingSection[], generatedAt }`.
+Edited in the UI under **Settings → Activity**.
 
-### Automatizovaný briefing
+## Briefing system
 
-Cíl automations (typ `briefing`):
+### What a briefing is
 
-```yaml
-trigger:
-  type: cron
-  cron: "0 8 * * *" # každý den v 8:00
-target:
-  type: briefing
+A deterministic synthesis of the activity log and vault notes into a butler's
+briefing, not a firehose:
+
+> "Two bugs came in overnight — both fixed, PRs up for review. Company X asked
+> about feature Y; I answered. Nothing else needs you."
+
+`BriefingService` (`apps/api/src/briefing/briefing.service.ts`) assembles it
+from pending approvals, parked runs/goals, in-flight channel items, and
+activity since the last briefing; `briefing-assembly.ts` is the pure function
+that groups and filters that into `BriefingItem[]` sections; `claude-cli-briefer.ts`
+is an optional richer-prose pass over CLI. A cron-triggered `briefing` automation
+target (`0 8 * * *` by default) generates it daily and records
+`briefing-generated`.
+
+```
+GET /api/briefing/{date}   the briefing for a date (YYYY-MM-DD)
 ```
 
-Po spuštění zapíše `briefing-generated` do activity logu.
-
-### ClaudeCliBriefier
-
-**Soubor:** `apps/api/src/briefing/claude-cli-briefer.ts`
-
-Volitelná integrace: pokud chce operátor richer briefing, může přes CLI.
-Výstup jde na stdout.
+See `docs/api/briefing.md` for the full module writeup (run lifecycle, section
+assembly, and the `ClaudeCliBriefer` seam).
