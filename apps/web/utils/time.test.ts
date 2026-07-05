@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compactAgo, relativeTime } from "./time";
+import { clockTime, compactAgo, relativeTime } from "./time";
 
 const T0 = Date.parse("2026-06-10T12:00:00Z");
 const iso = (msAgo: number) => new Date(T0 - msAgo).toISOString();
@@ -30,5 +30,27 @@ describe("compactAgo", () => {
     expect(compactAgo(iso(10_000), T0)).toBe("now");
     expect(compactAgo(iso(3 * 60_000), T0)).toBe("3m");
     expect(compactAgo(iso(2 * 60 * 60_000), T0)).toBe("2h");
+  });
+});
+
+describe("clockTime", () => {
+  it("formats the wall-clock time in the viewer's local timezone, not UTC", () => {
+    const at = "2026-06-10T10:03:00Z";
+    const expected = new Date(Date.parse(at)).toLocaleTimeString("en", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    expect(clockTime(at, "en")).toBe(expected);
+    // Regression guard: the old bug sliced "HH:MM" straight out of the UTC ISO
+    // string, so it would equal "10:03" regardless of the viewer's timezone.
+    // Assert we're not doing that (this only fails to guard in a UTC CI runner,
+    // where local time legitimately equals the UTC slice).
+    if (new Date().getTimezoneOffset() !== 0) {
+      expect(clockTime(at, "en")).not.toBe("10:03");
+    }
+  });
+
+  it("returns an empty string for an invalid timestamp", () => {
+    expect(clockTime("not-a-date", "en")).toBe("");
   });
 });

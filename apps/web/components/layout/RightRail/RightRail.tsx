@@ -2,21 +2,17 @@
 
 import { Button, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { DEFAULT_ACTIVITY_VIEW } from "@zibby/contracts";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { buildActivityLog } from "../../../features/overview/activityLog";
 import { useActivityFeedInfiniteQuery } from "../../../features/overview/queries";
 import { useActivityViewQuery } from "../../../features/settings/queries";
+import { clockTime } from "../../../utils/time";
 
 export enum RightRailTestId {
   Root = "right-rail",
   Log = "right-rail-log",
   Line = "right-rail-line",
   LoadOlder = "right-rail-load-older",
-}
-
-/** "HH:MM" in UTC straight off the ISO timestamp — deterministic, locale-free. */
-function clockTime(at: string): string {
-  return at.length >= 16 ? at.slice(11, 16) : "";
 }
 
 /** One `> HH:MM  summary` log line. */
@@ -48,6 +44,7 @@ function LogLine({ time, text, muted }: { time: string; text: string; muted?: bo
  */
 export function RightRail() {
   const t = useTranslations();
+  const locale = useLocale();
   const feed = useActivityFeedInfiniteQuery();
   const { data: view } = useActivityViewQuery();
   const rows = buildActivityLog(feed.data ?? [], view ?? DEFAULT_ACTIVITY_VIEW);
@@ -69,7 +66,11 @@ export function RightRail() {
         <Stack data-testid={RightRailTestId.Log} gap="50">
           {rows.map((row) =>
             row.type === "entry" ? (
-              <LogLine key={row.key} text={row.entry.summary} time={clockTime(row.entry.at)} />
+              <LogLine
+                key={row.key}
+                text={row.entry.summary}
+                time={clockTime(row.entry.at, locale)}
+              />
             ) : (
               <LogLine
                 muted
@@ -78,7 +79,7 @@ export function RightRail() {
                   count: row.count,
                   group: t(`settings.activity.groups.${row.group}`),
                 })}
-                time={clockTime(row.at)}
+                time={clockTime(row.at, locale)}
               />
             ),
           )}

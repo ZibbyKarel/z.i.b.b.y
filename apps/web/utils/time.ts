@@ -25,6 +25,13 @@ export function relativeTime(
 export const compactAgo = (iso: string, now: number): string =>
   relativeTime(iso, now, (n, unit) => (n === 0 ? "now" : `${n}${unit}`));
 
+/** Wall-clock "HH:MM" in the viewer's local timezone (fixes the UTC-slice bug). */
+export function clockTime(iso: string, locale: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return "";
+  return new Date(ms).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+}
+
 /**
  * Phase 9 — render a limit-pause resume time (epoch ms). Within 24 h it reads as an
  * absolute wall-clock "~HH:MM" (the operator thinks "resumes around 04:30"); further
