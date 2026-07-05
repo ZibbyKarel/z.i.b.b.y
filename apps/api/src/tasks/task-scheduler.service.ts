@@ -22,7 +22,7 @@ import type {
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
-import { BudgetService } from "../budget/budget.service";
+import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
 import { ChainRunnerService } from "../chains/chain-runner.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { LimitsService } from "../limits/limits.service";
@@ -40,6 +40,7 @@ import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskOutputService } from "./task-output.service";
+import { sumStageCosts } from "./task-runs.service";
 
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
@@ -469,7 +470,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const check = await this.budget.check(projectId, new Date(now));
     if (!check.ok) {
       const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now);
-      const held = await this.holdForApproval(task, project, check.detail);
+      const held = await this.holdForApproval(task, project, check.detail, check.metrics);
       if (background && titleAuto) this.refineTitle(task.id, input.text);
       return { outcome: "scheduled", task: held };
     }
@@ -604,7 +605,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       const check = await this.budget.check(task.projectId, at);
       if (!check.ok) {
         await this.storage.markHeld(task.id, check.detail);
-        await this.holdForApproval(task, project, check.detail);
+        await this.holdForApproval(task, project, check.detail, check.metrics);
         return "held";
       }
     }
@@ -660,9 +661,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     task: ScheduledTask,
     project: Project | null,
     detail: string,
+    /** Phase 12: the dollar facts on a cost-cap hold ({ costUsd, capUsd }); absent on a run-count hold. */
+    metrics?: BudgetOverMetrics,
   ): Promise<ScheduledTask> {
     // Evaluate the floor so a `gate-decision` is recorded (the approval IS the gate).
-    this.gates.evaluate(await this.gates.floor(), { action: SPEND_PAST_CAP });
+    // Phase 12: a dollar-cap hold rides its costUsd/capUsd as metrics so a `threshold`
+    // floor rule can read them (IntendedActionSchema.metrics already supported this).
+    this.gates.evaluate(await this.gates.floor(), {
+      action: SPEND_PAST_CAP,
+      ...(metrics ? { metrics } : {}),
+    });
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "task",
@@ -1031,6 +1039,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },
       });
+      await this.recordRunCost(task.projectId, taskId, run.runId, "agent", run.costUsd);
     } catch (error) {
       // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
       this.log.debug("task outcome write skipped", {
@@ -1064,6 +1073,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },
       });
+      await this.recordRunCost(
+        task.projectId,
+        taskId,
+        run.pipelineRunId,
+        "pipeline",
+        sumStageCosts(run.stageRuns),
+      );
     } catch (error) {
       this.log.debug("task outcome write skipped", {
         taskId,
@@ -1093,6 +1109,10 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },
       });
+      // Phase 12: no cost line here — `GoalRunSchema` carries no top-level `costUsd`
+      // (only its per-iteration makers do, tracked by `goal-runner.service.ts`'s own
+      // `recordDispatch`, dispatch-only). Cost lines currently flow only from the
+      // agent/pipeline outcome paths above.
     } catch (error) {
       this.log.debug("task outcome write skipped", {
         taskId,
@@ -1125,12 +1145,31 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           ...(task.projectId ? { projectId: task.projectId } : {}),
         },
       });
+      // Phase 12: no cost line here either — `ChainRunSchema` carries no `costUsd`
+      // (a chain's steps are agent/pipeline runs whose own outcomes already record
+      // their cost individually when THEY reach a terminal state).
     } catch (error) {
       this.log.debug("task outcome write skipped", {
         taskId,
         err: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /**
+   * Best-effort cost-line write for a finished run (Phase 12) — only when both a
+   * project and a known price exist; awaited so it lands before the caller's outer
+   * try/catch returns, but {@link BudgetService.recordCost} itself never throws.
+   */
+  private recordRunCost(
+    projectId: string | undefined,
+    taskId: string,
+    runRef: string,
+    kind: string,
+    costUsd: number | undefined,
+  ): Promise<void> {
+    if (!projectId || costUsd == null) return Promise.resolve();
+    return this.budget.recordCost({ projectId, taskId, runRef, kind, costUsd });
   }
 
   /** Last non-empty log line of an agent run, truncated to one readable line. */

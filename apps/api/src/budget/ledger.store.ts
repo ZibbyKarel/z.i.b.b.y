@@ -9,7 +9,16 @@ export const BUDGET_LEDGER_DIR = "BUDGET_LEDGER_DIR";
 /** Timezone the budget windows are cut on — the scheduler's cron timezone precedent. */
 export const BUDGET_TZ = "Europe/Prague";
 
-/** One ledger line: a single *started* run, attributed for windowed counting. */
+/**
+ * One ledger line. Two shapes share the same file (decision 2, Phase 12):
+ * - A *dispatch* line (`type` absent — every pre-Phase-12 line, and every new
+ *   started-run line): counted by {@link BudgetLedgerStore.countDaily}/`countWeekly`/
+ *   `countMonthly` toward the run-count caps.
+ * - A *cost* line (`type: "cost"`, `costUsd` set): appended once a run finishes with
+ *   a known price (task-scheduler's `reconcileOutcome`); excluded from the run-count
+ *   methods, summed by `sumCostDaily`/`sumCostWeekly`/`sumCostMonthly` toward the
+ *   dollar caps. Never migrated — old files simply have no cost lines.
+ */
 export interface LedgerEntry {
   at: string;
   projectId?: string;
@@ -17,6 +26,18 @@ export interface LedgerEntry {
   runRef: string;
   /** The routed target kind ("agent" | "pipeline" | "orchestrator"). */
   kind: string;
+  /** "dispatch" (the default — absent on every line before Phase 12) or "cost". */
+  type?: "dispatch" | "cost";
+  /** USD cost of the finished run. Set only on `type: "cost"` lines. */
+  costUsd?: number;
+}
+
+/** Sum + count of cost lines in a window — count is the average's denominator. */
+export interface CostWindowStats {
+  /** Total `costUsd` across the window's cost lines. */
+  sum: number;
+  /** How many cost lines contributed to `sum` (0 → no cost data yet in the window). */
+  count: number;
 }
 
 /** Thrown when the ledger dir cannot be read (NOT a missing day file) — fail-closed signal. */
@@ -46,6 +67,22 @@ export class BudgetLedgerStore {
 
   /** Append one started-run line (awaited on the dispatch path — enforcement data). */
   async record(entry: LedgerEntry, now: Date = new Date()): Promise<void> {
+    await this.append(entry, now);
+  }
+
+  /**
+   * Append one finished-run cost line (Phase 12) — `type: "cost"`, excluded from
+   * the run-count methods. The caller (task-scheduler's `reconcileOutcome`) awaits
+   * this but treats a failure as best-effort (logs, does not fail the reconcile).
+   */
+  async recordCost(
+    entry: Omit<LedgerEntry, "type" | "costUsd"> & { costUsd: number },
+    now: Date = new Date(),
+  ): Promise<void> {
+    await this.append({ ...entry, type: "cost" }, now);
+  }
+
+  private async append(entry: LedgerEntry, now: Date): Promise<void> {
     await ensureDir(this.dir);
     const file = this.fileFor(pragueDate(now));
     await fs.appendFile(file, `${JSON.stringify(entry)}\n`, "utf8");
@@ -66,15 +103,46 @@ export class BudgetLedgerStore {
     return this.countAcross(monthDates(pragueDate(now)), projectId);
   }
 
-  /** Sum matching lines across the given day-file names. */
+  /** Cost-line sum + count for `projectId` on the Prague day containing `now`. */
+  async sumCostDaily(projectId: string, now: Date = new Date()): Promise<CostWindowStats> {
+    return this.costStatsAcross([pragueDate(now)], projectId);
+  }
+
+  /** Cost-line sum + count for `projectId` across the current ISO week, Prague. */
+  async sumCostWeekly(projectId: string, now: Date = new Date()): Promise<CostWindowStats> {
+    return this.costStatsAcross(isoWeekDates(pragueDate(now)), projectId);
+  }
+
+  /** Cost-line sum + count for `projectId` month-to-date, Prague. */
+  async sumCostMonthly(projectId: string, now: Date = new Date()): Promise<CostWindowStats> {
+    return this.costStatsAcross(monthDates(pragueDate(now)), projectId);
+  }
+
+  /** Count matching *dispatch* lines across the given day-file names (cost lines excluded). */
   private async countAcross(dates: string[], projectId: string): Promise<number> {
     let total = 0;
     for (const date of dates) {
       for (const entry of await this.readDay(date)) {
+        if (entry.type === "cost") continue;
         if (entry.projectId === projectId) total += 1;
       }
     }
     return total;
+  }
+
+  /** Sum + count matching *cost* lines across the given day-file names. */
+  private async costStatsAcross(dates: string[], projectId: string): Promise<CostWindowStats> {
+    let sum = 0;
+    let count = 0;
+    for (const date of dates) {
+      for (const entry of await this.readDay(date)) {
+        if (entry.type === "cost" && entry.projectId === projectId) {
+          sum += entry.costUsd ?? 0;
+          count += 1;
+        }
+      }
+    }
+    return { sum, count };
   }
 
   /** Tolerant read of one day file. ENOENT → []; any other error → fail-closed throw. */

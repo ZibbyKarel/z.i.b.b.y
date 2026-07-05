@@ -74,23 +74,31 @@ export const UpdateProjectProfileSchema = ProjectProfileSchema.partial();
 export type UpdateProjectProfileInput = z.infer<typeof UpdateProjectProfileSchema>;
 
 /**
- * Per-engagement budget (Phase 8.1). The unit is **run-count per window**, not
- * tokens: a run carries no usage data and `LimitsService` is account-level, so a
- * per-project token cap would be a lie in the UI. `maxConcurrent` is the
+ * Per-engagement budget (Phase 8.1, dollar caps added Phase 12). The unit is
+ * **run-count per window** OR **USD per window** — both axes optional and
+ * independent, a project may set either, both, or neither. `maxConcurrent` is the
  * parallelism cap (8.2) — at capacity new dispatches QUEUE, they are not rejected.
  * Every field optional (absent = unlimited on that axis); `.strict()` so an unknown
- * key can never smuggle a fourth knob in. Windows are calendar day / ISO week in
- * Europe/Prague (the scheduler's cron timezone).
+ * key can never smuggle a fifth knob in. Windows are calendar day / ISO week /
+ * calendar month in Europe/Prague (the scheduler's cron timezone).
  */
 export const ProjectBudgetSchema = z
   .object({
     dailyRuns: z.number().int().positive().optional(),
     weeklyRuns: z.number().int().positive().optional(),
     // M7: the north-star's "monthly cap" — same run-count unit as daily/weekly,
-    // cut on the Europe/Prague calendar month. (USD is N/A: a Claude subscription
-    // exposes no per-run cost, so the budget unit is runs, never dollars.)
+    // cut on the Europe/Prague calendar month.
     monthlyRuns: z.number().int().positive().optional(),
     maxConcurrent: z.number().int().positive().optional(),
+    /**
+     * Phase 12: dollar caps, same windows as the run-count caps above but priced
+     * off the accumulated `costUsd` of finished runs (`BudgetLedgerStore`'s `"cost"`
+     * lines) rather than a run count. `spend-past-cap` holds a dispatch whose
+     * spent-so-far + estimated next-run cost would cross the cap.
+     */
+    dailyCostCapUsd: z.number().positive().optional(),
+    weeklyCostCapUsd: z.number().positive().optional(),
+    monthlyCostCapUsd: z.number().positive().optional(),
   })
   .strict();
 export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>;

@@ -287,6 +287,19 @@ function agentRunToView(r: AgentRun): TaskRun {
   };
 }
 
+/**
+ * Total cost across a pipeline run's stages, or `undefined` when none carry
+ * `costUsd` (a run from before the costing feature) — so an old run doesn't show a
+ * misleading "$0.00". Shared with `task-scheduler.service.ts`'s cost-line write on
+ * pipeline outcome (Phase 12) so the two never compute it differently.
+ */
+export function sumStageCosts(stageRuns: readonly { costUsd?: number }[]): number | undefined {
+  const withCost = stageRuns.filter((s) => s.costUsd != null);
+  return withCost.length
+    ? withCost.reduce((sum, s) => sum + (s.costUsd ?? 0), 0)
+    : undefined;
+}
+
 function pipelineRunToView(r: PipelineRun, pipeline?: Pipeline): TaskRun {
   // A directed task's per-run override wins; absent that, the pipeline definition's
   // own `outputs:` is the default sink (mirrors the delivery path's own fallback —
@@ -294,12 +307,7 @@ function pipelineRunToView(r: PipelineRun, pipeline?: Pipeline): TaskRun {
   const fileOutput =
     r.outputsOverride?.find((o) => o.type === "file") ??
     pipeline?.outputs?.find((o) => o.type === "file");
-  // Celková cena pipeline běhu = součet cen fází. Nastav jen když aspoň jedna
-  // fáze cenu má, ať starý běh z doby před touhle featurou neukazuje "$0.00".
-  const stageCosts = r.stageRuns.filter((s) => s.costUsd != null);
-  const costUsd = stageCosts.length
-    ? stageCosts.reduce((sum, s) => sum + (s.costUsd ?? 0), 0)
-    : undefined;
+  const costUsd = sumStageCosts(r.stageRuns);
   const status: TaskRun["status"] =
     r.status === "paused-limit"
       ? "paused-limit"

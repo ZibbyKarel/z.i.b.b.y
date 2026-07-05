@@ -460,7 +460,16 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     return check.ok;
   }
 
-  /** Count this iteration's maker run against the project ledger (decision 6). */
+  /**
+   * Count this iteration's maker run against the project ledger (decision 6).
+   * Phase 12: this writes a dispatch line only, never a cost line — a goal's own
+   * completion isn't tracked here as a single terminal-state point the way
+   * `task-scheduler.service.ts`'s `reconcileOutcome` observes agent/pipeline runs, and
+   * `GoalRunSchema` carries no aggregate `costUsd` to write anyway. Cost lines for a
+   * goal dispatched through a `ScheduledTask` still flow from the scheduler's
+   * `writeAgentOutcome`/`writePipelineOutcome` — each iteration's own maker run is
+   * itself an agent or pipeline run with its own outcome.
+   */
   private async recordDispatch(
     run: GoalRun,
     project: Project | null,

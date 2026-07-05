@@ -10,15 +10,41 @@ import { BudgetConfigStore } from "./budget-config.store";
 import { BudgetLedgerStore, type LedgerEntry } from "./ledger.store";
 
 /** Why a dispatch is over-cap — the axis the guard reports and the approval names. */
-export type BudgetOverReason = "project-daily" | "project-weekly" | "project-monthly" | "global";
+export type BudgetOverReason =
+  | "project-daily"
+  | "project-weekly"
+  | "project-monthly"
+  | "project-daily-cost"
+  | "project-weekly-cost"
+  | "project-monthly-cost"
+  | "global";
+
+/**
+ * The `spend-past-cap` gate's dollar facts (Phase 12) — set only on a dollar-cap
+ * hold. The index signature keeps this structurally assignable to
+ * `IntendedAction["metrics"]` (`Record<string, number>`) at the `gates.evaluate`
+ * call site, not just for a fresh object literal.
+ */
+export interface BudgetOverMetrics {
+  costUsd: number;
+  capUsd: number;
+  [key: string]: number;
+}
 
 /** The budget guard's verdict for one dispatch. */
-export type BudgetCheck = { ok: true } | { ok: false; over: BudgetOverReason; detail: string };
+export type BudgetCheck =
+  | { ok: true }
+  | { ok: false; over: BudgetOverReason; detail: string; metrics?: BudgetOverMetrics };
 
-const over = (reason: BudgetOverReason, detail: string): BudgetCheck => ({
+const over = (
+  reason: BudgetOverReason,
+  detail: string,
+  metrics?: BudgetOverMetrics,
+): BudgetCheck => ({
   ok: false,
   over: reason,
   detail,
+  ...(metrics ? { metrics } : {}),
 });
 
 /**
@@ -128,6 +154,62 @@ export class BudgetService {
           );
         }
       }
+
+      // Phase 12: per-project dollar caps. Estimate = spent-so-far + the average
+      // cost of this project's own finished runs in the window (decision 3) — with
+      // no cost line yet, the average is 0 so the estimate is just spent-so-far.
+      // Only runs when at least one dollar cap is actually set (unchanged behavior
+      // for every project that never adopts a cost cap).
+      if (
+        budget?.dailyCostCapUsd != null ||
+        budget?.weeklyCostCapUsd != null ||
+        budget?.monthlyCostCapUsd != null
+      ) {
+        try {
+          if (budget.dailyCostCapUsd != null) {
+            const { sum, count } = await this.ledger.sumCostDaily(projectId, now);
+            const estimate = sum + (count > 0 ? sum / count : 0);
+            if (estimate > budget.dailyCostCapUsd) {
+              return over(
+                "project-daily-cost",
+                `daily cost cap reached ($${estimate.toFixed(2)}/$${budget.dailyCostCapUsd.toFixed(2)})`,
+                { costUsd: estimate, capUsd: budget.dailyCostCapUsd },
+              );
+            }
+          }
+          if (budget.weeklyCostCapUsd != null) {
+            const { sum, count } = await this.ledger.sumCostWeekly(projectId, now);
+            const estimate = sum + (count > 0 ? sum / count : 0);
+            if (estimate > budget.weeklyCostCapUsd) {
+              return over(
+                "project-weekly-cost",
+                `weekly cost cap reached ($${estimate.toFixed(2)}/$${budget.weeklyCostCapUsd.toFixed(2)})`,
+                { costUsd: estimate, capUsd: budget.weeklyCostCapUsd },
+              );
+            }
+          }
+          if (budget.monthlyCostCapUsd != null) {
+            const { sum, count } = await this.ledger.sumCostMonthly(projectId, now);
+            const estimate = sum + (count > 0 ? sum / count : 0);
+            if (estimate > budget.monthlyCostCapUsd) {
+              return over(
+                "project-monthly-cost",
+                `monthly cost cap reached ($${estimate.toFixed(2)}/$${budget.monthlyCostCapUsd.toFixed(2)})`,
+                { costUsd: estimate, capUsd: budget.monthlyCostCapUsd },
+              );
+            }
+          }
+        } catch (error) {
+          this.log.warn("budget cost ledger unreadable — holding (fail-closed)", {
+            projectId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return over(
+            "global",
+            "spend position unknown (cost ledger unreadable) — holding for approval",
+          );
+        }
+      }
     }
     return { ok: true };
   }
@@ -135,6 +217,25 @@ export class BudgetService {
   /** Append one started-run line to the enforcement ledger (awaited on dispatch). */
   recordDispatch(entry: LedgerEntry, now: Date = new Date()): Promise<void> {
     return this.ledger.record(entry, now);
+  }
+
+  /**
+   * Append one finished-run cost line (Phase 12) — awaited by the caller
+   * (task-scheduler's `reconcileOutcome`) but best-effort here: a write failure is
+   * logged, never thrown, so a ledger hiccup can't crash the outcome write-back.
+   */
+  async recordCost(
+    entry: { projectId: string; taskId?: string; runRef: string; kind: string; costUsd: number },
+    now: Date = new Date(),
+  ): Promise<void> {
+    try {
+      await this.ledger.recordCost({ at: now.toISOString(), ...entry }, now);
+    } catch (error) {
+      this.log.warn("cost ledger write failed (best-effort, run outcome still recorded)", {
+        ...entry,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -189,12 +290,16 @@ export class BudgetService {
     const rows: ProjectBudgetStatus[] = [];
     for (const project of projects) {
       if (!project.budget) continue; // only engagements with a budget appear in the readout
-      const [daily, weekly, monthly, running] = await Promise.all([
-        this.ledger.countDaily(project.id, now).catch(() => 0),
-        this.ledger.countWeekly(project.id, now).catch(() => 0),
-        this.ledger.countMonthly(project.id, now).catch(() => 0),
-        this.countRunning(project.id),
-      ]);
+      const [daily, weekly, monthly, dailyCost, weeklyCost, monthlyCost, running] =
+        await Promise.all([
+          this.ledger.countDaily(project.id, now).catch(() => 0),
+          this.ledger.countWeekly(project.id, now).catch(() => 0),
+          this.ledger.countMonthly(project.id, now).catch(() => 0),
+          this.ledger.sumCostDaily(project.id, now).catch(() => ({ sum: 0, count: 0 })),
+          this.ledger.sumCostWeekly(project.id, now).catch(() => ({ sum: 0, count: 0 })),
+          this.ledger.sumCostMonthly(project.id, now).catch(() => ({ sum: 0, count: 0 })),
+          this.countRunning(project.id),
+        ]);
       rows.push({
         projectId: project.id,
         name: project.name,
@@ -209,6 +314,26 @@ export class BudgetService {
         monthly: {
           used: monthly,
           ...(project.budget.monthlyRuns != null ? { cap: project.budget.monthlyRuns } : {}),
+        },
+        // Phase 12: the dollar-window counterparts, same shape as daily/weekly/monthly
+        // above — spentUsd always reported, capUsd only when the project set one.
+        dailyCost: {
+          spentUsd: dailyCost.sum,
+          ...(project.budget.dailyCostCapUsd != null
+            ? { capUsd: project.budget.dailyCostCapUsd }
+            : {}),
+        },
+        weeklyCost: {
+          spentUsd: weeklyCost.sum,
+          ...(project.budget.weeklyCostCapUsd != null
+            ? { capUsd: project.budget.weeklyCostCapUsd }
+            : {}),
+        },
+        monthlyCost: {
+          spentUsd: monthlyCost.sum,
+          ...(project.budget.monthlyCostCapUsd != null
+            ? { capUsd: project.budget.monthlyCostCapUsd }
+            : {}),
         },
         running,
         ...(project.budget.maxConcurrent != null

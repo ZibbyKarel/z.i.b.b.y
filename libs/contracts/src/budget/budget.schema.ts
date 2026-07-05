@@ -25,6 +25,17 @@ export const BudgetWindowUsageSchema = z.object({
 });
 export type BudgetWindowUsage = z.infer<typeof BudgetWindowUsageSchema>;
 
+/**
+ * A spent/cap pair for one dollar window (Phase 12) — the cost-line counterpart of
+ * {@link BudgetWindowUsageSchema}. `capUsd` absent → unlimited on that axis (the
+ * window still reports `spentUsd` for visibility even with no cap set).
+ */
+export const CostWindowUsageSchema = z.object({
+  spentUsd: z.number().nonnegative(),
+  capUsd: z.number().positive().optional(),
+});
+export type CostWindowUsage = z.infer<typeof CostWindowUsageSchema>;
+
 /** Per-engagement budget status: counts from the ledger + live runner registries. */
 export const ProjectBudgetStatusSchema = z.object({
   projectId: z.string(),
@@ -33,6 +44,14 @@ export const ProjectBudgetStatusSchema = z.object({
   weekly: BudgetWindowUsageSchema,
   /** M7: month-to-date run count (Europe/Prague calendar month). Optional for back-compat. */
   monthly: BudgetWindowUsageSchema.optional(),
+  /**
+   * Phase 12: dollar-window counterparts of `daily`/`weekly`/`monthly`, read from
+   * the ledger's `"cost"` lines. Optional for back-compat with older clients/fixtures
+   * that predate the dollar cap.
+   */
+  dailyCost: CostWindowUsageSchema.optional(),
+  weeklyCost: CostWindowUsageSchema.optional(),
+  monthlyCost: CostWindowUsageSchema.optional(),
   /** Top-level runs currently in flight for this project. */
   running: z.number().int().nonnegative(),
   maxConcurrent: z.number().int().positive().optional(),

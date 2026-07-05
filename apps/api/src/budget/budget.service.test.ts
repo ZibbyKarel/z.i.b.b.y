@@ -14,12 +14,18 @@ const limits = (over: Partial<Limits> = {}): Limits => ({
   ...over,
 });
 
+const zeroCostStats = async () => ({ sum: 0, count: 0 });
+
 interface Deps {
   ledger?: Partial<{
     countDaily: () => Promise<number>;
     countWeekly: () => Promise<number>;
     countMonthly: () => Promise<number>;
+    sumCostDaily: () => Promise<{ sum: number; count: number }>;
+    sumCostWeekly: () => Promise<{ sum: number; count: number }>;
+    sumCostMonthly: () => Promise<{ sum: number; count: number }>;
     record: () => Promise<void>;
+    recordCost: () => Promise<void>;
   }>;
   config?: { read: () => Promise<Record<string, number>> };
   project?: Project | null;
@@ -33,7 +39,11 @@ function build(deps: Deps = {}): BudgetService {
     countDaily: deps.ledger?.countDaily ?? (async () => 0),
     countWeekly: deps.ledger?.countWeekly ?? (async () => 0),
     countMonthly: deps.ledger?.countMonthly ?? (async () => 0),
+    sumCostDaily: deps.ledger?.sumCostDaily ?? zeroCostStats,
+    sumCostWeekly: deps.ledger?.sumCostWeekly ?? zeroCostStats,
+    sumCostMonthly: deps.ledger?.sumCostMonthly ?? zeroCostStats,
     record: deps.ledger?.record ?? (async () => {}),
+    recordCost: deps.ledger?.recordCost ?? (async () => {}),
   };
   const config = deps.config ?? { read: async () => ({}) };
   const projects = {
@@ -171,6 +181,80 @@ describe("BudgetService.check — fail-closed", () => {
   });
 });
 
+describe("BudgetService.check — dollar caps (Phase 12)", () => {
+  it("ok when under the daily cost cap", async () => {
+    const svc = build({
+      project: project({ dailyCostCapUsd: 10 }),
+      ledger: { sumCostDaily: async () => ({ sum: 4, count: 2 }) }, // avg 2 → estimate 6
+    });
+    expect(await svc.check("alpha")).toEqual({ ok: true });
+  });
+
+  it("over when spent + average run cost would cross the daily cost cap, and carries metrics", async () => {
+    const svc = build({
+      project: project({ dailyCostCapUsd: 10 }),
+      ledger: { sumCostDaily: async () => ({ sum: 9, count: 3 }) }, // avg 3 → estimate 12
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.over).toBe("project-daily-cost");
+    expect(result.metrics).toEqual({ costUsd: 12, capUsd: 10 });
+  });
+
+  it("over when the weekly cost cap is crossed", async () => {
+    const svc = build({
+      project: project({ weeklyCostCapUsd: 5 }),
+      ledger: { sumCostWeekly: async () => ({ sum: 6, count: 1 }) }, // avg 6 → estimate 12
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-weekly-cost");
+  });
+
+  it("over when the monthly cost cap is crossed", async () => {
+    const svc = build({
+      project: project({ monthlyCostCapUsd: 20 }),
+      ledger: { sumCostMonthly: async () => ({ sum: 21, count: 1 }) },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-monthly-cost");
+  });
+
+  it("with no cost line yet, the estimate is spent-only (avg 0) and stays under the cap", async () => {
+    const svc = build({
+      project: project({ dailyCostCapUsd: 1 }),
+      ledger: { sumCostDaily: async () => ({ sum: 0, count: 0 }) },
+    });
+    expect(await svc.check("alpha")).toEqual({ ok: true });
+  });
+
+  it("does not run the cost check at all when no dollar cap is set", async () => {
+    const sumCostDaily = vi.fn(async () => ({ sum: 0, count: 0 }));
+    const svc = build({
+      project: project({ dailyRuns: 5 }),
+      ledger: { countDaily: async () => 0, sumCostDaily },
+    });
+    expect(await svc.check("alpha")).toEqual({ ok: true });
+    expect(sumCostDaily).not.toHaveBeenCalled();
+  });
+
+  it("holds (over global) when the cost ledger is unreadable (fail-closed)", async () => {
+    const svc = build({
+      project: project({ dailyCostCapUsd: 10 }),
+      ledger: {
+        sumCostDaily: async () => {
+          throw new Error("EACCES");
+        },
+      },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("global");
+  });
+});
+
 describe("BudgetService.status — monthly", () => {
   it("includes a month-to-date window with its cap", async () => {
     const svc = build({
@@ -179,6 +263,51 @@ describe("BudgetService.status — monthly", () => {
     });
     const status = await svc.status();
     expect(status.projects[0]?.monthly).toEqual({ used: 7, cap: 30 });
+  });
+});
+
+describe("BudgetService.status — cost windows (Phase 12)", () => {
+  it("reports spentUsd + capUsd for a project with a dollar cap set", async () => {
+    const svc = build({
+      project: project({ dailyCostCapUsd: 10 }),
+      ledger: { sumCostDaily: async () => ({ sum: 3.5, count: 2 }) },
+    });
+    const status = await svc.status();
+    expect(status.projects[0]?.dailyCost).toEqual({ spentUsd: 3.5, capUsd: 10 });
+  });
+
+  it("still reports spentUsd with no capUsd when the project has no dollar cap", async () => {
+    const svc = build({
+      project: project({ dailyRuns: 5 }),
+      ledger: { sumCostDaily: async () => ({ sum: 1.2, count: 1 }) },
+    });
+    const status = await svc.status();
+    expect(status.projects[0]?.dailyCost).toEqual({ spentUsd: 1.2 });
+  });
+});
+
+describe("BudgetService.recordCost", () => {
+  it("appends a cost line via the ledger", async () => {
+    const recordCost = vi.fn(async () => {});
+    const svc = build({ ledger: { recordCost } });
+    await svc.recordCost({ projectId: "alpha", taskId: "t1", runRef: "r1", kind: "agent", costUsd: 0.4 });
+    expect(recordCost).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "alpha", runRef: "r1", costUsd: 0.4 }),
+      expect.any(Date),
+    );
+  });
+
+  it("swallows a ledger write failure — best-effort, never throws", async () => {
+    const svc = build({
+      ledger: {
+        recordCost: async () => {
+          throw new Error("disk full");
+        },
+      },
+    });
+    await expect(
+      svc.recordCost({ projectId: "alpha", runRef: "r1", kind: "agent", costUsd: 1 }),
+    ).resolves.toBeUndefined();
   });
 });
 

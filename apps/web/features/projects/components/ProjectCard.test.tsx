@@ -41,6 +41,33 @@ describe("ProjectCard budget", () => {
   });
 });
 
+describe("ProjectCard cost bars (Phase 12)", () => {
+  it("shows the daily cost bar with spent/cap when a dollar cap is set", () => {
+    render(
+      <ProjectCard
+        budget={status({ dailyCost: { spentUsd: 1.5, capUsd: 5 } })}
+        project={project({ budget: { dailyCostCapUsd: 5 } })}
+      />,
+    );
+    expect(screen.getByText("$1.50 / $5.00")).toBeInTheDocument();
+  });
+
+  it("hides a cost bar when its window has no dollar cap set (even with spend > 0)", () => {
+    render(
+      <ProjectCard
+        budget={status({ dailyCost: { spentUsd: 1.5 } })}
+        project={project({ budget: { dailyRuns: 2 } })}
+      />,
+    );
+    expect(screen.queryByText(/\$1\.50/)).not.toBeInTheDocument();
+  });
+
+  it("hides all cost bars entirely when the project has no budget", () => {
+    render(<ProjectCard budget={undefined} project={project()} />);
+    expect(screen.queryByText(/^\$/)).not.toBeInTheDocument();
+  });
+});
+
 describe("ProjectCard logo", () => {
   it("renders the project's custom logo when set", () => {
     render(<ProjectCard project={project({ logo: "data:image/png;base64,AAA" })} />);
