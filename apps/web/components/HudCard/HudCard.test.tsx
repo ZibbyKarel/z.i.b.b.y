@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { IconTileTestId } from "@zibby/design-system";
 import { HudCard } from "./HudCard";
 
 describe("HudCard", () => {
@@ -30,5 +31,17 @@ describe("HudCard", () => {
     render(<HudCard onClick={onOpen} openLabel="otevřít reviewer" title="reviewer" />);
     fireEvent.click(screen.getByRole("button", { name: "otevřít reviewer" }));
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the custom logo, defaulting its alt text to the title", () => {
+    render(<HudCard logoSrc="data:image/png;base64,AAA" title="media-vault" />);
+    const img = screen.getByTestId(IconTileTestId.Image);
+    expect(img).toHaveAccessibleName("media-vault");
+    expect(img).toHaveAttribute("src", "data:image/png;base64,AAA");
+  });
+
+  it("falls back to the glyph when no logo is set", () => {
+    render(<HudCard title="reviewer" />);
+    expect(screen.queryByTestId(IconTileTestId.Image)).toBeNull();
   });
 });

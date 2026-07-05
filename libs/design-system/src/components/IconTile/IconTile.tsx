@@ -1,12 +1,16 @@
+"use client";
+
 import type { HTMLAttributes, ReactNode, Ref } from "react";
+import { useState } from "react";
+import type { Size } from "../../tokens";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
-import { Icon } from "../Icon/Icon";
 import type { IconName } from "../Icon/Icon";
-import type { Size } from "../../tokens";
+import { Icon } from "../Icon/Icon";
 
 export enum IconTileTestId {
   Root = "icon-tile-root",
+  Image = "icon-tile-image",
 }
 
 export type IconTileSize = "sm" | "md" | "lg" | "xl";
@@ -49,6 +53,14 @@ const radiusClass: Record<IconTileRadius, string> = {
 export interface IconTileProps extends Omit<HTMLAttributes<HTMLElement>, "className"> {
   /** Glyph rendered inside the tile (ignored when `children` is provided). */
   glyph?: IconName;
+  /**
+   * Custom image (e.g. a project logo data URI) filling the tile. Takes priority
+   * over `glyph`/`children`; falls back to them automatically if the image fails
+   * to load.
+   */
+  src?: string;
+  /** Accessible alt text for `src`. */
+  alt?: string;
   size?: IconTileSize;
   tone?: IconTileTone;
   radius?: IconTileRadius;
@@ -70,6 +82,8 @@ export interface IconTileProps extends Omit<HTMLAttributes<HTMLElement>, "classN
  */
 export function IconTile({
   glyph,
+  src,
+  alt,
   size = "md",
   tone = "accent",
   radius = "sm",
@@ -84,10 +98,24 @@ export function IconTile({
   ...rest
 }: IconTileProps) {
   const px = tilePx[size];
+  // Reset the failure flag whenever the image source changes, so swapping to a
+  // new (valid) src always gets a fresh load attempt instead of sticking on the
+  // previous fallback. Adjusted during render (React's documented pattern for
+  // resetting state on a prop change) rather than in an effect, which would
+  // cause an extra render pass.
+  const [imageFailed, setImageFailed] = useState(false);
+  const [trackedSrc, setTrackedSrc] = useState(src);
+  if (src !== trackedSrc) {
+    setTrackedSrc(src);
+    setImageFailed(false);
+  }
+
+  const showImage = Boolean(src) && !imageFailed;
+
   return (
     <Tag
       className={cn(
-        "grid shrink-0 place-items-center border",
+        "grid shrink-0 place-items-center overflow-hidden border",
         shape === "circle" ? "rounded-full" : radiusClass[radius],
         filled ? toneClass[tone] : outlineToneClass[tone],
         glow && "shadow-glow-accent",
@@ -102,7 +130,17 @@ export function IconTile({
       style={{ width: px, height: px, ...style }}
       {...rest}
     >
-      {children ?? (glyph ? <Icon name={glyph} size={innerIcon[size]} /> : null)}
+      {showImage ? (
+        <img
+          alt={alt ?? ""}
+          className="h-full w-full object-cover"
+          data-testid={IconTileTestId.Image}
+          onError={() => setImageFailed(true)}
+          src={src}
+        />
+      ) : (
+        (children ?? (glyph ? <Icon name={glyph} size={innerIcon[size]} /> : null))
+      )}
     </Tag>
   );
 }

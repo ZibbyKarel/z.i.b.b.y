@@ -133,6 +133,14 @@ export const ProjectSchema = z.object({
    */
   hasSecrets: z.boolean().optional(),
 
+  /**
+   * Optional custom logo as a data URI (`data:image/*;base64,…`), shown on the
+   * project card in place of the default glyph (the glyph remains the fallback
+   * when absent, or when the image fails to load). Capped at ~200 KB of base64
+   * (280 000 chars) to bound the cost of reading it back on every `GET /projects`.
+   */
+  logo: z.string().startsWith("data:image/").max(280_000).optional(),
+
   // --- Operational profile (M1) ---
   /** Team members, clients, and stakeholders associated with this project. */
   identity: ProjectIdentitySchema.optional(),

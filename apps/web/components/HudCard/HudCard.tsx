@@ -15,6 +15,11 @@ export interface HudCardProps {
   title: string;
   /** Icon rendered in the leading tile. Defaults to "bot". */
   glyph?: IconName;
+  /** Custom logo (data URI) shown in the leading tile instead of the glyph; falls
+   * back to the glyph automatically when absent or when it fails to load. */
+  logoSrc?: string;
+  /** Accessible alt text for `logoSrc`; defaults to `title`. */
+  logoAlt?: string;
   /** Mono meta line right under the title (a path, an id…), single-line truncated. */
   subtitle?: string;
   /** Secondary text under the title, clamped to two lines. */
@@ -42,6 +47,8 @@ export interface HudCardProps {
 export function HudCard({
   title,
   glyph,
+  logoSrc,
+  logoAlt,
   subtitle,
   description,
   aside,
@@ -56,7 +63,7 @@ export function HudCard({
     <Container textAlign="left">
       <Stack gap="150">
         <Stack align="start" direction="row" gap="150">
-          <IconTile glyph={glyph ?? "bot"} size="md" />
+          <IconTile alt={logoAlt ?? title} glyph={glyph ?? "bot"} size="md" src={logoSrc} />
           <Container grow minW0>
             <Stack gap="25">
               <Typography mono truncate size="md" type="note" weight="semibold">

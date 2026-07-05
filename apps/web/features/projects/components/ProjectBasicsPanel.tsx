@@ -1,20 +1,37 @@
 "use client";
 
-import { type ReactNode } from "react";
-import { useState } from "react";
+import { type ChangeEvent, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Pressable, Stack, Tag, TextAreaField, Typography } from "@zibby/design-system";
+import {
+  Button,
+  IconTile,
+  Pressable,
+  Stack,
+  Tag,
+  TextAreaField,
+  Typography,
+} from "@zibby/design-system";
 import type { Category, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { toastBus } from "../../../components/Toaster/toastBus";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
 
-/** The core project record fields this panel edits (name/path/category/desc/budget/checks/env). */
+/**
+ * Mirrors `ProjectSchema.logo`'s cap (280 000 base64 chars, ~200 KB) so an
+ * oversized file is rejected client-side with a toast instead of a 422 on save.
+ */
+const LOGO_MAX_DATA_URI_LENGTH = 280_000;
+
+/** The core project record fields this panel edits (name/path/category/desc/logo/budget/checks/env). */
 export interface ProjectBasicsBody {
   name: string;
   path: string;
   desc?: string;
   category?: string;
+  /** Custom logo as a data URI; absent/undefined falls back to the default glyph. */
+  logo?: string;
   budget?: {
     dailyRuns?: number;
     weeklyRuns?: number;
@@ -102,6 +119,29 @@ export function ProjectBasicsPanel({
   const [envRows, setEnvRows] = useState<KeyValueRow[]>(toRows(project?.env));
   // Verify-phase shell commands, one per line (joined with && by the runner).
   const [checksText, setChecksText] = useState((project?.checks ?? []).join("\n"));
+  const [logo, setLogo] = useState<string | undefined>(project?.logo);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  function handleLogoFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset the input so picking the same file again still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toastBus.emit({ message: t("fields.logoTooLarge") });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUri = typeof reader.result === "string" ? reader.result : null;
+      if (dataUri != null && dataUri.length <= LOGO_MAX_DATA_URI_LENGTH) {
+        setLogo(dataUri);
+      } else {
+        toastBus.emit({ message: t("fields.logoTooLarge") });
+      }
+    };
+    reader.readAsDataURL(file);
+  }
 
   const { renderForm, submit, form } = useFormControls<ProjectEditValues>({
     defaultValues: {
@@ -140,6 +180,7 @@ export function ProjectBasicsPanel({
         path: values.path.trim(),
         desc: values.desc.trim() || undefined,
         category: values.category || undefined,
+        logo,
         budget,
         checks: checks.length > 0 ? checks : undefined,
         env: fromRows(envRows),
@@ -217,6 +258,39 @@ export function ProjectBasicsPanel({
           name="desc"
           placeholder={t("fields.descPlaceholder")}
         />
+
+        <Stack gap="75">
+          <Typography mono size="sm" type="note" variant="secondary">
+            {t("fields.logo")}
+          </Typography>
+          <Stack align="center" direction="row" gap="150">
+            <IconTile alt={watchedName || t("fields.logo")} glyph="code" size="xl" src={logo} />
+            <Stack direction="row" gap="75">
+              <Button
+                icon="file"
+                intent="ghost"
+                onClick={() => logoInputRef.current?.click()}
+                size="sm"
+              >
+                {t("fields.logoUpload")}
+              </Button>
+              {logo != null && (
+                <Button icon="trash" intent="danger" onClick={() => setLogo(undefined)} size="sm">
+                  {t("fields.logoRemove")}
+                </Button>
+              )}
+            </Stack>
+            {/* Native hidden attribute (not a style/className) — triggered from the Button above. */}
+            <input
+              hidden
+              accept="image/*"
+              data-testid="project-logo-input"
+              onChange={handleLogoFile}
+              ref={logoInputRef}
+              type="file"
+            />
+          </Stack>
+        </Stack>
 
         <Stack gap="75">
           <Typography mono size="sm" type="note" variant="secondary">

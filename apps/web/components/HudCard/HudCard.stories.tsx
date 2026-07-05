@@ -60,3 +60,10 @@ export const Default: Story = {
 export const Minimal: Story = {
   args: { description: undefined, badges: undefined, actions: undefined },
 };
+
+export const WithLogo: Story = {
+  args: {
+    logoSrc:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  },
+};

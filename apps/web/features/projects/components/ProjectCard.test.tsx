@@ -1,4 +1,5 @@
 import type { Project, ProjectBudgetStatus } from "@zibby/contracts";
+import { IconTileTestId } from "@zibby/design-system";
 import { describe, expect, it } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { ProjectCard } from "./ProjectCard";
@@ -37,5 +38,19 @@ describe("ProjectCard budget", () => {
       <ProjectCard budget={status({ held: 2 })} project={project({ budget: { dailyRuns: 1 } })} />,
     );
     expect(screen.getByText("2")).toBeInTheDocument();
+  });
+});
+
+describe("ProjectCard logo", () => {
+  it("renders the project's custom logo when set", () => {
+    render(<ProjectCard project={project({ logo: "data:image/png;base64,AAA" })} />);
+    const img = screen.getByTestId(IconTileTestId.Image);
+    expect(img).toHaveAccessibleName("Alpha");
+    expect(img).toHaveAttribute("src", "data:image/png;base64,AAA");
+  });
+
+  it("falls back to the code glyph when the project has no logo", () => {
+    render(<ProjectCard project={project()} />);
+    expect(screen.queryByTestId(IconTileTestId.Image)).toBeNull();
   });
 });

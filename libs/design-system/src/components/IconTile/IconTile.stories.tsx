@@ -2,6 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Typography } from "../Typography/Typography";
 import { IconTile } from "./IconTile";
 
+// A tiny valid 1x1 transparent PNG — stands in for an uploaded project logo.
+const PLACEHOLDER_LOGO =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
 const meta: Meta<typeof IconTile> = {
   title: "DesignSystem/IconTile",
   component: IconTile,
@@ -34,6 +38,15 @@ export const Overview: Story = {
           <IconTile glyph="spark" tone="accent" />
           <IconTile glyph="gear" tone="neutral" />
           <IconTile interactive as="button" glyph="edit" tone="neutral" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography mono type="subtitle" variant="tertiary">
+          image (with glyph fallback)
+        </Typography>
+        <div className="flex items-center gap-4">
+          <IconTile alt="Project logo" glyph="code" size="xl" src={PLACEHOLDER_LOGO} />
+          <IconTile alt="Broken logo" glyph="code" size="xl" src="data:image/png;base64,broken" />
         </div>
       </div>
     </div>

@@ -84,6 +84,8 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
       }
       description={project.desc}
       glyph="code"
+      logoAlt={project.name}
+      logoSrc={project.logo}
       onClick={() => onOpen?.(project)}
       openLabel={t("openAria", { name: project.name })}
       subtitle={project.path}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { IconTile, IconTileTestId } from "./IconTile";
@@ -30,5 +30,27 @@ describe("IconTile", () => {
     expect(el).toHaveRole("button");
     await userEvent.click(el);
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("renders the image with its alt text when src is provided", () => {
+    render(<IconTile alt="Project logo" glyph="code" src="data:image/png;base64,AAA" />);
+    const img = screen.getByTestId(IconTileTestId.Image);
+    expect(img).toHaveAccessibleName("Project logo");
+    expect(img).toHaveAttribute("src", "data:image/png;base64,AAA");
+    expect(screen.queryByTestId(IconTestId.Root)).toBeNull();
+  });
+
+  it("falls back to the glyph when the image fails to load", () => {
+    render(<IconTile alt="Project logo" glyph="code" src="data:image/png;base64,AAA" />);
+    const img = screen.getByTestId(IconTileTestId.Image);
+    fireEvent.error(img);
+    expect(screen.queryByTestId(IconTileTestId.Image)).toBeNull();
+    expect(screen.getByTestId(IconTestId.Root)).toBeInTheDocument();
+  });
+
+  it("renders the glyph when no src is provided", () => {
+    render(<IconTile glyph="code" />);
+    expect(screen.queryByTestId(IconTileTestId.Image)).toBeNull();
+    expect(screen.getByTestId(IconTestId.Root)).toBeInTheDocument();
   });
 });
