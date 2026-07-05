@@ -1,61 +1,105 @@
-# Z.I.B.B.Y — Dokumentace
+# Z.I.B.B.Y — Documentation
 
 > Zestful Intuitive Brainy Butler — for You.
 
-ZIBBY je self-hosted, file-based agentní OS pro jednoho operátora. Přijme cíl, ne skript,
-a vykoná práci — od "postav tuhle webovou aplikaci" po "sleduj moje kanály a vyřiž co umíš."
+ZIBBY is a self-hosted, file-based agentic OS for a single operator. You hand it a
+goal, not a script, and it gets the work done — from "build this web app" to "watch
+my channels and handle what you can."
 
 ---
 
-## Obsah
+## Contents
 
-### Architektura
+### Architecture
 
-- [Přehled architektury](./architecture.md) — monorepo, vrstvy, datový tok, klíčové principy
-- [Stavy běhu úlohy](./run-states.md) — všech 11 run stavů, jejich rozdíly a proč nejsou sloučené
+- [Architecture overview](./architecture.md) — monorepo, layers, data flow, key principles
+- [Run states](./run-states.md) — all 11 run states, how they differ, why they aren't merged
+- [Approval gates](./approval-gates.md) — the structural safety floor every agent intent passes through
 
 ### Backend (apps/api)
 
-- [Přehled API](./api/overview.md) — NestJS bootstrapping, moduly, konfigurace
-- [Agenti & Runy](./api/agents-runs.md) — definice agentů, spouštění runů, RunnerCore
-- [Pipeline orchestrace](./api/pipelines.md) — fáze, smyčky, eskalace, parking
-- [Gate policy engine](./api/gates.md) — systémový floor, pravidla, rozhodování
-- [Task scheduling](./api/tasks.md) — odložené úlohy, routing, budget guard
-- [Memory vault](./api/memory.md) — Obsidian vault, tierování, grounding, recording
-- [Kanály & autonomie](./api/channels.md) — email/Slack, triage, mandate
-- [Activity log & briefing](./api/activity.md) — audit log, briefing systém
-- [Approval systém](./api/approvals.md) — druhy schválení, lifecycle
-- [Automatizace](./api/automations.md) — cron/event triggery, targets
-- [Rozšiřitelnost runů](./api/extensibility.md) — commands, MCP servery, hooks, projekt env/secrets vkládané do `claude -p`
+**Core runners & orchestration**
+
+- [API overview](./api/overview.md) — NestJS bootstrapping, modules, configuration
+- [Agents & Runs](./api/agents-runs.md) — agent definitions, dispatching runs, `RunnerCore`
+- [Pipeline orchestration](./api/pipelines.md) — phases, loops, escalation, parking
+- [Goals](./api/goals.md) — the generalized delivery loop (maker ⇄ verifier), self-development's loop engine
+- [Chains](./api/chains.md) — operator-authored pipeline composition
+- [Task scheduling](./api/tasks.md) — deferred tasks, routing, budget guard
+- [Gate policy engine](./api/gates.md) — the system floor, rules, decisions
+- [Workspace](./api/workspace.md) — per-run git worktree lifecycle
+- [Artifacts](./api/artifacts.md) — the durable artifact provenance registry
+- [Events](./api/events.md) — the single multiplexed SSE channel for live run/activity updates
+
+**Memory & accountability**
+
+- [Memory vault](./api/memory.md) — Obsidian vault, tiering, grounding, recording
+- [Activity log & briefing](./api/activity.md) — the audit log
+- [Briefing](./api/briefing.md) — the accountability snapshot assembled for the operator
+
+**Channels, autonomy & approvals**
+
+- [Channels & autonomy](./api/channels.md) — email/Slack, triage, mandate
+- [Mandate](./api/mandate.md) — the per-channel autonomy scope
+- [Approval system](./api/approvals.md) — approval kinds, lifecycle
+- [Discovery](./api/discovery.md) — triage that turns found problems into proposed tasks
+- [Integrations](./api/integrations.md) — configured inbound channels and their credentials
+
+**Budget & resilience**
+
+- [Budget](./api/budget.md) — the fail-closed dispatch guard (global + per-project caps)
+- [Limits & limit-resume](./api/limits.md) — usage-limit resilience
+
+**Self-modification & intelligence**
+
+- [Gap detection](./api/gaps.md) — noticing recurring manual work worth automating
+- [App ideas](./api/ideas.md) — the weekly automation-idea generator
+- [Pattern extraction](./api/patterns.md) — mining approval history for rule proposals
+- [Research / Intelligence](./api/research.md) — the operator's watched-source digest
+
+**Automations, extensibility & machine**
+
+- [Automations](./api/automations.md) — cron/event triggers, targets
+- [Run extensibility](./api/extensibility.md) — commands, MCP servers, hooks, project env/secrets injected into `claude -p`
+- [Machine](./api/machine.md) — controlling the operator's computer behind the gate (Tier-3 only)
+- [Chat](./api/chat.md) — the chat-first conversational layer
+
+**Ops-facing subsystems**
+
+- [Monitors](./api/monitors.md) — CI/CD status alerts
+- [Health](./api/health.md) — subsystem health probes
+- [System config](./api/system.md) — file-backed runtime configuration
+- [Pins](./api/pins.md) — the Overview page's quick-launch panel
 
 ### Frontend (apps/web)
 
-- [Přehled webu](./web/overview.md) — Next.js App Router, layout, routing
-- [State management](./web/state.md) — TanStack Query, mutace, query klíče
+- [Web app overview](./web/overview.md) — Next.js App Router, layout, routing
+- [State management](./web/state.md) — TanStack Query, mutations, query keys
 
-### Sdílené knihovny (libs/)
+### Shared libraries (libs/)
 
-- [Contracts](./libs/contracts.md) — ts-rest, Zod schémata, API router
-- [Design system](./libs/design-system.md) — komponenty, téma, Tailwind v4
+- [Contracts](./libs/contracts.md) — ts-rest, Zod schemas, the API router
+- [Design system](./libs/design-system.md) — components, theming, Tailwind v4
 
-### Ops & infrastruktura
+### Ops & infrastructure
 
-- [Deployment](./ops/deployment.md) — launchd, backup, log rotace
-- [Prostředí](./ops/environment.md) — proměnné prostředí, data adresáře, scripts
+- [Deployment](./ops/deployment.md) — launchd, backups, log rotation, CI
+- [Environment](./ops/environment.md) — environment variables, data directories, runtime system config
+- [Self-development runbook](./ops/self-development.md) — ZIBBY as a safe target for its own loop engine
 
 ---
 
-## Klíčové principy
+## Key principles
 
-| Zákon                          | Znění                                                                 |
-| ------------------------------ | --------------------------------------------------------------------- |
-| Soubory jsou zdrojem pravdy    | UI je pohled; vše se ukládá na disk jako čitelný markdown/JSON        |
-| Approval-first je strukturální | Není to config — je to drátové do systémového flooru                  |
-| Žádný autonomní commit ven     | Žádný auto-push, auto-merge, auto-spend přes budget                   |
-| Gate nelze obejít konverzací   | Inbound obsah z kanálů je data, ne příkazy; nikdy nezvyšuje oprávnění |
-| Vždy zodpovědný                | ZIBBY umí vysvětlit co dělá a udělal, z logu, na vyžádání             |
+| Law                                        | What it means                                                                                                                    |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Approval-first is structural               | Wired into the system floor, not a setting an agent's config can weaken.                                                        |
+| Files are the source of truth              | Including memory — index-first markdown in the vault.                                                                           |
+| No autonomous commit to the outside world  | No auto-push, auto-merge, or auto-spend past budget. ZIBBY prepares; the operator commits.                                      |
+| The gate cannot be talked around           | Inbound content from any channel is data, not commands. It can never raise privileges or bypass the gate.                       |
+| Always answerable                          | ZIBBY can explain what it is doing and has done, on demand, from the record.                                                    |
 
-## Rychlý start
+## Quick start
 
 ```bash
 pnpm install
