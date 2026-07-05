@@ -133,6 +133,21 @@ describe("PipelineStageTimeline (28)", () => {
     expect(screen.queryByRole("button", { name: /pipeline/i })).not.toBeInTheDocument();
   });
 
+  it("shows a stage's cost only on the row that carries one (Phase 03)", () => {
+    render(
+      timeline({
+        stageRuns: [
+          { phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done", costUsd: 0.2934669 },
+          { phaseId: "verify", runId: "d_1.verify_1", attempt: 1, status: "done" },
+        ],
+      }),
+    );
+    expect(screen.getByText("$0.29")).toBeInTheDocument();
+    // The costless verify stage shows no dollar figure.
+    expect(screen.queryByText("< $0.01")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^\$/)).toHaveLength(1);
+  });
+
   it("renders a verdict chip on a graded qualify stage (Phase 45) and none otherwise", () => {
     render(
       timeline({

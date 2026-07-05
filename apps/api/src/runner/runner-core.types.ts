@@ -49,6 +49,15 @@ export interface BaseRun {
   resumeAt?: number | null;
   /** Phase 9: how many times this run has been auto-resumed off a limit pause. */
   limitResumeCycles?: number;
+  /**
+   * Souhrnná cena běhu v USD (odhad podle API ceníku, `total_cost_usd` z
+   * `claude -p --output-format stream-json`). Akumuluje se přes respawny
+   * (limit-pause resume spouští stejný runId znovu BEZ `--resume`, takže
+   * jde o nezávislé relace, ne pokračování — viz Zjištění). Absent, dokud
+   * run neuvidí svůj první `result` event; absent i pro demo/test běhy bez
+   * `formatLine`.
+   */
+  costUsd?: number;
 }
 
 /** Everything a wrapper must hand the core to spawn one run. */

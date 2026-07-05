@@ -211,10 +211,16 @@ export class TaskClassifierService {
     if (!TaskRoutingSchema.safeParse(routing).success) return false;
     const target = routing.target;
     // The orchestrator is this service's own terminal rule — a router that picks
-    // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10) is
-    // explicit-only: it never appears in the routable catalog, so the classifier
-    // must never route to one (the same posture as orchestrator).
-    if (target.kind === "orchestrator" || target.kind === "goal") return false;
+    // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10) and
+    // a chain (Phase 05) are explicit-only: they never appear in the routable catalog,
+    // so the classifier must never route to one (the same posture as orchestrator).
+    if (
+      target.kind === "orchestrator" ||
+      target.kind === "goal" ||
+      target.kind === "chain"
+    ) {
+      return false;
+    }
     return candidates.some((c) => c.id === target.id && c.kind === target.kind);
   }
 }

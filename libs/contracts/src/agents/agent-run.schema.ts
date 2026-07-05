@@ -67,6 +67,8 @@ export const AgentRunSchema = z.object({
    * first resume.
    */
   limitResumeCycles: z.number().int().nonnegative().optional(),
+  /** Souhrnná cena běhu (odhad USD, viz runner-core.types.ts `BaseRun.costUsd`). */
+  costUsd: z.number().optional(),
   /**
    * The dedicated git worktree this run worked in (Phase 3.1), when it targeted a
    * git project. Absent for non-git / projectless runs (the run spawns in its

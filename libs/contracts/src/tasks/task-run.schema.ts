@@ -4,6 +4,7 @@ import {
   GoalParkedDetailSchema,
   GoalParkedReasonSchema,
 } from "../goals/goal-run.schema";
+import { ChainRunStepSchema } from "../chains/chain.schema";
 import {
   ParkedDetailSchema,
   PipelineCheckpointSchema,
@@ -16,7 +17,7 @@ import { AttachmentSchema } from "./task.schema";
  * dispatched yet (it has no run behind it — its `runId` is the task id), the other
  * three are the live/finished run kinds.
  */
-export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "scheduled"]);
+export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "chain", "scheduled"]);
 export type RunKind = z.infer<typeof RunKindSchema>;
 
 /**
@@ -53,7 +54,7 @@ export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>;
  * id when the definition was deleted (mirrors the web `runGlyph` catalog-miss handling).
  */
 export const ProcessorSchema = z.object({
-  kind: z.enum(["agent", "pipeline", "goal"]),
+  kind: z.enum(["agent", "pipeline", "goal", "chain"]),
   id: z.string().min(1),
   name: z.string().min(1),
 });
@@ -126,6 +127,12 @@ export const TaskRunSchema = z.object({
   deferredLimit: z.boolean().optional(),
   /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
   checkpoints: z.array(PipelineCheckpointSchema).optional(),
+  /**
+   * Souhrnná cena běhu (odhad USD): pro agent běh přímo z `AgentRun.costUsd`,
+   * pro pipeline běh součet `stageRuns[].costUsd`. Absent = žádná data (starý
+   * běh před touhle featurou), ne nula.
+   */
+  costUsd: z.number().optional(),
   /** Phase 28 (pipeline runs): the per-phase stage runs, for the detail's stage timeline. */
   stageRuns: z.array(StageRunSchema).optional(),
   /** Pipeline runs: the phase currently executing, for the timeline's live stage row. */
@@ -138,6 +145,10 @@ export const TaskRunSchema = z.object({
   goalParked: GoalParkedDetailSchema.optional(),
   /** Phase 10 (goal runs): why the goal parked (iterations / budget / limit). */
   goalParkedReason: GoalParkedReasonSchema.optional(),
+  /** Phase 05 (chain runs): the chain definition id, for the detail's step fold. */
+  chainId: z.string().optional(),
+  /** Phase 05 (chain runs): the per-step pipeline runs, folded into the detail. */
+  steps: z.array(ChainRunStepSchema).optional(),
 });
 export type TaskRun = z.infer<typeof TaskRunSchema>;
 

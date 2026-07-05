@@ -882,6 +882,24 @@ export class RunnerCore<R extends BaseRun> {
     timer.unref?.();
   }
 
+  /**
+   * Vytáhne `total_cost_usd` z jednoho stream-json `result` řádku, nebo
+   * `null`, pokud řádek není platný `result` event. Levný substring check
+   * před `JSON.parse`, aby se neparsovaly všechny ostatní řádky výstupu.
+   */
+  private extractResultCost(raw: string): number | null {
+    const line = raw.trim();
+    if (!line.startsWith("{") || !line.includes('"total_cost_usd"')) return null;
+    try {
+      const evt = JSON.parse(line);
+      return evt?.type === "result" && typeof evt.total_cost_usd === "number"
+        ? evt.total_cost_usd
+        : null;
+    } catch {
+      return null; // not JSON / malformed — ignore
+    }
+  }
+
   /** Attach output capture + exit handling to a live handle. */
   private wire(handle: RunHandle<R>): void {
     const { child, log, run } = handle;
@@ -907,6 +925,11 @@ export class RunnerCore<R extends BaseRun> {
         if (this.formatLine) {
           const formatted = this.formatLine(raw);
           if (formatted !== null) log.write(`${formatted}\n`);
+          // Cena z `result` eventu se akumuluje přes respawny (limit-pause
+          // resume spouští stejný runId znovu bez `--resume`). Jen na reálném
+          // claude běhu (formatLine wired), ne na demo/test výstupu.
+          const cost = this.extractResultCost(raw);
+          if (cost !== null) run.costUsd = (run.costUsd ?? 0) + cost;
         }
         const line = raw.trim();
         const progress = /^PROGRESS\s+(\d+)/.exec(line);
@@ -964,6 +987,10 @@ export class RunnerCore<R extends BaseRun> {
     // formatted path buffers it; the raw path already wrote it as part of the chunk).
     const flushResidual = () => {
       if (this.formatLine && residual) {
+        // Poslední řádek běhu (typicky `result` event) může dorazit bez
+        // trailing newline — parsuj cenu i tady, jinak by se ztratila.
+        const cost = this.extractResultCost(residual);
+        if (cost !== null) run.costUsd = (run.costUsd ?? 0) + cost;
         const formatted = this.formatLine(residual);
         if (formatted !== null) log.write(`${formatted}\n`);
         residual = "";

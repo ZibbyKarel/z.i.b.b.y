@@ -1528,10 +1528,20 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // the stage goes terminal.
     run.currentStageRunId = rec.runId;
     const status = await this.waitForStage(rec.runId);
+    // Cena té fáze se čte z dokončeného stage recordu (naakumulovaná přes
+    // případné limit-pause respawny) a promítá se na vrácený StageRun.
+    const finishedRec = this.core.get(rec.runId);
     // `dir` records the numbered sandbox folder this dispatch ran in (the basename
     // of the cwd drive() computed), so later lookups find THIS run's folder even
     // after a loop re-runs the same phase into a new one.
-    return { phaseId: phase.id, runId: rec.runId, attempt, status, dir: path.basename(stageCwd) };
+    return {
+      phaseId: phase.id,
+      runId: rec.runId,
+      attempt,
+      status,
+      dir: path.basename(stageCwd),
+      ...(finishedRec?.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
+    };
   }
 
   /**

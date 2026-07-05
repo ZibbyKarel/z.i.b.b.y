@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button, Stack, Tag, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { formatCostUsd } from "../../../utils/cost";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import { useStageRunLogStream } from "../useRunLogStream";
 import type { RunView } from "../run";
@@ -172,6 +173,11 @@ export function PipelineStageTimeline({
                     )}
                   </Stack>
                   <Stack align="center" direction="row" gap="100">
+                    {s.costUsd != null && (
+                      <Typography mono size="2xs" type="note" variant="tertiary">
+                        {formatCostUsd(s.costUsd)}
+                      </Typography>
+                    )}
                     {s.verdict && (
                       <Tag
                         data-testid={`stage-verdict-${s.verdict}`}

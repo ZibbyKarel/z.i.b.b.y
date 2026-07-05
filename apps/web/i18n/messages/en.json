@@ -877,6 +877,7 @@
     "metaScheduled": "fires",
     "metaTarget": "target",
     "metaPipeline": "pipeline",
+    "metaCost": "cost (est.)",
     "metaAgent": "agent",
     "metaKind": "type",
     "metaTask": "task",
@@ -923,6 +924,7 @@
       "agent": "agent",
       "pipeline": "pipeline",
       "goal": "goal",
+      "chain": "chain",
       "scheduled": "scheduled task"
     },
     "parkedQueue": "parked runs",
@@ -977,6 +979,15 @@
     "stageNoLog": "This stage has no log yet.",
     "stageNone": "This run has no stages yet.",
     "stageLoading": "Loading maker stages…",
+    "chainSteps": "Chain steps",
+    "chainNoSteps": "This run has no steps yet.",
+    "chainStep": "step {n}",
+    "chainStepStatus": {
+      "pending": "pending",
+      "running": "running",
+      "done": "done",
+      "failed": "failed"
+    },
     "verdict": {
       "pass": "Approved",
       "gap": "Incomplete",
@@ -1365,6 +1376,13 @@
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
       "send": "Send"
     }
+  },
+  "pins": {
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "quickLaunchTitle": "Quick launch",
+    "run": "Run",
+    "unpinAria": "Unpin {name}"
   },
   "chains": {
     "title": "Chains",

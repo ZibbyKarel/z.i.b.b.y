@@ -22,6 +22,8 @@ export const PipelineStageRecordSchema = z.object({
   // `resumeAt` up; the resume path drives off the aggregate, not the stage).
   resumeAt: z.number().int().nullable().optional(),
   limitResumeCycles: z.number().int().nonnegative().optional(),
+  /** Souhrnná cena téhle fáze (odhad USD, viz runner-core.types.ts `BaseRun.costUsd`). */
+  costUsd: z.number().optional(),
   pipelineRunId: z.string(),
   phaseId: z.string(),
   attempt: z.number().int().min(1),

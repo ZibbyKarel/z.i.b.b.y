@@ -7,6 +7,15 @@
 > změnit popis/target před odesláním); u řetězce RUN spustí chain rovnou, beze
 > dialogu — přesně tak, jak řetězec funguje dnes všude jinde v appce.
 
+> **⚠️ Aktualizace (phase-05): řetězec je teď plnohodnotný `TaskTarget`.**
+> [`docs/plans/phase-05.md`](./phase-05.md) obrátil dřívější rozhodnutí "chain
+> se spouští bez dialogu" — chain je nyní `kind: "chain"` v `TaskTargetSchema` a
+> spouští se **stejnou cestou jako agent/pipeline**: RUN otevře `NewTaskDialog`
+> s předvyplněným targetem. V tomto plánu to znamená: RUN na připnuté chain
+> kartě volá **stejné** `openNewTask(undefined, { kind: "chain", ... })` jako
+> agent/pipeline — žádné zvláštní `if (item.kind === "chain")
+> startChain.mutate(...)` větvení (viz Fáze 6, upraveno níže).
+
 ---
 
 ## Zjištění (současný stav, ověřeno v kódu)
@@ -117,7 +126,7 @@
 
 ## Fáze 1 — Kontrakt: schéma + API kontrakt pro piny
 
-- [ ] Nový soubor `libs/contracts/src/pins/pin.schema.ts`:
+- [x] Nový soubor `libs/contracts/src/pins/pin.schema.ts`:
   ```ts
   import { z } from "zod";
 
@@ -138,7 +147,7 @@
   export const PinsSchema = z.array(PinSchema);
   export type Pins = z.infer<typeof PinsSchema>;
   ```
-- [ ] Nový soubor `libs/contracts/src/pins/pins.contract.ts` (1:1 vzor podle
+- [x] Nový soubor `libs/contracts/src/pins/pins.contract.ts` (1:1 vzor podle
       `system.contract.ts`):
   ```ts
   import { initContract } from "@ts-rest/core";
@@ -173,17 +182,17 @@
   );
   export type PinsContract = typeof pinsContract;
   ```
-- [ ] `libs/contracts/src/index.ts`: přidat vedle řádků 55-56 (`system`)
+- [x] `libs/contracts/src/index.ts`: přidat vedle řádků 55-56 (`system`)
       `export * from "./pins/pin.schema";` a
       `export * from "./pins/pins.contract";`.
-- [ ] `libs/contracts/src/app.contract.ts`: import `pinsContract` vedle
+- [x] `libs/contracts/src/app.contract.ts`: import `pinsContract` vedle
       `systemContract` (řádek 36) a registrace `pins: pinsContract,` vedle
       `system: systemContract,` v `appContract` (řádek 82).
-- [ ] `pnpm typecheck`.
+- [x] `pnpm typecheck`.
 
 ## Fáze 2 — Backend: `PinsStore` + kontroler + modul
 
-- [ ] Nový soubor `apps/api/src/pins/pins.store.ts` (1:1 vzor podle
+- [x] Nový soubor `apps/api/src/pins/pins.store.ts` (1:1 vzor podle
       `system-config.store.ts`, ale nad polem místo objektu a s dedup na
       write):
   ```ts
@@ -244,7 +253,7 @@
   (Poznámka: dedup podle poslední výskytu, ne první — když klient posílá "seznam
   po přidání", nová položka je na konci a musí přežít, kdyby náhodou byla v
   seznamu duplicitně.)
-- [ ] Nový soubor `apps/api/src/pins/pins.controller.ts`:
+- [x] Nový soubor `apps/api/src/pins/pins.controller.ts`:
   ```ts
   import { Controller } from "@nestjs/common";
   import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
@@ -264,7 +273,7 @@
     }
   }
   ```
-- [ ] Nový soubor `apps/api/src/pins/pins.module.ts` (1:1 vzor podle
+- [x] Nový soubor `apps/api/src/pins/pins.module.ts` (1:1 vzor podle
       `system.module.ts`, ale bez `@Global()` — piny čte jen web přes HTTP,
       žádný jiný backend modul je nepotřebuje in-process):
   ```ts
@@ -283,13 +292,13 @@
   })
   export class PinsModule {}
   ```
-- [ ] `apps/api/src/app.module.ts`: import `PinsModule` vedle `SystemModule`
+- [x] `apps/api/src/app.module.ts`: import `PinsModule` vedle `SystemModule`
       (řádek 36) a přidat do `imports` pole vedle `SystemModule` (řádek 43).
-- [ ] `pnpm typecheck`.
+- [x] `pnpm typecheck`.
 
 ## Fáze 3 — Backend: testy
 
-- [ ] `apps/api/src/pins/pins.store.test.ts` (vzor
+- [x] `apps/api/src/pins/pins.store.test.ts` (vzor
       `system-config.store.test.ts`): prázdný/neexistující soubor → `read()`
       vrací `[]`; `write()` perzistuje a `read()` po restartu (nová instance
       nad stejným souborem) vidí totéž; `write()` s duplicitním `(kind, id)` →
@@ -299,7 +308,7 @@
 
 ## Fáze 4 — Frontend: query/mutation hooky + sdílený toggle
 
-- [ ] Nový soubor `apps/web/features/pins/queries/usePinsQuery.ts` (1:1 vzor
+- [x] Nový soubor `apps/web/features/pins/queries/usePinsQuery.ts` (1:1 vzor
       `useSystemConfigQuery.ts`):
   ```ts
   import { apiClient } from "../../../state/api";
@@ -316,7 +325,7 @@
     });
   }
   ```
-- [ ] Nový soubor `apps/web/features/pins/mutations/useSetPinsMutation.ts`
+- [x] Nový soubor `apps/web/features/pins/mutations/useSetPinsMutation.ts`
       (1:1 vzor `useSetSystemConfigMutation.ts`):
   ```ts
   import { apiClient } from "../../../state/api";
@@ -328,7 +337,7 @@
     getPinsQueryKey,
   );
   ```
-- [ ] Nový soubor `apps/web/features/pins/usePinToggle.ts` — sdílená logika
+- [x] Nový soubor `apps/web/features/pins/usePinToggle.ts` — sdílená logika
       "je tohle připnuté? přepni to", použitá jak z `PinButton`
       (Fáze 5), tak z `QuickLaunchPanel`'s odepnutí (Fáze 6):
   ```ts
@@ -359,13 +368,13 @@
     return { pins, isPinned, toggle, isPending: setPins.isPending };
   }
   ```
-- [ ] Nový soubor `apps/web/features/pins/index.ts` — barrel (`usePinsQuery`,
+- [x] Nový soubor `apps/web/features/pins/index.ts` — barrel (`usePinsQuery`,
       `useSetPinsMutation`, `usePinToggle`, `PinButton` z Fáze 5).
-- [ ] `pnpm typecheck`.
+- [x] `pnpm typecheck`.
 
 ## Fáze 5 — Frontend: Pin/Odepnout tlačítko na detailu agenta/pipeliny/řetězce
 
-- [ ] Nový soubor `apps/web/features/pins/components/PinButton.tsx`:
+- [x] Nový soubor `apps/web/features/pins/components/PinButton.tsx`:
   ```tsx
   "use client";
   import type { PinKind } from "@zibby/contracts";
@@ -397,23 +406,23 @@
     );
   }
   ```
-- [ ] `apps/web/features/agents/DetailScreen.tsx`: přidat
+- [x] `apps/web/features/agents/DetailScreen.tsx`: přidat
       `<PinButton kind="agent" id={agent.id} />` do `actions` `Stack`
       (řádky 104-145), vedle Run tlačítka.
-- [ ] `apps/web/features/pipelines/Screen.tsx`: přidat
+- [x] `apps/web/features/pipelines/Screen.tsx`: přidat
       `<PinButton kind="pipeline" id={selected.id} />` do akčního `Stack`
       vedle vybrané pipeliny (řádky 165-208), vedle Run tlačítka.
-- [ ] `apps/web/features/chains/Screen.tsx`: přidat
+- [x] `apps/web/features/chains/Screen.tsx`: přidat
       `<PinButton kind="chain" id={selected.id} />` do akčního `Stack` vedle
       vybraného řetězce (řádky 168-193), vedle Run tlačítka.
-- [ ] Do `apps/web/i18n/messages/cs.json` a `en.json` přidat namespace `pins`:
+- [x] Do `apps/web/i18n/messages/cs.json` a `en.json` přidat namespace `pins`:
       - cs: `"pins": { "pin": "Připnout", "unpin": "Odepnout" }`
       - en: `"pins": { "pin": "Pin", "unpin": "Unpin" }`
-- [ ] `pnpm lint && pnpm typecheck`.
+- [x] `pnpm lint && pnpm typecheck`.
 
 ## Fáze 6 — Frontend: `QuickLaunchPanel` na Overview
 
-- [ ] Nový soubor
+- [x] Nový soubor
       `apps/web/features/overview/components/QuickLaunchPanel/QuickLaunchPanel.tsx`:
   ```tsx
   "use client";
@@ -421,7 +430,7 @@
   import { useTranslations } from "next-intl";
   import { HudPanel } from "../../../../components/HudPanel/HudPanel";
   import { useAgentsQuery } from "../../../agents";
-  import { useChainsQuery, useStartChainMutation } from "../../../chains";
+  import { useChainsQuery } from "../../../chains";
   import { usePipelinesQuery } from "../../../pipelines";
   import { usePinToggle } from "../../../pins";
   import { useNewTask } from "../../../tasks";
@@ -455,7 +464,6 @@
     const { data: pipelines = [] } = usePipelinesQuery();
     const { data: chains = [] } = useChainsQuery();
     const { open: openNewTask } = useNewTask();
-    const startChain = useStartChainMutation();
 
     const resolved: ResolvedPin[] = pins.flatMap((pin) => {
       if (pin.kind === "agent") {
@@ -494,13 +502,10 @@
                 data-testid={QuickLaunchPanelTestId.Run}
                 icon="play"
                 intent="primary"
-                onClick={() => {
-                  if (item.kind === "chain") {
-                    startChain.mutate({ params: { id: item.id }, body: {} });
-                  } else {
-                    openNewTask(undefined, { kind: item.kind, id: item.id, name: item.name, glyph: item.glyph });
-                  }
-                }}
+                onClick={() =>
+                  // phase-05: chain je normální TaskTarget → stejná cesta jako agent/pipeline.
+                  openNewTask(undefined, { kind: item.kind, id: item.id, name: item.name, glyph: item.glyph })
+                }
                 size="sm"
               >
                 {t("run")}
@@ -523,55 +528,57 @@
   (Ověřit při implementaci přesné jméno `Typography`'s `grow` propy / ekvivalentu
   pro vyplnění zbylého prostoru řádku — pokud neexistuje, obalit `Typography`
   do `Container grow minW0` stejně jako `AgentCard`/jiné karty.)
-- [ ] `apps/web/features/chains/mutations/index.ts` — ověřit, že
-      `useStartChainMutation` je odsud exportovaný (dnes ho přímo importuje
-      `chains/Screen.tsx:16` z `./mutations`) — pokud ne, přidat export.
-- [ ] `apps/web/features/overview/Screen.tsx`: přidat `useChainsQuery` import
+- [x] (phase-05 zrušil potřebu `useStartChainMutation` v panelu — chain jede
+      přes `openNewTask` jako agent/pipeline; RUN pro všechny tři je jedna cesta.)
+- [x] `apps/web/features/overview/Screen.tsx`: přidat `useChainsQuery` import
       (vedle `usePipelinesQuery`, řádek 10) a vykreslit `<QuickLaunchPanel />`
       do hlavního `Stack` (řádky 43-100) — zařadit **za `NeedsAttentionPanel` a
       před `ActivityFeed`**: schvalování/parkované/needs-attention zůstávají
       nahoře jako fronta "potřebuje tě", quick-launch je akční, ale
       neurgentní panel, activity feed je pasivní log dole.
-- [ ] Do `cs.json`/`en.json` namespace `pins` doplnit:
+- [x] Do `cs.json`/`en.json` namespace `pins` doplnit:
       - cs: `"quickLaunchTitle": "Panel rychlého spuštění"`, `"run": "Spustit"`,
         `"unpinAria": "Odepnout {name}"`
       - en: `"quickLaunchTitle": "Quick launch"`, `"run": "Run"`,
         `"unpinAria": "Unpin {name}"`
-- [ ] `pnpm lint && pnpm typecheck`.
+- [x] `pnpm lint && pnpm typecheck`.
 
 ## Fáze 7 — Testy (frontend)
 
-- [ ] `apps/web/features/pins/usePinToggle.test.ts` (nebo units v RTL wrapperu
+- [x] `apps/web/features/pins/usePinToggle.test.ts` (nebo units v RTL wrapperu
       podle existujícího vzoru pro hooky): `isPinned` true/false podle
       obsahu seznamu; `toggle` na nepřipnuté položce zavolá mutaci s
       seznamem `+1`; `toggle` na připnuté položce zavolá mutaci s tou
       položkou odebranou.
-- [ ] `apps/web/features/pins/components/PinButton.test.tsx`: nepřipnutý
+- [x] `apps/web/features/pins/components/PinButton.test.tsx`: nepřipnutý
       target → label "Připnout", klik → mutace s přidanou položkou; připnutý
       target → label "Odepnout", klik → mutace bez té položky.
-- [ ] `apps/web/features/agents/DetailScreen.test.tsx`,
+- [x] `apps/web/features/agents/DetailScreen.test.tsx`,
       `apps/web/features/pipelines/Screen.test.tsx` (pokud existuje),
       `apps/web/features/chains/Screen.test.tsx`: rozšířit o assert, že
       `PinButton` je v akční řadě přítomný s očekávaným `kind`/`id`.
-- [ ] `apps/web/features/overview/components/QuickLaunchPanel/QuickLaunchPanel.test.tsx`:
+- [x] `apps/web/features/overview/components/QuickLaunchPanel/QuickLaunchPanel.test.tsx`:
   - žádné piny → panel se nevykreslí (`null`).
   - pin na existující agenty/pipeliny/řetězce → řádek s jejich jménem/glyphem.
   - pin na neexistující (smazané) id → tichy vypadne ze seznamu, žádná chyba.
-  - klik na RUN u agenta/pipeliny → `openNewTask` zavolané se správným
-    `initialTarget`.
-  - klik na RUN u řetězce → `useStartChainMutation().mutate` zavolané se
-    správným `id`, `openNewTask` se NEVOLÁ.
+  - klik na RUN u agenta/pipeliny/řetězce → `openNewTask` zavolané se správným
+    `initialTarget` (phase-05: chain jede stejnou cestou jako agent/pipeline).
   - klik na odepnutí → `toggle`/mutace zavolaná s danou položkou odebranou.
-- [ ] `apps/web/features/overview/Screen.test.tsx` — rozšířit o assert, že
+- [x] `apps/web/features/overview/Screen.test.tsx` — rozšířit o assert, že
       `QuickLaunchPanel` je na stránce vykreslený.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` (celá suita).
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` (celá suita).
 - [ ] Manuální smoke test: připnout agenta na jeho detailu → objeví se na
       `/overview` v Panelu rychlého spuštění → RUN otevře `NewTaskDialog`
       s předvyplněným targetem → odeslat/zavřít. Připnout pipeline → totéž.
-      Připnout řetězec → RUN na Overview spustí chain run bez dialogu,
-      ověřit na `/chains/:id`, že run vznikl. Odepnout z Overview panelu →
-      karta zmizí; restart `pnpm api:dev` → připnuté položky přežijí
-      (`data/pins.json` existuje a je čitelný).
+      Připnout řetězec → RUN na Overview otevře `NewTaskDialog` s chain
+      targetem (phase-05: chain jede stejnou cestou jako agent/pipeline).
+      Odepnout z Overview panelu → karta zmizí; restart `pnpm api:dev` →
+      připnuté položky přežijí (`data/pins.json` existuje a je čitelný).
+  - _Pozn. (2026-07-04): odloženo na operátora — vyžaduje běžící web+API;
+    chování kryjí testy (pins.store + pins.e2e: perzistence/dedup/round-trip;
+    usePinToggle: is-pinned/toggle; PinButton: pin/unpin label + toggle;
+    QuickLaunchPanel: render/resolve/orphan-drop/RUN→openNewTask/unpin;
+    overview + detail Screen testy: panel a PinButton přítomné)._
 
 ---
 

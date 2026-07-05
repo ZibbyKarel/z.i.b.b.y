@@ -877,6 +877,7 @@
     "metaScheduled": "spustí se",
     "metaTarget": "cíl",
     "metaPipeline": "pipelina",
+    "metaCost": "cena (odhad)",
     "metaAgent": "agent",
     "metaKind": "typ",
     "metaTask": "úkol",
@@ -923,6 +924,7 @@
       "agent": "agent",
       "pipeline": "pipeline",
       "goal": "cíl",
+      "chain": "řetězec",
       "scheduled": "naplánovaný task"
     },
     "parkedQueue": "zaparkované běhy",
@@ -977,6 +979,15 @@
     "stageNoLog": "Tato fáze zatím nemá žádný log.",
     "stageNone": "Tento běh zatím nemá žádné fáze.",
     "stageLoading": "Načítám fáze makera…",
+    "chainSteps": "Kroky řetězce",
+    "chainNoSteps": "Tento běh zatím nemá žádné kroky.",
+    "chainStep": "krok {n}",
+    "chainStepStatus": {
+      "pending": "čeká",
+      "running": "běží",
+      "done": "hotovo",
+      "failed": "selhalo"
+    },
     "verdict": {
       "pass": "Schváleno",
       "gap": "Chybí část",
@@ -1365,6 +1376,13 @@
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
       "send": "Odeslat"
     }
+  },
+  "pins": {
+    "pin": "Připnout",
+    "unpin": "Odepnout",
+    "quickLaunchTitle": "Panel rychlého spuštění",
+    "run": "Spustit",
+    "unpinAria": "Odepnout {name}"
   },
   "chains": {
     "title": "Řetězce",

@@ -66,5 +66,11 @@ export const ChainRunSchema = z.object({
   steps: z.array(ChainRunStepSchema).min(1),
   startedAt: z.string().datetime(),
   parkedReason: z.string().optional(),
+  /**
+   * Úkol, ze kterého byl řetězec dispatchnutý (Phase 05) — chybí pro přímý
+   * `POST /chains/:id/run` mimo task flow. Slouží k zápisu outcome zpátky na
+   * úkol, stejně jako `AgentRun`/`PipelineRun`/`GoalRun`.
+   */
+  taskId: z.string().optional(),
 });
 export type ChainRun = z.infer<typeof ChainRunSchema>;

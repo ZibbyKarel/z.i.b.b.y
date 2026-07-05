@@ -1,5 +1,6 @@
 import { Card, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
+import { formatCostUsd } from "../../../utils/cost";
 import { resumeEta } from "../../../utils/time";
 import { type RunView, runTitle } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
@@ -101,6 +102,11 @@ export function TaskCard({
               )}
             </Stack>
             <Stack align="center" direction="row" gap="50">
+              {run.costUsd != null && (
+                <Typography mono size="2xs" type="note" variant="tertiary">
+                  {formatCostUsd(run.costUsd)}
+                </Typography>
+              )}
               {run.owner && <Icon name={glyph} size="xs" tone="faint" />}
               <Typography mono size="2xs" type="note" variant="tertiary">
                 {run.owner ? `${run.owner} · ` : ""}

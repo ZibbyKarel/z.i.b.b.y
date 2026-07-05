@@ -1009,4 +1009,90 @@ describe("RunnerCore", () => {
     await core.init();
     expect(core.get(runId).status).toBe("interrupted");
   });
+
+  // ── Cost capture (Phase 03) ────────────────────────────────────────────────
+
+  /** A `result` stream-json line carrying a total cost, one line, newline-terminated. */
+  function resultCostLine(cost: number): string {
+    return JSON.stringify({ type: "result", subtype: "success", total_cost_usd: cost });
+  }
+
+  /**
+   * limit-then-exit-1 on the FIRST run (after emitting a `result` line with cost
+   * `first`), then a `result` line with cost `second` + PROGRESS 100 + exit 0 on the
+   * respawn — so a test can assert the two costs SUM (respawn is a fresh session, not
+   * a `--resume` continuation).
+   */
+  function costLimitOnceScript(cwd: string, epochSeconds: number, first: number, second: number) {
+    const marker = JSON.stringify(path.join(cwd, ".cost-marker"));
+    const body = `const fs=require("node:fs");if(!fs.existsSync(${marker})){fs.writeFileSync(${marker},"1");console.log(${JSON.stringify(
+      resultCostLine(first),
+    )});console.log("Claude AI usage limit reached|${epochSeconds}");process.exit(1)}console.log(${JSON.stringify(
+      resultCostLine(second),
+    )});console.log("PROGRESS 100");process.exit(0)`;
+    return ["-e", body];
+  }
+
+  it("accumulates result-event cost across a limit-pause respawn (sum, not overwrite)", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 2;
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      formatClaudeStreamLine,
+      async (d) => d ?? 1,
+    );
+    await core.init();
+    const cwd = path.join(dir, "cost_respawn");
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "costr",
+      command: NODE,
+      args: costLimitOnceScript(cwd, epoch, 0.1, 0.2),
+      cwd,
+      extra: { label: "x" },
+    });
+    await waitForStatus(core, run.runId, "paused-limit");
+    await core.resume(run.runId);
+    await waitForStatus(core, run.runId, "done");
+    expect(core.get(run.runId).costUsd).toBeCloseTo(0.3, 10);
+  });
+
+  it("captures a result event delivered as the last line WITHOUT a trailing newline", async () => {
+    const core = new RunnerCore(dir, strategy, undefined, undefined, undefined, formatClaudeStreamLine);
+    await core.init();
+    const cwd = path.join(dir, "cost_noeol");
+    // Write the result line with NO trailing newline, then exit 0 → it lands in
+    // `residual` and only `flushResidual` can rescue its cost.
+    const body = `process.stdout.write(${JSON.stringify(resultCostLine(0.42))});process.exit(0)`;
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "costn",
+      command: NODE,
+      args: ["-e", body],
+      cwd,
+      extra: { label: "x" },
+    });
+    await waitForStatus(core, run.runId, "done");
+    expect(core.get(run.runId).costUsd).toBeCloseTo(0.42, 10);
+  });
+
+  it("leaves costUsd undefined on a run without a formatLine (demo/test path)", async () => {
+    const core = new RunnerCore(dir, strategy);
+    await core.init();
+    const cwd = path.join(dir, "cost_none");
+    const body = `console.log(${JSON.stringify(resultCostLine(0.9))});console.log("PROGRESS 100");process.exit(0)`;
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "costx",
+      command: NODE,
+      args: ["-e", body],
+      cwd,
+      extra: { label: "x" },
+    });
+    await waitForStatus(core, run.runId, "done");
+    expect(core.get(run.runId).costUsd).toBeUndefined();
+  });
 });

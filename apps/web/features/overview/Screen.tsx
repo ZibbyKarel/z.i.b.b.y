@@ -14,6 +14,7 @@ import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
+import { QuickLaunchPanel } from "./components/QuickLaunchPanel/QuickLaunchPanel";
 import { useActivityQuery } from "./queries";
 import { SummaryWidget } from "./SummaryWidget";
 
@@ -54,6 +55,10 @@ export function Screen() {
         {/* "Needs your attention" — notify-only items ZIBBY surfaced (inbound mail that
             wants a reply or a decision) as summary cards linking to the original. */}
         <NeedsAttentionPanel />
+
+        {/* Quick launch — pinned agents/pipelines/chains with a one-click RUN. Actional
+            but not urgent, so it sits below the needs-you queue and above the log. */}
+        <QuickLaunchPanel />
 
         {activity.length > 0 && (
           <HudPanel title={t("overview.activity")}>

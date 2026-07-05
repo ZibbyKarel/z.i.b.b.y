@@ -13,6 +13,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { RuleModal } from "../gates/components/RuleModal";
+import { PinButton } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { useNewTask } from "../tasks";
 import { agentFile } from "./agentDraft";
@@ -119,6 +120,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
               >
                 {t("run")}
               </Button>
+              <PinButton id={agent.id} kind="agent" />
               <Button
                 data-testid={AgentDetailScreenTestId.Delete}
                 icon="x"

@@ -31,6 +31,7 @@ import { hooksContract } from "./hooks/hooks.contract";
 import { limitsContract } from "./limits/limits.contract";
 import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.contract";
 import { goalsContract } from "./goals/goals.contract";
+import { pinsContract } from "./pins/pins.contract";
 import { projectsContract } from "./projects/projects.contract";
 import { skillsContract } from "./skills/skills.contract";
 import { systemContract } from "./system/system.contract";
@@ -80,6 +81,7 @@ export const appContract = c.router({
   tasks: tasksContract,
   taskRuns: taskRunsContract,
   system: systemContract,
+  pins: pinsContract,
   activity: activityContract,
   activityView: activityViewContract,
   briefing: briefingContract,

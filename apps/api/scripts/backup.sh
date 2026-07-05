@@ -46,7 +46,13 @@ if [ -d "$VAULT_DIR" ]; then
   if git -C "$VAULT_DIR" diff --cached --quiet; then
     log "vault: nothing to commit"
   else
-    git -C "$VAULT_DIR" commit -q -m "vault backup ${BACKUP_DATE:-$(date +%F)}"
+    # Supply a committer identity inline so the backup commit works on any host,
+    # even one with no global git identity (a CI runner, or a fresh self-hosted
+    # ZIBBY box). Inline `-c` never mutates the repo/global config.
+    git -C "$VAULT_DIR" \
+      -c user.name="ZIBBY Backup" \
+      -c user.email="zibby@localhost" \
+      commit -q -m "vault backup ${BACKUP_DATE:-$(date +%F)}"
     log "vault: committed"
   fi
 else

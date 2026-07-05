@@ -8,6 +8,7 @@ import {
 import type {
   AgentRun,
   Attachment,
+  ChainRun,
   CreateTaskInput,
   CreateTaskResult,
   GoalRun,
@@ -22,6 +23,7 @@ import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { BudgetService } from "../budget/budget.service";
+import { ChainRunnerService } from "../chains/chain-runner.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { LimitsService } from "../limits/limits.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
@@ -69,6 +71,8 @@ const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupte
 const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
 /** Goal run statuses that free a concurrency slot (Phase 10). */
 const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
+/** Chain run statuses that free a concurrency slot (Phase 05). */
+const TERMINAL_CHAIN = new Set<ChainRun["status"]>(["done", "failed"]);
 
 /**
  * The deferred-task daemon. {@link createTask} is the single action behind the New
@@ -107,6 +111,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly goalRunner: GoalRunnerService,
+    private readonly chainRunner: ChainRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
@@ -139,6 +144,10 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       this.goalRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeGoalOutcome(run.taskId, run);
         if (TERMINAL_GOAL.has(run.status)) void this.drainQueues();
+      }),
+      this.chainRunner.onRunStatus((run) => {
+        if (run.taskId) void this.writeChainOutcome(run.taskId, run);
+        if (TERMINAL_CHAIN.has(run.status)) void this.drainQueues();
       }),
     );
 
@@ -829,6 +838,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       );
       return { runRef: run.goalRunId, target };
     }
+    if (target.kind === "chain") {
+      // Phase 05: a chain-targeted task dispatches through the chain runner. The
+      // chain run carries the taskId so its terminal outcome writes back onto the
+      // task exactly like agent/pipeline/goal runs.
+      const run = await this.chainRunner.start(target.id, taskId);
+      return { runRef: run.chainRunId, target };
+    }
     // Terminal fallback: the orchestrator session self-delegates to the right
     // subagent(s) or does the task directly — a task never no-ops. It carries the
     // projectId too so an orchestrator-dispatched task counts toward concurrency.
@@ -1071,6 +1087,38 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     }
   }
 
+  private async writeChainOutcome(taskId: string, run: ChainRun): Promise<void> {
+    if (run.status !== "done" && run.status !== "failed") return;
+    const outcome: TaskOutcome = {
+      status: run.status === "done" ? "done" : "error",
+      summary: `${run.steps.length} steps, ${run.status}`,
+      finishedAt: new Date().toISOString(),
+    };
+    try {
+      const task = await this.storage.writeOutcome(taskId, outcome);
+      this.log.info("task outcome written", {
+        taskId,
+        runRef: run.chainRunId,
+        status: run.status,
+      });
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `task ${outcome.status}: ${outcome.summary}`,
+        refs: {
+          taskId,
+          runRef: run.chainRunId,
+          status: outcome.status,
+          ...(task.projectId ? { projectId: task.projectId } : {}),
+        },
+      });
+    } catch (error) {
+      this.log.debug("task outcome write skipped", {
+        taskId,
+        err: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   /** Last non-empty log line of an agent run, truncated to one readable line. */
   private async agentRunSummary(runId: string): Promise<string> {
     const log = await this.agentRunner.readLog(runId, 0).catch(() => null);
@@ -1086,9 +1134,14 @@ function targetIdOf(target: TaskTarget): string {
   return target.kind === "orchestrator" ? "orchestrator" : target.id;
 }
 
-/** The activity ref the target contributes (agentId / pipelineId), if any. */
-function refForTarget(target: TaskTarget): { agentId?: string; pipelineId?: string } {
+/** The activity ref the target contributes (agentId / pipelineId / chainId), if any. */
+function refForTarget(target: TaskTarget): {
+  agentId?: string;
+  pipelineId?: string;
+  chainId?: string;
+} {
   if (target.kind === "agent") return { agentId: target.id };
   if (target.kind === "pipeline") return { pipelineId: target.id };
+  if (target.kind === "chain") return { chainId: target.id };
   return {};
 }
