@@ -5,6 +5,7 @@ import {
   NoteIdSchema,
   NoteSchema,
   NoteTypeSchema,
+  SearchHitSchema,
   memoryContract,
 } from "../index";
 
@@ -59,6 +60,34 @@ describe("memory schemas", () => {
         nodes: [{ id: "a", label: "A", tier: "knowledge" }],
         edges: [{ from: "a", to: "b" }],
       }).success,
+    ).toBe(true);
+  });
+
+  it("accepts an optional `project` on graph nodes and search hits (Fáze 11)", () => {
+    const graph = MemoryGraphSchema.safeParse({
+      nodes: [
+        { id: "a", label: "A", tier: "knowledge", project: "alpha" },
+        { id: "b", label: "B", tier: "memory" },
+      ],
+      edges: [],
+    });
+    expect(graph.success).toBe(true);
+    if (graph.success) {
+      expect(graph.data.nodes[0]?.project).toBe("alpha");
+      expect(graph.data.nodes[1]?.project).toBeUndefined();
+    }
+
+    const hit = SearchHitSchema.safeParse({
+      id: "a",
+      title: "A",
+      tier: "knowledge",
+      snippet: "…",
+      project: "alpha",
+    });
+    expect(hit.success).toBe(true);
+    // Back-compat: a hit without `project` still validates.
+    expect(
+      SearchHitSchema.safeParse({ id: "b", title: "B", tier: "memory", snippet: "…" }).success,
     ).toBe(true);
   });
 

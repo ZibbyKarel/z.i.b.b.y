@@ -1112,6 +1112,9 @@
   },
   "projects": {
     "title": "Projekty",
+    "switcherLabel": "Aktivní projekt",
+    "switcherAll": "Všechny projekty",
+    "scopeActive": "Projekt: {name}",
     "runsPanelTitle": "Běhy",
     "countSummary": "{count, plural, =0 {žádné projekty} one {# projekt} few {# projekty} other {# projektů}} · cílové adresáře pro spouštění agentů a skillů",
     "addProject": "Přidat projekt",

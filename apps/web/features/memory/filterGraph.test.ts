@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MemoryGraph } from "@zibby/contracts";
-import { filterGraphByTier } from "./filterGraph";
+import { filterGraphByProject, filterGraphByTier } from "./filterGraph";
 
 const graph: MemoryGraph = {
   nodes: [
@@ -45,5 +45,33 @@ describe("filterGraphByTier", () => {
     };
     const out = filterGraphByTier(connected, "knowledge");
     expect(out.edges).toEqual([{ from: "a", to: "b" }]);
+  });
+});
+
+describe("filterGraphByProject", () => {
+  const projectGraph: MemoryGraph = {
+    nodes: [
+      { id: "alpha-note", label: "Alpha", tier: "knowledge", project: "alpha" },
+      { id: "beta-note", label: "Beta", tier: "knowledge", project: "beta" },
+      { id: "global", label: "Global", tier: "memory" },
+    ],
+    edges: [
+      { from: "alpha-note", to: "global" },
+      { from: "alpha-note", to: "beta-note" },
+    ],
+  };
+
+  it("returns the graph unchanged for null (Všechny projekty)", () => {
+    expect(filterGraphByProject(projectGraph, null)).toBe(projectGraph);
+  });
+
+  it("keeps only nodes attributed to the project — global notes drop too", () => {
+    const out = filterGraphByProject(projectGraph, "alpha");
+    expect(out.nodes.map((n) => n.id)).toEqual(["alpha-note"]);
+  });
+
+  it("drops edges whose endpoint was filtered out", () => {
+    const out = filterGraphByProject(projectGraph, "alpha");
+    expect(out.edges).toEqual([]);
   });
 });
