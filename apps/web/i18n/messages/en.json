@@ -818,6 +818,14 @@
       "goalAutoResumeHint": "Enable for unattended (launchd) mode — running/limit-paused goals re-dispatch on restart. Off = they park and wait for approval (Law 3).",
       "save": "Save"
     },
+    "selfKnowledge": {
+      "title": "Self-Knowledge",
+      "hint": "A machine-generated note of what ZIBBY knows about itself — agents, pipelines, gate rules, channels. Produced by `pnpm self-knowledge:generate`; this is a read-only preview. The same note is also visible in Memory as an ordinary vault note.",
+      "upToDate": "Up to date",
+      "drift": "Drifted — run pnpm self-knowledge:generate",
+      "generatedAt": "Generated: {time}",
+      "sections": "{agents} agents · {pipelines} pipelines · {gateRules} gate rules · {channels} channels"
+    },
     "preferences": "Preferences",
     "language": "Interface language",
     "languageHint": "Full interface translation is rolling out gradually — Czech and English are available for now.",

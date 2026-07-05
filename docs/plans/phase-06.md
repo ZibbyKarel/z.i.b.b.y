@@ -154,7 +154,7 @@ mid-stage checkpointing, rozšíření approval hooku na Write/Edit/WebFetch/MCP
 
 ---
 
-## Fáze 1 — Self-Knowledge Layer
+## Fáze 1 — Self-Knowledge Layer ✅ (hotovo)
 
 **Kontrakt (`libs/contracts`):**
 - Nový resource `self-knowledge`: `SelfKnowledgeSchema` —

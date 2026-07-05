@@ -47,6 +47,19 @@ jobs:
       # vitest run — all 5 workspace projects (design-system, contracts, api, web, web-components).
       - run: pnpm run test
 
+  self-knowledge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Fails if the committed self-knowledge fixture note has drifted from the
+      # committed `apps/api/data-test` catalog (agents/pipelines/gate-rules) — the
+      # same check the `.githooks/pre-commit` hook runs locally, pinned at the
+      # repo's committed fixture data root (there is no committed live data dir).
+      - run: pnpm self-knowledge:check
+        env:
+          ZIBBY_DATA_DIR: apps/api/data-test
+
   build:
     runs-on: ubuntu-latest
     steps:

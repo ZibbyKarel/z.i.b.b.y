@@ -16,6 +16,7 @@ import {
   memoryContract,
   pipelineRunsContract,
   pipelinesContract,
+  selfKnowledgeContract,
   skillsContract,
   tasksContract,
 } from "@zibby/contracts";
@@ -38,6 +39,7 @@ const apiContract = initContract().router({
   memory: memoryContract,
   automations: automationsContract,
   health: healthContract,
+  selfKnowledge: selfKnowledgeContract,
   limits: limitsContract,
   tasks: tasksContract,
 });

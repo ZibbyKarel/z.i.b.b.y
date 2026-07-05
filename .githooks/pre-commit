@@ -1,0 +1,15 @@
+#!/bin/sh
+# Self-Knowledge drift gate (Fáze 1 — docs/plans/phase-06.md). Refuses a commit
+# whose agents/pipelines/gate-rules/channels drifted from the committed
+# self-knowledge vault note, so the note never silently goes stale.
+#
+# Tolerant by design: this hook must never block a commit just because the repo
+# isn't `pnpm install`ed yet (e.g. a fresh clone, or a commit made before the
+# first install) — it skips with a note instead of failing in that case.
+
+if [ ! -d node_modules ] || [ ! -d apps/api/node_modules ]; then
+  echo "[pre-commit] node_modules missing — skipping self-knowledge:check (run pnpm install)."
+  exit 0
+fi
+
+pnpm self-knowledge:check
