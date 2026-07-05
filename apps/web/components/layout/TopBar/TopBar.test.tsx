@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SearchMenuTestId } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
 import { CatalogProvider } from "../../../state/store";
-import { TopBar } from "./TopBar";
+import { TopBar, TopBarTestId } from "./TopBar";
 
 describe("TopBar", () => {
   it("renders the breadcrumb, wallet slot and the global search", () => {
@@ -17,5 +17,26 @@ describe("TopBar", () => {
     expect(screen.getByTestId(SearchMenuTestId.Input)).toHaveAccessibleName(
       "Hledat v pracovním prostoru",
     );
+  });
+
+  it("does not render the rail toggle when onToggleRail is absent", () => {
+    renderWithProviders(
+      <CatalogProvider>
+        <TopBar breadcrumb="Přehled" />
+      </CatalogProvider>,
+    );
+    expect(screen.queryByTestId(TopBarTestId.RailToggle)).not.toBeInTheDocument();
+  });
+
+  it("renders the rail toggle when onToggleRail is provided, reflecting railHidden state", () => {
+    const onToggleRail = vi.fn();
+    renderWithProviders(
+      <CatalogProvider>
+        <TopBar breadcrumb="Přehled" onToggleRail={onToggleRail} railHidden={false} />
+      </CatalogProvider>,
+    );
+    const toggle = screen.getByTestId(TopBarTestId.RailToggle);
+    expect(toggle).toHaveAccessibleName("Skrýt postranní panel");
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
   });
 });

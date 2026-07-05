@@ -1,16 +1,33 @@
-import { Container, Divider, Icon, Stack, Typography } from "@zibby/design-system";
+import { Button, Container, Divider, Icon, Stack, Typography } from "@zibby/design-system";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
 import { GlobalSearch } from "../GlobalSearch/GlobalSearch";
+
+export enum TopBarTestId {
+  RailToggle = "topbar-rail-toggle",
+}
 
 export interface TopBarProps {
   breadcrumb: string;
   walletSlot?: ReactNode;
   taskSlot?: ReactNode;
   chatSlot?: ReactNode;
+  /** Current visibility of the right rail — controls the toggle's icon/label. */
+  railHidden?: boolean;
+  /** Present only when a right rail exists; renders the toggle button. */
+  onToggleRail?: () => void;
 }
 
-export function TopBar({ breadcrumb, walletSlot, taskSlot, chatSlot }: TopBarProps) {
+export function TopBar({
+  breadcrumb,
+  walletSlot,
+  taskSlot,
+  chatSlot,
+  railHidden,
+  onToggleRail,
+}: TopBarProps) {
+  const t = useTranslations("topbar");
   return (
     <Container as="header" position="relative" zIndex={20}>
       <Container height="64px" padding={["0", "300"]} position="relative">
@@ -29,6 +46,18 @@ export function TopBar({ breadcrumb, walletSlot, taskSlot, chatSlot }: TopBarPro
           {chatSlot}
           {taskSlot}
           <LanguageSwitcher />
+          {onToggleRail && (
+            <Button
+              aria-expanded={!railHidden}
+              aria-label={railHidden ? t("showRail") : t("hideRail")}
+              aria-pressed={!railHidden}
+              data-testid={TopBarTestId.RailToggle}
+              icon={railHidden ? "expand" : "collapse"}
+              intent="ghost"
+              onClick={onToggleRail}
+              size="sm"
+            />
+          )}
           <Divider orientation="vertical" />
           {walletSlot}
         </Stack>

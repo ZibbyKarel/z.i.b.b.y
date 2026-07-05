@@ -1,10 +1,28 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Container, Divider, Stack, Surface } from "@zibby/design-system";
 import type { NavItem } from "@zibby/design-system";
 import { TopBar } from "../TopBar/TopBar";
 import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { Sidebar } from "../Sidebar/Sidebar";
+
+const RAIL_HIDDEN_KEY = "zibby.railHidden";
+
+/**
+ * Right-rail visibility, persisted in localStorage — SSR-safe lazy init
+ * (default visible) plus a write-through effect on every change.
+ */
+function useRailHidden(): [boolean, (next: boolean) => void] {
+  const [railHidden, setRailHidden] = useState(() =>
+    typeof window === "undefined" ? false : localStorage.getItem(RAIL_HIDDEN_KEY) === "true",
+  );
+
+  useEffect(() => {
+    localStorage.setItem(RAIL_HIDDEN_KEY, String(railHidden));
+  }, [railHidden]);
+
+  return [railHidden, setRailHidden];
+}
 
 export interface MainLayoutProps {
   navItems: NavItem[];
@@ -34,6 +52,7 @@ export function MainLayout({
   children,
 }: MainLayoutProps) {
   const t = useTranslations("sidebar");
+  const [railHidden, setRailHidden] = useRailHidden();
   return (
     <Surface background="scene">
       <Stack
@@ -59,6 +78,8 @@ export function MainLayout({
         <TopBar
           breadcrumb={breadcrumb}
           chatSlot={chatSlot}
+          onToggleRail={railSlot ? () => setRailHidden(!railHidden) : undefined}
+          railHidden={railSlot ? railHidden : undefined}
           taskSlot={taskSlot}
           walletSlot={walletSlot}
         />
@@ -67,7 +88,7 @@ export function MainLayout({
         </Container>
       </Stack>
 
-      {railSlot && (
+      {railSlot && !railHidden && (
         <>
           <Divider orientation="vertical" />
           <Stack

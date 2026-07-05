@@ -73,7 +73,9 @@
     "commandHint": "Command or skill (⌘K)",
     "commandAriaLabel": "Command or skill",
     "commandPlaceholder": "Command or skill…",
-    "langSwitcherLabel": "Interface language"
+    "langSwitcherLabel": "Interface language",
+    "hideRail": "Hide side panel",
+    "showRail": "Show side panel"
   },
   "tasks": {
     "triggerLabel": "TASK",

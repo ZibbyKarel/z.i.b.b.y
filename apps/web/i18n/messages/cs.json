@@ -73,7 +73,9 @@
     "commandHint": "Příkaz nebo skill (⌘K)",
     "commandAriaLabel": "Příkaz nebo skill",
     "commandPlaceholder": "Příkaz nebo skill…",
-    "langSwitcherLabel": "Jazyk rozhraní"
+    "langSwitcherLabel": "Jazyk rozhraní",
+    "hideRail": "Skrýt postranní panel",
+    "showRail": "Zobrazit postranní panel"
   },
   "tasks": {
     "triggerLabel": "TASK",
