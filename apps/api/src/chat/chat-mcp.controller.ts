@@ -155,6 +155,21 @@ export class ChatMcpController {
       async ({ query }) => text(await this.tools.proposeOpenMaps(query)),
     );
 
+    server.registerTool(
+      "open_folder",
+      {
+        description:
+          "PROPOSE opening a folder on the operator's machine in their file manager " +
+          "(a Finder/Explorer window on the named path). Only opens a window and is " +
+          "still approval-gated — nothing runs on the operator's machine silently. " +
+          "Use when the operator asks to open/show a named folder.",
+        inputSchema: {
+          path: z.string().describe("Absolute path to the folder the operator named."),
+        },
+      },
+      async ({ path }) => text(await this.tools.proposeOpenFolder(path)),
+    );
+
     return server;
   }
 }

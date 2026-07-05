@@ -184,4 +184,24 @@ describe("machine tools (N5b) — propose only, never execute", () => {
     expect(out).toContain("odmítl");
     expect(out).toContain("absolute path");
   });
+
+  it("proposeOpenFolder parks the action and confirms with the path", async () => {
+    const propose = vi.fn().mockResolvedValue({ id: "machine-3", preview: [], state: "proposed" });
+    const svc = makeService({ propose });
+    const out = await svc.proposeOpenFolder("/Users/op/Downloads");
+    expect(propose).toHaveBeenCalledWith({ kind: "open-folder", path: "/Users/op/Downloads" });
+    expect(out).toContain("/Users/op/Downloads");
+    expect(out).toContain("schválení");
+  });
+
+  it("proposeOpenFolder returns the guard message, not a crash, when the path is refused", async () => {
+    const { MachineActionRejectedError } = await import("../machine/machine.service");
+    const propose = vi
+      .fn()
+      .mockRejectedValue(new MachineActionRejectedError("path must be an absolute path: fotky"));
+    const svc = makeService({ propose });
+    const out = await svc.proposeOpenFolder("fotky");
+    expect(out).toContain("odmítl");
+    expect(out).toContain("absolute path");
+  });
 });

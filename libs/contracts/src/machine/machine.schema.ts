@@ -31,9 +31,23 @@ export const OpenMapsActionSchema = z.object({
 });
 export type OpenMapsAction = z.infer<typeof OpenMapsActionSchema>;
 
+/**
+ * The third reference task (N5c): open a folder in the operator's file manager
+ * (macOS `open /path`). Reversible and low-risk — it only pops a Finder window —
+ * but it still goes through the gate: nothing on the operator's machine runs
+ * silently, even a plain "show me this folder".
+ */
+export const OpenFolderActionSchema = z.object({
+  kind: z.literal("open-folder"),
+  /** Absolute path to an existing directory the operator named. */
+  path: z.string().min(1),
+});
+export type OpenFolderAction = z.infer<typeof OpenFolderActionSchema>;
+
 export const MachineActionSchema = z.discriminatedUnion("kind", [
   RenameFilesActionSchema,
   OpenMapsActionSchema,
+  OpenFolderActionSchema,
 ]);
 export type MachineAction = z.infer<typeof MachineActionSchema>;
 

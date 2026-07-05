@@ -167,4 +167,95 @@ describe("MachineService (N5a — file ops behind the gate)", () => {
     expect(stored.state).toBe("failed");
     expect(stored.error).toBeDefined();
   });
+
+  describe("open-folder (N5c)", () => {
+    it("proposes low-risk with empty preview; approve calls the opener with the path exactly once", async () => {
+      const opener = vi.fn(async () => {});
+      const withOpener = new MachineService(
+        store,
+        approvals as never,
+        activity as never,
+        fakeLogger as never,
+        opener,
+      );
+      const record = await withOpener.propose({ kind: "open-folder", path: folder });
+      expect(record.preview).toEqual([]);
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "machine", action: "fs.open", risk: "low" }),
+      );
+      expect(opener).not.toHaveBeenCalled(); // propose never executes
+
+      await withOpener.resume(record.id);
+      expect(opener).toHaveBeenCalledTimes(1);
+      expect(opener).toHaveBeenCalledWith(folder);
+      expect((await store.get(record.id)).state).toBe("executed");
+    });
+
+    it("reject never opens anything and leaves the disk untouched", async () => {
+      const opener = vi.fn(async () => {});
+      const withOpener = new MachineService(
+        store,
+        approvals as never,
+        activity as never,
+        fakeLogger as never,
+        opener,
+      );
+      const record = await withOpener.propose({ kind: "open-folder", path: folder });
+      withOpener.cancel(record.id);
+      await vi.waitFor(async () => {
+        expect((await store.get(record.id)).state).toBe("rejected");
+      });
+      await withOpener.resume(record.id);
+      expect(opener).not.toHaveBeenCalled();
+    });
+
+    it("fails closed at propose: relative path and non-existent folder are refused, nothing parked", async () => {
+      await expect(
+        service.propose({ kind: "open-folder", path: "fotky" }),
+      ).rejects.toBeInstanceOf(MachineActionRejectedError);
+      await expect(
+        service.propose({ kind: "open-folder", path: path.join(folder, "nope") }),
+      ).rejects.toBeInstanceOf(MachineActionRejectedError);
+      expect(await store.list()).toEqual([]);
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it("a folder deleted between propose and approve fails with a recorded error (fail-closed re-verify)", async () => {
+      const opener = vi.fn(async () => {});
+      const withOpener = new MachineService(
+        store,
+        approvals as never,
+        activity as never,
+        fakeLogger as never,
+        opener,
+      );
+      const record = await withOpener.propose({ kind: "open-folder", path: folder });
+      await fs.rm(folder, { recursive: true, force: true });
+      await withOpener.resume(record.id);
+      const stored = await store.get(record.id);
+      expect(stored.state).toBe("failed");
+      expect(stored.error).toBeDefined();
+      expect(opener).not.toHaveBeenCalled();
+      // Recreate so the shared afterEach cleanup doesn't fail on the missing folder.
+      await fs.mkdir(folder, { recursive: true });
+    });
+
+    it("a second resume is an idempotent no-op (fail-closed)", async () => {
+      const opener = vi.fn(async () => {});
+      const withOpener = new MachineService(
+        store,
+        approvals as never,
+        activity as never,
+        fakeLogger as never,
+        opener,
+      );
+      const record = await withOpener.propose({ kind: "open-folder", path: folder });
+      await withOpener.resume(record.id);
+      opener.mockClear();
+      activity.record.mockClear();
+      await withOpener.resume(record.id);
+      expect(opener).not.toHaveBeenCalled();
+      expect(activity.record).not.toHaveBeenCalled();
+    });
+  });
 });

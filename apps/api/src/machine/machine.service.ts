@@ -34,8 +34,12 @@ export class MachineActionRejectedError extends Error {
  * separator in find/replace, an empty preview or a target collision refuses the
  * proposal outright, and execution re-verifies each rename before performing it.
  */
-/** Open a URL on the operator's machine (macOS `open`); tests inject a stub. */
-export type UrlOpener = (url: string) => Promise<void>;
+/**
+ * Open a URL or a plain filesystem path on the operator's machine (macOS
+ * `open`, which handles both a `maps://` URL and a directory path the same
+ * way); tests inject a stub so nothing actually launches.
+ */
+export type UrlOpener = (target: string) => Promise<void>;
 
 const defaultOpener: UrlOpener = async (url) => {
   await promisify(execFile)("open", [url]);
@@ -116,6 +120,17 @@ export class MachineService implements OnModuleInit, ResumableRunner {
           detail: `Open Maps: "${action.query}"`,
           risk: "low",
         };
+      case "open-folder": {
+        // Nothing to preview — the dry-run IS the existence check (fail-closed,
+        // same shape as previewRenames): a bad path refuses the proposal outright.
+        await this.assertOpenableFolder(action.path);
+        return {
+          preview: [],
+          gateAction: "fs.open",
+          detail: `Open folder: ${action.path}`,
+          risk: "low",
+        };
+      }
     }
   }
 
@@ -171,6 +186,13 @@ export class MachineService implements OnModuleInit, ResumableRunner {
         await this.opener(`maps://?q=${encodeURIComponent(action.query)}`);
         return `opened Maps for "${action.query}"`;
       }
+      case "open-folder": {
+        // Re-verify right before acting — the folder may have been moved/deleted
+        // since the preview (same fail-closed discipline as the rename re-check).
+        await this.assertOpenableFolder(action.path);
+        await this.opener(action.path);
+        return `opened folder ${action.path}`;
+      }
     }
   }
 
@@ -222,5 +244,22 @@ export class MachineService implements OnModuleInit, ResumableRunner {
       targets.add(p.to);
     }
     return preview;
+  }
+
+  /**
+   * Fail-closed existence check for `open-folder` — an absolute path to an
+   * existing directory, nothing else; used both at propose time (the dry-run)
+   * and again right before execute (the world may have moved in between).
+   */
+  private async assertOpenableFolder(folderPath: string): Promise<void> {
+    if (!path.isAbsolute(folderPath)) {
+      throw new MachineActionRejectedError(`path must be an absolute path: ${folderPath}`);
+    }
+    const stat = await fs.stat(folderPath).catch(() => null);
+    if (!stat?.isDirectory()) {
+      throw new MachineActionRejectedError(
+        `path does not exist or is not a directory: ${folderPath}`,
+      );
+    }
   }
 }

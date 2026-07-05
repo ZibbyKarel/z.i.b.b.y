@@ -98,6 +98,20 @@ export class ChatToolsService {
       throw err;
     }
   }
+
+  /**
+   * N5c: park opening a folder in the operator's file manager behind the gate
+   * (opens a window only — still gated, still fail-closed on a bad path).
+   */
+  async proposeOpenFolder(path: string): Promise<string> {
+    try {
+      await this.machine.propose({ kind: "open-folder", path });
+      return `Připravil jsem otevření složky ${path} — čeká na tvé schválení ve frontě.`;
+    } catch (err) {
+      if (err instanceof MachineActionRejectedError) return `Návrh jsem odmítl: ${err.message}`;
+      throw err;
+    }
+  }
 }
 
 /** A one-line, human-readable name for a dispatched task's chosen target. */
