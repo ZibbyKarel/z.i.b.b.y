@@ -1,62 +1,71 @@
-# Monitors — CI/CD status alerty (N3)
+# Monitors — CI/CD status alerts (N3)
 
-Monitor sleduje **stav světa** (červený build), ne konverzaci — jeho eventy jsou
-alerty, nikdy zprávy k odpovědi. Seam `MonitorAdapter`
-(`apps/api/src/monitors/monitor-adapter.ts`) je záměrně oddělený od
-`ChannelAdapter`: žádné `send()`, výběr přes `wants(integration)` — nový zdroj
-(Sentry) = jedno `registry.register(...)` v `MonitorsModule`, žádná změna
-watcheru ani runtime.
+A monitor watches **the state of the world** (a red build), not a
+conversation — its events are alerts, never messages to reply to. The
+`MonitorAdapter` seam (`apps/api/src/monitors/monitor-adapter.ts`) is
+deliberately separate from `ChannelAdapter`: no `send()`, selection happens via
+`wants(integration)` — a new source (Sentry) is one
+`registry.register(...)` call in `MonitorsModule`, no change to the watcher or
+its runtime.
 
-## První monitor: GitHub Actions
+## First monitor: GitHub Actions
 
-- Opt-in přes existující GitHub integraci: `config.streams` obsahuje `"ci"`
-  (channel adapter tento stream přirozeně ignoruje; stejný PAT, stejné
+- Opt-in through the existing GitHub integration: `config.streams` contains
+  `"ci"` (the channel adapter naturally ignores this stream; same PAT, same
   credentials).
-- Poll `/repos/{repo}/actions/runs` (newest-first), kurzor = nejnovější
-  `created_at` (per integrace × adapter, sidecar v `MONITOR_EVENTS_DIR/cursors/`).
-- Dokončený run se závěrem `failure`/`timed_out`/`startup_failure` → event
-  `ci-run-failed` s deterministickým id `ci-<repo>-<runId>-<attempt>` (re-poll =
-  dedup no-op; retry workflowu = nový výskyt). Zelené/in-progress runy = no-op.
+- Polls `/repos/{repo}/actions/runs` (newest-first), cursor = the latest
+  `created_at` (per integration × adapter, a sidecar under
+  `MONITOR_EVENTS_DIR/cursors/`).
+- A finished run with conclusion `failure`/`timed_out`/`startup_failure` →
+  event `ci-run-failed` with a deterministic id `ci-<repo>-<runId>-<attempt>`
+  (a re-poll is a dedup no-op; a workflow retry is a new occurrence). Green or
+  in-progress runs are a no-op.
 
-## Zpracování (tier path)
+## Handling (tier path)
 
-Nový alert → JSON soubor v `MONITOR_EVENTS_DIR` (default
-`ZIBBY_DATA_DIR/monitors`), activity `monitor-alert` (skupina integrations),
-a dispatch vyšetřovacího tasku přes běžný `TaskSchedulerService.createTask`
-s `trustedProjectId` z integrace — classifier routuje, budget/limit guardy platí,
-fix končí na strukturální PR bráně (Tier-3) jako každý jiný run. Selhání
-dispatch nechá event `new`; další tick ho re-dispatchne (alert se nikdy tiše
-neztratí). Heartbeat: `systemConfig.monitorTickMs` (default 60 s, `0` vypíná;
-testovací fixture pinuje 0).
+A new alert → a JSON file in `MONITOR_EVENTS_DIR` (default
+`ZIBBY_DATA_DIR/monitors`), a `monitor-alert` activity entry (integrations
+group), and dispatch of an investigation task through the ordinary
+`TaskSchedulerService.createTask`, with `trustedProjectId` from the
+integration — the classifier routes it, budget/limit guards apply, and the fix
+ends up at the structural PR gate (Tier-3) like any other run. A dispatch
+failure leaves the event at `new`; the next tick re-dispatches it (an alert
+never silently gets lost). Heartbeat: `systemConfig.monitorTickMs` (default
+60s, `0` disables it; the test fixture pins it to `0`).
 
-## CI health = stav, ne událost (N4b)
+## CI health as state, not event (N4b)
 
-Vedle alertů (event path výše) si každý poll spočítá **aktuální stav zdroje**:
-`GithubCiMonitor` z CELÉ stažené stránky (ne kurzorem filtrovaného výseku) určí
-červená/zelená podle nejnovějšího rozhodného runu (`success` vs.
-red-conclusions; cancelled/in-progress nerozhodují) a `sinceAt` = začátek
-souvislé série stejného stavu. Watcher snapshot atribuuje
-(integrationId/projectId) a PŘEPÍŠE sidecar
-`MONITOR_EVENTS_DIR/status/<integrationId>--<adapterKind>.json` — poslední známý
-stav přežije restart; žádná historie, žádný dedup.
+Alongside alerts (the event path above), every poll also computes the
+**current state of the source**: `GithubCiMonitor` looks at the WHOLE fetched
+page (not the cursor-filtered slice) to determine red/green from the latest
+decisive run (`success` vs. red conclusions; cancelled/in-progress runs don't
+decide), and `sinceAt` marks the start of the current unbroken run of that
+state. The watcher's snapshot is attributed (integrationId/projectId) and
+OVERWRITES the sidecar
+`MONITOR_EVENTS_DIR/status/<integrationId>--<adapterKind>.json` — the last
+known state survives a restart; there is no history, no dedup.
 
-Povrchy (anti alert-fatigue: stavová linka existuje, dokud stav trvá, a zmizí
-sama — jednorázová notifikace zůstává alertem N3):
+Surfaces (anti alert-fatigue: a status line exists for as long as the state
+persists and disappears on its own — a one-time notification remains the N3
+alert):
 
-- **Briefing**: needs-you položka kindu `ci-red` („CI red since …"), jen dokud
-  je červeno; zezelenání nic nehlásí, linka prostě zmizí.
-- **Web**: chip na project detailu (`ProjectCiStatusChip` v PageHeader) — tři
-  indikátory (tone bad/ok + glyph x/check + text „CI červené od HH:MM"), a11y
-  nikdy jen barvou. Bez sledovaného CI se nerenderuje. Červená se propíše hned
-  (invalidace na `monitor-alert` activity SSE); zotavení do zelena pokryje
-  pomalý interval (CI status je skutečně pollovaný STAV — posture health/limits).
+- **Briefing**: a needs-you item of kind `ci-red` ("CI red since …"), only
+  while it's red; turning green announces nothing, the line just disappears.
+- **Web**: a chip on the project detail page (`ProjectCiStatusChip` in
+  `PageHeader`) — three indicators (tone bad/ok + glyph x/check + text "CI red
+  since HH:MM"), never color-only for accessibility. Renders nothing if no CI
+  is being watched. Red propagates immediately (invalidated on the
+  `monitor-alert` activity SSE); recovery to green is covered by the slower
+  poll interval (CI status is genuinely a polled STATE — same posture as
+  health/limits).
 
 ## HTTP (read-only)
 
 ```
-GET /api/monitors/events          seznam alertů (?projectId= &state=new|handled|ignored)
-GET /api/monitors/events/:id      jeden alert
-GET /api/monitors/status          poslední známý CI stav per zdroj (?projectId=)
+GET /api/monitors/events          list alerts (?projectId= &state=new|handled|ignored)
+GET /api/monitors/events/:id      a single alert
+GET /api/monitors/status          last known CI state per source (?projectId=)
 ```
 
-Eventy i statusy se rodí jen uvnitř API — klient je nezfalšuje.
+Both events and statuses are born only inside the API — a client can never
+forge one.

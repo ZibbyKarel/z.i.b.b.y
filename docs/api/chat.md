@@ -1,34 +1,35 @@
-# API — Chat (chat-first konverzace)
+# API — Chat (chat-first conversation)
 
-Konverzační vrstva ZIBBYHO — nahrazuje původní Voice UI. Operátor si píše s ZIBBYM
-v jednom průběžném vlákně; jeden `claude` turn s tool-use rozhodne, jestli
-**odpovědět / doptat se / jednat**. Z konverzace přirozeně padají úkoly.
+ZIBBY's conversational layer — replaces the original Voice UI. The operator
+types with ZIBBY in one ongoing thread; a single `claude` turn with tool use
+decides whether to **answer / ask a follow-up / act**. Tasks fall naturally out
+of the conversation.
 
-**Modul:** `apps/api/src/chat/` · **Contract:** `libs/contracts/src/chat/`
+**Module:** `apps/api/src/chat/` · **Contract:** `libs/contracts/src/chat/`
 **Design spec:** `docs/superpowers/specs/2026-06-23-chat-ui-design.md`
 
-## Endpointy
+## Endpoints
 
-| Metoda | Cesta | Popis |
-| ------ | ----- | ----- |
-| `POST` | `/api/chat/messages` | Přidá operátorův turn a spustí streaming odpověď. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (vrací hned; tokeny jdou přes SSE). |
-| `GET`  | `/api/chat/transcript?conversationId=` | Čistý read přepisu konverzace (`{ conversationId, sessionId, messages }`). Bez `conversationId` → aktivní vlákno. |
-| `GET`  | `/api/chat/stream?conversationId=` | **SSE** (raw `@Sse()`, mimo ts-rest) — živé tokeny. Každý `data` je JSON `ChatTurnEvent`. |
-| `POST`/`GET` | `/api/chat/mcp` | In-process **MCP server** (Streamable HTTP) s nástroji ZIBBYHO. Volá ho spawnnutý `claude`, ne frontend. |
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/api/chat/messages` | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE). |
+| `GET`  | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread. |
+| `GET`  | `/api/chat/stream?conversationId=` | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`. |
+| `POST`/`GET` | `/api/chat/mcp` | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend. |
 
 ### `ChatTurnEvent` (SSE payload)
 
 ```ts
-{ conversationId, turnId, type: "delta", text }   // token vizuálního textu
-{ conversationId, turnId, type: "tool", tool }     // oznámení dispatch (ChatToolEvent)
-{ conversationId, turnId, type: "done", text }     // turn dokončen, finální text
-{ conversationId, turnId, type: "error", message } // turn selhal
+{ conversationId, turnId, type: "delta", text }   // a token of visible text
+{ conversationId, turnId, type: "tool", tool }     // dispatch notification (ChatToolEvent)
+{ conversationId, turnId, type: "done", text }     // turn finished, final text
+{ conversationId, turnId, type: "error", message } // turn failed
 ```
 
 ## Engine (`chat-session.service.ts`)
 
-Jeden turn = jeden spawn `claude` CLI (žádný API klíč, běží na Max předplatném).
-Ověřený recept (spike, viz spec §7):
+One turn = one spawn of the `claude` CLI (no API key, runs on the Max
+subscription). The verified recipe (spike, see spec §7):
 
 ```
 claude -p <msg> [--resume <sid>] \
@@ -38,73 +39,87 @@ claude -p <msg> [--resume <sid>] \
   --mcp-config {zibby:{type:http,url:.../api/chat/mcp}} --allowedTools mcp__zibby__*
 ```
 
-- **Token streaming** vyžaduje `--include-partial-messages` (jinak přijdou celé bloky).
-  Parser (`chat-stream-parser.ts`, čistý) přeposílá jen `text_delta`.
-- **Kontinuita:** `--resume <sessionId>` drží kontext; session id se persistuje per
-  konverzace a obnovuje každý turn (server je stateless per turn).
-- **Izolace:** `--setting-sources ""` nenačte žádné user/project/local settings →
-  globální hooky/pluginy (které by injektovaly cizí kontext) nevyskočí, ale auth
-  (keychain) zůstává. (`CLAUDE_CONFIG_DIR` auth rozbíjí — nepoužívat.)
-- **`--tools ""`** vypne všechny vestavěné nástroje (Bash/Write/Edit/…). ZIBBY chat
-  je konverzační butler, ne coding agent — jednat smí JEN přes `zibby` MCP nástroje
-  (`create_task` deleguje práci pipeline). Bez toho se model snaží appku postavit sám
-  přes Bash/Write místo dispatche. (Ověřeno živým evalem.)
-- Model přepsatelný přes `ZIBBY_CHAT_MODEL` (výchozí `sonnet`).
+- **Token streaming** requires `--include-partial-messages` (otherwise whole
+  blocks arrive instead). The parser (`chat-stream-parser.ts`, pure) forwards
+  only `text_delta`.
+- **Continuity:** `--resume <sessionId>` keeps context; the session id persists
+  per conversation and is passed again every turn (the server is stateless per
+  turn).
+- **Isolation:** `--setting-sources ""` loads no user/project/local settings, so
+  global hooks/plugins (which could inject foreign context) never fire — but
+  auth (keychain) still works. (`CLAUDE_CONFIG_DIR` breaks auth — do not use
+  it.)
+- **`--tools ""`** turns off every built-in tool (Bash/Write/Edit/…). ZIBBY
+  chat is a conversational butler, not a coding agent — it may only act through
+  the `zibby` MCP tools (`create_task` delegates the work to a pipeline).
+  Without this, the model tries to build the app itself via Bash/Write instead
+  of dispatching. (Verified with a live eval.)
+- The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
 
-## Nástroje (`chat-tools.service.ts` + `chat-mcp.controller.ts`)
+## Tools (`chat-tools.service.ts` + `chat-mcp.controller.ts`)
 
-MCP server hostovaný přímo v api (`@modelcontextprotocol/sdk`, Streamable HTTP,
-stateless), takže služby jsou injektované — žádný druhý proces. Server id `zibby`:
+An MCP server hosted directly in the API (`@modelcontextprotocol/sdk`,
+Streamable HTTP, stateless), so services are injected — no second process.
+Server id `zibby`:
 
-| Nástroj | Volá | Efekt |
-| ------- | ---- | ----- |
-| `create_task` | `TaskSchedulerService.createTask` | Klasifikuje + spustí úkol (dispatch). Výstupy běhu dál hlídá gate vrstva. |
-| `recall_memory` | `VaultService.search` | Index-first hledání ve vaultu. |
-| `get_status` | `BriefingService.assemble` | Shrnutí "co se děje" (read-only). |
+| Tool | Calls | Effect |
+| ---- | ----- | ------ |
+| `create_task` | `TaskSchedulerService.createTask` | Classifies + dispatches a task. The run's outputs are still guarded by the gate layer. |
+| `recall_memory` | `VaultService.search` | Index-first search over the vault. |
+| `get_status` | `BriefingService.assemble` | A "what's happening" summary (read-only). |
 
-**Dispatch je prompt-governed** (`chat-persona.ts`), ne vynucený — stejná vrstva,
-kde žil starý voice bug ("jak se máš" → spustil úkol). Hlídá to opt-in eval
-`chat-dispatch.eval.test.ts` (`CHAT_EVAL=1`, potřebuje živou api + tokeny).
+**Dispatch is prompt-governed** (`chat-persona.ts`), not enforced in code — the
+same layer where the old voice bug lived ("how are you" triggering a task). An
+opt-in eval (`chat-dispatch.eval.test.ts`, `CHAT_EVAL=1`, needs a live API and
+tokens) guards against regressions there.
 
-Prompt má **dvě části**: swappable **persona** (jen tón — `CHAT_PERSONAS`) +
-konstantní **governor** (`CHAT_GOVERNOR_PROMPT`, rozhodování odpověz/doptej/jednej +
-nástroje). Každá persona se přidá nad **tentýž** governor, takže dispatch discipline
-je invariantní napříč osobnostmi (to je to, co eval hlídá). `buildChatPrompt(persona)`
-je složí; `buildArgs()` čte personu živě z `SystemConfigStore`.
+The prompt has **two parts**: a swappable **persona** (tone only —
+`CHAT_PERSONAS`) plus a constant **governor** (`CHAT_GOVERNOR_PROMPT`, the
+answer/ask/act decision + tools). Every persona is layered on top of the
+**same** governor, so dispatch discipline is invariant across personalities
+(that's what the eval guards). `buildChatPrompt(persona)` assembles them;
+`buildArgs()` reads the persona live from `SystemConfigStore`.
 
-**Volitelná osobnost:** operátor vybírá personu v `/settings` → uloží se jako
-`chatPersona` na file-backed `SystemConfig` (`jarvis` (výchozí) / `concise` /
-`formal`). Čte se per turn, takže se projeví v další konverzaci bez restartu (mění se
-jen tón, ne chování). Změna se neaplikuje doprostřed běžícího `--resume` vlákna.
+**Optional personality:** the operator picks a persona in `/settings` — saved
+as `chatPersona` on the file-backed `SystemConfig` (`jarvis` (default) /
+`concise` / `formal`). Read per turn, so it takes effect on the next
+conversation without a restart (only the tone changes, not the behavior). The
+change does not apply mid-way through a running `--resume` thread.
 
-## Persistence + paměť
+## Persistence + memory
 
-- **Přepis:** append-only JSONL `data/chat/<conversationId>.jsonl` (jedna `ChatMessage`
-  na řádek) + sidecar `<id>.meta.json` se session id + `active.json` (ukazatel na
-  aktivní vlákno). `CHAT_DIR` env override.
-- **Destilace:** nightly `MemoryDistillerService` sweepuje i konverzace —
-  **inkrementálně** (vlákno je dlouhožijící): destiluje jen zprávy za markerem
-  `<id>.distilled.json` (počet zpráv) a kurzor posune. Důležité fakty putují do
-  vault markdownu jako u běhů.
+- **Transcript:** append-only JSONL `data/chat/<conversationId>.jsonl` (one
+  `ChatMessage` per line) + a sidecar `<id>.meta.json` holding the session id +
+  `active.json` (a pointer to the active thread). `CHAT_DIR` env override.
+- **Distillation:** the nightly `MemoryDistillerService` sweep also covers
+  conversations — **incrementally** (a thread is long-lived): it distills only
+  the messages past the `<id>.distilled.json` marker (a message count) and
+  advances the cursor. Important facts flow into vault markdown the same way
+  runs do.
 
-## Web overlay (JARVIS styl)
+## Web overlay (JARVIS style)
 
-Chat je fullscreen takeover ve stylu původního Voice UI (`apps/web/features/chat/`):
-radiální pozadí + scanline/grid, ambientní orb (`ChatOrb`, převzatý z Voice UI) za
-konverzací a scrollovatelný přepis, jehož horní hrana se vytrácí (maska-gradient) —
-starší zprávy mizí, ale jde scrollovat až k začátku.
+Chat is a fullscreen takeover in the style of the original Voice UI
+(`apps/web/features/chat/`): a radial background with a scanline/grid, an
+ambient orb (`ChatOrb`, carried over from Voice UI) behind the conversation, and
+a scrollable transcript whose top edge fades out (a mask gradient) — older
+messages fade, but you can still scroll back to the start.
 
-- **Konverzace žije v klient-state overlaye** (ne refetch z `/transcript`): operátorův
-  turn se přidá optimisticky při odeslání, asistentův turn se přidá z `done` streamu
-  (autoritativní `done.text` + nasbírané tool eventy). Backend stále zapisuje každou
-  zprávu do JSONL — UI jen renderuje, co stream/POST vyprodukoval. Tím zmizel flash
-  „historie zmizela po odpovědi" (nebylo už okno na refetch).
-- **Reset při zavření + otevření:** `ChatProvider` razí nové `conversationId` při
-  každém otevření, takže nový thread nemá `claude` session na `--resume` → ZIBBY
-  začíná nanovo. Zavření overlaye odmountuje obrazovku (klient-state zmizí).
-- `GET /transcript` zůstává pro budoucí resume/odbočky; aktuální overlay ho nečte.
+- **The conversation lives in client-side overlay state** (not refetched from
+  `/transcript`): the operator's turn is added optimistically on send, the
+  assistant's turn is added from the `done` stream event (the authoritative
+  `done.text` plus the tool events collected along the way). The backend still
+  writes every message to JSONL — the UI only renders what the stream/POST
+  produced. This removed the flash where "history disappeared after the
+  reply" (there was no longer a window for a refetch).
+- **Reset on close + open:** `ChatProvider` mints a fresh `conversationId` every
+  time the overlay opens, so a new thread has no `claude` session to
+  `--resume` → ZIBBY starts fresh. Closing the overlay unmounts the screen (the
+  client-side state disappears).
+- `GET /transcript` remains for a future resume/branch feature; the current
+  overlay doesn't read it.
 
-## MVP rozsah
+## MVP scope
 
-Jedno průběžné vlákno per otevření overlaye (efemérní). Odbočky/podvlákna a obnovení
-dřívějšího vlákna jsou odložený increment (spec §2).
+One ongoing thread per overlay open (ephemeral). Branches/sub-threads and
+resuming an earlier thread are a deferred increment (spec §2).
