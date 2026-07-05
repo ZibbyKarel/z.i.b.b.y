@@ -1,97 +1,111 @@
-# Self-development runbook — ZIBBY jako bezpečný cíl vlastní loop engine
+# Self-development runbook — ZIBBY as a safe target for its own loop engine
 
-> **Phase 12.8.** ZIBBY smí mířit svůj Phase 10 loop engine na **vlastní** monorepo
-> jen za podmínek níže. Tento runbook je závěr Phase 12 — "MEMORY BOMB" (commit
-> 96d1294) vznikla přesně tím, že se loop pustil na repo bez těchto pravidel.
-> Detailní RCA: [`docs/plans/phase-12.md`](../plans/phase-12.md).
+> **Phase 12.8.** ZIBBY may point its Phase 10 loop engine at its **own** monorepo
+> only under the conditions below. This runbook is the conclusion of Phase 12 — the
+> "MEMORY BOMB" (commit `96d1294`) happened exactly because the loop was let loose on
+> this repo without these rules. For the detailed root-cause analysis, see the Phase
+> 12 post-mortem (git history around commit `96d1294`).
 
-## Zlaté pravidlo: **Builder ≠ Subject**
+## The golden rule: **Builder ≠ Subject**
 
-Orchestrátor, který self-development **řídí** (builder), nesmí běžet na tom samém
-stromě, který **upravuje** (subject):
+The orchestrator that **drives** self-development (the builder) must not run on the
+same tree that it **modifies** (the subject):
 
-- **Builder** = běžící ZIBBY API. Pro self-development ho spouštěj z **pinned/built**
-  artefaktu, NE `ts-node-dev --respawn` (`apps/api/package.json:6`, script `dev`).
-  `--respawn` re-startuje na každý zápis souboru → pod self-developmentem by se
-  AppModule re-bootoval uprostřed úprav (to byl jeden z meta-cirkulárních vektorů,
-  viz Phase 12.4). Použij `pnpm api:start` / `serve` (`ts-node` bez `--respawn`),
-  ideálně z jiného checkoutu než ten, který je subject.
-- **Subject** = repo, na které goal míří. Zaregistruj ho jako **projekt** s vlastní
-  `path` na **čerstvý checkout** (`git clone` / `git worktree add` mimo builderův
-  strom). Goal runner mu stejně vyřízne vlastní worktree v `ZIBBY_WORKTREE_ROOT`
-  (Phase 12.7), takže builderův pracovní strom se nikdy needituje.
+- **Builder** = the running ZIBBY API. For self-development, run it from a
+  **pinned/built** artifact, NOT `ts-node-dev --respawn` (`apps/api/package.json:6`,
+  the `dev` script). `--respawn` restarts on every file write, so under
+  self-development `AppModule` would reboot mid-edit (one of the meta-circular
+  vectors, see Phase 12.4). Use `pnpm api:start` / `serve` (`ts-node` without
+  `--respawn`), ideally from a different checkout than the subject.
+- **Subject** = the repo the goal targets. Register it as a **project** with its own
+  `path` pointing at a **fresh checkout** (`git clone` / `git worktree add` outside
+  the builder's tree). The goal runner cuts its own worktree under
+  `ZIBBY_WORKTREE_ROOT` regardless (Phase 12.7), so the builder's working tree is
+  never edited.
 
-Builder a subject **nesmí sdílet** ani pracovní strom, ani `ZIBBY_DATA_DIR`.
+Builder and subject **must not share** either a working tree or a `ZIBBY_DATA_DIR`.
 
-## Tři identity, které se musí držet oddělené (Phase 12 RCA)
+## Three identities that must stay separate (Phase 12 root-cause analysis)
 
-Když je target == ZIBBY, kolabují tři věci — Phase 12 každou rozpojila:
+When the target == ZIBBY, three things collapse into one — Phase 12 pulled each of
+them apart:
 
-| Identita       | Kolaps                                                                                  | Fix                                                                                             |
-| -------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Proces**     | verifier `pnpm test` bootne druhý AppModule → `reconstruct()` → re-dispatch téhož goalu | 12.1/12.2 (scope verifieru, nikdy full-repo), 12.4 (gate boot re-dispatch), 12.5 (e2e izolace)  |
-| **Filesystem** | worktree + artefakty uvnitř sledovaného/testovaného stromu                              | 12.7 (worktrees mimo repo přes `ZIBBY_WORKTREE_ROOT`)                                           |
-| **Zdroje**     | žádný timeout/kill/cap/reaping → N kopií žere RAM                                       | 12.3 (timeout + detached pgid + cap + reaping), 12.9 (await reaping na shutdownu), 8.1 (budget) |
+| Identity       | Collapse                                                                                 | Fix                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Process**    | the verifier's `pnpm test` boots a second `AppModule` → `reconstruct()` → re-dispatches the same goal | 12.1/12.2 (scope the verifier, never full-repo), 12.4 (gate boot re-dispatch), 12.5 (e2e isolation)   |
+| **Filesystem** | the worktree + artifacts land inside the watched/tested tree                               | 12.7 (worktrees outside the repo, via `ZIBBY_WORKTREE_ROOT`)                                          |
+| **Resources**  | no timeout/kill/cap/reaping → N copies eat RAM                                              | 12.3 (timeout + detached pgid + cap + reaping), 12.9 (await reaping on shutdown), 8.1 (budget)         |
 
-## Resource-governance jako dimenze autonomy contractu
+## Resource governance as a dimension of the autonomy contract
 
-Autonomy contract (CLAUDE.md "Laws") dosud řešil autonomii **úsudku** (tiers, gate,
-approval-first). Phase 12 přidává autonomii **exekuce** — kolik výpočtu smí jeden běh
-spotřebovat — jako rovnocennou dimenzi floor:
+The autonomy contract (`CLAUDE.md`'s "Laws") previously only addressed autonomy of
+**judgment** (tiers, gate, approval-first). Phase 12 adds autonomy of **execution** —
+how much compute a single run may consume — as an equally load-bearing floor:
 
-- **Per-call ceiling:** `goalVerifyTimeoutMs` (12.3, runtime system config) + output
-  cap; každý verifier shell je detached process-group, killnutý na deadline (SIGTERM→SIGKILL).
-- **Per-run/per-goal budget:** Phase 8.1 `BudgetService` — daily/weekly token/run-count
-  cap; překročení parkuje dispatch za Tier 3 approval.
-- **OS-level ceiling (doporučeno, mimo proces):** subjektův verifier spouštěj pod
-  reálným resource stropem — cgroup `memory.max`/`cpu.max`, kontejner s `--memory`/
-  `--cpus`, nebo (nejsilnější izolace) microVM (Firecracker) / gVisor. Sdílené-kernel
-  kontejnery jsou slabší (riziko escape); pro skutečně netrusted self-modifying běh
-  preferuj microVM. In-process timeout (12.3) je jen interim strop, ne náhrada.
+- **Per-call ceiling:** `goalVerifyTimeoutMs` (12.3, runtime system config) plus an
+  output cap; every verifier shell is a detached process group, killed at the
+  deadline (`SIGTERM`→`SIGKILL`).
+- **Per-run/per-goal budget:** Phase 8.1's `BudgetService` — daily/weekly
+  token/run-count caps; exceeding one parks the dispatch behind a Tier-3 approval.
+- **OS-level ceiling (recommended, outside the process):** run the subject's
+  verifier under a real resource cap — a `memory.max`/`cpu.max` cgroup, a container
+  with `--memory`/`--cpus`, or (the strongest isolation) a microVM (Firecracker) /
+  gVisor. Shared-kernel containers are weaker (escape risk); for genuinely untrusted
+  self-modifying runs, prefer a microVM. The in-process timeout (12.3) is only an
+  interim ceiling, not a substitute.
 
-## Defense-in-depth: vrstvy, které už ZIBBY má
+## Defense in depth: the layers ZIBBY already has
 
-Žádná jediná vrstva nestačí — bezpečnost je jejich součet:
+No single layer is sufficient — safety is their sum:
 
-1. **Approval gate + Tier 3** (core) — žádný push/merge/spend-past-cap bez operátora.
-2. **Worktree-per-run mimo repo** (12.7) — subjektovy commity nikdy nesahají na builder.
-3. **Scoped verifier** (12.1/12.2) — nikdy full-monorepo suita zevnitř repa.
-4. **Reaping + timeout** (12.3/12.9) — žádný orphan, žádný hung shell.
-5. **Boot gate** (12.4) — restart nedispatchne goal bez `goalAutoResume: true` (runtime system config).
+1. **Approval gate + Tier 3** (core) — no push/merge/spend-past-cap without the
+   operator.
+2. **Worktree-per-run outside the repo** (12.7) — the subject's commits never touch
+   the builder.
+3. **Scoped verifier** (12.1/12.2) — never the full monorepo suite from inside the
+   repo.
+4. **Reaping + timeout** (12.3/12.9) — no orphans, no hung shells.
+5. **Boot gate** (12.4) — a restart never re-dispatches a goal without
+   `goalAutoResume: true` (runtime system config).
 6. **Budget cap** (8.1) — bounded spend.
-7. **Test izolace** (12.5) — `pnpm test` se nedotkne živých dat ani reálného claude.
+7. **Test isolation** (12.5) — `pnpm test` never touches live data or the real
+   `claude` binary.
 
-## Postup spuštění self-development běhu
+## How to launch a self-development run
 
 ```bash
-# 1) Builder: pinned běh z odděleného checkoutu (NE ts-node-dev --respawn)
-#    s vlastním data-dir a worktrees mimo subject.
-#    (goalVerifyTimeoutMs nastav v data/system-config.json nebo přes /settings)
+# 1) Builder: a pinned run from a separate checkout (NOT ts-node-dev --respawn),
+#    with its own data dir and worktrees outside the subject.
+#    (set goalVerifyTimeoutMs in data/system-config.json, or via /settings)
 ZIBBY_DATA_DIR=/var/zibby/builder-data \
 ZIBBY_WORKTREE_ROOT=/var/zibby/worktrees \
 AGENT_RUNNER_MODE=claude \
 pnpm --filter @zibby/api serve
 
-# 2) Subject: čerstvý checkout repa jako projekt s explicitními checks (scoped!)
+# 2) Subject: a fresh checkout of the repo, registered as a project with explicit
+#    scoped checks.
 git clone <zibby-remote> /var/zibby/subject
-#    → zaregistruj projekt { path: "/var/zibby/subject", checks: ["pnpm --filter X test"] }
-#    (NIKDY prázdné checks — to by spadlo na full-repo default a 12.1 to zaparkuje)
+#    → register the project { path: "/var/zibby/subject", checks: ["pnpm --filter X test"] }
+#    (NEVER leave checks empty — that falls back to the full-repo default, and 12.1 parks it)
 
-# 3) Goal: maker = delivery pipeline, verifier scoped na subjekt; spusť přes gate.
-#    OS strop (doporučeno): celý builder proces v kontejneru/cgroup s memory+cpu cap.
+# 3) Goal: maker = delivery pipeline, verifier scoped to the subject; run it through
+#    the gate.
+#    OS ceiling (recommended): run the whole builder process in a container/cgroup
+#    with a memory+cpu cap.
 ```
 
 ## Exit-criterion checklist (Phase 12)
 
-Goal mířící na ZIBBY repo musí doběhnout/zaparkovat, **aniž** by kdy:
+A goal targeting the ZIBBY repo must finish or park **without ever**:
 
-- (a) spustil full-monorepo suitu zevnitř repa — **12.1 + 12.2** ✅
-- (b) nechal orphan child po API killu — **12.3 + 12.9** ✅
-- (c) re-dispatchnul se na restartu — **12.4** ✅
-- (d) vyčerpal RAM — **12.3 timeout/cap + 8.1 budget + OS strop**
+- (a) running the full-monorepo suite from inside the repo — **12.1 + 12.2** ✅
+- (b) leaving an orphaned child after an API kill — **12.3 + 12.9** ✅
+- (c) re-dispatching itself on restart — **12.4** ✅
+- (d) exhausting RAM — **12.3 timeout/cap + 8.1 budget + OS ceiling**
 
-a `pnpm test` je plně izolovaný od živých dat a reálného claude — **12.5** ✅.
+and `pnpm test` is fully isolated from live data and the real `claude` binary —
+**12.5** ✅.
 
-Blast-radius sada **12.1–12.4 musí být zelená** (je) předtím, než se loop pustí na
-toto repo. Guard test invariantu (worktree-root mimo builder strom):
-`apps/api/src/shared/self-development.test.ts`.
+The 12.1–12.4 blast-radius set **must be green** (it is) before the loop is let
+loose on this repo. The invariant guard test (worktree root outside the builder's
+tree) is `apps/api/src/shared/self-development.test.ts`.

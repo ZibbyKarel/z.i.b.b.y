@@ -1,14 +1,38 @@
 # Deployment
 
+How to run ZIBBY as a durable, self-hosted service on the operator's macOS machine,
+so two seeded engagements can progress overnight on a machine that rebooted once and
+the morning briefing still accounts for everything.
+
+> **The API is the butler.** The UI being down must never stop runs. Run the API
+> under launchd (below); the web app is optional and has its own build/start step if
+> you want it served too.
+
+## Components
+
+| Process        | What                                             | How                                                                |
+| -------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
+| **API**        | The butler — runs, scheduler, channels, briefing | `pnpm api:start` (`ts-node src/main.ts`), launchd `com.zibby.api`   |
+| Web (optional) | The dashboard view                               | `pnpm web:build` → `pnpm web:start`, optional own plist             |
+| Backup         | Vault git commit + data rsync                    | `apps/api/scripts/backup.sh`, launchd `com.zibby.backup`            |
+
+There is **no build step** for the API — `pnpm api:start` runs `pnpm --filter
+@zibby/api serve`, which is `ts-node -P tsconfig.json src/main.ts`: the compiled
+server runs straight from source, no `tsc`/`esbuild` artifact in between.
+
 ## launchd — API service (macOS)
 
-**Soubor:** `ops/com.zibby.api.plist`
+**File:** `ops/com.zibby.api.plist`
 
-API běží jako macOS launchd daemon — automatický start při loginu, automatický restart po crash.
+The API runs as a macOS launchd daemon — automatic start at login, automatic
+restart on crash.
 
-### Instalace
+### Install
 
-1. Zkopíruj plist a vyplň strojové hodnoty (označeny `⟨…⟩`):
+1. Edit the plist and fill in the machine-specific values (marked `⟨…⟩`): the
+   absolute repo root, the absolute `pnpm` path (`which pnpm`), and a `PATH` that
+   includes the dir holding the `claude` binary (agent and pipeline runs shell out
+   to it) plus node/pnpm:
 
    ```xml
    <key>ProgramArguments</key>
@@ -17,23 +41,31 @@ API běží jako macOS launchd daemon — automatický start při loginu, automa
      <string>api:start</string>
    </array>
    <key>WorkingDirectory</key>
-   <string>⟨/Users/ty/Workspace/z.i.b.b.y⟩</string>
+   <string>⟨/Users/you/Workspace/z.i.b.b.y⟩</string>
    <key>PATH</key>
    <string>⟨/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin⟩</string>
    ```
 
-2. Zkopíruj do LaunchAgents:
+2. Copy into `LaunchAgents`:
 
    ```bash
+   mkdir -p ~/Library/LaunchAgents ~/Library/Logs/zibby
    cp ops/com.zibby.api.plist ~/Library/LaunchAgents/
    ```
 
-3. Bootstrap (načti a spusť):
+3. Bootstrap (load and start):
+
    ```bash
    launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.api.plist
    ```
 
-### Správa
+4. Health check:
+
+   ```bash
+   curl -fsS http://localhost:3333/api/health && echo " OK"
+   ```
+
+### Managing the service
 
 ```bash
 # Restart
@@ -45,121 +77,193 @@ launchctl bootout gui/$UID/com.zibby.api
 # Status
 launchctl list com.zibby.api
 
-# Reinstalace (po změně plistu)
+# Reinstall (after editing the plist)
 launchctl bootout gui/$UID/com.zibby.api
 launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.api.plist
 ```
 
-### Konfigurace v plistu
+**Restart after a code pull:**
 
-| Klíč                  | Hodnota                 | Popis                                                                                                         |
-| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `RunAtLoad`           | `true`                  | Spustí se automaticky po boostrapping                                                                         |
-| `KeepAlive`           | `true`                  | Restartuje po crash                                                                                           |
-| `ThrottleInterval`    | `10`                    | 10s backoff mezi restarty                                                                                     |
-| `PORT`                | `3333`                  | API port                                                                                                      |
-| `LOG_LEVEL`           | `info`                  | Úroveň logování                                                                                               |
-| `CORS_ORIGIN`         | `http://localhost:3000` | Povolená origin                                                                                               |
-| `GOAL_AUTO_RESUME`    | `1`                     | **Phase 13.3** — na restartu démon re-drivuje `running`/`paused-limit` goaly (Phase 12.4 gate). Jen v démonu! |
-| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩`  | **Phase 12.7** — worktrees mimo repo/data strom                                                               |
+```bash
+git pull && pnpm install
+launchctl kickstart -k gui/$UID/com.zibby.api
+```
 
-### Goal auto-resume — unattended builder (Phase 13.3)
+### Plist keys
 
-Instalace tohoto démonu **JE** operátorův explicitní opt-in do bezobslužného provozu, takže
-`GOAL_AUTO_RESUME=1` v plistu je legitimní (jediné místo, kde auto-resume patří — Phase 12.4
-ho jinak gateuje za Tier 3). Sémantika restartu:
+| Key                   | Value                    | Meaning                                                     |
+| --------------------- | ------------------------ | ------------------------------------------------------------ |
+| `RunAtLoad`           | `true`                   | Starts automatically once bootstrapped                      |
+| `KeepAlive`           | `true`                   | Restarts on crash                                            |
+| `ThrottleInterval`    | `10`                     | 10s backoff between restarts                                 |
+| `PORT`                | `3333`                   | API port                                                     |
+| `LOG_LEVEL`           | `info`                   | Log level                                                    |
+| `CORS_ORIGIN`         | `http://localhost:3000`  | Allowed origin                                               |
+| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩`  | **Phase 12.7** — run worktrees outside the repo/data tree    |
 
-| `GOAL_AUTO_RESUME`   | Chování po restartu (`reconstruct()`)                                                                           |
-| -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `1` (démon)          | rehydratuje registr **a** re-drivuje `running`/`paused-limit` goaly (continuation, ne restart — Phase 9.3/12.4) |
-| unset (attended dev) | rehydratuje registr, ale live goaly zaparkuje `awaiting-resume` — čeká na operátora (Law 3)                     |
+`GOAL_AUTO_RESUME` is **not** a plist environment key anymore — see the next
+section.
 
-**Self-development:** pokud démon má pohánět loop proti **vlastnímu** repu, řiď se
-[`self-development.md`](./self-development.md) — builder ≠ subject (subject = čerstvý sibling
-checkout jako projekt; worktrees v `ZIBBY_WORKTREE_ROOT` mimo builderův strom). Démon běží
-přes `api:start` (`serve` = `ts-node` bez `--respawn`), takže edit-respawn smyčka odpadá.
+### Goal auto-resume — the unattended builder (Phase 13.3)
 
-### Logy
+Unattended-builder resume is no longer an env var: it is the file-backed
+`goalAutoResume` knob in the runtime system config (`data/system-config.json`,
+editable from `/settings` — see `docs/ops/environment.md`). Installing this daemon
+**is** the operator's explicit opt-in to unattended operation, so turning
+`goalAutoResume` on there is legitimate (the one place auto-resume belongs — Phase
+12.4 otherwise gates it behind Tier 3). Restart semantics (`reconstruct()`):
+
+| `goalAutoResume`       | Behavior after restart                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `true` (daemon)        | Rehydrates the registry **and** re-drives `running`/`paused-limit` goals (continuation, not a restart — Phase 9.3/12.4) |
+| `false` (attended dev) | Rehydrates the registry, but parks live goals `awaiting-resume` — waits for the operator (Law 3)             |
+
+**Self-development:** if this daemon is meant to drive the loop against **its own**
+repo, follow [`self-development.md`](./self-development.md) — builder ≠ subject
+(the subject is a fresh sibling checkout registered as a project; worktrees live
+under `ZIBBY_WORKTREE_ROOT`, outside the builder's own tree). The daemon runs via
+`api:start` (`serve` = `ts-node` without `--respawn`), so the edit-respawn loop that
+would otherwise reboot the builder mid-edit does not apply.
+
+### Logs
 
 ```
 ~/Library/Logs/zibby/api.out.log   # stdout
 ~/Library/Logs/zibby/api.err.log   # stderr
 ```
 
-Rotovány dle `ops/zibby.newsyslog.conf`.
+Rotated per `ops/zibby.newsyslog.conf` (see _Log rotation_ below).
 
 ## Backup service
 
-**Soubor:** `ops/com.zibby.backup.plist`
+**File:** `ops/com.zibby.backup.plist`
 
-Spouští `apps/api/scripts/backup.sh` každý den ve 3:30.
+Runs `apps/api/scripts/backup.sh` (driven by `com.zibby.backup`) daily at 03:30.
 
 ### Backup script (`apps/api/scripts/backup.sh`)
 
-1. **Git commit vault** — vault poznámky jsou verzovány git commitem (bez push — Zákon 3)
-2. **Rsync runtime data** — rsync do `ZIBBY_BACKUP_DIR` s rotujícími složkami po dnech týdne
-3. **Credentials** — vyloučeny výchozím nastavením; `--include-credentials` opt-in
+1. **Vault → git**: `git add -A && git commit` in the vault dir. **No remote, no
+   push** (Law 3). Want offsite? Add a private remote yourself and push it on your
+   own cadence.
+2. **data/ → rsync**: `rsync -a --delete` of the runtime dirs into
+   `$ZIBBY_BACKUP_DIR/<1..7>` (rotating day-of-week). **Credentials are excluded by
+   default**; pass `--include-credentials` to opt in (secrets — only to an
+   encrypted / trusted target).
+3. Idempotent and no-op safe: a clean vault commits nothing, a missing data dir is
+   skipped, and it exits 0 on "nothing to back up".
 
-### Rsync strategie
+### Rsync strategy
 
-Rotace 7 adresářů pojmenovaných po dni týdne (mon, tue, wed, ...) — každý obsahuje kompletní snapshot.
+Rotation across 7 subdirectories named by day-of-week number (`1`..`7`, Mon..Sun) —
+each holds a complete snapshot:
 
 ```bash
 rsync -a --delete \
-  --exclude=credentials/ \    # výchozí ochrana
+  --exclude=credentials/ \    # default protection
   $ZIBBY_DATA_DIR/ \
-  $ZIBBY_BACKUP_DIR/$(date +%a)/   # np. /backup/mon/
+  $ZIBBY_BACKUP_DIR/<day>/
 ```
 
-### Instalace backup service
+Verify manually: `ZIBBY_BACKUP_DIR=/tmp/zb bash apps/api/scripts/backup.sh`, then
+inspect `/tmp/zb/<day>/`. The exec-level test is `apps/api/test/backup.test.ts`.
+
+### Install the backup service
 
 ```bash
 cp ops/com.zibby.backup.plist ~/Library/LaunchAgents/
-# Vyplň strojové hodnoty (WorkingDirectory, ProgramArguments, ZIBBY_BACKUP_DIR)
+# Fill in the machine-specific values (WorkingDirectory, ProgramArguments, ZIBBY_BACKUP_DIR)
 launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.zibby.backup.plist
 ```
 
-## Log rotace (newsyslog)
+## Log rotation (newsyslog)
 
-**Soubor:** `ops/zibby.newsyslog.conf`
+**File:** `ops/zibby.newsyslog.conf`
 
 ```bash
-# Instalace
-sudo cp ops/zibby.newsyslog.conf /etc/newsyslog.d/
+# Install
+sudo cp ops/zibby.newsyslog.conf /etc/newsyslog.d/zibby.conf
 ```
 
-Rotuje:
+Rotates:
 
 - `~/Library/Logs/zibby/api.out.log`
 - `~/Library/Logs/zibby/api.err.log`
 - `~/Library/Logs/zibby/backup.out.log`
+- `~/Library/Logs/zibby/backup.err.log`
 
-## Build pro produkci
+**Held-fd caveat (Darwin 27):** the API is a launchd process that does not reopen
+its log on `SIGHUP`, so a `newsyslog` rotation renames the file but the live process
+keeps writing to the old inode until its next restart. The config uses flag `N` (no
+signal) and a 10 MB size cap; the rotated file only starts filling again after
+`launchctl kickstart -k gui/$UID/com.zibby.api`. `KeepAlive` plus the nightly
+cadence make this acceptable. Backup logs are written by a short-lived job and
+rotate cleanly — no caveat there.
 
-API build (esbuild/tsc):
+## Building for other components
 
-```bash
-pnpm api:start   # spustí zkompilovaný server přímo (bez ts-node-dev)
-```
-
-Web build:
+The API has no build artifact (see _Components_ above). The web app does:
 
 ```bash
 pnpm web:build   # Next.js production build
-pnpm web:start   # Spuštění production buildu
+pnpm web:start   # run the production build
 ```
 
-## Jedna instance
+## One instance per data root
 
-`withPathLock` v `data-dir.ts` je in-process lock (zabrání dvojímu startu ve stejném procesu).
-launchd garantuje jednu instanci per `Label` na systémové úrovni — label `com.zibby.api` může běžet jen jednou.
+`withPathLock` (in `data-dir.ts`) is an **in-process** lock only — it serializes
+read-modify-write within a single API process, but two API processes on the same
+`ZIBBY_DATA_DIR` would still race the vault MOCs and the ledger. launchd guarantees
+a single instance per `Label` at the system level — label `com.zibby.api` can only
+run once. Do not also run `pnpm api:dev` against the live data root while the
+daemon is up.
 
 ## Crash-safety
 
-Restart API je bezpečný díky reconciliation mechanismům:
+Restarting the API is safe thanks to reconciliation on boot:
 
-- `RunnerCore.init()` — orphaned "running" runy → "interrupted"
-- `RunRecorderModule` — re-audit vault po restartu
-- `TaskSchedulerService` bootstrap drain — queued tasks se obnoví
+- `RunnerCore.init()` — orphaned `running` runs are rebuilt from the on-disk
+  sidecars (written atomically, so a torn sidecar can't break this) and reconciled
+  to `interrupted`.
+- `RunRecorderModule` — re-audits the vault after a restart, recording any run that
+  finished while the API was down.
+- `TaskSchedulerService` bootstrap drain — drains the concurrency queues and
+  re-arms held tasks behind their approvals.
 
-Žádná ztráta dat při restartu — vše je na disku (sidecar JSON, JSONL activity, vault markdown).
+No data loss across a restart — everything lives on disk (sidecar JSON, JSONL
+activity, vault markdown).
+
+## CI — Playwright on a self-hosted runner
+
+`.github/workflows/e2e.yml` has a `playwright-selfhosted` job (`runs-on:
+[self-hosted, macOS, zibby]`) that runs on **push to `main` only** — never on
+`pull_request` (self-hosted + untrusted fork PRs is a foot-gun, and it costs
+nothing to guard a single-operator repo). Register this machine as a runner:
+
+```sh
+# GitHub → repo Settings → Actions → Runners → New self-hosted runner (macOS)
+# Use labels: self-hosted, macOS, zibby
+```
+
+The suite is token-free: `playwright.config.ts` boots both servers with isolated
+`.e2e-data` dirs and demo knobs (`AGENT_DEMO_STEPS=3`, `CHANNEL_FAKE_DIR` set → fake
+channel adapter). Prove it locally first with `CLAUDE_BIN` unset; if a spec truly
+needs the binary, point `CLAUDE_BIN` at `e2e/fake-claude.mjs` in the config's
+`apiEnv`. Keep the runner user's environment free of real credentials (the suite
+sets its own isolated dirs; verify `CLAUDE_CONFIG_DIR` doesn't leak the operator's
+real rate-limits/keychain into the API under test). The ubuntu `workflow_dispatch`
+job stays as the manual fallback. Promotion to a required check stays deferred
+until it's been green for a while.
+
+## The "rebooted once" rehearsal (manual)
+
+The Phase 8 exit proof, run by hand:
+
+1. Seed two fixture projects with budgets — project A `dailyRuns: 2`,
+   `maxConcurrent: 1`.
+2. Queue four tasks across A and B, plus a fake-channel bug report naming project B.
+3. Run the API under launchd; `kill -9` it once mid-evening — `KeepAlive` restarts
+   it.
+4. In the morning, confirm: both engagements progressed; A's overflow is a **held**
+   task behind a `spend-past-cap` approval; the briefing **groups by engagement**
+   and every line traces end to end (activity JSONL → ledger line → run dir → vault
+   note); and the logs rotated/landed under `~/Library/Logs/zibby/`.

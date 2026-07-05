@@ -1,142 +1,170 @@
-# Prostředí a konfigurace
+# Environment & configuration
 
-## Proměnné prostředí (API)
+## Environment variables (API)
 
-| Proměnná              | Výchozí                              | Popis                                                                                                                                         |
-| --------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                | `3333`                               | Port na kterém API naslouchá                                                                                                                  |
-| `LOG_LEVEL`           | `info`                               | Úroveň logování: `debug` / `info` / `warn` / `error`                                                                                          |
-| `CORS_ORIGIN`         | `http://localhost:3000`              | Povolené origins (comma-separated pro více)                                                                                                   |
-| `ZIBBY_DATA_DIR`      | `apps/api/data`                      | Root adresář pro všechna runtime data                                                                                                         |
-| `VAULT_DIR`           | `$ZIBBY_DATA_DIR/vault`              | Cesta k Obsidian vault (memory)                                                                                                               |
-| `ZIBBY_BACKUP_DIR`    | —                                    | Cíl zálohy (rsync destination) — jen pro backup script                                                                                        |
-| `SYSTEM_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/system-config.json` | Cesta k souboru runtime system configu (viz níže) — path/test-isolation knob, ne behaviorální                                                 |
-| `AGENT_RUNNER_MODE`   | `claude`                             | `claude` = reálný `claude -p`; `demo` = deterministický stand-in (testy/CI). Patří do **untracked** `.env`, ne do `.env.example` (tam `demo`) |
-| `CLAUDE_BIN`          | `claude`                             | Cesta k `claude` binárce — test seam (fake binárka v e2e)                                                                                     |
-| `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees`            | **Phase 12.7** — root pro run worktrees, **mimo** repo/data strom. NEodvozuje se z `ZIBBY_DATA_DIR` (záměrně)                                 |
+Set in the plist's `EnvironmentVariables` (see `docs/ops/deployment.md`), or in a
+`.env` the API loads. Loaded via `@nestjs/config` (`ConfigModule.forRoot({ isGlobal:
+true })`).
 
-Načítání přes `@nestjs/config` (ConfigModule.forRoot, isGlobal: true).
+| Variable              | Default                              | Purpose                                                                                                                                       |
+| --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`                | `3333`                                | API listen port                                                                                                                                |
+| `LOG_LEVEL`           | `info`                                | `debug` / `info` / `warn` / `error`                                                                                                            |
+| `CORS_ORIGIN`         | `http://localhost:3000`               | Allowed origins (comma-separated for more than one)                                                                                            |
+| `ZIBBY_DATA_DIR`      | `apps/api/data`                       | Single data-root switch — repoints every store at once                                                                                        |
+| `VAULT_DIR`           | `$ZIBBY_DATA_DIR/vault`               | Obsidian vault (second brain)                                                                                                                  |
+| `BUDGET_LEDGER_DIR`   | `$ZIBBY_DATA_DIR/budget-ledger`       | Dispatch ledger (enforcement; gitignored)                                                                                                      |
+| `BUDGET_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/budget.json`         | Operator global pause thresholds (committed)                                                                                                   |
+| `SYSTEM_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/system-config.json`  | Path to the runtime system config file (see below) — a path/test-isolation knob, not a behavioral one                                          |
+| `AGENT_RUNNER_MODE`   | `claude`                              | `claude` = real `claude -p`; `demo` = deterministic stand-in (tests/CI). Belongs in the **untracked** `.env`, not `.env.example` (which sets `demo`) |
+| `CLAUDE_BIN`          | `claude` on `PATH`                    | Path to the `claude` binary — test seam (fake binary in e2e)                                                                                   |
+| `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees`             | **Phase 12.7** — root for run worktrees, **outside** the repo/data tree. Deliberately does not derive from `ZIBBY_DATA_DIR`                    |
+| `ZIBBY_BACKUP_DIR`    | _(unset)_                             | rsync destination root for `backup.sh` (backup script only)                                                                                    |
+
+The `PATH` used to launch the API **must** include the dir holding `claude` —
+agent and pipeline runs shell out to it.
+
+## Budgets & caps
+
+Per-engagement budgets live on the project record (`PATCH /projects/:id`, or the
+project editor in the dashboard): `dailyRuns` / `weeklyRuns` (run-count caps per
+Europe/Prague window) and `maxConcurrent`. Over a cap, a new task is **held** behind
+a Tier-3 `spend-past-cap` approval (Law 3: no autonomous spend past budget); at
+`maxConcurrent` it is **queued** (no approval) and drains when a run of that
+project finishes. The global account ceiling (`data/budget.json` →
+`pauseAtRollingPct` / `pauseAtWeeklyPct`) holds **every** dispatch once account
+utilization crosses it.
+
+**If everything is suddenly held**, the budget guard is failing closed (by design:
+an unreadable ledger or limits snapshot ⇒ hold, never auto-spend). **Check disk** —
+the ledger dir (`budget-ledger/`) must be writable and `data/budget.json` readable.
+Each held task carries its own approval; rejecting them clears the queue.
 
 ## Runtime system config (`data/system-config.json`)
 
-Behaviorální „knoby", které dřív byly start-only proměnné prostředí, jsou teď
-**file-backed** a editovatelné z `/settings` (zákon _Files are the source of truth_).
-Žádný env override — soubor je jediný zdroj; chybějící soubor = schema defaulty
-(reprodukují historické chování „env unset"). Endpoint `GET/PUT /api/system/config`.
+Behavioral knobs that used to be start-only environment variables are now
+**file-backed** and editable from `/settings` (Law: files are the source of truth).
+There is no env override — the file is the only source; a missing file reads as the
+schema defaults (reproducing the historical "env unset" behavior). Endpoint:
+`GET/PUT /api/system/config`.
 
-Změny intervalů a režimu adaptéru se projeví **okamžitě** (schedulery se naživo
-přearmují přes `SystemConfigStore.onChange`); `goalAutoResume` se uplatní až při
-příštím bootu.
+Changes to interval and adapter-mode knobs take effect **immediately** (the
+schedulers live-rearm via `SystemConfigStore.onChange`); `goalAutoResume` only
+applies on the next boot.
 
-| Klíč                  | Výchozí  | Popis                                                                                                                                                |
-| --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `taskTickMs`          | `30000`  | Interval task scheduler ticku (0 = vypnuto, test default)                                                                                            |
-| `channelTickMs`       | `30000`  | Interval heartbeatu channel watcheru (0 = vypnuto)                                                                                                   |
-| `automationTickMs`    | `0`      | Interval automations scheduleru (0 = vypnuto; historický default)                                                                                    |
-| `limitResumeTickMs`   | `60000`  | Interval skenu limit-resume démona (0 = vypnuto)                                                                                                     |
-| `limitResumeMax`      | `3`      | Max. cyklů obnovy než se limitem pozastavený běh zaparkuje/selže                                                                                     |
-| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline `checks` verifier shellu (pak SIGTERM→SIGKILL)                                                                  |
-| `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = na bootu auto-re-drive `running`/`paused-limit` goalů (bezobslužný launchd démon). Default: park `awaiting-resume` (Law 3) |
-| `chatPersona`         | `jarvis` | Osobnost chat butlera (`jarvis`/`concise`/`formal`) — mění jen tón, ne dispatch governor. Čte se per turn, nastavuje se v `/settings`                |
+| Key                   | Default  | Purpose                                                                                                                                                |
+| --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `taskTickMs`          | `30000`  | Task scheduler heartbeat interval (`0` = disabled; the test default)                                                                                  |
+| `channelTickMs`       | `30000`  | Channel watcher poll interval (`0` = disabled)                                                                                                        |
+| `monitorTickMs`       | `60000`  | Monitor watcher poll interval (`0` = disabled) — CI status alerts (Phase N3)                                                                          |
+| `automationTickMs`    | `0`      | Automation scheduler loop interval (`0` = disabled; the historical default)                                                                           |
+| `limitResumeTickMs`   | `60000`  | Limit-resume daemon scan interval (`0` = disabled)                                                                                                    |
+| `limitResumeMax`      | `3`      | Max resume cycles before a limit-paused run is parked/failed                                                                                          |
+| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                  |
+| `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = on boot, auto-re-drive `running`/`paused-limit` goals (the unattended launchd daemon). Default: park `awaiting-resume` (Law 3) |
+| `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`      |
 
-V testech seeduje `vitest.setup.ts` tento soubor (ticky 0) přes `SYSTEM_CONFIG_FILE`;
-suite, která potřebuje jiný knob, volá `writeSystemConfig()`
-(`apps/api/src/system/system-config.fixture.ts`) před bootem appky.
+In tests, `vitest.setup.ts` seeds this file (ticks at `0`) via `SYSTEM_CONFIG_FILE`;
+a suite that needs a different knob calls `writeSystemConfig()`
+(`apps/api/src/system/system-config.fixture.ts`) before booting the app.
 
-Channelové adaptéry jsou v produkci vždy reálné (dle typu integrace). Fake adaptér je
-jen testovací seam — `AdapterRegistry` ho vybere pro všechny typy, jakmile je nastaven
-env `CHANNEL_FAKE_DIR` (seeduje ho `vitest.setup.ts`); není to operátorský config.
+Channel adapters are always real in production (per integration type). The fake
+adapter is a test-only seam — `AdapterRegistry` selects it for every type as soon as
+the env var `CHANNEL_FAKE_DIR` is set (seeded by `vitest.setup.ts`); it is not an
+operator-facing config.
 
-## .env soubor
+## The `.env` file
 
-`apps/api/.env` nebo kořenový `.env` (oba podporovány přes NestJS ConfigModule).
+`apps/api/.env` or a root `.env` (both supported via NestJS `ConfigModule`).
 
 ```bash
-# Příklad .env pro lokální vývoj
+# Example .env for local development
 PORT=3333
 LOG_LEVEL=debug
 CORS_ORIGIN=http://localhost:3000
 ZIBBY_DATA_DIR=apps/api/data
 ```
 
-`.env` je v `.gitignore` — nikdy se necommituje.
+`.env` is in `.gitignore` — never commit it.
 
-## Datové adresáře
+## Data directories
 
-### Výchozí (`apps/api/data/`)
+### Default (`apps/api/data/`)
 
-Používá se při `pnpm api:dev` a `pnpm api:start`.
+Used by `pnpm api:dev` and `pnpm api:start`.
 
-### Testovací (`.zibby/data-test/`)
+### Test (`.zibby/data-test/`)
 
-Přepnutí: `ZIBBY_DATA_DIR=.zibby/data-test`
+Switch with `ZIBBY_DATA_DIR=.zibby/data-test`.
 
-Příkazy:
+Commands:
 
 ```bash
-pnpm api:dev:test        # dev server s testovacími daty
-pnpm api:start:test      # production server s testovacími daty
-pnpm seed:test           # seed testovacích dat
+pnpm api:dev:test        # dev server against test data
+pnpm api:start:test      # production server against test data
+pnpm seed:test           # seed test data
 ```
 
-Playwright e2e testy startují druhý API server na jiném portu s testovacími daty
-(viz `project_playwright_fast_refresh_loop.md`).
+Playwright e2e tests start a second API server on a different port with test data
+(see `project_playwright_fast_refresh_loop.md`).
 
-## Monorepo scripts (package.json root)
+## Monorepo scripts (root `package.json`)
 
 ```bash
-# Vývoj
+# Development
 pnpm web:dev             # Next.js → http://localhost:3000
 pnpm api:dev             # NestJS (LOG_LEVEL=debug) → http://localhost:3333
-pnpm api:dev:test        # NestJS s data-test/
+pnpm api:dev:test        # NestJS against data-test/
 pnpm storybook           # Storybook → http://localhost:6006
 
 # Build
 pnpm web:build           # Next.js production build
-pnpm web:start           # Spuštění production buildu
-pnpm api:start           # NestJS production build
+pnpm web:start           # run the production build
+pnpm api:start           # run the API from source (no build step — see docs/ops/deployment.md)
 
-# Testy
-pnpm test                # všechny vitest projekty
-pnpm web:test            # jen web vitest projekt (jsdom)
-pnpm api:test            # jen api vitest projekt
+# Tests
+pnpm test                # all vitest projects
+pnpm web:test            # web vitest project only (jsdom)
+pnpm api:test            # api vitest project only
 pnpm e2e                 # Playwright E2E
 
-# Qualita kódu
-pnpm lint                # ESLint --fix (slouží jako formatter)
-pnpm typecheck           # tsc --noEmit pro tsconfig.base + apps/web/tsconfig
-                         # POZOR: rtk pnpm typecheck maskuje chyby — vždy volit přímé tsc
+# Code quality
+pnpm lint                # ESLint --fix (acts as the formatter)
+pnpm typecheck           # tsc --noEmit for tsconfig.base + apps/web/tsconfig
+                         # NOTE: rtk pnpm typecheck masks errors — always call tsc directly
 
-# Utility
+# Utilities
 pnpm seed                # seed data/
 pnpm seed:test           # seed data-test/
 pnpm api:smoke           # Claude smoke test
 pnpm e2e:report          # Playwright HTML report
 ```
 
-## Testovací environment
+## Test environment
 
-### Vitest projects (vitest.workspace.ts)
+### Vitest projects (`vitest.workspace.ts`)
 
 ```typescript
 export default defineWorkspace([
-  { project: "api",  ... },  // apps/api unit testy
-  { project: "web",  ... },  // apps/web component testy (jsdom)
+  { project: "api",  ... },  // apps/api unit tests
+  { project: "web",  ... },  // apps/web component tests (jsdom)
 ])
 ```
 
-Poznámka: `apps/web` není v workspace pro globální `pnpm test` — nutno volit `pnpm web:test`.
+Note: `apps/web` is not in the workspace for the global `pnpm test` — use `pnpm
+web:test` instead.
 
-### Playwright (playwright.config.ts)
+### Playwright (`playwright.config.ts`)
 
 - Chromium + Firefox + WebKit
-- Testovací API server na separátním portu s `ZIBBY_DATA_DIR=.zibby/data-test`
-- `TASK_TICK_MS=0` pro deterministické testy (tick drivenmanually)
-- `.playwright-mcp/` output adresář je gitignored (rozbil by Next.js Fast Refresh)
+- A test API server on a separate port with `ZIBBY_DATA_DIR=.zibby/data-test`
+- `TASK_TICK_MS=0` for deterministic tests (the tick is driven manually)
+- `.playwright-mcp/` output dir is gitignored (it would otherwise break Next.js Fast
+  Refresh)
 
 ## TypeScript path aliases
 
-Definovány v `tsconfig.base.json`, používány všude v monorepu:
+Defined in `tsconfig.base.json`, used across the monorepo:
 
 ```json
 {
@@ -151,16 +179,16 @@ Definovány v `tsconfig.base.json`, používány všude v monorepu:
 }
 ```
 
-## NX konfigurace (nx.json)
+## NX configuration (`nx.json`)
 
-4 projekty: `design-system`, `contracts`, `web`, `api`
+4 projects: `design-system`, `contracts`, `web`, `api`.
 
-- Caching: build, test, lint výstupy jsou cachovány
-- Named inputs: `default` (všechny soubory), `production` (bez testů)
-- Affected: NX detekuje změny a spouští jen ovlivněné projekty
+- Caching: build, test, and lint outputs are cached
+- Named inputs: `default` (all files), `production` (excludes tests)
+- Affected: NX detects changes and runs only the affected projects
 
-## Playwright MCP výstup
+## Playwright MCP output
 
-`.playwright-mcp/` — screenshots a trace výstupy z Playwright MCP tool.
-Musí být mimo sledovaný strom Next.js dev serveru (jinak Fast Refresh smyčka).
-Je gitignored.
+`.playwright-mcp/` — screenshots and trace output from the Playwright MCP tool.
+Must stay outside the tree watched by the Next.js dev server (otherwise it breaks
+Fast Refresh). It is gitignored.
