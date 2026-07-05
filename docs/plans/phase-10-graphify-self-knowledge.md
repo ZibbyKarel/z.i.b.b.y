@@ -46,8 +46,11 @@
   manifest. Pokud pip install `graphifyy` v prostředí selže (proxy/offline), fázi
   dokončit bez seedu — implementace musí fungovat i bez `graphify-out/` (bod 3 výše)
   a seed se dožene lokálně.
-- Do `.gitignore` nepřidávat nic — `graphify-out/` se commitujе (files are the source
-  of truth); velké HTML viz negenerovat.
+- `graphify-out/` je už dnes celý v `.gitignore` (ř. 11: „regenerated via
+  `graphify update .`, not versioned") — NIC z něj se necommituje; je to lokální,
+  regenerovatelný artefakt (stejná kategorie jako `apps/api/data/`). Self-knowledge
+  reader s tím počítá (graceful absence) a seed se na každém stroji dožene
+  spuštěním skillu.
 
 ### 2. Kontrakt
 
