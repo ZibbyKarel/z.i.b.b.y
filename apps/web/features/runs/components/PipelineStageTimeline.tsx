@@ -54,7 +54,13 @@ function LiveStageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phase
   const { text: streamed } = useStageRunLogStream(pipelineRunId, phaseId);
   const text = streamed.replace(/\n$/, "");
   return text ? (
-    <RunTranscript live maxHeight="viewport" scrollKey={text} text={text} />
+    <RunTranscript
+      live
+      maxHeight="viewport"
+      scrollKey={text}
+      text={text}
+      toggleLabel={t("toggleToolOutput")}
+    />
   ) : (
     <Typography mono size="2xs" type="note" variant="tertiary">
       {t("liveLog")}…
@@ -81,7 +87,13 @@ function TerminalStageLog({
     );
   }
   return text ? (
-    <RunTranscript live={false} maxHeight="viewport" scrollKey={text} text={text} />
+    <RunTranscript
+      live={false}
+      maxHeight="viewport"
+      scrollKey={text}
+      text={text}
+      toggleLabel={t("toggleToolOutput")}
+    />
   ) : (
     <Typography mono size="2xs" type="note" variant="tertiary">
       {t("stageNoLog")}

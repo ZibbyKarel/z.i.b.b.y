@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Icon, Panel, Typography } from "@zibby/design-system";
 import { useRunLog } from "../useRunLog";
 import { RunTranscript } from "./RunTranscript";
@@ -21,6 +22,7 @@ export interface RunLogStreamProps {
 export function RunLogStream({ runId, live, liveLabel, logLabel, linesLabel }: RunLogStreamProps) {
   const { text, done } = useRunLog(runId);
   const lineCount = text ? text.replace(/\n$/, "").split("\n").length : 0;
+  const t = useTranslations("runs");
 
   return (
     <Panel
@@ -44,6 +46,7 @@ export function RunLogStream({ runId, live, liveLabel, logLabel, linesLabel }: R
         placeholder={`${liveLabel}…`}
         scrollKey={text}
         text={text.replace(/\n$/, "")}
+        toggleLabel={t("toggleToolOutput")}
       />
     </Panel>
   );

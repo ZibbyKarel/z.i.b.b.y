@@ -1,19 +1,36 @@
 "use client";
 
-import { type CSSProperties, type ReactNode, memo, useEffect, useMemo, useRef } from "react";
-import { type CodeBlockHeight, Container, Markdown, Stack, Typography } from "@zibby/design-system";
-import { type TranscriptSegment, parseTranscript } from "../transcript";
+import { type CSSProperties, type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CodeBlockHeight,
+  Container,
+  Markdown,
+  Pressable,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
+import {
+  type TranscriptGroup,
+  type TranscriptSegment,
+  groupTranscript,
+  parseTranscript,
+} from "../transcript";
 
 export enum RunTranscriptTestId {
   Root = "run-transcript-root",
   Caret = "run-transcript-caret",
   Placeholder = "run-transcript-placeholder",
   Tool = "run-transcript-tool",
+  ToolCall = "run-transcript-tool-call",
+  ToolCaret = "run-transcript-tool-caret",
   Result = "run-transcript-result",
   System = "run-transcript-system",
   Thinking = "run-transcript-thinking",
   Footer = "run-transcript-footer",
 }
+
+/** DS string-prop convention (EN default) — {@link RunLogStream} supplies the cs/en copy. */
+const DEFAULT_TOGGLE_LABEL = "toggle tool output";
 
 /** Mirror {@link CodeBlock}'s sealed height scale so this is a drop-in swap. */
 const maxHeightPx: Record<CodeBlockHeight, string> = {
@@ -37,6 +54,8 @@ export interface RunTranscriptProps {
   /** Shown in place of the transcript while it is empty (e.g. "waiting…"). */
   placeholder?: ReactNode;
   maxHeight?: CodeBlockHeight;
+  /** Accessible label for a tool-call's collapse/expand trigger. EN default; see {@link RunLogStream}. */
+  toggleLabel?: string;
 }
 
 /**
@@ -55,9 +74,10 @@ export function RunTranscript({
   scrollKey,
   placeholder,
   maxHeight = "viewport",
+  toggleLabel = DEFAULT_TOGGLE_LABEL,
 }: RunTranscriptProps) {
   const scrollRef = useRef<HTMLElement>(null);
-  const segments = useMemo(() => parseTranscript(text), [text]);
+  const groups = useMemo(() => groupTranscript(parseTranscript(text)), [text]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -84,9 +104,13 @@ export function RunTranscript({
         </Typography>
       ) : (
         <Stack gap="100">
-          {segments.map((seg, i) => (
-            <Segment key={i} seg={seg} />
-          ))}
+          {groups.map((group: TranscriptGroup, i) =>
+            group.kind === "toolCall" ? (
+              <ToolCallSegment key={i} result={group.result} toggleLabel={toggleLabel} tool={group.tool} />
+            ) : (
+              <Segment key={i} seg={group} />
+            ),
+          )}
           {live && (
             <Typography
               mono
@@ -170,6 +194,78 @@ function Segment({ seg }: { seg: TranscriptSegment }) {
         </Typography>
       );
   }
+}
+
+interface ToolCallSegmentProps {
+  /** The tool-call line text (glyph already stripped — same as {@link TranscriptSegment} `tool`). */
+  tool: string;
+  /** The tool's `⎿` output, if any. Absent → nothing to expand, row isn't clickable. */
+  result?: string;
+  toggleLabel: string;
+}
+
+/**
+ * A `● Tool(...)` call, collapsed by default. The trigger row (caret + `●` + tool
+ * text) mirrors the old always-visible `case "tool"` look exactly; clicking it
+ * reveals the `⎿` result body below. A tool call with no result renders the same
+ * static row as before — nothing to fold, so no caret and no click handler.
+ */
+function ToolCallSegment({ tool, result, toggleLabel }: ToolCallSegmentProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (result === undefined) {
+    return (
+      <Stack align="start" data-testid={RunTranscriptTestId.Tool} direction="row" gap="100">
+        <Typography mono size="2xs" tone="accent" type="note">
+          ●
+        </Typography>
+        <Typography mono size="2xs" style={preWrap} type="note" variant="secondary">
+          {tool}
+        </Typography>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack gap="50">
+      <Pressable
+        aria-expanded={expanded}
+        aria-label={toggleLabel}
+        data-testid={RunTranscriptTestId.ToolCall}
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <Stack align="start" direction="row" gap="100">
+          <Typography
+            mono
+            data-testid={RunTranscriptTestId.ToolCaret}
+            size="2xs"
+            tone="accent"
+            type="note"
+          >
+            {expanded ? "▾" : "▸"}
+          </Typography>
+          <Typography mono size="2xs" tone="accent" type="note">
+            ●
+          </Typography>
+          <Typography mono size="2xs" style={preWrap} type="note" variant="secondary">
+            {tool}
+          </Typography>
+        </Stack>
+      </Pressable>
+      {expanded && (
+        <Typography
+          mono
+          data-testid={RunTranscriptTestId.Result}
+          size="2xs"
+          style={preWrap}
+          type="note"
+          variant="tertiary"
+        >
+          {result}
+        </Typography>
+      )}
+    </Stack>
+  );
 }
 
 /**

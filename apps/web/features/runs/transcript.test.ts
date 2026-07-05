@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTranscript } from "./transcript";
+import { groupTranscript, parseTranscript } from "./transcript";
 
 /**
  * Golden fixtures lifted verbatim from real run logs under
@@ -136,5 +136,61 @@ describe("parseTranscript", () => {
   it("returns no segments for empty input", () => {
     expect(parseTranscript("")).toEqual([]);
     expect(parseTranscript("\n\n")).toEqual([]);
+  });
+});
+
+describe("groupTranscript", () => {
+  it("folds a tool call and its immediate result into one toolCall group", () => {
+    const groups = groupTranscript(parseTranscript(TOOL_WITH_RESULT));
+
+    expect(groups).toHaveLength(1);
+    const [group] = groups;
+    expect(group).toMatchObject({
+      kind: "toolCall",
+      tool: "Glob /Users/zibby/Workspace/z.i.b.b.y/apps/api",
+    });
+    expect((group as { result?: string }).result).toContain("chat-stream-parser.ts");
+  });
+
+  it("folds a rate_limit-interrupted tool + result the same as an adjacent one", () => {
+    const groups = groupTranscript(parseTranscript(DROP_BETWEEN_TOOL_AND_RESULT));
+
+    // parseTranscript already drops the rate_limit line, so this is tool+result adjacent
+    // by the time groupTranscript sees it.
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ kind: "toolCall" });
+    expect((groups[0] as { result?: string }).result).toContain("# Plán");
+  });
+
+  it("produces a toolCall with no result for a tool call with no output", () => {
+    const groups = groupTranscript(parseTranscript("● Bash(pnpm test)"));
+
+    expect(groups).toEqual([{ kind: "toolCall", tool: "Bash(pnpm test)" }]);
+  });
+
+  it("does not merge two consecutive tool calls with no result between them", () => {
+    const groups = groupTranscript(parseTranscript(["● Bash(one)", "● Bash(two)"].join("\n")));
+
+    expect(groups).toEqual([
+      { kind: "toolCall", tool: "Bash(one)" },
+      { kind: "toolCall", tool: "Bash(two)" },
+    ]);
+  });
+
+  it("passes text/thinking/system/footer segments through unchanged", () => {
+    const groups = groupTranscript(parseTranscript(ORCHESTRATOR));
+
+    expect(groups.map((g) => g.kind)).toEqual(["system", "thinking", "text", "footer"]);
+    expect(groups[0]).toEqual({ kind: "system", text: "claude-sonnet-4-6" });
+  });
+
+  it("passes a lone result (no preceding tool) through unchanged", () => {
+    const groups = groupTranscript([{ kind: "result", text: "  ⎿ stray output" }]);
+
+    expect(groups).toEqual([{ kind: "result", text: "  ⎿ stray output" }]);
+  });
+
+  it("returns an empty array for no segments", () => {
+    expect(groupTranscript([])).toEqual([]);
   });
 });

@@ -893,6 +893,7 @@
     "liveLog": "živý log",
     "log": "log běhu",
     "lines": "{n} řádků",
+    "toggleToolOutput": "rozbalit/sbalit výstup nástroje",
     "metaProject": "projekt",
     "metaStarted": "spuštěno",
     "metaScheduled": "spustí se",

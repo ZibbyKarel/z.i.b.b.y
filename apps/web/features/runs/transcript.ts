@@ -125,3 +125,45 @@ export function parseTranscript(text: string): TranscriptSegment[] {
   flushText();
   return segments;
 }
+
+/**
+ * A grouped transcript unit: every {@link TranscriptSegment} passes through
+ * unchanged EXCEPT a `tool` segment immediately followed by its `result` — those
+ * fold into one `toolCall` group so the UI can render a single collapsible unit
+ * (trigger row + optional body) instead of two adjacent segments.
+ */
+export type TranscriptGroup =
+  | TranscriptSegment // everything else, unchanged
+  | { kind: "toolCall"; tool: string; result?: string }; // ● + its immediate ⎿, folded
+
+/**
+ * Fold `tool` + immediately-following `result` segments into one `toolCall` group.
+ * `parseTranscript` itself stays untouched (its output and tests are unaffected) —
+ * this is a pure post-processing pass. A `tool` segment not followed by a `result`
+ * becomes a `toolCall` with no `result` (a tool call with no output). A `result`
+ * with no preceding `tool` (rare) passes through unchanged, as does everything else.
+ */
+export function groupTranscript(segments: TranscriptSegment[]): TranscriptGroup[] {
+  const groups: TranscriptGroup[] = [];
+  let i = 0;
+  while (i < segments.length) {
+    const seg = segments[i];
+    if (!seg) break;
+
+    if (seg.kind === "tool") {
+      const next = segments[i + 1];
+      if (next && next.kind === "result") {
+        groups.push({ kind: "toolCall", tool: seg.text, result: next.text });
+        i += 2;
+        continue;
+      }
+      groups.push({ kind: "toolCall", tool: seg.text });
+      i += 1;
+      continue;
+    }
+
+    groups.push(seg);
+    i += 1;
+  }
+  return groups;
+}

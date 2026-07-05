@@ -893,6 +893,7 @@
     "liveLog": "live log",
     "log": "run log",
     "lines": "{n} lines",
+    "toggleToolOutput": "toggle tool output",
     "metaProject": "project",
     "metaStarted": "started",
     "metaScheduled": "fires",
