@@ -1,22 +1,23 @@
 # Gate policy engine
 
-Gate systém je **strukturální** bezpečnostní vrstva — každý záměr agenta (intent) prochází
-vyhodnocením před provedením. Není to config, nelze ho vypnout konverzací.
+The gate system is a **structural** safety layer — every agent intent is evaluated
+before it executes. It is not config, and it cannot be turned off by conversation.
 
-## Dva zdroje pravidel
+## Two runtime sources, one authoring catalog
 
-### 1. Systémový floor (POLICY.md)
+### 1. System floor (POLICY.md)
 
-Soubor: `apps/api/data/gates/POLICY.md`
+File: `POLICY.md` at the API data root (`apps/api/data/POLICY.md` by default,
+overridable with the `POLICY_DIR` env var).
 
-- Spravovaný operátorem přímo na disku
-- Při startu API načten `PolicyStorageService`
-- Označen jako `locked: true, source: "system"`
-- Agent ho může jen **zpřísnit**, nikdy oslabit
+- Managed by the operator directly on disk
+- Loaded by `PolicyStorageService` at API startup (and read fresh on every `floor()` call)
+- Always tagged `locked: true, source: "system"`, regardless of what's on disk
+- An agent can only **harden** it, never weaken it
 
-### 2. Vlastní pravidla agenta
+### 2. An agent's own rules
 
-Definována v frontmatter agenta (`gates: [...]` nebo `gateRuleIds: [...]`):
+Defined in the agent's frontmatter (`gates: [...]`):
 
 ```yaml
 gates:
@@ -27,129 +28,143 @@ gates:
     decision: ask
     resolve:
       type: human
-
-gateRuleIds:
-  - push-to-main # reference na globální katalog
 ```
 
-Vlastní pravidla agenta mají **vyšší prioritu** než floor (first match wins, vlastní pravidla jsou první v seznamu).
-Pokud by vlastní pravidlo oslabovalo floor pravidlo na stejnou akci → `PolicyViolation` (422).
+An agent's own rules have **higher priority** than the floor (first match wins, own
+rules are listed first). If an own rule would weaken a floor rule for the same
+action → `PolicyViolation` (422).
 
-### 3. Globální katalog pravidel
+### 3. The global gate-rule catalog (authoring only, not runtime-resolved)
 
 ```
-GET    /api/gate-rules           seznam všech katalogových pravidel
-POST   /api/gate-rules           vytvoření pravidla
-GET    /api/gate-rules/:id       detail pravidla
-PUT    /api/gate-rules/:id       aktualizace pravidla
-DELETE /api/gate-rules/:id       smazání pravidla
+GET    /api/gate-rules           list every catalog rule (ordered, first match wins)
+POST   /api/gate-rules           add a rule to the catalog
+POST   /api/gate-rules/reorder   reorder the catalog by a full list of rule ids
+PUT    /api/gate-rules/:id       edit a catalog rule in place
+DELETE /api/gate-rules/:id       remove a catalog rule
 ```
 
-Katalogové pravidlo (`GlobalGateRule`) je `GateRuleInput` + `id` + volitelné `name`/`desc`.
-Agent ho odkazuje přes `gateRuleIds: ["push-to-main"]` — pravidlo se aplikuje jako by bylo inline.
+A catalog rule (`GlobalGateRule`) is a `GateRuleInput` plus `id` and an optional
+`name`/`desc`. Agents and skills can carry a `gateRuleIds: [...]` field that names
+catalog rules by id — but this is **composed on the client** (the web UI reads an
+entity's `gateRuleIds` and renders/edits the referenced catalog rules alongside its
+inline `gates`). The runtime `GateEvaluatorService` does **not** read `gateRuleIds`
+at all — `ownRules()` only ever looks at `input.gates` (inline rules) and
+`input.requires_approval` (the legacy sugar below). A catalog rule only affects
+evaluation once its content has been copied into an entity's `gates` array; there is
+no runtime resolution step that expands `gateRuleIds` into effective rules.
 
-## Schéma pravidla (GateRule)
+## Rule schema (GateRule)
 
 ### MatchCondition (discriminated union)
 
 ```typescript
-// Konkrétní tool (MCP / bash / edit / ...)
+// A specific tool (MCP / bash / edit / ...)
 { type: "tool", tool: "bash" }
 
-// Akce s volitelným branch qualifierem
+// An action with an optional branch qualifier
 { type: "action", action: "git.push", branch?: "main" }
 
-// Numerická metrika s operátorem
+// A numeric metric with a comparison operator
 { type: "threshold", metric: "purchase.amount", op: "gt", value: 1000 }
 
-// Scope (např. soubory v určitém adresáři)
+// A scope (e.g. files under a given directory)
 { type: "scope", scope: "apps/web/**" }
 
-// Kontext (libovolný textový pattern)
+// A context (a free-form text pattern)
 { type: "context", context: "production" }
 ```
 
-`match` array je **AND** — všechny podmínky musí platit.
+The `match` array is **AND**-ed — every condition must hold.
 
 ### Decision
 
-| Hodnota  | Chování                                                     |
-| -------- | ----------------------------------------------------------- |
-| `allow`  | Tiché povolení, žádný záznam                                |
-| `notify` | Povolení, ale zaznamená se do activity logu                 |
-| `ask`    | Run se pozastaví, vytvoří se `Approval`, čeká na rozhodnutí |
-| `deny`   | Run se okamžitě ukončí (`interrupted`)                      |
+| Value    | Behavior                                                            |
+| -------- | --------------------------------------------------------------------- |
+| `allow`  | Silent allow, no record                                              |
+| `notify` | Allowed, but recorded to the activity log                            |
+| `ask`    | The run pauses, an `Approval` is created, waits for a decision       |
+| `deny`   | The run is terminated immediately (`interrupted`)                    |
 
-### Resolve (jen pro `ask`)
+### Resolve (only for `ask`)
 
-Strom resolver — `ask` bez `resolve` je chyba validace.
+A resolver tree — `ask` without `resolve` is a validation error.
 
 ```typescript
-{ type: "human" }                        // čeká na operátora
-{ type: "check", check: "ci-green" }     // čeká na automatizovaný check
-{ type: "agent", agent: "reviewer" }     // čeká na review agenta
-{ type: "all", all: [Resolve, ...] }     // ALL musí říct ano
-{ type: "any", any: [Resolve, ...] }     // ANY jeden stačí
+{ type: "human" }                        // waits for the operator
+{ type: "check", check: "ci-green" }     // waits for an automated check
+{ type: "agent", agent: "reviewer" }     // waits for a reviewing agent
+{ type: "all", all: [Resolve, ...] }     // ALL must say yes
+{ type: "any", any: [Resolve, ...] }     // ANY one is enough
 ```
 
 ## GateEvaluatorService
 
-**Soubor:** `apps/api/src/gates/gate-evaluator.service.ts` (6.7 KB)
+**File:** `apps/api/src/gates/gate-evaluator.service.ts`
 
-### Priorita pravidel
+Pure with respect to entities — it reads only the locked floor (via
+`PolicyStorageService`) and whatever rules a caller hands it, so it has no
+dependency on the agents store.
+
+### Rule priority
 
 ```
 rulesForAgent(input) = [...ownRules(input), ...floor()]
 ```
 
-`ownRules` jsou první → první shoda vyhrává → agent může pravidlo zpřísnit (vlastní `ask`
-vyhraje nad floor `notify`), ale nemůže oslabit (floor `ask` + vlastní `allow` = `PolicyViolation`).
+`ownRules` come first → first match wins → an agent can harden a rule (its own
+`ask` beats the floor's `notify`), but it cannot weaken one (floor `ask` + own
+`allow` for the same action = `PolicyViolation`).
 
-### Výchozí decision
+### Default decision
 
-Pokud žádné pravidlo nematchuje → `allow` (default, žádný `ruleId`).
+If no rule matches → `allow` (default, no `ruleId`).
 
-### Evaluace
+### Evaluation
 
 ```typescript
-evaluate(action: IntendedAction, rules: GateRule[]): GateEvaluation
+evaluate(rules: GateRule[], action: IntendedAction): GateEvaluation
 ```
 
-Vrátí `{ decision, ruleId?, resolve? }`.
+Returns `{ decision, ruleId?, resolve? }`. Every rule that actually fires (a real
+decision, not the silent default allow) is recorded to the activity log as a
+`gate-decision` entry, scoped to the active run via `AsyncLocalStorage`.
 
 ### `validateHardenOnly`
 
-Volá se při `PUT /api/gates/:agentId` (nahrazení vlastních pravidel agenta):
+Called on `PUT /api/agents/:id/gates` (replacing an agent's own rules):
 
-- Projde každé navrhované pravidlo vůči floor
-- Pokud by pravidlo oslabovalo floor pravidlo → `PolicyViolation`
+- Walks every proposed rule against the floor
+- If a rule would weaken a floor rule for the same action → `PolicyViolation`
 
 ## IntendedAction
 
-Co agent oznamuje před každou akcí:
+What an agent/runner declares before every action:
 
 ```typescript
 {
-  action: string           // např. "git.push", "bash.execute", "file.edit"
-  tool?: string            // MCP nástroj
-  scope?: string           // cesta / namespace
-  branch?: string          // git branch (pro git akce)
-  context?: string         // volný kontext
-  metrics?: Record<string, number>  // pro threshold match
+  action: string           // e.g. "git.push", "bash.execute", "file.edit"
+  tool?: string            // MCP tool
+  scope?: string           // path / namespace
+  branch?: string          // git branch (for git actions)
+  context?: string         // free-form context
+  metrics?: Record<string, number>  // for a threshold match
 }
 ```
 
 ## Gate API endpoints
 
 ```
-GET  /api/gates/:agentId        inherited (floor) + own pravidla agenta
-PUT  /api/gates/:agentId        nahraď vlastní pravidla agenta (validateHardenOnly)
-POST /api/gates/evaluate        jednorázové vyhodnocení (pro testování/debugging)
+GET  /api/gates/policy          the locked system policy floor
+POST /api/gates/evaluate        one-off dry-run evaluation (for testing/debugging)
+GET  /api/agents/:id/gates      an agent's inherited (floor) + own rules
+PUT  /api/agents/:id/gates      replace an agent's own rules (validateHardenOnly)
 ```
 
 ## Legacy backwards compatibility
 
-`requires_approval: true` v frontmatter bez `gates` se deserializuje na jedno catch-all pravidlo:
+`requires_approval: true` in frontmatter with no `gates` deserializes to a single
+catch-all rule:
 
 ```typescript
 {

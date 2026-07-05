@@ -1,251 +1,281 @@
 # Task scheduling & routing
 
-## Co je Task
+## What is a Task
 
-`ScheduledTask` je odložená nebo okamžitá úloha zadaná operátorem.
-Při dispatch prochází klasifikací → routingem → stejnými runnery jako přímé spuštění agenta.
+A `ScheduledTask` is a deferred or immediate unit of work created by the operator.
+At dispatch it goes through classification → routing → the same runners a direct
+agent start would use.
 
 ## Task lifecycle
 
 ```
-scheduled    ← vytvořen s budoucím scheduledAt
+scheduled    ← created with a future scheduledAt
     ↓
-  tick()     ← daemon jednou za minutu
+  tick()     ← daemon runs once per configured interval
     ↓
-queued       ← projekt dosáhl maxConcurrent (FIFO, bez schválení)
-held         ← výdaj přesáhl budget cap (čeká na approve-override)
-pending      ← interaktivní cesta (dialog): přijato, klasifikace + spawn běží NA POZADÍ
-dispatched   ← přiřazen runneru
+queued       ← project hit maxConcurrent (FIFO, no approval)
+held         ← spend exceeded the budget cap (waits for approval to release)
+pending      ← interactive path (dialog): accepted, classification + spawn run IN THE BACKGROUND
     ↓
-awaiting-output ← run doběhl `done` a zvolený `pr` výstup čeká na bránu
-    ↓             (durable; approve/reject → outcome zapsán, zpět na dispatched)
+dispatched   ← handed to a runner
+    ↓
+awaiting-output ← run finished `done` and the chosen `pr` output is parked at the gate
+    ↓             (durable; approve/reject → outcome written, back to dispatched)
 success | failed | cancelled
 ```
 
-`TaskSchedulerService` spravuje celý lifecycle.
+`TaskSchedulerService` owns the whole lifecycle.
 
-### `pending` — background dispatch (interaktivní cesta)
+### `pending` — background dispatch (interactive path)
 
-Aby New Task dialog nečekal na celý spawn (Haiku pojmenování + klasifikace + start
-runneru může trvat sekundy), interaktivní cesta (`POST /api/tasks` z dialogu) běží s
-`background = true`: rychlé guardy (limit / budget / kapacita) proběhnou synchronně,
-pak se úloha uloží jako `pending` a **okamžitě se vrátí** `{ outcome: "pending", task }`.
-Klasifikace a spawn dobíhají na pozadí (`dispatchPending`) → úloha přepne na
-`dispatched` (born linked na `taskId`), nebo na `failed` s důvodem, když není kam
-routovat (žádný silent no-op — Zákon 5). Dialog přesměruje na `/runs?run=<task.id>` a
-feed řádek se přímo přepne z `pending` na běh (výběr sleduje `taskId`).
+So the New Task dialog doesn't block on the full spawn (Haiku naming + classification
++ starting the runner can take seconds), the interactive path (`POST /api/tasks` from
+the dialog) runs with `background = true`: the fast guards (limit / budget /
+capacity) run synchronously, then the task is persisted as `pending` and the
+response returns **immediately** as `{ outcome: "pending", task }`. Classification
+and spawn finish in the background (`dispatchPending`) → the task flips to
+`dispatched` (born linked to `taskId`), or to `failed` with a reason when there's
+nowhere to route it (never a silent no-op — Law 5). The dialog redirects to
+`/runs?run=<task.id>` and the feed row flips in place from `pending` to the run
+(selection follows `taskId`).
 
-Serveroví volající (chat, channel triage, proposed-task) `background` nenastavují —
-zůstávají synchronní a zachovávají si původní `dispatched` / `EmptyCatalogError`
-sémantiku.
+Server-side callers (chat, channel triage, proposed-task) don't set `background` —
+they stay synchronous and keep the original `dispatched` / `EmptyCatalogError`
+semantics.
 
-## Vytvoření úlohy
+## Creating a task
 
 ```
 POST /api/tasks
 Body: {
-  title: string
-  text: string               # popis úlohy (klasifikátor to přečte)
-  paths?: string[]           # soubory / adresáře
-  scheduledAt?: number       # epoch ms; pokud chybí nebo v minulosti → okamžitý dispatch
-  projectId?: string         # explicitní přiřazení projektu (přeskočí matchování)
-  target?: TaskTarget        # Phase 11: předem zvolený cíl, který přeskočí klasifikaci
-                             # (naplánovaný loop nese { kind: "goal", id }; scheduler ho
-                             # při ticku znovu nasadí na tento cíl místo re-klasifikace)
-  output?: TaskOutput        # co se stane s hotovou prací (PR / soubor / void).
-                             # Chybí = zdědit (pipeline si nechá svoje outputs, agent
-                             # nic). Viz „Výstup úkolu" níže.
+  title?: string             # optional short name
+  text: string                # the task description (the classifier reads this)
+  paths?: string[]            # files / directories (max 64)
+  attachmentSetId?: string    # a previously-uploaded attachment set (POST /api/tasks/attachments)
+  scheduledAt?: number         # epoch ms; absent or in the past → immediate dispatch
+  output?: TaskOutput          # what happens to the finished work (PR / file / void).
+                               # Absent = inherit (a pipeline target keeps its own
+                               # outputs:, an agent/orchestrator target delivers
+                               # nothing). See "Task output" below.
+  target?: TaskTarget          # Phase 11: a pre-chosen target that skips classification
+                               # (a scheduled loop carries { kind: "goal", id }; the
+                               # scheduler re-dispatches to that target on tick instead
+                               # of re-classifying)
 }
 ```
 
-`scheduledAt` bez hodnoty nebo v minulosti → `createTask` spustí okamžitou klasifikaci +
-dispatch. Z dialogu (`background = true`) se dispatch odehraje na pozadí a endpoint
-vrátí hned `pending` (viz „`pending` — background dispatch" výše).
+There is no client-supplied `projectId` field — project attribution is always
+derived server-side by `matchProject` (deterministic, no tokens), never asserted by
+the caller (Law 4).
 
-## Klasifikace (TaskClassifierService)
+`scheduledAt` absent or in the past → `createTask` runs classification + dispatch
+immediately. From the dialog (`background = true`), dispatch happens in the
+background and the endpoint returns `pending` right away (see "`pending` —
+background dispatch" above).
 
-**Soubor:** `apps/api/src/tasks/task-classifier.service.ts`
+## Classification (TaskClassifierService)
 
-Klasifikátor najde nejlepší cíl pro text úlohy:
+**File:** `apps/api/src/tasks/task-classifier.service.ts`
 
-1. Načte všechny agenty a pipeline (jejich `description` pole)
-2. Keyword scoring — počítá překryv slov mezi textem úlohy a popis
-3. Vrátí `TaskRouting`:
+The classifier finds the best target for the task's text:
+
+1. Loads every agent and pipeline (their `description` field)
+2. Keyword scoring — counts word overlap between the task text and each description
+3. Returns a `TaskRouting`:
    ```typescript
    {
      target: "agent" | "pipeline" | "orchestrator"
-     id?: string        // ID agenta nebo pipeline (orchestrator ID nemá)
+     id?: string        // agent or pipeline id (the orchestrator has none)
      confidence: number // 0–1
-     reason: string     // proč tento cíl
+     reason: string     // why this target
    }
    ```
-4. Pokud katalog je prázdný → `EmptyCatalogError` → HTTP 422
+4. If the catalog is empty → `EmptyCatalogError` → HTTP 422
 
-Operátor může také volat `POST /api/tasks/classify` pro testování klasifikace bez vytvoření úlohy.
+The operator can also call `POST /api/tasks/classify` to test classification without
+creating a task.
 
 ## Budget guard
 
-Před každým dispatchem (okamžitým i ze scheduleru):
+Before every dispatch (immediate or from the scheduler):
 
-1. `matchProject(task, projects)` — přiřadí projekt k úloze (deterministické, bez tokenů)
-2. `BudgetService.checkCap(projectId)` — ověří denní/měsíční budget
-3. Přesáhl cap → task přejde do **held** stavu:
-   - Vytvoří se `Approval` druhu `task` s `action: "spend-past-cap"`
-   - Operátor schválí přes `POST /api/tasks/:id/approve-override`
-   - Po schválení se task vrátí do fronty (budget check se přeskočí jednou pro toto ID)
+1. `matchProject(task, projects)` — attributes the task to a project (deterministic, no tokens)
+2. `BudgetService.check(projectId, now)` — checks the project's daily/weekly budget
+   (see [budget.md](./budget.md) for the enforcement details; not duplicated here)
+3. Over the cap → the task moves to the **held** state:
+   - A `task`-kind `Approval` is created with `action: "spend-past-cap"`
+   - The operator approves it via the generic approvals surface
+     (`POST /api/approvals/:id/approve` — see [approvals.md](./approvals.md)), which
+     triggers the scheduler's `releaseHeld` for this task
+   - Once approved, the task re-enters dispatch (the budget check is skipped once for
+     this id)
 
 ## Concurrency guard
 
-Každý projekt má `maxConcurrent` (kolik runů může běžet najednou):
+Every project has a `maxConcurrent` (how many runs may be active at once):
 
-1. `countActiveRuns(projectId)` — počítá běžící agent + pipeline runy projektu
-2. Dosáhlo limitu → task přejde do **queued** stavu (bez schválení)
-3. Při každém terminálu runu → `drain(projectId)` — přesune první queued task do dispatch
+1. `countRunning(projectId)` — counts the project's active agent + pipeline runs
+2. At the limit → the task moves to the **queued** state (no approval needed)
+3. On every terminal run → `drainQueues()` — moves the oldest queued task of each
+   project into dispatch
 
-`budgetApproved: Set<string>` v paměti — IDs úloh s approve-override; drain tyto úlohy přeskočí budget check, pak je z setu odstraní.
+`budgetApproved: Set<string>` in memory — task ids that were released past the cap;
+a drain skips the budget check for these once, then removes them from the set.
 
 ## Daemon tick
 
 ```typescript
-// taskTickMs (runtime system config) = 30_000 výchozí (0 = disabled, pro testy);
-// scheduler se přearmuje naživo přes SystemConfigStore.onChange při změně configu.
+// taskTickMs (runtime system config) = 30_000 by default (0 = disabled, used in tests);
+// the scheduler re-arms live via SystemConfigStore.onChange() when the config changes.
 setInterval(() => tick(), systemConfig.current().taskTickMs);
 ```
 
 `tick()`:
 
-1. Načte všechny `scheduled` úlohy s `scheduledAt <= now`
-2. Pro každou volá `attemptDispatch(task)`
+1. Loads every `scheduled` task with `scheduledAt <= now`
+2. Calls `attemptDispatch(task)` for each
 3. `attemptDispatch` → budget check → concurrency check → route → dispatch
 
-## Routing a dispatch
+## Routing and dispatch
 
 | Target         | Dispatcher                                                        |
-| -------------- | ----------------------------------------------------------------- |
-| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`       |
-| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })` |
-| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`        |
+| -------------- | ------------------------------------------------------------------ |
+| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`         |
+| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })`   |
+| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`          |
 
-Po dispatchun se zapíše `runRef` do task recordu.
+After dispatch, `runRef` is written back to the task record.
 
-## Výsledek (outcome)
+## Outcome
 
-Daemon sleduje terminal stav run:
+The daemon watches the run's terminal state:
 
-- `AgentRun.status: done | error | interrupted` → task dostane `outcome: { status, summary }`
-- `PipelineRun.status: done | failed` → totéž
-- `summary` je zkrácen na `SUMMARY_MAX_CHARS = 200` znaků
+- `AgentRun.status: done | error | interrupted` → the task gets `outcome: { status, summary }`
+- `PipelineRun.status: done | failed` → the same
+- `summary` is truncated to `SUMMARY_MAX_CHARS = 200` characters
 
 ## API endpoints
 
 ```
-GET    /api/tasks                     seznam (filtrovatelný podle status)
-POST   /api/tasks                     vytvoření / okamžitý dispatch
-PUT    /api/tasks/:id                 aktualizace naplánované úlohy
-DELETE /api/tasks/:id                 zrušení (jen scheduled | queued | held)
-POST   /api/tasks/:id/approve-override   odemkni held úlohu (spend-past-cap)
-POST   /api/tasks/classify            klasifikuj text bez vytvoření úlohy
+POST   /api/tasks/classify            classify text without creating a task
+POST   /api/tasks                     create a task — dispatch now, or schedule for scheduledAt
+GET    /api/tasks/scheduled           list deferred tasks (newest first)
+DELETE /api/tasks/scheduled/:id       cancel a still-waiting task (scheduled | queued | held)
+POST   /api/tasks/attachments         upload files as a durable attachment set (multipart)
 ```
 
-## Jednotný run povrch (`/api/tasks/runs`)
+There is no dedicated "list all tasks" or "update a scheduled task" endpoint — the
+unified run feed (`GET /api/tasks/runs`, below) is how every task/run is browsed, and
+a held task is released through the generic approvals surface, not a task-specific
+override endpoint.
 
-Úkol je entita, která běží; procesor (agent / pipeline / goal) je metadata.
-Všechny operace nad během žijí pod jedním povrchem — žádné per-kind run routy.
-Run se spouští **jen** vytvořením úlohy (`POST /api/tasks`); start není součástí
-tohoto povrchu. `TaskRunSchema` je nadmnožina feed-řádku + volitelný
-`processor: { kind, id, name }` (název padá zpět na id, když byla definice
-smazána). Goal maker/verifier child runy jsou z feedu složeny dovnitř (nejsou
-peer řádky), ale zůstávají dosažitelné v detailu cíle.
+## The unified run surface (`/api/tasks/runs`)
+
+A task is the entity that runs; the processor (agent / pipeline / goal) is metadata.
+Every operation on a run lives under one surface — no per-kind run routes. A run is
+only ever started by creating a task (`POST /api/tasks`); starting is not part of
+this surface. `TaskRunSchema` is a superset of the feed row plus an optional
+`processor: { kind, id, name }` (the name falls back to the id when the definition
+was deleted). Goal maker/verifier child runs are folded into the feed (not peer
+rows), but stay reachable from the goal's detail view.
 
 ```
-GET    /api/tasks/runs                          jednotný feed (newest-first; agent/pipeline/goal/scheduled)
-GET    /api/tasks/runs/:runId                   detail jednoho běhu
-GET    /api/tasks/runs/:runId/logs?offset=      chunk logu od byte offsetu
-GET    /api/tasks/runs/:runId/logs/stream       SSE tail (fallback na offset-poll)
-GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=   log jedné pipeline fáze
-GET    /api/tasks/runs/:runId/artifacts/:name   whitelistovaný artefakt (pr-draft.md, verdict.txt, …)
-POST   /api/tasks/runs/:runId/stop              zastavení běžícího runu
-POST   /api/tasks/runs/:runId/resume            pokračování parkovaného runu (s poznámkou)
-DELETE /api/tasks/runs/:runId                   smazání běhu + artefaktů
+GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)
+GET    /api/tasks/runs/:runId                                a single run's detail
+GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
+GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
+GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one pipeline stage's log
+GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a pipeline stage's log
+GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artifact (pr-draft.md, verdict.txt, …)
+POST   /api/tasks/runs/:runId/stop                            stop a running run
+POST   /api/tasks/runs/:runId/resume                          resume a parked run (with a note)
+DELETE /api/tasks/runs/:runId                                  delete a run and its artifacts
 ```
 
-Resolver podle `runId` dispatchne na vlastnícího runnera. Jediné per-kind run
-endpointy, které zůstaly, jsou katalogové živosti `GET /api/agents/running` a
-`GET /api/pipelines/runs` (badge/počítadla v katalogu) — viz
-[agents-runs.md](./agents-runs.md) a [pipelines.md](./pipelines.md).
+Both `/logs/stream` endpoints live outside the ts-rest contract as raw NestJS `@Sse`
+routes (ts-rest doesn't model event streams) — the concrete implementation of the
+"SSE for live streams, polling for state" DNA rule. The resolver looks up `runId` and
+dispatches to the owning runner. The only per-kind run endpoints left are the catalog
+liveness routes `GET /api/agents/running` and `GET /api/pipelines/runs` (badges/counts
+in the catalog) — see [agents-runs.md](./agents-runs.md) and [pipelines.md](./pipelines.md).
 
-## Výstup úkolu (`output`)
+## Task output (`output`)
 
-Operátor v dialogu Nový task volí, **co se stane s hotovou prací** — protějšek
-pipeline bloku `outputs:`. Je to deterministické a vlastněné systémem (žádný agent,
-žádné tokeny); výstupní strana „PR je brána". `TaskOutput` je diskriminovaná unie:
+In the New Task dialog, the operator chooses **what happens to the finished work** —
+the counterpart to a pipeline's `outputs:` block. It's deterministic and owned by the
+system (no agent, no tokens); the output side is "the PR is the gate". `TaskOutput`
+is a discriminated union:
 
-| `type` | Pole         | Co dělá                                                                                                                                            |
-| ------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr`   | —            | Otevře PR z branche hotového runu. **Vždy zaparkuje** za approvalem `task-output`, než pushne (PR je brána, strukturálně).                         |
-| `file` | `dest`, `to` | Zapíše výsledek (shrnutí runu) do souboru — do projektového worktree (`dest: project`) nebo jako poznámku ve vaultu (`dest: vault`). Tier-1, hned. |
-| `void` | —            | Explicitně žádný výstup (potlačí i pipeline deklarovaný `pr`).                                                                                     |
+| `type` | Fields       | What it does                                                                                                                                          |
+| ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr`   | —            | Opens a PR from the finished run's branch. **Always parks** behind a `task-output` approval before pushing (the PR is the gate, structurally).        |
+| `file` | `dest`, `to` | Writes the run's result (a summary) to a file — into the project's worktree (`dest: project`) or as a vault note (`dest: vault`). Tier-1, immediate.  |
+| `void` | —            | Explicitly no output (also suppresses a pipeline-declared `pr`).                                                                                       |
 
-**Chybějící pole = zdědit, ne void.** U pipeline cíle se použijí jeho vlastní
-`outputs:`, u agenta/orchestrátoru se nic nedoručí (dnešní chování). „Nezvolil" a
-„zvolil void" jsou dva různé stavy.
+**A missing field means inherit, not void.** For a pipeline target, its own
+`outputs:` apply; for an agent/orchestrator target, nothing is delivered (today's
+behavior). "Didn't choose" and "chose void" are two different states.
 
-**Dvě cesty, jedna brána.**
+**Two paths, one gate.**
 
-- **Pipeline cíl** — `output` se předá runneru jako per-run override deklarovaných
-  `outputs:` (uloženo jako `PipelineRun.outputsOverride`; `void` → `[]`). Zbytek
-  obstará existující pipeline output gate (`parkedReason: "output"`).
-- **Agent / orchestrátor cíl** — gate žije na úrovni tasku (`TaskOutputService`),
-  protože agent runy nemají vlastní durable park. Když run skončí `done`:
-  - `file` se doručí hned (Tier-1), outcome se zapíše normálně.
-  - `pr` **commitne** branch (`checkpoint` — `git add -A && commit`, vlastněno
-    systémem, nezávisle na agentovi; commit ≠ push), zachytí `branch` + `repoPath`
-    do `pendingOutput`, založí approval `task-output` (runId = taskId) a task přejde
-    na `awaiting-output`. Tahle parkovací stav je **durable** (run už doběhl, žádné
-    živé dítě — `ScheduledTask` record JE ten stav, přežije restart zadarmo). Po
-    schválení systém pushne z `repoPath` proti `branch` (ref přežije i úklid
-    worktree) a zapíše outcome; zamítnutí nechá práci na branchi bez PR. Když branch
-    nemá žádné commity nebo run nemá worktree → soft no-op (žádná brána, outcome jako
-    obvykle).
+- **Pipeline target** — `output` is passed to the runner as a per-run override of the
+  declared `outputs:` (stored as `PipelineRun.outputsOverride`; `void` → `[]`). The
+  rest is handled by the existing pipeline output gate (`parkedReason: "output"`).
+- **Agent / orchestrator target** — the gate lives at the task level
+  (`TaskOutputService`), because agent runs have no durable park of their own. When
+  the run ends `done`:
+  - `file` is delivered immediately (Tier-1), the outcome is written normally.
+  - `pr` **commits** the branch (`checkpoint` — `git add -A && commit`, owned by the
+    system, independent of the agent; commit ≠ push), captures `branch` + `repoPath`
+    into `pendingOutput`, creates a `task-output` approval (`runId` = `taskId`), and
+    the task moves to `awaiting-output`. This parked state is **durable** (the run has
+    already finished, no live child — the `ScheduledTask` record IS the state, it
+    survives a restart for free). Once approved, the system pushes from `repoPath`
+    against `branch` (the ref survives worktree cleanup too) and writes the outcome;
+    rejecting leaves the work on the branch with no PR. When the branch has no commits
+    or the run has no worktree → a soft no-op (no gate, outcome as usual).
 
-## Phase 11 — sjednocené zadání (loop shape + path scoping)
+## Phase 11 — unified assignment (loop shape + path scoping)
 
-Klasifikace zůstává **bez vedlejších efektů** a katalog dál routuje jen na
-agent/pipeline/orchestrator (`isCoherent` cíl `goal` nadále vylučuje). `TaskRouting`
-ale nese tři přídavná, zpětně kompatibilní pole (starý klient je ignoruje):
+Classification stays **free of side effects**, and the catalog still only routes to
+agent/pipeline/orchestrator (an `isCoherent` `goal` target is still excluded). But
+`TaskRouting` now carries three additional, backward-compatible fields (an old client
+ignores them):
 
 ```typescript
 {
   // …target, confidence, reason, matchedTerms, candidates…
   mode: "single" | "loop"            // default "single"
-  proposedGoal: ProposedGoal | null  // syntéza goalu, když mode === "loop"
-  paths: ResolvedPath[]              // detekované cesty přiřazené k projektům
+  proposedGoal: ProposedGoal | null  // the synthesized goal, when mode === "loop"
+  paths: ResolvedPath[]              // detected paths attributed to projects
 }
 ```
 
-- **Loop detekce (dvě nohy).** LLM router smí vrátit `loop: true` (anotace na svém
-  agent/pipeline výběru), nebo deterministický `detectLoopCue(text)` (cs+en, fold
-  diakritiky) najde cue typu „dokud", „keep retrying", „until it passes". Když platí
-  kterákoli a existuje konkrétní maker, klasifikátor sestaví `proposedGoal`
-  (`synthesizeGoal`): `objective`/`instructions` = surový text úlohy (Law 4 — data,
-  ne příkaz), `maker` = zvolený agent/pipeline (orchestrator → první pipeline z
-  katalogu, jinak `mode` zpět na `single`), `verifier: { kind: "checks" }` (výchozí
-  kontroly projektu), `maxIterations = DEFAULT_GOAL_ITERATIONS`. **Nic se nezapisuje**
-  — `.goal.md` vznikne až při submitu z webu (createGoal → startGoalRun, u
-  naplánovaného loopu createGoal → createTask s `target: goal`).
+- **Loop detection (two paths).** The LLM router may return `loop: true` (an
+  annotation on its own agent/pipeline pick), or the deterministic
+  `detectLoopCue(text)` (cs+en, diacritic-folded) finds a cue like "until it passes"
+  or "keep retrying". When either fires and there is a concrete maker, the classifier
+  assembles a `proposedGoal` (`synthesizeGoal`): `objective`/`instructions` = the raw
+  task text (Law 4 — data, not a command), `maker` = the chosen agent/pipeline
+  (orchestrator → the first pipeline in the catalog, otherwise `mode` falls back to
+  `single`), `verifier: { kind: "checks" }` (the project's default checks),
+  `maxIterations = DEFAULT_GOAL_ITERATIONS`. **Nothing is written** — the `.goal.md`
+  is only created on submit from the web (`createGoal` → `startGoalRun`; for a
+  scheduled loop, `createGoal` → `createTask` with `target: goal`).
 
-- **Path scoping.** Klasifikátor přes `matchProject` přiřadí každou `paths[]` cestu k
-  projektu (read-only atribuce). Web vykreslí „v projektu <name>", nebo u cesty mimo
-  projekt nabídne **povolit přístup** — operátorský confirm zavolá `createProject`
-  (registruje složku jako workspace root). Žádný autonomní tok grant nevolá (Law 1).
-  Negitová udělená složka běží přímo jako cwd (bez worktree, bez `WorkspaceSetupError`).
+- **Path scoping.** The classifier attributes each `paths[]` entry to a project via
+  `matchProject` (read-only attribution). The web renders "in project <name>", or —
+  for a path outside any project — offers to **grant access**; the operator's confirm
+  calls `createProject` (registers the folder as a workspace root). No autonomous
+  path ever calls the grant (Law 1). A non-git granted folder runs directly as the
+  cwd (no worktree, no `WorkspaceSetupError`).
 
-## Activity záznamy
+## Activity records
 
-| Event             | Kdy                                      |
-| ----------------- | ---------------------------------------- |
-| `task-created`    | Úloha vytvořena                          |
-| `task-dispatched` | Úloha odeslána runneru                   |
-| `task-queued`     | Úloha zařazena do fronty (maxConcurrent) |
-| `task-held`       | Úloha pozastavena pro budget schválení   |
-| `task-outcome`    | Run dokončen, outcome zapsán zpět        |
+| Event              | When                                        |
+| ------------------ | -------------------------------------------- |
+| `task-created`     | A task was created                            |
+| `task-dispatched`  | A task was handed to a runner                 |
+| `task-queued`      | A task was queued (maxConcurrent)             |
+| `task-held`        | A task was parked for budget approval         |
+| `task-outcome`     | A run finished, outcome written back          |
