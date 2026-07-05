@@ -67,6 +67,11 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // App ideas (M6 weekly bonus): pair the operator's research interests with the
   // latest digest trends into prototype pitches in the vault. Deterministic.
   z.object({ type: z.literal("app-ideas") }),
+  // Agent Factory (Phase 4b): scan recurring `orchestrator-fallback` activity for a
+  // missing specialist, draft a deterministic candidate agent `.md`, and park it
+  // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only
+  // an approval flips a candidate to `status: active`).
+  z.object({ type: z.literal("agent-factory") }),
 ]);
 export type Target = z.infer<typeof TargetSchema>;
 

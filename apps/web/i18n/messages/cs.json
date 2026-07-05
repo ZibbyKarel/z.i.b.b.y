@@ -818,6 +818,14 @@
       "goalAutoResumeHint": "Zapni pro bezobslužný (launchd) režim — běžící/limitem pozastavené cíle se po restartu samy znovu rozjedou. Vypnuto = parkují a čekají na schválení (Law 3).",
       "save": "Uložit"
     },
+    "selfKnowledge": {
+      "title": "Self-Knowledge",
+      "hint": "Strojově generovaná poznámka o tom, co ZIBBY o sobě ví — agenti, pipeliny, gate pravidla, kanály. Vytváří se příkazem `pnpm self-knowledge:generate`; tady je jen náhled pro čtení. Stejná poznámka je vidět i v Paměti jako běžná vault poznámka.",
+      "upToDate": "Aktuální",
+      "drift": "Neaktuální — spusť pnpm self-knowledge:generate",
+      "generatedAt": "Vygenerováno: {time}",
+      "sections": "{agents} agentů · {pipelines} pipeline · {gateRules} gate pravidel · {channels} kanálů"
+    },
     "preferences": "Předvolby",
     "language": "Jazyk rozhraní",
     "languageHint": "Plný překlad rozhraní se postupně dopisuje — zatím je dostupná čeština a angličtina.",
@@ -1262,6 +1270,7 @@
     "targetResearchDigest": "Výzkumný přehled",
     "targetGapDetect": "Detekce mezer",
     "targetAppIdeas": "Nápady na aplikace",
+    "targetAgentFactory": "Továrna agentů",
     "discoveryNote": "Trigger prohledá práci a navrhne tasky za schvalovací bránou. Nic se nespustí, dokud neschválíš.",
     "systemBadge": "Systémová",
     "systemEditNote": "Systémová automatizace — seedovaná ZIBBYM. Měnit lze jen rozvrh; cíl ani název upravit nelze a smazat ji nejde.",

@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import { Injectable, Logger } from "@nestjs/common";
-import type { AgentRun, GoalRun, PipelineRun, Project } from "@zibby/contracts";
+import type { AgentRun, GoalRun, NoteType, PipelineRun, Project } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
@@ -8,7 +8,25 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
-import { DuplicateNoteError, VaultService } from "./vault.service";
+import { DuplicateNoteError, SimilarNoteError, VaultService } from "./vault.service";
+
+/**
+ * Union of unique tags across a batch of learnings (Fáze 3), sorted for a stable
+ * digest note. Exported for unit testing.
+ */
+export function mergeLearningTags(learnings: Learning[]): string[] {
+  return [...new Set(learnings.flatMap((l) => l.tags))].sort();
+}
+
+/**
+ * The batch's shared `type`, or `undefined` when the learnings span more than one
+ * kind — a digest note covering several categories isn't honestly any single one.
+ * Exported for unit testing.
+ */
+export function mergeLearningType(learnings: Learning[]): NoteType | undefined {
+  const types = new Set(learnings.map((l) => l.type));
+  return types.size === 1 ? [...types][0] : undefined;
+}
 
 /** Marker written into a run's cwd once it has been distilled (at-most-once intake). */
 const MARKER = "memory-distilled.json";
@@ -214,7 +232,14 @@ export class MemoryDistillerService {
     };
   }
 
-  /** File the batch as one digest knowledge note + link it from each project MOC. */
+  /**
+   * File the batch as one digest knowledge note + link it from each project MOC.
+   * `createNote` runs with `dedupe: true` (Fáze 3): if today's fresh id collides
+   * with a note written by an earlier pass THE SAME DAY, that's an exact-id
+   * `DuplicateNoteError` — append as before. If instead it scores as a near-
+   * duplicate of a PAST day's digest (`SimilarNoteError`), merge into that
+   * existing note rather than filing a fresh one, and link/append point at it.
+   */
   private async fileDigest(
     now: Date,
     learnings: Learning[],
@@ -222,11 +247,14 @@ export class MemoryDistillerService {
   ): Promise<void> {
     const day = now.toISOString().slice(0, 10);
     const noteId = `distilled-${day}`;
+    const tags = mergeLearningTags(learnings);
+    const type = mergeLearningType(learnings);
     const frontmatter = {
       distilledAt: now.toISOString(),
       runs: candidates.length,
       learnings: learnings.length,
     };
+    let filedId = noteId;
     try {
       await this.vault.createNote({
         id: noteId,
@@ -234,25 +262,34 @@ export class MemoryDistillerService {
         title: `Destilace paměti — ${day}`,
         body: this.render(day, learnings),
         frontmatter,
+        ...(type !== undefined ? { type } : {}),
+        ...(tags.length > 0 ? { tags } : {}),
+        dedupe: true,
       });
     } catch (error) {
-      // A second pass the same day appends (never replaces) so the morning's
-      // learnings survive an evening top-up.
-      if (!(error instanceof DuplicateNoteError)) throw error;
-      await this.vault.appendToNote(noteId, this.renderSections(learnings));
+      if (error instanceof SimilarNoteError) {
+        filedId = error.existingId;
+        await this.vault.appendToNote(filedId, this.renderSections(learnings));
+      } else if (error instanceof DuplicateNoteError) {
+        // A second pass the same day appends (never replaces) so the morning's
+        // learnings survive an evening top-up.
+        await this.vault.appendToNote(noteId, this.renderSections(learnings));
+      } else {
+        throw error;
+      }
     }
 
     const projectIds = [
       ...new Set(candidates.map((c) => c.projectId).filter((id): id is string => Boolean(id))),
     ];
     for (const projectId of projectIds) {
-      await this.vault.updateIndex(projectId, noteId, `Destilace — ${day}`).catch((error) => {
-        this.logger.warn(`could not link ${noteId} from ${projectId}: ${String(error)}`);
+      await this.vault.updateIndex(projectId, filedId, `Destilace — ${day}`).catch((error) => {
+        this.logger.warn(`could not link ${filedId} from ${projectId}: ${String(error)}`);
       });
     }
     await this.vault
       .appendDaily(
-        `paměť destilována → [[${noteId}]] (${candidates.length} běhů, ${learnings.length} poznatků)`,
+        `paměť destilována → [[${filedId}]] (${candidates.length} běhů, ${learnings.length} poznatků)`,
       )
       .catch((error) => this.logger.warn(`could not append daily distill line: ${String(error)}`));
   }

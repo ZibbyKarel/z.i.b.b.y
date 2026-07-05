@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { Automation } from "@zibby/contracts";
+import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { DiscoveryTriageService } from "../discovery/discovery-triage.service";
@@ -47,6 +48,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly gaps: GapDetectorService,
     private readonly ideas: IdeaGeneratorService,
     private readonly systemConfig: SystemConfigStore,
+    private readonly agentFactory: AgentFactoryService,
   ) {
     this.log = logger.child(SchedulerService.name);
   }
@@ -180,6 +182,13 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // pitches in the vault. Deterministic; ref = `ideas:<count>`.
         const { ideas } = await this.ideas.generate();
         return `ideas:${ideas.length}`;
+      }
+      case "agent-factory": {
+        // Phase 4b: scan recurring orchestrator-fallback telemetry for a missing
+        // specialist agent, park a deterministic candidate behind the
+        // `agent-proposal` Tier-3 approval. Deterministic; ref = `agent-proposals:<count>`.
+        const { proposed } = await this.agentFactory.detect();
+        return `agent-proposals:${proposed.length}`;
       }
     }
   }

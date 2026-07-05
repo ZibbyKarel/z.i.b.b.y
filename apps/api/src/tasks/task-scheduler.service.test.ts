@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentRun, PipelineRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ActivityInput } from "../activity/activity-log.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -83,6 +84,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let service: TaskSchedulerService;
   let systemConfig: ReturnType<typeof fakeSystemConfigStore>;
   let attachmentStorage: AttachmentStorageService;
+  let activity: { record: ReturnType<typeof vi.fn<(input: ActivityInput) => Promise<void>>> };
 
   /** A fixed near-future window-reset epoch the limit guard defers to. */
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
@@ -161,6 +163,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
       resolveResumeAt: vi.fn(async () => RESET_AT),
     };
+    activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
 
     service = new TaskSchedulerService(
       storage,
@@ -171,7 +174,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       chainRunner as never,
       fakeLogger as never,
       fakeTrace as never,
-      { record: async () => {} } as never,
+      activity as never,
       fakeProjects as never,
       fakeBudget as never,
       fakeApprovals as never,
@@ -238,6 +241,60 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(persisted.outcome).toBeUndefined();
     // Pure intent (no target) is exactly what the classifier routes.
     expect(classifier.classify).toHaveBeenCalledTimes(1);
+  });
+
+  describe("Phase 4a — orchestrator-fallback telemetry", () => {
+    beforeEach(() => {
+      // The classifier's own terminal rule: nothing matched confidently.
+      classifier.classify = vi.fn(async () => ({
+        target: { kind: "orchestrator", name: "Orchestrator", glyph: "compass" },
+        confidence: 0,
+        reason: "No agent or pipeline matched confidently",
+        matchedTerms: ["deploy", "staging"],
+        candidates: [],
+      }));
+    });
+
+    it("records an orchestrator-fallback activity when the CLASSIFIER routes to the orchestrator", async () => {
+      await service.createTask({ text: "Deploy to Staging!", title: "Deploy" });
+
+      const call = activity.record.mock.calls.find(([entry]) => entry.kind === "orchestrator-fallback");
+      expect(call).toBeDefined();
+      const entry = call?.[0];
+      expect(entry?.refs?.normalizedSummary).toBe("deploy to staging");
+      expect(entry?.refs?.terms).toBe("deploy,staging");
+      expect(entry?.summary).toContain("Deploy to Staging!");
+    });
+
+    it("does NOT record a fallback when an explicit orchestrator target overrides the classifier", async () => {
+      // e.g. an approved proposed-task whose suggested target is the orchestrator —
+      // a deliberate override, not an escape, so it must not count toward the tally.
+      await service.createTask(
+        { text: "handle this", title: "T" },
+        undefined,
+        undefined,
+        { kind: "orchestrator", name: "Orchestrator", glyph: "compass" },
+        false,
+      );
+      expect(classifier.classify).not.toHaveBeenCalled();
+      expect(
+        activity.record.mock.calls.some(([entry]) => entry.kind === "orchestrator-fallback"),
+      ).toBe(false);
+    });
+
+    it("does not record a fallback when the classifier routes to a real agent/pipeline", async () => {
+      classifier.classify = vi.fn(async () => ({
+        target: { kind: "agent", id: "writer", name: "Writer" },
+        confidence: 0.9,
+        reason: "match",
+        matchedTerms: [],
+        candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
+      }));
+      await service.createTask({ text: "write the doc", title: "Doc" });
+      expect(
+        activity.record.mock.calls.some(([entry]) => entry.kind === "orchestrator-fallback"),
+      ).toBe(false);
+    });
   });
 
   it("resolves and persists attachments from the set id on create", async () => {

@@ -589,6 +589,103 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     expect(run.retries).toEqual({ build: 2 });
   });
 
+  it("reconstruct leaves a running aggregate alone when its stage survived as a live orphan (Phase 6)", async () => {
+    const ghostId = "ghost_1780000000002";
+    const root = path.join(dir, ghostId);
+    const stageRunId = `${ghostId}.build_1`;
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: ghostId,
+        pipelineId: "release",
+        status: "running",
+        currentStage: "build",
+        currentStageRunId: stageRunId,
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+    // core.init() reattached a pgid monitor to this stage — it is still "running".
+    h.core.get.mockImplementation((id: unknown) => ({
+      runId: id,
+      pipelineRunId: ghostId,
+      phaseId: "build",
+      status: "running",
+    }));
+    await (h.service as unknown as { reconstruct(): Promise<void> }).reconstruct();
+    const run = h.service.get(ghostId);
+    expect(run.status).toBe("running");
+    expect(run.currentStage).toBe("build");
+  });
+
+  it("reconstruct fails a running aggregate whose stage did NOT survive (dead orphan)", async () => {
+    const ghostId = "ghost_1780000000003";
+    const root = path.join(dir, ghostId);
+    const stageRunId = `${ghostId}.build_1`;
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: ghostId,
+        pipelineId: "release",
+        status: "running",
+        currentStage: "build",
+        currentStageRunId: stageRunId,
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+    // core.init() reconciled the dead orphan to "interrupted" (or dropped it entirely) —
+    // either way `core.get` no longer reports it as running.
+    h.core.get.mockImplementation((id: string) => {
+      throw new RunNotFoundError(id);
+    });
+    await (h.service as unknown as { reconstruct(): Promise<void> }).reconstruct();
+    const run = h.service.get(ghostId);
+    expect(run.status).toBe("failed");
+    expect(run.currentStage).toBeNull();
+  });
+
+  it("reconstruct fails a running aggregate with no currentStageRunId (nothing to check, safe default)", async () => {
+    const ghostId = "ghost_1780000000004";
+    const root = path.join(dir, ghostId);
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        pipelineRunId: ghostId,
+        pipelineId: "release",
+        status: "running",
+        currentStage: "build",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+    await (h.service as unknown as { reconstruct(): Promise<void> }).reconstruct();
+    const run = h.service.get(ghostId);
+    expect(run.status).toBe("failed");
+  });
+
+  it("writeAggregate persists via atomic temp+rename (no partial file survives)", async () => {
+    const run = h.runs.get(PIPELINE_RUN_ID);
+    if (!run) throw new Error("seeded run missing");
+    await (
+      h.service as unknown as { writeAggregate(run: PipelineRun): Promise<void> }
+    ).writeAggregate({ ...run, status: "done" });
+    const entries = await fs.readdir(run.cwd);
+    expect(entries).toContain("run.json");
+    expect(entries.some((e) => e.includes(".tmp"))).toBe(false);
+    const persisted = JSON.parse(await fs.readFile(path.join(run.cwd, "run.json"), "utf8"));
+    expect(persisted.status).toBe("done");
+  });
+
   describe("escalation ladder", () => {
     const phaseWithLadder: PipelinePhase = {
       id: "review",

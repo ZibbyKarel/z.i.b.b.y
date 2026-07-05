@@ -188,4 +188,69 @@ describe("RunRecorderService", () => {
     expect(readArtifact).not.toHaveBeenCalled();
     await expect(vault.note("learned-delivery_123")).rejects.toThrow();
   });
+
+  it("merges a near-duplicate learned.md into the earlier run's note instead of filing a new one (Fáze 3)", async () => {
+    const project: Project = { id: "acme", name: "ACME", path: "/repos/acme" };
+    const projects = {
+      get: async () => {
+        throw new Error();
+      },
+      list: async () => [project],
+    };
+    const learnedBody = "- Durable fact about ACME that repeats across runs of the same pipeline.";
+    // Each simulated run needs its OWN cwd — the recorder's at-most-once marker
+    // (`memory-recorded.json`) lives in `run.cwd`, so sharing one would make the
+    // second `claim()` a silent no-op instead of exercising the merge path.
+    const cwd1 = await fs.mkdtemp(path.join(os.tmpdir(), "rec-run-1-"));
+    const cwd2 = await fs.mkdtemp(path.join(os.tmpdir(), "rec-run-2-"));
+
+    try {
+      // First run files `learned-delivery_1` normally.
+      const agent1 = makeRunner<AgentRun>();
+      const pipeline1 = makeRunner<PipelineRun>();
+      const svc1 = build({
+        agent: agent1,
+        pipeline: pipeline1,
+        projects,
+        readArtifact: async (_id, name) =>
+          name === "learned.md" ? { name, content: learnedBody } : null,
+      });
+      svc1.onModuleInit();
+      pipeline1.emit(pipelineRun({ pipelineRunId: "delivery_1", projectPath: "/repos/acme", cwd: cwd1 }));
+      await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_1"));
+      const first = await vault.note("learned-delivery_1");
+      expect(first.body).toContain("Durable fact about ACME");
+
+      // A second run of the SAME pipeline with the SAME learned.md content scores as a
+      // near-duplicate (same title "Learned — delivery", same tags, same body) →
+      // merges into the first note instead of filing `learned-delivery_2`.
+      const agent2 = makeRunner<AgentRun>();
+      const pipeline2 = makeRunner<PipelineRun>();
+      const svc2 = build({
+        agent: agent2,
+        pipeline: pipeline2,
+        projects,
+        readArtifact: async (_id, name) =>
+          name === "learned.md" ? { name, content: learnedBody } : null,
+      });
+      svc2.onModuleInit();
+      pipeline2.emit(pipelineRun({ pipelineRunId: "delivery_2", projectPath: "/repos/acme", cwd: cwd2 }));
+      await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_2"));
+
+      // No fresh note filed for the second run — it merged into the first's id.
+      await expect(vault.note("learned-delivery_2")).rejects.toThrow();
+      const merged = await vault.note("learned-delivery_1");
+      expect(merged.body).toContain(learnedBody);
+      // The merged content appears twice (once from each run) in the same note.
+      expect((merged.body ?? "").match(/Durable fact about ACME/g)?.length).toBe(2);
+
+      // The daily line and MOC link both point at the EXISTING (merged-into) note id.
+      const daily = await readDaily();
+      expect(daily).toContain("[[learned-delivery_1]]");
+      expect(daily).not.toContain("[[learned-delivery_2]]");
+    } finally {
+      await fs.rm(cwd1, { recursive: true, force: true });
+      await fs.rm(cwd2, { recursive: true, force: true });
+    }
+  });
 });

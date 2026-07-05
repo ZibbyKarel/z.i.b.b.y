@@ -5,9 +5,21 @@ export const MemoryTierSchema = z.enum(["memory", "daily", "knowledge"]);
 export type MemoryTier = z.infer<typeof MemoryTierSchema>;
 
 /**
+ * The four durable-note kinds (Fáze 3 typed memory). A pure classification of
+ * what a note IS, orthogonal to its tier (where it lives): a `decision` can sit
+ * in `knowledge/` just as easily as a `fact`. Kept a closed, small enum — free-form
+ * categorization already exists via `tags`.
+ */
+export const NoteTypeSchema = z.enum(["decision", "preference", "fact", "pattern"]);
+export type NoteType = z.infer<typeof NoteTypeSchema>;
+
+/**
  * A single vault note. `id` is the note's basename (Obsidian-style, unique across
  * the vault); `links` are the `[[wiki-link]]` targets resolved to note ids;
- * `backlinks` are the notes that link back to it.
+ * `backlinks` are the notes that link back to it. `type`/`tags` are typed
+ * frontmatter fields (Fáze 3) surfaced at the top level for convenience — they are
+ * still stored as plain frontmatter keys, so an untyped/older note simply omits
+ * them (optional, backwards compatible).
  */
 export const NoteSchema = z.object({
   id: z.string().min(1),
@@ -18,6 +30,8 @@ export const NoteSchema = z.object({
   links: z.array(z.string()),
   backlinks: z.array(z.string()).optional(),
   body: z.string().optional(),
+  type: NoteTypeSchema.optional(),
+  tags: z.array(z.string()).optional(),
 });
 export type Note = z.infer<typeof NoteSchema>;
 
@@ -66,13 +80,23 @@ export const NoteIdSchema = z
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,119}$/, "Invalid note id");
 export type NoteId = z.infer<typeof NoteIdSchema>;
 
-/** Create a note in a chosen tier. The API assembles frontmatter from these fields. */
+/**
+ * Create a note in a chosen tier. The API assembles frontmatter from these fields
+ * (`type`/`tags` fold into frontmatter alongside `title` — see `vault.service.ts`).
+ * `dedupe` is a write-OPTION, not a note field: it is never persisted, it only
+ * tells `VaultService.createNote` to run `findSimilar` first and refuse (via
+ * `SimilarNoteError`) instead of writing a near-duplicate. Defaults to `false` so
+ * existing callers keep today's exact-id-collision-only behavior.
+ */
 export const CreateNoteSchema = z.object({
   id: NoteIdSchema,
   tier: MemoryTierSchema,
   title: z.string().optional(),
   body: z.string(),
   frontmatter: z.record(z.string(), z.unknown()).optional(),
+  type: NoteTypeSchema.optional(),
+  tags: z.array(z.string()).optional(),
+  dedupe: z.boolean().optional(),
 });
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 

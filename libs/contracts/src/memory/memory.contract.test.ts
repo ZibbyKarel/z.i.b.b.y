@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { MemoryGraphSchema, NoteIdSchema, NoteSchema, memoryContract } from "../index";
+import {
+  CreateNoteSchema,
+  MemoryGraphSchema,
+  NoteIdSchema,
+  NoteSchema,
+  NoteTypeSchema,
+  memoryContract,
+} from "../index";
 
 describe("memoryContract", () => {
   it("exposes index/note/graph/search/daily under /api/memory", () => {
@@ -66,5 +73,65 @@ describe("memory schemas", () => {
         links: [],
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts an optional typed `type`/`tags` pair on a note (Fáze 3)", () => {
+    const parsed = NoteSchema.safeParse({
+      id: "zibby",
+      path: "zibby.md",
+      tier: "memory",
+      title: "Zibby",
+      frontmatter: {},
+      links: [],
+      type: "decision",
+      tags: ["infra", "pnpm"],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.type).toBe("decision");
+      expect(parsed.data.tags).toEqual(["infra", "pnpm"]);
+    }
+  });
+
+  it("omitting `type`/`tags` still validates (backwards compatible)", () => {
+    expect(
+      NoteSchema.safeParse({
+        id: "zibby",
+        path: "zibby.md",
+        tier: "memory",
+        title: "Zibby",
+        frontmatter: {},
+        links: [],
+      }).success,
+    ).toBe(true);
+  });
+});
+
+describe("NoteTypeSchema", () => {
+  it("accepts exactly the four durable-note kinds", () => {
+    for (const type of ["decision", "preference", "fact", "pattern"]) {
+      expect(NoteTypeSchema.safeParse(type).success).toBe(true);
+    }
+    expect(NoteTypeSchema.safeParse("todo").success).toBe(false);
+  });
+});
+
+describe("CreateNoteSchema", () => {
+  it("accepts optional `type`/`tags`/`dedupe` write-option fields", () => {
+    const parsed = CreateNoteSchema.safeParse({
+      id: "note-1",
+      tier: "knowledge",
+      body: "x",
+      type: "pattern",
+      tags: ["a", "b"],
+      dedupe: true,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still validates without any of the new fields (backwards compatible)", () => {
+    expect(CreateNoteSchema.safeParse({ id: "note-1", tier: "knowledge", body: "x" }).success).toBe(
+      true,
+    );
   });
 });

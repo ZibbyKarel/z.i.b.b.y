@@ -8,23 +8,42 @@ import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import type { ClaudeCliDistiller, Learning } from "./claude-cli-distiller";
-import { MemoryDistillerService } from "./memory-distiller.service";
-import { DuplicateNoteError, type VaultService } from "./vault.service";
+import {
+  MemoryDistillerService,
+  mergeLearningTags,
+  mergeLearningType,
+} from "./memory-distiller.service";
+import { DuplicateNoteError, SimilarNoteError, type VaultService } from "./vault.service";
 
-/** A vault double that records the writes the distiller makes. */
-function makeVault() {
-  const notes = new Map<string, { body: string }>();
+/**
+ * A vault double that records the writes the distiller makes. `similarTo` scripts
+ * `findSimilar`-style dedupe: a `createNote({ id, dedupe: true })` call for an id
+ * present as a `similarTo` key throws `SimilarNoteError` at that mapped existing id,
+ * mirroring `VaultService.createNote`'s opt-in dedupe path.
+ */
+function makeVault(opts: { similarTo?: Record<string, string> } = {}) {
+  const notes = new Map<string, { body: string; type?: string; tags?: string[] }>();
   const indexed: Array<{ moc: string; target: string }> = [];
   const daily: string[] = [];
   return {
     indexed,
     daily,
     notes,
-    createNote: vi.fn(async (input: { id: string; body: string }) => {
-      if (notes.has(input.id)) throw new DuplicateNoteError(input.id);
-      notes.set(input.id, { body: input.body });
-      return {};
-    }),
+    createNote: vi.fn(
+      async (input: {
+        id: string;
+        body: string;
+        type?: string;
+        tags?: string[];
+        dedupe?: boolean;
+      }) => {
+        if (notes.has(input.id)) throw new DuplicateNoteError(input.id);
+        const similar = opts.similarTo?.[input.id];
+        if (input.dedupe && similar) throw new SimilarNoteError(similar);
+        notes.set(input.id, { body: input.body, type: input.type, tags: input.tags });
+        return {};
+      },
+    ),
     appendToNote: vi.fn(async (id: string, text: string) => {
       const existing = notes.get(id);
       if (existing) existing.body += `\n${text}`;
@@ -96,7 +115,9 @@ describe("MemoryDistillerService", () => {
     const vault = makeVault();
     const service = makeService({
       vault,
-      learnings: [{ title: "pnpm is canonical", body: "Use pnpm, never npm." }],
+      learnings: [
+        { title: "pnpm is canonical", body: "Use pnpm, never npm.", type: "preference", tags: ["pnpm"] },
+      ],
       pipelines: {
         listAll: async () => [
           {
@@ -122,6 +143,9 @@ describe("MemoryDistillerService", () => {
     expect(ref).toBe("memory-distill:1");
     expect(vault.createNote).toHaveBeenCalledTimes(1);
     expect(vault.notes.has("distilled-2026-06-16")).toBe(true);
+    // The single learning's type/tags thread through onto the digest note (Fáze 3).
+    expect(vault.notes.get("distilled-2026-06-16")?.type).toBe("preference");
+    expect(vault.notes.get("distilled-2026-06-16")?.tags).toEqual(["pnpm"]);
     expect(vault.indexed).toEqual([{ moc: "proj", target: "distilled-2026-06-16" }]);
     expect(vault.daily).toHaveLength(1);
     // The run is marked so the next pass skips it.
@@ -144,7 +168,7 @@ describe("MemoryDistillerService", () => {
 
     const first = makeService({
       vault: makeVault(),
-      learnings: [{ title: "t", body: "b" }],
+      learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
       pipelines,
     });
     expect(await first.distill(now)).toBe("memory-distill:1");
@@ -152,7 +176,7 @@ describe("MemoryDistillerService", () => {
     const secondVault = makeVault();
     const second = makeService({
       vault: secondVault,
-      learnings: [{ title: "t", body: "b" }],
+      learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
       pipelines,
     });
     expect(await second.distill(now)).toBe("memory-distill:0");
@@ -163,7 +187,7 @@ describe("MemoryDistillerService", () => {
     const vault = makeVault();
     const service = makeService({
       vault,
-      learnings: [{ title: "t", body: "b" }],
+      learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
       pipelines: {
         listAll: async () => [
           { status: "running", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir },
@@ -200,7 +224,9 @@ describe("MemoryDistillerService", () => {
     const marked: Array<{ id: string; count: number }> = [];
     const service = makeService({
       vault,
-      learnings: [{ title: "operator prefers pnpm", body: "Always pnpm." }],
+      learnings: [
+        { title: "operator prefers pnpm", body: "Always pnpm.", type: "preference", tags: ["pnpm"] },
+      ],
       chat: {
         listConversationIds: async () => ["conv-1"],
         distilledCount: async () => 1, // first message already distilled
@@ -228,7 +254,7 @@ describe("MemoryDistillerService", () => {
     const vault = makeVault();
     const service = makeService({
       vault,
-      learnings: [{ title: "t", body: "b" }],
+      learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
       chat: {
         listConversationIds: async () => ["conv-1"],
         distilledCount: async () => 2,
@@ -259,5 +285,70 @@ describe("MemoryDistillerService", () => {
       } as unknown as PipelineRunnerService,
     });
     expect(await service.distill(now)).toBe("memory-distill:0");
+  });
+
+  it("merges into an existing similar digest note (SimilarNoteError) instead of duplicating (Fáze 3)", async () => {
+    const vault = makeVault({ similarTo: { "distilled-2026-06-16": "distilled-2026-06-15" } });
+    // Seed the "existing" note the fresh id would collide-by-similarity with.
+    vault.notes.set("distilled-2026-06-15", { body: "yesterday's digest" });
+    const service = makeService({
+      vault,
+      learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
+      pipelines: {
+        listAll: async () => [
+          { status: "done", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir, projectPath: "/proj" },
+        ],
+        readArtifact: async () => ({ name: "docs.md", content: "x" }),
+      } as unknown as PipelineRunnerService,
+      projects: {
+        list: async () => [{ id: "proj", path: "/proj", name: "Proj" }],
+        get: async () => {
+          throw new Error("none");
+        },
+      } as unknown as ProjectsStorageService,
+    });
+
+    expect(await service.distill(now)).toBe("memory-distill:1");
+    // No fresh note filed — the fresh id was never created…
+    expect(vault.notes.has("distilled-2026-06-16")).toBe(false);
+    // …the batch's sections were appended to the EXISTING similar note instead…
+    expect(vault.notes.get("distilled-2026-06-15")?.body).toContain("yesterday's digest");
+    expect(vault.notes.get("distilled-2026-06-15")?.body).toContain("## t");
+    // …and the MOC link + daily line point at the existing note's id.
+    expect(vault.indexed).toEqual([{ moc: "proj", target: "distilled-2026-06-15" }]);
+    expect(vault.daily[0]).toContain("[[distilled-2026-06-15]]");
+  });
+});
+
+describe("mergeLearningTags / mergeLearningType", () => {
+  it("mergeLearningTags: unions and sorts tags across the batch", () => {
+    expect(
+      mergeLearningTags([
+        { title: "a", body: "a", type: "fact", tags: ["b", "a"] },
+        { title: "b", body: "b", type: "fact", tags: ["a", "c"] },
+      ]),
+    ).toEqual(["a", "b", "c"]);
+  });
+
+  it("mergeLearningTags: empty batch yields an empty list", () => {
+    expect(mergeLearningTags([])).toEqual([]);
+  });
+
+  it("mergeLearningType: a uniform batch keeps its type", () => {
+    expect(
+      mergeLearningType([
+        { title: "a", body: "a", type: "decision", tags: [] },
+        { title: "b", body: "b", type: "decision", tags: [] },
+      ]),
+    ).toBe("decision");
+  });
+
+  it("mergeLearningType: a mixed batch has no single honest type", () => {
+    expect(
+      mergeLearningType([
+        { title: "a", body: "a", type: "decision", tags: [] },
+        { title: "b", body: "b", type: "fact", tags: [] },
+      ]),
+    ).toBeUndefined();
   });
 });

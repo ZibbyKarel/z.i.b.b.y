@@ -83,13 +83,53 @@ export class GateEvaluatorService {
 
   /** Evaluate an action against an ordered rule list — first match wins. */
   evaluate(rules: GateRule[], action: IntendedAction): GateEvaluation {
-    let evaluation: GateEvaluation = { decision: "allow" };
+    const evaluation = this.matchOnce(rules, action);
+    this.recordEvaluation(action, evaluation);
+    return evaluation;
+  }
+
+  /**
+   * Fáze 2b — orchestrator strictest-union. Delegation (the `Task` tool) runs
+   * inside a single spawned `claude -p` process, so the backend only ever sees the
+   * orchestrator's own identity — a subagent's own `gates`/`requires_approval`
+   * would otherwise be silently dropped for a delegated action (Zjištění 3a). This
+   * evaluates `action` once per agent in `[orchestrator, ...catalogAgents]` — each
+   * agent's OWN rules plus the (shared) floor — and returns the STRICTEST decision
+   * across the set (deny > ask > notify > allow). Only the winning evaluation is
+   * logged/recorded (the per-agent probes stay silent), so a run with a large
+   * catalog doesn't spam the activity feed with one entry per candidate.
+   */
+  async evaluateForOrchestrator(
+    orchestrator: AgentPolicyInput,
+    catalogAgents: readonly AgentPolicyInput[],
+    action: IntendedAction,
+  ): Promise<GateEvaluation> {
+    const floor = await this.floor();
+    let best: GateEvaluation = { decision: "allow" };
+    for (const input of [orchestrator, ...catalogAgents]) {
+      const rules = [...this.ownRules(input), ...floor];
+      const evaluation = this.matchOnce(rules, action);
+      if (DECISION_RANK[evaluation.decision] > DECISION_RANK[best.decision]) best = evaluation;
+    }
+    this.recordEvaluation(action, best);
+    return best;
+  }
+
+  /** Pure rule matching — first match wins, no logging/activity side effects (so
+   * {@link evaluateForOrchestrator} can probe several agents' rule sets and log
+   * only the final, strictest result). */
+  private matchOnce(rules: GateRule[], action: IntendedAction): GateEvaluation {
     for (const rule of rules) {
       if (rule.match.every((cond) => this.matches(cond, action))) {
-        evaluation = { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve };
-        break;
+        return { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve };
       }
     }
+    return { decision: "allow" };
+  }
+
+  /** Debug-log + activity-record one evaluation result (shared by {@link evaluate}
+   * and {@link evaluateForOrchestrator}, which must only record once per intent). */
+  private recordEvaluation(action: IntendedAction, evaluation: GateEvaluation): void {
     this.log?.debug("gate evaluated", {
       action: action.action,
       tool: action.tool,
@@ -107,7 +147,6 @@ export class GateEvaluatorService {
         refs: { action: action.action, decision: evaluation.decision, status: evaluation.ruleId },
       });
     }
-    return evaluation;
   }
 
   /**

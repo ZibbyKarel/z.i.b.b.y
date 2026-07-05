@@ -26,6 +26,7 @@ import { ActivitySection } from "./components/ActivitySection";
 import { ChatSection } from "./components/ChatSection";
 import { MandateSection } from "./components/MandateSection";
 import { ResearchSection } from "./components/ResearchSection";
+import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
 import { SystemSection } from "./components/SystemSection";
 
 type Locale = "cs" | "en";
@@ -125,6 +126,7 @@ export function Screen() {
             <Tab value="mandate">{t("mandate.title")}</Tab>
             <Tab value="research">{t("research.title")}</Tab>
             <Tab value="runtime">{t("runtime.title")}</Tab>
+            <Tab value="selfKnowledge">{t("selfKnowledge.title")}</Tab>
             <Tab value="system">{t("system")}</Tab>
           </TabList>
 
@@ -184,6 +186,10 @@ export function Screen() {
 
           <TabPanel value="runtime">
             <SystemSection />
+          </TabPanel>
+
+          <TabPanel value="selfKnowledge">
+            <SelfKnowledgeSection />
           </TabPanel>
 
           <TabPanel value="system">

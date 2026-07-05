@@ -11,7 +11,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
-import { DuplicateNoteError, VaultService } from "./vault.service";
+import { DuplicateNoteError, SimilarNoteError, VaultService } from "./vault.service";
 
 /** Marker file written into a run's cwd once it has been recorded (at-most-once). */
 const MARKER = "memory-recorded.json";
@@ -130,8 +130,17 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
   /**
    * Fetch the run's learned.md artifact and file it as `learned-<runId>` in
    * `knowledge/`, linked from the project MOC. Returns the note id, or null when
-   * there was no learned.md (older agent, demo run without the knob). Tolerant of a
-   * duplicate (sweep + subscription racing the same run).
+   * there was no learned.md (older agent, demo run without the knob).
+   *
+   * `createNote` runs with `dedupe: true` (Fáze 3): a run of the SAME pipeline
+   * whose learned.md scores as a near-duplicate of an earlier run's note
+   * (`SimilarNoteError`) merges into that EXISTING note instead of filing a new
+   * one — the link/return id points at it. `tags` carries the pipeline (and
+   * project, when known) so `findSimilar`'s tag-overlap term actually has a signal
+   * to compare across two runs of the same pipeline (title + body overlap alone
+   * caps at 0.7, under `SIMILARITY_THRESHOLD`). An exact id collision
+   * (`DuplicateNoteError`, sweep + subscription racing the same run) keeps the
+   * previous tolerant no-op.
    */
   private async fileLearned(run: PipelineRun, projectId: string | null): Promise<string | null> {
     const artifact = await this.pipelineRunner
@@ -139,6 +148,8 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
       .catch(() => null);
     if (!artifact?.content.trim()) return null;
     const id = `learned-${run.pipelineRunId}`;
+    const tags = [run.pipelineId, ...(projectId ? [projectId] : [])];
+    let filedId = id;
     try {
       await this.vault.createNote({
         id,
@@ -150,16 +161,25 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
           pipeline: run.pipelineId,
           ...(projectId ? { project: projectId } : {}),
         },
+        tags,
+        dedupe: true,
       });
     } catch (error) {
-      if (!(error instanceof DuplicateNoteError)) throw error;
+      if (error instanceof SimilarNoteError) {
+        filedId = error.existingId;
+        await this.vault.appendToNote(filedId, artifact.content);
+      } else if (!(error instanceof DuplicateNoteError)) {
+        throw error;
+      }
     }
     if (projectId) {
-      await this.vault.updateIndex(projectId, id, `Learned — ${run.pipelineId}`).catch((error) => {
-        this.logger.warn(`could not link ${id} from ${projectId}: ${String(error)}`);
-      });
+      await this.vault
+        .updateIndex(projectId, filedId, `Learned — ${run.pipelineId}`)
+        .catch((error) => {
+          this.logger.warn(`could not link ${filedId} from ${projectId}: ${String(error)}`);
+        });
     }
-    return id;
+    return filedId;
   }
 
   /** Resolve a free-form project label (id or exact name) to its id, or null. */

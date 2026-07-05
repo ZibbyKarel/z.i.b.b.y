@@ -1,16 +1,22 @@
 #!/usr/bin/env node
 // PreToolUse approval hook for real `claude -p` agent runs (replaces the old
 // stdout-`INTENT` gate that demo scripts faked). Claude Code runs this BEFORE a
-// Bash tool call, passing the call as JSON on stdin. A hook's stdout never reaches
-// the parent process's pipe, so the gate is coordinated through files in the
-// session's own sandbox cwd:
+// Bash tool call OR a Task (Agent-delegation) call, passing the call as JSON on
+// stdin. A hook's stdout never reaches the parent process's pipe, so the gate is
+// coordinated through files in the session's own sandbox cwd:
 //
 //   1. A Bash command the classifier doesn't recognise → allow immediately (exit 0).
 //   2. A gated command → announce it by writing `intent-request.json` into the
 //      coordination dir, then BLOCK polling for `intent-decision.json`. We gate:
 //        - deletes: the rm family, `find … -delete`, `git clean`;
 //        - git publish: `git push` (→ git.push) and force variants (→ git.force_push);
-//        - PRs: `gh pr create` (→ pr.open) and `gh pr merge` (→ pr.merge).
+//        - PRs: `gh pr create` (→ pr.open) and `gh pr merge` (→ pr.merge);
+//        - EVERY `Task` call (an orchestrator delegating to a subagent) → `agent.delegate`
+//          (Fáze 2a). Delegation happens entirely inside this one `claude -p` process, so
+//          this hook is the only realtime signal the backend gets of a handoff — there is
+//          no locked floor rule for it (default allow, Tier 1, just logged), but an
+//          operator's own gate-rules.json rule on `action: agent.delegate` (e.g. `ask`)
+//          takes effect immediately through the same protocol.
 //   3. RunnerCore watches the dir for the request, routes it through the gate
 //      evaluator (allow / ask-a-human / deny), and writes the decision file.
 //   4. The hook returns the decision to Claude as `hookSpecificOutput`, which
@@ -259,6 +265,68 @@ export function classify(command) {
   return best;
 }
 
+/**
+ * Bound on the delegated-prompt excerpt carried into the `agent.delegate` intent's
+ * `context`. Kept short: unlike a Bash intent's `context` (a JSON display blob),
+ * this `context` is a plain string the gate ALSO matches on (`MatchCondition` type
+ * `"context"`), so it must stay a short, meaningful excerpt — not the whole prompt.
+ */
+const TASK_CONTEXT_CHARS = 200;
+
+/**
+ * Classify a `Task` tool call (the Agent tool's delegation — one subagent handoff)
+ * into an `agent.delegate` intent. `subagent_type` becomes the intent's `scope` (so
+ * an operator's gate rule can target one subagent, e.g. `scope: "cleaner*"`); the
+ * delegated prompt (or, failing that, its `description`) is truncated into
+ * `context` so the approval card shows what was actually asked of the subagent.
+ * Every `Task` call classifies to SOMETHING (never null) — Fáze 2a's point is that
+ * every handoff goes through the same gate protocol as a destructive Bash command,
+ * even though the default decision (no floor rule for `agent.delegate`) is allow.
+ */
+export function classifyTask(toolInput) {
+  const input = toolInput && typeof toolInput === "object" ? toolInput : {};
+  const scope = typeof input.subagent_type === "string" ? input.subagent_type : undefined;
+  const prompt =
+    typeof input.prompt === "string"
+      ? input.prompt
+      : typeof input.description === "string"
+        ? input.description
+        : "";
+  const context =
+    prompt.length > TASK_CONTEXT_CHARS ? `${prompt.slice(0, TASK_CONTEXT_CHARS)}…` : prompt;
+  return {
+    action: "agent.delegate",
+    ...(scope ? { scope } : {}),
+    ...(context ? { context } : {}),
+  };
+}
+
+/**
+ * Classify a PreToolUse event into the `intent-request.json` payload, or `null`
+ * when nothing is gated (Bash's classifier fell through — the caller then lets
+ * Claude's own permissions decide; every `Task` call always classifies to
+ * something, see {@link classifyTask}). Pure and synchronous, called inside a
+ * try/catch by `main()` so a classifier bug fails OPEN, never blocks the tool.
+ */
+function classifyEvent(input) {
+  if (input?.tool_name === "Bash") {
+    const cls = classify(input?.tool_input?.command ?? "");
+    if (!cls) return null;
+    return {
+      action: cls.action,
+      ...(cls.branch ? { branch: cls.branch } : {}),
+      context: JSON.stringify({
+        riskType: cls.riskType,
+        summary: cls.summary,
+        consequence: cls.consequence,
+        preview: cls.preview,
+      }),
+    };
+  }
+  if (input?.tool_name === "Task") return classifyTask(input?.tool_input);
+  return null;
+}
+
 /** Emit a PreToolUse decision and exit. `allow` overrides dontAsk; `deny` blocks. */
 function decide(permissionDecision, reason) {
   process.stdout.write(
@@ -301,31 +369,21 @@ function main() {
     process.exit(0);
   }
 
-  const command = input?.tool_input?.command ?? "";
-  // Fail OPEN: a classifier exception must never block all Bash (it is in the spawn
-  // path of every run) — an unclassified command falls through to Claude's perms.
-  let cls = null;
+  // Fail OPEN: a classifier exception must never block all Bash/Task calls (this
+  // hook sits in the spawn path of every run) — an unclassified command, or a
+  // non-Bash/Task tool, falls through to Claude's own permissions.
+  let request = null;
   try {
-    if (input?.tool_name === "Bash") cls = classify(command);
+    request = classifyEvent(input);
   } catch {
-    cls = null;
+    request = null;
   }
-  if (!cls) process.exit(0);
+  if (!request) process.exit(0);
 
   // The sandbox RunnerCore watches — pinned via env, not the command's cwd.
   const cwd = process.env.ZIBBY_INTENT_DIR || input.cwd || process.cwd();
-  const context = JSON.stringify({
-    riskType: cls.riskType,
-    summary: cls.summary,
-    consequence: cls.consequence,
-    preview: cls.preview,
-  });
 
-  writeFileSync(
-    path.join(cwd, REQUEST_FILE),
-    JSON.stringify({ action: cls.action, ...(cls.branch ? { branch: cls.branch } : {}), context }),
-    "utf8",
-  );
+  writeFileSync(path.join(cwd, REQUEST_FILE), JSON.stringify(request), "utf8");
 
   const deadlineS = Number(process.argv[2]);
   const deadlineMs =

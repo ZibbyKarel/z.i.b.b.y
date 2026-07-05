@@ -5,6 +5,7 @@ import {
   DuplicateNoteError,
   InvalidNoteIdError,
   NoteNotFoundError,
+  SimilarNoteError,
   VaultService,
 } from "./vault.service";
 
@@ -45,7 +46,7 @@ export class MemoryController {
         try {
           return { status: 201, body: await this.vault.createNote(body) };
         } catch (error) {
-          if (error instanceof DuplicateNoteError)
+          if (error instanceof DuplicateNoteError || error instanceof SimilarNoteError)
             return { status: 409, body: { message: error.message } };
           if (error instanceof InvalidNoteIdError)
             return { status: 422, body: { message: error.message } };

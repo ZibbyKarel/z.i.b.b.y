@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { GateRule, GateRuleInput, IntendedAction } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GateEvaluatorService } from "./gate-evaluator.service";
+import { type AgentPolicyInput, GateEvaluatorService } from "./gate-evaluator.service";
 import { PolicyStorageService } from "./policy.storage.service";
 
 describe("GateEvaluatorService", () => {
@@ -160,6 +160,71 @@ describe("GateEvaluatorService", () => {
         { match: [{ type: "action", action: "tweet" }], decision: "allow" },
       ]);
       expect(violation).toBeNull();
+    });
+  });
+
+  describe("evaluateForOrchestrator (Fáze 2b — strictest union)", () => {
+    it("defaults to allow when neither the orchestrator nor any catalog agent has a rule", async () => {
+      const result = await evaluator.evaluateForOrchestrator({}, [{}, {}], {
+        action: "agent.delegate",
+        scope: "cleaner",
+      });
+      expect(result.decision).toBe("allow");
+    });
+
+    it("picks up a catalog subagent's OWN rule even though the orchestrator has none (mitigates Zjištění 3a)", async () => {
+      const cleaner: AgentPolicyInput = {
+        gates: [{ match: [{ type: "action", action: "agent.delegate" }], decision: "deny" }],
+      };
+      const result = await evaluator.evaluateForOrchestrator({}, [cleaner], {
+        action: "agent.delegate",
+      });
+      expect(result.decision).toBe("deny");
+    });
+
+    it("the strictest decision across orchestrator + catalog wins (deny > ask > allow)", async () => {
+      const orchestrator: AgentPolicyInput = {
+        gates: [{ match: [{ type: "action", action: "agent.delegate" }], decision: "allow" }],
+      };
+      const askAgent: AgentPolicyInput = { requires_approval: true };
+      const denyAgent: AgentPolicyInput = {
+        gates: [{ match: [{ type: "action", action: "agent.delegate" }], decision: "deny" }],
+      };
+      // allow (orchestrator) + ask (one catalog agent) → ask wins.
+      expect(
+        (await evaluator.evaluateForOrchestrator(orchestrator, [askAgent], { action: "agent.delegate" }))
+          .decision,
+      ).toBe("ask");
+      // allow + ask + deny → deny wins (the strictest of all three).
+      expect(
+        (
+          await evaluator.evaluateForOrchestrator(orchestrator, [askAgent, denyAgent], {
+            action: "agent.delegate",
+          })
+        ).decision,
+      ).toBe("deny");
+    });
+
+    it("still applies the locked floor per agent (a floor action can't be missed just because one agent has no rule)", async () => {
+      const result = await evaluator.evaluateForOrchestrator({}, [{}], { action: "purchase" });
+      // No agent has its own rule for `purchase`, but the floor (ask:human) applies
+      // to every probed rule set, so the union still surfaces it.
+      expect(result.decision).toBe("ask");
+    });
+
+    it("records only ONE activity entry for the whole union (no per-agent log spam)", async () => {
+      const recorded: unknown[] = [];
+      const activity = { record: (entry: unknown) => void recorded.push(entry) };
+      const scoped = new GateEvaluatorService(
+        new PolicyStorageService(dir),
+        undefined,
+        activity as never,
+      );
+      const denyAgent: AgentPolicyInput = {
+        gates: [{ match: [{ type: "action", action: "agent.delegate" }], decision: "deny" }],
+      };
+      await scoped.evaluateForOrchestrator({}, [{}, {}, denyAgent], { action: "agent.delegate" });
+      expect(recorded).toHaveLength(1);
     });
   });
 });

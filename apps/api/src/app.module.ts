@@ -33,6 +33,7 @@ import { ProjectsModule } from "./projects/projects.module";
 import { ResearchModule } from "./research/research.module";
 import { LoggingModule } from "./shared/logging/logging.module";
 import { PinsModule } from "./pins/pins.module";
+import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
 import { SkillsModule } from "./skills/skills.module";
 import { SystemModule } from "./system/system.module";
 import { TasksModule } from "./tasks/tasks.module";
@@ -70,6 +71,7 @@ import { TasksModule } from "./tasks/tasks.module";
     DiscoveryModule,
     ResearchModule,
     HealthModule,
+    SelfKnowledgeModule,
     LimitsModule,
     LimitResumeModule,
     EventsModule,

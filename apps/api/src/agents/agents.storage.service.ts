@@ -55,6 +55,17 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     return searchByText(await this.list(), query, (a) => [a.id, a.name, a.description, a.category]);
   }
 
+  /**
+   * Phase 4c (Agent Factory): the catalog minus any `status: "proposed"` candidate
+   * — the dispatchable set. Consumers that treat the registry as a routing/catalog
+   * source (the task classifier, the delegation catalog) read this instead of
+   * {@link list}; the raw `list()` stays unfiltered so the UI can still show a
+   * proposed agent awaiting its `agent-proposal` approval.
+   */
+  async listActive(): Promise<Agent[]> {
+    return (await this.list()).filter((a) => a.status !== "proposed");
+  }
+
   async update(id: string, patch: UpdateAgentInput): Promise<Agent> {
     const existing = await this.get(id);
     // Only overwrite fields that were actually provided; never touch the id
@@ -123,6 +134,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     // partially-parsed policy); a single bad rule shouldn't weaken the gate.
     const gates = GateRuleInputSchema.array().safeParse(data.gates);
     if (gates.success) candidate.gates = gates.data;
+    if (data.status === "proposed" || data.status === "active") candidate.status = data.status;
 
     const result = AgentSchema.safeParse(candidate);
     return result.success ? result.data : null;
@@ -140,6 +152,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (agent.requires_approval !== undefined) data.requires_approval = agent.requires_approval;
     if (agent.risk !== undefined) data.risk = agent.risk;
     if (agent.gates !== undefined) data.gates = agent.gates;
+    if (agent.status !== undefined) data.status = agent.status;
     return data;
   }
 }

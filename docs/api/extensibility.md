@@ -46,10 +46,13 @@ Custom Claude Code lifecycle hooks (PreToolUse/PostToolUse/Stop/…) merged into
 
 - **Store:** `hooks.storage.service.ts` (JSON `{ id, event, matcher?, command, timeout?, enabled }`).
 - **Merge (Law 1 — approval-first is structural):** `buildSettings()` always
-  inserts the locked approval hook **first** in `PreToolUse`; a custom hook with
-  `event=PreToolUse` and a matcher on `Bash` (or an empty matcher) is **dropped**.
-  No stored hook can bypass or weaken the gate this way. Other events are added
-  normally. Fail-open onto approval-only.
+  inserts the locked approval hook **first** in `PreToolUse`, with a `Bash|Task`
+  matcher (Fáze 2a: `Task` is delegation via the Agent tool — every handoff goes
+  through the same intent-request protocol as destructive Bash, classified as
+  `agent.delegate`). A custom hook with `event=PreToolUse` and a matcher on
+  `Bash`/`Task` (or an empty matcher) is **dropped**. No stored hook can bypass
+  or weaken the gate this way. Other events are added normally. Fail-open onto
+  approval-only.
 
 ## Per-project env/secrets (`/api/projects/:id/secrets`)
 

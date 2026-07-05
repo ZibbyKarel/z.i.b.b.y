@@ -1,14 +1,16 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
-import type {
-  CreateNoteInput,
-  IndexEntry,
-  MemoryGraph,
-  MemoryTier,
-  Note,
-  SearchHit,
-  UpdateNoteInput,
+import {
+  type CreateNoteInput,
+  type IndexEntry,
+  type MemoryGraph,
+  type MemoryTier,
+  type Note,
+  type NoteType,
+  NoteTypeSchema,
+  type SearchHit,
+  type UpdateNoteInput,
 } from "@zibby/contracts";
 import matter from "gray-matter";
 import { resolveSafeFile, writeFileAtomic } from "../shared/file-storage/file-utils";
@@ -41,8 +43,69 @@ export class DuplicateNoteError extends Error {
   }
 }
 
+/**
+ * Raised by an opt-in (`dedupe: true`) `createNote` call when `findSimilar` finds
+ * an existing same-tier note scoring at/above {@link SIMILARITY_THRESHOLD}
+ * (→ 409-style; the caller should merge into `existingId` instead of writing).
+ */
+export class SimilarNoteError extends Error {
+  constructor(public readonly existingId: string) {
+    super(`A similar note already exists: "${existingId}"`);
+    this.name = "SimilarNoteError";
+  }
+}
+
 const WIKILINK = /\[\[([^\]]+)\]\]/g;
 const TIERS: MemoryTier[] = ["memory", "daily", "knowledge"];
+
+/**
+ * Dedupe heuristic threshold (Fáze 3) — a candidate scoring at/above this against
+ * an existing same-tier note is a near-duplicate. Pure heuristic (title exact
+ * match + tag/body Jaccard overlap), no ML/embeddings — index-first memory stays
+ * index-first (Zjištění 5).
+ */
+export const SIMILARITY_THRESHOLD = 0.75;
+
+/** Jaccard similarity of two sets: |intersection| / |union|, 0 when both are empty. */
+function jaccard(a: ReadonlySet<string>, b: ReadonlySet<string>): number {
+  let intersection = 0;
+  for (const x of a) if (b.has(x)) intersection++;
+  const union = a.size + b.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/** Lowercase, whitespace-tokenize free text into a set (body-overlap heuristic). */
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean),
+  );
+}
+
+/** A frontmatter `tags` value, filtered down to actual strings (tolerant of foreign data). */
+function tagsOf(frontmatter: Record<string, unknown>): string[] {
+  const raw = frontmatter.tags;
+  return Array.isArray(raw) ? raw.filter((t): t is string => typeof t === "string") : [];
+}
+
+/**
+ * Parse the optional typed `type`/`tags` frontmatter fields back into top-level
+ * `Note` fields (Fáze 3). Tolerant of malformed/foreign frontmatter — an invalid
+ * `type` or non-string-array `tags` is simply omitted rather than surfaced.
+ */
+function typedFieldsOf(frontmatter: Record<string, unknown>): {
+  type?: NoteType;
+  tags?: string[];
+} {
+  const out: { type?: NoteType; tags?: string[] } = {};
+  const parsedType = NoteTypeSchema.safeParse(frontmatter.type);
+  if (parsedType.success) out.type = parsedType.data;
+  if (Array.isArray(frontmatter.tags)) out.tags = tagsOf(frontmatter);
+  return out;
+}
 
 /**
  * The project a note belongs to (M7 multi-project isolation), or undefined if it is
@@ -139,6 +202,7 @@ export class VaultService implements OnModuleInit {
       links: found.links,
       backlinks,
       body: found.body,
+      ...typedFieldsOf(found.frontmatter),
     };
   }
 
@@ -208,18 +272,66 @@ export class VaultService implements OnModuleInit {
   /**
    * Create a note in `tier`. Ids are unique across the *whole* vault, so a
    * collision in any tier is a 409 — a per-dir check would shadow notes that
-   * `note(id)` could never reach.
+   * `note(id)` could never reach. `dedupe: true` (opt-in, default false — see
+   * `CreateNoteSchema`) runs {@link findSimilar} first and throws
+   * `SimilarNoteError` instead of writing when a same-tier near-duplicate exists;
+   * default behavior is untouched.
    */
   async createNote(input: CreateNoteInput): Promise<Note> {
     const file = this.resolveNoteFile(input.tier, input.id);
     const existing = (await this.scan()).find((n) => n.id === input.id);
     if (existing) throw new DuplicateNoteError(input.id);
+    if (input.dedupe) {
+      const similar = await this.findSimilar({
+        tier: input.tier,
+        title: input.title ?? input.id,
+        tags: input.tags,
+        body: input.body,
+      });
+      if (similar) throw new SimilarNoteError(similar.id);
+    }
     const data: Record<string, unknown> = { ...(input.frontmatter ?? {}) };
     if (input.title !== undefined) data.title = input.title;
+    if (input.type !== undefined) data.type = input.type;
+    if (input.tags !== undefined) data.tags = input.tags;
     await fs.mkdir(path.dirname(file), { recursive: true });
     await writeFileAtomic(file, matter.stringify(input.body, data));
     this.cache = null;
     return this.note(input.id);
+  }
+
+  /**
+   * Heuristic dedupe check (Fáze 3, Zjištění 5): score `candidate` against every
+   * EXISTING note in the same tier — exact case-insensitive/trimmed title match
+   * (weight 0.4) + Jaccard overlap of tag sets (weight 0.3) + Jaccard overlap of
+   * whitespace-tokenized lowercase body text (weight 0.3). Returns the highest-
+   * scoring same-tier note at/above {@link SIMILARITY_THRESHOLD}, or `undefined`.
+   * Pure heuristic — no ML/embeddings, no cross-tier comparison.
+   */
+  async findSimilar(candidate: {
+    tier: MemoryTier;
+    title: string;
+    tags?: string[];
+    body: string;
+  }): Promise<{ id: string } | undefined> {
+    const notes = await this.scan();
+    const candidateTitle = candidate.title.trim().toLowerCase();
+    const candidateTags = new Set((candidate.tags ?? []).map((t) => t.toLowerCase()));
+    const candidateTokens = tokenize(candidate.body);
+
+    let best: { id: string; score: number } | undefined;
+    for (const n of notes) {
+      if (n.tier !== candidate.tier) continue;
+      const titleScore = n.title.trim().toLowerCase() === candidateTitle ? 0.4 : 0;
+      const noteTags = new Set(tagsOf(n.frontmatter).map((t) => t.toLowerCase()));
+      const tagScore = jaccard(candidateTags, noteTags) * 0.3;
+      const bodyScore = jaccard(candidateTokens, tokenize(n.body)) * 0.3;
+      const score = titleScore + tagScore + bodyScore;
+      if (score >= SIMILARITY_THRESHOLD && (!best || score > best.score)) {
+        best = { id: n.id, score };
+      }
+    }
+    return best ? { id: best.id } : undefined;
   }
 
   /**

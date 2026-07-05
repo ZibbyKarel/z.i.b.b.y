@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GroundingService, selectIndexes, visibleToProject } from "./grounding.service";
+import { GroundingService, SELF_KNOWLEDGE_ID, selectIndexes, visibleToProject } from "./grounding.service";
 import { VaultService, ownerProjectOf } from "./vault.service";
 
 /** Build a service over a fresh temp vault seeded by `seed`. */
@@ -215,6 +215,52 @@ describe("GroundingService.compose", () => {
     const block = await made.grounding.compose({ task: "x", matchedTerms: ["billing"] });
     expect(block).toContain("Billing");
     expect(block).not.toContain("North Star");
+  });
+
+  it("always grounds the self-knowledge note right after the North Star (Fáze 1)", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+      await vault.createNote({
+        id: SELF_KNOWLEDGE_ID,
+        tier: "knowledge",
+        title: "Self-Knowledge",
+        body: "Agents, pipelines, gates, channels.",
+      });
+      await vault.createNote({
+        id: "billing-moc",
+        tier: "knowledge",
+        title: "Billing",
+        body: "Invoices.",
+      });
+    });
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "x", matchedTerms: ["billing"] });
+    const nsAt = block.indexOf("North Star");
+    const skAt = block.indexOf("Self-Knowledge");
+    const billingAt = block.indexOf("Billing");
+    expect(nsAt).toBeGreaterThan(-1);
+    expect(skAt).toBeGreaterThan(nsAt);
+    expect(billingAt).toBeGreaterThan(skAt);
+  });
+
+  it("fails open when the self-knowledge note is absent (never seeded yet)", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+    });
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "x" });
+    expect(block).toContain("North Star");
+    expect(block).not.toContain("Self-Knowledge");
   });
 
   it("never throws on an unreadable vault → ''", async () => {

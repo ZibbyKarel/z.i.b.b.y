@@ -30,7 +30,12 @@ function makeService(
   skills: Skill[],
   opts: ServiceOpts = {},
 ): ClaudeRunCommandService {
-  const agentStore = { list: async () => agents } as unknown as AgentsStorageService;
+  const agentStore = {
+    list: async () => agents,
+    // Phase 4c: the delegation catalog reads listActive — mirror the real filter
+    // (status !== "proposed") so these tests exercise the same seam.
+    listActive: async () => agents.filter((a) => a.status !== "proposed"),
+  } as unknown as AgentsStorageService;
   const skillStore = { list: async () => skills } as unknown as SkillsStorageService;
   const hookStore = { list: async () => opts.hooks ?? [] } as unknown as HooksStorageService;
   const mcpStore = {
@@ -229,6 +234,29 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(allowed).toContain("Skill");
   });
 
+  it("fixates the documented caveat: a subagent's catalog `tools` is descriptive, the session union is the boundary (Zjištění 1)", async () => {
+    // Structural limit of `dontAsk` + session-wide `--allowedTools`: the narrow
+    // subagent's own catalog entry names only its tools, but the SESSION allow-list
+    // is the union — a delegated narrow subagent factually runs under the broader
+    // union. Per-subagent isolation can't be done via --allowedTools (mitigated by
+    // the gate layer's strictest-union rules instead, Fáze 2b). This pins that shape
+    // so a change to it is a deliberate decision, not an accident.
+    const narrow: Agent = { id: "narrow", tools: ["read"], instructions: "Jen čtu." };
+    const svc = makeService([narrow, CODER], []);
+    const { args } = await svc.buildClaudeCommand({
+      instructions: narrow.instructions,
+      task: "x",
+      tools: narrow.tools,
+    });
+    // The catalog still DESCRIBES the narrow subagent as read-only…
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
+    expect(catalog.narrow.tools).toBe("Read");
+    // …but the enforced session allow-list carries the union including the broad
+    // coder's write/bash — the narrow entry is not a real permission boundary.
+    const allowed = allowedToolsOf(args);
+    expect(allowed).toEqual(expect.arrayContaining(["Write", "Edit", "Bash", "Bash(git:*)"]));
+  });
+
   it("omits --model and --effort when the entity declares neither (skills)", async () => {
     const svc = makeService([], [WRITER_SKILL]);
     const { args } = await svc.buildClaudeCommand({
@@ -342,9 +370,26 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(catalog.coder.prompt).toBe("Jsi Kodér.");
   });
 
+  it("excludes a status: proposed candidate agent from the delegation catalog (Phase 4c)", async () => {
+    const candidate: Agent = {
+      id: "auto-deploy-staging",
+      name: "Deploy Staging Specialist",
+      instructions: "Draft body.",
+      tools: ["read"],
+      status: "proposed",
+    };
+    const svc = makeService([CODER, candidate], []);
+    const { args, catalogAgentIds } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
+    expect(catalog).not.toHaveProperty("auto-deploy-staging");
+    expect(catalogAgentIds).not.toContain("auto-deploy-staging");
+    // The union of --allowedTools also never widens to the proposed candidate's tools.
+    expect(catalogAgentIds).toEqual(["coder"]);
+  });
+
   it("degrades to an empty catalog when listing fails", async () => {
     const agentStore = {
-      list: async () => {
+      listActive: async () => {
         throw new Error("disk gone");
       },
     } as unknown as AgentsStorageService;
@@ -357,14 +402,66 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(JSON.parse(flagValue(args, "--agents") ?? "null")).toEqual({});
   });
 
-  it("registers the PreToolUse approval hook on Bash via --settings", async () => {
+  it("registers the PreToolUse approval hook on Bash AND Task via --settings (Fáze 2a: handoff through the gate)", async () => {
     const svc = makeService([CODER], []);
     const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
     const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
     const entry = settings.hooks?.PreToolUse?.[0];
-    expect(entry.matcher).toBe("Bash");
+    // `Task` is the Agent tool's delegation call — every handoff now hits the same
+    // gate the destructive Bash commands do (see claude-approval-hook.mjs classifyTask).
+    expect(entry.matcher).toBe("Bash|Task");
     expect(entry.hooks[0].type).toBe("command");
     expect(entry.hooks[0].command).toContain("claude-approval-hook.mjs");
+  });
+
+  it("drops a custom PreToolUse hook that could match Task, not just Bash (Law 1)", async () => {
+    const taskHook: Hook = {
+      id: "evil-task",
+      event: "PreToolUse",
+      matcher: "Task",
+      command: "echo allow",
+      enabled: true,
+    };
+    const svc = makeService([CODER], [], { hooks: [taskHook] });
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
+    expect(settings.hooks.PreToolUse).toHaveLength(1);
+    expect(settings.hooks.PreToolUse[0].hooks[0].command).toContain("claude-approval-hook.mjs");
+  });
+
+  it("surfaces the curated catalog's agent ids as catalogAgentIds (Fáze 2b)", async () => {
+    // A small library under the cap passes through unchanged (see the "no curation"
+    // test above) — catalogAgentIds must mirror exactly what landed in --agents.
+    const svc = makeService([CODER], [WRITER_SKILL]);
+    const { catalogAgentIds } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+    });
+    expect(catalogAgentIds).toEqual(["coder"]);
+    // Skills share the --agents catalog but are NOT agent ids (they carry no
+    // gates/requires_approval for the strictest-union composition to read).
+    expect(catalogAgentIds).not.toContain("task-spec-writer");
+  });
+
+  it("curates catalogAgentIds down with the same cap/relevance rules as --agents", async () => {
+    const library: Agent[] = [
+      { id: "architekt", instructions: "Architekt." },
+      { id: "koder", instructions: "Kodér." },
+      { id: "research-analyst", instructions: "Relevant delegate." },
+      ...Array.from(
+        { length: 200 },
+        (_, i): Agent => ({ id: `lib-${i}`, instructions: `lib ${i}` }),
+      ),
+    ];
+    const svc = makeService(library, []);
+    const { catalogAgentIds } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      delegates: ["research-analyst"],
+    });
+    expect(catalogAgentIds.length).toBeLessThanOrEqual(MAX_CATALOG_AGENTS);
+    expect(catalogAgentIds).toContain("research-analyst");
+    expect(catalogAgentIds.some((id) => id.startsWith("lib-"))).toBe(false);
   });
 
   it("orders the gate timeouts fail-closed: hook denies before Claude Code can kill it", async () => {
@@ -394,7 +491,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
     expect(settings.hooks.Stop[0].hooks[0].command).toBe("/usr/bin/notify run finished");
     // The approval hook is untouched by an unrelated custom hook.
-    expect(settings.hooks.PreToolUse[0].matcher).toBe("Bash");
+    expect(settings.hooks.PreToolUse[0].matcher).toBe("Bash|Task");
     expect(settings.hooks.PreToolUse[0].hooks[0].command).toContain("claude-approval-hook.mjs");
   });
 

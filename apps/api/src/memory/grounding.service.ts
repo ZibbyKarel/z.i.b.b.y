@@ -6,6 +6,14 @@ import { VaultService } from "./vault.service";
 /** Fixed id of the operator's mission note — always grounded first when present. */
 export const NORTH_STAR_ID = "north-star";
 
+/**
+ * Fixed id of the machine-generated self-knowledge note (Fáze 1 — agents,
+ * pipelines, gate rules, channels). Always grounded second, right after the
+ * North Star, so every run carries current core knowledge about ZIBBY itself —
+ * the same always-loaded pattern as the North Star, no new composition point.
+ */
+export const SELF_KNOWLEDGE_ID = "self-knowledge";
+
 /** Per-note body budget (chars). Conservative — the block rides argv. */
 const NOTE_BUDGET = 2000;
 /** Per-block budget (chars) across all grounded notes. */
@@ -91,6 +99,7 @@ export class GroundingService {
       };
 
       await add(NORTH_STAR_ID);
+      await add(SELF_KNOWLEDGE_ID);
       const entries = await this.vault.index().catch((): IndexEntry[] => []);
       // M7 isolation: restrict the candidate set to this run's project before
       // term-matching, so a run can never ground on another project's notes.
