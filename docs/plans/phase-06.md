@@ -245,7 +245,7 @@ service (introspekce fixtures), controller e2e vzor dle `health`.
 
 ---
 
-## Fáze 3 — Paměť: typování, dedupe, crash-hardening
+## Fáze 3 — Paměť: typování, dedupe, crash-hardening ✅ (hotovo)
 
 **3a. Kontrakt (`libs/contracts/src/memory/memory.schema.ts`):**
 - `NoteTypeSchema = z.enum(["decision","preference","fact","pattern"])`.

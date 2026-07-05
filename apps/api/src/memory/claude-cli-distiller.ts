@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { Injectable } from "@nestjs/common";
+import { type NoteType, NoteTypeSchema } from "@zibby/contracts";
 import { z } from "zod";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
@@ -20,15 +21,24 @@ export interface RunDigest {
   excerpt: string;
 }
 
-/** One durable learning the model extracted from the batch. */
+/**
+ * One durable learning the model extracted from the batch. `type`/`tags` (Fáze 3
+ * typed memory) are Zod-validated with a fallback (`.catch()`) rather than
+ * rejected — a model that omits or mistypes them still files a usable, if
+ * generically-typed, note instead of losing the whole batch.
+ */
 export interface Learning {
   title: string;
   body: string;
+  type: NoteType;
+  tags: string[];
 }
 
 const LearningSchema = z.object({
   title: z.string().min(1).max(160),
   body: z.string().min(1).max(1500),
+  type: NoteTypeSchema.catch("fact"),
+  tags: z.array(z.string()).catch([]),
 });
 const DistillSchema = z.object({ learnings: z.array(LearningSchema).max(12) }).strict();
 
@@ -41,8 +51,11 @@ const DISTILLER_SYSTEM_PROMPT = [
   "did — that is episodic and belongs elsewhere. Merge duplicates across runs into",
   "one learning. If nothing durable stands out, return an empty list.",
   "",
+  "Classify each learning's `type` as one of decision|preference|fact|pattern, and",
+  "give it a short `tags` list (lowercase, kebab-case where useful).",
+  "",
   "Reply with ONLY a JSON object, no prose and no code fences:",
-  '{"learnings":[{"title":string,"body":string}]}',
+  '{"learnings":[{"title":string,"body":string,"type":"decision"|"preference"|"fact"|"pattern","tags":string[]}]}',
 ].join("\n");
 
 /**

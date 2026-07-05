@@ -37,6 +37,7 @@ import { RunnerCore } from "../runner/runner-core";
 import { LimitsService } from "../limits/limits.service";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { writeFileAtomic } from "../shared/file-storage/file-utils";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { prepareWorktreeDir } from "../shared/worktree-root";
@@ -1846,17 +1847,37 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async writeAggregate(run: PipelineRun): Promise<void> {
-    await fs
-      .writeFile(path.join(run.cwd, AGGREGATE_FILE), JSON.stringify(run), "utf8")
-      .catch(() => {
-        // Best-effort: a failed write degrades restart fidelity, not the run.
-      });
+    await writeFileAtomic(path.join(run.cwd, AGGREGATE_FILE), JSON.stringify(run)).catch(() => {
+      // Best-effort: a failed write degrades restart fidelity, not the run.
+    });
     // Persisting is the transition point — notify the status channel after it so a
     // subscriber that refetches sees the same state we just wrote to disk.
     this.events.emit("status", run);
   }
 
-  /** Rebuild aggregates from `<runRoot>/run.json` sidecars; a mid-flight run fails. */
+  /**
+   * True when `stageRunId`'s stage record survived {@link RunnerCore.init} as a
+   * LIVE orphan (Phase 6: a detached child that outlived a hard crash — its pgid
+   * is still alive, so `init()` reattaches an exit monitor instead of reconciling
+   * it to `interrupted`). `core.get` throws `RunNotFoundError` for anything not in
+   * the rebuilt registry (dead orphan, no stage record at all), which reads here
+   * as "not surviving".
+   */
+  private stageStillRunning(stageRunId: string): boolean {
+    try {
+      return this.core.get(stageRunId).status === "running";
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Rebuild aggregates from `<runRoot>/run.json` sidecars. A mid-flight run
+   * normally fails (its child died with the previous backend) — UNLESS its
+   * current stage survived as a live orphan (see {@link stageStillRunning}), in
+   * which case the aggregate is left `running` and the reattached exit monitor
+   * drives it to its normal terminal transition.
+   */
   private async reconstruct(): Promise<void> {
     const entries = await fs.readdir(this.dir, { withFileTypes: true }).catch(() => []);
     for (const entry of entries) {
@@ -1873,7 +1894,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const parsed = PipelineRunSchema.safeParse(data);
       if (!parsed.success) continue;
       let run = parsed.data;
-      // A run left "running" lost its mid-flight child with the previous backend.
+      // A run left "running" lost its mid-flight child with the previous backend —
+      // UNLESS that child survived as a live orphan (Phase 6): its stage record is
+      // still `running` after `core.init()` reattached a pgid monitor, so honor
+      // that instead of failing a run that is actually still executing.
+      const survivingOrphan =
+        run.status === "running" &&
+        run.currentStageRunId !== undefined &&
+        this.stageStillRunning(run.currentStageRunId);
       // An APPROVAL-parked run is the same situation (its blocking child died
       // with the API) → honest reconciliation is `failed`. A RETRIES-parked run
       // has no child at all — it is durable and stays parked, resumable. A
@@ -1885,7 +1913,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // child either — it is durable like `retries` and survives the restart parked.
       const approvalParked =
         run.status === "parked" && run.parkedReason !== "retries" && run.parkedReason !== "output";
-      if (run.status === "running" || approvalParked) {
+      if ((run.status === "running" && !survivingOrphan) || approvalParked) {
         run = {
           ...run,
           status: "failed",
