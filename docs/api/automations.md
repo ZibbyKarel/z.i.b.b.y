@@ -1,43 +1,51 @@
-# Automatizace
+# Automations
 
-## Co je Automation
+## What is an Automation
 
-`Automation` je definice pravidelně nebo událostně spouštěné akce.
-Plánování ZIBBY — ne cron pro příkazy, ale cron pro záměry.
+An `Automation` is a definition of an action that fires on a schedule or on an
+event. ZIBBY's scheduling — not cron for commands, but cron for intents.
 
-## Schéma
+## Schema
 
 ```typescript
 interface Automation {
   id: string;
-  name: string;
-  enabled: boolean;
+  name?: string;
   trigger: CronTrigger | EventTrigger;
   target: AutomationTarget;
-  system: boolean; // server-owned: nesmazatelná, editovatelný jen rozvrh
+  prompt?: string; // free-text steering forwarded to whatever the target runs
+  enabled: boolean;
+  system: boolean; // server-owned: cannot be deleted, only its schedule is editable
   lastFiredAt?: string; // ISO datetime (idempotence)
 }
 ```
 
-`system` je **vlastněno serverem** — nelze ho nastavit přes create/update (je
-vynechán z obou vstupních schémat). Viz [Systémové automatizace](#systémové-automatizace).
+`system` is **server-owned** — it cannot be set through create/update (it is
+omitted from both input schemas). See [System automations](#system-automations).
 
 ### Trigger
 
 ```typescript
-// Cron trigger — 5polní výraz
+// Cron trigger — 5-field expression
 interface CronTrigger {
   type: "cron";
-  cron: string; // "0 8 * * *" = každý den v 8:00
-  timezone: string; // výchozí "Europe/Prague"
+  expr: string; // "0 8 * * *" = every day at 08:00
 }
 
-// Event trigger — pojmenovaná událost
+// Event trigger — one or more named events; fires when ANY listed event arrives
 interface EventTrigger {
   type: "event";
-  event: string; // název události (např. "briefing-generated")
+  events: string[]; // closed catalog, e.g. "git.push", "pr.opened", "run.failed"
 }
 ```
+
+Cron expressions are evaluated in `Europe/Prague` (hard-coded in the matcher,
+not configurable per automation). The event catalog is closed — see
+`AUTOMATION_EVENTS` in `libs/contracts/src/automations/automation.schema.ts`
+(`file.created`, `file.changed`, `git.push`, `pr.opened`, `pr.merged`,
+`run.completed`, `run.failed`, `email.received`, `slack.message`). No event bus
+fires these automatically yet — an event automation fires only through the
+manual `trigger` path.
 
 ### Target
 
@@ -45,145 +53,182 @@ interface EventTrigger {
 interface PipelineTarget {
   type: "pipeline";
   pipelineId: string;
-  prompt?: string; // volitelný prompt předaný pipeline
 }
 
 interface AgentTarget {
   type: "agent";
   agentId: string;
-  prompt?: string; // prompt předaný agentovi
 }
 
 interface BriefingTarget {
   type: "briefing";
-  // bez dalších polí — deterministické generování briefingu
+  // no extra fields — deterministic briefing assembly
 }
 
 interface DiscoveryTarget {
   type: "discovery";
-  // deterministický sken → kandidáti úkolů za schvalovací bránou
+  // deterministic scan → task candidates behind the approval gate
 }
 
 interface MemoryDistillTarget {
   type: "memory-distill";
-  // noční destilace paměti — viz Systémové automatizace
+  // nightly memory distillation — see System automations
+}
+
+interface PatternExtractTarget {
+  type: "pattern-extract";
+  // scans 30 days of approval-decision activity, drafts rule proposals to the vault
+}
+
+interface ResearchDigestTarget {
+  type: "research-digest";
+  // fetches the operator's configured sources, mirrors a ranked digest to the vault
+}
+
+interface GapDetectTarget {
+  type: "gap-detect";
+  // scans recurring task-created activity for automatable manual work
+}
+
+interface AppIdeasTarget {
+  type: "app-ideas";
+  // pairs research interests with digest trends into prototype pitches
 }
 ```
 
+`prompt` is a top-level, optional field (not per-target): free-text steering
+forwarded to whatever the automation runs — the agent's prompt, the research
+focus, or the briefing voice.
+
 ## SchedulerService
 
-**Soubor:** `apps/api/src/automations/scheduler.service.ts`
+**File:** `apps/api/src/automations/scheduler.service.ts`
 
-Tick: každých `AUTOMATION_TICK_MS` ms (výchozí 60 000; `0` = disabled pro testy).
+Tick: every `automationTickMs` ms, read from the runtime system config
+(`SystemConfigStore`, not a start-only env var — see
+[`docs/ops/environment.md`](../ops/environment.md)); `0` disables the loop (the
+test/CI default — tests drive `tick()` directly). The scheduler re-arms live
+when the config changes.
 
-### Jeden tick
+### One tick
 
-1. Načte všechny `enabled` automations z disku
-2. Pro každou zkontroluje: je trigger splněn?
-   - Cron: `cron-parser` vyhodnotí, jestli `lastFiredAt < nextFireTime <= now`
-   - Event: `EventsService` signalizuje pojmenovanou událost
-3. Pokud splněn → dispatch target:
+1. Reads all `enabled` automations from disk.
+2. For each, checks whether its trigger is due:
+   - Cron: `matchesCron()` (`apps/api/src/automations/cron.ts`) evaluates the
+     5-field expression against `now` in `Europe/Prague`; a run won't double-fire
+     within the same wall-clock minute (idempotence via `lastFiredAt`).
+   - Event: fired only via the manual `trigger` path today (no event bus yet).
+3. When due, dispatches the target:
    - `pipeline` → `PipelineRunnerService.start(...)`
    - `agent` → `AgentRunnerService.start(...)`
-   - `briefing` → `BriefingService.generate(today)`
+   - `briefing` → `BriefingService.generate(...)`
    - `discovery` → `DiscoveryTriageService.run()`
    - `memory-distill` → `MemoryDistillerService.distill()`
-4. Aktualizuj `lastFiredAt = now` (idempotence — dvojité spuštění ve stejné minutě bezpečné)
-5. Zapiš event do activity logu
-
-### Timezone
-
-Cron výrazy jsou vyhodnocovány v `Europe/Prague` (výchozí). Lze přepsat per-automation.
+   - `pattern-extract` → `PatternExtractorService.extract()`
+   - `research-digest` → `ResearchService.refresh(...)`
+   - `gap-detect` → `GapDetectorService.detect()`
+   - `app-ideas` → `IdeaGeneratorService.generate()`
+4. Updates `lastFiredAt = now` (idempotence — a double fire within the same
+   minute is safe).
+5. Logs the fire; missed triggers are skipped, not caught up.
 
 ## API
 
 ```
-GET    /api/automations           seznam všech
-POST   /api/automations           vytvoření
-GET    /api/automations/:id       detail
-PATCH  /api/automations/:id       aktualizace (enable/disable, retarget; 409 u system → jen reschedule)
-DELETE /api/automations/:id       smazání (409 u system automatizace)
-POST   /api/automations/:id/trigger  spustit ihned (vrátí runRef)
+GET    /api/automations           list all
+POST   /api/automations           create
+GET    /api/automations/search?q= search by id or name
+GET    /api/automations/:id       get one
+PATCH  /api/automations/:id       update (enable/disable, retarget; system: reschedule only, else 409)
+DELETE /api/automations/:id       delete (409 for a system automation)
+POST   /api/automations/:id/trigger  fire now (returns runRef)
 ```
 
 ## Persistence
 
-Každá automation je JSON soubor v `apps/api/data/automations/<id>.json`.
-`lastFiredAt` se zapisuje zpět po každém spuštění.
+Each automation is a JSON file in `apps/api/data/automations/<id>.json`.
+`lastFiredAt` is written back after every fire.
 
-## Systémové automatizace
+## System automations
 
-Některé schopnosti patří **systému ZIBBY**, ne operátorovi ani agentovi. Takové
-automatizace mají `system: true`:
+Some capabilities belong to **the ZIBBY system itself**, not the operator or an
+agent. Such automations have `system: true`:
 
-- **Nelze je smazat** — `DELETE /api/automations/:id` vrátí `409`.
-- **Lze upravit jen rozvrh** — `PATCH` přijme pouze změnu `trigger`; jakákoli jiná
-  změna (`target`, `enabled`, `name`) vrátí `409`.
-- **Seedují se a self-healí při startu** — `AutomationsStorageService.onModuleInit`
-  vytvoří chybějící a u existujících znovu vynutí `system` + `target`, ale zachová
-  operátorův `trigger`, `enabled` a `lastFiredAt` z disku.
+- **Cannot be deleted** — `DELETE /api/automations/:id` returns `409`.
+- **Only the schedule can be edited** — `PATCH` accepts only a `trigger` change;
+  any other change (`target`, `enabled`, `name`) returns `409`.
+- **Seeded and self-healed on boot** — `AutomationsStorageService.onModuleInit`
+  creates any missing ones and re-asserts `system`/`target`/`name` on existing
+  ones, while preserving the operator's `trigger`, `enabled`, and `lastFiredAt`
+  from disk.
 
-Definice žijí v konstantě `SYSTEM_AUTOMATIONS`
-(`apps/api/src/automations/automations.storage.service.ts`).
+Definitions live in the `SYSTEM_AUTOMATIONS` constant
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds a
+single automation:
 
-### Destilace paměti (`memory-distill`)
+### Memory distillation (`memory-distill`)
 
-Kanonická systémová automatizace (výchozí cron `0 3 * * *`). Realizuje princip
-**„agent o paměti neví; učení vlastní systém"** — je to výstupní zrcadlo groundingu
-(systém čte poznatky _ven_, stejně jako grounding píše kontext _dovnitř_).
+The canonical system automation (default cron `0 3 * * *`). It embodies the
+principle **"the agent doesn't know about memory; the system owns learning"** —
+it is the output mirror of grounding (the system reads learnings _out_, the same
+way grounding writes context _in_).
 
 `MemoryDistillerService.distill()` (`apps/api/src/memory/memory-distiller.service.ts`):
 
-1. projde terminální běhy pipeline/agentů/goalů, které ještě nebyly destilovány
-   (marker `memory-distilled.json` v `cwd` běhu; cap `MAX_RUNS_PER_PASS`, zbytek se
-   odloží na další noc — nic se neztrácí);
-2. levný model (`ClaudeCliDistiller`, haiku, VITEST-guarded, fail-open) z výňatků
-   jejich artefaktů vytáhne **trvalé poznatky** (ne changelog jednoho běhu);
-3. zapíše jeden noční digest `distilled-<datum>` do `knowledge/`, přilinkuje ho
-   z MOCů dotčených projektů a přidá ukazatel do denní poznámky;
-4. označí zpracované běhy (až po zápisu — at-least-once, raději duplicitní řádek než
-   ztracený poznatek). `distill()` **nikdy nehodí** — scheduler tick to nesmí rozbít.
+1. Walks terminal pipeline/agent/goal runs that haven't been distilled yet
+   (a `memory-distilled.json` marker in the run's `cwd`; capped at
+   `MAX_RUNS_PER_PASS` per pass — the remainder rolls to the next night, nothing
+   is lost);
+2. Uses a cheap model (`ClaudeCliDistiller`, haiku, VITEST-guarded, fail-open) to
+   pull **durable learnings** out of the run's artifacts (not a per-run
+   changelog);
+3. Writes a single nightly digest `distilled-<date>` into `knowledge/`, links it
+   from the affected projects' MOCs, and adds a pointer to the daily note;
+4. Marks processed runs (only after writing — at-least-once, a duplicate line
+   beats a lost learning). `distill()` **never throws** — a scheduler tick must
+   not break on it.
 
-## Omezení autonomie
+## Autonomy boundary
 
-Automation může dispatch provést — ale dispatch prochází standardním gate systémem.
-Není cesta jak automation spustila by akci, která by obešla gate.
-Autonomie je "planning-only" vrstva nad schvalovacím systémem.
+An automation can dispatch a target — but that dispatch goes through the
+standard gate system like any other run. There is no path by which an
+automation-fired run bypasses the gate. Automation is a "planning-only" layer
+on top of the approval system.
 
-## Příklady použití
+## Usage examples
 
 ```yaml
-# Ranní briefing každý pracovní den
+# Morning briefing every weekday
 id: morning-briefing
-name: Ranní briefing
+name: Morning briefing
 enabled: true
 trigger:
   type: cron
-  cron: "0 8 * * 1-5"
+  expr: "0 8 * * 1-5"
 target:
   type: briefing
 
-# Týdenní status report
+# Weekly status report
 id: weekly-status
-name: Týdenní status
+name: Weekly status
 enabled: true
 trigger:
   type: cron
-  cron: "0 9 * * 1"    # každé pondělí v 9:00
+  expr: "0 9 * * 1" # every Monday at 09:00
 target:
   type: pipeline
   pipelineId: status-report
-  prompt: "Vygeneruj týdenní status report za uplynulý týden."
+prompt: "Generate the weekly status report for the past week."
 
-# Sledování PR po push
+# Review a PR after a push
 id: pr-review-on-push
-name: Review po push
+name: Review after push
 enabled: true
 trigger:
   type: event
-  event: "git.push"
+  events: ["git.push"]
 target:
   type: agent
   agentId: code-reviewer
-  prompt: "Zkontroluj poslední push a přidej komentáře k PR."
+prompt: "Review the latest push and add comments to the PR."
 ```

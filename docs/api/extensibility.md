@@ -1,66 +1,75 @@
-# Rozšiřitelnost runů — Commands, MCP, Hooks, Project env/secrets
+# Run extensibility — Commands, MCP, Hooks, Project env/secrets
 
-Čtyři katalogy, kterými operátor z UI rozšiřuje prostředí každého `claude -p` runu.
-Společný vzor: **soubory jsou zdroj pravdy** (file-backed store), enabled položky se
-vkládají do runu při spawnu. Command builder je `apps/api/src/runner/claude-run-command.service.ts`,
-spawn engine `runner-core.ts`.
+Four catalogs the operator uses from the UI to extend the environment of every
+`claude -p` run. Shared pattern: **files are the source of truth** (a file-backed
+store), and enabled entries are injected into the run at spawn time. The command
+builder is `apps/api/src/runner/claude-run-command.service.ts`; the spawn engine
+is `runner-core.ts`.
 
 ## Commands (`/api/commands`)
 
-Custom Claude Code slash-commandy (`/<id>`), na kterých stojí stažené skilly/agenti
-(např. `plan-orchestrate` odkazuje `/orchestrate`). Claude Code objevuje commandy
-**jen ze souborů** (`.claude/commands/*.md` v cwd) — neexistuje `--commands` flag.
+Custom Claude Code slash commands (`/<id>`) that downloaded skills/agents rely on
+(e.g. `plan-orchestrate` references `/orchestrate`). Claude Code discovers
+commands **only from files** (`.claude/commands/*.md` in the cwd) — there is no
+`--commands` flag.
 
-- **Store:** `commands.storage.service.ts` (Markdown `<id>.md`, kebab-case frontmatter
-  `description`/`argument-hint`/`allowed-tools`/`model`/`disable-model-invocation` + body).
-- **Injektáž:** `command-materializer.service.ts` zapíše enabled commandy do
-  `<spawnCwd>/.claude/commands/<id>.md` (worktree u projektového runu, jinak sandbox).
-  Per-run izolace (každý run má vlastní cwd). Fail-open. Pollution guard: existující
-  soubor (projektový/uživatelský command) **vyhrává**, materializovaný se přidá do
-  `.git/info/exclude`, aby ho agent nemohl commitnout.
-- **allowedTools:** `Skill` je v base setu, aby model materializované commandy mohl volat.
-- ⚠️ **Ověřit při nasazení:** jméno nástroje, kterým model volá filesystem command
-  (`Skill` vs `SlashCommand`). Plně autonomní mid-run vyvolání je spolehlivé jen pro
-  operátorem/`-p` spuštěné a generativní skilly (slash expanze je input-time).
+- **Store:** `commands.storage.service.ts` (Markdown `<id>.md`, kebab-case
+  frontmatter `description`/`argument-hint`/`allowed-tools`/`model`/
+  `disable-model-invocation` + body).
+- **Injection:** `command-materializer.service.ts` writes enabled commands into
+  `<spawnCwd>/.claude/commands/<id>.md` (the worktree for a project run, else the
+  sandbox). Per-run isolation (each run has its own cwd). Fail-open. Pollution
+  guard: an existing file (a project's or user's own command) **wins** — the
+  materialized copy is added to `.git/info/exclude` so the agent can't commit it.
+- **allowedTools:** `Skill` is in the base allow-list so the model can invoke
+  materialized commands. Confirmed in `claude-run-command.service.ts` —
+  `Skill` (not `SlashCommand`) is the tool name the model uses to call a
+  filesystem command, alongside its normal role of invoking catalog skills.
 
-## MCP servery (`/api/mcp-servers`)
+## MCP servers (`/api/mcp-servers`)
 
-Připojené MCP servery injektované do **každého** runu (root `.mcp.json` NENÍ napojen).
+Connected MCP servers injected into **every** run (the root `.mcp.json` is NOT
+wired in).
 
 - **Store:** `mcp.storage.service.ts` (`{ id, type: stdio|http|sse, command?/args?/url?/headers?, enabled }`)
   - gitignored `mcp-credentials.store.ts` (write-only `{ env?, headers?, authToken? }`,
-    nikdy se nečte ani neloguje; entity nese jen `hasSecrets`-ekvivalent `hasCredentials`).
-- **Injektáž:** `buildMcpConfig()` sloučí enabled servery + secrety → `--mcp-config <json>`.
-- **allowedTools:** pro každý enabled server se přidá `mcp__<id>__*` (jinak by `dontAsk`
-  volání MCP nástroje zamítlo; bare `mcp__<id>` nematchuje).
+    never read back or logged; the entity carries only the `hasCredentials` flag).
+- **Injection:** `buildMcpConfig()` merges enabled servers + secrets into
+  `--mcp-config <json>`.
+- **allowedTools:** each enabled server adds `mcp__<id>__*` (otherwise `dontAsk`
+  would deny the MCP tool call; the bare `mcp__<id>` does not match).
 
 ## Hooks (`/api/hooks`)
 
-Custom Claude Code lifecycle hooks (PreToolUse/PostToolUse/Stop/…) slité do `--settings`.
+Custom Claude Code lifecycle hooks (PreToolUse/PostToolUse/Stop/…) merged into
+`--settings`.
 
 - **Store:** `hooks.storage.service.ts` (JSON `{ id, event, matcher?, command, timeout?, enabled }`).
-- **Slití (Zákon 1 — approval-first je strukturální):** `buildSettings()` vždy vloží
-  zamčený approval hook jako **první** v `PreToolUse`; custom hook s `event=PreToolUse`
-  a matcherem na `Bash` (nebo prázdným) se **zahodí**. Žádný uložený hook tak nemůže
-  obejít/oslabit gate. Ostatní eventy se přidají normálně. Fail-open na approval-only.
+- **Merge (Law 1 — approval-first is structural):** `buildSettings()` always
+  inserts the locked approval hook **first** in `PreToolUse`; a custom hook with
+  `event=PreToolUse` and a matcher on `Bash` (or an empty matcher) is **dropped**.
+  No stored hook can bypass or weaken the gate this way. Other events are added
+  normally. Fail-open onto approval-only.
 
-## Per-projekt env/secrets (`/api/projects/:id/secrets`)
+## Per-project env/secrets (`/api/projects/:id/secrets`)
 
-Env proměnné a secrety vlité do runů daného projektu (API klíče, DB URL).
+Env vars and secrets injected into a given project's runs (API keys, DB URLs).
 
-- **Non-secret `env`** žije na committed entitě (`project.env`); **secrety** v gitignored
-  `project-secrets.store.ts` (write-only, entity nese jen `hasSecrets`).
-- **Injektáž:** runner sloučí `project.env` + secrety (secrety vyhrávají) do
-  `RunSpec.env`; `runner-core.ts` je rozprostře do `env` dítěte při spawnu i resume.
-  ZIBBY-vlastní klíče (`ZIBBY_INTENT_DIR`) se aplikují **až po** project env — projekt
-  je nemůže přepsat. Secrety se nikdy nelogují (core loguje `command`/`cwd`, ne `env`).
+- **Non-secret `env`** lives on the committed entity (`project.env`); **secrets**
+  live in the gitignored `project-secrets.store.ts` (write-only, the entity
+  carries only `hasSecrets`).
+- **Injection:** the runner merges `project.env` + secrets (secrets win) into
+  `RunSpec.env`; `runner-core.ts` spreads it into the child's `env` on both spawn
+  and resume. ZIBBY's own keys (`ZIBBY_INTENT_DIR`) are applied **after** project
+  env, so a project can't override them. Secrets are never logged (the core logs
+  `command`/`cwd`, never `env`).
 
-## Datové adresáře / env knoby
+## Data directories / env knobs
 
-| Store           | Dir (env override)                             | Git        |
-| --------------- | ---------------------------------------------- | ---------- |
-| Commands        | `data/commands` (`COMMANDS_DIR`)               | committed  |
-| MCP servery     | `data/mcp-servers` (`MCP_DIR`)                 | committed  |
-| MCP secrety     | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`) | gitignored |
-| Hooks           | `data/hooks` (`HOOKS_DIR`)                     | committed  |
-| Projekt secrety | `data/project-secrets` (`PROJECT_SECRETS_DIR`) | gitignored |
+| Store            | Dir (env override)                             | Git        |
+| ----------------- | ----------------------------------------------- | ---------- |
+| Commands          | `data/commands` (`COMMANDS_DIR`)                | committed  |
+| MCP servers       | `data/mcp-servers` (`MCP_DIR`)                   | committed  |
+| MCP credentials   | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`)   | gitignored |
+| Hooks             | `data/hooks` (`HOOKS_DIR`)                       | committed  |
+| Project secrets   | `data/project-secrets` (`PROJECT_SECRETS_DIR`)   | gitignored |
