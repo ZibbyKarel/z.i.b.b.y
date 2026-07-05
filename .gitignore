@@ -81,3 +81,7 @@ z-i-b-b-y
 /graphify-out/.graphify_python
 /graphify-out/.graphify_*.json
 /graphify-out/.graphify_*.txt
+
+# live runtime data root (resolveDataRoot() default anchor — real operator data,
+# regenerated locally e.g. by `pnpm self-knowledge:generate`; never versioned)
+/apps/api/data/
