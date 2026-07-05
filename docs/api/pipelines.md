@@ -1,10 +1,11 @@
-# Pipeline orchestrace
+# Pipeline Orchestration
 
-## Pipeline — definice
+## Pipeline — definition
 
-Pipeline je Markdown soubor s YAML frontmatter v `apps/api/data/pipelines/<id>.pipeline.md`.
+A pipeline is a Markdown file with YAML frontmatter at
+`apps/api/data/pipelines/<id>.pipeline.md`.
 
-### Frontmatter pole
+### Frontmatter fields
 
 ```yaml
 id: delivery-loop
@@ -14,17 +15,17 @@ phases:
   - id: architekt
     type: agent
     agent: architekt
-    model: opus # přepisuje default model agenta pro tuto fázi
+    model: opus # overrides the agent's default model for this phase
     thinking: high
-    produces: spec.md # handoff soubor pro další fázi
+    produces: spec.md # handoff file for the next phase
 
   - id: kodér
     type: agent
     agent: kodér
-    consumes: spec.md # vstup z předchozí fáze
+    consumes: spec.md # input from the previous phase
     produces: diff.patch
     loop:
-      to: code-review # zpětná hrana při selhání
+      to: code-review # back-edge on failure
       maxRetries: 3
       escalation:
         - rung: 1
@@ -39,11 +40,11 @@ phases:
     agent: code-reviewer
     consumes: diff.patch
     then:
-      pass: tester # při OK → jdi na tester
-      fail: kodér # při FAIL → zpět na kodér
+      pass: tester # on OK → go to tester
+      fail: kodér # on FAIL → back to kodér
 
   - id: tester
-    type: verify # deterministická fáze, žádné tokeny
+    type: verify # deterministic phase, no tokens
     commands:
       - pnpm typecheck
       - pnpm test
@@ -56,233 +57,254 @@ phases:
     agent: dokumentátor
     produces: docs.md
 
-outputs: # co se stane s hotovou prací (delivery sinks)
-  - type: pr # otevře PR z docs.md (gated — „PR je brána")
+outputs: # what happens to the finished work (delivery sinks)
+  - type: pr # opens a PR from docs.md (gated — "the PR is the gate")
     from: docs.md
-  - type: file # zapíše review.md do projektu (jede na zibby/* branchi)
+  - type: file # writes review.md into the project (on a zibby/* branch)
     from: review.md
     dest: project
     to: reports/review.md
 ```
 
-Tělo `.md` souboru jsou instrukce pro celou pipeline (kontextová nápověda).
+The body of the `.md` file is the instructions for the whole pipeline
+(context hint).
 
-### Výstupy (`outputs`) — delivery sinks
+### Outputs (`outputs`) — delivery sinks
 
-Co se stane s hotovou prací **nedělá žádný agent** (dřív to byl agent `pr-autor`),
-ale je to konfigurace na úrovni pipeline. `outputs` je pole terminálních sinků, které
-runner zpracuje po zelené fázové smyčce — deterministicky, vlastněné systémem (žádný
-agent, žádný model, žádné tokeny; výstupní obdoba `verify` fáze). Pipeline jich může
-mít víc (otevřít PR _a_ zároveň zapsat report). Každý sink čerpá z `from` — relativní
-cesty, kterou některá fáze `produces`.
+What happens to finished work is **not done by any agent** (it used to be a
+`pr-autor` agent), but is pipeline-level configuration instead. `outputs` is
+an array of terminal sinks the runner processes after the phase loop goes
+green — deterministic, system-owned (no agent, no model, no tokens; the
+output-side counterpart of the `verify` phase). A pipeline can have more than
+one (open a PR _and_ write a report). Each sink draws from `from` — a
+relative path some phase `produces`.
 
-| `type` | Pole                 | Co dělá                                                                                                                                                                                                                |
-| ------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr`   | `from`               | Z `from` (Markdown `# titulek` + tělo) složí PR a otevře ho přes `git push && gh pr create`. **Vždy zaparkuje na schválení** — PR je brána, vynucená strukturálně systémem (Law 3), ne configem agenta.                |
-| `file` | `from`, `dest`, `to` | Zkopíruje `from` do `to` — do projektového worktree (`dest: project`, jede na `zibby/*` branchi) nebo jako poznámku ve vaultu (`dest: vault`, trvalý druhý mozek pro pipeline, jejichž výsledek je informace, ne kód). |
+| `type` | Fields               | What it does                                                                                                                                                                                                       |
+| ------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr`   | `from`               | Composes a PR from `from` (Markdown `# title` + body) and opens it via `git push && gh pr create`. **Always parks for approval** — the PR is the gate, enforced structurally by the system (Law 3), not by agent config.  |
+| `file` | `from`, `dest`, `to` | Copies `from` to `to` — into the project worktree (`dest: project`, on a `zibby/*` branch) or as a vault note (`dest: vault`, a durable second-brain record for pipelines whose result is information, not code). |
 
-PR sink zaparkuje aggregate s `parkedReason: "output"` (durable přes restart — fázová
-smyčka už doběhla, žádné živé dítě), zapíše `pr-draft.md` + `diffstat.txt` jako
-rozhodovací plochu a založí approval `kind: "pipeline-output"` (runId = pipelineRunId).
-Schválení → systém spustí gated push a běh doběhne `done`; zamítnutí → práce zůstane na
-branchi bez PR (běh je stejně `done`). `file` sinky jsou Tier-1 a běží hned.
+A `pr` sink parks the aggregate with `parkedReason: "output"` (durable across
+a restart — the phase loop has already finished, no live child), writes
+`pr-draft.md` + `diffstat.txt` as the decision surface, and opens an approval
+of `kind: "pipeline-output"` (runId = pipelineRunId). Approval → the system
+runs the gated push and the run finishes `done`; rejection → the work stays
+on the branch without a PR (the run is still `done`). `file` sinks are Tier-1
+and run immediately.
 
-**Per-run override.** Když je pipeline cílem directed tasku, který nese vlastní
-`output` (dialog Nový task — viz `docs/api/tasks.md`), tato volba **přepíše**
-deklarované `outputs:` pro daný běh: uloží se jako `PipelineRun.outputsOverride`
-(`void` → `[]`, potlačí i deklarovaný PR) a runner čte `outputsOverride ?? outputs`.
-`from` se dopočítá z posledního `produces` pipeline (task žádné `from` nenese).
+**Per-run override.** When the pipeline is the target of a directed task that
+carries its own `output` (the New Task dialog — see
+[tasks.md](./tasks.md)), that choice **overrides** the declared `outputs:`
+for that run: it's stored as `PipelineRun.outputsOverride` (`void` → `[]`,
+which suppresses even a declared PR) and the runner reads
+`outputsOverride ?? outputs`. `from` is derived from the pipeline's last
+`produces` (a task carries no `from`).
 
-### Registr artefaktů (N2a) — provenance záznamy
+### Artifact registry (N2a) — provenance records
 
-Každá úspěšná delivery zapíše **trvalý provenance záznam** do registru artefaktů —
-jeden plain-JSON soubor v `ARTIFACTS_DIR` (default `ZIBBY_DATA_DIR/artifacts`),
-`ArtifactsStorageService` (modul `artifacts/`). Záznam nese `kind`
-(`vault-note` | `project-file` | `pr`), `locator` (id poznámky / projektová cesta /
-URL PR), `from` (handoff jméno) a `producedBy` (`runRef`, `pipelineId`, `taskId?`,
-`projectId?`). Id záznamu je stabilní `<runRef>_<kind>_<slug(from)>` — idempotentní
-re-delivery záznam nahradí, neduplikuje. Zápis je best-effort: selhání registru nikdy
-neshodí (už zelenou) delivery. Selhaná delivery žádný záznam nezapisuje — provenance
-se nefalšuje. Registr je read-only přes HTTP:
+Every successful delivery writes a **durable provenance record** to the
+artifact registry — one plain-JSON file under `ARTIFACTS_DIR` (default
+`ZIBBY_DATA_DIR/artifacts`), owned by `ArtifactsStorageService` (the
+`artifacts/` module — see `docs/api/artifacts.md`). A record carries `kind`
+(`vault-note` | `project-file` | `pr`), `locator` (note id / project path /
+PR URL), `from` (the handoff name), and `producedBy` (`runRef`,
+`pipelineId`, `taskId?`, `projectId?`). The record id is the stable
+`<runRef>_<kind>_<slug(from)>` — an idempotent re-delivery replaces the
+record rather than duplicating it. The write is best-effort: a registry
+failure never fails an (already green) delivery. A failed delivery writes no
+record — provenance is never faked. The registry is read-only over HTTP:
 
 ```
-GET /api/artifacts                    seznam záznamů (newest-first; ?projectId= &pipelineId=)
-GET /api/artifacts/:id                jeden záznam
+GET /api/artifacts                    list records (newest-first; ?projectId= &pipelineId=)
+GET /api/artifacts/:id                one record
 ```
 
-Registr je základ pro řetězení pipeline (N2b): downstream pipeline naváže svůj vstup
-na záznam upstream výstupu, takže chain přežije restart i evikci runu z paměti.
+The registry is the foundation for pipeline chaining (N2b, see
+`docs/api/chains.md`): a downstream pipeline anchors its input on an
+upstream output's record, so a chain survives a restart or the source run
+being evicted from memory.
 
 ### CRUD API
 
 ```
-GET    /api/pipelines           seznam všech pipelines
-POST   /api/pipelines           vytvoření pipeline
-GET    /api/pipelines/:id       detail pipeline
-PUT    /api/pipelines/:id       aktualizace pipeline
-DELETE /api/pipelines/:id       smazání pipeline
+GET    /api/pipelines           list every pipeline
+POST   /api/pipelines           create a pipeline
+GET    /api/pipelines/:id       pipeline detail
+PUT    /api/pipelines/:id       update a pipeline
+DELETE /api/pipelines/:id       delete a pipeline
 ```
 
-## Spouštění pipeline runu
+## Starting a pipeline run
 
-> **Pipeline se spouští jen přes úlohu.** Žádná operátorská cesta ji nespustí
-> přímo — vytvoří se úloha (`POST /api/tasks`) s cílem
-> `{ kind: "pipeline", id }`; scheduler interně volá
-> `PipelineRunnerService.start(...)`. Jediný per-kind run endpoint, který
-> zůstává, je katalogová živost `GET /api/pipelines/runs` (běžící + právě
-> doběhlé runy pro počítadla pokusů v katalogu).
+> **A pipeline only starts via a task.** No operator path starts it
+> directly — a task is created (`POST /api/tasks`) with target
+> `{ kind: "pipeline", id }`; the scheduler internally calls
+> `PipelineRunnerService.start(...)`. The only per-kind run endpoint that
+> remains is the catalog-liveness `GET /api/pipelines/runs` (running +
+> just-finished runs, for retry counters in the catalog).
 
 ### Pipeline Run lifecycle
 
 ```
-running → done       (všechny fáze prošly + výstupy doručeny)
-        → failed     (fáze selhala a retry/eskalace se vyčerpaly a then.fail chybí)
-        → parked     (smyčka se vyčerpala → durable parking pro human review;
-                      nebo `pr` output čeká na schválení brány → parkedReason "output")
+running → done       (every phase passed + outputs delivered)
+        → failed     (a phase failed, retry/escalation were exhausted, and there's no then.fail)
+        → parked     (the loop was exhausted → durable parking for human review;
+                      or a `pr` output is waiting on the gate → parkedReason "output")
 ```
 
-### Polling logů (jednotný povrch)
+### Log polling (unified surface)
 
-Detail, stage-logy, artefakty, resume a smazání pipeline runu žijí na jednotném
-`/api/tasks/runs/*` (viz [tasks.md](./tasks.md)):
+Detail, stage logs, artifacts, resume, and delete for a pipeline run all live
+on the unified `/api/tasks/runs/*` (see [tasks.md](./tasks.md)):
 
 ```
-GET /api/tasks/runs/:runId                              stav runu (+ stageRuns[])
-GET /api/tasks/runs/:runId/stages/:phaseId/logs?offset= log jedné fáze (po fázích)
-GET /api/tasks/runs/:runId/artifacts/:name              whitelistovaný artefakt (pr-draft.md, …)
-POST /api/tasks/runs/:runId/resume                      pokračování retries-parkovaného runu
+GET  /api/tasks/runs/:runId                              run state (+ stageRuns[])
+GET  /api/tasks/runs/:runId/stages/:phaseId/logs?offset= a single phase's log (per phase)
+GET  /api/tasks/runs/:runId/stages/:phaseId/logs/stream  SSE tail of the currently running phase's log
+GET  /api/tasks/runs/:runId/artifacts/:name              a whitelisted artifact (pr-draft.md, …)
+POST /api/tasks/runs/:runId/resume                       resume a retries-parked run
 ```
 
-**Živý log běžící fáze.** Stage se do `stageRuns` zapíše až ve chvíli, kdy dosáhne
-terminálního stavu, takže běžící fázi v něm nelze najít. Po dobu jejího běhu ji
-runner vystavuje přes `currentStageRunId` (RunnerCore run id právě běžícího dítěte)
-a `readStageLog` nejprve zkusí tuhle živou stopu — frontend tak může tailovat log
-běžící fáze, jak roste, místo aby ho viděl až po jejím doběhnutí. Při retry to vrací
-log _aktuálního_ pokusu, ne staršího terminálního. `currentStageRunId` se vyčistí,
-jakmile fáze skončí (log už je dosažitelný ze `stageRuns`).
+**Live log of the running phase.** A stage is only written into `stageRuns`
+once it reaches a terminal state, so a still-running phase can't be found
+there. While it runs, the runner exposes it via `currentStageRunId` (the
+RunnerCore run id of the currently running child), and `readStageLog` tries
+this live pointer first — so the frontend can tail a running phase's log as
+it grows, instead of only seeing it once the phase finishes. On retry this
+returns the log of the _current_ attempt, not an older terminal one.
+`currentStageRunId` is cleared once the phase ends (its log is then
+reachable from `stageRuns`).
 
 ## PipelineRunnerService
 
-**Soubor:** `apps/api/src/pipelines/pipeline-runner.service.ts` (37.3 KB)
+**File:** `apps/api/src/pipelines/pipeline-runner.service.ts` (~84 KB)
 
-### Fáze: agent
+### Phase: agent
 
-1. Načte handoff soubor (`consumes`) z předchozí fáze (pokud existuje)
-2. Sestaví prompt = pipeline prompt + fáze instrukce + obsah handoff souboru
-3. Zavolá `RunnerCore.spawn()` pro `pipeline-stage` kind
-4. Čeká na ukončení (polling sidecar status)
-5. Přečte výstup z `produces` souboru (nebo posledních N řádků logu)
-6. Vyhodnotí výsledek (úspěch / neúspěch)
+1. Loads the handoff file (`consumes`) from the previous phase (if any).
+2. Builds the prompt = pipeline prompt + phase instructions + the handoff file's content.
+3. Calls `RunnerCore.spawn()` for a `pipeline-stage` kind.
+4. Waits for it to finish (polling the sidecar status).
+5. Reads the output from the `produces` file (or the log's last N lines).
+6. Evaluates the result (success / failure).
 
-### Fáze: verify
+### Phase: verify
 
-Deterministické příkazy — žádný agent, žádné tokeny, žádné záměry:
+Deterministic commands — no agent, no tokens, no intents:
 
-1. Spustí každý command z `commands` array (v sekvenci)
-2. Exit code 0 = pass, jinak fail
-3. Logy příkazů přidávány do pipeline run logu
+1. Runs each command from the `commands` array (in sequence).
+2. Exit code 0 = pass, anything else = fail.
+3. Command logs are appended to the pipeline run log.
 
-### Fáze: qualify (verdikt agenta řídí smyčku, Phase 45)
+### Phase: qualify (an agent's verdict drives the loop, Phase 45)
 
-Agentní fáze s `qualify: true` je _subjektivní_ brána (doplněk objektivní `verify`).
-Když fáze doběhne `done`, runner z jejího `produces` artefaktu vyparsuje poslední tag
-`<verdict>pass|gap|drift</verdict>` (case-insensitive) a podle něj řídí **existující**
-zpětnou hranu:
+An agent phase with `qualify: true` is a _subjective_ gate (a complement to
+the objective `verify`). When the phase finishes `done`, the runner parses
+the last `<verdict>pass|gap|drift</verdict>` tag (case-insensitive) out of
+its `produces` artifact and drives an **existing** back-edge from it:
 
-- `pass` → kurzor postoupí dál (beze změny chování).
-- `gap` → zpětná hrana na `loop.to` (Kodér dopracuje chybějící část zadání).
-- `drift` → zpětná hrana na `loop.driftTo` (Architekt přeplánuje; default `loop.to`).
-- chybějící/nečitelný verdikt → bere se jako `gap` (**fail-closed** — označená brána
-  nikdy mlčky neprojde).
+- `pass` → the cursor moves on (no behavior change).
+- `gap` → back-edge to `loop.to` (Kodér fills in the missing part of the spec).
+- `drift` → back-edge to `loop.driftTo` (Architekt replans; defaults to `loop.to`).
+- missing/unreadable verdict → treated as `gap` (**fail-closed** — a gated
+  phase never silently passes).
 
-Pravidla schématu (superRefine): `qualify` je jen pro `agent` fáze a vyžaduje `loop`;
-`loop.driftTo` musí být existující phase id. Vyparsovaný verdikt se uloží na
-`StageRun.verdict` (volitelné pole, žádná migrace), zapíše se `stage-verdict` do
-activity logu a přibalí se do failure-context handoffu, aby Kodér/Architekt věděli
-proč byli znovu spuštěni. `qualify` na erroru fáze se neuplatní (jen na `done`) —
-spadlá fáze jde běžnou failure cestou.
+Schema rules (superRefine): `qualify` is only valid on `agent` phases and
+requires `loop`; `loop.driftTo` must be an existing phase id. The parsed
+verdict is stored on `StageRun.verdict` (an optional field, no migration
+needed), a `stage-verdict` entry is written to the activity log, and it's
+folded into the failure-context handoff so Kodér/Architekt know why they
+were re-run. `qualify` doesn't apply to a phase's error path (only to
+`done`) — a crashed phase takes the ordinary failure route.
 
-### Smyčka (loop) a eskalace
+### Loop and escalation
 
 ```
-Fáze selhala (nebo qualify: gap/drift/chybí) + má loop.to
-  → počet retry < loop.maxRetries?
-      Ano → najdi escalation rung pro aktuální retry count
-            přidej failure context do promptu (u qualify i verdikt)
-            znovu spusť fázi s (možná vyšším) model/thinking
-            (drift jde na loop.driftTo, gap/error na loop.to)
-      Ne  → PARKED nebo then.fail (pokud existuje)
+Phase failed (or qualify: gap/drift/missing) and has loop.to
+  → retry count < loop.maxRetries?
+      Yes → find the escalation rung for the current retry count
+            add failure context to the prompt (including the verdict, for qualify)
+            re-run the phase with a (possibly higher) model/thinking
+            (drift goes to loop.driftTo, gap/error to loop.to)
+      No  → PARKED, or then.fail if it exists
 ```
 
-**Escalation ladder** — postupné "rungs":
+**Escalation ladder** — successive "rungs":
 
-- rung 1 po prvním selhání: například `sonnet` + `medium`
-- rung 2 po druhém selhání: například `opus` + `high`
+- rung 1 after the first failure: e.g. `sonnet` + `medium`
+- rung 2 after the second failure: e.g. `opus` + `high`
 
-Rung definice jsou volitelné — pokud chybí, fáze se opakuje se stejným modelem.
+Rung definitions are optional — if missing, the phase retries with the same
+model.
 
-### Handoff soubory (consumes / produces)
+### Handoff files (consumes / produces)
 
-Soubory sdílené mezi fázemi pipeline runu:
+Files shared between a pipeline run's phases:
 
-- Uloženy v sandbox adresáři pipeline runu
-- Každý dispatch fáze dostane vlastní číslovanou složku `NN_<phaseId>`
-  (např. `01_developer`, `02_code-review`, `03_developer`) v pořadí volání —
-  opakovaný běh téže fáze přes `loop` tedy nepřepíše výstup předchozího.
-  Název složky se ukládá na `StageRun.dir`; starší runy bez čísel (`developer/`)
-  zůstávají čitelné (lookup padá zpět na holé `phaseId`).
-- `produces: spec.md` → tato fáze zapíše `spec.md`
-- `consumes: spec.md` → tato fáze přečte `spec.md` jako vstup
-- **P1-T2:** handoff do `consumes` je RELATIVNÍ symlink na zdrojový `produces`
-  soubor předchozí fáze (`placeHandoff()`), ne kopie — agent tak čte skutečný
-  artefakt, ne nezávislý duplikát, který může (třeba neúmyslnou úpravou) zdrojit
-  drift. Relativní cíl (`path.relative` od adresáře symlinku) přežije přesun celé
-  run složky. Jakmile fáze doběhne `done`, její `produces` soubor se `chmod`uje na
-  `0o444` (read-only) — pozdější fáze ho tak nemůže přes symlink omylem přepsat;
-  na `checkpointPhase` (git checkpoint worktree) to nemá vliv, ten soubor jen čte
-  (pro shrnutí commitu) a commituje jinou složku (worktree, ne sandbox). Odemazání
-  celé run složky (`fs.rm`) read-only souborům nevadí — maže se přes oprávnění
-  rodičovského adresáře, ne souboru samotného. Sandbox grant (`--add-dir`) je při
-  `consumes` handoffu rozšířen na kořen celého runu (ne jen na vlastní sandbox
-  fáze), protože symlink může mířit do sourozenecké složky předchozí fáze.
+- Stored in the pipeline run's sandbox directory.
+- Each phase dispatch gets its own numbered folder `NN_<phaseId>` (e.g.
+  `01_developer`, `02_code-review`, `03_developer`) in call order — a repeated
+  run of the same phase via `loop` doesn't overwrite the previous output. The
+  folder name is stored on `StageRun.dir`; older runs without numbers
+  (`developer/`) stay readable (the lookup falls back to the bare `phaseId`).
+- `produces: spec.md` → this phase writes `spec.md`.
+- `consumes: spec.md` → this phase reads `spec.md` as input.
+- **P1-T2:** a `consumes` handoff is a RELATIVE symlink to the source
+  `produces` file of the previous phase (`placeHandoff()`), not a copy — so
+  the agent reads the real artifact, not an independent duplicate that could
+  (say, through an accidental edit) become a source of drift. The relative
+  target (`path.relative` from the symlink's directory) survives moving the
+  whole run folder. Once a phase finishes `done`, its `produces` file is
+  `chmod`ed to `0o444` (read-only) — a later phase can't accidentally
+  overwrite it through the symlink; this has no effect on `checkpointPhase`
+  (the git checkpoint worktree), which only reads that file (for the commit
+  summary) and commits a different directory (the worktree, not the
+  sandbox). Deleting the whole run folder (`fs.rm`) is unaffected by
+  read-only files — deletion goes through the parent directory's
+  permissions, not the file's own. The sandbox grant (`--add-dir`) is
+  widened to the whole run's root (not just the phase's own sandbox) on a
+  `consumes` handoff, since the symlink may point into a sibling phase's
+  folder.
 
-### `context/` a `output/` (P1-T3)
+### `context/` and `output/` (P1-T3)
 
-Kromě fázových sandboxů (`NN_<phaseId>`) má kořen runu dvě sdílené složky,
-založené v `start()`:
+Besides the per-phase sandboxes (`NN_<phaseId>`), a run's root has two shared
+folders, created in `start()`:
 
-- **`context/`** — pipeline-level vstupy, sdílené napříč celým runem (ne
-  handoff mezi fázemi). Každá fáze do ní vidí přes relativní symlink
-  `<sandbox>/context -> ../context` (stejný styl jako P1-T2 handoff). Soubory
-  jsou po zapsání `chmod`ované na `0o444` — jsou vstupem celého runu, ne
-  vlastnictvím jedné fáze. Jediný dnešní obsah: `context/input.md` — N2b
-  chain-fed vstup (řetězcový obsah z `chain-runner`, dřív `<run>/input.md`);
-  je to jediný "pipeline-level input" koncept v kódu (žádný jiný soubor tuto
-  roli nehraje), čte se přesně jednou, uvnitř téhož volání `start()`, které ho
-  zapisuje — pro starší běhy tedy neexistuje samostatná READ cesta, kterou by
-  bylo nutné zpětně kompatibilizovat.
-- **`output/`** — kanonický zdroj pro doručení výstupu (`resolveOutputSource`).
-  Namísto hledání fáze podle `produces === from` čte `deliverFileOutput` /
-  `parkOnPrOutput` / `openPrOutput` rovnou `output/<from>` — při prvním čtení se
-  tam lenivě (idempotentně) vytvoří relativní symlink na aktuální `produces`
-  soubor produkující fáze (stejný styl jako handoff). Starší běhy na disku bez
-  `output/` složky (před P1-T3) padají zpět na původní hledání podle fáze.
+- **`context/`** — pipeline-level inputs, shared across the whole run (not a
+  handoff between phases). Every phase sees it through a relative symlink
+  `<sandbox>/context -> ../context` (the same style as the P1-T2 handoff).
+  Files are `chmod`ed to `0o444` once written — they're input to the whole
+  run, not owned by one phase. The only content today: `context/input.md` —
+  the N2b chain-fed input (chained content from `chain-runner`, formerly
+  `<run>/input.md`); it's the only "pipeline-level input" concept in the
+  code (no other file plays this role), read exactly once, inside the same
+  `start()` call that writes it — so older runs have no separate READ path
+  that needs backward compatibility.
+- **`output/`** — the canonical source for output delivery
+  (`resolveOutputSource`). Instead of searching for a phase where
+  `produces === from`, `deliverFileOutput` / `parkOnPrOutput` /
+  `openPrOutput` read `output/<from>` directly — on first read, a relative
+  symlink to the producing phase's current `produces` file is lazily
+  (idempotently) created there (the same style as the handoff). Older runs
+  on disk without an `output/` folder (pre-P1-T3) fall back to the original
+  by-phase search.
 
 ### Parking
 
-Parked stav nastane když:
+A run parks when:
 
-- smyčka (`loop`) se vyčerpá (`maxRetries` dosaženo) a není `then.fail`
-- nebo explicitně v `then: { fail: park }`
+- the `loop` is exhausted (`maxRetries` reached) and there's no `then.fail`,
+- or explicitly via `then: { fail: park }`.
 
-Parked pipeline run:
+A parked pipeline run:
 
-- Je durable (přežije restart API)
-- Zobrazí se v UI s možností human review
-- Operátor může ručně rozhodnout (resume / abandon)
-- `pipeline-parked` event se zapíše do activity logu
+- Is durable (survives an API restart).
+- Shows up in the UI with a human-review option.
+- Can be manually decided by the operator (resume / abandon).
+- Writes a `pipeline-parked` event to the activity log.
 
-## Konzistence po restartu
+## Consistency after a restart
 
-Stejně jako u agent runů: `PipelineRunnerService` při init kontroluje běžící stage runy
-a reconciliuje orphaned `running` → `interrupted`.
+Same as for agent runs: `PipelineRunnerService` checks running stage runs on
+init and reconciles orphaned `running` → `interrupted`.

@@ -1,146 +1,152 @@
-# Agenti & Runy
+# Agents & Runs
 
-## Agent — definice
+## Agent — definition
 
-Agent je Markdown soubor s YAML frontmatter v `apps/api/data/agents/<id>.md`.
+An agent is a Markdown file with YAML frontmatter at `apps/api/data/agents/<id>.md`.
 
-### Frontmatter pole
+### Frontmatter fields
 
 ```yaml
-id: kodér # filesystem-safe identifikátor
-name: Kodér # zobrazovaný název
-description: | # popis pro klasifikátor úloh
-  Implementuje funkce podle specifikace.
-glyph: "💻" # emoji ikona (volitelné)
+id: kodér # filesystem-safe identifier
+name: Kodér # display name
+description: | # description for the task classifier
+  Implements features against a spec.
+glyph: "💻" # emoji icon (optional)
 model: opus # opus | sonnet | haiku
 thinking: high # high | medium | low  (extended thinking)
-tools: # povolené nástroje claude CLI
+tools: # tools allowed for the claude CLI
   - bash
   - edit
   - read
 risk: medium # low | medium | high (display hint)
-gates: # vlastní gate pravidla (inline)
+gates: # custom gate rules (inline)
   - match:
       - type: action
         action: git.push
     decision: ask
     resolve:
       type: human
-gateRuleIds: # reference na globální katalog
+gateRuleIds: # references into the global catalog
   - push-to-main
 ```
 
-Tělo `.md` souboru je systémový prompt předaný claude CLI.
+The body of the `.md` file is the system prompt passed to the claude CLI.
 
 ### CRUD API
 
 ```
-GET    /api/agents              seznam všech agentů
-POST   /api/agents              vytvoření agenta
-GET    /api/agents/:id          detail agenta
-PUT    /api/agents/:id          aktualizace agenta
-DELETE /api/agents/:id          smazání agenta
-GET    /api/agents/search?q=    full-text search (id / name / description / kategorie)
-GET    /api/agents/categories   seznam kategorií
+GET    /api/agents              list every agent
+POST   /api/agents              create an agent
+GET    /api/agents/:id          agent detail
+PUT    /api/agents/:id          update an agent
+DELETE /api/agents/:id          delete an agent
+GET    /api/agents/search?q=    full-text search (id / name / description / category)
+GET    /api/agents/categories   list categories
 ```
 
-## Agent Run — spouštění
+## Agent Run — dispatch
 
-> **Run se spouští jen přes úlohu.** Neexistuje žádná operátorská cesta jak
-> spustit agenta přímo — jediný vstupní bod je vytvoření úlohy
-> (`POST /api/tasks`) s cílem `{ kind: "agent", id }` (nebo klasifikátor cíl
-> vybere). Scheduler pak interně volá `AgentRunnerService.start(...)`. Detail
-> runu, logy, stop a smazání žijí na jednotném povrchu `/api/tasks/runs/*` —
-> viz [tasks.md](./tasks.md). Jediný per-kind run endpoint, který zůstává, je
-> katalogová živost `GET /api/agents/running` (běžící + právě doběhlé runy pro
-> badge v katalogu a panel na Overview).
+> **A run only starts via a task.** There is no operator path that starts an
+> agent directly — the only entry point is creating a task
+> (`POST /api/tasks`) with target `{ kind: "agent", id }` (or letting the
+> classifier pick one). The scheduler then internally calls
+> `AgentRunnerService.start(...)`. Run detail, logs, stop, and delete all live
+> on the unified surface `/api/tasks/runs/*` — see [tasks.md](./tasks.md). The
+> only per-kind run endpoint that remains is the catalog-liveness
+> `GET /api/agents/running` (running + just-finished runs, for the catalog
+> badge and the Overview panel).
 
 ### Run lifecycle
 
 ```
 running → done
        → error
-       → interrupted     (kill / crash / restart reconciliation)
-       → awaiting-approval  (gate zastavil run, čeká na schválení)
+       → interrupted        (kill / crash / restart reconciliation)
+       → awaiting-approval  (a gate stopped the run, waiting on approval)
 ```
 
-### Polling a streaming logů (jednotný povrch)
+### Log polling and streaming (unified surface)
 
 ```
-GET  /api/tasks/runs                       jednotný feed (agent/pipeline/goal/scheduled)
-GET  /api/tasks/runs/:runId                detail runu (status, pct, …)
-GET  /api/tasks/runs/:runId/logs?offset=   chunk logu od offsetu (bytes)
-GET  /api/tasks/runs/:runId/logs/stream    SSE tail (fallback na offset-poll výše)
-POST /api/tasks/runs/:runId/stop           zastavení běžícího runu
-DELETE /api/tasks/runs/:runId              smazání runu + artefaktů
+GET  /api/tasks/runs                       unified feed (agent/pipeline/goal/scheduled)
+GET  /api/tasks/runs/:runId                run detail (status, pct, …)
+GET  /api/tasks/runs/:runId/logs?offset=   log chunk from an offset (bytes)
+GET  /api/tasks/runs/:runId/logs/stream    SSE tail (falls back to the offset-poll above)
+POST /api/tasks/runs/:runId/stop           stop a running run
+DELETE /api/tasks/runs/:runId              delete a run + its artifacts
 ```
 
-Klient preferuje SSE stream (`…/logs/stream`); když ho proxy/prohlížeč nezvládne,
-spadne na pull model — opakované GET requesty s `?offset=nextOffset` dokud
-`done: true`. Resolver podle `runId` dispatchne na vlastnícího runnera.
+The client prefers the SSE stream (`…/logs/stream`); when a proxy/browser can't
+sustain it, it falls back to a pull model — repeated GET requests with
+`?offset=nextOffset` until `done: true`. The resolver dispatches by `runId` to
+the owning runner.
 
 ## RunnerCore — spawn engine
 
-**Soubor:** `apps/api/src/runner/runner-core.ts` (36.8 KB)
+**File:** `apps/api/src/runner/runner-core.ts` (~51 KB)
 
-`RunnerCore` je universal spawn engine sdílený agenty, skills a pipeline stagemi.
+`RunnerCore` is the universal spawn engine shared by agents, skills, and
+pipeline stages.
 
-### Co RunnerCore dělá
+### What RunnerCore does
 
-1. Vytvoří sandbox adresář (`cwd`) pro run
-2. Spustí `child_process.spawn(command, args, { cwd: spawnCwd ?? cwd })`
-3. Streamuje stdout/stderr do log souboru
-4. Zapíše sidecar JSON (`sidecar.json`) — runId, pid, pgid, status, startedAt, cwd, workspace
-5. Parsuje log pro `PROGRESS <n>` řádky → `pct` (0–100)
-6. Parsuje intent markery (záměry agenta před každou akcí)
-7. Při ukončení procesu aktualizuje sidecar status (done / error / interrupted)
+1. Creates a sandbox directory (`cwd`) for the run.
+2. Spawns `child_process.spawn(command, args, { cwd: spawnCwd ?? cwd })`.
+3. Streams stdout/stderr into a log file.
+4. Writes a sidecar JSON file (`sidecar.json`) — runId, pid, pgid, status, startedAt, cwd, workspace.
+5. Parses the log for `PROGRESS <n>` lines → `pct` (0–100).
+6. Parses intent markers (the agent's stated intent before each action).
+7. Updates the sidecar status (done / error / interrupted) when the process exits.
 
 ### KindStrategy
 
-Každý druh runu implementuje `KindStrategy<R extends BaseRun>`:
+Each run kind implements `KindStrategy<R extends BaseRun>`:
 
 ```typescript
 interface KindStrategy<R extends BaseRun> {
-  assemble(base: BaseRun, spec: RunSpec): R; // sestaví sidecar z base + extra polí
-  schema: ZodType<R, unknown>; // validuje sidecar při restart reconciliation
+  assemble(base: BaseRun, spec: RunSpec): R; // assembles the sidecar from base + extra fields
+  schema: ZodType<R, unknown>; // validates the sidecar during restart reconciliation
 }
 ```
 
-Druhy: `"agent"` | `"skill"` | `"pipeline-stage"`
+Kinds: `"agent"` | `"skill"` | `"pipeline-stage"`
 
 ### spawnCwd vs. cwd
 
-- `cwd` — sandbox adresář runu; sem jde log soubor, sidecar, intent koordinace
-- `spawnCwd` — adresář kde se process skutečně spustí (pro project-targeted runy: checkout projektu, aby se načetl jeho `CLAUDE.md` a `.claude/` kontext)
+- `cwd` — the run's sandbox directory; this is where the log file, sidecar, and intent coordination live.
+- `spawnCwd` — the directory where the process actually runs (for project-targeted runs: the project checkout, so its `CLAUDE.md` and `.claude/` context load).
 
 ### Restart reconciliation
 
-Při startu API (`OnApplicationBootstrap`) `RunnerCore.init()` prochází všechny sidecar soubory.
-Runy se statusem `running` ale mrtvým PID → přejdou na `interrupted`.
-Tím je restart API bezpečný i uprostřed spuštěného runu.
+On API startup (`OnApplicationBootstrap`), `RunnerCore.init()` walks every
+sidecar file. Runs with status `running` but a dead PID transition to
+`interrupted`. This makes an API restart safe even mid-run.
 
-### Git worktree integrace
+### Git worktree integration
 
-Pro project-targeted runy se vytvoří git worktree:
+For project-targeted runs, a git worktree is created:
 
 - Branch: `zibby/<runId>-<slug>`
-- Namespace `apps/api/src/workspace/` spravuje lifecycle (create / cleanup)
+- Namespace `apps/api/src/workspace/` manages the lifecycle (create / cleanup) — see `docs/api/workspace.md`.
 
 ## AgentRunnerService
 
-**Soubor:** `apps/api/src/agents/agent-runner.service.ts` (19.5 KB)
+**File:** `apps/api/src/agents/agent-runner.service.ts` (~27 KB)
 
-Tenký wrapper nad `RunnerCore` pro agent druhy runů:
+A thin wrapper over `RunnerCore` for agent-kind runs:
 
-1. Načte agent definici z disku
-2. Sestaví `claude` příkaz s args (model, thinking, tools, system prompt, dontAsk flags)
-3. Aplikuje gate pravidla agenta přes `GateEvaluatorService`
-4. Zavolá `RunnerCore.spawn(spec)`
-5. Vystavuje `listRuns`, `getRun`, `getLogChunk`, `killRun`
+1. Loads the agent definition from disk.
+2. Builds the `claude` command with args (model, thinking, tools, system prompt, dontAsk flags).
+3. Applies the agent's gate rules via `GateEvaluatorService`.
+4. Calls `RunnerCore.spawn(spec)`.
+5. Exposes `listRuns`, `getRun`, `getLogChunk`, `killRun`.
 
 ## ClaudeRunCommandService
 
-Sestavuje příkazovou řádku pro `claude` CLI:
+**File:** `apps/api/src/runner/claude-run-command.service.ts` — lives in the
+shared `ClaudeRunModule` (`runner/claude-run.module.ts`), which the three
+runners (agents, skills, pipeline stages) all import, rather than being nested
+under the agents module. Assembles the `claude` CLI command line:
 
 ```bash
 claude -p "<prompt>" \
@@ -153,28 +159,45 @@ claude -p "<prompt>" \
   --append-system-prompt "<grounding context>"
 ```
 
-Flags jsou řešeny typově — `dontAsk` + `--agents catalog` + `--append-system-prompt`
-(ověřeno spike testem, viz `project_claude_runner_flags.md`).
+The flags are resolved by type — `dontAsk` + `--agents catalog` +
+`--append-system-prompt` (verified with a spike test; see
+`project_claude_runner_flags.md`).
 
-### Limity argv (spawn E2BIG)
+Two neighboring services in the same module round out the run-assembly seam:
 
-`--agents` i `--append-system-prompt` jdou na argv, jehož celková velikost
-(argv + env) je omezená OS limitem (`ARG_MAX`). Dvě pojistky drží runy pod ním:
+- **`ClaudePreflightService`** (`runner/claude-preflight.service.ts`) — probes
+  `claude --version` with a short timeout and caches the verdict (30s ok / 5s
+  failure). Health reports `degraded` from it, and the runners refuse to start
+  a claude-shaped run while it fails (503 `ClaudeUnavailableError`), so a typed
+  task never produces a dead run record when the CLI is missing or broken.
+- **`CommandMaterializerService`** (`runner/command-materializer.service.ts`) —
+  writes the enabled custom-command catalog into `<targetDir>/.claude/commands/`
+  before a run starts (Claude Code only discovers slash commands on disk).
+  Best-effort and fail-open; a materialization hiccup never blocks the run.
 
-- **Kurátorovaný katalog.** Do `--agents` se neserializuje celá knihovna agentů
-  (ZIBBY jich má 160+ jako seed — to samo přeteče `ARG_MAX` → `spawn E2BIG`).
-  `buildCatalog` vybírá relevantní podmnožinu: `delegates` od volajícího (pipeline
-  posílá agenty svých fází) + operační jádro ZIBBY (`CORE_DELEGATE_IDS`), deduplikované
-  a omezené na `MAX_CATALOG_AGENTS` (16). Malá knihovna (≤ cap, bez `delegates`)
-  projde beze změny. `--allowedTools` se tím zúží na tools této podmnožiny (správně —
-  na vypuštěného agenta stejně nejde delegovat).
-- **System prompt do souboru.** Když runner dostane `systemPromptDir` (sandbox cwd),
-  složený system prompt se zapíše do `<sandbox>/.zibby-system-prompt.md` a předá se
-  přes `--append-system-prompt-file` místo inline `--append-system-prompt`. Soubor
-  přežije v sandboxu, takže approval→resume (přehrání stejných args) ho stále najde.
+### argv limits (spawn E2BIG)
+
+Both `--agents` and `--append-system-prompt` go on argv, whose total size
+(argv + env) is bounded by the OS `ARG_MAX` limit. Two safeguards keep runs
+under it:
+
+- **Curated catalog.** The full agent library isn't serialized into
+  `--agents` (ZIBBY seeds 160+ of them — that alone overflows `ARG_MAX` →
+  `spawn E2BIG`). `buildCatalog` selects the relevant subset: the caller's
+  `delegates` (a pipeline sends its phases' agents) + ZIBBY's operational core
+  (`CORE_DELEGATE_IDS`), deduplicated and capped at `MAX_CATALOG_AGENTS` (16).
+  A small library (≤ cap, no `delegates`) passes through unchanged.
+  `--allowedTools` narrows to this subset's tools (correctly — there's no
+  point delegating to an agent that was dropped).
+- **System prompt to a file.** When the runner gets a `systemPromptDir`
+  (sandbox cwd), the composed system prompt is written to
+  `<sandbox>/.zibby-system-prompt.md` and passed via
+  `--append-system-prompt-file` instead of an inline
+  `--append-system-prompt`. The file survives in the sandbox, so
+  approval→resume (replaying the same args) still finds it.
 
 ## Orchestrator agent
 
-Syntetický fallback agent — nemá uloženou definici v `data/agents/`.
-Použije se jako cíl routingu když žádný konkrétní agent nevyhovuje klasifikaci.
-Spouští se přímo jako `claude` CLI s obecnými instrukcemi.
+A synthetic fallback agent — it has no stored definition under `data/agents/`.
+Used as the routing target when no concrete agent matches the classification.
+Runs directly as the `claude` CLI with generic instructions.
