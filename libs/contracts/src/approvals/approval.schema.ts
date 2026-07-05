@@ -35,6 +35,12 @@ export const ApprovalRunKindSchema = z.enum([
   // folder) parked with its dry-run preview. The runId is the MachineActionRecord id;
   // approving executes the preview exactly once, rejecting leaves the disk untouched.
   "machine",
+  // Phase 4d (Agent Factory): a deterministically-generated candidate agent (from
+  // recurring orchestrator fallbacks) awaiting sign-off before it becomes
+  // dispatchable. The runId is the candidate agent's id; approving flips its
+  // `status` to `active` (visible immediately — read-through storage), rejecting
+  // deletes the candidate file (the approval record remains as the trace).
+  "agent-proposal",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

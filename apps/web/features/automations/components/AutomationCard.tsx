@@ -40,6 +40,7 @@ const TARGET_GLYPH = {
   "research-digest": "compass",
   "gap-detect": "flask",
   "app-ideas": "spark",
+  "agent-factory": "gear",
 } as const satisfies Record<Target["type"], IconName>;
 
 export interface AutomationCardProps {
@@ -259,7 +260,8 @@ function targetKindKey(
   | "targetPatternExtract"
   | "targetResearchDigest"
   | "targetGapDetect"
-  | "targetAppIdeas" {
+  | "targetAppIdeas"
+  | "targetAgentFactory" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -279,5 +281,7 @@ function targetKindKey(
       return "targetGapDetect";
     case "app-ideas":
       return "targetAppIdeas";
+    case "agent-factory":
+      return "targetAgentFactory";
   }
 }

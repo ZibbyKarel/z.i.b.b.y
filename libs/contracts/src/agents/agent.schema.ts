@@ -64,6 +64,13 @@ export const AgentSchema = z.object({
    * everywhere it is linked. Distinct from `gates`, which are this agent's own rules.
    */
   gateRuleIds: z.array(z.string()).optional(),
+  /**
+   * Phase 4c (Agent Factory). `"proposed"` marks a machine-generated candidate
+   * agent awaiting the `agent-proposal` Tier-3 approval — absent (or `"active"`)
+   * means the agent is a normal, dispatchable catalog entry. Backwards
+   * compatible: every agent written before this field existed parses as active.
+   */
+  status: z.enum(["proposed", "active"]).optional(),
   instructions: z.string().min(1),
 });
 export type Agent = z.infer<typeof AgentSchema>;

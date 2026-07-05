@@ -23,7 +23,10 @@ import { AgentRunnerService } from "./agent-runner.service";
  * mcp servers). This exercises the true task/`--add-dir` assembly.
  */
 function makeRunner(): AgentRunnerService {
-  const emptyStore = { list: async () => [] };
+  // Phase 4c: the agents store also needs `listActive` (the delegation-catalog
+  // seam `ClaudeRunCommandService.buildCatalog` reads) — harmless no-op extra
+  // property on the other (skills/hooks/mcp) stores sharing this fixture.
+  const emptyStore = { list: async () => [], listActive: async () => [] };
   const claude = new ClaudeRunCommandService(
     emptyStore as unknown as AgentsStorageService,
     emptyStore as unknown as SkillsStorageService,

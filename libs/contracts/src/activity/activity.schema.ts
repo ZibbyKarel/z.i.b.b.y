@@ -79,6 +79,12 @@ export const ActivityKindSchema = z.enum([
   "chain-advanced",
   "chain-parked",
   "chain-finished",
+  // Phase 4a (Agent Factory telemetry, Tier 1 — silent + recorded). The task
+  // classifier's terminal rule routed a task to the orchestrator because nothing
+  // in the catalog matched confidently (never an explicit target override). The
+  // Agent Factory's detector groups these by `refs.normalizedSummary` — repeated
+  // escapes are the signal a missing specialist agent would resolve.
+  "orchestrator-fallback",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 
@@ -109,6 +115,15 @@ export const ActivityRefsSchema = z
     decision: z.string().optional(),
     status: z.string().optional(),
     noteId: z.string().optional(),
+    /**
+     * Phase 4a (Agent Factory telemetry): the normalized task summary an
+     * `orchestrator-fallback` entry carries — the same lowercase/punctuation-
+     * stripped grouping key `GapDetectorService` uses for `task-created`, so the
+     * detector can tally recurring escapes without re-deriving it.
+     */
+    normalizedSummary: z.string().optional(),
+    /** Comma-joined classifier-matched terms carried alongside `normalizedSummary`. */
+    terms: z.string().optional(),
   })
   .strict();
 export type ActivityRefs = z.infer<typeof ActivityRefsSchema>;

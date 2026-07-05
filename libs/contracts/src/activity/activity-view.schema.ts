@@ -37,6 +37,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "task-queued": "tasks",
   "task-deferred-limit": "tasks",
   "task-dead-lettered": "tasks",
+  // Phase 4a (Agent Factory telemetry): the classifier's own escape to the
+  // orchestrator — reads with the other task-routing entries.
+  "orchestrator-fallback": "tasks",
   "run-started": "runs",
   "run-finished": "runs",
   "run-paused-limit": "runs",

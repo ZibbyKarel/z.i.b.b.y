@@ -180,8 +180,10 @@ export class TaskClassifierService {
 
   /** Build the rankable candidate catalog from both stores (tolerant of listing failures). */
   private async buildCandidates(): Promise<RoutableTarget[]> {
+    // Phase 4c: only ACTIVE agents are dispatchable — a `status: "proposed"`
+    // candidate awaiting its `agent-proposal` approval must never be routed to.
     const [agents, pipelines] = await Promise.all([
-      this.agents.list().catch(() => []),
+      this.agents.listActive().catch(() => []),
       this.pipelines.list().catch(() => []),
     ]);
 

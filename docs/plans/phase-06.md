@@ -279,7 +279,7 @@ service (introspekce fixtures), controller e2e vzor dle `health`.
 
 ---
 
-## Fáze 4 — Agent Factory / Sub-Agent Spawner
+## Fáze 4 — Agent Factory / Sub-Agent Spawner ✅ (hotovo)
 
 **4a. Telemetrie fallbacků:**
 - `ActivityKindSchema` (`libs/contracts/src/activity/activity.schema.ts`): nový

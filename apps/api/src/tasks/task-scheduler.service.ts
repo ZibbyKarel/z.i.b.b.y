@@ -32,6 +32,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { SystemConfigStore } from "../system/system-config.store";
 import { AttachmentStorageService } from "./attachment-storage.service";
@@ -844,6 +845,19 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       // task exactly like agent/pipeline/goal runs.
       const run = await this.chainRunner.start(target.id, taskId);
       return { runRef: run.chainRunId, target };
+    }
+    // Phase 4a (Agent Factory telemetry): record a fallback ONLY when the
+    // classifier itself picked the orchestrator (its terminal "nothing matched
+    // confidently" rule) — an explicit `orchestrator` target (a directed override,
+    // e.g. an approved proposed-task) is a deliberate choice, not an escape, and
+    // must not count toward the Agent Factory's recurrence tally.
+    if (!explicitTarget) {
+      const normalizedSummary = normalizeSummary(text);
+      void this.activity.record({
+        kind: "orchestrator-fallback",
+        summary: `orchestrator fallback: ${text.length > SUMMARY_MAX_CHARS ? `${text.slice(0, SUMMARY_MAX_CHARS)}…` : text}`,
+        refs: { normalizedSummary, terms: matchedTerms.join(",") },
+      });
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
     // subagent(s) or does the task directly — a task never no-ops. It carries the

@@ -70,7 +70,8 @@ type ActivityKind =
   | "chain-started" // an operator-authored chain started
   | "chain-advanced" // ...handed an artifact to its next step
   | "chain-parked" // ...parked on a broken/gated handoff
-  | "chain-finished"; // ...reached a terminal state (done/failed)
+  | "chain-finished" // ...reached a terminal state (done/failed)
+  | "orchestrator-fallback"; // Fáze 4a: the classifier itself chose the orchestrator (no explicit override)
 ```
 
 No free text — a new kind is added explicitly to the schema.
@@ -95,6 +96,8 @@ interface ActivityRefs {
   decision?: string;
   status?: string;
   noteId?: string;
+  normalizedSummary?: string; // Fáze 4a: normalizovaný text pro seskupení Agent Factory detekcí
+  terms?: string; // Fáze 4a: comma-joined klasifikátorem shodnuté termy
 }
 ```
 

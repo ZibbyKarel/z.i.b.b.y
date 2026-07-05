@@ -466,8 +466,11 @@ export class ClaudeRunCommandService {
     /** The curated agent ids folded into `catalog` (skills excluded — see Fáze 2b). */
     catalogAgentIds: string[];
   }> {
+    // Phase 4c: the delegation catalog is dispatchable by construction — a
+    // `status: "proposed"` candidate awaiting its `agent-proposal` approval must
+    // never be delegatable.
     const [allAgents, skills] = await Promise.all([
-      this.agents.list().catch((): Agent[] => []),
+      this.agents.listActive().catch((): Agent[] => []),
       this.skills.list().catch((): Skill[] => []),
     ]);
     // Curate down to a bounded, relevant set — the whole library inlined into

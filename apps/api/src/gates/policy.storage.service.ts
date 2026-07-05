@@ -90,6 +90,12 @@ const ASK_FLOOR_ACTIONS = [
   // the budget guard holds the over-cap task and requests this approval (Law 3:
   // no autonomous spend past budget). Harden-only: an agent may raise it to deny.
   "spend-past-cap",
+  // Phase 4d (Agent Factory): activating a deterministically-generated candidate
+  // agent is a Tier-3 decision — it expands the dispatchable/delegatable surface,
+  // so it always surfaces for sign-off (never silently activated, however
+  // recurring the pattern that produced it). Harden-only: an agent may raise it
+  // to deny, never weaken it.
+  "agent.propose_new",
 ] as const;
 
 const DEFAULT_FLOOR: GateRule[] = [

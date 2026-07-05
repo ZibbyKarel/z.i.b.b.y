@@ -30,7 +30,12 @@ function makeService(
   skills: Skill[],
   opts: ServiceOpts = {},
 ): ClaudeRunCommandService {
-  const agentStore = { list: async () => agents } as unknown as AgentsStorageService;
+  const agentStore = {
+    list: async () => agents,
+    // Phase 4c: the delegation catalog reads listActive — mirror the real filter
+    // (status !== "proposed") so these tests exercise the same seam.
+    listActive: async () => agents.filter((a) => a.status !== "proposed"),
+  } as unknown as AgentsStorageService;
   const skillStore = { list: async () => skills } as unknown as SkillsStorageService;
   const hookStore = { list: async () => opts.hooks ?? [] } as unknown as HooksStorageService;
   const mcpStore = {
@@ -365,9 +370,26 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(catalog.coder.prompt).toBe("Jsi Kodér.");
   });
 
+  it("excludes a status: proposed candidate agent from the delegation catalog (Phase 4c)", async () => {
+    const candidate: Agent = {
+      id: "auto-deploy-staging",
+      name: "Deploy Staging Specialist",
+      instructions: "Draft body.",
+      tools: ["read"],
+      status: "proposed",
+    };
+    const svc = makeService([CODER, candidate], []);
+    const { args, catalogAgentIds } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
+    expect(catalog).not.toHaveProperty("auto-deploy-staging");
+    expect(catalogAgentIds).not.toContain("auto-deploy-staging");
+    // The union of --allowedTools also never widens to the proposed candidate's tools.
+    expect(catalogAgentIds).toEqual(["coder"]);
+  });
+
   it("degrades to an empty catalog when listing fails", async () => {
     const agentStore = {
-      list: async () => {
+      listActive: async () => {
         throw new Error("disk gone");
       },
     } as unknown as AgentsStorageService;

@@ -88,6 +88,15 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-agent.propose_new
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: agent.propose_new
+    decision: ask
+    resolve:
+      type: human
   - id: floor-channel-reply
     source: system
     locked: true

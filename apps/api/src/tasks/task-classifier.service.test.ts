@@ -19,6 +19,7 @@ function agent(over: Partial<Agent> & { id: string }): Agent {
     glyph: "bot",
     description: over.description ?? "",
     category: over.category,
+    status: over.status,
   } as unknown as Agent;
 }
 
@@ -49,6 +50,9 @@ function makeService(opts: {
 }): TaskClassifierService {
   const agents = {
     list: () => Promise.resolve(opts.agents ?? []),
+    // Phase 4c: the classifier's catalog reads listActive — mirror the real
+    // filter (status !== "proposed") so these tests exercise the same seam.
+    listActive: () => Promise.resolve((opts.agents ?? []).filter((a) => a.status !== "proposed")),
   } as unknown as AgentsStorageService;
   const pipelines = {
     list: () => Promise.resolve(opts.pipelines ?? []),
@@ -207,6 +211,27 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
     expect(r?.target.kind).toBe("orchestrator");
     expect(r?.mode).toBe("loop");
     expect(r?.proposedGoal?.maker.kind).toBe("pipeline");
+  });
+});
+
+describe("TaskClassifierService — Phase 4c (Agent Factory: proposed agents are not dispatchable)", () => {
+  it("never routes to a status: proposed agent — it's excluded from the candidate catalog entirely", async () => {
+    const svc = makeService({
+      agents: [
+        agent({ id: "coder", name: "Kodér", description: "implements" }),
+        agent({
+          id: "auto-deploy-staging",
+          name: "Deploy Staging Specialist",
+          description: "deploy to staging",
+          status: "proposed",
+        }),
+      ],
+      pipelines: [],
+    });
+    const r = await svc.classify({ text: "deploy to staging" });
+    // The only candidate is `coder` (no keyword overlap with "deploy to staging"),
+    // so this falls to the orchestrator — never to the excluded proposed agent.
+    expect(r?.target.kind).toBe("orchestrator");
   });
 });
 

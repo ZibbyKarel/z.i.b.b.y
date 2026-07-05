@@ -241,6 +241,50 @@ describe("AgentsStorageService", () => {
     });
   });
 
+  describe("status (Phase 4c — Agent Factory)", () => {
+    it("round-trips status: proposed through the frontmatter", async () => {
+      const created = await service.create({ ...sampleInput, id: "candidate", status: "proposed" });
+      expect(created.status).toBe("proposed");
+      expect(await service.get("candidate")).toEqual(created);
+
+      const parsed = matter(await fs.readFile(fileFor(dir, "candidate"), "utf8"));
+      expect(parsed.data.status).toBe("proposed");
+    });
+
+    it("omits status from the frontmatter when absent (backwards compatible)", async () => {
+      const created = await service.create(sampleInput);
+      expect(created.status).toBeUndefined();
+      const parsed = matter(await fs.readFile(fileFor(dir, "code-reviewer"), "utf8"));
+      expect(parsed.data).not.toHaveProperty("status");
+    });
+
+    it("drops a bogus status value instead of discarding the agent", async () => {
+      await fs.writeFile(
+        fileFor(dir, "bogus-status"),
+        matter.stringify("Do the work.\n", { name: "bogus-status", status: "in-review" }),
+        "utf8",
+      );
+      const agent = await service.get("bogus-status");
+      expect(agent.id).toBe("bogus-status");
+      expect(agent.status).toBeUndefined();
+    });
+
+    describe("listActive", () => {
+      it("excludes proposed agents but keeps agents with no status (active by default)", async () => {
+        await service.create({ ...sampleInput, id: "active-implicit" });
+        await service.create({ ...sampleInput, id: "active-explicit", status: "active" });
+        await service.create({ ...sampleInput, id: "candidate", status: "proposed" });
+
+        const activeIds = (await service.listActive()).map((a) => a.id);
+        expect(activeIds).toEqual(["active-explicit", "active-implicit"]);
+
+        // `list()` stays unfiltered — the UI can still show the proposed candidate.
+        const allIds = (await service.list()).map((a) => a.id);
+        expect(allIds).toContain("candidate");
+      });
+    });
+  });
+
   describe("path traversal protection", () => {
     const evilIds = ["../../evil", "foo/bar", "..", "a/../b", "/etc/passwd", ".", ""];
 
