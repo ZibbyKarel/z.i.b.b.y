@@ -186,28 +186,38 @@ interface HookMatcherGroup {
 
 /**
  * The locked approval hook group — always the FIRST `PreToolUse` group so a
- * destructive Bash command hits the fail-closed gate before any custom hook can
- * allow it. `command` is shell-quoted so a node or hook path with spaces still
- * resolves; argv[2] is the hook's fail-closed deadline (the `timeout` stays a
- * margin above it so the hook always denies before the CLI can kill it — a killed
- * hook is a non-decision → the command would auto-run under dontAsk).
+ * destructive Bash command (or an agent handoff — Fáze 2a) hits the fail-closed
+ * gate before any custom hook can allow it. `command` is shell-quoted so a node or
+ * hook path with spaces still resolves; argv[2] is the hook's fail-closed deadline
+ * (the `timeout` stays a margin above it so the hook always denies before the CLI
+ * can kill it — a killed hook is a non-decision → the command would auto-run under
+ * dontAsk).
+ *
+ * `matcher: "Bash|Task"` — `Task` is the Agent tool's delegation call (Fáze 2:
+ * orchestration delegates entirely inside this one `claude -p` process, so the
+ * `Task` call is the only realtime signal the backend gets of a handoff). The hook
+ * classifies it to an `agent.delegate` intent through the same intent-request
+ * protocol as Bash; there is no locked floor rule for it (default `allow`, Tier 1 —
+ * logged, not blocking), but an operator's own `ask`/`deny` gate-rules.json rule on
+ * `action: agent.delegate` takes effect immediately, same as any other action.
  */
 function approvalGroup(): HookMatcherGroup {
   const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
   return {
-    matcher: "Bash",
+    matcher: "Bash|Task",
     hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
   };
 }
 
 /**
  * Would a custom hook collide with the locked approval gate's responsibility? A
- * `PreToolUse` hook whose matcher catches `Bash` (explicitly, or by being empty /
- * `*` = "match every tool") could `allow` a destructive Bash command the approval
- * hook is meant to gate. Such hooks are DROPPED at merge time, so a stored hook can
- * never weaken the gate (Law 1). The check is deliberately conservative — any
- * matcher token that is empty, `*`, or contains the `Bash` tool name counts as a
- * collision, even at the cost of refusing an over-broad benign hook.
+ * `PreToolUse` hook whose matcher catches `Bash` or `Task` (explicitly, or by being
+ * empty / `*` = "match every tool") could `allow` a destructive Bash command or an
+ * agent handoff before the approval hook gates it. Such hooks are DROPPED at merge
+ * time, so a stored hook can never weaken the gate (Law 1). The check is
+ * deliberately conservative — any matcher token that is empty, `*`, or contains
+ * `Bash`/`Task` counts as a collision, even at the cost of refusing an over-broad
+ * benign hook.
  */
 function collidesWithApprovalGate(hook: Hook): boolean {
   if (hook.event !== "PreToolUse") return false;
@@ -216,7 +226,7 @@ function collidesWithApprovalGate(hook: Hook): boolean {
   return matcher
     .split("|")
     .map((token) => token.trim())
-    .some((token) => token === "" || token === "*" || token.includes("Bash"));
+    .some((token) => token === "" || token === "*" || token.includes("Bash") || token.includes("Task"));
 }
 
 /**
@@ -345,14 +355,25 @@ export class ClaudeRunCommandService {
     private readonly mcpCredentials: McpCredentialsStore,
   ) {}
 
-  async buildClaudeCommand(opts: ClaudeRunOptions): Promise<{ command: string; args: string[] }> {
+  async buildClaudeCommand(opts: ClaudeRunOptions): Promise<{
+    command: string;
+    args: string[];
+    /**
+     * The agent ids in this run's curated `--agents` catalog (Fáze 2b) — every
+     * subagent this session could delegate to via the `Task` tool. Persisted on the
+     * run record at spawn so a later orchestrator-run intent evaluation can pull each
+     * one's `gates`/`requires_approval` back in (strictest-union), since delegation
+     * inside a single `claude -p` process otherwise loses the delegate's own identity.
+     */
+    catalogAgentIds: string[];
+  }> {
     // Enabled MCP servers are injected into every run: their tools widen the
     // session allow-list (see buildCatalog) and their connection config rides
     // `--mcp-config`. A listing failure degrades to no MCP (never blocks the run).
     const mcpServers = (await this.mcp.list().catch((): McpServer[] => [])).filter(
       (server) => server.enabled,
     );
-    const { catalog, allowedTools } = await this.buildCatalog(
+    const { catalog, allowedTools, catalogAgentIds } = await this.buildCatalog(
       opts.tools,
       mcpServers,
       opts.delegates,
@@ -404,7 +425,7 @@ export class ClaudeRunCommandService {
     }
     // `CLAUDE_BIN` is a test seam (point it at a stub binary); production runs the
     // real `claude` CLI. The command/args are always the real claude shape.
-    return { command: process.env.CLAUDE_BIN ?? "claude", args };
+    return { command: process.env.CLAUDE_BIN ?? "claude", args, catalogAgentIds };
   }
 
   /**
@@ -442,6 +463,8 @@ export class ClaudeRunCommandService {
   ): Promise<{
     catalog: Record<string, CatalogEntry>;
     allowedTools: string[];
+    /** The curated agent ids folded into `catalog` (skills excluded — see Fáze 2b). */
+    catalogAgentIds: string[];
   }> {
     const [allAgents, skills] = await Promise.all([
       this.agents.list().catch((): Agent[] => []),
@@ -483,7 +506,7 @@ export class ClaudeRunCommandService {
         ...(tools ? { tools } : {}),
       };
     }
-    return { catalog, allowedTools: [...allowed] };
+    return { catalog, allowedTools: [...allowed], catalogAgentIds: agents.map((a) => a.id) };
   }
 
   /**

@@ -206,7 +206,7 @@ service (introspekce fixtures), controller e2e vzor dle `health`.
 
 ---
 
-## Fáze 2 — Orchestrace: gate na handoff, strictest-union, fixační testy
+## Fáze 2 — Orchestrace: gate na handoff, strictest-union, fixační testy ✅ (hotovo)
 
 **2a. Handoff přes gate (přepis delegační cesty):**
 - `claude-approval-hook.mjs`: matcher hooku rozšířit z `"Bash"` na `"Bash|Task"`

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 // The hook is a dependency-free `.mjs` with no `.d.ts` sibling; `classify` is a pure
 // `(command: string) => { action, branch?, … } | null`. Imported for unit coverage.
 // @ts-expect-error — untyped .mjs module (implicit any), intentional for this seam.
-import { classify } from "./claude-approval-hook.mjs";
+import { classify, classifyTask } from "./claude-approval-hook.mjs";
 
 /**
  * Direct coverage for the PreToolUse approval hook's destructive-command detector.
@@ -52,6 +52,15 @@ const bashEvent = (command: string, cwd: string) => ({
   cwd,
 });
 
+const taskEvent = (
+  cwd: string,
+  toolInput: { subagent_type?: string; prompt?: string; description?: string },
+) => ({
+  tool_name: "Task",
+  tool_input: toolInput,
+  cwd,
+});
+
 describe("claude approval hook — destructive-command gate", () => {
   let cwd: string;
   const requestFile = () => path.join(cwd, "intent-request.json");
@@ -83,7 +92,7 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(await present(requestFile())).toBe(false);
   });
 
-  it("ignores a non-Bash tool call entirely", async () => {
+  it("ignores a non-Bash, non-Task tool call entirely", async () => {
     const res = await runHook(cwd, {
       tool_name: "Read",
       tool_input: { file_path: "/etc/hosts" },
@@ -91,6 +100,48 @@ describe("claude approval hook — destructive-command gate", () => {
     });
     expect(res.code).toBe(0);
     expect(await present(requestFile())).toBe(false);
+  });
+
+  it("gates EVERY Task (agent delegation) call as agent.delegate, not just recognised idioms", async () => {
+    // Fáze 2a: unlike Bash (only recognised destructive idioms are gated), every
+    // handoff goes through the gate — the default floor decision is allow, so an
+    // unremarkable delegation still proceeds, just via the same protocol.
+    await preApprove();
+    const res = await runHook(
+      cwd,
+      taskEvent(cwd, { subagent_type: "coder", prompt: "Fix the failing test in foo.ts" }),
+    );
+    const req = await readRequest();
+    expect(req.action).toBe("agent.delegate");
+    expect(req.scope).toBe("coder");
+    expect(req.context).toBe("Fix the failing test in foo.ts");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("truncates a long delegated prompt to ~200 chars for the intent's context", async () => {
+    await preApprove();
+    const longPrompt = "x".repeat(500);
+    await runHook(cwd, taskEvent(cwd, { subagent_type: "tester", prompt: longPrompt }));
+    const req = await readRequest();
+    expect(req.context.length).toBeLessThan(longPrompt.length);
+    expect(req.context.startsWith("x".repeat(200))).toBe(true);
+  });
+
+  it("falls back to the Task's description when no prompt field is present", async () => {
+    await preApprove();
+    await runHook(cwd, taskEvent(cwd, { subagent_type: "cleaner", description: "Tidy the repo" }));
+    const req = await readRequest();
+    expect(req.context).toBe("Tidy the repo");
+  });
+
+  it("denies a delegation when the gate rejects it (an operator's own agent.delegate rule)", async () => {
+    await fs.writeFile(
+      path.join(cwd, "intent-decision.json"),
+      JSON.stringify({ decision: "deny" }),
+      "utf8",
+    );
+    const res = await runHook(cwd, taskEvent(cwd, { subagent_type: "coder", prompt: "do it" }));
+    expect(res.stdout).toContain('"permissionDecision":"deny"');
   });
 
   it("gates a plain rm and keeps a quoted, spaced filename as one target", async () => {
@@ -282,5 +333,39 @@ describe("claude approval hook — classify (push / PR / chains)", () => {
     expect(classify("rm -rf scratch.tmp")?.action).toBe("delete");
     expect(classify("find . -name .DS_Store -delete")?.action).toBe("delete");
     expect(classify("git clean -fdx")?.action).toBe("delete");
+  });
+});
+
+describe("claude approval hook — classifyTask (agent delegation)", () => {
+  it("classifies a Task call to agent.delegate, carrying subagent_type as scope", () => {
+    const c = classifyTask({ subagent_type: "coder", prompt: "Implement the feature" });
+    expect(c.action).toBe("agent.delegate");
+    expect(c.scope).toBe("coder");
+    expect(c.context).toBe("Implement the feature");
+  });
+
+  it("omits scope when subagent_type is absent (still classifies — every handoff is gated)", () => {
+    const c = classifyTask({ prompt: "General task" });
+    expect(c.action).toBe("agent.delegate");
+    expect(c.scope).toBeUndefined();
+    expect(c.context).toBe("General task");
+  });
+
+  it("truncates a long prompt to ~200 chars with an ellipsis marker", () => {
+    const c = classifyTask({ subagent_type: "tester", prompt: "y".repeat(300) });
+    expect(c.context.length).toBeLessThan(210);
+    expect(c.context.endsWith("…")).toBe(true);
+  });
+
+  it("falls back to description when prompt is missing, and omits context when both are blank", () => {
+    expect(classifyTask({ subagent_type: "x", description: "d" }).context).toBe("d");
+    const bare = classifyTask({ subagent_type: "x" });
+    expect(bare.context).toBeUndefined();
+  });
+
+  it("tolerates a malformed/missing tool_input (never throws, always classifies)", () => {
+    expect(classifyTask(undefined)).toEqual({ action: "agent.delegate" });
+    expect(classifyTask(null)).toEqual({ action: "agent.delegate" });
+    expect(classifyTask("not an object")).toEqual({ action: "agent.delegate" });
   });
 });

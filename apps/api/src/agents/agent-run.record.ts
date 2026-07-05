@@ -19,6 +19,15 @@ export const AgentRunRecordSchema = AgentRunSchema.extend({
    * with the run to re-link its background logs — surviving an API restart.
    */
   traceId: z.string().optional(),
+  /**
+   * Fáze 2b: the agent ids in this run's curated `--agents` delegation catalog
+   * (from `ClaudeRunCommandService.buildClaudeCommand`'s `catalogAgentIds`).
+   * Internal-only (never over HTTP — {@link toAgentRun} drops it): an orchestrator
+   * run's mid-run `evaluateIntent` reads it back to pull each catalog subagent's
+   * own `gates`/`requires_approval` into the strictest-union evaluation, since a
+   * delegated action otherwise loses the subagent's identity (Zjištění 3a).
+   */
+  catalogAgentIds: z.array(z.string()).optional(),
 });
 
 export type AgentRunRecord = z.infer<typeof AgentRunRecordSchema> & BaseRun;
@@ -49,6 +58,9 @@ export const agentStrategy: KindStrategy<AgentRunRecord> = {
       files: Array.isArray(spec.extra.files) ? spec.extra.files.map(String) : [],
       ...(spec.extra.taskId ? { taskId: String(spec.extra.taskId) } : {}),
       ...(spec.extra.traceId ? { traceId: String(spec.extra.traceId) } : {}),
+      ...(Array.isArray(spec.extra.catalogAgentIds)
+        ? { catalogAgentIds: spec.extra.catalogAgentIds.map(String) }
+        : {}),
       ...(workspaceFromExtra(spec.extra) ? { workspace: workspaceFromExtra(spec.extra) } : {}),
     };
   },

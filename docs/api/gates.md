@@ -137,6 +137,31 @@ Called on `PUT /api/agents/:id/gates` (replacing an agent's own rules):
 - Walks every proposed rule against the floor
 - If a rule would weaken a floor rule for the same action → `PolicyViolation`
 
+## Orchestrátorská delegace — strictest union (Fáze 2)
+
+Delegace (subagent přes `Task`/Agent tool) probíhá uvnitř jednoho spawnutého
+`claude -p` procesu — backend nevidí jednotlivé handoffy jinak než přes
+`PreToolUse` hook s matcherem `Bash|Task` (viz `docs/api/extensibility.md`).
+Hook klasifikuje `Task` volání na intent `{ action: "agent.delegate", scope:
+<subagent_type>, context: <zkrácený prompt> }` a pošle ho stejným
+`intent-request.json` protokolem jako Bash. Žádné floor pravidlo pro
+`agent.delegate` neexistuje → default `allow` (Tier 1, jen zalogováno); operátor
+může přidat vlastní `ask`/`deny` pravidlo (`gate-rules.json`, `action:
+agent.delegate`), které se okamžitě uplatní.
+
+Protože delegovaný subagent běží pod identitou orchestrátoru (`AgentRunnerService.
+evaluateIntent` resolvuje pravidla podle `rec.agentId`, což je `ORCHESTRATOR_ID`),
+subagentovo vlastní zpřísnění (`gates`/`requires_approval`) by se jinak ztratilo.
+Mitigace: `ClaudeRunCommandService.buildClaudeCommand` vrací `catalogAgentIds` —
+id všech agentů v kurátorovaném `--agents` katalogu (bez skillů) — persistované
+na run recordu (`AgentRunRecord.catalogAgentIds`, interní pole, není v HTTP
+kontraktu). Pro orchestrátorský běh `evaluateIntent` vyhodnotí akci přes
+`GateEvaluatorService.evaluateForOrchestrator(orchestrator, catalogAgents, action)`:
+zvlášť pro orchestrátora a pro KAŽDÉHO katalogového agenta (vlastní pravidla +
+floor), a vrátí **nejpřísnější** rozhodnutí napříč množinou (`deny > ask > notify
+> allow`). Zaloguje/zaznamená se jen výsledné rozhodnutí (ne jedno per agenta).
+Neorchestrátorský běh je beze změny (`rulesForAgent` + `evaluate`, jako dřív).
+
 ## IntendedAction
 
 What an agent/runner declares before every action:

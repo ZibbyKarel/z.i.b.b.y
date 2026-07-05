@@ -205,6 +205,42 @@ describe("AgentsStorageService", () => {
     });
   });
 
+  describe("hot reload (Fáze 2c fixation — Zjištění 2)", () => {
+    it("lists an agent .md written directly to disk, outside the API, without any restart", async () => {
+      // AgentsStorageService is a plain read-through store (no cache, no fs.watch) —
+      // list()/get() read the directory on every call. This fixates that behaviour so
+      // a later phase's "hot-reload an approved proposal" doesn't regress it silently.
+      await fs.writeFile(
+        fileFor(dir, "external"),
+        matter.stringify("Written outside the service.\n", {
+          name: "external",
+          description: "Dropped straight onto disk",
+        }),
+        "utf8",
+      );
+      const ids = (await service.list()).map((a) => a.id);
+      expect(ids).toContain("external");
+      const agent = await service.get("external");
+      expect(agent.description).toBe("Dropped straight onto disk");
+      expect(agent.instructions).toBe("Written outside the service.");
+    });
+
+    it("picks up an on-disk EDIT of an already-listed agent without restart", async () => {
+      await service.create(sampleInput);
+      await fs.writeFile(
+        fileFor(dir, sampleInput.id),
+        matter.stringify("Edited on disk, not via the service.\n", {
+          name: sampleInput.id,
+          description: "Updated externally",
+        }),
+        "utf8",
+      );
+      const agent = await service.get(sampleInput.id);
+      expect(agent.description).toBe("Updated externally");
+      expect(agent.instructions).toBe("Edited on disk, not via the service.");
+    });
+  });
+
   describe("path traversal protection", () => {
     const evilIds = ["../../evil", "foo/bar", "..", "a/../b", "/etc/passwd", ".", ""];
 

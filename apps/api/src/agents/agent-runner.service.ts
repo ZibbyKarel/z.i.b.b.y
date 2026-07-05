@@ -6,7 +6,7 @@ import type { Agent, AgentRun, Project, Workspace } from "@zibby/contracts";
 import type { IntendedAction } from "@zibby/contracts";
 import { AgentsStorageService } from "./agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
-import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import { type AgentPolicyInput, GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { LimitsService } from "../limits/limits.service";
 import { GroundingService } from "../memory/grounding.service";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
@@ -242,7 +242,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       projectId: resolved?.id,
       matchedTerms,
     });
-    const { command, args } = await this.buildCommand(
+    const { command, args, catalogAgentIds } = await this.buildCommand(
       agent,
       prompt,
       grantDirs,
@@ -317,6 +317,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         taskId,
         traceId: this.trace.getTraceId(),
         workspace,
+        // Fáze 2b: the curated delegation catalog, persisted so an orchestrator
+        // run's mid-run intent evaluation can pull each subagent's own gates back
+        // in (strictest-union) instead of evaluating on the orchestrator alone.
+        catalogAgentIds,
       },
     };
 
@@ -391,15 +395,27 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
   private async evaluateIntent(runId: string, action: IntendedAction): Promise<void> {
     try {
       const rec = this.core.get(runId);
-      // The orchestrator is synthetic (not in storage); its empty gates/
-      // requires_approval mean the evaluation runs on the locked floor alone.
-      const agent =
-        rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId);
-      const rules = await this.gates.rulesForAgent({
+      // The orchestrator is synthetic (not in storage); its own gates/
+      // requires_approval are empty, so on its own it evaluates on the floor alone.
+      const isOrchestrator = rec.agentId === ORCHESTRATOR_ID;
+      const agent = isOrchestrator ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId);
+      const agentInput: AgentPolicyInput = {
         gates: agent.gates,
         requires_approval: agent.requires_approval,
-      });
-      const evaluation = this.gates.evaluate(rules, action);
+      };
+      // Fáze 2b — strictest union: delegation runs entirely inside the orchestrator's
+      // own `claude -p` process, so the backend never sees the delegate's identity —
+      // a subagent's own hardening would otherwise be silently dropped for a
+      // delegated action (Zjištění 3a). For an orchestrator run, evaluate against the
+      // orchestrator's rules PLUS every catalog subagent's own rules and take the
+      // strictest decision; a non-orchestrator run is unchanged.
+      const evaluation = isOrchestrator
+        ? await this.gates.evaluateForOrchestrator(
+            agentInput,
+            await this.catalogAgentInputs(rec.catalogAgentIds),
+            action,
+          )
+        : this.gates.evaluate(await this.gates.rulesForAgent(agentInput), action);
       const decision = evaluation.decision;
       this.log.info("evaluating mid-run intent", {
         agentId: rec.agentId,
@@ -446,6 +462,21 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       });
       await this.core.denyIntent(runId).catch(() => {});
     }
+  }
+
+  /**
+   * Fáze 2b: resolve a run's persisted `catalogAgentIds` back to each agent's own
+   * policy input (`gates`/`requires_approval`), for the orchestrator strictest-union
+   * evaluation. Tolerant — an id for an agent deleted since the run spawned is
+   * simply skipped (its hardening can no longer be recovered; the orchestrator's own
+   * rules + the locked floor still apply).
+   */
+  private async catalogAgentInputs(ids?: readonly string[]): Promise<AgentPolicyInput[]> {
+    if (!ids || ids.length === 0) return [];
+    const agents = await Promise.all(ids.map((id) => this.agents.get(id).catch(() => null)));
+    return agents
+      .filter((a): a is Agent => a !== null)
+      .map((a) => ({ gates: a.gates, requires_approval: a.requires_approval }));
   }
 
   /** Running runs, plus any finished within the retention window; newest first. */
@@ -582,7 +613,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     grounding?: string,
     sandboxCwd?: string,
     attachments?: RunAttachments,
-  ): Promise<{ command: string; args: string[] }> {
+  ): Promise<{ command: string; args: string[]; catalogAgentIds: string[] }> {
     // The work directory (the run's `files`, if any) stays the "operate on" target;
     // the attachments dir is reference material, never the thing to act on.
     const operate = grantDirs.length
