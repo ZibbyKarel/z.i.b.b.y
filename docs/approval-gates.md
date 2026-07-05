@@ -1,217 +1,222 @@
 # Approval Gates
 
-## Kdo evaluuje a kdy
+## Who evaluates, and when
 
-**Evaluátor je `GateEvaluatorService`** (`apps/api/src/gates/gate-evaluator.service.ts`). Je to NestJS service — čistá třída bez side-efektů, která jen bere pravidla a akci a vrátí rozhodnutí.
+**The evaluator is `GateEvaluatorService`** (`apps/api/src/gates/gate-evaluator.service.ts`). It's a NestJS service — a pure class with no side effects that just takes rules and an action and returns a decision.
 
-Volá ji **`AgentRunnerService.onIntent()`** (`apps/api/src/agents/agent-runner.service.ts`), a to **uprostřed běhu agenta** — ve chvíli, kdy child process oznámí akci s vnějším efektem řádkem `INTENT {json}` na stdout (Variant B). Run se nejdřív normálně spawne; gating proběhne až když agent skutečně chce provést gated akci.
+It is called by **`AgentRunnerService.onIntent()`** (`apps/api/src/agents/agent-runner.service.ts`), **in the middle of an agent run** — the moment the run announces an action with an external effect (Variant B). The run spawns normally first; gating only happens once the agent actually wants to perform a gated action.
 
-> **Historicky** (Variant A) se evaluace spouštěla jednou, na spawn boundary — agent se vůbec nespustil, dokud nebyl schválen. To bylo nahrazeno Variantou B (viz níže), která umí gatovat jednotlivé akce uprostřed jednoho běhu.
+> **Historically** (Variant A), evaluation ran once, at the spawn boundary — the agent didn't start at all until it was approved. That was replaced by Variant B (see below), which can gate individual actions in the middle of a single run.
 
 ---
 
-## Krok za krokem: co se děje při `INTENT {json}`
+## Step by step: what happens on an intent
 
-### 1. Child emituje `INTENT` a zablokuje
+### 1. The run announces an intent and blocks
 
-Child process (např. `demo-task.mjs`) v místě gated akce zapíše na stdout:
+Two mechanisms feed the same handler, depending on what's spawned:
 
-```
-INTENT {"action":"payment","metrics":{"purchase.amount":1200}}
-```
+- **Real `claude -p` agent runs (current production path).** A `PreToolUse` hook, `apps/api/src/runner/claude-approval-hook.mjs`, runs before every Bash tool call. It classifies the command against a denylist — the `rm` family / `find … -delete` / `git clean` (→ `delete`), `git push` / a force-push variant (→ `git.push` / `git.force_push`), `gh pr create` (→ `pr.open`), `gh pr merge` (→ `pr.merge`) — and lets anything unrecognized through immediately (exit 0). A gated command is announced by writing `intent-request.json` into the run's sandbox `cwd` (pinned via the `ZIBBY_INTENT_DIR` env var, never the tool call's own `cwd`, so the request lands where the core is actually watching), then the hook **blocks**, polling for `intent-decision.json`. A hook's stdout never reaches the parent process's pipe, so this coordination is entirely file-based. `RunnerCore.watchIntentRequest()` polls the sandbox `cwd` for that request file (every 200 ms), and on seeing one, validates it as an `IntendedAction` and calls `IntentHandler` → `AgentRunnerService.onIntent(runId, action)`.
+- **Demo / test children (legacy stdout path).** A demo or test child writes a line to stdout instead:
 
-a pak **blokuje** — pollovacím cyklem čeká, až runner zapíše `intent-decision.json` do jeho sandbox `cwd`. `RunnerCore.wire()` ten řádek naparsuje (line-buffered, aby přežil rozdělení mezi chunky), zvaliduje jako `IntendedAction` a zavolá `IntentHandler` → `AgentRunnerService.onIntent(runId, action)`.
+  ```
+  INTENT {"action":"payment","metrics":{"purchase.amount":1200}}
+  ```
 
-### 2. Načtení agenta + sestavení pravidel: `rulesForAgent()`
+  and then blocks the same way, polling for `intent-decision.json` in its own sandbox `cwd`. `RunnerCore.wire()` parses that line (line-buffered, so it survives being split across chunks), validates it as an `IntendedAction`, and calls the same `IntentHandler`. This is the path exercised by `runner-core.test.ts`; there is no standalone demo child script on disk any more — `claude-approval-hook.mjs`'s own header comment notes it "replaces the old stdout-`INTENT` gate that demo scripts faked."
 
-`RunnerCore` je entity-agnostický, takže `onIntent` si agenta načte znovu z run recordu (`core.get(runId).agentId`):
+Both paths converge on the same handler, so everything from here on is identical regardless of which one fired.
 
-Evaluátor zavolá `rulesForAgent()`, která vrátí **seřazený seznam pravidel**:
+### 2. Load the agent + assemble rules: `rulesForAgent()`
+
+`RunnerCore` is entity-agnostic, so `onIntent` reloads the agent from the run record (`core.get(runId).agentId`):
+
+The evaluator calls `rulesForAgent()`, which returns an **ordered rule list**:
 
 ```typescript
 const rules = await this.gates.rulesForAgent({
-  gates: agent.gates, // agent's own rules (z DB)
+  gates: agent.gates, // agent's own rules (from storage)
   requires_approval: agent.requires_approval, // legacy flag
 });
 ```
 
-Uvnitř `rulesForAgent()` se dějí dvě věci:
+Inside `rulesForAgent()` two things happen:
 
-**a) Legacy desugar** — pokud agent nemá `gates` (prázdné pole) ale má `requires_approval: true`, vytvoří se syntetické pravidlo:
+**a) Legacy desugar** — if the agent has no `gates` (an empty array) but has `requires_approval: true`, a synthetic rule is created:
 
 ```typescript
 {
   id: "legacy-requires-approval",
-  match: [{ type: "context", context: "*" }],  // sedí na vše
+  match: [{ type: "context", context: "*" }],  // matches everything
   decision: "ask",
   resolve: { type: "human" }
 }
 ```
 
-**b) Konkatenace** — vlastní pravidla agenta jdou **před** systémový floor:
+**b) Concatenation** — the agent's own rules go **before** the system floor:
 
 ```
-[vlastní pravidla agenta, agent-0, agent-1, ...]
+[agent's own rules, agent-0, agent-1, ...]
 +
-[systémová pravidla z POLICY.md — locked floor]
+[system rules from POLICY.md — the locked floor]
 ```
 
-Pořadí je záměrné: agent může zpřísnit floor (přidat `ask` tam kde floor říká `allow`), ale nemůže ho oslabit — to hlídá `validateHardenOnly()`.
+The order is deliberate: an agent can harden the floor (add `ask` where the floor says `allow`), but can never weaken it — `validateHardenOnly()` enforces that.
 
-### 3. Evaluace: `evaluate(rules, action)`
+### 3. Evaluation: `evaluate(rules, action)`
 
 ```typescript
 const decision = this.gates.evaluate(rules, action).decision;
 ```
 
-Evaluátor prochází seznam pravidel **od začátku** a pro každé pravidlo zkontroluje všechny jeho `match` podmínky (jsou AND-ované). **První pravidlo, kde všechny podmínky sedí, vyhrává.** Zbytek se ignoruje.
+The evaluator walks the rule list **from the start** and checks all of a rule's `match` conditions (AND-ed together) for each rule. **The first rule where every condition matches wins.** The rest are ignored.
 
-Pokud žádné pravidlo nesedí → výchozí `"allow"`.
+If no rule matches → the default is `"allow"`.
 
-#### Jak funguje každý typ match podmínky
+#### How each match-condition type works
 
-| Typ         | Co kontroluje                           | Příklad                                                                  |
-| ----------- | --------------------------------------- | ------------------------------------------------------------------------ |
-| `tool`      | Přesná shoda nástroje/skillu            | `{ type: "tool", tool: "bash" }`                                         |
-| `action`    | Přesná shoda akce + volitelně větve     | `{ type: "action", action: "git.force_push", branch: "main" }`           |
-| `scope`     | Prefix wildcard na scope                | `{ type: "scope", scope: "feature/*" }`                                  |
-| `context`   | ID agenta nebo `"*"` catchall           | `{ type: "context", context: "*" }`                                      |
-| `threshold` | Numerická porovnání na `action.metrics` | `{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }` |
+| Type        | What it checks                        | Example                                                                  |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| `tool`      | Exact match on tool/skill              | `{ type: "tool", tool: "bash" }`                                         |
+| `action`    | Exact match on action + optional branch | `{ type: "action", action: "git.force_push", branch: "main" }`           |
+| `scope`     | Prefix wildcard on scope               | `{ type: "scope", scope: "feature/*" }`                                  |
+| `context`   | Agent id, or the `"*"` catch-all       | `{ type: "context", context: "*" }`                                      |
+| `threshold` | Numeric comparison on `action.metrics` | `{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }` |
 
-Všechny podmínky v jednom pravidle musí **zároveň** platit (AND). Podmínky napříč pravidly jsou OR (stačí, aby jedno pravidlo celé sedělo).
+All conditions within one rule must hold **simultaneously** (AND). Conditions across rules are OR'd (it's enough for one rule to fully match).
 
-### 4. Rozhodnutí
+### 4. Decision
 
-Na základě `decision` `onIntent` zvolí jednu ze tří větví (child celou dobu blokuje):
+Based on `decision`, `onIntent` picks one of three branches (the run stays blocked throughout):
 
-**`"ask"`** — uživatel musí schválit:
-
-```
-core.holdForApproval(runId) → status "running" → "awaiting-approval" (child žije dál a blokuje)
-requestApproval()           → ${approvalId}.json na disk + status "pending"
-```
-
-Po **approve**: `ApprovalsService.approve()` → `runner.resume()` → `core.resume()` zapíše
-`{ decision: "allow" }` do `intent-decision.json`, child odblokuje a pokračuje, status zpět na `running`.
-Po **reject**: `runner.cancel()` → `core.cancel()` zapíše `{ decision: "deny" }` + nastaví `interrupting`,
-child se ukončí, status `interrupted`.
-
-**`"deny"`** — zakázáno politikou (bez čekání na uživatele):
+**`"ask"`** — a human must approve:
 
 ```
-core.denyIntent(runId) → interrupting=true + zápis { decision: "deny" }
-child dostane deny → process.exit(1) → exit handler → status "interrupted"
+core.holdForApproval(runId) → status "running" → "awaiting-approval" (run stays alive, blocked)
+requestApproval()            → ${approvalId}.json on disk + status "pending"
 ```
 
-**`"allow"` nebo `"notify"`** — pustit dál:
+On **approve**: `ApprovalsService.approve()` → `runner.resume()` → `core.resume()` writes
+`{ decision: "allow" }` to `intent-decision.json`, the run unblocks and continues, status back to `running`.
+On **reject**: `runner.cancel()` → `core.cancel()` writes `{ decision: "deny" }` and sets `interrupting`,
+the run terminates, status `interrupted`.
+
+**`"deny"`** — blocked by policy (no waiting on a human):
 
 ```
-core.allowIntent(runId) → zápis { decision: "allow" }
-child odblokuje a provede akci, status zůstává "running"
+core.denyIntent(runId) → interrupting=true + write { decision: "deny" }
+child receives deny → process exits non-zero → exit handler → status "interrupted"
 ```
 
-> **`interrupting` flag**: child ukončený kvůli deny/reject sice odejde s nenulovým exit code, ale
-> jeho terminální stav je `interrupted`, ne `error`. Flag v `RunHandle` přepíná exit handler na
-> `interrupted`. Stejný flag používá i `shutdown()`, aby graceful zastavení neoznačilo běh jako `error`.
+**`"allow"` or `"notify"`** — let it through:
+
+```
+core.allowIntent(runId) → write { decision: "allow" }
+run unblocks and performs the action, status stays "running"
+```
+
+> **The `interrupting` flag**: a run terminated on deny/reject exits with a non-zero code, but
+> its terminal state is `interrupted`, not `error`. A flag on `RunHandle` switches the exit handler to
+> `interrupted`. The same flag is used by `shutdown()`, so a graceful stop never marks a run as `error`.
 
 ---
 
-## Strength ordering — proč agent nemůže oslabit floor
+## Strength ordering — why an agent can't weaken the floor
 
-Rozhodnutí mají pevné pořadí síly:
+Decisions have a fixed strength order:
 
 ```
 allow (0) < notify (1) < ask (2) < deny (3)
 ```
 
-`validateHardenOnly()` před uložením pravidel porovná vlastní pravidla agenta s floor: pokud agent na **stejnou akci** říká `allow` a floor říká `ask`, vrátí `PolicyViolation` a API odpoví 422. Agent může jen zvýšit číslo (zpřísnit), nikdy snížit.
+`validateHardenOnly()` compares an agent's own rules against the floor before saving: if an agent says `allow` for the **same action** the floor says `ask` for, it returns a `PolicyViolation` and the API answers 422. An agent can only raise the number (harden), never lower it.
 
 ---
 
-## Celý flow
+## Full flow
 
 ```
 AgentRunnerService.start(agentId, prompt)
-  └─ core.start(spec)                       hned spawne child, status "running"
+  └─ core.start(spec)                       spawns immediately, status "running"
 
-— uprostřed běhu, když child chce provést gated akci —
+— mid-run, when the run wants to perform a gated action —
 
-child stdout: INTENT {"action":"payment","metrics":{"purchase.amount":1200}}
-child pak BLOKUJE na ${cwd}/intent-decision.json
+Real claude run: PreToolUse hook writes intent-request.json into the sandbox cwd, then blocks.
+Demo/test child: writes INTENT {"action":"payment","metrics":{"purchase.amount":1200}} to stdout, then blocks.
   │
-RunnerCore.wire() naparsuje INTENT → onIntent(runId, action)
+RunnerCore.watchIntentRequest() (real) / RunnerCore.wire() (demo/test) → onIntent(runId, action)
   │
 AgentRunnerService.onIntent(runId, action)
-  ├─ agent = agents.get(core.get(runId).agentId)   načti agenta znovu
+  ├─ agent = agents.get(core.get(runId).agentId)   reload the agent
   │
   ├─ gates.rulesForAgent({ gates, requires_approval })
-  │    ├─ ownRules()  →  desugar legacy + obalit agent-{i} IDy
-  │    ├─ floor()     →  načíst POLICY.md
-  │    └─ return [...own, ...floor]         vlastní pravidla PRVNÍ
+  │    ├─ ownRules()  →  legacy desugar + wrap agent-{i} ids
+  │    ├─ floor()     →  read POLICY.md
+  │    └─ return [...own, ...floor]         own rules FIRST
   │
   ├─ gates.evaluate(rules, action)
-  │    └─ for každé pravidlo:
-  │         └─ every(match podmínka) → první shoda → return decision
-  │         (žádná shoda → "allow")
+  │    └─ for each rule:
+  │         └─ every(match condition) → first match → return decision
+  │         (no match → "allow")
   │
   ├─ decision === "ask"
-  │    ├─ core.holdForApproval(runId)        status → awaiting-approval (child žije)
+  │    ├─ core.holdForApproval(runId)        status → awaiting-approval (run stays alive)
   │    └─ approvals.requestApproval(...)     approval.json, status pending
-  │         ├─ approve → core.resume()  →  zápis allow, status running, child pokračuje
-  │         └─ reject  → core.cancel()  →  zápis deny + interrupting, child exit → interrupted
+  │         ├─ approve → core.resume()  →  writes allow, status running, run continues
+  │         └─ reject  → core.cancel()  →  writes deny + interrupting, run exits → interrupted
   │
   ├─ decision === "deny"
-  │    └─ core.denyIntent(runId)             zápis deny + interrupting, child exit → interrupted
+  │    └─ core.denyIntent(runId)             writes deny + interrupting, run exits → interrupted
   │
   └─ decision === "allow" / "notify"
-       └─ core.allowIntent(runId)            zápis allow, child pokračuje
+       └─ core.allowIntent(runId)            writes allow, run continues
 
-(jakákoliv chyba v onIntent — např. smazaný agent — fail-safe na deny)
+(any error inside onIntent — e.g. a deleted agent — fails safe to deny)
 ```
 
 ---
 
-## Mid-run gating: jak to funguje (Varianta B)
+## Mid-run gating: how it works (Variant B)
 
-Gating probíhá **uprostřed běhu** přes sentinel uvnitř procesu — analogie k `PROGRESS <n>`:
+Gating happens **mid-run** through a coordination file, similar to `PROGRESS <n>`:
 
-1. Child proces emituje `INTENT {json}` na stdout v místě akce s vnějším efektem.
-2. `RunnerCore.wire()` ten řádek zachytí (line-buffered parser), zvaliduje jako `IntendedAction`
-   a zavolá `IntentHandler` (`onIntent`).
-3. `onIntent` proežene akci `GateEvaluatorService.evaluate()` a podle rozhodnutí napíše
-   `intent-decision.json` do sandbox `cwd` runu (`allow`/`deny`), případně run přepne na
-   `awaiting-approval` a čeká na lidské rozhodnutí.
-4. Child celou dobu **blokuje** pollováním `intent-decision.json` (interval 200 ms, timeout 10 min).
-   `allow` → pokračuje; `deny` → `process.exit(1)`.
+1. The run announces a gated, external-effect action — a `PreToolUse` hook writing `intent-request.json` for a real `claude -p` run, or an `INTENT {json}` stdout line for a demo/test child.
+2. `RunnerCore` picks it up — `watchIntentRequest()` polling for the request file (real runs) or `wire()`'s line-buffered parser (demo/test) — validates it as an `IntendedAction`, and calls `IntentHandler` (`onIntent`).
+3. `onIntent` runs the action through `GateEvaluatorService.evaluate()` and, depending on the decision, writes
+   `intent-decision.json` into the run's sandbox `cwd` (`allow`/`deny`), or flips the run to
+   `awaiting-approval` and waits on a human decision.
+4. The run **blocks** throughout, polling for `intent-decision.json` (200 ms interval; the real-run hook takes its own deadline — see `claude-approval-hook.mjs` — and fails closed to `deny` before Claude Code's own hook timeout would kill it as a silent non-decision).
+   `allow` → continues; `deny` → the run exits non-zero.
 
-Umožňuje to per-action gating uprostřed jednoho běhu: agent může nakupovat (benigní akce projdou),
-ale platba nad limit počká na schválení.
+This enables per-action gating in the middle of a single run: an agent can shop around (benign actions pass through), but a payment over the limit waits for approval.
 
-### Příklad: "agent kliká zboží do košíku a pak chce zaplatit"
+### Example: "an agent adds items to a cart, then tries to pay"
 
-Agent uprostřed práce emituje `INTENT {"action":"payment","metrics":{"purchase.amount":1200}}`.
-Runner to vyhodnotí; `threshold`-pravidlo `purchase.amount > 500 → ask:human` (nebo floor
-`payment → ask`) zastaví child do doby, než uživatel schválí. Benigní akce (`add_to_cart`) projdou
-jako `allow` bez přerušení.
+Mid-run, the run announces `INTENT {"action":"payment","metrics":{"purchase.amount":1200}}`.
+The runner evaluates it; a `threshold` rule (`purchase.amount > 500 → ask:human`), or the floor's
+`payment → ask`, stops it until a human approves. Benign actions (`add_to_cart`) pass through
+as `allow` without interruption.
 
-### Omezení: přežití restartu
+For a real `claude -p` run doing destructive or publishing work, the equivalent is the hook classifying `rm -rf build/` as `delete`, or `git push origin main` as `git.push`, and pausing on the same `ask`/`deny` floor rules.
 
-Mid-run pauza (`awaiting-approval` s živým blokujícím childem) **nepřežije restart backendu** — child
-je potomek API procesu a umírá s ním, a žádný spawn spec se neukládá. Na `init()` se takový běh
-rekonciluje na `interrupted` (rozlišení: `awaiting-approval` _se_ stashnutým spec = pipeline-stage
-pauza na spawn boundary, ta přežije a jde resumovat; _bez_ spec = mrtvá mid-run pauza → `interrupted`).
+### Limitation: restart survival
+
+A mid-run pause (`awaiting-approval` with a live blocked run) **does not survive a backend restart** — the
+run is a child of the API process and dies with it, and no spawn spec is stashed for it. On `init()`, such a run
+is reconciled to `interrupted` (the distinction: `awaiting-approval` _with_ a stashed spec is a pipeline-stage
+pause at the spawn boundary, which does survive and can be resumed; _without_ a spec, it's a dead mid-run pause → `interrupted`).
 
 ---
 
-## Klíčové soubory
+## Key files
 
-| Soubor                                                     | Co dělá                                                                                 |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `apps/api/src/gates/gate-evaluator.service.ts`             | Celá evaluační logika — `rulesForAgent`, `evaluate`, `matches`, `validateHardenOnly`    |
-| `apps/api/src/gates/policy.storage.service.ts`             | Čte locked floor z `POLICY.md`                                                          |
-| `apps/api/src/agents/agent-runner.service.ts`              | `onIntent()` — volá evaluátor mid-run, větví na ask/deny/allow                          |
-| `apps/api/src/agents/demo-task.mjs`                        | Demo child: emituje `INTENT` a blokuje na `intent-decision.json`                        |
-| `apps/api/src/runner/runner-core.ts`                       | `wire()` INTENT parser; `allowIntent`/`denyIntent`/`holdForApproval`; `resume`/`cancel` |
-| `apps/api/src/approvals/approvals.service.ts:47`           | Vytvoří Approval entitu, resume/cancel routing                                          |
-| `libs/contracts/src/gates/gate.schema.ts`                  | Typy: `GateRule`, `MatchCondition`, `Decision`, `IntendedAction`                        |
-| `apps/web/features/approvals/queries/useApprovalsQuery.ts` | UI polling každou minutu                                                                |
+| File                                                        | What it does                                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `apps/api/src/gates/gate-evaluator.service.ts`               | The whole evaluation engine — `rulesForAgent`, `evaluate`, `matches`, `validateHardenOnly` |
+| `apps/api/src/gates/policy.storage.service.ts`                | Reads the locked floor from `POLICY.md`                                                    |
+| `apps/api/src/agents/agent-runner.service.ts`                 | `onIntent()` — calls the evaluator mid-run, branches to ask/deny/allow                     |
+| `apps/api/src/runner/claude-approval-hook.mjs`                | `PreToolUse` hook for real `claude -p` runs: classifies gated Bash commands, writes `intent-request.json`, blocks on `intent-decision.json` |
+| `apps/api/src/runner/runner-core.ts`                          | `watchIntentRequest()` (real runs) / `wire()` (demo, test) intent parsing; `allowIntent`/`denyIntent`/`holdForApproval`; `resume`/`cancel` |
+| `apps/api/src/approvals/approvals.service.ts`                 | Creates the `Approval` entity; routes `approve`/`reject` to `resume`/`cancel`              |
+| `libs/contracts/src/gates/gate.schema.ts`                     | Types: `GateRule`, `MatchCondition`, `Decision`, `IntendedAction`                          |
+| `apps/web/features/approvals/queries/useApprovalsQuery.ts`    | UI: live via the SSE events stream, falling back to a 60 s poll when the stream isn't connected |
