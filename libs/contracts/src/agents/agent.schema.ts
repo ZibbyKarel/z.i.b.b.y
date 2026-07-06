@@ -81,6 +81,13 @@ export type Agent = z.infer<typeof AgentSchema>;
 export const CreateAgentSchema = AgentSchema;
 export type CreateAgentInput = z.infer<typeof CreateAgentSchema>;
 
-/** Body accepted by `updateAgent` — every field is optional (partial update), id excluded. */
-export const UpdateAgentSchema = AgentSchema.omit({ id: true }).partial();
+/**
+ * Body accepted by `updateAgent` — every field is optional (partial update), id
+ * excluded. `avatar: null` is the explicit "clear" signal: `undefined` can't
+ * survive JSON transport (the client dropping the key means "leave unchanged"),
+ * so a real removal needs a value that serializes — `null` clears it server-side.
+ */
+export const UpdateAgentSchema = AgentSchema.omit({ id: true })
+  .partial()
+  .extend({ avatar: AvatarSchema.nullable().optional() });
 export type UpdateAgentInput = z.infer<typeof UpdateAgentSchema>;

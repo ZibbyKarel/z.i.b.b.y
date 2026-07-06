@@ -70,9 +70,13 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     const existing = await this.get(id);
     // Only overwrite fields that were actually provided; never touch the id
     // (the patch schema omits it, so the spread cannot clobber it).
-    const merged: Agent = { ...existing, ...patch, id: existing.id };
-    await this.writeEntity(merged);
-    return merged;
+    const merged: Record<string, unknown> = { ...existing, ...patch, id: existing.id };
+    // `avatar: null` is the explicit "clear" signal (undefined can't survive JSON
+    // transport) — drop the key so the full-entity parse below sees it as absent.
+    if (patch.avatar === null) delete merged.avatar;
+    const parsed = AgentSchema.parse(merged);
+    await this.writeEntity(parsed);
+    return parsed;
   }
 
   protected idOf(agent: Agent): string {

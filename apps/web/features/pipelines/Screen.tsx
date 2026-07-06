@@ -164,7 +164,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                 image={selected.avatar}
                 name={selected.name}
                 onRemove={() =>
-                  updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: undefined } })
+                  updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: null } })
                 }
                 onUpload={(dataUri) => {
                   if (dataUri.length > AVATAR_MAX) {
@@ -182,12 +182,6 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                   <Stack wrap align="start" direction="row" gap="200" justify="between">
                     <Container minW0>
                       <Stack gap="100">
-                        <Typography size="3xl" type="title" weight="semibold">
-                          {selected.name}
-                        </Typography>
-                        <Typography mono size="caption" type="note" variant="secondary">
-                          {selected.desc}
-                        </Typography>
                         <Stack align="center" direction="row" gap="75">
                           <Icon name="file" size="xs" tone="faint" />
                           <Typography mono size="sm" type="note" variant="tertiary">

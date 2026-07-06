@@ -220,6 +220,12 @@ export type Pipeline = z.infer<typeof PipelineSchema>;
 export const CreatePipelineSchema = PipelineSchema;
 export type CreatePipelineInput = z.infer<typeof CreatePipelineSchema>;
 
-/** Body accepted by `updatePipeline` — every field optional (partial), id excluded. */
-export const UpdatePipelineSchema = PipelineObject.omit({ id: true }).partial();
+/**
+ * Body accepted by `updatePipeline` — every field optional (partial), id
+ * excluded. `avatar: null` is the explicit "clear" signal (see the mirrored
+ * comment on `UpdateAgentSchema` — `undefined` can't survive JSON transport).
+ */
+export const UpdatePipelineSchema = PipelineObject.omit({ id: true })
+  .partial()
+  .extend({ avatar: AvatarSchema.nullable().optional() });
 export type UpdatePipelineInput = z.infer<typeof UpdatePipelineSchema>;

@@ -200,6 +200,35 @@ describe("AgentsStorageService", () => {
         AgentNotFoundError,
       );
     });
+
+    it("clears the avatar when patched with avatar: null", async () => {
+      const created = await service.create({
+        ...sampleInput,
+        id: "avatar-clear",
+        avatar: "/avatars/x.png",
+      });
+      expect(created.avatar).toBe("/avatars/x.png");
+
+      const updated = await service.update(created.id, { avatar: null });
+      expect(updated.avatar).toBeUndefined();
+      expect((await service.get(created.id)).avatar).toBeUndefined();
+    });
+
+    it("preserves the avatar when the patch omits the key entirely (JSON drops `avatar: undefined`)", async () => {
+      const created = await service.create({
+        ...sampleInput,
+        id: "avatar-preserve",
+        avatar: "/avatars/x.png",
+      });
+
+      // Deliberately no `avatar` key at all — mirrors what the wire produces when
+      // the client sends `{ avatar: undefined }` (JSON.stringify drops the key).
+      // A literal `avatar: undefined` in a JS object literal is NOT equivalent:
+      // it creates an own property that DOES override on spread.
+      const updated = await service.update(created.id, { instructions: "unrelated change" });
+      expect(updated.avatar).toBe("/avatars/x.png");
+      expect((await service.get(created.id)).avatar).toBe("/avatars/x.png");
+    });
   });
 
   describe("delete", () => {
