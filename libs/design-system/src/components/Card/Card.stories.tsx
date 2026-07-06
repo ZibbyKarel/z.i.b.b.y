@@ -64,6 +64,19 @@ export const Overview: Story = {
           <CardContent>Karta s HUD rohovými závorkami</CardContent>
         </Card>
       </div>
+      <div className="flex flex-col gap-2">
+        <Typography mono type="subtitle" variant="tertiary">
+          living (animated tone glow — the shared orb/HUD pulse)
+        </Typography>
+        <div className="flex gap-4">
+          <Card corners living tone="run">
+            <CardContent>Běžící úloha</CardContent>
+          </Card>
+          <Card corners living tone="warn">
+            <CardContent>Čeká na schválení</CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   ),
 };

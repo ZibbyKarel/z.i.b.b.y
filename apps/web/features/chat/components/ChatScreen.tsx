@@ -6,7 +6,15 @@
 
 import type { Route } from "next";
 import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
-import { Container, Icon, SearchBar, Stack, Typography } from "@zibby/design-system";
+import {
+  Container,
+  type DotTone,
+  Icon,
+  SearchBar,
+  Stack,
+  StatusDot,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
@@ -34,7 +42,20 @@ import { ChatPalette } from "./ChatPalette";
 import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
 
-const ACCENT = "var(--color-accent)";
+/**
+ * The header status dot — the same canonical state vocabulary that drives the orb,
+ * expressed through the shared {@link StatusDot} primitive instead of a bespoke
+ * inline colour. Maps the derived {@link SceneMode} to a dot tone + whether it's live.
+ */
+const MODE_DOT: Record<SceneMode, { tone: DotTone; pulse: boolean }> = {
+  idle: { tone: "accent", pulse: false },
+  listening: { tone: "accent", pulse: true },
+  thinking: { tone: "run", pulse: true },
+  streaming: { tone: "run", pulse: true },
+  tool: { tone: "run", pulse: true },
+  "waiting-approval": { tone: "wait", pulse: true },
+  error: { tone: "bad", pulse: false },
+};
 
 /** Statuses that put the orb in `waiting-approval` — a run parked on the
  * operator's decision (Rozhodnutí 5, phase-15 plan): over budget/behind an
@@ -355,13 +376,7 @@ export function ChatScreen({
           <Typography mono size="sm" tone="accent" tracking="widest" type="note">
             {t("modeLabel")}
           </Typography>
-          <span
-            className="ml-1 inline-block h-1.5 w-1.5 rounded-full transition-all"
-            style={{
-              background: thinking ? "var(--color-ok)" : ACCENT,
-              boxShadow: `0 0 8px ${thinking ? "var(--color-ok)" : ACCENT}`,
-            }}
-          />
+          <StatusDot pulse={MODE_DOT[mode].pulse} size="75" tone={MODE_DOT[mode].tone} />
         </Stack>
 
         <Typography mono size="md" type="subtitle" weight="semibold">

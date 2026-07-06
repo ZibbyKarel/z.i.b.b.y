@@ -87,6 +87,25 @@ type IconStroke = "thin" | "default" | "medium" | "bold"; // 1.2 / 1.6 / 2 / 2.4
 type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl"; // 360 / 460 / 600 / 800 / 1000px
 ```
 
+### State tone & living motion — one vocabulary, one glow
+
+"Is this alive, and in what state?" has **one** answer in this repo. Do not invent a
+second colour enum or a hand-rolled pulse for a new stateful surface.
+
+- **`StateTone`** (`src/stateTone.ts`, exported from `@zibby/design-system`) is the
+  canonical five-value palette: `accent | ok | warn | bad | run`. `Card.tone`,
+  `CornersTone`, the approvals `UiTone`, and the chat `SceneColorToken` all derive
+  from it. `TagTone`/`DotTone` are DS supersets of it, not rivals. For non-CSS
+  consumers (WebGL/canvas) use `resolveStateToneHex(tone)` — the one cached hex
+  resolver — never a private hex table.
+- **`LivingGlow`** is the animated half: a `tone`-tinted, `intensity` (`idle`/`hot`)
+  pulse reusing the `v-glow-idle`/`v-glow-hot`/`v-breath` keyframes. Turn it on via
+  `Card living` / `HudPanel live`; the Chat-UI orb draws from the same tokens.
+- **Matte by default; animate only what's genuinely in flight** (running / awaiting /
+  streaming / erroring).
+
+Full contract, incl. the rich-state → tone mapping table: **`src/theme/LIVING-STATE.md`**.
+
 ### Sealed component sizing — no raw px in public props
 
 All DS component props that control visual size use semantic tokens, never raw numbers or px strings.
@@ -242,7 +261,7 @@ import { Text } from "../Text/Text";
 
 Good candidates to reach for: `Stack`, `Row`, `Container`, `Text`, `Heading`, `Icon`, `Card`, `Badge`, `Divider`, `Spacer`.
 
-`Corners` has a `tone` prop: `"accent" | "bad" | "ok" | "warn"` (default `"accent"`).
+`Corners` has a `tone` prop of type `StateTone` (`accent | ok | warn | bad | run`, default `"accent"`).
 `Chip` has a `size` prop: `"sm"` (default, compact) or `"md"` (larger, for labels/context tags).
 
 Full list: `Text`, `Heading`, `Divider`, `Badge`, `Chip`, `Kbd`, `Alert`, `Card`

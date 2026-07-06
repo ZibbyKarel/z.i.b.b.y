@@ -12,12 +12,17 @@ export interface HudPanelProps {
    * panels are matte by default.
    */
   tone?: CardProps["tone"];
+  /**
+   * Make the tone emphasis *animate* — the shared {@link LivingGlow} pulse the
+   * Chat-UI orb also uses. Reserve for genuinely in-flight panels; requires `tone`.
+   */
+  live?: boolean;
 }
 
-export function HudPanel({ title, action, padding = "250", tone, children }: HudPanelProps) {
+export function HudPanel({ title, action, padding = "250", tone, live, children }: HudPanelProps) {
   const hasHeader = Boolean(title || action);
   return (
-    <Card corners={Boolean(tone)} tone={tone}>
+    <Card corners={Boolean(tone)} living={Boolean(tone) && live} tone={tone}>
       <Container padding={padding}>
         <Stack gap="150">
           {hasHeader && (

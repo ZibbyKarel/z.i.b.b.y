@@ -1,47 +1,34 @@
 /**
- * Resolving ZIBBY's semantic design tokens to hex values a `THREE.Color` can
- * parse, plus the constellation/node-web category palette. A CSS custom property
- * can't be assigned to a WebGL uniform, so the scene reads the computed values
- * once at first use and caches them (the theme is static dark — nothing to react
- * to at runtime). Everything here is dependency-free and callable from the render
- * loop after the first resolve.
+ * The constellation/node-web category palette, plus a thin adapter over the design
+ * system's canonical state-tone hex resolver. A CSS custom property can't be assigned
+ * to a WebGL uniform, so the orb resolves the four state colours it uses to hex — but
+ * through the ONE shared resolver in `@zibby/design-system` (`resolveStateToneHex`),
+ * not a second private hex table. Everything here is dependency-free and callable
+ * from the render loop after the first resolve.
  */
+import { type StateTone, resolveStateToneHex } from "@zibby/design-system";
 
-/** The state colours the orb resolves from — ZIBBY's existing semantic tokens. */
-export type SceneColorToken = "accent" | "run" | "ok" | "bad";
+/** The state colours the orb resolves from — the subset of the canonical
+ * {@link StateTone} the scene expresses (no `warn`; approval-waiting uses `bad`). */
+export type SceneColorToken = Extract<StateTone, "accent" | "run" | "ok" | "bad">;
 
-const CSS_VAR_BY_TOKEN: Record<SceneColorToken, string> = {
-  accent: "--color-accent",
-  run: "--color-run",
-  ok: "--color-ok",
-  bad: "--color-bad",
-};
-
-/** Hex fallbacks mirroring `libs/design-system/src/theme/globals.css`, used when
- * `getComputedStyle` can't resolve the property (SSR, jsdom, or too-early call). */
-const FALLBACK_HEX_BY_TOKEN: Record<SceneColorToken, string> = {
-  accent: "#5b8def",
-  run: "#7aa5f8",
-  ok: "#3fcf8e",
-  bad: "#ff6b6b",
-};
+const SCENE_TOKENS: readonly SceneColorToken[] = ["accent", "run", "ok", "bad"];
 
 let tokenCache: Record<SceneColorToken, string> | null = null;
 
 /**
- * The four state-colour tokens resolved to hex, read from the DOM once and cached.
- * Safe to call every frame afterwards (a cached object lookup).
+ * The scene's state-colour tokens resolved to hex via the shared DS resolver, read
+ * once and cached. Safe to call every frame afterwards (a cached object lookup).
  */
 export function resolveSceneTokens(): Record<SceneColorToken, string> {
   if (tokenCache) return tokenCache;
-  const styles =
-    typeof document !== "undefined" ? getComputedStyle(document.documentElement) : null;
-  tokenCache = {
-    accent: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.accent).trim() || FALLBACK_HEX_BY_TOKEN.accent,
-    run: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.run).trim() || FALLBACK_HEX_BY_TOKEN.run,
-    ok: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.ok).trim() || FALLBACK_HEX_BY_TOKEN.ok,
-    bad: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.bad).trim() || FALLBACK_HEX_BY_TOKEN.bad,
-  };
+  tokenCache = SCENE_TOKENS.reduce(
+    (acc, tone) => {
+      acc[tone] = resolveStateToneHex(tone);
+      return acc;
+    },
+    {} as Record<SceneColorToken, string>,
+  );
   return tokenCache;
 }
 
