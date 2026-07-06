@@ -4,6 +4,7 @@ import type { Decision, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contr
 import { Button, ButtonGroup, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -41,6 +42,7 @@ function moved(ids: string[], id: string, delta: -1 | 1): string[] | null {
  */
 export function GateRulesSection() {
   const t = useTranslations("gates");
+  const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
   const rules = rulesQuery.data ?? [];
   const { data: agents = [] } = useAgentsQuery();
@@ -53,6 +55,9 @@ export function GateRulesSection() {
 
   const [filter, setFilter] = useState<Decision | null>(null);
   const [editing, setEditing] = useState<GlobalGateRule | "new" | null>(null);
+  // Deleting a rule can silently un-harden every agent/skill linked to it — confirm
+  // before it fires (Phase 18).
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const byDecision = (d: Decision) => rules.filter((r) => r.decision === d).length;
   const shown = filter ? rules.filter((r) => r.decision === filter) : rules;
@@ -144,7 +149,7 @@ export function GateRulesSection() {
                 isFirst={idx === 0}
                 isLast={idx === ids.length - 1}
                 key={rule.id}
-                onDelete={(id) => remove.mutate({ params: { id } })}
+                onDelete={(id) => setDeletingId(id)}
                 onEdit={(r) => setEditing(r)}
                 onMoveDown={(id) => move(id, 1)}
                 onMoveUp={(id) => move(id, -1)}
@@ -166,6 +171,21 @@ export function GateRulesSection() {
           onClose={() => setEditing(null)}
           onSave={save}
           pending={create.isPending || update.isPending}
+        />
+      )}
+
+      {deletingId && (
+        <ConfirmDeleteDialog
+          body={t("deleteBody")}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={t("delete")}
+          onCancel={() => setDeletingId(null)}
+          onConfirm={() => {
+            remove.mutate({ params: { id: deletingId } });
+            setDeletingId(null);
+          }}
+          pending={remove.isPending}
+          title={t("deleteTitle")}
         />
       )}
     </Stack>

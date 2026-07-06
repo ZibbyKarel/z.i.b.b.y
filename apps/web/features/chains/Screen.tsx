@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Chain, ChainRun } from "@zibby/contracts";
 import { Button, Card, Container, Grid, Icon, Stack, Tag, Typography } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -47,6 +48,7 @@ function runTone(status: ChainRun["status"]): "ok" | "warn" | "bad" | "run" {
  */
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations("chains");
+  const tk = useTranslations();
   const router = useRouter();
   const chainsQuery = useChainsQuery();
   const chains = chainsQuery.data ?? [];
@@ -56,6 +58,8 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
   const deleteChain = useDeleteChainMutation();
   const { open: openNewTask } = useNewTask();
   const [adding, setAdding] = useState(false);
+  // Deleting erases the chain's definition — confirm before it fires (Phase 18).
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const selected = (routeId ? chains.find((c) => c.id === routeId) : null) ?? chains[0];
   const selectedRuns = selected ? runs.filter((r) => r.chainId === selected.id) : [];
@@ -174,12 +178,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                         disabled={deleteChain.isPending}
                         icon="x"
                         intent="ghost"
-                        onClick={() =>
-                          deleteChain.mutate(
-                            { params: { id: selected.id } },
-                            { onSuccess: () => router.push("/chains") },
-                          )
-                        }
+                        onClick={() => setConfirmDeleteId(selected.id)}
                         size="sm"
                       >
                         {t("delete")}
@@ -256,6 +255,28 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
         </Grid>
         {addModal}
       </Stack>
+
+      {confirmDeleteId && (
+        <ConfirmDeleteDialog
+          body={t("deleteBody", { name: selected?.name ?? confirmDeleteId })}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={t("delete")}
+          onCancel={() => setConfirmDeleteId(null)}
+          onConfirm={() =>
+            deleteChain.mutate(
+              { params: { id: confirmDeleteId } },
+              {
+                onSuccess: () => {
+                  setConfirmDeleteId(null);
+                  router.push("/chains");
+                },
+              },
+            )
+          }
+          pending={deleteChain.isPending}
+          title={t("deleteTitle")}
+        />
+      )}
     </PageContainer>
   );
 }
