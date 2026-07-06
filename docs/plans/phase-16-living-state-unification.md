@@ -154,6 +154,22 @@ Commit: `phase 16.4: document the living-state contract`.
 - Tenhle plán je základ pro Fáze 14/15 — ty už proběhly, takže 16 je návazný
   refaktor, který je sjednotí na jeden zdroj (ne přepis od nuly).
 
+## Stav implementace
+
+- [x] **16.0** — plán + inventura (tento dokument).
+- [x] **16.1** — `StateTone` jako jediný pojmenovaný DS zdroj (`stateTone.ts`),
+  `Card.tone`/`CornersTone`/`UiTone` z něj odvozené.
+- [x] **16.2** — `LivingGlow` primitiva + tón-parametrizované `v-glow-*` keyframes
+  (`--living-color`, default accent) + `Card living`.
+- [x] **16.3** — `HudPanel live`, chat `scene/tokens.ts` deleguje na
+  `resolveStateToneHex` (privátní hex tabulka smazána), `ChatScreen` hlavička na
+  `StatusDot` (lokální `ACCENT` odstraněn).
+- [x] **16.4** — `LIVING-STATE.md` + sekce v design-system SKILL.md.
+
+`pnpm lint` (0 errors) + `pnpm typecheck` zelené; 948 DS+web testů prochází.
+(Předběžné selhání `|api|` e2e — agent fixtures / backup.sh / worktrees — je
+prostředí-specifické a tímto typově-jen refaktorem nedotčené.)
+
 ## Definition of done
 
 Existuje JEDEN pojmenovaný `StateTone` exportovaný z DS, který používá Card, Corners
