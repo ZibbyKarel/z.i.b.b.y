@@ -59,6 +59,8 @@ describe("chains Screen (N4a)", () => {
   beforeEach(() => {
     push.mockClear();
     hooks.openNewTask.mockClear();
+    hooks.del.mockClear();
+    hooks.del.mockReset();
     hooks.chains = { data: CHAINS, isPending: false, isError: false, refetch: vi.fn() };
     hooks.runs = RUNS;
   });
@@ -105,5 +107,33 @@ describe("chains Screen (N4a)", () => {
     const [headerAction] = screen.getAllByRole("button", { name: "Nový řetězec" });
     await userEvent.click(headerAction!);
     expect(screen.getByLabelText("Nový řetězec")).toBeInTheDocument();
+  });
+
+  it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /chains (Phase 18.1)", async () => {
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.(),
+    );
+    render(<Screen selectedId="research-then-build" />);
+    await userEvent.click(screen.getByTestId(ChainsScreenTestId.Delete));
+    expect(screen.getByText("Smazat řetězec?")).toBeInTheDocument();
+    expect(hooks.del).not.toHaveBeenCalled();
+
+    const confirm = screen
+      .getAllByRole("button", { name: "Smazat" })
+      .find((b) => b !== screen.getByTestId(ChainsScreenTestId.Delete));
+    await userEvent.click(confirm!);
+    expect(hooks.del).toHaveBeenCalledWith(
+      { params: { id: "research-then-build" } },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    expect(push).toHaveBeenCalledWith("/chains");
+  });
+
+  it("cancelling the chain delete confirm never calls the mutation", async () => {
+    render(<Screen selectedId="research-then-build" />);
+    await userEvent.click(screen.getByTestId(ChainsScreenTestId.Delete));
+    await userEvent.click(screen.getByRole("button", { name: "Zrušit" }));
+    expect(hooks.del).not.toHaveBeenCalled();
+    expect(screen.queryByText("Smazat řetězec?")).not.toBeInTheDocument();
   });
 });

@@ -14,6 +14,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useNewTask } from "../../tasks";
 import { formatCostUsd } from "../../../utils/cost";
@@ -277,6 +278,11 @@ export function RunDetail({
 }: RunDetailProps) {
   const t = useTranslations("runs");
   const tApprovals = useTranslations("approvals");
+  const tk = useTranslations();
+  // Stop/Delete are destructive (a running task's progress is lost; a done run's
+  // artifacts are erased) — both ask via the shared ConfirmDeleteDialog before the
+  // mutation fires (Phase 18).
+  const [confirmKind, setConfirmKind] = useState<"stop" | "delete" | null>(null);
   const { data: queue = [] } = useApprovalsQuery();
   const approval = approvalForRun(queue, run);
   // Who is doing the work: an agent run's `owner` is its agent id; the approval
@@ -335,7 +341,8 @@ export function RunDetail({
   );
 
   return (
-    <Stack gap="200">
+    <>
+      <Stack gap="200">
       <HudPanel padding="300" tone={tone}>
         <Stack gap="200">
           <Stack wrap align="start" direction="row" gap="150" justify="between">
@@ -396,13 +403,19 @@ export function RunDetail({
                     disabled={stopping}
                     icon="stop"
                     intent="danger"
-                    onClick={onStop}
+                    onClick={() => setConfirmKind("stop")}
                     size="sm"
                   >
                     {t("stop")}
                   </Button>
                 )}
-                <Button disabled={deleting} icon="x" intent="danger" onClick={onDelete} size="sm">
+                <Button
+                  disabled={deleting}
+                  icon="x"
+                  intent="danger"
+                  onClick={() => setConfirmKind("delete")}
+                  size="sm"
+                >
                   {run.status === "scheduled" ? t("cancelTask") : t("delete")}
                 </Button>
               </Stack>
@@ -523,6 +536,37 @@ export function RunDetail({
           </Stack>
         </HudPanel>
       )}
-    </Stack>
+      </Stack>
+
+      {confirmKind === "stop" && (
+        <ConfirmDeleteDialog
+          body={t("stopBody")}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={t("stop")}
+          icon="stop"
+          onCancel={() => setConfirmKind(null)}
+          onConfirm={() => {
+            setConfirmKind(null);
+            onStop();
+          }}
+          pending={stopping}
+          title={t("stopTitle")}
+        />
+      )}
+      {confirmKind === "delete" && (
+        <ConfirmDeleteDialog
+          body={run.status === "scheduled" ? t("cancelBody") : t("deleteBody")}
+          cancelLabel={tk("common.cancel")}
+          confirmLabel={run.status === "scheduled" ? t("cancelTask") : t("delete")}
+          onCancel={() => setConfirmKind(null)}
+          onConfirm={() => {
+            setConfirmKind(null);
+            onDelete();
+          }}
+          pending={deleting}
+          title={run.status === "scheduled" ? t("cancelTitle") : t("deleteTitle")}
+        />
+      )}
+    </>
   );
 }
