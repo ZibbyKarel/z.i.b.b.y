@@ -1,5 +1,5 @@
 import type { Approval as ContractApproval } from "@zibby/contracts";
-import type { IconName, TagTone } from "@zibby/design-system";
+import type { IconName, StateTone, TagTone } from "@zibby/design-system";
 
 /**
  * The design models an approval much richer than the contract does: the contract
@@ -93,8 +93,9 @@ export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
   return { ...a, ...e, detail: e.summary ?? a.detail };
 }
 
-/** Tone usable for Card / Typography / StatusDot / Icon / Stat (excludes Badge-only tones). */
-export type UiTone = "accent" | "ok" | "warn" | "bad";
+/** Tone usable for Card / Typography / StatusDot / Icon / Stat — the canonical
+ * {@link StateTone} minus `run` (which collapses to `accent` in these surfaces). */
+export type UiTone = Exclude<StateTone, "run">;
 
 interface RiskMeta {
   label: string;

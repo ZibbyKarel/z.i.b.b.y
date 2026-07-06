@@ -4,6 +4,7 @@ import { focusRing } from "../../utils/focus";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import { type Padding, type Spacing, spacingToPx } from "../../tokens";
+import type { StateTone } from "../../stateTone";
 
 export enum CardTestId {
   Root = "card-root",
@@ -12,7 +13,8 @@ export enum CardTestId {
   Footer = "card-footer",
 }
 
-export type CornersTone = "accent" | "bad" | "ok" | "warn" | "run";
+/** The HUD bracket tone — the canonical {@link StateTone} vocabulary. */
+export type CornersTone = StateTone;
 
 const cornersToneClass: Record<CornersTone, string> = {
   accent: "border-accent",
@@ -68,7 +70,7 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
   animate?: "none" | "fade" | "scale";
   corners?: boolean;
   /** Toned emphasis: colours the border, corners and adds a faint ring glow. */
-  tone?: "accent" | "ok" | "warn" | "bad" | "run";
+  tone?: StateTone;
   /** Render as a selectable button (forwards onClick / aria-pressed). */
   as?: "div" | "button";
   /** Highlighted selected state (accent border + ring). */

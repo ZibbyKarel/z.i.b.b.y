@@ -14,6 +14,18 @@ export { mergeTheme, resolvePadding, spacingToPx, spacingValues, tokensToCssVars
 export type { Padding, PartialTheme, Size, Spacing, Theme } from "./tokens";
 
 // ---------------------------------------------------------------------------
+// Canonical state vocabulary (the living-state contract — see theme/LIVING-STATE.md)
+// ---------------------------------------------------------------------------
+export {
+  resetStateToneHexCache,
+  resolveStateToneHex,
+  STATE_TONES,
+  stateToneHex,
+  stateToneVar,
+} from "./stateTone";
+export type { StateTone } from "./stateTone";
+
+// ---------------------------------------------------------------------------
 // Theme registry
 // ---------------------------------------------------------------------------
 export {
