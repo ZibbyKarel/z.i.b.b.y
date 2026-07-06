@@ -5,7 +5,6 @@ import {
   Chip,
   Container,
   type IconName,
-  MenuSurface,
   SearchMenu,
   type SearchMenuSection,
   Stack,
@@ -213,10 +212,17 @@ export function ChatComposer({ onSend, disabled, onDraftChange }: ChatComposerPr
 
       <Container position="relative" ref={rootRef}>
         {mentionOpen && menuRect && (
-          <MenuSurface
+          // A bare fixed wrapper, NOT a MenuSurface: SearchMenu renders its own
+          // dropdown panel (a MenuSurface anchored below its input), and nesting it
+          // inside another MenuSurface both double-framed the input and clipped the
+          // result list behind the outer `overflow-hidden`.
+          <Container
+            bottom={`${menuRect.bottom}px`}
             data-testid={ChatComposerTestId.MentionMenu}
-            placement="fixed"
-            style={{ left: menuRect.left, width: menuRect.width, bottom: menuRect.bottom }}
+            left={`${menuRect.left}px`}
+            position="fixed"
+            width={`${menuRect.width}px`}
+            zIndex={50}
           >
             <SearchMenu
               ariaLabel={tMention("ariaLabel")}
@@ -232,7 +238,7 @@ export function ChatComposer({ onSend, disabled, onDraftChange }: ChatComposerPr
               sections={[agentSection, pipelineSection]}
               value={mentionQuery}
             />
-          </MenuSurface>
+          </Container>
         )}
 
         <Stack align="end" direction="row" gap="100">
