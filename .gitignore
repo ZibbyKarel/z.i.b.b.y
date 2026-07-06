@@ -85,3 +85,4 @@ z-i-b-b-y
 # live runtime data root (resolveDataRoot() default anchor — real operator data,
 # regenerated locally e.g. by `pnpm self-knowledge:generate`; never versioned)
 /apps/api/data/
+/scratchpad/

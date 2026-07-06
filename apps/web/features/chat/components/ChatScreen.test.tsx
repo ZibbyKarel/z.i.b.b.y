@@ -81,7 +81,7 @@ import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { SearchMenuTestId } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { ChatComposerTestId } from "./ChatComposer";
-import { ChatOrbTestId } from "./ChatOrb";
+import { CosmicSceneTestId } from "../scene/CosmicScene";
 import { ChatPaletteTestId } from "./ChatPalette";
 import { ChatSidePanelTestId } from "./ChatSidePanel";
 
@@ -166,7 +166,7 @@ describe("ChatScreen", () => {
   describe("orb mode derivation (Fáze 14.1)", () => {
     it("is idle with no activity", () => {
       renderWithProviders(<ChatScreenHarness />);
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "idle");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "idle");
     });
 
     it("is listening when the composer has a non-empty draft", async () => {
@@ -174,13 +174,13 @@ describe("ChatScreen", () => {
       renderWithProviders(<ChatScreenHarness />);
 
       await user.type(screen.getByTestId(ChatComposerTestId.Input), "Ahoj");
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "listening");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "listening");
     });
 
     it("is thinking while the send mutation is pending", () => {
       sendState.isPending = true;
       renderWithProviders(<ChatScreenHarness />);
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "thinking");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "thinking");
     });
 
     it("is streaming once tokens are flowing", async () => {
@@ -194,7 +194,7 @@ describe("ChatScreen", () => {
         mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám se" });
       });
 
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "streaming");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "streaming");
     });
 
     it("is tool while the last announced tool event is still running", async () => {
@@ -213,7 +213,7 @@ describe("ChatScreen", () => {
         });
       });
 
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "tool");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "tool");
     });
 
     it("is error when the stream ends the turn with a terminal error frame (Fáze 15.3)", async () => {
@@ -227,7 +227,7 @@ describe("ChatScreen", () => {
         mock.last().emit({ conversationId: "c1", turnId: "t1", type: "error", message: "boom" });
       });
 
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "error");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "error");
     });
 
     it("is waiting-approval when the last dispatched run is parked on the operator's decision (Fáze 15.3)", async () => {
@@ -247,7 +247,7 @@ describe("ChatScreen", () => {
         });
       });
 
-      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "waiting-approval");
+      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "waiting-approval");
     });
   });
 

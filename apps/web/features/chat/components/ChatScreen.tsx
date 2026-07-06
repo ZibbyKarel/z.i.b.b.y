@@ -9,14 +9,27 @@ import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "
 import { Container, Icon, SearchBar, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
+import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { usePipelineRunQuery } from "../../pipelines";
+import { useRunsQuery } from "../../runs/queries/useRunsQuery";
+import { buildConstellation } from "../scene/constellation";
+import { buildDock } from "../scene/dock";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
+import { CosmicScene } from "../scene/CosmicScene";
+import type { SceneMode } from "../scene/sceneTypes";
 import { ChatComposer } from "./ChatComposer";
-import { ChatOrb, type ChatOrbMode } from "./ChatOrb";
 import { ChatPalette } from "./ChatPalette";
 import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
@@ -102,7 +115,13 @@ export function ChatScreen({
   const setMessages = onMessagesChange;
   const sendMessage = useSendChatMessageMutation();
 
+  // Bumped once per finished turn so the scene can fire its completion flash
+  // (Tier 3). Kept separate from the transcript so an empty-but-done turn — a pure
+  // tool dispatch with no text — still flashes.
+  const [completedTick, setCompletedTick] = useState(0);
+
   const appendAssistant = useCallback(({ turnId, text, toolEvents }: CompletedTurn) => {
+    setCompletedTick((t) => t + 1);
     if (!text && toolEvents.length === 0) return;
     setMessages((prev) => [
       ...prev,
@@ -250,10 +269,37 @@ export function ChatScreen({
   ]);
   const { data: lastRun } = usePipelineRunQuery(lastRunRef);
 
+  // The constellation roster — the live agent catalog deduped to real roles and
+  // coloured by category (Tier 4). Only rebuilt when the catalog changes.
+  const { data: agentCatalog } = useAgentsQuery();
+  const agents = useMemo(() => buildConstellation(agentCatalog ?? []), [agentCatalog]);
+
+  // The dock (Tier 5) — the running/queued agents & pipelines from the live runs
+  // feed (kept fresh by the shared RunEventsProvider bus), never the full roster.
+  const { runs } = useRunsQuery();
+  const dock = useMemo(() => buildDock(runs, agents), [runs, agents]);
+
+  // Dispatch signal (Tier 5): each new `tool` event naming an agent bumps a seq the
+  // scene fires the beam/flare on. Seen callIds are tracked so the two-phase
+  // started→ok pair (same callId) fires exactly once.
+  const dispatchSeen = useRef<Set<string>>(new Set());
+  const dispatchSeq = useRef(0);
+  const [dispatch, setDispatch] = useState<{ seq: number; agentId: string } | undefined>(undefined);
+  useEffect(() => {
+    for (const ev of stream.toolEvents) {
+      if (ev.target?.kind !== "agent") continue;
+      const key = ev.callId ?? `${ev.name}:${ev.target.id}`;
+      if (dispatchSeen.current.has(key)) continue;
+      dispatchSeen.current.add(key);
+      dispatchSeq.current += 1;
+      setDispatch({ seq: dispatchSeq.current, agentId: ev.target.id });
+    }
+  }, [stream.toolEvents]);
+
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
 
-  const mode: ChatOrbMode = errorMode
+  const mode: SceneMode = errorMode
     ? "error"
     : waitingApproval
       ? "waiting-approval"
@@ -364,17 +410,21 @@ export function ChatScreen({
         </Stack>
       </div>
 
-      {/* ── Main area: orb behind, scrollable conversation over it ───── */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
-        {/* Ambient orb — centered, behind the conversation, dimmed so text reads. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          style={{ opacity: isEmpty ? 0.85 : 0.32, transition: "opacity 0.6s" }}
-        >
-          <ChatOrb mode={mode} />
-        </div>
+      {/* Full-screen living cosmic scene — the text-reactive orb, procedural
+          nebula and sub-agent constellation. Sits behind every interactive
+          surface (its own canvas layers are pointer-events:none); the transcript
+          floats over it in a legibility-protected band. */}
+      <CosmicScene
+        agents={agents}
+        completedTick={completedTick}
+        dispatch={dispatch}
+        dock={dock}
+        mode={mode}
+        streamChars={stream.streaming ? stream.text.length : 0}
+      />
 
+      {/* ── Main area: scene behind, scrollable conversation over it ───── */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
         <div
           className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
