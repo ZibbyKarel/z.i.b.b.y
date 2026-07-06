@@ -530,6 +530,7 @@
     "reject": "Reject",
     "holdToApprove": "Hold to approve",
     "holdDone": "Approved",
+    "holdArmed": "Press again to confirm",
     "riskTag": {
       "payment": "payment",
       "deletion": "deletion",
@@ -736,6 +737,7 @@
     "reject": "Reject",
     "holdToApprove": "Hold to approve",
     "holdDone": "Approved",
+    "holdArmed": "Press again to confirm",
     "guarantee": "ZIBBY never completes a risky action without your consent. The approval gate is an enforced layer, not a suggestion.",
     "requestedLabel": "Requested",
     "viaLabel": "Triggered by",

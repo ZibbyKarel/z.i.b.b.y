@@ -131,9 +131,11 @@ wherever the thing it gates is already visible:
 - **Run detail** — `RunApprovalGate` shows the exact action, its structured
   preview, and its consequence, with Confirm / Reject. High-risk actions
   (`HIGH_RISK_TYPES`, currently payment and deletion) require a deliberate
-  ~0.9s hold-to-confirm (`HoldButton`) instead of a single click; rejecting
-  records the denial and terminates the run without erasing it, so it stays in
-  the feed and answerable.
+  ~0.9s hold-to-confirm (`HoldButton`) instead of a single click — or the
+  timing-free equivalent: a short press arms the button and a second discrete
+  press confirms (Escape/blur disarms, no expiry window; WCAG 2.5.1/2.2.1).
+  Rejecting records the denial and terminates the run without erasing it, so it
+  stays in the feed and answerable.
 - **Overview** — an `ApprovalsPanel` lists pending approvals across the
   system, and the overview page shows a pending-count badge.
 - **Agent detail** — `ApprovalCard` surfaces an approval tied to that agent.

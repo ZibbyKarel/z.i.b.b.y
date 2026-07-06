@@ -27,18 +27,28 @@ export enum HoldButtonTestId {
   Root = "hold-button-root",
   Fill = "hold-button-fill",
   Icon = "hold-button-icon",
+  Label = "hold-button-label",
+  /** The armed-state label — present only while the button is armed. */
+  ArmedLabel = "hold-button-armed-label",
 }
 
 export interface HoldButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "className" | "onClick" | "children"
 > {
-  /** Fired once the hold completes. */
+  /** Fired once the hold completes, or on the second discrete activation when armed. */
   onConfirm?: () => void;
   /** Idle label. */
   label?: string;
-  /** Label shown after the hold completes. */
+  /** Label shown after the confirmation completes. */
   doneLabel?: string;
+  /**
+   * Label shown while armed (Fáze 17.2): a short press/click arms the button
+   * instead of silently rolling back, and this label prompts the second,
+   * discrete activation that confirms. DS is i18n-agnostic — English default,
+   * consumers override via props.
+   */
+  armedLabel?: string;
   tone?: HoldButtonTone;
   block?: boolean;
   ref?: Ref<HTMLButtonElement>;
@@ -47,12 +57,18 @@ export interface HoldButtonProps extends Omit<
 /**
  * Hold-to-confirm button (design `ZtHold`) — the double-confirmation guardrail
  * for high-risk approvals (payment, deletion). A 0.9s press fills the button
- * left-to-right; releasing early rolls the fill back without confirming.
+ * left-to-right; releasing early no longer silently rolls back: it **arms** the
+ * button (full pulsing fill + `armedLabel`), and a second discrete activation
+ * (click, or a short Space/Enter press) confirms — a timing-free alternative for
+ * motor impairments, switch access, and voice control (WCAG 2.5.1/2.2.1). The
+ * armed state has NO expiry window; `Escape` or blur disarms it. A completed
+ * hold still confirms directly, armed or not.
  */
 export function HoldButton({
   onConfirm,
   label = "Hold to confirm",
   doneLabel = "Confirmed",
+  armedLabel = "Press again to confirm",
   tone = "warn",
   block,
   disabled,
@@ -61,11 +77,18 @@ export function HoldButton({
 }: HoldButtonProps) {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const [armed, setArmed] = useState(false);
   const raf = useRef<number>(0);
   const start = useRef<number>(0);
   const holding = useRef(false);
 
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
+
+  const confirm = () => {
+    setArmed(false);
+    setDone(true);
+    onConfirm?.();
+  };
 
   const tick = (now: number) => {
     if (!holding.current) return;
@@ -73,8 +96,7 @@ export function HoldButton({
     setProgress(pct);
     if (pct >= 1) {
       holding.current = false;
-      setDone(true);
-      onConfirm?.();
+      confirm();
       return;
     }
     raf.current = requestAnimationFrame(tick);
@@ -87,11 +109,31 @@ export function HoldButton({
     raf.current = requestAnimationFrame(tick);
   };
 
-  const endHold = () => {
-    if (!holding.current) return;
+  /** Stop an in-flight hold without treating it as an activation (drag-off, Escape,
+   * blur). Returns whether a hold was actually in flight. */
+  const cancelHold = () => {
+    if (!holding.current) return false;
     holding.current = false;
     cancelAnimationFrame(raf.current);
     setProgress(0);
+    return true;
+  };
+
+  /** A press released before the hold completed = one discrete activation:
+   * first arms, second (while armed) confirms. Timing-free by design — the
+   * armed state never expires on its own. */
+  const releaseHold = () => {
+    if (!cancelHold()) return;
+    if (armed) {
+      confirm();
+    } else {
+      setArmed(true);
+    }
+  };
+
+  const disarm = () => {
+    cancelHold();
+    setArmed(false);
   };
 
   return (
@@ -107,14 +149,18 @@ export function HoldButton({
       )}
       data-testid={HoldButtonTestId.Root}
       disabled={disabled}
+      onBlur={disarm}
       onKeyDown={(e) => {
         if ((e.key === " " || e.key === "Enter") && !e.repeat) beginHold();
+        if (e.key === "Escape") disarm();
       }}
-      onKeyUp={endHold}
-      onPointerCancel={endHold}
+      onKeyUp={(e) => {
+        if (e.key === " " || e.key === "Enter") releaseHold();
+      }}
+      onPointerCancel={cancelHold}
       onPointerDown={beginHold}
-      onPointerLeave={endHold}
-      onPointerUp={endHold}
+      onPointerLeave={cancelHold}
+      onPointerUp={releaseHold}
       ref={ref}
       type="button"
       {...props}
@@ -124,15 +170,28 @@ export function HoldButton({
           className={cn(
             "absolute inset-y-0 left-0",
             fillClass[tone],
-            progress === 0 && "transition-[width] duration-200",
+            armed && "w-full animate-pulse",
+            !armed && progress === 0 && "transition-[width] duration-200",
           )}
           data-testid={HoldButtonTestId.Fill}
-          style={{ width: `${progress * 100}%` }}
+          style={armed ? undefined : { width: `${progress * 100}%` }}
         />
       )}
-      <span className="relative inline-flex items-center gap-1.5">
+      {/* aria-live so the label swap (idle → armed → done) is announced; the armed
+          state is conveyed by descriptive text, not aria-pressed (not a toggle). */}
+      <span
+        aria-live="polite"
+        className="relative inline-flex items-center gap-1.5"
+        data-testid={HoldButtonTestId.Label}
+      >
         {done && <Icon data-testid={HoldButtonTestId.Icon} name="check" size="sm" stroke="bold" />}
-        {done ? doneLabel : label}
+        {done ? (
+          doneLabel
+        ) : armed ? (
+          <span data-testid={HoldButtonTestId.ArmedLabel}>{armedLabel}</span>
+        ) : (
+          label
+        )}
       </span>
     </button>
   );

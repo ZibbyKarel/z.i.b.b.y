@@ -530,6 +530,7 @@
     "reject": "Zamítnout",
     "holdToApprove": "Podržet pro schválení",
     "holdDone": "Schváleno",
+    "holdArmed": "Stiskni znovu pro potvrzení",
     "riskTag": {
       "payment": "platba",
       "deletion": "mazání",
@@ -736,6 +737,7 @@
     "reject": "Zamítnout",
     "holdToApprove": "Podržet pro schválení",
     "holdDone": "Schváleno",
+    "holdArmed": "Stiskni znovu pro potvrzení",
     "guarantee": "ZIBBY nikdy nedokončí rizikovou akci bez tvého souhlasu. Approval gate je vynucená vrstva, ne doporučení.",
     "requestedLabel": "Vyžádáno",
     "viaLabel": "Spustil",

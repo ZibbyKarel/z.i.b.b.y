@@ -115,7 +115,7 @@ monospace.
 | ------------- | -------------------------------------------------------------- |
 | `Button`      | Primary button (variant: solid/ghost/outline, size: xs–xl)     |
 | `ButtonGroup` | Groups buttons together                                         |
-| `HoldButton`  | Hold-to-confirm button (for destructive actions)                |
+| `HoldButton`  | Hold-to-confirm button (for destructive actions); a short press arms it and a second press confirms — timing-free a11y alternative to the hold |
 
 ### Form primitives
 
