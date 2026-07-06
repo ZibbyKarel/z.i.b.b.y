@@ -1456,7 +1456,10 @@
     "unpin": "Unpin",
     "quickLaunchTitle": "Quick launch",
     "run": "Run",
-    "unpinAria": "Unpin {name}"
+    "unpinAria": "Unpin {name}",
+    "kindAgent": "Agent",
+    "kindPipeline": "Pipeline",
+    "kindChain": "Chain"
   },
   "chains": {
     "title": "Chains",

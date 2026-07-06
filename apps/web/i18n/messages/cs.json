@@ -1456,7 +1456,10 @@
     "unpin": "Odepnout",
     "quickLaunchTitle": "Panel rychlého spuštění",
     "run": "Spustit",
-    "unpinAria": "Odepnout {name}"
+    "unpinAria": "Odepnout {name}",
+    "kindAgent": "Agent",
+    "kindPipeline": "Pipeline",
+    "kindChain": "Řetězec"
   },
   "chains": {
     "title": "Řetězce",
