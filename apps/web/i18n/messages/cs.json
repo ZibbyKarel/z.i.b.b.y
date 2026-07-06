@@ -509,7 +509,11 @@
     "stateDone": "hotovo",
     "stateParked": "zaparkováno",
     "stateFailed": "selhalo",
-    "stateRunning": "běží"
+    "stateRunning": "běží",
+    "uploadImage": "Nahrát obrázek",
+    "removeImage": "Odebrat obrázek",
+    "uploadPipelineAvatar": "Nahraj obrázek orchestrace",
+    "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB)."
   },
   "phase": {
     "modelTitle": "model (override per-run)",

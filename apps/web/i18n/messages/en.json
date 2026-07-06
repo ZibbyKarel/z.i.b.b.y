@@ -509,7 +509,11 @@
     "stateDone": "done",
     "stateParked": "parked",
     "stateFailed": "failed",
-    "stateRunning": "running"
+    "stateRunning": "running",
+    "uploadImage": "Upload image",
+    "removeImage": "Remove image",
+    "uploadPipelineAvatar": "Upload pipeline image",
+    "avatarTooLarge": "Image is too large (max ~200 KB)."
   },
   "phase": {
     "modelTitle": "model (override per-run)",
