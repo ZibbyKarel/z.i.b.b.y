@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AgentSchema } from "./agent.schema";
-import { PipelineSchema } from "../pipelines/pipeline.schema";
+import { AgentSchema, UpdateAgentSchema } from "./agent.schema";
+import { PipelineSchema, UpdatePipelineSchema } from "../pipelines/pipeline.schema";
 import { AVATAR_MAX } from "../common.schema";
 
 const baseAgent = { id: "architect", instructions: "do things" };
@@ -31,5 +31,17 @@ describe("avatar field", () => {
   });
   it("is optional", () => {
     expect(AgentSchema.parse(baseAgent).avatar).toBeUndefined();
+  });
+});
+
+describe("update schemas accept avatar: null as an explicit clear signal", () => {
+  it("UpdateAgentSchema accepts avatar: null", () => {
+    expect(UpdateAgentSchema.parse({ avatar: null }).avatar).toBeNull();
+  });
+  it("UpdatePipelineSchema accepts avatar: null", () => {
+    expect(UpdatePipelineSchema.parse({ avatar: null }).avatar).toBeNull();
+  });
+  it("still rejects a non-null, non-string avatar", () => {
+    expect(UpdateAgentSchema.safeParse({ avatar: 123 }).success).toBe(false);
   });
 });

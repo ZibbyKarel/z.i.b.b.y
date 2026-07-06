@@ -52,7 +52,10 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
 
   async update(id: string, patch: UpdatePipelineInput): Promise<Pipeline> {
     const existing = await this.get(id);
-    const candidate = { ...existing, ...patch, id: existing.id };
+    const candidate: Record<string, unknown> = { ...existing, ...patch, id: existing.id };
+    // `avatar: null` is the explicit "clear" signal (undefined can't survive JSON
+    // transport) — drop the key so the full-schema parse (string|absent) succeeds.
+    if (patch.avatar === null) delete candidate.avatar;
     const parsed = PipelineSchema.safeParse(candidate);
     if (!parsed.success) {
       throw new InvalidPipelineError(parsed.error.issues[0]?.message ?? "invalid pipeline");
