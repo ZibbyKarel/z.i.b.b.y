@@ -39,12 +39,13 @@ _Generated: 2026-07-06T00:05:21.610Z_
 <!-- AUTO:PIPELINES:END -->
 
 <!-- AUTO:GATES:START -->
-## Gate rules (17)
+## Gate rules (18)
 
-### System floor (locked, 12)
+### System floor (locked, 13)
 - `floor-agent.propose_new`: action=agent.propose_new → **ask**
 - `floor-channel-reply`: action=channel-reply → **notify**
 - `floor-delete`: action=delete → **ask**
+- `floor-gh.api_write`: action=gh.api_write → **ask**
 - `floor-git.force_push`: action=git.force_push → **ask**
 - `floor-git.push`: action=git.push → **ask**
 - `floor-jira.create_issue`: action=jira.create_issue → **ask**

@@ -73,6 +73,7 @@ const AUTONOMY_ACTIONS = [
   "git.push",
   "git.force_push",
   "pr.merge",
+  "gh.api_write",
   "delete",
   "purchase",
   "payment",

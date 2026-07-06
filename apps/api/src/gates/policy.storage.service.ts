@@ -81,6 +81,12 @@ const ASK_FLOOR_ACTIONS = [
   "git.force_push",
   "git.push",
   "pr.open",
+  // Fáze 17.1: the generic bucket for a mutating `gh api …` call that isn't the
+  // more specific `pr.merge`/`pr.open` REST shapes (see `classifyGhApi` in
+  // `claude-approval-hook.mjs`) — unknown effect, so it defaults to `ask`, never
+  // silently allowed. `action` is a free string in the approval/gate contracts, so
+  // this new kind needed no schema change — only this floor rule.
+  "gh.api_write",
   "send_email",
   "delete",
   // The finished-day "creates a Jira task" — an outbound external write, so it is
