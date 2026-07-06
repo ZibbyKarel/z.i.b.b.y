@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RiskSchema } from "../common.schema";
+import { AvatarSchema, RiskSchema } from "../common.schema";
 import { GateRuleInputSchema } from "../gates/gate.schema";
 
 /**
@@ -39,6 +39,8 @@ export const AgentSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   glyph: z.string().optional(),
+  /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
+  avatar: AvatarSchema.optional(),
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
   tools: z.array(z.string()).optional(),

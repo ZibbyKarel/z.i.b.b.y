@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { IsoDateTimeSchema } from "../common.schema";
+import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
@@ -25,6 +25,8 @@ export type Attachment = z.infer<typeof AttachmentSchema>;
 const taskTargetDisplayShape = {
   name: z.string().min(1),
   glyph: z.string().optional(),
+  /** Optional avatar (data URI or `/avatars/*.png` path); overrides the glyph in chat/HUD. */
+  avatar: AvatarSchema.optional(),
   /** Free-form functional area, when the definition carries one. */
   category: z.string().optional(),
 };
