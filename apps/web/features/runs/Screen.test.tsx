@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../test/render";
+import { fireEvent, renderWithProviders as render, screen } from "../../test/render";
 import type { RunView } from "./run";
 import { Screen } from "./Screen";
 
@@ -29,8 +29,18 @@ const RUNS: RunView[] = [
   makeRun("run-beta", "beta"),
   makeRun("run-global"),
 ];
+
+const { query } = vi.hoisted(() => ({
+  query: { runs: [] as RunView[], isPending: false, isError: false },
+}));
+const refetch = vi.fn();
 vi.mock("./queries/useRunsQuery", () => ({
-  useRunsQuery: () => ({ runs: RUNS }),
+  useRunsQuery: () => ({
+    runs: query.runs,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch,
+  }),
   useRunGlyphMap: () => new Map(),
 }));
 
@@ -66,6 +76,10 @@ function makeRun(id: string, projectId?: string): RunView {
 describe("Runs Screen — project scoping (Fáze 11)", () => {
   beforeEach(() => {
     active.id = null;
+    query.runs = RUNS;
+    query.isPending = false;
+    query.isError = false;
+    refetch.mockClear();
   });
 
   it("renders every run (attributed or not) under 'Všechny projekty'", () => {
@@ -84,5 +98,31 @@ describe("Runs Screen — project scoping (Fáze 11)", () => {
     expect(screen.queryByTestId("task-card-run-beta")).not.toBeInTheDocument();
     expect(screen.queryByTestId("task-card-run-global")).not.toBeInTheDocument();
     expect(screen.getByTestId("project-scope-chip")).toBeInTheDocument();
+  });
+});
+
+describe("Runs Screen — honest load states (Phase 18.2)", () => {
+  beforeEach(() => {
+    active.id = null;
+    query.runs = [];
+    query.isPending = false;
+    query.isError = false;
+    refetch.mockClear();
+  });
+
+  it("shows the loading state while the feed is pending, not the empty-feed message", () => {
+    query.isPending = true;
+    render(<Screen />);
+    expect(screen.getByText("Načítání…")).toBeInTheDocument();
+    expect(screen.queryByText("Žádné běhy")).not.toBeInTheDocument();
+  });
+
+  it("shows the error state (with retry) when the feed fails — never an empty feed", () => {
+    query.isError = true;
+    render(<Screen />);
+    expect(screen.getByText("Nepodařilo se načíst")).toBeInTheDocument();
+    expect(screen.queryByText("Žádné běhy")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Zkusit znovu"));
+    expect(refetch).toHaveBeenCalled();
   });
 });

@@ -39,8 +39,19 @@ function pollWhileLive(query: {
  * feed key on every run transition. The self-gating poll (refetch while any row is
  * `running`/`awaiting-approval`/`parked`/`scheduled`) is kept only as the fallback
  * for when the stream is down — `refetchInterval` is `false` while it's connected.
+ *
+ * Returns `runs` alongside the query's own `isPending`/`isError`/`refetch` (Phase
+ * 18.2) — a `?? []` default alone swallowed the load state, so a failed fetch used
+ * to read as an honestly-empty feed rather than an outage. `runs` itself keeps its
+ * existing `{ runs }` shape (many call sites destructure just that) — the smallest
+ * safe change is additive, not a switch to returning the query result directly.
  */
-export function useRunsQuery(): { runs: RunView[] } {
+export function useRunsQuery(): {
+  runs: RunView[];
+  isPending: boolean;
+  isError: boolean;
+  refetch: () => unknown;
+} {
   const streamConnected = useRunEventsConnected();
   const query = apiClient.taskRuns.listTaskRuns.useQuery({
     queryKey: allTaskRunsKey,
@@ -67,7 +78,7 @@ export function useRunsQuery(): { runs: RunView[] } {
     if (entered) void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
   }, [runs, qc]);
 
-  return { runs };
+  return { runs, isPending: query.isPending, isError: query.isError, refetch: query.refetch };
 }
 
 /** Build the owner-id → glyph map from the skill/agent catalogs (for run cards). */

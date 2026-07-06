@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ProjectScopeChip, useActiveProject, useProjectsQuery } from "../projects";
@@ -38,7 +40,12 @@ const STATUSES: FeedStatus[] = [
 
 export function Screen() {
   const t = useTranslations("runs");
-  const { runs: allRuns } = useRunsQuery();
+  const {
+    runs: allRuns,
+    isPending: runsPending,
+    isError: runsError,
+    refetch: refetchRuns,
+  } = useRunsQuery();
   const { data: projects = [] } = useProjectsQuery();
   // Fáze 11: the app-wide active project scopes the feed FIRST — only runs
   // attributed to it remain (unattributed runs read as global and show only
@@ -120,6 +127,31 @@ export function Screen() {
 
   const running = count("running");
   const awaiting = count("awaiting-approval");
+
+  // Honest load states (Phase 18.2): the feed used to swallow both via `?? []` — a
+  // failed fetch read as an honestly-empty workspace instead of an outage.
+  if (runsPending) {
+    return (
+      <PageContainer>
+        <Stack gap="250">
+          <PageHeader title={t("title")} />
+          <QueryLoading />
+        </Stack>
+      </PageContainer>
+    );
+  }
+
+  if (runsError) {
+    return (
+      <PageContainer>
+        <Stack gap="250">
+          <PageHeader title={t("title")} />
+          <QueryError onRetry={() => void refetchRuns()} />
+        </Stack>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <Stack gap="250">
