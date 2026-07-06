@@ -233,8 +233,9 @@ App Router route group `(dashboard)`.
   `usePathname()`, wraps `MainLayout` with nav/rail/voice/task slots, and mounts
   `CatalogProvider` + `VoiceProvider` + `NewTaskProvider`
 - Each page = `page.tsx` in its own segment. Dashboard segments: `agents`, `automations`,
-  `gates`, `integrations`, `memory`, `overview`, `pipelines`, `projects`, `runs`, `settings`,
-  `skills`
+  `chains`, `commands`, `gates`, `hooks`, `mcp`, `memory`, `overview`, `pipelines`, `projects`,
+  `runs`, `settings`, `skills`. There is no standalone `integrations` segment — integrations
+  live on the owning project's detail page.
 - `/pipelines/[id]` — pipeline detail
 
 ---

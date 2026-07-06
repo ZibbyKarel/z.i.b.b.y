@@ -122,16 +122,18 @@ export abstract class EntityFileStore<T> {
   async list(): Promise<T[]> {
     await this.ensureDir();
     const entries = await fs.readdir(this.dir).catch(() => [] as string[]);
-    const out: T[] = [];
-    for (const entry of entries) {
-      if (!entry.endsWith(this.fileExt)) continue;
-      const id = entry.slice(0, -this.fileExt.length);
-      const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null);
-      // Skip corrupt/unreadable files instead of failing the whole listing.
-      if (raw === null) continue;
-      const parsed = this.tryParse(raw, id);
-      if (parsed) out.push(parsed);
-    }
+    const parsed = await Promise.all(
+      entries
+        .filter((entry) => entry.endsWith(this.fileExt))
+        .map(async (entry) => {
+          const id = entry.slice(0, -this.fileExt.length);
+          // Skip corrupt/unreadable files instead of failing the whole listing.
+          const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null);
+          if (raw === null) return null;
+          return this.tryParse(raw, id);
+        }),
+    );
+    const out = parsed.filter((entity) => entity !== null) as T[];
     return out.sort((a, b) => this.compare(a, b));
   }
 

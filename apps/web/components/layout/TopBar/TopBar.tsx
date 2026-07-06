@@ -45,7 +45,7 @@ export function TopBar({
           {projectSlot}
           {/* Search sits in flow (flex: 0 1 360px) so it can never overlap
               its neighbours — the absolute ⌘K collision was an audit finding. */}
-          <Container minW0 style={{ flex: "0 1 360px", minWidth: 150, margin: "0 auto" }}>
+          <Container minWidth="150px" style={{ flex: "0 1 360px", margin: "0 auto" }}>
             <GlobalSearch />
           </Container>
           {chatSlot}
