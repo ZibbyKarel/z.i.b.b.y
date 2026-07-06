@@ -119,6 +119,9 @@ export type { AlertProps, AlertSeverity } from "./components/Alert/Alert";
 export { Card, CardActions, CardContent, CardFooter, CardHeader } from "./components/Card/Card";
 export type { CardProps } from "./components/Card/Card";
 
+export { LivingGlow, LivingGlowTestId } from "./components/LivingGlow/LivingGlow";
+export type { LivingGlowIntensity, LivingGlowProps } from "./components/LivingGlow/LivingGlow";
+
 export { Dialog, DialogBody } from "./components/Dialog/Dialog";
 export type { DialogProps, DialogWidth } from "./components/Dialog/Dialog";
 

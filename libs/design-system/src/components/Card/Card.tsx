@@ -5,6 +5,7 @@ import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import { type Padding, type Spacing, spacingToPx } from "../../tokens";
 import type { StateTone } from "../../stateTone";
+import { LivingGlow } from "../LivingGlow/LivingGlow";
 
 export enum CardTestId {
   Root = "card-root",
@@ -71,6 +72,9 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
   corners?: boolean;
   /** Toned emphasis: colours the border, corners and adds a faint ring glow. */
   tone?: StateTone;
+  /** Make the tone emphasis *live*: swap the static ring for the shared animated
+   *  {@link LivingGlow} pulse (same primitive the Chat-UI orb reuses). Requires `tone`. */
+  living?: boolean;
   /** Render as a selectable button (forwards onClick / aria-pressed). */
   as?: "div" | "button";
   /** Highlighted selected state (accent border + ring). */
@@ -137,6 +141,7 @@ export function Card({
   animate = "none",
   corners = false,
   tone,
+  living = false,
   as: Tag = "div",
   selected = false,
   header,
@@ -164,7 +169,7 @@ export function Card({
               ? "border border-border-strong"
               : "border border-border"),
         bordered && tone && "border",
-        tone && toneGlow[tone],
+        tone && !living && toneGlow[tone],
         borderStyle === "dashed" && "border-dashed",
         Tag === "button" && cn("w-full text-left cursor-pointer", focusRing),
         interactive &&
@@ -173,6 +178,7 @@ export function Card({
       )}
       ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
     >
+      {tone && living && <LivingGlow radius={radius} tone={tone} />}
       {corners && <Corners inset="75" tone={tone ?? "accent"} />}
       {header && <CardHeader>{header}</CardHeader>}
       {children}

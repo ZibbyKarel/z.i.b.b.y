@@ -379,17 +379,20 @@
   }
 }
 
+/* Living glow — tone-parametrized via `--living-color` (defaults to accent, so
+ * existing accent-only callers are unchanged). `LivingGlow` sets `--living-color`
+ * from a StateTone; both the HUD (Card/HudPanel) and Chat-UI reuse these. */
 @keyframes v-glow-idle {
   0%,
   100% {
     box-shadow:
-      0 0 38px rgba(91, 141, 239, 0.12),
-      0 0 80px rgba(91, 141, 239, 0.06);
+      0 0 38px color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent),
+      0 0 80px color-mix(in srgb, var(--living-color, var(--color-accent)) 6%, transparent);
   }
   50% {
     box-shadow:
-      0 0 60px rgba(91, 141, 239, 0.26),
-      0 0 120px rgba(91, 141, 239, 0.12);
+      0 0 60px color-mix(in srgb, var(--living-color, var(--color-accent)) 26%, transparent),
+      0 0 120px color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent);
   }
 }
 
@@ -397,13 +400,13 @@
   0%,
   100% {
     box-shadow:
-      0 0 60px rgba(91, 141, 239, 0.38),
-      0 0 120px rgba(91, 141, 239, 0.18);
+      0 0 60px color-mix(in srgb, var(--living-color, var(--color-accent)) 38%, transparent),
+      0 0 120px color-mix(in srgb, var(--living-color, var(--color-accent)) 18%, transparent);
   }
   50% {
     box-shadow:
-      0 0 100px rgba(91, 141, 239, 0.62),
-      0 0 200px rgba(91, 141, 239, 0.28);
+      0 0 100px color-mix(in srgb, var(--living-color, var(--color-accent)) 62%, transparent),
+      0 0 200px color-mix(in srgb, var(--living-color, var(--color-accent)) 28%, transparent);
   }
 }
 
