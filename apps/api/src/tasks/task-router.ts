@@ -19,6 +19,7 @@ export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget {
     id: candidate.id,
     name: candidate.name,
     glyph: candidate.glyph,
+    avatar: candidate.avatar,
     category: candidate.category,
   };
 }

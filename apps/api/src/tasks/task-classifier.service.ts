@@ -192,6 +192,7 @@ export class TaskClassifierService {
       id: a.id,
       name: a.name ?? a.id,
       glyph: a.glyph ?? "bot",
+      avatar: a.avatar,
       category: a.category,
       search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
     }));
@@ -201,6 +202,7 @@ export class TaskClassifierService {
       id: p.id,
       name: p.name ?? p.id,
       glyph: "flow",
+      avatar: p.avatar,
       // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
       search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
     }));
