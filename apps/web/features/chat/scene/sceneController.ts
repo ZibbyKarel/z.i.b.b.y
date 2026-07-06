@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
 import { orbTarget } from "./modeVisuals";
 import type { SceneInputs } from "./sceneTypes";
@@ -45,8 +46,19 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
   let running = false;
   let rafId = 0;
 
-  // --- Orb renderer (transparent, composited over the background layer added in
-  // Tier 2). Full quality, always. ---
+  const mobile = (container.clientWidth || window.innerWidth || 0) < 640;
+
+  // --- Background renderer (furthest back, opaque). Its own renderer so it can be
+  // dropped to half framerate on weak devices (Tier 6) without the orb stuttering.
+  // Appended FIRST so it paints under the orb canvas. ---
+  const bgRenderer = new THREE.WebGLRenderer({ alpha: false, antialias: false });
+  bgRenderer.domElement.setAttribute("data-scene-layer", "background");
+  applyCanvasStyle(bgRenderer.domElement);
+  container.appendChild(bgRenderer.domElement);
+  const background: BackgroundLayer = createBackgroundLayer(mobile);
+
+  // --- Orb renderer (transparent, composited over the background). Full quality,
+  // always. Appended second so it stacks on top. ---
   const orbRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   orbRenderer.setClearColor(0x000000, 0);
   orbRenderer.domElement.setAttribute("data-scene-layer", "orb");
@@ -71,6 +83,10 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     orbRenderer.setPixelRatio(dpr);
     orbRenderer.setSize(w, h, false);
+    // The background can afford a lower resolution (it's soft and out of focus).
+    bgRenderer.setPixelRatio(Math.min(dpr, 1.5));
+    bgRenderer.setSize(w, h, false);
+    background.setAspect(w / h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
@@ -98,6 +114,8 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
       camera.lookAt(0, 0, 0);
     }
 
+    background.update(dt, { orbColor: orb.currentColor, reducedMotion: inputs.reducedMotion });
+    background.render(bgRenderer, camera);
     orbRenderer.render(orbScene, camera);
   }
 
@@ -132,8 +150,11 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
       cancelAnimationFrame(rafId);
       resizeObserver?.disconnect();
       orb.dispose();
+      background.dispose();
       orbRenderer.dispose();
       orbRenderer.domElement.remove();
+      bgRenderer.dispose();
+      bgRenderer.domElement.remove();
     },
   };
 }
