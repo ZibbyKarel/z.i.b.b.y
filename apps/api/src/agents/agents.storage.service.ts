@@ -112,6 +112,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (typeof data.name === "string") candidate.name = data.name;
     if (typeof data.description === "string") candidate.description = data.description;
     if (typeof data.glyph === "string") candidate.glyph = data.glyph;
+    if (typeof data.avatar === "string") candidate.avatar = data.avatar;
     if (typeof data.category === "string") candidate.category = data.category;
     // `tools` is normally a YAML list, but some files write it inline as a
     // comma/space-separated string (e.g. `tools: Read, Grep, Glob`). Accept both
@@ -145,6 +146,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     const data: Record<string, unknown> = { name: agent.name ?? agent.id };
     if (agent.description !== undefined) data.description = agent.description;
     if (agent.glyph !== undefined) data.glyph = agent.glyph;
+    if (agent.avatar !== undefined) data.avatar = agent.avatar;
     if (agent.model !== undefined) data.model = agent.model;
     if (agent.thinking !== undefined) data.thinking = agent.thinking;
     if (agent.tools !== undefined) data.tools = agent.tools;

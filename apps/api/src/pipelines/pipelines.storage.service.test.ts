@@ -76,6 +76,30 @@ describe("PipelinesStorageService", () => {
     ]);
   });
 
+  it("round-trips the avatar field", async () => {
+    const created = await service.create({
+      id: "with-avatar",
+      name: "With Avatar",
+      avatar: "/avatars/orchestrator.png",
+      instructions: "body",
+      phases: [
+        {
+          id: "p1",
+          type: "agent",
+          agent: "architect",
+          model: "opus",
+          thinking: "high",
+          consumes: "a.md",
+          produces: "b.md",
+        },
+      ],
+      outputs: [],
+    });
+    expect(created.avatar).toBe("/avatars/orchestrator.png");
+    const read = await service.get("with-avatar");
+    expect(read.avatar).toBe("/avatars/orchestrator.png");
+  });
+
   it("rejects a duplicate id and a dangling loop target", async () => {
     await service.create(sample);
     await expect(service.create(sample)).rejects.toBeInstanceOf(PipelineConflictError);

@@ -102,6 +102,7 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
     };
     if (typeof data.name === "string") candidate.name = data.name;
     if (typeof data.desc === "string") candidate.desc = data.desc;
+    if (typeof data.avatar === "string") candidate.avatar = data.avatar;
     // Delivery sinks (default [] when absent, so older pipelines parse unchanged).
     if (data.outputs !== undefined) candidate.outputs = data.outputs;
 
@@ -115,6 +116,7 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
       phases: pipeline.phases,
     };
     if (pipeline.desc !== undefined) data.desc = pipeline.desc;
+    if (pipeline.avatar !== undefined) data.avatar = pipeline.avatar;
     if (pipeline.outputs.length > 0) data.outputs = pipeline.outputs;
     return data;
   }

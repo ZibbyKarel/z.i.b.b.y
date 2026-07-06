@@ -87,6 +87,17 @@ describe("AgentsStorageService", () => {
       expect(await service.get("stylist")).toEqual(input);
     });
 
+    it("round-trips the avatar field", async () => {
+      const created = await service.create({
+        id: "with-avatar",
+        avatar: "/avatars/architect.png",
+        instructions: "Design the system.",
+      });
+      expect(created.avatar).toBe("/avatars/architect.png");
+      const read = await service.get("with-avatar");
+      expect(read.avatar).toBe("/avatars/architect.png");
+    });
+
     it("drops a single out-of-range field instead of discarding the agent", async () => {
       // A hand-edited file with a bogus model must not vanish from the catalog.
       await fs.writeFile(
