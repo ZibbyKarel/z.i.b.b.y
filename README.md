@@ -112,6 +112,11 @@ rotation, and the vault-git / data-rsync backup — is documented in
 **[`docs/ops.md`](docs/ops.md)**. The launchd plists, newsyslog template and
 `backup.sh` live under [`ops/`](ops/) and `apps/api/scripts/`.
 
+Accepted security risks for this self-hosted, single-operator deployment
+(plaintext credentials at rest, the dev-only `vitest` critical finding, the
+fail-open approval-hook classifier contract) are documented in
+**[`docs/ops/security-posture.md`](docs/ops/security-posture.md)**.
+
 ---
 
 ## Environment variables
