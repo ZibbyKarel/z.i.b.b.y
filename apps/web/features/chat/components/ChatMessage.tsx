@@ -2,10 +2,11 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, Container, Icon, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
-import type { DotTone, IconName } from "@zibby/design-system";
-import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
+import type { DotTone } from "@zibby/design-system";
+import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
 import { ChatRunCard } from "./ChatRunCard";
+import { TargetIdentity } from "./TargetIdentity";
 
 export enum ChatMessageTestId {
   Root = "chat-message",
@@ -15,7 +16,6 @@ export enum ChatMessageTestId {
   AssistantIdentity = "chat-message-assistant-identity",
   ToolEvent = "chat-message-tool-event",
   ToolEventLink = "chat-message-tool-event-link",
-  ToolEventTarget = "chat-message-tool-event-target",
   StreamingCursor = "chat-message-streaming-cursor",
 }
 
@@ -32,40 +32,6 @@ function toolTone(status: ChatToolEvent["status"]): DotTone {
   if (status === "error") return "bad";
   if (status === "ok") return "ok";
   return "run";
-}
-
-/** The orchestrator has no `glyph` in its display shape today — fall back to its
- * compass; a stored agent/pipeline/goal/chain target falls back to a generic bot.
- * Exported so {@link ChatRunCard} (Fáze 14.3) can render the same identity chip
- * in its collapsed header without a second lookup implementation. */
-export function targetGlyph(target: TaskTarget): IconName {
-  if (target.kind === "orchestrator") return "compass";
-  return (target.glyph as IconName | undefined) ?? "bot";
-}
-
-/**
- * The dispatch identity for a tool event — a small `IconTile` chip naming the
- * routing target (Fáze 14.2, Rozhodnutí 4). Accepts an array so a future
- * `orchestrátor → sub-agent` chain (once a run's sub-agent is known) is just
- * another entry — today every event carries at most one target. Exported so
- * `ChatRunCard` (Fáze 14.3) reuses this exact chip render for its own header
- * instead of a parallel implementation (Rozhodnutí 4/5).
- */
-export function TargetIdentity({ targets }: { targets: TaskTarget[] }) {
-  if (targets.length === 0) return null;
-  return (
-    <Stack wrap align="center" data-testid={ChatMessageTestId.ToolEventTarget} direction="row" gap="50">
-      {targets.map((target, i) => (
-        <Stack align="center" direction="row" gap="50" key={`${target.kind}-${i}`}>
-          {i > 0 && <Icon name="chevron" size="xs" tone="faint" />}
-          <IconTile glyph={targetGlyph(target)} size="sm" tone="accent" />
-          <Typography mono size="xs" tone="accent" type="note">
-            {target.name}
-          </Typography>
-        </Stack>
-      ))}
-    </Stack>
-  );
 }
 
 function ToolEventRow({ event }: { event: ChatToolEvent }) {

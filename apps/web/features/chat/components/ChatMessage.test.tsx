@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import { ChatMessage, ChatMessageTestId } from "./ChatMessage";
+import { TargetIdentityTestId } from "./TargetIdentity";
 import { ChatRunCardTestId } from "./ChatRunCard";
 
 // A tool event carrying `runRef` upgrades the flat row into `ChatRunCard` (Fáze
@@ -109,7 +110,7 @@ describe("ChatMessage", () => {
         ]}
       />,
     );
-    expect(screen.getByTestId(ChatMessageTestId.ToolEventTarget)).toHaveTextContent("Delivery");
+    expect(screen.getByTestId(TargetIdentityTestId.Root)).toHaveTextContent("Delivery");
     expect(screen.queryByTestId(ChatRunCardTestId.Root)).not.toBeInTheDocument();
   });
 
@@ -127,7 +128,7 @@ describe("ChatMessage", () => {
         ]}
       />,
     );
-    expect(screen.getByTestId(ChatMessageTestId.ToolEventTarget)).toHaveTextContent("Orchestrator");
+    expect(screen.getByTestId(TargetIdentityTestId.Root)).toHaveTextContent("Orchestrator");
   });
 
   it("renders a tool event without an href as plain text (no link)", () => {

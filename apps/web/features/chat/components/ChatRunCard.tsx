@@ -17,7 +17,7 @@ import { ChainStepsPanel } from "../../runs/components/ChainStepsPanel";
 import { PipelineStageTimeline } from "../../runs/components/PipelineStageTimeline";
 import { RunStateBadge } from "../../runs/components/RunStateBadge";
 import type { RunView } from "../../runs/run";
-import { TargetIdentity } from "./ChatMessage";
+import { TargetIdentity } from "./TargetIdentity";
 
 export interface ChatRunCardProps {
   /** The dispatched run's id (`ChatToolEvent.runRef`) — the same id the runs
