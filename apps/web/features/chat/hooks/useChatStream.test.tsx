@@ -57,6 +57,67 @@ describe("useChatStream", () => {
     expect(result.current.toolEvents[0]).toMatchObject({ name: "create_task", href: "/runs" });
   });
 
+  it("replaces a buffered tool event by callId (started→ok collapses to one entry)", () => {
+    const { result } = renderHook(() => useChatStream("c1"));
+    act(() => {
+      mock.last().emit({
+        conversationId: "c1",
+        turnId: "t1",
+        type: "tool",
+        tool: { name: "create_task", status: "started", callId: "toolu_1", summary: "Spouštím úkol…" },
+      });
+      mock.last().emit({
+        conversationId: "c1",
+        turnId: "t1",
+        type: "tool",
+        tool: {
+          name: "create_task",
+          status: "ok",
+          callId: "toolu_1",
+          summary: "Spustil jsem úkol — pipeline Delivery.",
+          href: "/runs?run=delivery_1",
+          runRef: "delivery_1",
+          taskId: "task-9",
+        },
+      });
+    });
+
+    expect(result.current.toolEvents).toHaveLength(1);
+    expect(result.current.toolEvents[0]).toMatchObject({
+      status: "ok",
+      callId: "toolu_1",
+      href: "/runs?run=delivery_1",
+    });
+  });
+
+  it("appends tool events without a matching callId instead of replacing", () => {
+    const { result } = renderHook(() => useChatStream("c1"));
+    act(() => {
+      mock.last().emit({
+        conversationId: "c1",
+        turnId: "t1",
+        type: "tool",
+        tool: { name: "recall_memory", status: "ok" },
+      });
+      mock.last().emit({
+        conversationId: "c1",
+        turnId: "t1",
+        type: "tool",
+        tool: { name: "create_task", status: "started", callId: "toolu_2" },
+      });
+      // A different callId does not match the pending "started" entry — appended.
+      mock.last().emit({
+        conversationId: "c1",
+        turnId: "t1",
+        type: "tool",
+        tool: { name: "create_task", status: "ok", callId: "toolu_3" },
+      });
+    });
+
+    expect(result.current.toolEvents).toHaveLength(3);
+    expect(result.current.toolEvents.map((e) => e.status)).toEqual(["ok", "started", "ok"]);
+  });
+
   it("hands the finished turn to onComplete (done.text authoritative) and resets the buffer", () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() => useChatStream("c1", { onComplete }));

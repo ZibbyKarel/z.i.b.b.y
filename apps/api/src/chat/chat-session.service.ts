@@ -11,6 +11,8 @@ import { SystemConfigStore } from "../system/system-config.store";
 import { buildChatPrompt } from "./chat-persona";
 import { ChatEventsService } from "./chat-events.service";
 import { type ChatStreamEvent, parseChatStreamLine } from "./chat-stream-parser";
+import { type ChatCreateTaskMeta, ChatToolResultRegistry } from "./chat-tool-result.registry";
+import { describeTarget } from "./chat-tools.service";
 import { ChatTranscriptStore } from "./chat-transcript.store";
 
 /** Minimal shape of the spawned `claude` process — the test seam overrides this. */
@@ -23,6 +25,27 @@ export interface ClaudeProcess {
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
 const TURN_TIMEOUT_MS = 120_000;
+
+/**
+ * Merge a newly emitted {@link ChatToolEvent} into the turn's accumulated (and
+ * eventually persisted) list. When the event carries a `callId` that matches an
+ * existing entry, it REPLACES that entry in place — this is how a `create_task`
+ * two-phase dispatch (`started` → `ok`) collapses to a single persisted event
+ * instead of leaving both the started and the finished announcement in the
+ * transcript. An event without a matching `callId` (no correlation, or the
+ * first sighting of one) is appended. Exported for direct unit testing.
+ */
+export function mergeToolEvent(events: ChatToolEvent[], event: ChatToolEvent): ChatToolEvent[] {
+  if (event.callId) {
+    const index = events.findIndex((existing) => existing.callId === event.callId);
+    if (index !== -1) {
+      const next = events.slice();
+      next[index] = event;
+      return next;
+    }
+  }
+  return [...events, event];
+}
 
 /**
  * The conversational engine. One operator message = one streaming `claude` CLI
@@ -50,14 +73,20 @@ export class ChatSessionService {
     private readonly store: ChatTranscriptStore,
     private readonly events: ChatEventsService,
     private readonly systemConfig: SystemConfigStore,
+    private readonly toolResults: ChatToolResultRegistry,
   ) {}
 
   /**
    * Append the operator's turn and kick off the streaming assistant response. Returns
    * immediately with `{ conversationId, turnId }`; tokens arrive on the SSE stream.
+   *
+   * `body.target` (Fáze 14.2, the @mention picker) is held in the tool-result registry
+   * BEFORE the turn starts, so `create_task` can read it as its explicit target and the
+   * prompt built in `buildArgs` can tell the model the operator addressed a specific unit.
    */
   async sendMessage(body: SendChatMessageBody, now: Date = new Date()): Promise<SendChatMessageResult> {
     const conversationId = await this.store.ensureConversation(body.conversationId, now);
+    if (body.target) this.toolResults.setExplicitTarget(conversationId, body.target);
     const userMessage: ChatMessage = {
       id: collisionResistantId("msg"),
       role: "user",
@@ -78,7 +107,17 @@ export class ChatSessionService {
   }
 
   /** Build the verified CLI argument vector for one turn. Exposed for the args test. */
-  buildArgs(text: string, sessionId: string | null): string[] {
+  buildArgs(text: string, sessionId: string | null, conversationId: string): string[] {
+    const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
+    const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
+    // Fáze 14.2: when the operator @mentioned a unit, tell the model plainly — it still
+    // decides WHETHER to call `create_task` (rule 3 of the governor), but if it does,
+    // routing is already decided (`explicitTarget` skips the classifier server-side).
+    const prompt = explicitTarget
+      ? `${persona}\n\nOperátor v této zprávě výslovně oslovil ${describeTarget(explicitTarget)} ` +
+        "(@mention). Pokud zavoláš create_task, tato volba už má přednost před klasifikací — " +
+        "nemusíš znovu vybírat cíl."
+      : persona;
     const args = [
       "-p",
       text,
@@ -93,7 +132,7 @@ export class ChatSessionService {
       // Persona (tone) is operator-selectable and read live from SystemConfig; the
       // answer/ask/act governor inside is constant across personas.
       "--append-system-prompt",
-      buildChatPrompt(this.systemConfig.current().chatPersona),
+      prompt,
       "--output-format",
       "stream-json",
       "--include-partial-messages",
@@ -104,14 +143,16 @@ export class ChatSessionService {
       "dontAsk",
     ];
     if (sessionId) args.push("--resume", sessionId);
-    args.push(...this.toolArgs());
+    args.push(...this.toolArgs(conversationId));
     return args;
   }
 
-  /** The base URL the spawned `claude` reaches the in-process MCP server at. */
-  protected mcpBaseUrl(): string {
+  /** The base URL the spawned `claude` reaches the in-process MCP server at, scoped to
+   * this conversation so the (stateless, one-request-per-call) MCP controller can queue
+   * `create_task` results and read the explicit target for the right conversation. */
+  protected mcpBaseUrl(conversationId: string): string {
     const base = process.env.ZIBBY_API_BASE ?? `http://localhost:${process.env.PORT ?? 3333}`;
-    return `${base}/api/chat/mcp`;
+    return `${base}/api/chat/mcp?conversationId=${encodeURIComponent(conversationId)}`;
   }
 
   /**
@@ -119,9 +160,9 @@ export class ChatSessionService {
    * in-process HTTP MCP server (server id `zibby`) and allow its three tools. The CLI
    * round-trips tool-use against this under the verified chat spawn config.
    */
-  protected toolArgs(): string[] {
+  protected toolArgs(conversationId: string): string[] {
     const config = {
-      mcpServers: { zibby: { type: "http", url: this.mcpBaseUrl() } },
+      mcpServers: { zibby: { type: "http", url: this.mcpBaseUrl(conversationId) } },
     };
     return ["--mcp-config", JSON.stringify(config), "--allowedTools", "mcp__zibby__*"];
   }
@@ -136,6 +177,18 @@ export class ChatSessionService {
   /**
    * Run one turn end-to-end: spawn, parse the stream line-by-line, emit live events,
    * then persist the assistant message + session id. Resolves when the process ends.
+   *
+   * Two-phase `create_task` emission (the ordering fix): the `tool_use` stream line
+   * always arrives BEFORE the MCP handler has actually run the tool (the CLI emits it
+   * as it decides to call the tool, not once the call returns), so an enrichment read
+   * at that moment would always see an empty registry. Instead: on the `tool` stream
+   * event, emit a `started` announcement immediately and remember its `callId`
+   * (`tool_use`'s block id) in arrival order; separately, subscribe to the registry
+   * for the conversation's `create_task` results for the duration of the turn — when
+   * one is pushed (whenever the MCP handler actually finishes, which races the rest
+   * of the stream), pair it with the OLDEST pending callId and emit the enriched `ok`
+   * event with the same `callId`. The turn's persisted `toolEvents` collapse the pair
+   * into one entry (see {@link mergeToolEvent}) rather than keeping both.
    */
   async runTurn(
     conversationId: string,
@@ -144,12 +197,39 @@ export class ChatSessionService {
     now: Date = new Date(),
   ): Promise<void> {
     const sessionId = await this.store.getSessionId(conversationId);
-    const proc = this.createProcess(this.buildArgs(text, sessionId));
+    const proc = this.createProcess(this.buildArgs(text, sessionId, conversationId));
 
     let accumulated = "";
     let capturedSession: string | null = null;
     let errored: string | null = null;
-    const toolEvents: ChatToolEvent[] = [];
+    let toolEvents: ChatToolEvent[] = [];
+    // FIFO of `create_task` callIds awaiting their structured result, in the order
+    // their `started` events were emitted.
+    const pendingCreateTaskCallIds: string[] = [];
+
+    /** Pair a structured create_task result with the oldest pending callId and emit
+     * (+ persist-merge) the enriched `ok` event. Used both for a live push during the
+     * turn and for the turn-end sweep of anything left in the fallback queue. */
+    const emitCreateTaskOk = (result: ChatCreateTaskMeta): void => {
+      const callId = pendingCreateTaskCallIds.shift();
+      const tool: ChatToolEvent = {
+        name: "create_task",
+        status: "ok",
+        // `!== undefined` (not truthy) — a shifted "" callId (the parser's fallback
+        // for a `tool_use` block with no id) must still round-trip so `mergeToolEvent`
+        // can pair it with the started entry that also carries "".
+        ...(callId !== undefined ? { callId } : {}),
+        summary: `Spustil jsem úkol — ${describeTarget(result.target)}.`,
+        href: result.runRef ? `/runs?run=${result.runRef}` : "/runs",
+        target: result.target,
+        ...(result.runRef ? { runRef: result.runRef } : {}),
+        taskId: result.taskId,
+      };
+      toolEvents = mergeToolEvent(toolEvents, tool);
+      this.events.emit({ conversationId, turnId, type: "tool", tool });
+    };
+
+    const unsubscribe = this.toolResults.onCreateTaskResult(conversationId, emitCreateTaskOk);
 
     const apply = (event: ChatStreamEvent): void => {
       switch (event.type) {
@@ -161,8 +241,9 @@ export class ChatSessionService {
           this.events.emit({ conversationId, turnId, type: "delta", text: event.text });
           break;
         case "tool": {
-          const tool = this.describeTool(event.name);
-          toolEvents.push(tool);
+          const tool = this.describeToolStarted(event.name, event.id);
+          if (tool.status === "started") pendingCreateTaskCallIds.push(event.id);
+          toolEvents = mergeToolEvent(toolEvents, tool);
           this.events.emit({ conversationId, turnId, type: "tool", tool });
           break;
         }
@@ -214,9 +295,24 @@ export class ChatSessionService {
       });
     });
 
+    // The turn is over: stop reacting to live pushes, then sweep anything that was
+    // queued because it arrived with no subscriber listening (e.g. it landed in the
+    // gap after this turn's own subscription above but is only drained now) — each
+    // leftover result is still paired with the oldest remaining pending callId. A
+    // `started` create_task that never got a result (the tool errored) is left as-is.
+    unsubscribe();
+    let leftover: ChatCreateTaskMeta | undefined;
+    while ((leftover = this.toolResults.drainCreateTaskResult(conversationId))) {
+      emitCreateTaskOk(leftover);
+    }
+
     if (capturedSession) {
       await this.store.setSessionId(conversationId, capturedSession, now);
     }
+
+    // The @mention target (if any) is one-shot per turn — discard it now so a stale
+    // explicit target never leaks into the conversation's next turn.
+    this.toolResults.clearExplicitTarget(conversationId);
 
     if (errored && !accumulated) {
       this.events.emit({ conversationId, turnId, type: "error", message: errored });
@@ -234,11 +330,20 @@ export class ChatSessionService {
     this.events.emit({ conversationId, turnId, type: "done", text: accumulated });
   }
 
-  /** Map a raw tool name (e.g. `mcp__zibby__create_task`) to its inline announcement. */
-  private describeTool(rawName: string): ChatToolEvent {
+  /**
+   * Map a raw tool name (e.g. `mcp__zibby__create_task`) to its FIRST-phase inline
+   * announcement, emitted the instant the `tool_use` stream line is parsed (i.e.
+   * before the tool has actually run). `create_task` gets a `started` event carrying
+   * `callId` — its enrichment (`target`/`runRef`/`taskId`/deep `href`) arrives later
+   * as a second, correlated `ok` event once the registry delivers the structured
+   * result (see {@link runTurn}'s `emitCreateTaskOk`). Every other tool has no
+   * completion signal available to this seam, so it keeps the old single-phase
+   * behaviour unchanged: one `ok` event, no `callId`, no regression.
+   */
+  private describeToolStarted(rawName: string, callId: string): ChatToolEvent {
     const name = rawName.split("__").pop() ?? rawName;
     if (name === "create_task") {
-      return { name, status: "ok", summary: "Spustil jsem úkol.", href: "/runs" };
+      return { name, status: "started", callId, summary: "Spouštím úkol…" };
     }
     return { name, status: "ok" };
   }

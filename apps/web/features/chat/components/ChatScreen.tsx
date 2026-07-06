@@ -4,7 +4,7 @@
    inline styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
+import type { ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
 import { Container, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
@@ -103,13 +103,15 @@ export function ChatScreen({
     onError: appendError,
   });
 
-  const send = (text: string) => {
+  const send = (text: string, target?: TaskTarget) => {
     if (!conversationId) return;
     setMessages((prev) => [
       ...prev,
       { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
     ]);
-    sendMessage.mutate({ body: { conversationId, text } });
+    // The composer owns `target` (the @mention picker, Fáze 14.2) and clears its own
+    // selection once this fires — nothing further to reset here.
+    sendMessage.mutate({ body: { conversationId, text, ...(target ? { target } : {}) } });
   };
 
   // Keep the latest turn in view as messages land and tokens stream in.

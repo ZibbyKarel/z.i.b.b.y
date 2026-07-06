@@ -1414,6 +1414,16 @@
       "label": "Message",
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
       "send": "Send"
+    },
+    "mention": {
+      "ariaLabel": "Search agents and pipelines to mention",
+      "placeholder": "Search agents or pipelines…",
+      "empty": "Nothing found",
+      "removeAria": "Remove target",
+      "sections": {
+        "agents": "Agents",
+        "pipelines": "Pipelines"
+      }
     }
   },
   "pins": {

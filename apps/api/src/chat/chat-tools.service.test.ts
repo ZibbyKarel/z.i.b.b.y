@@ -1,4 +1,4 @@
-import type { Briefing, CreateTaskResult, SearchHit } from "@zibby/contracts";
+import type { Briefing, CreateTaskResult, SearchHit, TaskTarget } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { BriefingService } from "../briefing/briefing.service";
 import type { MachineService } from "../machine/machine.service";
@@ -43,28 +43,55 @@ describe("ChatToolsService", () => {
       const svc = makeService({ createTask });
       const out = await svc.createTask({ text: "postav appku", paths: ["apps/web"] });
 
-      expect(createTask).toHaveBeenCalledWith({ text: "postav appku", paths: ["apps/web"] });
-      expect(out).toContain("task-7");
-      expect(out).toContain("Builder");
-      expect(out).toContain("run-99");
+      expect(createTask).toHaveBeenCalledWith(
+        { text: "postav appku", paths: ["apps/web"] },
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(out.text).toContain("task-7");
+      expect(out.text).toContain("Builder");
+      expect(out.text).toContain("run-99");
+      expect(out.meta).toEqual({
+        runRef: "run-99",
+        taskId: "task-7",
+        target: DISPATCHED.target,
+      });
     });
 
     it("omits an empty paths array from the scheduler body", async () => {
       const createTask = vi.fn().mockResolvedValue(DISPATCHED);
       const svc = makeService({ createTask });
       await svc.createTask({ text: "postav appku" });
-      expect(createTask).toHaveBeenCalledWith({ text: "postav appku" });
+      expect(createTask).toHaveBeenCalledWith({ text: "postav appku" }, undefined, undefined, undefined);
     });
 
-    it("reports a scheduled outcome distinctly", async () => {
+    it("reports a scheduled outcome distinctly, with no meta (nothing was dispatched)", async () => {
       const scheduled: CreateTaskResult = {
         outcome: "scheduled",
         task: { ...DISPATCHED.task, status: "scheduled", scheduledAt: 1_900_000_000_000 },
       };
       const svc = makeService({ createTask: vi.fn().mockResolvedValue(scheduled) });
       const out = await svc.createTask({ text: "později" });
-      expect(out).toContain("Naplánoval");
-      expect(out).toContain("task-7");
+      expect(out.text).toContain("Naplánoval");
+      expect(out.text).toContain("task-7");
+      expect(out.meta).toBeUndefined();
+    });
+
+    it("passes an explicit target through to the scheduler and notes it in the confirmation", async () => {
+      const createTask = vi.fn().mockResolvedValue(DISPATCHED);
+      const svc = makeService({ createTask });
+      const explicitTarget: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
+      const out = await svc.createTask({ text: "postav appku", explicitTarget });
+
+      expect(createTask).toHaveBeenCalledWith(
+        { text: "postav appku" },
+        undefined,
+        undefined,
+        explicitTarget,
+      );
+      expect(out.text).toContain("Oslovil jsi přímo");
+      expect(out.meta?.target).toEqual(DISPATCHED.target);
     });
   });
 

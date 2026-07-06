@@ -1414,6 +1414,16 @@
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
       "send": "Odeslat"
+    },
+    "mention": {
+      "ariaLabel": "Vyhledat agenta nebo pipeline k oslovení",
+      "placeholder": "Hledat agenta nebo pipeline…",
+      "empty": "Nic nenalezeno",
+      "removeAria": "Odebrat cíl",
+      "sections": {
+        "agents": "Agenti",
+        "pipelines": "Pipelines"
+      }
     }
   },
   "pins": {

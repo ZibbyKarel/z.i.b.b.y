@@ -3,7 +3,20 @@ import { Controller, Get, Logger, Post, Req, Res } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
+import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatToolsService } from "./chat-tools.service";
+
+/** Pull `conversationId` off the request URL's query string (see {@link mcpBaseUrl} in
+ * `chat-session.service.ts`, which appends it when spawning the turn). Absent/malformed
+ * falls back to `""` — the registry simply has nothing queued/held for that key, so a
+ * turn without it degrades to the old un-enriched behaviour rather than throwing. */
+function conversationIdFromUrl(url: string | undefined): string {
+  try {
+    return new URL(url ?? "", "http://localhost").searchParams.get("conversationId") ?? "";
+  } catch {
+    return "";
+  }
+}
 
 /** Wrap a tool's string result in the MCP text-content envelope. */
 function text(value: string): { content: Array<{ type: "text"; text: string }> } {
@@ -28,11 +41,15 @@ function text(value: string): { content: Array<{ type: "text"; text: string }> }
 export class ChatMcpController {
   private readonly logger = new Logger(ChatMcpController.name);
 
-  constructor(private readonly tools: ChatToolsService) {}
+  constructor(
+    private readonly tools: ChatToolsService,
+    private readonly toolResults: ChatToolResultRegistry,
+  ) {}
 
   @Post("api/chat/mcp")
   async handle(@Req() req: IncomingMessage, @Res() res: ServerResponse): Promise<void> {
-    const server = this.buildServer();
+    const conversationId = conversationIdFromUrl(req.url);
+    const server = this.buildServer(conversationId);
     // Stateless: no session id, single JSON response per request (simplest round-trip).
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -75,8 +92,8 @@ export class ChatMcpController {
     );
   }
 
-  /** Build a per-request MCP server with the three chat tools registered. */
-  private buildServer(): McpServer {
+  /** Build a per-request MCP server with the chat tools registered, scoped to one conversation. */
+  private buildServer(conversationId: string): McpServer {
     const server = new McpServer({ name: "zibby", version: "1.0.0" });
 
     server.registerTool(
@@ -95,7 +112,18 @@ export class ChatMcpController {
             .describe("Optional file/folder paths the task concerns."),
         },
       },
-      async ({ text: taskText, paths }) => text(await this.tools.createTask({ text: taskText, paths })),
+      async ({ text: taskText, paths }) => {
+        // Fáze 14.2: an @mention picked in the composer bypasses the classifier for
+        // this conversation's in-flight turn — peek it (non-destructive; a turn may
+        // dispatch more than once) and forward it as the scheduler's explicit target.
+        const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
+        const result = await this.tools.createTask({ text: taskText, paths, explicitTarget });
+        // Only the confirmation string goes to the model; the structured data (run/
+        // target/task id) is queued for `chat-session.service#describeTool` to read
+        // when it emits the inline `ChatToolEvent` — never round-tripped through the CLI.
+        if (result.meta) this.toolResults.pushCreateTaskResult(conversationId, result.meta);
+        return text(result.text);
+      },
     );
 
     server.registerTool(

@@ -4,8 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../../test/render";
 import { installEventSourceMock } from "../../../test/eventSourceMock";
 
-// The stream hook reads API_URL off the env; pin it so the EventSource opens.
-vi.mock("../../../state/api", () => ({ API_URL: "http://localhost:3333" }));
+// The stream hook reads API_URL off the env; pin it so the EventSource opens. Keep
+// the REAL `apiClient` (via importOriginal) — the mention picker's agent/pipeline
+// queries are stubbed at their own hook level below, but other modules pulled in
+// transitively through the agents/pipelines barrels (e.g. mutation hooks) still
+// reference `apiClient` at import time and would break on a bare `{ API_URL }` mock.
+vi.mock("../../../state/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../state/api")>();
+  return { ...actual, API_URL: "http://localhost:3333" };
+});
 // Sending is fire-and-forget over the network — stub it so the test drives only
 // the optimistic append + the stream, never a real fetch. `sendState.isPending` is
 // mutable so individual tests can drive the "thinking" orb mode without a real
@@ -14,6 +21,16 @@ const mutate = vi.fn();
 const sendState = { isPending: false };
 vi.mock("../mutations/useSendChatMessageMutation", () => ({
   useSendChatMessageMutation: () => ({ mutate, isPending: sendState.isPending }),
+}));
+// ChatComposer (child) reads the agent/pipeline catalogs for its @mention picker
+// (Fáze 14.2) — stub them so this suite never hits the network.
+vi.mock("../../agents/queries/useAgentsQuery", () => ({
+  useAgentsQuery: () => ({ data: [] }),
+  getAgentsQueryKey: () => ["agents"],
+}));
+vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
+  usePipelinesQuery: () => ({ data: [] }),
+  getPipelinesQueryKey: () => ["pipelines"],
 }));
 
 import { useState } from "react";

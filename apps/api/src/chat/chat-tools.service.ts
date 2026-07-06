@@ -4,6 +4,15 @@ import { BriefingService } from "../briefing/briefing.service";
 import { MachineActionRejectedError, MachineService } from "../machine/machine.service";
 import { VaultService } from "../memory/vault.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import type { ChatCreateTaskMeta } from "./chat-tool-result.registry";
+
+/** `createTask`'s return: the Czech confirmation the model sees, plus the structured
+ * data (when a run was actually dispatched) the MCP controller queues into the
+ * {@link ChatCreateTaskMeta} registry for `chat-session.service#describeTool`. */
+export interface ChatCreateTaskOutcome {
+  text: string;
+  meta?: ChatCreateTaskMeta;
+}
 
 /** Cap on how many memory hits the chat surfaces — signal, not the whole vault. */
 const MAX_RECALL_HITS = 5;
@@ -30,26 +39,46 @@ export class ChatToolsService {
   /**
    * Dispatch a new work task the operator explicitly asked for (build/fix/run …).
    * Routes through the normal scheduler, so it hits the approval gate exactly like the
-   * New Task dialog. Returns a short confirmation naming the chosen target / run.
+   * New Task dialog. Returns a short confirmation naming the chosen target / run, plus
+   * (when a run was actually dispatched) the structured `meta` the MCP controller
+   * queues for `chat-session.service#describeTool` to enrich the tool event with.
+   *
+   * `explicitTarget` (Fáze 14.2, the @mention picker) is passed straight through to
+   * the scheduler — "explicit target overrides the classifier" — and, when used, gets
+   * a short note appended to the confirmation so the model knows routing was explicit.
    */
-  async createTask(input: { text: string; paths?: string[] }): Promise<string> {
-    const result: CreateTaskResult = await this.scheduler.createTask({
-      text: input.text,
-      ...(input.paths && input.paths.length > 0 ? { paths: input.paths } : {}),
-    });
+  async createTask(input: {
+    text: string;
+    paths?: string[];
+    explicitTarget?: TaskTarget;
+  }): Promise<ChatCreateTaskOutcome> {
+    const result: CreateTaskResult = await this.scheduler.createTask(
+      { text: input.text, ...(input.paths && input.paths.length > 0 ? { paths: input.paths } : {}) },
+      undefined,
+      undefined,
+      input.explicitTarget,
+    );
     if (result.outcome === "scheduled") {
-      return `Naplánoval jsem úkol (${result.task.id}) na ${new Date(
-        result.task.scheduledAt,
-      ).toISOString()}.`;
+      return {
+        text: `Naplánoval jsem úkol (${result.task.id}) na ${new Date(
+          result.task.scheduledAt,
+        ).toISOString()}.`,
+      };
     }
     // The chat tool calls the scheduler synchronously (no `background`), so it always
     // gets `dispatched`/`scheduled` — never the dialog's `pending`. Guard it anyway so
     // the union stays exhaustive.
     if (result.outcome === "pending") {
-      return `Spustil jsem úkol (${result.task.id}) — připravuje se na pozadí.`;
+      return { text: `Spustil jsem úkol (${result.task.id}) — připravuje se na pozadí.` };
     }
     const target = describeTarget(result.target);
-    return `Spustil jsem úkol (${result.task.id}) — ${target}. Běh: ${result.runRef}.`;
+    const explicitNote = input.explicitTarget
+      ? ` Oslovil jsi přímo ${target}, klasifikátor jsem tedy přeskočil.`
+      : "";
+    return {
+      text: `Spustil jsem úkol (${result.task.id}) — ${target}. Běh: ${result.runRef}.${explicitNote}`,
+      meta: { runRef: result.runRef, taskId: result.task.id, target: result.target },
+    };
   }
 
   /** Search the Obsidian vault and return the top few hits compactly (title + snippet). */
@@ -114,8 +143,13 @@ export class ChatToolsService {
   }
 }
 
-/** A one-line, human-readable name for a dispatched task's chosen target. */
-function describeTarget(target: TaskTarget): string {
+/**
+ * A one-line, human-readable name for a dispatched task's chosen target. Exported
+ * so `chat-session.service` can reuse the same wording — for the tool event's
+ * summary (`target` known) and for the explicit-target line added to the turn's
+ * system prompt.
+ */
+export function describeTarget(target: TaskTarget): string {
   switch (target.kind) {
     case "agent":
       return `agent ${target.name}`;

@@ -72,6 +72,14 @@ const EMPTY: ChatStreamState = {
  * empty frame in between (this is what fixed "history zmizela": there is no
  * refetch window to flash through).
  *
+ * A `tool` frame is two-phase for `create_task` (backend `chat-session.service`):
+ * a `started` frame lands the instant the dispatch is announced, then an `ok`
+ * frame with the same `callId` lands once the structured result (target/runRef/
+ * taskId/href) is known. When an incoming `tool` frame's `callId` matches one
+ * already buffered, it REPLACES that entry in place (so the transcript shows one
+ * live-updating row, not a duplicate); a frame without a matching `callId` (no
+ * correlation, or a single-phase tool like `recall_memory`) is appended as usual.
+ *
  * The stream is scoped to the hook's lifetime: it opens when a `conversationId` is
  * known and closes on unmount (the overlay closing). A `null` conversationId is
  * inert (nothing to stream yet).
@@ -130,8 +138,16 @@ export function useChatStream(
             error: null,
           });
           break;
-        case "tool":
-          buf.toolEvents = [...buf.toolEvents, parsed.tool];
+        case "tool": {
+          // A `callId` match REPLACES the buffered entry (the create_task started→ok
+          // pair collapses to one row); otherwise append.
+          const matchIndex = parsed.tool.callId
+            ? buf.toolEvents.findIndex((event) => event.callId === parsed.tool.callId)
+            : -1;
+          buf.toolEvents =
+            matchIndex !== -1
+              ? buf.toolEvents.map((event, i) => (i === matchIndex ? parsed.tool : event))
+              : [...buf.toolEvents, parsed.tool];
           setState({
             forConversation: conversationId,
             turnId: parsed.turnId,
@@ -141,6 +157,7 @@ export function useChatStream(
             error: null,
           });
           break;
+        }
         case "done": {
           // `done.text` is authoritative (deltas can drop). Hand the finished turn
           // to the caller and reset the live buffer in the same React batch.

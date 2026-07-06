@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TaskTargetSchema } from "../tasks/task.schema";
 
 /**
  * Chat (chat-first conversational layer, replaces the Voice UI). The operator
@@ -31,9 +32,19 @@ export type ChatPersona = z.infer<typeof ChatPersonaSchema>;
 export const ChatToolEventSchema = z.object({
   name: z.string(),
   status: z.enum(["started", "ok", "error"]),
+  /** Correlates a `started` event with its later `ok`/`error` counterpart (the
+   * `tool_use` block's id) — optional so old JSONL transcripts (no two-phase
+   * emission) still parse. */
+  callId: z.string().optional(),
   summary: z.string().optional(),
-  /** Link target into the app (e.g. `/runs` for a dispatched task). */
+  /** Link target into the app (e.g. `/runs?run=<runRef>` for a dispatched task). */
   href: z.string().optional(),
+  /** Routing destination the tool dispatched to (Fáze 14.2), when known. */
+  target: TaskTargetSchema.optional(),
+  /** The dispatched run's id (e.g. `delivery_1`), when the tool created a run. */
+  runRef: z.string().optional(),
+  /** The scheduler's task id for the dispatch, when known. */
+  taskId: z.string().optional(),
 });
 export type ChatToolEvent = z.infer<typeof ChatToolEventSchema>;
 
@@ -59,6 +70,12 @@ export const SendChatMessageBodySchema = z.object({
   /** Omit to use (or create) the single active conversation. */
   conversationId: z.string().optional(),
   text: z.string().min(1),
+  /**
+   * Explicit routing destination (@mention picker, Fáze 14.2). When present it
+   * bypasses the classifier for this turn's `create_task` dispatch — "explicit
+   * target overrides the classifier".
+   */
+  target: TaskTargetSchema.optional(),
 });
 export type SendChatMessageBody = z.infer<typeof SendChatMessageBodySchema>;
 

@@ -8,6 +8,7 @@ import { ChatController } from "./chat.controller";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpController } from "./chat-mcp.controller";
 import { ChatSessionService } from "./chat-session.service";
+import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatToolsService } from "./chat-tools.service";
 import { CHAT_DIR, ChatTranscriptStore } from "./chat-transcript.store";
 
@@ -33,6 +34,7 @@ export function resolveChatDir(): string {
     ChatEventsService,
     ChatSessionService,
     ChatToolsService,
+    ChatToolResultRegistry,
   ],
   exports: [ChatSessionService, ChatTranscriptStore],
 })

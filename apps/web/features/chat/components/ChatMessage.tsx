@@ -1,9 +1,9 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
-import type { DotTone } from "@zibby/design-system";
-import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
+import { Card, Container, Icon, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
+import type { DotTone, IconName } from "@zibby/design-system";
+import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
 
 export enum ChatMessageTestId {
@@ -11,8 +11,10 @@ export enum ChatMessageTestId {
   UserBubble = "chat-message-user",
   AssistantBubble = "chat-message-assistant",
   Text = "chat-message-text",
+  AssistantIdentity = "chat-message-assistant-identity",
   ToolEvent = "chat-message-tool-event",
   ToolEventLink = "chat-message-tool-event-link",
+  ToolEventTarget = "chat-message-tool-event-target",
   StreamingCursor = "chat-message-streaming-cursor",
 }
 
@@ -31,15 +33,48 @@ function toolTone(status: ChatToolEvent["status"]): DotTone {
   return "run";
 }
 
+/** The orchestrator has no `glyph` in its display shape today — fall back to its
+ * compass; a stored agent/pipeline/goal/chain target falls back to a generic bot. */
+function targetGlyph(target: TaskTarget): IconName {
+  if (target.kind === "orchestrator") return "compass";
+  return (target.glyph as IconName | undefined) ?? "bot";
+}
+
+/**
+ * The dispatch identity for a tool event — a small `IconTile` chip naming the
+ * routing target (Fáze 14.2, Rozhodnutí 4). Accepts an array so a future
+ * `orchestrátor → sub-agent` chain (once a run's sub-agent is known) is just
+ * another entry — today every event carries at most one target.
+ */
+function TargetIdentity({ targets }: { targets: TaskTarget[] }) {
+  if (targets.length === 0) return null;
+  return (
+    <Stack wrap align="center" data-testid={ChatMessageTestId.ToolEventTarget} direction="row" gap="50">
+      {targets.map((target, i) => (
+        <Stack align="center" direction="row" gap="50" key={`${target.kind}-${i}`}>
+          {i > 0 && <Icon name="chevron" size="xs" tone="faint" />}
+          <IconTile glyph={targetGlyph(target)} size="sm" tone="accent" />
+          <Typography mono size="xs" tone="accent" type="note">
+            {target.name}
+          </Typography>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 function ToolEventRow({ event }: { event: ChatToolEvent }) {
   const summary = event.summary ?? event.name;
   const body = (
-    <Stack align="center" data-testid={ChatMessageTestId.ToolEvent} direction="row" gap="75">
-      <StatusDot pulse={event.status === "started"} tone={toolTone(event.status)} />
-      <Typography mono size="xs" type="note" variant="secondary">
-        {summary}
-      </Typography>
-      {event.href && <Icon name="chevron" size="sm" tone="faint" />}
+    <Stack direction="col" gap="50">
+      {event.target && <TargetIdentity targets={[event.target]} />}
+      <Stack align="center" data-testid={ChatMessageTestId.ToolEvent} direction="row" gap="75">
+        <StatusDot pulse={event.status === "started"} tone={toolTone(event.status)} />
+        <Typography mono size="xs" type="note" variant="secondary">
+          {summary}
+        </Typography>
+        {event.href && <Icon name="chevron" size="sm" tone="faint" />}
+      </Stack>
     </Stack>
   );
 
@@ -72,6 +107,14 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
       direction="col"
       gap="75"
     >
+      {!isUser && (
+        <Stack align="center" data-testid={ChatMessageTestId.AssistantIdentity} direction="row" gap="50">
+          <IconTile glyph="butlerSign" size="sm" tone="accent" />
+          <Typography mono size="xs" tone="accent" type="note">
+            ZIBBY
+          </Typography>
+        </Stack>
+      )}
       <Card
         background={isUser ? "raised" : "surface"}
         data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}

@@ -4,11 +4,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ChatPersona } from "@zibby/contracts";
+import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
-import { ChatSessionService, type ClaudeProcess } from "./chat-session.service";
+import { ChatSessionService, type ClaudeProcess, mergeToolEvent } from "./chat-session.service";
+import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatTranscriptStore } from "./chat-transcript.store";
 
 /** A fake `claude` process that replays canned stream-json lines then closes. */
@@ -34,8 +35,9 @@ class TestSession extends ChatSessionService {
     events: ChatEventsService,
     private readonly lines: string[],
     persona: ChatPersona = "jarvis",
+    toolResults: ChatToolResultRegistry = new ChatToolResultRegistry(),
   ) {
-    super(store, events, fakeSystemConfigStore({ chatPersona: persona }));
+    super(store, events, fakeSystemConfigStore({ chatPersona: persona }), toolResults);
   }
   protected createProcess(args: string[]): ClaudeProcess {
     this.lastArgs = args;
@@ -45,6 +47,42 @@ class TestSession extends ChatSessionService {
 
 const NOW = new Date("2026-06-23T10:00:00.000Z");
 const line = (obj: unknown): string => JSON.stringify(obj);
+
+describe("mergeToolEvent", () => {
+  it("appends an event with no callId", () => {
+    const started: ChatToolEvent = { name: "recall_memory", status: "ok" };
+    expect(mergeToolEvent([], started)).toEqual([started]);
+  });
+
+  it("appends an event whose callId doesn't match any existing entry", () => {
+    const first: ChatToolEvent = { name: "create_task", status: "started", callId: "a" };
+    const second: ChatToolEvent = { name: "create_task", status: "started", callId: "b" };
+    expect(mergeToolEvent([first], second)).toEqual([first, second]);
+  });
+
+  it("replaces the entry with the matching callId in place, preserving position", () => {
+    const started: ChatToolEvent = { name: "create_task", status: "started", callId: "a", summary: "Spouštím úkol…" };
+    const other: ChatToolEvent = { name: "recall_memory", status: "ok" };
+    const ok: ChatToolEvent = { name: "create_task", status: "ok", callId: "a", summary: "Spustil jsem úkol — pipeline Delivery.", href: "/runs?run=r1" };
+
+    const merged = mergeToolEvent([started, other], ok);
+
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toEqual(ok);
+    expect(merged[1]).toEqual(other);
+  });
+
+  it("does not mutate the input array", () => {
+    const started: ChatToolEvent = { name: "create_task", status: "started", callId: "a" };
+    const events = [started];
+    const ok: ChatToolEvent = { name: "create_task", status: "ok", callId: "a" };
+
+    const merged = mergeToolEvent(events, ok);
+
+    expect(events).toEqual([started]);
+    expect(merged).not.toBe(events);
+  });
+});
 
 describe("ChatSessionService", () => {
   let dir: string;
@@ -77,7 +115,7 @@ describe("ChatSessionService", () => {
 
   it("builds the verified isolated streaming arg vector", () => {
     const svc = new TestSession(store, events, []);
-    const args = svc.buildArgs("ahoj", null);
+    const args = svc.buildArgs("ahoj", null, "c1");
     expect(args).toContain("--include-partial-messages");
     expect(args).toContain("--model");
     expect(args[args.indexOf("--model") + 1]).toBe("sonnet");
@@ -89,24 +127,24 @@ describe("ChatSessionService", () => {
     expect(args).not.toContain("--resume");
   });
 
-  it("wires the zibby MCP tool server (--mcp-config + --allowedTools)", () => {
+  it("wires the zibby MCP tool server (--mcp-config + --allowedTools), scoped to the conversation", () => {
     const svc = new TestSession(store, events, []);
-    const args = svc.buildArgs("ahoj", null);
+    const args = svc.buildArgs("ahoj", null, "c1");
     expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*");
     const config = JSON.parse(args[args.indexOf("--mcp-config") + 1] ?? "{}");
     expect(config.mcpServers.zibby.type).toBe("http");
-    expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp$/);
+    expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp\?conversationId=c1$/);
   });
 
   it("adds --resume with the threaded session id", () => {
     const svc = new TestSession(store, events, []);
-    const args = svc.buildArgs("ahoj", "sess-7");
+    const args = svc.buildArgs("ahoj", "sess-7", "c1");
     expect(args[args.indexOf("--resume") + 1]).toBe("sess-7");
   });
 
   it("appends the selected persona tone, always over the constant governor", () => {
-    const jarvis = new TestSession(store, events, [], "jarvis").buildArgs("ahoj", null);
-    const concise = new TestSession(store, events, [], "concise").buildArgs("ahoj", null);
+    const jarvis = new TestSession(store, events, [], "jarvis").buildArgs("ahoj", null, "c1");
+    const concise = new TestSession(store, events, [], "concise").buildArgs("ahoj", null, "c1");
 
     const jarvisPrompt = jarvis[jarvis.indexOf("--append-system-prompt") + 1] ?? "";
     const concisePrompt = concise[concise.indexOf("--append-system-prompt") + 1] ?? "";
@@ -140,22 +178,132 @@ describe("ChatSessionService", () => {
     expect(assistant?.text).toBe("Ahoj, pane.");
   });
 
-  it("announces a tool dispatch inline and records it on the message", async () => {
+  it("announces a create_task dispatch as started immediately, carrying its callId", async () => {
     const svc = new TestSession(store, events, [
       line({ type: "system", subtype: "init", session_id: "s" }),
       line({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: "Jdu na to." } } }),
-      line({ type: "assistant", message: { content: [{ type: "tool_use", name: "mcp__zibby__create_task", input: { text: "postav X" } }] } }),
+      line({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "toolu_2", name: "mcp__zibby__create_task", input: { text: "postav X" } }],
+        },
+      }),
       line({ type: "result", is_error: false, result: "Jdu na to." }),
     ]);
     const id = await store.ensureConversation("c2");
     await svc.runTurn(id, "turn-2", "postav X", NOW);
 
-    const tool = seen.find((e) => e.type === "tool");
+    // Only ONE tool frame ever goes out — the started announcement — because no
+    // structured result (registry push) ever arrives for this turn.
+    const toolFrames = seen.filter((e) => e.type === "tool");
+    expect(toolFrames).toHaveLength(1);
+    const tool = toolFrames[0];
     expect(tool && tool.type === "tool" && tool.tool.name).toBe("create_task");
-    expect(tool && tool.type === "tool" && tool.tool.href).toBe("/runs");
+    expect(tool && tool.type === "tool" && tool.tool.status).toBe("started");
+    expect(tool && tool.type === "tool" && tool.tool.callId).toBe("toolu_2");
+    expect(tool && tool.type === "tool" && tool.tool.href).toBeUndefined();
+
+    // The unresolved started event is left as-is on the persisted message (acceptable
+    // per spec — e.g. the dispatch errored, or a scheduled/pending outcome never
+    // pushes a structured result).
+    const assistant = (await store.readTranscript(id)).messages.find((m) => m.role === "assistant");
+    expect(assistant?.toolEvents).toHaveLength(1);
+    expect(assistant?.toolEvents?.[0]?.name).toBe("create_task");
+    expect(assistant?.toolEvents?.[0]?.status).toBe("started");
+  });
+
+  it("enriches create_task via a registry push that arrives AFTER the tool_use line was parsed — the ordering fix", async () => {
+    const toolResults = new ChatToolResultRegistry();
+    const target: TaskTarget = { kind: "pipeline", id: "delivery", name: "Delivery" };
+    const svc = new TestSession(
+      store,
+      events,
+      [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({
+          type: "assistant",
+          message: {
+            content: [{ type: "tool_use", id: "toolu_4", name: "mcp__zibby__create_task", input: { text: "postav X" } }],
+          },
+        }),
+        line({ type: "result", is_error: false, result: "Jdu na to." }),
+      ],
+      "jarvis",
+      toolResults,
+    );
+    const id = await store.ensureConversation("c4");
+
+    // Reproduces the real production ordering: the "started" announcement for the
+    // tool_use block goes out BEFORE any structured result exists in the registry —
+    // the MCP handler (chat-mcp.controller) only pushes it once create_task has
+    // actually finished executing. Nothing is pre-filled before the turn starts;
+    // the push happens off the live "started" frame instead, exactly like the real
+    // handler reacting after the stream has already announced the dispatch.
+    const sub = events.stream().subscribe((e) => {
+      if (e.type === "tool" && e.tool.name === "create_task" && e.tool.status === "started") {
+        toolResults.pushCreateTaskResult(id, { runRef: "delivery_1", taskId: "task-9", target });
+      }
+    });
+    await svc.runTurn(id, "turn-4", "postav X", NOW);
+    sub.unsubscribe();
+
+    const toolFrames = seen.filter((e) => e.type === "tool");
+    expect(toolFrames).toHaveLength(2);
+    const [started, ok] = toolFrames;
+    expect(started && started.type === "tool" && started.tool.status).toBe("started");
+    expect(ok && ok.type === "tool" && ok.tool.status).toBe("ok");
+    // Same callId correlates the pair.
+    const callId = started && started.type === "tool" ? started.tool.callId : undefined;
+    expect(callId).toBe("toolu_4");
+    expect(ok && ok.type === "tool" && ok.tool.callId).toBe(callId);
+    expect(ok && ok.type === "tool" && ok.tool.href).toBe("/runs?run=delivery_1");
+    expect(ok && ok.type === "tool" && ok.tool.runRef).toBe("delivery_1");
+    expect(ok && ok.type === "tool" && ok.tool.taskId).toBe("task-9");
+    expect(ok && ok.type === "tool" && ok.tool.target).toEqual(target);
+    expect(ok && ok.type === "tool" && ok.tool.summary).toContain("Delivery");
+
+    // The persisted transcript collapses the started→ok pair to ONE entry, not two.
+    const assistant = (await store.readTranscript(id)).messages.find((m) => m.role === "assistant");
+    expect(assistant?.toolEvents).toHaveLength(1);
+    expect(assistant?.toolEvents?.[0]?.status).toBe("ok");
+    expect(assistant?.toolEvents?.[0]?.runRef).toBe("delivery_1");
+  });
+
+  it("turn-end sweep pairs a leftover queued create_task result that had no live subscriber to receive it", async () => {
+    const toolResults = new ChatToolResultRegistry();
+    const target: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
+    const svc = new TestSession(
+      store,
+      events,
+      [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({
+          type: "assistant",
+          message: {
+            content: [{ type: "tool_use", id: "toolu_5", name: "mcp__zibby__create_task", input: { text: "postav X" } }],
+          },
+        }),
+        line({ type: "result", is_error: false, result: "Jdu na to." }),
+      ],
+      "jarvis",
+      toolResults,
+    );
+    const id = await store.ensureConversation("c5");
+    // Queued BEFORE the turn starts — so before `runTurn` ever subscribes — which is
+    // the one case that still goes through the FIFO queue instead of a live push.
+    // The turn-end sweep (not the live-push path) is what pairs and delivers it.
+    toolResults.pushCreateTaskResult(id, { runRef: "delivery_2", taskId: "task-10", target });
+    await svc.runTurn(id, "turn-5", "postav X", NOW);
+
+    const toolFrames = seen.filter((e) => e.type === "tool");
+    expect(toolFrames).toHaveLength(2);
+    const ok = toolFrames[1];
+    expect(ok && ok.type === "tool" && ok.tool.status).toBe("ok");
+    expect(ok && ok.type === "tool" && ok.tool.callId).toBe("toolu_5");
+    expect(ok && ok.type === "tool" && ok.tool.runRef).toBe("delivery_2");
 
     const assistant = (await store.readTranscript(id)).messages.find((m) => m.role === "assistant");
-    expect(assistant?.toolEvents?.[0]?.name).toBe("create_task");
+    expect(assistant?.toolEvents).toHaveLength(1);
   });
 
   it("emits an error turn and persists no assistant message on failure", async () => {
@@ -183,5 +331,56 @@ describe("ChatSessionService", () => {
     const transcript = await store.readTranscript(result.conversationId);
     expect(transcript.messages[0]?.role).toBe("user");
     expect(transcript.messages[0]?.text).toBe("jak se máš?");
+  });
+
+  describe("explicit @mention target (Fáze 14.2)", () => {
+    const target: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
+
+    it("sendMessage stores body.target in the registry before the turn starts", async () => {
+      const toolResults = new ChatToolResultRegistry();
+      const svc = new TestSession(
+        store,
+        events,
+        [
+          line({ type: "system", subtype: "init", session_id: "s" }),
+          line({ type: "result", is_error: false, result: "ok" }),
+        ],
+        "jarvis",
+        toolResults,
+      );
+      const result = await svc.sendMessage({ conversationId: "c6", text: "postav appku", target }, NOW);
+      // Set synchronously, before the fire-and-forget turn even runs.
+      expect(toolResults.getExplicitTarget(result.conversationId)).toEqual(target);
+      await settled(result.turnId);
+    });
+
+    it("adds an explicit-target line to the turn's system prompt and clears it once the turn ends", async () => {
+      const toolResults = new ChatToolResultRegistry();
+      const svc = new TestSession(
+        store,
+        events,
+        [
+          line({ type: "system", subtype: "init", session_id: "s" }),
+          line({ type: "result", is_error: false, result: "ok" }),
+        ],
+        "jarvis",
+        toolResults,
+      );
+      const result = await svc.sendMessage({ conversationId: "c7", text: "postav appku", target }, NOW);
+      await settled(result.turnId);
+
+      const prompt = svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
+      expect(prompt).toContain("Builder");
+      expect(prompt).toContain("@mention");
+      // One-shot per turn: cleared once the turn settles (done/error).
+      expect(toolResults.getExplicitTarget(result.conversationId)).toBeUndefined();
+    });
+
+    it("builds no explicit-target line when nothing was mentioned", () => {
+      const svc = new TestSession(store, events, []);
+      const args = svc.buildArgs("ahoj", null, "c8");
+      const prompt = args[args.indexOf("--append-system-prompt") + 1] ?? "";
+      expect(prompt).not.toContain("@mention");
+    });
   });
 });
