@@ -1,6 +1,16 @@
 "use client";
 
-import { Button, Container, Divider, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Divider,
+  EntityHero,
+  Grid,
+  Icon,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
+import { AVATAR_MAX } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -10,6 +20,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { toastBus } from "../../components/Toaster/toastBus";
 import type { Pipeline } from "../../domain";
 import { useAgentsQuery } from "../agents";
 import { PinButton } from "../pins";
@@ -144,6 +155,28 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
 
           {selected && (
             <Stack gap="250">
+              <EntityHero
+                editable
+                desc={selected.desc}
+                fit="contain"
+                glyph="flow"
+                height={220}
+                image={selected.avatar}
+                name={selected.name}
+                onRemove={() =>
+                  updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: undefined } })
+                }
+                onUpload={(dataUri) => {
+                  if (dataUri.length > AVATAR_MAX) {
+                    toastBus.emit({ message: t("pipelines.avatarTooLarge") });
+                    return;
+                  }
+                  updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: dataUri } });
+                }}
+                placeholder={t("pipelines.uploadPipelineAvatar")}
+                removeLabel={t("pipelines.removeImage")}
+                uploadLabel={t("pipelines.uploadImage")}
+              />
               <HudPanel padding="250">
                 <Stack gap="200">
                   <Stack wrap align="start" direction="row" gap="200" justify="between">
