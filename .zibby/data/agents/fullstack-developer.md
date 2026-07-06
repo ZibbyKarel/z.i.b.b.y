@@ -2,6 +2,7 @@
 name: fullstack-developer
 description: "Use this agent when you need to build complete features spanning database, API, and frontend layers together as a cohesive unit."
 glyph: code
+avatar: /avatars/coder.png
 model: sonnet
 thinking: medium
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]

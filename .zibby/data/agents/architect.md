@@ -5,6 +5,7 @@ tools: ["Read", "Grep", "Glob"]
 model: opus
 thinking: high
 glyph: compass
+avatar: /avatars/architect.png
 ---
 
 ## Prompt Defense Baseline
