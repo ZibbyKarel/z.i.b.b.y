@@ -19,7 +19,9 @@ export const darkTheme: Theme = {
   // foreground
   colorForeground: "#e6edf3",
   colorForegroundDim: "#9aa7b4",
-  colorForegroundFaint: "#66737f",
+  // WCAG AA (>=4.5:1) against all surface levels (colorBackgroundDeep..colorElevated) —
+  // see phase 19.2 commit message for computed ratios.
+  colorForegroundFaint: "#7a8793",
 
   // borders
   colorBorder: "rgba(255,255,255,0.08)",
