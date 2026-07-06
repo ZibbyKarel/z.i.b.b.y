@@ -16,6 +16,9 @@ const REVEAL_SECONDS = 1.2;
 /** Orb apparent radius in NDC (radius-1 sphere at origin, 45° fov, camera z≈6). */
 const ORB_NDC_RADIUS = 0.42;
 const GOLDEN_ANGLE = 2.399963229728653;
+/** Distance from the camera a docked avatar hovers at — near the orb's own depth
+ * so it reads at a natural size (not blown up close to the lens). */
+const DOCK_DISTANCE = 5;
 
 interface AgentNode {
   agent: SceneAgent;
@@ -39,6 +42,9 @@ export interface ConstellationContext {
   width: number;
   height: number;
   reducedMotion: boolean;
+  /** agentId → dock-chip centre in container pixels. A docked agent flies out of
+   * orbit to hover at its slot (Tier 5); absent agents keep orbiting. */
+  dockTargets: Map<string, { x: number; y: number }>;
 }
 
 export interface ConstellationLayer {
@@ -131,6 +137,8 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
 
   const ndc = new THREE.Vector3();
   const viewPos = new THREE.Vector3();
+  const orbitPos = new THREE.Vector3();
+  const dockWorld = new THREE.Vector3();
 
   function currentIds(): string {
     return nodes.map((n) => n.agent.id).join("|");
@@ -206,10 +214,30 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
         if (!ctx.reducedMotion) n.angle += dt * n.speed;
         n.flare = Math.max(0, n.flare - dt / 1.4);
 
-        // Position on the tilted orbit plane.
-        n.sprite.position
+        // Orbit position on the tilted plane.
+        orbitPos
           .set(Math.cos(n.angle) * n.radius, 0, Math.sin(n.angle) * n.radius)
           .applyEuler(n.euler);
+
+        // A docked agent (in the dock, has a live run) flies out of orbit to hover
+        // at its dock chip; everyone else eases to their orbit point.
+        const dockPx = ctx.dockTargets.get(n.agent.id);
+        if (dockPx) {
+          const ndcX = (dockPx.x / ctx.width) * 2 - 1;
+          const ndcY = -((dockPx.y / ctx.height) * 2 - 1);
+          // Cast a ray to the chip and place the avatar a fixed distance along it,
+          // so it sits at the chip's screen position at a natural depth/size.
+          dockWorld
+            .set(ndcX, ndcY, 0.5)
+            .unproject(ctx.camera)
+            .sub(ctx.camera.position)
+            .normalize()
+            .multiplyScalar(DOCK_DISTANCE)
+            .add(ctx.camera.position);
+          n.sprite.position.lerp(dockWorld, 1 - Math.exp(-dt * 3));
+        } else {
+          n.sprite.position.lerp(orbitPos, 1 - Math.exp(-dt * 3));
+        }
 
         // Breathing + flare scale, plus a sustained working swell.
         const breathe = 1 + 0.08 * Math.sin(elapsed * 1.2 + n.breathePhase);
@@ -230,8 +258,8 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
         n.material.opacity = Math.min(1, opacity);
         n.sprite.renderOrder = -viewPos.z; // nearer avatars paint over farther
 
-        // Label follow.
-        const onScreen = ndc.z < 1 && Math.abs(ndc.x) < 1.1 && Math.abs(ndc.y) < 1.1;
+        // Label follow — hidden while docked (the dock chip carries the name).
+        const onScreen = !dockPx && ndc.z < 1 && Math.abs(ndc.x) < 1.1 && Math.abs(ndc.y) < 1.1;
         if (!onScreen) {
           n.label.style.opacity = "0";
         } else {

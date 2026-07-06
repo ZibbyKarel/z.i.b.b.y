@@ -31,6 +31,9 @@ export interface CosmicSceneProps {
   /** A monotonically increasing counter bumped once per completed (`done`) turn.
    * The scene fires the brief ok-green completion flash on each increment. */
   completedTick?: number;
+  /** The most recent agent dispatch (a `tool` event named an agent). The scene
+   * fires the beam/flare/ring reaction whenever `seq` increases. */
+  dispatch?: { seq: number; agentId: string };
 }
 
 /**
@@ -50,12 +53,14 @@ export function CosmicScene({
   dock = EMPTY_DOCK,
   streamChars = 0,
   completedTick = 0,
+  dispatch,
 }: CosmicSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SceneController | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const prevChars = useRef(0);
   const prevTick = useRef(0);
+  const prevDispatchSeq = useRef(0);
 
   // Instantiate the controller once. Dynamically imported so three.js never loads
   // in SSR or the initial HUD bundle, and never instantiates in jsdom/no-WebGL.
@@ -109,6 +114,14 @@ export function CosmicScene({
     if (completedTick > prevTick.current) controllerRef.current?.flashComplete();
     prevTick.current = completedTick;
   }, [completedTick]);
+
+  // Fire the dispatch reaction whenever a new agent dispatch lands.
+  useEffect(() => {
+    if (dispatch && dispatch.seq > prevDispatchSeq.current) {
+      controllerRef.current?.triggerDispatch(dispatch.agentId);
+    }
+    if (dispatch) prevDispatchSeq.current = dispatch.seq;
+  }, [dispatch]);
 
   return (
     <div

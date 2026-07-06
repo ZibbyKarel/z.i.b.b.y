@@ -22,7 +22,9 @@ import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
 import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { usePipelineRunQuery } from "../../pipelines";
+import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { buildConstellation } from "../scene/constellation";
+import { buildDock } from "../scene/dock";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { CosmicScene } from "../scene/CosmicScene";
@@ -272,6 +274,28 @@ export function ChatScreen({
   const { data: agentCatalog } = useAgentsQuery();
   const agents = useMemo(() => buildConstellation(agentCatalog ?? []), [agentCatalog]);
 
+  // The dock (Tier 5) — the running/queued agents & pipelines from the live runs
+  // feed (kept fresh by the shared RunEventsProvider bus), never the full roster.
+  const { runs } = useRunsQuery();
+  const dock = useMemo(() => buildDock(runs, agents), [runs, agents]);
+
+  // Dispatch signal (Tier 5): each new `tool` event naming an agent bumps a seq the
+  // scene fires the beam/flare on. Seen callIds are tracked so the two-phase
+  // started→ok pair (same callId) fires exactly once.
+  const dispatchSeen = useRef<Set<string>>(new Set());
+  const dispatchSeq = useRef(0);
+  const [dispatch, setDispatch] = useState<{ seq: number; agentId: string } | undefined>(undefined);
+  useEffect(() => {
+    for (const ev of stream.toolEvents) {
+      if (ev.target?.kind !== "agent") continue;
+      const key = ev.callId ?? `${ev.name}:${ev.target.id}`;
+      if (dispatchSeen.current.has(key)) continue;
+      dispatchSeen.current.add(key);
+      dispatchSeq.current += 1;
+      setDispatch({ seq: dispatchSeq.current, agentId: ev.target.id });
+    }
+  }, [stream.toolEvents]);
+
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
 
@@ -393,6 +417,8 @@ export function ChatScreen({
       <CosmicScene
         agents={agents}
         completedTick={completedTick}
+        dispatch={dispatch}
+        dock={dock}
         mode={mode}
         streamChars={stream.streaming ? stream.text.length : 0}
       />

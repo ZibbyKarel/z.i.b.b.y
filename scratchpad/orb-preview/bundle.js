@@ -13984,6 +13984,86 @@
       return new _SphereGeometry(data.radius, data.widthSegments, data.heightSegments, data.phiStart, data.phiLength, data.thetaStart, data.thetaLength);
     }
   };
+  var TorusGeometry = class _TorusGeometry extends BufferGeometry {
+    /**
+     * Constructs a new torus geometry.
+     *
+     * @param {number} [radius=1] - Radius of the torus, from the center of the torus to the center of the tube.
+     * @param {number} [tube=0.4] - Radius of the tube. Must be smaller than `radius`.
+     * @param {number} [radialSegments=12] - The number of radial segments.
+     * @param {number} [tubularSegments=48] - The number of tubular segments.
+     * @param {number} [arc=Math.PI*2] - Central angle in radians.
+     * @param {number} [thetaStart=0] - Start of the tubular sweep in radians.
+     * @param {number} [thetaLength=Math.PI*2] - Length of the tubular sweep in radians.
+     */
+    constructor(radius = 1, tube = 0.4, radialSegments = 12, tubularSegments = 48, arc = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI * 2) {
+      super();
+      this.type = "TorusGeometry";
+      this.parameters = {
+        radius,
+        tube,
+        radialSegments,
+        tubularSegments,
+        arc,
+        thetaStart,
+        thetaLength
+      };
+      radialSegments = Math.floor(radialSegments);
+      tubularSegments = Math.floor(tubularSegments);
+      const indices = [];
+      const vertices = [];
+      const normals = [];
+      const uvs = [];
+      const center = new Vector3();
+      const vertex2 = new Vector3();
+      const normal = new Vector3();
+      for (let j = 0; j <= radialSegments; j++) {
+        const v = thetaStart + j / radialSegments * thetaLength;
+        for (let i = 0; i <= tubularSegments; i++) {
+          const u = i / tubularSegments * arc;
+          vertex2.x = (radius + tube * Math.cos(v)) * Math.cos(u);
+          vertex2.y = (radius + tube * Math.cos(v)) * Math.sin(u);
+          vertex2.z = tube * Math.sin(v);
+          vertices.push(vertex2.x, vertex2.y, vertex2.z);
+          center.x = radius * Math.cos(u);
+          center.y = radius * Math.sin(u);
+          normal.subVectors(vertex2, center).normalize();
+          normals.push(normal.x, normal.y, normal.z);
+          uvs.push(i / tubularSegments);
+          uvs.push(j / radialSegments);
+        }
+      }
+      for (let j = 1; j <= radialSegments; j++) {
+        for (let i = 1; i <= tubularSegments; i++) {
+          const a = (tubularSegments + 1) * j + i - 1;
+          const b = (tubularSegments + 1) * (j - 1) + i - 1;
+          const c = (tubularSegments + 1) * (j - 1) + i;
+          const d = (tubularSegments + 1) * j + i;
+          indices.push(a, b, d);
+          indices.push(b, c, d);
+        }
+      }
+      this.setIndex(indices);
+      this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+      this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    }
+    copy(source) {
+      super.copy(source);
+      this.parameters = Object.assign({}, source.parameters);
+      return this;
+    }
+    /**
+     * Factory method for creating an instance of this class from the given
+     * JSON object.
+     *
+     * @param {Object} data - A JSON object representing the serialized geometry.
+     * @return {TorusGeometry} A new instance.
+     */
+    static fromJSON(data) {
+      return new _TorusGeometry(data.radius, data.tube, data.radialSegments, data.tubularSegments, data.arc);
+    }
+  };
   function cloneUniforms(src) {
     const dst = {};
     for (const u in src) {
@@ -21658,7 +21738,7 @@
       renderItemsIndex++;
       return renderItem;
     }
-    function push(object, geometry, material, groupOrder, z, group) {
+    function push2(object, geometry, material, groupOrder, z, group) {
       const renderItem = getNextRenderItem(object, geometry, material, groupOrder, z, group);
       if (material.transmission > 0) {
         transmissive.push(renderItem);
@@ -21704,7 +21784,7 @@
       transmissive,
       transparent,
       init,
-      push,
+      push: push2,
       unshift,
       finish,
       sort
@@ -28369,6 +28449,7 @@ void main() {
   var REVEAL_SECONDS2 = 1.2;
   var ORB_NDC_RADIUS = 0.42;
   var GOLDEN_ANGLE = 2.399963229728653;
+  var DOCK_DISTANCE = 5;
   function makeAvatarTexture(agent) {
     const size = 128;
     const canvas = document.createElement("canvas");
@@ -28430,6 +28511,8 @@ void main() {
     let revealElapsed = 0;
     const ndc = new Vector3();
     const viewPos = new Vector3();
+    const orbitPos = new Vector3();
+    const dockWorld = new Vector3();
     function currentIds() {
       return nodes.map((n) => n.agent.id).join("|");
     }
@@ -28469,7 +28552,7 @@ void main() {
             texture,
             label: label2,
             // Spread orbits so paths never clump or move in lockstep.
-            radius: 2.3 + i % 3 * 0.55,
+            radius: 2.1 + i % 3 * 0.5,
             speed: (0.05 + i % 4 * 0.014) * (i % 2 === 0 ? 1 : -1),
             angle: i * GOLDEN_ANGLE,
             euler: new Euler(
@@ -28500,7 +28583,16 @@ void main() {
         for (const n of nodes) {
           if (!ctx.reducedMotion) n.angle += dt * n.speed;
           n.flare = Math.max(0, n.flare - dt / 1.4);
-          n.sprite.position.set(Math.cos(n.angle) * n.radius, 0, Math.sin(n.angle) * n.radius).applyEuler(n.euler);
+          orbitPos.set(Math.cos(n.angle) * n.radius, 0, Math.sin(n.angle) * n.radius).applyEuler(n.euler);
+          const dockPx = ctx.dockTargets.get(n.agent.id);
+          if (dockPx) {
+            const ndcX = dockPx.x / ctx.width * 2 - 1;
+            const ndcY = -(dockPx.y / ctx.height * 2 - 1);
+            dockWorld.set(ndcX, ndcY, 0.5).unproject(ctx.camera).sub(ctx.camera.position).normalize().multiplyScalar(DOCK_DISTANCE).add(ctx.camera.position);
+            n.sprite.position.lerp(dockWorld, 1 - Math.exp(-dt * 3));
+          } else {
+            n.sprite.position.lerp(orbitPos, 1 - Math.exp(-dt * 3));
+          }
           const breathe = 1 + 0.08 * Math.sin(elapsed * 1.2 + n.breathePhase);
           const workingSwell = n.working ? 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 4)) : 0;
           n.sprite.scale.setScalar(BASE_SCALE * (breathe + workingSwell + n.flare * 0.4));
@@ -28514,7 +28606,7 @@ void main() {
           const opacity = reveal * (0.55 + working + n.flare * 0.45) * (1 - 0.85 * occlude);
           n.material.opacity = Math.min(1, opacity);
           n.sprite.renderOrder = -viewPos.z;
-          const onScreen = ndc.z < 1 && Math.abs(ndc.x) < 1.1 && Math.abs(ndc.y) < 1.1;
+          const onScreen = !dockPx && ndc.z < 1 && Math.abs(ndc.x) < 1.1 && Math.abs(ndc.y) < 1.1;
           if (!onScreen) {
             n.label.style.opacity = "0";
           } else {
@@ -28527,6 +28619,229 @@ void main() {
       },
       dispose() {
         clear();
+      }
+    };
+  }
+
+  // apps/web/features/chat/scene/dispatchLayer.ts
+  var BEAM_LIFE = 2.2;
+  var ringTexture = null;
+  function getRingTexture() {
+    if (ringTexture) return ringTexture;
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const c = size / 2;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = size * 0.06;
+    ctx.beginPath();
+    ctx.arc(c, c, size * 0.4, 0, Math.PI * 2);
+    ctx.stroke();
+    ringTexture = new CanvasTexture(canvas);
+    return ringTexture;
+  }
+  function createDispatchLayer() {
+    const group = new Group();
+    const beams = [];
+    const pulses = [];
+    const origin = new Vector3(0, 0, 0);
+    const tmp = new Vector3();
+    function spawnRing(pos, color, from, to, life) {
+      const material = new SpriteMaterial({
+        map: getRingTexture(),
+        color: color.clone(),
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: AdditiveBlending
+      });
+      const sprite = new Sprite(material);
+      sprite.position.copy(pos);
+      sprite.scale.setScalar(from);
+      group.add(sprite);
+      pulses.push({ sprite, material, t: 0, life, from, to });
+    }
+    return {
+      object3d: group,
+      fire(agentId, color) {
+        const positions = new Float32Array([0, 0, 0, 0, 0, 0]);
+        const geometry = new BufferGeometry();
+        geometry.setAttribute("position", new BufferAttribute(positions, 3));
+        const lineMaterial = new LineBasicMaterial({
+          color: color.clone(),
+          transparent: true,
+          opacity: 0.6,
+          depthWrite: false,
+          blending: AdditiveBlending
+        });
+        const line = new Line(geometry, lineMaterial);
+        line.frustumCulled = false;
+        group.add(line);
+        const pulseMaterial = new SpriteMaterial({
+          map: getRingTexture(),
+          color: color.clone(),
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          blending: AdditiveBlending
+        });
+        const pulse = new Sprite(pulseMaterial);
+        pulse.scale.setScalar(0.22);
+        group.add(pulse);
+        beams.push({
+          agentId,
+          color: color.clone(),
+          t: 0,
+          line,
+          lineMaterial,
+          positions,
+          pulse,
+          pulseMaterial,
+          agentRingFired: false
+        });
+        spawnRing(origin, color, 0.3, 1.1, 0.7);
+      },
+      update(dt, resolve) {
+        for (let i = beams.length - 1; i >= 0; i--) {
+          const beam = beams[i];
+          beam.t += dt / BEAM_LIFE;
+          const target = resolve(beam.agentId);
+          if (!target || beam.t >= 1) {
+            group.remove(beam.line, beam.pulse);
+            beam.line.geometry.dispose();
+            beam.lineMaterial.dispose();
+            beam.pulseMaterial.dispose();
+            beams.splice(i, 1);
+            continue;
+          }
+          beam.positions[3] = target.x;
+          beam.positions[4] = target.y;
+          beam.positions[5] = target.z;
+          beam.line.geometry.attributes.position.needsUpdate = true;
+          beam.lineMaterial.opacity = 0.6 * (1 - beam.t);
+          const p = beam.t < 0.5 ? beam.t / 0.5 : (1 - beam.t) / 0.5;
+          tmp.copy(origin).lerp(target, p);
+          beam.pulse.position.copy(tmp);
+          beam.pulse.scale.setScalar(0.22 + p * 0.1);
+          beam.pulseMaterial.opacity = 0.9 * Math.sin(Math.PI * beam.t);
+          if (!beam.agentRingFired && beam.t >= 0.48) {
+            beam.agentRingFired = true;
+            spawnRing(target, beam.color, 0.3, 1.6, 0.9);
+          }
+        }
+        for (let i = pulses.length - 1; i >= 0; i--) {
+          const ring = pulses[i];
+          ring.t += dt / ring.life;
+          if (ring.t >= 1) {
+            group.remove(ring.sprite);
+            ring.material.dispose();
+            pulses.splice(i, 1);
+            continue;
+          }
+          const e = 1 - Math.pow(1 - ring.t, 2);
+          ring.sprite.scale.setScalar(ring.from + (ring.to - ring.from) * e);
+          ring.material.opacity = (1 - ring.t) * 0.8;
+        }
+      },
+      dispose() {
+        for (const beam of beams) {
+          beam.line.geometry.dispose();
+          beam.lineMaterial.dispose();
+          beam.pulseMaterial.dispose();
+        }
+        for (const ring of pulses) ring.material.dispose();
+        beams.length = 0;
+        pulses.length = 0;
+      }
+    };
+  }
+
+  // apps/web/features/chat/scene/dockLayer.ts
+  function createDockLayer(container, dockRoot) {
+    dockRoot.style.position = "absolute";
+    dockRoot.style.left = "50%";
+    dockRoot.style.bottom = "104px";
+    dockRoot.style.transform = "translateX(-50%)";
+    dockRoot.style.display = "flex";
+    dockRoot.style.gap = "8px";
+    dockRoot.style.flexWrap = "wrap";
+    dockRoot.style.justifyContent = "center";
+    dockRoot.style.maxWidth = "72%";
+    dockRoot.style.pointerEvents = "none";
+    const chips = /* @__PURE__ */ new Map();
+    const centers = /* @__PURE__ */ new Map();
+    function makeChip(item) {
+      const el = document.createElement("div");
+      el.style.display = "flex";
+      el.style.alignItems = "center";
+      el.style.gap = "7px";
+      el.style.padding = "5px 11px";
+      el.style.borderRadius = "999px";
+      el.style.border = `1px solid ${item.color}`;
+      el.style.background = "rgba(11, 20, 34, 0.72)";
+      el.style.backdropFilter = "blur(6px)";
+      el.style.font = "600 11px ui-monospace, monospace";
+      el.style.letterSpacing = "0.03em";
+      el.style.color = "#e6ecf5";
+      el.style.whiteSpace = "nowrap";
+      el.style.boxShadow = `0 0 14px ${item.color}44`;
+      el.style.opacity = "0";
+      el.style.transform = "translateY(8px)";
+      el.style.transition = "opacity 0.4s ease, transform 0.4s ease";
+      const dot = document.createElement("span");
+      dot.style.width = "7px";
+      dot.style.height = "7px";
+      dot.style.borderRadius = "50%";
+      dot.style.background = item.color;
+      dot.style.boxShadow = `0 0 8px ${item.color}`;
+      dot.style.animation = "v-glow-hot 1.4s ease-in-out infinite";
+      const name = document.createElement("span");
+      name.textContent = item.name;
+      const kind = document.createElement("span");
+      kind.textContent = item.kind === "pipeline" ? "\u26D3" : "\u25C6";
+      kind.style.opacity = "0.6";
+      el.append(dot, name, kind);
+      dockRoot.appendChild(el);
+      requestAnimationFrame(() => {
+        el.style.opacity = "1";
+        el.style.transform = "translateY(0)";
+      });
+      return { el, dot, targetId: item.targetId };
+    }
+    return {
+      setItems(items) {
+        const nextKeys = new Set(items.map((i) => i.key));
+        for (const [key, chip] of chips) {
+          if (!nextKeys.has(key)) {
+            chip.el.remove();
+            chips.delete(key);
+          }
+        }
+        for (const item of items) {
+          if (!chips.has(item.key)) chips.set(item.key, makeChip(item));
+        }
+        requestAnimationFrame(() => this.measure());
+      },
+      chipScreenPos(targetId) {
+        return centers.get(targetId) ?? null;
+      },
+      measure() {
+        const base = container.getBoundingClientRect();
+        centers.clear();
+        for (const chip of chips.values()) {
+          if (!chip.targetId) continue;
+          const r = chip.el.getBoundingClientRect();
+          centers.set(chip.targetId, {
+            x: r.left - base.left + r.width / 2,
+            y: r.top - base.top + r.height / 2
+          });
+        }
+      },
+      dispose() {
+        for (const chip of chips.values()) chip.el.remove();
+        chips.clear();
+        centers.clear();
       }
     };
   }
@@ -28689,6 +29004,92 @@ void main() {
     };
   }
 
+  // apps/web/features/chat/scene/ringsLayer.ts
+  var RING_COUNT = 3;
+  var SECONDARY_HEX = "#4fd1e0";
+  var DAMPING_RATE2 = 4;
+  var RING_VERTEX = (
+    /* glsl */
+    `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`
+  );
+  var RING_FRAGMENT = (
+    /* glsl */
+    `
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform float uTime;
+uniform float uPulseSpeed;
+varying vec2 vUv;
+void main() {
+  // A bright pulse travelling around the major circumference (uv.x).
+  float band = abs(fract(vUv.x - uTime * uPulseSpeed) - 0.5);
+  float pulse = smoothstep(0.5, 0.32, band);
+  float a = uOpacity * (0.28 + 0.72 * pulse);
+  gl_FragColor = vec4(uColor, a);
+}
+`
+  );
+  function createRingsLayer() {
+    const group = new Group();
+    const tokens = resolveSceneTokens();
+    const accent = new Color(tokens.accent);
+    const secondary = new Color(SECONDARY_HEX);
+    const rings = [];
+    let opacity = 0;
+    for (let i = 0; i < RING_COUNT; i++) {
+      const radius = 1.45 + i * 0.26;
+      const geometry = new TorusGeometry(radius, 0.012, 8, 160);
+      const material = new ShaderMaterial({
+        uniforms: {
+          uColor: { value: accent.clone() },
+          uOpacity: { value: 0 },
+          uTime: { value: 0 },
+          uPulseSpeed: { value: 0.25 + i * 0.12 }
+        },
+        vertexShader: RING_VERTEX,
+        fragmentShader: RING_FRAGMENT,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending
+      });
+      const mesh = new Mesh(geometry, material);
+      mesh.rotation.x = 1.1 + i * 0.5;
+      mesh.rotation.y = i * 0.7;
+      group.add(mesh);
+      rings.push({ mesh, material, spin: (0.15 + i * 0.08) * (i % 2 === 0 ? 1 : -1), colorPhase: i * 1.7 });
+    }
+    const tmp = new Color();
+    return {
+      object3d: group,
+      update(dt, elapsed, target, reducedMotion) {
+        opacity += (target - opacity) * (1 - Math.exp(-dt * DAMPING_RATE2));
+        const spinScale = reducedMotion ? 0 : 1;
+        for (const ring of rings) {
+          ring.mesh.rotation.z += dt * ring.spin * spinScale;
+          const u = ring.material.uniforms;
+          u.uOpacity.value = opacity;
+          u.uTime.value += reducedMotion ? 0 : dt;
+          const mix = 0.5 + 0.5 * Math.sin(elapsed * 0.4 + ring.colorPhase);
+          tmp.copy(accent).lerp(secondary, mix);
+          u.uColor.value.copy(tmp);
+        }
+        group.visible = opacity > 0.01;
+      },
+      dispose() {
+        for (const ring of rings) {
+          ring.mesh.geometry.dispose();
+          ring.material.dispose();
+        }
+      }
+    };
+  }
+
   // apps/web/features/chat/scene/modeVisuals.ts
   var BASE = {
     // Dormant: dim accent, slow drift, gentle breathing.
@@ -28828,6 +29229,26 @@ void main() {
     const constellation = createConstellationLayer(labelRoot);
     orbScene.add(constellation.object3d);
     constellation.setAgents(mobile ? [] : initial.agents);
+    const rings = createRingsLayer();
+    orbScene.add(rings.object3d);
+    const dispatch = createDispatchLayer();
+    orbScene.add(dispatch.object3d);
+    const dockRoot = document.createElement("div");
+    dockRoot.setAttribute("data-scene-layer", "dock");
+    container.appendChild(dockRoot);
+    const dock2 = createDockLayer(container, dockRoot);
+    dock2.setItems(initial.dock);
+    const agentColors = /* @__PURE__ */ new Map();
+    const dockTargets = /* @__PURE__ */ new Map();
+    function syncRoster(next) {
+      agentColors.clear();
+      for (const a of next.agents) agentColors.set(a.id, new Color(a.color));
+      constellation.setWorking(
+        new Set(next.dock.filter((d) => d.kind === "agent" && d.targetId).map((d) => d.targetId))
+      );
+      dock2.setItems(next.dock);
+    }
+    syncRoster(initial);
     const clock = new Clock();
     let elapsed = 0;
     let driftPhase = 0;
@@ -28842,6 +29263,7 @@ void main() {
       background.setAspect(w2 / h);
       camera.aspect = w2 / h;
       camera.updateProjectionMatrix();
+      dock2.measure();
     }
     const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => resize()) : null;
     resizeObserver?.observe(container);
@@ -28853,19 +29275,29 @@ void main() {
       elapsed += dt;
       energy = Math.max(0, energy - ENERGY_DECAY * dt);
       flash = Math.max(0, flash - dt / 0.8);
-      orb.update(dt, orbTarget(inputs.mode, energy), inputs.reducedMotion, flash);
+      const target = orbTarget(inputs.mode, energy);
+      orb.update(dt, target, inputs.reducedMotion, flash);
+      rings.update(dt, elapsed, target.rings, inputs.reducedMotion);
       if (!inputs.reducedMotion) {
         driftPhase += dt * 0.15;
         camera.position.x = Math.sin(driftPhase) * 0.18;
         camera.position.y = Math.cos(driftPhase * 0.8) * 0.12;
         camera.lookAt(0, 0, 0);
       }
+      dockTargets.clear();
+      for (const d of inputs.dock) {
+        if (d.kind !== "agent" || !d.targetId) continue;
+        const pos = dock2.chipScreenPos(d.targetId);
+        if (pos) dockTargets.set(d.targetId, pos);
+      }
       constellation.update(dt, elapsed, {
         camera,
         width: container.clientWidth || 1,
         height: container.clientHeight || 1,
-        reducedMotion: inputs.reducedMotion
+        reducedMotion: inputs.reducedMotion,
+        dockTargets
       });
+      dispatch.update(dt, (id) => constellation.positionOf(id));
       background.update(dt, { orbColor: orb.currentColor, reducedMotion: inputs.reducedMotion });
       background.render(bgRenderer, camera);
       orbRenderer.render(orbScene, camera);
@@ -28881,12 +29313,18 @@ void main() {
       setInputs(next) {
         inputs = next;
         constellation.setAgents(mobile ? [] : next.agents);
+        syncRoster(next);
       },
       pushActivity(chars) {
         energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
       },
       flashComplete() {
         flash = 1;
+      },
+      triggerDispatch(agentId) {
+        const color = agentColors.get(agentId) ?? new Color(resolveSceneTokens().accent);
+        constellation.flare(agentId);
+        dispatch.fire(agentId, color);
       },
       pause() {
         if (!running) return;
@@ -28905,7 +29343,11 @@ void main() {
         orb.dispose();
         background.dispose();
         constellation.dispose();
+        rings.dispose();
+        dispatch.dispose();
+        dock2.dispose();
         labelRoot.remove();
+        dockRoot.remove();
         orbRenderer.dispose();
         orbRenderer.domElement.remove();
         bgRenderer.dispose();
@@ -28933,25 +29375,25 @@ void main() {
     ["hospodar", "Hospod\xE1\u0159", "Dom\xE1cnost"],
     ["kronikar", "Kronik\xE1\u0159", "Psan\xED"]
   ];
-  var agents = ROSTER.map(([id, name, category]) => ({
-    id,
-    name,
-    category,
-    specialty: `${name} \u2014 ${category}`,
-    color: categoryColor(category)
-  }));
+  var agents = ROSTER.map(([id, name, category]) => ({ id, name, category, specialty: `${name} \u2014 ${category}`, color: categoryColor(category) }));
   var root = document.getElementById("root");
-  var controller = createSceneController(root, { mode: "idle", agents, dock: [], reducedMotion: false });
+  var dock = [];
+  var controller = createSceneController(root, { mode: "idle", agents, dock, reducedMotion: false });
   var label = document.getElementById("label");
   var w = window;
-  w.setMode = (mode) => {
-    controller.setInputs({ mode, agents, dock: [], reducedMotion: false });
+  function push(mode) {
+    controller.setInputs({ mode, agents, dock, reducedMotion: false });
     label.textContent = mode;
+  }
+  w.setMode = push;
+  w.setDock = (items) => {
+    dock = items.map(([key, targetId, name, kind]) => ({ key, targetId, name, kind, status: "running", color: kind === "agent" ? categoryColor(agents.find((a) => a.id === targetId)?.category ?? "") : "#5b8def" }));
+    controller.setInputs({ mode: label.textContent || "idle", agents, dock, reducedMotion: false });
   };
+  w.dispatch = (id) => controller.triggerDispatch(id);
   w.pump = () => {
     for (let i = 0; i < 8; i++) controller.pushActivity(6);
   };
-  w.flash = () => controller.flashComplete();
 })();
 /*! Bundled license information:
 

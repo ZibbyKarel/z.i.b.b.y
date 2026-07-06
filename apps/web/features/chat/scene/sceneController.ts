@@ -1,8 +1,12 @@
 import * as THREE from "three";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
 import { type ConstellationLayer, createConstellationLayer } from "./constellationLayer";
+import { type DispatchLayer, createDispatchLayer } from "./dispatchLayer";
+import { type DockLayer, createDockLayer } from "./dockLayer";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
+import { type RingsLayer, createRingsLayer } from "./ringsLayer";
 import { orbTarget } from "./modeVisuals";
+import { resolveSceneTokens } from "./tokens";
 import type { SceneInputs } from "./sceneTypes";
 
 /**
@@ -26,6 +30,10 @@ export interface SceneController {
   /** Fire the brief completion flash (a `done` turn) — an `ok`-green pulse on the
    * orb and its background glow that decays back to the current mode. */
   flashComplete(): void;
+  /** Fire a dispatch reaction toward an agent's avatar (a `tool` event named it):
+   * a beam races out and back, the avatar flares, rings bloom (Tier 5). No-op if
+   * the agent isn't in the constellation (e.g. a pipeline-only dispatch). */
+  triggerDispatch(agentId: string): void;
   /** Pause the loop (overlay closed / tab hidden). Idempotent. */
   pause(): void;
   /** Resume without a time jump (the clock is reset so `dt` stays small). Idempotent. */
@@ -91,6 +99,35 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
   orbScene.add(constellation.object3d);
   constellation.setAgents(mobile ? [] : initial.agents);
 
+  // --- Rings (Tier 5): helix around the orb during thinking/tool. ---
+  const rings: RingsLayer = createRingsLayer();
+  orbScene.add(rings.object3d);
+
+  // --- Dispatch beams (Tier 5): fired on a tool event naming an agent. ---
+  const dispatch: DispatchLayer = createDispatchLayer();
+  orbScene.add(dispatch.object3d);
+
+  // --- Dock (Tier 5): a DOM bar of the running/queued agents & pipelines. ---
+  const dockRoot = document.createElement("div");
+  dockRoot.setAttribute("data-scene-layer", "dock");
+  container.appendChild(dockRoot);
+  const dock: DockLayer = createDockLayer(container, dockRoot);
+  dock.setItems(initial.dock);
+
+  // agentId → accent colour, kept in sync with the roster for dispatch beams.
+  const agentColors = new Map<string, THREE.Color>();
+  const dockTargets = new Map<string, { x: number; y: number }>();
+  function syncRoster(next: SceneInputs) {
+    agentColors.clear();
+    for (const a of next.agents) agentColors.set(a.id, new THREE.Color(a.color));
+    // Working pulse: agents with a live run (present in the dock).
+    constellation.setWorking(
+      new Set(next.dock.filter((d) => d.kind === "agent" && d.targetId).map((d) => d.targetId!)),
+    );
+    dock.setItems(next.dock);
+  }
+  syncRoster(initial);
+
   const clock = new THREE.Clock();
   let elapsed = 0;
   // A slow, ever-present camera drift so even the idle scene breathes (Tier 2
@@ -109,6 +146,7 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     background.setAspect(w / h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    dock.measure();
   }
 
   const resizeObserver =
@@ -127,7 +165,9 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     // Completion flash decays over ~0.8s (attack is instant in flashComplete).
     flash = Math.max(0, flash - dt / 0.8);
 
-    orb.update(dt, orbTarget(inputs.mode, energy), inputs.reducedMotion, flash);
+    const target = orbTarget(inputs.mode, energy);
+    orb.update(dt, target, inputs.reducedMotion, flash);
+    rings.update(dt, elapsed, target.rings, inputs.reducedMotion);
 
     // Gentle camera parallax — disabled under reduced motion.
     if (!inputs.reducedMotion) {
@@ -137,12 +177,22 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
       camera.lookAt(0, 0, 0);
     }
 
+    // Which agents are docked this frame (a live run with a dock chip) → fly-to.
+    dockTargets.clear();
+    for (const d of inputs.dock) {
+      if (d.kind !== "agent" || !d.targetId) continue;
+      const pos = dock.chipScreenPos(d.targetId);
+      if (pos) dockTargets.set(d.targetId, pos);
+    }
+
     constellation.update(dt, elapsed, {
       camera,
       width: container.clientWidth || 1,
       height: container.clientHeight || 1,
       reducedMotion: inputs.reducedMotion,
+      dockTargets,
     });
+    dispatch.update(dt, (id) => constellation.positionOf(id));
 
     background.update(dt, { orbColor: orb.currentColor, reducedMotion: inputs.reducedMotion });
     background.render(bgRenderer, camera);
@@ -162,12 +212,18 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     setInputs(next) {
       inputs = next;
       constellation.setAgents(mobile ? [] : next.agents);
+      syncRoster(next);
     },
     pushActivity(chars) {
       energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
     },
     flashComplete() {
       flash = 1;
+    },
+    triggerDispatch(agentId) {
+      const color = agentColors.get(agentId) ?? new THREE.Color(resolveSceneTokens().accent);
+      constellation.flare(agentId);
+      dispatch.fire(agentId, color);
     },
     pause() {
       if (!running) return;
@@ -186,7 +242,11 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
       orb.dispose();
       background.dispose();
       constellation.dispose();
+      rings.dispose();
+      dispatch.dispose();
+      dock.dispose();
       labelRoot.remove();
+      dockRoot.remove();
       orbRenderer.dispose();
       orbRenderer.domElement.remove();
       bgRenderer.dispose();
