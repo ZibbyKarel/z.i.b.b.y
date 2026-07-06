@@ -77,6 +77,9 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
   living?: boolean;
   /** Render as a selectable button (forwards onClick / aria-pressed). */
   as?: "div" | "button";
+  /** Only meaningful with `as="button"` — defaults to `"button"` so the card
+   *  never falls back to the HTML default of `"submit"` inside a `<form>`. */
+  type?: "button" | "submit" | "reset";
   /** Highlighted selected state (accent border + ring). */
   selected?: boolean;
   header?: ReactNode;
@@ -143,6 +146,7 @@ export function Card({
   tone,
   living = false,
   as: Tag = "div",
+  type,
   selected = false,
   header,
   footer,
@@ -177,6 +181,7 @@ export function Card({
         selected && "border-accent bg-raised shadow-[0_0_0_1px_var(--color-accent-dim)]",
       )}
       ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
+      type={Tag === "button" ? (type ?? "button") : undefined}
     >
       {tone && living && <LivingGlow radius={radius} tone={tone} />}
       {corners && <Corners inset="75" tone={tone ?? "accent"} />}

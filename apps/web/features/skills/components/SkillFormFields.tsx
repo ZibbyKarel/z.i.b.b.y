@@ -131,9 +131,12 @@ export function SkillFormFields({
             <Stack gap="150">
               <DropZoneField
                 multiple
+                activeLabel={t("content.directory.activeHint")}
                 hint={t("content.directory.hint")}
+                idleLabel={t("content.directory.idleHint")}
                 label={t("content.directory.label")}
                 onDrop={handleDrop}
+                rejectedLabel={t("content.directory.rejectedHint")}
               />
 
               {files.length > 0 && (

@@ -10,8 +10,23 @@ describe("Alert", () => {
     expect(screen.getByTestId(AlertTestId.Root)).toHaveTextContent("Hotovo");
   });
 
-  it("has role=alert", () => {
+  it("has role=status for the info severity (default)", () => {
     render(<Alert>Zpráva</Alert>);
+    expect(screen.getByTestId(AlertTestId.Root)).toHaveRole("status");
+  });
+
+  it("has role=status for the ok severity", () => {
+    render(<Alert severity="ok">Zpráva</Alert>);
+    expect(screen.getByTestId(AlertTestId.Root)).toHaveRole("status");
+  });
+
+  it("has role=alert for the warn severity", () => {
+    render(<Alert severity="warn">Zpráva</Alert>);
+    expect(screen.getByTestId(AlertTestId.Root)).toHaveRole("alert");
+  });
+
+  it("has role=alert for the error severity", () => {
+    render(<Alert severity="error">Zpráva</Alert>);
     expect(screen.getByTestId(AlertTestId.Root)).toHaveRole("alert");
   });
 

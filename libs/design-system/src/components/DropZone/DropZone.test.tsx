@@ -8,8 +8,13 @@ describe("DropZone", () => {
     expect(screen.getByTestId(DropZoneTestId.Root)).toBeInTheDocument();
     expect(screen.getByTestId(DropZoneTestId.Input)).toBeInTheDocument();
     expect(screen.getByTestId(DropZoneTestId.Hint)).toHaveTextContent(
-      "Přetáhněte soubory nebo klikněte pro výběr",
+      "Drop files here or click to select",
     );
+  });
+
+  it("renders a custom idle label", () => {
+    render(<DropZone idleLabel="Přetáhněte soubory sem" onDrop={vi.fn()} />);
+    expect(screen.getByTestId(DropZoneTestId.Hint)).toHaveTextContent("Přetáhněte soubory sem");
   });
 
   it("is keyboard focusable", () => {

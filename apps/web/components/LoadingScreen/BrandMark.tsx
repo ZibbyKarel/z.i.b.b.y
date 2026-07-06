@@ -11,23 +11,23 @@ export function BrandMark({ logo, testId }: BrandMarkProps) {
   return (
     <div className="relative mb-11 flex h-[220px] w-[220px] items-center justify-center">
       <div
-        className="animate-ripple absolute inset-0 rounded-full"
+        className="animate-ripple motion-reduce:animate-none absolute inset-0 rounded-full"
         style={{ background: "rgba(91,141,239,0.08)" }}
       />
       <div
-        className="animate-ripple absolute inset-0 rounded-full"
+        className="animate-ripple motion-reduce:animate-none absolute inset-0 rounded-full"
         style={{ background: "rgba(91,141,239,0.05)", animationDelay: "1.4s" }}
       />
       <div
-        className="animate-ring-pulse absolute rounded-full"
+        className="animate-ring-pulse motion-reduce:animate-none absolute rounded-full"
         style={{ inset: -28, border: "1px solid rgba(91,141,239,0.12)", animationDelay: "0.7s" }}
       />
       <div
-        className="animate-ring-pulse absolute rounded-full"
+        className="animate-ring-pulse motion-reduce:animate-none absolute rounded-full"
         style={{ inset: -10, border: "1.5px solid rgba(91,141,239,0.3)" }}
       />
       <div
-        className="animate-orbit-spin absolute rounded-full"
+        className="animate-orbit-spin motion-reduce:animate-none absolute rounded-full"
         style={{ inset: -22, border: "1px solid rgba(91,141,239,0.18)" }}
       >
         <div
@@ -43,7 +43,7 @@ export function BrandMark({ logo, testId }: BrandMarkProps) {
         />
       </div>
       <div
-        className="animate-logo-breathe h-[220px] w-[220px] overflow-hidden rounded-full"
+        className="animate-logo-breathe motion-reduce:animate-none h-[220px] w-[220px] overflow-hidden rounded-full"
         data-testid={testId}
       >
         {logo}
