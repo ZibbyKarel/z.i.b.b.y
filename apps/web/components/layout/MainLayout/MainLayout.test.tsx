@@ -4,6 +4,7 @@ import type { NavItem } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
 import { CatalogProvider } from "../../../state/store";
 import { TopBarTestId } from "../TopBar/TopBar";
+import { SkipLinkTestId } from "../SkipLink/SkipLink";
 import { MainLayout } from "./MainLayout";
 
 const RAIL_CONTENT_TESTID = "test-rail-content";
@@ -27,6 +28,35 @@ describe("MainLayout", () => {
     );
     expect(screen.getByText("Moje cesta")).toBeInTheDocument();
     expect(screen.getByText("obsah stránky")).toBeInTheDocument();
+  });
+
+  it("renders a main landmark holding the page content", () => {
+    renderWithProviders(
+      <CatalogProvider>
+        <MainLayout activeNav="overview" breadcrumb="Moje cesta" navItems={navItems}>
+          <div>obsah stránky</div>
+        </MainLayout>
+      </CatalogProvider>,
+    );
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "main-content");
+    expect(screen.getByText("obsah stránky")).toBeInTheDocument();
+  });
+
+  it("puts the skip-link first in tab order, jumping to the main landmark", () => {
+    renderWithProviders(
+      <CatalogProvider>
+        <MainLayout activeNav="overview" breadcrumb="Moje cesta" navItems={navItems}>
+          <div>obsah stránky</div>
+        </MainLayout>
+      </CatalogProvider>,
+    );
+    const focusable = document.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
+    );
+    const skipLink = screen.getByTestId(SkipLinkTestId.Root);
+    expect(focusable[0]).toBe(skipLink);
+    expect(skipLink).toHaveAttribute("href", "#main-content");
   });
 
   it("shows the rail when railSlot is provided, and hides it on toggle click", async () => {

@@ -5,6 +5,9 @@ import type { NavItem } from "@zibby/design-system";
 import { TopBar } from "../TopBar/TopBar";
 import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { Sidebar } from "../Sidebar/Sidebar";
+import { SkipLink } from "../SkipLink/SkipLink";
+
+const MAIN_CONTENT_ID = "main-content";
 
 const RAIL_HIDDEN_KEY = "zibby.railHidden";
 
@@ -58,6 +61,7 @@ export function MainLayout({
   const [railHidden, setRailHidden] = useRailHidden();
   return (
     <Surface background="scene">
+      <SkipLink label={t("skipToContent")} targetId={MAIN_CONTENT_ID} />
       <Stack
         aria-label={t("navLabel")}
         as="nav"
@@ -87,7 +91,15 @@ export function MainLayout({
           taskSlot={taskSlot}
           walletSlot={walletSlot}
         />
-        <Container grow overflow="auto" padding={["300", "350"]} position="relative">
+        <Container
+          grow
+          as="main"
+          id={MAIN_CONTENT_ID}
+          overflow="auto"
+          padding={["300", "350"]}
+          position="relative"
+          tabIndex={-1}
+        >
           {children}
         </Container>
       </Stack>

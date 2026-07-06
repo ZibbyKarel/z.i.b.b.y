@@ -216,7 +216,8 @@
   "sidebar": {
     "navLabel": "Hlavní navigace",
     "tagline": "Zestful Intuitive Brainy Butler for You",
-    "railLabel": "Postranní panel"
+    "railLabel": "Postranní panel",
+    "skipToContent": "Přeskočit na obsah"
   },
   "loading": {
     "tagline": "Inteligentní automatizační platforma",
