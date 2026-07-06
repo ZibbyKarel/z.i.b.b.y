@@ -9,10 +9,20 @@ import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "
 import { Container, Icon, SearchBar, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
+import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { usePipelineRunQuery } from "../../pipelines";
+import { buildConstellation } from "../scene/constellation";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { CosmicScene } from "../scene/CosmicScene";
@@ -257,6 +267,11 @@ export function ChatScreen({
   ]);
   const { data: lastRun } = usePipelineRunQuery(lastRunRef);
 
+  // The constellation roster — the live agent catalog deduped to real roles and
+  // coloured by category (Tier 4). Only rebuilt when the catalog changes.
+  const { data: agentCatalog } = useAgentsQuery();
+  const agents = useMemo(() => buildConstellation(agentCatalog ?? []), [agentCatalog]);
+
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
 
@@ -376,6 +391,7 @@ export function ChatScreen({
           surface (its own canvas layers are pointer-events:none); the transcript
           floats over it in a legibility-protected band. */}
       <CosmicScene
+        agents={agents}
         completedTick={completedTick}
         mode={mode}
         streamChars={stream.streaming ? stream.text.length : 0}

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
+import { type ConstellationLayer, createConstellationLayer } from "./constellationLayer";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
 import { orbTarget } from "./modeVisuals";
 import type { SceneInputs } from "./sceneTypes";
@@ -76,7 +77,22 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
   const orb: OrbLayer = createOrbLayer();
   orbScene.add(orb.object3d);
 
+  // --- Constellation (Tier 4). Its sprites render in the orb scene (shared camera,
+  // transparent); its DOM labels live in an overlay above the canvases. Hidden on
+  // small mobile — the roster would clutter a phone-width viewport. ---
+  const labelRoot = document.createElement("div");
+  labelRoot.setAttribute("data-scene-layer", "labels");
+  labelRoot.style.position = "absolute";
+  labelRoot.style.inset = "0";
+  labelRoot.style.overflow = "hidden";
+  labelRoot.style.pointerEvents = "none";
+  container.appendChild(labelRoot);
+  const constellation: ConstellationLayer = createConstellationLayer(labelRoot);
+  orbScene.add(constellation.object3d);
+  constellation.setAgents(mobile ? [] : initial.agents);
+
   const clock = new THREE.Clock();
+  let elapsed = 0;
   // A slow, ever-present camera drift so even the idle scene breathes (Tier 2
   // deepens this; a gentle version here keeps Tier 1 from ever looking frozen).
   let driftPhase = 0;
@@ -104,6 +120,7 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     if (!running) return;
     rafId = requestAnimationFrame(frame);
     const dt = Math.min(clock.getDelta(), 0.05); // clamp after a tab-switch stall
+    elapsed += dt;
 
     // Energy: instant attack happens in pushActivity; here we only decay.
     energy = Math.max(0, energy - ENERGY_DECAY * dt);
@@ -119,6 +136,13 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
       camera.position.y = Math.cos(driftPhase * 0.8) * 0.12;
       camera.lookAt(0, 0, 0);
     }
+
+    constellation.update(dt, elapsed, {
+      camera,
+      width: container.clientWidth || 1,
+      height: container.clientHeight || 1,
+      reducedMotion: inputs.reducedMotion,
+    });
 
     background.update(dt, { orbColor: orb.currentColor, reducedMotion: inputs.reducedMotion });
     background.render(bgRenderer, camera);
@@ -137,6 +161,7 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
   return {
     setInputs(next) {
       inputs = next;
+      constellation.setAgents(mobile ? [] : next.agents);
     },
     pushActivity(chars) {
       energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
@@ -160,6 +185,8 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
       resizeObserver?.disconnect();
       orb.dispose();
       background.dispose();
+      constellation.dispose();
+      labelRoot.remove();
       orbRenderer.dispose();
       orbRenderer.domElement.remove();
       bgRenderer.dispose();
