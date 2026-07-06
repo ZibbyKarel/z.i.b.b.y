@@ -216,7 +216,8 @@
   "sidebar": {
     "navLabel": "Main navigation",
     "tagline": "Zestful Intuitive Brainy Butler for You",
-    "railLabel": "Side panel"
+    "railLabel": "Side panel",
+    "skipToContent": "Skip to content"
   },
   "loading": {
     "tagline": "Intelligent Automation Platform",
