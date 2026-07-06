@@ -12,6 +12,7 @@ const meta: Meta<typeof HoldButton> = {
   args: {
     label: "Podržet pro schválení",
     doneLabel: "Schváleno",
+    armedLabel: "Stiskni znovu pro potvrzení",
     tone: "warn",
   },
 };
@@ -28,6 +29,17 @@ export const Overview: Story = {
           <HoldButton doneLabel="Schváleno" label="Podržet pro schválení" tone="warn" />
           <HoldButton doneLabel="Smazáno" label="Podržet pro smazání" tone="bad" />
           <HoldButton doneLabel="Potvrzeno" label="Podržet pro potvrzení" tone="accent" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">armed (diskrétní cesta) — krátký klik nabije, druhý klik potvrdí</Typography>
+        <div className="flex flex-wrap gap-3">
+          <HoldButton
+            armedLabel="Stiskni znovu pro potvrzení"
+            doneLabel="Schváleno"
+            label="Klikni jednou (nabít)"
+            tone="bad"
+          />
         </div>
       </div>
       <div className="flex flex-col gap-2">

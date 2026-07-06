@@ -108,6 +108,7 @@ export function RunApprovalGate({ approval }: RunApprovalGateProps) {
           {highRisk ? (
             <HoldButton
               block
+              armedLabel={t("holdArmed")}
               disabled={reject.isPending}
               doneLabel={t("holdDone")}
               label={t("holdToApprove")}

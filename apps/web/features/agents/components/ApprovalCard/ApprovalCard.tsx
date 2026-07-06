@@ -114,6 +114,7 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
               {hold ? (
                 <HoldButton
                   block
+                  armedLabel={t("holdArmed")}
                   doneLabel={t("holdDone")}
                   label={t("holdToApprove")}
                   onConfirm={() => {
