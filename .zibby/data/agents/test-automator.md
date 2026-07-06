@@ -2,6 +2,7 @@
 name: test-automator
 description: "Use this agent when you need to build, implement, or enhance automated test frameworks, create test scripts, or integrate testing into CI/CD pipelines."
 glyph: flask
+avatar: /avatars/tester.png
 model: sonnet
 thinking: medium
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
