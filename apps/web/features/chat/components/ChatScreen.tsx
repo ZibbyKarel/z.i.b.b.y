@@ -103,7 +103,13 @@ export function ChatScreen({
   const setMessages = onMessagesChange;
   const sendMessage = useSendChatMessageMutation();
 
+  // Bumped once per finished turn so the scene can fire its completion flash
+  // (Tier 3). Kept separate from the transcript so an empty-but-done turn — a pure
+  // tool dispatch with no text — still flashes.
+  const [completedTick, setCompletedTick] = useState(0);
+
   const appendAssistant = useCallback(({ turnId, text, toolEvents }: CompletedTurn) => {
+    setCompletedTick((t) => t + 1);
     if (!text && toolEvents.length === 0) return;
     setMessages((prev) => [
       ...prev,
@@ -369,7 +375,11 @@ export function ChatScreen({
           nebula and sub-agent constellation. Sits behind every interactive
           surface (its own canvas layers are pointer-events:none); the transcript
           floats over it in a legibility-protected band. */}
-      <CosmicScene mode={mode} streamChars={stream.streaming ? stream.text.length : 0} />
+      <CosmicScene
+        completedTick={completedTick}
+        mode={mode}
+        streamChars={stream.streaming ? stream.text.length : 0}
+      />
 
       {/* ── Main area: scene behind, scrollable conversation over it ───── */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">

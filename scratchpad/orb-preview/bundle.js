@@ -1001,12 +1001,12 @@
      * @param {number} [z=0] - The z value of this quaternion.
      * @param {number} [w=1] - The w value of this quaternion.
      */
-    constructor(x = 0, y = 0, z = 0, w = 1) {
+    constructor(x = 0, y = 0, z = 0, w2 = 1) {
       this.isQuaternion = true;
       this._x = x;
       this._y = y;
       this._z = z;
-      this._w = w;
+      this._w = w2;
     }
     /**
      * Interpolates between two quaternions via SLERP. This implementation assumes the
@@ -1149,11 +1149,11 @@
      * @param {number} w - The w value of this quaternion.
      * @return {Quaternion} A reference to this quaternion.
      */
-    set(x, y, z, w) {
+    set(x, y, z, w2) {
       this._x = x;
       this._y = y;
       this._z = z;
-      this._w = w;
+      this._w = w2;
       this._onChangeCallback();
       return this;
     }
@@ -1474,13 +1474,13 @@
      * @return {Quaternion} A reference to this quaternion.
      */
     slerp(qb, t) {
-      let x = qb._x, y = qb._y, z = qb._z, w = qb._w;
+      let x = qb._x, y = qb._y, z = qb._z, w2 = qb._w;
       let dot = this.dot(qb);
       if (dot < 0) {
         x = -x;
         y = -y;
         z = -z;
-        w = -w;
+        w2 = -w2;
         dot = -dot;
       }
       let s = 1 - t;
@@ -1492,13 +1492,13 @@
         this._x = this._x * s + x * t;
         this._y = this._y * s + y * t;
         this._z = this._z * s + z * t;
-        this._w = this._w * s + w * t;
+        this._w = this._w * s + w2 * t;
         this._onChangeCallback();
       } else {
         this._x = this._x * s + x * t;
         this._y = this._y * s + y * t;
         this._z = this._z * s + z * t;
-        this._w = this._w * s + w * t;
+        this._w = this._w * s + w2 * t;
         this.normalize();
       }
       return this;
@@ -1917,10 +1917,10 @@
     applyMatrix4(m) {
       const x = this.x, y = this.y, z = this.z;
       const e = m.elements;
-      const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
-      this.x = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
-      this.y = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
-      this.z = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
+      const w2 = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
+      this.x = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w2;
+      this.y = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w2;
+      this.z = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w2;
       return this;
     }
     /**
@@ -3642,11 +3642,11 @@
      * @param {number} [z=0] - The z value of this vector.
      * @param {number} [w=1] - The w value of this vector.
      */
-    constructor(x = 0, y = 0, z = 0, w = 1) {
+    constructor(x = 0, y = 0, z = 0, w2 = 1) {
       this.x = x;
       this.y = y;
       this.z = z;
-      this.w = w;
+      this.w = w2;
     }
     /**
      * Alias for {@link Vector4#z}.
@@ -3679,11 +3679,11 @@
      * @param {number} w - The value of the w component.
      * @return {Vector4} A reference to this vector.
      */
-    set(x, y, z, w) {
+    set(x, y, z, w2) {
       this.x = x;
       this.y = y;
       this.z = z;
-      this.w = w;
+      this.w = w2;
       return this;
     }
     /**
@@ -3735,8 +3735,8 @@
      * @param {number} w - The value to set.
      * @return {Vector4} A reference to this vector.
      */
-    setW(w) {
-      this.w = w;
+    setW(w2) {
+      this.w = w2;
       return this;
     }
     /**
@@ -3935,12 +3935,12 @@
      * @return {Vector4} A reference to this vector.
      */
     applyMatrix4(m) {
-      const x = this.x, y = this.y, z = this.z, w = this.w;
+      const x = this.x, y = this.y, z = this.z, w2 = this.w;
       const e = m.elements;
-      this.x = e[0] * x + e[4] * y + e[8] * z + e[12] * w;
-      this.y = e[1] * x + e[5] * y + e[9] * z + e[13] * w;
-      this.z = e[2] * x + e[6] * y + e[10] * z + e[14] * w;
-      this.w = e[3] * x + e[7] * y + e[11] * z + e[15] * w;
+      this.x = e[0] * x + e[4] * y + e[8] * z + e[12] * w2;
+      this.y = e[1] * x + e[5] * y + e[9] * z + e[13] * w2;
+      this.z = e[2] * x + e[6] * y + e[10] * z + e[14] * w2;
+      this.w = e[3] * x + e[7] * y + e[11] * z + e[15] * w2;
       return this;
     }
     /**
@@ -5543,11 +5543,11 @@
      */
     compose(position, quaternion, scale) {
       const te = this.elements;
-      const x = quaternion._x, y = quaternion._y, z = quaternion._z, w = quaternion._w;
+      const x = quaternion._x, y = quaternion._y, z = quaternion._z, w2 = quaternion._w;
       const x2 = x + x, y2 = y + y, z2 = z + z;
       const xx = x * x2, xy = x * y2, xz = x * z2;
       const yy = y * y2, yz = y * z2, zz = z * z2;
-      const wx = w * x2, wy = w * y2, wz = w * z2;
+      const wx = w2 * x2, wy = w2 * y2, wz = w2 * z2;
       const sx = scale.x, sy = scale.y, sz = scale.z;
       te[0] = (1 - (yy + zz)) * sx;
       te[1] = (xy + wz) * sx;
@@ -8460,7 +8460,7 @@
      */
     closestPointToPoint(p, target) {
       const a = this.a, b = this.b, c = this.c;
-      let v, w;
+      let v, w2;
       _vab.subVectors(b, a);
       _vac.subVectors(c, a);
       _vap.subVectors(p, a);
@@ -8488,19 +8488,19 @@
       }
       const vb = d5 * d2 - d1 * d6;
       if (vb <= 0 && d2 >= 0 && d6 <= 0) {
-        w = d2 / (d2 - d6);
-        return target.copy(a).addScaledVector(_vac, w);
+        w2 = d2 / (d2 - d6);
+        return target.copy(a).addScaledVector(_vac, w2);
       }
       const va = d3 * d6 - d5 * d4;
       if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
         _vbc.subVectors(c, b);
-        w = (d4 - d3) / (d4 - d3 + (d5 - d6));
-        return target.copy(b).addScaledVector(_vbc, w);
+        w2 = (d4 - d3) / (d4 - d3 + (d5 - d6));
+        return target.copy(b).addScaledVector(_vbc, w2);
       }
       const denom = 1 / (va + vb + vc);
       v = vb * denom;
-      w = vc * denom;
-      return target.copy(a).addScaledVector(_vab, v).addScaledVector(_vac, w);
+      w2 = vc * denom;
+      return target.copy(a).addScaledVector(_vab, v).addScaledVector(_vac, w2);
     }
     /**
      * Returns `true` if this triangle is equal with the given one.
@@ -9351,9 +9351,9 @@
      * @return {number} The w component.
      */
     getW(index) {
-      let w = this.array[index * this.itemSize + 3];
-      if (this.normalized) w = denormalize(w, this.array);
-      return w;
+      let w2 = this.array[index * this.itemSize + 3];
+      if (this.normalized) w2 = denormalize(w2, this.array);
+      return w2;
     }
     /**
      * Sets the w component of the vector at the given index.
@@ -9362,9 +9362,9 @@
      * @param {number} w - The value to set.
      * @return {BufferAttribute} A reference to this instance.
      */
-    setW(index, w) {
-      if (this.normalized) w = normalize(w, this.array);
-      this.array[index * this.itemSize + 3] = w;
+    setW(index, w2) {
+      if (this.normalized) w2 = normalize(w2, this.array);
+      this.array[index * this.itemSize + 3] = w2;
       return this;
     }
     /**
@@ -9416,18 +9416,18 @@
      * @param {number} w - The value for the w component to set.
      * @return {BufferAttribute} A reference to this instance.
      */
-    setXYZW(index, x, y, z, w) {
+    setXYZW(index, x, y, z, w2) {
       index *= this.itemSize;
       if (this.normalized) {
         x = normalize(x, this.array);
         y = normalize(y, this.array);
         z = normalize(z, this.array);
-        w = normalize(w, this.array);
+        w2 = normalize(w2, this.array);
       }
       this.array[index + 0] = x;
       this.array[index + 1] = y;
       this.array[index + 2] = z;
-      this.array[index + 3] = w;
+      this.array[index + 3] = w2;
       return this;
     }
     /**
@@ -10277,8 +10277,8 @@
         tmp.sub(n.multiplyScalar(n.dot(t))).normalize();
         tmp2.crossVectors(n2, t);
         const test = tmp2.dot(tan2[v]);
-        const w = test < 0 ? -1 : 1;
-        tangentAttribute.setXYZW(v, tmp.x, tmp.y, tmp.z, w);
+        const w2 = test < 0 ? -1 : 1;
+        tangentAttribute.setXYZW(v, tmp.x, tmp.y, tmp.z, w2);
       }
       for (let i = 0, il = groups.length; i < il; ++i) {
         const group = groups[i];
@@ -11870,9 +11870,9 @@
      * @param {number} w - The constant value.
      * @return {Plane} A reference to this plane.
      */
-    setComponents(x, y, z, w) {
+    setComponents(x, y, z, w2) {
       this.normal.set(x, y, z);
-      this.constant = w;
+      this.constant = w2;
       return this;
     }
     /**
@@ -12781,7 +12781,7 @@
       this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
       this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
       this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
-      function buildPlane(u, v, w, udir, vdir, width2, height2, depth2, gridX, gridY, materialIndex) {
+      function buildPlane(u, v, w2, udir, vdir, width2, height2, depth2, gridX, gridY, materialIndex) {
         const segmentWidth = width2 / gridX;
         const segmentHeight = height2 / gridY;
         const widthHalf = width2 / 2;
@@ -12798,11 +12798,11 @@
             const x = ix * segmentWidth - widthHalf;
             vector[u] = x * udir;
             vector[v] = y * vdir;
-            vector[w] = depthHalf;
+            vector[w2] = depthHalf;
             vertices.push(vector.x, vector.y, vector.z);
             vector[u] = 0;
             vector[v] = 0;
-            vector[w] = depth2 > 0 ? 1 : -1;
+            vector[w2] = depth2 > 0 ? 1 : -1;
             normals.push(vector.x, vector.y, vector.z);
             uvs.push(ix / gridX);
             uvs.push(1 - iy / gridY);
@@ -20375,12 +20375,12 @@
     }
     _getShaderCacheForMaterial(material) {
       const cache = this.materialCache;
-      let set2 = cache.get(material);
-      if (set2 === void 0) {
-        set2 = /* @__PURE__ */ new Set();
-        cache.set(material, set2);
+      let set = cache.get(material);
+      if (set === void 0) {
+        set = /* @__PURE__ */ new Set();
+        cache.set(material, set);
       }
-      return set2;
+      return set;
     }
     _getShaderStage(code) {
       const cache = this.shaderCache;
@@ -27491,10 +27491,10 @@ void main() {
   // Two drifting nebula cloud layers.
   float n1 = fbm(vec3(p * 1.6 + vec2(uTime * 0.012, 0.0), uTime * 0.02));
   float n2 = fbm(vec3(p * 2.7 - vec2(0.0, uTime * 0.009), 5.0 + uTime * 0.015));
-  float cloudA = smoothstep(0.05, 0.75, n1);
-  float cloudB = smoothstep(0.10, 0.85, n2 * 0.5 + 0.5);
-  col += uNebulaA * cloudA * 0.16;
-  col += uNebulaB * cloudB * 0.12;
+  float cloudA = smoothstep(0.0, 0.72, n1);
+  float cloudB = smoothstep(0.05, 0.82, n2 * 0.5 + 0.5);
+  col += uNebulaA * cloudA * 0.22;
+  col += uNebulaB * cloudB * 0.15;
 
   // Two independent star layers.
   float s1 = stars(uv, 90.0, 2.3, 0.0);
@@ -27788,6 +27788,7 @@ void main() {
     group.add(glowMesh);
     const currentColor = new Color().copy(seedColor);
     const targetColor = new Color();
+    const okColor = new Color(tokens.ok);
     let amp = 0.08;
     let speed = 0.18;
     let rotation = 0.05;
@@ -27799,7 +27800,7 @@ void main() {
     return {
       object3d: group,
       currentColor,
-      update(dt, target, reducedMotion) {
+      update(dt, target, reducedMotion, flash) {
         const tokens2 = resolveSceneTokens();
         const targetAmp = reducedMotion ? 0.01 : target.noiseAmp;
         const targetRotation = reducedMotion ? target.rotationSpeed * 0.05 : target.rotationSpeed;
@@ -27814,6 +27815,7 @@ void main() {
         const pulse = pulseAmp * (0.5 + 0.5 * Math.sin(pulsePhase));
         targetColor.set(tokens2[target.colorToken]).multiplyScalar(target.intensity);
         currentColor.lerp(targetColor, 1 - Math.exp(-dt * DAMPING_RATE));
+        if (flash > 1e-3) currentColor.lerp(okColor, flash * 0.85);
         orbMesh.rotation.y += dt * rotation;
         tiltPhase += dt * rotation * 0.4;
         orbMesh.rotation.x = Math.sin(tiltPhase) * 0.25;
@@ -27824,7 +27826,7 @@ void main() {
         orbUniforms.uNoiseSpeed.value = speed;
         orbUniforms.uColor.value.copy(currentColor);
         glowUniforms.uColor.value.copy(currentColor);
-        glowUniforms.uStrength.value = glow * (1 + pulse);
+        glowUniforms.uStrength.value = glow * (1 + pulse) + flash * 0.5;
         glowMesh.scale.setScalar(1 + pulse * 0.5);
       },
       dispose() {
@@ -27945,6 +27947,7 @@ void main() {
   function createSceneController(container, initial) {
     let inputs = initial;
     let energy = 0;
+    let flash = 0;
     let disposed = false;
     let running = false;
     let rafId = 0;
@@ -27967,15 +27970,15 @@ void main() {
     const clock = new Clock();
     let driftPhase = 0;
     function resize() {
-      const w = container.clientWidth || 1;
+      const w2 = container.clientWidth || 1;
       const h = container.clientHeight || 1;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       orbRenderer.setPixelRatio(dpr);
-      orbRenderer.setSize(w, h, false);
+      orbRenderer.setSize(w2, h, false);
       bgRenderer.setPixelRatio(Math.min(dpr, 1.5));
-      bgRenderer.setSize(w, h, false);
-      background.setAspect(w / h);
-      camera.aspect = w / h;
+      bgRenderer.setSize(w2, h, false);
+      background.setAspect(w2 / h);
+      camera.aspect = w2 / h;
       camera.updateProjectionMatrix();
     }
     const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => resize()) : null;
@@ -27986,7 +27989,8 @@ void main() {
       rafId = requestAnimationFrame(frame);
       const dt = Math.min(clock.getDelta(), 0.05);
       energy = Math.max(0, energy - ENERGY_DECAY * dt);
-      orb.update(dt, orbTarget(inputs.mode, energy), inputs.reducedMotion);
+      flash = Math.max(0, flash - dt / 0.8);
+      orb.update(dt, orbTarget(inputs.mode, energy), inputs.reducedMotion, flash);
       if (!inputs.reducedMotion) {
         driftPhase += dt * 0.15;
         camera.position.x = Math.sin(driftPhase) * 0.18;
@@ -28010,6 +28014,9 @@ void main() {
       },
       pushActivity(chars) {
         energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
+      },
+      flashComplete() {
+        flash = 1;
       },
       pause() {
         if (!running) return;
@@ -28044,21 +28051,17 @@ void main() {
 
   // scratchpad/orb-preview/entry.ts
   var root = document.getElementById("root");
-  var controller = createSceneController(root, {
-    mode: "idle",
-    agents: [],
-    dock: [],
-    reducedMotion: false
-  });
+  var controller = createSceneController(root, { mode: "idle", agents: [], dock: [], reducedMotion: false });
   var label = document.getElementById("label");
-  function set(mode) {
+  var w = window;
+  w.setMode = (mode) => {
     controller.setInputs({ mode, agents: [], dock: [], reducedMotion: false });
     label.textContent = mode;
-  }
-  window.setMode = set;
-  window.pump = () => {
+  };
+  w.pump = () => {
     for (let i = 0; i < 8; i++) controller.pushActivity(6);
   };
+  w.flash = () => controller.flashComplete();
 })();
 /*! Bundled license information:
 

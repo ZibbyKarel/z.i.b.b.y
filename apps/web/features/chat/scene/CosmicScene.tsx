@@ -28,6 +28,9 @@ export interface CosmicSceneProps {
    * across renders and feeds each increment to the energy signal (Tier 3) — a
    * declarative substitute for pushing a callback on every token. */
   streamChars?: number;
+  /** A monotonically increasing counter bumped once per completed (`done`) turn.
+   * The scene fires the brief ok-green completion flash on each increment. */
+  completedTick?: number;
 }
 
 /**
@@ -46,11 +49,13 @@ export function CosmicScene({
   agents = EMPTY_AGENTS,
   dock = EMPTY_DOCK,
   streamChars = 0,
+  completedTick = 0,
 }: CosmicSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SceneController | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const prevChars = useRef(0);
+  const prevTick = useRef(0);
 
   // Instantiate the controller once. Dynamically imported so three.js never loads
   // in SSR or the initial HUD bundle, and never instantiates in jsdom/no-WebGL.
@@ -98,6 +103,12 @@ export function CosmicScene({
     // A fresh turn resets the counter to 0 (delta goes negative) — ignore that.
     if (delta > 0) controllerRef.current?.pushActivity(delta);
   }, [streamChars]);
+
+  // Fire the completion flash once per finished turn.
+  useEffect(() => {
+    if (completedTick > prevTick.current) controllerRef.current?.flashComplete();
+    prevTick.current = completedTick;
+  }, [completedTick]);
 
   return (
     <div

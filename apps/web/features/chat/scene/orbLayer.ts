@@ -94,7 +94,9 @@ export interface OrbLayer {
   object3d: THREE.Group;
   /** The orb's live world colour — the background glow tracks it (Tier 2). */
   currentColor: THREE.Color;
-  update(dt: number, target: OrbTarget, reducedMotion: boolean): void;
+  /** @param flash Transient completion flash in [0, 1] — tints the orb toward the
+   * `ok` token and boosts the glow, decaying to 0 (the `done`-turn green pulse). */
+  update(dt: number, target: OrbTarget, reducedMotion: boolean, flash: number): void;
   dispose(): void;
 }
 
@@ -149,6 +151,7 @@ export function createOrbLayer(): OrbLayer {
   // Damped state chased toward the mode target every frame.
   const currentColor = new THREE.Color().copy(seedColor);
   const targetColor = new THREE.Color();
+  const okColor = new THREE.Color(tokens.ok);
   let amp = 0.08;
   let speed = 0.18;
   let rotation = 0.05;
@@ -162,7 +165,7 @@ export function createOrbLayer(): OrbLayer {
   return {
     object3d: group,
     currentColor,
-    update(dt, target, reducedMotion) {
+    update(dt, target, reducedMotion, flash) {
       const tokens2 = resolveSceneTokens();
       const targetAmp = reducedMotion ? 0.01 : target.noiseAmp;
       const targetRotation = reducedMotion ? target.rotationSpeed * 0.05 : target.rotationSpeed;
@@ -180,6 +183,9 @@ export function createOrbLayer(): OrbLayer {
 
       targetColor.set(tokens2[target.colorToken]).multiplyScalar(target.intensity);
       currentColor.lerp(targetColor, 1 - Math.exp(-dt * DAMPING_RATE));
+      // Completion flash: blend toward the `ok` token for the brief pulse. Applied
+      // after the mode ease so it overrides colour without disturbing the target.
+      if (flash > 0.001) currentColor.lerp(okColor, flash * 0.85);
 
       orbMesh.rotation.y += dt * rotation;
       tiltPhase += dt * rotation * 0.4;
@@ -194,7 +200,7 @@ export function createOrbLayer(): OrbLayer {
       orbUniforms.uColor.value.copy(currentColor);
 
       glowUniforms.uColor.value.copy(currentColor);
-      glowUniforms.uStrength.value = glow * (1 + pulse);
+      glowUniforms.uStrength.value = glow * (1 + pulse) + flash * 0.5;
       glowMesh.scale.setScalar(1 + pulse * 0.5);
     },
     dispose() {

@@ -22,6 +22,9 @@ export interface SceneController {
   /** Bump the streaming energy signal — called once per delta with the token
    * chunk length (Tier 3). Energy attacks fast and decays slowly inside the loop. */
   pushActivity(chars: number): void;
+  /** Fire the brief completion flash (a `done` turn) — an `ok`-green pulse on the
+   * orb and its background glow that decays back to the current mode. */
+  flashComplete(): void;
   /** Pause the loop (overlay closed / tab hidden). Idempotent. */
   pause(): void;
   /** Resume without a time jump (the clock is reset so `dt` stays small). Idempotent. */
@@ -42,6 +45,7 @@ const CAMERA_Z = 6;
 export function createSceneController(container: HTMLElement, initial: SceneInputs): SceneController {
   let inputs = initial;
   let energy = 0;
+  let flash = 0;
   let disposed = false;
   let running = false;
   let rafId = 0;
@@ -103,8 +107,10 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
 
     // Energy: instant attack happens in pushActivity; here we only decay.
     energy = Math.max(0, energy - ENERGY_DECAY * dt);
+    // Completion flash decays over ~0.8s (attack is instant in flashComplete).
+    flash = Math.max(0, flash - dt / 0.8);
 
-    orb.update(dt, orbTarget(inputs.mode, energy), inputs.reducedMotion);
+    orb.update(dt, orbTarget(inputs.mode, energy), inputs.reducedMotion, flash);
 
     // Gentle camera parallax — disabled under reduced motion.
     if (!inputs.reducedMotion) {
@@ -134,6 +140,9 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     },
     pushActivity(chars) {
       energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
+    },
+    flashComplete() {
+      flash = 1;
     },
     pause() {
       if (!running) return;
