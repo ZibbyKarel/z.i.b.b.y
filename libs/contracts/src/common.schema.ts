@@ -60,3 +60,19 @@ export const WorkspaceSchema = z.object({
   baseRef: z.string().min(1),
 });
 export type Workspace = z.infer<typeof WorkspaceSchema>;
+
+/** Max length of an avatar data URI (~200 KB of base64), the storage backstop. */
+export const AVATAR_MAX = 280_000;
+
+/**
+ * An entity avatar: either an uploaded `data:image/*` URI or a `/`-rooted path to
+ * a bundled static asset (`/avatars/architect.png`). Anything else — notably an
+ * external `http(s)://` URL — is rejected, so inbound data can never point the UI
+ * at a fetch it shouldn't make.
+ */
+export const AvatarSchema = z
+  .string()
+  .max(AVATAR_MAX)
+  .refine((v) => v.startsWith("data:image/") || v.startsWith("/"), {
+    message: "avatar must be a data:image/ URI or a root-relative path",
+  });

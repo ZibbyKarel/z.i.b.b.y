@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
+import { AvatarSchema } from "../common.schema";
 
 /**
  * One rung of the loop's escalation ladder: the model/thinking override applied
@@ -113,6 +114,8 @@ export type PipelineOutput = z.infer<typeof PipelineOutputSchema>;
 const PipelineObject = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).optional(),
+  /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
+  avatar: AvatarSchema.optional(),
   desc: z.string().optional(),
   phases: z.array(PipelinePhaseSchema).min(1),
   /** Terminal delivery sinks (default none, so every committed pipeline parses). */
