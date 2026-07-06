@@ -48,6 +48,20 @@ describe("EntityFormModal", () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: "rohlik" }));
   });
 
+  it("gives the dialog an accessible name from the entity title", () => {
+    render(
+      <EntityFormModal
+        fields={fields}
+        glyph="spark"
+        onClose={() => {}}
+        onSubmit={() => {}}
+        submitLabel="Vytvořit skill"
+        title="Nový skill"
+      />,
+    );
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Nový skill");
+  });
+
   it("cancels", async () => {
     const onClose = vi.fn();
     render(

@@ -1,9 +1,12 @@
 "use client";
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Row } from "../Stack/Stack";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export type DialogWidth = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
@@ -69,11 +72,37 @@ export function Dialog({
   children,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose?.();
+      if (e.key === "Escape") {
+        onClose?.();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const container = dialogRef.current;
+      if (!container) return;
+      const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const first = focusable.at(0);
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        e.preventDefault();
+        container.focus();
+        return;
+      }
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || active === container) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -105,7 +134,9 @@ export function Dialog({
     >
       <div
         aria-modal
-        aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
+        aria-describedby={description ? descriptionId : undefined}
+        aria-label={ariaLabel}
+        aria-labelledby={title && !ariaLabel ? titleId : undefined}
         className="relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded-lg shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_13%,transparent),var(--shadow-modal)] animate-scale-in outline-none"
         data-testid={DialogTestId.Root}
         ref={dialogRef}
@@ -121,8 +152,10 @@ export function Dialog({
           <DialogHeader
             closeLabel={closeLabel}
             description={description}
+            descriptionId={descriptionId}
             onClose={onClose}
             title={title}
+            titleId={titleId}
           />
         )}
         {children && <DialogBody>{children}</DialogBody>}
@@ -134,12 +167,16 @@ export function Dialog({
 
 function DialogHeader({
   title,
+  titleId,
   description,
+  descriptionId,
   onClose,
   closeLabel = "Close dialog",
 }: {
   title: ReactNode;
+  titleId: string;
   description?: ReactNode;
+  descriptionId: string;
   onClose?: () => void;
   closeLabel?: string;
 }) {
@@ -152,6 +189,7 @@ function DialogHeader({
         <div
           className="font-mono font-semibold text-md text-foreground"
           data-testid={DialogTestId.Title}
+          id={titleId}
         >
           {title}
         </div>
@@ -173,6 +211,7 @@ function DialogHeader({
         <p
           className="mt-1.5 text-base text-foreground-dim leading-relaxed"
           data-testid={DialogTestId.Description}
+          id={descriptionId}
         >
           {description}
         </p>
