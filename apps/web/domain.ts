@@ -94,6 +94,8 @@ export interface Pipeline {
   phases: PipelinePhase[];
   /** Delivery sinks run after the chain finishes green (empty = chain ends silently). */
   outputs: PipelineOutput[];
+  /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
+  avatar?: string;
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";

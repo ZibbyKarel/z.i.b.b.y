@@ -2,6 +2,7 @@ import { renderWithProviders as render, screen } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Agent } from "@zibby/contracts";
+import { IconTileTestId } from "@zibby/design-system";
 import type { Pipeline } from "../../../../domain";
 import { PipelineCard } from "./PipelineCard";
 
@@ -54,5 +55,20 @@ describe("PipelineCard", () => {
     );
     await userEvent.click(screen.getByRole("button"));
     expect(onSelect).toHaveBeenCalledWith("build-feature");
+  });
+
+  it("renders the pipeline avatar over the glyph", () => {
+    render(
+      <PipelineCard
+        agents={agents}
+        onSelect={() => {}}
+        pipeline={{ ...pipeline, avatar: "/avatars/orchestrator.png" }}
+        selected={false}
+      />,
+    );
+    expect(screen.getByTestId(IconTileTestId.Image)).toHaveAttribute(
+      "src",
+      "/avatars/orchestrator.png",
+    );
   });
 });
