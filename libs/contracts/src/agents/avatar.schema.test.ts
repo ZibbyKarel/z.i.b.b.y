@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AgentSchema } from "./agent.schema";
 import { PipelineSchema } from "../pipelines/pipeline.schema";
+import { AVATAR_MAX } from "../common.schema";
 
 const baseAgent = { id: "architect", instructions: "do things" };
 const basePipeline = {
@@ -20,6 +21,13 @@ describe("avatar field", () => {
   it("rejects an arbitrary external URL", () => {
     expect(AgentSchema.safeParse({ ...baseAgent, avatar: "https://evil.example/x.png" }).success).toBe(false);
     expect(PipelineSchema.safeParse({ ...basePipeline, avatar: "http://evil/x.png" }).success).toBe(false);
+  });
+  it("rejects a protocol-relative URL", () => {
+    expect(AgentSchema.safeParse({ ...baseAgent, avatar: "//evil.example/x.png" }).success).toBe(false);
+  });
+  it("rejects an avatar longer than AVATAR_MAX", () => {
+    const tooLong = "data:image/png;base64," + "A".repeat(AVATAR_MAX);
+    expect(AgentSchema.safeParse({ ...baseAgent, avatar: tooLong }).success).toBe(false);
   });
   it("is optional", () => {
     expect(AgentSchema.parse(baseAgent).avatar).toBeUndefined();
