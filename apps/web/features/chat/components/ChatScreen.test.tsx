@@ -63,6 +63,18 @@ vi.mock("../../overview/queries/useActivityQuery", () => ({
 }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+// `ChatScreen` reads `usePipelineRunQuery` (the same aggregate `ChatRunCard` polls,
+// Rozhodnutí 5, Fáze 15.3) to derive the `waiting-approval` orb mode. Mock only that
+// one export off the barrel — `ChatComposer`/`ChatPalette` also import
+// `usePipelinesQuery` from the same barrel (already stubbed above at its own module
+// path), so this keeps the real barrel wiring for everything else.
+const { pipelineRunMock } = vi.hoisted(() => ({
+  pipelineRunMock: vi.fn((_runId: string | null) => ({ data: undefined as { status: string } | undefined })),
+}));
+vi.mock("../../pipelines", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../pipelines")>();
+  return { ...actual, usePipelineRunQuery: pipelineRunMock };
+});
 
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
@@ -103,6 +115,8 @@ describe("ChatScreen", () => {
     mutate.mockClear();
     sendState.isPending = false;
     push.mockClear();
+    pipelineRunMock.mockReset();
+    pipelineRunMock.mockReturnValue({ data: undefined });
   });
   afterEach(() => {
     mock.restore();
@@ -200,6 +214,40 @@ describe("ChatScreen", () => {
       });
 
       expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "tool");
+    });
+
+    it("is error when the stream ends the turn with a terminal error frame (Fáze 15.3)", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
+      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+
+      act(() => {
+        mock.last().emit({ conversationId: "c1", turnId: "t1", type: "error", message: "boom" });
+      });
+
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "error");
+    });
+
+    it("is waiting-approval when the last dispatched run is parked on the operator's decision (Fáze 15.3)", async () => {
+      pipelineRunMock.mockReturnValue({ data: { status: "awaiting-approval" } });
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Naplánuj úkol");
+      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+
+      act(() => {
+        mock.last().emit({
+          conversationId: "c1",
+          turnId: "t1",
+          type: "tool",
+          tool: { name: "create_task", status: "ok", runRef: "delivery_1" },
+        });
+      });
+
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "waiting-approval");
     });
   });
 

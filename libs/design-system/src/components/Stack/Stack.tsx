@@ -1,4 +1,4 @@
-import type { CSSProperties, ElementType, HTMLAttributes, Ref } from "react";
+import type { CSSProperties, FC, HTMLAttributes, Ref } from "react";
 import { type Spacing, spacingToPx } from "../../tokens";
 
 export enum StackTestId {
@@ -71,7 +71,20 @@ export function Stack({
     ...style,
   };
 
-  const Component = Tag as ElementType;
+  /* Rendering through a bare `ElementType` breaks once any library augments
+     React.JSX.IntrinsicElements globally (e.g. @react-three/fiber adds three.js
+     scene-graph elements whose `ref`/`style` are incompatible with DOM elements):
+     the shared prop types across the widened intrinsic union collapse to `never`.
+     `as` is a closed union of DOM tags, so the tag is cast to a component
+     signature carrying exactly the props Stack forwards — the JSX runtime still
+     receives the plain tag string. */
+  const Component = Tag as unknown as FC<
+    Omit<HTMLAttributes<HTMLElement>, "className"> & {
+      ref?: Ref<HTMLElement>;
+      style?: CSSProperties;
+      "data-testid"?: string;
+    }
+  >;
   return <Component data-testid={StackTestId.Root} {...rest} ref={ref} style={computedStyle} />;
 }
 

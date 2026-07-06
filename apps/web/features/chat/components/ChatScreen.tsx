@@ -5,13 +5,14 @@
 "use client";
 
 import type { Route } from "next";
-import type { ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
+import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { Container, Icon, SearchBar, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
+import { usePipelineRunQuery } from "../../pipelines";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { ChatComposer } from "./ChatComposer";
@@ -21,6 +22,29 @@ import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
 
 const ACCENT = "var(--color-accent)";
+
+/** Statuses that put the orb in `waiting-approval` — a run parked on the
+ * operator's decision (Rozhodnutí 5, phase-15 plan): over budget/behind an
+ * approval (`awaiting-approval`/`held`) or parked after exhausting retries
+ * (`parked`). */
+const WAITING_APPROVAL_STATUSES = new Set(["awaiting-approval", "parked", "held"]);
+
+/**
+ * The most recent tool event carrying a `runRef`, newest first — searched across
+ * a list of tool-event arrays in the order given (the caller passes the live
+ * stream buffer before the committed transcript so an in-flight turn's dispatch
+ * wins over an older one).
+ */
+function findLastRunRef(toolEventLists: (ChatToolEvent[] | undefined)[]): string | null {
+  for (const events of toolEventLists) {
+    if (!events) continue;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const runRef = events[i]?.runRef;
+      if (runRef) return runRef;
+    }
+  }
+  return null;
+}
 
 export enum ChatScreenTestId {
   Root = "chat-screen",
@@ -213,16 +237,35 @@ export function ChatScreen({
   const isEmpty = messages.length === 0 && !stream.streaming;
 
   const lastTool = stream.toolEvents[stream.toolEvents.length - 1];
-  const mode: ChatOrbMode =
-    lastTool?.status === "started" && stream.streaming
-      ? "tool"
-      : stream.streaming && stream.text.length > 0
-        ? "streaming"
-        : sendMessage.isPending || stream.streaming
-          ? "thinking"
-          : hasDraft
-            ? "listening"
-            : "idle";
+
+  // The most recently dispatched run's id, across the in-flight turn and the
+  // committed transcript (newest first) — always computed so the query below
+  // stays an unconditional hook call (React rules). `usePipelineRunQuery` itself
+  // no-ops on `null` (`enabled: pipelineRunId !== null`), and shares its cache
+  // with `ChatRunCard` (Rozhodnutí 5, Fáze 15.3) — no new polling for a run
+  // already rendered inline in the transcript.
+  const lastRunRef = findLastRunRef([
+    stream.toolEvents,
+    ...[...messages].reverse().map((m) => m.toolEvents),
+  ]);
+  const { data: lastRun } = usePipelineRunQuery(lastRunRef);
+
+  const errorMode = stream.error !== null || sendMessage.isError;
+  const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
+
+  const mode: ChatOrbMode = errorMode
+    ? "error"
+    : waitingApproval
+      ? "waiting-approval"
+      : lastTool?.status === "started" && stream.streaming
+        ? "tool"
+        : stream.streaming && stream.text.length > 0
+          ? "streaming"
+          : sendMessage.isPending || stream.streaming
+            ? "thinking"
+            : hasDraft
+              ? "listening"
+              : "idle";
 
   const time = new Date(now);
   const timeStr = `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`;
