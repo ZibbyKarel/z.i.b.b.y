@@ -1,9 +1,11 @@
 {
   "taskTickMs": 30000,
   "channelTickMs": 30000,
+  "monitorTickMs": 60000,
   "automationTickMs": 0,
   "limitResumeTickMs": 60000,
   "limitResumeMax": 3,
   "goalVerifyTimeoutMs": 600000,
-  "goalAutoResume": false
+  "goalAutoResume": false,
+  "chatPersona": "jarvis"
 }

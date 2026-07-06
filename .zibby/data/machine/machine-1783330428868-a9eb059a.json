@@ -1,0 +1,12 @@
+{
+  "id": "machine-1783330428868-a9eb059a",
+  "action": {
+    "kind": "open-folder",
+    "path": "/Users/zibby"
+  },
+  "preview": [],
+  "state": "executed",
+  "approvalId": "machine_1783330428870_62484f",
+  "requestedAt": "2026-07-06T09:33:48.868Z",
+  "executedAt": "2026-07-06T09:34:03.130Z"
+}
