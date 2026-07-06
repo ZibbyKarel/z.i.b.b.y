@@ -73,6 +73,25 @@ describe("Card", () => {
     expect(screen.getByTestId(CardTestId.Footer)).toHaveTextContent("zápatí");
   });
 
+  it("defaults to type=button when rendered as a button, so it never submits a form", () => {
+    render(<Card as="button">x</Card>);
+    expect(screen.getByTestId(CardTestId.Root)).toHaveAttribute("type", "button");
+  });
+
+  it("lets an explicit type win over the default", () => {
+    render(
+      <Card as="button" type="submit">
+        x
+      </Card>,
+    );
+    expect(screen.getByTestId(CardTestId.Root)).toHaveAttribute("type", "submit");
+  });
+
+  it("does not render a type attribute when not a button", () => {
+    render(<Card>x</Card>);
+    expect(screen.getByTestId(CardTestId.Root)).not.toHaveAttribute("type");
+  });
+
   it("CardActions renders its children via CardFooter", () => {
     render(
       <Card>

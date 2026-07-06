@@ -72,6 +72,9 @@ export interface IconTileProps extends Omit<HTMLAttributes<HTMLElement>, "classN
   /** Render hover/focus affordances; pair with `as="button"` for click targets. */
   interactive?: boolean;
   as?: "span" | "div" | "button";
+  /** Only meaningful with `as="button"` — defaults to `"button"` so the tile never
+   *  falls back to the HTML default of `"submit"` inside a `<form>`. */
+  type?: "button" | "submit" | "reset";
   children?: ReactNode;
   ref?: Ref<HTMLElement>;
 }
@@ -92,6 +95,7 @@ export function IconTile({
   glow = false,
   interactive = false,
   as: Tag = "span",
+  type,
   children,
   style,
   ref,
@@ -128,6 +132,7 @@ export function IconTile({
       data-testid={IconTileTestId.Root}
       ref={ref as Ref<HTMLSpanElement & HTMLDivElement & HTMLButtonElement>}
       style={{ width: px, height: px, ...style }}
+      type={Tag === "button" ? (type ?? "button") : undefined}
       {...rest}
     >
       {showImage ? (

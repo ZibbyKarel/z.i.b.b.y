@@ -32,6 +32,21 @@ describe("IconTile", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it("defaults to type=button when rendered as a button, so it never submits a form", () => {
+    render(<IconTile as="button" glyph="edit" />);
+    expect(screen.getByTestId(IconTileTestId.Root)).toHaveAttribute("type", "button");
+  });
+
+  it("lets an explicit type win over the default", () => {
+    render(<IconTile as="button" glyph="edit" type="submit" />);
+    expect(screen.getByTestId(IconTileTestId.Root)).toHaveAttribute("type", "submit");
+  });
+
+  it("does not render a type attribute when not a button", () => {
+    render(<IconTile glyph="edit" />);
+    expect(screen.getByTestId(IconTileTestId.Root)).not.toHaveAttribute("type");
+  });
+
   it("renders the image with its alt text when src is provided", () => {
     render(<IconTile alt="Project logo" glyph="code" src="data:image/png;base64,AAA" />);
     const img = screen.getByTestId(IconTileTestId.Image);

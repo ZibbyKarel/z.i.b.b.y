@@ -193,6 +193,8 @@
     "attachments": {
       "label": "Přílohy",
       "dropHint": "Přetáhněte soubory nebo klikněte pro výběr",
+      "dropActiveHint": "Pusťte soubory sem",
+      "dropRejectedHint": "Typ souboru není povolen",
       "uploading": "Nahrávám…",
       "error": "Nahrání selhalo",
       "sectionTitle": "Přílohy",
@@ -597,7 +599,10 @@
           "hint": ".md · .markdown · .txt · včetně podsložek",
           "summary": "{total, plural, one {# soubor} few {# soubory} other {# souborů}} · {selected} vybráno",
           "import": "Import do editoru",
-          "fileSize": "{kb} kB"
+          "fileSize": "{kb} kB",
+          "idleHint": "Přetáhněte soubory nebo klikněte pro výběr",
+          "activeHint": "Pusťte soubory sem",
+          "rejectedHint": "Typ souboru není povolen"
         },
         "editor": {
           "placeholder": "Markdown obsah skillu…"

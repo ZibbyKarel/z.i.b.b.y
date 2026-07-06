@@ -25,13 +25,23 @@ const severityClasses: Record<AlertSeverity, string> = {
   error: "text-bad bg-bad/10 border-bad/25",
 };
 
+/** Severities that interrupt/warn get the assertive `alert` role; informational
+ *  ones get the polite `status` role — screen readers announce `alert` content
+ *  immediately, which would be noisy for routine info/ok messages. */
+const roleBySeverity: Record<AlertSeverity, "alert" | "status"> = {
+  info: "status",
+  ok: "status",
+  warn: "alert",
+  error: "alert",
+};
+
 export function Alert({ severity = "info", title, onClose, children, ...rest }: AlertProps) {
   return (
     <div
       data-testid={AlertTestId.Root}
       {...rest}
       className={cn("px-[14px] py-[10px] rounded border", severityClasses[severity])}
-      role="alert"
+      role={roleBySeverity[severity]}
     >
       <Stack direction="row" gap="150">
         <div className="flex-1 text-base leading-relaxed">

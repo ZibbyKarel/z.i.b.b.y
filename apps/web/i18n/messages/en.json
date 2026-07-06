@@ -193,6 +193,8 @@
     "attachments": {
       "label": "Attachments",
       "dropHint": "Drag files here or click to select",
+      "dropActiveHint": "Drop files here",
+      "dropRejectedHint": "File type not allowed",
       "uploading": "Uploading…",
       "error": "Upload failed",
       "sectionTitle": "Attachments",
@@ -597,7 +599,10 @@
           "hint": ".md · .markdown · .txt · subfolders included",
           "summary": "{total, plural, one {# file} other {# files}} · {selected} selected",
           "import": "Import to editor",
-          "fileSize": "{kb} kB"
+          "fileSize": "{kb} kB",
+          "idleHint": "Drag files here or click to select",
+          "activeHint": "Drop files here",
+          "rejectedHint": "File type not allowed"
         },
         "editor": {
           "placeholder": "Markdown skill content…"

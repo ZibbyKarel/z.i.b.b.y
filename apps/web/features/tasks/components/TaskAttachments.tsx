@@ -52,9 +52,12 @@ export function TaskAttachments({ value, onChange }: TaskAttachmentsProps) {
       </Typography>
       <DropZone
         multiple
+        activeLabel={t("dropActiveHint")}
+        idleLabel={t("dropHint")}
         maxSize={10 * 1024 * 1024}
         onDrop={handleDrop}
         onDropRejected={handleDropRejected}
+        rejectedLabel={t("dropRejectedHint")}
       />
       {upload.isPending && (
         <Typography size="xs" type="note" variant="tertiary">
