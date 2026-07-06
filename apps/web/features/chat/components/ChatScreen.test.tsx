@@ -7,16 +7,20 @@ import { installEventSourceMock } from "../../../test/eventSourceMock";
 // The stream hook reads API_URL off the env; pin it so the EventSource opens.
 vi.mock("../../../state/api", () => ({ API_URL: "http://localhost:3333" }));
 // Sending is fire-and-forget over the network — stub it so the test drives only
-// the optimistic append + the stream, never a real fetch.
+// the optimistic append + the stream, never a real fetch. `sendState.isPending` is
+// mutable so individual tests can drive the "thinking" orb mode without a real
+// in-flight mutation.
 const mutate = vi.fn();
+const sendState = { isPending: false };
 vi.mock("../mutations/useSendChatMessageMutation", () => ({
-  useSendChatMessageMutation: () => ({ mutate, isPending: false }),
+  useSendChatMessageMutation: () => ({ mutate, isPending: sendState.isPending }),
 }));
 
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { ChatComposerTestId } from "./ChatComposer";
+import { ChatOrbTestId } from "./ChatOrb";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
 // component behaves exactly as it does under ChatProvider.
@@ -39,6 +43,7 @@ describe("ChatScreen", () => {
   beforeEach(() => {
     mock = installEventSourceMock();
     mutate.mockClear();
+    sendState.isPending = false;
   });
   afterEach(() => {
     mock.restore();
@@ -83,5 +88,59 @@ describe("ChatScreen", () => {
     await user.click(screen.getByTestId(ChatScreenTestId.NewChat));
     expect(screen.queryByText("Ahoj")).not.toBeInTheDocument();
     expect(screen.getByTestId(ChatScreenTestId.Greeting)).toBeInTheDocument();
+  });
+
+  describe("orb mode derivation (Fáze 14.1)", () => {
+    it("is idle with no activity", () => {
+      renderWithProviders(<ChatScreenHarness />);
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "idle");
+    });
+
+    it("is listening when the composer has a non-empty draft", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Ahoj");
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "listening");
+    });
+
+    it("is thinking while the send mutation is pending", () => {
+      sendState.isPending = true;
+      renderWithProviders(<ChatScreenHarness />);
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "thinking");
+    });
+
+    it("is streaming once tokens are flowing", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
+      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+
+      act(() => {
+        mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám se" });
+      });
+
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "streaming");
+    });
+
+    it("is tool while the last announced tool event is still running", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Naplánuj úkol");
+      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+
+      act(() => {
+        mock.last().emit({
+          conversationId: "c1",
+          turnId: "t1",
+          type: "tool",
+          tool: { name: "create_task", status: "started" },
+        });
+      });
+
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "tool");
+    });
   });
 });

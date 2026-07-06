@@ -7,13 +7,13 @@
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { Container, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef } from "react";
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { ChatComposer } from "./ChatComposer";
-import { ChatOrb } from "./ChatOrb";
+import { ChatOrb, type ChatOrbMode } from "./ChatOrb";
 import { ChatTranscript } from "./ChatTranscript";
 
 const ACCENT = "var(--color-accent)";
@@ -128,8 +128,25 @@ export function ChatScreen({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Composer activity is the only new state this phase adds — everything else the
+  // orb needs is already carried by the stream + mutation (see Rozhodnutí 1, Fáze
+  // 14.1 of the phase-14 plan).
+  const [hasDraft, setHasDraft] = useState(false);
+
   const thinking = sendMessage.isPending || stream.streaming;
   const isEmpty = messages.length === 0 && !stream.streaming;
+
+  const lastTool = stream.toolEvents[stream.toolEvents.length - 1];
+  const mode: ChatOrbMode =
+    lastTool?.status === "started" && stream.streaming
+      ? "tool"
+      : stream.streaming && stream.text.length > 0
+        ? "streaming"
+        : sendMessage.isPending || stream.streaming
+          ? "thinking"
+          : hasDraft
+            ? "listening"
+            : "idle";
 
   const time = new Date(now);
   const timeStr = `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`;
@@ -218,7 +235,7 @@ export function ChatScreen({
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
           style={{ opacity: isEmpty ? 0.85 : 0.32, transition: "opacity 0.6s" }}
         >
-          <ChatOrb thinking={thinking} />
+          <ChatOrb mode={mode} />
         </div>
 
         <div
@@ -266,7 +283,7 @@ export function ChatScreen({
       {/* ── Composer ────────────────────────────────────────────────── */}
       <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto max-w-[720px]">
-          <ChatComposer disabled={thinking} onSend={send} />
+          <ChatComposer disabled={thinking} onDraftChange={setHasDraft} onSend={send} />
         </div>
       </div>
     </div>
