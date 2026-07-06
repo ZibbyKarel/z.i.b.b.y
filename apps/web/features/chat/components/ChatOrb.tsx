@@ -314,7 +314,7 @@ export function ChatOrb({ mode = "idle" }: ChatOrbProps) {
       </div>
 
       {/* Static core + brand icon, always on top of the sphere. */}
-      <OrbCoreFallback {...v} />
+      {/* <OrbCoreFallback {...v} /> */}
     </div>
   );
 }

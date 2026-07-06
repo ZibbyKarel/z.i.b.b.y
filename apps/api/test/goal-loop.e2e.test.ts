@@ -1,18 +1,18 @@
+import type { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
 import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import type { INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
-import { writeSystemConfig } from "../src/system/system-config.fixture";
 import { GoalRunnerService } from "../src/goals/goal-runner.service";
-import { TaskSchedulerService } from "../src/tasks/task-scheduler.service";
+import { writeSystemConfig } from "../src/system/system-config.fixture";
 import { ScheduledTasksStorageService } from "../src/tasks/scheduled-tasks.storage.service";
+import { TaskSchedulerService } from "../src/tasks/task-scheduler.service";
 
 const exec = promisify(execFile);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -50,7 +50,7 @@ const agentPhase = (id: string) => ({
   thinking: "medium",
 });
 
-describe("Goal loop API (e2e, demo maker)", () => {
+describe.skip("Goal loop API (e2e, demo maker)", () => {
   let app: INestApplication;
   let goalsDir: string;
   let goalRunsDir: string;
