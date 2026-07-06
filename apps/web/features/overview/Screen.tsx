@@ -4,6 +4,8 @@ import { Card, Container, Grid, Icon, IconTile, Stack, Typography } from "@zibby
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../agents";
 import { useIntegrationsQuery } from "../integrations";
@@ -28,18 +30,59 @@ const STARTERS = [
 
 export function Screen() {
   const t = useTranslations();
-  const { data: integrations = [] } = useIntegrationsQuery();
-  const { data: skills = [] } = useSkillsQuery();
-  const { data: pipelines = [] } = usePipelinesQuery();
-  const { data: agents = [] } = useAgentsQuery();
+  const integrationsQuery = useIntegrationsQuery();
+  const skillsQuery = useSkillsQuery();
+  const pipelinesQuery = usePipelinesQuery();
+  const agentsQuery = useAgentsQuery();
+  const { data: integrations = [] } = integrationsQuery;
+  const { data: skills = [] } = skillsQuery;
+  const { data: pipelines = [] } = pipelinesQuery;
+  const { data: agents = [] } = agentsQuery;
   const { data: activity = [] } = useActivityQuery();
   const { pins } = usePinToggle();
+
+  // Honest load states (Phase 18.2): these four catalogs decide `isFresh` below, so a
+  // pending/failed fetch must never read as a genuinely-empty workspace. Only when
+  // EVERY primary query is pending/erroring does the whole dashboard swap to a single
+  // loading/error state; a partial failure falls through to the normal render (each
+  // section already defaults to `[]` on its own).
+  const primaryQueries = [integrationsQuery, skillsQuery, pipelinesQuery, agentsQuery];
+  const primaryPending = primaryQueries.every((q) => q.isPending);
+  const primaryError = !primaryPending && primaryQueries.every((q) => q.isError);
+  const retryPrimary = () => {
+    void integrationsQuery.refetch();
+    void skillsQuery.refetch();
+    void pipelinesQuery.refetch();
+    void agentsQuery.refetch();
+  };
 
   const isFresh =
     skills.length === 0 &&
     integrations.length === 0 &&
     agents.length === 0 &&
     pipelines.length === 0;
+
+  if (primaryPending) {
+    return (
+      <PageContainer>
+        <Stack direction="col" gap="250">
+          <SummaryWidget />
+          <QueryLoading />
+        </Stack>
+      </PageContainer>
+    );
+  }
+
+  if (primaryError) {
+    return (
+      <PageContainer>
+        <Stack direction="col" gap="250">
+          <SummaryWidget />
+          <QueryError onRetry={retryPrimary} />
+        </Stack>
+      </PageContainer>
+    );
+  }
 
   // The needs-you queue: what actually wants the operator. Panels that have nothing
   // to show render null and simply drop out of the column.

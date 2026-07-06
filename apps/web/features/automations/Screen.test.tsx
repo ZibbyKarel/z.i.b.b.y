@@ -28,11 +28,20 @@ const trigger = vi.fn();
 const update = vi.fn();
 const create = vi.fn();
 const push = vi.fn();
-let automations: Automation[] = [automation];
+const refetch = vi.fn();
+
+const { query } = vi.hoisted(() => ({
+  query: { automations: [] as Automation[], isPending: false, isError: false },
+}));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("./queries", () => ({
-  useAutomationsQuery: () => ({ data: automations }),
+  useAutomationsQuery: () => ({
+    data: query.automations,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch,
+  }),
 }));
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
 vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
@@ -44,11 +53,30 @@ vi.mock("./mutations", () => ({
 
 describe("Automations Screen", () => {
   beforeEach(() => {
-    automations = [automation];
+    query.automations = [automation];
+    query.isPending = false;
+    query.isError = false;
     trigger.mockClear();
     update.mockClear();
     create.mockClear();
     push.mockClear();
+    refetch.mockClear();
+  });
+
+  it("shows the honest loading state while the primary query is pending (Phase 18.2)", () => {
+    query.isPending = true;
+    render(<Screen />);
+    expect(screen.getByText("Načítání…")).toBeInTheDocument();
+    expect(screen.queryByTestId(AutomationCardTestId.Root)).not.toBeInTheDocument();
+  });
+
+  it("shows the honest error state (with retry) when the primary query fails — never an empty workspace", () => {
+    query.isError = true;
+    render(<Screen />);
+    expect(screen.getByText("Nepodařilo se načíst")).toBeInTheDocument();
+    expect(screen.queryByText("Zatím žádné automatizace")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Zkusit znovu"));
+    expect(refetch).toHaveBeenCalled();
   });
 
   it("renders the cron automation with a human-readable schedule (not raw cron)", () => {
@@ -89,12 +117,13 @@ describe("Automations Screen", () => {
     // The prompt is no longer agent-only — it's shown for every new automation.
     expect(screen.getByTestId(AutomationFormTestId.Prompt)).toBeInTheDocument();
   });
-
 });
 
 describe("Automations Screen — system automation", () => {
   beforeEach(() => {
-    automations = [systemAutomation];
+    query.automations = [systemAutomation];
+    query.isPending = false;
+    query.isError = false;
     trigger.mockClear();
     update.mockClear();
     create.mockClear();

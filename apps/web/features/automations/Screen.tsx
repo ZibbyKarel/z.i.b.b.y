@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
+import { QueryError } from "../../components/LoadError/QueryError";
+import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
@@ -24,7 +26,8 @@ import { useAutomationsQuery } from "./queries";
 export function Screen() {
   const t = useTranslations("automations");
   const router = useRouter();
-  const { data: automations = [] } = useAutomationsQuery();
+  const automationsQuery = useAutomationsQuery();
+  const automations = automationsQuery.data ?? [];
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const create = useCreateAutomationMutation();
@@ -84,18 +87,57 @@ export function Screen() {
   const eventAutomations = automations.filter((a) => a.trigger.type === "event");
   const activeCount = automations.filter((a) => a.enabled).length;
 
+  const header = (
+    <PageHeader
+      actions={
+        <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
+          {t("addAutomation")}
+        </Button>
+      }
+      subtitle={t("summary", { active: activeCount, total: automations.length })}
+      title={t("title")}
+    />
+  );
+
+  const addModal = creating && (
+    <AutomationFormDialog
+      agents={agents}
+      onClose={() => setCreating(false)}
+      onCreate={onCreate}
+      pipelines={pipelines}
+    />
+  );
+
+  // Honest load states (Phase 18.2): a pending/failed automations fetch must never
+  // read as an empty workspace (see Collection's own docstring for the same rule).
+  if (automationsQuery.isPending) {
+    return (
+      <PageContainer>
+        <Stack gap="250">
+          {header}
+          <QueryLoading />
+        </Stack>
+        {addModal}
+      </PageContainer>
+    );
+  }
+
+  if (automationsQuery.isError) {
+    return (
+      <PageContainer>
+        <Stack gap="250">
+          {header}
+          <QueryError onRetry={() => void automationsQuery.refetch()} />
+        </Stack>
+        {addModal}
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <Stack gap="250">
-        <PageHeader
-          actions={
-            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
-              {t("addAutomation")}
-            </Button>
-          }
-          subtitle={t("summary", { active: activeCount, total: automations.length })}
-          title={t("title")}
-        />
+        {header}
         <Stack align="center" direction="row" gap="100">
           <Icon name="shield" size="sm" tone="warn" />
           <Typography mono size="2xs" type="micro" variant="tertiary">
@@ -144,15 +186,7 @@ export function Screen() {
           </Stack>
         )}
       </Stack>
-
-      {creating && (
-        <AutomationFormDialog
-          agents={agents}
-          onClose={() => setCreating(false)}
-          onCreate={onCreate}
-          pipelines={pipelines}
-        />
-      )}
+      {addModal}
     </PageContainer>
   );
 }
