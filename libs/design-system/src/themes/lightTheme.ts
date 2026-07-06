@@ -16,7 +16,9 @@ export const lightTheme: Theme = {
   // foreground
   colorForeground: "#0d1117",
   colorForegroundDim: "#3d4b5a",
-  colorForegroundFaint: "#6b7c8d",
+  // WCAG AA (>=4.5:1) against all surface levels (colorBackgroundDeep..colorHover) —
+  // see phase 19.2 commit message for computed ratios.
+  colorForegroundFaint: "#586778",
 
   // borders
   colorBorder: "rgba(0,0,0,0.09)",
