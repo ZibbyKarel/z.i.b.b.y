@@ -71,12 +71,13 @@ export function CosmicScene({
 
     void import("./sceneController").then(({ createSceneController }) => {
       if (cancelled || !containerRef.current) return;
-      controllerRef.current = createSceneController(container, {
-        mode,
-        agents,
-        dock,
-        reducedMotion,
-      });
+      const controller = createSceneController(container, { mode, agents, dock, reducedMotion });
+      controllerRef.current = controller;
+      // Expose the key setters for console testing during development — drive the
+      // orb/dispatch by hand without a live turn (e.g. `__cosmicScene.triggerDispatch("koder")`).
+      if (process.env.NODE_ENV !== "production") {
+        (window as unknown as { __cosmicScene?: SceneController }).__cosmicScene = controller;
+      }
     });
 
     const onVisibility = () => {
@@ -90,6 +91,9 @@ export function CosmicScene({
       document.removeEventListener("visibilitychange", onVisibility);
       controllerRef.current?.dispose();
       controllerRef.current = null;
+      if (process.env.NODE_ENV !== "production") {
+        delete (window as unknown as { __cosmicScene?: SceneController }).__cosmicScene;
+      }
     };
     // Mount-once: subsequent prop changes flow through the effects below, never a
     // re-instantiation.

@@ -239,9 +239,11 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
           n.sprite.position.lerp(orbitPos, 1 - Math.exp(-dt * 3));
         }
 
-        // Breathing + flare scale, plus a sustained working swell.
-        const breathe = 1 + 0.08 * Math.sin(elapsed * 1.2 + n.breathePhase);
-        const workingSwell = n.working ? 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 4)) : 0;
+        // Breathing + flare scale, plus a sustained working swell. Reduced motion
+        // holds the avatars still (no breathe/working oscillation).
+        const breathe = ctx.reducedMotion ? 1 : 1 + 0.08 * Math.sin(elapsed * 1.2 + n.breathePhase);
+        const workingSwell =
+          n.working && !ctx.reducedMotion ? 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 4)) : 0;
         n.sprite.scale.setScalar(BASE_SCALE * (breathe + workingSwell + n.flare * 0.4));
 
         // Project for the label + depth fade.

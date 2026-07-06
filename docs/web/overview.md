@@ -168,7 +168,9 @@ features/
 ├── approvals/      Approval queue
 ├── automations/    Cron/event triggers
 ├── chains/         Completion-driven chain primitive (queue + settle)
-├── chat/           Chat-first interface (replaces the old Voice UI)
+├── chat/           Chat-first interface (replaces the old Voice UI); its
+│                   full-screen WebGL backdrop lives in `chat/scene`
+│                   (see docs/web/chat-cosmic-scene.md)
 ├── commands/       Slash-command catalog
 ├── gates/          Gate rule catalog
 ├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)

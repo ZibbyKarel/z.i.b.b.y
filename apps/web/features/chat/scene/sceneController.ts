@@ -60,6 +60,10 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
   let rafId = 0;
 
   const mobile = (container.clientWidth || window.innerWidth || 0) < 640;
+  // Low-power devices (mobile, or few cores) get an extra-frugal background: lower
+  // resolution on top of the always-on half-framerate. The orb stays full quality.
+  const lowPower = mobile || (navigator.hardwareConcurrency ?? 8) <= 4;
+  let frameCount = 0;
 
   // --- Background renderer (furthest back, opaque). Its own renderer so it can be
   // dropped to half framerate on weak devices (Tier 6) without the orb stuttering.
@@ -140,8 +144,9 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     orbRenderer.setPixelRatio(dpr);
     orbRenderer.setSize(w, h, false);
-    // The background can afford a lower resolution (it's soft and out of focus).
-    bgRenderer.setPixelRatio(Math.min(dpr, 1.5));
+    // The background can afford a lower resolution (it's soft and out of focus) —
+    // lower still on low-power devices.
+    bgRenderer.setPixelRatio(Math.min(dpr, lowPower ? 1 : 1.5));
     bgRenderer.setSize(w, h, false);
     background.setAspect(w / h);
     camera.aspect = w / h;
@@ -194,9 +199,13 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
     });
     dispatch.update(dt, (id) => constellation.positionOf(id));
 
+    // Background always advances (wall-clock steady) but renders every OTHER frame
+    // — at ~30fps its slow drift is indistinguishable, and the orb keeps every
+    // frame. The skipped frame keeps its last-drawn contents on the canvas.
     background.update(dt, { orbColor: orb.currentColor, reducedMotion: inputs.reducedMotion });
-    background.render(bgRenderer, camera);
+    if (frameCount % 2 === 0) background.render(bgRenderer, camera);
     orbRenderer.render(orbScene, camera);
+    frameCount++;
   }
 
   function start() {
