@@ -18,7 +18,7 @@
 export type ChatStreamEvent =
   | { type: "session"; sessionId: string }
   | { type: "delta"; text: string }
-  | { type: "tool"; name: string; input: unknown }
+  | { type: "tool"; name: string; input: unknown; id: string }
   | { type: "done"; text: string }
   | { type: "error"; message: string };
 
@@ -62,7 +62,8 @@ export function parseChatStreamLine(line: string): ChatStreamEvent[] {
     const tools: ChatStreamEvent[] = [];
     for (const block of content) {
       if (isRecord(block) && block["type"] === "tool_use" && typeof block["name"] === "string") {
-        tools.push({ type: "tool", name: block["name"], input: block["input"] ?? null });
+        const id = typeof block["id"] === "string" ? block["id"] : "";
+        tools.push({ type: "tool", name: block["name"], input: block["input"] ?? null, id });
       }
     }
     return tools;

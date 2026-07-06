@@ -80,6 +80,13 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.status === "awaiting-approval") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
+        // Fáze 14.4: the chat's inline run card (Fáze 14.3) reads the single-run
+        // aggregate (`usePipelineRunQuery`) for agent runs too, not only pipeline/
+        // chain runs — without invalidating it here the card would only ever
+        // update off that query's 1s fallback poll instead of this push.
+        if (parsed.runId) {
+          void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
+        }
       } else if (parsed.scope === "pipeline-runs" && parsed.runId) {
         void qc.invalidateQueries({ queryKey: allTaskRunsKey });
         // The single-run aggregate (a goal's pipeline maker timeline) is keyed by id.

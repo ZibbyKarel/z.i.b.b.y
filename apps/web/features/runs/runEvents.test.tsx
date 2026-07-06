@@ -4,6 +4,7 @@ import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } fr
 import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getChainRunsQueryKey } from "../chains/queries/keys";
+import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
@@ -61,6 +62,13 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "agent-runs", runId: "writer_1", status: "awaiting-approval" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+  });
+
+  it("an agent-runs event with a runId invalidates the single-run aggregate too (Fáze 14.4 — the chat run card reads it for agent runs, not just pipeline/chain)", () => {
+    act(() => {
+      mock.last().emit({ scope: "agent-runs", runId: "writer_1", status: "running" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("writer_1") });
   });
 
   it("a pipeline-runs event refreshes the chain runs (a chain advances on step transitions)", () => {

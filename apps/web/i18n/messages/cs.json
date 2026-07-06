@@ -1414,6 +1414,41 @@
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
       "send": "Odeslat"
+    },
+    "mention": {
+      "ariaLabel": "Vyhledat agenta nebo pipeline k oslovení",
+      "placeholder": "Hledat agenta nebo pipeline…",
+      "empty": "Nic nenalezeno",
+      "removeAria": "Odebrat cíl",
+      "sections": {
+        "agents": "Agenti",
+        "pipelines": "Pipelines"
+      }
+    },
+    "runCard": {
+      "loading": "Načítám běh…",
+      "openRunAria": "Otevřít běh",
+      "expandAria": "Rozbalit detail běhu",
+      "collapseAria": "Sbalit detail běhu"
+    },
+    "panel": {
+      "title": "Aktivita",
+      "openAria": "Otevřít panel aktivity",
+      "closeAria": "Zavřít panel aktivity",
+      "empty": "Zatím žádná aktivita",
+      "loading": "Načítám aktivitu…"
+    },
+    "palette": {
+      "placeholder": "Hledat agenta, pipeline, gate nebo poznámku…",
+      "ariaLabel": "Rychlé přepínání po systému",
+      "empty": "Nic nenalezeno",
+      "openAria": "Otevřít rychlé přepínání",
+      "sections": {
+        "agents": "Agenti",
+        "pipelines": "Pipelines",
+        "gates": "Gates",
+        "memory": "Paměť"
+      }
     }
   },
   "pins": {

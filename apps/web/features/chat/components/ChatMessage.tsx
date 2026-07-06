@@ -1,16 +1,19 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Card, Container, Icon, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
+import { ChatRunCard } from "./ChatRunCard";
+import { TargetIdentity } from "./TargetIdentity";
 
 export enum ChatMessageTestId {
   Root = "chat-message",
   UserBubble = "chat-message-user",
   AssistantBubble = "chat-message-assistant",
   Text = "chat-message-text",
+  AssistantIdentity = "chat-message-assistant-identity",
   ToolEvent = "chat-message-tool-event",
   ToolEventLink = "chat-message-tool-event-link",
   StreamingCursor = "chat-message-streaming-cursor",
@@ -32,14 +35,27 @@ function toolTone(status: ChatToolEvent["status"]): DotTone {
 }
 
 function ToolEventRow({ event }: { event: ChatToolEvent }) {
+  // A dispatch that has produced a run (`runRef` known — the `ok` phase of the
+  // two-phase create_task event, Fáze 14.2) renders the live run card instead of
+  // the flat announcement row (Fáze 14.3, Rozhodnutí 5). The `started` phase has
+  // no `runRef` yet, so it still renders the flat row below — the row upgrades to
+  // a card in place the instant `useChatStream` merges in the matching `ok` event
+  // (same callId), with no extra state needed here.
+  if (event.runRef) {
+    return <ChatRunCard runRef={event.runRef} target={event.target} />;
+  }
+
   const summary = event.summary ?? event.name;
   const body = (
-    <Stack align="center" data-testid={ChatMessageTestId.ToolEvent} direction="row" gap="75">
-      <StatusDot pulse={event.status === "started"} tone={toolTone(event.status)} />
-      <Typography mono size="xs" type="note" variant="secondary">
-        {summary}
-      </Typography>
-      {event.href && <Icon name="chevron" size="sm" tone="faint" />}
+    <Stack direction="col" gap="50">
+      {event.target && <TargetIdentity targets={[event.target]} />}
+      <Stack align="center" data-testid={ChatMessageTestId.ToolEvent} direction="row" gap="75">
+        <StatusDot pulse={event.status === "started"} tone={toolTone(event.status)} />
+        <Typography mono size="xs" type="note" variant="secondary">
+          {summary}
+        </Typography>
+        {event.href && <Icon name="chevron" size="sm" tone="faint" />}
+      </Stack>
     </Stack>
   );
 
@@ -72,6 +88,14 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
       direction="col"
       gap="75"
     >
+      {!isUser && (
+        <Stack align="center" data-testid={ChatMessageTestId.AssistantIdentity} direction="row" gap="50">
+          <IconTile glyph="butlerSign" size="sm" tone="accent" />
+          <Typography mono size="xs" tone="accent" type="note">
+            ZIBBY
+          </Typography>
+        </Stack>
+      )}
       <Card
         background={isUser ? "raised" : "surface"}
         data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}

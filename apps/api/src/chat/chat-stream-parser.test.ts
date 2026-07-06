@@ -35,18 +35,35 @@ describe("parseChatStreamLine", () => {
     expect(parseChatStreamLine(start)).toEqual([]);
   });
 
-  it("emits a tool event for each tool_use block in an assistant message", () => {
+  it("emits a tool event for each tool_use block in an assistant message, carrying its id", () => {
     const line = JSON.stringify({
       type: "assistant",
       message: {
         content: [
           { type: "text", text: "už spouštím" },
-          { type: "tool_use", name: "mcp__zibby__create_task", input: { text: "postav X" } },
+          {
+            type: "tool_use",
+            id: "toolu_01Abc",
+            name: "mcp__zibby__create_task",
+            input: { text: "postav X" },
+          },
         ],
       },
     });
     expect(parseChatStreamLine(line)).toEqual([
-      { type: "tool", name: "mcp__zibby__create_task", input: { text: "postav X" } },
+      { type: "tool", name: "mcp__zibby__create_task", input: { text: "postav X" }, id: "toolu_01Abc" },
+    ]);
+  });
+
+  it("falls back to an empty id when the tool_use block has none", () => {
+    const line = JSON.stringify({
+      type: "assistant",
+      message: {
+        content: [{ type: "tool_use", name: "mcp__zibby__get_status", input: {} }],
+      },
+    });
+    expect(parseChatStreamLine(line)).toEqual([
+      { type: "tool", name: "mcp__zibby__get_status", input: {}, id: "" },
     ]);
   });
 

@@ -4,33 +4,95 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../../test/render";
 import { installEventSourceMock } from "../../../test/eventSourceMock";
 
-// The stream hook reads API_URL off the env; pin it so the EventSource opens.
-vi.mock("../../../state/api", () => ({ API_URL: "http://localhost:3333" }));
+// The stream hook reads API_URL off the env; pin it so the EventSource opens. Keep
+// the REAL `apiClient` (via importOriginal) — the mention picker's agent/pipeline
+// queries are stubbed at their own hook level below, but other modules pulled in
+// transitively through the agents/pipelines barrels (e.g. mutation hooks) still
+// reference `apiClient` at import time and would break on a bare `{ API_URL }` mock.
+vi.mock("../../../state/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../state/api")>();
+  return { ...actual, API_URL: "http://localhost:3333" };
+});
 // Sending is fire-and-forget over the network — stub it so the test drives only
-// the optimistic append + the stream, never a real fetch.
+// the optimistic append + the stream, never a real fetch. `sendState.isPending` is
+// mutable so individual tests can drive the "thinking" orb mode without a real
+// in-flight mutation.
 const mutate = vi.fn();
+const sendState = { isPending: false };
 vi.mock("../mutations/useSendChatMessageMutation", () => ({
-  useSendChatMessageMutation: () => ({ mutate, isPending: false }),
+  useSendChatMessageMutation: () => ({ mutate, isPending: sendState.isPending }),
 }));
+// ChatComposer (child) reads the agent/pipeline catalogs for its @mention picker
+// (Fáze 14.2); the ⌘K palette (Fáze 14.5) reads the same two plus gates/memory —
+// stub every one (with one fixture each, reused by the 14.5 wiring tests below) so
+// this suite never hits the network.
+vi.mock("../../agents/queries/useAgentsQuery", () => ({
+  useAgentsQuery: () => ({ data: [{ id: "builder", name: "Builder", glyph: "hammer" }] }),
+  getAgentsQueryKey: () => ["agents"],
+}));
+vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
+  usePipelinesQuery: () => ({ data: [] }),
+  getPipelinesQueryKey: () => ["pipelines"],
+}));
+vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
+  useApprovalsQuery: () => ({
+    data: [
+      {
+        id: "ap1",
+        runId: "r1",
+        kind: "agent",
+        skill: "writer",
+        action: "purchase",
+        detail: "buy the domain",
+        risk: "low",
+        status: "pending",
+        requestedAt: "2026-06-12T07:00:00.000Z",
+      },
+    ],
+    isPending: false,
+  }),
+  getApprovalsQueryKey: () => ["approvals"],
+}));
+vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
+  useMemorySearchQuery: () => ({ data: undefined, isFetching: false }),
+  getMemorySearchQueryKey: (q: string) => ["memory", "search", q],
+}));
+vi.mock("../../overview/queries/useActivityQuery", () => ({
+  useActivityQuery: () => ({ data: [], isPending: false }),
+  getActivityQueryKey: () => ["activity", "today"],
+}));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
+import { SearchMenuTestId } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { ChatComposerTestId } from "./ChatComposer";
+import { ChatOrbTestId } from "./ChatOrb";
+import { ChatPaletteTestId } from "./ChatPalette";
+import { ChatSidePanelTestId } from "./ChatSidePanel";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
-// component behaves exactly as it does under ChatProvider.
-function ChatScreenHarness() {
+// component behaves exactly as it does under ChatProvider. `onClose` is spy-able so
+// the Esc-priority / palette-navigate tests can assert it fired (or didn't).
+function ChatScreenHarness({ onClose = () => {} }: { onClose?: () => void }) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   return (
     <ChatScreen
       conversationId="c1"
       messages={messages}
-      onClose={() => {}}
+      onClose={onClose}
       onMessagesChange={setMessages}
       onNewChat={() => setMessages([])}
     />
   );
+}
+
+function fireKey(init: KeyboardEventInit) {
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { ...init, bubbles: true }));
+  });
 }
 
 describe("ChatScreen", () => {
@@ -39,6 +101,8 @@ describe("ChatScreen", () => {
   beforeEach(() => {
     mock = installEventSourceMock();
     mutate.mockClear();
+    sendState.isPending = false;
+    push.mockClear();
   });
   afterEach(() => {
     mock.restore();
@@ -83,5 +147,176 @@ describe("ChatScreen", () => {
     await user.click(screen.getByTestId(ChatScreenTestId.NewChat));
     expect(screen.queryByText("Ahoj")).not.toBeInTheDocument();
     expect(screen.getByTestId(ChatScreenTestId.Greeting)).toBeInTheDocument();
+  });
+
+  describe("orb mode derivation (Fáze 14.1)", () => {
+    it("is idle with no activity", () => {
+      renderWithProviders(<ChatScreenHarness />);
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "idle");
+    });
+
+    it("is listening when the composer has a non-empty draft", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Ahoj");
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "listening");
+    });
+
+    it("is thinking while the send mutation is pending", () => {
+      sendState.isPending = true;
+      renderWithProviders(<ChatScreenHarness />);
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "thinking");
+    });
+
+    it("is streaming once tokens are flowing", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
+      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+
+      act(() => {
+        mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám se" });
+      });
+
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "streaming");
+    });
+
+    it("is tool while the last announced tool event is still running", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Naplánuj úkol");
+      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+
+      act(() => {
+        mock.last().emit({
+          conversationId: "c1",
+          turnId: "t1",
+          type: "tool",
+          tool: { name: "create_task", status: "started" },
+        });
+      });
+
+      expect(screen.getByTestId(ChatOrbTestId.Root)).toHaveAttribute("data-mode", "tool");
+    });
+  });
+
+  describe("activity panel + quick-switcher (Fáze 14.5)", () => {
+    it("toggles the activity panel from the top-bar button", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
+      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
+      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
+      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
+      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
+    });
+
+    it("opens the palette on ⌘K, closing the panel it replaces (mutually exclusive)", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
+      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
+
+      fireKey({ key: "k", metaKey: true });
+      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
+
+      // And the reverse: reopening the panel closes the palette back out.
+      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
+      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+    });
+
+    it("suppresses the dashboard's global ⌘K listener while the overlay is open", () => {
+      // Simulates TopBar's GlobalSearch, which keeps its own bubble-phase ⌘K
+      // listener mounted underneath this overlay for the overlay's whole lifetime
+      // — the chat's own listener must intercept the shortcut first (capture phase
+      // + stopPropagation) so that handler never fires invisibly behind the chat.
+      const globalHandler = vi.fn();
+      window.addEventListener("keydown", globalHandler);
+      renderWithProviders(<ChatScreenHarness />);
+
+      fireKey({ key: "k", metaKey: true });
+
+      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
+      expect(globalHandler).not.toHaveBeenCalled();
+      window.removeEventListener("keydown", globalHandler);
+    });
+
+    it("Esc closes the panel before the overlay", async () => {
+      const onClose = vi.fn();
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness onClose={onClose} />);
+
+      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
+      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
+
+      // 1st Esc: the panel closes, the overlay stays.
+      fireKey({ key: "Escape" });
+      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+
+      // 2nd Esc: nothing else open — closes the overlay itself.
+      fireKey({ key: "Escape" });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("Esc closes the palette before the overlay", () => {
+      const onClose = vi.fn();
+      renderWithProviders(<ChatScreenHarness onClose={onClose} />);
+
+      fireKey({ key: "k", metaKey: true });
+      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
+
+      // 1st Esc: the palette closes, the overlay stays.
+      fireKey({ key: "Escape" });
+      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+
+      // 2nd Esc: nothing else open — closes the overlay itself.
+      fireKey({ key: "Escape" });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("selecting an agent in the palette injects an @mention target into the composer", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      fireKey({ key: "k", metaKey: true });
+      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
+      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+
+      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+      expect(screen.getByTestId(ChatComposerTestId.TargetChip)).toHaveTextContent("Builder");
+      expect(screen.getByTestId(ChatComposerTestId.Input)).toHaveValue("@Builder ");
+
+      await user.type(screen.getByTestId(ChatComposerTestId.Input), "ahoj");
+      await user.keyboard("{Enter}");
+      expect(mutate).toHaveBeenCalledWith({
+        body: {
+          conversationId: "c1",
+          text: "@Builder ahoj",
+          target: { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+        },
+      });
+    });
+
+    it("selecting a gate in the palette navigates and closes the whole overlay", async () => {
+      const onClose = vi.fn();
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness onClose={onClose} />);
+
+      fireKey({ key: "k", metaKey: true });
+      await user.type(screen.getByTestId(SearchMenuTestId.Input), "purchase");
+      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`));
+
+      expect(push).toHaveBeenCalledWith("/gates");
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 });

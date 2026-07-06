@@ -4,12 +4,30 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../test/render";
 import { installEventSourceMock } from "../../test/eventSourceMock";
 
-// The overlay's stream hook reads API_URL off the env; pin it so the EventSource opens.
-vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
+// The overlay's stream hook reads API_URL off the env; pin it so the EventSource
+// opens. Keep the REAL `apiClient` (via importOriginal) — the mention picker's
+// agent/pipeline queries are stubbed at their own hook level below, but other
+// modules pulled in transitively through the agents/pipelines barrels (e.g.
+// mutation hooks) still reference `apiClient` at import time and would break on a
+// bare `{ API_URL }` mock.
+vi.mock("../../state/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../state/api")>();
+  return { ...actual, API_URL: "http://localhost:3333" };
+});
 // Sending is fire-and-forget — stub it so toggling the overlay never hits the network.
 const mutate = vi.fn();
 vi.mock("./mutations/useSendChatMessageMutation", () => ({
   useSendChatMessageMutation: () => ({ mutate, isPending: false }),
+}));
+// ChatComposer (nested under the overlay) reads the agent/pipeline catalogs for its
+// @mention picker (Fáze 14.2) — stub them so this suite never hits the network.
+vi.mock("../agents/queries/useAgentsQuery", () => ({
+  useAgentsQuery: () => ({ data: [] }),
+  getAgentsQueryKey: () => ["agents"],
+}));
+vi.mock("../pipelines/queries/usePipelinesQuery", () => ({
+  usePipelinesQuery: () => ({ data: [] }),
+  getPipelinesQueryKey: () => ["pipelines"],
 }));
 
 import { ChatProvider, useChat } from "./ChatContext";

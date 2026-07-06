@@ -72,9 +72,27 @@ const EMPTY: ChatStreamState = {
  * empty frame in between (this is what fixed "history zmizela": there is no
  * refetch window to flash through).
  *
+ * A `tool` frame is two-phase for `create_task` (backend `chat-session.service`):
+ * a `started` frame lands the instant the dispatch is announced, then an `ok`
+ * frame with the same `callId` lands once the structured result (target/runRef/
+ * taskId/href) is known. When an incoming `tool` frame's `callId` matches one
+ * already buffered, it REPLACES that entry in place (so the transcript shows one
+ * live-updating row, not a duplicate); a frame without a matching `callId` (no
+ * correlation, or a single-phase tool like `recall_memory`) is appended as usual.
+ *
  * The stream is scoped to the hook's lifetime: it opens when a `conversationId` is
  * known and closes on unmount (the overlay closing). A `null` conversationId is
  * inert (nothing to stream yet).
+ *
+ * Fáze 14.3's inline run card (`ChatRunCard`, rendered once a `tool` event's
+ * `runRef` is known) does NOT read this stream for its live data — Rozhodnutí 6
+ * deliberately keeps this channel to delta/tool/done/error text events only. The
+ * card instead uses the existing `usePipelineRunQuery(runRef)`, which is kept
+ * fresh by the shared `RunEventsProvider` invalidation bus (mounted above the chat
+ * overlay, so it works from inside it) plus that query's own 1s fallback poll.
+ * Smaller surface, zero behaviour change for every other `/api/events` consumer;
+ * the only addition (Fáze 14.4) was making that bus invalidate the single-run key
+ * for `agent-runs` events too, since it previously only did so for pipeline runs.
  */
 export function useChatStream(
   conversationId: string | null,
@@ -130,8 +148,16 @@ export function useChatStream(
             error: null,
           });
           break;
-        case "tool":
-          buf.toolEvents = [...buf.toolEvents, parsed.tool];
+        case "tool": {
+          // A `callId` match REPLACES the buffered entry (the create_task started→ok
+          // pair collapses to one row); otherwise append.
+          const matchIndex = parsed.tool.callId
+            ? buf.toolEvents.findIndex((event) => event.callId === parsed.tool.callId)
+            : -1;
+          buf.toolEvents =
+            matchIndex !== -1
+              ? buf.toolEvents.map((event, i) => (i === matchIndex ? parsed.tool : event))
+              : [...buf.toolEvents, parsed.tool];
           setState({
             forConversation: conversationId,
             turnId: parsed.turnId,
@@ -141,6 +167,7 @@ export function useChatStream(
             error: null,
           });
           break;
+        }
         case "done": {
           // `done.text` is authoritative (deltas can drop). Hand the finished turn
           // to the caller and reset the live buffer in the same React batch.
