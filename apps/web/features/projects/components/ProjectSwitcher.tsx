@@ -40,6 +40,7 @@ export function ProjectSwitcher() {
         aria-label={t("switcherLabel")}
         onChange={(value) => setActiveProject(value === ALL_PROJECTS ? null : value)}
         options={options}
+        size="sm"
         value={activeProjectId ?? ALL_PROJECTS}
       />
     </Container>
