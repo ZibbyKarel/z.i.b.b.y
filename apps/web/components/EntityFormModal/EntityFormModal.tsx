@@ -53,6 +53,7 @@ export function EntityFormModal({
           </Button>
         </>
       }
+      ariaLabel={title}
       onClose={onClose}
       open={true}
       title={

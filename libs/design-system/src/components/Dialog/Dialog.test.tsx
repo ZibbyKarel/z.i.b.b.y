@@ -79,4 +79,89 @@ describe("Dialog", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it("gives the dialog an accessible name from the title", () => {
+    render(
+      <Dialog open title="Smazat">
+        x
+      </Dialog>,
+    );
+    expect(screen.getByTestId(DialogTestId.Root)).toHaveAccessibleName("Smazat");
+  });
+
+  it("wires aria-describedby to the rendered description", () => {
+    render(
+      <Dialog open description="Toto nelze vrátit" title="Potvrzení">
+        x
+      </Dialog>,
+    );
+    const root = screen.getByTestId(DialogTestId.Root);
+    expect(root).toHaveAccessibleDescription("Toto nelze vrátit");
+  });
+
+  it("lets an explicit ariaLabel override the title-derived name", () => {
+    render(
+      <Dialog open ariaLabel="Vlastní jméno" title={<span>Nikoli text</span>}>
+        x
+      </Dialog>,
+    );
+    expect(screen.getByTestId(DialogTestId.Root)).toHaveAccessibleName("Vlastní jméno");
+  });
+
+  it("traps Tab focus inside the dialog, wrapping from last to first", async () => {
+    render(
+      <Dialog
+        open
+        actions={
+          <>
+            <button>OK</button>
+          </>
+        }
+        onClose={() => {}}
+        title="Potvrzení"
+      >
+        <button>Confirm</button>
+      </Dialog>,
+    );
+    const closeButton = screen.getByTestId(DialogTestId.CloseButton);
+    const confirmButton = screen.getByRole("button", { name: "Confirm" });
+    const okButton = screen.getByRole("button", { name: "OK" });
+
+    closeButton.focus();
+    expect(document.activeElement).toBe(closeButton);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(confirmButton);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(okButton);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(closeButton);
+  });
+
+  it("traps Shift+Tab focus, wrapping from first to last", async () => {
+    render(
+      <Dialog
+        open
+        actions={
+          <>
+            <button>OK</button>
+          </>
+        }
+        onClose={() => {}}
+        title="Potvrzení"
+      >
+        <button>Confirm</button>
+      </Dialog>,
+    );
+    const closeButton = screen.getByTestId(DialogTestId.CloseButton);
+    const okButton = screen.getByRole("button", { name: "OK" });
+
+    closeButton.focus();
+    expect(document.activeElement).toBe(closeButton);
+
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(okButton);
+  });
 });
