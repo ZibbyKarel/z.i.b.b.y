@@ -33,6 +33,22 @@ export interface ChatComposerProps {
    * derive a "listening" state without owning the draft text itself.
    */
   onDraftChange?: (hasDraft: boolean) => void;
+  /**
+   * A target picked OUTSIDE this composer's own @mention picker — e.g. the
+   * quick-switcher palette (Fáze 14.5). Setting this to a target inserts
+   * `@Name ` into the draft and adopts it exactly like an in-composer mention
+   * pick, then hands focus back here; `onInjectedTargetConsumed` fires right
+   * after so the parent can clear its pending value (one-shot, mirroring the
+   * target itself). Chosen over lifting the composer's `selectedTarget` up to
+   * `ChatScreen`: the in-progress mention state it depends on
+   * (`mentionOpen`/`mentionStart`/`menuRect`) has to stay local to this
+   * component regardless, so lifting only the picked target would split one
+   * selection across two components for no gain — this is the smaller,
+   * self-contained change.
+   */
+  injectedTarget?: TaskTarget;
+  /** Fired once `injectedTarget` above has been applied. */
+  onInjectedTargetConsumed?: () => void;
 }
 
 /** Position (viewport px) the fixed mention picker is rendered at, above the composer. */
@@ -71,7 +87,13 @@ function matchesQuery(query: string, name: string, id: string): boolean {
  * with the next `onSend` call; sending (or removing the chip) clears it — it is
  * one-shot per message, mirroring the backend's one-shot-per-turn explicit target.
  */
-export function ChatComposer({ onSend, disabled, onDraftChange }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  disabled,
+  onDraftChange,
+  injectedTarget,
+  onInjectedTargetConsumed,
+}: ChatComposerProps) {
   const t = useTranslations("chat.composer");
   const tMention = useTranslations("chat.mention");
   const [value, setValue] = useState("");
@@ -85,6 +107,10 @@ export function ChatComposer({ onSend, disabled, onDraftChange }: ChatComposerPr
   const [mentionQuery, setMentionQuery] = useState("");
   const [menuRect, setMenuRect] = useState<MentionMenuRect | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<TaskTarget | undefined>(undefined);
+  // Mirrors the `injectedTarget` prop so a NEW value (including the same target
+  // picked again after a round-trip through `undefined` — see `ChatScreen`, which
+  // clears it once consumed) can be told apart from a re-render with the same one.
+  const [prevInjectedTarget, setPrevInjectedTarget] = useState(injectedTarget);
 
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
@@ -131,6 +157,35 @@ export function ChatComposer({ onSend, disabled, onDraftChange }: ChatComposerPr
       onDraftChange?.(hasDraft);
     }
   };
+
+  // Apply a target picked outside this composer (the ⌘K palette, Fáze 14.5) — React's
+  // "adjust state while rendering" pattern (react.dev/learn/you-might-not-need-an-effect)
+  // rather than a `useEffect`: it's OWN local state (`value`/`selectedTarget`), so it's
+  // safe to update synchronously mid-render, and doing it here (not in an effect) skips
+  // the extra commit-then-fix-up render an effect would cost.
+  if (injectedTarget !== prevInjectedTarget) {
+    setPrevInjectedTarget(injectedTarget);
+    if (injectedTarget) {
+      const mentionText = `@${injectedTarget.name} `;
+      const next =
+        value.length > 0 ? `${value}${value.endsWith(" ") ? "" : " "}${mentionText}` : mentionText;
+      setValue(next);
+      setSelectedTarget(injectedTarget);
+    }
+  }
+
+  // The two side effects of an injection — telling the parent it's been applied and
+  // handing focus back — DO belong in a real effect (an external callback + an
+  // imperative DOM call, not this component's own state), so they stay separate from
+  // the state update above. Reads `value` at the moment of injection rather than
+  // depending on it, so this only reruns when a NEW target actually arrives.
+  useEffect(() => {
+    if (!injectedTarget) return;
+    notifyDraftChange(value);
+    onInjectedTargetConsumed?.();
+    textareaRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedTarget]);
 
   const submit = () => {
     const text = value.trim();

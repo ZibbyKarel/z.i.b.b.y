@@ -1430,6 +1430,25 @@
       "openRunAria": "Otevřít běh",
       "expandAria": "Rozbalit detail běhu",
       "collapseAria": "Sbalit detail běhu"
+    },
+    "panel": {
+      "title": "Aktivita",
+      "openAria": "Otevřít panel aktivity",
+      "closeAria": "Zavřít panel aktivity",
+      "empty": "Zatím žádná aktivita",
+      "loading": "Načítám aktivitu…"
+    },
+    "palette": {
+      "placeholder": "Hledat agenta, pipeline, gate nebo poznámku…",
+      "ariaLabel": "Rychlé přepínání po systému",
+      "empty": "Nic nenalezeno",
+      "openAria": "Otevřít rychlé přepínání",
+      "sections": {
+        "agents": "Agenti",
+        "pipelines": "Pipelines",
+        "gates": "Gates",
+        "memory": "Paměť"
+      }
     }
   },
   "pins": {

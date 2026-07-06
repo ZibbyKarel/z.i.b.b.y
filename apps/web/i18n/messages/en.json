@@ -1430,6 +1430,25 @@
       "openRunAria": "Open run",
       "expandAria": "Expand run detail",
       "collapseAria": "Collapse run detail"
+    },
+    "panel": {
+      "title": "Activity",
+      "openAria": "Open activity panel",
+      "closeAria": "Close activity panel",
+      "empty": "No activity yet",
+      "loading": "Loading activity…"
+    },
+    "palette": {
+      "placeholder": "Search agents, pipelines, gates or notes…",
+      "ariaLabel": "Quick-switch across the system",
+      "empty": "Nothing found",
+      "openAria": "Open quick switcher",
+      "sections": {
+        "agents": "Agents",
+        "pipelines": "Pipelines",
+        "gates": "Gates",
+        "memory": "Memory"
+      }
     }
   },
   "pins": {

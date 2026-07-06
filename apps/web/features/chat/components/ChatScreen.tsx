@@ -4,9 +4,11 @@
    inline styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
+import type { Route } from "next";
 import type { ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
-import { Container, Icon, Stack, Typography } from "@zibby/design-system";
+import { Container, Icon, SearchBar, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
@@ -14,6 +16,8 @@ import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { ChatComposer } from "./ChatComposer";
 import { ChatOrb, type ChatOrbMode } from "./ChatOrb";
+import { ChatPalette } from "./ChatPalette";
+import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
 
 const ACCENT = "var(--color-accent)";
@@ -24,6 +28,7 @@ export enum ChatScreenTestId {
   Greeting = "chat-screen-greeting",
   Close = "chat-screen-close",
   NewChat = "chat-screen-new-chat",
+  PanelToggle = "chat-screen-panel-toggle",
 }
 
 export interface ChatScreenProps {
@@ -66,6 +71,7 @@ export function ChatScreen({
 }: ChatScreenProps) {
   const t = useTranslations("chat");
   const now = useNow(MINUTE_MS);
+  const router = useRouter();
 
   // The lifted setter is a stable useState dispatcher from the provider; alias it so
   // the append helpers read like the original local-state version.
@@ -121,14 +127,82 @@ export function ChatScreen({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, stream.text, stream.toolEvents.length]);
 
-  // Esc closes the overlay.
+  // Fáze 14.5: the activity panel and the ⌘K quick-switcher are mutually exclusive
+  // overlays ON TOP of the conversation — opening either closes the other. Both are
+  // owned here (not by the panel/palette themselves) so Esc priority and the
+  // top-bar toggles all read from one source of truth.
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const openPanel = useCallback(() => {
+    setPaletteOpen(false);
+    setPanelOpen((v) => !v);
+  }, []);
+  const openPalette = useCallback(() => {
+    setPanelOpen(false);
+    setPaletteOpen((v) => !v);
+  }, []);
+
+  // A target picked in the palette (agents/pipelines sections) rides into the
+  // composer through its `injectedTarget` prop rather than lifting the composer's
+  // whole mention-selection state up here — see the doc comment on
+  // `ChatComposerProps.injectedTarget` for why.
+  const [pendingMentionTarget, setPendingMentionTarget] = useState<TaskTarget | undefined>(
+    undefined,
+  );
+  const handleMentionSelect = useCallback((target: TaskTarget) => {
+    setPendingMentionTarget(target);
+  }, []);
+  const handlePaletteNavigate = useCallback(
+    (href: Route) => {
+      // Gates/memory have nowhere to render in-overlay yet (Rozhodnutí 7's sanctioned
+      // fallback) — navigating away closes the whole conversation, not just the palette.
+      setPaletteOpen(false);
+      router.push(href);
+      onClose();
+    },
+    [router, onClose],
+  );
+
+  // Esc priority: the palette sits on top of the panel, which sits on top of the
+  // conversation itself — the topmost open surface is what a single Esc dismisses.
+  // Closing the whole overlay also drops `panelOpen`/`paletteOpen` for free (this
+  // component unmounts).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (paletteOpen) {
+        setPaletteOpen(false);
+        return;
+      }
+      if (panelOpen) {
+        setPanelOpen(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [paletteOpen, panelOpen, onClose]);
+
+  // ⌘/Ctrl+K opens the quick-switcher — but ONLY while this overlay is mounted
+  // (the effect only exists for the lifetime of ChatScreen). The dashboard's own
+  // TopBar `GlobalSearch` keeps its global ⌘K listener mounted underneath this
+  // full-screen overlay (it never unmounts), so a plain bubble-phase listener here
+  // would ALSO trigger it invisibly behind the chat. Registering on the CAPTURE
+  // phase runs before any bubble-phase `window` listener — including
+  // GlobalSearch's — so `stopPropagation` here cleanly suppresses it without
+  // touching anything outside `features/chat`.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      if (e.key.toLowerCase() !== "k") return;
+      e.preventDefault();
+      e.stopPropagation();
+      openPalette();
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [openPalette]);
 
   // Composer activity is the only new state this phase adds — everything else the
   // orb needs is already carried by the stream + mutation (see Rozhodnutí 1, Fáze
@@ -206,6 +280,24 @@ export function ChatScreen({
         </Typography>
 
         <Stack align="center" direction="row" gap="100">
+          <Container width="220px">
+            <SearchBar
+              ariaLabel={t("palette.openAria")}
+              onClick={openPalette}
+              placeholder={t("palette.placeholder")}
+              shortcut="⌘K"
+            />
+          </Container>
+          <button
+            aria-label={t(panelOpen ? "panel.closeAria" : "panel.openAria")}
+            className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
+            data-testid={ChatScreenTestId.PanelToggle}
+            onClick={openPanel}
+            type="button"
+          >
+            <Icon name="pulse" size="xs" />
+            {t("panel.title")}
+          </button>
           {messages.length > 0 && (
             <button
               className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
@@ -285,9 +377,27 @@ export function ChatScreen({
       {/* ── Composer ────────────────────────────────────────────────── */}
       <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto max-w-[720px]">
-          <ChatComposer disabled={thinking} onDraftChange={setHasDraft} onSend={send} />
+          <ChatComposer
+            disabled={thinking}
+            injectedTarget={pendingMentionTarget}
+            onDraftChange={setHasDraft}
+            onInjectedTargetConsumed={() => setPendingMentionTarget(undefined)}
+            onSend={send}
+          />
         </div>
       </div>
+
+      {/* ── Activity panel + quick-switcher (Fáze 14.5) ────────────────
+          Both float above everything else in the overlay; mounted only while
+          open so their own data hooks don't fire until the operator asks. */}
+      {panelOpen && <ChatSidePanel onClose={() => setPanelOpen(false)} />}
+      {paletteOpen && (
+        <ChatPalette
+          onClose={() => setPaletteOpen(false)}
+          onMentionSelect={handleMentionSelect}
+          onNavigate={handlePaletteNavigate}
+        />
+      )}
     </div>
   );
 }
