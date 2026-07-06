@@ -6,7 +6,7 @@
 
 - [x] v prabém bočním panelu jsou špatné časy. Jsou o dvě hodiny posunuté dozadu — fáze 09
 
-- [ ] Dropdown nemá props size (Language switcher v topBaru je větší než ostatní prvky v topBaru)
+- [x] Dropdown nemá props size (Language switcher v topBaru je větší než ostatní prvky v topBaru) — fáze 10
 
 - [ ] převést Chat UI na samostatnou stránku místo toho aby to byl jen Overlay
 
@@ -22,6 +22,6 @@
 
 - [ ] chat ui - constalace by měla zobrazovat primářně připnuté agenty/pipeliny/řetězce a pak preferuji zobrazovat jen agenty s obrázky
 
-- [ ] editace agenta - výběr kategorie bude přes komponentu Select
+- [x] editace agenta - výběr kategorie bude přes komponentu Select — fáze 11
 
 - [ ] avatary agentů na kartách uděláme větší

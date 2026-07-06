@@ -25,6 +25,7 @@ export function LanguageSwitcher() {
       aria-label={t("langSwitcherLabel")}
       onChange={handleChange}
       options={LANG_OPTIONS}
+      size="sm"
       value={locale}
     />
   );

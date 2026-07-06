@@ -167,7 +167,7 @@ a cron string is the app's job (`apps/web/features/automations/schedule.ts`:
 | `Tabs`        | Tab navigation                |
 | `Accordion`   | Collapsible section           |
 | `List`        | Structured list                |
-| `Dropdown`    | Dropdown menu (single, or `multi` — checkboxes in the options plus closable chips in the field; `showSelectAll` adds a "select/clear all" row) |
+| `Dropdown`    | Dropdown menu (single, or `multi` — checkboxes in the options plus closable chips in the field; `showSelectAll` adds a "select/clear all" row; `size="sm"` gives a compact trigger for dense chrome like the top bar) |
 | `MenuSurface` | Surface for a menu overlay     |
 | `SearchBar`   | Search input                   |
 | `SearchMenu`  | Search with results            |

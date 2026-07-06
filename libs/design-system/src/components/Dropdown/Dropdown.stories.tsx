@@ -32,6 +32,23 @@ export const Languages: Story = {
   },
 };
 
+export const SmallInline: Story = {
+  render: () => {
+    const [value, setValue] = useState("cs");
+    return (
+      <div className="flex justify-end p-4">
+        <Dropdown
+          aria-label="Jazyk rozhraní"
+          onChange={setValue}
+          options={LANG_OPTIONS}
+          size="sm"
+          value={value}
+        />
+      </div>
+    );
+  },
+};
+
 export const FieldVariant: Story = {
   render: () => {
     const [value, setValue] = useState("opus");

@@ -9,6 +9,7 @@ import {
   Controller,
   FormMarkdownEditor,
   FormSegmentPicker,
+  FormSelect,
   FormTextInput,
 } from "@zibby/forms";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
@@ -62,27 +63,10 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
               placeholder={t("fields.whenToUsePlaceholder")}
             />
 
-            <Controller<AgentEditValues, "category">
-              control={control}
+            <FormSelect<string, AgentEditValues>
+              label={t("fields.category")}
               name="category"
-              render={({ field }) => (
-                <Stack gap="75">
-                  <Typography mono size="sm" type="note" variant="secondary">
-                    {t("fields.category")}
-                  </Typography>
-                  <Stack wrap direction="row" gap="75">
-                    {categories.map((c) => (
-                      <ChipToggle
-                        active={field.value === c.name}
-                        key={c.name}
-                        onClick={() => field.onChange(c.name)}
-                      >
-                        {c.name}
-                      </ChipToggle>
-                    ))}
-                  </Stack>
-                </Stack>
-              )}
+              options={categories.map((c) => ({ value: c.name, label: c.name }))}
             />
 
             <Stack direction="row" gap="150">

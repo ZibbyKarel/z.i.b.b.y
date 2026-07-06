@@ -16,6 +16,15 @@ describe("Dropdown", () => {
     expect(trigger).toHaveTextContent("Čeština");
   });
 
+  it("applies compact padding in size=sm", () => {
+    const { rerender } = render(
+      <Dropdown onChange={vi.fn()} options={OPTIONS} size="sm" value="cs" />,
+    );
+    expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveClass("text-sm");
+    rerender(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveClass("text-base");
+  });
+
   it("is collapsed by default", () => {
     render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
     expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveAttribute("aria-expanded", "false");
