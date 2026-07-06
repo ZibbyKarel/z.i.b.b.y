@@ -45,6 +45,15 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-gh.api_write
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: gh.api_write
+    decision: ask
+    resolve:
+      type: human
   - id: floor-pr.merge
     source: system
     locked: true

@@ -183,6 +183,41 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(ctx.summary).toBe("Smazat 3 položek");
   });
 
+  it("gates a `gh api … -X PUT …/merges` REST merge (Fáze 17.1 — previously fail-open)", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("gh api repos/o/r/pulls/1/merges -X PUT", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("pr.merge");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates a chained `gh api … -X PUT …/merges` (segmentation already existed)", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("ls && gh api repos/o/r/pulls/1/merges -X PUT", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("pr.merge");
+  });
+
+  it("gates a `gh api` field-flag write (implicit POST) that creates a PR", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("gh api repos/o/r/pulls -f title=x", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("pr.open");
+  });
+
+  it("gates a `gh api … --method DELETE` as the generic gh.api_write intent", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("gh api repos/o/r/pulls --method DELETE", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("gh.api_write");
+  });
+
+  it("lets a plain `gh api` GET through without a request (fail-open default persists)", async () => {
+    const res = await runHook(cwd, bashEvent("gh api repos/o/r/pulls", cwd));
+    expect(res.code).toBe(0);
+    expect(await present(requestFile())).toBe(false);
+  });
+
   it("gates `find … -delete` (the .DS_Store sweep that previously slipped the gate)", async () => {
     await preApprove();
     await runHook(cwd, bashEvent("find . -name .DS_Store -delete", cwd));
@@ -333,6 +368,57 @@ describe("claude approval hook — classify (push / PR / chains)", () => {
     expect(classify("rm -rf scratch.tmp")?.action).toBe("delete");
     expect(classify("find . -name .DS_Store -delete")?.action).toBe("delete");
     expect(classify("git clean -fdx")?.action).toBe("delete");
+  });
+});
+
+describe("claude approval hook — classify (gh api mutations, Fáze 17.1)", () => {
+  it("maps a PUT on a …/merges path to pr.merge (the REST merge)", () => {
+    const c = classify("gh api repos/o/r/pulls/1/merges -X PUT");
+    expect(c?.action).toBe("pr.merge");
+    expect(c?.riskType).toBe("push");
+  });
+
+  it("recognises --method= (equals form) and lower-case method values", () => {
+    expect(classify("gh api repos/o/r/pulls/1/merges --method=put")?.action).toBe("pr.merge");
+    expect(classify("gh api repos/o/r/pulls/1/merges -X put")?.action).toBe("pr.merge");
+  });
+
+  it("maps an explicit POST on a path ending /pulls to pr.open", () => {
+    expect(classify("gh api repos/o/r/pulls -X POST -f title=x")?.action).toBe("pr.open");
+  });
+
+  it("maps an implicit POST (a field flag, no -X) on /pulls to pr.open", () => {
+    expect(classify("gh api repos/o/r/pulls -f title=x")?.action).toBe("pr.open");
+    expect(classify("gh api repos/o/r/pulls -F body=@f.md")?.action).toBe("pr.open");
+    expect(classify("gh api repos/o/r/pulls --raw-field title=x")?.action).toBe("pr.open");
+    expect(classify("gh api repos/o/r/pulls --input body.json")?.action).toBe("pr.open");
+  });
+
+  it("falls back to the generic gh.api_write for any other mutating gh api call", () => {
+    expect(classify("gh api repos/o/r/pulls --method DELETE")?.action).toBe("gh.api_write");
+    expect(classify("gh api repos/o/r --method PATCH -f archived=true")?.action).toBe(
+      "gh.api_write",
+    );
+    expect(classify("gh api repos/o/r/collaborators/bob -X PUT")?.action).toBe("gh.api_write");
+  });
+
+  it("does not classify a plain GET, with or without --paginate", () => {
+    expect(classify("gh api repos/o/r/pulls")).toBeNull();
+    expect(classify("gh api repos/o/r/issues --paginate")).toBeNull();
+  });
+
+  it("does not classify an unrecognised gh subcommand", () => {
+    expect(classify("gh issue list")).toBeNull();
+    expect(classify("gh repo view")).toBeNull();
+  });
+
+  it("gh.api_write outranks a plain push but not a REST merge in a chain", () => {
+    const withPush = classify("git push origin main && gh api repos/o/r --method PATCH -f x=y");
+    expect(withPush?.action).toBe("gh.api_write");
+    const withMerge = classify(
+      "gh api repos/o/r --method PATCH -f x=y && gh api repos/o/r/pulls/1/merges -X PUT",
+    );
+    expect(withMerge?.action).toBe("pr.merge");
   });
 });
 

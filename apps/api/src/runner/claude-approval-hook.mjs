@@ -11,6 +11,9 @@
 //        - deletes: the rm family, `find … -delete`, `git clean`;
 //        - git publish: `git push` (→ git.push) and force variants (→ git.force_push);
 //        - PRs: `gh pr create` (→ pr.open) and `gh pr merge` (→ pr.merge);
+//        - mutating `gh api …` calls (Fáze 17.1): PUT/POST/PATCH/DELETE (or a field
+//          flag implying POST) → `pr.merge`/`pr.open` when the path matches, else
+//          the generic `gh.api_write`;
 //        - EVERY `Task` call (an orchestrator delegating to a subagent) → `agent.delegate`
 //          (Fáze 2a). Delegation happens entirely inside this one `claude -p` process, so
 //          this hook is the only realtime signal the backend gets of a handoff — there is
@@ -32,9 +35,14 @@
 // would drop the request where the core never watches, stranding the gate.
 //
 // Denylist honesty: this is a best-effort matcher, not a sandbox. It does NOT catch
-// a push/merge hidden behind `$(…)` nesting it can't normalize, `gh api … -X PUT
-// …/merges` (the REST merge), or an aliased binary. The locked floor + the
-// non-interactive run shape are the real guarantees; this just routes the common
+// a push/merge hidden behind `$(…)` nesting it can't normalize, an aliased binary, or
+// a raw `curl` call to the GitHub API that bypasses `gh` entirely. `gh api …`
+// mutations ARE now caught (Fáze 17.1): an explicit `-X`/`--method` of
+// PUT/POST/PATCH/DELETE, or a `-f`/`-F`/`--field`/`--raw-field`/`--input` field flag
+// that implies an implicit POST body — routed to `pr.merge`/`pr.open` when the path
+// semantically matches, else the generic `gh.api_write` intent. A plain `gh api` GET
+// (optionally `--paginate`) stays unclassified — reads are Tier-1. The locked floor +
+// the non-interactive run shape are the real guarantees; this just routes the common
 // idioms to the gate.
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -60,15 +68,19 @@ const RM_FAMILY = /(^|[\s;&|(`])(rm|rmdir|unlink|shred|trash|trash-put)(\s|$)/;
 
 /**
  * Chain-severity rank: when a command chains several gated segments, we announce
- * the single most severe one. pr.merge (a locked deny) outranks a force-push,
- * which outranks opening a PR, which outranks a plain push, which outranks a delete.
+ * the single most severe one. pr.merge (a locked deny) outranks a force-push, which
+ * outranks a generic `gh api` write (unknown effect — could be anything from adding
+ * a comment to deleting a ref, so it's ranked above the two *known*, bounded
+ * git-publish actions below it), which outranks opening a PR, which outranks a
+ * plain push, which outranks a delete.
  */
 const ACTION_RANK = {
   delete: 0,
   "git.push": 1,
   "pr.open": 2,
-  "git.force_push": 3,
-  "pr.merge": 4,
+  "gh.api_write": 3,
+  "git.force_push": 4,
+  "pr.merge": 5,
 };
 
 /** Czech presentation per push/PR action (delete carries its own, target-aware copy). */
@@ -88,6 +100,10 @@ const ACTION_META = {
   "pr.merge": {
     summary: "Sloučit pull request do cílové větve",
     consequence: "Sloučení je nevratná publikace — systémový floor ho zakazuje (deny).",
+  },
+  "gh.api_write": {
+    summary: "Mutační volání GitHub API (gh api)",
+    consequence: "Neznámý dopad — může měnit nastavení, oprávnění nebo obsah repozitáře na GitHubu.",
   },
 };
 
@@ -182,7 +198,84 @@ function classifyGit(tokens) {
   return { action: isForce ? "git.force_push" : "git.push", branch };
 }
 
-/** Classify a `gh …` segment as opening or merging a PR, or null. */
+/**
+ * Flags accepted by `gh api` that consume the following token as their value —
+ * so that value never gets mistaken for the request path. `-f`/`-F`/`--field`/
+ * `--raw-field`/`--input` additionally imply an implicit POST body (tracked
+ * separately, see {@link classifyGhApi}).
+ */
+const GH_API_FIELD_FLAGS = new Set(["-f", "-F", "--field", "--raw-field", "--input"]);
+const GH_API_VALUE_FLAGS = new Set([
+  "-X",
+  "--method",
+  "-R",
+  "--repo",
+  "-H",
+  "--header",
+  "-q",
+  "--jq",
+  "-t",
+  "--template",
+  "--hostname",
+  "--cache",
+]);
+
+/**
+ * Classify a `gh api <path> …` segment (Fáze 17.1 — the gap the header comment
+ * used to admit by name). A mutating call is one with an explicit `-X`/`--method`
+ * of PUT/POST/PATCH/DELETE, or any field flag (`-f`/`-F`/`--field`/`--raw-field`/
+ * `--input`) — gh sends those as an implicit POST body even with no `-X`. A plain
+ * GET (optionally `--paginate`) is left unclassified: reads are Tier-1.
+ *
+ * Two request shapes get an existing, semantically matching intent: a path
+ * containing `/merges` IS a REST merge (`pr.merge`); a POST whose path ends in
+ * `/pulls` IS creating a pull request (`pr.open`). Every other mutating call falls
+ * back to the generic `gh.api_write` intent — `action` is a free string across the
+ * approval/gate contracts (`z.string()`, no closed enum), so adding this new kind
+ * costs nothing structurally; it just needs its own floor rule (see
+ * `policy.storage.service.ts`) so it doesn't silently default-allow.
+ */
+function classifyGhApi(tokens, startIdx) {
+  let method;
+  let hasFieldFlag = false;
+  let pathArg;
+  for (let j = startIdx; j < tokens.length; j++) {
+    const t = tokens[j];
+    if (t === undefined) continue;
+    const eqMatch = /^(-X|--method)=(.+)$/i.exec(t);
+    if (eqMatch) {
+      method = eqMatch[2];
+      continue;
+    }
+    if (/^(-X|--method)$/i.test(t)) {
+      method = tokens[j + 1];
+      j += 1;
+      continue;
+    }
+    if (GH_API_FIELD_FLAGS.has(t)) {
+      hasFieldFlag = true;
+      j += 1;
+      continue;
+    }
+    if (GH_API_VALUE_FLAGS.has(t)) {
+      j += 1;
+      continue;
+    }
+    if (t.startsWith("-")) continue; // unknown flag — best-effort, assume no value
+    if (pathArg === undefined) pathArg = t;
+  }
+  // Field flags send an implicit POST when no explicit method was given.
+  const effectiveMethod = method ?? (hasFieldFlag ? "POST" : undefined);
+  if (effectiveMethod === undefined || !/^(PUT|POST|PATCH|DELETE)$/i.test(effectiveMethod)) {
+    return null;
+  }
+  const path = (pathArg ?? "").replace(/\?.*$/, "").replace(/\/$/, "");
+  if (path.includes("/merges")) return { action: "pr.merge" };
+  if (/^POST$/i.test(effectiveMethod) && path.endsWith("/pulls")) return { action: "pr.open" };
+  return { action: "gh.api_write" };
+}
+
+/** Classify a `gh …` segment as opening/merging a PR, or a mutating `gh api` call. */
 function classifyGh(tokens) {
   if (tokens[0] !== "gh") return null;
   let i = 1;
@@ -194,10 +287,14 @@ function classifyGh(tokens) {
     }
     break;
   }
-  if (tokens[i] !== "pr") return null;
-  const sub = tokens[i + 1];
-  if (sub === "create") return { action: "pr.open" };
-  if (sub === "merge") return { action: "pr.merge" };
+  const sub = tokens[i];
+  if (sub === "pr") {
+    const prSub = tokens[i + 1];
+    if (prSub === "create") return { action: "pr.open" };
+    if (prSub === "merge") return { action: "pr.merge" };
+    return null;
+  }
+  if (sub === "api") return classifyGhApi(tokens, i + 1);
   return null;
 }
 
