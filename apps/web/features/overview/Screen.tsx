@@ -10,6 +10,7 @@ import { useIntegrationsQuery } from "../integrations";
 import { usePipelinesQuery } from "../pipelines";
 import { useSkillsQuery } from "../skills";
 import { NeedsAttentionPanel } from "../integrations/components/NeedsAttentionPanel";
+import { usePinToggle } from "../pins";
 import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
@@ -32,6 +33,7 @@ export function Screen() {
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
   const { data: activity = [] } = useActivityQuery();
+  const { pins } = usePinToggle();
 
   const isFresh =
     skills.length === 0 &&
@@ -39,36 +41,59 @@ export function Screen() {
     agents.length === 0 &&
     pipelines.length === 0;
 
+  // The needs-you queue: what actually wants the operator. Panels that have nothing
+  // to show render null and simply drop out of the column.
+  const queue = (
+    <Stack direction="col" gap="250">
+      <BriefingCard />
+
+      {/* Approvals + parked runs — the needs-you queue that used to live in the
+          right rail. */}
+      <ApprovalsPanel />
+
+      <ParkedRunsPanel />
+
+      {/* "Needs your attention" — notify-only items ZIBBY surfaced (inbound mail that
+          wants a reply or a decision) as summary cards linking to the original. */}
+      <NeedsAttentionPanel />
+    </Stack>
+  );
+
+  // Rail — actionable-but-not-urgent launchers + the live log. Only worth a column of
+  // its own when it actually holds something; otherwise the queue takes the full width
+  // rather than leaving a dead 360px gutter.
+  const railHasContent = pins.length > 0 || activity.length > 0;
+
   return (
     <PageContainer>
-      <Stack direction="col" gap="200">
+      <Stack direction="col" gap="250">
+        {/* Full-width HUD header: system health + the live stats banner. */}
         <SummaryWidget />
 
-        <BriefingCard />
+        {/* Dynamic two-zone dashboard: below lg it collapses to a single column, at lg+
+            the needs-you queue (main) sits beside the launch + activity rail so the page
+            uses its width instead of stacking every block full-bleed. */}
+        {railHasContent ? (
+          <Grid align="start" gap="250" sidebar="right">
+            {queue}
+            <Stack direction="col" gap="250">
+              {/* Quick launch — pinned agents/pipelines/chains with a one-click RUN. */}
+              <QuickLaunchPanel />
 
-        {/* Approvals + parked runs — the needs-you queue that used to live in the
-            right rail. The rail is now a pure live activity log. */}
-        <ApprovalsPanel />
-
-        <ParkedRunsPanel />
-
-        {/* "Needs your attention" — notify-only items ZIBBY surfaced (inbound mail that
-            wants a reply or a decision) as summary cards linking to the original. */}
-        <NeedsAttentionPanel />
-
-        {/* Quick launch — pinned agents/pipelines/chains with a one-click RUN. Actional
-            but not urgent, so it sits below the needs-you queue and above the log. */}
-        <QuickLaunchPanel />
-
-        {activity.length > 0 && (
-          <HudPanel title={t("overview.activity")}>
-            <ActivityFeed items={activity} limit={8} />
-          </HudPanel>
+              {activity.length > 0 && (
+                <HudPanel title={t("overview.activity")}>
+                  <ActivityFeed items={activity} limit={8} />
+                </HudPanel>
+              )}
+            </Stack>
+          </Grid>
+        ) : (
+          queue
         )}
 
         {isFresh && (
           <HudPanel title={t("overview.starterTitle")}>
-            <Grid cols={1} gap="100" sm={2}>
+            <Grid cols={1} gap="150" md={4} sm={2}>
               {STARTERS.map((s) => (
                 // Each starter deep-links to its dashboard segment (the ids ARE the route
                 // segments). `Link` is a component, so react/forbid-dom-props doesn't apply

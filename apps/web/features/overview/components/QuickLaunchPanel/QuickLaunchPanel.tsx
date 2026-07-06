@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import { Button, Container, Grid, type IconName, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { HudCard } from "../../../../components/HudCard/HudCard";
 import { HudPanel } from "../../../../components/HudPanel/HudPanel";
 import { useAgentsQuery } from "../../../agents";
 import { useChainsQuery } from "../../../chains";
@@ -22,6 +23,14 @@ interface ResolvedPin {
   glyph: IconName;
 }
 
+/** Localized kind label shown as the card's meta line (matches the agent/pipeline
+ * card grammar where a mono sub-line names the entity type). */
+const KIND_LABEL: Record<ResolvedPin["kind"], "kindAgent" | "kindPipeline" | "kindChain"> = {
+  agent: "kindAgent",
+  pipeline: "kindPipeline",
+  chain: "kindChain",
+};
+
 /**
  * Overview "Panel rychlého spuštění" (this plan): every pinned agent/pipeline/
  * chain, resolved live against its catalog so a rename shows up without any
@@ -29,6 +38,10 @@ interface ResolvedPin {
  * this list (the pin itself is left on disk — no write-on-read side effect;
  * unpinning is still explicit from the detail page or this panel). Renders nothing
  * while there is nothing pinned, same as {@link ParkedRunsPanel}.
+ *
+ * Each pin now renders as a simplified {@link HudCard} — the same glyph-tile + mono
+ * title card the /agents and /pipelines master lists use — laid out in a responsive
+ * grid so the panel fills its width instead of stacking full-bleed rows.
  *
  * Since phase-05 chain is a normal `TaskTarget`, so RUN opens the New Task dialog
  * with a prefilled target for all three kinds — one path, no chain special case.
@@ -68,48 +81,48 @@ export function QuickLaunchPanel() {
 
   return (
     <HudPanel title={t("quickLaunchTitle")}>
-      <Stack gap="100">
+      <Grid cols={1} gap="150" sm={2}>
         {resolved.map((item) => (
-          <Stack
-            align="center"
-            data-testid={QuickLaunchPanelTestId.Row}
-            direction="row"
-            gap="100"
-            key={`${item.kind}:${item.id}`}
-          >
-            <Icon name={item.glyph} size="sm" tone="dim" />
-            <Container grow minW0>
-              <Typography truncate size="sm" type="note" weight="medium">
-                {item.name}
-              </Typography>
-            </Container>
-            <Button
-              data-testid={QuickLaunchPanelTestId.Run}
-              icon="play"
-              intent="primary"
-              onClick={() =>
-                openNewTask(undefined, {
-                  kind: item.kind,
-                  id: item.id,
-                  name: item.name,
-                  glyph: item.glyph,
-                })
+          <Container data-testid={QuickLaunchPanelTestId.Row} key={`${item.kind}:${item.id}`}>
+            <HudCard
+              actions={
+                <Stack align="center" direction="row" gap="100">
+                  <Container grow minW0>
+                    <Button
+                      block
+                      data-testid={QuickLaunchPanelTestId.Run}
+                      icon="play"
+                      intent="primary"
+                      onClick={() =>
+                        openNewTask(undefined, {
+                          kind: item.kind,
+                          id: item.id,
+                          name: item.name,
+                          glyph: item.glyph,
+                        })
+                      }
+                      size="sm"
+                    >
+                      {t("run")}
+                    </Button>
+                  </Container>
+                  <Button
+                    aria-label={t("unpinAria", { name: item.name })}
+                    data-testid={QuickLaunchPanelTestId.Unpin}
+                    icon="x"
+                    intent="ghost"
+                    onClick={() => toggle(item.kind, item.id)}
+                    size="sm"
+                  />
+                </Stack>
               }
-              size="sm"
-            >
-              {t("run")}
-            </Button>
-            <Button
-              aria-label={t("unpinAria", { name: item.name })}
-              data-testid={QuickLaunchPanelTestId.Unpin}
-              icon="x"
-              intent="ghost"
-              onClick={() => toggle(item.kind, item.id)}
-              size="sm"
+              glyph={item.glyph}
+              subtitle={t(KIND_LABEL[item.kind])}
+              title={item.name}
             />
-          </Stack>
+          </Container>
         ))}
-      </Stack>
+      </Grid>
     </HudPanel>
   );
 }
