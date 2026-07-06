@@ -1424,6 +1424,12 @@
         "agents": "Agents",
         "pipelines": "Pipelines"
       }
+    },
+    "runCard": {
+      "loading": "Loading run…",
+      "openRunAria": "Open run",
+      "expandAria": "Expand run detail",
+      "collapseAria": "Collapse run detail"
     }
   },
   "pins": {

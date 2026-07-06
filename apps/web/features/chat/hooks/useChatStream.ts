@@ -83,6 +83,16 @@ const EMPTY: ChatStreamState = {
  * The stream is scoped to the hook's lifetime: it opens when a `conversationId` is
  * known and closes on unmount (the overlay closing). A `null` conversationId is
  * inert (nothing to stream yet).
+ *
+ * Fáze 14.3's inline run card (`ChatRunCard`, rendered once a `tool` event's
+ * `runRef` is known) does NOT read this stream for its live data — Rozhodnutí 6
+ * deliberately keeps this channel to delta/tool/done/error text events only. The
+ * card instead uses the existing `usePipelineRunQuery(runRef)`, which is kept
+ * fresh by the shared `RunEventsProvider` invalidation bus (mounted above the chat
+ * overlay, so it works from inside it) plus that query's own 1s fallback poll.
+ * Smaller surface, zero behaviour change for every other `/api/events` consumer;
+ * the only addition (Fáze 14.4) was making that bus invalidate the single-run key
+ * for `agent-runs` events too, since it previously only did so for pipeline runs.
  */
 export function useChatStream(
   conversationId: string | null,

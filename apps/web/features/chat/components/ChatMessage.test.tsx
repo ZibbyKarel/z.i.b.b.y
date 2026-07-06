@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import { ChatMessage, ChatMessageTestId } from "./ChatMessage";
+import { ChatRunCardTestId } from "./ChatRunCard";
+
+// A tool event carrying `runRef` upgrades the flat row into `ChatRunCard` (Fáze
+// 14.3) — that card is unit-tested on its own; here it's enough to stub its data
+// source and assert ChatMessage picked the card over the flat row.
+const { pipelineRunMock } = vi.hoisted(() => ({
+  pipelineRunMock: vi.fn(() => ({ data: undefined as unknown })),
+}));
+vi.mock("../../pipelines", () => ({ usePipelineRunQuery: pipelineRunMock }));
 
 describe("ChatMessage", () => {
   it("renders a user turn in the user bubble", () => {
@@ -44,7 +53,21 @@ describe("ChatMessage", () => {
     expect(screen.getByTestId(ChatMessageTestId.ToolEvent)).toHaveTextContent("Spustil jsem úkol.");
   });
 
-  it("renders the routing target's identity chip on a tool event that carries one", () => {
+  it("upgrades a tool event with a known runRef into the live ChatRunCard (Fáze 14.3)", () => {
+    pipelineRunMock.mockReturnValue({
+      data: {
+        runId: "delivery_1",
+        kind: "pipeline",
+        owner: "delivery",
+        status: "running",
+        pct: null,
+        title: "",
+        prompt: "",
+        project: "",
+        startedAt: new Date().toISOString(),
+        logBase: null,
+      },
+    });
     renderWithProviders(
       <ChatMessage
         role="assistant"
@@ -62,11 +85,32 @@ describe("ChatMessage", () => {
         ]}
       />,
     );
-    expect(screen.getByTestId(ChatMessageTestId.ToolEventTarget)).toHaveTextContent("Delivery");
-    expect(screen.getByTestId(ChatMessageTestId.ToolEventLink)).toHaveAttribute(
+    // The flat row is gone — the card replaces it entirely (not a sibling).
+    expect(screen.queryByTestId(ChatMessageTestId.ToolEvent)).not.toBeInTheDocument();
+    expect(screen.getByTestId(ChatRunCardTestId.Root)).toHaveTextContent("Delivery");
+    expect(screen.getByTestId(ChatRunCardTestId.Link)).toHaveAttribute(
       "href",
       "/runs?run=delivery_1",
     );
+  });
+
+  it("keeps the flat row for a tool event without a runRef, even with a target", () => {
+    renderWithProviders(
+      <ChatMessage
+        role="assistant"
+        text="Hotovo."
+        toolEvents={[
+          {
+            name: "create_task",
+            status: "started",
+            summary: "Spouštím pipeline Delivery.",
+            target: { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId(ChatMessageTestId.ToolEventTarget)).toHaveTextContent("Delivery");
+    expect(screen.queryByTestId(ChatRunCardTestId.Root)).not.toBeInTheDocument();
   });
 
   it("renders the orchestrator's own identity when the target is the orchestrator fallback", () => {

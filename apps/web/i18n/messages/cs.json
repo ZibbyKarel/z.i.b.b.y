@@ -1424,6 +1424,12 @@
         "agents": "Agenti",
         "pipelines": "Pipelines"
       }
+    },
+    "runCard": {
+      "loading": "Načítám běh…",
+      "openRunAria": "Otevřít běh",
+      "expandAria": "Rozbalit detail běhu",
+      "collapseAria": "Sbalit detail běhu"
     }
   },
   "pins": {

@@ -5,6 +5,7 @@ import { Card, Container, Icon, IconTile, Stack, StatusDot, Typography } from "@
 import type { DotTone, IconName } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
+import { ChatRunCard } from "./ChatRunCard";
 
 export enum ChatMessageTestId {
   Root = "chat-message",
@@ -34,8 +35,10 @@ function toolTone(status: ChatToolEvent["status"]): DotTone {
 }
 
 /** The orchestrator has no `glyph` in its display shape today — fall back to its
- * compass; a stored agent/pipeline/goal/chain target falls back to a generic bot. */
-function targetGlyph(target: TaskTarget): IconName {
+ * compass; a stored agent/pipeline/goal/chain target falls back to a generic bot.
+ * Exported so {@link ChatRunCard} (Fáze 14.3) can render the same identity chip
+ * in its collapsed header without a second lookup implementation. */
+export function targetGlyph(target: TaskTarget): IconName {
   if (target.kind === "orchestrator") return "compass";
   return (target.glyph as IconName | undefined) ?? "bot";
 }
@@ -44,9 +47,11 @@ function targetGlyph(target: TaskTarget): IconName {
  * The dispatch identity for a tool event — a small `IconTile` chip naming the
  * routing target (Fáze 14.2, Rozhodnutí 4). Accepts an array so a future
  * `orchestrátor → sub-agent` chain (once a run's sub-agent is known) is just
- * another entry — today every event carries at most one target.
+ * another entry — today every event carries at most one target. Exported so
+ * `ChatRunCard` (Fáze 14.3) reuses this exact chip render for its own header
+ * instead of a parallel implementation (Rozhodnutí 4/5).
  */
-function TargetIdentity({ targets }: { targets: TaskTarget[] }) {
+export function TargetIdentity({ targets }: { targets: TaskTarget[] }) {
   if (targets.length === 0) return null;
   return (
     <Stack wrap align="center" data-testid={ChatMessageTestId.ToolEventTarget} direction="row" gap="50">
@@ -64,6 +69,16 @@ function TargetIdentity({ targets }: { targets: TaskTarget[] }) {
 }
 
 function ToolEventRow({ event }: { event: ChatToolEvent }) {
+  // A dispatch that has produced a run (`runRef` known — the `ok` phase of the
+  // two-phase create_task event, Fáze 14.2) renders the live run card instead of
+  // the flat announcement row (Fáze 14.3, Rozhodnutí 5). The `started` phase has
+  // no `runRef` yet, so it still renders the flat row below — the row upgrades to
+  // a card in place the instant `useChatStream` merges in the matching `ok` event
+  // (same callId), with no extra state needed here.
+  if (event.runRef) {
+    return <ChatRunCard runRef={event.runRef} target={event.target} />;
+  }
+
   const summary = event.summary ?? event.name;
   const body = (
     <Stack direction="col" gap="50">
