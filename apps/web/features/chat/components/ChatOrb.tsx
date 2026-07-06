@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { BrandIcon } from "../../../components/BrandIcon";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import type { OrbColorToken } from "./ChatOrbSphere";
 
 const S = 264;
 /** How far the nebula glow spills past the orb box on every side. */
@@ -24,10 +25,18 @@ export enum ChatOrbTestId {
 
 /**
  * The orb's derived visual state, computed in {@link ChatScreen} purely from the
- * chat stream + composer signals (see `Rozhodnutí 1` in the phase-14 plan) — never
- * a store of its own.
+ * chat stream + composer signals (see `Rozhodnutí 1` in the phase-14 plan, extended
+ * with `waiting-approval`/`error` by `Rozhodnutí 5` in the phase-15 plan) — never a
+ * store of its own.
  */
-export type ChatOrbMode = "idle" | "listening" | "thinking" | "streaming" | "tool";
+export type ChatOrbMode =
+  | "idle"
+  | "listening"
+  | "thinking"
+  | "streaming"
+  | "tool"
+  | "waiting-approval"
+  | "error";
 
 export interface ChatOrbProps {
   /** Derived conversation state driving the orb's visual — see {@link ChatOrbMode}. */
@@ -35,9 +44,9 @@ export interface ChatOrbProps {
 }
 
 /**
- * Per-mode visual tuning for the HTML layers (nebula + core disk + brand icon).
- * The sphere itself (color/noise/rotation) isn't mode-driven yet — that lands
- * in Fáze 15.3 once the full 7-mode union + color mapping is in place.
+ * Per-mode visual tuning for every layer: the sphere (color/noise/rotation/pulse,
+ * `ChatOrbSphereProps`), the nebula CSS backdrop, the core disk and the brand icon.
+ * See Rozhodnutí 6 in the phase-15 plan for the mode → color/dynamics mapping.
  */
 interface ChatOrbVisual {
   /** `v-breath`/`v-glow-idle` cycle length; only used when `hot` is false. */
@@ -46,8 +55,9 @@ interface ChatOrbVisual {
   iconOpacity: number;
   /** Core disk border alpha. */
   coreBorderOpacity: number;
-  /** Hot = `v-glow-hot` core glow (thinking/streaming/tool — an action is
-   * running or tokens are flowing). Idle/listening breathe instead. */
+  /** Hot = `v-glow-hot` core glow (thinking/streaming/tool/error — an action is
+   * running, tokens are flowing, or the turn failed). Calmer modes breathe
+   * instead. */
   hot: boolean;
   /** Primary nebula tint — becomes the wrapper's `--orb-nebula-a`. */
   nebulaA: string;
@@ -56,47 +66,150 @@ interface ChatOrbVisual {
   /** Nebula layer intensity; the glow tokens are full-strength colors, so the
    * "low alpha" of the calm modes is expressed here (CSS-transitioned). */
   nebulaOpacity: number;
+  /** Design token the sphere's wireframe color resolves from. */
+  sphereColorToken: OrbColorToken;
+  /** Brightness multiplier on the resolved sphere color — muted for the two "low
+   * intensity" modes (idle, waiting-approval), full elsewhere. */
+  sphereIntensity: number;
+  /** Sphere vertex-noise displacement amplitude ("breathing" turbulence). */
+  sphereNoiseAmp: number;
+  /** Sphere noise time-evolution speed. */
+  sphereNoiseSpeed: number;
+  /** Sphere self-rotation speed, radians/second. */
+  sphereRotationSpeed: number;
+  /** Extra periodic noise-amplitude swell — the "tool"/"waiting-approval" pulse
+   * (0 = no pulse), replacing the old ripple rings. */
+  spherePulseAmp: number;
+  /** Pulse angular speed, radians/second. */
+  spherePulseSpeed: number;
 }
 
-// thinking/streaming/tool previously diverged on SVG-only signals (orbit speed,
-// ripple rings) that no longer exist now the sphere replaces the flat orbits —
-// all three "busy" modes share this one visual until Fáze 15.3 gives the sphere
-// itself per-mode color/dynamics. Busy = a stronger, accent-dominant nebula mix.
-const BUSY_VISUAL: ChatOrbVisual = {
-  breathS: 3.8,
-  iconOpacity: 1,
-  coreBorderOpacity: 0.33,
-  hot: true,
-  nebulaA: "var(--color-accent-glow)",
-  nebulaB: "var(--color-accent-glow)",
-  nebulaOpacity: 0.5,
-};
-
-/** Lookup keyed by mode — durations/opacities/tints only, no scattered ternaries. */
+/** Lookup keyed by mode — durations/opacities/tints/sphere dynamics only, no
+ * scattered ternaries. Color transitions between entries are smoothed in
+ * `ChatOrbSphere` (`THREE.Color.lerp` in `useFrame`), not here. */
 const MODE_VISUALS: Record<ChatOrbMode, ChatOrbVisual> = {
+  // Muted accent, low intensity, slow breathing — nothing is happening.
   idle: {
     breathS: 3.8,
-    iconOpacity: 0.85,
-    coreBorderOpacity: 0.13,
+    iconOpacity: 0.8,
+    coreBorderOpacity: 0.1,
     hot: false,
     nebulaA: "var(--color-accent-glow)",
     nebulaB: "var(--color-run-glow)",
-    nebulaOpacity: 0.2,
+    nebulaOpacity: 0.16,
+    sphereColorToken: "accent",
+    sphereIntensity: 0.5,
+    sphereNoiseAmp: 0.08,
+    sphereNoiseSpeed: 0.18,
+    sphereRotationSpeed: 0.05,
+    spherePulseAmp: 0,
+    spherePulseSpeed: 0,
   },
-  // Idle base but slightly awakened: quicker breath cycle, a touch more nebula —
-  // the operator is typing.
+  // Idle base but one notch more awake: quicker breath cycle, brighter accent, a
+  // touch more nebula — the operator is typing.
   listening: {
     breathS: 2.6,
-    iconOpacity: 0.85,
-    coreBorderOpacity: 0.13,
+    iconOpacity: 0.9,
+    coreBorderOpacity: 0.15,
     hot: false,
     nebulaA: "var(--color-accent-glow)",
     nebulaB: "var(--color-run-glow)",
     nebulaOpacity: 0.28,
+    sphereColorToken: "accent",
+    sphereIntensity: 0.75,
+    sphereNoiseAmp: 0.12,
+    sphereNoiseSpeed: 0.3,
+    sphereRotationSpeed: 0.09,
+    spherePulseAmp: 0,
+    spherePulseSpeed: 0,
   },
-  thinking: BUSY_VISUAL,
-  streaming: BUSY_VISUAL,
-  tool: BUSY_VISUAL,
+  // Full accent, faster deformation — a turn is being composed.
+  thinking: {
+    breathS: 3.8,
+    iconOpacity: 1,
+    coreBorderOpacity: 0.33,
+    hot: true,
+    nebulaA: "var(--color-accent-glow)",
+    nebulaB: "var(--color-accent-glow)",
+    nebulaOpacity: 0.5,
+    sphereColorToken: "accent",
+    sphereIntensity: 1,
+    sphereNoiseAmp: 0.2,
+    sphereNoiseSpeed: 0.55,
+    sphereRotationSpeed: 0.16,
+    spherePulseAmp: 0,
+    spherePulseSpeed: 0,
+  },
+  // --color-run, fastest flow — tokens are streaming in.
+  streaming: {
+    breathS: 3.8,
+    iconOpacity: 1,
+    coreBorderOpacity: 0.33,
+    hot: true,
+    nebulaA: "var(--color-run-glow)",
+    nebulaB: "var(--color-run-glow)",
+    nebulaOpacity: 0.55,
+    sphereColorToken: "run",
+    sphereIntensity: 1,
+    sphereNoiseAmp: 0.22,
+    sphereNoiseSpeed: 0.85,
+    sphereRotationSpeed: 0.24,
+    spherePulseAmp: 0,
+    spherePulseSpeed: 0,
+  },
+  // Accent + a pronounced pulse — the equivalent of the old ripple rings for a
+  // running tool dispatch.
+  tool: {
+    breathS: 3.8,
+    iconOpacity: 1,
+    coreBorderOpacity: 0.33,
+    hot: true,
+    nebulaA: "var(--color-accent-glow)",
+    nebulaB: "var(--color-accent-glow)",
+    nebulaOpacity: 0.5,
+    sphereColorToken: "accent",
+    sphereIntensity: 1,
+    sphereNoiseAmp: 0.14,
+    sphereNoiseSpeed: 0.45,
+    sphereRotationSpeed: 0.15,
+    spherePulseAmp: 0.16,
+    spherePulseSpeed: 2.4,
+  },
+  // --color-bad at low intensity, slow warning pulse — a run is parked on the
+  // operator's decision, but this is a warning, not an alarm.
+  "waiting-approval": {
+    breathS: 2.2,
+    iconOpacity: 0.78,
+    coreBorderOpacity: 0.16,
+    hot: false,
+    nebulaA: "var(--color-bad-glow)",
+    nebulaB: "var(--color-bad-glow)",
+    nebulaOpacity: 0.22,
+    sphereColorToken: "bad",
+    sphereIntensity: 0.45,
+    sphereNoiseAmp: 0.07,
+    sphereNoiseSpeed: 0.2,
+    sphereRotationSpeed: 0.05,
+    spherePulseAmp: 0.05,
+    spherePulseSpeed: 0.9,
+  },
+  // Full --color-bad — the turn errored out.
+  error: {
+    breathS: 3.8,
+    iconOpacity: 0.85,
+    coreBorderOpacity: 0.33,
+    hot: true,
+    nebulaA: "var(--color-bad-glow)",
+    nebulaB: "var(--color-bad-glow)",
+    nebulaOpacity: 0.55,
+    sphereColorToken: "bad",
+    sphereIntensity: 1,
+    sphereNoiseAmp: 0.22,
+    sphereNoiseSpeed: 0.5,
+    sphereRotationSpeed: 0.12,
+    spherePulseAmp: 0,
+    spherePulseSpeed: 0,
+  },
 };
 
 // Dynamic import so three.js + @react-three/fiber never load in SSR or jsdom
@@ -189,7 +302,15 @@ export function ChatOrb({ mode = "idle" }: ChatOrbProps) {
 
       {/* Wireframe sphere — fills the box, above the nebula, behind the core disk. */}
       <div style={{ position: "absolute", inset: 0 }}>
-        <ChatOrbSphereLazy />
+        <ChatOrbSphereLazy
+          colorToken={v.sphereColorToken}
+          intensity={v.sphereIntensity}
+          noiseAmp={v.sphereNoiseAmp}
+          noiseSpeed={v.sphereNoiseSpeed}
+          pulseAmp={v.spherePulseAmp}
+          pulseSpeed={v.spherePulseSpeed}
+          rotationSpeed={v.sphereRotationSpeed}
+        />
       </div>
 
       {/* Static core + brand icon, always on top of the sphere. */}

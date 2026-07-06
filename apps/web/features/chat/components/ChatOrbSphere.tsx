@@ -14,10 +14,22 @@ import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
+/**
+ * The design tokens the sphere can be colored from (Rozhodnutí 6, Fáze 15.3) —
+ * `ChatOrb.tsx`'s `MODE_VISUALS` picks one per mode; this module resolves it to a
+ * hex string a `THREE.Color` can parse (see {@link resolveOrbColorTokens}).
+ */
+export type OrbColorToken = "accent" | "run" | "bad";
+
 export interface ChatOrbSphereProps {
-  /** Wireframe color — any three.js-parseable color string. Applied through the
-   * `uColor` uniform (smooth `Color.lerp` transitions come in Fáze 15.3). */
-  color?: string;
+  /** Design token driving the wireframe color — resolved to a hex value from the
+   * CSS custom property once per client (see {@link resolveOrbColorTokens}), then
+   * smoothly `Color.lerp`-ed toward on every mode change (never a hard cut). */
+  colorToken?: OrbColorToken;
+  /** Brightness multiplier applied to the resolved token color (0–1). Modes that
+   * read as "muted"/"low intensity" (idle, waiting-approval) darken the token
+   * rather than picking a different color — same hue, dimmer. */
+  intensity?: number;
   /** Vertex-noise displacement amplitude — the sphere's "breathing" turbulence,
    * in units of the sphere radius (1). Clamped to ~0 under reduced motion. */
   noiseAmp?: number;
@@ -26,13 +38,53 @@ export interface ChatOrbSphereProps {
   /** Continuous self-rotation speed, radians/second around the Y axis. Reduced
    * to near-zero under reduced motion. */
   rotationSpeed?: number;
+  /** Extra periodic swell added on top of `noiseAmp` (0 = no pulse) — the "tool"
+   * and "waiting-approval" modes' pulse (replaces the old ripple rings). Dropped
+   * under reduced motion, same as the base amplitude. */
+  pulseAmp?: number;
+  /** Pulse angular speed, radians/second — how fast the swell cycles. */
+  pulseSpeed?: number;
 }
 
 const RADIUS = 1;
 const DETAIL = 3;
 /** Spatial frequency of the noise field — how many "lobes" the deformation has. */
 const NOISE_FREQ = 1.4;
-const DEFAULT_COLOR = "#5b8def";
+
+/** CSS custom property backing each color token. */
+const CSS_VAR_BY_TOKEN: Record<OrbColorToken, string> = {
+  accent: "--color-accent",
+  run: "--color-run",
+  bad: "--color-bad",
+};
+
+/** Hex fallbacks (mirroring `libs/design-system/src/theme/globals.css`) used when
+ * `getComputedStyle` can't resolve the custom property (or runs too early). */
+const FALLBACK_HEX_BY_TOKEN: Record<OrbColorToken, string> = {
+  accent: "#5b8def",
+  run: "#7aa5f8",
+  bad: "#ff6b6b",
+};
+
+let resolvedTokenCache: Record<OrbColorToken, string> | null = null;
+
+/**
+ * Read the three color tokens' resolved hex values from the DOM once per client
+ * session and cache them — a CSS custom property can't be assigned directly to a
+ * WebGL uniform, and the theme is static dark (nothing to react to at runtime),
+ * so one `getComputedStyle` read at first use is enough (Rozhodnutí 6). Safe to
+ * call from `useFrame` every frame afterward — it's a cached object lookup.
+ */
+function resolveOrbColorTokens(): Record<OrbColorToken, string> {
+  if (resolvedTokenCache) return resolvedTokenCache;
+  const styles = typeof document !== "undefined" ? getComputedStyle(document.documentElement) : null;
+  resolvedTokenCache = {
+    accent: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.accent).trim() || FALLBACK_HEX_BY_TOKEN.accent,
+    run: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.run).trim() || FALLBACK_HEX_BY_TOKEN.run,
+    bad: styles?.getPropertyValue(CSS_VAR_BY_TOKEN.bad).trim() || FALLBACK_HEX_BY_TOKEN.bad,
+  };
+  return resolvedTokenCache;
+}
 
 // ---------------------------------------------------------------------------
 // Simplex 3D Noise
@@ -165,10 +217,13 @@ function canMountWebGL(): boolean {
 }
 
 interface WireframeSphereProps {
-  color: string;
+  colorToken: OrbColorToken;
+  intensity: number;
   noiseAmp: number;
   noiseSpeed: number;
   rotationSpeed: number;
+  pulseAmp: number;
+  pulseSpeed: number;
 }
 
 /** The typed shape of this material's uniforms (three's own `uniforms` field is
@@ -187,35 +242,81 @@ interface OrbUniforms {
 function createOrbUniforms(): OrbUniforms {
   return {
     uTime: { value: 0 },
-    uColor: { value: new THREE.Color(DEFAULT_COLOR) },
+    uColor: { value: new THREE.Color(FALLBACK_HEX_BY_TOKEN.accent) },
     uNoiseAmp: { value: 0 },
     uNoiseSpeed: { value: 0 },
   };
 }
 
+/** How quickly the damped values (color, amplitude, speed, rotation, pulse) chase
+ * their mode-driven targets — exponential decay, frame-rate independent (Rozhodnutí
+ * 6). `1 - e^(-RATE·dt)` reaches ~95% of the way to the target in `3/RATE` seconds,
+ * so `5` settles in ~0.6s, matching the plan's "smooth ~0.6s" color transition. */
+const DAMPING_RATE = 5;
+
+/** Exponential approach of `current` toward `target`, frame-rate independent. */
+function damp(current: number, target: number, delta: number): number {
+  return current + (target - current) * (1 - Math.exp(-delta * DAMPING_RATE));
+}
+
 /** The deforming wireframe icosahedron — noise displacement + fresnel shader. */
-function WireframeSphere({ color, noiseAmp, noiseSpeed, rotationSpeed }: WireframeSphereProps) {
+function WireframeSphere({
+  colorToken,
+  intensity,
+  noiseAmp,
+  noiseSpeed,
+  rotationSpeed,
+  pulseAmp,
+  pulseSpeed,
+}: WireframeSphereProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const reducedMotion = usePrefersReducedMotion();
 
   const initialUniforms = useMemo(() => createOrbUniforms(), []);
 
-  const effectiveAmp = reducedMotion ? 0.005 : noiseAmp;
-  const effectiveRotation = reducedMotion ? rotationSpeed * 0.05 : rotationSpeed;
+  // Damped state, chased toward the mode's target every frame in `useFrame` below
+  // — never assigned directly from props, so a mode switch glides rather than
+  // jumping (Rozhodnutí 6). Seeded from the first render's props.
+  const currentColor = useRef(
+    new THREE.Color(resolveOrbColorTokens()[colorToken]).multiplyScalar(intensity),
+  );
+  const targetColor = useRef(new THREE.Color());
+  const currentAmp = useRef(noiseAmp);
+  const currentSpeed = useRef(noiseSpeed);
+  const currentRotation = useRef(rotationSpeed);
+  const currentPulseAmp = useRef(pulseAmp);
+  const currentPulseSpeed = useRef(pulseSpeed);
+  const pulsePhase = useRef(0);
 
-  // All per-frame writes go through the material ref (the sanctioned mutable
-  // escape) rather than the memoized initial object — React-managed values
-  // stay immutable after render.
+  const targetAmp = reducedMotion ? 0.005 : noiseAmp;
+  const targetRotation = reducedMotion ? rotationSpeed * 0.05 : rotationSpeed;
+  const targetPulseAmp = reducedMotion ? 0 : pulseAmp;
+
+  // All per-frame writes go through the material/mesh refs (the sanctioned
+  // mutable escape) rather than the memoized initial uniforms object —
+  // React-managed values stay immutable after render.
   useFrame((_, delta) => {
-    if (meshRef.current) meshRef.current.rotation.y += delta * effectiveRotation;
+    currentAmp.current = damp(currentAmp.current, targetAmp, delta);
+    currentSpeed.current = damp(currentSpeed.current, noiseSpeed, delta);
+    currentRotation.current = damp(currentRotation.current, targetRotation, delta);
+    currentPulseAmp.current = damp(currentPulseAmp.current, targetPulseAmp, delta);
+    currentPulseSpeed.current = damp(currentPulseSpeed.current, pulseSpeed, delta);
+
+    pulsePhase.current += delta * currentPulseSpeed.current;
+    const pulse = currentPulseAmp.current * (0.5 + 0.5 * Math.sin(pulsePhase.current));
+
+    targetColor.current.set(resolveOrbColorTokens()[colorToken]).multiplyScalar(intensity);
+    currentColor.current.lerp(targetColor.current, 1 - Math.exp(-delta * DAMPING_RATE));
+
+    if (meshRef.current) meshRef.current.rotation.y += delta * currentRotation.current;
     const material = materialRef.current;
     if (!material) return;
     const uniforms = material.uniforms as OrbUniforms;
     uniforms.uTime.value += delta;
-    uniforms.uNoiseAmp.value = effectiveAmp;
-    uniforms.uNoiseSpeed.value = noiseSpeed;
-    uniforms.uColor.value.set(color);
+    uniforms.uNoiseAmp.value = currentAmp.current + pulse;
+    uniforms.uNoiseSpeed.value = currentSpeed.current;
+    uniforms.uColor.value.copy(currentColor.current);
   });
 
   return (
@@ -242,10 +343,13 @@ function WireframeSphere({ color, noiseAmp, noiseSpeed, rotationSpeed }: Wirefra
  * for the noise bulge) fills most of the 264px box without clipping.
  */
 export function ChatOrbSphere({
-  color = DEFAULT_COLOR,
-  noiseAmp = 0.16,
-  noiseSpeed = 0.4,
-  rotationSpeed = 0.12,
+  colorToken = "accent",
+  intensity = 0.5,
+  noiseAmp = 0.08,
+  noiseSpeed = 0.18,
+  rotationSpeed = 0.05,
+  pulseAmp = 0,
+  pulseSpeed = 0,
 }: ChatOrbSphereProps) {
   const [canRender] = useState(canMountWebGL);
 
@@ -254,9 +358,12 @@ export function ChatOrbSphere({
   return (
     <Canvas camera={{ position: [0, 0, 3.2], fov: 45 }} dpr={[1, 2]} gl={{ alpha: true, antialias: true }}>
       <WireframeSphere
-        color={color}
+        colorToken={colorToken}
+        intensity={intensity}
         noiseAmp={noiseAmp}
         noiseSpeed={noiseSpeed}
+        pulseAmp={pulseAmp}
+        pulseSpeed={pulseSpeed}
         rotationSpeed={rotationSpeed}
       />
     </Canvas>
