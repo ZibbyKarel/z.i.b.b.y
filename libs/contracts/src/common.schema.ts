@@ -73,6 +73,6 @@ export const AVATAR_MAX = 280_000;
 export const AvatarSchema = z
   .string()
   .max(AVATAR_MAX)
-  .refine((v) => v.startsWith("data:image/") || v.startsWith("/"), {
+  .refine((v) => v.startsWith("data:image/") || (v.startsWith("/") && !v.startsWith("//")), {
     message: "avatar must be a data:image/ URI or a root-relative path",
   });
