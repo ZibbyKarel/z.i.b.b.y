@@ -15,8 +15,9 @@ import { MINUTE_MS } from "../../../utils/time";
 import { usePipelineRunQuery } from "../../pipelines";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
+import { CosmicScene } from "../scene/CosmicScene";
+import type { SceneMode } from "../scene/sceneTypes";
 import { ChatComposer } from "./ChatComposer";
-import { ChatOrb, type ChatOrbMode } from "./ChatOrb";
 import { ChatPalette } from "./ChatPalette";
 import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
@@ -253,7 +254,7 @@ export function ChatScreen({
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
 
-  const mode: ChatOrbMode = errorMode
+  const mode: SceneMode = errorMode
     ? "error"
     : waitingApproval
       ? "waiting-approval"
@@ -364,17 +365,14 @@ export function ChatScreen({
         </Stack>
       </div>
 
-      {/* ── Main area: orb behind, scrollable conversation over it ───── */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
-        {/* Ambient orb — centered, behind the conversation, dimmed so text reads. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          style={{ opacity: isEmpty ? 0.85 : 0.32, transition: "opacity 0.6s" }}
-        >
-          <ChatOrb mode={mode} />
-        </div>
+      {/* Full-screen living cosmic scene — the text-reactive orb, procedural
+          nebula and sub-agent constellation. Sits behind every interactive
+          surface (its own canvas layers are pointer-events:none); the transcript
+          floats over it in a legibility-protected band. */}
+      <CosmicScene mode={mode} streamChars={stream.streaming ? stream.text.length : 0} />
 
+      {/* ── Main area: scene behind, scrollable conversation over it ───── */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
         <div
           className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
