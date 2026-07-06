@@ -75,4 +75,15 @@ describe("project schema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts a per-engagement dollar cap alongside run caps (Phase 12)", () => {
+    expect(
+      ProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/Projects/alpha",
+        budget: { dailyRuns: 2, dailyCostCapUsd: 5, weeklyCostCapUsd: 20, monthlyCostCapUsd: 80 },
+      }).success,
+    ).toBe(true);
+  });
 });

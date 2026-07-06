@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import { promises as fs } from "node:fs";
 import { IntegrationKindSchema, type Note, type SelfKnowledge } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
@@ -11,11 +12,19 @@ import {
   computeDrift,
   mergeAutoBlocks,
 } from "./self-knowledge.composer";
+import { type ParsedGraphReport, parseGraphReport } from "./graph-report.parser";
 
 /** Fixed vault note id/tier/title — the one durable self-knowledge note. */
 export const SELF_KNOWLEDGE_NOTE_ID = "self-knowledge";
 const SELF_KNOWLEDGE_TIER = "knowledge" as const;
 const SELF_KNOWLEDGE_TITLE = "Self-Knowledge";
+
+/**
+ * DI token carrying the absolute path to graphify's `GRAPH_REPORT.md` (Fáze 10).
+ * Default resolved by `resolveGraphReportPath()` in `self-knowledge.module.ts`;
+ * tests inject their own (typically a path inside an isolated temp dir).
+ */
+export const GRAPH_REPORT_PATH = "GRAPH_REPORT_PATH";
 
 /**
  * Composes, persists and drift-checks the self-knowledge note (Fáze 1). Reads
@@ -31,6 +40,13 @@ const SELF_KNOWLEDGE_TITLE = "Self-Knowledge";
  * string list. `IntegrationKindSchema.options` (the exact set the registry
  * switches on) is the already-exported single source of truth for those kind
  * strings, so it is reused here rather than duplicating them.
+ *
+ * Fáze 10 adds one more read, straight off disk rather than through a storage
+ * service: graphify's `graphify-out/GRAPH_REPORT.md`. That directory is
+ * entirely gitignored and machine-local (never committed — see
+ * `docs/plans/phase-10-graphify-self-knowledge.md`'s "Rozhodnutí"), so the file
+ * routinely does not exist; any read failure (missing, unreadable, whatever)
+ * is treated as "codebase shape not available" rather than propagated.
  */
 @Injectable()
 export class SelfKnowledgeService {
@@ -40,14 +56,26 @@ export class SelfKnowledgeService {
     private readonly gateRules: GateRulesStorageService,
     private readonly policy: PolicyStorageService,
     private readonly vault: VaultService,
+    @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
   ) {}
 
+  /** Read + parse `GRAPH_REPORT.md`; any failure at all (missing, unreadable, …) → `null`. */
+  private async readCodebaseShape(): Promise<ParsedGraphReport | null> {
+    try {
+      const raw = await fs.readFile(this.graphReportPath, "utf8");
+      return parseGraphReport(raw);
+    } catch {
+      return null;
+    }
+  }
+
   private async gather(): Promise<SelfKnowledgeComposerInput> {
-    const [agents, pipelines, gateRules, policyFloor] = await Promise.all([
+    const [agents, pipelines, gateRules, policyFloor, codebaseShape] = await Promise.all([
       this.agents.list(),
       this.pipelines.list(),
       this.gateRules.list(),
       this.policy.floor(),
+      this.readCodebaseShape(),
     ]);
     return {
       agents,
@@ -55,6 +83,7 @@ export class SelfKnowledgeService {
       gateRules,
       policyFloor,
       channelKinds: [...IntegrationKindSchema.options],
+      codebaseShape,
     };
   }
 

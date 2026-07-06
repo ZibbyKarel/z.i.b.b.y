@@ -37,6 +37,10 @@ export interface ProjectBasicsBody {
     weeklyRuns?: number;
     monthlyRuns?: number;
     maxConcurrent?: number;
+    /** Phase 12: dollar caps, same windows as the run-count caps above. */
+    dailyCostCapUsd?: number;
+    weeklyCostCapUsd?: number;
+    monthlyCostCapUsd?: number;
   };
   checks?: string[];
   env?: Record<string, string>;
@@ -76,12 +80,21 @@ type ProjectEditValues = {
   budgetWeeklyRuns: string;
   budgetMonthlyRuns: string;
   budgetMaxConcurrent: string;
+  budgetDailyCostCapUsd: string;
+  budgetWeeklyCostCapUsd: string;
+  budgetMonthlyCostCapUsd: string;
 };
 
 /** Parse a budget field: a positive integer, or undefined when blank/invalid. */
 function toPositiveInt(raw: string): number | undefined {
   const n = Number.parseInt(raw.trim(), 10);
   return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
+/** Parse a dollar-cap field: a positive number, or undefined when blank/invalid. */
+function toPositiveFloat(raw: string): number | undefined {
+  const n = Number.parseFloat(raw.trim());
+  return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 function ChipToggle({
@@ -156,19 +169,37 @@ export function ProjectBasicsPanel({
         project?.budget?.monthlyRuns != null ? String(project.budget.monthlyRuns) : "",
       budgetMaxConcurrent:
         project?.budget?.maxConcurrent != null ? String(project.budget.maxConcurrent) : "",
+      budgetDailyCostCapUsd:
+        project?.budget?.dailyCostCapUsd != null ? String(project.budget.dailyCostCapUsd) : "",
+      budgetWeeklyCostCapUsd:
+        project?.budget?.weeklyCostCapUsd != null ? String(project.budget.weeklyCostCapUsd) : "",
+      budgetMonthlyCostCapUsd:
+        project?.budget?.monthlyCostCapUsd != null ? String(project.budget.monthlyCostCapUsd) : "",
     },
     onSubmit: (values) => {
       const dailyRuns = toPositiveInt(values.budgetDailyRuns);
       const weeklyRuns = toPositiveInt(values.budgetWeeklyRuns);
       const monthlyRuns = toPositiveInt(values.budgetMonthlyRuns);
       const maxConcurrent = toPositiveInt(values.budgetMaxConcurrent);
+      const dailyCostCapUsd = toPositiveFloat(values.budgetDailyCostCapUsd);
+      const weeklyCostCapUsd = toPositiveFloat(values.budgetWeeklyCostCapUsd);
+      const monthlyCostCapUsd = toPositiveFloat(values.budgetMonthlyCostCapUsd);
       const budget =
-        dailyRuns != null || weeklyRuns != null || monthlyRuns != null || maxConcurrent != null
+        dailyRuns != null ||
+        weeklyRuns != null ||
+        monthlyRuns != null ||
+        maxConcurrent != null ||
+        dailyCostCapUsd != null ||
+        weeklyCostCapUsd != null ||
+        monthlyCostCapUsd != null
           ? {
               ...(dailyRuns != null ? { dailyRuns } : {}),
               ...(weeklyRuns != null ? { weeklyRuns } : {}),
               ...(monthlyRuns != null ? { monthlyRuns } : {}),
               ...(maxConcurrent != null ? { maxConcurrent } : {}),
+              ...(dailyCostCapUsd != null ? { dailyCostCapUsd } : {}),
+              ...(weeklyCostCapUsd != null ? { weeklyCostCapUsd } : {}),
+              ...(monthlyCostCapUsd != null ? { monthlyCostCapUsd } : {}),
             }
           : undefined;
       const checks = checksText
@@ -322,6 +353,26 @@ export function ProjectBasicsPanel({
               inputMode="numeric"
               label={t("fields.budgetMaxConcurrent")}
               name="budgetMaxConcurrent"
+              placeholder="—"
+            />
+          </Stack>
+          <Stack direction="row" gap="150">
+            <FormTextInput<ProjectEditValues>
+              inputMode="decimal"
+              label={t("fields.budgetDailyCostCapUsd")}
+              name="budgetDailyCostCapUsd"
+              placeholder="—"
+            />
+            <FormTextInput<ProjectEditValues>
+              inputMode="decimal"
+              label={t("fields.budgetWeeklyCostCapUsd")}
+              name="budgetWeeklyCostCapUsd"
+              placeholder="—"
+            />
+            <FormTextInput<ProjectEditValues>
+              inputMode="decimal"
+              label={t("fields.budgetMonthlyCostCapUsd")}
+              name="budgetMonthlyCostCapUsd"
               placeholder="—"
             />
           </Stack>

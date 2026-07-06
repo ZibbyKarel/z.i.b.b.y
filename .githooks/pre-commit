@@ -13,3 +13,35 @@ if [ ! -d node_modules ] || [ ! -d apps/api/node_modules ]; then
 fi
 
 pnpm self-knowledge:check
+CHECK_STATUS=$?
+
+# --- graphify-out staleness warning (Fáze 10 — non-blocking, always exits 0) ---
+# graphify-out/ is entirely gitignored (never committed — see
+# docs/plans/phase-10-graphify-self-knowledge.md's "Rozhodnutí"), so this is
+# purely a local nudge: it never fails the commit, only prints a hint. Run in a
+# subshell so its own `exit 0` can't clobber $CHECK_STATUS above — the real
+# drift gate — which is what the script exits with below.
+(
+  REPORT="graphify-out/GRAPH_REPORT.md"
+
+  if [ ! -f "$REPORT" ]; then
+    echo "[pre-commit] graphify-out/GRAPH_REPORT.md not found — run \`/graphify\` to generate it."
+    exit 0
+  fi
+
+  STALE=0
+  for FILE in $(git diff --cached --name-only --diff-filter=ACMR -- apps libs); do
+    if [ -f "$FILE" ] && [ "$FILE" -nt "$REPORT" ]; then
+      STALE=1
+      break
+    fi
+  done
+
+  if [ "$STALE" = "1" ]; then
+    echo "[pre-commit] graphify-out may be stale — run \`graphify update .\`."
+  fi
+
+  exit 0
+)
+
+exit "$CHECK_STATUS"

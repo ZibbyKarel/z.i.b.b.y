@@ -13,6 +13,9 @@ export interface TopBarProps {
   walletSlot?: ReactNode;
   taskSlot?: ReactNode;
   chatSlot?: ReactNode;
+  /** The app-wide project switcher (Fáze 11) — one consistent spot, right of the
+   * breadcrumb, on every screen. */
+  projectSlot?: ReactNode;
   /** Current visibility of the right rail — controls the toggle's icon/label. */
   railHidden?: boolean;
   /** Present only when a right rail exists; renders the toggle button. */
@@ -24,6 +27,7 @@ export function TopBar({
   walletSlot,
   taskSlot,
   chatSlot,
+  projectSlot,
   railHidden,
   onToggleRail,
 }: TopBarProps) {
@@ -38,6 +42,7 @@ export function TopBar({
               {breadcrumb}
             </Typography>
           </Stack>
+          {projectSlot}
           {/* Search sits in flow (flex: 0 1 360px) so it can never overlap
               its neighbours — the absolute ⌘K collision was an audit finding. */}
           <Container minW0 style={{ flex: "0 1 360px", minWidth: 150, margin: "0 auto" }}>

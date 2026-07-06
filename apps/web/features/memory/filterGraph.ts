@@ -15,3 +15,18 @@ export function filterGraphByTier(graph: MemoryGraph, tier: TierFilter): MemoryG
   const edges = graph.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
   return { nodes, edges };
 }
+
+/**
+ * Filter a memory graph to one project (Fáze 11 project context). Only nodes
+ * attributed to the project (`node.project`, derived server-side from the
+ * `project:` frontmatter via `ownerProjectOf`) survive — unattributed (global)
+ * notes show only under "Všechny projekty" (`null` returns the graph unchanged).
+ * Dangling edges are dropped like in {@link filterGraphByTier}. Pure — unit-tested.
+ */
+export function filterGraphByProject(graph: MemoryGraph, projectId: string | null): MemoryGraph {
+  if (projectId === null) return graph;
+  const nodes = graph.nodes.filter((n) => n.project === projectId);
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = graph.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+  return { nodes, edges };
+}

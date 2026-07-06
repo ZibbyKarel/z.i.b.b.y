@@ -27,13 +27,15 @@ agent and pipeline runs shell out to it.
 ## Budgets & caps
 
 Per-engagement budgets live on the project record (`PATCH /projects/:id`, or the
-project editor in the dashboard): `dailyRuns` / `weeklyRuns` (run-count caps per
-Europe/Prague window) and `maxConcurrent`. Over a cap, a new task is **held** behind
-a Tier-3 `spend-past-cap` approval (Law 3: no autonomous spend past budget); at
-`maxConcurrent` it is **queued** (no approval) and drains when a run of that
-project finishes. The global account ceiling (`data/budget.json` →
+project editor in the dashboard): `dailyRuns` / `weeklyRuns` / `monthlyRuns`
+(run-count caps per Europe/Prague window) and `maxConcurrent`, plus (Phase 12)
+`dailyCostCapUsd` / `weeklyCostCapUsd` / `monthlyCostCapUsd` — the same windows,
+priced off finished runs' `costUsd` instead of a run count. Over either kind of cap, a
+new task is **held** behind a Tier-3 `spend-past-cap` approval (Law 3: no autonomous
+spend past budget); at `maxConcurrent` it is **queued** (no approval) and drains when
+a run of that project finishes. The global account ceiling (`data/budget.json` →
 `pauseAtRollingPct` / `pauseAtWeeklyPct`) holds **every** dispatch once account
-utilization crosses it.
+utilization crosses it. See `docs/api/budget.md` for the full check/ledger flow.
 
 **If everything is suddenly held**, the budget guard is failing closed (by design:
 an unreadable ledger or limits snapshot ⇒ hold, never auto-spend). **Check disk** —

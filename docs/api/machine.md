@@ -23,6 +23,12 @@ map of old→new (reversible by default).
   (`open "maps://?q=<enc>"`). Only opens a window (reversible, risk low), but
   STILL behind the gate — nothing executes silently on the machine. The opener
   is injectable (tests never actually launch anything).
+- `open-folder` `{path}` (N5c) — opens a folder in the operator's file manager
+  (`open <path>`). Only opens a window (reversible, risk low), but STILL behind
+  the gate. Guards (fail-closed, same shape as `rename-files`):
+  - `path` must be an absolute, existing directory — checked at propose time
+    (the dry-run) AND again right before execute (the world may have moved);
+  - preview is always empty (nothing to preview beyond the existence check).
 
 ## Record lifecycle
 
@@ -40,11 +46,12 @@ GET  /api/machine/actions/:id    a single record
 
 ## Operator input: chat tools (N5b)
 
-`machine_rename {folder, find, replace}` and `open_maps {query}` in the chat
-MCP (`ChatToolsService.proposeRename`/`proposeOpenMaps`) — chat may only
-PROPOSE (propose never executes); a rejected guard comes back as a message, not
-a crash. The gate renders a multi-line machine-approval preview via
-`CodeBlock` (preserving the old → new lines).
+`machine_rename {folder, find, replace}`, `open_maps {query}` and
+`open_folder {path}` in the chat MCP
+(`ChatToolsService.proposeRename`/`proposeOpenMaps`/`proposeOpenFolder`) — chat
+may only PROPOSE (propose never executes); a rejected guard comes back as a
+message, not a crash. The gate renders a multi-line machine-approval preview
+via `CodeBlock` (preserving the old → new lines).
 
 No execute endpoint exists — the only path to execution is the approval gate
 (Law 1: the gate is structural). The approval shows up in the ordinary

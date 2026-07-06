@@ -72,3 +72,16 @@ z-i-b-b-y
 /apps/api/agent-007-was-here.txt
 /apps/api/intent-request.json
 /apps/api/payment-done.txt
+
+# graphify: only GRAPH_REPORT.md (+ cost.json) is committed — the rest is
+# machine-specific (interpreter path, absolute-path manifest) or regenerable.
+/graphify-out/graph.json
+/graphify-out/manifest.json
+/graphify-out/cache/
+/graphify-out/.graphify_python
+/graphify-out/.graphify_*.json
+/graphify-out/.graphify_*.txt
+
+# live runtime data root (resolveDataRoot() default anchor — real operator data,
+# regenerated locally e.g. by `pnpm self-knowledge:generate`; never versioned)
+/apps/api/data/

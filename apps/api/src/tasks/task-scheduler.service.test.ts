@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { AgentRun, PipelineRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
+import type { BudgetCheck } from "../budget/budget.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -81,6 +82,20 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     windowExhausted: ReturnType<typeof vi.fn>;
     resolveResumeAt: ReturnType<typeof vi.fn>;
   };
+  let fakeBudget: {
+    check: ReturnType<typeof vi.fn<(projectId?: string, now?: Date) => Promise<BudgetCheck>>>;
+    countRunning: () => Promise<number>;
+    recordDispatch: () => Promise<void>;
+    recordCost: ReturnType<
+      typeof vi.fn<
+        (
+          entry: { projectId: string; taskId?: string; runRef: string; kind: string; costUsd: number },
+          now?: Date,
+        ) => Promise<void>
+      >
+    >;
+  };
+  let fakeGates: { floor: () => Promise<never[]>; evaluate: ReturnType<typeof vi.fn> };
   let service: TaskSchedulerService;
   let systemConfig: ReturnType<typeof fakeSystemConfigStore>;
   let attachmentStorage: AttachmentStorageService;
@@ -146,17 +161,18 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         throw new Error("no project");
       },
     };
-    const fakeBudget = {
-      check: async () => ({ ok: true }),
+    fakeBudget = {
+      check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       countRunning: async () => 0,
       recordDispatch: async () => {},
+      recordCost: vi.fn(async () => {}),
     };
     const fakeApprovals = {
       register: vi.fn(),
       requestApproval: async () => ({ id: "appr_1" }),
       reject: async () => {},
     };
-    const fakeGates = { floor: async () => [], evaluate: () => ({ decision: "allow" }) };
+    fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
     // Limits double (Phase 9): headroom by default; a test flips windowExhausted to
     // exercise the limit guard. resolveResumeAt echoes a fixed near-future reset.
     fakeLimits = {
@@ -656,5 +672,148 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(task.scheduledAt).toBe(nextReset);
     expect(task.limitDeferrals).toBe(2);
     expect(agentRunner.start).not.toHaveBeenCalled();
+  });
+
+  // ─── Phase 12: dollar cost-cap lines + gate metrics ────────────────────────
+
+  it("writes a best-effort cost line when a terminal agent run carries costUsd + a project", async () => {
+    // Attribution is server-derived off `paths` (Law 4) — a plain `createTask` in
+    // this suite never resolves a project (the project store is empty), so a
+    // project-attributed task is built directly, as the catch-up sweep test does.
+    const id = storage.newId();
+    await storage.createDispatched(
+      id,
+      { text: "do" },
+      "writer_1_1",
+      { kind: "agent", id: "writer", name: "Writer" },
+      Date.now(),
+      "alpha",
+    );
+    agentListener?.(agentRun({ status: "done", taskId: id, costUsd: 0.42 }));
+    await vi.waitFor(() => {
+      expect(fakeBudget.recordCost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: "alpha",
+          taskId: id,
+          runRef: "writer_1_1",
+          kind: "agent",
+          costUsd: 0.42,
+        }),
+      );
+    });
+  });
+
+  it("does not write a cost line when the terminal agent run has no costUsd", async () => {
+    const id = storage.newId();
+    await storage.createDispatched(
+      id,
+      { text: "do" },
+      "writer_1_1",
+      { kind: "agent", id: "writer", name: "Writer" },
+      Date.now(),
+      "alpha",
+    );
+    agentListener?.(agentRun({ status: "done", taskId: id }));
+    await vi.waitFor(async () => {
+      const task = await storage.get(id);
+      expect(task.outcome).toBeDefined();
+    });
+    expect(fakeBudget.recordCost).not.toHaveBeenCalled();
+  });
+
+  it("writes a cost line summed from stage costs on a terminal pipeline run", async () => {
+    const id = storage.newId();
+    await storage.createDispatched(
+      id,
+      { text: "ship it" },
+      "release_1",
+      { kind: "pipeline", id: "release", name: "Release" },
+      Date.now(),
+      "alpha",
+    );
+    pipelineListener?.(
+      pipelineRun({
+        status: "done",
+        taskId: id,
+        stageRuns: [
+          { phaseId: "a", runId: "r.a", attempt: 1, status: "done", costUsd: 0.1 },
+          { phaseId: "b", runId: "r.b", attempt: 1, status: "done", costUsd: 0.25 },
+        ],
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(fakeBudget.recordCost).toHaveBeenCalled();
+    });
+    const call = fakeBudget.recordCost.mock.calls.at(-1)?.[0] as {
+      projectId: string;
+      taskId: string;
+      runRef: string;
+      kind: string;
+      costUsd: number;
+    };
+    expect(call).toMatchObject({
+      projectId: "alpha",
+      taskId: id,
+      runRef: "release_1",
+      kind: "pipeline",
+    });
+    expect(call.costUsd).toBeCloseTo(0.35, 10);
+  });
+
+  it("does not write a cost line when no stage of the pipeline run carries costUsd", async () => {
+    const id = storage.newId();
+    await storage.createDispatched(
+      id,
+      { text: "ship it" },
+      "release_1",
+      { kind: "pipeline", id: "release", name: "Release" },
+      Date.now(),
+      "alpha",
+    );
+    pipelineListener?.(
+      pipelineRun({
+        status: "done",
+        taskId: id,
+        stageRuns: [{ phaseId: "a", runId: "r.a", attempt: 1, status: "done" }],
+      }),
+    );
+    await vi.waitFor(async () => {
+      const task = await storage.get(id);
+      expect(task.outcome).toBeDefined();
+    });
+    expect(fakeBudget.recordCost).not.toHaveBeenCalled();
+  });
+
+  it("propagates the BudgetCheck's dollar metrics into the spend-past-cap gate evaluation", async () => {
+    fakeBudget.check.mockResolvedValue({
+      ok: false,
+      over: "project-daily-cost",
+      detail: "daily cost cap reached ($12.00/$10.00)",
+      metrics: { costUsd: 12, capUsd: 10 },
+    });
+    const result = await service.createTask({ text: "do the thing" });
+    expect(result.outcome).toBe("scheduled");
+    expect(fakeGates.evaluate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        action: "spend-past-cap",
+        metrics: { costUsd: 12, capUsd: 10 },
+      }),
+    );
+  });
+
+  it("evaluates the gate with no metrics on a plain run-count hold", async () => {
+    fakeBudget.check.mockResolvedValue({
+      ok: false,
+      over: "project-daily",
+      detail: "daily run cap reached (2/2)",
+    });
+    await service.createTask({ text: "do the thing" });
+    expect(fakeGates.evaluate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({ action: "spend-past-cap" }),
+    );
+    const call = fakeGates.evaluate.mock.calls.at(-1)?.[1] as { metrics?: unknown };
+    expect(call.metrics).toBeUndefined();
   });
 });

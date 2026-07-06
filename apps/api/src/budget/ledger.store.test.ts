@@ -155,3 +155,96 @@ describe("BudgetLedgerStore", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("BudgetLedgerStore — cost lines (Phase 12)", () => {
+  let dir: string;
+  let store: BudgetLedgerStore;
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "budget-ledger-cost-"));
+    store = new BudgetLedgerStore(dir);
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("a mixed file counts only dispatch lines but sums only cost lines", async () => {
+    const now = new Date("2026-06-12T08:00:00.000Z");
+    await store.record(
+      { at: now.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent" },
+      now,
+    );
+    await store.record(
+      { at: now.toISOString(), projectId: "alpha", runRef: "r2", kind: "agent" },
+      now,
+    );
+    await store.recordCost(
+      { at: now.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent", costUsd: 0.5 },
+      now,
+    );
+    await store.recordCost(
+      { at: now.toISOString(), projectId: "alpha", runRef: "r2", kind: "agent", costUsd: 1.25 },
+      now,
+    );
+
+    // Run count is unaffected by the cost lines sharing the same file.
+    expect(await store.countDaily("alpha", now)).toBe(2);
+    // Cost sum only reads the cost lines, and reports the denominator for the average.
+    expect(await store.sumCostDaily("alpha", now)).toEqual({ sum: 1.75, count: 2 });
+  });
+
+  it("sums to zero with a zero denominator when no cost line exists yet", async () => {
+    const now = new Date("2026-06-12T08:00:00.000Z");
+    await store.record(
+      { at: now.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent" },
+      now,
+    );
+    expect(await store.sumCostDaily("alpha", now)).toEqual({ sum: 0, count: 0 });
+  });
+
+  it("does not count another project's cost line", async () => {
+    const now = new Date("2026-06-12T08:00:00.000Z");
+    await store.recordCost(
+      { at: now.toISOString(), projectId: "beta", runRef: "r1", kind: "agent", costUsd: 9 },
+      now,
+    );
+    expect(await store.sumCostDaily("alpha", now)).toEqual({ sum: 0, count: 0 });
+  });
+
+  it("weekly cost sum spans the ISO week", async () => {
+    const mon = new Date("2026-06-08T08:00:00.000Z");
+    const fri = new Date("2026-06-12T08:00:00.000Z");
+    await store.recordCost(
+      { at: mon.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent", costUsd: 1 },
+      mon,
+    );
+    await store.recordCost(
+      { at: fri.toISOString(), projectId: "alpha", runRef: "r2", kind: "agent", costUsd: 2 },
+      fri,
+    );
+    expect(await store.sumCostWeekly("alpha", fri)).toEqual({ sum: 3, count: 2 });
+  });
+
+  it("monthly cost sum excludes the prior month", async () => {
+    const may = new Date("2026-05-31T08:00:00.000Z");
+    const jun12 = new Date("2026-06-12T08:00:00.000Z");
+    await store.recordCost(
+      { at: may.toISOString(), projectId: "alpha", runRef: "r0", kind: "agent", costUsd: 10 },
+      may,
+    );
+    await store.recordCost(
+      { at: jun12.toISOString(), projectId: "alpha", runRef: "r1", kind: "agent", costUsd: 2 },
+      jun12,
+    );
+    expect(await store.sumCostMonthly("alpha", jun12)).toEqual({ sum: 2, count: 1 });
+  });
+
+  it("fails closed: an unreadable ledger dir throws on a cost sum too", async () => {
+    const filePath = path.join(dir, "not-a-dir");
+    await fs.writeFile(filePath, "x");
+    const broken = new BudgetLedgerStore(filePath);
+    await expect(
+      broken.sumCostDaily("alpha", new Date("2026-06-12T08:00:00.000Z")),
+    ).rejects.toThrow();
+  });
+});

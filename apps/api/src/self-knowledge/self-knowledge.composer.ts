@@ -6,14 +6,16 @@ import type {
   Pipeline,
   SelfKnowledgeSections,
 } from "@zibby/contracts";
+import type { ParsedGraphReport } from "./graph-report.parser";
 
 /**
  * Pure composition for the self-knowledge note (Fáze 1 — see
- * `docs/plans/phase-06.md`). No DI, no I/O: everything the note needs is passed
- * in by the caller (`SelfKnowledgeService`), so this file is unit-testable
- * without a NestJS test module or a real vault/storage.
+ * `docs/plans/phase-06.md`; the sixth block below is Fáze 10, see
+ * `docs/plans/phase-10-graphify-self-knowledge.md`). No DI, no I/O: everything
+ * the note needs is passed in by the caller (`SelfKnowledgeService`), so this
+ * file is unit-testable without a NestJS test module or a real vault/storage.
  *
- * The note is a normal Markdown document with five machine-owned "AUTO" blocks
+ * The note is a normal Markdown document with six machine-owned "AUTO" blocks
  * delimited by HTML comments (`<!-- AUTO:<KEY>:START -->` / `…:END`). Everything
  * OUTSIDE those blocks is operator-owned and untouched by {@link mergeAutoBlocks}.
  * `META` carries the generation timestamp and is deliberately excluded from
@@ -21,8 +23,8 @@ import type {
  * meaningful signal of "did the underlying catalog change".
  */
 
-/** Ids of the five AUTO blocks, also each block's rendering order in the note. */
-const BLOCK_KEYS = ["META", "AGENTS", "PIPELINES", "GATES", "CHANNELS"] as const;
+/** Ids of the six AUTO blocks, also each block's rendering order in the note. */
+const BLOCK_KEYS = ["META", "AGENTS", "PIPELINES", "GATES", "CHANNELS", "CODEBASE-SHAPE"] as const;
 type BlockKey = (typeof BLOCK_KEYS)[number];
 
 /** Inputs the composer needs — one plain snapshot of the current catalog state. */
@@ -35,9 +37,18 @@ export interface SelfKnowledgeComposerInput {
   policyFloor: GateRule[];
   /** Kinds of channel adapter ZIBBY knows how to speak (e.g. "slack", "email"). */
   channelKinds: string[];
+  /**
+   * A digest of graphify's `graphify-out/GRAPH_REPORT.md` (Fáze 10) — `null` or
+   * absent means the report was missing/unreadable when `SelfKnowledgeService`
+   * read it, which renders a one-line "run `/graphify`" hint instead of a digest.
+   */
+  codebaseShape?: ParsedGraphReport | null;
   /** Override for the `META` timestamp — tests only; defaults to `new Date().toISOString()`. */
   generatedAt?: string;
 }
+
+/** How many god nodes / communities the digest shows before pointing to the full report. */
+const CODEBASE_SHAPE_DIGEST_SIZE = 10;
 
 /** What {@link composeSelfKnowledge} returns: the full note body + its metadata. */
 export interface ComposedSelfKnowledge {
@@ -165,17 +176,66 @@ function renderChannels(channelKinds: string[]): string {
 }
 
 /**
+ * Digest of graphify's `graphify-out/GRAPH_REPORT.md` — a concise excerpt, not
+ * the full report. `null`/`undefined` (report missing or unreadable) renders a
+ * one-line hint instead, matching the empty-state style of the other blocks.
+ */
+function renderCodebaseShape(shape: ParsedGraphReport | null | undefined): string {
+  const lines = ["## Codebase shape"];
+  if (!shape) {
+    lines.push("_graphify-out is missing — run `/graphify` to generate it._");
+    return lines.join("\n");
+  }
+
+  const topGodNodes = [...shape.godNodes]
+    .sort((a, b) => (b.degree ?? 0) - (a.degree ?? 0))
+    .slice(0, CODEBASE_SHAPE_DIGEST_SIZE);
+  const topCommunities = [...shape.communities]
+    .sort((a, b) => (b.size ?? 0) - (a.size ?? 0))
+    .slice(0, CODEBASE_SHAPE_DIGEST_SIZE);
+
+  lines.push("", `### God nodes (${shape.godNodes.length})`);
+  if (topGodNodes.length === 0) {
+    lines.push("_None found._");
+  } else {
+    for (const node of topGodNodes) {
+      const degree = node.degree === undefined ? "" : ` — ${node.degree} edges`;
+      lines.push(`- \`${node.name}\`${degree}`);
+    }
+  }
+
+  lines.push("", `### Communities (${shape.communities.length})`);
+  if (topCommunities.length === 0) {
+    lines.push("_None found._");
+  } else {
+    for (const community of topCommunities) {
+      const size = community.size === undefined ? "" : ` (${community.size} nodes)`;
+      lines.push(`- ${community.label}${size}`);
+    }
+  }
+
+  lines.push("", "_Full source: `graphify-out/GRAPH_REPORT.md`._");
+  return lines.join("\n");
+}
+
+/**
  * Compose the full self-knowledge note body from a fresh catalog snapshot.
  * Deterministic given the same input + `generatedAt` (entities are sorted by
  * id) — the only non-determinism is the default timestamp, overridable for tests.
  */
 export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): ComposedSelfKnowledge {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const codebaseShape = input.codebaseShape ?? null;
   const sections: SelfKnowledgeSections = {
     agents: input.agents.length,
     pipelines: input.pipelines.length,
     gateRules: input.policyFloor.length + input.gateRules.length,
     channels: input.channelKinds.length,
+    codebaseShape: {
+      present: codebaseShape !== null,
+      godNodes: codebaseShape?.godNodes.length ?? 0,
+      communities: codebaseShape?.communities.length ?? 0,
+    },
   };
 
   const blocks: Record<BlockKey, string> = {
@@ -184,6 +244,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
     PIPELINES: renderPipelines(input.pipelines),
     GATES: renderGates(input.policyFloor, input.gateRules),
     CHANNELS: renderChannels(input.channelKinds),
+    "CODEBASE-SHAPE": renderCodebaseShape(codebaseShape),
   };
 
   const parts = [

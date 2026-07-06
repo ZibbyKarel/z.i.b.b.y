@@ -70,3 +70,56 @@ describe("ProjectBasicsPanel logo upload", () => {
     expect(screen.queryByTestId(IconTileTestId.Image)).not.toBeInTheDocument();
   });
 });
+
+describe("ProjectBasicsPanel dollar caps (Phase 12)", () => {
+  it("saves the three dollar caps entered alongside the run caps", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
+    await userEvent.type(screen.getByLabelText("$ / den"), "5");
+    await userEvent.type(screen.getByLabelText("$ / týden"), "20");
+    await userEvent.type(screen.getByLabelText("$ / měsíc"), "80");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        budget: expect.objectContaining({
+          dailyCostCapUsd: 5,
+          weeklyCostCapUsd: 20,
+          monthlyCostCapUsd: 80,
+        }),
+      }),
+    );
+  });
+
+  it("prefills the dollar-cap fields from the existing project", () => {
+    render(
+      <ProjectBasicsPanel
+        categories={[]}
+        isNew={false}
+        onSave={vi.fn()}
+        project={{
+          id: "alpha",
+          name: "Alpha",
+          path: "~/Projects/alpha",
+          budget: { dailyCostCapUsd: 5 },
+        }}
+      />,
+    );
+    expect(screen.getByLabelText("$ / den")).toHaveValue("5");
+    expect(screen.getByLabelText("$ / týden")).toHaveValue("");
+  });
+
+  it("omits budget entirely when every run- and dollar-cap field is blank", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ budget: undefined }));
+  });
+});

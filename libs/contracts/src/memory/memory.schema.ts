@@ -51,7 +51,19 @@ export type IndexEntry = z.infer<typeof IndexEntrySchema>;
 
 /** The force-directed graph of wiki-links across the vault. */
 export const MemoryGraphSchema = z.object({
-  nodes: z.array(z.object({ id: z.string(), label: z.string(), tier: MemoryTierSchema })),
+  nodes: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      tier: MemoryTierSchema,
+      /**
+       * The owning project (Fáze 11 project context) — same derivation as
+       * {@link IndexEntrySchema}'s `project` (`ownerProjectOf`). Optional and
+       * absent for a global note, so older payloads stay valid.
+       */
+      project: z.string().optional(),
+    }),
+  ),
   edges: z.array(z.object({ from: z.string(), to: z.string() })),
 });
 export type MemoryGraph = z.infer<typeof MemoryGraphSchema>;
@@ -62,6 +74,8 @@ export const SearchHitSchema = z.object({
   title: z.string(),
   tier: MemoryTierSchema,
   snippet: z.string(),
+  /** Owning project of the hit note (Fáze 11) — absent for a global note. */
+  project: z.string().optional(),
 });
 export type SearchHit = z.infer<typeof SearchHitSchema>;
 

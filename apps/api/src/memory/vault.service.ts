@@ -209,7 +209,12 @@ export class VaultService implements OnModuleInit {
   async graph(): Promise<MemoryGraph> {
     const notes = await this.scan();
     const ids = new Set(notes.map((n) => n.id));
-    const nodes = notes.map((n) => ({ id: n.id, label: n.title, tier: n.tier }));
+    // Nodes carry the note's owning project (Fáze 11 project context) via the same
+    // `ownerProjectOf` derivation the index uses — absent for a global note.
+    const nodes = notes.map((n) => {
+      const project = ownerProjectOf(n.frontmatter);
+      return { id: n.id, label: n.title, tier: n.tier, ...(project ? { project } : {}) };
+    });
     const edges: MemoryGraph["edges"] = [];
     for (const n of notes) {
       for (const target of n.links) {
@@ -233,11 +238,25 @@ export class VaultService implements OnModuleInit {
         .slice(Math.max(0, at - 30), at + 90)
         .replace(/\s+/g, " ")
         .trim();
-      hits.push({ id: n.id, title: n.title, tier: n.tier, snippet, score: inTitle ? 2 : 1 });
+      const project = ownerProjectOf(n.frontmatter);
+      hits.push({
+        id: n.id,
+        title: n.title,
+        tier: n.tier,
+        snippet,
+        ...(project ? { project } : {}),
+        score: inTitle ? 2 : 1,
+      });
     }
     return hits
       .sort((a, b) => b.score - a.score)
-      .map((h) => ({ id: h.id, title: h.title, tier: h.tier, snippet: h.snippet }));
+      .map((h) => ({
+        id: h.id,
+        title: h.title,
+        tier: h.tier,
+        snippet: h.snippet,
+        ...(h.project ? { project: h.project } : {}),
+      }));
   }
 
   /** Safe episodic write: append `text` to today's `daily/<YYYY-MM-DD>.md`. */

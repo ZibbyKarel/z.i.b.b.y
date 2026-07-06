@@ -131,6 +131,30 @@ describe("VaultService write paths", () => {
     expect(graph.nodes.some((n) => n.id === "fresh")).toBe(true);
   });
 
+  it("carries the owning project on graph nodes and search hits (Fáze 11)", async () => {
+    await vault.createNote({
+      id: "alpha-note",
+      tier: "knowledge",
+      title: "Alpha Note",
+      body: "alpha payload",
+      frontmatter: { project: "alpha" },
+    });
+    await vault.createNote({
+      id: "global-note",
+      tier: "knowledge",
+      title: "Global Note",
+      body: "alpha payload too",
+    });
+
+    const graph = await vault.graph();
+    expect(graph.nodes.find((n) => n.id === "alpha-note")?.project).toBe("alpha");
+    expect(graph.nodes.find((n) => n.id === "global-note")?.project).toBeUndefined();
+
+    const hits = await vault.search("alpha payload");
+    expect(hits.find((h) => h.id === "alpha-note")?.project).toBe("alpha");
+    expect(hits.find((h) => h.id === "global-note")?.project).toBeUndefined();
+  });
+
   it("round-trips typed `type`/`tags` through frontmatter (Fáze 3)", async () => {
     const created = await vault.createNote({
       id: "typed-1",

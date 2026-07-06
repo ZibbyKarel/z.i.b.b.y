@@ -25,6 +25,13 @@ vi.mock("../pins", () => ({
 }));
 vi.mock("../chains", () => ({ useChainsQuery: () => ({ data: [{ id: "c1", name: "My chain" }] }) }));
 vi.mock("../tasks", () => ({ useNewTask: () => ({ open: vi.fn() }) }));
+// ApprovalsPanel reads the Fáze 11 project context; "Všechny projekty" here keeps
+// the queue unscoped (the scoping itself is covered by the runs Screen test).
+vi.mock("../projects", () => ({
+  useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
+  ProjectScopeChip: () => null,
+  useProjectsQuery: () => ({ data: [] }),
+}));
 
 const activity: ActivityEntry[] = [
   {

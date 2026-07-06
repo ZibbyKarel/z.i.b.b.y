@@ -99,13 +99,17 @@ Server component — renders `AppShell` with children.
 Client component (`"use client"`):
 
 - Uses `usePathname()` to derive the active nav item
-- Mounts `CatalogProvider` → `NewTaskProvider` → `ChatProvider` (in that
-  nesting order; `NewTaskProvider` stays the outer provider — the position the
-  now-removed `VoiceProvider` used to hold — so the chat overlay can reach the
-  task flow)
+- Mounts `CatalogProvider` → `ProjectProvider` → `NewTaskProvider` →
+  `ChatProvider` (in that nesting order; `NewTaskProvider` stays the outer task
+  provider — the position the now-removed `VoiceProvider` used to hold — so the
+  chat overlay can reach the task flow). `ProjectProvider`
+  (`features/projects/context/`) is the Fáze 11 app-wide active-project scope,
+  persisted in the `activeProject` cookie; screens read it via
+  `useActiveProject()` and filter client-side.
 - Renders `MainLayout` with `navItems`, `railSlot` (`RightRail`), `chatSlot`
-  (`ChatButton`), `taskSlot` (`NewTaskButton`), and `walletSlot`
-  (`LimitsRings`) slots
+  (`ChatButton`), `taskSlot` (`NewTaskButton`), `projectSlot`
+  (`ProjectSwitcher` — the one app-wide project switcher, top bar next to the
+  breadcrumb on every screen), and `walletSlot` (`LimitsRings`) slots
 
 The Voice UI (JARVIS-style takeover, speech-to-text input, TTS read-back) was
 removed in favor of a chat-first interface (`features/chat`); there is no

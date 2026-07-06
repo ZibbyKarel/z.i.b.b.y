@@ -26,6 +26,11 @@ describe("machine.schema (N5a)", () => {
     // N5b: the second reference task joins the closed union.
     expect(MachineActionSchema.safeParse({ kind: "open-maps", query: "Brno" }).success).toBe(true);
     expect(MachineActionSchema.safeParse({ kind: "open-maps", query: "" }).success).toBe(false);
+    // N5c: the third reference task — open a folder — joins the closed union.
+    expect(
+      MachineActionSchema.safeParse({ kind: "open-folder", path: "/Users/op/Downloads" }).success,
+    ).toBe(true);
+    expect(MachineActionSchema.safeParse({ kind: "open-folder", path: "" }).success).toBe(false);
     expect(MachineActionSchema.safeParse({ ...ACTION, kind: "format-disk" }).success).toBe(false);
     expect(MachineActionRecordSchema.safeParse({ ...record, state: "pending" }).success).toBe(
       false,

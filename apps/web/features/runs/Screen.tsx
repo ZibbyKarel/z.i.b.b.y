@@ -8,7 +8,7 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { useProjectsQuery } from "../projects";
+import { ProjectScopeChip, useActiveProject, useProjectsQuery } from "../projects";
 import { useCancelScheduledTaskMutation } from "../tasks";
 import { RunDetail } from "./components/RunDetail";
 import { TaskCard } from "./components/TaskCard";
@@ -38,8 +38,15 @@ const STATUSES: FeedStatus[] = [
 
 export function Screen() {
   const t = useTranslations("runs");
-  const { runs } = useRunsQuery();
+  const { runs: allRuns } = useRunsQuery();
   const { data: projects = [] } = useProjectsQuery();
+  // Fáze 11: the app-wide active project scopes the feed FIRST — only runs
+  // attributed to it remain (unattributed runs read as global and show only
+  // under "Všechny projekty"). Client-side over the shared cache, so switching
+  // projects is instant.
+  const { activeProjectId } = useActiveProject();
+  const runs =
+    activeProjectId === null ? allRuns : allRuns.filter((r) => r.projectId === activeProjectId);
   const glyphById = useRunGlyphMap();
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
@@ -118,7 +125,10 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader
           actions={
-            <Stack direction="row" gap="150">
+            <Stack align="center" direction="row" gap="150">
+              {/* Fáze 11: subtle indication that the feed is scoped to the active
+                  project, so an empty filtered list is never confusing. */}
+              <ProjectScopeChip />
               <Container width="15rem">
                 <Dropdown<string>
                   compact

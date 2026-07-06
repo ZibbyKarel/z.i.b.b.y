@@ -9,6 +9,7 @@ import { LimitsRings } from "../LimitsRings/LimitsRings";
 import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
+import { ProjectProvider, ProjectSwitcher } from "../../../features/projects";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
 import { ChatButton, ChatProvider } from "../../../features/chat";
 import { navBadgeCount, useNotifications } from "../../../features/notifications";
@@ -56,6 +57,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       chatSlot={<ChatButton />}
       footerItem={footerItem}
       navItems={navItems}
+      projectSlot={<ProjectSwitcher />}
       railSlot={<RightRail />}
       taskSlot={<NewTaskButton />}
       walletSlot={<LimitsRings />}
@@ -68,15 +70,19 @@ function AppShellInner({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
-      {/* NewTaskProvider stays the OUTER provider (the position the removed
-          VoiceProvider held), so the chat overlay can reach the task flow later. */}
-      <NewTaskProvider>
-        <ChatProvider>
-          <Suspense>
-            <AppShellInner>{children}</AppShellInner>
-          </Suspense>
-        </ChatProvider>
-      </NewTaskProvider>
+      {/* ProjectProvider (Fáze 11) sits beside CatalogProvider: the active-project
+          scope is a dashboard concern, so it mounts here, not in root providers. */}
+      <ProjectProvider>
+        {/* NewTaskProvider stays the OUTER provider (the position the removed
+            VoiceProvider held), so the chat overlay can reach the task flow later. */}
+        <NewTaskProvider>
+          <ChatProvider>
+            <Suspense>
+              <AppShellInner>{children}</AppShellInner>
+            </Suspense>
+          </ChatProvider>
+        </NewTaskProvider>
+      </ProjectProvider>
     </CatalogProvider>
   );
 }
