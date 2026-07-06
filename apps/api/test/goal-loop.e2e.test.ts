@@ -19,7 +19,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 /** Verifier fixture: fails N times (marker-counted), then passes. */
 const COUNTING_CHECK = path.resolve(HERE, "fixtures/counting-check.mjs");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-async function until<T>(fn: () => Promise<T>, timeoutMs = 20000): Promise<T> {
+async function until<T>(fn: () => Promise<T>, timeoutMs = 45000): Promise<T> {
   const start = Date.now();
   for (;;) {
     const result = await fn();
@@ -103,11 +103,12 @@ describe("Goal loop API (e2e, demo maker)", () => {
   async function untilGoalRun(
     goalRunId: string,
     pred: (run: ReturnType<GoalRunnerService["get"]>) => boolean,
+    timeoutMs?: number,
   ): Promise<ReturnType<GoalRunnerService["get"]>> {
     return until(async () => {
       const run = getRun(goalRunId).body;
       return pred(run) ? run : null;
-    }) as Promise<ReturnType<GoalRunnerService["get"]>>;
+    }, timeoutMs) as Promise<ReturnType<GoalRunnerService["get"]>>;
   }
 
   async function boot(autoResume = false): Promise<INestApplication> {
@@ -449,7 +450,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
     expect(final.iterations[0]!.verifier.output).toMatch(/skipped a redundant re-run/);
 
     await fs.rm(vproj, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-  });
+  }, 90_000); // (13.5) real pipeline dispatch under CI's contended runners can clear the default test timeout
 
   it("default boot gate (Law 3): restart parks the goal awaiting-resume — no auto-dispatch", async () => {
     // A looping goal (fails 5×, 10 iterations) is reliably still running when we kill
@@ -473,7 +474,7 @@ describe("Goal loop API (e2e, demo maker)", () => {
       (r) => r.status !== "parked" && r.status !== "running",
     );
     expect(done.status).toBe("done");
-  });
+  }, 90_000); // (13.5) closes an app + reboots it under CI's contended runners; can clear the default test timeout
 
   it("survives an API restart mid-loop with goalAutoResume on — reconstruct continues to done", async () => {
     await makeGoal("restartgoal", 0, 3);
