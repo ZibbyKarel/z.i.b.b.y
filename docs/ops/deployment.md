@@ -142,13 +142,21 @@ Runs `apps/api/scripts/backup.sh` (driven by `com.zibby.backup`) daily at 03:30.
 
 ### Backup script (`apps/api/scripts/backup.sh`)
 
+**System dependency:** `rsync` must be installed when `ZIBBY_BACKUP_DIR` is set
+(ships with macOS; on Linux install via the distro package manager). The script
+preflight-checks for it at the very top, before step 1 runs, and exits 1 with a
+clear message if it's missing — instead of aborting mid-backup with a raw `set -e`
+exit 127 after the vault commit already happened (phase 20.2).
+
 1. **Vault → git**: `git add -A && git commit` in the vault dir. **No remote, no
    push** (Law 3). Want offsite? Add a private remote yourself and push it on your
    own cadence.
 2. **data/ → rsync**: `rsync -a --delete` of the runtime dirs into
    `$ZIBBY_BACKUP_DIR/<1..7>` (rotating day-of-week). **Credentials are excluded by
    default**; pass `--include-credentials` to opt in (secrets — only to an
-   encrypted / trusted target).
+   encrypted / trusted target; see
+   [`docs/ops/security-posture.md`](security-posture.md) for the at-rest-plaintext
+   tradeoff this implies).
 3. Idempotent and no-op safe: a clean vault commits nothing, a missing data dir is
    skipped, and it exits 0 on "nothing to back up".
 

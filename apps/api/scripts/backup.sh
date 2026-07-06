@@ -27,6 +27,16 @@ for arg in "$@"; do
   esac
 done
 
+# ---- 0. rsync preflight (BEFORE the vault git commit below) -----------------------
+# `set -euo pipefail` means a missing `rsync` would otherwise abort with a raw exit
+# 127 partway through step 2 — AFTER the vault commit already ran, leaving a half
+# backup (vault committed, data/ never rsynced). Only relevant when a data rsync was
+# actually requested (ZIBBY_BACKUP_DIR set); a vault-only run has no rsync dependency.
+if [ -n "${ZIBBY_BACKUP_DIR:-}" ] && ! command -v rsync >/dev/null 2>&1; then
+  echo "backup.sh: rsync not found — install it or unset ZIBBY_BACKUP_DIR" >&2
+  exit 1
+fi
+
 # Resolve the data root relative to this script (…/apps/api/scripts/backup.sh).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_DATA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/data"
