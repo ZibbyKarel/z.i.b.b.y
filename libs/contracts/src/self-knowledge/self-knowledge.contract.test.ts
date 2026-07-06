@@ -41,4 +41,43 @@ describe("SelfKnowledgeSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts a payload without codebaseShape (back-compat with pre-Fáze-10 payloads)", () => {
+    const parsed = SelfKnowledgeSchema.safeParse({
+      markdown: "# Self-Knowledge\n",
+      generatedAt: new Date().toISOString(),
+      drift: false,
+      sections,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.sections.codebaseShape).toBeUndefined();
+  });
+
+  it("accepts codebaseShape present with digest counts, and present:false with zero counts", () => {
+    const present = SelfKnowledgeSchema.safeParse({
+      markdown: "# Self-Knowledge\n",
+      generatedAt: new Date().toISOString(),
+      drift: false,
+      sections: { ...sections, codebaseShape: { present: true, godNodes: 10, communities: 3 } },
+    });
+    expect(present.success).toBe(true);
+
+    const absent = SelfKnowledgeSchema.safeParse({
+      markdown: "# Self-Knowledge\n",
+      generatedAt: new Date().toISOString(),
+      drift: false,
+      sections: { ...sections, codebaseShape: { present: false, godNodes: 0, communities: 0 } },
+    });
+    expect(absent.success).toBe(true);
+  });
+
+  it("rejects a negative codebaseShape count", () => {
+    const parsed = SelfKnowledgeSchema.safeParse({
+      markdown: "x",
+      generatedAt: new Date().toISOString(),
+      drift: false,
+      sections: { ...sections, codebaseShape: { present: true, godNodes: -1, communities: 0 } },
+    });
+    expect(parsed.success).toBe(false);
+  });
 });

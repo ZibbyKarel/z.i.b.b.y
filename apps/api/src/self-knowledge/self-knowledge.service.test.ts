@@ -9,8 +9,15 @@ import { VaultService } from "../memory/vault.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { SELF_KNOWLEDGE_NOTE_ID, SelfKnowledgeService } from "./self-knowledge.service";
 
-/** Build a fully-wired service over fresh temp dirs (mirrors the storage services' own tests). */
-async function makeService(): Promise<{ dir: string; service: SelfKnowledgeService }> {
+/**
+ * Build a fully-wired service over fresh temp dirs (mirrors the storage
+ * services' own tests). `graphReportPath` defaults to a path that does not
+ * exist inside the same temp dir, so a fresh service behaves exactly as it did
+ * before Fáze 10 (codebase shape absent) unless a test writes a report there.
+ */
+async function makeService(
+  graphReportPath?: string,
+): Promise<{ dir: string; service: SelfKnowledgeService }> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "self-knowledge-"));
 
   const agents = new AgentsStorageService(path.join(dir, "agents"));
@@ -24,7 +31,11 @@ async function makeService(): Promise<{ dir: string; service: SelfKnowledgeServi
   const vault = new VaultService(path.join(dir, "vault"));
   await vault.onModuleInit();
 
-  return { dir, service: new SelfKnowledgeService(agents, pipelines, gateRules, policy, vault) };
+  const resolvedGraphReportPath = graphReportPath ?? path.join(dir, "graphify-out", "GRAPH_REPORT.md");
+  return {
+    dir,
+    service: new SelfKnowledgeService(agents, pipelines, gateRules, policy, vault, resolvedGraphReportPath),
+  };
 }
 
 describe("SelfKnowledgeService", () => {
@@ -127,6 +138,67 @@ describe("SelfKnowledgeService", () => {
       expect(await service.check()).toBe(true);
       await service.write();
       expect(await service.check()).toBe(false);
+    });
+  });
+
+  describe("codebaseShape (Fáze 10 — reading graphify-out/GRAPH_REPORT.md)", () => {
+    const SAMPLE_REPORT = [
+      "# Graph Report - z.i.b.b.y",
+      "",
+      "## God Nodes (most connected - your core abstractions)",
+      "1. `Stack()` - 144 edges",
+      "2. `Typography()` - 139 edges",
+      "",
+      "## Communities (2 total)",
+      "",
+      '### Community 0 - "LoggerService"',
+      "Cohesion: 0.03",
+      "Nodes (70): AgentProposalFlowService, FrontmatterPreview (+68 more)",
+      "",
+      "## Knowledge Gaps",
+      "- none",
+      "",
+    ].join("\n");
+
+    it("renders the absence hint and reports codebaseShape.present=false when the report is missing", async () => {
+      // `service` (from the outer beforeEach) already points at a graphReportPath
+      // that does not exist — see makeService()'s default.
+      const result = await service.compose();
+      expect(result.sections.codebaseShape).toEqual({ present: false, godNodes: 0, communities: 0 });
+      expect(result.markdown).toContain("graphify-out is missing");
+    });
+
+    it("carries the digest into sections and markdown when the report is present", async () => {
+      const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "graph-report-"));
+      const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
+      await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
+
+      const { dir: withReportDir, service: withReport } = await makeService(reportPath);
+      const result = await withReport.compose();
+
+      expect(result.sections.codebaseShape).toEqual({ present: true, godNodes: 2, communities: 1 });
+      expect(result.markdown).toContain("Stack()");
+      expect(result.markdown).toContain("144 edges");
+      expect(result.markdown).toContain("LoggerService");
+      expect(result.markdown).not.toContain("graphify-out is missing");
+
+      await fs.rm(reportDir, { recursive: true, force: true });
+      await fs.rm(withReportDir, { recursive: true, force: true });
+    });
+
+    it("treats an unreadable path (e.g. a directory, not ENOENT) as absent — never throws", async () => {
+      // `graphReportPath` points at a directory, not a file: fs.readFile fails with
+      // EISDIR, not ENOENT — this exercises the broad catch, not just the ENOENT case.
+      const notAFilePath = await fs.mkdtemp(path.join(os.tmpdir(), "graph-report-dir-"));
+
+      const { dir: withBadPathDir, service: withBadPath } = await makeService(notAFilePath);
+      const result = await withBadPath.compose();
+
+      expect(result.sections.codebaseShape).toEqual({ present: false, godNodes: 0, communities: 0 });
+      expect(result.markdown).toContain("graphify-out is missing");
+
+      await fs.rm(notAFilePath, { recursive: true, force: true });
+      await fs.rm(withBadPathDir, { recursive: true, force: true });
     });
   });
 });

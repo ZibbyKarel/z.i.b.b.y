@@ -11,6 +11,21 @@ export const SelfKnowledgeSectionsSchema = z.object({
   /** System floor rules + the global gate-rule catalog, combined. */
   gateRules: z.number().int().nonnegative(),
   channels: z.number().int().nonnegative(),
+  /**
+   * Codebase-shape digest sourced from graphify's `graphify-out/GRAPH_REPORT.md`
+   * (Fáze 10 — see `docs/plans/phase-10-graphify-self-knowledge.md`). `present`
+   * is false when `graphify-out/` was missing or unreadable at compose time, in
+   * which case `godNodes`/`communities` are both `0`. Optional so payloads
+   * composed before this section existed still validate — absent means "not
+   * yet reported", not "empty".
+   */
+  codebaseShape: z
+    .object({
+      present: z.boolean(),
+      godNodes: z.number().int().nonnegative(),
+      communities: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 export type SelfKnowledgeSections = z.infer<typeof SelfKnowledgeSectionsSchema>;
 

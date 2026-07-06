@@ -65,12 +65,18 @@ function baseInput(overrides: Partial<SelfKnowledgeComposerInput> = {}): SelfKno
 describe("composeSelfKnowledge", () => {
   it("counts each section correctly", () => {
     const { sections } = composeSelfKnowledge(baseInput());
-    expect(sections).toEqual({ agents: 1, pipelines: 1, gateRules: 2, channels: 2 });
+    expect(sections).toEqual({
+      agents: 1,
+      pipelines: 1,
+      gateRules: 2,
+      channels: 2,
+      codebaseShape: { present: false, godNodes: 0, communities: 0 },
+    });
   });
 
   it("renders every AUTO block with matching START/END markers", () => {
     const { markdown } = composeSelfKnowledge(baseInput());
-    for (const key of ["META", "AGENTS", "PIPELINES", "GATES", "CHANNELS"]) {
+    for (const key of ["META", "AGENTS", "PIPELINES", "GATES", "CHANNELS", "CODEBASE-SHAPE"]) {
       expect(markdown).toContain(`<!-- AUTO:${key}:START -->`);
       expect(markdown).toContain(`<!-- AUTO:${key}:END -->`);
     }
@@ -119,6 +125,67 @@ describe("composeSelfKnowledge", () => {
     expect(first).toBe(second);
     expect(first.indexOf("aaa-agent")).toBeLessThan(first.indexOf("zzz-agent"));
   });
+
+  describe("CODEBASE-SHAPE block", () => {
+    it("renders a missing-report hint when codebaseShape is absent", () => {
+      const { markdown, sections } = composeSelfKnowledge(baseInput());
+      expect(markdown).toContain("graphify-out is missing");
+      expect(markdown).toContain("/graphify");
+      expect(sections.codebaseShape).toEqual({ present: false, godNodes: 0, communities: 0 });
+    });
+
+    it("renders a missing-report hint when codebaseShape is explicitly null", () => {
+      const { markdown } = composeSelfKnowledge(baseInput({ codebaseShape: null }));
+      expect(markdown).toContain("graphify-out is missing");
+    });
+
+    it("renders a digest of god nodes and communities when codebaseShape is present", () => {
+      const { markdown, sections } = composeSelfKnowledge(
+        baseInput({
+          codebaseShape: {
+            godNodes: [
+              { name: "Stack()", degree: 144 },
+              { name: "Typography()", degree: 139 },
+            ],
+            communities: [
+              { label: "LoggerService", size: 70 },
+              { label: "Project", size: 6 },
+            ],
+          },
+        }),
+      );
+
+      expect(markdown).toContain("Stack()");
+      expect(markdown).toContain("144 edges");
+      expect(markdown).toContain("Typography()");
+      expect(markdown).toContain("LoggerService");
+      expect(markdown).toContain("Project");
+      expect(markdown).toContain("graphify-out/GRAPH_REPORT.md");
+      expect(markdown).not.toContain("graphify-out is missing");
+      expect(sections.codebaseShape).toEqual({ present: true, godNodes: 2, communities: 2 });
+    });
+
+    it("caps the digest to the top ~10 god nodes and communities by size", () => {
+      const godNodes = Array.from({ length: 15 }, (_, i) => ({
+        name: `node-${i}`,
+        degree: 15 - i,
+      }));
+      const communities = Array.from({ length: 15 }, (_, i) => ({
+        label: `community-${i}`,
+        size: 15 - i,
+      }));
+      const { markdown, sections } = composeSelfKnowledge(
+        baseInput({ codebaseShape: { godNodes, communities } }),
+      );
+
+      expect(markdown).toContain("node-0");
+      expect(markdown).not.toContain("node-14");
+      expect(markdown).toContain("community-0");
+      expect(markdown).not.toContain("community-14");
+      // Sections still report the true, un-truncated counts.
+      expect(sections.codebaseShape).toEqual({ present: true, godNodes: 15, communities: 15 });
+    });
+  });
 });
 
 describe("mergeAutoBlocks", () => {
@@ -151,6 +218,11 @@ describe("mergeAutoBlocks", () => {
       "## Channels (0)",
       "<!-- AUTO:CHANNELS:END -->",
       "",
+      "<!-- AUTO:CODEBASE-SHAPE:START -->",
+      "## Codebase shape",
+      "_graphify-out is missing — run `/graphify` to generate it._",
+      "<!-- AUTO:CODEBASE-SHAPE:END -->",
+      "",
       "More operator prose at the very end.",
     ].join("\n");
 
@@ -162,6 +234,34 @@ describe("mergeAutoBlocks", () => {
     expect(merged).not.toContain("No agents registered yet");
     expect(merged).toContain("koder");
     expect(merged).toContain("build-app");
+  });
+
+  it("preserves operator content outside blocks while replacing a stale CODEBASE-SHAPE block", () => {
+    const generated = composeSelfKnowledge(
+      baseInput({
+        codebaseShape: {
+          godNodes: [{ name: "Stack()", degree: 144 }],
+          communities: [{ label: "LoggerService", size: 70 }],
+        },
+      }),
+    ).markdown;
+    const existing = [
+      "# Self-Knowledge",
+      "",
+      "Operator note: keep this line no matter what.",
+      "",
+      "<!-- AUTO:CODEBASE-SHAPE:START -->",
+      "## Codebase shape",
+      "_graphify-out is missing — run `/graphify` to generate it._",
+      "<!-- AUTO:CODEBASE-SHAPE:END -->",
+    ].join("\n");
+
+    const merged = mergeAutoBlocks(existing, generated);
+
+    expect(merged).toContain("Operator note: keep this line no matter what.");
+    expect(merged).toContain("Stack()");
+    expect(merged).toContain("LoggerService");
+    expect(merged).not.toContain("graphify-out is missing");
   });
 
   it("appends a block missing from the existing note, without disturbing the rest", () => {
@@ -205,5 +305,20 @@ describe("computeDrift", () => {
   it("is true when a non-META block is entirely missing from one side", () => {
     const generated = composeSelfKnowledge(baseInput()).markdown;
     expect(computeDrift("# Self-Knowledge\nno blocks at all\n", generated)).toBe(true);
+  });
+
+  it("reacts to a codebaseShape change (absent vs. present)", () => {
+    const a = composeSelfKnowledge(baseInput()).markdown;
+    const b = composeSelfKnowledge(
+      baseInput({ codebaseShape: { godNodes: [{ name: "Stack()", degree: 144 }], communities: [] } }),
+    ).markdown;
+    expect(computeDrift(a, b)).toBe(true);
+  });
+
+  it("is false when codebaseShape content is identical across both sides", () => {
+    const shape = { godNodes: [{ name: "Stack()", degree: 144 }], communities: [] };
+    const a = composeSelfKnowledge(baseInput({ codebaseShape: shape })).markdown;
+    const b = composeSelfKnowledge(baseInput({ codebaseShape: shape })).markdown;
+    expect(computeDrift(a, b)).toBe(false);
   });
 });
