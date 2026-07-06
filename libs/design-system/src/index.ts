@@ -72,6 +72,9 @@ export type {
   IconTileTone,
 } from "./components/IconTile/IconTile";
 
+export { EntityHero, EntityHeroTestId } from "./components/EntityHero/EntityHero";
+export type { EntityHeroProps } from "./components/EntityHero/EntityHero";
+
 // ---------------------------------------------------------------------------
 // Generic components
 // ---------------------------------------------------------------------------
