@@ -7,6 +7,7 @@ import {
   Container,
   Divider,
   Icon,
+  IconTile,
   Stack,
   Typography,
 } from "@zibby/design-system";
@@ -41,18 +42,21 @@ export function PipelineCard({ pipeline, agents, selected, onSelect }: PipelineC
     >
       <Container padding="150">
         <Stack gap="150">
-          <Stack gap="75">
-            <Stack align="center" direction="row" justify="between">
-              <Typography mono size="md" type="note" weight="bold">
-                {pipeline.name}
+          <Stack align="start" direction="row" gap="150">
+            <IconTile alt={pipeline.name} glyph="flow" size="md" src={pipeline.avatar} />
+            <Stack gap="75">
+              <Stack align="center" direction="row" justify="between">
+                <Typography mono size="md" type="note" weight="bold">
+                  {pipeline.name}
+                </Typography>
+                <Chip dot pulse={sm.pulse} tone={sm.tone}>
+                  {t(sm.labelKey)}
+                </Chip>
+              </Stack>
+              <Typography leading="snug" size="caption" type="note" variant="secondary">
+                {pipeline.desc}
               </Typography>
-              <Chip dot pulse={sm.pulse} tone={sm.tone}>
-                {t(sm.labelKey)}
-              </Chip>
             </Stack>
-            <Typography leading="snug" size="caption" type="note" variant="secondary">
-              {pipeline.desc}
-            </Typography>
           </Stack>
 
           <Stack wrap align="center" direction="row" gap="75">

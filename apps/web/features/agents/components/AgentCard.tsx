@@ -36,6 +36,7 @@ export function AgentCard({ agent, pipelineCount = 0, onClick }: AgentCardProps)
       ]}
       description={agent.description}
       glyph={(agent.glyph as IconName | undefined) ?? "bot"}
+      logoSrc={agent.avatar}
       onClick={onClick ? () => onClick(agent) : undefined}
       openLabel={t("openAria", { name })}
       title={name}
