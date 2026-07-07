@@ -10,7 +10,7 @@
 
 - [x] převést Chat UI na samostatnou stránku místo toho aby to byl jen Overlay — fáze 23
 
-- [ ] úplně oddělené kontexty pro projekty. Momentálně máme přepínátko projektů v top baru. To by mělo zajistit to, že vždy budu vidět jen globální informace (agenty, skilly, pipeliny, paměť) a project-specific věci jako běhy tásků. Nechci pak vidět běhy tasků z jiných projektů. Selector projektu v topBaru by pak měl být jediným selectorem. stejný selector z New task dialogu odstraníme a hodnotu vezmeme ze selektoru v topBaru. Zíroveň musí být vždy vyplněn některý projekt. Neexistuje možnost "všechny projekty". Ale můžu mít tasky, které nejsou spojeny s žádným projektem jako třeba výzkumy atp. Přidáme tedy možnost "bez projektu" a u takových běhů chci mít možnost zařadit je do určitého projektu.
+- [x] úplně oddělené kontexty pro projekty — fáze 24. Momentálně máme přepínátko projektů v top baru. To by mělo zajistit to, že vždy budu vidět jen globální informace (agenty, skilly, pipeliny, paměť) a project-specific věci jako běhy tásků. Nechci pak vidět běhy tasků z jiných projektů. Selector projektu v topBaru by pak měl být jediným selectorem. stejný selector z New task dialogu odstraníme a hodnotu vezmeme ze selektoru v topBaru. Zíroveň musí být vždy vyplněn některý projekt. Neexistuje možnost "všechny projekty". Ale můžu mít tasky, které nejsou spojeny s žádným projektem jako třeba výzkumy atp. Přidáme tedy možnost "bez projektu" a u takových běhů chci mít možnost zařadit je do určitého projektu.
 
 - [ ] při změně projektu se změní i logo systému z.i.b.b.y na logo, které je uložené u projektu aby to zdůraznilo scope projektu.
 
@@ -25,3 +25,5 @@
 - [x] editace agenta - výběr kategorie bude přes komponentu Select — fáze 11
 
 - [x] avatary agentů na kartách uděláme větší — fáze 22
+
+- [ ] na stránce chatu zrušíme by se MainLayout měl lišit. Celé tělo chat stránky musí být fullscreen. Jedná se o "paralelní UI s HUD UI" takže je rovnocenné a né vnořené do HUD UI.

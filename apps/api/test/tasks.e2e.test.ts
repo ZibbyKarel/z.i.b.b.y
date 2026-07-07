@@ -418,6 +418,56 @@ describe("Tasks API (e2e)", () => {
       await fs.rm(folder, { recursive: true, force: true });
     });
   });
+
+  // ── Phase 24 Part D ─────────────────────────────────────────────────────
+  describe("Phase 24 Part D — assign a run's project", () => {
+    it("assigns a project-less run into a project, then clears it back to none", async () => {
+      await seedCatalog();
+      await request(app.getHttpServer())
+        .post("/api/projects")
+        .send({ id: "acme", name: "Acme", path: "/tmp/acme-project-e2e" })
+        .expect(201);
+
+      const created = await request(app.getHttpServer())
+        .post(CREATE)
+        .send({ title: "Unattributed", text: "Srovnej a popiš média v mé knihovně" })
+        .expect(201);
+      const dispatched = await untilTaskStatus(created.body.task.id, "dispatched");
+      const runId = dispatched.runRef as string;
+
+      const before = await request(app.getHttpServer())
+        .get(`/api/tasks/runs/${runId}`)
+        .expect(200);
+      expect(before.body.projectId).toBeUndefined();
+
+      const assigned = await request(app.getHttpServer())
+        .patch(`/api/tasks/runs/${runId}/project`)
+        .send({ projectId: "acme" })
+        .expect(200);
+      expect(assigned.body.projectId).toBe("acme");
+      // The display label re-resolves to the assigned project's name too.
+      expect(assigned.body.project).toBe("Acme");
+
+      // GET reflects the assignment independently of the PATCH response.
+      const after = await request(app.getHttpServer())
+        .get(`/api/tasks/runs/${runId}`)
+        .expect(200);
+      expect(after.body.projectId).toBe("acme");
+
+      const cleared = await request(app.getHttpServer())
+        .patch(`/api/tasks/runs/${runId}/project`)
+        .send({ projectId: null })
+        .expect(200);
+      expect(cleared.body.projectId).toBeUndefined();
+    });
+
+    it("404s assigning a project to an unknown run", async () => {
+      await request(app.getHttpServer())
+        .patch("/api/tasks/runs/ghost/project")
+        .send({ projectId: "acme" })
+        .expect(404);
+    });
+  });
 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

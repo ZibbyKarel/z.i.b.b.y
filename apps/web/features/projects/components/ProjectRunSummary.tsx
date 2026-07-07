@@ -7,6 +7,7 @@ import Link from "next/link";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useRunsQuery } from "../../runs";
 import { RUN_STATUS_GROUPS, groupFilterParam } from "../../runs/statusGroups";
+import { useActiveProject } from "../context/ProjectProvider";
 
 export interface ProjectRunSummaryProps {
   projectId: string;
@@ -19,6 +20,11 @@ export interface ProjectRunSummaryProps {
  * from the same unified `useRunsQuery` feed the runs screen reads, filtered client-
  * side by `projectId` — the field the API now joins onto every task-spawned run.
  *
+ * Phase 24: the runs feed no longer reads a `?project=` query — the top-bar
+ * selector is the single scope now — so each tile arms that scope (via
+ * `setActiveProject`) before the `Link`'s own navigation fires, dropping the
+ * now-dead `project=` param from the href.
+ *
  * Typed routes can't infer a query-string-carrying template stored in a variable,
  * so each `href` is cast `as Route` (the codebase-wide convention for `<Link>`).
  */
@@ -26,6 +32,7 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
   const t = useTranslations("runs");
   const tp = useTranslations("projects");
   const { runs } = useRunsQuery();
+  const { setActiveProject } = useActiveProject();
   const mine = runs.filter((r) => r.projectId === projectId);
 
   return (
@@ -33,15 +40,21 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
       <Stack wrap direction="row" gap="450">
         <Link
           data-testid="project-run-summary-total"
-          href={`/runs?project=${projectId}` as Route}
+          href={"/runs" as Route}
+          onClick={() => setActiveProject(projectId)}
         >
           <Stat icon="pulse" label={t("group.total")} tone="neutral" value={mine.length} />
         </Link>
         {RUN_STATUS_GROUPS.map((g) => {
           const count = mine.filter((r) => g.statuses.includes(r.status)).length;
-          const href = `/runs?project=${projectId}&filter=${groupFilterParam(g)}` as Route;
+          const href = `/runs?filter=${groupFilterParam(g)}` as Route;
           return (
-            <Link data-testid={`project-run-summary-${g.key}`} href={href} key={g.key}>
+            <Link
+              data-testid={`project-run-summary-${g.key}`}
+              href={href}
+              key={g.key}
+              onClick={() => setActiveProject(projectId)}
+            >
               <Stat
                 icon={g.icon}
                 label={t(`group.${g.key}`)}

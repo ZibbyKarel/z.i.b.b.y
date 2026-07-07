@@ -174,3 +174,14 @@ export const ResumeTaskRunSchema = z.object({
   note: z.string().optional(),
 });
 export type ResumeTaskRunInput = z.infer<typeof ResumeTaskRunSchema>;
+
+/**
+ * Body accepted by `assignTaskRunProject` (Phase 24 Part D) — the operator
+ * reassigning a run into a project (or clearing it back to "bez projektu" with
+ * `null`). Always an explicit choice, never derived — unlike the path-based
+ * `matchProject` attribution a task gets at creation time.
+ */
+export const AssignTaskRunProjectSchema = z.object({
+  projectId: z.string().nullable(),
+});
+export type AssignTaskRunProjectInput = z.infer<typeof AssignTaskRunProjectSchema>;

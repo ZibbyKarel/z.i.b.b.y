@@ -80,6 +80,13 @@ vi.mock("../integrations/mutations", () => ({
   useTestIntegrationMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+// The overview tab's ProjectRunSummary (Phase 24 Part D) arms the top-bar active
+// project scope on click — stub the context outright rather than wrapping every
+// test in a real ProjectProvider.
+vi.mock("./context/ProjectProvider", () => ({
+  useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
+}));
+
 // The `?tab=` the mocked URL reports; a deep-link test sets it before render.
 let searchTab = "";
 

@@ -2,7 +2,12 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { RunLogChunkSchema } from "../agents/agent-run.schema";
 import { ErrorSchema } from "../common.schema";
-import { ResumeTaskRunSchema, TaskRunArtifactSchema, TaskRunSchema } from "./task-run.schema";
+import {
+  AssignTaskRunProjectSchema,
+  ResumeTaskRunSchema,
+  TaskRunArtifactSchema,
+  TaskRunSchema,
+} from "./task-run.schema";
 
 const c = initContract();
 
@@ -116,6 +121,19 @@ export const taskRunsContract = c.router(
         404: ErrorSchema,
       },
       summary: "Delete a run and all its artifacts",
+    },
+
+    assignTaskRunProject: {
+      method: "PATCH",
+      path: "/tasks/runs/:runId/project",
+      pathParams: RunIdParam,
+      body: AssignTaskRunProjectSchema,
+      responses: {
+        200: TaskRunSchema,
+        404: ErrorSchema,
+      },
+      summary:
+        "Assign a run into a project, or clear it back to 'bez projektu' with a null projectId",
     },
   },
   {

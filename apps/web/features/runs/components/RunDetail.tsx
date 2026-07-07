@@ -9,6 +9,7 @@ import {
   type IconName,
   IconTile,
   Pressable,
+  SelectField,
   Stack,
   Typography,
 } from "@zibby/design-system";
@@ -22,6 +23,8 @@ import { useApprovalsQuery } from "../../approvals";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { useNewTask } from "../../tasks";
+import { useProjectsQuery } from "../../projects";
+import { useAssignRunProjectMutation } from "../mutations";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import { type RunView, approvalForRun, runTitle } from "../run";
 import { ChainStepsPanel } from "./ChainStepsPanel";
@@ -130,6 +133,43 @@ function MetaCell({
         {value}
       </Typography>
     </Stack>
+  );
+}
+
+/**
+ * "Zařadit do projektu" — Phase 24 Part D's reassignment control, shown in place of
+ * the project meta cell for a "bez projektu" run. A plain project pick (no "clear"
+ * entry — the run is already project-less); choosing one fires
+ * `useAssignRunProjectMutation`, which invalidates the feed so the run's own meta
+ * cell takes over on the next render. Renders nothing when the registry is empty
+ * (there is nothing to assign into).
+ */
+function AssignProjectControl({ runId }: { runId: string }) {
+  const t = useTranslations("runs");
+  const { data: projects = [] } = useProjectsQuery();
+  const assign = useAssignRunProjectMutation();
+  const [value, setValue] = useState("");
+
+  if (projects.length === 0) return null;
+
+  const options = [
+    { value: "", label: t("assignProjectPlaceholder") },
+    ...projects.map((p) => ({ value: p.id, label: p.name })),
+  ];
+
+  return (
+    <Container width="14rem">
+      <SelectField
+        hint={t("assignProjectHint")}
+        label={t("assignProjectLabel")}
+        onValueChange={(v) => {
+          setValue(v);
+          if (v) assign.mutate({ params: { runId }, body: { projectId: v } });
+        }}
+        options={options}
+        value={value}
+      />
+    </Container>
   );
 }
 
@@ -449,8 +489,10 @@ export function RunDetail({
             </Stack>
 
             <Stack wrap direction="row" gap="300">
-              {run.project && (
+              {run.projectId ? (
                 <MetaCell label={t("metaProject")} tone="accent" value={run.project} />
+              ) : (
+                <AssignProjectControl runId={run.runId} />
               )}
               <MetaCell
                 label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}

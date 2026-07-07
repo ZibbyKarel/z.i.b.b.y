@@ -166,6 +166,22 @@ export class TaskRunsService {
     return this.getTaskRun(runId);
   }
 
+  /**
+   * Phase 24 Part D: assign (or clear, with `null`) a run's project — an explicit
+   * operator action, distinct from the path-derived `matchProject` attribution a
+   * task gets at creation time. Persists onto the run's backing scheduled-task
+   * record (the join `enrichRunWithTask`/`scheduledTaskToView` read from), since
+   * that record — not the per-kind run — is `projectId`'s source of truth. A run
+   * with no backing task (e.g. a self-dev goal started outside the task flow) has
+   * nowhere durable to persist the assignment, so it is returned unchanged.
+   */
+  async assignProject(runId: string, projectId: string | null): Promise<TaskRun> {
+    const run = await this.getTaskRun(runId);
+    const taskId = run.kind === "scheduled" ? run.runId : run.taskId;
+    if (taskId) await this.scheduled.setProjectId(taskId, projectId);
+    return this.getTaskRun(runId);
+  }
+
   /** Permanently delete a run and all its artifacts. */
   async delete(runId: string): Promise<void> {
     const kind = await this.kindOf(runId);

@@ -101,6 +101,15 @@ export class TaskRunsController {
           throw error;
         }
       },
+
+      assignTaskRunProject: async ({ params: { runId }, body: { projectId } }) => {
+        try {
+          return { status: 200, body: await this.runs.assignProject(runId, projectId) };
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
+          throw error;
+        }
+      },
     });
   }
 }

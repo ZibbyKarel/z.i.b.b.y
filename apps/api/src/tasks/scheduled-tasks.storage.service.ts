@@ -252,6 +252,20 @@ export class ScheduledTasksStorageService
   }
 
   /**
+   * Phase 24 Part D: reassign a task's engagement — an explicit operator action
+   * (unlike the path-derived `matchProject` attribution at creation time). `null`
+   * clears it back to "bez projektu".
+   */
+  async setProjectId(id: string, projectId: string | null): Promise<ScheduledTask> {
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing };
+    if (projectId) merged.projectId = projectId;
+    else delete merged.projectId;
+    await this.writeEntity(merged);
+    return merged;
+  }
+
+  /**
    * Persist an immediately-dispatched task as a `dispatched` record (with the
    * pre-generated `id` its run was born linked to). `scheduledAt` is the dispatch
    * time — there was never a future fire time.
