@@ -15,13 +15,18 @@ import { type TaskTarget, toApiTarget, whenLabel } from "../task";
 /** How long the scheduled confirmation lingers before the dialog closes itself. */
 const CONFIRM_LINGER_MS = 1600;
 
+/** The create-task outcome, exactly as the backend reports it. */
+export type TaskSubmitResult =
+  | { outcome: "dispatched"; runRef: string }
+  | { outcome: "pending"; task: { id: string } }
+  | { outcome: "scheduled"; task: { scheduledAt: number } };
+
 export interface UseTaskSubmitArgs {
   title: string;
   /** The dispatched description (operator text plus any folded-in prior context). */
   composedText: string;
   paths: string[];
   attachmentSetId?: string;
-  scheduledAt: number | null;
   output: TaskOutput | undefined;
   /** An explicit single-dispatch target, or null for auto (the backend classifies). */
   chosenTarget: TaskTarget | null;
@@ -32,10 +37,17 @@ export interface UseTaskSubmitArgs {
   text: string;
   onClose: () => void;
   setScheduledWhen: (when: string | null) => void;
+  /** Fired with the raw result as soon as it lands — before the outcome branching
+   *  (navigate / close / linger-then-close) runs. Lets a caller that embeds this hook
+   *  (e.g. the CommandLine composite) observe the launch without re-implementing the
+   *  dispatched/pending/scheduled handling itself. */
+  onLaunched?: (result: TaskSubmitResult) => void;
 }
 
 export interface UseTaskSubmit {
-  handleSubmit: () => void;
+  /** `scheduledAt` is resolved by the caller per action (e.g. a DropDownButton's
+   *  "now" / "in 1h" / "when limits reset" options) — `null` runs immediately. */
+  handleSubmit: (scheduledAt: number | null) => void;
   /** True while a create-task or create-goal mutation is in flight. */
   busy: boolean;
 }
@@ -51,7 +63,6 @@ export function useTaskSubmit({
   composedText,
   paths,
   attachmentSetId,
-  scheduledAt,
   output,
   chosenTarget,
   isLoop,
@@ -60,6 +71,7 @@ export function useTaskSubmit({
   text,
   onClose,
   setScheduledWhen,
+  onLaunched,
 }: UseTaskSubmitArgs): UseTaskSubmit {
   const router = useRouter();
   const { mutate: createTask, isPending: creatingTask } = useCreateTaskMutation();
@@ -68,10 +80,8 @@ export function useTaskSubmit({
 
   const handleCreateTaskSuccess = useCallback(
     (res: Parameters<typeof selectApiResponseBody>[0]) => {
-      const result = selectApiResponseBody(res) as
-        | { outcome: "dispatched"; runRef: string }
-        | { outcome: "pending"; task: { id: string } }
-        | { outcome: "scheduled"; task: { scheduledAt: number } };
+      const result = selectApiResponseBody(res) as TaskSubmitResult;
+      onLaunched?.(result);
       // A dispatched run opens by its run ref; a `pending` task opens by its task id —
       // the feed row flips from the pending task to its run in place, and the Runs
       // screen keeps the selection because it matches `runId` OR `taskId`.
@@ -88,88 +98,76 @@ export function useTaskSubmit({
       setScheduledWhen(whenLabel(result.task.scheduledAt, now));
       setTimeout(onClose, CONFIRM_LINGER_MS);
     },
-    [router, onClose, now, setScheduledWhen],
+    [router, onClose, now, setScheduledWhen, onLaunched],
   );
 
-  const submitSingle = useCallback(() => {
-    // An explicit pick (pre-selected or chosen) sends a target; auto omits it so the
-    // backend classifies — byte-for-byte the un-seeded behaviour.
-    createTask(
-      {
-        body: {
-          title: title.trim() || undefined,
-          text: composedText,
-          paths,
-          ...(attachmentSetId ? { attachmentSetId } : {}),
-          scheduledAt,
-          ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
-          ...(output ? { output } : {}),
+  const submitSingle = useCallback(
+    (scheduledAt: number | null) => {
+      // An explicit pick (pre-selected or chosen) sends a target; auto omits it so the
+      // backend classifies — byte-for-byte the un-seeded behaviour.
+      createTask(
+        {
+          body: {
+            title: title.trim() || undefined,
+            text: composedText,
+            paths,
+            ...(attachmentSetId ? { attachmentSetId } : {}),
+            scheduledAt,
+            ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
+            ...(output ? { output } : {}),
+          },
         },
-      },
-      { onSuccess: handleCreateTaskSuccess },
-    );
-  }, [
-    chosenTarget,
-    createTask,
-    title,
-    composedText,
-    paths,
-    attachmentSetId,
-    scheduledAt,
-    output,
-    handleCreateTaskSuccess,
-  ]);
+        { onSuccess: handleCreateTaskSuccess },
+      );
+    },
+    [chosenTarget, createTask, title, composedText, paths, attachmentSetId, output, handleCreateTaskSuccess],
+  );
 
-  const submitLoop = useCallback(() => {
-    const seed = title.trim() || loop.objective;
-    const goalId = makeGoalId(seed, now);
-    const body = buildCreateGoalBody(loop, goalId, title);
-    createGoal(
-      { body },
-      {
-        onSuccess: () => {
-          // Every loop enters through a task carrying its goal target — the scheduler's
-          // defer/limit/budget machinery owns the dispatch (immediate when scheduledAt is
-          // null, deferred otherwise). There is no direct goal-run start: only a task runs.
-          createTask(
-            {
-              body: {
-                title: title.trim() || undefined,
-                text: composedText,
-                paths,
-                ...(attachmentSetId ? { attachmentSetId } : {}),
-                scheduledAt,
-                target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
+  const submitLoop = useCallback(
+    (scheduledAt: number | null) => {
+      const seed = title.trim() || loop.objective;
+      const goalId = makeGoalId(seed, now);
+      const body = buildCreateGoalBody(loop, goalId, title);
+      createGoal(
+        { body },
+        {
+          onSuccess: () => {
+            // Every loop enters through a task carrying its goal target — the scheduler's
+            // defer/limit/budget machinery owns the dispatch (immediate when scheduledAt is
+            // null, deferred otherwise). There is no direct goal-run start: only a task runs.
+            createTask(
+              {
+                body: {
+                  title: title.trim() || undefined,
+                  text: composedText,
+                  paths,
+                  ...(attachmentSetId ? { attachmentSetId } : {}),
+                  scheduledAt,
+                  target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
+                },
               },
-            },
-            { onSuccess: handleCreateTaskSuccess },
-          );
+              { onSuccess: handleCreateTaskSuccess },
+            );
+          },
         },
-      },
-    );
-  }, [
-    loop,
-    title,
-    now,
-    scheduledAt,
-    composedText,
-    paths,
-    attachmentSetId,
-    createGoal,
-    createTask,
-    handleCreateTaskSuccess,
-  ]);
+      );
+    },
+    [loop, title, now, composedText, paths, attachmentSetId, createGoal, createTask, handleCreateTaskSuccess],
+  );
 
-  const handleSubmit = useCallback(() => {
-    if (busy) return;
-    if (isLoop) {
-      if (!canSubmitLoop(loop)) return;
-      submitLoop();
-      return;
-    }
-    if (text.trim().length <= 2) return;
-    submitSingle();
-  }, [busy, isLoop, loop, text, submitLoop, submitSingle]);
+  const handleSubmit = useCallback(
+    (scheduledAt: number | null) => {
+      if (busy) return;
+      if (isLoop) {
+        if (!canSubmitLoop(loop)) return;
+        submitLoop(scheduledAt);
+        return;
+      }
+      if (text.trim().length <= 2) return;
+      submitSingle(scheduledAt);
+    },
+    [busy, isLoop, loop, text, submitLoop, submitSingle],
+  );
 
   return { handleSubmit, busy };
 }

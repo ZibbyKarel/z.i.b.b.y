@@ -1,31 +1,14 @@
 "use client";
-import type { Attachment } from "@zibby/contracts";
-import {
-  Button,
-  Container,
-  Dialog,
-  IconTile,
-  SelectField,
-  Stack,
-  TextInputField,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Container, Dialog, IconTile, Stack, TextInputField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { useLimitsQuery } from "../../limits";
 import { useActiveProject, useProjectsQuery } from "../../projects";
 import { useTaskClassification } from "../hooks/useTaskClassification";
 import { useTaskOutput } from "../hooks/useTaskOutput";
-import { useTaskSchedule } from "../hooks/useTaskSchedule";
-import { useTaskSubmit } from "../hooks/useTaskSubmit";
-import { canSubmitLoop } from "../loop";
-import { type TaskTarget, extractPathRanges, extractPaths, targetKey } from "../task";
+import { type TaskRouting, type TaskTarget, extractPaths } from "../task";
+import { CommandLine } from "./CommandLine/CommandLine";
 import { LoopComposer } from "./LoopComposer";
 import { PlanPreview } from "./PlanPreview";
-import { ScheduleField } from "./ScheduleField";
-import { ScheduledConfirmation } from "./ScheduledConfirmation";
-import { TaskAttachments } from "./TaskAttachments";
-import { TaskComposer } from "./TaskComposer";
 import { TaskContextPanel } from "./TaskContextPanel";
 import { TaskOutputField } from "./TaskOutputField";
 
@@ -34,11 +17,11 @@ export interface NewTaskDialogProps {
   /** Phase 11.4: seed the description field (a voice transcript / external trigger). */
   initialText?: string;
   /**
-   * Pre-select a destination in the standard composer. Used when the operator picks
-   * the processor up front — e.g. "Run pipeline" opens the dialog with that pipeline
-   * already chosen in the "Edit" target picker. Classification still runs (the normal
-   * flow), the chosen target heads the preview, and the operator can change it — it is
-   * a pre-fill, not a lock.
+   * Pre-select a destination in CommandLine's inline `@` picker. Used when the operator
+   * picks the processor up front — e.g. "Run pipeline" opens the dialog with that
+   * pipeline already assigned. Classification still runs (the normal flow), the chosen
+   * target heads the preview, and the operator can change it — it is a pre-fill, not a
+   * lock.
    */
   initialTarget?: TaskTarget;
   /**
@@ -50,19 +33,23 @@ export interface NewTaskDialogProps {
 }
 
 /**
- * The whole New Task flow in one modal (Phase 11): a single described intent. The
- * operator says what they want; a debounced classify shows a compact "ZIBBY will…"
- * {@link PlanPreview} — the *how* (single dispatch vs a synthesized loop) is inferred,
- * not chosen on a form. Advanced control survives behind an "Edit" disclosure (the
- * goal {@link LoopComposer} for a loop, a manual target picker for a low-confidence
- * single). File/folder paths referenced in the description are highlighted inline and
- * folded into the run's allowed directories automatically. Submitting dispatches a
- * task or — for a loop — creates the goal and starts its run. Risky actions are still
- * caught later by the approval gate.
+ * The whole New Task flow in one modal (Phase 11, collapsed onto the unified
+ * {@link CommandLine} launcher in Phase 26): a single described intent, typed into one
+ * growable input. The operator says what they want; a debounced classify shows a
+ * compact "ZIBBY will…" {@link PlanPreview} — the *how* (single dispatch vs a
+ * synthesized loop) is inferred, not chosen on a form. Assigning a destination is done
+ * inline (typing `@Name` in the description opens CommandLine's own agent/pipeline
+ * search — there is no separate override picker); a synthesized Loop still gets its own
+ * {@link LoopComposer} editor, entered through the SAME run control CommandLine renders
+ * (its label switches to "Run loop"). File/folder paths referenced in the description
+ * are highlighted inline and folded into the run's allowed directories automatically.
+ * Submitting dispatches a task or — for a loop — creates the goal and starts its run.
+ * Risky actions are still caught later by the approval gate.
  *
- * The heavy lifting lives in cohesive hooks ({@link useTaskClassification},
- * {@link useTaskOutput}, {@link useTaskSchedule}, {@link useTaskSubmit}) and the
- * composer / output / context subcomponents — this component just wires them together.
+ * `text`/`target` below are MIRRORS of CommandLine's own internal state (it owns the
+ * textarea and the `@`-mention picker) — this dialog only needs them to drive the live
+ * classify preview and to decide whether the Loop editor should appear; the actual
+ * dispatch happens inside CommandLine via {@link useTaskSubmit}.
  */
 export function NewTaskDialog({
   onClose,
@@ -71,22 +58,12 @@ export function NewTaskDialog({
   initialContext,
 }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
-  const { data: limits } = useLimitsQuery();
   const { data: projects } = useProjectsQuery();
   const { activeProjectId } = useActiveProject();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState(initialText ?? "");
-  const [attachments, setAttachments] = useState<{
-    attachmentSetId?: string;
-    files: Attachment[];
-  }>({ files: [] });
-
-  // A stable "now" for the dialog's lifetime (lazy — Date.now() in render is lint-banned):
-  // presets resolve against it, the limit-reset option gates on it, and the goal id's
-  // uniqueness suffix uses it.
-  const [now] = useState(() => Date.now());
-  const resetsAt = limits?.rolling.resetsAt ?? null;
+  const [target, setTarget] = useState<TaskTarget | undefined>(initialTarget);
 
   // Phase 24: the project is sourced from the top bar, not a dialog field. A real
   // active project resolves here (its `path` joins `paths`); "Bez projektu"
@@ -98,63 +75,39 @@ export function NewTaskDialog({
   );
 
   // Every path referenced in the description — plus the top-bar active project's
-  // folder — is folded into the task's allowed directories. The typed ones are
-  // highlighted inline in the composer; the active project's folder follows the
-  // top-bar selector (switch to "Bez projektu" to drop it).
+  // folder — feeds the live classify preview below (CommandLine folds the same set
+  // into the dispatched task's allowed directories independently).
   const paths = useMemo(() => {
     const detected = extractPaths(text);
     const all = selectedProject ? [selectedProject.path, ...detected] : detected;
     return [...new Set(all)];
   }, [text, selectedProject]);
-  const highlights = useMemo(() => extractPathRanges(text), [text]);
 
-  const {
-    activeRouting,
-    previewRouting,
-    allTargets,
-    chosenKey,
-    setChosenKey,
-    chosenTarget,
-    isLoop,
-    loop,
-    patchLoop,
-  } = useTaskClassification({ text, paths, initialTarget });
+  const { activeRouting, loop, patchLoop } = useTaskClassification({ text, paths, initialTarget });
+
+  // An explicit `@`-mention pick always wins over the live classify verdict. Computed
+  // directly here rather than through the hook's `chosenKey`/`allTargets` (which stays
+  // scoped to `activeRouting.candidates`) because the mention picker reaches the WHOLE
+  // agent/pipeline catalog — unlike the old "Předat" override select, it is never
+  // limited to what the classifier itself ranked.
+  const previewRouting: TaskRouting | null = target
+    ? {
+        target,
+        confidence: 1,
+        reason: t("target.chosenReason"),
+        matchedTerms: [],
+        candidates: activeRouting?.candidates ?? [target],
+        mode: "single",
+        proposedGoal: null,
+        paths: activeRouting?.paths ?? [],
+      }
+    : activeRouting;
+  const isLoop = !target && activeRouting?.mode === "loop";
 
   const output = useTaskOutput();
-  const { preset, setPreset, scheduledAt, scheduledWhen, setScheduledWhen } = useTaskSchedule({
-    now,
-    resetsAt,
-  });
-
-  // The dispatched description: the operator's text plus, when continuing from a prior
-  // run, that run's output appended as a labelled context block — so the new run sees
-  // what the previous one produced without the operator re-typing it.
-  const composedText = useMemo(
-    () =>
-      initialContext ? `${text.trim()}\n\n---\n${t("context.heading")}\n${initialContext}` : text,
-    [text, initialContext, t],
-  );
-
-  const { handleSubmit, busy } = useTaskSubmit({
-    title,
-    composedText,
-    paths,
-    attachmentSetId: attachments.attachmentSetId,
-    scheduledAt,
-    output: output.output,
-    chosenTarget,
-    isLoop,
-    loop,
-    now,
-    text,
-    onClose,
-    setScheduledWhen,
-  });
-
-  // A chosen `file` output needs a filename — else block, so the selection can't be
-  // silently dropped on submit.
+  // A chosen `file` output needs a filename — else CommandLine's run control stays
+  // disabled, so the selection can't be silently dropped on submit.
   const outputReady = isLoop || output.outputReady;
-  const canSubmit = (isLoop ? canSubmitLoop(loop) : text.trim().length > 2) && outputReady;
 
   const dialogAria = t("dialogTitle");
   const header = (
@@ -171,56 +124,13 @@ export function NewTaskDialog({
     </Stack>
   );
 
-  if (scheduledWhen !== null) {
-    return (
-      <Dialog
-        open
-        ariaLabel={dialogAria}
-        closeLabel={t("cancel")}
-        onClose={onClose}
-        title={header}
-        width="lg"
-      >
-        <ScheduledConfirmation when={scheduledWhen} />
-      </Dialog>
-    );
-  }
-
-  // Submit label/icon: a schedule wins; else a loop reads as "run loop"; else "run".
-  let submitLabel: string;
-  let submitIcon: "play" | "clock" | "retry";
-  if (scheduledAt !== null) {
-    submitLabel = t("schedule.submit");
-    submitIcon = "clock";
-  } else if (isLoop) {
-    submitLabel = t("loop.submit");
-    submitIcon = "retry";
-  } else {
-    submitLabel = t("classifyRun");
-    submitIcon = "play";
-  }
-
   const actions = (
-    <Stack grow align="center" direction="row" gap="100" justify="end">
+    <Stack grow align="center" direction="row" justify="end">
       <Button icon="x" intent="ghost" onClick={onClose}>
         {t("cancel")}
       </Button>
-      <Button
-        disabled={!canSubmit}
-        icon={submitIcon}
-        intent="primary"
-        loading={busy}
-        onClick={handleSubmit}
-      >
-        {submitLabel}
-      </Button>
     </Stack>
   );
-
-  const targetOptions = [
-    { value: "", label: t("override.auto") },
-    ...allTargets.map((target) => ({ value: targetKey(target), label: target.name })),
-  ];
 
   return (
     <Dialog
@@ -242,29 +152,24 @@ export function NewTaskDialog({
 
         {initialContext && <TaskContextPanel context={initialContext} />}
 
-        <TaskComposer
-          highlights={highlights}
-          onChange={setText}
-          onSubmit={handleSubmit}
-          value={text}
+        <CommandLine
+          context={initialContext}
+          disabled={!outputReady}
+          initialTarget={initialTarget}
+          initialText={initialText}
+          isLoop={isLoop}
+          loop={loop}
+          onClose={onClose}
+          onTargetChange={setTarget}
+          onTextChange={setText}
+          output={output.output}
+          rows={10}
+          title={title}
         />
 
         {previewRouting && <PlanPreview routing={previewRouting} />}
 
-        {(activeRouting || initialTarget) &&
-          (isLoop ? (
-            <LoopComposer onChange={patchLoop} state={loop} />
-          ) : (
-            <SelectField
-              hint={t("override.hint")}
-              label={t("override.label")}
-              onValueChange={setChosenKey}
-              options={targetOptions}
-              value={chosenKey}
-            />
-          ))}
-
-        <TaskAttachments onChange={setAttachments} value={attachments} />
+        {isLoop && <LoopComposer onChange={patchLoop} state={loop} />}
 
         {!isLoop && (
           <TaskOutputField
@@ -276,8 +181,6 @@ export function NewTaskDialog({
             outputType={output.outputType}
           />
         )}
-
-        <ScheduleField now={now} onChange={setPreset} resetsAt={resetsAt} value={preset} />
       </Stack>
     </Dialog>
   );

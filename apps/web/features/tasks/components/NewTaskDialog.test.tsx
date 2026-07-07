@@ -1,39 +1,30 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ChipTestId,
+  DropDownButtonTestId,
+  FilePreviewTestId,
+  SearchMenuTestId,
+} from "@zibby/design-system";
 import { renderWithProviders as render, screen, waitFor } from "../../../test/render";
+import { CommandLineTestId } from "./CommandLine/CommandLine";
 import { NewTaskDialog } from "./NewTaskDialog";
 
 /**
- * Phase 11 unified composer. The create-task + classify mutations and the limits
- * query are mocked so the one-field → live-preview → dispatch flow runs without a
- * backend. `classify` echoes a {@link TaskRouting} derived from the typed text
- * (loop-shaped text → `mode: "loop"` carrying a synthesized `proposedGoal`); the
- * dialog renders the preview and branches submit on the inferred mode.
+ * Phase 11 unified composer, collapsed onto the Phase 26 {@link CommandLine} launcher.
+ * The create-task/create-goal/classify mutations and the limits/catalog queries are
+ * mocked so the one-field → live-preview → dispatch flow runs without a backend.
+ * `classify` echoes a {@link TaskRouting} derived from the typed text (loop-shaped
+ * text → `mode: "loop"` carrying a synthesized `proposedGoal`); the dialog renders the
+ * preview and branches submit on the inferred mode. Assigning a destination now goes
+ * through CommandLine's inline `@` picker (no more "Předat" override select) —
+ * exercised here via `SearchMenuTestId` the same way `CommandLine.test.tsx` does.
  */
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/overview",
   useSearchParams: () => new URLSearchParams(),
-}));
-
-// Task 12: stub the real TaskAttachments composite (Task 11 already tests it in
-// isolation) so this suite only proves the threading — NewTaskDialog actually
-// mounts it, and a chosen set's attachmentSetId reaches the create body.
-vi.mock("./TaskAttachments", () => ({
-  TaskAttachments: ({
-    onChange,
-  }: {
-    onChange: (v: { attachmentSetId?: string; files: unknown[] }) => void;
-  }) => (
-    <button
-      data-testid="attach-stub"
-      onClick={() => onChange({ attachmentSetId: "set_1", files: [{ name: "a.txt", size: 2 }] })}
-      type="button"
-    >
-      attach
-    </button>
-  ),
 }));
 
 const CANDIDATES = [
@@ -154,6 +145,14 @@ vi.mock("../mutations", () => ({
   useCreateTaskMutation: () => ({ mutate: createTask, isPending: false }),
 }));
 
+const uploadMutateAsync = vi.fn().mockResolvedValue({
+  attachmentSetId: "set_1",
+  files: [{ name: "a.txt", size: 2 }],
+});
+vi.mock("../mutations/useUploadTaskAttachmentsMutation", () => ({
+  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: uploadMutateAsync, isPending: false }),
+}));
+
 type GoalVars = { params?: { id: string }; body: Record<string, unknown> };
 type GoalOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
 const createGoal = vi.fn((_vars: GoalVars, opts?: GoalOpts) =>
@@ -207,13 +206,25 @@ vi.mock("../../limits/queries/useLimitsQuery", () => ({
   }),
 }));
 
-describe("NewTaskDialog (Phase 11 unified composer)", () => {
+async function pickMention(user: ReturnType<typeof userEvent.setup>, query: string, itemId: string) {
+  const input = screen.getByTestId(CommandLineTestId.Input);
+  // A leading space guarantees the `@` starts a fresh word (the trigger only fires
+  // at the very start of the text or right after whitespace) regardless of what the
+  // test already typed into the field.
+  await user.type(input, " @");
+  const mentionInput = screen.getByTestId(SearchMenuTestId.Input);
+  await user.type(mentionInput, query);
+  await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-${itemId}`));
+}
+
+describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)", () => {
   beforeEach(() => {
     push.mockClear();
     classify.mockClear();
     createTask.mockClear();
     createGoal.mockClear();
     createProject.mockClear();
+    uploadMutateAsync.mockClear();
     activeProject.id = null;
   });
 
@@ -226,31 +237,34 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
   });
 
   it("highlights a referenced path inline in the description", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "Srovnej média v ~/Projects/media-vault");
+    await user.type(screen.getByLabelText(/Zadání/), "Srovnej média v ~/Projects/media-vault");
     // The path is marked inline (on the highlight backdrop), not listed as a chip below.
     const marks = await screen.findAllByTestId("highlight-text-area-mark");
     expect(marks.map((m) => m.textContent).join("")).toContain("~/Projects/media-vault");
   });
 
   it("folds a referenced path into the dispatched task's allowed directories — no grant step", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "uprav /tmp/scratch/widget a otestuj");
+    await user.type(screen.getByLabelText(/Zadání/), "uprav /tmp/scratch/widget a otestuj");
     await screen.findByText(/ZIBBY to předá/);
     // There is no "grant access" action — a referenced path is added automatically.
     expect(screen.queryByRole("button", { name: /Povolit ZIBBY/ })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/tmp/scratch/widget");
   });
 
   it("classifies a one-shot task and dispatches on one click", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={onClose} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
     // Live preview appears for the single verdict.
     expect(await screen.findByText(/ZIBBY to předá/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
     expect(createTask).toHaveBeenCalledTimes(1);
     expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
@@ -261,18 +275,41 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
   });
 
   it("carries a chosen PR output into the dispatched task", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
     await screen.findByText(/ZIBBY to předá/);
 
-    await userEvent.click(screen.getByLabelText("Výstup úkolu"));
-    await userEvent.click(await screen.findByRole("option", { name: "Otevřít PR" }));
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByLabelText("Výstup úkolu"));
+    await user.click(await screen.findByRole("option", { name: "Otevřít PR" }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
     expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
   });
 
+  it("blocks the run control until an incomplete 'write to a file' output is filled in", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskDialog onClose={() => {}} />);
+    await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await screen.findByText(/ZIBBY to předá/);
+
+    await user.click(screen.getByLabelText("Výstup úkolu"));
+    await user.click(await screen.findByRole("option", { name: "Zapsat do souboru" }));
+    expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Název souboru"), "report.md");
+    expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeEnabled();
+
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+    expect(createTask.mock.calls[0]?.[0].body.output).toEqual({
+      type: "file",
+      dest: "project",
+      to: "report.md",
+    });
+  });
+
   it("shows a prior-run context panel and folds it into the dispatched text", async () => {
+    const user = userEvent.setup();
     render(
       <NewTaskDialog
         initialContext="Výstup: https://github.com/acme/app/pull/42"
@@ -281,44 +318,27 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     );
     // The "context added" panel is visible up front.
     expect(screen.getByTestId("task-context-panel")).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText(/Zadání/), "navaž na PR");
+    await user.type(screen.getByLabelText(/Zadání/), "navaž na PR");
     await screen.findByText(/ZIBBY to předá/);
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
     const sentText = createTask.mock.calls[0]?.[0].body.text as string;
     expect(sentText).toContain("navaž na PR");
     expect(sentText).toContain("https://github.com/acme/app/pull/42");
   });
 
-  it("carries a chosen file output (dest + filename) into the dispatched task", async () => {
-    render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
-    await screen.findByText(/ZIBBY to předá/);
-
-    await userEvent.click(screen.getByLabelText("Výstup úkolu"));
-    await userEvent.click(await screen.findByRole("option", { name: "Zapsat do souboru" }));
-    // The filename is required — submit stays blocked until it's filled.
-    await userEvent.type(screen.getByLabelText("Název souboru"), "report.md");
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
-
-    expect(createTask.mock.calls[0]?.[0].body.output).toEqual({
-      type: "file",
-      dest: "project",
-      to: "report.md",
-    });
-  });
-
   it("infers a loop and dispatches it as a task carrying its goal target on one click", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={onClose} />);
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText(/Zadání/),
       "fix the failing test and keep going until it's green",
     );
     // The loop preview summarizes maker + checks verifier + iteration cap.
     expect(await screen.findByText(/Loop · vykonavatel Delivery/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Spustit loop/ }));
+    await user.click(screen.getByRole("button", { name: /Spustit loop/ }));
 
     expect(createGoal).toHaveBeenCalledTimes(1);
     const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
@@ -337,16 +357,17 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
   });
 
   it("pre-fills the loop composer from the proposal and carries an edited maxIterations", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "retry the build until it works");
+    await user.type(screen.getByLabelText(/Zadání/), "retry the build until it works");
     expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
 
     // The LoopComposer renders pre-filled with the proposal; bump the iteration cap.
     const iterations = screen.getByLabelText(/Max\. iterací/);
-    await userEvent.clear(iterations);
-    await userEvent.type(iterations, "9");
+    await user.clear(iterations);
+    await user.type(iterations, "9");
 
-    await userEvent.click(screen.getByRole("button", { name: /Spustit loop/ }));
+    await user.click(screen.getByRole("button", { name: /Spustit loop/ }));
     const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
     expect(goalBody.maxIterations).toBe(9);
     // Unedited fields round-trip losslessly from the proposal.
@@ -354,25 +375,42 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(goalBody.verifier).toEqual({ kind: "checks" });
   });
 
-  it("offers a manual target picker for a low-confidence single verdict", async () => {
+  it("shows a low-confidence hint on the preview for a vague single verdict", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "vague request");
+    await user.type(screen.getByLabelText(/Zadání/), "vague request");
+    expect(await screen.findByText(/nízká jistota/)).toBeInTheDocument();
+  });
+
+  it("lets the operator override a low-confidence verdict by @-mentioning any catalog target, not just the classify candidates", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskDialog onClose={() => {}} />);
+    await user.type(screen.getByLabelText(/Zadání/), "vague request");
     expect(await screen.findByText(/nízká jistota/)).toBeInTheDocument();
 
-    // The override picker is offered directly (the candidate list is reachable).
-    expect(screen.getByLabelText(/Předat/)).toBeInTheDocument();
+    await pickMention(user, "Kod", "agents-koder");
+    expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Kodér");
+
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+    expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
+      kind: "agent",
+      id: "koder",
+      name: "Kodér",
+      glyph: "bot",
+    });
   });
 
   it("defers a scheduled loop through createTask with a goal target", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText(/Zadání/),
       "keep retrying the deploy until it passes",
     );
     expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Za 1 h/ }));
-    await userEvent.click(screen.getByRole("button", { name: /Naplánovat/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    await user.click(screen.getByTestId(`${DropDownButtonTestId.Item}-in-1h`));
 
     expect(createGoal).toHaveBeenCalledTimes(1);
     const taskBody = createTask.mock.calls.at(-1)?.[0].body;
@@ -387,24 +425,26 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
 
   it("folds the top-bar active project's path into the dispatched task, exactly like a typed path", async () => {
     activeProject.id = "beta";
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
 
     // It flows through the live classify (attribution) and into the dispatched task.
     await screen.findByText(/ZIBBY to předá/);
     expect(classify.mock.calls.at(-1)?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
 
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
   });
 
   it("folds nothing when the top-bar scope is 'Bez projektu' (null)", async () => {
     activeProject.id = null;
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
     await screen.findByText(/ZIBBY to předá/);
 
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/alpha");
     expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/beta");
   });
@@ -421,31 +461,33 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
 
   it("closes via the cancel action", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={onClose} />);
     const cancels = screen.getAllByRole("button", { name: /Zrušit/ });
-    await userEvent.click(cancels[cancels.length - 1] as HTMLElement);
+    await user.click(cancels[cancels.length - 1] as HTMLElement);
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("pre-selects a pipeline in the standard composer and dispatches straight to it", async () => {
+  it("pre-assigns a pipeline via initialTarget and dispatches straight to it", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(
       <NewTaskDialog
         initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
         onClose={onClose}
       />,
     );
-    // It's the standard composer (not a locked mode) with the pipeline pre-chosen: the
-    // "Edit" target picker is open and already shows the pipeline as the selected value.
+    // It's the standard composer (not a locked mode) with the pipeline pre-assigned: the
+    // CommandLine target chip already shows it.
     expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Předat/)).toHaveTextContent("Delivery");
+    expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Delivery");
 
-    await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
-    // Classification still runs (the normal flow, debounced) — it populates the alternatives.
+    await user.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+    // Classification still runs (the normal flow, debounced) — it populates the preview.
     await waitFor(() => expect(classify).toHaveBeenCalled());
 
-    // Submitting as-is dispatches straight to the pre-selected pipeline.
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    // Submitting as-is dispatches straight to the pre-assigned pipeline.
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask).toHaveBeenCalledTimes(1);
     expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
       kind: "pipeline",
@@ -457,51 +499,54 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("lets the operator switch the pre-selected pipeline to another target before dispatch", async () => {
+  it("lets the operator switch the pre-assigned pipeline to another target before dispatch", async () => {
+    const user = userEvent.setup();
     render(
       <NewTaskDialog
         initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
         onClose={() => {}}
       />,
     );
-    await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+    await user.type(screen.getByLabelText(/Zadání/), " spusť delivery pipelinu");
 
-    // Switch the target picker from the pre-selected pipeline to the agent candidate
-    // (a classify alternative) — the pre-fill is changeable, not a lock.
-    await userEvent.click(screen.getByLabelText(/Předat/));
-    await userEvent.click(await screen.findByRole("option", { name: "Kodér" }));
+    // Clear the pre-assigned pipeline, then @-mention the agent instead — the pre-fill
+    // is changeable, not a lock.
+    await user.click(screen.getByTestId(ChipTestId.Close));
+    await pickMention(user, "Kod", "agents-koder");
 
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("agent");
     expect(createTask.mock.calls[0]?.[0].body.target?.id).toBe("koder");
   });
 
-  it("carries a chosen output into a pre-selected pipeline dispatch", async () => {
+  it("carries a chosen output into a pre-assigned pipeline dispatch", async () => {
+    const user = userEvent.setup();
     render(
       <NewTaskDialog
         initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
         onClose={() => {}}
       />,
     );
-    await userEvent.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+    await user.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
 
-    await userEvent.click(screen.getByLabelText("Výstup úkolu"));
-    await userEvent.click(await screen.findByRole("option", { name: "Otevřít PR" }));
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByLabelText("Výstup úkolu"));
+    await user.click(await screen.findByRole("option", { name: "Otevřít PR" }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
     expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("pipeline");
     expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
   });
 
   it("threads an attached set's attachmentSetId into the dispatched task", async () => {
+    const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    // Proves TaskAttachments is actually mounted — if NewTaskDialog forgot to
-    // render it, this stub button wouldn't exist.
-    await userEvent.click(screen.getByTestId("attach-stub"));
+    const file = new File(["hi"], "a.txt", { type: "text/plain" });
+    await user.upload(screen.getByTestId(CommandLineTestId.FileInput), file);
+    await waitFor(() => expect(screen.getByTestId(FilePreviewTestId.Name)).toBeInTheDocument());
 
-    await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+    await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
     await screen.findByText(/ZIBBY to předá/);
-    await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ body: expect.objectContaining({ attachmentSetId: "set_1" }) }),

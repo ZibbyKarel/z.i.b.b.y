@@ -145,6 +145,12 @@
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
       "submitHint": "⌘↩ zařadit"
     },
+    "commandLine": {
+      "label": "Zadání",
+      "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
+      "attachAria": "Přiložit soubory",
+      "moreRunOptions": "Další možnosti spuštění"
+    },
     "loop": {
       "submit": "Spustit loop",
       "objective": {

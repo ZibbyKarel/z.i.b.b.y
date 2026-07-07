@@ -145,6 +145,12 @@
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
       "submitHint": "⌘↩ to classify"
     },
+    "commandLine": {
+      "label": "Task",
+      "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
+      "attachAria": "Attach files",
+      "moreRunOptions": "More run options"
+    },
     "loop": {
       "submit": "Start loop",
       "objective": {
