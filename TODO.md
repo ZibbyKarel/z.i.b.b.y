@@ -46,7 +46,7 @@
       [api] at cors (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:188:7)
       to musíme opravit. Je to velmi malý obrázek. Obrázky do 2Mb by měly být možné nahrávat v pořádku
 
-- [ ] editační dialog pro pipeline mi přijde zbytečný. Můžeme ho zrušit a jeho obsah zobrazit v rámci detail view pipeliny (jen sidepanel s agenty zrušíme a zobrazíme ho jen když uživatel klikne na nové tlačítko + se záměrem přidat agenta. Po přidání agenta se side panel zase zavře případně bude mít uživatel možnost zavřít ho manuálně )
+- [x] (fáze 34) editační dialog pro pipeline mi přijde zbytečný. Můžeme ho zrušit a jeho obsah zobrazit v rámci detail view pipeliny (jen sidepanel s agenty zrušíme a zobrazíme ho jen když uživatel klikne na nové tlačítko + se záměrem přidat agenta. Po přidání agenta se side panel zase zavře případně bude mít uživatel možnost zavřít ho manuálně )
 
 - [x] v chat ui mi chybí přepínátko projektů - dejme do topbaru — fáze 33
 

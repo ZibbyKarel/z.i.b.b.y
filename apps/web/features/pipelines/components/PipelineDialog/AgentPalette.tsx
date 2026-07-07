@@ -2,12 +2,28 @@
 import { useTranslations } from "next-intl";
 import type { Agent } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
-import { Container, Icon, IconTile, Pressable, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Icon,
+  IconTile,
+  Pressable,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 
 export interface AgentPaletteProps {
   agents: Agent[];
   /** Add the agent as a node (palette click — the keyboard/non-drag path). */
   onAdd: (agentId: string) => void;
+  /**
+   * Manual dismissal — the inline editor auto-closes the palette after an agent
+   * is added, but the operator can also close it without adding one. Omitted in
+   * the create-dialog split pane, where the palette is always visible.
+   */
+  onClose?: () => void;
+  /** Accessible label for the close button (required when `onClose` is set). */
+  closeLabel?: string;
 }
 
 /** Drag-data MIME the canvas reads on drop. */
@@ -20,7 +36,7 @@ const glyphOf = (a: Agent): IconName => (a.glyph as IconName | undefined) ?? "bo
  * click-to-add (a non-drag affordance kept for keyboard / a11y — full canvas
  * keyboard wiring is a known v1 limitation).
  */
-export function AgentPalette({ agents, onAdd }: AgentPaletteProps) {
+export function AgentPalette({ agents, onAdd, onClose, closeLabel }: AgentPaletteProps) {
   const t = useTranslations("forms.pipeline");
   return (
     <Container
@@ -35,14 +51,19 @@ export function AgentPalette({ agents, onAdd }: AgentPaletteProps) {
       }}
       width="232px"
     >
-      <Container padding={["50", "100", "100", "100"]}>
-        <Typography mono uppercase size="2xs" tracking="widest" type="note" variant="tertiary">
-          {t("paletteTitle")}
-        </Typography>
-        <Typography mono size="2xs" type="note" variant="tertiary">
-          {agents.length === 0 ? t("noAgents") : t("paletteHint")}
-        </Typography>
-      </Container>
+      <Stack align="start" direction="row" gap="50" justify="between">
+        <Container padding={["50", "100", "100", "100"]}>
+          <Typography mono uppercase size="2xs" tracking="widest" type="note" variant="tertiary">
+            {t("paletteTitle")}
+          </Typography>
+          <Typography mono size="2xs" type="note" variant="tertiary">
+            {agents.length === 0 ? t("noAgents") : t("paletteHint")}
+          </Typography>
+        </Container>
+        {onClose && (
+          <Button aria-label={closeLabel} icon="x" intent="ghost" onClick={onClose} size="sm" />
+        )}
+      </Stack>
       <Stack gap="25">
         {agents.map((a) => (
           <Pressable
