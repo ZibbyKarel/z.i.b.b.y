@@ -1,7 +1,7 @@
 import type { Agent } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import { buildConstellation } from "./constellation";
-import { DEFAULT_CATEGORY_COLOR, categoryColor } from "./tokens";
+import { categoryColor, resolvePipelineAccentHex } from "./tokens";
 
 /** Minimal agent factory — only the fields the constellation reads. */
 function agent(over: Partial<Agent> & Pick<Agent, "id">): Agent {
@@ -94,7 +94,7 @@ describe("buildConstellation", () => {
     expect(node?.color).toBe(categoryColor("Vývoj"));
   });
 
-  it("gives pinned pipelines/chains the neutral default colour and no category", () => {
+  it("gives pinned pipelines/chains the pipeline accent colour, their kind, and no category", () => {
     const roster = buildConstellation({
       agents: [],
       pipelines: [{ id: "delivery", name: "Delivery" }],
@@ -105,11 +105,19 @@ describe("buildConstellation", () => {
       ],
     });
     for (const node of roster) {
-      expect(node.color).toBe(DEFAULT_CATEGORY_COLOR);
+      expect(node.color).toBe(resolvePipelineAccentHex());
       expect(node.category).toBe("");
     }
+    expect(roster.find((n) => n.id === "delivery")?.kind).toBe("pipeline");
+    expect(roster.find((n) => n.id === "chain-x")?.kind).toBe("chain");
     // A chain has no image; a pipeline may but this one doesn't.
     expect(roster.find((n) => n.id === "chain-x")?.avatar).toBeUndefined();
+  });
+
+  it("marks an agent's kind as \"agent\" (the constellation's quieter mark)", () => {
+    const agents = [agent({ id: "koder", name: "Kodér", category: "Vývoj" })];
+    const [node] = buildConstellation({ agents, pins: [{ kind: "agent", id: "koder" }] });
+    expect(node?.kind).toBe("agent");
   });
 
   it("dedupes same-named agents, preferring the canonical category", () => {

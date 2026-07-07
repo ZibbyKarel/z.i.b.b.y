@@ -64,3 +64,37 @@ export function categoryColor(category: string | undefined): string {
   if (!category) return DEFAULT_CATEGORY_COLOR;
   return CATEGORY_COLORS[category] ?? DEFAULT_CATEGORY_COLOR;
 }
+
+/**
+ * Hex fallback for the pipeline/chain accent — the design system's dark-theme
+ * `--color-risk-push` value — mirroring {@link stateToneHex}'s own SSR/too-early
+ * fallback so a too-early read still resolves the push purple.
+ */
+const PIPELINE_ACCENT_FALLBACK_HEX = "#b07cff";
+
+let pipelineAccentCache: string | null = null;
+
+/**
+ * The pipeline/chain accent resolved to hex: the shared "push" risk-category tone
+ * (`--color-risk-push`) already used for an `@pipeline` mention
+ * (`HighlightTextAreaField`) and pipeline risk badges (`Tag` `risk="push"`) — so the
+ * constellation's stronger pipeline mark reads as the *same* purple the rest of the
+ * app uses for "pipeline", not a private colour. `push` isn't a {@link StateTone}
+ * (it's a risk category, not a live state), so this reads `--color-risk-push`
+ * directly, live from the DOM, and caches it the same way
+ * {@link resolveStateToneHex} caches its tones.
+ */
+export function resolvePipelineAccentHex(): string {
+  if (pipelineAccentCache) return pipelineAccentCache;
+  const resolved =
+    typeof document !== "undefined"
+      ? getComputedStyle(document.documentElement).getPropertyValue("--color-risk-push").trim()
+      : "";
+  pipelineAccentCache = resolved || PIPELINE_ACCENT_FALLBACK_HEX;
+  return pipelineAccentCache;
+}
+
+/** Test seam — drop the resolved pipeline-accent cache (theme swap in a test harness). */
+export function resetPipelineAccentHexCache(): void {
+  pipelineAccentCache = null;
+}

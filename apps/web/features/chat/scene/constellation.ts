@@ -1,5 +1,5 @@
 import type { Agent, Pin } from "@zibby/contracts";
-import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR, categoryColor } from "./tokens";
+import { CATEGORY_COLORS, categoryColor, resolvePipelineAccentHex } from "./tokens";
 import type { SceneAgent } from "./sceneTypes";
 
 /**
@@ -66,6 +66,7 @@ function isCanonical(agent: Agent): boolean {
 function agentToScene(agent: Agent): SceneAgent {
   return {
     id: agent.id,
+    kind: "agent",
     name: agent.name?.trim() || agent.id,
     specialty: agent.description?.trim() ?? "",
     category: agent.category ?? "",
@@ -74,13 +75,18 @@ function agentToScene(agent: Agent): SceneAgent {
   };
 }
 
+// Pipelines (and chains, below) render as the constellation's stronger mark (Phase
+// 35) — the push/purple accent already used for an `@pipeline` mention and pipeline
+// risk badges elsewhere in the app, not the neutral default an uncategorised agent
+// gets.
 function pipelineToScene(pipeline: ConstellationPipeline): SceneAgent {
   return {
     id: pipeline.id,
+    kind: "pipeline",
     name: pipeline.name?.trim() || pipeline.id,
     specialty: "",
     category: "",
-    color: DEFAULT_CATEGORY_COLOR,
+    color: resolvePipelineAccentHex(),
     ...(pipeline.avatar ? { avatar: pipeline.avatar } : {}),
   };
 }
@@ -88,10 +94,11 @@ function pipelineToScene(pipeline: ConstellationPipeline): SceneAgent {
 function chainToScene(chain: ConstellationChain): SceneAgent {
   return {
     id: chain.id,
+    kind: "chain",
     name: chain.name?.trim() || chain.id,
     specialty: "",
     category: "",
-    color: DEFAULT_CATEGORY_COLOR,
+    color: resolvePipelineAccentHex(),
   };
 }
 

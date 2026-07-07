@@ -11,6 +11,25 @@ import type { SceneAgent } from "./sceneTypes";
  */
 
 const BASE_SCALE = 0.42;
+/**
+ * Visual-scale multiplier for pipeline/chain nodes over the quieter agent default
+ * (Phase 35 — "pipelines should read as clearly more prominent than agents"). Chains
+ * get the same boost: a chain is itself a composition of pipelines/agents, so it
+ * should never read quieter than a plain pipeline.
+ */
+const PROMINENT_SCALE = 1.3;
+/** At-rest sprite opacity for the quieter agent mark vs. the brighter pipeline/chain
+ * mark — combined with the size + glow + halo-ring boost below so the two kinds are
+ * unmistakable even before the DOM label loads. */
+const AGENT_BASE_OPACITY = 0.55;
+const PROMINENT_BASE_OPACITY = 0.78;
+
+/** Pipelines and chains are the constellation's stronger mark; a plain agent stays
+ * the quieter default. */
+function isProminentKind(kind: SceneAgent["kind"]): boolean {
+  return kind !== "agent";
+}
+
 /** Reveal ramp when the roster first appears, seconds. */
 const REVEAL_SECONDS = 1.2;
 /** Orb apparent radius in NDC (radius-1 sphere at origin, 45° fov, camera z≈6). */
@@ -35,6 +54,9 @@ interface AgentNode {
   flare: number;
   /** Working pulse (Tier 5): sustained while the agent has a live run. */
   working: boolean;
+  /** Whether this node is the constellation's stronger mark (pipeline/chain) — cached
+   * from `agent.kind` at build time so the per-frame update doesn't re-derive it. */
+  prominent: boolean;
 }
 
 export interface ConstellationContext {
@@ -65,20 +87,32 @@ export interface ConstellationLayer {
 const AVATAR_SIZE = 128;
 
 /** Draw the glow + accent ring an avatar sits inside — shared by the image and the
- * initial fallback so both read as the same node type. */
+ * initial fallback so both read as the same node type. Pipelines/chains (Phase 35)
+ * get a hotter, wider glow plus an outer halo ring so the stronger mark reads even
+ * before the accent ring or label are legible. */
 function drawAvatarFrame(ctx: CanvasRenderingContext2D, agent: SceneAgent): void {
   const size = AVATAR_SIZE;
   const c = size / 2;
+  const prominent = isProminentKind(agent.kind);
   ctx.clearRect(0, 0, size, size);
 
   // Soft outer glow.
   const glow = ctx.createRadialGradient(c, c, 8, c, c, c);
-  glow.addColorStop(0, hexToRgba(agent.color, 0.55));
+  glow.addColorStop(0, hexToRgba(agent.color, prominent ? 0.75 : 0.55));
   glow.addColorStop(1, hexToRgba(agent.color, 0));
   ctx.fillStyle = glow;
   ctx.beginPath();
   ctx.arc(c, c, c, 0, Math.PI * 2);
   ctx.fill();
+
+  // Halo ring — the pipeline/chain-only extra ring outside the core accent ring.
+  if (prominent) {
+    ctx.strokeStyle = hexToRgba(agent.color, 0.55);
+    ctx.lineWidth = size * 0.028;
+    ctx.beginPath();
+    ctx.arc(c, c, size * 0.44, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 /** Draw an avatar disc: soft glow, accent ring, dark core, and the name's initial —
@@ -86,6 +120,7 @@ function drawAvatarFrame(ctx: CanvasRenderingContext2D, agent: SceneAgent): void
 function drawAvatarFallback(ctx: CanvasRenderingContext2D, agent: SceneAgent): void {
   const size = AVATAR_SIZE;
   const c = size / 2;
+  const prominent = isProminentKind(agent.kind);
   drawAvatarFrame(ctx, agent);
 
   // Dark core.
@@ -94,9 +129,9 @@ function drawAvatarFallback(ctx: CanvasRenderingContext2D, agent: SceneAgent): v
   ctx.arc(c, c, size * 0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  // Accent ring.
+  // Accent ring — thicker for the stronger pipeline/chain mark.
   ctx.strokeStyle = agent.color;
-  ctx.lineWidth = size * 0.035;
+  ctx.lineWidth = size * (prominent ? 0.055 : 0.035);
   ctx.beginPath();
   ctx.arc(c, c, size * 0.3, 0, Math.PI * 2);
   ctx.stroke();
@@ -119,6 +154,7 @@ function drawAvatarImage(
   const size = AVATAR_SIZE;
   const c = size / 2;
   const r = size * 0.3;
+  const prominent = isProminentKind(agent.kind);
   drawAvatarFrame(ctx, agent);
 
   // Image clipped to the disc (cover-fit so a non-square portrait fills it).
@@ -132,9 +168,9 @@ function drawAvatarImage(
   ctx.drawImage(img, c - w / 2, c - h / 2, w, h);
   ctx.restore();
 
-  // Accent ring on top.
+  // Accent ring on top — thicker for the stronger pipeline/chain mark.
   ctx.strokeStyle = agent.color;
-  ctx.lineWidth = size * 0.035;
+  ctx.lineWidth = size * (prominent ? 0.055 : 0.035);
   ctx.beginPath();
   ctx.arc(c, c, r, 0, Math.PI * 2);
   ctx.stroke();
@@ -230,8 +266,9 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
           depthTest: false,
           depthWrite: false,
         });
+        const prominent = isProminentKind(agent.kind);
         const sprite = new THREE.Sprite(material);
-        sprite.scale.setScalar(BASE_SCALE);
+        sprite.scale.setScalar(BASE_SCALE * (prominent ? PROMINENT_SCALE : 1));
         group.add(sprite);
         const label = makeLabel(agent);
         labelRoot.appendChild(label);
@@ -253,6 +290,7 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
           breathePhase: i * 0.7,
           flare: 0,
           working: false,
+          prominent,
         };
       });
     },
@@ -301,11 +339,14 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
         }
 
         // Breathing + flare scale, plus a sustained working swell. Reduced motion
-        // holds the avatars still (no breathe/working oscillation).
+        // holds the avatars still (no breathe/working oscillation). The prominent
+        // (pipeline/chain) size multiplier rides on top so the stronger mark stays
+        // stronger through every animated state, not just at rest.
         const breathe = ctx.reducedMotion ? 1 : 1 + 0.08 * Math.sin(elapsed * 1.2 + n.breathePhase);
         const workingSwell =
           n.working && !ctx.reducedMotion ? 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 4)) : 0;
-        n.sprite.scale.setScalar(BASE_SCALE * (breathe + workingSwell + n.flare * 0.4));
+        const sizeScale = n.prominent ? PROMINENT_SCALE : 1;
+        n.sprite.scale.setScalar(BASE_SCALE * sizeScale * (breathe + workingSwell + n.flare * 0.4));
 
         // Project for the label + depth fade.
         ndc.copy(n.sprite.position).project(ctx.camera);
@@ -317,7 +358,10 @@ export function createConstellationLayer(labelRoot: HTMLElement): ConstellationL
           behind && ndcDist < ORB_NDC_RADIUS ? 1 - ndcDist / ORB_NDC_RADIUS : 0;
 
         const working = n.working ? 0.25 + 0.25 * Math.sin(elapsed * 4 + n.breathePhase) : 0;
-        const opacity = reveal * (0.55 + working + n.flare * 0.45) * (1 - 0.85 * occlude);
+        // Pipelines/chains sit brighter at rest than the quieter agent default —
+        // stronger glow/opacity is part of the Phase 35 visual hierarchy.
+        const baseOpacity = n.prominent ? PROMINENT_BASE_OPACITY : AGENT_BASE_OPACITY;
+        const opacity = reveal * (baseOpacity + working + n.flare * 0.45) * (1 - 0.85 * occlude);
         n.material.opacity = Math.min(1, opacity);
         n.sprite.renderOrder = -viewPos.z; // nearer avatars paint over farther
 

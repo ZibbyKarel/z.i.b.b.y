@@ -29,6 +29,10 @@ export interface SceneAgent {
   /** Stored entity id — matched against a `tool` event's `target.id` to know which
    * avatar was dispatched, and against a live run's `agentId` for the working pulse. */
   id: string;
+  /** Entity kind — drives the constellation's visual hierarchy (Phase 35): pipelines
+   * (and chains, a composition of pipelines/agents) render as the stronger mark —
+   * larger, brighter, haloed — while a plain agent stays the quieter default. */
+  kind: "agent" | "pipeline" | "chain";
   /** Canonical (Czech) display name shown on the DOM label. */
   name: string;
   /** One-line specialty from the agent's frontmatter `description` (empty for

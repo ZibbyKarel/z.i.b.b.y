@@ -54,7 +54,7 @@
 
 - [x] chat ui - místo psaní "Zibby" s buřinkou nad každou zprávou, kterou ZIBBY psal jen barevně oddělíme pozadí zpráv — fáze 33
 
-- [ ] chat ui - musíme nějak vizuálně odlišit agenty a pipeliny, které jsou na orbitě. Pipeliny by měly být určitě výraznější než agenti.
+- [x] chat ui - musíme nějak vizuálně odlišit agenty a pipeliny, které jsou na orbitě. Pipeliny by měly být určitě výraznější než agenti. — fáze 35
 
 - [ ] k chat UI musíme vytvořit storybook. Rád bych viděl všechny možné stavy "pozadí" chatu
 
