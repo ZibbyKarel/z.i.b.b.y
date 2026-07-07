@@ -5,9 +5,9 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useRunsQuery } from "../../runs";
-import { RUN_STATUS_GROUPS, groupFilterParam } from "../../runs/statusGroups";
+import { groupFilterParam } from "../../runs/statusGroups";
 import { useActiveProject } from "../context/ProjectProvider";
+import { useProjectTaskStats } from "../queries";
 
 export interface ProjectRunSummaryProps {
   projectId: string;
@@ -31,9 +31,8 @@ export interface ProjectRunSummaryProps {
 export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
   const t = useTranslations("runs");
   const tp = useTranslations("projects");
-  const { runs } = useRunsQuery();
   const { setActiveProject } = useActiveProject();
-  const mine = runs.filter((r) => r.projectId === projectId);
+  const { total, groups } = useProjectTaskStats(projectId);
 
   return (
     <HudPanel padding="300" title={tp("runsPanelTitle")}>
@@ -43,10 +42,9 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
           href={"/runs" as Route}
           onClick={() => setActiveProject(projectId)}
         >
-          <Stat icon="pulse" label={t("group.total")} tone="neutral" value={mine.length} />
+          <Stat icon="pulse" label={t("group.total")} tone="neutral" value={total} />
         </Link>
-        {RUN_STATUS_GROUPS.map((g) => {
-          const count = mine.filter((r) => g.statuses.includes(r.status)).length;
+        {groups.map(({ group: g, count }) => {
           const href = `/runs?filter=${groupFilterParam(g)}` as Route;
           return (
             <Link

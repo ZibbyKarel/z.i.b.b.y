@@ -1,8 +1,43 @@
-import type { Project, ProjectBudgetStatus } from "@zibby/contracts";
-import { IconTileTestId } from "@zibby/design-system";
-import { describe, expect, it } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import type { Project, ProjectBudgetStatus, TaskRun, TaskRunStatus } from "@zibby/contracts";
+import { IconTileTestId, StatTestId } from "@zibby/design-system";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { ProjectCard } from "./ProjectCard";
+
+// The footer task stats read the same unified feed the runs screen does; stub it
+// so the card gets a fixed set of runs across two projects.
+let feed: TaskRun[] = [];
+vi.mock("../../runs", () => ({
+  useRunsQuery: () => ({ runs: feed }),
+}));
+
+// Phase 24: a stat deep-link arms the top-bar active-project scope before it
+// navigates — stub the context so we can assert that.
+const setActiveProject = vi.fn();
+vi.mock("../context/ProjectProvider", () => ({
+  useActiveProject: () => ({ activeProjectId: null, setActiveProject }),
+}));
+
+let seq = 0;
+function taskRun(projectId: string | undefined, statusValue: TaskRunStatus): TaskRun {
+  return {
+    runId: `${projectId ?? "none"}-${statusValue}-${seq++}`,
+    kind: "agent",
+    owner: "",
+    status: statusValue,
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "",
+    startedAt: "2026-07-05T00:00:00.000Z",
+    ...(projectId ? { projectId } : {}),
+  } as TaskRun;
+}
+
+beforeEach(() => {
+  feed = [];
+  setActiveProject.mockClear();
+});
 
 const project = (over: Partial<Project> = {}): Project => ({
   id: "alpha",
@@ -65,6 +100,52 @@ describe("ProjectCard cost bars (Phase 12)", () => {
   it("hides all cost bars entirely when the project has no budget", () => {
     render(<ProjectCard budget={undefined} project={project()} />);
     expect(screen.queryByText(/^\$/)).not.toBeInTheDocument();
+  });
+});
+
+function statValue(key: string): string {
+  const link = screen.getByTestId(`project-card-stat-${key}`);
+  return within(link).getByTestId(StatTestId.Value).textContent ?? "";
+}
+
+describe("ProjectCard task stats (Phase 52)", () => {
+  it("shows the per-status task counts (bucketed) but no 'Celkem' total", () => {
+    feed = [
+      taskRun("alpha", "running"),
+      taskRun("alpha", "done"),
+      taskRun("alpha", "done"),
+      taskRun("alpha", "queued"), // → waiting bucket
+      taskRun("alpha", "awaiting-approval"), // → waiting bucket
+      taskRun("beta", "error"), // other project — excluded
+    ];
+    render(<ProjectCard project={project()} />);
+
+    expect(statValue("running")).toBe("1");
+    expect(statValue("waiting")).toBe("2");
+    expect(statValue("done")).toBe("2");
+    expect(statValue("error")).toBe("0");
+    expect(statValue("parked")).toBe("0");
+    // The detail's "Celkem" total is intentionally excluded from the card.
+    expect(screen.queryByTestId("project-card-stat-total")).toBeNull();
+  });
+
+  it("deep-links each stat into /runs pre-filtered to the bucket's states", () => {
+    feed = [taskRun("alpha", "done")];
+    render(<ProjectCard project={project()} />);
+
+    expect(screen.getByTestId("project-card-stat-done")).toHaveAttribute("href", "/runs?filter=done");
+    expect(screen.getByTestId("project-card-stat-waiting")).toHaveAttribute(
+      "href",
+      "/runs?filter=queued,scheduled,pending,held,awaiting-approval",
+    );
+  });
+
+  it("arms the top-bar project scope before navigating from a stat", () => {
+    feed = [taskRun("alpha", "done")];
+    render(<ProjectCard project={project()} />);
+
+    screen.getByTestId("project-card-stat-done").click();
+    expect(setActiveProject).toHaveBeenCalledWith("alpha");
   });
 });
 

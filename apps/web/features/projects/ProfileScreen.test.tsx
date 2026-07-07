@@ -42,6 +42,7 @@ vi.mock("./queries", () => ({
   useProjectCategoriesQuery: () => ({ data: [{ name: "Dev", glyph: "code" }] }),
   useProjectIntegrationActivityQuery: () => ({ data: [] }),
   useCiStatusQuery: () => ({ data: [] }),
+  useProjectTaskStats: () => ({ total: 0, groups: [] }),
 }));
 
 vi.mock("./mutations", () => ({

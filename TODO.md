@@ -86,7 +86,7 @@
 
 - [ ] stránka běhy a aktivita - avatar přiřazeného agenta nebo pipeliny by měl být dělaný stejně jako v HeroEntity komponentě - čili jako roztažené pozadí
 
-- [ ] stránka Projekty - na kartě projektu zobrazíme ve footeru stejné statistiky jako máme v detailu projektu ohledně úkolů (mimo "Celkem"). Opěd budou jednotlivé ásti možné prokliknout na vyfiltrovanou stránku běhy a aktivita
+- [x] stránka Projekty - na kartě projektu zobrazíme ve footeru stejné statistiky jako máme v detailu projektu ohledně úkolů (mimo "Celkem"). Opěd budou jednotlivé ásti možné prokliknout na vyfiltrovanou stránku běhy a aktivita — fáze 52 (sdílený useProjectTaskStats, deep-link na /runs?filter)
 
 - [ ] CosmicScene - ringsLayer je moc výrazná. Zkus místo toho vymyslet nějakou jinou variantu vizualizace stavu, které momentálně využívají rigns
 

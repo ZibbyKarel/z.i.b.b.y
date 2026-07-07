@@ -14,3 +14,8 @@ export {
   getProjectCategoriesQueryKey,
   useProjectCategoriesQuery,
 } from "./useProjectCategoriesQuery";
+export {
+  type ProjectTaskStat,
+  type ProjectTaskStats,
+  useProjectTaskStats,
+} from "./useProjectTaskStats";

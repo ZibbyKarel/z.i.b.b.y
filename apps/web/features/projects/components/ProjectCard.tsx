@@ -1,8 +1,13 @@
 import type { Project, ProjectBudgetStatus } from "@zibby/contracts";
 import { Progress, Stack, Stat, Tag, Typography, getUsageTone } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { formatCostUsd } from "../../../utils/cost";
 import { HudCard } from "../../../components/HudCard/HudCard";
+import { groupFilterParam } from "../../runs/statusGroups";
+import { useActiveProject } from "../context/ProjectProvider";
+import { useProjectTaskStats } from "../queries";
 
 export interface ProjectCardProps {
   project: Project;
@@ -61,55 +66,87 @@ function CostBar({ label, spentUsd, capUsd }: { label: string; spentUsd: number;
 
 /**
  * Catalog card for a single project (target directory): a thin container over
- * the generic {@link HudCard}. With a Phase-8 budget set, the footer shows the
- * daily/weekly run-count bars (tinted by usage) and the live running count; with
- * no budget the card is unchanged.
+ * the generic {@link HudCard}. The footer leads with the per-status task-run stats
+ * (the same buckets the project detail's run summary shows, minus the "Celkem"
+ * total), each a deep-link into the runs feed pre-filtered to that project + bucket.
+ * With a Phase-8 budget set, the daily/weekly run-count and cost bars follow.
  */
 export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
   const t = useTranslations("projects");
+  const tr = useTranslations("runs");
   const hasBudget = project.budget != null;
+  const { groups } = useProjectTaskStats(project.id);
+  const { setActiveProject } = useActiveProject();
+
+  // Per-status task stats (minus the "Celkem" total). Each stat is its own
+  // `next/link` — living in the card footer, outside the body's click target, so a
+  // stat click deep-links to /runs and never triggers the card's open-detail nav.
+  // Like the detail summary, each link arms the top-bar project scope before it
+  // navigates (Phase 24 — the runs feed reads scope from that context, not a query).
+  const taskStats = (
+    <Stack wrap direction="row" gap="200">
+      {groups.map(({ group: g, count }) => (
+        <Link
+          data-testid={`project-card-stat-${g.key}`}
+          href={`/runs?filter=${groupFilterParam(g)}` as Route}
+          key={g.key}
+          onClick={() => setActiveProject(project.id)}
+        >
+          <Stat
+            icon={g.icon}
+            label={tr(`group.${g.key}`)}
+            tone={count > 0 ? g.tone : "neutral"}
+            value={count}
+          />
+        </Link>
+      ))}
+    </Stack>
+  );
 
   return (
     <HudCard
       actions={
-        hasBudget ? (
-          <Stack gap="100">
-            <BudgetBar
-              cap={project.budget?.dailyRuns}
-              label={t("budgetDaily")}
-              used={budget?.daily.used ?? 0}
-            />
-            <BudgetBar
-              cap={project.budget?.weeklyRuns}
-              label={t("budgetWeekly")}
-              used={budget?.weekly.used ?? 0}
-            />
-            <CostBar
-              capUsd={budget?.dailyCost?.capUsd}
-              label={t("budgetDailyCost")}
-              spentUsd={budget?.dailyCost?.spentUsd ?? 0}
-            />
-            <CostBar
-              capUsd={budget?.weeklyCost?.capUsd}
-              label={t("budgetWeeklyCost")}
-              spentUsd={budget?.weeklyCost?.spentUsd ?? 0}
-            />
-            <CostBar
-              capUsd={budget?.monthlyCost?.capUsd}
-              label={t("budgetMonthlyCost")}
-              spentUsd={budget?.monthlyCost?.spentUsd ?? 0}
-            />
-            <Stack align="center" direction="row" gap="200">
-              <Stat label={t("budgetRunning")} value={String(budget?.running ?? 0)} />
-              {(budget?.queued ?? 0) > 0 && (
-                <Stat label={t("budgetQueued")} value={String(budget?.queued ?? 0)} />
-              )}
-              {(budget?.held ?? 0) > 0 && (
-                <Stat label={t("budgetHeld")} tone="warn" value={String(budget?.held ?? 0)} />
-              )}
+        <Stack gap="150">
+          {taskStats}
+          {hasBudget && (
+            <Stack gap="100">
+              <BudgetBar
+                cap={project.budget?.dailyRuns}
+                label={t("budgetDaily")}
+                used={budget?.daily.used ?? 0}
+              />
+              <BudgetBar
+                cap={project.budget?.weeklyRuns}
+                label={t("budgetWeekly")}
+                used={budget?.weekly.used ?? 0}
+              />
+              <CostBar
+                capUsd={budget?.dailyCost?.capUsd}
+                label={t("budgetDailyCost")}
+                spentUsd={budget?.dailyCost?.spentUsd ?? 0}
+              />
+              <CostBar
+                capUsd={budget?.weeklyCost?.capUsd}
+                label={t("budgetWeeklyCost")}
+                spentUsd={budget?.weeklyCost?.spentUsd ?? 0}
+              />
+              <CostBar
+                capUsd={budget?.monthlyCost?.capUsd}
+                label={t("budgetMonthlyCost")}
+                spentUsd={budget?.monthlyCost?.spentUsd ?? 0}
+              />
+              <Stack align="center" direction="row" gap="200">
+                <Stat label={t("budgetRunning")} value={String(budget?.running ?? 0)} />
+                {(budget?.queued ?? 0) > 0 && (
+                  <Stat label={t("budgetQueued")} value={String(budget?.queued ?? 0)} />
+                )}
+                {(budget?.held ?? 0) > 0 && (
+                  <Stat label={t("budgetHeld")} tone="warn" value={String(budget?.held ?? 0)} />
+                )}
+              </Stack>
             </Stack>
-          </Stack>
-        ) : undefined
+          )}
+        </Stack>
       }
       badges={
         project.category
