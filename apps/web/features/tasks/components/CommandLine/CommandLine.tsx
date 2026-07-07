@@ -55,6 +55,7 @@ export enum CommandLineTestId {
   Suggestion = "command-line-suggestion",
   AckRow = "command-line-ack-row",
   AckDismiss = "command-line-ack-dismiss",
+  Send = "command-line-send",
 }
 
 export interface CommandLineProps {
@@ -63,6 +64,10 @@ export interface CommandLineProps {
   /** Hard cap the auto-grow won't exceed. */
   maxRows?: number;
   placeholder?: string;
+  /** Overrides the input field's visible label — default "Task"/"Zadání". Chat
+   *  passes its own "Message" wording so the label reflects what's actually
+   *  being composed. */
+  label?: string;
   initialText?: string;
   initialTarget?: TaskTarget;
   /** An optional task title — passed straight through to the dispatched body. */
@@ -119,6 +124,35 @@ export interface CommandLineProps {
    *  the scheduled confirmation lingers for a deferred one. Defaults to a no-op — a
    *  standalone quick-launch has nothing to close. */
   onClose?: () => void;
+  /**
+   * Send-delegation mode (Phase 38 — the chat composer): when present, a submit
+   * (Enter, or the trailing action) calls this INSTEAD of launching a task via
+   * `useTaskSubmit`. Renders a plain **Send** action rather than the run
+   * split-button (scheduling is meaningless for a chat turn), and clears the
+   * text/target/attachments itself once called — mirroring `useTaskSubmit`'s own
+   * post-dispatch reset. Omit for the default task-launch behaviour (unchanged).
+   */
+  onSubmit?: (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => void;
+  /** Fired whenever the trimmed draft flips between empty and non-empty — lets an
+   *  embedding parent (e.g. `ChatScreen`) derive a "listening" state without owning
+   *  the text itself. Mirrors `ChatComposer`'s `onDraftChange` contract. */
+  onDraftChange?: (hasDraft: boolean) => void;
+  /**
+   * A target picked OUTSIDE this component's own @mention picker — e.g. the chat
+   * quick-switcher palette. Setting this inserts `@Name ` into the text and adopts
+   * it exactly like an in-picker selection, then hands focus back;
+   * `onInjectedTargetConsumed` fires right after so the parent can clear its
+   * pending value (one-shot, mirroring the target itself).
+   */
+  injectedTarget?: TaskTarget;
+  /** Fired once `injectedTarget` above has been applied. */
+  onInjectedTargetConsumed?: () => void;
+  /**
+   * Show the `+`/attach affordance (and the drag-and-drop file overlay). Default
+   * `true`. Chat passes `false`: the chat message API has no attachment channel
+   * yet, so the affordance would silently be ignored rather than hidden.
+   */
+  showAttach?: boolean;
 }
 
 /** Position (viewport px) the fixed mention picker is rendered at, above the input. */
@@ -200,6 +234,7 @@ export function CommandLine({
   rows = 1,
   maxRows = 10,
   placeholder,
+  label,
   initialText,
   initialTarget,
   title = "",
@@ -216,14 +251,29 @@ export function CommandLine({
   onAttachmentsChange,
   onLaunched,
   onClose = noop,
+  onSubmit,
+  onDraftChange,
+  injectedTarget,
+  onInjectedTargetConsumed,
+  showAttach = true,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
+
+  // Send-delegation mode (Phase 38): an `onSubmit` caller (the chat composer)
+  // dispatches through it instead of `useTaskSubmit`, and gets a plain Send
+  // action instead of the schedule split-button.
+  const sendMode = onSubmit !== undefined;
 
   const [text, setText] = useState(initialText ?? "");
   const [target, setTarget] = useState<TaskTarget | undefined>(initialTarget);
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
+  const hasDraftRef = useRef(false);
+  // Mirrors the `injectedTarget` prop so a NEW value (including the same target
+  // picked again after a round-trip through `undefined` once consumed) can be
+  // told apart from a re-render with the same one — ported from `ChatComposer`.
+  const [prevInjectedTarget, setPrevInjectedTarget] = useState(injectedTarget);
 
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionStart, setMentionStart] = useState<number | null>(null);
@@ -276,6 +326,46 @@ export function CommandLine({
     }
   }, [mentionOpen]);
 
+  /** Fires `onDraftChange` only when the trimmed draft flips between empty and
+   *  non-empty — never on every keystroke (ported from `ChatComposer`). */
+  function notifyDraftChange(nextText: string) {
+    const hasDraft = nextText.trim().length > 0;
+    if (hasDraft !== hasDraftRef.current) {
+      hasDraftRef.current = hasDraft;
+      onDraftChange?.(hasDraft);
+    }
+  }
+
+  // Apply a target picked outside this component's own @mention picker (the chat
+  // quick-switcher palette) — React's "adjust state while rendering" pattern
+  // rather than a `useEffect`: it's OWN local state (`text`/`target`), so it's
+  // safe to update synchronously mid-render, skipping the extra commit-then-fix-up
+  // render an effect would cost. Ported from `ChatComposer`.
+  if (injectedTarget !== prevInjectedTarget) {
+    setPrevInjectedTarget(injectedTarget);
+    if (injectedTarget) {
+      const mentionText = `@${injectedTarget.name} `;
+      const next = text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${mentionText}` : mentionText;
+      setText(next);
+      onTextChange?.(next);
+      setTarget(injectedTarget);
+      onTargetChange?.(injectedTarget);
+    }
+  }
+
+  // The two side effects of an injection — telling the parent it's been applied
+  // and handing focus back — DO belong in a real effect (an external callback + an
+  // imperative DOM call, not this component's own state). Reads `text` at the
+  // moment of injection rather than depending on it, so this only reruns when a
+  // NEW target actually arrives.
+  useEffect(() => {
+    if (!injectedTarget) return;
+    notifyDraftChange(text);
+    onInjectedTargetConsumed?.();
+    textareaRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedTarget]);
+
   const selectedProject = useMemo(
     () => (activeProjectId ? (projects.find((p) => p.id === activeProjectId) ?? null) : null),
     [projects, activeProjectId],
@@ -324,7 +414,9 @@ export function CommandLine({
     onLaunched,
   });
 
-  const canRun = !disabled && (isLoop ? canSubmitLoop(loop) : text.trim().length > 2);
+  const canRun =
+    !disabled &&
+    (sendMode ? text.trim().length > 0 : isLoop ? canSubmitLoop(loop) : text.trim().length > 2);
   const runLabel = isLoop ? t("loop.submit") : t("classifyRun");
   const runIcon: IconName = isLoop ? "retry" : "play";
 
@@ -353,8 +445,30 @@ export function CommandLine({
 
   /** Every submit path (Enter, the primary run action, a schedule-menu item, or a
    * suggestion chip) funnels through here so the ack row — when enabled — always
-   * reflects the actual dispatch, computed at the same moment it fires. */
+   * reflects the actual dispatch, computed at the same moment it fires.
+   *
+   * In send-delegation mode (`onSubmit` set) this calls the caller INSTEAD of
+   * `useTaskSubmit` and clears the text/target/attachments itself — mirroring
+   * `useTaskSubmit`'s own post-dispatch reset (a host that navigates away/unmounts
+   * on submit has nothing further to clear; a chat thread that stays mounted does). */
   function dispatch(scheduledAt: number | null) {
+    if (onSubmit) {
+      if (!canRun) return;
+      const trimmed = composedText.trim();
+      if (!trimmed) return;
+      const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
+      onSubmit(trimmed, target, attachmentPayload);
+      setText("");
+      onTextChange?.("");
+      notifyDraftChange("");
+      setTarget(undefined);
+      onTargetChange?.(undefined);
+      if (attachmentPayload) {
+        setAttachments({ files: [] });
+        onAttachmentsChange?.({ files: [] });
+      }
+      return;
+    }
     if (showAck) {
       const info = buildAck();
       if (info) setAck(info);
@@ -375,6 +489,7 @@ export function CommandLine({
   function selectSuggestion(suggestion: string) {
     setText(suggestion);
     onTextChange?.(suggestion);
+    notifyDraftChange(suggestion);
     pendingSuggestionRef.current = true;
   }
 
@@ -390,6 +505,7 @@ export function CommandLine({
     const cursor = e.target.selectionStart ?? nextValue.length;
     setText(nextValue);
     onTextChange?.(nextValue);
+    notifyDraftChange(nextValue);
     if (!mentionOpen && isMentionTrigger(nextValue, cursor)) {
       // Measure synchronously (the DOM is fully laid out inside this event handler)
       // so `menuRect` and `mentionOpen` land in the SAME render.
@@ -438,6 +554,7 @@ export function CommandLine({
     const nextValue = text.slice(0, start) + mentionText + text.slice(start + 1);
     setText(nextValue);
     onTextChange?.(nextValue);
+    notifyDraftChange(nextValue);
     setTarget(picked);
     onTargetChange?.(picked);
     pendingCursorRef.current = start + mentionText.length;
@@ -530,9 +647,9 @@ export function CommandLine({
   const inputArea = (
     <Container
       data-testid={CommandLineTestId.Box}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
+      onDragLeave={showAttach ? handleDragLeave : undefined}
+      onDragOver={showAttach ? handleDragOver : undefined}
+      onDrop={showAttach ? handleDrop : undefined}
       position="relative"
       ref={rootRef}
     >
@@ -562,7 +679,7 @@ export function CommandLine({
         </Container>
       )}
 
-      {dragOver && (
+      {showAttach && dragOver && (
         <Container
           bottom="0"
           data-testid={CommandLineTestId.DropOverlay}
@@ -584,21 +701,23 @@ export function CommandLine({
         </Container>
       )}
 
-      <input
-        hidden
-        multiple
-        data-testid={CommandLineTestId.FileInput}
-        onChange={handleFileInputChange}
-        ref={fileInputRef}
-        type="file"
-      />
+      {showAttach && (
+        <input
+          hidden
+          multiple
+          data-testid={CommandLineTestId.FileInput}
+          onChange={handleFileInputChange}
+          ref={fileInputRef}
+          type="file"
+        />
+      )}
 
       <HighlightTextAreaField
         autoFocus
         data-testid={CommandLineTestId.Input}
         disabled={disabled}
         highlights={highlights}
-        label={t("commandLine.label")}
+        label={label ?? t("commandLine.label")}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder ?? t("commandLine.placeholder")}
@@ -608,36 +727,53 @@ export function CommandLine({
       />
 
       <Stack align="center" direction="row" gap="75" style={{ marginTop: "8px" }}>
-        <Button
-          aria-label={t("commandLine.attachAria")}
-          data-testid={CommandLineTestId.Attach}
-          icon="plus"
-          intent="ghost"
-          onClick={openFilePicker}
-          size="sm"
-        />
-        <Button
-          aria-label={t("commandLine.pinAria")}
-          data-testid={CommandLineTestId.Pin}
-          icon="pin"
-          intent="ghost"
-          onClick={openFilePicker}
-          size="sm"
-        />
+        {showAttach && (
+          <>
+            <Button
+              aria-label={t("commandLine.attachAria")}
+              data-testid={CommandLineTestId.Attach}
+              icon="plus"
+              intent="ghost"
+              onClick={openFilePicker}
+              size="sm"
+            />
+            <Button
+              aria-label={t("commandLine.pinAria")}
+              data-testid={CommandLineTestId.Pin}
+              icon="pin"
+              intent="ghost"
+              onClick={openFilePicker}
+              size="sm"
+            />
+          </>
+        )}
 
         <Stack grow style={{ minWidth: 0 }} />
 
-        <DropDownButton
-          disabled={!canRun || busy}
-          icon={runIcon}
-          intent="primary"
-          label={runLabel}
-          loading={busy}
-          menuAriaLabel={t("commandLine.moreRunOptions")}
-          menuItems={menuItems}
-          onClick={() => dispatch(null)}
-          size="sm"
-        />
+        {sendMode ? (
+          <Button
+            data-testid={CommandLineTestId.Send}
+            disabled={!canRun}
+            icon="arrow"
+            intent="primary"
+            onClick={() => dispatch(null)}
+            size="sm"
+          >
+            {t("commandLine.send")}
+          </Button>
+        ) : (
+          <DropDownButton
+            disabled={!canRun || busy}
+            icon={runIcon}
+            intent="primary"
+            label={runLabel}
+            loading={busy}
+            menuAriaLabel={t("commandLine.moreRunOptions")}
+            menuItems={menuItems}
+            onClick={() => dispatch(null)}
+            size="sm"
+          />
+        )}
       </Stack>
     </Container>
   );

@@ -34,13 +34,14 @@ import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { usePinsQuery } from "../../pins";
 import { ProjectSwitcher } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
+import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
+import { toClientTarget } from "../../tasks/task";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { buildConstellation } from "../scene/constellation";
 import { CosmicScene } from "../scene/CosmicScene";
 import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
-import { ChatComposer } from "./ChatComposer";
 import { ChatPalette } from "./ChatPalette";
 import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
@@ -224,13 +225,24 @@ export function ChatScreen({
   // A target picked in the palette (agents/pipelines sections) rides into the
   // composer through its `injectedTarget` prop rather than lifting the composer's
   // whole mention-selection state up here — see the doc comment on
-  // `ChatComposerProps.injectedTarget` for why.
+  // `CommandLineProps.injectedTarget` for why.
   const [pendingMentionTarget, setPendingMentionTarget] = useState<TaskTarget | undefined>(
     undefined,
   );
   const handleMentionSelect = useCallback((target: TaskTarget) => {
     setPendingMentionTarget(target);
   }, []);
+  // `CommandLine`'s own `TaskTarget` (Phase 26) narrows `glyph` to the
+  // design-system `IconName` union — the palette hands over the wider
+  // `@zibby/contracts` shape (`glyph` a free-form string), so it's narrowed here.
+  // Memoized on `pendingMentionTarget`'s own identity: `CommandLine` tells a NEW
+  // injection apart from a re-render by reference equality, so a value recomputed
+  // on every render (rather than only when the source target changes) would
+  // wrongly re-trigger the one-shot injection.
+  const injectedTarget = useMemo(
+    () => (pendingMentionTarget ? toClientTarget(pendingMentionTarget) : undefined),
+    [pendingMentionTarget],
+  );
   const handlePaletteNavigate = useCallback(
     (href: Route) => {
       // Gates/memory have nowhere to render inline yet (Rozhodnutí 7's sanctioned
@@ -499,15 +511,24 @@ export function ChatScreen({
         </div>
       </div>
 
-      {/* ── Composer ────────────────────────────────────────────────── */}
+      {/* ── Composer ─────────────────────────────────────────────────
+          Phase 38: the unified `CommandLine` launcher in send-delegation mode
+          (`onSubmit`) — same growable input + @mention picker as the task
+          launcher, `chrome={false}` (this bar is its own frame already), and
+          `showAttach={false}` since the chat message API has no attachment
+          channel yet (Phase 38 plan §5). */}
       <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto max-w-[720px]">
-          <ChatComposer
+          <CommandLine
+            chrome={false}
             disabled={thinking}
-            injectedTarget={pendingMentionTarget}
+            injectedTarget={injectedTarget}
+            label={t("composer.label")}
             onDraftChange={setHasDraft}
             onInjectedTargetConsumed={() => setPendingMentionTarget(undefined)}
-            onSend={send}
+            onSubmit={send}
+            placeholder={t("composer.placeholder")}
+            showAttach={false}
           />
         </div>
       </div>

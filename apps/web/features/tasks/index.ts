@@ -21,5 +21,6 @@ export {
   isLowConfidence,
   resolveScheduledAt,
   toClientRouting,
+  toClientTarget,
   whenLabel,
 } from "./task";

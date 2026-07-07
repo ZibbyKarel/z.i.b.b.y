@@ -125,7 +125,10 @@ export interface TaskRouting {
  * Narrow a backend target onto the client shape: the API carries `glyph` as a
  * free-form string (it doesn't know the design-system `IconName` union), so we
  * coerce it here, defaulting to the kind's icon when absent — exactly how the
- * former client-side classifier mapped the raw catalog.
+ * former client-side classifier mapped the raw catalog. Exported (Phase 38) so a
+ * caller holding the wider `@zibby/contracts` `TaskTarget` — e.g. `ChatScreen`
+ * feeding a palette-picked target into `CommandLine`'s `injectedTarget` — can
+ * narrow it onto this module's `TaskTarget` before handing it over.
  */
 const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   agent: "bot",
@@ -135,7 +138,7 @@ const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   orchestrator: "compass",
 };
 
-function toClientTarget(target: ApiTaskTarget): TaskTarget {
+export function toClientTarget(target: ApiTaskTarget): TaskTarget {
   const display = {
     name: target.name,
     glyph: (target.glyph as IconName | undefined) ?? KIND_FALLBACK_GLYPH[target.kind],

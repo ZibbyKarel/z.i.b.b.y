@@ -22,10 +22,11 @@ const sendState = { isPending: false };
 vi.mock("../mutations/useSendChatMessageMutation", () => ({
   useSendChatMessageMutation: () => ({ mutate, isPending: sendState.isPending }),
 }));
-// ChatComposer (child) reads the agent/pipeline catalogs for its @mention picker
-// (Fáze 14.2); the ⌘K palette (Fáze 14.5) reads the same two plus gates/memory —
-// stub every one (with one fixture each, reused by the 14.5 wiring tests below) so
-// this suite never hits the network.
+// CommandLine (child, Phase 38 — the chat composer in send-delegation mode)
+// reads the agent/pipeline catalogs for its @mention picker (Fáze 14.2); the ⌘K
+// palette (Fáze 14.5) reads the same two plus gates/memory — stub every one
+// (with one fixture each, reused by the 14.5 wiring tests below) so this suite
+// never hits the network.
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "builder", name: "Builder", glyph: "hammer" }] }),
   getAgentsQueryKey: () => ["agents"],
@@ -33,6 +34,18 @@ vi.mock("../../agents/queries/useAgentsQuery", () => ({
 vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [] }),
   getPipelinesQueryKey: () => ["pipelines"],
+}));
+// CommandLine also reads the limits query (for its schedule menu, unused in
+// send-delegation mode) and the attachment-upload mutation (unused —
+// `showAttach={false}` in chat) — stub both so mounting it never hits the
+// network, matching `CommandLine.test.tsx`'s own mocking pattern.
+vi.mock("../../limits/queries/useLimitsQuery", () => ({
+  useLimitsQuery: () => ({
+    data: { rolling: { usedPct: 10, resetsAt: null }, weekly: { usedPct: 5, resetsAt: null }, capturedAt: Date.now(), stale: false },
+  }),
+}));
+vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
+  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
   useApprovalsQuery: () => ({
@@ -75,7 +88,7 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // `ChatScreen` reads `usePipelineRunQuery` (the same aggregate `ChatRunCard` polls,
 // Rozhodnutí 5, Fáze 15.3) to derive the `waiting-approval` orb mode. Mock only that
-// one export off the barrel — `ChatComposer`/`ChatPalette` also import
+// one export off the barrel — `CommandLine`/`ChatPalette` also import
 // `usePipelinesQuery` from the same barrel (already stubbed above at its own module
 // path), so this keeps the real barrel wiring for everything else.
 const { pipelineRunMock } = vi.hoisted(() => ({
@@ -90,7 +103,7 @@ import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
-import { ChatComposerTestId } from "./ChatComposer";
+import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
 import { ChatPaletteTestId } from "./ChatPalette";
 import { ChatSidePanelTestId } from "./ChatSidePanel";
@@ -136,8 +149,8 @@ describe("ChatScreen", () => {
     const user = userEvent.setup();
     renderWithProviders(<ChatScreenHarness />);
 
-    await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
-    await user.click(screen.getByTestId(ChatComposerTestId.Send));
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
+    await user.click(screen.getByTestId(CommandLineTestId.Send));
 
     // The user's turn is appended optimistically on send.
     expect(screen.getByText("Jak se máš")).toBeInTheDocument();
@@ -163,8 +176,8 @@ describe("ChatScreen", () => {
     // No turns yet → nothing to reset, so the New chat affordance is absent.
     expect(screen.queryByTestId(ChatScreenTestId.NewChat)).not.toBeInTheDocument();
 
-    await user.type(screen.getByTestId(ChatComposerTestId.Input), "Ahoj");
-    await user.click(screen.getByTestId(ChatComposerTestId.Send));
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "Ahoj");
+    await user.click(screen.getByTestId(CommandLineTestId.Send));
     expect(screen.getByText("Ahoj")).toBeInTheDocument();
 
     // Once there's a transcript, New chat appears and wipes it back to the greeting.
@@ -183,7 +196,7 @@ describe("ChatScreen", () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Ahoj");
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "Ahoj");
       expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "listening");
     });
 
@@ -197,8 +210,8 @@ describe("ChatScreen", () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
-      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
 
       act(() => {
         mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám se" });
@@ -211,8 +224,8 @@ describe("ChatScreen", () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Naplánuj úkol");
-      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "Naplánuj úkol");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
 
       act(() => {
         mock.last().emit({
@@ -230,8 +243,8 @@ describe("ChatScreen", () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Jak se máš");
-      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
 
       act(() => {
         mock.last().emit({ conversationId: "c1", turnId: "t1", type: "error", message: "boom" });
@@ -245,8 +258,8 @@ describe("ChatScreen", () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.type(screen.getByTestId(ChatComposerTestId.Input), "Naplánuj úkol");
-      await user.click(screen.getByTestId(ChatComposerTestId.Send));
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "Naplánuj úkol");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
 
       act(() => {
         mock.last().emit({
@@ -355,10 +368,10 @@ describe("ChatScreen", () => {
       await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
 
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-      expect(screen.getByTestId(ChatComposerTestId.TargetChip)).toHaveTextContent("Builder");
-      expect(screen.getByTestId(ChatComposerTestId.Input)).toHaveValue("@Builder ");
+      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
+      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("@Builder ");
 
-      await user.type(screen.getByTestId(ChatComposerTestId.Input), "ahoj");
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
       await user.keyboard("{Enter}");
       expect(mutate).toHaveBeenCalledWith({
         body: {

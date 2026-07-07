@@ -150,6 +150,7 @@
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
       "attachAria": "Přiložit soubory",
       "pinAria": "Připnout soubor",
+      "send": "Odeslat",
       "moreRunOptions": "Další možnosti spuštění",
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {

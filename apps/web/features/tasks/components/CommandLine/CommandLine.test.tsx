@@ -461,4 +461,96 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(screen.queryByTestId(CommandLineTestId.AckRow)).not.toBeInTheDocument();
     });
   });
+
+  describe("Phase 38 — send-delegation mode (the chat composer)", () => {
+    it("calls onSubmit — not the task-launch mutation — on Enter, carrying the picked target, and clears the field", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} />);
+
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@");
+      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
+      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      await user.type(input, "ahoj");
+      await user.keyboard("{Enter}");
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        "@Builder ahoj",
+        { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+        undefined,
+      );
+      expect(createTask).not.toHaveBeenCalled();
+      expect(input).toHaveValue("");
+      expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
+    });
+
+    it("renders a plain Send action instead of the run split-button, and Send dispatches via onSubmit", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} />);
+
+      expect(screen.queryByTestId(DropDownButtonTestId.Primary)).not.toBeInTheDocument();
+      expect(screen.getByTestId(CommandLineTestId.Send)).toBeInTheDocument();
+
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith("ahoj", undefined, undefined);
+      expect(createTask).not.toHaveBeenCalled();
+    });
+
+    it("disables the input and the Send action while `disabled` is set (e.g. while ZIBBY is thinking)", () => {
+      render(<CommandLine disabled initialText="ahoj" onSubmit={vi.fn()} />);
+      expect(screen.getByTestId(CommandLineTestId.Input)).toBeDisabled();
+      expect(screen.getByTestId(CommandLineTestId.Send)).toBeDisabled();
+    });
+
+    it("applies an externally injected target (the chat quick-switcher palette) into the text and chip, then reports it consumed", () => {
+      const onInjectedTargetConsumed = vi.fn();
+      const target = { kind: "agent", id: "builder", name: "Builder", glyph: "bot" } as const;
+      const { rerender } = render(
+        <CommandLine onInjectedTargetConsumed={onInjectedTargetConsumed} onSubmit={vi.fn()} />,
+      );
+      rerender(
+        <CommandLine
+          injectedTarget={target}
+          onInjectedTargetConsumed={onInjectedTargetConsumed}
+          onSubmit={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
+      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("@Builder ");
+      expect(onInjectedTargetConsumed).toHaveBeenCalledTimes(1);
+    });
+
+    it("fires onDraftChange true/false as the draft flips between empty and non-empty", async () => {
+      const onDraftChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onDraftChange={onDraftChange} onSubmit={vi.fn()} />);
+
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "h");
+      expect(onDraftChange).toHaveBeenLastCalledWith(true);
+
+      await user.keyboard("{Enter}");
+      expect(onDraftChange).toHaveBeenLastCalledWith(false);
+    });
+
+    describe("showAttach={false} (chat: the message API has no attachment channel)", () => {
+      it("hides the attach/pin buttons and the hidden file input", () => {
+        render(<CommandLine onSubmit={vi.fn()} showAttach={false} />);
+        expect(screen.queryByTestId(CommandLineTestId.Attach)).not.toBeInTheDocument();
+        expect(screen.queryByTestId(CommandLineTestId.Pin)).not.toBeInTheDocument();
+        expect(screen.queryByTestId(CommandLineTestId.FileInput)).not.toBeInTheDocument();
+      });
+
+      it("ignores drag-and-drop — no overlay ever shows", () => {
+        render(<CommandLine onSubmit={vi.fn()} showAttach={false} />);
+        fireEvent.dragOver(screen.getByTestId(CommandLineTestId.Box));
+        expect(screen.queryByTestId(CommandLineTestId.DropOverlay)).not.toBeInTheDocument();
+      });
+    });
+  });
 });

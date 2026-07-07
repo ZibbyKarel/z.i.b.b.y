@@ -34,7 +34,7 @@ export interface ChatPaletteProps {
   onClose: () => void;
 }
 
-/** Case-insensitive substring match — mirrors `ChatComposer`'s mention-picker filter. */
+/** Case-insensitive substring match — mirrors `CommandLine`'s mention-picker filter. */
 function matchesQuery(query: string, ...fields: Array<string | undefined>): boolean {
   if (!query) return true;
   const q = query.toLowerCase();
@@ -46,7 +46,7 @@ function matchesQuery(query: string, ...fields: Array<string | undefined>): bool
  * conversation (Fáze 14.5), never a navigation away from it except for the two
  * sections that have nowhere else to render yet (gates, memory — see
  * {@link ChatPaletteProps.onNavigate}). Agents/pipelines reuse the exact @mention
- * target shape `ChatComposer`'s own picker builds (Fáze 14.2), just handed to the
+ * target shape `CommandLine`'s own picker builds (Fáze 14.2), just handed to the
  * composer from outside instead of typed inline.
  */
 export function ChatPalette({ onMentionSelect, onNavigate, onClose }: ChatPaletteProps) {

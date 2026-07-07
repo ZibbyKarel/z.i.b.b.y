@@ -150,6 +150,7 @@
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
       "attachAria": "Attach files",
       "pinAria": "Pin a file",
+      "send": "Send",
       "moreRunOptions": "More run options",
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
