@@ -4,12 +4,12 @@ import Link from "next/link";
 import { type RunView, runStateTone, runTitle } from "../../runs/run";
 import { RunStateBadge } from "../../runs/components/RunStateBadge";
 
-export enum ChatRunningTaskRowTestId {
+export enum ChatTaskRowTestId {
   /** The whole row is the deep-link into `/runs?run=<id>`. */
-  Link = "chat-running-task-row",
+  Link = "chat-task-row",
 }
 
-export interface ChatRunningTaskRowProps {
+export interface ChatTaskRowProps {
   run: RunView;
   /** Glyph of the routed agent/pipeline (or the kind fallback). */
   glyph: IconName;
@@ -22,18 +22,20 @@ export interface ChatRunningTaskRowProps {
 }
 
 /**
- * One compact row in the chat's left "Běží" rail: the routed entity's avatar/glyph,
+ * One compact row in the chat's left tasks panel: the routed entity's avatar/glyph,
  * the task-first title, a state chip and — when the run carries a live percentage —
  * a slim progress bar. The whole row is a link into the HUD run detail
  * (`/runs?run=<id>`); the chat surface hands the run off to the runs page rather
  * than rendering its full log inline.
  *
- * Presentation mirrors the runs {@link TaskCard} but slimmed for the rail: the
+ * Presentation mirrors the runs {@link TaskCard} but slimmed for the panel: the
  * left edge and glow read the shared {@link runStateTone} (single state map), and
  * the glow is reserved for a genuinely live run (running / awaiting-approval) —
- * consistent with the constellation/dock "glow only when live" rule.
+ * consistent with the constellation/dock "glow only when live" rule. A finished or
+ * waiting task renders matte (no glow), so the panel lists every task in scope while
+ * still surfacing the live set at a glance.
  */
-export function ChatRunningTaskRow({ run, glyph, avatar, stateLabel, openAria }: ChatRunningTaskRowProps) {
+export function ChatTaskRow({ run, glyph, avatar, stateLabel, openAria }: ChatTaskRowProps) {
   const live = run.status === "running" || run.status === "awaiting-approval";
   const tone = runStateTone(run.status);
   const title = runTitle(run);
@@ -44,7 +46,7 @@ export function ChatRunningTaskRow({ run, glyph, avatar, stateLabel, openAria }:
   return (
     <Link
       aria-label={openAria}
-      data-testid={ChatRunningTaskRowTestId.Link}
+      data-testid={ChatTaskRowTestId.Link}
       href={`/runs?run=${run.runId}` as Route}
     >
       <Card

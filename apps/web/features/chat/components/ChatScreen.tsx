@@ -43,7 +43,7 @@ import { CosmicScene } from "../scene/CosmicScene";
 import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
 import { ChatPalette } from "./ChatPalette";
-import { ChatRunningTasks } from "./ChatRunningTasks";
+import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
 
 /**
@@ -447,7 +447,7 @@ export function ChatScreen({
 
       {/* ── Main area: scene behind, scrollable conversation over it ───── */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
-        {/* ── Left rail: live running/active tasks (Phase 44) ───────────────
+        {/* ── Left panel: ALL tasks in scope (Phase 57, was running-only in 44) ─
             A `z`-raised fixed-width column pinned to the left, above the scene
             like the top bar / composer. `pointer-events-none` on the gutter so
             the scene stays interactive around it (the panel itself re-enables
@@ -455,7 +455,7 @@ export function ChatScreen({
             on a narrow viewport. */}
         <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
           <div className="pointer-events-auto">
-            <ChatRunningTasks />
+            <ChatTasksPanel />
           </div>
         </div>
         <div

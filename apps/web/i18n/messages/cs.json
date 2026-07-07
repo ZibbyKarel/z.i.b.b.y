@@ -1502,9 +1502,9 @@
       "expandAria": "Rozbalit detail běhu",
       "collapseAria": "Sbalit detail běhu"
     },
-    "runningTasks": {
-      "title": "Běží",
-      "empty": "Nic neběží",
+    "tasks": {
+      "title": "Tasky",
+      "empty": "Žádné tasky",
       "openAria": "Otevřít běh: {title}"
     },
     "palette": {

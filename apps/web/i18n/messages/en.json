@@ -1502,9 +1502,9 @@
       "expandAria": "Expand run detail",
       "collapseAria": "Collapse run detail"
     },
-    "runningTasks": {
-      "title": "Running",
-      "empty": "Nothing running",
+    "tasks": {
+      "title": "Tasks",
+      "empty": "No tasks",
       "openAria": "Open run: {title}"
     },
     "palette": {

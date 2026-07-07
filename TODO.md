@@ -92,6 +92,6 @@
 
 - [ ] CosmicScene - Error stav a stav waiting for aprooval je poměrně stejný. Waiting for approval bych dal jako "warning tone"
 
-- [ ] Chat UI - momentálně vidím jen běžící tasky ale měl bych vidět všechny tasky ve vybraném projektu (nebo bez projektů) v panelu tasků na levo. Chat UI by mělo být plnohodnoté UI.
+- [x] Chat UI - momentálně vidím jen běžící tasky ale měl bych vidět všechny tasky ve vybraném projektu (nebo bez projektů) v panelu tasků na levo. Chat UI by mělo být plnohodnoté UI. — fáze 57 (ChatRunningTasks→ChatTasksPanel: všechny tasky ve scope, live seřazené první přes RUN_STATUS_GROUPS)
 
 - [ ] Chat UI - musím být schopný přes cmd-k zkratku si zobrazit detail vybraného výsledku v dialogu a né ho jen přidat do kontextu inputu dole (tohle chování je duplicitní s inline searchem komponenty CommandLine)
