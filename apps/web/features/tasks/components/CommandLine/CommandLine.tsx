@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Container,
   DropDownButton,
   type DropDownButtonItem,
@@ -53,13 +52,27 @@ export enum CommandLineTestId {
   MentionMenu = "command-line-mention-menu",
   MentionItem = "command-line-mention-item",
   MentionEmpty = "command-line-mention-empty",
-  TargetChip = "command-line-target-chip",
   Box = "command-line-box",
   DropOverlay = "command-line-drop-overlay",
   Suggestion = "command-line-suggestion",
   AckRow = "command-line-ack-row",
   AckDismiss = "command-line-ack-dismiss",
   Send = "command-line-send",
+  /** One compact attached-file tile — suffixed `-${file.name}` so a test can
+   *  scope into a SPECIFIC file's remove button among several tiles. */
+  FileTile = "command-line-file-tile",
+  /**
+   * @deprecated Phase 59 removed the top target chip — the picked `@Name`
+   * inline in the text is now the only trace of `target`. Kept as a value
+   * (never rendered by this component any more) purely so out-of-scope
+   * consumers of this identifier — `ChatScreen.test.tsx` and
+   * `NewTaskDialog.test.tsx`, both outside this phase's edit scope — keep
+   * compiling; `queryByTestId(TargetChip)` there correctly resolves to
+   * "not in the document". Two `getByTestId(TargetChip)` assertions in
+   * `NewTaskDialog.test.tsx` (expecting it to render) will still fail at
+   * runtime and need updating in a follow-up.
+   */
+  TargetChip = "command-line-target-chip",
 }
 
 export interface CommandLineProps {
@@ -243,6 +256,19 @@ function mentionRanges(
   return ranges;
 }
 
+/** True when a `@token` case-insensitive match for `name` still appears in
+ * `text` — the exact "present in text" rule {@link mentionRanges} uses for the
+ * inline highlight, reused so a picked `target` is reconciled against the SAME
+ * definition of "still referenced" (see the target-clearing effect in
+ * `handleChange`). */
+function hasMentionFor(text: string, name: string): boolean {
+  const needle = name.toLowerCase();
+  for (const match of text.matchAll(MENTION_RE)) {
+    if (match[0].slice(1).toLowerCase() === needle) return true;
+  }
+  return false;
+}
+
 function noop() {
   /* no-op default for CommandLine's onClose */
 }
@@ -336,6 +362,10 @@ const MENTION_MAX_WIDTH = 320;
 /** Bottom padding reserved on the textarea so the caret/text never slides under the
  *  overlaid controls, plus the inset the controls keep from the input's edges. */
 const CONTROLS_RESERVED_BOTTOM = "2.75rem";
+/** Same reservation, grown to also fit one wrapped row of attached-file tiles
+ *  (rendered just above the controls — see the file-tile row below) so text
+ *  never slides under THEM either. */
+const CONTROLS_RESERVED_BOTTOM_WITH_FILES = "6.5rem";
 const CONTROLS_INSET = "8px";
 
 /**
@@ -386,7 +416,17 @@ export function CommandLine({
   // action instead of the schedule split-button.
   const sendMode = onSubmit !== undefined;
 
-  const [text, setText] = useState(initialText ?? "");
+  // A pre-assigned `initialTarget` seeds an inline `@Name ` into the text (exactly
+  // like `injectedTarget` and an in-picker pick do) so the target has a VISIBLE
+  // inline representation now that the top chip is gone (Phase 59, item 2) — and so
+  // the `handleChange` reconciliation (which clears a target whose `@Name` no longer
+  // appears in the text) doesn't nuke it the moment the operator types.
+  const [text, setText] = useState(() => {
+    const base = initialText ?? "";
+    if (!initialTarget) return base;
+    const mention = `@${initialTarget.name} `;
+    return base.length > 0 ? `${mention}${base}` : mention;
+  });
   const [target, setTarget] = useState<TaskTarget | undefined>(initialTarget);
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -653,6 +693,14 @@ export function CommandLine({
     setText(nextValue);
     onTextChange?.(nextValue);
     notifyDraftChange(nextValue);
+    // The top target chip is gone (Phase 59) — the picked `@Name` inline IS the
+    // only trace of `target`, so editing it out of the text is now the only way
+    // to clear it. Reconcile on every change rather than sticking with a stale
+    // target once its mention is deleted.
+    if (target && !hasMentionFor(nextValue, target.name)) {
+      setTarget(undefined);
+      onTargetChange?.(undefined);
+    }
     syncMention(e.target);
   }
 
@@ -727,12 +775,6 @@ export function CommandLine({
     closeMention();
   }
 
-  function clearTarget() {
-    setTarget(undefined);
-    onTargetChange?.(undefined);
-    textareaRef.current?.focus();
-  }
-
   async function uploadFiles(files: File[]) {
     if (files.length === 0) return;
     setAttachError(null);
@@ -767,8 +809,13 @@ export function CommandLine({
     void uploadFiles(Array.from(e.dataTransfer.files ?? []));
   }
 
-  function handleRemoveAttachments() {
-    const next: TaskAttachmentSet = { files: [] };
+  /** Removes ONE attached file by name — each compact tile owns its own remove
+   *  button now (Phase 59), rather than the old single control that cleared the
+   *  whole set. Dropping the last file also drops the now-meaningless
+   *  `attachmentSetId`, mirroring the prior "clear all" behaviour. */
+  function handleRemoveFile(name: string) {
+    const files = attachments.files.filter((f) => f.name !== name);
+    const next: TaskAttachmentSet = files.length > 0 ? { ...attachments, files } : { files: [] };
     setAttachments(next);
     onAttachmentsChange?.(next);
   }
@@ -778,8 +825,11 @@ export function CommandLine({
   }
 
   // The inline dropdown's rows — agents then pipelines, filtered live by the
-  // in-progress query, capped to a handful so the "plachta" never grows past a
-  // glance (ported from the velin-b reference's `mentionResults`).
+  // in-progress query. Capped only as a runaway guard (50) — a real catalog
+  // easily exceeds the old 6-row cap, and MenuSurface's own `scroll` +
+  // `maxHeight` clamp (see `mentionMenuStyle`) is what keeps the panel itself
+  // from growing past the viewport, so the list is scrollable rather than cut
+  // off (ported from the velin-b reference's `mentionResults`).
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
     const agentHits: MentionResult[] = agents
@@ -798,7 +848,7 @@ export function CommandLine({
         name: p.name,
         glyph: "flow" as IconName,
       }));
-    return [...agentHits, ...pipelineHits].slice(0, 6);
+    return [...agentHits, ...pipelineHits].slice(0, 50);
   }, [mention, agents, pipelines]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
@@ -915,10 +965,45 @@ export function CommandLine({
           ref={textareaRef}
           rows={computeRows(text, rows, maxRows)}
           // Reserve a bottom strip so the caret/text never slides under the overlaid
-          // controls (a DS style passthrough for the genuinely-layout value).
-          style={{ paddingBottom: CONTROLS_RESERVED_BOTTOM }}
+          // controls — grown when files are attached to also clear their tile row
+          // (a DS style passthrough for the genuinely-layout value).
+          style={{
+            paddingBottom:
+              attachments.files.length > 0
+                ? CONTROLS_RESERVED_BOTTOM_WITH_FILES
+                : CONTROLS_RESERVED_BOTTOM,
+          }}
           value={text}
         />
+
+        {/* Attached files — a wrapping row of compact tiles sitting INSIDE the input,
+            just above the attach button (never the old full-width stack below the box). */}
+        {attachments.files.length > 0 && (
+          <Container
+            bottom={CONTROLS_RESERVED_BOTTOM}
+            left={CONTROLS_INSET}
+            position="absolute"
+            right={CONTROLS_INSET}
+            zIndex={10}
+          >
+            <Stack wrap direction="row" gap="50">
+              {attachments.files.map((file) => (
+                <Container
+                  data-testid={`${CommandLineTestId.FileTile}-${file.name}`}
+                  key={file.name}
+                  maxWidth="12rem"
+                >
+                  <FilePreview
+                    mediaType={file.mediaType}
+                    name={file.name}
+                    onRemove={() => handleRemoveFile(file.name)}
+                    size={file.size}
+                  />
+                </Container>
+              ))}
+            </Stack>
+          </Container>
+        )}
 
         {/* Attach — pinned bottom-left INSIDE the input, over the reserved strip. */}
         {showAttach && (
@@ -1071,20 +1156,6 @@ export function CommandLine({
 
   return (
     <Stack data-testid={CommandLineTestId.Root} direction="col" gap="150">
-      {target && (
-        <Stack align="center" direction="row" gap="75">
-          <Chip
-            closable
-            closeLabel={tMention("removeAria")}
-            data-testid={CommandLineTestId.TargetChip}
-            onClose={clearTarget}
-            tone="accent"
-          >
-            {target.name}
-          </Chip>
-        </Stack>
-      )}
-
       {chrome ? (
         <Panel
           elevated
@@ -1115,7 +1186,7 @@ export function CommandLine({
         </>
       )}
 
-      {(attachments.files.length > 0 || upload.isPending || attachError) && (
+      {(upload.isPending || attachError) && (
         <Stack gap="50">
           {upload.isPending && (
             <Typography size="xs" type="note" variant="tertiary">
@@ -1127,15 +1198,6 @@ export function CommandLine({
               {attachError}
             </Typography>
           )}
-          {attachments.files.map((file) => (
-            <FilePreview
-              key={file.name}
-              mediaType={file.mediaType}
-              name={file.name}
-              onRemove={handleRemoveAttachments}
-              size={file.size}
-            />
-          ))}
         </Stack>
       )}
     </Stack>

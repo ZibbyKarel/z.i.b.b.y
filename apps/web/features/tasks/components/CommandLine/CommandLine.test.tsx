@@ -1,14 +1,19 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  ChipTestId,
   DropDownButtonTestId,
   FilePreviewTestId,
   HighlightTextAreaFieldTestId,
   PanelTestId,
   SearchMenuTestId,
 } from "@zibby/design-system";
-import { fireEvent, renderWithProviders as render, screen, waitFor } from "../../../../test/render";
+import {
+  fireEvent,
+  renderWithProviders as render,
+  screen,
+  waitFor,
+  within,
+} from "../../../../test/render";
 import { CommandLine, CommandLineTestId } from "./CommandLine";
 
 /**
@@ -183,7 +188,7 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
   });
 
   describe("@ mention picker — Phase 45: a caret-anchored INLINE dropdown, never a separate search box", () => {
-    it("opens inline on '@', filters live as the query is typed in the SAME field, and assigns the picked target as a chip", async () => {
+    it("opens inline on '@', filters live as the query is typed in the SAME field, and assigns the picked target as the highlighted inline @Name (no top chip)", async () => {
       const onTargetChange = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine onTargetChange={onTargetChange} />);
@@ -204,8 +209,12 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
 
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
 
-      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
+      // Phase 59: no top target chip any more — the picked `@Name` inline,
+      // highlighted, is the only visible trace of the assigned target.
+      expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
       expect(input).toHaveValue("@Builder ");
+      const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+      expect(marks.find((m) => m.textContent === "@Builder")).toHaveClass("bg-accent/[0.14]");
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
       expect(onTargetChange).toHaveBeenLastCalledWith({
         kind: "agent",
@@ -227,7 +236,6 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
 
       expect(input).toHaveFocus();
       expect(input).toHaveValue("@Kodér ");
-      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Kodér");
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
     });
 
@@ -266,22 +274,41 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       });
     });
 
-    it("removing the chip clears the target", async () => {
+    it("keeps the target while the @Name mention stays in the text, unaffected by trailing edits", async () => {
       const onTargetChange = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine onTargetChange={onTargetChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@Bui");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      onTargetChange.mockClear();
 
-      await user.click(screen.getByTestId(ChipTestId.Close));
+      await user.type(input, "prosím zkontroluj to");
+
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("deleting the @Name out of the text clears the target — there is no chip left to click", async () => {
+      const onTargetChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onTargetChange={onTargetChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      expect(onTargetChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: "builder", name: "Builder" }),
+      );
       expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
+
+      await user.clear(input);
+
+      expect(input).toHaveValue("");
       expect(onTargetChange).toHaveBeenLastCalledWith(undefined);
     });
   });
 
   describe("attachments", () => {
-    it("uploads a file picked via the + button and shows it as a FilePreview chip", async () => {
+    it("uploads a file picked via the + button and shows it as a compact tile inside the box", async () => {
       const onAttachmentsChange = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine onAttachmentsChange={onAttachmentsChange} />);
@@ -292,6 +319,11 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       await waitFor(() => {
         expect(screen.getByTestId(FilePreviewTestId.Name)).toHaveTextContent("a.txt");
       });
+      // Phase 59: the tile lives INSIDE the box (never the old full-width stack
+      // below it), as a compact, name+size tile.
+      const tile = screen.getByTestId(`${CommandLineTestId.FileTile}-a.txt`);
+      expect(screen.getByTestId(CommandLineTestId.Box).contains(tile)).toBe(true);
+      expect(within(tile).getByTestId(FilePreviewTestId.Size)).toHaveTextContent("2 B");
       expect(onAttachmentsChange).toHaveBeenCalledWith({
         attachmentSetId: "set_1",
         files: [{ name: "a.txt", size: 2 }],
@@ -312,6 +344,50 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
         expect.objectContaining({ body: expect.objectContaining({ attachmentSetId: "set_1" }) }),
         expect.anything(),
       );
+    });
+
+    it("removes a single file via its own tile's remove button, leaving the rest attached", async () => {
+      uploadMutateAsync.mockResolvedValueOnce({
+        attachmentSetId: "set_2",
+        files: [
+          { name: "a.txt", size: 2 },
+          { name: "b.txt", size: 2048 },
+        ],
+      });
+      const onAttachmentsChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onAttachmentsChange={onAttachmentsChange} />);
+
+      const files = [
+        new File(["hi"], "a.txt", { type: "text/plain" }),
+        new File(["ho"], "b.txt", { type: "text/plain" }),
+      ];
+      await user.upload(screen.getByTestId(CommandLineTestId.FileInput), files);
+
+      const tileA = await screen.findByTestId(`${CommandLineTestId.FileTile}-a.txt`);
+      const tileB = screen.getByTestId(`${CommandLineTestId.FileTile}-b.txt`);
+      expect(within(tileB).getByTestId(FilePreviewTestId.Size)).toHaveTextContent("2 KB");
+
+      await user.click(within(tileB).getByTestId(FilePreviewTestId.Remove));
+
+      expect(onAttachmentsChange).toHaveBeenLastCalledWith({
+        attachmentSetId: "set_2",
+        files: [{ name: "a.txt", size: 2 }],
+      });
+      expect(screen.queryByTestId(`${CommandLineTestId.FileTile}-b.txt`)).not.toBeInTheDocument();
+      expect(tileA).toBeInTheDocument();
+    });
+
+    it("surfaces an upload error message without blocking the rest of the composer", async () => {
+      uploadMutateAsync.mockRejectedValueOnce(new Error("nope"));
+      const user = userEvent.setup();
+      render(<CommandLine />);
+
+      const file = new File(["hi"], "bad.txt", { type: "text/plain" });
+      await user.upload(screen.getByTestId(CommandLineTestId.FileInput), file);
+
+      expect(await screen.findByText("Nahrání selhalo")).toBeInTheDocument();
+      expect(screen.queryByTestId(`${CommandLineTestId.FileTile}-bad.txt`)).not.toBeInTheDocument();
     });
   });
 
@@ -520,7 +596,6 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       );
       expect(createTask).not.toHaveBeenCalled();
       expect(input).toHaveValue("");
-      expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
     });
 
     it("renders a plain Send action instead of the run split-button, and Send dispatches via onSubmit", async () => {
@@ -544,7 +619,7 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(screen.getByTestId(CommandLineTestId.Send)).toBeDisabled();
     });
 
-    it("applies an externally injected target (the chat quick-switcher palette) into the text and chip, then reports it consumed", () => {
+    it("applies an externally injected target (the chat quick-switcher palette) into the text, then reports it consumed", () => {
       const onInjectedTargetConsumed = vi.fn();
       const target = { kind: "agent", id: "builder", name: "Builder", glyph: "bot" } as const;
       const { rerender } = render(
@@ -558,7 +633,6 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
         />,
       );
 
-      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
       expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("@Builder ");
       expect(onInjectedTargetConsumed).toHaveBeenCalledTimes(1);
     });
@@ -605,13 +679,12 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(screen.getByTestId(CommandLineTestId.Box).contains(menu)).toBe(false);
     });
 
-    it("still picks a portaled result on click, assigning the target chip", async () => {
+    it("still picks a portaled result on click, assigning the target via the inline @Name", async () => {
       const user = userEvent.setup();
       render(<CommandLine />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@Bui");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
-      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
       expect(input).toHaveValue("@Builder ");
     });
 

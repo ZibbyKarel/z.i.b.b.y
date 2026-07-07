@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ChipTestId, DropDownButtonTestId, FilePreviewTestId } from "@zibby/design-system";
+import { DropDownButtonTestId, FilePreviewTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen, waitFor } from "../../../test/render";
 import { CommandLineTestId } from "./CommandLine/CommandLine";
 import { NewTaskDialog } from "./NewTaskDialog";
@@ -383,7 +383,11 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(await screen.findByText(/nízká jistota/)).toBeInTheDocument();
 
     await pickMention(user, "Kod", "agent-koder");
-    expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Kodér");
+    // Phase 59 (item 2): no top chip any more — the picked target is represented by
+    // the highlighted inline `@Name` in the input itself.
+    expect(screen.getByTestId<HTMLTextAreaElement>(CommandLineTestId.Input).value).toContain(
+      "@Kodér",
+    );
 
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
@@ -472,9 +476,11 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
       />,
     );
     // It's the standard composer (not a locked mode) with the pipeline pre-assigned: the
-    // CommandLine target chip already shows it.
+    // CommandLine seeds the target as an inline `@Delivery` mention (no top chip — Phase 59).
     expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
-    expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Delivery");
+    expect(screen.getByTestId<HTMLTextAreaElement>(CommandLineTestId.Input).value).toContain(
+      "@Delivery",
+    );
 
     await user.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
     // Classification still runs (the normal flow, debounced) — it populates the preview.
@@ -503,9 +509,10 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     );
     await user.type(screen.getByLabelText(/Zadání/), " spusť delivery pipelinu");
 
-    // Clear the pre-assigned pipeline, then @-mention the agent instead — the pre-fill
-    // is changeable, not a lock.
-    await user.click(screen.getByTestId(ChipTestId.Close));
+    // Clear the pre-assigned pipeline by removing its inline `@Delivery` mention (the
+    // top chip is gone — Phase 59), then @-mention the agent instead — the pre-fill is
+    // changeable, not a lock. Clearing the text drops the reconciled target.
+    await user.clear(screen.getByTestId(CommandLineTestId.Input));
     await pickMention(user, "Kod", "agent-koder");
 
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
