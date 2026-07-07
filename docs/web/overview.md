@@ -112,6 +112,16 @@ Client component (`"use client"`):
   (`ChatButton`), `taskSlot` (`NewTaskButton`), `projectSlot`
   (`ProjectSwitcher` — the one app-wide project switcher, top bar next to the
   breadcrumb on every screen), and `walletSlot` (`LimitsRings`) slots
+- **Phase 27:** on `/chat` (and any `/chat/*` sub-path), `AppShellInner`
+  bypasses `MainLayout` entirely and renders `children` fullscreen in a
+  `Container` sized to the viewport (`height="100dvh"`) — no nav rail, top bar,
+  or right rail. Chat is a coequal, parallel UI to the HUD, not a screen nested
+  inside it; the check sits above the nav-item/notification computation so
+  those HUD-only hooks don't fire on `/chat`. The provider stack (in
+  particular `ChatProvider`) still mounts around it, so the conversation
+  persists across HUD ⇄ chat navigation. `ChatScreen`'s own top bar (palette,
+  activity panel, new-chat, **Close → `/overview`**) is the chat surface's own
+  chrome and the way back to the HUD, alongside ⌘/Ctrl+J.
 
 The Voice UI (JARVIS-style takeover, speech-to-text input, TTS read-back) was
 removed in favor of a chat-first interface (`features/chat`); there is no
