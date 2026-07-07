@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Card, Container, Icon, IconTile, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
@@ -13,7 +13,6 @@ export enum ChatMessageTestId {
   UserBubble = "chat-message-user",
   AssistantBubble = "chat-message-assistant",
   Text = "chat-message-text",
-  AssistantIdentity = "chat-message-assistant-identity",
   ToolEvent = "chat-message-tool-event",
   ToolEventLink = "chat-message-tool-event-link",
   StreamingCursor = "chat-message-streaming-cursor",
@@ -76,6 +75,11 @@ function ToolEventRow({ event }: { event: ChatToolEvent }) {
  * assistant turns sit to the left, render their (possibly streaming) text and any
  * inline tool-dispatch announcements with a link into the app. While `streaming`,
  * a trailing cursor signals tokens are still arriving.
+ *
+ * Phase 33 dropped the per-message "Zibby" name + bowler-hat header — role is
+ * read from the bubble's background tone instead (accent-tinted for the
+ * assistant, the plain raised surface for the operator), so nothing repeats
+ * per turn.
  */
 export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessageProps) {
   const t = useTranslations("chat");
@@ -88,16 +92,8 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
       direction="col"
       gap="75"
     >
-      {!isUser && (
-        <Stack align="center" data-testid={ChatMessageTestId.AssistantIdentity} direction="row" gap="50">
-          <IconTile glyph="butlerSign" size="sm" tone="accent" />
-          <Typography mono size="xs" tone="accent" type="note">
-            ZIBBY
-          </Typography>
-        </Stack>
-      )}
       <Card
-        background={isUser ? "raised" : "surface"}
+        background={isUser ? "raised" : "accent"}
         data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
         radius="lg"
       >

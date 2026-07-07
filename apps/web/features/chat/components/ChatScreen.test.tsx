@@ -61,6 +61,16 @@ vi.mock("../../overview/queries/useActivityQuery", () => ({
   useActivityQuery: () => ({ data: [], isPending: false }),
   getActivityQueryKey: () => ["activity", "today"],
 }));
+// The top-bar `ProjectSwitcher` (Phase 33) reads the app-wide project registry
+// and the active-project scope — stub both the same way `NewTaskDialog.test.tsx`
+// does, since this suite never mounts the real `ProjectProvider`.
+vi.mock("../../projects/queries/useProjectsQuery", () => ({
+  useProjectsQuery: () => ({ data: [{ id: "alpha", name: "Alpha" }] }),
+  getProjectsQueryKey: () => ["projects"],
+}));
+vi.mock("../../projects/context/ProjectProvider", () => ({
+  useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
+}));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // `ChatScreen` reads `usePipelineRunQuery` (the same aggregate `ChatRunCard` polls,

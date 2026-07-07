@@ -58,7 +58,7 @@ export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
 }
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  background?: "elevated" | "raised" | "surface" | "panel" | "glass" | "background";
+  background?: "elevated" | "raised" | "surface" | "panel" | "glass" | "background" | "accent";
   bordered?: boolean;
   borderStyle?: "solid" | "dashed";
   /** One step above surface — elevated background, strong border, elevation shadow.
@@ -104,6 +104,9 @@ const bgClasses: Record<NonNullable<CardProps["background"]>, string> = {
   panel: "bg-surface-panel",
   glass: "bg-surface-glass",
   background: "bg-background",
+  /** A faint accent-tinted surface (Phase 33's Chat message backgrounds) —
+   *  distinguishes a role/state at a glance without a border or glow. */
+  accent: "bg-accent-dim",
 };
 
 const radiusClasses: Record<NonNullable<CardProps["radius"]>, string> = {

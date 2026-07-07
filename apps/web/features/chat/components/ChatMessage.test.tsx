@@ -24,12 +24,17 @@ describe("ChatMessage", () => {
     expect(screen.getByTestId(ChatMessageTestId.AssistantBubble)).toBeInTheDocument();
   });
 
-  it("shows the ZIBBY identity on assistant turns but not on the operator's own turn", () => {
-    const { rerender } = renderWithProviders(<ChatMessage role="assistant" text="Ahoj!" />);
-    expect(screen.getByTestId(ChatMessageTestId.AssistantIdentity)).toHaveTextContent("ZIBBY");
+  it("distinguishes assistant vs user turns by background tone, with no repeated author header (Phase 33)", () => {
+    renderWithProviders(<ChatMessage role="assistant" text="Ahoj!" />);
+    expect(screen.getByTestId(ChatMessageTestId.AssistantBubble).className).toContain(
+      "bg-accent-dim",
+    );
+    // The old per-message "ZIBBY" name + bowler-hat header is gone — role now
+    // reads from the bubble's background alone.
+    expect(screen.queryByText("ZIBBY")).not.toBeInTheDocument();
 
-    rerender(<ChatMessage role="user" text="Ahoj" />);
-    expect(screen.queryByTestId(ChatMessageTestId.AssistantIdentity)).not.toBeInTheDocument();
+    renderWithProviders(<ChatMessage role="user" text="Ahoj" />);
+    expect(screen.getByTestId(ChatMessageTestId.UserBubble).className).toContain("bg-raised");
   });
 
   it("shows the streaming cursor only while streaming", () => {

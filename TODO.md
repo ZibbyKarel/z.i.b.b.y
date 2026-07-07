@@ -48,8 +48,14 @@
 
 - [ ] editační dialog pro pipeline mi přijde zbytečný. Můžeme ho zrušit a jeho obsah zobrazit v rámci detail view pipeliny (jen sidepanel s agenty zrušíme a zobrazíme ho jen když uživatel klikne na nové tlačítko + se záměrem přidat agenta. Po přidání agenta se side panel zase zavře případně bude mít uživatel možnost zavřít ho manuálně )
 
-- [ ] v chat ui mi chybí přepínátko projektů - dejme do topbaru
+- [x] v chat ui mi chybí přepínátko projektů - dejme do topbaru — fáze 33
 
 - [ ] máme moc logů Overview - Nedávná aktivita, pravý side panel v HUD ui a Aktivita panel v Chat UI. chce to sjednotit a nechat na jednom místě
 
-- [ ] chat ui - místo psaní "Zibby" s buřinkou nad každou zprávou, kterou ZIBBY psal jen barevně oddělíme pozadí zpráv
+- [x] chat ui - místo psaní "Zibby" s buřinkou nad každou zprávou, kterou ZIBBY psal jen barevně oddělíme pozadí zpráv — fáze 33
+
+- [ ] chat ui - musíme nějak vizuálně odlišit agenty a pipeliny, které jsou na orbitě. Pipeliny by měly být určitě výraznější než agenti.
+
+- [ ] k chat UI musíme vytvořit storybook. Rád bych viděl všechny možné stavy "pozadí" chatu
+
+- [ ] stránka běhy a aktivita hlavně pak log fází běhu pipeline nevypadá jako v designu (stránka "Tasky" v designu). Pořádně to předělej podle designu.
