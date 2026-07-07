@@ -1054,6 +1054,7 @@
       "pipeline": "pipeline"
     },
     "goalOpenLog": "log",
+    "togglePhaseLog": "zobrazit nebo skrýt log této fáze",
     "goalMakerLog": "log makera",
     "goalVerifierLog": "log verifieru",
     "goalVerifierVerdict": "verdikt",

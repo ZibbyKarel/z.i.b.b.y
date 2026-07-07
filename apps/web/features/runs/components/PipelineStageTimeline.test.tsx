@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { IconTileTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
-import { PipelineStageTimeline } from "./PipelineStageTimeline";
+import { PipelineStageTimeline, PipelineStageTimelineTestId } from "./PipelineStageTimeline";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -56,7 +56,9 @@ const timeline = (
   />
 );
 
-const logToggles = () => screen.getAllByRole("button", { name: /^log$/i });
+// The whole phase-row header is the log toggle now (Phase 46) — select it by its
+// stable testid, not the removed "log" button label.
+const logToggles = () => screen.getAllByTestId(PipelineStageTimelineTestId.RowToggle);
 
 /** A 3-phase pipeline definition — "verify" is the qualify gate that loops back to
  * "koder" (mirrors the delivery loop: Kodér ⇄ Code-Review ⇄ Tester). */
@@ -123,6 +125,36 @@ describe("PipelineStageTimeline (36)", () => {
     expect(stageLogMock).toHaveBeenCalledWith("delivery_1", "build");
     expect(stageStreamMock).not.toHaveBeenCalled();
     expect(screen.getByText("LOG for build")).toBeInTheDocument();
+  });
+
+  it("has no standalone 'log' button — the whole phase-row header is the toggle", () => {
+    render(timeline());
+    expect(screen.queryByRole("button", { name: /^log$/i })).not.toBeInTheDocument();
+    // Each real phase row exposes a labeled toggle (Law 4) — a real button.
+    const [first] = logToggles();
+    expect(first).toHaveRole("button");
+    expect(first).toHaveAccessibleName();
+    expect(first).toHaveAttribute("aria-controls");
+  });
+
+  it("reflects open/closed state on the row toggle via aria-expanded", async () => {
+    render(timeline());
+    const [first] = logToggles();
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(first!);
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(first!);
+    expect(first).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("toggles the log from the keyboard — Tab to the row, Enter opens it", async () => {
+    render(timeline());
+    const [first] = logToggles();
+    first!.focus();
+    expect(first).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByText("LOG for build")).toBeInTheDocument();
+    expect(first).toHaveAttribute("aria-expanded", "true");
   });
 
   it("shows the running phase as a live row and tails it over SSE without a click", () => {

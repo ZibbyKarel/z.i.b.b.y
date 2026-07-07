@@ -1054,6 +1054,7 @@
       "pipeline": "pipeline"
     },
     "goalOpenLog": "log",
+    "togglePhaseLog": "show or hide this phase's log",
     "goalMakerLog": "maker log",
     "goalVerifierLog": "verifier log",
     "goalVerifierVerdict": "verdict",

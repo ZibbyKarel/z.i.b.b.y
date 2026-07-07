@@ -9,10 +9,12 @@ import {
   Icon,
   type IconName,
   IconTile,
+  Pressable,
   Stack,
   StatusDot,
   Tag,
   Typography,
+  cn,
   stateToneVar,
 } from "@zibby/design-system";
 import { useAgentsQuery } from "../../agents";
@@ -45,6 +47,7 @@ export interface PipelineStageTimelineProps {
 export enum PipelineStageTimelineTestId {
   Root = "pipeline-stage-timeline",
   Connector = "pipeline-stage-connector",
+  RowToggle = "pipeline-stage-row-toggle",
 }
 
 type StageRunEntry = NonNullable<RunView["stageRuns"]>[number];
@@ -377,6 +380,7 @@ export function PipelineStageTimeline({
             const hasLog = !isPlaceholder;
             const key = node.main ? `${node.phaseId}#${node.main.attempt}` : node.phaseId;
             const isOpen = hasLog && openKey === key;
+            const logId = `stage-log-${key.replace("#", "-")}`;
 
             const produced =
               displayStatus === "done" && phaseDef?.type !== "verify"
@@ -407,55 +411,82 @@ export function PipelineStageTimeline({
 
                 <Container grow minW0 style={{ paddingBottom: isLastNode ? "0" : "1.5rem" }}>
                   <Stack gap="50">
-                    <Stack align="center" direction="row" gap="100" justify="between">
-                      <Container grow minW0>
-                        <Stack align="center" direction="row" gap="100">
-                          <IconTile
-                            glyph={glyph}
-                            size="sm"
-                            src={agent?.avatar}
-                            style={
-                              running ? { boxShadow: `0 0 0 1px ${stateToneVar.run}` } : undefined
-                            }
-                            tone="accent"
-                          />
-                          <Typography mono truncate size="sm" type="note" weight="semibold">
-                            {agentName}
-                          </Typography>
+                    {(() => {
+                      const header = (
+                        <Stack align="center" direction="row" gap="100" justify="between">
+                          <Container grow minW0>
+                            <Stack align="center" direction="row" gap="100">
+                              <IconTile
+                                glyph={glyph}
+                                size="sm"
+                                src={agent?.avatar}
+                                style={
+                                  running
+                                    ? { boxShadow: `0 0 0 1px ${stateToneVar.run}` }
+                                    : undefined
+                                }
+                                tone="accent"
+                              />
+                              <Typography mono truncate size="sm" type="note" weight="semibold">
+                                {agentName}
+                              </Typography>
+                            </Stack>
+                          </Container>
+                          <Stack align="center" direction="row" gap="100" shrink={false}>
+                            {totalCost != null && (
+                              <Typography mono size="2xs" type="note" variant="tertiary">
+                                {formatCostUsd(totalCost)}
+                              </Typography>
+                            )}
+                            {node.main?.verdict && (
+                              <Tag
+                                data-testid={`stage-verdict-${node.main.verdict}`}
+                                size="sm"
+                                tone={node.main.verdict === "pass" ? "ok" : "warn"}
+                              >
+                                {t(`verdict.${node.main.verdict}`)}
+                              </Tag>
+                            )}
+                            <RunStateBadge
+                              canonTitle={isPlaceholder ? undefined : displayStatus}
+                              label={
+                                isPlaceholder ? t("stageWaitingLabel") : t(`state.${displayStatus}`)
+                              }
+                              status={displayStatus}
+                            />
+                            {hasLog && (
+                              <Icon
+                                className={cn(
+                                  "transition-transform duration-150",
+                                  isOpen && "rotate-90",
+                                )}
+                                name="chevron"
+                                size="xs"
+                                tone="faint"
+                              />
+                            )}
+                          </Stack>
                         </Stack>
-                      </Container>
-                      <Stack align="center" direction="row" gap="100" shrink={false}>
-                        {totalCost != null && (
-                          <Typography mono size="2xs" type="note" variant="tertiary">
-                            {formatCostUsd(totalCost)}
-                          </Typography>
-                        )}
-                        {node.main?.verdict && (
-                          <Tag
-                            data-testid={`stage-verdict-${node.main.verdict}`}
-                            size="sm"
-                            tone={node.main.verdict === "pass" ? "ok" : "warn"}
-                          >
-                            {t(`verdict.${node.main.verdict}`)}
-                          </Tag>
-                        )}
-                        <RunStateBadge
-                          canonTitle={isPlaceholder ? undefined : displayStatus}
-                          label={isPlaceholder ? t("stageWaitingLabel") : t(`state.${displayStatus}`)}
-                          status={displayStatus}
-                        />
-                        {hasLog && (
-                          <Button
-                            icon="code"
-                            intent="ghost"
-                            onClick={() => setOpenLog(isOpen ? "" : key)}
-                            size="sm"
-                          >
-                            {t("goalOpenLog")}
-                          </Button>
-                        )}
-                      </Stack>
-                    </Stack>
+                      );
+                      // The whole phase-row header is the accordion toggle — Law 4: it's a
+                      // labeled button (aria-label/expanded/controls) with a focus-visible
+                      // ring, so the log opens on a click or keyboard Enter anywhere on the
+                      // row. A placeholder phase has no log, so it stays a plain, inert row.
+                      return hasLog ? (
+                        <Pressable
+                          aria-controls={logId}
+                          aria-expanded={isOpen}
+                          aria-label={t("togglePhaseLog")}
+                          data-testid={PipelineStageTimelineTestId.RowToggle}
+                          onClick={() => setOpenLog(isOpen ? "" : key)}
+                          style={{ display: "block", width: "100%" }}
+                        >
+                          {header}
+                        </Pressable>
+                      ) : (
+                        header
+                      );
+                    })()}
 
                     {produced && (
                       <Stack align="center" direction="row" gap="75">
@@ -482,11 +513,13 @@ export function PipelineStageTimeline({
                     )}
 
                     {isOpen && node.main && (
-                      <StageLog
-                        live={node.main.status === "running"}
-                        phaseId={node.phaseId}
-                        pipelineRunId={pipelineRunId}
-                      />
+                      <Container id={logId}>
+                        <StageLog
+                          live={node.main.status === "running"}
+                          phaseId={node.phaseId}
+                          pipelineRunId={pipelineRunId}
+                        />
+                      </Container>
                     )}
                   </Stack>
                 </Container>
