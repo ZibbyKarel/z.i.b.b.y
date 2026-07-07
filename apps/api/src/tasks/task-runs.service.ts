@@ -19,8 +19,9 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ChainRunnerService } from "../chains/chain-runner.service";
 import { ChainsStorageService } from "../chains/chains.storage.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
+import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import { GoalsStorageService } from "../goals/goals.storage.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { PipelineRunNotStoppableError, PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -33,10 +34,13 @@ export class TaskRunNotFoundError extends Error {
   }
 }
 
-/** The run's kind has no stop (only agent runs can be stopped). */
+/**
+ * The run isn't currently running (already terminal, parked, or paused-limit), or
+ * its kind has no stop at all (chain/scheduled own no single live process).
+ */
 export class TaskRunNotStoppableError extends Error {
   constructor(runId: string) {
-    super(`Task run "${runId}" cannot be stopped (only agent runs can)`);
+    super(`Task run "${runId}" cannot be stopped (not currently running)`);
     this.name = "TaskRunNotStoppableError";
   }
 }
@@ -149,11 +153,30 @@ export class TaskRunsService {
     return null;
   }
 
-  /** Stop a running agent run. Other kinds have no stop. */
+  /**
+   * Phase 43 — stop a running agent, pipeline, or goal run: resolve the owning
+   * runner and delegate to its own `stop`, which kills the live child through the
+   * shared RunnerCore process governance (pgid kill, `interrupted` landing). A
+   * chain/scheduled run (or a kind-specific run that isn't currently running) has
+   * no stop; its own runner's "not stoppable" error is normalized here to the
+   * unified {@link TaskRunNotStoppableError} the controller maps to a 409.
+   */
   async stop(runId: string): Promise<TaskRun> {
     const kind = await this.kindOf(runId);
-    if (kind !== "agent") throw new TaskRunNotStoppableError(runId);
-    this.agentRunner.stop(runId);
+    try {
+      if (kind === "agent") this.agentRunner.stop(runId);
+      else if (kind === "pipeline") await this.pipelineRunner.stop(runId);
+      else if (kind === "goal") await this.goalRunner.stop(runId);
+      else throw new TaskRunNotStoppableError(runId);
+    } catch (error) {
+      if (
+        error instanceof PipelineRunNotStoppableError ||
+        error instanceof GoalRunNotStoppableError
+      ) {
+        throw new TaskRunNotStoppableError(runId);
+      }
+      throw error;
+    }
     return this.getTaskRun(runId);
   }
 
@@ -396,7 +419,9 @@ function pipelineRunToView(r: PipelineRun, projectNames: ProjectNameMaps, pipeli
           ? "error"
           : r.status === "done"
             ? "done"
-            : "running";
+            : r.status === "interrupted"
+              ? "interrupted"
+              : "running";
   return {
     runId: r.pipelineRunId,
     kind: "pipeline",
@@ -430,7 +455,9 @@ function goalRunToView(r: GoalRun, projectNames: ProjectNameMaps): TaskRun {
           ? "error"
           : r.status === "done"
             ? "done"
-            : "running";
+            : r.status === "interrupted"
+              ? "interrupted"
+              : "running";
   return {
     runId: r.goalRunId,
     kind: "goal",

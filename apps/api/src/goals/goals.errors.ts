@@ -56,3 +56,15 @@ export class GoalRunNotParkedError extends Error {
     this.name = "GoalRunNotParkedError";
   }
 }
+
+/**
+ * Phase 43 — raised when {@link GoalRunnerService.stop} targets a run with no live
+ * maker to kill (already terminal, parked, paused-limit, or the current iteration
+ * has no dispatched maker yet) — controllers map it to a 409.
+ */
+export class GoalRunNotStoppableError extends Error {
+  constructor(id: string) {
+    super(`Goal run "${id}" is not running`);
+    this.name = "GoalRunNotStoppableError";
+  }
+}

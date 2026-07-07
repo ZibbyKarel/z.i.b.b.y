@@ -41,6 +41,19 @@ export function findSelectedRun(list: readonly RunView[], selId: string | null):
 }
 
 /**
+ * Kinds whose run owns a single live process the backend can actually kill (Phase
+ * 43 — `stopTaskRun` generalized past agent-only). A chain run orchestrates a
+ * sequence of pipeline runs with no process of its own, and a `scheduled` row has
+ * no run behind it yet — neither has anything to interrupt.
+ */
+const STOPPABLE_KINDS = new Set<RunKind>(["agent", "pipeline", "goal"]);
+
+/** Whether the Stop action applies to `run` at all — a stoppable kind, currently running. */
+export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
+  return run.status === "running" && STOPPABLE_KINDS.has(run.kind);
+}
+
+/**
  * Task-first display name: the explicit task title, else (for runs born from a
  * task) the task's own name, else the run's prompt, else the routed target id.
  * A pipeline run's `prompt` is the "fáze: X" progress string — a subtitle, never

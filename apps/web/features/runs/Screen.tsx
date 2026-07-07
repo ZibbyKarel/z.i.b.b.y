@@ -17,10 +17,10 @@ import { TaskCard } from "./components/TaskCard";
 import {
   useDeleteAgentRunMutation,
   useDeletePipelineRunMutation,
-  useStopAgentMutation,
+  useStopTaskRunMutation,
 } from "./mutations";
 import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
-import { type FeedStatus, type RunView, findSelectedRun, runGlyph } from "./run";
+import { type FeedStatus, type RunView, findSelectedRun, isStoppableRun, runGlyph } from "./run";
 
 // No synthetic "all" entry — an empty selection already reads as "every state"
 // (see `list` below), which is what the header segmented control's own "Vše"
@@ -104,7 +104,7 @@ export function Screen() {
   );
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
-  const stopAgent = useStopAgentMutation();
+  const stopRun = useStopTaskRunMutation();
 
   // Deleting a run erases its on-disk artifacts; clearing the selection first keeps
   // the detail pane from briefly pointing at a now-gone run before the refetch.
@@ -138,8 +138,8 @@ export function Screen() {
     return relative(r.startedAt, now, ago);
   };
 
-  const stop = (runId: string, kind: string) => {
-    if (kind === "agent") stopAgent.mutate({ params: { runId }, body: {} });
+  const stop = (run: RunView) => {
+    if (isStoppableRun(run)) stopRun.mutate({ params: { runId: run.runId }, body: {} });
   };
 
   const remove = (runId: string, kind: string) => {
@@ -260,9 +260,9 @@ export function Screen() {
                 key={selected.runId}
                 now={now}
                 onDelete={() => remove(selected.runId, selected.kind)}
-                onStop={() => stop(selected.runId, selected.kind)}
+                onStop={() => stop(selected)}
                 run={selected}
-                stopping={stopAgent.isPending}
+                stopping={stopRun.isPending}
               />
             ) : (
               <HudPanel padding="500">

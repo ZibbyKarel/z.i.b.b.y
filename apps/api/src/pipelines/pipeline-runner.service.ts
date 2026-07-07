@@ -81,6 +81,18 @@ export class RunNotRetriesParkedError extends Error {
 }
 
 /**
+ * Phase 43 — raised when {@link PipelineRunnerService.stop} targets a run with no
+ * live stage child to kill (already terminal, parked, or paused-limit) — controllers
+ * map it to a 409. Only a truly `running` run owns a process to interrupt.
+ */
+export class PipelineRunNotStoppableError extends Error {
+  constructor(id: string) {
+    super(`Pipeline run "${id}" is not running`);
+    this.name = "PipelineRunNotStoppableError";
+  }
+}
+
+/**
  * Runs a pipeline by chaining its phases through the shared {@link RunnerCore}: one
  * child process per phase (so each stage's log polls independently), handoff over
  * disk (phase N's `produces` is copied into phase N+1's `consumes`), and the
@@ -98,6 +110,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string;
   private readonly core: RunnerCore<PipelineStageRecord>;
   private readonly runs = new Map<string, PipelineRun>();
+  /**
+   * Phase 43 — pipeline run ids with an operator-requested stop in flight. Set by
+   * {@link stop} right before killing the live stage child; consumed (and cleared)
+   * by {@link drive} the moment that stage's `waitForStage` returns, so the loop
+   * lands the aggregate `interrupted` instead of taking its normal retry/park path.
+   */
+  private readonly stopRequested = new Set<string>();
   private readonly log: ScopedLogger;
   /**
    * Push channel for aggregate transitions. Unlike agent runs (whose lifecycle the
@@ -625,6 +644,29 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Phase 43 — stop a running pipeline run: kill its live stage child (reusing the
+   * same {@link RunnerCore.cancel} the agent stop already uses) and flag the run so
+   * `drive()` lands it `interrupted` on the kill's next turn, instead of retrying or
+   * parking. Only a run that is `running` with a live stage owns a process to kill —
+   * anything else (parked, paused-limit, already terminal) throws
+   * {@link PipelineRunNotStoppableError}. Fires the kill and returns immediately; the
+   * kill's exit reconciles asynchronously (mirrors the agent stop's own timing).
+   */
+  async stop(pipelineRunId: string): Promise<void> {
+    const run = this.runs.get(pipelineRunId);
+    if (!run || run.status !== "running" || !run.currentStageRunId) {
+      throw new PipelineRunNotStoppableError(pipelineRunId);
+    }
+    this.stopRequested.add(pipelineRunId);
+    try {
+      this.core.cancel(run.currentStageRunId);
+    } catch (error) {
+      this.stopRequested.delete(pipelineRunId);
+      throw error;
+    }
+  }
+
+  /**
    * Permanently delete a pipeline run. Each stage spawned through the core writes
    * its sidecar/log to the *runs dir root* (not the stage cwd), so removing the run
    * folder alone would orphan them — delete every stage's artifacts first, then the
@@ -851,6 +893,22 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // to be appended to `stageRuns` — its log is readable from there now, so drop
       // the live pointer the running attempt used.
       run.currentStageRunId = undefined;
+
+      // Phase 43: an operator-requested stop killed this stage's child — land the
+      // aggregate `interrupted` right here, before any retry/park/limit logic runs,
+      // so a stopped run never respawns a retry attempt or drops into a pause.
+      if (this.stopRequested.delete(run.pipelineRunId)) {
+        run.stageRuns.push(stageRun);
+        run.status = "interrupted";
+        run.currentStage = null;
+        await this.writeAggregate(run);
+        await this.writeProgress(run, phaseIds);
+        this.log.info("pipeline run stopped (operator)", {
+          phase: phase.id,
+          pipelineRunId: run.pipelineRunId,
+        });
+        return;
+      }
 
       // Phase 9 (mid-stage pause, decision 3a): the stage child died on a usage limit.
       // The aggregate pauses WITHOUT touching the retry map — loop budget and the

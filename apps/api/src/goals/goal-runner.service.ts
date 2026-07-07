@@ -20,11 +20,11 @@ import {
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { BudgetService } from "../budget/budget.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { PipelineRunNotStoppableError, PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { buildResumeContext } from "../pipelines/resume-context";
 import { buildVerifyCommand } from "../pipelines/verify-command";
-import { isAlive, killGroup } from "../runner/runner-core";
+import { RunNotFoundError, isAlive, killGroup } from "../runner/runner-core";
 import { prepareWorktreeDir } from "../shared/worktree-root";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
@@ -32,7 +32,11 @@ import { SystemConfigStore } from "../system/system-config.store";
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service";
 import { GoalsStorageService } from "./goals.storage.service";
 import { decideStop, renderGoalProgress } from "./goal-stop";
-import { GoalRunNotFoundError, GoalRunNotParkedError } from "./goals.errors";
+import {
+  GoalRunNotFoundError,
+  GoalRunNotParkedError,
+  GoalRunNotStoppableError,
+} from "./goals.errors";
 
 /** Max chars of a verifier's output captured into the verdict file / resume-context. */
 const VERDICT_MAX_CHARS = 4000;
@@ -146,6 +150,14 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly events = new EventEmitter();
   /** In-flight verifier shells (Phase 12.3) — tracked so `onModuleDestroy` reaps them. */
   private readonly liveShells = new Set<ChildProcess>();
+  /**
+   * Phase 43 — goal run ids with an operator-requested stop in flight. Set by
+   * {@link stop} right before killing the current iteration's live maker; consumed
+   * (and cleared) by {@link drive} the moment `waitForMaker` returns, so the loop
+   * lands the aggregate `interrupted` instead of running the verifier / deciding
+   * whether to continue.
+   */
+  private readonly stopRequested = new Set<string>();
   private readonly log: ScopedLogger;
 
   constructor(
@@ -370,6 +382,18 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
 
       const makerStatus = await this.waitForMaker(run, goal.maker.kind, makerRunRef);
       iteration.status = makerStatus;
+
+      // Phase 43: an operator-requested stop killed this iteration's maker — land
+      // the aggregate `interrupted` right here, before the verifier runs or
+      // `decideStop` picks a continuation, so a stopped goal never re-dispatches.
+      if (this.stopRequested.delete(run.goalRunId)) {
+        iteration.endedAt = new Date().toISOString();
+        run.status = "interrupted";
+        run.currentIteration = null;
+        await this.writeAggregate(run);
+        this.log.info("goal run stopped (operator)", { goalRunId: run.goalRunId, index });
+        return;
+      }
 
       // Phase 12.6: a pipeline maker that passed its OWN deterministic verify phase
       // already ran the very checks the goal's checks verifier would — skip the
@@ -943,6 +967,35 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     const run = this.runs.get(goalRunId);
     if (!run) throw new GoalRunNotFoundError(goalRunId);
     return run;
+  }
+
+  /**
+   * Phase 43 — stop a running goal run: kill the current iteration's live maker
+   * (through its own runner's `stop`, reusing the same {@link RunnerCore.cancel}
+   * governance the agent/pipeline stop already use) and flag the run so `drive()`
+   * lands it `interrupted` on the maker's next terminal turn, instead of running the
+   * verifier or dispatching a further iteration. Only a `running` goal with a
+   * dispatched current-iteration maker owns a process to kill — anything else
+   * (parked, paused-limit, no maker yet) throws {@link GoalRunNotStoppableError}.
+   * Fires the kill and returns immediately; the kill's exit reconciles
+   * asynchronously (mirrors the agent/pipeline stop's own timing).
+   */
+  async stop(goalRunId: string): Promise<void> {
+    const run = this.runs.get(goalRunId);
+    if (!run || run.status !== "running") throw new GoalRunNotStoppableError(goalRunId);
+    const iteration = run.iterations.find((i) => i.index === run.currentIteration);
+    const makerRunRef = iteration?.makerRunRef;
+    if (!iteration || !makerRunRef) throw new GoalRunNotStoppableError(goalRunId);
+    this.stopRequested.add(goalRunId);
+    try {
+      if (iteration.makerKind === "agent") this.agentRunner.stop(makerRunRef);
+      else await this.pipelineRunner.stop(makerRunRef);
+    } catch (error) {
+      this.stopRequested.delete(goalRunId);
+      throw error instanceof RunNotFoundError || error instanceof PipelineRunNotStoppableError
+        ? new GoalRunNotStoppableError(goalRunId)
+        : error;
+    }
   }
 
   /** Permanently delete a goal run and all its artifacts (worktree pruned first). */

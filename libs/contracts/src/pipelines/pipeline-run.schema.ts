@@ -35,6 +35,10 @@ export const PipelineStateSchema = z.enum([
   // phase boundary because the window is exhausted. Auto-resumes on window reset;
   // unlike `parked` it is not an operator decision and burns no loop retries.
   "paused-limit",
+  // Phase 43: the operator stopped a running run — its live stage child was killed
+  // deliberately (mirrors the stage-level `StageRunStatusSchema` value this already
+  // had). Distinct from `failed`: no retry/park logic runs on a stop.
+  "interrupted",
 ]);
 export type PipelineState = z.infer<typeof PipelineStateSchema>;
 

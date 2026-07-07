@@ -92,10 +92,10 @@ export const taskRunsContract = c.router(
       responses: {
         200: TaskRunSchema,
         404: ErrorSchema,
-        // The run's kind has no stop (only agent runs can be stopped).
+        // The run isn't currently running, or its kind has no stop (chain/scheduled).
         409: ErrorSchema,
       },
-      summary: "Stop a running task (agent runs)",
+      summary: "Stop a running task (agent, pipeline, or goal runs)",
     },
 
     resumeTaskRun: {

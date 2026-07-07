@@ -26,7 +26,14 @@ import { useNewTask } from "../../tasks";
 import { useProjectsQuery } from "../../projects";
 import { useAssignRunProjectMutation } from "../mutations";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
-import { type RunView, approvalForRun, isMarkdownFilename, runStateTone, runTitle } from "../run";
+import {
+  type RunView,
+  approvalForRun,
+  isMarkdownFilename,
+  isStoppableRun,
+  runStateTone,
+  runTitle,
+} from "../run";
 import { ChainStepsPanel } from "./ChainStepsPanel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
@@ -471,7 +478,7 @@ export function RunDetail({
                 </Stack>
               ) : (
                 <Stack align="center" direction="row" gap="100">
-                  {run.status === "running" && (
+                  {isStoppableRun(run) && (
                     <Button
                       disabled={stopping}
                       icon="stop"

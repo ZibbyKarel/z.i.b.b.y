@@ -16,7 +16,9 @@ import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { ChainRunnerService } from "../chains/chain-runner.service";
 import type { ChainsStorageService } from "../chains/chains.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
+import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
+import { PipelineRunNotStoppableError } from "../pipelines/pipeline-runner.service";
 import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -141,6 +143,7 @@ function build() {
     readStageLog: vi.fn(async () => ({ content: "stage", nextOffset: 5, done: false })),
     onStageLogAppend: vi.fn(() => () => {}),
     readArtifact: vi.fn(async () => ({ name: "pr-draft.md", content: "PR" })),
+    stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => pipeP),
     delete: vi.fn(async () => {}),
   };
@@ -151,6 +154,7 @@ function build() {
       return goalG;
     }),
     readArtifact: vi.fn(async () => ({ name: "verdict.txt", content: "ok" })),
+    stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => goalG),
     delete: vi.fn(async () => {}),
   };
@@ -492,11 +496,26 @@ describe("TaskRunsService", () => {
       expect(artifact).toEqual({ name: "verdict.txt", content: "ok" });
     });
 
-    it("stops an agent run, refuses to stop a pipeline run", async () => {
-      const { service, agentRunner } = build();
+    it("stops an agent, pipeline, or goal run via its own runner; refuses a chain run", async () => {
+      const { service, agentRunner, pipelineRunner, goalRunner } = build();
       await service.stop("researcher_1");
       expect(agentRunner.stop).toHaveBeenCalledWith("researcher_1");
+      await service.stop("delivery_3");
+      expect(pipelineRunner.stop).toHaveBeenCalledWith("delivery_3");
+      await service.stop("ship-it_4");
+      expect(goalRunner.stop).toHaveBeenCalledWith("ship-it_4");
+      // A chain run owns no single live process of its own — no stop.
+      await expect(service.stop("research-then-build_5")).rejects.toBeInstanceOf(
+        TaskRunNotStoppableError,
+      );
+    });
+
+    it("normalizes a pipeline/goal runner's own 'not stoppable' error to the unified one", async () => {
+      const { service, pipelineRunner, goalRunner } = build();
+      pipelineRunner.stop.mockRejectedValueOnce(new PipelineRunNotStoppableError("delivery_3"));
       await expect(service.stop("delivery_3")).rejects.toBeInstanceOf(TaskRunNotStoppableError);
+      goalRunner.stop.mockRejectedValueOnce(new GoalRunNotStoppableError("ship-it_4"));
+      await expect(service.stop("ship-it_4")).rejects.toBeInstanceOf(TaskRunNotStoppableError);
     });
 
     it("resumes pipeline/goal runs, refuses to resume an agent run", async () => {

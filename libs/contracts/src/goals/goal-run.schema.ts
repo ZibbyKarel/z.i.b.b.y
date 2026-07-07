@@ -10,7 +10,17 @@ import { IsoDateTimeSchema, WorkspaceSchema } from "../common.schema";
  * operator must decide, `paused-limit` when an iteration's maker died on a usage
  * limit (a pause, not a failure — and it does NOT burn an iteration).
  */
-export const GoalStateSchema = z.enum(["running", "done", "parked", "failed", "paused-limit"]);
+export const GoalStateSchema = z.enum([
+  "running",
+  "done",
+  "parked",
+  "failed",
+  "paused-limit",
+  // Phase 43: the operator stopped a running goal — its live maker run was killed
+  // deliberately, before the verifier ran. Distinct from `failed`: no retry/park
+  // logic runs on a stop.
+  "interrupted",
+]);
 export type GoalState = z.infer<typeof GoalStateSchema>;
 
 /**

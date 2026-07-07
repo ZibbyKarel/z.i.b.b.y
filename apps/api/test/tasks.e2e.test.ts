@@ -7,6 +7,9 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { GoalRunnerService } from "../src/goals/goal-runner.service";
+import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { isAlive } from "../src/runner/runner-core";
 import { TaskSchedulerService } from "../src/tasks/task-scheduler.service";
 
 const CLASSIFY = "/api/tasks/classify";
@@ -466,6 +469,120 @@ describe("Tasks API (e2e)", () => {
         .patch("/api/tasks/runs/ghost/project")
         .send({ projectId: "acme" })
         .expect(404);
+    });
+  });
+
+  // ── Phase 43 — stop a running task (agent/pipeline/goal) ───────────────────
+  describe("Phase 43 — stop a running task", () => {
+    // The committed `apps/api/.env` defaults `AGENT_DEMO_STEPS=25` /
+    // `AGENT_DEMO_DELAY_MS=1000` (a human-watchable demo pace, ~25s) — a pipeline
+    // stage's demo child (apps/api/src/pipelines/demo-stage.mjs) reads these, NOT
+    // `FAKE_CLAUDE_*` (that governs the agent runner's `claude` stand-in, used by
+    // a goal's agent maker below). Fast values here so "runs to done" tests don't
+    // wait out the real demo pace; restored after every test in the block.
+    afterEach(() => {
+      process.env.AGENT_DEMO_STEPS = "2";
+      process.env.AGENT_DEMO_DELAY_MS = "30";
+      process.env.FAKE_CLAUDE_STEPS = "2";
+      process.env.FAKE_CLAUDE_DELAY_MS = "30";
+    });
+
+    it("stops a running pipeline run: it lands interrupted and its stage process is reaped", async () => {
+      await seedCatalog();
+      // Slow enough that the stage is still mid-flight when we call stop.
+      process.env.AGENT_DEMO_STEPS = "20";
+      process.env.AGENT_DEMO_DELAY_MS = "150";
+
+      const pipelines = app.get(PipelineRunnerService);
+      const start = await pipelines.start("build-feature", undefined, "");
+      expect(start.status).toBe("running");
+
+      // Wait for the stage child to actually spawn before stopping it.
+      await until(async () => {
+        const rec = pipelines.get(start.pipelineRunId);
+        return rec.currentStageRunId ? rec : null;
+      });
+      const stageRunId = pipelines.get(start.pipelineRunId).currentStageRunId as string;
+
+      await request(app.getHttpServer())
+        .post(`/api/tasks/runs/${start.pipelineRunId}/stop`)
+        .expect(200);
+
+      // The kill's exit reconciles asynchronously through the driver's own await.
+      const stopped = await until(async () => {
+        const res = await request(app.getHttpServer()).get(
+          `/api/tasks/runs/${start.pipelineRunId}`,
+        );
+        return res.body.status === "interrupted" ? res.body : null;
+      });
+      expect(stopped.status).toBe("interrupted");
+      expect(stopped.stageRuns.at(-1)?.status).toBe("interrupted");
+
+      // The stage's process group is gone — the kill was real, not just a status flip.
+      // `RunnerCore` runIds end `<startedMs>_<pid>`; the pid is the trailing segment.
+      const pid = Number(stageRunId.split("_").pop());
+      expect(isAlive(pid)).toBe(false);
+
+      // A second stop on an already-interrupted run has nothing left to kill.
+      await request(app.getHttpServer())
+        .post(`/api/tasks/runs/${start.pipelineRunId}/stop`)
+        .expect(409);
+    });
+
+    it("409s stopping a pipeline run that isn't currently running", async () => {
+      await seedCatalog();
+      const pipelines = app.get(PipelineRunnerService);
+      const start = await pipelines.start("build-feature", undefined, "");
+      const done = await until(async () => {
+        const rec = pipelines.get(start.pipelineRunId);
+        return rec.status !== "running" ? rec : null;
+      });
+      expect(done.status).toBe("done");
+
+      await request(app.getHttpServer())
+        .post(`/api/tasks/runs/${start.pipelineRunId}/stop`)
+        .expect(409);
+    });
+
+    it("stops a running goal run: it lands interrupted without dispatching a further iteration", async () => {
+      await seedCatalog();
+      await request(app.getHttpServer())
+        .post("/api/goals")
+        .send({
+          id: "stop-goal",
+          objective: "Ship the thing",
+          maker: { kind: "agent", id: "coder" },
+          verifier: { kind: "claude", agent: "coder" },
+          maxIterations: 3,
+          instructions: "Iterate until satisfied.",
+        })
+        .expect(201);
+
+      // The goal's agent maker spawns through the agent runner (always `CLAUDE_BIN`
+      // — the fake claude fixture), so it's `FAKE_CLAUDE_*`, not `AGENT_DEMO_*`.
+      process.env.FAKE_CLAUDE_STEPS = "8";
+      process.env.FAKE_CLAUDE_DELAY_MS = "300";
+
+      const goals = app.get(GoalRunnerService);
+      const start = await goals.start("stop-goal", "do it", "", [], "Stop goal test");
+      expect(start.status).toBe("running");
+
+      await until(async () => {
+        const rec = goals.get(start.goalRunId);
+        return rec.iterations[0]?.makerRunRef ? rec : null;
+      });
+
+      await request(app.getHttpServer())
+        .post(`/api/tasks/runs/${start.goalRunId}/stop`)
+        .expect(200);
+
+      const stopped = await until(async () => {
+        const res = await request(app.getHttpServer()).get(`/api/tasks/runs/${start.goalRunId}`);
+        return res.body.status === "interrupted" ? res.body : null;
+      });
+      expect(stopped.status).toBe("interrupted");
+      // Only the one (killed) iteration was recorded — no further re-dispatch.
+      expect(stopped.iterations).toHaveLength(1);
     });
   });
 });

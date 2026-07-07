@@ -45,7 +45,7 @@ vi.mock("./queries/useRunsQuery", () => ({
 }));
 
 vi.mock("./mutations", () => ({
-  useStopAgentMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useStopTaskRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteAgentRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useDeletePipelineRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
