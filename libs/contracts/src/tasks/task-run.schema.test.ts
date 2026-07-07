@@ -30,6 +30,22 @@ describe("TaskRunSchema — attachments", () => {
   });
 });
 
+describe("TaskRunSchema — attachmentSetId (Phase 65)", () => {
+  it("parses a run without an attachmentSetId; the field stays undefined", () => {
+    const parsed = TaskRunSchema.parse(minimalRun);
+    expect(parsed.attachmentSetId).toBeUndefined();
+  });
+
+  it("round-trips an attachment set id, alongside its attachments", () => {
+    const parsed = TaskRunSchema.parse({
+      ...minimalRun,
+      attachments: [{ name: "a.txt", size: 2 }],
+      attachmentSetId: "set_abc",
+    });
+    expect(parsed.attachmentSetId).toBe("set_abc");
+  });
+});
+
 describe("TaskRunSchema — sessionId (Phase 49)", () => {
   it("parses a run without a sessionId; the field stays undefined", () => {
     const parsed = TaskRunSchema.parse(minimalRun);

@@ -61,6 +61,13 @@ vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: projectsRef.
 vi.mock("../mutations", () => ({
   useAssignRunProjectMutation: () => ({ mutate: assignMutate, isPending: false }),
 }));
+// Pin the API origin (Phase 65's open-file serve URL) so the attachment link's `href`
+// is deterministic — the API is a separate server, never a same-origin relative path.
+// Partial mock: `apiClient` (used transitively by useApprovalsQuery et al.) must stay real.
+vi.mock("../../../state/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../state/api")>()),
+  API_URL: "http://api.test",
+}));
 
 const LONG_DESC =
   "Refaktoruj detail běhu pipeliny tak, aby nezobrazoval název úkolu dvakrát, " +
@@ -142,6 +149,40 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.getByText("spec.pdf")).toBeInTheDocument();
     expect(screen.getByText("data.csv")).toBeInTheDocument();
     expect(screen.queryByTestId(FilePreviewTestId.Remove)).not.toBeInTheDocument();
+  });
+
+  it("shows open links to the serve URL when the run carries an attachmentSetId (Phase 65)", async () => {
+    renderDetail({
+      ...pipelineRun,
+      attachmentSetId: "set_abc",
+      attachments: [
+        { name: "spec.pdf", size: 100 },
+        { name: "a b.csv", size: 200 },
+      ],
+    });
+    await userEvent.click(screen.getByText("Vstup"));
+    const links = screen.getAllByTestId("attachment-open-link");
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "http://api.test/api/tasks/attachments/set_abc/spec.pdf",
+    );
+    expect(links[1]).toHaveAttribute(
+      "href",
+      "http://api.test/api/tasks/attachments/set_abc/a%20b.csv",
+    );
+    expect(links[0]).toHaveAttribute("target", "_blank");
+    expect(links[0]).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("keeps the read-only attachments list when the run has no attachmentSetId", async () => {
+    renderDetail({
+      ...pipelineRun,
+      attachments: [{ name: "spec.pdf", size: 100 }],
+    });
+    await userEvent.click(screen.getByText("Vstup"));
+    expect(screen.queryByTestId("attachment-open-link")).not.toBeInTheDocument();
+    expect(screen.getByTestId(FilePreviewTestId.Name)).toBeInTheDocument();
   });
 
   it("renders no \"Vstup\" section when the run has neither task text nor attachments", () => {

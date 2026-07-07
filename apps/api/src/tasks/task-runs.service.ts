@@ -555,6 +555,9 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     taskOutcomeFinishedAt: task.outcome?.finishedAt,
     taskOutputKind: task.output?.type,
     attachments: task.attachments,
+    // Phase 65: carried alongside `attachments` so the detail can build the
+    // open-file serve URL (`GET /api/tasks/attachments/:setId/:name`).
+    ...(task.attachmentSetId ? { attachmentSetId: task.attachmentSetId } : {}),
     // The engagement id lives on the scheduled task; agent/pipeline/goal/chain run
     // views don't carry it themselves, so join it in here (scheduled rows set it
     // directly). This is what lets the feed be filtered by project and the project

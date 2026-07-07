@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { API_URL } from "../../../state/api";
 import { formatCostUsd } from "../../../utils/cost";
 import { formatDuration, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
@@ -184,6 +185,11 @@ function firstUrl(text: string | undefined): string | undefined {
   return text?.match(/https?:\/\/\S+/)?.[0];
 }
 
+/** The Phase 65 open-file serve URL for one attachment (`GET /api/tasks/attachments/:setId/:name`). */
+function attachmentOpenHref(attachmentSetId: string, name: string): string {
+  return `${API_URL}/api/tasks/attachments/${attachmentSetId}/${encodeURIComponent(name)}`;
+}
+
 /** How much produced output is folded into a follow-up task's context (8000-char cap). */
 const CONTINUE_CONTEXT_MAX = 1500;
 
@@ -319,9 +325,13 @@ function RunOutputPanel({ run }: { run: RunView }) {
  * The task's complete input — Phase 64: pulled out of the header (where long
  * descriptions crowded the state/meta strip) into its own default-collapsed
  * "Vstup" accordion below it, so a long task never inflates the header. Shows the
- * full `taskText` as formatted markdown, then the read-only attachments list
- * (opening them is Phase 65). Renders nothing when there is neither text nor an
- * attachment to show.
+ * full `taskText` as formatted markdown, then the attachments list. Phase 65: when the
+ * run carries an `attachmentSetId`, each attachment opens the file (in a new tab) via
+ * the serve route — older runs with no set id keep the plain read-only row (DS
+ * `FilePreview` has no `onOpen`/`href` prop, and it's out of this phase's scope to add
+ * one, so the open affordance is a plain anchor wrapping the preview, styled with DS
+ * focus-ring/utility classes rather than a new DS primitive). Renders nothing when
+ * there is neither text nor an attachment to show.
  */
 function RunInputSection({ run }: { run: RunView }) {
   const t = useTranslations("runs");
@@ -329,6 +339,7 @@ function RunInputSection({ run }: { run: RunView }) {
   const hasText = Boolean(run.taskText);
   const hasAttachments = Boolean(run.attachments && run.attachments.length > 0);
   if (!hasText && !hasAttachments) return null;
+  const attachmentSetId = run.attachmentSetId;
   return (
     <Accordion>
       <AccordionItem summary={t("inputSection")}>
@@ -339,9 +350,22 @@ function RunInputSection({ run }: { run: RunView }) {
               <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
                 {tAttach("sectionTitle")}
               </Typography>
-              {(run.attachments ?? []).map((a) => (
-                <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
-              ))}
+              {(run.attachments ?? []).map((a) =>
+                attachmentSetId ? (
+                  <a
+                    className="inline-block w-fit rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    data-testid="attachment-open-link"
+                    href={attachmentOpenHref(attachmentSetId, a.name)}
+                    key={a.name}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    <FilePreview mediaType={a.mediaType} name={a.name} size={a.size} />
+                  </a>
+                ) : (
+                  <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
+                ),
+              )}
             </Stack>
           )}
         </Stack>

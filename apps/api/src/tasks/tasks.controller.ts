@@ -1,11 +1,18 @@
+import { createReadStream } from "node:fs";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import {
   type ArgumentsHost,
   BadRequestException,
   Catch,
   Controller,
   type ExceptionFilter,
+  Get,
+  NotFoundException,
+  Param,
   PayloadTooLargeException,
   Post,
+  StreamableFile,
   UploadedFiles,
   UseFilters,
   UseInterceptors,
@@ -99,6 +106,32 @@ export class TasksController {
       throw new PayloadTooLargeException("Attachment set exceeds 50 MB");
     }
     return this.attachments.save(uploaded);
+  }
+
+  /**
+   * Streams one attachment's bytes back so the "Vstup" section's open link opens it in a
+   * browser tab (Phase 65). Binary streaming doesn't fit the ts-rest JSON contract (same
+   * reason the multipart upload above is a plain route, not the ts-rest handler below), so
+   * this is a second raw `@Get` alongside it — no auth, matching the upload route (single-
+   * operator, self-hosted threat model). `dir(setId)` already `path.basename`-guards the set
+   * id; `path.basename(name)` here does the same for the file name, so a `..`/absolute
+   * traversal in either param stays contained to the set's own directory.
+   */
+  @Get("/api/tasks/attachments/:setId/:name")
+  async openAttachment(
+    @Param("setId") setId: string,
+    @Param("name") name: string,
+  ): Promise<StreamableFile> {
+    const safeName = path.basename(name);
+    const filePath = path.join(this.attachments.dir(setId), safeName);
+    const stat = await fs.stat(filePath).catch(() => null);
+    if (!stat || !stat.isFile()) throw new NotFoundException("Attachment not found");
+    const meta = await this.attachments.list(setId);
+    const mediaType = meta.find((a) => a.name === safeName)?.mediaType ?? "application/octet-stream";
+    return new StreamableFile(createReadStream(filePath), {
+      type: mediaType,
+      disposition: `inline; filename="${safeName}"`,
+    });
   }
 
   @TsRestHandler(scheduledTaskRoutes)

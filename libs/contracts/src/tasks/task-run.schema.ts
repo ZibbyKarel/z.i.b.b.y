@@ -96,6 +96,12 @@ export const TaskRunSchema = z.object({
   taskText: z.string().optional(),
   /** Enriched from the task record: its uploaded attachment set (read-only in detail). */
   attachments: z.array(AttachmentSchema).optional(),
+  /**
+   * Enriched from the task record: the attachment set id (Phase 65), letting the detail
+   * build the open-file serve URL (`GET /api/tasks/attachments/:setId/:name`). Optional —
+   * absent for runs with no attachments (and every synthetic run literal predating this).
+   */
+  attachmentSetId: z.string().optional(),
   /** Enriched from the task record: the written-back run outcome. */
   taskOutcome: z.enum(["done", "error"]).optional(),
   /**
