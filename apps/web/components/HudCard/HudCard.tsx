@@ -4,6 +4,7 @@ import {
   Divider,
   type IconName,
   IconTile,
+  type IconTileSize,
   Pressable,
   Stack,
   Typography,
@@ -15,6 +16,8 @@ export interface HudCardProps {
   title: string;
   /** Icon rendered in the leading tile. Defaults to "bot". */
   glyph?: IconName;
+  /** Size of the leading avatar tile. Defaults to "md". */
+  avatarSize?: IconTileSize;
   /** Custom logo (data URI) shown in the leading tile instead of the glyph; falls
    * back to the glyph automatically when absent or when it fails to load. */
   logoSrc?: string;
@@ -47,6 +50,7 @@ export interface HudCardProps {
 export function HudCard({
   title,
   glyph,
+  avatarSize = "md",
   logoSrc,
   logoAlt,
   subtitle,
@@ -63,7 +67,7 @@ export function HudCard({
     <Container textAlign="left">
       <Stack gap="150">
         <Stack align="start" direction="row" gap="150">
-          <IconTile alt={logoAlt ?? title} glyph={glyph ?? "bot"} size="md" src={logoSrc} />
+          <IconTile alt={logoAlt ?? title} glyph={glyph ?? "bot"} size={avatarSize} src={logoSrc} />
           <Container grow minW0>
             <Stack gap="25">
               <Typography mono truncate size="md" type="note" weight="semibold">

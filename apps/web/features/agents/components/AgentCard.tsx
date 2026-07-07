@@ -18,6 +18,7 @@ export function AgentCard({ agent, pipelineCount = 0, onClick }: AgentCardProps)
 
   return (
     <HudCard
+      avatarSize="lg"
       badges={[
         [
           <ModelBadge key="model" model={agent.model ?? "sonnet"} />,

@@ -24,4 +24,4 @@
 
 - [x] editace agenta - výběr kategorie bude přes komponentu Select — fáze 11
 
-- [ ] avatary agentů na kartách uděláme větší
+- [x] avatary agentů na kartách uděláme větší — fáze 22
