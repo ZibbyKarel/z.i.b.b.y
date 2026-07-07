@@ -1,5 +1,5 @@
-import { useTranslations } from "next-intl";
 import {
+  CodeBlock,
   Container,
   Divider,
   Icon,
@@ -10,7 +10,6 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useRunLog } from "../useRunLog";
-import { RunTranscript } from "./RunTranscript";
 
 export interface RunLogStreamProps {
   /** The run whose log to tail (an agent run id, or a goal child's runRef). */
@@ -35,6 +34,12 @@ export interface RunLogStreamProps {
  * Ref-driven (id + live) so any holder of a bare run id can mount it — a run detail,
  * or a folded goal-iteration child (Phase 27). The log is read from the unified
  * `/api/tasks/runs/:runId/logs` surface. Mount with `key={runId}`.
+ *
+ * Phase 54: the log body renders through the DS {@link CodeBlock} — the same framed
+ * monospace treatment as the file-output block (Phase 41) — so the run log matches
+ * the design. CodeBlock owns the live-tail natively: `followTail` + `scrollKey`
+ * autoscroll as the stream grows, and `caret` shows the blinking accent caret while
+ * the run is still producing output.
  */
 export function RunLogStream({
   runId,
@@ -46,8 +51,8 @@ export function RunLogStream({
   tone = "run",
 }: RunLogStreamProps) {
   const { text, done } = useRunLog(runId);
-  const lineCount = text ? text.replace(/\n$/, "").split("\n").length : 0;
-  const t = useTranslations("runs");
+  const body = text.replace(/\n$/, "");
+  const lineCount = body.length === 0 ? 0 : body.split("\n").length;
 
   return (
     <Panel
@@ -66,13 +71,13 @@ export function RunLogStream({
       }
       live={live}
     >
-      <RunTranscript
-        live={live && !done}
+      <CodeBlock
+        followTail
+        caret={live && !done}
         maxHeight="viewport"
         placeholder={`${liveLabel}…`}
         scrollKey={text}
-        text={text.replace(/\n$/, "")}
-        toggleLabel={t("toggleToolOutput")}
+        text={body}
       />
       {pct != null && (
         <>

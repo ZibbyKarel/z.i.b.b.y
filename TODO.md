@@ -82,7 +82,7 @@
 
 - [x] CommandLine componenta - tlačítko odeslání i tlačítka na přidání souborů by měla být pozicována "uvnitř inputu". Je potřeba ale zajistit aby text inputut nezasahoval do tlačítek — fáze 51 (absolutní controls uvnitř inputu + rezervovaný paddingBottom)
 
-- [ ] stránka běhy a aktivita - log běhu nesedí s designem. Měl by být obalen v CodeBlock componentě
+- [x] stránka běhy a aktivita - log běhu nesedí s designem. Měl by být obalen v CodeBlock componentě — fáze 54 (run log přes DS CodeBlock, live-tail zachován; POZN: sbalování nástrojů z fáze 06 na run logu odpadlo — CodeBlock nemá children slot; pipeline stage log si sbalování drží. Lze vrátit přidáním children slotu do CodeBlock, pokud chceš)
 
 - [x] stránka běhy a aktivita - avatar přiřazeného agenta nebo pipeliny by měl být dělaný stejně jako v HeroEntity komponentě - čili jako roztažené pozadí — fáze 53 (EntityHero + children overlay slot, header nad scrimem)
 
