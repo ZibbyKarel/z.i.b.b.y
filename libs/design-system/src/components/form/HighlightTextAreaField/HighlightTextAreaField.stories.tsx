@@ -51,6 +51,30 @@ export const Overview: Story = {
   },
 };
 
+/** Per-type `@mention` tones alongside untoned path highlights (Phase 31 — CommandLine). */
+export const TonedMentions: Story = {
+  render: () => {
+    const [text, setText] = useState(
+      "@Builder projdi ~/zibby/backlog a spusť @Delivery, přilož @report.md",
+    );
+    const highlights = [
+      { start: 0, end: 8, tone: "accent" as const }, // @Builder — agent
+      { start: 16, end: 31 }, // ~/zibby/backlog — untoned path
+      { start: 40, end: 49, tone: "push" as const }, // @Delivery — pipeline
+      { start: 58, end: 68, tone: "dim" as const }, // @report.md — unresolved file
+    ];
+    return (
+      <HighlightTextAreaField
+        highlights={highlights}
+        hint="agent = accent · pipeline = push · soubor/neznámé = dim"
+        label="Zadání"
+        onChange={(e) => setText(e.target.value)}
+        value={text}
+      />
+    );
+  },
+};
+
 export const Playground: Story = {
   render: (args) => {
     const [text, setText] = useState("Otevři ./apps/web a /var/log/app");

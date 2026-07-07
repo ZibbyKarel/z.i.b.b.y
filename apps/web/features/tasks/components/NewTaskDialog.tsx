@@ -153,6 +153,7 @@ export function NewTaskDialog({
         {initialContext && <TaskContextPanel context={initialContext} />}
 
         <CommandLine
+          chrome={false}
           context={initialContext}
           disabled={!outputReady}
           initialTarget={initialTarget}

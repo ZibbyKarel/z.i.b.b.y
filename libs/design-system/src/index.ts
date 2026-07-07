@@ -204,6 +204,7 @@ export {
 export type {
   HighlightRange,
   HighlightTextAreaFieldProps,
+  HighlightTone,
 } from "./components/form/HighlightTextAreaField/HighlightTextAreaField";
 
 export { SelectField } from "./components/form/SelectField/SelectField";

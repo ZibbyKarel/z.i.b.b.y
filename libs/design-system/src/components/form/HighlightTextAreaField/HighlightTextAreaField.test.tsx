@@ -48,6 +48,33 @@ describe("HighlightTextAreaField", () => {
     expect(marks[0]).toHaveTextContent("abcdef");
   });
 
+  it("keeps the default mark untoned (byte-identical bg-accent/20, no ring)", () => {
+    render(<HighlightTextAreaField highlights={[{ start: 0, end: 4 }]} label="Zadání" value="ahoj" />);
+    const mark = screen.getByTestId(HighlightTextAreaFieldTestId.Mark);
+    expect(mark).toHaveClass("bg-accent/20");
+    expect(mark.className).not.toMatch(/shadow-\[/);
+  });
+
+  it("tints a toned range's mark and adds its ring, leaving other marks untoned", () => {
+    render(
+      <HighlightTextAreaField
+        highlights={[
+          { start: 0, end: 5, tone: "push" },
+          { start: 10, end: 13 },
+        ]}
+        label="Zadání"
+        value="@delivery run"
+      />,
+    );
+    const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+    expect(marks).toHaveLength(2);
+    expect(marks[0]).toHaveTextContent("@deli");
+    expect(marks[0]).toHaveClass("bg-risk-push/[0.14]");
+    expect(marks[0]?.className).toMatch(/shadow-\[/);
+    expect(marks[1]).toHaveTextContent("run");
+    expect(marks[1]).toHaveClass("bg-accent/20");
+  });
+
   it("fires onChange as the operator edits", () => {
     const onChange = vi.fn();
     render(

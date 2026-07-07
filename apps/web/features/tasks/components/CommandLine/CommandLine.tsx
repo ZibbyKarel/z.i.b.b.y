@@ -5,13 +5,19 @@ import { useTranslations } from "next-intl";
 import type { TaskOutput } from "@zibby/contracts";
 import {
   Button,
+  Card,
   Chip,
   Container,
   DropDownButton,
   type DropDownButtonItem,
   FilePreview,
+  type HighlightRange,
   HighlightTextAreaField,
+  type HighlightTone,
+  Icon,
   type IconName,
+  OrbitLoader,
+  Panel,
   SearchMenu,
   type SearchMenuSection,
   Stack,
@@ -26,6 +32,7 @@ import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loo
 import {
   type SchedulePreset,
   type TaskTarget,
+  type TaskTargetKind,
   clockLabel,
   extractPathRanges,
   extractPaths,
@@ -39,9 +46,15 @@ export enum CommandLineTestId {
   Root = "command-line-root",
   Input = "command-line-input",
   Attach = "command-line-attach",
+  Pin = "command-line-pin",
   FileInput = "command-line-file-input",
   MentionMenu = "command-line-mention-menu",
   TargetChip = "command-line-target-chip",
+  Box = "command-line-box",
+  DropOverlay = "command-line-drop-overlay",
+  Suggestion = "command-line-suggestion",
+  AckRow = "command-line-ack-row",
+  AckDismiss = "command-line-ack-dismiss",
 }
 
 export interface CommandLineProps {
@@ -67,6 +80,31 @@ export interface CommandLineProps {
   /** An extra guard from the caller (e.g. an incomplete "write to a file" output
    *  choice) that blocks the run control regardless of the text/loop guard. */
   disabled?: boolean;
+  /**
+   * Wrap the input in the full velin-b panel chrome — an elevated `Panel` with a
+   * header row (a spark/accent icon + "Zadej směr…" label, and a right-aligned
+   * mention/attach hint). Default `true`. A host that already frames the composer
+   * itself (e.g. `NewTaskDialog`, already inside a `Dialog`) passes `chrome={false}`
+   * for the bare growable input, avoiding a double frame.
+   */
+  chrome?: boolean;
+  /**
+   * Suggested descriptions rendered as clickable chips below the input while it's
+   * empty — clicking one submits it immediately (exactly like typing it and
+   * pressing Enter), matching the velin-b command bar. Omit for no suggestions
+   * (the default — a dialog host has its own affordances for this).
+   */
+  suggestions?: string[];
+  /**
+   * Show the compact classification ack row once a submit goes out (spinner +
+   * "Klasifikováno jako … → spouštím …" + the quoted text + a dismiss ✕). Built
+   * honestly from what CommandLine already knows at submit time — the resolved
+   * `@`-mention target, the loop verdict, or (absent either) an explicit "auto"
+   * label; it never fabricates a backend classification result. Default `false`:
+   * a host that navigates away / unmounts on submit (e.g. `NewTaskDialog`) has no
+   * use for it.
+   */
+  showAck?: boolean;
   /** Mirrors the live text up so an embedding parent can drive its own classify
    *  preview off the same value without owning the textarea itself. */
   onTextChange?: (text: string) => void;
@@ -88,6 +126,13 @@ interface MentionMenuRect {
   left: number;
   width: number;
   bottom: number;
+}
+
+/** The honest, non-fabricated classification ack shown below the box after submit. */
+interface AckInfo {
+  text: string;
+  kind: string;
+  exec: string;
 }
 
 /** True right after the operator types `@` at the start of the text or after
@@ -112,22 +157,44 @@ function computeRows(text: string, min: number, max: number): number {
   return Math.min(max, Math.max(min, lines));
 }
 
+/** Every `@token` occurrence in the text, verbatim (no spaces) — matches how the
+ * mention picker inserts `@Name ` and how a dropped file inserts `@filename`. */
+const MENTION_RE = /@\S+/g;
+
+/** Per-type highlight tone for a detected `@token`: a known agent name resolves
+ * `accent`, a known pipeline name resolves `push` (the risk-category purple), and
+ * anything else (a dropped file, an unresolved name) resolves `dim`. */
+function mentionRanges(
+  text: string,
+  agentNames: ReadonlySet<string>,
+  pipelineNames: ReadonlySet<string>,
+): HighlightRange[] {
+  const ranges: HighlightRange[] = [];
+  for (const match of text.matchAll(MENTION_RE)) {
+    if (match.index === undefined) continue;
+    const token = match[0].slice(1).toLowerCase();
+    const tone: HighlightTone = agentNames.has(token) ? "accent" : pipelineNames.has(token) ? "push" : "dim";
+    ranges.push({ start: match.index, end: match.index + match[0].length, tone });
+  }
+  return ranges;
+}
+
 function noop() {
   /* no-op default for CommandLine's onClose */
 }
 
 /**
- * The unified task launcher (Phase 26): one growable input that does everything —
- * free-text description, an inline `@` search to assign an agent/pipeline target,
- * a `+` button (and drag-and-drop) to attach files, and a trailing split-button to
- * run now / in 1 h / when limits reset. Composed entirely from DS primitives plus
- * the reused {@link HighlightTextAreaField} (path highlights), the `@`-mention
- * picker ported from `ChatComposer`, and {@link useTaskSubmit} (single dispatch, or
- * a synthesized loop when the caller passes `isLoop`/`loop` from its own classify).
- *
- * Per-range highlight tone was skipped (see Phase 26 plan) — only detected paths are
- * marked inline; a picked target renders as a closable `Chip` instead, which already
- * makes the assignment explicit without needing a second highlight colour.
+ * The unified task launcher (Phase 26; restyled to the velin-b command bar in Phase
+ * 31a): one growable input that does everything — free-text description, an inline
+ * `@` search to assign an agent/pipeline target, a `+`/pin button (and drag-and-drop)
+ * to attach files, and a trailing split-button to run now / in 1 h / when limits
+ * reset. Composed entirely from DS primitives plus the reused
+ * {@link HighlightTextAreaField} (path highlights AND per-type `@token` tones), the
+ * `@`-mention picker ported from `ChatComposer`, and {@link useTaskSubmit} (single
+ * dispatch, or a synthesized loop when the caller passes `isLoop`/`loop` from its own
+ * classify). The panel chrome (header row), suggestion chips and classification ack
+ * row are opt-in via `chrome`/`suggestions`/`showAck` so the same component serves a
+ * dialog-hosted bare input and a standalone command bar alike.
  */
 export function CommandLine({
   rows = 1,
@@ -141,6 +208,9 @@ export function CommandLine({
   isLoop = false,
   loop = INITIAL_LOOP_STATE,
   disabled = false,
+  chrome = true,
+  suggestions,
+  showAck = false,
   onTextChange,
   onTargetChange,
   onAttachmentsChange,
@@ -159,6 +229,13 @@ export function CommandLine({
   const [mentionStart, setMentionStart] = useState<number | null>(null);
   const [mentionQuery, setMentionQuery] = useState("");
   const [menuRect, setMenuRect] = useState<MentionMenuRect | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [ack, setAck] = useState<AckInfo | null>(null);
+  // Set on a suggestion-chip click: the text state hasn't re-rendered yet at click
+  // time, so the actual dispatch is deferred to the effect below, which fires once
+  // `text` reflects the suggestion — the same closure staleness pitfall useTaskSubmit
+  // is built to avoid.
+  const pendingSuggestionRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionInputRef = useRef<HTMLInputElement>(null);
@@ -208,7 +285,21 @@ export function CommandLine({
     const all = selectedProject ? [selectedProject.path, ...detected] : detected;
     return [...new Set(all)];
   }, [text, selectedProject]);
-  const highlights = useMemo(() => extractPathRanges(text), [text]);
+  const pathHighlights = useMemo(() => extractPathRanges(text), [text]);
+
+  const agentNames = useMemo(
+    () => new Set(agents.map((a) => (a.name ?? a.id).toLowerCase())),
+    [agents],
+  );
+  const pipelineNames = useMemo(() => new Set(pipelines.map((p) => p.name.toLowerCase())), [pipelines]);
+  const mentionHighlights = useMemo(
+    () => mentionRanges(text, agentNames, pipelineNames),
+    [text, agentNames, pipelineNames],
+  );
+  const highlights = useMemo(
+    () => [...pathHighlights, ...mentionHighlights],
+    [pathHighlights, mentionHighlights],
+  );
 
   // The dispatched description: the operator's text plus, when continuing from a
   // prior run, that run's output appended as a labelled context block.
@@ -232,6 +323,60 @@ export function CommandLine({
     setScheduledWhen,
     onLaunched,
   });
+
+  const canRun = !disabled && (isLoop ? canSubmitLoop(loop) : text.trim().length > 2);
+  const runLabel = isLoop ? t("loop.submit") : t("classifyRun");
+  const runIcon: IconName = isLoop ? "retry" : "play";
+
+  const ackKindLabel: Record<TaskTargetKind, string> = {
+    agent: t("commandLine.ack.kind.agent"),
+    pipeline: t("commandLine.ack.kind.pipeline"),
+    goal: t("commandLine.ack.kind.goal"),
+    chain: t("commandLine.ack.kind.chain"),
+    orchestrator: t("commandLine.ack.kind.orchestrator"),
+  };
+
+  /** The honest ack built from what's already known at the moment of submit — never
+   * a fabricated backend verdict (see {@link CommandLineProps.showAck}). */
+  function buildAck(): AckInfo | null {
+    if (!canRun || busy) return null;
+    if (isLoop) {
+      return {
+        text,
+        kind: t("commandLine.ack.kind.loop"),
+        exec: title.trim() || loop.objective || t("commandLine.ack.execFallback"),
+      };
+    }
+    if (target) return { text, kind: ackKindLabel[target.kind], exec: target.name };
+    return { text, kind: t("commandLine.ack.kind.auto"), exec: t("commandLine.ack.execPending") };
+  }
+
+  /** Every submit path (Enter, the primary run action, a schedule-menu item, or a
+   * suggestion chip) funnels through here so the ack row — when enabled — always
+   * reflects the actual dispatch, computed at the same moment it fires. */
+  function dispatch(scheduledAt: number | null) {
+    if (showAck) {
+      const info = buildAck();
+      if (info) setAck(info);
+    }
+    handleSubmit(scheduledAt);
+  }
+
+  // A suggestion chip sets `text` then flags a pending dispatch; this fires once
+  // that state has landed, so `dispatch` (and the `useTaskSubmit` it calls into)
+  // reads the suggestion text instead of a stale prior render's closure.
+  useEffect(() => {
+    if (!pendingSuggestionRef.current) return;
+    pendingSuggestionRef.current = false;
+    dispatch(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+
+  function selectSuggestion(suggestion: string) {
+    setText(suggestion);
+    onTextChange?.(suggestion);
+    pendingSuggestionRef.current = true;
+  }
 
   function closeMention() {
     setMentionOpen(false);
@@ -265,7 +410,7 @@ export function CommandLine({
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(null);
+      dispatch(null);
     }
   }
 
@@ -324,8 +469,18 @@ export function CommandLine({
     void uploadFiles(files);
   }
 
+  function handleDragOver(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(true);
+  }
+
+  function handleDragLeave() {
+    setDragOver(false);
+  }
+
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    setDragOver(false);
     void uploadFiles(Array.from(e.dataTransfer.files ?? []));
   }
 
@@ -336,7 +491,7 @@ export function CommandLine({
   }
 
   function run(preset: SchedulePreset) {
-    handleSubmit(resolveScheduledAt(preset, now, resetsAt));
+    dispatch(resolveScheduledAt(preset, now, resetsAt));
   }
 
   const agentSection: SearchMenuSection = {
@@ -354,10 +509,6 @@ export function CommandLine({
       .map((p) => ({ id: p.id, title: p.name, glyph: "flow" as IconName })),
   };
 
-  const canRun = !disabled && (isLoop ? canSubmitLoop(loop) : text.trim().length > 2);
-  const runLabel = isLoop ? t("loop.submit") : t("classifyRun");
-  const runIcon: IconName = isLoop ? "retry" : "play";
-
   const menuItems: DropDownButtonItem[] = [
     { id: "in-1h", label: t("schedule.in1h"), icon: "clock", onSelect: () => run("in-1h") },
     ...(resetsAt !== null && resetsAt > now
@@ -374,11 +525,168 @@ export function CommandLine({
 
   if (scheduledWhen !== null) return <ScheduledConfirmation when={scheduledWhen} />;
 
+  const openFilePicker = () => fileInputRef.current?.click();
+
+  const inputArea = (
+    <Container
+      data-testid={CommandLineTestId.Box}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      position="relative"
+      ref={rootRef}
+    >
+      {mentionOpen && menuRect && (
+        <Container
+          bottom={`${menuRect.bottom}px`}
+          data-testid={CommandLineTestId.MentionMenu}
+          left={`${menuRect.left}px`}
+          position="fixed"
+          width={`${menuRect.width}px`}
+          zIndex={50}
+        >
+          <SearchMenu
+            ariaLabel={tMention("ariaLabel")}
+            emptyLabel={tMention("empty")}
+            inputRef={mentionInputRef}
+            onOpenChange={(open) => {
+              if (!open) closeMention();
+            }}
+            onSelect={selectMention}
+            onValueChange={setMentionQuery}
+            open={mentionOpen}
+            placeholder={tMention("placeholder")}
+            sections={[agentSection, pipelineSection]}
+            value={mentionQuery}
+          />
+        </Container>
+      )}
+
+      {dragOver && (
+        <Container
+          bottom="0"
+          data-testid={CommandLineTestId.DropOverlay}
+          left="0"
+          pointerEvents="none"
+          position="absolute"
+          right="0"
+          top="0"
+          zIndex={20}
+        >
+          <Card bordered background="background" borderStyle="dashed" radius="default" style={{ height: "100%" }} tone="accent">
+            <Stack align="center" direction="row" gap="75" justify="center" style={{ height: "100%" }}>
+              <Icon name="file" size="sm" tone="accent" />
+              <Typography tone="accent" type="note">
+                {t("commandLine.dropHint")}
+              </Typography>
+            </Stack>
+          </Card>
+        </Container>
+      )}
+
+      <input
+        hidden
+        multiple
+        data-testid={CommandLineTestId.FileInput}
+        onChange={handleFileInputChange}
+        ref={fileInputRef}
+        type="file"
+      />
+
+      <HighlightTextAreaField
+        autoFocus
+        data-testid={CommandLineTestId.Input}
+        disabled={disabled}
+        highlights={highlights}
+        label={t("commandLine.label")}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder ?? t("commandLine.placeholder")}
+        ref={textareaRef}
+        rows={computeRows(text, rows, maxRows)}
+        value={text}
+      />
+
+      <Stack align="center" direction="row" gap="75" style={{ marginTop: "8px" }}>
+        <Button
+          aria-label={t("commandLine.attachAria")}
+          data-testid={CommandLineTestId.Attach}
+          icon="plus"
+          intent="ghost"
+          onClick={openFilePicker}
+          size="sm"
+        />
+        <Button
+          aria-label={t("commandLine.pinAria")}
+          data-testid={CommandLineTestId.Pin}
+          icon="pin"
+          intent="ghost"
+          onClick={openFilePicker}
+          size="sm"
+        />
+
+        <Stack grow style={{ minWidth: 0 }} />
+
+        <DropDownButton
+          disabled={!canRun || busy}
+          icon={runIcon}
+          intent="primary"
+          label={runLabel}
+          loading={busy}
+          menuAriaLabel={t("commandLine.moreRunOptions")}
+          menuItems={menuItems}
+          onClick={() => dispatch(null)}
+          size="sm"
+        />
+      </Stack>
+    </Container>
+  );
+
+  const belowBox = ack ? (
+    <Stack align="center" data-testid={CommandLineTestId.AckRow} direction="row" gap="150">
+      <OrbitLoader size="sm" />
+      <Stack grow gap="25" style={{ minWidth: 0 }}>
+        <Typography size="sm" type="note">
+          {t("commandLine.ack.headline", { kind: ack.kind, exec: ack.exec })}
+        </Typography>
+        <Typography mono truncate size="xs" type="note" variant="tertiary">
+          {t("commandLine.ack.quoted", { text: ack.text })}
+        </Typography>
+      </Stack>
+      <Button
+        aria-label={t("commandLine.ack.dismissAria")}
+        data-testid={CommandLineTestId.AckDismiss}
+        icon="x"
+        intent="ghost"
+        onClick={() => setAck(null)}
+        size="sm"
+      />
+    </Stack>
+  ) : (
+    suggestions &&
+    suggestions.length > 0 &&
+    text.trim().length === 0 && (
+      <Stack wrap direction="row" gap="75">
+        {suggestions.map((suggestion) => (
+          <Button
+            data-testid={CommandLineTestId.Suggestion}
+            intent="ghost"
+            key={suggestion}
+            onClick={() => selectSuggestion(suggestion)}
+            size="sm"
+          >
+            {suggestion}
+          </Button>
+        ))}
+      </Stack>
+    )
+  );
+
   return (
     <Stack
       data-testid={CommandLineTestId.Root}
       direction="col"
-      gap="75"
+      gap="150"
       // Escape while the mention picker is focused must close ONLY the picker.
       onKeyDown={(e) => {
         if (mentionOpen && e.key === "Escape") e.stopPropagation();
@@ -398,80 +706,35 @@ export function CommandLine({
         </Stack>
       )}
 
-      <Container onDragOver={(e) => e.preventDefault()} onDrop={handleDrop} position="relative" ref={rootRef}>
-        {mentionOpen && menuRect && (
-          <Container
-            bottom={`${menuRect.bottom}px`}
-            data-testid={CommandLineTestId.MentionMenu}
-            left={`${menuRect.left}px`}
-            position="fixed"
-            width={`${menuRect.width}px`}
-            zIndex={50}
-          >
-            <SearchMenu
-              ariaLabel={tMention("ariaLabel")}
-              emptyLabel={tMention("empty")}
-              inputRef={mentionInputRef}
-              onOpenChange={(open) => {
-                if (!open) closeMention();
-              }}
-              onSelect={selectMention}
-              onValueChange={setMentionQuery}
-              open={mentionOpen}
-              placeholder={tMention("placeholder")}
-              sections={[agentSection, pipelineSection]}
-              value={mentionQuery}
-            />
-          </Container>
-        )}
-
-        <Stack align="end" direction="row" gap="100">
-          <input
-            hidden
-            multiple
-            data-testid={CommandLineTestId.FileInput}
-            onChange={handleFileInputChange}
-            ref={fileInputRef}
-            type="file"
-          />
-          <Button
-            aria-label={t("commandLine.attachAria")}
-            data-testid={CommandLineTestId.Attach}
-            icon="plus"
-            intent="ghost"
-            onClick={() => fileInputRef.current?.click()}
-            size="sm"
-          />
-
-          <Stack grow style={{ minWidth: 0 }}>
-            <HighlightTextAreaField
-              autoFocus
-              data-testid={CommandLineTestId.Input}
-              disabled={disabled}
-              highlights={highlights}
-              label={t("commandLine.label")}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder ?? t("commandLine.placeholder")}
-              ref={textareaRef}
-              rows={computeRows(text, rows, maxRows)}
-              value={text}
-            />
+      {chrome ? (
+        <Panel
+          elevated
+          header={
+            <>
+              <Icon name="spark" size="sm" tone="accent" />
+              <Typography mono size="xs" tracking="wide" type="note" variant="secondary">
+                {t("commandLine.chrome.label")}
+              </Typography>
+            </>
+          }
+          headerEnd={
+            <Typography mono size="2xs" type="note" variant="tertiary">
+              {t("commandLine.chrome.hint")}
+            </Typography>
+          }
+          padding="150"
+        >
+          <Stack gap="150">
+            {inputArea}
+            {belowBox}
           </Stack>
-
-          <DropDownButton
-            disabled={!canRun || busy}
-            icon={runIcon}
-            intent="primary"
-            label={runLabel}
-            loading={busy}
-            menuAriaLabel={t("commandLine.moreRunOptions")}
-            menuItems={menuItems}
-            onClick={() => handleSubmit(null)}
-            size="sm"
-          />
-        </Stack>
-      </Container>
+        </Panel>
+      ) : (
+        <>
+          {inputArea}
+          {belowBox}
+        </>
+      )}
 
       {(attachments.files.length > 0 || upload.isPending || attachError) && (
         <Stack gap="50">

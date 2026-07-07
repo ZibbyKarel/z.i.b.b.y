@@ -131,7 +131,7 @@ form/
 ├── Field.tsx             Shared label/hint/error wrapper (FieldTestId, FieldLayout, SelectOption)
 ├── TextInputField/
 ├── TextAreaField/
-├── HighlightTextAreaField/  (inline path/[[wikilink]] highlighting)
+├── HighlightTextAreaField/  (inline path/[[wikilink]]/@mention highlighting; optional per-range `tone`: accent/push/dim)
 ├── NumberField/
 ├── SelectField/
 ├── SegmentPickerField/    (segmented toggle)

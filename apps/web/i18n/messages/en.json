@@ -149,7 +149,29 @@
       "label": "Task",
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
       "attachAria": "Attach files",
-      "moreRunOptions": "More run options"
+      "pinAria": "Pin a file",
+      "moreRunOptions": "More run options",
+      "dropHint": "Drop here — added as an @file in the text",
+      "chrome": {
+        "label": "Say what you need · plain language",
+        "hint": "@ searches agents and pipelines · drag a file, or use the paperclip"
+      },
+      "ack": {
+        "kind": {
+          "agent": "agent",
+          "pipeline": "pipeline",
+          "goal": "goal loop",
+          "chain": "chain",
+          "orchestrator": "orchestrator",
+          "loop": "goal loop",
+          "auto": "auto-classify"
+        },
+        "execFallback": "the loop's objective",
+        "execPending": "waiting for the result…",
+        "headline": "Classified as {kind} → running {exec}",
+        "quoted": "“{text}”",
+        "dismissAria": "Dismiss"
+      }
     },
     "loop": {
       "submit": "Start loop",

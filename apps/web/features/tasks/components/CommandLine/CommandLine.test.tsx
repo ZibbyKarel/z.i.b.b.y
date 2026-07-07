@@ -4,9 +4,11 @@ import {
   ChipTestId,
   DropDownButtonTestId,
   FilePreviewTestId,
+  HighlightTextAreaFieldTestId,
+  PanelTestId,
   SearchMenuTestId,
 } from "@zibby/design-system";
-import { renderWithProviders as render, screen, waitFor } from "../../../../test/render";
+import { fireEvent, renderWithProviders as render, screen, waitFor } from "../../../../test/render";
 import { CommandLine, CommandLineTestId } from "./CommandLine";
 
 /**
@@ -341,5 +343,122 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     render(<CommandLine disabled />);
     await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
     expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeDisabled();
+  });
+
+  describe("Phase 31a — velin-b chrome, drag overlay, mention tones, suggestions, ack", () => {
+    it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
+      render(<CommandLine />);
+      expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
+      expect(screen.getByText(/hledá agenty a pipeliny/)).toBeInTheDocument();
+    });
+
+    it("renders a bare input with no panel chrome when chrome={false}", () => {
+      render(<CommandLine chrome={false} />);
+      expect(screen.queryByTestId(PanelTestId.Header)).not.toBeInTheDocument();
+      expect(screen.getByTestId(CommandLineTestId.Input)).toBeInTheDocument();
+    });
+
+    it("shows the dashed drop overlay while dragging over the box, and hides it on drag-leave", () => {
+      render(<CommandLine />);
+      const box = screen.getByTestId(CommandLineTestId.Box);
+      expect(screen.queryByTestId(CommandLineTestId.DropOverlay)).not.toBeInTheDocument();
+
+      fireEvent.dragOver(box);
+      expect(screen.getByTestId(CommandLineTestId.DropOverlay)).toBeInTheDocument();
+
+      fireEvent.dragLeave(box);
+      expect(screen.queryByTestId(CommandLineTestId.DropOverlay)).not.toBeInTheDocument();
+    });
+
+    it("hides the drop overlay again once a drop lands", () => {
+      render(<CommandLine />);
+      const box = screen.getByTestId(CommandLineTestId.Box);
+      fireEvent.dragOver(box);
+      expect(screen.getByTestId(CommandLineTestId.DropOverlay)).toBeInTheDocument();
+
+      fireEvent.drop(box, { dataTransfer: { files: [] } });
+      expect(screen.queryByTestId(CommandLineTestId.DropOverlay)).not.toBeInTheDocument();
+    });
+
+    it("tints @mentions by resolved type — a known agent accent, a known pipeline push, an unresolved token dim", () => {
+      render(<CommandLine />);
+      // A single `change` (rather than typing character-by-character) — typing a
+      // literal `@` triggers the mention picker, which steals focus to its own
+      // search input; this test only cares what the final text renders as, not the
+      // picker's own UX (already covered by the "@ mention picker" describe above).
+      fireEvent.change(screen.getByTestId(CommandLineTestId.Input), {
+        target: { value: "@Builder a @Delivery a @report.md" },
+      });
+
+      const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+      const byText = (needle: string) => marks.find((m) => m.textContent === needle);
+
+      expect(byText("@Builder")).toHaveClass("bg-accent/[0.14]");
+      expect(byText("@Delivery")).toHaveClass("bg-risk-push/[0.14]");
+      expect(byText("@report.md")).toHaveClass("bg-foreground-dim/[0.14]");
+    });
+
+    it("shows suggestion chips only while the input is empty, and clicking one dispatches it immediately", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine suggestions={["zkontroluj zálohy", "shrň standup"]} />);
+
+      const chips = screen.getAllByTestId(CommandLineTestId.Suggestion);
+      expect(chips.length).toBeGreaterThan(0);
+      expect(chips.map((c) => c.textContent)).toEqual(["zkontroluj zálohy", "shrň standup"]);
+
+      await user.click(chips[0] as HTMLElement);
+
+      expect(createTask).toHaveBeenCalledTimes(1);
+      expect(createTask.mock.calls[0]?.[0].body.text).toBe("zkontroluj zálohy");
+      // The field cleared to the dispatched suggestion — no longer empty — so the
+      // chip rail is gone (superseded by the ack row once the operator enables it).
+      expect(screen.queryByTestId(CommandLineTestId.Suggestion)).not.toBeInTheDocument();
+    });
+
+    it("does not show the ack row by default, even after a successful dispatch", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.keyboard("{Enter}");
+      expect(screen.queryByTestId(CommandLineTestId.AckRow)).not.toBeInTheDocument();
+    });
+
+    it("shows an honest auto-classify ack when no target is assigned and showAck is set", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine showAck />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.keyboard("{Enter}");
+
+      const row = screen.getByTestId(CommandLineTestId.AckRow);
+      expect(row).toHaveTextContent("auto-klasifikace");
+      expect(row).toHaveTextContent("zkontroluj zálohy");
+    });
+
+    it("reflects the actually-picked mention target's kind/name in the ack — never a fabricated route", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine showAck />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@");
+      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
+      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      await user.type(input, "otestuj to");
+
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+
+      const row = screen.getByTestId(CommandLineTestId.AckRow);
+      expect(row).toHaveTextContent("agent");
+      expect(row).toHaveTextContent("Builder");
+    });
+
+    it("dismisses the ack row via its close control", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine showAck />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.keyboard("{Enter}");
+      expect(screen.getByTestId(CommandLineTestId.AckRow)).toBeInTheDocument();
+
+      await user.click(screen.getByTestId(CommandLineTestId.AckDismiss));
+      expect(screen.queryByTestId(CommandLineTestId.AckRow)).not.toBeInTheDocument();
+    });
   });
 });

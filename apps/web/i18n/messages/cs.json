@@ -149,7 +149,29 @@
       "label": "Zadání",
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
       "attachAria": "Přiložit soubory",
-      "moreRunOptions": "Další možnosti spuštění"
+      "pinAria": "Připnout soubor",
+      "moreRunOptions": "Další možnosti spuštění",
+      "dropHint": "Pustit sem — přidá se jako @soubor do textu",
+      "chrome": {
+        "label": "Zadej směr · přirozeným jazykem",
+        "hint": "@ hledá agenty a pipeliny · přetáhni soubor, nebo použij sponku"
+      },
+      "ack": {
+        "kind": {
+          "agent": "agent",
+          "pipeline": "pipeline",
+          "goal": "goal loop",
+          "chain": "chain",
+          "orchestrator": "orchestrátor",
+          "loop": "goal loop",
+          "auto": "auto-klasifikace"
+        },
+        "execFallback": "cíl loopu",
+        "execPending": "čekám na výsledek…",
+        "headline": "Klasifikováno jako {kind} → spouštím {exec}",
+        "quoted": "„{text}“",
+        "dismissAria": "Zavřít"
+      }
     },
     "loop": {
       "submit": "Spustit loop",
