@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { writeHeapSnapshot } from "node:v8";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { initContract } from "@ts-rest/core";
 import { generateOpenApi } from "@ts-rest/open-api";
 import {
@@ -45,7 +46,15 @@ const apiContract = initContract().router({
 });
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Raise the JSON body limit above the Express default (100 kb): entity avatars /
+  // project logos are sent inline as base64 `data:image/*` URIs on PATCH bodies, and a
+  // 2 MB image is ~2.8 MB of base64 — the default rejected even a 184 KB image with a
+  // `PayloadTooLargeError`. 5 MB fits a ~2 MB image plus JSON overhead while staying a
+  // sane DoS backstop; the schema-level AVATAR_MAX (~2 MB) is the real cap.
+  app.useBodyParser("json", { limit: "5mb" });
+  app.useBodyParser("urlencoded", { limit: "5mb", extended: true });
 
   // The web app (Next.js, default :3000) is a different origin than this API
   // (:3333), so the browser needs CORS to read any response — plain fetch and a

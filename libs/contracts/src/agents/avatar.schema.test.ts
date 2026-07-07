@@ -29,6 +29,12 @@ describe("avatar field", () => {
     const tooLong = "data:image/png;base64," + "A".repeat(AVATAR_MAX);
     expect(AgentSchema.safeParse({ ...baseAgent, avatar: tooLong }).success).toBe(false);
   });
+  it("accepts a ~2 MB image data URI (base64 of a 2 MB file)", () => {
+    // A 2 MB image → ~2.8 M base64 chars; AVATAR_MAX must admit it (TODO line 35).
+    const twoMbBase64 = "data:image/png;base64," + "A".repeat(Math.ceil((2 * 1024 * 1024) / 3) * 4);
+    expect(AgentSchema.safeParse({ ...baseAgent, avatar: twoMbBase64 }).success).toBe(true);
+    expect(PipelineSchema.safeParse({ ...basePipeline, avatar: twoMbBase64 }).success).toBe(true);
+  });
   it("is optional", () => {
     expect(AgentSchema.parse(baseAgent).avatar).toBeUndefined();
   });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { IsoDateTimeSchema } from "../common.schema";
+import { AVATAR_MAX, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
@@ -144,10 +144,11 @@ export const ProjectSchema = z.object({
   /**
    * Optional custom logo as a data URI (`data:image/*;base64,…`), shown on the
    * project card in place of the default glyph (the glyph remains the fallback
-   * when absent, or when the image fails to load). Capped at ~200 KB of base64
-   * (280 000 chars) to bound the cost of reading it back on every `GET /projects`.
+   * when absent, or when the image fails to load). Capped at AVATAR_MAX (~2 MB image
+   * as base64) — the shared image data-URI backstop — to bound the cost of reading it
+   * back on every `GET /projects`.
    */
-  logo: z.string().startsWith("data:image/").max(280_000).optional(),
+  logo: z.string().startsWith("data:image/").max(AVATAR_MAX).optional(),
 
   // --- Operational profile (M1) ---
   /** Team members, clients, and stakeholders associated with this project. */

@@ -32,4 +32,24 @@
 
 - [ ] upravme CommandLine komponentu aby sedělat s designem viz velin-b.jsx v design složce. Toto komponentu pak použijeme v NewTaskDialog, na Overview (viz design) a v rámci chat UI
 
-- [ ] nahrával jsem image
+- [x] (fáze 32) nahrával jsem image 184Kb jako avatara pro delivery pipeline a dostal jsem chybu - [api] [Nest] 9038 - 07/07/2026, 10:40:03 AM ERROR [Exception] ✗ PATCH /api/pipelines/delivery 500 {"err":"request entity too large","stack":"PayloadTooLargeError: request entity too large\n at readStream (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/raw-body@3.0.2/node_modules/raw-body/index.js:163:17)\n at getRawBody (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/raw-body@3.0.2/node_modules/raw-body/index.js:116:12)\n at read (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/body-parser@2.2.2/node_modules/body-parser/lib/read.js:113:3)\n at jsonParser (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/body-...(+775)"}
+      [api] PayloadTooLargeError: request entity too large
+      [api] at readStream (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/raw-body@3.0.2/node_modules/raw-body/index.js:163:17)
+      [api] at getRawBody (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/raw-body@3.0.2/node_modules/raw-body/index.js:116:12)
+      [api] at read (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/body-parser@2.2.2/node_modules/body-parser/lib/read.js:113:3)
+      [api] at jsonParser (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/body-parser@2.2.2/node_modules/body-parser/lib/types/json.js:88:5)
+      [api] at Layer.handleRequest (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+      [api] at trimPrefix (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+      [api] at /Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9
+      [api] at processParams (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+      [api] at next (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+      [api] at cors (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:188:7)
+      to musíme opravit. Je to velmi malý obrázek. Obrázky do 2Mb by měly být možné nahrávat v pořádku
+
+- [ ] editační dialog pro pipeline mi přijde zbytečný. Můžeme ho zrušit a jeho obsah zobrazit v rámci detail view pipeliny (jen sidepanel s agenty zrušíme a zobrazíme ho jen když uživatel klikne na nové tlačítko + se záměrem přidat agenta. Po přidání agenta se side panel zase zavře případně bude mít uživatel možnost zavřít ho manuálně )
+
+- [ ] v chat ui mi chybí přepínátko projektů - dejme do topbaru
+
+- [ ] máme moc logů Overview - Nedávná aktivita, pravý side panel v HUD ui a Aktivita panel v Chat UI. chce to sjednotit a nechat na jednom místě
+
+- [ ] chat ui - místo psaní "Zibby" s buřinkou nad každou zprávou, kterou ZIBBY psal jen barevně oddělíme pozadí zpráv

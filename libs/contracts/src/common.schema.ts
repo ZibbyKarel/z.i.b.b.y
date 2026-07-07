@@ -61,8 +61,12 @@ export const WorkspaceSchema = z.object({
 });
 export type Workspace = z.infer<typeof WorkspaceSchema>;
 
-/** Max length of an avatar data URI (~200 KB of base64), the storage backstop. */
-export const AVATAR_MAX = 280_000;
+/**
+ * Max length of an avatar/logo data URI, the storage backstop. Sized so a 2 MB image
+ * fits: 2 MB → ~2.8 M base64 chars, and we allow up to 2,900,000 for the data-URI
+ * prefix + headroom. (The API body-parser limit in `main.ts` must stay above this.)
+ */
+export const AVATAR_MAX = 2_900_000;
 
 /**
  * An entity avatar: either an uploaded `data:image/*` URI or a `/`-rooted path to
