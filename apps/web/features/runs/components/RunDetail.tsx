@@ -435,12 +435,15 @@ export function RunDetail({
     <>
       <Stack gap="200">
         {/* Phase 53: the assigned agent/pipeline avatar is rendered like the DS
-            EntityHero — a STRETCHED BACKGROUND band (object-cover fill + gradient
-            scrim, glyph fallback when absent) — with the whole run header laid over
-            it. The Card keeps the state tone/HUD brackets and clips the image to the
-            panel radius; EntityHero owns the image + scrim treatment. */}
+            EntityHero — a background band (object-cover fill + gradient scrim, glyph
+            fallback when absent) — with the whole run header laid over it. The Card
+            keeps the state tone/HUD brackets and clips the image to the panel radius;
+            EntityHero owns the image + scrim treatment. Phase 60: `imageBleed="band"`
+            constrains the image to a right-anchored bounded-width strip (with a
+            horizontal fade) instead of full-bleed, so the header text sits over plain
+            surface — opt-in, other EntityHero consumers stay full-bleed. */}
         <Card clip corners={Boolean(tone)} tone={tone}>
-          <EntityHero glyph={glyph} image={avatar}>
+          <EntityHero glyph={glyph} image={avatar} imageBleed="band">
             <Container padding="300">
               <Stack gap="200">
                 <Stack wrap align="start" direction="row" gap="150" justify="between">

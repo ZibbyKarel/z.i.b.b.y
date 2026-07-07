@@ -45,6 +45,14 @@ export interface EntityHeroProps {
   height?: number;
   /** How the image fills the band — `contain` for wide art, `cover` for portraits. */
   fit?: "cover" | "contain";
+  /**
+   * How the image fills the band horizontally. `"full"` (default) stretches it edge to
+   * edge, as before. `"band"` constrains it to a right-anchored bounded-width strip
+   * (with a horizontal fade into the left content area) so header text on the left
+   * sits over the plain surface instead of over stretched imagery. Opt-in — every
+   * consumer other than the run-detail header keeps the default full-bleed look.
+   */
+  imageBleed?: "full" | "band";
   /** Enable upload / drag-drop / remove. */
   editable?: boolean;
   onUpload?: (dataUri: string) => void;
@@ -80,6 +88,7 @@ export function EntityHero({
   desc,
   height = 190,
   fit = "cover",
+  imageBleed = "full",
   editable = false,
   onUpload,
   onRemove,
@@ -119,8 +128,13 @@ export function EntityHero({
         <img
           alt=""
           className={cn(
-            "absolute inset-0 h-full w-full",
-            fit === "cover" ? "object-cover" : "object-contain",
+            "absolute",
+            // band: the whole image, right-anchored, scaled to the band height with the
+            // width computed from the aspect ratio — object-contain so nothing crops.
+            // full: stretched edge to edge, cropped per `fit`.
+            imageBleed === "band"
+              ? "inset-y-0 right-0 h-full w-auto object-contain"
+              : cn("inset-0 h-full w-full", fit === "cover" ? "object-cover" : "object-contain"),
           )}
           data-testid={EntityHeroTestId.Image}
           onError={() => setFailed(true)}
@@ -133,6 +147,11 @@ export function EntityHero({
         >
           <Icon name={glyph} size="xl" />
         </div>
+      )}
+
+      {/* band mode: fade the bounded image into the left content area */}
+      {imageBleed === "band" && showImage && (
+        <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-surface via-surface/70 to-transparent" />
       )}
 
       {/* dissolve the image into the panel below */}

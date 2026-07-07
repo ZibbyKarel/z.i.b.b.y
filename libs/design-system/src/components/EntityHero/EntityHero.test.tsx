@@ -63,4 +63,21 @@ describe("EntityHero", () => {
     expect(screen.getByTestId(EntityHeroTestId.GlyphFallback)).toBeInTheDocument();
     expect(screen.getByTestId(EntityHeroTestId.Overlay)).toHaveTextContent("run header content");
   });
+
+  it("defaults to a full-bleed image (imageBleed omitted)", () => {
+    render(<EntityHero glyph="flow" image="/avatars/delivery.png" name="X" />);
+    const img = screen.getByTestId(EntityHeroTestId.Image);
+    expect(img).toHaveClass("inset-0", "h-full", "w-full");
+    expect(img).not.toHaveClass("right-0");
+  });
+
+  it("shows the whole image right-anchored and scaled to height when imageBleed is band", () => {
+    render(
+      <EntityHero glyph="flow" image="/avatars/delivery.png" imageBleed="band" name="X" />,
+    );
+    const img = screen.getByTestId(EntityHeroTestId.Image);
+    // Whole image (no crop), right-anchored, height = band height, width from aspect ratio.
+    expect(img).toHaveClass("absolute", "inset-y-0", "right-0", "h-full", "w-auto", "object-contain");
+    expect(img).not.toHaveClass("w-full", "w-1/2", "object-cover");
+  });
 });

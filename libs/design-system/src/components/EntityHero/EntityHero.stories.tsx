@@ -59,6 +59,20 @@ export const Overview: Story = {
           </EntityHero>
         </div>
       </div>
+      <div className="flex flex-col gap-2">
+        <div className="w-[620px]">
+          {/* Phase 60: `imageBleed="band"` — used only by the run-detail header. The
+              image is constrained to a right-anchored bounded strip with a horizontal
+              fade, instead of stretching full-bleed, so header content on the left
+              sits over plain surface. */}
+          <EntityHero glyph="flow" image={PLACEHOLDER_IMAGE} imageBleed="band">
+            <div className="p-4 font-mono text-foreground">
+              <div className="text-lg font-bold">delivery_42</div>
+              <div className="text-sm text-foreground-dim">běží · pipelina · agent delivery</div>
+            </div>
+          </EntityHero>
+        </div>
+      </div>
     </div>
   ),
 };
