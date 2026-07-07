@@ -30,8 +30,8 @@ import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
 import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { useChainsQuery } from "../../chains";
-import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { usePinsQuery } from "../../pins";
+import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { ProjectSwitcher } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
@@ -43,6 +43,7 @@ import { CosmicScene } from "../scene/CosmicScene";
 import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
 import { ChatPalette } from "./ChatPalette";
+import { ChatRunningTasks } from "./ChatRunningTasks";
 import { ChatTranscript } from "./ChatTranscript";
 
 /**
@@ -446,6 +447,17 @@ export function ChatScreen({
 
       {/* ── Main area: scene behind, scrollable conversation over it ───── */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
+        {/* ── Left rail: live running/active tasks (Phase 44) ───────────────
+            A `z`-raised fixed-width column pinned to the left, above the scene
+            like the top bar / composer. `pointer-events-none` on the gutter so
+            the scene stays interactive around it (the panel itself re-enables
+            them); hidden below `lg` so it never crowds the centered transcript
+            on a narrow viewport. */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
+          <div className="pointer-events-auto">
+            <ChatRunningTasks />
+          </div>
+        </div>
         <div
           className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
@@ -497,6 +509,7 @@ export function ChatScreen({
       <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto max-w-[720px]">
           <CommandLine
+            showAttach
             chrome={false}
             disabled={thinking}
             injectedTarget={injectedTarget}
@@ -505,7 +518,6 @@ export function ChatScreen({
             onInjectedTargetConsumed={() => setPendingMentionTarget(undefined)}
             onSubmit={send}
             placeholder={t("composer.placeholder")}
-            showAttach={false}
           />
         </div>
       </div>

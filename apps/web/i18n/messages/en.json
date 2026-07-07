@@ -1502,6 +1502,11 @@
       "expandAria": "Expand run detail",
       "collapseAria": "Collapse run detail"
     },
+    "runningTasks": {
+      "title": "Running",
+      "empty": "Nothing running",
+      "openAria": "Open run: {title}"
+    },
     "palette": {
       "placeholder": "Search agents, pipelines, gates or notes…",
       "ariaLabel": "Quick-switch across the system",

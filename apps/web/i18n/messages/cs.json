@@ -1502,6 +1502,11 @@
       "expandAria": "Rozbalit detail běhu",
       "collapseAria": "Sbalit detail běhu"
     },
+    "runningTasks": {
+      "title": "Běží",
+      "empty": "Nic neběží",
+      "openAria": "Otevřít běh: {title}"
+    },
     "palette": {
       "placeholder": "Hledat agenta, pipeline, gate nebo poznámku…",
       "ariaLabel": "Rychlé přepínání po systému",

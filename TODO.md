@@ -64,7 +64,7 @@
 
 - [x] stránka běhy a aktivita - tlačítko "Zastavit běh" na běžícím tasku nic nedělá. Z potvrzovacího dialogu se neodešle žádný request na backend — fáze 43
 
-- [ ] na stránce chatu nevidím běžící tasky pokud byly spuštěny z HUD UI. Měl bych vidět na levé straně aktivní tasky
+- [x] na stránce chatu nevidím běžící tasky pokud byly spuštěny z HUD UI. Měl bych vidět na levé straně aktivní tasky — fáze 50 (levý rail "Běží" v ChatScreen, data z useRunsQuery, scoped na aktivní projekt)
 
 - [x] na stránce chatu není použita CommandLine komponenta — fáze 38 (ChatScreen renderuje CommandLine v send-delegation módu)
 
@@ -91,3 +91,7 @@
 - [ ] CosmicScene - ringsLayer je moc výrazná. Zkus místo toho vymyslet nějakou jinou variantu vizualizace stavu, které momentálně využívají rigns
 
 - [ ] CosmicScene - Error stav a stav waiting for aprooval je poměrně stejný. Waiting for approval bych dal jako "warning tone"
+
+- [ ] Chat UI - momentálně vidím jen běžící tasky ale měl bych vidět všechny tasky ve vybraném projektu (nebo bez projektů) v panelu tasků na levo. Chat UI by mělo být plnohodnoté UI.
+
+- [ ] Chat UI - musím být schopný přes cmd-k zkratku si zobrazit detail vybraného výsledku v dialogu a né ho jen přidat do kontextu inputu dole (tohle chování je duplicitní s inline searchem komponenty CommandLine)
