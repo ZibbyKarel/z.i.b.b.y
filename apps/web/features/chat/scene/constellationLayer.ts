@@ -62,12 +62,12 @@ export interface ConstellationLayer {
   dispose(): void;
 }
 
-/** Draw an avatar disc: soft glow, accent ring, dark core, and the name's initial. */
-function makeAvatarTexture(agent: SceneAgent): THREE.CanvasTexture {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
+const AVATAR_SIZE = 128;
+
+/** Draw the glow + accent ring an avatar sits inside — shared by the image and the
+ * initial fallback so both read as the same node type. */
+function drawAvatarFrame(ctx: CanvasRenderingContext2D, agent: SceneAgent): void {
+  const size = AVATAR_SIZE;
   const c = size / 2;
   ctx.clearRect(0, 0, size, size);
 
@@ -79,6 +79,14 @@ function makeAvatarTexture(agent: SceneAgent): THREE.CanvasTexture {
   ctx.beginPath();
   ctx.arc(c, c, c, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/** Draw an avatar disc: soft glow, accent ring, dark core, and the name's initial —
+ * the fallback for a node with no image (all chains, imageless agents/pipelines). */
+function drawAvatarFallback(ctx: CanvasRenderingContext2D, agent: SceneAgent): void {
+  const size = AVATAR_SIZE;
+  const c = size / 2;
+  drawAvatarFrame(ctx, agent);
 
   // Dark core.
   ctx.fillStyle = "#0b1422";
@@ -93,16 +101,69 @@ function makeAvatarTexture(agent: SceneAgent): THREE.CanvasTexture {
   ctx.arc(c, c, size * 0.3, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Initial (avatar fallback: no image in the catalog, so glyph/initial).
+  // Initial.
   const initial = (agent.name.trim()[0] ?? "?").toUpperCase();
   ctx.fillStyle = agent.color;
   ctx.font = `600 ${size * 0.34}px ui-monospace, monospace`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(initial, c, c + size * 0.02);
+}
+
+/** Draw the loaded avatar image clipped to the disc, framed by the accent ring. */
+function drawAvatarImage(
+  ctx: CanvasRenderingContext2D,
+  agent: SceneAgent,
+  img: HTMLImageElement,
+): void {
+  const size = AVATAR_SIZE;
+  const c = size / 2;
+  const r = size * 0.3;
+  drawAvatarFrame(ctx, agent);
+
+  // Image clipped to the disc (cover-fit so a non-square portrait fills it).
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.clip();
+  const scale = Math.max((2 * r) / img.width, (2 * r) / img.height);
+  const w = img.width * scale;
+  const h = img.height * scale;
+  ctx.drawImage(img, c - w / 2, c - h / 2, w, h);
+  ctx.restore();
+
+  // Accent ring on top.
+  ctx.strokeStyle = agent.color;
+  ctx.lineWidth = size * 0.035;
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+/**
+ * Build the avatar texture. The initial-in-a-disc fallback is drawn synchronously
+ * (so the sprite never flashes empty); if the node carries an image it loads in the
+ * background and repaints the same canvas on arrival — the "prefer agents with
+ * images" half of the TODO note. A failed load simply keeps the fallback.
+ */
+function makeAvatarTexture(agent: SceneAgent): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = AVATAR_SIZE;
+  const ctx = canvas.getContext("2d")!;
+  drawAvatarFallback(ctx, agent);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+
+  if (agent.avatar) {
+    const img = new Image();
+    img.onload = () => {
+      drawAvatarImage(ctx, agent, img);
+      texture.needsUpdate = true;
+    };
+    img.src = agent.avatar;
+  }
+
   return texture;
 }
 
