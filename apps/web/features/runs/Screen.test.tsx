@@ -42,6 +42,7 @@ vi.mock("./queries/useRunsQuery", () => ({
     refetch,
   }),
   useRunGlyphMap: () => new Map(),
+  useRunAvatarMap: () => new Map(),
 }));
 
 vi.mock("./mutations", () => ({

@@ -255,3 +255,12 @@ const KIND_GLYPH: Record<RunKind, IconName> = {
 export function runGlyph(run: RunView, glyphById: Map<string, IconName>): IconName {
   return glyphById.get(run.owner) ?? KIND_GLYPH[run.kind];
 }
+
+/**
+ * Resolve a run's assigned-entity avatar (agent/pipeline) from the catalog, keyed by
+ * `run.owner`. Returns `undefined` when the owner has no avatar — the run-detail
+ * header then falls back to the {@link runGlyph} glyph (Phase 48).
+ */
+export function runAvatar(run: RunView, avatarById: Map<string, string>): string | undefined {
+  return avatarById.get(run.owner);
+}

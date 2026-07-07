@@ -5,8 +5,10 @@ import {
   CodeBlockTestId,
   DropdownTestId,
   FilePreviewTestId,
+  IconTileTestId,
   MarkdownTestId,
 } from "@zibby/design-system";
+import { within } from "@testing-library/react";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
@@ -151,6 +153,58 @@ describe("RunDetail — pipeline header", () => {
   it("omits the duration cell while the run has no written-back finish time", () => {
     renderDetail();
     expect(screen.queryByText("délka běhu")).not.toBeInTheDocument();
+  });
+});
+
+describe("RunDetail — header avatar (Phase 48)", () => {
+  const HEADER_AVATAR = "run-header-avatar";
+
+  it("renders the assigned entity's avatar image in the header when provided", () => {
+    render(
+      <RunDetail
+        avatar="/avatars/delivery.png"
+        deleting={false}
+        glyph="flow"
+        now={Date.parse("2026-06-14T10:05:00Z")}
+        onDelete={() => {}}
+        onStop={() => {}}
+        run={pipelineRun}
+        stopping={false}
+      />,
+    );
+    const tile = screen.getByTestId(HEADER_AVATAR);
+    const img = within(tile).getByTestId(IconTileTestId.Image);
+    expect(img).toHaveAttribute("src", "/avatars/delivery.png");
+  });
+
+  it("falls back to the glyph (no image) when no avatar is provided", () => {
+    renderDetail(); // renderDetail passes no `avatar`
+    const tile = screen.getByTestId(HEADER_AVATAR);
+    expect(within(tile).queryByTestId(IconTileTestId.Image)).not.toBeInTheDocument();
+  });
+
+  it("keeps the delete action functional alongside the header avatar", async () => {
+    const onDelete = vi.fn();
+    render(
+      <RunDetail
+        avatar="/avatars/delivery.png"
+        deleting={false}
+        glyph="flow"
+        now={Date.parse("2026-06-14T10:05:00Z")}
+        onDelete={onDelete}
+        onStop={() => {}}
+        run={{ ...pipelineRun, status: "done" }}
+        stopping={false}
+      />,
+    );
+    // The avatar and the actions coexist in the header's right cluster.
+    expect(screen.getByTestId("run-header-avatar")).toBeInTheDocument();
+    // Delete still opens its confirm dialog and, on confirm, calls onDelete (the full
+    // confirm flow is covered in RunDetailConfirm.test.tsx — this guards the swap).
+    await userEvent.click(screen.getByText("Smazat"));
+    const buttons = screen.getAllByRole("button", { name: "Smazat" });
+    await userEvent.click(buttons[buttons.length - 1]!);
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 });
 

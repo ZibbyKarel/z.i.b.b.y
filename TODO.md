@@ -72,7 +72,7 @@
 
 - [x] v souboru PipelineStageTimeline odstraníme tlačítko "log" které zobrazuje log fáze a funkcionalitu nahradíme komponentou Accordion kde bude stačit kliknout na celý řádek fáze aby se log zobrazil/schoval — fáze 46
 
-- [ ] stránka běhy a aktivita - na detailu tasku v headeru bych místo klasického glyphu v levo nahoře zobrazil avatara (s fallbackem na glyph) přiřazeného agenta nebo pipeliny. Avatar by měl být vpravo
+- [x] stránka běhy a aktivita - na detailu tasku v headeru bych místo klasického glyphu v levo nahoře zobrazil avatara (s fallbackem na glyph) přiřazeného agenta nebo pipeliny. Avatar by měl být vpravo — fáze 48
 
 - [ ] stránka běhy a aktivita - na detailu tasku, který skončil chybou mi chybí tlačítko "resume", které pustí task znova (ideálně tak aby se nemusel znovu celý opakovat a načítat context)
 

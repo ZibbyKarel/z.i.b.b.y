@@ -19,8 +19,15 @@ import {
   useDeletePipelineRunMutation,
   useStopTaskRunMutation,
 } from "./mutations";
-import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
-import { type FeedStatus, type RunView, findSelectedRun, isStoppableRun, runGlyph } from "./run";
+import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
+import {
+  type FeedStatus,
+  type RunView,
+  findSelectedRun,
+  isStoppableRun,
+  runAvatar,
+  runGlyph,
+} from "./run";
 
 // No synthetic "all" entry — an empty selection already reads as "every state"
 // (see `list` below), which is what the header segmented control's own "Vše"
@@ -84,6 +91,7 @@ export function Screen() {
       ? allRuns.filter((r) => !r.projectId)
       : allRuns.filter((r) => r.projectId === activeProjectId);
   const glyphById = useRunGlyphMap();
+  const avatarById = useRunAvatarMap();
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
 
@@ -255,6 +263,7 @@ export function Screen() {
 
             {selected ? (
               <RunDetail
+                avatar={runAvatar(selected, avatarById)}
                 deleting={deleting}
                 glyph={runGlyph(selected, glyphById)}
                 key={selected.runId}

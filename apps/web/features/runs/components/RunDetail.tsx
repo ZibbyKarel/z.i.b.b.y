@@ -46,6 +46,9 @@ import { RunStateBadge } from "./RunStateBadge";
 export interface RunDetailProps {
   run: RunView;
   glyph: IconName;
+  /** The assigned agent/pipeline's avatar, shown in the header in place of the
+   * glyph (which is the fallback when this is absent) — Phase 48. */
+  avatar?: string;
   now: number;
   onStop: () => void;
   stopping: boolean;
@@ -352,6 +355,7 @@ function RunAttachmentsPanel({ run }: { run: RunView }) {
 export function RunDetail({
   run,
   glyph,
+  avatar,
   now,
   onStop,
   stopping,
@@ -431,75 +435,83 @@ export function RunDetail({
         <HudPanel padding="300" tone={tone}>
           <Stack gap="200">
             <Stack wrap align="start" direction="row" gap="150" justify="between">
-              <Stack align="start" direction="row" gap="150">
-                <IconTile glyph={glyph} size="lg" />
-                <Container minW0>
-                  <Stack gap="50">
-                    <Stack wrap align="center" direction="row" gap="100">
-                      <Typography type="subtitle" weight="semibold">
-                        {headline}
-                      </Typography>
-                      <RunStateBadge
-                        canonTitle={run.status}
-                        label={t(`state.${run.status}`)}
-                        size="md"
-                        status={run.status}
-                      />
-                    </Stack>
-                    {subtitle && (
-                      <Typography leading="snug" size="sm" type="text" variant="secondary">
-                        {subtitle}
-                      </Typography>
-                    )}
-                    {descriptionText && <TaskDescription text={descriptionText} />}
-                    {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
-                        into this one meta line instead of a second, separate chip. */}
-                    <Typography mono size="2xs" type="note" variant="tertiary">
-                      {run.runId} · {t(`kind.${run.kind}`)}
-                      {agentName ? ` · ${t("metaAgent")} ${agentName}` : ""}
+              <Container minW0>
+                <Stack gap="50">
+                  <Stack wrap align="center" direction="row" gap="100">
+                    <Typography type="subtitle" weight="semibold">
+                      {headline}
                     </Typography>
+                    <RunStateBadge
+                      canonTitle={run.status}
+                      label={t(`state.${run.status}`)}
+                      size="md"
+                      status={run.status}
+                    />
                   </Stack>
-                </Container>
-              </Stack>
-              {approval ? (
-                // While the run waits on the gate, the header carries the approval's
-                // severity + risk type; deciding happens in the panel below.
-                <Stack align="center" direction="row" gap="150">
-                  <SeverityMeter
-                    showLabel
-                    label={tApprovals(`severity.${approval.risk}`)}
-                    severity={approval.risk}
-                  />
-                  <RiskBadge
-                    label={approval.riskType ? tApprovals(`risk.${approval.riskType}`) : ""}
-                    size="md"
-                    type={approval.riskType}
-                  />
+                  {subtitle && (
+                    <Typography leading="snug" size="sm" type="text" variant="secondary">
+                      {subtitle}
+                    </Typography>
+                  )}
+                  {descriptionText && <TaskDescription text={descriptionText} />}
+                  {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
+                      into this one meta line instead of a second, separate chip. */}
+                  <Typography mono size="2xs" type="note" variant="tertiary">
+                    {run.runId} · {t(`kind.${run.kind}`)}
+                    {agentName ? ` · ${t("metaAgent")} ${agentName}` : ""}
+                  </Typography>
                 </Stack>
-              ) : (
-                <Stack align="center" direction="row" gap="100">
-                  {isStoppableRun(run) && (
+              </Container>
+              {/* The actions/approval sit between the title block and the assigned
+                  entity's avatar, which is the rightmost element of the header
+                  (Phase 48 — glyph is the avatar's fallback via IconTile `src`). */}
+              <Stack align="center" direction="row" gap="150">
+                {approval ? (
+                  // While the run waits on the gate, the header carries the approval's
+                  // severity + risk type; deciding happens in the panel below.
+                  <Stack align="center" direction="row" gap="150">
+                    <SeverityMeter
+                      showLabel
+                      label={tApprovals(`severity.${approval.risk}`)}
+                      severity={approval.risk}
+                    />
+                    <RiskBadge
+                      label={approval.riskType ? tApprovals(`risk.${approval.riskType}`) : ""}
+                      size="md"
+                      type={approval.riskType}
+                    />
+                  </Stack>
+                ) : (
+                  <Stack align="center" direction="row" gap="100">
+                    {isStoppableRun(run) && (
+                      <Button
+                        disabled={stopping}
+                        icon="stop"
+                        intent="danger"
+                        onClick={() => setConfirmKind("stop")}
+                        size="sm"
+                      >
+                        {t("stop")}
+                      </Button>
+                    )}
                     <Button
-                      disabled={stopping}
-                      icon="stop"
+                      disabled={deleting}
+                      icon="x"
                       intent="danger"
-                      onClick={() => setConfirmKind("stop")}
+                      onClick={() => setConfirmKind("delete")}
                       size="sm"
                     >
-                      {t("stop")}
+                      {run.status === "scheduled" ? t("cancelTask") : t("delete")}
                     </Button>
-                  )}
-                  <Button
-                    disabled={deleting}
-                    icon="x"
-                    intent="danger"
-                    onClick={() => setConfirmKind("delete")}
-                    size="sm"
-                  >
-                    {run.status === "scheduled" ? t("cancelTask") : t("delete")}
-                  </Button>
-                </Stack>
-              )}
+                  </Stack>
+                )}
+                <IconTile
+                  data-testid="run-header-avatar"
+                  glyph={glyph}
+                  size="lg"
+                  src={avatar}
+                />
+              </Stack>
             </Stack>
 
             <Stack wrap direction="row" gap="300">
