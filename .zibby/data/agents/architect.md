@@ -1,11 +1,19 @@
 ---
 name: architect
-description: Software architecture specialist for system design, scalability, and technical decision-making. Use PROACTIVELY when planning new features, refactoring large systems, or making architectural decisions.
-tools: ["Read", "Grep", "Glob"]
-model: opus
-thinking: high
+description: >-
+  Software architecture specialist for system design, scalability, and technical
+  decision-making. Use PROACTIVELY when planning new features, refactoring large
+  systems, or making architectural decisions.
 glyph: compass
 avatar: /avatars/architect.png
+model: opus
+thinking: high
+tools:
+  - Read
+  - Grep
+  - Glob
+category: Core Development
+gates: []
 ---
 
 ## Prompt Defense Baseline

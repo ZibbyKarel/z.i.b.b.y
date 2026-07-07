@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import { Injectable } from "@nestjs/common";
 import {
   type AgentRun,
@@ -21,6 +22,7 @@ import { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalsStorageService } from "../goals/goals.storage.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 
 /** The unified run could not be resolved across any runner store (memory or disk). */
@@ -55,6 +57,12 @@ interface NameMaps {
   chain: ReadonlyMap<string, string>;
 }
 
+/** Registered project id / absolute path → human name, for resolving a run's display project. */
+interface ProjectNameMaps {
+  byId: ReadonlyMap<string, string>;
+  byPath: ReadonlyMap<string, string>;
+}
+
 /**
  * The unified task-run surface. Owns the merge that used to live in the web
  * (`mergeRunFeed` + the per-kind `*ToView` converters): it reads all three runner
@@ -76,6 +84,7 @@ export class TaskRunsService {
     private readonly pipelinesStore: PipelinesStorageService,
     private readonly goalsStore: GoalsStorageService,
     private readonly chainsStore: ChainsStorageService,
+    private readonly projectsStore: ProjectsStorageService,
     private readonly scheduled: ScheduledTasksStorageService,
   ) {}
 
@@ -189,24 +198,39 @@ export class TaskRunsService {
    * child run ids the feed folds out.
    */
   private async collect(): Promise<{ runs: TaskRun[]; childRunIds: Set<string> }> {
-    const [agents, pipelines, goals, chains, scheduled, agentDefs, pipelineDefs, goalDefs, chainDefs] =
-      await Promise.all([
-        this.agentRunner.listAll(),
-        this.pipelineRunner.listAll(),
-        this.goalRunner.listAll(),
-        this.chainRunner.listAll(),
-        this.scheduled.list(),
-        this.agentsStore.list(),
-        this.pipelinesStore.list(),
-        this.goalsStore.list(),
-        this.chainsStore.list(),
-      ]);
+    const [
+      agents,
+      pipelines,
+      goals,
+      chains,
+      scheduled,
+      agentDefs,
+      pipelineDefs,
+      goalDefs,
+      chainDefs,
+      projects,
+    ] = await Promise.all([
+      this.agentRunner.listAll(),
+      this.pipelineRunner.listAll(),
+      this.goalRunner.listAll(),
+      this.chainRunner.listAll(),
+      this.scheduled.list(),
+      this.agentsStore.list(),
+      this.pipelinesStore.list(),
+      this.goalsStore.list(),
+      this.chainsStore.list(),
+      this.projectsStore.list(),
+    ]);
 
     const names: NameMaps = {
       agent: new Map(agentDefs.map((d) => [d.id, d.name ?? d.id])),
       pipeline: new Map(pipelineDefs.map((d) => [d.id, d.name ?? d.id])),
       goal: new Map(goalDefs.map((d) => [d.id, d.name ?? d.id])),
       chain: new Map(chainDefs.map((d) => [d.id, d.name ?? d.id])),
+    };
+    const projectNames: ProjectNameMaps = {
+      byId: new Map(projects.map((p) => [p.id, p.name])),
+      byPath: new Map(projects.map((p) => [p.path, p.name])),
     };
     const tasksById = new Map(scheduled.map((t) => [t.id, t]));
     const pipelineDefsById = new Map(pipelineDefs.map((d) => [d.id, d]));
@@ -221,16 +245,28 @@ export class TaskRunsService {
 
     const runs: TaskRun[] = [
       ...agents.map((r) =>
-        enrichRunWithTask(this.withProcessor(agentRunToView(r), names), tasksById),
+        resolveProjectDisplay(
+          enrichRunWithTask(this.withProcessor(agentRunToView(r, projectNames), names), tasksById),
+          projectNames,
+        ),
       ),
       ...pipelines.map((r) =>
-        enrichRunWithTask(
-          this.withProcessor(pipelineRunToView(r, pipelineDefsById.get(r.pipelineId)), names),
-          tasksById,
+        resolveProjectDisplay(
+          enrichRunWithTask(
+            this.withProcessor(
+              pipelineRunToView(r, projectNames, pipelineDefsById.get(r.pipelineId)),
+              names,
+            ),
+            tasksById,
+          ),
+          projectNames,
         ),
       ),
       ...goals.map((r) =>
-        enrichRunWithTask(this.withProcessor(goalRunToView(r), names), tasksById),
+        resolveProjectDisplay(
+          enrichRunWithTask(this.withProcessor(goalRunToView(r, projectNames), names), tasksById),
+          projectNames,
+        ),
       ),
       ...chains.map((r) =>
         enrichRunWithTask(this.withProcessor(chainRunToView(r), names), tasksById),
@@ -268,7 +304,16 @@ function processorFor(kind: RunKind, owner: string, names: NameMaps): Processor 
 
 // ── Pure converters (ported from apps/web/features/runs/run.ts) ──────────────
 
-function agentRunToView(r: AgentRun): TaskRun {
+/**
+ * Resolve a run's raw `project` reference (an agent run's free-form label — an
+ * id, a name, or a browser-relative path with no registry entry) against the
+ * registry by id, falling back to the reference itself unresolved.
+ */
+function resolveAgentProjectLabel(projectRef: string, projectNames: ProjectNameMaps): string {
+  return projectNames.byId.get(projectRef) ?? projectRef;
+}
+
+function agentRunToView(r: AgentRun, projectNames: ProjectNameMaps): TaskRun {
   return {
     runId: r.runId,
     kind: "agent",
@@ -277,7 +322,7 @@ function agentRunToView(r: AgentRun): TaskRun {
     pct: r.pct,
     title: r.title,
     prompt: r.prompt,
-    project: r.project,
+    project: resolveAgentProjectLabel(r.project, projectNames),
     startedAt: r.startedAt,
     logBase: "agents",
     taskId: r.taskId,
@@ -300,7 +345,23 @@ export function sumStageCosts(stageRuns: readonly { costUsd?: number }[]): numbe
     : undefined;
 }
 
-function pipelineRunToView(r: PipelineRun, pipeline?: Pipeline): TaskRun {
+/**
+ * The run's target-project display label, resolved from the resolved project's
+ * absolute `projectPath` — never the run's own sandbox `cwd` (a pipeline/goal run's
+ * `cwd` is its per-phase sandbox root, named `${id}_${startedMs}`, which reads as a
+ * meaningless id when shown as "project"). Falls back to the path's basename when
+ * the project isn't (or is no longer) in the registry; "" when the run has no
+ * resolved project at all (sandbox-only).
+ */
+function resolveSandboxProjectLabel(
+  projectPath: string | undefined,
+  projectNames: ProjectNameMaps,
+): string {
+  if (!projectPath) return "";
+  return projectNames.byPath.get(projectPath) ?? path.basename(projectPath);
+}
+
+function pipelineRunToView(r: PipelineRun, projectNames: ProjectNameMaps, pipeline?: Pipeline): TaskRun {
   // A directed task's per-run override wins; absent that, the pipeline definition's
   // own `outputs:` is the default sink (mirrors the delivery path's own fallback —
   // `run.outputsOverride ?? pipeline.outputs` in PipelineRunnerService.runOutputs).
@@ -328,7 +389,7 @@ function pipelineRunToView(r: PipelineRun, pipeline?: Pipeline): TaskRun {
     pct: null,
     title: "",
     prompt: r.currentStage ? `fáze: ${r.currentStage}` : "",
-    project: r.cwd.split("/").pop() ?? "",
+    project: resolveSandboxProjectLabel(r.projectPath, projectNames),
     startedAt: r.startedAt,
     logBase: null,
     taskId: r.taskId,
@@ -343,7 +404,7 @@ function pipelineRunToView(r: PipelineRun, pipeline?: Pipeline): TaskRun {
   };
 }
 
-function goalRunToView(r: GoalRun): TaskRun {
+function goalRunToView(r: GoalRun, projectNames: ProjectNameMaps): TaskRun {
   const status: TaskRun["status"] =
     r.status === "paused-limit"
       ? "paused-limit"
@@ -362,7 +423,7 @@ function goalRunToView(r: GoalRun): TaskRun {
     pct: null,
     title: "",
     prompt: r.currentIteration != null ? `iterace ${r.currentIteration + 1}` : "",
-    project: r.cwd.split("/").pop() ?? "",
+    project: resolveSandboxProjectLabel(r.projectPath, projectNames),
     startedAt: r.startedAt,
     logBase: null,
     taskId: r.taskId,
@@ -412,6 +473,7 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     taskText: task.text,
     taskOutcome: task.outcome?.status,
     taskOutcomeSummary: task.outcome?.summary,
+    taskOutcomeFinishedAt: task.outcome?.finishedAt,
     taskOutputKind: task.output?.type,
     attachments: task.attachments,
     // The engagement id lives on the scheduled task; agent/pipeline/goal/chain run
@@ -421,6 +483,19 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     // simply keep no projectId and fall outside every project filter.
     ...(task.projectId ? { projectId: task.projectId } : {}),
   };
+}
+
+/**
+ * The task's `projectId` (the engagement FK) is the authoritative source for a
+ * run's project — it wins over the kind-specific `project` label (an agent run's
+ * free-form reference, or a pipeline/goal run's resolved-path guess) whenever it
+ * resolves to a registered project. Runs with no owning task, or whose project was
+ * since deleted, keep their existing `project` label unchanged.
+ */
+function resolveProjectDisplay(run: TaskRun, projectNames: ProjectNameMaps): TaskRun {
+  if (!run.projectId) return run;
+  const name = projectNames.byId.get(run.projectId);
+  return name ? { ...run, project: name } : run;
 }
 
 /** Owner id a routed target reads as: the stored definition id, or the orchestrator id. */

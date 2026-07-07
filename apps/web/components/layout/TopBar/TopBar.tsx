@@ -1,8 +1,8 @@
 import { Button, Container, Divider, Icon, Stack, Typography } from "@zibby/design-system";
-import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
+import type { ReactNode } from "react";
 import { GlobalSearch } from "../GlobalSearch/GlobalSearch";
+import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
 
 export enum TopBarTestId {
   RailToggle = "topbar-rail-toggle",
@@ -57,7 +57,7 @@ export function TopBar({
               aria-label={railHidden ? t("showRail") : t("hideRail")}
               aria-pressed={!railHidden}
               data-testid={TopBarTestId.RailToggle}
-              icon={railHidden ? "expand" : "collapse"}
+              icon={!railHidden ? "expand" : "collapse"}
               intent="ghost"
               onClick={onToggleRail}
               size="sm"

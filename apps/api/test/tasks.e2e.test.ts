@@ -411,8 +411,9 @@ describe("Tasks API (e2e)", () => {
       expect(typeof task.runRef).toBe("string");
       const run = await request(app.getHttpServer()).get(`/api/tasks/runs/${task.runRef}`);
       expect(run.status).toBe(200);
-      // The run is attributed to the granted project (no WorkspaceSetupError thrown).
-      expect(run.body.project).toBe("nongit");
+      // The run is attributed to the granted project (no WorkspaceSetupError thrown),
+      // displayed by its human name — not the raw registry id.
+      expect(run.body.project).toBe("NonGit");
 
       await fs.rm(folder, { recursive: true, force: true });
     });

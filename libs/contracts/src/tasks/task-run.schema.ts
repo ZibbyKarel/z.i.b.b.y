@@ -104,6 +104,12 @@ export const TaskRunSchema = z.object({
    * surface an "open output" affordance and seed a follow-up task with it.
    */
   taskOutcomeSummary: z.string().optional(),
+  /**
+   * Enriched from the task record: when the outcome was written — the run's
+   * completion time. Paired with `startedAt` the detail derives the total run
+   * duration; absent for a run still in flight or with no written-back outcome.
+   */
+  taskOutcomeFinishedAt: z.string().optional(),
   /** Enriched from the task record: the operator's chosen terminal output kind. */
   taskOutputKind: z.enum(["pr", "file", "void"]).optional(),
   /**
