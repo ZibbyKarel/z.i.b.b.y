@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
 import {
   Accordion,
   AccordionItem,
@@ -14,24 +12,26 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useNewTask } from "../../tasks";
 import { formatCostUsd } from "../../../utils/cost";
-import { relativeTime, resumeEta } from "../../../utils/time";
+import { formatDuration, relativeTime, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
-import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
+import { useNewTask } from "../../tasks";
+import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import { type RunView, approvalForRun, runTitle } from "../run";
 import { ChainStepsPanel } from "./ChainStepsPanel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
 import { RunApprovalGate } from "./RunApprovalGate";
+import { RunLogStream } from "./RunLogStream";
 import { RunParkedPanel } from "./RunParkedPanel";
 import { RunPrGatePanel } from "./RunPrGatePanel";
 import { RunStateBadge } from "./RunStateBadge";
-import { RunLogStream } from "./RunLogStream";
 
 export interface RunDetailProps {
   run: RunView;
@@ -103,13 +103,30 @@ function TaskDescription({ text }: { text: string }) {
   );
 }
 
-function MetaCell({ label, value, tone }: { label: string; value: string; tone?: "accent" }) {
+function MetaCell({
+  label,
+  value,
+  tone,
+  emphasize,
+}: {
+  label: string;
+  value: string;
+  tone?: "accent";
+  /** Bumps the value's size so it reads as the standout figure of the strip (the cost). */
+  emphasize?: boolean;
+}) {
   return (
     <Stack gap="25">
       <Typography mono size="2xs" tracking="wide" type="note" variant="tertiary">
         {label}
       </Typography>
-      <Typography mono size="sm" tone={tone} type="note" weight="semibold">
+      <Typography
+        mono
+        size={emphasize ? "md" : "sm"}
+        tone={tone}
+        type="note"
+        weight={emphasize ? "bold" : "semibold"}
+      >
         {value}
       </Typography>
     </Stack>
@@ -168,7 +185,9 @@ function RunOutputPanel({ run }: { run: RunView }) {
     ? (summary ?? "")
     : (prDraft?.content ?? fileArtifact?.content ?? "");
   const output =
-    rawOutput.length > CONTINUE_CONTEXT_MAX ? `${rawOutput.slice(0, CONTINUE_CONTEXT_MAX)}…` : rawOutput;
+    rawOutput.length > CONTINUE_CONTEXT_MAX
+      ? `${rawOutput.slice(0, CONTINUE_CONTEXT_MAX)}…`
+      : rawOutput;
   const context = [
     run.taskTitle ? t("continueContextTask", { title: run.taskTitle }) : null,
     t("continueContextOutput", { output }),
@@ -312,6 +331,13 @@ export function RunDetail({
         : t("inH", { n: Math.floor(inMin / 60) })
       : relativeTime(run.startedAt, now, ago);
 
+  // Total wall-clock time from dispatch to the written-back outcome — only once the
+  // task's outcome carries a `finishedAt` (absent for a run still in flight, or one
+  // with no owning task to write an outcome back onto).
+  const durationMs = run.taskOutcomeFinishedAt
+    ? Date.parse(run.taskOutcomeFinishedAt) - Date.parse(run.startedAt)
+    : undefined;
+
   const headline = runTitle(run);
 
   // A pipeline run's `prompt` is only the "fáze: X" progress string, which the stage
@@ -343,199 +369,209 @@ export function RunDetail({
   return (
     <>
       <Stack gap="200">
-      <HudPanel padding="300" tone={tone}>
-        <Stack gap="200">
-          <Stack wrap align="start" direction="row" gap="150" justify="between">
-            <Stack align="start" direction="row" gap="150">
-              <IconTile glyph={glyph} size="lg" />
-              <Container minW0>
-                <Stack gap="50">
-                  <Stack wrap align="center" direction="row" gap="100">
-                    <Typography type="subtitle" weight="semibold">
-                      {headline}
-                    </Typography>
-                    <RunStateBadge
-                      canonTitle={run.status}
-                      label={t(`state.${run.status}`)}
-                      size="md"
-                      status={run.status}
-                    />
-                    {agentName && (
-                      <Stack align="center" direction="row" gap="50" title={t("metaAgent")}>
-                        <Icon name="bot" size="xs" tone="accent" />
-                        <Typography mono size="xs" type="note" variant="secondary">
-                          {agentName}
-                        </Typography>
-                      </Stack>
+        <HudPanel padding="300" tone={tone}>
+          <Stack gap="200">
+            <Stack wrap align="start" direction="row" gap="150" justify="between">
+              <Stack align="start" direction="row" gap="150">
+                <IconTile glyph={glyph} size="lg" />
+                <Container minW0>
+                  <Stack gap="50">
+                    <Stack wrap align="center" direction="row" gap="100">
+                      <Typography type="subtitle" weight="semibold">
+                        {headline}
+                      </Typography>
+                      <RunStateBadge
+                        canonTitle={run.status}
+                        label={t(`state.${run.status}`)}
+                        size="md"
+                        status={run.status}
+                      />
+                      {agentName && (
+                        <Stack align="center" direction="row" gap="50" title={t("metaAgent")}>
+                          <Icon name="bot" size="xs" tone="accent" />
+                          <Typography mono size="xs" type="note" variant="secondary">
+                            {agentName}
+                          </Typography>
+                        </Stack>
+                      )}
+                    </Stack>
+                    {subtitle && (
+                      <Typography leading="snug" size="sm" type="text" variant="secondary">
+                        {subtitle}
+                      </Typography>
                     )}
-                  </Stack>
-                  {subtitle && (
-                    <Typography leading="snug" size="sm" type="text" variant="secondary">
-                      {subtitle}
+                    {descriptionText && <TaskDescription text={descriptionText} />}
+                    <Typography mono size="2xs" type="note" variant="tertiary">
+                      {run.runId} · {t(`kind.${run.kind}`)} · {run.status}
                     </Typography>
-                  )}
-                  {descriptionText && <TaskDescription text={descriptionText} />}
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {run.runId} · {t(`kind.${run.kind}`)} · {run.status}
-                  </Typography>
-                </Stack>
-              </Container>
-            </Stack>
-            {approval ? (
-              // While the run waits on the gate, the header carries the approval's
-              // severity + risk type; deciding happens in the panel below.
-              <Stack align="center" direction="row" gap="150">
-                <SeverityMeter
-                  showLabel
-                  label={tApprovals(`severity.${approval.risk}`)}
-                  severity={approval.risk}
-                />
-                <RiskBadge
-                  label={approval.riskType ? tApprovals(`risk.${approval.riskType}`) : ""}
-                  size="md"
-                  type={approval.riskType}
-                />
+                  </Stack>
+                </Container>
               </Stack>
-            ) : (
-              <Stack align="center" direction="row" gap="100">
-                {run.status === "running" && (
+              {approval ? (
+                // While the run waits on the gate, the header carries the approval's
+                // severity + risk type; deciding happens in the panel below.
+                <Stack align="center" direction="row" gap="150">
+                  <SeverityMeter
+                    showLabel
+                    label={tApprovals(`severity.${approval.risk}`)}
+                    severity={approval.risk}
+                  />
+                  <RiskBadge
+                    label={approval.riskType ? tApprovals(`risk.${approval.riskType}`) : ""}
+                    size="md"
+                    type={approval.riskType}
+                  />
+                </Stack>
+              ) : (
+                <Stack align="center" direction="row" gap="100">
+                  {run.status === "running" && (
+                    <Button
+                      disabled={stopping}
+                      icon="stop"
+                      intent="danger"
+                      onClick={() => setConfirmKind("stop")}
+                      size="sm"
+                    >
+                      {t("stop")}
+                    </Button>
+                  )}
                   <Button
-                    disabled={stopping}
-                    icon="stop"
+                    disabled={deleting}
+                    icon="x"
                     intent="danger"
-                    onClick={() => setConfirmKind("stop")}
+                    onClick={() => setConfirmKind("delete")}
                     size="sm"
                   >
-                    {t("stop")}
+                    {run.status === "scheduled" ? t("cancelTask") : t("delete")}
                   </Button>
-                )}
-                <Button
-                  disabled={deleting}
-                  icon="x"
-                  intent="danger"
-                  onClick={() => setConfirmKind("delete")}
-                  size="sm"
-                >
-                  {run.status === "scheduled" ? t("cancelTask") : t("delete")}
-                </Button>
-              </Stack>
-            )}
-          </Stack>
+                </Stack>
+              )}
+            </Stack>
 
-          <Stack wrap direction="row" gap="300">
-            {run.project && <MetaCell label={t("metaProject")} tone="accent" value={run.project} />}
-            <MetaCell
-              label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
-              value={startedValue}
-            />
-            {run.owner && run.kind !== "agent" && (
+            <Stack wrap direction="row" gap="300">
+              {run.project && (
+                <MetaCell label={t("metaProject")} tone="accent" value={run.project} />
+              )}
               <MetaCell
-                label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
-                tone={run.kind === "pipeline" ? "accent" : undefined}
-                value={run.owner}
+                label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
+                value={startedValue}
               />
-            )}
-            {/* The task name is already the headline — only repeat it here when it
+              {run.owner && run.kind !== "agent" && (
+                <MetaCell
+                  label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
+                  tone={run.kind === "pipeline" ? "accent" : undefined}
+                  value={run.owner}
+                />
+              )}
+              {/* The task name is already the headline — only repeat it here when it
                 differs, and then carry the written-back outcome it uniquely holds. */}
-            {run.taskTitle && run.taskTitle !== headline && (
-              <MetaCell
-                label={t("metaTask")}
-                value={
-                  run.taskOutcome
-                    ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
-                    : run.taskTitle
-                }
-              />
-            )}
-            {run.costUsd != null && (
-              <MetaCell label={t("metaCost")} value={formatCostUsd(run.costUsd)} />
-            )}
-            {approval && (
-              <MetaCell
-                label={tApprovals("requestedLabel")}
-                value={new Date(approval.requestedAt).toLocaleString("cs")}
-              />
-            )}
-            {approval?.via && <MetaCell label={tApprovals("viaLabel")} value={approval.via} />}
+              {run.taskTitle && run.taskTitle !== headline && (
+                <MetaCell
+                  label={t("metaTask")}
+                  value={
+                    run.taskOutcome
+                      ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
+                      : run.taskTitle
+                  }
+                />
+              )}
+              {run.costUsd != null && (
+                <MetaCell
+                  emphasize
+                  label={t("metaCost")}
+                  tone="accent"
+                  value={formatCostUsd(run.costUsd)}
+                />
+              )}
+              {durationMs != null && (
+                <MetaCell label={t("metaDuration")} value={formatDuration(durationMs)} />
+              )}
+              {approval && (
+                <MetaCell
+                  label={tApprovals("requestedLabel")}
+                  value={new Date(approval.requestedAt).toLocaleString("cs")}
+                />
+              )}
+              {approval?.via && <MetaCell label={tApprovals("viaLabel")} value={approval.via} />}
+            </Stack>
           </Stack>
-        </Stack>
-      </HudPanel>
+        </HudPanel>
 
-      <RunOutputPanel run={run} />
-      <RunAttachmentsPanel run={run} />
+        <RunOutputPanel run={run} />
+        <RunAttachmentsPanel run={run} />
 
-      {approval ? (
-        <>
-          {/* A pipeline run parked on the PR gate shows what's about to be published
+        {approval ? (
+          <>
+            {/* A pipeline run parked on the PR gate shows what's about to be published
               (the draft + diffstat) above the generic confirm/discard panel. */}
-          {run.kind === "pipeline" &&
-            (approval.action === "pr.open" || approval.action === "git.push") && (
-              <RunPrGatePanel pipelineRunId={run.runId} />
-            )}
-          <RunApprovalGate approval={approval} />
-          <Accordion>
-            <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
-          </Accordion>
-        </>
-      ) : run.kind === "goal" ? (
-        // Phase 10: a goal run's surface IS its iteration timeline + cost bar (and,
-        // when parked, the resume-with-note panel) — there is no per-run log.
-        <>
-          {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
-          <GoalDetailPanel run={run} />
-        </>
-      ) : run.kind === "chain" ? (
-        // Phase 05: a chain run folds its steps the same way a goal folds its
-        // maker/verifier iterations — each step's runRef is a pipeline run with its
-        // own stage timeline.
-        <ChainStepsPanel run={run} />
-      ) : run.kind === "pipeline" ? (
-        // Phase 28: a pipeline run's surface IS its stage timeline (each phase's log is
-        // openable). A paused-limit / retries-parked run shows its notice above it.
-        <>
-          {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
-          {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
-          <PipelineStageTimeline
-            currentStage={run.currentStage}
-            live={run.status === "running"}
-            owner={run.owner}
-            pipelineRunId={run.runId}
-            stageRuns={run.stageRuns}
-          />
-        </>
-      ) : run.status === "paused-limit" ? (
-        <>
-          <LimitPausedPanel now={now} run={run} />
-          <Accordion>
-            <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
-          </Accordion>
-        </>
-      ) : (
-        <HudPanel
-          padding={run.logBase ? "250" : "300"}
-          title={run.logBase ? t("output") : undefined}
-        >
-          {logPanel}
-        </HudPanel>
-      )}
+            {run.kind === "pipeline" &&
+              (approval.action === "pr.open" || approval.action === "git.push") && (
+                <RunPrGatePanel pipelineRunId={run.runId} />
+              )}
+            <RunApprovalGate approval={approval} />
+            <Accordion>
+              <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
+            </Accordion>
+          </>
+        ) : run.kind === "goal" ? (
+          // Phase 10: a goal run's surface IS its iteration timeline + cost bar (and,
+          // when parked, the resume-with-note panel) — there is no per-run log.
+          <>
+            {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
+            <GoalDetailPanel run={run} />
+          </>
+        ) : run.kind === "chain" ? (
+          // Phase 05: a chain run folds its steps the same way a goal folds its
+          // maker/verifier iterations — each step's runRef is a pipeline run with its
+          // own stage timeline.
+          <ChainStepsPanel run={run} />
+        ) : run.kind === "pipeline" ? (
+          // Phase 28: a pipeline run's surface IS its stage timeline (each phase's log is
+          // openable). A paused-limit / retries-parked run shows its notice above it.
+          <>
+            {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
+            {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
+            <PipelineStageTimeline
+              currentStage={run.currentStage}
+              live={run.status === "running"}
+              owner={run.owner}
+              pipelineRunId={run.runId}
+              stageRuns={run.stageRuns}
+            />
+          </>
+        ) : run.status === "paused-limit" ? (
+          <>
+            <LimitPausedPanel now={now} run={run} />
+            <Accordion>
+              <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
+            </Accordion>
+          </>
+        ) : (
+          <HudPanel
+            padding={run.logBase ? "250" : "300"}
+            title={run.logBase ? t("output") : undefined}
+          >
+            {logPanel}
+          </HudPanel>
+        )}
 
-      {run.checkpoints && run.checkpoints.length > 0 && (
-        <HudPanel padding="250" title={t("checkpoints")}>
-          <Stack gap="50">
-            {run.checkpoints.map((c) => (
-              <Typography
-                mono
-                key={`${c.phaseId}-${c.sha}`}
-                size="2xs"
-                type="note"
-                variant="tertiary"
-              >
-                {c.phaseId} · {c.sha}
-              </Typography>
-            ))}
-          </Stack>
-        </HudPanel>
-      )}
+        {run.checkpoints && run.checkpoints.length > 0 && (
+          <HudPanel padding="250" title={t("checkpoints")}>
+            <Stack gap="50">
+              {run.checkpoints.map((c) => (
+                <Typography
+                  mono
+                  key={`${c.phaseId}-${c.sha}`}
+                  size="2xs"
+                  type="note"
+                  variant="tertiary"
+                >
+                  {c.phaseId} · {c.sha}
+                </Typography>
+              ))}
+            </Stack>
+          </HudPanel>
+        )}
       </Stack>
 
       {confirmKind === "stop" && (

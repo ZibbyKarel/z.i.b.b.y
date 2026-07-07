@@ -4,7 +4,6 @@
    inline styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import type { Route } from "next";
 import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import {
   Container,
@@ -15,6 +14,7 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
@@ -31,11 +31,11 @@ import { MINUTE_MS } from "../../../utils/time";
 import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { usePipelineRunQuery } from "../../pipelines";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
-import { buildConstellation } from "../scene/constellation";
-import { buildDock } from "../scene/dock";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
+import { buildConstellation } from "../scene/constellation";
 import { CosmicScene } from "../scene/CosmicScene";
+import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
 import { ChatComposer } from "./ChatComposer";
 import { ChatPalette } from "./ChatPalette";
@@ -141,32 +141,38 @@ export function ChatScreen({
   // tool dispatch with no text — still flashes.
   const [completedTick, setCompletedTick] = useState(0);
 
-  const appendAssistant = useCallback(({ turnId, text, toolEvents }: CompletedTurn) => {
-    setCompletedTick((t) => t + 1);
-    if (!text && toolEvents.length === 0) return;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: turnId,
-        role: "assistant",
-        text,
-        at: new Date().toISOString(),
-        ...(toolEvents.length > 0 ? { toolEvents } : {}),
-      },
-    ]);
-  }, [setMessages]);
+  const appendAssistant = useCallback(
+    ({ turnId, text, toolEvents }: CompletedTurn) => {
+      setCompletedTick((t) => t + 1);
+      if (!text && toolEvents.length === 0) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: turnId,
+          role: "assistant",
+          text,
+          at: new Date().toISOString(),
+          ...(toolEvents.length > 0 ? { toolEvents } : {}),
+        },
+      ]);
+    },
+    [setMessages],
+  );
 
-  const appendError = useCallback((message: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `err-${crypto.randomUUID()}`,
-        role: "assistant",
-        text: message,
-        at: new Date().toISOString(),
-      },
-    ]);
-  }, [setMessages]);
+  const appendError = useCallback(
+    (message: string) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `err-${crypto.randomUUID()}`,
+          role: "assistant",
+          text: message,
+          at: new Date().toISOString(),
+        },
+      ]);
+    },
+    [setMessages],
+  );
 
   const stream = useChatStream(conversationId, {
     onComplete: appendAssistant,

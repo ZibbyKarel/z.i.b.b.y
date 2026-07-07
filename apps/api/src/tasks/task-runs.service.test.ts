@@ -7,6 +7,7 @@ import type {
   GoalRun,
   Pipeline,
   PipelineRun,
+  Project,
   ScheduledTask,
 } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
@@ -18,6 +19,7 @@ import type { GoalRunnerService } from "../goals/goal-runner.service";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
 import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import {
   TaskRunNotResumableError,
@@ -26,6 +28,8 @@ import {
 } from "./task-runs.service";
 
 const AT = "2026-06-16T00:00:00.000Z";
+
+const acmeProject = { id: "acme", name: "Acme Corp", path: "/repos/acme" } as Project;
 
 const agentA: AgentRun = {
   runId: "researcher_1",
@@ -60,7 +64,11 @@ const pipeP: PipelineRun = {
   currentStage: "kodér",
   stageRuns: [],
   startedAt: "2026-06-16T00:02:00.000Z",
-  cwd: "/tmp/acme",
+  // `cwd` is the run's own per-phase sandbox root (named `${pipelineId}_${startedMs}`,
+  // mirroring production) — never the display project. `projectPath` is the resolved
+  // target project's path, which the display label must be derived from instead.
+  cwd: "/tmp/delivery_3",
+  projectPath: acmeProject.path,
 };
 
 const goalG: GoalRun = {
@@ -157,6 +165,7 @@ function build() {
   const pipelinesStore = { list: vi.fn(async () => [pipelineDef]) };
   const goalsStore = { list: vi.fn(async () => [] as Goal[]) };
   const chainsStore = { list: vi.fn(async () => [chainDef]) };
+  const projectsStore = { list: vi.fn(async () => [acmeProject]) };
   const scheduled = { list: vi.fn(async () => [scheduledS]) };
 
   const service = new TaskRunsService(
@@ -168,9 +177,19 @@ function build() {
     pipelinesStore as unknown as PipelinesStorageService,
     goalsStore as unknown as GoalsStorageService,
     chainsStore as unknown as ChainsStorageService,
+    projectsStore as unknown as ProjectsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
   );
-  return { service, agentRunner, pipelineRunner, goalRunner, chainRunner, pipelinesStore, scheduled };
+  return {
+    service,
+    agentRunner,
+    pipelineRunner,
+    goalRunner,
+    chainRunner,
+    pipelinesStore,
+    projectsStore,
+    scheduled,
+  };
 }
 
 describe("TaskRunsService", () => {
@@ -370,6 +389,77 @@ describe("TaskRunsService", () => {
       scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
       const feed = await service.listTaskRuns();
       expect(feed.find((r) => r.runId === "researcher_1")?.projectId).toBeUndefined();
+    });
+  });
+
+  describe("project display label (regression: was showing the run's own sandbox id)", () => {
+    it("resolves a pipeline run's project from its resolved projectPath, not its sandbox cwd", async () => {
+      const { service } = build();
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      // `cwd` is "/tmp/delivery_3" (the sandbox root, named after the run itself) —
+      // the display label must never equal that; it resolves via `projectPath` instead.
+      expect(run.project).toBe("Acme Corp");
+      expect(run.project).not.toBe("delivery_3");
+    });
+
+    it("falls back to the resolved path's basename when the project isn't registered", async () => {
+      const { service, projectsStore } = build();
+      projectsStore.list.mockResolvedValue([]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.project).toBe("acme");
+    });
+
+    it("shows no project for a pipeline/goal run with no resolved projectPath", async () => {
+      const { service } = build();
+      const run = await service.getTaskRun(goalG.goalRunId);
+      expect(run.project).toBe("");
+    });
+
+    it("resolves an agent run's raw project reference (an id) to its registered name", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([{ ...agentA, project: "acme" }, makerChild]);
+      const run = await service.getTaskRun(agentA.runId);
+      expect(run.project).toBe("Acme Corp");
+    });
+
+    it("the owning task's projectId wins over the kind-specific project label when both resolve", async () => {
+      const { service, scheduled, pipelineRunner } = build();
+      // A pipeline run resolved to a *different*, unregistered filesystem path than
+      // the task's own engagement — the path-based fallback would read "other", but
+      // the task's projectId is the authoritative display source and must win.
+      pipelineRunner.listAll.mockResolvedValue([
+        { ...pipeP, taskId: "task-pipe", projectPath: "/repos/other" },
+      ]);
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "task-pipe", status: "dispatched", projectId: "acme" },
+      ]);
+      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      expect(run.project).toBe("Acme Corp");
+    });
+  });
+
+  describe("taskOutcomeFinishedAt (total run duration)", () => {
+    it("joins the task's written-back outcome finish time onto its run", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          outcome: { status: "done", summary: "ok", finishedAt: "2026-06-16T00:05:00.000Z" },
+        },
+      ]);
+      const feed = await service.listTaskRuns();
+      expect(feed.find((r) => r.runId === "researcher_1")?.taskOutcomeFinishedAt).toBe(
+        "2026-06-16T00:05:00.000Z",
+      );
+    });
+
+    it("is absent when the owning task has no written-back outcome yet", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
+      const run = await service.getTaskRun(agentA.runId);
+      expect(run.taskOutcomeFinishedAt).toBeUndefined();
     });
   });
 

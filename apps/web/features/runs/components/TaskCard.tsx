@@ -1,6 +1,5 @@
-import { Card, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import { Card, Container, Icon, type IconName, Stack, Tag, Typography } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import { formatCostUsd } from "../../../utils/cost";
 import { resumeEta } from "../../../utils/time";
 import { type RunView, runTitle } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
@@ -87,33 +86,21 @@ export function TaskCard({
               {caption}
             </Typography>
           )}
-          <Stack align="center" direction="row" gap="100" justify="between">
-            <Stack align="center" direction="row" gap="100">
-              <RunStateBadge canonTitle={run.status} label={stateLabel} status={run.status} />
-              {run.taskOutcome && (
-                <Typography
-                  mono
-                  size="2xs"
-                  tone={run.taskOutcome === "done" ? "ok" : "bad"}
-                  type="note"
-                >
-                  {t("metaTask")} → {t(`taskOutcome.${run.taskOutcome}`)}
-                </Typography>
-              )}
-            </Stack>
+          <Stack align="start" direction="row" gap="100" justify="between">
             <Stack align="center" direction="row" gap="50">
-              {run.costUsd != null && (
-                <Typography mono size="2xs" type="note" variant="tertiary">
-                  {formatCostUsd(run.costUsd)}
-                </Typography>
+              <RunStateBadge canonTitle={run.status} label={stateLabel} status={run.status} />
+
+              {run.owner && (
+                <Tag>
+                  <Icon name={glyph} size="xs" tone="faint" />
+                  {run.owner}
+                </Tag>
               )}
-              {run.owner && <Icon name={glyph} size="xs" tone="faint" />}
-              <Typography mono size="2xs" type="note" variant="tertiary">
-                {run.owner ? `${run.owner} · ` : ""}
-                {run.project ? `${run.project} · ` : ""}
-                {startedLabel}
-              </Typography>
             </Stack>
+
+            <Typography mono size="2xs" type="note" variant="tertiary">
+              {startedLabel}
+            </Typography>
           </Stack>
         </Stack>
       </Container>

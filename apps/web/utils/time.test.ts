@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clockTime, compactAgo, relativeTime } from "./time";
+import { clockTime, compactAgo, formatDuration, relativeTime } from "./time";
 
 const T0 = Date.parse("2026-06-10T12:00:00Z");
 const iso = (msAgo: number) => new Date(T0 - msAgo).toISOString();
@@ -52,5 +52,27 @@ describe("clockTime", () => {
 
   it("returns an empty string for an invalid timestamp", () => {
     expect(clockTime("not-a-date", "en")).toBe("");
+  });
+});
+
+describe("formatDuration", () => {
+  it("renders sub-minute spans as seconds only", () => {
+    expect(formatDuration(45_000)).toBe("45s");
+    expect(formatDuration(0)).toBe("0s");
+  });
+
+  it("renders minutes plus remaining seconds under an hour", () => {
+    expect(formatDuration(3 * 60_000 + 12_000)).toBe("3m 12s");
+    expect(formatDuration(59 * 60_000)).toBe("59m 0s");
+  });
+
+  it("renders hours plus remaining minutes from an hour up", () => {
+    expect(formatDuration(60 * 60_000)).toBe("1h 0m");
+    expect(formatDuration(2 * 60 * 60_000 + 5 * 60_000)).toBe("2h 5m");
+  });
+
+  it("clamps a negative or non-finite span to 0s", () => {
+    expect(formatDuration(-1000)).toBe("0s");
+    expect(formatDuration(Number.NaN)).toBe("0s");
   });
 });

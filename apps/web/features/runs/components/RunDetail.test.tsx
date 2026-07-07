@@ -120,6 +120,21 @@ describe("RunDetail — pipeline header", () => {
     renderDetail();
     expect(screen.queryByText("cena (odhad)")).not.toBeInTheDocument();
   });
+
+  it("shows the total run duration once the task outcome carries a finish time", () => {
+    renderDetail({
+      ...pipelineRun,
+      startedAt: new Date("2026-06-14T10:00:00Z").toISOString(),
+      taskOutcomeFinishedAt: new Date("2026-06-14T10:03:12Z").toISOString(),
+    });
+    expect(screen.getByText("délka běhu")).toBeInTheDocument();
+    expect(screen.getByText("3m 12s")).toBeInTheDocument();
+  });
+
+  it("omits the duration cell while the run has no written-back finish time", () => {
+    renderDetail();
+    expect(screen.queryByText("délka běhu")).not.toBeInTheDocument();
+  });
 });
 
 describe("RunDetail — chain fold (Phase 05)", () => {

@@ -25,6 +25,21 @@ export function relativeTime(
 export const compactAgo = (iso: string, now: number): string =>
   relativeTime(iso, now, (n, unit) => (n === 0 ? "now" : `${n}${unit}`));
 
+/**
+ * A span of milliseconds as a compact duration ("45s" / "3m 12s" / "2h 5m") — the
+ * coarser unit only shows when non-zero, so a sub-minute run reads "45s" rather
+ * than "0m 45s". Negative/NaN spans (a clock skew, an in-flight run) clamp to "0s".
+ */
+export function formatDuration(ms: number): string {
+  const totalSec = Number.isFinite(ms) ? Math.max(0, Math.round(ms / 1000)) : 0;
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 /** Wall-clock "HH:MM" in the viewer's local timezone (fixes the UTC-slice bug). */
 export function clockTime(iso: string, locale: string): string {
   const ms = Date.parse(iso);

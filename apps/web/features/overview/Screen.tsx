@@ -1,19 +1,19 @@
 "use client";
 
 import { Card, Container, Grid, Icon, IconTile, Stack, Typography } from "@zibby/design-system";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../agents";
 import { useIntegrationsQuery } from "../integrations";
-import { usePipelinesQuery } from "../pipelines";
-import { useSkillsQuery } from "../skills";
 import { NeedsAttentionPanel } from "../integrations/components/NeedsAttentionPanel";
 import { usePinToggle } from "../pins";
+import { usePipelinesQuery } from "../pipelines";
 import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
+import { useSkillsQuery } from "../skills";
 import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
@@ -117,7 +117,7 @@ export function Screen() {
             the needs-you queue (main) sits beside the launch + activity rail so the page
             uses its width instead of stacking every block full-bleed. */}
         {railHasContent ? (
-          <Grid align="start" gap="250" sidebar="right">
+          <Grid align="start" cols={2} gap="250">
             {queue}
             <Stack direction="col" gap="250">
               {/* Quick launch — pinned agents/pipelines/chains with a one-click RUN. */}
