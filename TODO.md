@@ -28,6 +28,8 @@
 
 - [x] na stránce chatu zrušíme by se MainLayout měl lišit. Celé tělo chat stránky musí být fullscreen. Jedná se o "paralelní UI s HUD UI" takže je rovnocenné a né vnořené do HUD UI. — fáze 27
 
-- [ ] na stránce /chat nefunguje cmd+k zkratka
+- [x] na stránce /chat nefunguje cmd+k zkratka — fáze 30
 
 - [ ] upravme CommandLine komponentu aby sedělat s designem viz velin-b.jsx v design složce. Toto komponentu pak použijeme v NewTaskDialog, na Overview (viz design) a v rámci chat UI
+
+- [ ] nahrával jsem image

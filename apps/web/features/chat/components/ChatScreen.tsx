@@ -259,6 +259,23 @@ export function ChatScreen({
     return () => window.removeEventListener("keydown", handler);
   }, [paletteOpen, panelOpen]);
 
+  // ⌘K / Ctrl+K opens the quick-switcher — the same toggle the SearchBar's click
+  // goes through, so a second press (or one while the panel is open) closes it
+  // rather than stacking overlays. Phase 23 dropped this listener because the
+  // chat surface used to sit over the HUD's own global ⌘K search (double-open);
+  // now that `/chat` is fullscreen and bypasses `MainLayout` (phase 27), there is
+  // no competing handler on this route, so re-adding it is safe — no capture-phase
+  // suppression needed.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "k") return;
+      e.preventDefault();
+      openPalette();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [openPalette]);
+
   // Composer activity is the only new state this phase adds — everything else the
   // orb needs is already carried by the stream + mutation (see Rozhodnutí 1, Fáze
   // 14.1 of the phase-14 plan).

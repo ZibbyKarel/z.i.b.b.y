@@ -280,6 +280,26 @@ describe("ChatScreen", () => {
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
     });
 
+    it("⌘K opens the palette, and Esc closes it (Fáze 30)", async () => {
+      renderWithProviders(<ChatScreenHarness />);
+
+      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+      fireKey({ key: "k", metaKey: true });
+      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
+
+      fireKey({ key: "Escape" });
+      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+    });
+
+    it("Ctrl+K toggles the palette closed on a second press, same as the search bar (Fáze 30)", async () => {
+      renderWithProviders(<ChatScreenHarness />);
+
+      fireKey({ key: "k", ctrlKey: true });
+      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
+      fireKey({ key: "k", ctrlKey: true });
+      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+    });
+
     it("Esc closes the panel, then does nothing further (no overlay left to close)", async () => {
       const onClose = vi.fn();
       const user = userEvent.setup();
