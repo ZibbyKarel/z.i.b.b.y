@@ -173,6 +173,15 @@ vi.mock("../../projects/queries/useProjectsQuery", () => ({
   getProjectsQueryKey: () => ["projects"],
 }));
 
+// Phase 24: the project is sourced from the top-bar active-project context, not a
+// dialog field — a mutable hoisted fixture lets each test set the scope.
+const { activeProject } = vi.hoisted(() => ({
+  activeProject: { id: null as string | null },
+}));
+vi.mock("../../projects/context/ProjectProvider", () => ({
+  useActiveProject: () => ({ activeProjectId: activeProject.id, setActiveProject: vi.fn() }),
+}));
+
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "koder", name: "Kodér", instructions: "x" }] }),
   // useCreateAgentMutation (pulled in via the agents/mutations barrel) reads this
@@ -205,6 +214,7 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     createTask.mockClear();
     createGoal.mockClear();
     createProject.mockClear();
+    activeProject.id = null;
   });
 
   it("renders one description field, no mode tabs", () => {
@@ -370,13 +380,15 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(taskBody?.scheduledAt).toBeGreaterThan(Date.now());
   });
 
-  it("folds a selected project's path into the dispatched task, exactly like a typed path", async () => {
+  it("has no project field — the project is sourced from the top-bar scope", () => {
+    render(<NewTaskDialog onClose={() => {}} />);
+    expect(screen.queryByLabelText(/Projekt/)).not.toBeInTheDocument();
+  });
+
+  it("folds the top-bar active project's path into the dispatched task, exactly like a typed path", async () => {
+    activeProject.id = "beta";
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
-
-    // Pick a project — its configured `path` is added to context like a typed path.
-    await userEvent.click(screen.getByLabelText(/Projekt/));
-    await userEvent.click(await screen.findByRole("option", { name: "Beta" }));
 
     // It flows through the live classify (attribution) and into the dispatched task.
     await screen.findByText(/ZIBBY to předá/);
@@ -386,17 +398,14 @@ describe("NewTaskDialog (Phase 11 unified composer)", () => {
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
   });
 
-  it("deselecting the project drops its path from the dispatched task", async () => {
+  it("folds nothing when the top-bar scope is 'Bez projektu' (null)", async () => {
+    activeProject.id = null;
     render(<NewTaskDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
-    await userEvent.click(screen.getByLabelText(/Projekt/));
-    await userEvent.click(await screen.findByRole("option", { name: "Beta" }));
-
-    // Switch the picker back to "no project" — its path is no longer folded in.
-    await userEvent.click(screen.getByLabelText(/Projekt/));
-    await userEvent.click(await screen.findByRole("option", { name: /Žádný projekt/ }));
+    await screen.findByText(/ZIBBY to předá/);
 
     await userEvent.click(screen.getByRole("button", { name: /^Spustit$/ }));
+    expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/alpha");
     expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/beta");
   });
 

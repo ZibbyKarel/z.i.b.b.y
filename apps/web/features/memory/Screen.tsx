@@ -46,9 +46,9 @@ export function Screen() {
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
 
-  // Fáze 11: the app-wide active project scopes the graph and search to notes
-  // attributed via `project:` frontmatter; global notes show only under
-  // "Všechny projekty". Client-side — the shared cache stays unscoped.
+  // Phase 24: the top-bar active project scopes the graph and search to notes
+  // attributed via `project:` frontmatter; "Bez projektu" shows only notes with no
+  // `project:` frontmatter. Client-side — the shared cache stays unscoped.
   const { activeProjectId } = useActiveProject();
   const filteredGraph = useMemo(
     () => (graph ? filterGraphByTier(filterGraphByProject(graph, activeProjectId), tier) : graph),
@@ -59,7 +59,7 @@ export function Screen() {
       (searchHits?.results ?? []).filter(
         (h) =>
           (tier === "all" || h.tier === tier) &&
-          (activeProjectId === null || h.project === activeProjectId),
+          (activeProjectId === null ? !h.project : h.project === activeProjectId),
       ),
     [searchHits, tier, activeProjectId],
   );

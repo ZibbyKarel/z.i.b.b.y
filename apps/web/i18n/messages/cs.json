@@ -115,11 +115,6 @@
       "note": "Výstup předchozího úkolu se přidá do kontextu tohoto úkolu.",
       "heading": "Kontext z předchozího běhu:"
     },
-    "project": {
-      "label": "Projekt (volitelný)",
-      "hint": "Zaměř task na projekt — jeho složka se přidá do kontextu, úplně stejně jako cesta napsaná ručně.",
-      "none": "Žádný projekt"
-    },
     "output": {
       "label": "Výstup úkolu",
       "hint": "co se stane s hotovou prací (PR je vždy za bránou schválení)",
@@ -891,8 +886,6 @@
     "filterSelectAll": "Vybrat vše",
     "filterClearAll": "Zrušit vše",
     "filterRemove": "Odebrat filtr",
-    "filterProject": "Projekt",
-    "filterAllProjects": "Všechny projekty",
     "group": {
       "total": "Celkem",
       "running": "Běží",
@@ -1139,8 +1132,9 @@
   "projects": {
     "title": "Projekty",
     "switcherLabel": "Aktivní projekt",
-    "switcherAll": "Všechny projekty",
+    "switcherNoProject": "Bez projektu",
     "scopeActive": "Projekt: {name}",
+    "scopeNone": "Bez projektu",
     "runsPanelTitle": "Běhy",
     "countSummary": "{count, plural, =0 {žádné projekty} one {# projekt} few {# projekty} other {# projektů}} · cílové adresáře pro spouštění agentů a skillů",
     "addProject": "Přidat projekt",

@@ -4,9 +4,10 @@ import type { RunView } from "./run";
 import { Screen } from "./Screen";
 
 /**
- * Fáze 11 scoping: with an active project the feed renders ONLY runs attributed
- * to it (`TaskRun.projectId`); unattributed runs show only under "Všechny
- * projekty". The heavy child composites (TaskCard/RunDetail) are stubbed — this
+ * Phase 24 scoping: the top-bar project is the single, always-set scope. A real
+ * project renders ONLY runs attributed to it (`TaskRun.projectId`); `null`
+ * ("Bez projektu") renders ONLY unattributed runs. There is no "show everything"
+ * branch. The heavy child composites (TaskCard/RunDetail) are stubbed — this
  * suite proves the Screen-level filtering, not the cards.
  */
 const { active } = vi.hoisted(() => ({
@@ -20,8 +21,7 @@ vi.mock("../projects", () => ({
     ],
   }),
   useActiveProject: () => ({ activeProjectId: active.id, setActiveProject: vi.fn() }),
-  ProjectScopeChip: () =>
-    active.id !== null ? <span data-testid="project-scope-chip" /> : null,
+  ProjectScopeChip: () => <span data-testid="project-scope-chip" />,
 }));
 
 const RUNS: RunView[] = [
@@ -73,7 +73,7 @@ function makeRun(id: string, projectId?: string): RunView {
   };
 }
 
-describe("Runs Screen — project scoping (Fáze 11)", () => {
+describe("Runs Screen — project scoping (Phase 24)", () => {
   beforeEach(() => {
     active.id = null;
     query.runs = RUNS;
@@ -82,12 +82,13 @@ describe("Runs Screen — project scoping (Fáze 11)", () => {
     refetch.mockClear();
   });
 
-  it("renders every run (attributed or not) under 'Všechny projekty'", () => {
+  it("renders only unattributed runs under 'Bez projektu' (default)", () => {
     render(<Screen />);
-    expect(screen.getByTestId("task-card-run-alpha")).toBeInTheDocument();
-    expect(screen.getByTestId("task-card-run-beta")).toBeInTheDocument();
+    expect(screen.queryByTestId("task-card-run-alpha")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("task-card-run-beta")).not.toBeInTheDocument();
     expect(screen.getByTestId("task-card-run-global")).toBeInTheDocument();
-    expect(screen.queryByTestId("project-scope-chip")).not.toBeInTheDocument();
+    // The chip is always shown — there is no "show everything" state to hide under.
+    expect(screen.getByTestId("project-scope-chip")).toBeInTheDocument();
   });
 
   it("renders only the attributed runs with an active project, plus the scope chip", () => {

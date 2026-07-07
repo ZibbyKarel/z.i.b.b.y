@@ -10,15 +10,16 @@ export enum ProjectSwitcherTestId {
 }
 
 /**
- * Sentinel for "Všechny projekty". The DS `Dropdown` is a single-select over
- * string values and real project ids are non-empty, so `""` is safe.
+ * Sentinel for "Bez projektu" (no-project). The DS `Dropdown` is a single-select
+ * over string values and real project ids are non-empty, so `""` is safe.
  */
-const ALL_PROJECTS = "";
+const NO_PROJECT = "";
 
 /**
- * The one app-wide project switcher (Fáze 11) — a domain composite mounted at a
- * single consistent spot in the `AppShell` chrome (the top bar, next to the
- * breadcrumb), the same place on every screen.
+ * The one app-wide project switcher (Phase 24; began as Fáze 11) — a domain
+ * composite mounted at a single consistent spot in the `AppShell` chrome (the top
+ * bar, next to the breadcrumb), the same place on every screen. Always populated:
+ * either a real project or "Bez projektu" — there is no "all projects" option.
  *
  * DS primitive decision: composed from the existing `Dropdown` (inline
  * single-select variant — the same primitive the `LanguageSwitcher` uses), so the
@@ -30,7 +31,7 @@ export function ProjectSwitcher() {
   const { data: projects = [] } = useProjectsQuery();
 
   const options: DropdownOption<string>[] = [
-    { value: ALL_PROJECTS, label: t("switcherAll") },
+    { value: NO_PROJECT, label: t("switcherNoProject") },
     ...projects.map((p) => ({ value: p.id, label: p.name })),
   ];
 
@@ -38,10 +39,10 @@ export function ProjectSwitcher() {
     <Container data-testid={ProjectSwitcherTestId.Root} shrink={false}>
       <Dropdown<string>
         aria-label={t("switcherLabel")}
-        onChange={(value) => setActiveProject(value === ALL_PROJECTS ? null : value)}
+        onChange={(value) => setActiveProject(value === NO_PROJECT ? null : value)}
         options={options}
         size="sm"
-        value={activeProjectId ?? ALL_PROJECTS}
+        value={activeProjectId ?? NO_PROJECT}
       />
     </Container>
   );

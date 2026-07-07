@@ -10,7 +10,7 @@ export const ACTIVE_PROJECT_COOKIE = "activeProject";
 /** ~1 year — the active project is a workspace preference, not a session value. */
 const COOKIE_MAX_AGE_S = 60 * 60 * 24 * 365;
 
-/** Read the persisted selection; empty/missing cookie reads as `null` (all projects). */
+/** Read the persisted selection; empty/missing cookie reads as `null` ("Bez projektu"). */
 function readActiveProjectCookie(): string | null {
   if (typeof document === "undefined") return null;
   const row = document.cookie
@@ -20,14 +20,18 @@ function readActiveProjectCookie(): string | null {
   return raw ? decodeURIComponent(raw) : null;
 }
 
-/** Persist the selection; `null` writes an empty value (= "Všechny projekty"). */
+/** Persist the selection; `null` writes an empty value (= "Bez projektu"). */
 function writeActiveProjectCookie(id: string | null): void {
   const value = id === null ? "" : encodeURIComponent(id);
   document.cookie = `${ACTIVE_PROJECT_COOKIE}=${value}; path=/; max-age=${COOKIE_MAX_AGE_S}; SameSite=Lax`;
 }
 
 interface ProjectStore {
-  /** The active engagement scoping the dashboard, or `null` = "Všechny projekty". */
+  /**
+   * The active engagement scoping the dashboard: a real project id, or `null` =
+   * "Bez projektu" (no-project). The selector is always populated — there is no
+   * "all projects" state (Phase 24).
+   */
   activeProjectId: string | null;
   setActiveProject: (id: string | null) => void;
 }
@@ -35,12 +39,15 @@ interface ProjectStore {
 const ProjectContext = createContext<ProjectStore | null>(null);
 
 /**
- * App-wide active-project context (Fáze 11 multi-project UX). The selection is a
- * pure client-side view scope — screens filter already-attributed data by it; it is
- * NOT a security boundary. Persisted in the `activeProject` cookie so it survives
- * navigation and reload (lazy init mirrors `MainLayout`'s rail persistence).
- * Mounted in `AppShell` alongside `CatalogProvider` — the project scope is a
- * dashboard concern, not a root-provider one.
+ * App-wide active-project context — the single, always-set scope (Phase 24; began
+ * as Fáze 11 multi-project UX). `null` means "Bez projektu" (project-less work,
+ * e.g. research), not "show everything" — there is no "all projects" branch
+ * anymore. The selection is a pure client-side view scope — screens filter
+ * already-attributed data by it; it is NOT a security boundary. Persisted in the
+ * `activeProject` cookie so it survives navigation and reload (lazy init mirrors
+ * `MainLayout`'s rail persistence). Mounted in `AppShell` alongside
+ * `CatalogProvider` — the project scope is a dashboard concern, not a
+ * root-provider one.
  */
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [rawId, setRawId] = useState<string | null>(() => readActiveProjectCookie());

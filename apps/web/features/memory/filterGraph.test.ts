@@ -61,8 +61,9 @@ describe("filterGraphByProject", () => {
     ],
   };
 
-  it("returns the graph unchanged for null (Všechny projekty)", () => {
-    expect(filterGraphByProject(projectGraph, null)).toBe(projectGraph);
+  it("keeps only unattributed notes for null (Bez projektu)", () => {
+    const out = filterGraphByProject(projectGraph, null);
+    expect(out.nodes.map((n) => n.id)).toEqual(["global"]);
   });
 
   it("keeps only nodes attributed to the project — global notes drop too", () => {

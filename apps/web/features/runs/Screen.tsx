@@ -10,7 +10,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { ProjectScopeChip, useActiveProject, useProjectsQuery } from "../projects";
+import { ProjectScopeChip, useActiveProject } from "../projects";
 import { useCancelScheduledTaskMutation } from "../tasks";
 import { RunDetail } from "./components/RunDetail";
 import { TaskCard } from "./components/TaskCard";
@@ -46,14 +46,15 @@ export function Screen() {
     isError: runsError,
     refetch: refetchRuns,
   } = useRunsQuery();
-  const { data: projects = [] } = useProjectsQuery();
-  // Fáze 11: the app-wide active project scopes the feed FIRST — only runs
-  // attributed to it remain (unattributed runs read as global and show only
-  // under "Všechny projekty"). Client-side over the shared cache, so switching
-  // projects is instant.
+  // Phase 24: the top-bar active project is the single, always-set scope — a real
+  // project shows only its own runs; "Bez projektu" shows only unattributed runs.
+  // There is no "show everything" branch. Client-side over the shared cache, so
+  // switching projects is instant.
   const { activeProjectId } = useActiveProject();
   const runs =
-    activeProjectId === null ? allRuns : allRuns.filter((r) => r.projectId === activeProjectId);
+    activeProjectId === null
+      ? allRuns.filter((r) => !r.projectId)
+      : allRuns.filter((r) => r.projectId === activeProjectId);
   const glyphById = useRunGlyphMap();
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
@@ -72,9 +73,6 @@ export function Screen() {
       ? paramFilter.split(",").filter((s): s is FeedStatus => STATUSES.includes(s as FeedStatus))
       : [],
   );
-  // `?project=<id>` scopes the whole feed to one engagement (the project detail
-  // summary links here); "" means every project.
-  const [projectFilter, setProjectFilter] = useState<string>(searchParams.get("project") ?? "");
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
   const stopAgent = useStopAgentMutation();
@@ -86,11 +84,10 @@ export function Screen() {
   const deletePipeline = useDeletePipelineRunMutation();
   const cancelTask = useCancelScheduledTaskMutation();
 
-  // Project scopes the whole feed; status narrows within that scope. Keeping them
-  // ordered this way means the status counts and header stats read the selected
-  // project, not the global feed.
-  const scoped = projectFilter === "" ? runs : runs.filter((r) => r.projectId === projectFilter);
-  const list = filter.length === 0 ? scoped : scoped.filter((r) => filter.includes(r.status));
+  // The top-bar project already scopes `runs`; status narrows within that scope.
+  // Keeping them ordered this way means the status counts and header stats read
+  // the selected project, not the global feed.
+  const list = filter.length === 0 ? runs : runs.filter((r) => filter.includes(r.status));
   // Keep the detail in sync with the filtered list: a selection only counts when
   // it's actually visible, and we fall back to the first row of the *current* filter —
   // never to runs[0], which would show an out-of-filter run's detail. Matching on
@@ -98,7 +95,7 @@ export function Screen() {
   // (see findSelectedRun).
   const selected = findSelectedRun(list, selId);
 
-  const count = (s: FeedStatus) => scoped.filter((r) => r.status === s).length;
+  const count = (s: FeedStatus) => runs.filter((r) => r.status === s).length;
   const ago = (n: number, unit: string) =>
     n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
@@ -158,21 +155,10 @@ export function Screen() {
         <PageHeader
           actions={
             <Stack align="center" direction="row" gap="150">
-              {/* Fáze 11: subtle indication that the feed is scoped to the active
-                  project, so an empty filtered list is never confusing. */}
+              {/* Phase 24: the top bar's project selector is the single scope —
+                  this chip is the only in-screen indication of it, so an empty
+                  filtered list is never confusing. */}
               <ProjectScopeChip />
-              <Container width="15rem">
-                <Dropdown<string>
-                  compact
-                  aria-label={t("filterProject")}
-                  onChange={setProjectFilter}
-                  options={[
-                    { value: "", label: t("filterAllProjects") },
-                    ...projects.map((p) => ({ value: p.id, label: p.name })),
-                  ]}
-                  value={projectFilter}
-                />
-              </Container>
               <Container width="19rem">
                 <Dropdown<FeedStatus>
                   compact
@@ -193,7 +179,7 @@ export function Screen() {
               </Container>
             </Stack>
           }
-          subtitle={t("summary", { running, awaiting, total: scoped.length })}
+          subtitle={t("summary", { running, awaiting, total: runs.length })}
           title={t("title")}
         />
 

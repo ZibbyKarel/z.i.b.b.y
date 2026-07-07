@@ -22,7 +22,7 @@ const MAX_SHOWN = 4;
  * agent runs match exactly, a pipeline-stage approval's runId is prefixed by the
  * pipeline run id, a held/output task names the approval (`approvalId`) or is keyed
  * by its task id. Approvals with no resolvable run (channel/jira/machine/proposals)
- * stay unattributed and show only under "Všechny projekty".
+ * stay unattributed and show only under "Bez projektu".
  */
 function approvalProjectId(a: Approval, runs: readonly RunView[]): string | undefined {
   const run = runs.find(
@@ -41,8 +41,9 @@ function approvalProjectId(a: Approval, runs: readonly RunView[]): string | unde
  * {@link ApprovalCard}s; the full queue is the `/runs?filter=awaiting-approval`
  * link. The `/runs` tab keeps its own waiting-for-approval view unchanged.
  *
- * Fáze 11: with an active project, only approvals whose linked run is attributed to
- * it remain; unattributed approvals show only under "Všechny projekty".
+ * Phase 24: the top-bar project is the single scope — a real project keeps only
+ * approvals whose linked run is attributed to it; "Bez projektu" keeps only
+ * unattributed approvals. There is no "show everything" branch.
  */
 export function ApprovalsPanel() {
   const t = useTranslations();
@@ -54,7 +55,7 @@ export function ApprovalsPanel() {
 
   const approvals =
     activeProjectId === null
-      ? allApprovals
+      ? allApprovals.filter((a) => !approvalProjectId(a, runs))
       : allApprovals.filter((a) => approvalProjectId(a, runs) === activeProjectId);
 
   return (

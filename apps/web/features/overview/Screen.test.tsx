@@ -41,8 +41,9 @@ vi.mock("../pins", () => ({
 }));
 vi.mock("../chains", () => ({ useChainsQuery: () => ({ data: [{ id: "c1", name: "My chain" }] }) }));
 vi.mock("../tasks", () => ({ useNewTask: () => ({ open: vi.fn() }) }));
-// ApprovalsPanel reads the Fáze 11 project context; "Všechny projekty" here keeps
-// the queue unscoped (the scoping itself is covered by the runs Screen test).
+// ApprovalsPanel reads the Phase 24 project context; `null` ("Bez projektu") here
+// scopes it to unattributed approvals (the scoping itself is covered by the runs
+// Screen test) — with no approvals/runs data mocked, the queue renders empty either way.
 vi.mock("../projects", () => ({
   useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
   ProjectScopeChip: () => null,

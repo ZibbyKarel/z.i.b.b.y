@@ -13,7 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useLimitsQuery } from "../../limits";
-import { useProjectsQuery } from "../../projects";
+import { useActiveProject, useProjectsQuery } from "../../projects";
 import { useTaskClassification } from "../hooks/useTaskClassification";
 import { useTaskOutput } from "../hooks/useTaskOutput";
 import { useTaskSchedule } from "../hooks/useTaskSchedule";
@@ -73,11 +73,10 @@ export function NewTaskDialog({
   const t = useTranslations("tasks");
   const { data: limits } = useLimitsQuery();
   const { data: projects } = useProjectsQuery();
+  const { activeProjectId } = useActiveProject();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState(initialText ?? "");
-  /** Selected project id (its `path` is folded into `paths`), or "" for none. */
-  const [projectId, setProjectId] = useState<string>("");
   const [attachments, setAttachments] = useState<{
     attachmentSetId?: string;
     files: Attachment[];
@@ -89,15 +88,19 @@ export function NewTaskDialog({
   const [now] = useState(() => Date.now());
   const resetsAt = limits?.rolling.resetsAt ?? null;
 
-  // The project a `project` selection resolves to (its `path` joins `paths`).
+  // Phase 24: the project is sourced from the top bar, not a dialog field. A real
+  // active project resolves here (its `path` joins `paths`); "Bez projektu"
+  // (`activeProjectId === null`) resolves to `null` — nothing folds in.
   const selectedProject = useMemo(
-    () => (projectId ? ((projects ?? []).find((p) => p.id === projectId) ?? null) : null),
-    [projects, projectId],
+    () =>
+      activeProjectId ? ((projects ?? []).find((p) => p.id === activeProjectId) ?? null) : null,
+    [projects, activeProjectId],
   );
 
-  // Every path referenced in the description — plus the selected project's folder — is
-  // folded into the task's allowed directories. The typed ones are highlighted inline
-  // in the composer; the project's folder is owned by the picker (deselect to drop it).
+  // Every path referenced in the description — plus the top-bar active project's
+  // folder — is folded into the task's allowed directories. The typed ones are
+  // highlighted inline in the composer; the active project's folder follows the
+  // top-bar selector (switch to "Bez projektu" to drop it).
   const paths = useMemo(() => {
     const detected = extractPaths(text);
     const all = selectedProject ? [selectedProject.path, ...detected] : detected;
@@ -214,11 +217,6 @@ export function NewTaskDialog({
     </Stack>
   );
 
-  const projectOptions = [
-    { value: "", label: t("project.none") },
-    ...(projects ?? []).map((p) => ({ value: p.id, label: p.name })),
-  ];
-
   const targetOptions = [
     { value: "", label: t("override.auto") },
     ...allTargets.map((target) => ({ value: targetKey(target), label: target.name })),
@@ -243,16 +241,6 @@ export function NewTaskDialog({
         />
 
         {initialContext && <TaskContextPanel context={initialContext} />}
-
-        {(projects ?? []).length > 0 && (
-          <SelectField
-            hint={t("project.hint")}
-            label={t("project.label")}
-            onValueChange={setProjectId}
-            options={projectOptions}
-            value={projectId}
-          />
-        )}
 
         <TaskComposer
           highlights={highlights}

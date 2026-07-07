@@ -45,7 +45,7 @@ describe("ProjectProvider", () => {
     ];
   });
 
-  it("defaults to null (Všechny projekty) with no cookie", () => {
+  it("defaults to null (Bez projektu) with no cookie", () => {
     renderProbe();
     expect(screen.getByTestId("active-project-value")).toHaveTextContent("(null)");
   });
@@ -64,7 +64,7 @@ describe("ProjectProvider", () => {
 
     fireEvent.click(screen.getByTestId("set-null"));
     expect(screen.getByTestId("active-project-value")).toHaveTextContent("(null)");
-    // Clearing persists as an empty value ("Všechny projekty"), not a delete.
+    // Clearing persists as an empty value ("Bez projektu"), not a delete.
     expect(document.cookie).not.toContain(`${ACTIVE_PROJECT_COOKIE}=alpha`);
   });
 
