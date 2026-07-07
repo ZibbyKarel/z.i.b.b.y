@@ -10,6 +10,8 @@ import {
   type IconName,
   IconTile,
   Markdown,
+  MenuButton,
+  type MenuButtonItem,
   Pressable,
   SelectField,
   Stack,
@@ -401,6 +403,38 @@ export function RunDetail({
     ? Date.parse(run.taskOutcomeFinishedAt) - Date.parse(run.startedAt)
     : undefined;
 
+  // Phase 61: the header's Stop/Resume/Delete buttons collapse behind a single
+  // kebab MenuButton — same guards as the inline buttons they replace, built
+  // conditionally so an inapplicable action never shows a row.
+  const actionItems: MenuButtonItem[] = [];
+  if (isStoppableRun(run)) {
+    actionItems.push({
+      id: "stop",
+      label: t("stop"),
+      icon: "stop",
+      danger: true,
+      disabled: stopping,
+      onSelect: () => setConfirmKind("stop"),
+    });
+  }
+  if (onResume && isResumableRun(run)) {
+    actionItems.push({
+      id: "resume",
+      label: run.sessionId ? t("resumeContinue") : t("resumeFresh"),
+      icon: "run",
+      disabled: resuming,
+      onSelect: onResume,
+    });
+  }
+  actionItems.push({
+    id: "delete",
+    label: run.status === "scheduled" ? t("cancelTask") : t("delete"),
+    icon: "x",
+    danger: true,
+    disabled: deleting,
+    onSelect: () => setConfirmKind("delete"),
+  });
+
   const headline = runTitle(run);
 
   // A pipeline run's `prompt` is only the "fáze: X" progress string, which the stage
@@ -494,43 +528,10 @@ export function RunDetail({
                         />
                       </Stack>
                     ) : (
-                      <Stack align="center" direction="row" gap="100">
-                        {isStoppableRun(run) && (
-                          <Button
-                            disabled={stopping}
-                            icon="stop"
-                            intent="danger"
-                            onClick={() => setConfirmKind("stop")}
-                            size="sm"
-                          >
-                            {t("stop")}
-                          </Button>
-                        )}
-                        {/* Phase 49: re-run an errored/interrupted agent run. The label is
-                        honest about what ships: a captured session id re-runs with
-                        `--resume` ("Pokračovat"), otherwise a fresh re-run ("Spustit znovu"). */}
-                        {onResume && isResumableRun(run) && (
-                          <Button
-                            data-testid="resume-run"
-                            disabled={resuming}
-                            icon="run"
-                            intent="primary"
-                            onClick={onResume}
-                            size="sm"
-                          >
-                            {run.sessionId ? t("resumeContinue") : t("resumeFresh")}
-                          </Button>
-                        )}
-                        <Button
-                          disabled={deleting}
-                          icon="x"
-                          intent="danger"
-                          onClick={() => setConfirmKind("delete")}
-                          size="sm"
-                        >
-                          {run.status === "scheduled" ? t("cancelTask") : t("delete")}
-                        </Button>
-                      </Stack>
+                      // Phase 61: Stop/Resume/Delete collapse behind a single kebab
+                      // menu — the inline buttons this replaced are now rows in
+                      // `actionItems`, built above with the same guards.
+                      <MenuButton ariaLabel={t("actionsMenuLabel")} items={actionItems} />
                     )}
                   </Stack>
                 </Stack>

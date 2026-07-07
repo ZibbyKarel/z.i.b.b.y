@@ -937,6 +937,7 @@
     "emptyDesc": "Zatím tu žádný task neběžel. Zadej nový task a objeví se tady.",
     "emptyFilter": "Žádné tasky v tomto stavu.",
     "selectHint": "Vyber task vlevo pro detail a živý log.",
+    "actionsMenuLabel": "Akce běhu",
     "stop": "Zastavit běh",
     "stopTitle": "Zastavit běh?",
     "stopBody": "Opravdu zastavit tento běžící úkol? Rozpracovaný postup se ztratí.",

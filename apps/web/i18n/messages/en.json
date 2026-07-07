@@ -937,6 +937,7 @@
     "emptyDesc": "No task has run yet. Create a new task and it shows up here.",
     "emptyFilter": "No tasks in this state.",
     "selectHint": "Pick a task on the left for its detail and live log.",
+    "actionsMenuLabel": "Run actions",
     "stop": "Stop run",
     "stopTitle": "Stop the run?",
     "stopBody": "Really stop this running task? In-progress work will be lost.",

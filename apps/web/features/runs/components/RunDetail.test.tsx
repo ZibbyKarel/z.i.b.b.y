@@ -7,6 +7,7 @@ import {
   EntityHeroTestId,
   FilePreviewTestId,
   MarkdownTestId,
+  MenuButtonTestId,
 } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
@@ -198,11 +199,12 @@ describe("RunDetail — header avatar (Phase 48 → 53: stretched EntityHero bac
     );
     // The avatar band and the actions coexist in the header.
     expect(screen.getByTestId(EntityHeroTestId.Root)).toBeInTheDocument();
-    // Delete still opens its confirm dialog and, on confirm, calls onDelete (the full
+    // Delete now lives behind the kebab menu; opening it and activating the row
+    // still opens the confirm dialog and, on confirm, calls onDelete (the full
     // confirm flow is covered in RunDetailConfirm.test.tsx — this guards the swap).
-    await userEvent.click(screen.getByText("Smazat"));
-    const buttons = screen.getAllByRole("button", { name: "Smazat" });
-    await userEvent.click(buttons[buttons.length - 1]!);
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-delete`));
+    await userEvent.click(screen.getByRole("button", { name: "Smazat" }));
     expect(onDelete).toHaveBeenCalledOnce();
   });
 });
