@@ -13,6 +13,7 @@
     "runs": "Runs & activity",
     "settings": "System settings",
     "projects": "Projects",
+    "companies": "Companies",
     "mcp": "MCP servers",
     "commands": "Commands",
     "hooks": "Hooks",
@@ -1326,6 +1327,62 @@
         "title": "Integration activity",
         "empty": "Nothing processed from this project's integrations in the last 14 days."
       }
+    }
+  },
+  "companies": {
+    "title": "Companies",
+    "countSummary": "{count, plural, =0 {no companies} one {# company} other {# companies}} · the super-entity above projects",
+    "addCompany": "Add company",
+    "openAria": "Open {name}",
+    "emptyTitle": "No companies yet",
+    "emptyDescription": "A company is the super-entity above a project — a shared team and default budget its projects inherit. Add the first one and it shows up here as a card.",
+    "emptyHint": "// registry ~/zibby/companies.json",
+    "peopleCount": "{count, plural, =0 {no people} one {# person} other {# people}}",
+    "hasBudget": "default budget",
+    "newCompany": "New company",
+    "create": "Create company",
+    "save": "Save changes",
+    "delete": "Delete",
+    "deleteTitle": "Delete company?",
+    "deleteBody": "Really delete {name}? Projects referencing it keep a now-dangling companyId — nothing else is lost.",
+    "fields": {
+      "name": "Company name",
+      "namePlaceholder": "Acme Inc.",
+      "desc": "Description",
+      "descPlaceholder": "What the company does",
+      "budget": "Default budget & concurrency",
+      "budgetHint": "Run-count and dollar caps per window (Europe/Prague) that this company's projects inherit unless they set their own. Blank = no limit.",
+      "budgetDailyRuns": "runs / day",
+      "budgetWeeklyRuns": "runs / week",
+      "budgetMonthlyRuns": "runs / month",
+      "budgetMaxConcurrent": "max concurrent",
+      "budgetDailyCostCapUsd": "$ / day",
+      "budgetWeeklyCostCapUsd": "$ / week",
+      "budgetMonthlyCostCapUsd": "$ / month"
+    },
+    "profile": {
+      "basics": {
+        "title": "Company",
+        "newHint": "Once the company is saved you'll set its shared team."
+      }
+    },
+    "team": {
+      "title": "Shared team",
+      "empty": "No team members yet — add people shared across this company's projects.",
+      "add": "Add person",
+      "remove": "Remove",
+      "name": "Name",
+      "namePlaceholder": "Jane Doe",
+      "role": "Role",
+      "rolePlaceholder": "Product manager",
+      "vip": "VIP — forces escalation",
+      "commsStyle": "Communication style",
+      "commsStyleHelp": "How to communicate with this person — tone and form (e.g. terse, formal, bullet points). ZIBBY follows this when writing to or replying to them.",
+      "commsStylePlaceholder": "Terse, prefers bullet points"
+    },
+    "memberProjects": {
+      "title": "Company projects",
+      "placeholder": "A list of projects linked to this company will show up once the project ↔ company wiring lands (phase 72)."
     }
   },
   "automations": {

@@ -24,6 +24,7 @@ export const NAV_ITEMS = [
   { id: "chat", glyph: "butlerSign", href: "/chat" },
   { id: "runs", glyph: "pulse", href: "/runs" },
   { id: "projects", glyph: "code", href: "/projects" },
+  { id: "companies", glyph: "branch", href: "/companies" },
   { id: "agents", glyph: "bot", href: "/agents" },
   { id: "pipelines", glyph: "flow", href: "/pipelines" },
   { id: "chains", glyph: "link", href: "/chains" },

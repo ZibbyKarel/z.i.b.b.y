@@ -13,6 +13,7 @@
     "runs": "Běhy & aktivita",
     "settings": "Nastavení systému",
     "projects": "Projekty",
+    "companies": "Firmy",
     "mcp": "MCP servery",
     "commands": "Příkazy",
     "hooks": "Hooky",
@@ -1326,6 +1327,62 @@
         "title": "Aktivita integrací",
         "empty": "Za posledních 14 dní se z integrací tohoto projektu nic nezpracovalo."
       }
+    }
+  },
+  "companies": {
+    "title": "Firmy",
+    "countSummary": "{count, plural, =0 {žádné firmy} one {# firma} few {# firmy} other {# firem}} · nadřazená entita nad projekty",
+    "addCompany": "Přidat firmu",
+    "openAria": "Otevřít {name}",
+    "emptyTitle": "Zatím žádné firmy",
+    "emptyDescription": "Firma je nadřazená entita nad projektem — sdílený tým a výchozí rozpočet, který projekty dědí. Přidej první a objeví se tu jako karta.",
+    "emptyHint": "// registr ~/zibby/companies.json",
+    "peopleCount": "{count, plural, =0 {žádní lidé} one {# osoba} few {# osoby} other {# osob}}",
+    "hasBudget": "výchozí rozpočet",
+    "newCompany": "Nová firma",
+    "create": "Vytvořit firmu",
+    "save": "Uložit změny",
+    "delete": "Smazat",
+    "deleteTitle": "Smazat firmu?",
+    "deleteBody": "Opravdu smazat firmu {name}? Projekty na ni odkazující si ponechají neplatné companyId — nic se neztratí.",
+    "fields": {
+      "name": "Název firmy",
+      "namePlaceholder": "Acme s.r.o.",
+      "desc": "Popis",
+      "descPlaceholder": "Čím se firma zabývá",
+      "budget": "Výchozí rozpočet a souběh",
+      "budgetHint": "Limity počtu běhů a dolarové limity na okno (Europe/Prague), které projekty této firmy dědí, pokud nemají vlastní. Prázdné = bez limitu.",
+      "budgetDailyRuns": "běhů / den",
+      "budgetWeeklyRuns": "běhů / týden",
+      "budgetMonthlyRuns": "běhů / měsíc",
+      "budgetMaxConcurrent": "max paralelně",
+      "budgetDailyCostCapUsd": "$ / den",
+      "budgetWeeklyCostCapUsd": "$ / týden",
+      "budgetMonthlyCostCapUsd": "$ / měsíc"
+    },
+    "profile": {
+      "basics": {
+        "title": "Firma",
+        "newHint": "Po uložení firmy nastavíš její sdílený tým."
+      }
+    },
+    "team": {
+      "title": "Sdílený tým",
+      "empty": "Zatím žádní členové týmu — přidej lidi sdílené napříč projekty této firmy.",
+      "add": "Přidat osobu",
+      "remove": "Odebrat",
+      "name": "Jméno",
+      "namePlaceholder": "Jana Nováková",
+      "role": "Role",
+      "rolePlaceholder": "Produktový manažer",
+      "vip": "VIP — vynutí eskalaci",
+      "commsStyle": "Styl komunikace",
+      "commsStyleHelp": "Jak s tímto člověkem komunikovat — tón a forma (např. stručně, formálně, odrážky). ZIBBY se tím řídí, když mu píše nebo odpovídá.",
+      "commsStylePlaceholder": "Stručně, preferuje odrážky"
+    },
+    "memberProjects": {
+      "title": "Projekty firmy",
+      "placeholder": "Přehled projektů odkazujících na tuto firmu se zobrazí, až přibude propojení projekt ↔ firma (fáze 72)."
     }
   },
   "automations": {
