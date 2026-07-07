@@ -2,6 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Agent } from "@zibby/contracts";
+import { EntityHeroTestId } from "@zibby/design-system";
 import { AgentDetailScreenTestId, DetailScreen } from "./DetailScreen";
 
 const push = vi.fn();
@@ -112,5 +113,22 @@ describe("agents DetailScreen (N4c grammar)", () => {
       name: "Kodér",
       glyph: "bot",
     });
+  });
+
+  it("shows the agent avatar in the profile hero when set", () => {
+    hooks.agent = {
+      data: { ...AGENT, avatar: "/avatars/coder.png" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    render(<DetailScreen agentId="koder" />);
+    expect(screen.getByTestId(EntityHeroTestId.Image)).toHaveAttribute("src", "/avatars/coder.png");
+  });
+
+  it("falls back to the glyph when the agent has no avatar", () => {
+    render(<DetailScreen agentId="koder" />); // AGENT has no avatar
+    expect(screen.queryByTestId(EntityHeroTestId.Image)).toBeNull();
+    expect(screen.getByTestId(EntityHeroTestId.GlyphFallback)).toBeInTheDocument();
   });
 });
