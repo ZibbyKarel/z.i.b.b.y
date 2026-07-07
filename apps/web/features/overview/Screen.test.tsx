@@ -1,5 +1,6 @@
 import { fireEvent, renderWithProviders as render, screen } from "../../test/render";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CommandLineTestId } from "../tasks/components/CommandLine/CommandLine";
 import { Screen } from "./Screen";
 
 /** Isolate the Screen: stub the summary widget + catalog queries.
@@ -10,7 +11,11 @@ import { Screen } from "./Screen";
  * exercised without a real query client. */
 const { primary } = vi.hoisted(() => {
   const query = () => ({
-    data: [] as Array<{ id: string }>,
+    // `name` is optional — most callers only care about count/emptiness, but the
+    // command bar's (Phase 40) own `usePipelinesQuery`/`useAgentsQuery` reads build
+    // a lowercase name set for its `@`-mention highlighting, so a populated stub
+    // needs one.
+    data: [] as Array<{ id: string; name?: string }>,
     isPending: false,
     isError: false,
     refetch: () => {},
@@ -33,6 +38,8 @@ vi.mock("../integrations/queries", () => ({
 vi.mock("../skills/queries", () => ({ useSkillsQuery: () => primary.skills }));
 vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => primary.pipelines }));
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => primary.agents }));
+// CommandLine (Phase 40 command bar) reads limits for its schedule presets.
+vi.mock("../limits/queries", () => ({ useLimitsQuery: () => ({ data: undefined }) }));
 // QuickLaunchPanel's own dependencies — one pinned chain so the panel actually renders.
 vi.mock("../pins", () => ({
   usePinToggle: () => ({ pins: [{ kind: "chain", id: "c1" }], toggle: vi.fn() }),
@@ -58,7 +65,7 @@ vi.mock("./mutations", () => ({
 
 function resetPrimary() {
   for (const q of Object.values(primary)) {
-    q.data = [{ id: "x" }];
+    q.data = [{ id: "x", name: "X" }];
     q.isPending = false;
     q.isError = false;
     q.refetch = () => {};
@@ -74,6 +81,12 @@ describe("Overview Screen", () => {
     render(<Screen />);
     expect(screen.getByText("Panel rychlého spuštění")).toBeInTheDocument();
     expect(screen.getByText("My chain")).toBeInTheDocument();
+  });
+
+  it("renders the command bar right under the status header (Phase 40)", () => {
+    render(<Screen />);
+    expect(screen.getByTestId(CommandLineTestId.Root)).toBeInTheDocument();
+    expect(screen.getByText("Projdi backlog a implementuj highest-impact bug")).toBeInTheDocument();
   });
 
   it("links each fresh-workspace starter card to its dashboard segment", () => {

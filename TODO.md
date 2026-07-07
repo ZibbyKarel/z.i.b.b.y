@@ -30,7 +30,7 @@
 
 - [x] na stránce /chat nefunguje cmd+k zkratka — fáze 30
 
-- [ ] upravme CommandLine komponentu aby sedělat s designem viz velin-b.jsx v design složce. Toto komponentu pak použijeme v NewTaskDialog, na Overview (viz design) a v rámci chat UI
+- [x] upravme CommandLine komponentu aby sedělat s designem viz velin-b.jsx v design složce. Toto komponentu pak použijeme v NewTaskDialog, na Overview (viz design) a v rámci chat UI — fáze 40
 
 - [x] (fáze 32) nahrával jsem image 184Kb jako avatara pro delivery pipeline a dostal jsem chybu - [api] [Nest] 9038 - 07/07/2026, 10:40:03 AM ERROR [Exception] ✗ PATCH /api/pipelines/delivery 500 {"err":"request entity too large","stack":"PayloadTooLargeError: request entity too large\n at readStream (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/raw-body@3.0.2/node_modules/raw-body/index.js:163:17)\n at getRawBody (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/raw-body@3.0.2/node_modules/raw-body/index.js:116:12)\n at read (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/body-parser@2.2.2/node_modules/body-parser/lib/read.js:113:3)\n at jsonParser (/Users/zibby/Workspace/z.i.b.b.y/node_modules/.pnpm/body-...(+775)"}
       [api] PayloadTooLargeError: request entity too large
@@ -59,3 +59,5 @@
 - [x] k chat UI musíme vytvořit storybook. Rád bych viděl všechny možné stavy "pozadí" chatu — fáze 37
 
 - [x] stránka běhy a aktivita hlavně pak log fází běhu pipeline nevypadá jako v designu (stránka "Tasky" v designu). Pořádně to předělej podle designu. — fáze 36
+
+- [ ] stránka běhy a aktivita - výstup tasku (pokud se jedná o soubor) není formátovaný markdown

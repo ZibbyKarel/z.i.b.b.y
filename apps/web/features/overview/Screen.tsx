@@ -14,6 +14,7 @@ import { usePinToggle } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
 import { useSkillsQuery } from "../skills";
+import { CommandLine } from "../tasks/components/CommandLine/CommandLine";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { QuickLaunchPanel } from "./components/QuickLaunchPanel/QuickLaunchPanel";
@@ -24,6 +25,15 @@ const STARTERS = [
   { id: "projects", glyph: "code" },
   { id: "agents", glyph: "bot" },
   { id: "pipelines", glyph: "flow" },
+] as const;
+
+// Example natural-language prompts shown as chips below the command bar while it's
+// empty (velin-b's `VB_SUGGESTIONS`) — a nudge toward what "just describe the goal"
+// can mean, not an exhaustive list.
+const COMMAND_BAR_SUGGESTION_KEYS = [
+  "overview.commandBar.suggestions.backlog",
+  "overview.commandBar.suggestions.standup",
+  "overview.commandBar.suggestions.research",
 ] as const;
 
 export function Screen() {
@@ -105,11 +115,18 @@ export function Screen() {
   // HUD right rail — Phase 39 — not here.)
   const railHasContent = pins.length > 0;
 
+  const commandBarSuggestions = COMMAND_BAR_SUGGESTION_KEYS.map((key) => t(key));
+
   return (
     <PageContainer>
       <Stack direction="col" gap="250">
         {/* Full-width HUD header: system health + the live stats banner. */}
         <SummaryWidget />
+
+        {/* Prominent command bar (Phase 40) — task launcher right under the status
+            header, matching velin-b's VbCommandBar placement. Default task-launch mode
+            (no onSubmit): dispatches via useTaskSubmit and navigates to /runs. */}
+        <CommandLine chrome showAck suggestions={commandBarSuggestions} />
 
         {/* Dynamic two-zone dashboard: below lg it collapses to a single column, at lg+
             the needs-you queue (main) sits beside the quick-launch rail so the page

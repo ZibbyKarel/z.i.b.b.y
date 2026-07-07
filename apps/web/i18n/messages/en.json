@@ -311,6 +311,13 @@
     "briefingPausedLimit": "{count} paused on the limit",
     "briefingEngagement": "{needs} need · {did} done · {queued} queued · {held} held",
     "starterTitle": "start here · build the dashboard",
+    "commandBar": {
+      "suggestions": {
+        "backlog": "Go through the backlog and implement the highest-impact bug",
+        "standup": "Write today's standup",
+        "research": "Research topic X overnight"
+      }
+    },
     "approvalsQueue": "approvals queue",
     "noApprovals": "nothing is waiting · ZIBBY never orders on its own",
     "runningAgents": "running agents",

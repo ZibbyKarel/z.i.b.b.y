@@ -311,6 +311,13 @@
     "briefingPausedLimit": "{count} pozastaveno na limitu",
     "briefingEngagement": "{needs} čeká · {did} hotovo · {queued} ve frontě · {held} pozdrženo",
     "starterTitle": "začni tady · postav dashboard",
+    "commandBar": {
+      "suggestions": {
+        "backlog": "Projdi backlog a implementuj highest-impact bug",
+        "standup": "Sepiš standup za dnešek",
+        "research": "Prozkoumej téma X přes noc"
+      }
+    },
     "approvalsQueue": "fronta schválení",
     "noApprovals": "žádná akce nečeká · ZIBBY sám neobjedná",
     "runningAgents": "běžící agenti",
