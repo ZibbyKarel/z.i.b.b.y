@@ -52,6 +52,48 @@ export function runTitle(run: RunView): string {
   return run.title || run.taskTitle || run.prompt || run.owner;
 }
 
+/** Extensions that are clearly NOT markdown — everything else defaults to markdown
+ * (a produced text artifact is normally a markdown doc; Phase 41). */
+const NON_MARKDOWN_EXTENSIONS = new Set([
+  "ts",
+  "tsx",
+  "js",
+  "jsx",
+  "json",
+  "yml",
+  "yaml",
+  "css",
+  "html",
+  "py",
+  "sh",
+  "go",
+  "rs",
+  "java",
+  "rb",
+  "php",
+  "sql",
+  "xml",
+  "toml",
+  "txt",
+  "csv",
+  "log",
+]);
+
+/**
+ * Whether a produced file artifact should render as formatted markdown rather than a
+ * plain code block — `.md`/`.markdown`, or a name with no recognized extension (the
+ * common shape for a written artifact). A clearly non-markdown code/text file (`.ts`,
+ * `.json`, `.txt`, …) keeps the existing `CodeBlock`.
+ */
+export function isMarkdownFilename(name: string | undefined): boolean {
+  if (!name) return true;
+  const dot = name.lastIndexOf(".");
+  if (dot < 0) return true;
+  const ext = name.slice(dot + 1).toLowerCase();
+  if (ext === "md" || ext === "markdown") return true;
+  return !NON_MARKDOWN_EXTENSIONS.has(ext);
+}
+
 /**
  * The pending approval that belongs to a run waiting on the gate. Agent runs
  * match exactly; a pipeline run's approval is keyed by the STAGE run id

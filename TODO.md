@@ -60,4 +60,10 @@
 
 - [x] stránka běhy a aktivita hlavně pak log fází běhu pipeline nevypadá jako v designu (stránka "Tasky" v designu). Pořádně to předělej podle designu. — fáze 36
 
-- [ ] stránka běhy a aktivita - výstup tasku (pokud se jedná o soubor) není formátovaný markdown
+- [x] stránka běhy a aktivita - výstup tasku (pokud se jedná o soubor) není formátovaný markdown — fáze 41
+
+- [ ] stránka běhy a aktivita - tlačítko "Zastavit běh" na běžícím tasku nic nedělá. Z potvrzovacího dialogu se neodešle žádný request na backend
+
+- [ ] na stránce chatu nevidím běžící tasky pokud byly spuštěny z HUD UI. Měl bych vidět na levé straně aktivní tasky
+
+- [ ] na stránce chatu není použita CommandLine komponenta

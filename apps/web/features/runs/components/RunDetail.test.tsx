@@ -1,7 +1,12 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { CodeBlockTestId, DropdownTestId, FilePreviewTestId } from "@zibby/design-system";
+import {
+  CodeBlockTestId,
+  DropdownTestId,
+  FilePreviewTestId,
+  MarkdownTestId,
+} from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
@@ -26,6 +31,7 @@ vi.mock("../../tasks/TaskContext", () => ({
 const ARTIFACT_CONTENT: Record<string, string> = {
   "delivery_42:pr-draft.md": "# Add login fix\n\nDetails…",
   "delivery_file_43:audit-report.md": "# Audit report\n\nAll green.",
+  "delivery_file_45:report.json": '{"ok":true}',
 };
 vi.mock("../queries/useRunArtifactQuery", () => ({
   useRunArtifactQuery: (runId: string, name: string, enabled = true) => {
@@ -261,7 +267,7 @@ describe("RunDetail — task output", () => {
     );
   });
 
-  it("surfaces a done pipeline run's file output as its output and offers continue (P2-T2)", async () => {
+  it("surfaces a done pipeline run's markdown file output as formatted markdown, not a code block (Phase 41)", async () => {
     openNewTask.mockClear();
     renderDetail({
       ...pipelineRun,
@@ -271,9 +277,11 @@ describe("RunDetail — task output", () => {
       taskOutputKind: "file",
       outputArtifactName: "audit-report.md",
     });
-    // The produced file artifact is shown as the output, in a code block — not the
-    // pr-draft (which doesn't exist for a file-output pipeline run).
-    expect(screen.getByTestId(CodeBlockTestId.Pre)).toHaveTextContent("All green.");
+    // The produced `.md` artifact renders through the DS Markdown viewer — its
+    // heading becomes a real heading element, not a bare code block.
+    expect(screen.getByTestId(MarkdownTestId.Root)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audit report" })).toBeInTheDocument();
+    expect(screen.queryByTestId(CodeBlockTestId.Pre)).not.toBeInTheDocument();
     await userEvent.click(screen.getByTestId("continue-task"));
     expect(openNewTask).toHaveBeenCalledWith(
       undefined,
@@ -286,6 +294,19 @@ describe("RunDetail — task output", () => {
       undefined,
       expect.stringContaining("stages, done"),
     );
+  });
+
+  it("keeps a non-markdown file output (e.g. .json) in a code block, not the markdown viewer (Phase 41)", () => {
+    renderDetail({
+      ...pipelineRun,
+      runId: "delivery_file_45",
+      status: "done",
+      taskOutcome: "done",
+      taskOutputKind: "file",
+      outputArtifactName: "report.json",
+    });
+    expect(screen.getByTestId(CodeBlockTestId.Pre)).toHaveTextContent('{"ok":true}');
+    expect(screen.queryByTestId(MarkdownTestId.Root)).not.toBeInTheDocument();
   });
 
   it("renders nothing for a done pipeline file-output run whose artifact hasn't arrived (never falls into the agent-shaped branch)", () => {

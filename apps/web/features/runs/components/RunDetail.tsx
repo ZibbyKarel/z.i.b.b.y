@@ -7,6 +7,7 @@ import {
   FilePreview,
   type IconName,
   IconTile,
+  Markdown,
   Pressable,
   SelectField,
   Stack,
@@ -25,7 +26,7 @@ import { useNewTask } from "../../tasks";
 import { useProjectsQuery } from "../../projects";
 import { useAssignRunProjectMutation } from "../mutations";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
-import { type RunView, approvalForRun, runStateTone, runTitle } from "../run";
+import { type RunView, approvalForRun, isMarkdownFilename, runStateTone, runTitle } from "../run";
 import { ChainStepsPanel } from "./ChainStepsPanel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
@@ -268,11 +269,20 @@ function RunOutputPanel({ run }: { run: RunView }) {
 
   // Pipeline with a `file`-output artifact: no `RunPrGatePanel` (there is no diffstat,
   // no PR draft) — a lighter block with the same skeleton showing the artifact content.
+  // The produced artifact is normally a markdown doc (a research report, an audit) —
+  // rendered formatted via the DS Markdown viewer; a clearly non-markdown code file
+  // (`.ts`, `.json`, …) keeps the plain CodeBlock (Phase 41).
   if (fileArtifact?.content) {
     return (
       <HudPanel padding="250" title={t("producedOutputTitle")}>
         <Stack gap="200">
-          <CodeBlock maxHeight="md" text={fileArtifact.content} />
+          {isMarkdownFilename(run.outputArtifactName) ? (
+            <Container maxHeight="340px" overflow="auto">
+              <Markdown escapeHtml source={fileArtifact.content} />
+            </Container>
+          ) : (
+            <CodeBlock maxHeight="md" text={fileArtifact.content} />
+          )}
           <Stack align="center" direction="row" gap="100">
             {continueButton}
           </Stack>
