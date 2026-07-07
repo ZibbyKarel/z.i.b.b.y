@@ -2,19 +2,36 @@ import * as THREE from "three";
 import { resolveSceneTokens } from "./tokens";
 
 /**
- * The helix rings around the orb: thin glowing tori that fade in during the
- * `thinking`/`tool` states, each tilted differently and rotating at its own speed,
- * their colour drifting from `--color-accent` toward a cooler secondary hue, with a
- * bright pulse travelling around each ring. Opacity eases toward the mode target so
- * they never snap in or out.
+ * A single soft halo around the orb — the restrained successor (Phase 55) to the old
+ * triple helix of bright, additively-blended, pulse-chasing tori, which read far too
+ * loud for a "tichý velín". It carries exactly the same SCENE STATE the rings did:
+ * the mode target (from {@link modeVisuals}) is non-zero only while ZIBBY is genuinely
+ * live — `thinking` / `tool` (full) and `streaming` (partial) — so the halo fades in
+ * only then. `idle`, `listening`, `waiting-approval` and `error` all target zero, so
+ * it stays fully dark: quiet by default, a faint glow only when live.
+ *
+ * The halo is one camera-facing torus whose tube is feathered to a haze rather than a
+ * crisp line, painted in the scene's own accent token (no forked hue, no colour
+ * drift). Opacity eases toward the mode target so it never snaps, and — only in
+ * motion — breathes almost imperceptibly. No travelling bright pulse: this is a
+ * whisper of light, not a ring of it.
  */
 
-const RING_COUNT = 3;
-/** Cooler secondary the rings drift toward (a cyan in ZIBBY's cosmic family). */
-const SECONDARY_HEX = "#4fd1e0";
+/** Peak alpha of the halo at full mode opacity — deliberately low, so even the
+ * loudest live state (`thinking`/`tool`, target 1) reads as a faint aura rather than
+ * a bright ring. */
+const HALO_ALPHA = 0.32;
+/** Exponential-approach rate for the opacity fade in/out (so it never snaps). */
 const DAMPING_RATE = 4;
+/** Depth of the live halo's breathing swell (fraction of peak) — a barely-there
+ * pulse, and only when motion is allowed. */
+const BREATHE_DEPTH = 0.18;
+/** Angular speed of that breath (rad/s). */
+const BREATHE_SPEED = 1.1;
+/** Near-still self-rotation (rad/s) so a live halo isn't frozen; motion only. */
+const SPIN_SPEED = 0.06;
 
-const RING_VERTEX = /* glsl */ `
+const HALO_VERTEX = /* glsl */ `
 varying vec2 vUv;
 void main() {
   vUv = uv;
@@ -22,91 +39,67 @@ void main() {
 }
 `;
 
-const RING_FRAGMENT = /* glsl */ `
+const HALO_FRAGMENT = /* glsl */ `
 uniform vec3 uColor;
 uniform float uOpacity;
-uniform float uTime;
-uniform float uPulseSpeed;
 varying vec2 vUv;
 void main() {
-  // A bright pulse travelling around the major circumference (uv.x).
-  float band = abs(fract(vUv.x - uTime * uPulseSpeed) - 0.5);
-  float pulse = smoothstep(0.5, 0.32, band);
-  float a = uOpacity * (0.28 + 0.72 * pulse);
-  gl_FragColor = vec4(uColor, a);
+  // Feather across the tube (vUv.y): brightest on the centreline, fading to nothing
+  // at both rims — a soft band of haze instead of a hard-edged ring.
+  float edge = abs(vUv.y - 0.5) * 2.0;
+  float halo = smoothstep(1.0, 0.0, edge);
+  gl_FragColor = vec4(uColor, uOpacity * halo);
 }
 `;
 
-interface Ring {
-  mesh: THREE.Mesh;
-  material: THREE.ShaderMaterial;
-  spin: number;
-  colorPhase: number;
-}
-
 export interface RingsLayer {
   object3d: THREE.Group;
-  /** @param target ring opacity in [0,1] (from the mode); eased internally. */
+  /** @param target halo opacity in [0,1] (from the mode); eased internally. */
   update(dt: number, elapsed: number, target: number, reducedMotion: boolean): void;
   dispose(): void;
 }
 
 export function createRingsLayer(): RingsLayer {
   const group = new THREE.Group();
-  const tokens = resolveSceneTokens();
-  const accent = new THREE.Color(tokens.accent);
-  const secondary = new THREE.Color(SECONDARY_HEX);
-  const rings: Ring[] = [];
+  const accent = new THREE.Color(resolveSceneTokens().accent);
+  // A fat, low-segment tube: the width is what the fragment feathers into a haze;
+  // it sits just outside the unit-radius orb.
+  const geometry = new THREE.TorusGeometry(1.72, 0.13, 16, 220);
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: accent },
+      uOpacity: { value: 0 },
+    },
+    vertexShader: HALO_VERTEX,
+    fragmentShader: HALO_FRAGMENT,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  // A slight tilt lends the flat halo a hint of depth without reading as a 3D ring.
+  mesh.rotation.x = 0.32;
+  group.add(mesh);
+
   let opacity = 0;
-
-  for (let i = 0; i < RING_COUNT; i++) {
-    const radius = 1.45 + i * 0.26;
-    const geometry = new THREE.TorusGeometry(radius, 0.012, 8, 160);
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uColor: { value: accent.clone() },
-        uOpacity: { value: 0 },
-        uTime: { value: 0 },
-        uPulseSpeed: { value: 0.25 + i * 0.12 },
-      },
-      vertexShader: RING_VERTEX,
-      fragmentShader: RING_FRAGMENT,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    // Each ring on a distinct plane.
-    mesh.rotation.x = 1.1 + i * 0.5;
-    mesh.rotation.y = i * 0.7;
-    group.add(mesh);
-    rings.push({ mesh, material, spin: (0.15 + i * 0.08) * (i % 2 === 0 ? 1 : -1), colorPhase: i * 1.7 });
-  }
-
-  const tmp = new THREE.Color();
 
   return {
     object3d: group,
     update(dt, elapsed, target, reducedMotion) {
       opacity += (target - opacity) * (1 - Math.exp(-dt * DAMPING_RATE));
-      const spinScale = reducedMotion ? 0 : 1;
-      for (const ring of rings) {
-        ring.mesh.rotation.z += dt * ring.spin * spinScale;
-        const u = ring.material.uniforms;
-        u.uOpacity!.value = opacity;
-        u.uTime!.value += reducedMotion ? 0 : dt;
-        // Drift accent -> cooler secondary, per-ring phase.
-        const mix = 0.5 + 0.5 * Math.sin(elapsed * 0.4 + ring.colorPhase);
-        tmp.copy(accent).lerp(secondary, mix);
-        (u.uColor!.value as THREE.Color).copy(tmp);
+      if (!reducedMotion) {
+        mesh.rotation.z += dt * SPIN_SPEED;
       }
+      // Breathe only in motion; otherwise hold at peak. Range [1 - depth, 1].
+      const breathe = reducedMotion
+        ? 1
+        : 1 - BREATHE_DEPTH + BREATHE_DEPTH * (0.5 + 0.5 * Math.sin(elapsed * BREATHE_SPEED));
+      material.uniforms.uOpacity!.value = opacity * HALO_ALPHA * breathe;
       group.visible = opacity > 0.01;
     },
     dispose() {
-      for (const ring of rings) {
-        ring.mesh.geometry.dispose();
-        ring.material.dispose();
-      }
+      geometry.dispose();
+      material.dispose();
     },
   };
 }

@@ -88,7 +88,7 @@
 
 - [x] stránka Projekty - na kartě projektu zobrazíme ve footeru stejné statistiky jako máme v detailu projektu ohledně úkolů (mimo "Celkem"). Opěd budou jednotlivé ásti možné prokliknout na vyfiltrovanou stránku běhy a aktivita — fáze 52 (sdílený useProjectTaskStats, deep-link na /runs?filter)
 
-- [ ] CosmicScene - ringsLayer je moc výrazná. Zkus místo toho vymyslet nějakou jinou variantu vizualizace stavu, které momentálně využívají rigns
+- [x] CosmicScene - ringsLayer je moc výrazná. Zkus místo toho vymyslet nějakou jinou variantu vizualizace stavu, které momentálně využívají rigns — fáze 55 (triple-helix → jeden feathered halo, accent token, alpha≤0.32, jen live)
 
 - [ ] CosmicScene - Error stav a stav waiting for aprooval je poměrně stejný. Waiting for approval bych dal jako "warning tone"
 

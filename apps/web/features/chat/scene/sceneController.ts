@@ -3,11 +3,11 @@ import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
 import { type ConstellationLayer, createConstellationLayer } from "./constellationLayer";
 import { type DispatchLayer, createDispatchLayer } from "./dispatchLayer";
 import { type DockLayer, createDockLayer } from "./dockLayer";
+import { orbTarget } from "./modeVisuals";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
 import { type RingsLayer, createRingsLayer } from "./ringsLayer";
-import { orbTarget } from "./modeVisuals";
-import { resolveSceneTokens } from "./tokens";
 import type { SceneInputs } from "./sceneTypes";
+import { resolveSceneTokens } from "./tokens";
 
 /**
  * The vanilla-three controller that owns the whole cosmic scene: its renderer(s),
@@ -51,7 +51,10 @@ const ENERGY_DECAY = 1.6;
 
 const CAMERA_Z = 6;
 
-export function createSceneController(container: HTMLElement, initial: SceneInputs): SceneController {
+export function createSceneController(
+  container: HTMLElement,
+  initial: SceneInputs,
+): SceneController {
   let inputs = initial;
   let energy = 0;
   let flash = 0;
@@ -103,7 +106,7 @@ export function createSceneController(container: HTMLElement, initial: SceneInpu
   orbScene.add(constellation.object3d);
   constellation.setAgents(mobile ? [] : initial.agents);
 
-  // --- Rings (Tier 5): helix around the orb during thinking/tool. ---
+  // --- Rings (Tier 5): a soft halo around the orb during live states. ---
   const rings: RingsLayer = createRingsLayer();
   orbScene.add(rings.object3d);
 
