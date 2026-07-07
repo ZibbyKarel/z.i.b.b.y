@@ -9,10 +9,12 @@
 import { type StateTone, resolveStateToneHex } from "@zibby/design-system";
 
 /** The state colours the orb resolves from — the subset of the canonical
- * {@link StateTone} the scene expresses (no `warn`; approval-waiting uses `bad`). */
-export type SceneColorToken = Extract<StateTone, "accent" | "run" | "ok" | "bad">;
+ * {@link StateTone} the scene expresses. Includes `warn` so awaiting-approval reads
+ * as the shared warning/amber tone (`bad` stays reserved for error) — matching
+ * `runStateTone`, where `awaiting-approval` → `warn` and `error` → `bad`. */
+export type SceneColorToken = Extract<StateTone, "accent" | "run" | "ok" | "warn" | "bad">;
 
-const SCENE_TOKENS: readonly SceneColorToken[] = ["accent", "run", "ok", "bad"];
+const SCENE_TOKENS: readonly SceneColorToken[] = ["accent", "run", "ok", "warn", "bad"];
 
 let tokenCache: Record<SceneColorToken, string> | null = null;
 

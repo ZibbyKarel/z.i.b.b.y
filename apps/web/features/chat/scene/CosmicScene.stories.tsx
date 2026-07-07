@@ -219,8 +219,13 @@ export const ToolDispatch: Story = {
   args: { dispatch: { agentId: "agent-koder", seq: 1 }, mode: "tool" },
 };
 
+/** A run parked on the operator's decision. Reads in the shared `warn` (amber) tone —
+ * a "needs you" warning — visibly distinct from {@link ErrorState}'s red `bad` tone, so
+ * awaiting-approval is never mistaken for a failure (mirrors `runStateTone`). */
 export const WaitingApproval: Story = { args: { mode: "waiting-approval" } };
 
+/** The turn errored. Reads in the `bad` (red) tone — contrast it against
+ * {@link WaitingApproval}'s amber `warn` tone to confirm the two states differ. */
 export const ErrorState: Story = { args: { mode: "error" } };
 
 /** Same streaming state as {@link Streaming}, with the OS's reduced-motion

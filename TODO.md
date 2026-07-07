@@ -90,7 +90,7 @@
 
 - [x] CosmicScene - ringsLayer je moc výrazná. Zkus místo toho vymyslet nějakou jinou variantu vizualizace stavu, které momentálně využívají rigns — fáze 55 (triple-helix → jeden feathered halo, accent token, alpha≤0.32, jen live)
 
-- [ ] CosmicScene - Error stav a stav waiting for aprooval je poměrně stejný. Waiting for approval bych dal jako "warning tone"
+- [x] CosmicScene - Error stav a stav waiting for aprooval je poměrně stejný. Waiting for approval bych dal jako "warning tone" — fáze 56 (waiting-approval orb/glow → warn amber, error zůstává bad red)
 
 - [x] Chat UI - momentálně vidím jen běžící tasky ale měl bych vidět všechny tasky ve vybraném projektu (nebo bez projektů) v panelu tasků na levo. Chat UI by mělo být plnohodnoté UI. — fáze 57 (ChatRunningTasks→ChatTasksPanel: všechny tasky ve scope, live seřazené první přes RUN_STATUS_GROUPS)
 

@@ -29,8 +29,10 @@ export interface OrbTarget {
 
 /**
  * Base target per mode, before the streaming energy signal is folded in. Streaming
- * uses the run colour; error/waiting-approval the bad colour; everything else the
- * accent — matching ZIBBY's semantic tokens (no new brand colour).
+ * uses the run colour; error the bad colour; waiting-approval the warn (amber) colour
+ * so it reads as a distinct warning tone, not a second error; everything else the
+ * accent — matching ZIBBY's semantic tokens (`runStateTone`: awaiting-approval → warn,
+ * error → bad) with no new brand colour.
  */
 const BASE: Record<SceneMode, OrbTarget> = {
   // Dormant: dim accent, slow drift, gentle breathing.
@@ -94,9 +96,10 @@ const BASE: Record<SceneMode, OrbTarget> = {
     glow: 0.6,
     rings: 1,
   },
-  // A run parked on the operator's decision: bad colour, low intensity, slow warning.
+  // A run parked on the operator's decision: warn (amber) colour, low intensity, slow
+  // warning pulse — a "needs you" attention tone, visibly distinct from error's red.
   "waiting-approval": {
-    colorToken: "bad",
+    colorToken: "warn",
     intensity: 0.45,
     noiseAmp: 0.07,
     noiseSpeed: 0.2,
