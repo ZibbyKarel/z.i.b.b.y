@@ -1,11 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  ChipTestId,
-  DropDownButtonTestId,
-  FilePreviewTestId,
-  SearchMenuTestId,
-} from "@zibby/design-system";
+import { ChipTestId, DropDownButtonTestId, FilePreviewTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen, waitFor } from "../../../test/render";
 import { CommandLineTestId } from "./CommandLine/CommandLine";
 import { NewTaskDialog } from "./NewTaskDialog";
@@ -17,8 +12,9 @@ import { NewTaskDialog } from "./NewTaskDialog";
  * `classify` echoes a {@link TaskRouting} derived from the typed text (loop-shaped
  * text → `mode: "loop"` carrying a synthesized `proposedGoal`); the dialog renders the
  * preview and branches submit on the inferred mode. Assigning a destination now goes
- * through CommandLine's inline `@` picker (no more "Předat" override select) —
- * exercised here via `SearchMenuTestId` the same way `CommandLine.test.tsx` does.
+ * through CommandLine's Phase 45 inline `@` dropdown (no more "Předat" override
+ * select, and no separate search box) — exercised here via `CommandLineTestId`
+ * the same way `CommandLine.test.tsx` does.
  */
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -208,13 +204,11 @@ vi.mock("../../limits/queries/useLimitsQuery", () => ({
 
 async function pickMention(user: ReturnType<typeof userEvent.setup>, query: string, itemId: string) {
   const input = screen.getByTestId(CommandLineTestId.Input);
-  // A leading space guarantees the `@` starts a fresh word (the trigger only fires
-  // at the very start of the text or right after whitespace) regardless of what the
-  // test already typed into the field.
-  await user.type(input, " @");
-  const mentionInput = screen.getByTestId(SearchMenuTestId.Input);
-  await user.type(mentionInput, query);
-  await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-${itemId}`));
+  // A leading space guarantees the `@` starts a fresh word, and the query is typed
+  // straight into the SAME field — Phase 45's inline dropdown, never a separate
+  // search box.
+  await user.type(input, ` @${query}`);
+  await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-${itemId}`));
 }
 
 describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)", () => {
@@ -388,7 +382,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     await user.type(screen.getByLabelText(/Zadání/), "vague request");
     expect(await screen.findByText(/nízká jistota/)).toBeInTheDocument();
 
-    await pickMention(user, "Kod", "agents-koder");
+    await pickMention(user, "Kod", "agent-koder");
     expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Kodér");
 
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
@@ -512,7 +506,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     // Clear the pre-assigned pipeline, then @-mention the agent instead — the pre-fill
     // is changeable, not a lock.
     await user.click(screen.getByTestId(ChipTestId.Close));
-    await pickMention(user, "Kod", "agents-koder");
+    await pickMention(user, "Kod", "agent-koder");
 
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("agent");

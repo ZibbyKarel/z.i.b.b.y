@@ -182,23 +182,31 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/alpha");
   });
 
-  describe("@ mention picker", () => {
-    it("opens on '@', filters the catalog, and assigns the picked target as a chip", async () => {
+  describe("@ mention picker — Phase 45: a caret-anchored INLINE dropdown, never a separate search box", () => {
+    it("opens inline on '@', filters live as the query is typed in the SAME field, and assigns the picked target as a chip", async () => {
       const onTargetChange = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine onTargetChange={onTargetChange} />);
 
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@");
-      const mentionInput = screen.getByTestId(SearchMenuTestId.Input);
-      await user.type(mentionInput, "Bui");
-      expect(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`)).toBeInTheDocument();
-      expect(screen.queryByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`)).not.toBeInTheDocument();
+      await user.type(input, "@Bui");
 
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      // The dropdown is anchored under the SAME field — never an external
+      // SearchMenu with its own input stealing focus.
+      expect(screen.getByTestId(CommandLineTestId.MentionMenu)).toBeInTheDocument();
+      expect(screen.queryByTestId(SearchMenuTestId.Root)).not.toBeInTheDocument();
+      expect(input).toHaveFocus();
+
+      expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`)).toBeInTheDocument();
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
 
       expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
       expect(input).toHaveValue("@Builder ");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
       expect(onTargetChange).toHaveBeenLastCalledWith({
         kind: "agent",
         id: "builder",
@@ -207,13 +215,46 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       });
     });
 
-    it("dispatches straight to the mentioned target — reaching the whole catalog, not just classify candidates", async () => {
+    it("navigates with ArrowDown and picks with Enter — the textarea itself carries the keyboard nav", async () => {
       const user = userEvent.setup();
       render(<CommandLine />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@");
-      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Deliv");
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`));
+      expect(input).toHaveFocus();
+
+      // Results order: Builder, Kodér, Delivery — ArrowDown once lands on Kodér.
+      await user.keyboard("{ArrowDown}{Enter}");
+
+      expect(input).toHaveFocus();
+      expect(input).toHaveValue("@Kodér ");
+      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Kodér");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+    });
+
+    it("closes on Escape without submitting or touching the typed text, and leaves the ordinary send-on-Enter path intact", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      expect(screen.getByTestId(CommandLineTestId.MentionMenu)).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+      expect(input).toHaveValue("@Bui");
+      expect(createTask).not.toHaveBeenCalled();
+
+      // No mention open any more — Enter now takes the ordinary submit path.
+      await user.keyboard("{Enter}");
+      expect(createTask).toHaveBeenCalledTimes(1);
+    });
+
+    it("dispatches straight to the mentioned target — reaching the whole catalog, not just classify candidates", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Deliv");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`));
       await user.type(input, "spusť to");
 
       await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
@@ -230,9 +271,8 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       const user = userEvent.setup();
       render(<CommandLine onTargetChange={onTargetChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@");
-      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
 
       await user.click(screen.getByTestId(ChipTestId.Close));
       expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
@@ -438,9 +478,8 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       const user = userEvent.setup();
       render(<CommandLine showAck />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@");
-      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
       await user.type(input, "otestuj to");
 
       await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
@@ -469,9 +508,8 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       render(<CommandLine onSubmit={onSubmit} />);
 
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@");
-      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
       await user.type(input, "ahoj");
       await user.keyboard("{Enter}");
 

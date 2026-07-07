@@ -1,11 +1,9 @@
 "use client";
-import type { ChangeEvent, DragEvent, KeyboardEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
 import type { TaskOutput } from "@zibby/contracts";
 import {
   Button,
   Card,
+  CardContent,
   Chip,
   Container,
   DropDownButton,
@@ -16,19 +14,23 @@ import {
   type HighlightTone,
   Icon,
   type IconName,
+  MenuSurface,
   OrbitLoader,
   Panel,
-  SearchMenu,
-  type SearchMenuSection,
   Stack,
+  Tag,
   Typography,
 } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import type { ChangeEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAgentsQuery } from "../../../agents";
 import { useLimitsQuery } from "../../../limits";
-import { useActiveProject, useProjectsQuery } from "../../../projects";
 import { usePipelinesQuery } from "../../../pipelines";
+import { useActiveProject, useProjectsQuery } from "../../../projects";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
 import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
+import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import {
   type SchedulePreset,
   type TaskTarget,
@@ -38,7 +40,6 @@ import {
   extractPaths,
   resolveScheduledAt,
 } from "../../task";
-import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import { ScheduledConfirmation } from "../ScheduledConfirmation";
 import type { TaskAttachmentSet } from "../TaskAttachments";
 
@@ -49,6 +50,8 @@ export enum CommandLineTestId {
   Pin = "command-line-pin",
   FileInput = "command-line-file-input",
   MentionMenu = "command-line-mention-menu",
+  MentionItem = "command-line-mention-item",
+  MentionEmpty = "command-line-mention-empty",
   TargetChip = "command-line-target-chip",
   Box = "command-line-box",
   DropOverlay = "command-line-drop-overlay",
@@ -155,13 +158,6 @@ export interface CommandLineProps {
   showAttach?: boolean;
 }
 
-/** Position (viewport px) the fixed mention picker is rendered at, above the input. */
-interface MentionMenuRect {
-  left: number;
-  width: number;
-  bottom: number;
-}
-
 /** The honest, non-fabricated classification ack shown below the box after submit. */
 interface AckInfo {
   text: string;
@@ -169,11 +165,40 @@ interface AckInfo {
   exec: string;
 }
 
-/** True right after the operator types `@` at the start of the text or after
- * whitespace — the moment the mention picker should open (ported from ChatComposer). */
-function isMentionTrigger(text: string, cursor: number): boolean {
-  if (cursor === 0 || text[cursor - 1] !== "@") return false;
-  return cursor === 1 || /\s/.test(text[cursor - 2] ?? "");
+/** An in-progress `@query` the caret is currently sitting inside — `start` is the
+ * index of the `@` itself, so `text.slice(start, caret)` is `@query`. */
+interface Mention {
+  query: string;
+  start: number;
+}
+
+/** A single row of the inline mention dropdown — enough to both render the row
+ * (glyph/tone by `kind`) and build the `TaskTarget` it resolves to on pick. */
+interface MentionResult {
+  kind: "agent" | "pipeline";
+  id: string;
+  name: string;
+  glyph: IconName;
+}
+
+/** Matches an in-progress `@query` immediately before the caret — an `@` followed
+ * by word/`.`/`-` characters, anchored at the caret (`$`). Ported verbatim from
+ * the velin-b design reference's `checkMention`. */
+const MENTION_QUERY_RE = /@([\w.-]*)$/;
+
+/** Keys the mention dropdown's own keyboard nav fully owns while open — skipped
+ * by the keyup re-scan below so closing (Escape) or navigating (Arrow/Enter)
+ * never immediately reopens the panel from the unchanged caret position. */
+const MENTION_NAV_KEYS = new Set(["ArrowUp", "ArrowDown", "Enter", "Escape"]);
+
+/** Re-derives the in-progress mention (or `null`) from the text up to the caret —
+ * called on every change/click/keyup so the dropdown tracks the caret live, never
+ * just the moment `@` was typed. */
+function checkMention(text: string, caret: number): Mention | null {
+  const before = text.slice(0, caret);
+  const match = MENTION_QUERY_RE.exec(before);
+  if (!match) return null;
+  return { query: (match[1] ?? "").toLowerCase(), start: caret - match[0].length };
 }
 
 /** Case-insensitive substring match on a target's display name or id. */
@@ -207,7 +232,11 @@ function mentionRanges(
   for (const match of text.matchAll(MENTION_RE)) {
     if (match.index === undefined) continue;
     const token = match[0].slice(1).toLowerCase();
-    const tone: HighlightTone = agentNames.has(token) ? "accent" : pipelineNames.has(token) ? "push" : "dim";
+    const tone: HighlightTone = agentNames.has(token)
+      ? "accent"
+      : pipelineNames.has(token)
+        ? "push"
+        : "dim";
     ranges.push({ start: match.index, end: match.index + match[0].length, tone });
   }
   return ranges;
@@ -275,10 +304,11 @@ export function CommandLine({
   // told apart from a re-render with the same one — ported from `ChatComposer`.
   const [prevInjectedTarget, setPrevInjectedTarget] = useState(injectedTarget);
 
-  const [mentionOpen, setMentionOpen] = useState(false);
-  const [mentionStart, setMentionStart] = useState<number | null>(null);
-  const [mentionQuery, setMentionQuery] = useState("");
-  const [menuRect, setMenuRect] = useState<MentionMenuRect | null>(null);
+  // The in-progress `@query` under the caret (or `null`) — drives the inline
+  // dropdown directly; there is no separate "open" flag, `mention` IS the open
+  // state (mirrors the velin-b reference's `mentionQ`).
+  const [mention, setMention] = useState<Mention | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [ack, setAck] = useState<AckInfo | null>(null);
   // Set on a suggestion-chip click: the text state hasn't re-rendered yet at click
@@ -288,8 +318,6 @@ export function CommandLine({
   const pendingSuggestionRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const mentionInputRef = useRef<HTMLInputElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingCursorRef = useRef<number | null>(null);
 
@@ -306,25 +334,16 @@ export function CommandLine({
   const upload = useUploadTaskAttachmentsMutation();
   const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
 
-  // Once the mention picker is positioned (`menuRect` set synchronously in the
-  // change handler below, landing in the SAME render as `mentionOpen`), move focus
-  // into its own search input — SearchMenu owns its keyboard nav internally.
+  // The mention picker never steals focus — it's inline, the textarea stays the
+  // only input — so a pick only needs to move the CARET past the spliced-in
+  // token once the new `text` has actually landed in the DOM (this effect fires
+  // post-commit; the ref is `null` on every render that isn't a pick).
   useEffect(() => {
-    if (mentionOpen && menuRect) mentionInputRef.current?.focus();
-  }, [mentionOpen, menuRect]);
-
-  // Hand focus back to the textarea once the picker closes (Escape/outside-click or
-  // a selection), restoring the cursor a selection left behind.
-  useEffect(() => {
-    if (mentionOpen) return;
+    if (pendingCursorRef.current === null) return;
     const el = textareaRef.current;
-    if (!el) return;
-    el.focus();
-    if (pendingCursorRef.current !== null) {
-      el.setSelectionRange(pendingCursorRef.current, pendingCursorRef.current);
-      pendingCursorRef.current = null;
-    }
-  }, [mentionOpen]);
+    if (el) el.setSelectionRange(pendingCursorRef.current, pendingCursorRef.current);
+    pendingCursorRef.current = null;
+  }, [text]);
 
   /** Fires `onDraftChange` only when the trimmed draft flips between empty and
    *  non-empty — never on every keystroke (ported from `ChatComposer`). */
@@ -345,7 +364,8 @@ export function CommandLine({
     setPrevInjectedTarget(injectedTarget);
     if (injectedTarget) {
       const mentionText = `@${injectedTarget.name} `;
-      const next = text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${mentionText}` : mentionText;
+      const next =
+        text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${mentionText}` : mentionText;
       setText(next);
       onTextChange?.(next);
       setTarget(injectedTarget);
@@ -381,7 +401,10 @@ export function CommandLine({
     () => new Set(agents.map((a) => (a.name ?? a.id).toLowerCase())),
     [agents],
   );
-  const pipelineNames = useMemo(() => new Set(pipelines.map((p) => p.name.toLowerCase())), [pipelines]);
+  const pipelineNames = useMemo(
+    () => new Set(pipelines.map((p) => p.name.toLowerCase())),
+    [pipelines],
+  );
   const mentionHighlights = useMemo(
     () => mentionRanges(text, agentNames, pipelineNames),
     [text, agentNames, pipelineNames],
@@ -494,70 +517,95 @@ export function CommandLine({
   }
 
   function closeMention() {
-    setMentionOpen(false);
-    setMentionQuery("");
-    setMentionStart(null);
-    setMenuRect(null);
+    setMention(null);
+    setMentionIndex(0);
+  }
+
+  /** Re-derives `mention` from an element's live value + caret — shared by
+   *  change/click/keyup so the dropdown tracks the caret continuously, not just
+   *  the instant `@` was typed (ported from the velin-b reference). */
+  function syncMention(el: { value: string; selectionStart: number | null }) {
+    const caret = el.selectionStart ?? el.value.length;
+    setMention(checkMention(el.value, caret));
+    setMentionIndex(0);
   }
 
   function handleChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const nextValue = e.target.value;
-    const cursor = e.target.selectionStart ?? nextValue.length;
     setText(nextValue);
     onTextChange?.(nextValue);
     notifyDraftChange(nextValue);
-    if (!mentionOpen && isMentionTrigger(nextValue, cursor)) {
-      // Measure synchronously (the DOM is fully laid out inside this event handler)
-      // so `menuRect` and `mentionOpen` land in the SAME render.
-      const rect = rootRef.current?.getBoundingClientRect();
-      if (rect) {
-        setMenuRect({
-          left: rect.left,
-          width: rect.width,
-          bottom: window.innerHeight - rect.top + 8,
-        });
-      }
-      setMentionStart(cursor - 1);
-      setMentionQuery("");
-      setMentionOpen(true);
-    }
+    syncMention(e.target);
+  }
+
+  /** Caret moved via the mouse — re-check whether it's still inside an `@query`. */
+  function handleMentionClick(e: MouseEvent<HTMLTextAreaElement>) {
+    syncMention(e.currentTarget);
+  }
+
+  /** Caret moved via the keyboard (any key that ISN'T already fully handled by
+   *  `handleKeyDown` below while the dropdown is open — see {@link MENTION_NAV_KEYS}). */
+  function handleMentionKeyUp(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (MENTION_NAV_KEYS.has(e.key)) return;
+    syncMention(e.currentTarget);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (mention) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((i) => (mentionResults.length === 0 ? 0 : (i + 1) % mentionResults.length));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((i) =>
+          mentionResults.length === 0 ? 0 : (i - 1 + mentionResults.length) % mentionResults.length,
+        );
+        return;
+      }
+      if (e.key === "Enter") {
+        const active = mentionResults[activeMentionIndex];
+        if (active) {
+          e.preventDefault();
+          pickMentionResult(active);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        // Also stop native bubbling: an enclosing Dialog closes itself on a
+        // document-level Escape listener — closing just the picker must not
+        // ALSO close the dialog it lives in.
+        e.preventDefault();
+        e.stopPropagation();
+        closeMention();
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       dispatch(null);
     }
   }
 
-  function selectMention(sectionId: string, itemId: string) {
-    if (mentionStart === null) return;
-    let picked: TaskTarget | undefined;
-    if (sectionId === "agents") {
-      const agent = agents.find((a) => a.id === itemId);
-      if (agent) {
-        picked = {
-          kind: "agent",
-          id: agent.id,
-          name: agent.name ?? agent.id,
-          glyph: (agent.glyph as IconName | undefined) ?? "bot",
-        };
-      }
-    } else if (sectionId === "pipelines") {
-      const pipeline = pipelines.find((p) => p.id === itemId);
-      if (pipeline) picked = { kind: "pipeline", id: pipeline.id, name: pipeline.name, glyph: "flow" };
-    }
-    if (!picked) return;
-
+  function pickMentionResult(result: MentionResult) {
+    if (!mention) return;
+    const picked: TaskTarget = {
+      kind: result.kind,
+      id: result.id,
+      name: result.name,
+      glyph: result.glyph,
+    };
     const mentionText = `@${picked.name} `;
-    const start = mentionStart;
-    const nextValue = text.slice(0, start) + mentionText + text.slice(start + 1);
+    const el = textareaRef.current;
+    const end = el?.selectionStart ?? mention.start + 1 + mention.query.length;
+    const nextValue = text.slice(0, mention.start) + mentionText + text.slice(end);
     setText(nextValue);
     onTextChange?.(nextValue);
     notifyDraftChange(nextValue);
     setTarget(picked);
     onTargetChange?.(picked);
-    pendingCursorRef.current = start + mentionText.length;
+    pendingCursorRef.current = mention.start + mentionText.length;
     closeMention();
   }
 
@@ -611,20 +659,33 @@ export function CommandLine({
     dispatch(resolveScheduledAt(preset, now, resetsAt));
   }
 
-  const agentSection: SearchMenuSection = {
-    id: "agents",
-    label: tMention("sections.agents"),
-    items: agents
-      .filter((a) => matchesQuery(mentionQuery, a.name ?? a.id, a.id))
-      .map((a) => ({ id: a.id, title: a.name ?? a.id, glyph: (a.glyph as IconName | undefined) ?? "bot" })),
-  };
-  const pipelineSection: SearchMenuSection = {
-    id: "pipelines",
-    label: tMention("sections.pipelines"),
-    items: pipelines
-      .filter((p) => matchesQuery(mentionQuery, p.name, p.id))
-      .map((p) => ({ id: p.id, title: p.name, glyph: "flow" as IconName })),
-  };
+  // The inline dropdown's rows — agents then pipelines, filtered live by the
+  // in-progress query, capped to a handful so the "plachta" never grows past a
+  // glance (ported from the velin-b reference's `mentionResults`).
+  const mentionResults = useMemo<MentionResult[]>(() => {
+    if (!mention) return [];
+    const agentHits: MentionResult[] = agents
+      .filter((a) => matchesQuery(mention.query, a.name ?? a.id, a.id))
+      .map((a) => ({
+        kind: "agent" as const,
+        id: a.id,
+        name: a.name ?? a.id,
+        glyph: (a.glyph as IconName | undefined) ?? "bot",
+      }));
+    const pipelineHits: MentionResult[] = pipelines
+      .filter((p) => matchesQuery(mention.query, p.name, p.id))
+      .map((p) => ({
+        kind: "pipeline" as const,
+        id: p.id,
+        name: p.name,
+        glyph: "flow" as IconName,
+      }));
+    return [...agentHits, ...pipelineHits].slice(0, 6);
+  }, [mention, agents, pipelines]);
+  // Clamp at read time so a result list that shrank between renders never
+  // leaves the keyboard highlight out of range.
+  const activeMentionIndex =
+    mentionResults.length === 0 ? -1 : Math.min(mentionIndex, mentionResults.length - 1);
 
   const menuItems: DropDownButtonItem[] = [
     { id: "in-1h", label: t("schedule.in1h"), icon: "clock", onSelect: () => run("in-1h") },
@@ -651,34 +712,7 @@ export function CommandLine({
       onDragOver={showAttach ? handleDragOver : undefined}
       onDrop={showAttach ? handleDrop : undefined}
       position="relative"
-      ref={rootRef}
     >
-      {mentionOpen && menuRect && (
-        <Container
-          bottom={`${menuRect.bottom}px`}
-          data-testid={CommandLineTestId.MentionMenu}
-          left={`${menuRect.left}px`}
-          position="fixed"
-          width={`${menuRect.width}px`}
-          zIndex={50}
-        >
-          <SearchMenu
-            ariaLabel={tMention("ariaLabel")}
-            emptyLabel={tMention("empty")}
-            inputRef={mentionInputRef}
-            onOpenChange={(open) => {
-              if (!open) closeMention();
-            }}
-            onSelect={selectMention}
-            onValueChange={setMentionQuery}
-            open={mentionOpen}
-            placeholder={tMention("placeholder")}
-            sections={[agentSection, pipelineSection]}
-            value={mentionQuery}
-          />
-        </Container>
-      )}
-
       {showAttach && dragOver && (
         <Container
           bottom="0"
@@ -690,8 +724,21 @@ export function CommandLine({
           top="0"
           zIndex={20}
         >
-          <Card bordered background="background" borderStyle="dashed" radius="default" style={{ height: "100%" }} tone="accent">
-            <Stack align="center" direction="row" gap="75" justify="center" style={{ height: "100%" }}>
+          <Card
+            bordered
+            background="background"
+            borderStyle="dashed"
+            radius="default"
+            style={{ height: "100%" }}
+            tone="accent"
+          >
+            <Stack
+              align="center"
+              direction="row"
+              gap="75"
+              justify="center"
+              style={{ height: "100%" }}
+            >
               <Icon name="file" size="sm" tone="accent" />
               <Typography tone="accent" type="note">
                 {t("commandLine.dropHint")}
@@ -712,40 +759,93 @@ export function CommandLine({
         />
       )}
 
-      <HighlightTextAreaField
-        autoFocus
-        data-testid={CommandLineTestId.Input}
-        disabled={disabled}
-        highlights={highlights}
-        label={label ?? t("commandLine.label")}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder ?? t("commandLine.placeholder")}
-        ref={textareaRef}
-        rows={computeRows(text, rows, maxRows)}
-        value={text}
-      />
+      <Container position="relative">
+        <HighlightTextAreaField
+          autoFocus
+          data-testid={CommandLineTestId.Input}
+          disabled={disabled}
+          highlights={highlights}
+          label={label ?? t("commandLine.label")}
+          onBlur={closeMention}
+          onChange={handleChange}
+          onClick={handleMentionClick}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleMentionKeyUp}
+          placeholder={placeholder ?? t("commandLine.placeholder")}
+          ref={textareaRef}
+          rows={computeRows(text, rows, maxRows)}
+          value={text}
+        />
+
+        {mention && (
+          <MenuSurface
+            scroll
+            align="stretch"
+            aria-label={tMention("ariaLabel")}
+            data-testid={CommandLineTestId.MentionMenu}
+            role="listbox"
+          >
+            {mentionResults.length === 0 ? (
+              <Typography
+                data-testid={CommandLineTestId.MentionEmpty}
+                size="sm"
+                type="note"
+                variant="tertiary"
+              >
+                {tMention("empty")}
+              </Typography>
+            ) : (
+              <Stack gap="0">
+                {mentionResults.map((result, index) => {
+                  const active = index === activeMentionIndex;
+                  return (
+                    <Card
+                      aria-selected={active}
+                      as="button"
+                      background={active ? "surface" : "raised"}
+                      bordered={false}
+                      data-testid={`${CommandLineTestId.MentionItem}-${result.kind}-${result.id}`}
+                      key={`${result.kind}-${result.id}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        pickMentionResult(result);
+                      }}
+                      onPointerMove={() => setMentionIndex(index)}
+                      radius="none"
+                      role="option"
+                    >
+                      <CardContent padding="75">
+                        <Stack align="center" direction="row" gap="75" justify="between">
+                          <Tag
+                            icon={result.glyph}
+                            tone={result.kind === "agent" ? "accent" : "push"}
+                          >
+                            {result.name}
+                          </Tag>
+                          <Typography mono size="xs" type="note" variant="tertiary">
+                            {`@${result.name}`}
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Stack>
+            )}
+          </MenuSurface>
+        )}
+      </Container>
 
       <Stack align="center" direction="row" gap="75" style={{ marginTop: "8px" }}>
         {showAttach && (
-          <>
-            <Button
-              aria-label={t("commandLine.attachAria")}
-              data-testid={CommandLineTestId.Attach}
-              icon="plus"
-              intent="ghost"
-              onClick={openFilePicker}
-              size="sm"
-            />
-            <Button
-              aria-label={t("commandLine.pinAria")}
-              data-testid={CommandLineTestId.Pin}
-              icon="pin"
-              intent="ghost"
-              onClick={openFilePicker}
-              size="sm"
-            />
-          </>
+          <Button
+            aria-label={t("commandLine.attachAria")}
+            data-testid={CommandLineTestId.Attach}
+            icon="plus"
+            intent="ghost"
+            onClick={openFilePicker}
+            size="sm"
+          />
         )}
 
         <Stack grow style={{ minWidth: 0 }} />
@@ -819,15 +919,7 @@ export function CommandLine({
   );
 
   return (
-    <Stack
-      data-testid={CommandLineTestId.Root}
-      direction="col"
-      gap="150"
-      // Escape while the mention picker is focused must close ONLY the picker.
-      onKeyDown={(e) => {
-        if (mentionOpen && e.key === "Escape") e.stopPropagation();
-      }}
-    >
+    <Stack data-testid={CommandLineTestId.Root} direction="col" gap="150">
       {target && (
         <Stack align="center" direction="row" gap="75">
           <Chip

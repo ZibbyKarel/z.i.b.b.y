@@ -68,10 +68,12 @@
 
 - [x] na stránce chatu není použita CommandLine komponenta — fáze 38 (ChatScreen renderuje CommandLine v send-delegation módu)
 
-- [ ] vyhledávání agentů a pipeline v CommandLine komponentě nefunguje inline. Zobrazí se externí vyhledávací políčko což je špatné UX. Pokud napíšu "@" měla by se automaticky pod kurzorem zobrazit plachta s výsledky vyhledávání tak jak je to v design
+- [x] vyhledávání agentů a pipeline v CommandLine komponentě nefunguje inline. Zobrazí se externí vyhledávací políčko což je špatné UX. Pokud napíšu "@" měla by se automaticky pod kurzorem zobrazit plachta s výsledky vyhledávání tak jak je to v design — fáze 45
 
 - [ ] v souboru PipelineStageTimeline odstraníme tlačítko "log" které zobrazuje log fáze a funkcionalitu nahradíme komponentou Accordion kde bude stačit kliknout na celý řádek fáze aby se log zobrazil/schoval
 
 - [ ] stránka běhy a aktivita - na detailu tasku v headeru bych místo klasického glyphu v levo nahoře zobrazil avatara (s fallbackem na glyph) přiřazeného agenta nebo pipeliny. Avatar by měl být vpravo
 
 - [ ] stránka běhy a aktivita - na detailu tasku, který skončil chybou mi chybí tlačítko "resume", které pustí task znova (ideálně tak aby se nemusel znovu celý opakovat a načítat context)
+
+- [ ] DropdownButton v CommandLine nemá asi správný disabled stav. stále vypadá že je aktivní jen na něj nejde kliknout
