@@ -104,7 +104,7 @@ const ZtChip = ({ state = 'idle', children }) => {
       borderRadius: 999, border: `1px solid ${s.c}33`, background: `${s.c}10`,
       fontFamily: ZT.mono, fontSize: 11, color: s.c, whiteSpace: 'nowrap',
     }}>
-      <ZtDot state={state} size={6} />
+      <ZtDot size={6} state={state} />
       {children || s.label}
     </span>
   );
@@ -193,8 +193,8 @@ const ZtHold = ({ color = ZT.wait, label = 'Podržet pro schválení', doneLabel
   React.useEffect(() => () => cancelAnimationFrame(raf.current), []);
   return (
     <button className="zt-focusable"
-      onMouseDown={start} onMouseUp={stop} onMouseLeave={stop}
-      onTouchStart={start} onTouchEnd={stop}
+      onMouseDown={start} onMouseLeave={stop} onMouseUp={stop}
+      onTouchEnd={stop} onTouchStart={start}
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         padding: '11px 18px', borderRadius: ZT.rCtl, cursor: done ? 'default' : 'pointer',
@@ -257,11 +257,11 @@ const ZtApproval = ({ a, density = 'rail', preview = null, onDecide }) => {
       style={{ borderColor: dec ? ZT.line : `${ZT.wait}3d` }}>
       {/* 1 · stav + riziko */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: big ? 16 : 13 }}>
-        <ZtDot state={dec ? (dec === 'ok' ? 'ok' : 'idle') : 'wait'} size={7} />
+        <ZtDot size={7} state={dec ? (dec === 'ok' ? 'ok' : 'idle') : 'wait'} />
         <span style={{ ...T.label, color: dec ? (dec === 'ok' ? ZT.ok : ZT.ink3) : ZT.wait }}>
           {dec ? (dec === 'ok' ? 'Schváleno' : 'Zamítnuto') : 'Čeká na tebe'}
         </span>
-        <span style={{ marginLeft: 'auto' }}><ZtRisk risk={a.risk} big={big} /></span>
+        <span style={{ marginLeft: 'auto' }}><ZtRisk big={big} risk={a.risk} /></span>
       </div>
 
       {/* 2 · CO se schvaluje */}
@@ -295,8 +295,8 @@ const ZtApproval = ({ a, density = 'rail', preview = null, onDecide }) => {
         <div style={{ display: 'flex', gap: 9, marginTop: big ? 18 : 14 }}>
           {highRisk
             ? <ZtHold color={r.c} onConfirm={() => decide('ok')} style={{ flex: 1.4 }} />
-            : <ZtBtn variant="primary" icon="check" onClick={() => decide('ok')} style={{ flex: 1.4 }}>Schválit</ZtBtn>}
-          <ZtBtn variant="ghost" icon="x" onClick={() => decide('no')} style={{ flex: 1 }}>Zamítnout</ZtBtn>
+            : <ZtBtn icon="check" onClick={() => decide('ok')} style={{ flex: 1.4 }} variant="primary">Schválit</ZtBtn>}
+          <ZtBtn icon="x" onClick={() => decide('no')} style={{ flex: 1 }} variant="ghost">Zamítnout</ZtBtn>
         </div>
       )}
     </ZtPanel>

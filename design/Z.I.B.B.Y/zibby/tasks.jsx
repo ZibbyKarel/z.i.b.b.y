@@ -60,7 +60,7 @@ const TaskCard = ({ task, selected, onSelect, accent }) => {
       {/* Pending-classification highlight */}
       {isPendingClassify && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 9, padding: '6px 9px', background: `${Z.warn}12`, border: `1px solid ${Z.warn}28`, borderRadius: 2 }}>
-          <ZibbyMark size={11} color={Z.warn} />
+          <ZibbyMark color={Z.warn} size={11} />
           <Mono style={{ fontSize: 9.5, color: Z.warn }}>
             {cl.executorName} · {Math.round(cl.confidence * 100)}% · čeká na potvrzení
           </Mono>
@@ -152,11 +152,11 @@ const TasksBody = ({ accent, tasks: tasksProp, setTasks: setTasksProp, selId: se
           {filtered.length > 0
             ? filtered.map(t => (
                 <TaskCard
-                  key={t.id}
-                  task={t}
                   accent={accent}
-                  selected={sel && t.id === sel.id}
+                  key={t.id}
                   onSelect={setSelId}
+                  selected={sel && t.id === sel.id}
+                  task={t}
                 />
               ))
             : (
@@ -170,11 +170,11 @@ const TasksBody = ({ accent, tasks: tasksProp, setTasks: setTasksProp, selId: se
         {sel
           ? (
             <TaskDetail
-              key={sel.id}
-              task={sel}
               accent={accent}
+              key={sel.id}
               onConfirm={handleConfirm}
               onOverride={handleOverride}
+              task={sel}
             />
           )
           : (

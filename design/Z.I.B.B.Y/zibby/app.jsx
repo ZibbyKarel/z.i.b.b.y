@@ -28,17 +28,17 @@ const ThinStatusRail = ({ onNav }) => {
   const run = allTasks.filter(t => t.status === 'running').length;
   const wait = allTasks.filter(t => t.status === 'classified' || t.status === 'parked').length;
   const Cell = ({ state, n, label, to }) => (
-    <div onClick={() => onNav && onNav(to)} title={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-      <ZtDot state={state} size={8} />
+    <div onClick={() => onNav && onNav(to)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }} title={label}>
+      <ZtDot size={8} state={state} />
       <span style={{ fontFamily: Z.mono, fontSize: 12.5, fontWeight: 600, color: Z.ink }}>{String(n).padStart(2, '0')}</span>
     </div>
   );
   return (
     <div style={{ width: 60, flex: '0 0 60px', borderLeft: `1px solid ${Z.line}`, background: Z.bg0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '22px 0' }}>
-      <span title="systém · nominal"><ZtDot state="ok" size={9} /></span>
+      <span title="systém · nominal"><ZtDot size={9} state="ok" /></span>
       <div style={{ width: 22, height: 1, background: Z.line }} />
-      <Cell state="run" n={run} label="tasky běží" to="runs" />
-      <Cell state="wait" n={wait} label="čeká na tebe" to="approvals" />
+      <Cell label="tasky běží" n={run} state="run" to="runs" />
+      <Cell label="čeká na tebe" n={wait} state="wait" to="approvals" />
     </div>
   );
 };
@@ -123,21 +123,21 @@ function App() {
   const accent = accentOf();
 
   let body;
-  if (nav === 'overview') body = <OverviewBody accent={accent} skills={skills} setSkills={setSkills} agents={agents} onNav={setNav} />;
+  if (nav === 'overview') body = <OverviewBody accent={accent} agents={agents} onNav={setNav} setSkills={setSkills} skills={skills} />;
   else if (nav === 'approvals') body = <ApprovalsBody accent={accent} />;
-  else if (nav === 'gate-rules') body = <GateRulesBody accent={accent} gateRules={gateRules} setGateRules={setGateRules} agents={agents} skills={skills} cats={gateRuleCats} setCats={setGateRuleCats} />;
-  else if (nav === 'skills') body = <SkillsBody accent={accent} skills={skills} setSkills={setSkills} cats={skillCats} setCats={setSkillCats} gateRules={gateRules} projects={projects} />;
-  else if (nav === 'agents') body = <AgentsBody accent={accent} agents={agents} setAgents={setAgents} cats={agentCats} setCats={setAgentCats} gateRules={gateRules} projects={projects} />;
+  else if (nav === 'gate-rules') body = <GateRulesBody accent={accent} agents={agents} cats={gateRuleCats} gateRules={gateRules} setCats={setGateRuleCats} setGateRules={setGateRules} skills={skills} />;
+  else if (nav === 'skills') body = <SkillsBody accent={accent} cats={skillCats} gateRules={gateRules} projects={projects} setCats={setSkillCats} setSkills={setSkills} skills={skills} />;
+  else if (nav === 'agents') body = <AgentsBody accent={accent} agents={agents} cats={agentCats} gateRules={gateRules} projects={projects} setAgents={setAgents} setCats={setAgentCats} />;
   else if (nav === 'pipelines') body = <PipelinesBody accent={accent} />;
-  else if (nav === 'projects') body = <ProjectsBody accent={accent} projects={projects} setProjects={setProjects} cats={projectCats} setCats={setProjectCats} />;
+  else if (nav === 'projects') body = <ProjectsBody accent={accent} cats={projectCats} projects={projects} setCats={setProjectCats} setProjects={setProjects} />;
   else if (nav === 'integrations') body = <IntegrationsBody accent={accent} />;
   else if (nav === 'automations') body = <AutomationsBody accent={accent} />;
   else if (nav === 'memory') body = <MemoryBody accent={accent} />;
-  else if (nav === 'tasks') body = <TasksBody accent={accent} tasks={tasks} setTasks={setTasks} selId={taskSel} setSelId={setTaskSel} />;
+  else if (nav === 'tasks') body = <TasksBody accent={accent} selId={taskSel} setSelId={setTaskSel} setTasks={setTasks} tasks={tasks} />;
   else if (nav === 'definitions') body = <DefinitionsBody accent={accent} agents={agents} />;
   else if (nav === 'runs') body = <RunsBody accent={accent} />;
-  else if (nav === 'settings') body = <SettingsBody accent={accent} settings={settings} saveSettings={saveSettings} gateRules={gateRules} setGateRules={setGateRules} agents={agents} skills={skills} gateCats={gateRuleCats} setGateCats={setGateRuleCats} />;
-  else body = <Placeholder nav={nav} accent={accent} />;
+  else if (nav === 'settings') body = <SettingsBody accent={accent} agents={agents} gateCats={gateRuleCats} gateRules={gateRules} saveSettings={saveSettings} setGateCats={setGateRuleCats} setGateRules={setGateRules} settings={settings} skills={skills} />;
+  else body = <Placeholder accent={accent} nav={nav} />;
 
   if (viewMode === 'voice') {
     return (
@@ -149,13 +149,13 @@ function App() {
 
   return (
     <Frame skin="velin">
-      <Sidebar active={nav} accent={accent} onNav={setNav} />
+      <Sidebar accent={accent} active={nav} onNav={setNav} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopBar
-          accent={accent} nav={nav}
-          lang={settings.lang} onLang={(v) => saveSettings({ lang: v })}
-          onVoice={() => setViewMode('voice')}
+          accent={accent} lang={settings.lang}
+          nav={nav} onLang={(v) => saveSettings({ lang: v })}
           onNewTask={() => setNewTaskOpen(true)}
+          onVoice={() => setViewMode('voice')}
         />
         {newTaskOpen && (
           <NewTaskDialog

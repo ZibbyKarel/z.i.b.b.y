@@ -106,7 +106,7 @@ const PipelineTimeline = ({ stages, accent }) => {
                 onClick={() => hasLog && toggle(i)}
                 style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: hasLog ? 'pointer' : 'default', userSelect: 'none' }}
               >
-                <Avatar src={agentByName(stage.agentName).avatar} glyph={stage.agentGlyph} size={22} radius={2} accent={ss.c} style={{ boxShadow: stage.status === 'running' ? `0 0 0 1px ${ss.c}` : 'none' }} />
+                <Avatar accent={ss.c} glyph={stage.agentGlyph} radius={2} size={22} src={agentByName(stage.agentName).avatar} style={{ boxShadow: stage.status === 'running' ? `0 0 0 1px ${ss.c}` : 'none' }} />
                 <Mono style={{ fontSize: 13, fontWeight: 600, color: Z.ink, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {stage.agentName}
                 </Mono>
@@ -144,8 +144,8 @@ const PipelineTimeline = ({ stages, accent }) => {
               {isOpen && hasLog && (
                 <div style={{ marginTop: 10 }}>
                   <LogStream
-                    run={{ id: 'stage-' + i, state: stage.status === 'running' ? 'running' : 'done', pct: stage.status === 'running' ? 60 : 100, log: stage.log }}
                     accent={ss.c}
+                    run={{ id: 'stage-' + i, state: stage.status === 'running' ? 'running' : 'done', pct: stage.status === 'running' ? 60 : 100, log: stage.log }}
                   />
                 </div>
               )}
@@ -185,11 +185,11 @@ const ClassificationMoment = ({ task, accent, onConfirm, onOverride }) => {
     <div style={{ border: `1px solid ${Z.warn}55`, borderRadius: 3, overflow: 'visible', background: `${Z.warn}06`, boxShadow: `0 0 0 1px ${Z.warn}18, 0 0 32px ${Z.warn}0a` }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 18px', borderBottom: `1px solid ${Z.warn}2a` }}>
-        <ZibbyMark size={16} color={Z.warn} />
+        <ZibbyMark color={Z.warn} size={16} />
         <Mono style={{ fontSize: 10.5, color: Z.warn, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', flex: 1 }}>
           ZIBBY routed this task
         </Mono>
-        <Dot color={Z.warn} pulse size={7} />
+        <Dot pulse color={Z.warn} size={7} />
       </div>
 
       {/* Body */}
@@ -230,7 +230,7 @@ const ClassificationMoment = ({ task, accent, onConfirm, onOverride }) => {
             <Mono style={{ fontSize: 26, fontWeight: 700, color: confC, lineHeight: 1 }}>{pct}</Mono>
             <Mono style={{ fontSize: 12, color: Z.inkFaint }}>%</Mono>
           </div>
-          <div style={{ marginTop: 8 }}><Bar pct={pct} color={confC} h={4} glow /></div>
+          <div style={{ marginTop: 8 }}><Bar glow color={confC} h={4} pct={pct} /></div>
         </div>
 
         {/* Budget */}
@@ -260,9 +260,9 @@ const ClassificationMoment = ({ task, accent, onConfirm, onOverride }) => {
                 {(cl.alternatives || []).map((alt, i) => (
                   <button key={i}
                     onClick={() => { onOverride(alt); setOverrideOpen(false); }}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 2, color: Z.ink, textAlign: 'left' }}
                     onMouseEnter={e => e.currentTarget.style.background = Z.bg0}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', cursor: 'pointer', background: 'transparent', border: 'none', borderRadius: 2, color: Z.ink, textAlign: 'left' }}
                   >
                     <Icon name={alt.executorKind === 'pipeline' ? 'flow' : 'bot'} size={13} style={{ color: accent, flexShrink: 0 }} />
                     <Mono style={{ fontSize: 12, flex: 1 }}>{alt.executorName}</Mono>
@@ -281,6 +281,8 @@ const ClassificationMoment = ({ task, accent, onConfirm, onOverride }) => {
 
         <button
           onClick={() => { setConfirmed(true); onConfirm(); }}
+          onMouseEnter={e => e.currentTarget.style.boxShadow = `0 0 32px ${Z.ok}66`}
+          onMouseLeave={e => e.currentTarget.style.boxShadow = `0 0 20px ${Z.ok}44`}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 9,
             fontFamily: Z.mono, fontSize: 13, fontWeight: 700,
@@ -289,8 +291,6 @@ const ClassificationMoment = ({ task, accent, onConfirm, onOverride }) => {
             boxShadow: `0 0 20px ${Z.ok}44`,
             transition: 'box-shadow .16s',
           }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = `0 0 32px ${Z.ok}66`}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = `0 0 20px ${Z.ok}44`}
         >
           <Icon name="play" size={14} stroke={2} /> Potvrdit a spustit
         </button>
@@ -312,7 +312,7 @@ const TaskDetail = ({ task, accent, onConfirm, onOverride }) => {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 11 }}>
-              <TaskStatusBadge status={task.status} big />
+              <TaskStatusBadge big status={task.status} />
               {cl && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 9.5, color: Z.inkFaint, border: `1px solid ${Z.line}`, borderRadius: 2, padding: '2px 8px', flexShrink: 0 }}>
                   <Icon name={cl.executorKind === 'pipeline' ? 'flow' : 'bot'} size={10} style={{ flexShrink: 0 }} />
@@ -354,7 +354,7 @@ const TaskDetail = ({ task, accent, onConfirm, onOverride }) => {
 
       {/* ── Classification moment ── */}
       {showClassification && (
-        <ClassificationMoment task={task} accent={accent} onConfirm={onConfirm} onOverride={onOverride} />
+        <ClassificationMoment accent={accent} onConfirm={onConfirm} onOverride={onOverride} task={task} />
       )}
 
       {/* ── Parked banner ── */}
@@ -365,7 +365,7 @@ const TaskDetail = ({ task, accent, onConfirm, onOverride }) => {
             <Mono style={{ fontSize: 12, color: Z.warn, fontWeight: 600, display: 'block' }}>Task je zaparkovaný — potřebuje tvou pozornost</Mono>
             <Mono style={{ fontSize: 10.5, color: Z.inkDim, display: 'block', marginTop: 3 }}>pipeline narazila na problém, který neumí sama vyřešit</Mono>
           </div>
-          <GhostBtn icon="shield" accent={Z.warn}>Otevřít review</GhostBtn>
+          <GhostBtn accent={Z.warn} icon="shield">Otevřít review</GhostBtn>
         </div>
       )}
 
@@ -376,23 +376,23 @@ const TaskDetail = ({ task, accent, onConfirm, onOverride }) => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <Mono style={{ fontSize: 12, color: Z.bad, fontWeight: 600, display: 'block' }}>Task selhal — žádná data nebyla změněna</Mono>
           </div>
-          <GhostBtn icon="retry" accent={accent}>Zkusit znovu</GhostBtn>
+          <GhostBtn accent={accent} icon="retry">Zkusit znovu</GhostBtn>
         </div>
       )}
 
       {/* ── Pipeline stage timeline ── */}
       {task.pipelineRun && (
-        <HudPanel accent={accent} title="fáze pipeline" pad={20}>
-          <PipelineTimeline stages={task.pipelineRun.stages} accent={accent} />
+        <HudPanel accent={accent} pad={20} title="fáze pipeline">
+          <PipelineTimeline accent={accent} stages={task.pipelineRun.stages} />
         </HudPanel>
       )}
 
       {/* ── Agent log ── */}
       {task.agentRun && (
-        <HudPanel accent={accent} title="výstup agenta" pad={18}>
+        <HudPanel accent={accent} pad={18} title="výstup agenta">
           <LogStream
-            run={{ id: task.id, state: task.agentRun.state, pct: task.agentRun.pct, log: task.agentRun.log }}
             accent={accent}
+            run={{ id: task.id, state: task.agentRun.state, pct: task.agentRun.pct, log: task.agentRun.log }}
           />
         </HudPanel>
       )}
@@ -409,7 +409,7 @@ const TaskDetail = ({ task, accent, onConfirm, onOverride }) => {
       {task.status === 'classifying' && (
         <HudPanel accent={accent} pad={44}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-            <Dot color={accent} pulse size={18} />
+            <Dot pulse color={accent} size={18} />
             <Mono style={{ fontSize: 12, color: Z.inkDim }}>ZIBBY analyzuje zadání a vybírá nejvhodnější executor…</Mono>
           </div>
         </HudPanel>

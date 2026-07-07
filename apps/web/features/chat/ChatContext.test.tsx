@@ -49,6 +49,7 @@ describe("ChatProvider", () => {
   beforeEach(() => {
     push.mockClear();
     pathnameRef.current = "/overview";
+    window.localStorage.clear();
   });
 
   it("mints no conversation until chat is opened", () => {
@@ -209,5 +210,46 @@ describe("ChatProvider", () => {
     );
 
     expect(screen.getByTestId("message-count")).toHaveTextContent("1");
+  });
+
+  it("initialises conversationId from a conversation persisted before this reload", () => {
+    window.localStorage.setItem("zibby.chat.conversationId", "conv_from_disk");
+
+    renderWithProviders(
+      <ChatProvider>
+        <Harness />
+      </ChatProvider>,
+    );
+
+    expect(screen.getByTestId("conversation-id")).toHaveTextContent("conv_from_disk");
+  });
+
+  it("persists a newly-minted conversation id to localStorage (survives the next reload)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ChatProvider>
+        <Harness />
+      </ChatProvider>,
+    );
+
+    await user.click(screen.getByTestId("open"));
+    const id = screen.getByTestId("conversation-id").textContent;
+
+    expect(window.localStorage.getItem("zibby.chat.conversationId")).toBe(id);
+  });
+
+  it("persists newChat's fresh id, replacing the previous one", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ChatProvider>
+        <Harness />
+      </ChatProvider>,
+    );
+
+    await user.click(screen.getByTestId("open"));
+    await user.click(screen.getByTestId("new-chat"));
+    const id = screen.getByTestId("conversation-id").textContent;
+
+    expect(window.localStorage.getItem("zibby.chat.conversationId")).toBe(id);
   });
 });

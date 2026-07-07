@@ -42,7 +42,7 @@ const AutomationCard = ({ au, accent, onToggle }) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: '0 0 auto' }}>
           <Mono style={{ fontSize: 9.5, color: off ? Z.inkFaint : accent }}>{off ? 'vypnuto' : 'aktivní'}</Mono>
-          <Switch on={au.enabled} accent={accent} onToggle={() => onToggle(au.id)} />
+          <Switch accent={accent} on={au.enabled} onToggle={() => onToggle(au.id)} />
         </div>
       </div>
 
@@ -76,7 +76,7 @@ const AutomationCard = ({ au, accent, onToggle }) => {
           <Mono style={{ fontSize: 10.5, color: Z.inkDim }}>výsledek (<span style={{ color: Z.warn }}>{au.gate}</span>) projde frontou schválení — neproběhne autonomně</Mono>
         </div>
       )}
-      {au.actionSafeAfter && <ActionBoundaryNote value={au.actionSafeAfter} style={{ marginTop: 9 }} />}
+      {au.actionSafeAfter && <ActionBoundaryNote style={{ marginTop: 9 }} value={au.actionSafeAfter} />}
 
       {/* footer */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 13, paddingTop: 12, borderTop: `1px solid ${Z.line}`, gap: 12, flexWrap: 'wrap' }}>
@@ -88,8 +88,8 @@ const AutomationCard = ({ au, accent, onToggle }) => {
           <Mono style={{ fontSize: 10, color: Z.inkFaint }}>příště {au.nextRun}</Mono>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <GhostBtn icon="edit" accent={accent}>Upravit</GhostBtn>
-          <RunBtn accent={accent} size="sm" label="Spustit teď" />
+          <GhostBtn accent={accent} icon="edit">Upravit</GhostBtn>
+          <RunBtn accent={accent} label="Spustit teď" size="sm" />
         </div>
       </div>
     </div>
@@ -160,31 +160,31 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
         {/* body */}
         <div style={{ padding: '18px 20px', overflow: 'auto' }}>
           <FieldLabel>Název</FieldLabel>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="např. Ranní standup" style={{ ...inputStyle(name.trim()), fontFamily: Z.sans, fontSize: 14 }} />
+          <input autoFocus onChange={(e) => setName(e.target.value)} placeholder="např. Ranní standup" style={{ ...inputStyle(name.trim()), fontFamily: Z.sans, fontSize: 14 }} value={name} />
 
           {/* trigger */}
           <FieldLabel style={{ marginTop: 18 }}>Trigger</FieldLabel>
           <div style={{ display: 'flex', gap: 7, marginTop: 8 }}>
             {['cron', 'event'].map((k) => (
-              <ChipToggle key={k} active={trigType === k} accent={accent} onClick={() => setTrigType(k)}>
+              <ChipToggle accent={accent} active={trigType === k} key={k} onClick={() => setTrigType(k)}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name={TRIG[k].glyph} size={12} /> {k === 'cron' ? 'čas · cron' : 'událost · event'}</span>
               </ChipToggle>
             ))}
           </div>
-          <input value={spec} onChange={(e) => setSpec(e.target.value)} placeholder={trigType === 'cron' ? 'např. Po–Pá · 08:00' : 'např. soubor přibyl v /media/downloads'} style={inputStyle(spec.trim())} />
+          <input onChange={(e) => setSpec(e.target.value)} placeholder={trigType === 'cron' ? 'např. Po–Pá · 08:00' : 'např. soubor přibyl v /media/downloads'} style={inputStyle(spec.trim())} value={spec} />
 
           {/* target */}
           <FieldLabel style={{ marginTop: 18 }}>Cíl</FieldLabel>
           <div style={{ display: 'flex', gap: 7, marginTop: 8 }}>
             {[['agent', 'agent'], ['pipeline', 'pipeline'], ['briefing', 'briefing']].map(([k, lbl]) => (
-              <ChipToggle key={k} active={tKind === k} accent={accent} onClick={() => setTKind(k)}>{lbl}</ChipToggle>
+              <ChipToggle accent={accent} active={tKind === k} key={k} onClick={() => setTKind(k)}>{lbl}</ChipToggle>
             ))}
           </div>
 
           {!isBriefing && (
             <React.Fragment>
               <FieldLabel style={{ marginTop: 18 }}>Co se má provést <span style={{ color: Z.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· prompt pro agenta / pipeline</span></FieldLabel>
-              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="např. Shrň dnešní emaily a pošli mi souhrn" rows={3} style={{ ...inputStyle(prompt.trim()), fontFamily: Z.sans, fontSize: 13, resize: 'vertical', lineHeight: 1.55 }} />
+              <textarea onChange={(e) => setPrompt(e.target.value)} placeholder="např. Shrň dnešní emaily a pošli mi souhrn" rows={3} style={{ ...inputStyle(prompt.trim()), fontFamily: Z.sans, fontSize: 13, resize: 'vertical', lineHeight: 1.55 }} value={prompt} />
             </React.Fragment>
           )}
 
@@ -194,7 +194,7 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
               <Mono style={{ fontSize: 11, color: Z.inkDim, lineHeight: 1.6 }}>Trigger spustí nový briefing s výše zadaným promptem. Výsledek přistane v sekci Tasky.</Mono>
             </div>
           ) : (
-            <select value={tName} onChange={(e) => setTName(e.target.value)} style={{ ...inputStyle(tName), cursor: 'pointer', appearance: 'none' }}>
+            <select onChange={(e) => setTName(e.target.value)} style={{ ...inputStyle(tName), cursor: 'pointer', appearance: 'none' }} value={tName}>
               <option value="">— vyber {tKind} —</option>
               {targetList.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
             </select>
@@ -209,15 +209,15 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
                   <Mono style={{ fontSize: 11.5, color: Z.ink }}>Výsledek projde frontou schválení</Mono>
                   <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 2 }}>rizikový výsledek neproběhne autonomně</Mono>
                 </div>
-                <Switch on={gate} accent={Z.warn} onToggle={() => setGate((g) => !g)} />
+                <Switch accent={Z.warn} on={gate} onToggle={() => setGate((g) => !g)} />
               </div>
-              {gate && <input value={gateText} onChange={(e) => setGateText(e.target.value)} placeholder="co se gatuje, např. odeslání do Slacku" style={inputStyle(false)} />}
+              {gate && <input onChange={(e) => setGateText(e.target.value)} placeholder="co se gatuje, např. odeslání do Slacku" style={inputStyle(false)} value={gateText} />}
               <FieldLabel style={{ marginTop: 18 }}>Akce bezpečná až po <span style={{ color: Z.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· volitelné</span></FieldLabel>
               <div style={{ display: 'flex', gap: 7, marginTop: 8 }}>
-                <ChipToggle active={safeKind === 'time'} accent={accent} onClick={() => setSafeKind('time')}>čas</ChipToggle>
-                <ChipToggle active={safeKind === 'cond'} accent={accent} onClick={() => setSafeKind('cond')}>podmínka</ChipToggle>
+                <ChipToggle accent={accent} active={safeKind === 'time'} onClick={() => setSafeKind('time')}>čas</ChipToggle>
+                <ChipToggle accent={accent} active={safeKind === 'cond'} onClick={() => setSafeKind('cond')}>podmínka</ChipToggle>
               </div>
-              <input value={safeAfter} onChange={(e) => setSafeAfter(e.target.value)} placeholder={safeKind === 'cond' ? 'např. po potvrzení jídelníčku' : 'např. po 09:00'} style={inputStyle(false)} />
+              <input onChange={(e) => setSafeAfter(e.target.value)} placeholder={safeKind === 'cond' ? 'např. po potvrzení jídelníčku' : 'např. po 09:00'} style={inputStyle(false)} value={safeAfter} />
               <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 7, lineHeight: 1.5 }}>Dokud nenastane, projde i jinak bezpečná akce frontou schválení.</Mono>
             </React.Fragment>
           )}
@@ -226,7 +226,7 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
         {/* footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 9, padding: '14px 20px', borderTop: `1px solid ${Z.line}`, background: Z.bg0 }}>
           <button onClick={onClose} style={{ fontFamily: Z.mono, fontSize: 12, padding: '9px 15px', cursor: 'pointer', borderRadius: 2, color: Z.inkDim, background: 'transparent', border: `1px solid ${Z.line}` }}>Zrušit</button>
-          <button onClick={submit} disabled={!valid} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, padding: '9px 16px', cursor: valid ? 'pointer' : 'not-allowed', borderRadius: 2, color: Z.bg0, background: accent, border: 'none', opacity: valid ? 1 : 0.4 }}><Icon name="check" size={14} stroke={2} /> Vytvořit automatizaci</button>
+          <button disabled={!valid} onClick={submit} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, padding: '9px 16px', cursor: valid ? 'pointer' : 'not-allowed', borderRadius: 2, color: Z.bg0, background: accent, border: 'none', opacity: valid ? 1 : 0.4 }}><Icon name="check" size={14} stroke={2} /> Vytvořit automatizaci</button>
         </div>
       </div>
     </div>
@@ -255,7 +255,7 @@ const AutomationsBody = ({ accent }) => {
           </span>
         </SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {items.map((au) => <AutomationCard key={au.id} au={au} accent={accent} onToggle={toggle} />)}
+          {items.map((au) => <AutomationCard accent={accent} au={au} key={au.id} onToggle={toggle} />)}
         </div>
       </div>
     );
@@ -283,8 +283,8 @@ const AutomationsBody = ({ accent }) => {
         </div>
       </HudPanel>
 
-      <Section type="cron" items={crons} />
-      <Section type="event" items={events} />
+      <Section items={crons} type="cron" />
+      <Section items={events} type="event" />
 
       {autos.length === 0 && (
         <HudPanel accent={accent} pad={44}>
@@ -297,7 +297,7 @@ const AutomationsBody = ({ accent }) => {
         </HudPanel>
       )}
 
-      {adding && <AutomationDialog accent={accent} onClose={() => setAdding(false)} onAdd={add} />}
+      {adding && <AutomationDialog accent={accent} onAdd={add} onClose={() => setAdding(false)} />}
     </div>
   );
 };

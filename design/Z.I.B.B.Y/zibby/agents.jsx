@@ -22,8 +22,8 @@ const AgentCard = ({ agent, accent, onOpen, onRun, onToggleEnabled }) => {
   const off = agent.enabled === false;
   return (
     <div
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      onClick={() => onOpen(agent.id)}
+      onClick={() => onOpen(agent.id)} onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
       style={{
         position: 'relative', background: h ? Z.panelHi : Z.panel, border: `1px solid ${off ? Z.warn + '44' : (h ? accent + '55' : Z.line)}`,
         borderRadius: Z.rPanel, padding: 15, cursor: 'pointer', transition: 'all .15s', display: 'flex', flexDirection: 'column',
@@ -34,18 +34,18 @@ const AgentCard = ({ agent, accent, onOpen, onRun, onToggleEnabled }) => {
       {/* pause / activate — top-right */}
       <button
         onClick={(e) => { e.stopPropagation(); onToggleEnabled(agent.id); }}
-        title={off ? 'Aktivovat agenta' : 'Pozastavit agenta'}
         style={{
           position: 'absolute', top: 9, right: 9, width: 26, height: 26, display: (h || off) ? 'grid' : 'none',
           placeItems: 'center', borderRadius: 2, cursor: 'pointer', transition: 'all .14s',
           color: off ? Z.bg0 : accent, background: off ? Z.warn : 'rgba(255,255,255,0.04)',
           border: `1px solid ${off ? Z.warn : Z.line}`, boxShadow: off ? `0 0 12px ${Z.warn}66` : 'none',
-        }}>
+        }}
+        title={off ? 'Aktivovat agenta' : 'Pozastavit agenta'}>
         <Icon name={off ? 'play' : 'pause'} size={12} stroke={1.8} />
       </button>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, paddingRight: 24 }}>
-        <Avatar src={agent.avatar} glyph={agent.glyph} size={36} radius={2} accent={accent} dim={accentDimOf(agent.ctx)} />
+        <Avatar accent={accent} dim={accentDimOf(agent.ctx)} glyph={agent.glyph} radius={2} size={36} src={agent.avatar} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontFamily: Z.mono, fontSize: 13.5, fontWeight: 700, color: Z.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
           <div style={{ fontSize: 11.5, color: Z.inkDim, marginTop: 3, lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{agent.role}</div>
@@ -71,7 +71,7 @@ const AgentCard = ({ agent, accent, onOpen, onRun, onToggleEnabled }) => {
           <Dot color={sm.c} pulse={sm.pulse} size={6} />
           <Mono style={{ fontSize: 9.5, color: Z.inkFaint }}>{sm.label} · {agent.runs}×</Mono>
         </div>
-        <RunBtn accent={accent} size="sm" onClick={(e) => { e && e.stopPropagation && e.stopPropagation(); onRun(agent); }} />
+        <RunBtn accent={accent} onClick={(e) => { e && e.stopPropagation && e.stopPropagation(); onRun(agent); }} size="sm" />
       </div>
     </div>
   );
@@ -114,29 +114,29 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
   const header = (
     <div style={{ position: 'relative' }}>
       <EntityHero
-        image={draft.avatar} glyph={draft.glyph || 'bot'} accent={accentFor} height={168}
-        name={isNew ? 'Nový agent' : draft.name}
-        tag={<div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}><Pill color={Z.inkDim}>{draft.category}</Pill>{gated && <GatedBadge tip={`Rizikové nástroje: ${riskyTools.join(', ')}`} />}</div>}
-        desc={draft.role}
-        editable
-        controlsSide="left"
-        placeholder="Avatar agenta"
-        onUpload={(url) => set({ avatar: url })}
-        onRemove={() => set({ avatar: null })}
+        editable accent={accentFor} controlsSide="left" desc={draft.role}
         extraControls={<>
           {!isNew && mode === 'view' && (
-            <button onClick={() => onToggleEnabled(agent.id)} title={off ? 'Aktivovat' : 'Pozastavit agenta'}
-              style={{
+            <button onClick={() => onToggleEnabled(agent.id)} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', cursor: 'pointer', borderRadius: 2,
                 fontFamily: Z.mono, fontSize: 11, fontWeight: 600,
                 color: off ? Z.bg0 : '#e6edf3', background: off ? Z.warn : 'rgba(9,12,17,0.72)',
                 border: `1px solid ${off ? Z.warn : 'rgba(255,255,255,0.18)'}`, backdropFilter: 'blur(3px)',
-              }}>
+              }}
+              title={off ? 'Aktivovat' : 'Pozastavit agenta'}>
               <Icon name={off ? 'play' : 'pause'} size={13} stroke={1.8} /> {off ? 'Pozastaveno' : 'Aktivní'}
             </button>
           )}
-          <HeroIconBtn icon="x" title="Zavřít" onClick={onClose} />
+          <HeroIconBtn icon="x" onClick={onClose} title="Zavřít" />
         </>}
+        glyph={draft.glyph || 'bot'}
+        height={168}
+        image={draft.avatar}
+        name={isNew ? 'Nový agent' : draft.name}
+        onRemove={() => set({ avatar: null })}
+        onUpload={(url) => set({ avatar: url })}
+        placeholder="Avatar agenta"
+        tag={<div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}><Pill color={Z.inkDim}>{draft.category}</Pill>{gated && <GatedBadge tip={`Rizikové nástroje: ${riskyTools.join(', ')}`} />}</div>}
       />
     </div>
   );
@@ -196,7 +196,7 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
                 margin: '8px 0 0', padding: '14px 16px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 4,
                 maxHeight: 280, overflow: 'auto',
               }}>
-                <MarkdownView source={agent.body} accent={accentFor} />
+                <MarkdownView accent={accentFor} source={agent.body} />
               </div>
             </div>
 
@@ -207,7 +207,7 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
                 cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}55`,
               }}><Icon name="trash" size={13} /> Smazat</button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <GhostBtn icon="edit" accent={accentFor} onClick={() => { setDraft(agent); setMode('edit'); }}>Editovat</GhostBtn>
+                <GhostBtn accent={accentFor} icon="edit" onClick={() => { setDraft(agent); setMode('edit'); }}>Editovat</GhostBtn>
                 <RunBtn accent={accentFor} label="Spustit ad-hoc" onClick={onClose} />
               </div>
             </div>
@@ -237,14 +237,14 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
               {/* left column — meta */}
               <div>
                 <FieldLabel>Jméno</FieldLabel>
-                <TextInput value={draft.name} onChange={(v) => set({ name: v })} placeholder="jméno agenta" mono />
+                <TextInput mono onChange={(v) => set({ name: v })} placeholder="jméno agenta" value={draft.name} />
 
                 <FieldLabel style={{ marginTop: 16 }}>Role</FieldLabel>
-                <TextInput value={draft.role} onChange={(v) => set({ role: v })} placeholder="co agent dělá (jedna věta)" />
+                <TextInput onChange={(v) => set({ role: v })} placeholder="co agent dělá (jedna věta)" value={draft.role} />
 
                 <FieldLabel style={{ marginTop: 16 }}>Kategorie</FieldLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 7 }}>
-                  {cats.map((c) => <ChipToggle key={c} active={draft.category === c} accent={accentFor} onClick={() => set({ category: c })}>{c}</ChipToggle>)}
+                  {cats.map((c) => <ChipToggle accent={accentFor} active={draft.category === c} key={c} onClick={() => set({ category: c })}>{c}</ChipToggle>)}
                 </div>
 
                 {/* model + thinking */}
@@ -270,24 +270,24 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
                   {AGENT_GLYPHS.map((g) => {
                     const on = draft.glyph === g;
                     return (
-                      <button key={g} onClick={() => set({ glyph: g })} title={g} style={{
+                      <button key={g} onClick={() => set({ glyph: g })} style={{
                         width: 34, height: 34, display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2,
                         color: on ? Z.bg0 : Z.inkDim, background: on ? accentFor : 'transparent',
                         border: `1px solid ${on ? accentFor : Z.line}`, transition: 'all .12s',
-                      }}><Icon name={g} size={17} /></button>
+                      }} title={g}><Icon name={g} size={17} /></button>
                     );
                   })}
                 </div>
 
                 <FieldLabel style={{ marginTop: 16 }}>Povolené nástroje</FieldLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
-                  {ALL_TOOLS.map((t) => <ChipToggle key={t} active={draft.tools.includes(t)} accent={accentFor} onClick={() => toggleTool(t)}>{t}</ChipToggle>)}
+                  {ALL_TOOLS.map((t) => <ChipToggle accent={accentFor} active={draft.tools.includes(t)} key={t} onClick={() => toggleTool(t)}>{t}</ChipToggle>)}
                 </div>
 
                 {gated && (
                   <React.Fragment>
                     <FieldLabel style={{ marginTop: 16 }}>Approval gate</FieldLabel>
-                    <GatePanel tools={riskyTools} style={{ marginTop: 8 }} />
+                    <GatePanel style={{ marginTop: 8 }} tools={riskyTools} />
                     <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 7, lineHeight: 1.5 }}>
                       Odvozeno z povolených nástrojů, které umí rizikovou akci. Risk je vlastnost nástroje.
                     </Mono>
@@ -298,7 +298,7 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
               {/* right column — markdown editor */}
               <div>
                 <FieldLabel>agent.md</FieldLabel>
-                <MarkdownEditor value={splitFrontmatter(draft.body).content} onChange={(v) => setDraft((d) => ({ ...d, body: agentFront(d) + '\n\n' + v }))} accent={accentFor} minHeight={380} placeholder="Markdown popis agenta…" />
+                <MarkdownEditor accent={accentFor} minHeight={380} onChange={(v) => setDraft((d) => ({ ...d, body: agentFront(d) + '\n\n' + v }))} placeholder="Markdown popis agenta…" value={splitFrontmatter(draft.body).content} />
               </div>
             </div>}
 
@@ -327,7 +327,6 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
 
       {confirm && (
         <ConfirmDialog
-          title="Smazat agenta?"
           message={
             <span>
               Opravdu smazat agenta <Mono style={{ color: Z.ink }}>{agent.name}</Mono>?
@@ -337,6 +336,7 @@ const AgentModal = ({ agent, mode: initialMode, accent, cats = [], onClose, onSa
           }
           onCancel={() => setConfirm(false)}
           onConfirm={() => { setConfirm(false); onDelete(agent.id); }}
+          title="Smazat agenta?"
         />
       )}
     </div>
@@ -395,7 +395,7 @@ const AgentsBody = ({ accent, agents, setAgents, cats = [], setCats, gateRules =
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <CatAdder accent={accent} existing={cats} onAdd={addCat} />
-            <RunBtn accent={accent} label="Přidat agenta" onClick={startNew} icon="plus" />
+            <RunBtn accent={accent} icon="plus" label="Přidat agenta" onClick={startNew} />
           </div>
         </div>
       </HudPanel>
@@ -412,10 +412,10 @@ const AgentsBody = ({ accent, agents, setAgents, cats = [], setCats, gateRules =
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{all.length}</Mono>
                 {empty && !query && (
-                  <button onClick={() => delCat(cat)} title="Smazat prázdnou kategorii" style={{
+                  <button onClick={() => delCat(cat)} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10, padding: '4px 9px',
                     cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}44`,
-                  }}><Icon name="trash" size={12} /> Smazat</button>
+                  }} title="Smazat prázdnou kategorii"><Icon name="trash" size={12} /> Smazat</button>
                 )}
               </div>
             }>
@@ -426,7 +426,7 @@ const AgentsBody = ({ accent, agents, setAgents, cats = [], setCats, gateRules =
             {items.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 13 }}>
                 {items.map((a) => (
-                  <AgentCard key={a.id} agent={a} accent={accent} onOpen={setOpenId} onRun={setRunAgent} onToggleEnabled={toggleEnabled} />
+                  <AgentCard accent={accent} agent={a} key={a.id} onOpen={setOpenId} onRun={setRunAgent} onToggleEnabled={toggleEnabled} />
                 ))}
               </div>
             ) : (
@@ -450,16 +450,16 @@ const AgentsBody = ({ accent, agents, setAgents, cats = [], setCats, gateRules =
 
       {/* detail / editor */}
       {openAgent && (
-        <AgentModal key={openAgent.id} agent={openAgent} mode="view" accent={accent} cats={cats}
-          onClose={() => setOpenId(null)} onSave={save} onDelete={del} onToggleEnabled={toggleEnabled} gateRules={gateRules} projects={projects} />
+        <AgentModal accent={accent} agent={openAgent} cats={cats} gateRules={gateRules} key={openAgent.id}
+          mode="view" onClose={() => setOpenId(null)} onDelete={del} onSave={save} onToggleEnabled={toggleEnabled} projects={projects} />
       )}
       {newDraft && (
-        <AgentModal key="new" agent={newDraft} mode="new" accent={accent} cats={cats}
-          onClose={() => setNewDraft(null)} onSave={save} onDelete={del} onToggleEnabled={toggleEnabled} gateRules={gateRules} projects={projects} />
+        <AgentModal accent={accent} agent={newDraft} cats={cats} gateRules={gateRules} key="new"
+          mode="new" onClose={() => setNewDraft(null)} onDelete={del} onSave={save} onToggleEnabled={toggleEnabled} projects={projects} />
       )}
 
       {/* run modal (reuse) */}
-      <RunModal skill={runSkillObj} accent={accent} onClose={() => setRunAgent(null)} projects={projects} />
+      <RunModal accent={accent} onClose={() => setRunAgent(null)} projects={projects} skill={runSkillObj} />
     </div>
   );
 };

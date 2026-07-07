@@ -15,10 +15,10 @@ const GlobalRuleCard = ({ rule, index, accent, onEdit, onDelete, onReorder, drag
   return (
     <div
       draggable
-      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onReorder('start', index); }}
-      onDragOver={e => { e.preventDefault(); onReorder('over', index); }}
-      onDrop={e => { e.preventDefault(); onReorder('drop', index); }}
       onDragEnd={() => onReorder('end', index)}
+      onDragOver={e => { e.preventDefault(); onReorder('over', index); }}
+      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onReorder('start', index); }}
+      onDrop={e => { e.preventDefault(); onReorder('drop', index); }}
       onMouseEnter={() => setH(true)} onMouseLeave={() => { setH(false); setMenu(false); }}
       style={{
         position: 'relative', background: h ? Z.panelHi : Z.panel, opacity: dragging ? 0.4 : 1,
@@ -38,7 +38,7 @@ const GlobalRuleCard = ({ rule, index, accent, onEdit, onDelete, onReorder, drag
             <MatcherText rule={rule} />
             <span style={{ color: Z.inkFaint, fontFamily: Z.mono, fontSize: 11 }}>→</span>
             <DecisionBadge decision={rule.decision} />
-            {rule.decision === 'ask' && <ResolutionChips resolution={rule.resolution || []} mode={rule.mode} />}
+            {rule.decision === 'ask' && <ResolutionChips mode={rule.mode} resolution={rule.resolution || []} />}
             {rule.decision === 'notify' && <Mono style={{ fontSize: 9.5, color: Z.inkFaint }}>→ activity feed</Mono>}
           </div>
           {rule.desc && <div style={{ fontSize: 11, color: Z.inkFaint, lineHeight: 1.4 }}>{rule.desc}</div>}
@@ -60,7 +60,7 @@ const GlobalRuleCard = ({ rule, index, accent, onEdit, onDelete, onReorder, drag
             {menu && (
               <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 30, right: 0, zIndex: 30, minWidth: 140, background: Z.panelHi, border: `1px solid ${Z.lineHi}`, borderRadius: 3, boxShadow: '0 12px 34px rgba(0,0,0,0.5)', overflow: 'hidden', padding: 4 }}>
                 <MenuItem icon="edit" onClick={() => { setMenu(false); onEdit(rule); }}>Upravit</MenuItem>
-                <MenuItem icon="trash" danger onClick={() => { setMenu(false); onDelete(rule.id); }}>Smazat</MenuItem>
+                <MenuItem danger icon="trash" onClick={() => { setMenu(false); onDelete(rule.id); }}>Smazat</MenuItem>
               </div>
             )}
           </div>
@@ -193,7 +193,7 @@ const GateRulesBody = ({ accent, gateRules, setGateRules, agents = [], skills = 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{catRules.length}</Mono>
                 {empty && (
-                  <button onClick={() => delCat(cat)} title="Smazat prázdnou kategorii" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}44` }}>
+                  <button onClick={() => delCat(cat)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}44` }} title="Smazat prázdnou kategorii">
                     <Icon name="trash" size={12} /> Smazat
                   </button>
                 )}
@@ -208,9 +208,9 @@ const GateRulesBody = ({ accent, gateRules, setGateRules, agents = [], skills = 
                   {catRules.map((rule) => {
                     const i = ruleIndex(rule);
                     return (
-                      <GlobalRuleCard key={rule.id} rule={rule} index={i} accent={accent}
-                        onEdit={r => setEditing(r)} onDelete={del} onReorder={onReorder}
-                        dragState={drag} agents={agents} skills={skills} />
+                      <GlobalRuleCard accent={accent} agents={agents} dragState={drag} index={i}
+                        key={rule.id} onDelete={del} onEdit={r => setEditing(r)}
+                        onReorder={onReorder} rule={rule} skills={skills} />
                     );
                   })}
                 </div>
@@ -238,9 +238,9 @@ const GateRulesBody = ({ accent, gateRules, setGateRules, agents = [], skills = 
               {uncatRules.map(rule => {
                 const i = ruleIndex(rule);
                 return (
-                  <GlobalRuleCard key={rule.id} rule={rule} index={i} accent={accent}
-                    onEdit={r => setEditing(r)} onDelete={del} onReorder={onReorder}
-                    dragState={drag} agents={agents} skills={skills} />
+                  <GlobalRuleCard accent={accent} agents={agents} dragState={drag} index={i}
+                    key={rule.id} onDelete={del} onEdit={r => setEditing(r)}
+                    onReorder={onReorder} rule={rule} skills={skills} />
                 );
               })}
             </div>
@@ -256,13 +256,13 @@ const GateRulesBody = ({ accent, gateRules, setGateRules, agents = [], skills = 
         </div>
       )}
 
-      <button onClick={() => setEditing('new')} style={{
+      <button onClick={() => setEditing('new')} onMouseEnter={e => { e.currentTarget.style.background = `${accent}1c`; }}
+        onMouseLeave={e => { e.currentTarget.style.background = `${accent}0e`; }}
+        style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', cursor: 'pointer',
         borderRadius: 2, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, color: accent,
         background: `${accent}0e`, border: `1px dashed ${accent}55`, transition: 'all .14s',
-      }}
-        onMouseEnter={e => { e.currentTarget.style.background = `${accent}1c`; }}
-        onMouseLeave={e => { e.currentTarget.style.background = `${accent}0e`; }}>
+      }}>
         <Icon name="plus" size={14} stroke={2} /> Přidat globální pravidlo
       </button>
 

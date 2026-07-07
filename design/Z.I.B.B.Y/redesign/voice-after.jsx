@@ -24,23 +24,23 @@ const ZtOrb = ({ state = 'idle', size = 240 }) => {
         }}></div>
       ))}
 
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+      <svg height={size} style={{ position: 'absolute', inset: 0, overflow: 'visible' }} viewBox={`0 0 ${size} ${size}`} width={size}>
         {/* klidová orbita — jen idle a aktivní stavy, ne error */}
         {state !== 'error' && (
-          <circle cx={cx} cy={cx} r={cx - 3} stroke={col} strokeWidth="1" fill="none"
-            strokeDasharray="2 10" opacity={state === 'idle' ? 0.18 : 0.4}
+          <circle cx={cx} cy={cx} fill="none" opacity={state === 'idle' ? 0.18 : 0.4} r={cx - 3} stroke={col}
+            strokeDasharray="2 10" strokeWidth="1"
             style={{ transformOrigin: `${cx}px ${cx}px`, animation: 'ztSpin 26s linear infinite' }} />
         )}
         {/* thinking — určitý rotující oblouk (práce, ne nejistota) */}
         {state === 'thinking' && (
-          <circle cx={cx} cy={cx} r={cx - 12} stroke={col} strokeWidth="2.5" fill="none"
-            strokeDasharray={`${(cx - 12) * 1.2} ${(cx - 12) * 6}`} strokeLinecap="round" opacity="0.9"
+          <circle cx={cx} cy={cx} fill="none" opacity="0.9" r={cx - 12} stroke={col}
+            strokeDasharray={`${(cx - 12) * 1.2} ${(cx - 12) * 6}`} strokeLinecap="round" strokeWidth="2.5"
             style={{ transformOrigin: `${cx}px ${cx}px`, animation: 'ztSpin 1.4s linear infinite' }} />
         )}
         {/* error — přerušený statický kruh */}
         {state === 'error' && (
-          <circle cx={cx} cy={cx} r={cx - 3} stroke={col} strokeWidth="1.5" fill="none"
-            strokeDasharray="26 14" opacity="0.55" />
+          <circle cx={cx} cy={cx} fill="none" opacity="0.55" r={cx - 3} stroke={col}
+            strokeDasharray="26 14" strokeWidth="1.5" />
         )}
       </svg>
 
@@ -55,7 +55,7 @@ const ZtOrb = ({ state = 'idle', size = 240 }) => {
         transition: 'border-color .24s, box-shadow .24s',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: Math.max(4, size * 0.025) }}>
-          <ZibbyMark size={Math.round(size * 0.15)} color={col} />
+          <ZibbyMark color={col} size={Math.round(size * 0.15)} />
           <span style={{ fontFamily: ZT.mono, fontSize: Math.max(8, size * 0.034), letterSpacing: '0.30em', color: col, opacity: state === 'idle' ? 0.45 : 0.9 }}>Z·I·B·B·Y</span>
         </div>
       </div>
@@ -114,7 +114,7 @@ const VoiceAfter = ({ initial = 'idle', demo = true }) => {
     }}>
       {/* top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 22px', borderBottom: `1px solid ${ZT.line}`, flexShrink: 0 }}>
-        <ZibbyMark size={17} color={ZT.accent} />
+        <ZibbyMark color={ZT.accent} size={17} />
         <span style={{ ...T.label, color: ZT.accent }}>Voice</span>
         <ZtChip state={state === 'error' ? 'bad' : active ? 'run' : 'idle'}>
           {state === 'error' ? 'chyba' : active ? 'aktivní' : 'klid'}
@@ -124,7 +124,7 @@ const VoiceAfter = ({ initial = 'idle', demo = true }) => {
           <span style={{ color: ZT.run }}>2 běží</span> · <span style={{ color: ZT.wait }}>1 čeká na schválení</span>
         </span>
         <span style={{ marginLeft: 'auto', ...T.micro, fontSize: 13, fontWeight: 600, color: ZT.ink }}>07:42</span>
-        <ZtBtn size="sm" icon="grid">HUD · Esc</ZtBtn>
+        <ZtBtn icon="grid" size="sm">HUD · Esc</ZtBtn>
       </div>
 
       {/* střed */}
@@ -143,7 +143,7 @@ const VoiceAfter = ({ initial = 'idle', demo = true }) => {
           <div style={{ ...T.micro, marginTop: 4 }}>celý přepis v logu běhu <span style={{ color: ZT.accent }}>→</span></div>
         </div>
 
-        <ZtOrb state={state} size={240} />
+        <ZtOrb size={240} state={state} />
 
         {/* stavový řádek — čitelný z dálky, min 16 px */}
         <div style={{ textAlign: 'center', minHeight: 84 }}>
@@ -174,8 +174,8 @@ const VoiceAfter = ({ initial = 'idle', demo = true }) => {
             <div className="zt-anim" style={{ marginTop: 10, animation: 'ztFadeUp .25s ease-out' }}>
               <div style={{ ...T.bodySm }}>{v.sub}</div>
               <div style={{ display: 'flex', gap: 9, justifyContent: 'center', marginTop: 14 }}>
-                <ZtBtn variant="primary" size="sm" icon="retry" onClick={() => { setState('idle'); setHeard(''); }}>Zkusit znovu</ZtBtn>
-                <ZtBtn size="sm" icon="grid">Přejít do HUD</ZtBtn>
+                <ZtBtn icon="retry" onClick={() => { setState('idle'); setHeard(''); }} size="sm" variant="primary">Zkusit znovu</ZtBtn>
+                <ZtBtn icon="grid" size="sm">Přejít do HUD</ZtBtn>
               </div>
             </div>
           )}
@@ -185,7 +185,7 @@ const VoiceAfter = ({ initial = 'idle', demo = true }) => {
 
       {/* ovládání */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '16px 24px 20px', flexShrink: 0 }}>
-        <button className="zt-focusable" onClick={demo ? runDemo : undefined} title="Mikrofon" style={{
+        <button className="zt-focusable" onClick={demo ? runDemo : undefined} style={{
           width: 54, height: 54, borderRadius: '50%', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: active ? ZT.accent : state === 'error' ? `${ZT.bad}14` : ZT.accentDim,
@@ -193,7 +193,7 @@ const VoiceAfter = ({ initial = 'idle', demo = true }) => {
           color: active ? ZT.bg : state === 'error' ? ZT.bad : ZT.accent,
           boxShadow: active ? `0 0 26px ${ZT.accent}44` : 'none',
           transition: 'all .24s ease-out',
-        }}>
+        }} title="Mikrofon">
           <ZtMicIcon size={21} />
         </button>
         {demo && (
@@ -219,7 +219,7 @@ const OrbStatesBoard = () => {
     <div style={{ width: '100%', height: '100%', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', background: ZT.bg, fontFamily: ZT.sans }}>
       {states.map((x, i) => (
         <div key={x.s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, padding: '28px 16px', borderRight: i < 4 ? `1px solid ${ZT.line}` : 'none' }}>
-          <ZtOrb state={x.s} size={148} />
+          <ZtOrb size={148} state={x.s} />
           <div style={{ textAlign: 'center' }}>
             <div style={{ ...T.label, color: x.s === 'error' ? ZT.bad : ZT.ink2 }}>{x.n}</div>
             <div style={{ ...T.micro, fontSize: 10.5, marginTop: 8, maxWidth: 180, lineHeight: 1.6 }}>{x.d}</div>

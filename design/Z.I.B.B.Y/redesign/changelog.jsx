@@ -95,8 +95,8 @@ const ChangelogBoard = () => (
           where="ZtApproval ve třech hustotách (rail / stránka / voice) · vždy CO · ČÍM rizikové · JAKÝ dopad" />
         <ClRow p="P0" status="done" title="Voice: „poslouchám“ ≠ „mluvím“, přidán error"
           where="ZtOrb — 5 stavů odlišených tvarem pohybu · živý přepis = potvrzení „slyším tě“ · error s retry/únikem" />
-        <ClRow p="P0" status="done" title="Typografická škála: 23 velikostí → 8 kroků, min 11 px"
-          where="objekt T (display→micro) · mono = data, sans = řeč · žádná informace pod 11 px" last />
+        <ClRow last p="P0" status="done"
+          title="Typografická škála: 23 velikostí → 8 kroků, min 11 px" where="objekt T (display→micro) · mono = data, sans = řeč · žádná informace pod 11 px" />
 
         <div style={{ height: 22 }}></div>
 
@@ -115,8 +115,8 @@ const ChangelogBoard = () => (
           where="6 px ovládací prvky a chipy · 10 px panely a modaly · ZT.rCtl / ZT.rPanel" />
         <ClRow p="P1" status="done" title="Povrchy: 5 tokenů + 4 ad-hoc"
           where="3 úrovně (bg / surface / surface-hi) · hloubka radial vinětací, ne druhým pozadím" />
-        <ClRow p="P1" status="done" title="Top bar: absolutní ⌘K koliduje s TASK"
-          where="search ve flow (flex 0 1 360 px) místo position:absolute · nepřekrývá se · VaTopBar" last />
+        <ClRow last p="P1" status="done"
+          title="Top bar: absolutní ⌘K koliduje s TASK" where="search ve flow (flex 0 1 360 px) místo position:absolute · nepřekrývá se · VaTopBar" />
       </div>
 
       {/* PRAVÝ: P2 + nezapracováno + rozhodnutí */}
@@ -132,8 +132,8 @@ const ChangelogBoard = () => (
           where="jen 2: 0.14em labely · 0.30em wordmark · T.label" />
         <ClRow p="P2" status="done" title="Voice transcript bez historie"
           where="poslední 3 repliky + odkaz „celý přepis v logu běhu“ · ověř. otázka 6" />
-        <ClRow p="P2" status="part" title="Míchání jazyků v UI"
-          where="nové komponenty drží CZ · plný průchod 25 modulů + i18n ovládacích řetězců odložen (viz níže)" last />
+        <ClRow last p="P2" status="part"
+          title="Míchání jazyků v UI" where="nové komponenty drží CZ · plný průchod 25 modulů + i18n ovládacích řetězců odložen (viz níže)" />
 
         <div style={{ height: 22 }}></div>
 
@@ -143,19 +143,19 @@ const ChangelogBoard = () => (
             where="potřebuje produktové rozhodnutí o politice EN technických termínů + i18n vrstvu · ad-hoc změna by zavedla nové nekonzistence" />
           <ClRow p="P2" status="defer" title="Mrtvý kód: skiny zen/balanced/hud, kontexty home/work"
             where="čistka kódu, ne vizuální redesign · audit (ověř. otázka 3) doporučuje odstranění — mimo rozsah canvasu" />
-          <ClRow p="P1" status="defer" title="Propagace tokenů na ~22 sekundárních obrazovek"
-            where="foundation, sdílené komponenty a 3 klíčové HUD plochy + Voice hotové · rozkutí na Runs / Definice / Gate rules / Skills … je navazující implementace" last />
+          <ClRow last p="P1" status="defer"
+            title="Propagace tokenů na ~22 sekundárních obrazovek" where="foundation, sdílené komponenty a 3 klíčové HUD plochy + Voice hotové · rozkutí na Runs / Definice / Gate rules / Skills … je navazující implementace" />
         </div>
 
         <div style={{ height: 22 }}></div>
 
         <ClHead>Rozhodnutí k ověřovacím otázkám auditu (§05)</ClHead>
-        <ClDecision q="Persistentní pravý rail na všech stránkách?" a="Rail jen na Přehledu; jinde tenký stavový proužek." />
-        <ClDecision q="Scanlines + mřížka — pryč, nebo jemná stopa?" a="Úplně pryč; atmosféru nese hloubka pozadí." />
-        <ClDecision q="Mrtvé skiny / kontexty — odstranit?" a="Doporučeno odstranit; odloženo do čistky kódu." decided={false} />
-        <ClDecision q="Kategorické barvy modelů — držet?" a="Modely přecházejí na glyf + text, bez barvy." />
-        <ClDecision q="Vysoké riziko — dvojité potvrzení?" a="Hold-to-confirm 0,9 s (ZtHold) u platby a mazání." />
-        <ClDecision q="Voice transcript — plná historie?" a="Poslední 3 + odkaz do logu běhu; efemérnost cílená." last />
+        <ClDecision a="Rail jen na Přehledu; jinde tenký stavový proužek." q="Persistentní pravý rail na všech stránkách?" />
+        <ClDecision a="Úplně pryč; atmosféru nese hloubka pozadí." q="Scanlines + mřížka — pryč, nebo jemná stopa?" />
+        <ClDecision a="Doporučeno odstranit; odloženo do čistky kódu." decided={false} q="Mrtvé skiny / kontexty — odstranit?" />
+        <ClDecision a="Modely přecházejí na glyf + text, bez barvy." q="Kategorické barvy modelů — držet?" />
+        <ClDecision a="Hold-to-confirm 0,9 s (ZtHold) u platby a mazání." q="Vysoké riziko — dvojité potvrzení?" />
+        <ClDecision last a="Poslední 3 + odkaz do logu běhu; efemérnost cílená." q="Voice transcript — plná historie?" />
       </div>
     </div>
   </div>

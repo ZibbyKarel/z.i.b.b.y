@@ -7,7 +7,9 @@ import { API_URL } from "../../../state/api";
  * token stream. Consumers render `text` as a streaming bubble while `streaming`
  * is true; `toolEvents` are inline dispatch announcements. Once a turn finishes
  * the buffer resets to {@link EMPTY} and the finished turn is handed to
- * {@link ChatStreamHandlers.onComplete} — there is no persisted refetch.
+ * {@link ChatStreamHandlers.onComplete} — mid-conversation this stays a pure
+ * append, no refetch; the persisted transcript is only read back once, by
+ * `Screen`'s mount hydration (reload re-attaches to it via `getTranscript`).
  */
 export interface ChatStreamState {
   /** The turn currently streaming, or `null` between turns. */
@@ -31,9 +33,11 @@ export interface CompletedTurn {
 
 /**
  * Side-effect callbacks fired once per turn. The conversation lives in the
- * caller's client state (the chat overlay is ephemeral — reset on reopen), so the
- * hook hands the finished turn back rather than invalidating a query. `onComplete`
- * fires on the terminal `done`; `onError` on a terminal `error`.
+ * caller's client state ({@link ChatProvider}, which now also survives a full
+ * page reload via a persisted `conversationId` + mount hydration — see
+ * `Screen.tsx`), so the hook hands the finished turn back rather than
+ * invalidating a query. `onComplete` fires on the terminal `done`; `onError` on
+ * a terminal `error`.
  */
 export interface ChatStreamHandlers {
   onComplete?: (turn: CompletedTurn) => void;

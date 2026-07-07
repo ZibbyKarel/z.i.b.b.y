@@ -55,8 +55,8 @@ const DecisionBadge = ({ decision, big = false }) => {
 // ---- resolution chips (jen u "ask") --------------------------------------
 const personPath = (
   <g>
-    <circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
-    <path d="M5.5 20a6.5 6.5 0 0 1 13 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="12" cy="8" fill="none" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M5.5 20a6.5 6.5 0 0 1 13 0" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
   </g>
 );
 const ResChip = ({ res }) => {
@@ -71,7 +71,7 @@ const ResChip = ({ res }) => {
       border: `1px solid ${Z.line}`, whiteSpace: 'nowrap',
     }}>
       {res.kind === 'human'
-        ? <svg viewBox="0 0 24 24" width={12} height={12} style={{ display: 'block', color: c }}>{personPath}</svg>
+        ? <svg height={12} style={{ display: 'block', color: c }} viewBox="0 0 24 24" width={12}>{personPath}</svg>
         : <Icon name={icon} size={11} style={{ color: c }} />}
       {label}
     </span>

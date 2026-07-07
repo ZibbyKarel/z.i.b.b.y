@@ -177,12 +177,12 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
             }}>Esc</Mono>
             <button
               onClick={onClose}
+              onMouseEnter={e => e.currentTarget.style.color = Z.ink}
+              onMouseLeave={e => e.currentTarget.style.color = Z.inkFaint}
               style={{
                 background: 'transparent', border: 'none',
                 color: Z.inkFaint, cursor: 'pointer', display: 'flex', padding: 4, borderRadius: 2,
               }}
-              onMouseEnter={e => e.currentTarget.style.color = Z.ink}
-              onMouseLeave={e => e.currentTarget.style.color = Z.inkFaint}
             >
               <Icon name="x" size={17} />
             </button>
@@ -197,8 +197,9 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
                 Název <span style={{ color: Z.inkFaint, opacity: 0.6 }}>· volitelný</span>
               </Mono>
               <input
-                value={title}
+                onBlur={e => e.target.style.borderColor = Z.line}
                 onChange={(e) => setTitle(e.target.value)}
+                onFocus={e => e.target.style.borderColor = `${accent}66`}
                 placeholder="Krátký název tasku…"
                 style={{
                   width: '100%', padding: '10px 13px',
@@ -206,8 +207,7 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
                   color: Z.ink, fontFamily: Z.sans, fontSize: 13.5, fontWeight: 600,
                   outline: 'none', boxSizing: 'border-box', transition: 'border-color .15s',
                 }}
-                onFocus={e => e.target.style.borderColor = `${accent}66`}
-                onBlur={e => e.target.style.borderColor = Z.line}
+                value={title}
               />
             </div>
 
@@ -219,8 +219,9 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
             <div style={{ position: 'relative', width: '100%' }}>
               {/* backdrop */}
               <div
-                ref={bdRef}
                 aria-hidden="true"
+                dangerouslySetInnerHTML={{ __html: highlightPaths(text, accent) + '\u200b' }}
+                ref={bdRef}
                 style={{
                   position: 'absolute', inset: 0,
                   padding: '13px 15px',
@@ -235,16 +236,16 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
                   userSelect: 'none',
                   zIndex: 0,
                 }}
-                dangerouslySetInnerHTML={{ __html: highlightPaths(text, accent) + '\u200b' }}
               />
               <textarea
-                ref={taRef}
                 autoFocus
-                value={text}
+                onBlur={e => e.target.style.borderColor = Z.line}
                 onChange={(e) => setText(e.target.value)}
+                onFocus={e => e.target.style.borderColor = `${accent}66`}
+                onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
                 onScroll={() => { if (bdRef.current && taRef.current) bdRef.current.scrollTop = taRef.current.scrollTop; }}
                 placeholder={"Popiš task…\n\nNapř: Zkontroluj zálohy na Holly a výsledek ulož do @~/zibby/memory/holly-backup.md\n\nCestu označ zavináčem — @cesta se předá do kontextu."}
-                onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
+                ref={taRef}
                 style={{
                   position: 'relative', zIndex: 1,
                   width: '100%', minHeight: 152, padding: '13px 15px',
@@ -255,8 +256,7 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
                   lineHeight: 1.58, outline: 'none', boxSizing: 'border-box',
                   transition: 'border-color .15s',
                 }}
-                onFocus={e => e.target.style.borderColor = `${accent}66`}
-                onBlur={e => e.target.style.borderColor = Z.line}
+                value={text}
               />
             </div>
 
@@ -297,12 +297,12 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
 
               {/* Skrytý datetime picker pro Vlastní */}
               <input
-                ref={customPickerRef}
-                type="datetime-local"
-                value={custom}
                 min={toLocalInput(new Date())}
                 onChange={(e) => { setCustom(e.target.value); setSched('custom'); }}
+                ref={customPickerRef}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                type="datetime-local"
+                value={custom}
               />
 
               {scheduledAt && (
@@ -322,8 +322,8 @@ function NewTaskDialog({ accent, onClose, onSubmit }) {
                 <GhostBtn onClick={onClose}>Zrušit</GhostBtn>
                 <RunBtn
                   accent={canSubmit ? accent : Z.inkFaint}
-                  label="Odeslat ke kategorizaci"
                   icon="bolt"
+                  label="Odeslat ke kategorizaci"
                   onClick={handleSubmit}
                 />
               </div>
@@ -359,7 +359,6 @@ function NewTaskBtn({ onClick, accent, pendingCount = 0 }) {
   return (
     <button
       onClick={onClick}
-      title="Nový task (N)"
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
       style={{
@@ -371,6 +370,7 @@ function NewTaskBtn({ onClick, accent, pendingCount = 0 }) {
         fontFamily: Z.mono, fontSize: 11, fontWeight: 600,
         letterSpacing: '0.06em', transition: 'all .16s',
       }}
+      title="Nový task (N)"
     >
       <Icon name="plus" size={13} stroke={2} />
       TASK
@@ -409,13 +409,13 @@ function CategorizationQueue({ accent, tasks, onClearDone }) {
       {/* Trigger */}
       <button
         onClick={() => setOpen(v => !v)}
-        title="Fronta kategorizace"
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '8px 13px', cursor: 'pointer',
           background: Z.bg0, border: `1px solid ${open ? accent : Z.line}`,
           borderRadius: 3, transition: 'all .15s',
         }}
+        title="Fronta kategorizace"
       >
         <Mono style={{ fontSize: 9.5, color: Z.inkFaint, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           fronta
@@ -457,13 +457,13 @@ function CategorizationQueue({ accent, tasks, onClearDone }) {
               {hasDone && (
                 <button
                   onClick={() => { onClearDone(); setOpen(false); }}
+                  onMouseEnter={e => { e.currentTarget.style.color = Z.inkDim; e.currentTarget.style.borderColor = Z.lineHi; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = Z.inkFaint; e.currentTarget.style.borderColor = Z.line; }}
                   style={{
                     fontFamily: Z.mono, fontSize: 9.5, color: Z.inkFaint, cursor: 'pointer',
                     background: 'transparent', border: `1px solid ${Z.line}`,
                     borderRadius: 2, padding: '2px 8px', transition: 'all .13s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.color = Z.inkDim; e.currentTarget.style.borderColor = Z.lineHi; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = Z.inkFaint; e.currentTarget.style.borderColor = Z.line; }}
                 >
                   vymazat hotové
                 </button>

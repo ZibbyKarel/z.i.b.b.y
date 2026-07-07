@@ -7,8 +7,8 @@ const ProjectCard = ({ project, accent, onOpen }) => {
 
   return (
     <div
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      onClick={() => onOpen(project.id)}
+      onClick={() => onOpen(project.id)} onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
       style={{
         position: 'relative', background: h ? Z.panelHi : Z.panel,
         border: `1px solid ${h ? accent + '55' : Z.line}`, borderRadius: Z.rPanel, padding: 16,
@@ -66,23 +66,23 @@ const ProjectModal = ({ project, isNew, accent, cats, onClose, onSave, onDelete 
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <FieldLabel>Název projektu</FieldLabel>
-            <TextInput value={name} onChange={setName} placeholder="media-vault" mono />
+            <TextInput mono onChange={setName} placeholder="media-vault" value={name} />
           </div>
           <div>
             <FieldLabel>Cesta k rootu <span style={{ color: Z.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· na hostitelském systému</span></FieldLabel>
-            <TextInput value={path} onChange={setPath} placeholder="~/Projects/media-vault" mono />
+            <TextInput mono onChange={setPath} placeholder="~/Projects/media-vault" value={path} />
           </div>
           <div>
             <FieldLabel>Kategorie</FieldLabel>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
               {(cats || []).map(c => (
-                <ChipToggle key={c} active={category === c} accent={accent} onClick={() => setCategory(c)}>{c}</ChipToggle>
+                <ChipToggle accent={accent} active={category === c} key={c} onClick={() => setCategory(c)}>{c}</ChipToggle>
               ))}
             </div>
           </div>
           <div>
             <FieldLabel>Popis <span style={{ color: Z.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· volitelné</span></FieldLabel>
-            <TextInput value={desc} onChange={setDesc} placeholder="Čím se projekt zabývá" />
+            <TextInput onChange={setDesc} placeholder="Čím se projekt zabývá" value={desc} />
           </div>
 
         </div>
@@ -105,10 +105,10 @@ const ProjectModal = ({ project, isNew, accent, cats, onClose, onSave, onDelete 
 
       {confirm && (
         <ConfirmDialog
-          title="Smazat projekt?"
           message={<span>Opravdu smazat projekt <Mono style={{ color: Z.ink }}>{project.name}</Mono>? Soubory na disku zůstanou, odebere se jen záznam z velínu.</span>}
           onCancel={() => setConfirm(false)}
           onConfirm={() => { setConfirm(false); onDelete(project.id); }}
+          title="Smazat projekt?"
         />
       )}
     </div>
@@ -169,7 +169,7 @@ const ProjectsBody = ({ accent, projects, setProjects, cats = [], setCats }) => 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{items.length}</Mono>
                 {empty && (
-                  <button onClick={() => delCat(cat)} title="Smazat prázdnou kategorii" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}44` }}>
+                  <button onClick={() => delCat(cat)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}44` }} title="Smazat prázdnou kategorii">
                     <Icon name="trash" size={12} /> Smazat
                   </button>
                 )}
@@ -181,7 +181,7 @@ const ProjectsBody = ({ accent, projects, setProjects, cats = [], setCats }) => 
             </SectionLabel>
             {items.length > 0
               ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 13 }}>
-                  {items.map(p => <ProjectCard key={p.id} project={p} accent={accent} onOpen={setOpenId} />)}
+                  {items.map(p => <ProjectCard accent={accent} key={p.id} onOpen={setOpenId} project={p} />)}
                 </div>
               : <div style={{ padding: '18px 16px', border: `1px dashed ${Z.line}`, borderRadius: 3, textAlign: 'center' }}>
                   <Mono style={{ fontSize: 11, color: Z.inkFaint }}>Prázdná kategorie — přidej sem projekt, nebo ji smaž.</Mono>
@@ -192,12 +192,12 @@ const ProjectsBody = ({ accent, projects, setProjects, cats = [], setCats }) => 
       })}
 
       {openProject && (
-        <ProjectModal key={openProject.id} project={openProject} isNew={false} accent={accent} cats={cats}
-          onClose={() => setOpenId(null)} onSave={p => save(p, false)} onDelete={del} />
+        <ProjectModal accent={accent} cats={cats} isNew={false} key={openProject.id} onClose={() => setOpenId(null)}
+          onDelete={del} onSave={p => save(p, false)} project={openProject} />
       )}
       {newDraft && (
-        <ProjectModal key="new" project={newDraft} isNew={true} accent={accent} cats={cats}
-          onClose={() => setNewDraft(null)} onSave={p => save(p, true)} onDelete={del} />
+        <ProjectModal accent={accent} cats={cats} isNew={true} key="new" onClose={() => setNewDraft(null)}
+          onDelete={del} onSave={p => save(p, true)} project={newDraft} />
       )}
     </div>
   );

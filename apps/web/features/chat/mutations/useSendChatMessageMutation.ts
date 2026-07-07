@@ -6,9 +6,12 @@ import { apiClient } from "../../../state/api";
  * `{ conversationId, turnId }`.
  *
  * Deliberately NO transcript invalidation here: at mutation success the assistant
- * reply doesn't exist yet — its tokens stream in afterward over SSE. The transcript
- * refetch fires on the stream's `done` event (see {@link useChatStream}), so we
- * never refetch an empty reply.
+ * reply doesn't exist yet — its tokens stream in afterward over SSE, and the
+ * completed turn is appended straight to client state from `onComplete` (see
+ * {@link useChatStream}), never by refetching. The transcript query
+ * ({@link useChatTranscriptQuery}) is only read once per conversation, on mount, to
+ * re-hydrate after a full page reload — a mid-conversation refetch here would
+ * refetch an empty reply and flash the transcript blank.
  */
 export function useSendChatMessageMutation() {
   return apiClient.chat.sendMessage.useMutation();

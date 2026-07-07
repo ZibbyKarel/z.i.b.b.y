@@ -5,8 +5,8 @@
 const { useState: useStateV, useEffect: useEffectV, useRef: useRefV } = React;
 
 const ZtMicIcon = ({ size = 21 }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+  <svg fill="none" height={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width={size}>
+    <rect height="12" rx="3" width="6" x="9" y="2"></rect>
     <path d="M5 10v2a7 7 0 0 0 14 0v-2"></path>
     <path d="M12 19v3M8 22h8"></path>
   </svg>
@@ -27,20 +27,20 @@ const ZtOrb = ({ state = 'idle', size = 248 }) => {
       {state === 'speaking' && [0, 1].map((i) => (
         <div key={i} style={{ position: 'absolute', inset: 6, borderRadius: '50%', border: `1.5px solid ${col}`, opacity: 0, animation: `ztRingOut 1.8s ease-out ${i * 0.9}s infinite`, pointerEvents: 'none' }}></div>
       ))}
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+      <svg height={size} style={{ position: 'absolute', inset: 0, overflow: 'visible' }} viewBox={`0 0 ${size} ${size}`} width={size}>
         {state !== 'error' && (
-          <circle cx={cx} cy={cx} r={cx - 3} stroke={col} strokeWidth="1" fill="none"
-            strokeDasharray="2 10" opacity={state === 'idle' ? 0.18 : 0.4}
+          <circle cx={cx} cy={cx} fill="none" opacity={state === 'idle' ? 0.18 : 0.4} r={cx - 3} stroke={col}
+            strokeDasharray="2 10" strokeWidth="1"
             style={{ transformOrigin: `${cx}px ${cx}px`, animation: 'ztSpin 26s linear infinite' }} />
         )}
         {state === 'thinking' && (
-          <circle cx={cx} cy={cx} r={cx - 12} stroke={col} strokeWidth="2.5" fill="none"
-            strokeDasharray={`${(cx - 12) * 1.2} ${(cx - 12) * 6}`} strokeLinecap="round" opacity="0.9"
+          <circle cx={cx} cy={cx} fill="none" opacity="0.9" r={cx - 12} stroke={col}
+            strokeDasharray={`${(cx - 12) * 1.2} ${(cx - 12) * 6}`} strokeLinecap="round" strokeWidth="2.5"
             style={{ transformOrigin: `${cx}px ${cx}px`, animation: 'ztSpin 1.4s linear infinite' }} />
         )}
         {state === 'error' && (
-          <circle cx={cx} cy={cx} r={cx - 3} stroke={col} strokeWidth="1.5" fill="none"
-            strokeDasharray="26 14" opacity="0.55" />
+          <circle cx={cx} cy={cx} fill="none" opacity="0.55" r={cx - 3} stroke={col}
+            strokeDasharray="26 14" strokeWidth="1.5" />
         )}
       </svg>
       <div style={{
@@ -53,7 +53,7 @@ const ZtOrb = ({ state = 'idle', size = 248 }) => {
         transition: 'border-color .24s, box-shadow .24s',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: Math.max(4, size * 0.025) }}>
-          <ZibbyMark size={Math.round(size * 0.15)} color={col} />
+          <ZibbyMark color={col} size={Math.round(size * 0.15)} />
           <span style={{ fontFamily: ZT.mono, fontSize: Math.max(8, size * 0.034), letterSpacing: '0.30em', color: col, opacity: state === 'idle' ? 0.45 : 0.9 }}>Z·I·B·B·Y</span>
         </div>
       </div>
@@ -121,7 +121,7 @@ function VoiceScreen({ accent, onExit }) {
     }}>
       {/* top bar — jeden kontextový souhrn místo 4 rohových panelů */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 22px', borderBottom: `1px solid ${ZT.line}`, flexShrink: 0 }}>
-        <ZibbyMark size={17} color={ZT.accent} />
+        <ZibbyMark color={ZT.accent} size={17} />
         <span style={{ ...T.label, color: ZT.accent }}>Voice</span>
         <ZtChip state={state === 'error' ? 'bad' : active ? 'run' : 'idle'}>
           {state === 'error' ? 'chyba' : active ? 'aktivní' : 'klid'}
@@ -130,7 +130,7 @@ function VoiceScreen({ accent, onExit }) {
           <span style={{ color: ZT.run }}>{runCount} běží</span> · <span style={{ color: ZT.wait }}>{waitCount} čeká na schválení</span>
         </span>
         <span style={{ marginLeft: 'auto', ...T.micro, fontSize: 13, fontWeight: 600, color: ZT.ink }}>{timeStr}</span>
-        <ZtBtn size="sm" icon="grid" onClick={onExit}>HUD · Esc</ZtBtn>
+        <ZtBtn icon="grid" onClick={onExit} size="sm">HUD · Esc</ZtBtn>
       </div>
 
       {/* střed */}
@@ -148,7 +148,7 @@ function VoiceScreen({ accent, onExit }) {
           <div style={{ ...T.micro, marginTop: 2 }}>celý přepis v logu běhu <span style={{ color: ZT.accent }}>→</span></div>
         </div>
 
-        <ZtOrb state={state} size={248} />
+        <ZtOrb size={248} state={state} />
 
         {/* stavový řádek — čitelný z dálky, min 16 px */}
         <div style={{ textAlign: 'center', minHeight: 92 }}>
@@ -175,8 +175,8 @@ function VoiceScreen({ accent, onExit }) {
             <div className="zt-anim" style={{ marginTop: 10, animation: 'ztFadeUp .25s ease-out' }}>
               <div style={{ ...T.bodySm }}>{v.sub}</div>
               <div style={{ display: 'flex', gap: 9, justifyContent: 'center', marginTop: 14 }}>
-                <ZtBtn variant="primary" size="sm" icon="retry" onClick={() => { clearAll(); setState('idle'); setHeard(''); }}>Zkusit znovu</ZtBtn>
-                <ZtBtn size="sm" icon="grid" onClick={onExit}>Přejít do HUD</ZtBtn>
+                <ZtBtn icon="retry" onClick={() => { clearAll(); setState('idle'); setHeard(''); }} size="sm" variant="primary">Zkusit znovu</ZtBtn>
+                <ZtBtn icon="grid" onClick={onExit} size="sm">Přejít do HUD</ZtBtn>
               </div>
             </div>
           )}
@@ -186,7 +186,7 @@ function VoiceScreen({ accent, onExit }) {
 
       {/* ovládání */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '16px 24px 22px', flexShrink: 0, position: 'relative' }}>
-        <button className="zt-focusable" onClick={runDemo} title={active ? 'Zastavit' : 'Spustit demo'} style={{
+        <button className="zt-focusable" onClick={runDemo} style={{
           width: 56, height: 56, borderRadius: '50%', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: active ? ZT.accent : state === 'error' ? `${ZT.bad}14` : ZT.accentDim,
@@ -194,7 +194,7 @@ function VoiceScreen({ accent, onExit }) {
           color: active ? ZT.bg : state === 'error' ? ZT.bad : ZT.accent,
           boxShadow: active ? `0 0 26px ${ZT.accent}44` : 'none',
           transition: 'all .24s ease-out',
-        }}>
+        }} title={active ? 'Zastavit' : 'Spustit demo'}>
           <ZtMicIcon size={22} />
         </button>
         <button onClick={() => { clearAll(); setState('error'); setHeard(''); }} style={{ position: 'absolute', right: 24, background: 'none', border: 'none', cursor: 'pointer', ...T.micro, padding: 0 }}>

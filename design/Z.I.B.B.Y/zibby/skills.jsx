@@ -26,11 +26,11 @@ const ToolChip = ({ t }) => {
 // Skill/agent je „gated", pokud volá rizikový nástroj → každé jeho volání
 // projde approval frontou. Risk je vlastnost nástroje; tohle to zviditelňuje.
 const GatedBadge = ({ tip }) =>
-  <span title={tip || 'Volá rizikový nástroj — akce projde frontou schválení'} style={{
+  <span style={{
     display: 'inline-flex', alignItems: 'center', gap: 3, flex: '0 0 auto', fontFamily: Z.mono, fontSize: 8.5,
     fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '2px 6px', borderRadius: 2,
     color: Z.warn, background: `${Z.warn}1c`, border: `1px solid ${Z.warn}55`, whiteSpace: 'nowrap'
-  }}><Icon name="shield" size={10} /> gated</span>;
+  }} title={tip || 'Volá rizikový nástroj — akce projde frontou schválení'}><Icon name="shield" size={10} /> gated</span>;
 
 // Panel: které nástroje jsou rizikové + jejich typ a závažnost. Zviditelňuje
 // frontmatter (requires_approval / risky_tools) v editoru i v detailu.
@@ -68,8 +68,8 @@ const SkillCard = ({ skill, accent, onOpen, onRun, onTogglePin }) => {
   const sm = skillStateMeta[skill.state] || skillStateMeta.idle;
   return (
     <div
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      onClick={() => onOpen(skill.id)}
+      onClick={() => onOpen(skill.id)} onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
       style={{
         position: 'relative', background: h ? Z.panelHi : Z.panel, border: `1px solid ${h ? accent + '55' : Z.line}`,
         borderRadius: Z.rPanel, padding: 15, cursor: 'pointer', transition: 'all .15s', display: 'flex', flexDirection: 'column',
@@ -146,11 +146,11 @@ const FieldLabel = ({ children, style }) =>
 <label style={{ fontFamily: Z.mono, fontSize: 10, letterSpacing: '0.14em', color: Z.inkFaint, textTransform: 'uppercase', display: 'block', ...style }}>{children}</label>;
 
 const TextInput = ({ value, onChange, placeholder, mono = false }) =>
-<input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-style={{
+<input onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{
   width: '100%', marginTop: 7, padding: '9px 12px', background: Z.bg0, border: `1px solid ${Z.line}`,
   borderRadius: 3, color: Z.ink, fontFamily: mono ? Z.mono : Z.sans, fontSize: 13, outline: 'none', boxSizing: 'border-box'
-}} />;
+}}
+value={value} />;
 
 const ChipToggle = ({ active, accent, onClick, children }) =>
 <button onClick={onClick} style={{
@@ -201,13 +201,13 @@ const CatDialog = ({ accent, existing = [], onClose, onAdd }) => {
         {/* body */}
         <div style={{ padding: '18px 20px' }}>
           <FieldLabel>Název kategorie</FieldLabel>
-          <input autoFocus value={val} onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => {if (e.key === 'Enter') submit();if (e.key === 'Escape') onClose();}}
-          placeholder="např. Finance" style={{
+          <input autoFocus onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => {if (e.key === 'Enter') submit();if (e.key === 'Escape') onClose();}}
+          placeholder="např. Finance"
+          style={{
             width: '100%', marginTop: 7, padding: '10px 12px', background: Z.bg0,
             border: `1px solid ${dup ? Z.bad : name ? accent + '88' : Z.line}`, borderRadius: 3,
             color: Z.ink, fontFamily: Z.sans, fontSize: 14, outline: 'none', boxSizing: 'border-box'
-          }} />
+          }} value={val} />
           {dup && <Mono style={{ fontSize: 10.5, color: Z.bad, display: 'block', marginTop: 6 }}>Kategorie „{name}" už existuje.</Mono>}
 
           <FieldLabel style={{ marginTop: 18 }}>Glyph</FieldLabel>
@@ -215,11 +215,11 @@ const CatDialog = ({ accent, existing = [], onClose, onAdd }) => {
             {CAT_GLYPH_CHOICES.map((g) => {
               const on = glyph === g;
               return (
-                <button key={g} onClick={() => setGlyph(g)} title={g} style={{
+                <button key={g} onClick={() => setGlyph(g)} style={{
                   aspectRatio: '1', display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 3,
                   color: on ? Z.bg0 : Z.inkDim, background: on ? accent : Z.bg0,
                   border: `1px solid ${on ? accent : Z.line}`, transition: 'all .12s'
-                }}>
+                }} title={g}>
                   <Icon name={g} size={17} />
                 </button>);
 
@@ -233,7 +233,7 @@ const CatDialog = ({ accent, existing = [], onClose, onAdd }) => {
             fontFamily: Z.mono, fontSize: 12, padding: '9px 15px', cursor: 'pointer', borderRadius: 2,
             color: Z.inkDim, background: 'transparent', border: `1px solid ${Z.line}`
           }}>Zrušit</button>
-          <button onClick={submit} disabled={!valid} style={{
+          <button disabled={!valid} onClick={submit} style={{
             display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 600,
             padding: '9px 16px', cursor: valid ? 'pointer' : 'not-allowed', borderRadius: 2,
             color: Z.bg0, background: accent, border: 'none', opacity: valid ? 1 : 0.4
@@ -252,7 +252,7 @@ const CatAdder = ({ accent, existing = [], onAdd }) => {
         display: 'inline-flex', alignItems: 'center', gap: 7, alignSelf: 'flex-start', fontFamily: Z.mono, fontSize: 11.5,
         padding: '9px 14px', cursor: 'pointer', borderRadius: 2, color: accent, background: 'transparent', border: `1px dashed ${accent}66`
       }}><Icon name="plus" size={14} /> Přidat kategorii</button>
-      {open && <CatDialog accent={accent} existing={existing} onClose={() => setOpen(false)} onAdd={onAdd} />}
+      {open && <CatDialog accent={accent} existing={existing} onAdd={onAdd} onClose={() => setOpen(false)} />}
     </React.Fragment>);
 
 };
@@ -366,7 +366,7 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
                   <GatePanel tools={riskyTools} />
                 </div>
               }
-              {skill.safeAfter && <ActionBoundaryNote value={skill.safeAfter} style={{ marginTop: 12 }} />}
+              {skill.safeAfter && <ActionBoundaryNote style={{ marginTop: 12 }} value={skill.safeAfter} />}
 
               {/* SKILL.md preview */}
               <FieldLabel style={{ marginTop: 18 }}>SKILL.md</FieldLabel>
@@ -374,7 +374,7 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
               margin: '8px 0 0', padding: '14px 16px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 4,
               maxHeight: 280, overflow: 'auto'
             }}>
-                <MarkdownView source={skill.body} accent={accentFor} />
+                <MarkdownView accent={accentFor} source={skill.body} />
               </div>
             </div>
 
@@ -385,7 +385,7 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
               cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}55`
             }}><Icon name="trash" size={13} /> Smazat</button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <GhostBtn icon="edit" accent={accentFor} onClick={() => {setDraft(skill);setMode('edit');}}>Editovat</GhostBtn>
+                <GhostBtn accent={accentFor} icon="edit" onClick={() => {setDraft(skill);setMode('edit');}}>Editovat</GhostBtn>
                 <RunBtn accent={accentFor} label="Spustit" onClick={onClose} />
               </div>
             </div>
@@ -399,14 +399,14 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
               {/* left column — meta */}
               <div>
                 <FieldLabel>Název</FieldLabel>
-                <TextInput value={draft.name} onChange={(v) => set({ name: v })} placeholder="název skillu" mono />
+                <TextInput mono onChange={(v) => set({ name: v })} placeholder="název skillu" value={draft.name} />
 
                 <FieldLabel style={{ marginTop: 16 }}>Popis</FieldLabel>
-                <TextInput value={draft.desc} onChange={(v) => set({ desc: v })} placeholder="co skill dělá (jedna věta)" />
+                <TextInput onChange={(v) => set({ desc: v })} placeholder="co skill dělá (jedna věta)" value={draft.desc} />
 
                 <FieldLabel style={{ marginTop: 16 }}>Kategorie</FieldLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 7 }}>
-                  {cats.map((c) => <ChipToggle key={c} active={draft.category === c} accent={accentFor} onClick={() => set({ category: c })}>{c}</ChipToggle>)}
+                  {cats.map((c) => <ChipToggle accent={accentFor} active={draft.category === c} key={c} onClick={() => set({ category: c })}>{c}</ChipToggle>)}
                 </div>
 
                 <FieldLabel style={{ marginTop: 16 }}>Ikona</FieldLabel>
@@ -414,24 +414,24 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
                   {SKILL_GLYPHS.map((g) => {
                   const on = draft.glyph === g;
                   return (
-                    <button key={g} onClick={() => set({ glyph: g })} title={g} style={{
+                    <button key={g} onClick={() => set({ glyph: g })} style={{
                       width: 34, height: 34, display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2,
                       color: on ? Z.bg0 : Z.inkDim, background: on ? accentFor : 'transparent',
                       border: `1px solid ${on ? accentFor : Z.line}`, transition: 'all .12s'
-                    }}><Icon name={g} size={17} /></button>);
+                    }} title={g}><Icon name={g} size={17} /></button>);
 
                 })}
                 </div>
 
                 <FieldLabel style={{ marginTop: 16 }}>Povolené nástroje</FieldLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
-                  {ALL_TOOLS.map((t) => <ChipToggle key={t} active={draft.tools.includes(t)} accent={accentFor} onClick={() => toggleTool(t)}>{t}</ChipToggle>)}
+                  {ALL_TOOLS.map((t) => <ChipToggle accent={accentFor} active={draft.tools.includes(t)} key={t} onClick={() => toggleTool(t)}>{t}</ChipToggle>)}
                 </div>
 
                 {gated &&
                 <React.Fragment>
                   <FieldLabel style={{ marginTop: 16 }}>Approval gate</FieldLabel>
-                  <GatePanel tools={riskyTools} style={{ marginTop: 8 }} />
+                  <GatePanel style={{ marginTop: 8 }} tools={riskyTools} />
                   <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 7, lineHeight: 1.5 }}>
                     Odvozeno z Integrací (rizikové nástroje připojených služeb). Risk je vlastnost nástroje — needituje se tady.
                   </Mono>
@@ -440,11 +440,11 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
 
                 <FieldLabel style={{ marginTop: 16 }}>Akce bezpečná až po <span style={{ color: Z.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· čas nebo podmínka</span></FieldLabel>
                 <div style={{ display: 'flex', gap: 7, marginTop: 8 }}>
-                  <ChipToggle active={(draft.safeAfterKind || 'time') === 'time'} accent={accentFor} onClick={() => set({ safeAfterKind: 'time' })}>čas</ChipToggle>
-                  <ChipToggle active={draft.safeAfterKind === 'cond'} accent={accentFor} onClick={() => set({ safeAfterKind: 'cond' })}>podmínka</ChipToggle>
+                  <ChipToggle accent={accentFor} active={(draft.safeAfterKind || 'time') === 'time'} onClick={() => set({ safeAfterKind: 'time' })}>čas</ChipToggle>
+                  <ChipToggle accent={accentFor} active={draft.safeAfterKind === 'cond'} onClick={() => set({ safeAfterKind: 'cond' })}>podmínka</ChipToggle>
                 </div>
-                <TextInput value={draft.safeAfter || ''} onChange={(v) => set({ safeAfter: v })}
-                  placeholder={draft.safeAfterKind === 'cond' ? 'např. CI je zelené' : 'např. po 09:00'} mono />
+                <TextInput mono onChange={(v) => set({ safeAfter: v })}
+                  placeholder={draft.safeAfterKind === 'cond' ? 'např. CI je zelené' : 'např. po 09:00'} value={draft.safeAfter || ''} />
                 <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 7, lineHeight: 1.5 }}>
                   Volitelné. Dokud nenastane, projde i jinak bezpečná akce frontou schválení.
                 </Mono>
@@ -470,10 +470,10 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
                 {contentMode === 'folder' &&
                   <div>
                     <div
-                      onDragOver={e => { e.preventDefault(); setFolderDrag(true); }}
-                      onDragLeave={() => setFolderDrag(false)}
-                      onDrop={e => { e.preventDefault(); setFolderDrag(false); handleFolderSelect(e.dataTransfer.files); }}
                       onClick={() => folderInputRef.current && folderInputRef.current.click()}
+                      onDragLeave={() => setFolderDrag(false)}
+                      onDragOver={e => { e.preventDefault(); setFolderDrag(true); }}
+                      onDrop={e => { e.preventDefault(); setFolderDrag(false); handleFolderSelect(e.dataTransfer.files); }}
                       style={{
                         border: `1.5px dashed ${folderDrag ? accentFor : Z.line}`,
                         borderRadius: 4, padding: '36px 20px', textAlign: 'center', cursor: 'pointer',
@@ -491,10 +491,10 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
                         </Mono>
                       </div>
                       <input
-                        ref={el => { if (el) { el.setAttribute('webkitdirectory', ''); el.setAttribute('multiple', ''); } folderInputRef.current = el; }}
-                        type="file"
-                        style={{ display: 'none' }}
                         onChange={e => handleFolderSelect(e.target.files)}
+                        ref={el => { if (el) { el.setAttribute('webkitdirectory', ''); el.setAttribute('multiple', ''); } folderInputRef.current = el; }}
+                        style={{ display: 'none' }}
+                        type="file"
                       />
                     </div>
 
@@ -547,7 +547,7 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
                 }
 
                 {contentMode === 'editor' &&
-                  <MarkdownEditor value={splitFrontmatter(draft.body).content} onChange={(v) => setDraft((d) => ({ ...d, body: skillFront(d) + '\n\n' + v }))} accent={accentFor} minHeight={380} placeholder="Markdown obsah skillu…" />
+                  <MarkdownEditor accent={accentFor} minHeight={380} onChange={(v) => setDraft((d) => ({ ...d, body: skillFront(d) + '\n\n' + v }))} placeholder="Markdown obsah skillu…" value={splitFrontmatter(draft.body).content} />
                 }
               </div>
             </div>
@@ -567,10 +567,10 @@ const SkillModal = ({ skill, mode: initialMode, accent, cats = [], onClose, onSa
 
       {confirm &&
       <ConfirmDialog
-        title="Smazat skill?"
         message={<span>Opravdu smazat skill <Mono style={{ color: Z.ink }}>{skill.name}</Mono>? Smaže se i soubor <Mono style={{ color: Z.inkDim }}>{skill.file}</Mono>. Tuto akci nelze vrátit.</span>}
         onCancel={() => setConfirm(false)}
-        onConfirm={() => {setConfirm(false);onDelete(skill.id);}} />
+        onConfirm={() => {setConfirm(false);onDelete(skill.id);}}
+        title="Smazat skill?" />
 
       }
     </div>);
@@ -628,7 +628,7 @@ const SkillsBody = ({ accent, skills, setSkills, cats = [], setCats, gateRules =
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <CatAdder accent={accent} existing={cats} onAdd={addCat} />
-            <RunBtn accent={accent} label="Přidat skill" onClick={startNew} icon="plus" />
+            <RunBtn accent={accent} icon="plus" label="Přidat skill" onClick={startNew} />
           </div>
         </div>
       </HudPanel>
@@ -645,10 +645,10 @@ const SkillsBody = ({ accent, skills, setSkills, cats = [], setCats, gateRules =
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{all.length}</Mono>
                 {empty && !query &&
-              <button onClick={() => delCat(cat)} title="Smazat prázdnou kategorii" style={{
+              <button onClick={() => delCat(cat)} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10, padding: '4px 9px',
                 cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}44`
-              }}><Icon name="trash" size={12} /> Smazat</button>
+              }} title="Smazat prázdnou kategorii"><Icon name="trash" size={12} /> Smazat</button>
               }
               </div>
             }>
@@ -659,7 +659,7 @@ const SkillsBody = ({ accent, skills, setSkills, cats = [], setCats, gateRules =
             {items.length > 0 ?
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(266px, 1fr))', gap: 13 }}>
                 {items.map((s) =>
-              <SkillCard key={s.id} skill={s} accent={accent} onOpen={setOpenId} onRun={setRunSkill} onTogglePin={togglePin} />
+              <SkillCard accent={accent} key={s.id} onOpen={setOpenId} onRun={setRunSkill} onTogglePin={togglePin} skill={s} />
               )}
               </div> :
 
@@ -683,16 +683,16 @@ const SkillsBody = ({ accent, skills, setSkills, cats = [], setCats, gateRules =
 
       {/* detail / editor */}
       {openSkill &&
-      <SkillModal key={openSkill.id} skill={openSkill} mode="view" accent={accent} cats={cats}
-      onClose={() => setOpenId(null)} onSave={save} onDelete={del} onTogglePin={togglePin} gateRules={gateRules} />
+      <SkillModal accent={accent} cats={cats} gateRules={gateRules} key={openSkill.id} mode="view"
+      onClose={() => setOpenId(null)} onDelete={del} onSave={save} onTogglePin={togglePin} skill={openSkill} />
       }
       {newDraft &&
-      <SkillModal key="new" skill={newDraft} mode="new" accent={accent} cats={cats}
-      onClose={() => setNewDraft(null)} onSave={save} onDelete={del} onTogglePin={togglePin} gateRules={gateRules} />
+      <SkillModal accent={accent} cats={cats} gateRules={gateRules} key="new" mode="new"
+      onClose={() => setNewDraft(null)} onDelete={del} onSave={save} onTogglePin={togglePin} skill={newDraft} />
       }
 
       {/* run modal (reuse) */}
-      <RunModal skill={runSkill} accent={accent} onClose={() => setRunSkill(null)} projects={projects} />
+      <RunModal accent={accent} onClose={() => setRunSkill(null)} projects={projects} skill={runSkill} />
     </div>);
 
 };

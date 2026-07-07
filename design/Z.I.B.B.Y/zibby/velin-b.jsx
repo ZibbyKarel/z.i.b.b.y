@@ -196,8 +196,8 @@ const VbCommandBar = ({ accent }) => {
       </div>
 
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
         style={{
           position: 'relative', borderRadius: ZT.rCtl, border: `1px solid ${dragOver ? accent : ZT.line}`,
@@ -217,25 +217,20 @@ const VbCommandBar = ({ accent }) => {
         {/* text oblast s inline zvýrazněním @tokenů (backdrop technika) */}
         <div style={{ position: 'relative', padding: '10px 10px 6px 12px' }}>
           <div
-            ref={bdRef} aria-hidden="true"
+            aria-hidden="true" dangerouslySetInnerHTML={{ __html: vbHighlight(val) + '\u200b' }}
+            ref={bdRef}
             style={{
               position: 'absolute', top: 10, left: 12, right: 10, bottom: 6,
               fontFamily: ZT.sans, fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               color: 'transparent', overflow: 'hidden', pointerEvents: 'none', userSelect: 'none', zIndex: 0,
             }}
-            dangerouslySetInnerHTML={{ __html: vbHighlight(val) + '\u200b' }}
           />
           <textarea
-            ref={taRef} value={val} rows={1}
             onChange={(e) => {
               setVal(e.target.value);
               autosize();
               checkMention(e.target.value, e.target.selectionStart);
-            }}
-            onScroll={syncScroll}
-            onKeyUp={(e) => checkMention(e.target.value, e.target.selectionStart)}
-            onClick={(e) => checkMention(e.target.value, e.target.selectionStart)}
-            onKeyDown={(e) => {
+            }} onClick={(e) => checkMention(e.target.value, e.target.selectionStart)} onKeyDown={(e) => {
               if (mentionQ) {
                 const res = mentionResults();
                 if (e.key === 'ArrowDown') { e.preventDefault(); setMentionSel((s) => Math.min(res.length - 1, s + 1)); return; }
@@ -245,13 +240,18 @@ const VbCommandBar = ({ accent }) => {
               }
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
             }}
+            onKeyUp={(e) => checkMention(e.target.value, e.target.selectionStart)}
+            onScroll={syncScroll}
             placeholder="Projdi backlog, najdi highest-impact bugy a implementuj je… (@agent, @pipeline, soubory drag&dropem)"
+            ref={taRef}
+            rows={1}
             style={{
               position: 'relative', zIndex: 1, display: 'block', width: '100%', minHeight: 48, maxHeight: 200,
               resize: 'none', overflow: 'auto', background: 'transparent', border: 'none', outline: 'none',
               color: ZT.ink, caretColor: ZT.ink, fontFamily: ZT.sans, fontSize: 14, lineHeight: 1.5,
               boxSizing: 'border-box', padding: 0,
             }}
+            value={val}
           />
 
           {/* @ autocomplete — inline nad kurzorem, ale ukotvené pod textem (jednoduchá paleta) */}
@@ -279,24 +279,24 @@ const VbCommandBar = ({ accent }) => {
 
         {/* dolní lišta: sponka/plus vlevo, split run-button vpravo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 10px 10px 10px' }}>
-          <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
-            onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-          <button onClick={() => fileRef.current && fileRef.current.click()} title="Přidat soubor"
+          <input multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} ref={fileRef} style={{ display: 'none' }}
+            type="file" />
+          <button onClick={() => fileRef.current && fileRef.current.click()} onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
               borderRadius: ZT.rCtl, background: 'transparent', border: `1px solid ${ZT.line}`, color: ZT.ink2, cursor: 'pointer',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}>
+            title="Přidat soubor">
             <Icon name="plus" size={13} stroke={2} />
           </button>
-          <button onClick={() => fileRef.current && fileRef.current.click()} title="Připnout soubor"
+          <button onClick={() => fileRef.current && fileRef.current.click()} onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
               borderRadius: ZT.rCtl, background: 'transparent', border: `1px solid ${ZT.line}`, color: ZT.ink2, cursor: 'pointer',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}>
+            title="Připnout soubor">
             <Icon name="pin" size={13} />
           </button>
 
@@ -312,11 +312,11 @@ const VbCommandBar = ({ accent }) => {
             }}>
               <Icon name={mode.icon} size={13} stroke={2} /> {mode.short}
             </button>
-            <button onClick={() => setOptsOpen((o) => !o)} title="Options" style={{
+            <button onClick={() => setOptsOpen((o) => !o)} style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26,
               background: accent, borderLeft: `1px solid ${ZT.bg}44`, border: '1px solid transparent',
               borderRadius: '0 6px 6px 0', color: ZT.bg, cursor: 'pointer',
-            }}>
+            }} title="Options">
               <Icon name="chevron" size={12} stroke={2.2} style={{ transform: 'rotate(90deg)' }} />
             </button>
 
@@ -331,12 +331,12 @@ const VbCommandBar = ({ accent }) => {
                   <div style={{ ...T.micro, padding: '6px 9px 4px' }}>Options</div>
                   {RUN_MODES.map((m) => (
                     <div key={m.id} onClick={() => { setRunMode(m.id); setOptsOpen(false); }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = m.id === runMode ? 'rgba(255,255,255,0.05)' : 'transparent'; }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 9, padding: '8px 9px', borderRadius: 4, cursor: 'pointer',
                         background: m.id === runMode ? 'rgba(255,255,255,0.05)' : 'transparent',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = m.id === runMode ? 'rgba(255,255,255,0.05)' : 'transparent'; }}>
+                      }}>
                       <Icon name={m.id === runMode ? 'check' : m.icon} size={13} style={{ color: m.id === runMode ? accent : ZT.ink3, flex: '0 0 auto' }} />
                       <span style={{ ...T.bodySm, fontSize: 12.5, color: ZT.ink }}>{m.label}</span>
                     </div>
@@ -351,13 +351,13 @@ const VbCommandBar = ({ accent }) => {
       {!ack ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 12 }}>
           {VB_SUGGESTIONS.map((s) => (
-            <button key={s} onClick={() => submit(s)} style={{
+            <button key={s} onClick={() => submit(s)} onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}
+            style={{
               fontFamily: ZT.mono, fontSize: 11, color: ZT.ink2, cursor: 'pointer',
               padding: '6px 11px', borderRadius: 999, background: 'transparent',
               border: `1px solid ${ZT.line}`, transition: 'all .14s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}>
+            }}>
               {s}
             </button>
           ))}
@@ -389,9 +389,9 @@ const VbHero = () => {
     </div>
   );
   return (
-    <ZtPanel pad={24} live liveColor={ZT.run}>
+    <ZtPanel live liveColor={ZT.run} pad={24}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        <ZtDot state="ok" size={7} />
+        <ZtDot size={7} state="ok" />
         <span style={{ ...T.label, color: ZT.ok }}>Nominal</span>
         <span style={{ ...T.micro, marginLeft: 6 }}>démon na {SYSTEM.host} · vzhůru {SYSTEM.uptime} · caffeinate · noční konsolidace 06:55</span>
       </div>
@@ -400,10 +400,10 @@ const VbHero = () => {
         <span style={{ color: ZT.run }}>{o.reported} ti reportuju</span> a <span style={{ color: ZT.wait }}>{o.waiting} čekají</span>.
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 22, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${ZT.line}` }}>
-        <Stat n={o.silent} label="Tier 1 · zalogováno" c={ZT.ink2} />
-        <Stat n={o.reported} label="Tier 2 · reporty" c={ZT.run} />
-        <Stat n={o.waiting} label="Tier 3 · čeká na tebe" c={ZT.wait} />
-        <Stat n={o.learned} label="vzorce naučeno" c={ZT.accent} />
+        <Stat c={ZT.ink2} label="Tier 1 · zalogováno" n={o.silent} />
+        <Stat c={ZT.run} label="Tier 2 · reporty" n={o.reported} />
+        <Stat c={ZT.wait} label="Tier 3 · čeká na tebe" n={o.waiting} />
+        <Stat c={ZT.accent} label="vzorce naučeno" n={o.learned} />
       </div>
     </ZtPanel>
   );
@@ -421,18 +421,18 @@ const VbBriefRow = ({ row, last }) => (
       <div style={{ ...T.micro, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.sub}</div>
     </div>
     {row.action && (
-      <ZtBtn size="sm" icon={row.action.kind === 'pr' ? 'branch' : 'retry'}>{row.action.label}</ZtBtn>
+      <ZtBtn icon={row.action.kind === 'pr' ? 'branch' : 'retry'} size="sm">{row.action.label}</ZtBtn>
     )}
   </div>
 );
 
 const VbBriefing = () => (
-  <ZtPanel title="Ranní brífink · co se stalo přes noc" pad={20} right={<span style={T.micro}>14. 6. · 06:55</span>}>
+  <ZtPanel pad={20} right={<span style={T.micro}>14. 6. · 06:55</span>} title="Ranní brífink · co se stalo přes noc">
     <div style={{ ...T.body, fontSize: 14.5, lineHeight: 1.6, color: ZT.ink2, marginBottom: 6, textWrap: 'pretty' }}>
       {VB_NARRATIVE}
     </div>
     <div style={{ marginTop: 8 }}>
-      {VB_NIGHT.map((r, i) => <VbBriefRow key={r.id} row={r} last={i === VB_NIGHT.length - 1} />)}
+      {VB_NIGHT.map((r, i) => <VbBriefRow key={r.id} last={i === VB_NIGHT.length - 1} row={r} />)}
     </div>
   </ZtPanel>
 );
@@ -463,19 +463,19 @@ const VbTierLine = ({ text, sub, proj, dim }) => (
 );
 
 const VbAutonomy = ({ onNav }) => (
-  <ZtPanel title="Autonomie přes noc · co jsem směl a co ne" pad={20}
-    right={<span style={T.micro}>gate · per-projekt, per-akce</span>}>
+  <ZtPanel pad={20} right={<span style={T.micro}>gate · per-projekt, per-akce</span>}
+    title="Autonomie přes noc · co jsem směl a co ne">
     <div className="vb-tiers">
-      <VbTierColumn tier={1} count={VB_OVERNIGHT.silent}>
-        {VB_TIER1.slice(0, 3).map((x) => <VbTierLine key={x.id} text={x.text} proj={x.proj} sub={x.at} dim />)}
+      <VbTierColumn count={VB_OVERNIGHT.silent} tier={1}>
+        {VB_TIER1.slice(0, 3).map((x) => <VbTierLine dim key={x.id} proj={x.proj} sub={x.at} text={x.text} />)}
         <button onClick={() => onNav && onNav('runs')} style={{ ...T.micro, color: ZT.accent, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '2px 0' }}>
           + {VB_TIER1.length - 3} dalších v activity logu →
         </button>
       </VbTierColumn>
-      <VbTierColumn tier={2} count={VB_OVERNIGHT.reported}>
-        {VB_TIER2.map((x) => <VbTierLine key={x.id} text={x.text} sub={x.note} proj={x.proj} />)}
+      <VbTierColumn count={VB_OVERNIGHT.reported} tier={2}>
+        {VB_TIER2.map((x) => <VbTierLine key={x.id} proj={x.proj} sub={x.note} text={x.text} />)}
       </VbTierColumn>
-      <VbTierColumn tier={3} count={VB_OVERNIGHT.waiting}>
+      <VbTierColumn count={VB_OVERNIGHT.waiting} tier={3}>
         {VB_TIER3.map((x) => (
           <div key={x.id} style={{ padding: '9px 11px', borderRadius: ZT.rCtl, background: `${ZT.wait}0d`, border: `1px solid ${ZT.wait}33` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
@@ -523,8 +523,8 @@ const VbPromotion = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 9 }}>
-          <ZtBtn variant="primary" size="sm" icon="check" onClick={() => setDec('ok')}>Ano, dělej to sám</ZtBtn>
-          <ZtBtn variant="ghost" size="sm" icon="x" onClick={() => setDec('no')}>Ptej se dál</ZtBtn>
+          <ZtBtn icon="check" onClick={() => setDec('ok')} size="sm" variant="primary">Ano, dělej to sám</ZtBtn>
+          <ZtBtn icon="x" onClick={() => setDec('no')} size="sm" variant="ghost">Ptej se dál</ZtBtn>
         </div>
       )}
     </div>
@@ -532,12 +532,12 @@ const VbPromotion = () => {
 };
 
 const VbLearning = ({ onNav }) => (
-  <ZtPanel title="Co jsem se naučil · noční konsolidace" pad={20}
-    right={<span style={{ ...T.micro }}><Icon name="brain" size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 5, color: ZT.ink3 }} />semantic memory</span>}>
+  <ZtPanel pad={20} right={<span style={{ ...T.micro }}><Icon name="brain" size={13} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 5, color: ZT.ink3 }} />semantic memory</span>}
+    title="Co jsem se naučil · noční konsolidace">
     <div style={{ ...T.bodySm, marginBottom: 14 }}>{VB_CONSOLIDATION}</div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
       {VB_PATTERNS.map((p) => (
-        <div key={p.id} onClick={() => onNav && onNav('memory')} title="otevřít ve vaultu" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}`, cursor: 'pointer' }}>
+        <div key={p.id} onClick={() => onNav && onNav('memory')} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}`, cursor: 'pointer' }} title="otevřít ve vaultu">
           <Icon name="doc" size={15} style={{ color: ZT.ink3, flex: '0 0 auto' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ ...T.bodySm, fontSize: 12.5, color: ZT.ink }}>{p.text}</div>
@@ -573,7 +573,7 @@ const VbStandupCard = ({ s }) => {
     </div>
   );
   return (
-    <ZtPanel pad={16} hi={false} style={{ borderColor: ZT.line }}>
+    <ZtPanel hi={false} pad={16} style={{ borderColor: ZT.line }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 13 }}>
         <span style={{ width: 8, height: 8, borderRadius: 2, background: c }} />
         <span style={{ fontFamily: ZT.mono, fontSize: 13, fontWeight: 700, color: ZT.ink }}>{s.proj}</span>
@@ -581,12 +581,12 @@ const VbStandupCard = ({ s }) => {
         <span style={{ marginLeft: 'auto', fontFamily: ZT.mono, fontSize: 11, color: s.time === '—' ? ZT.ink3 : c }}>{s.time === '—' ? 'bez standupu' : '⏱ ' + s.time}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <Row label="HOTOVO" items={s.done} />
-        <Row label="DNES" items={s.today} />
-        {s.blockers.length > 0 && <Row label="BLOKERY" items={s.blockers} />}
+        <Row items={s.done} label="HOTOVO" />
+        <Row items={s.today} label="DNES" />
+        {s.blockers.length > 0 && <Row items={s.blockers} label="BLOKERY" />}
       </div>
       <div style={{ marginTop: 14 }}>
-        <ZtBtn size="sm" icon={copied ? 'check' : 'doc'} onClick={copy}>{copied ? 'Zkopírováno' : 'Kopírovat tahák'}</ZtBtn>
+        <ZtBtn icon={copied ? 'check' : 'doc'} onClick={copy} size="sm">{copied ? 'Zkopírováno' : 'Kopírovat tahák'}</ZtBtn>
       </div>
     </ZtPanel>
   );
@@ -609,8 +609,8 @@ const VbSelfMod = ({ onNav }) => {
   const [dec, setDec] = useStateVB(null);
   const s = VB_SELFMOD;
   return (
-    <ZtPanel title="Self-modification · ZIBBY vylepšuje sebe" pad={20}
-      right={<span style={{ ...T.micro, color: ZT.wait }}>{s.gate}</span>}>
+    <ZtPanel pad={20} right={<span style={{ ...T.micro, color: ZT.wait }}>{s.gate}</span>}
+      title="Self-modification · ZIBBY vylepšuje sebe">
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
         <div style={{ width: 38, height: 38, flex: '0 0 auto', borderRadius: ZT.rCtl, display: 'grid', placeItems: 'center', background: `${ZT.riskPush}16`, color: ZT.riskPush, border: `1px solid ${ZT.riskPush}44` }}>
           <Icon name="branch" size={18} />
@@ -633,8 +633,8 @@ const VbSelfMod = ({ onNav }) => {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
-              <ZtBtn variant="primary" size="sm" icon="check" onClick={() => setDec('ok')}>Schválit merge</ZtBtn>
-              <ZtBtn variant="ghost" size="sm" icon="branch" onClick={() => onNav && onNav('runs')}>Zobrazit PR</ZtBtn>
+              <ZtBtn icon="check" onClick={() => setDec('ok')} size="sm" variant="primary">Schválit merge</ZtBtn>
+              <ZtBtn icon="branch" onClick={() => onNav && onNav('runs')} size="sm" variant="ghost">Zobrazit PR</ZtBtn>
             </div>
           )}
         </div>
@@ -654,7 +654,7 @@ const VbRail = ({ onNav }) => {
           <span style={{ ...T.micro, color: ZT.ink2 }}>{label}</span>
           <span style={{ fontFamily: ZT.mono, fontSize: 12, fontWeight: 600, color: d.usedPct >= 60 ? c : ZT.ink }}>{d.usedPct} %</span>
         </div>
-        <ZtMeter pct={d.usedPct} color={d.usedPct >= 60 ? c : 'rgba(255,255,255,0.28)'} h={4} />
+        <ZtMeter color={d.usedPct >= 60 ? c : 'rgba(255,255,255,0.28)'} h={4} pct={d.usedPct} />
         <div style={{ ...T.micro, fontSize: 10.5, marginTop: 6 }}>reset {d.resetIn} · {d.tokens}</div>
       </div>
     );
@@ -663,33 +663,33 @@ const VbRail = ({ onNav }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ ...T.label, marginBottom: 12 }}>Čeká na tebe · {VB_TIER3.length}</div>
-        <ZtApproval density="rail" onDecide={() => {}} a={{
+        <ZtApproval a={{
           actor: VB_TIER3[0].actor, action: VB_TIER3[0].action, risk: VB_TIER3[0].risk,
           impact: VB_TIER3[0].impact, impactNote: VB_TIER3[0].impactNote, detailLink: 'náhled diffu',
-        }} />
+        }} density="rail" onDecide={() => {}} />
         <div style={{ marginTop: 10 }}>
-          <ZtBtn size="sm" icon="arrow" onClick={() => onNav && onNav('approvals')}>Celá fronta ({VB_TIER3.length})</ZtBtn>
+          <ZtBtn icon="arrow" onClick={() => onNav && onNav('approvals')} size="sm">Celá fronta ({VB_TIER3.length})</ZtBtn>
         </div>
       </div>
 
-      <ZtPanel title="Běží" live liveColor={ZT.run} pad={18} right={<span style={T.micro}>{RUNNING_AGENTS.length} agenti</span>}>
+      <ZtPanel live liveColor={ZT.run} pad={18} right={<span style={T.micro}>{RUNNING_AGENTS.length} agenti</span>} title="Běží">
         {RUNNING_AGENTS.map((a, i) => (
           <div key={a.id} style={{ padding: '10px 0', borderBottom: i < RUNNING_AGENTS.length - 1 ? `1px solid ${ZT.line}` : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <ZtDot state="run" size={6} />
+              <ZtDot size={6} state="run" />
               <span style={{ fontFamily: ZT.mono, fontSize: 12.5, fontWeight: 600, color: ZT.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.skill}</span>
               <span style={{ ...T.micro, color: ZT.run }}>{a.pct} %</span>
             </div>
             <div style={{ ...T.micro, margin: '5px 0 7px', paddingLeft: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.prompt}</div>
-            <div style={{ paddingLeft: 14 }}><ZtMeter pct={a.pct} color={ZT.run} /></div>
+            <div style={{ paddingLeft: 14 }}><ZtMeter color={ZT.run} pct={a.pct} /></div>
           </div>
         ))}
-        <div style={{ marginTop: 10 }}><ZtBtn size="sm" icon="pulse" onClick={() => onNav && onNav('runs')}>Otevřít aktivitu</ZtBtn></div>
+        <div style={{ marginTop: 10 }}><ZtBtn icon="pulse" onClick={() => onNav && onNav('runs')} size="sm">Otevřít aktivitu</ZtBtn></div>
       </ZtPanel>
 
-      <ZtPanel title="Limity" pad={18} right={<span style={T.micro}>jediný domov limitů</span>}>
-        <LimRow label="Claude · 5h" d={r} />
-        <LimRow label="Claude · týden" d={w} />
+      <ZtPanel pad={18} right={<span style={T.micro}>jediný domov limitů</span>} title="Limity">
+        <LimRow d={r} label="Claude · 5h" />
+        <LimRow d={w} label="Claude · týden" />
       </ZtPanel>
     </div>
   );
@@ -717,9 +717,9 @@ function AppB() {
 
   return (
     <Frame skin="velin">
-      <Sidebar active="overview" accent={accent} onNav={go} />
+      <Sidebar accent={accent} active="overview" onNav={go} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <TopBar accent={accent} nav="overview" lang={lang} onLang={setLang} />
+        <TopBar accent={accent} lang={lang} nav="overview" onLang={setLang} />
         <div style={{ flex: 1, overflow: 'auto', position: 'relative', padding: '24px 26px' }}>
           <VelinBBody onNav={go} />
         </div>

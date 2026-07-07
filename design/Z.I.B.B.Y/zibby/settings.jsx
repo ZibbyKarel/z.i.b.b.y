@@ -66,6 +66,8 @@ const ShortcutCapture = ({ value, accent, onChange }) => {
       <ShortcutBadge sc={sc} />
       <button
         onClick={() => setCapturing(c => !c)}
+        onMouseEnter={e => { if (!capturing) { e.currentTarget.style.borderColor = Z.lineHi; e.currentTarget.style.color = Z.ink; } }}
+        onMouseLeave={e => { if (!capturing) { e.currentTarget.style.borderColor = Z.line; e.currentTarget.style.color = Z.inkDim; } }}
         style={{
           padding: '6px 13px', cursor: 'pointer', borderRadius: 3,
           fontFamily: Z.mono, fontSize: 11, minWidth: 130,
@@ -74,22 +76,20 @@ const ShortcutCapture = ({ value, accent, onChange }) => {
           color: capturing ? accent : Z.inkDim,
           transition: 'all .15s',
         }}
-        onMouseEnter={e => { if (!capturing) { e.currentTarget.style.borderColor = Z.lineHi; e.currentTarget.style.color = Z.ink; } }}
-        onMouseLeave={e => { if (!capturing) { e.currentTarget.style.borderColor = Z.line; e.currentTarget.style.color = Z.inkDim; } }}
       >
         {capturing ? '↩ stiskni klávesu…' : 'Změnit zkratku'}
       </button>
       {!isDefault && (
         <button
           onClick={() => onChange(DEFAULT_VOICE_SHORTCUT)}
+          onMouseEnter={e => { e.currentTarget.style.color = Z.inkDim; }}
+          onMouseLeave={e => { e.currentTarget.style.color = Z.inkFaint; }}
           style={{
             padding: '6px 10px', cursor: 'pointer', borderRadius: 3,
             fontFamily: Z.mono, fontSize: 10, color: Z.inkFaint,
             background: 'transparent', border: `1px solid ${Z.line}`,
             transition: 'all .15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = Z.inkDim; }}
-          onMouseLeave={e => { e.currentTarget.style.color = Z.inkFaint; }}
         >
           reset
         </button>
@@ -138,12 +138,12 @@ const Segmented = ({ value, options, accent, onChange }) => (
 
 // toggle switch
 const Switch = ({ on, accent, onToggle }) => (
-  <button onClick={onToggle} title={on ? 'zapnuto' : 'vypnuto'} style={{
+  <button onClick={onToggle} style={{
     width: 46, height: 26, borderRadius: 26, padding: 3, cursor: 'pointer', display: 'flex',
     justifyContent: on ? 'flex-end' : 'flex-start', alignItems: 'center',
     border: `1px solid ${on ? accent : Z.line}`, background: on ? `${accent}26` : Z.bg0,
     transition: 'all .15s',
-  }}>
+  }} title={on ? 'zapnuto' : 'vypnuto'}>
     <span style={{ width: 18, height: 18, borderRadius: '50%', background: on ? accent : Z.inkFaint, boxShadow: on ? `0 0 10px ${accent}88` : 'none', transition: 'all .15s' }} />
   </button>
 );
@@ -210,36 +210,36 @@ const SettingsBody = ({ accent, settings, saveSettings, gateRules, setGateRules,
           {sub === 'general' ? (
             <React.Fragment>
               {/* preferences */}
-              <HudPanel accent={accent} title={t.preferences} pad={20}>
+              <HudPanel accent={accent} pad={20} title={t.preferences}>
                 <SettingRow
-                  label={t.language}
-                  hint={t.languageHint}
                   control={
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                      <Segmented value={settings.lang} accent={accent} onChange={(v) => saveSettings({ lang: v })}
-                        options={[{ id: 'cs', label: 'Čeština' }, { id: 'en', label: 'English' }]} />
+                      <Segmented accent={accent} onChange={(v) => saveSettings({ lang: v })} options={[{ id: 'cs', label: 'Čeština' }, { id: 'en', label: 'English' }]}
+                        value={settings.lang} />
                       <Mono style={{ fontSize: 9, color: accent }}>{t.langNote}</Mono>
                     </div>
-                  } />
+                  }
+                  hint={t.languageHint}
+                  label={t.language} />
                 <SettingRow
-                  label={t.caffeinate}
+                  control={<Switch accent={accent} on={settings.caffeinate} onToggle={() => saveSettings({ caffeinate: !settings.caffeinate })} />}
                   hint={t.caffeinateHint}
-                  control={<Switch on={settings.caffeinate} accent={accent} onToggle={() => saveSettings({ caffeinate: !settings.caffeinate })} />} />
+                  label={t.caffeinate} />
                 <SettingRow
                   last
-                  label={t.voiceShortcut}
-                  hint={t.voiceShortcutHint}
                   control={
                     <ShortcutCapture
-                      value={settings.voiceShortcut}
                       accent={accent}
                       onChange={(sc) => saveSettings({ voiceShortcut: sc })}
+                      value={settings.voiceShortcut}
                     />
-                  } />
+                  }
+                  hint={t.voiceShortcutHint}
+                  label={t.voiceShortcut} />
               </HudPanel>
 
               {/* system info */}
-              <HudPanel accent={accent} title={t.system} pad={20}>
+              <HudPanel accent={accent} pad={20} title={t.system}>
                 <InfoRow label={t.daemon} value={SYSTEM.daemon} />
                 <InfoRow label={t.host} value={SYSTEM.host} />
                 <InfoRow label={t.uptime} value={SYSTEM.uptime} />
@@ -250,12 +250,12 @@ const SettingsBody = ({ accent, settings, saveSettings, gateRules, setGateRules,
             gateRules && (
               <GateRulesBody
                 accent={accent}
-                gateRules={gateRules}
-                setGateRules={setGateRules}
                 agents={agents || AGENTS}
-                skills={skills || SKILLS}
                 cats={gateCats || GATE_RULE_CATEGORIES}
+                gateRules={gateRules}
                 setCats={setGateCats || (() => {})}
+                setGateRules={setGateRules}
+                skills={skills || SKILLS}
               />
             )
           )}

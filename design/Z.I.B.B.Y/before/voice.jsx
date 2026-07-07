@@ -63,15 +63,15 @@ function VoiceOrb({ state, accent }) {
 
       {/* SVG orbital rings */}
       <svg
-        style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
-        viewBox={`0 0 ${S} ${S}`} width={S} height={S}
+        height={S}
+        style={{ position: 'absolute', inset: 0, overflow: 'visible' }} viewBox={`0 0 ${S} ${S}`} width={S}
       >
         {/* outer dashed orbit */}
         <circle
-          cx={cx} cy={cx} r={cx - 6}
-          stroke={accent} strokeWidth="1"
-          strokeDasharray="3 13"
-          opacity={isActive ? 0.5 : 0.22} fill="none"
+          cx={cx} cy={cx} fill="none"
+          opacity={isActive ? 0.5 : 0.22} r={cx - 6}
+          stroke={accent}
+          strokeDasharray="3 13" strokeWidth="1"
           style={{
             transformOrigin: `${cx}px ${cx}px`,
             animation: `vOrbitCW ${isThinking ? '3.2s' : '20s'} linear infinite`,
@@ -79,10 +79,10 @@ function VoiceOrb({ state, accent }) {
         />
         {/* second dashed orbit (counter, small) */}
         <circle
-          cx={cx} cy={cx} r={cx - 22}
-          stroke={accent} strokeWidth="0.8"
-          strokeDasharray="2 18"
-          opacity={isActive ? 0.35 : 0.12} fill="none"
+          cx={cx} cy={cx} fill="none"
+          opacity={isActive ? 0.35 : 0.12} r={cx - 22}
+          stroke={accent}
+          strokeDasharray="2 18" strokeWidth="0.8"
           style={{
             transformOrigin: `${cx}px ${cx}px`,
             animation: `vOrbitCCW ${isThinking ? '4s' : '28s'} linear infinite`,
@@ -91,8 +91,8 @@ function VoiceOrb({ state, accent }) {
         {/* inner arc (partial, fast) */}
         <path
           d={`M ${cx} ${cx - (cx - 40)} A ${cx - 40} ${cx - 40} 0 0 1 ${cx + (cx - 40)} ${cx}`}
-          stroke={accent} strokeWidth={isActive ? '2' : '1.2'} fill="none"
-          opacity={isActive ? 0.72 : 0.38}
+          fill="none" opacity={isActive ? 0.72 : 0.38} stroke={accent}
+          strokeWidth={isActive ? '2' : '1.2'}
           style={{
             transformOrigin: `${cx}px ${cx}px`,
             animation: `vOrbitCCW ${isThinking ? '2.2s' : '13s'} linear infinite`,
@@ -101,10 +101,10 @@ function VoiceOrb({ state, accent }) {
         {/* thinking progress arc */}
         {isThinking && (
           <circle
-            cx={cx} cy={cx} r={cx - 56}
-            stroke={accent} strokeWidth="2.5" fill="none"
+            cx={cx} cy={cx} fill="none"
+            opacity="0.85" r={cx - 56} stroke={accent}
             strokeDasharray="220" strokeDashoffset="220"
-            opacity="0.85"
+            strokeWidth="2.5"
             style={{
               transformOrigin: `${cx}px ${cx}px`,
               transform: 'rotate(-90deg)',
@@ -118,10 +118,10 @@ function VoiceOrb({ state, accent }) {
           const rad = (deg - 90) * Math.PI / 180;
           return (
             <line key={i}
-              x1={cx + Math.cos(rad) * r0} y1={cx + Math.sin(rad) * r0}
-              x2={cx + Math.cos(rad) * r1} y2={cx + Math.sin(rad) * r1}
-              stroke={accent} strokeWidth="1"
-              opacity={isActive ? 0.5 : 0.18}
+              opacity={isActive ? 0.5 : 0.18} stroke={accent}
+              strokeWidth="1" x1={cx + Math.cos(rad) * r0}
+              x2={cx + Math.cos(rad) * r1} y1={cx + Math.sin(rad) * r0}
+              y2={cx + Math.sin(rad) * r1}
             />
           );
         })}
@@ -139,7 +139,7 @@ function VoiceOrb({ state, accent }) {
           : 'vBreath 3.8s ease-in-out infinite, vGlowIdle 3.8s ease-in-out infinite',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          <ZibbyMark size={38} color={accent} />
+          <ZibbyMark color={accent} size={38} />
           <Mono style={{ fontSize: 8, letterSpacing: '0.28em', color: accent, opacity: isActive ? 0.9 : 0.5 }}>
             Z·I·B·B·Y
           </Mono>
@@ -315,7 +315,7 @@ function VoiceScreen({ accent, onExit }) {
         flexShrink: 0, position: 'relative', zIndex: 2,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <ZibbyMark size={18} color={accent} />
+          <ZibbyMark color={accent} size={18} />
           <Mono style={{ fontSize: 10.5, color: accent, letterSpacing: '0.22em' }}>VOICE MODE</Mono>
           <span style={{
             display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
@@ -328,7 +328,9 @@ function VoiceScreen({ accent, onExit }) {
 
         <Mono style={{ fontSize: 15, color: Z.ink, fontWeight: 600 }}>{timeStr}</Mono>
 
-        <button onClick={onExit} style={{
+        <button onClick={onExit} onMouseEnter={e => { e.currentTarget.style.color = Z.ink; e.currentTarget.style.borderColor = accent; }}
+          onMouseLeave={e => { e.currentTarget.style.color = Z.inkDim; e.currentTarget.style.borderColor = Z.line; }}
+          style={{
           display: 'flex', alignItems: 'center', gap: 7,
           padding: '7px 14px', cursor: 'pointer',
           background: 'transparent', border: `1px solid ${Z.line}`,
@@ -336,8 +338,6 @@ function VoiceScreen({ accent, onExit }) {
           fontFamily: Z.mono, fontSize: 11,
           transition: 'all .15s',
         }}
-          onMouseEnter={e => { e.currentTarget.style.color = Z.ink; e.currentTarget.style.borderColor = accent; }}
-          onMouseLeave={e => { e.currentTarget.style.color = Z.inkDim; e.currentTarget.style.borderColor = Z.line; }}
         >
           <Icon name="grid" size={13} /> HUD
         </button>
@@ -348,10 +348,10 @@ function VoiceScreen({ accent, onExit }) {
 
         {/* TL — Active agents */}
         <div style={{ position: 'absolute', top: 18, left: 20 }}>
-          <VoicePanel title="Aktivní agenti" icon="bot">
+          <VoicePanel icon="bot" title="Aktivní agenti">
             {RUNNING_AGENTS.length > 0 ? RUNNING_AGENTS.map(a => (
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
-                <Dot color={Z.run} pulse size={5} />
+                <Dot pulse color={Z.run} size={5} />
                 <Mono style={{ fontSize: 10.5, color: Z.ink, flex: 1 }}>{a.skill}</Mono>
                 <div style={{ width: 40, height: 2, background: Z.line, borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ width: `${a.pct}%`, height: '100%', background: accent }} />
@@ -366,7 +366,7 @@ function VoiceScreen({ accent, onExit }) {
 
         {/* TR — Pending approvals */}
         <div style={{ position: 'absolute', top: 18, right: 20 }}>
-          <VoicePanel title="Čekají na schválení" icon="shield">
+          <VoicePanel icon="shield" title="Čekají na schválení">
             {APPROVALS.map(a => (
               <div key={a.id} style={{ marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -386,7 +386,7 @@ function VoiceScreen({ accent, onExit }) {
 
         {/* BL — Recent activity */}
         <div style={{ position: 'absolute', bottom: 18, left: 20 }}>
-          <VoicePanel title="Nedávná aktivita" icon="pulse">
+          <VoicePanel icon="pulse" title="Nedávná aktivita">
             {ACTIVITY.slice(0, 3).map(e => (
               <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 7 }}>
                 <div style={{ marginTop: 3 }}>
@@ -403,7 +403,7 @@ function VoiceScreen({ accent, onExit }) {
 
         {/* BR — Quick actions */}
         <div style={{ position: 'absolute', bottom: 18, right: 20 }}>
-          <VoicePanel title="Rychlé akce" icon="spark">
+          <VoicePanel icon="spark" title="Rychlé akce">
             {FAV_SKILLS_WORK.slice(0, 3).map(s => (
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
                 <Icon name={s.glyph} size={12} style={{ color: accent }} />
@@ -419,8 +419,8 @@ function VoiceScreen({ accent, onExit }) {
 
         {/* ── Center column ────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26 }}>
-          <VoiceTranscript messages={messages} accent={accent} />
-          <VoiceOrb state={state} accent={accent} />
+          <VoiceTranscript accent={accent} messages={messages} />
+          <VoiceOrb accent={accent} state={state} />
 
           {/* Status */}
           <div style={{ textAlign: 'center', minHeight: 46 }}>
@@ -464,7 +464,7 @@ function VoiceScreen({ accent, onExit }) {
         flexShrink: 0, position: 'relative', zIndex: 2,
       }}>
         {/* Mic toggle */}
-        <button onClick={handleMic} title={isActive ? 'Zastavit (klikni)' : 'Spustit demo (klikni)'} style={{
+        <button onClick={handleMic} style={{
           width: 56, height: 56, borderRadius: '50%', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: isActive ? accent : 'rgba(91,141,239,0.10)',
@@ -472,25 +472,25 @@ function VoiceScreen({ accent, onExit }) {
           color: isActive ? Z.bg0 : accent,
           boxShadow: isActive ? `0 0 30px ${accent}60, 0 0 60px ${accent}22` : 'none',
           transition: 'all 0.28s cubic-bezier(.22,.68,0,1.2)',
-        }}>
-          <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="2" width="6" height="12" rx="3" />
+        }} title={isActive ? 'Zastavit (klikni)' : 'Spustit demo (klikni)'}>
+          <svg fill="none" height={22} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width={22}>
+            <rect height="12" rx="3" width="6" x="9" y="2" />
             <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
             <path d="M12 19v3M8 22h8" />
           </svg>
         </button>
 
         {/* Speaker */}
-        <button title="Hlasitost" style={{
+        <button onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }} onMouseLeave={e => { e.currentTarget.style.borderColor = Z.line; e.currentTarget.style.color = Z.inkDim; }}
+          style={{
           width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkDim,
           transition: 'all 0.18s',
         }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = Z.line; e.currentTarget.style.color = Z.inkDim; }}
+          title="Hlasitost"
         >
-          <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <svg fill="none" height={16} stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" viewBox="0 0 24 24" width={16}>
             <path d="M11 5L6 9H2v6h4l5 4V5z" />
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
           </svg>

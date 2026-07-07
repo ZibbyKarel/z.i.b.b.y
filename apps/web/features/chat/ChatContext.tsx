@@ -23,6 +23,15 @@ export const CHAT_SHORTCUT_KEY = "j";
 const CHAT_ROUTE = "/chat";
 const CHAT_HOME_ROUTE = "/overview";
 
+/** localStorage key the conversation id survives a full page reload under. */
+const CHAT_CONVERSATION_KEY = "zibby.chat.conversationId";
+
+/** SSR-guarded read — `null` covers both "no window yet" and "never set". */
+function readStoredConversationId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CHAT_CONVERSATION_KEY);
+}
+
 interface ChatStore {
   /** Navigate to `/chat`, minting a conversation if this thread doesn't have one yet. */
   open: () => void;
@@ -43,6 +52,13 @@ interface ChatStore {
    * always lands on a thread, not just the in-app open/⌘J trigger.
    */
   ensureConversation: () => void;
+  /**
+   * Adopt a conversation id without minting one — used by `/chat`'s mount
+   * hydration to accept the server's authoritative id (e.g. the cold-start case
+   * where localStorage is empty but the server already has an active thread).
+   * Persisted the same way any other id change is.
+   */
+  setConversationId: Dispatch<SetStateAction<string | null>>;
   /** The transcript, lifted here so it survives `/chat` unmounting on navigation. */
   messages: ChatMessageType[];
   setMessages: Dispatch<SetStateAction<ChatMessageType[]>>;
@@ -64,14 +80,29 @@ const ChatContext = createContext<ChatStore | null>(null);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  // The conversation owned by the current thread. It is minted once (lazily, the
-  // first time it's needed) and then PRESERVED across leaving `/chat` and coming
-  // back, so the operator can dip in and out without losing the thread — the same
-  // id keeps `--resume`-ing ZIBBY's `claude` session. Only `newChat` mints a fresh id.
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  // The conversation owned by the current thread. Lazily initialised from
+  // localStorage so a full page reload re-attaches to the same thread (rather than
+  // minting a new one and orphaning the on-disk transcript + `--resume` session);
+  // falls back to `null` (mint-on-demand via `ensureConversation`) the first time
+  // this thread has ever opened chat, or on the server. Only `newChat` mints a
+  // fresh id thereafter.
+  const [conversationId, setConversationId] = useState<string | null>(readStoredConversationId);
   // The transcript lives here (above the `/chat` route) so it survives navigating
   // away — coming back to `/chat` shows the same conversation rather than a blank.
+  // Reload hydration (from the persisted transcript) is wired by `Screen`, which
+  // owns the `getTranscript` query and seeds this via `setMessages`.
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
+
+  // Keep localStorage in sync so the NEXT full reload finds this id — cleared
+  // entirely when there's no conversation (nothing to resume).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (conversationId) {
+      window.localStorage.setItem(CHAT_CONVERSATION_KEY, conversationId);
+    } else {
+      window.localStorage.removeItem(CHAT_CONVERSATION_KEY);
+    }
+  }, [conversationId]);
 
   const ensureConversation = useCallback(() => {
     setConversationId((id) => id ?? `conv_${crypto.randomUUID()}`);
@@ -122,6 +153,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       toggle,
       conversationId,
       ensureConversation,
+      setConversationId,
       messages,
       setMessages,
       newChat,
