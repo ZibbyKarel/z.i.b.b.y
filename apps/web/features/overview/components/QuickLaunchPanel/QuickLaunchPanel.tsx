@@ -21,6 +21,8 @@ interface ResolvedPin {
   id: string;
   name: string;
   glyph: IconName;
+  /** Optional avatar (agents/pipelines) shown in place of the glyph on the pin card. */
+  avatar?: string;
 }
 
 /** Localized kind label shown as the card's meta line (matches the agent/pipeline
@@ -64,13 +66,22 @@ export function QuickLaunchPanel() {
           id: agent.id,
           name: agent.name ?? agent.id,
           glyph: (agent.glyph as IconName | undefined) ?? "bot",
+          avatar: agent.avatar,
         },
       ];
     }
     if (pin.kind === "pipeline") {
       const pipeline = pipelines.find((p) => p.id === pin.id);
       if (!pipeline) return [];
-      return [{ kind: "pipeline" as const, id: pipeline.id, name: pipeline.name ?? pipeline.id, glyph: "flow" }];
+      return [
+        {
+          kind: "pipeline" as const,
+          id: pipeline.id,
+          name: pipeline.name ?? pipeline.id,
+          glyph: "flow",
+          avatar: pipeline.avatar,
+        },
+      ];
     }
     const chain = chains.find((c) => c.id === pin.id);
     if (!chain) return [];
@@ -117,6 +128,7 @@ export function QuickLaunchPanel() {
                 </Stack>
               }
               glyph={item.glyph}
+              logoSrc={item.avatar}
               subtitle={t(KIND_LABEL[item.kind])}
               title={item.name}
             />
