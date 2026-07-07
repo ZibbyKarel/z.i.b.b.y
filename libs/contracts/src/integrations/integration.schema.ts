@@ -112,22 +112,47 @@ export const IntegrationStatusSchema = z.enum(["connected", "disconnected", "err
 export type IntegrationStatus = z.infer<typeof IntegrationStatusSchema>;
 
 /**
- * A configured inbound channel (Phase 5). On disk: one `<id>.json` under
- * `data/integrations`. `status` / `lastSyncAt` / `lastError` are stamped by the
- * watcher and the connection test, never by a client. `hasCredentials` is computed
- * at read time from the separate gitignored credentials store — the secret itself
- * is never stored on, nor served from, the entity (Law 3 / credentials hygiene).
+ * Enforces "exactly one owner": an integration belongs to a project OR a company
+ * (Phase 68), never both, never neither. Shared by `IntegrationSchema` and
+ * `CreateIntegrationSchema` via `.superRefine`. Not applied to `UpdateIntegrationSchema`
+ * — a partial patch may touch neither field (no ownership change) without tripping it.
  */
-export const IntegrationSchema = z.object({
+function requireExactlyOneOwner(
+  data: { projectId?: string | undefined; companyId?: string | undefined },
+  ctx: z.RefinementCtx,
+): void {
+  const hasProject = data.projectId !== undefined;
+  const hasCompany = data.companyId !== undefined;
+  if (hasProject === hasCompany) {
+    const message = "exactly one of projectId or companyId must be set (not both, not neither)";
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: ["projectId"] });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: ["companyId"] });
+  }
+}
+
+/**
+ * The un-refined object shape shared by the full entity and the create body —
+ * kept separate from `IntegrationSchema` because `.superRefine` returns a
+ * `ZodEffects`, which cannot `.omit()`/`.partial()` (needed below for the update
+ * body).
+ */
+const IntegrationObjectSchema = z.object({
   id: IntegrationIdSchema,
   kind: IntegrationKindSchema,
   /**
-   * The project (one project = one company) this integration belongs to. Integrations
-   * are owned by a project and managed from its detail; this is a foreign key to a
-   * project `id` — never re-keyed (re-keying the integration `id` would orphan its
-   * credentials / channel items, but `projectId` is free to change to re-assign).
+   * The project this integration belongs to — a foreign key to a project `id`.
+   * Mutually exclusive with `companyId` (Phase 68): an integration is owned by a
+   * project OR a company, never both, never neither (enforced by `.superRefine`
+   * below). Never re-keyed (re-keying the integration `id` would orphan its
+   * credentials / channel items), but the owner field is free to change to
+   * re-assign.
    */
-  projectId: z.string().min(1),
+  projectId: z.string().min(1).optional(),
+  /**
+   * The company this integration belongs to (Phase 68) — a foreign key to a
+   * company `id`. Mutually exclusive with `projectId`; see `projectId` above.
+   */
+  companyId: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   enabled: z.boolean().default(true),
   config: IntegrationConfigSchema,
@@ -137,28 +162,43 @@ export const IntegrationSchema = z.object({
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
 });
-export type Integration = z.infer<typeof IntegrationSchema>;
 
 /**
- * Create body — the operator supplies id, kind, config (+ optional name/enabled).
- * Status fields and hasCredentials are server-owned, so they're omitted.
+ * A configured inbound channel (Phase 5). On disk: one `<id>.json` under
+ * `data/integrations`. `status` / `lastSyncAt` / `lastError` are stamped by the
+ * watcher and the connection test, never by a client. `hasCredentials` is computed
+ * at read time from the separate gitignored credentials store — the secret itself
+ * is never stored on, nor served from, the entity (Law 3 / credentials hygiene).
  */
-export const CreateIntegrationSchema = z.object({
+export const IntegrationSchema = IntegrationObjectSchema.superRefine(requireExactlyOneOwner);
+export type Integration = z.infer<typeof IntegrationObjectSchema>;
+
+/**
+ * Create body — the operator supplies id, kind, config, exactly one owner
+ * (+ optional name/enabled). Status fields and hasCredentials are server-owned,
+ * so they're omitted.
+ */
+const CreateIntegrationObjectSchema = z.object({
   id: IntegrationIdSchema,
   kind: IntegrationKindSchema,
-  projectId: z.string().min(1),
+  projectId: z.string().min(1).optional(),
+  companyId: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   config: IntegrationConfigSchema,
 });
-export type CreateIntegrationInput = z.infer<typeof CreateIntegrationSchema>;
+export const CreateIntegrationSchema = CreateIntegrationObjectSchema.superRefine(
+  requireExactlyOneOwner,
+);
+export type CreateIntegrationInput = z.infer<typeof CreateIntegrationObjectSchema>;
 
 /**
  * Update body — `id` and `kind` are immutable (kind drives the config union and
  * the adapter; changing it would orphan items + credentials), so both are omitted;
- * the rest is partial.
+ * the rest is partial. Not refined with `requireExactlyOneOwner`: a patch that
+ * touches neither `projectId` nor `companyId` (no ownership change) must stay valid.
  */
-export const UpdateIntegrationSchema = IntegrationSchema.omit({
+export const UpdateIntegrationSchema = IntegrationObjectSchema.omit({
   id: true,
   kind: true,
   status: true,

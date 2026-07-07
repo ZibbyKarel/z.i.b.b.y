@@ -10,8 +10,20 @@ import { AgentIdSchema } from "../agents/agent.schema";
  */
 export const ProjectIdSchema = AgentIdSchema;
 
-/** A person associated with a project (team member, client contact, stakeholder). */
+/**
+ * A person associated with a project (team member, client contact, stakeholder).
+ *
+ * `id` is OPTIONAL (Phase 68 migration decision): a REQUIRED id would make every
+ * person already on disk fail validation, and `ProjectsStorageService.list()`
+ * silently DROPS schema-invalid entries — a required id would silently lose
+ * people. Instead the storage layer backfills a stable id (deterministic:
+ * slugify(name) + a dedupe suffix on collision) where one is missing, persisting
+ * it on the next write (Phase 69). The company/project people MERGE (Phase 70)
+ * matches by `id` when both sides have one, falling back to case-insensitive
+ * `name` match when a side lacks one (older data mid-backfill).
+ */
 export const ProjectPersonSchema = z.object({
+  id: z.string().min(1).optional(),
   name: z.string().min(1),
   role: z.string().min(1),
   /** VIP flag: forces Tier-3 escalation for messages from this person. */
@@ -157,6 +169,16 @@ export const ProjectSchema = z.object({
   autonomy_policy: ProjectAutonomyPolicySchema.optional(),
   /** Daily operational rhythm: standup timing, monitoring hours. */
   daily_rhythm: ProjectDailyRhythmSchema.optional(),
+
+  /**
+   * Optional link to a `Company` (Phase 68) — standalone projects (no company)
+   * keep working exactly as today; this is additive. When set, the project's
+   * EFFECTIVE people/budget/integrations are the company's merged with the
+   * project's own (Phase 70's resolved-project service does the merge at read
+   * time — never copied here). An unknown/dangling `companyId` (its company was
+   * deleted) resolves as "no company" rather than erroring.
+   */
+  companyId: z.string().optional(),
 });
 export type Project = z.infer<typeof ProjectSchema>;
 

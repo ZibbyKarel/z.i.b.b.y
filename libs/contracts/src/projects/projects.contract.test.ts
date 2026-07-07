@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ProjectSchema, projectsContract } from "../index";
+import { ProjectPersonSchema, ProjectSchema, projectsContract } from "../index";
 
 describe("projectsContract", () => {
   it("lists projects under GET /api/projects", () => {
@@ -85,5 +85,38 @@ describe("project schema", () => {
         budget: { dailyRuns: 2, dailyCostCapUsd: 5, weeklyCostCapUsd: 20, monthlyCostCapUsd: 80 },
       }).success,
     ).toBe(true);
+  });
+
+  it("accepts a project without a companyId — standalone projects are unaffected (Phase 68)", () => {
+    const parsed = ProjectSchema.parse({ id: "alpha", name: "Alpha", path: "~/Projects/alpha" });
+    expect(parsed.companyId).toBeUndefined();
+  });
+
+  it("accepts a project with a companyId (Phase 68 project <-> company link)", () => {
+    const parsed = ProjectSchema.parse({
+      id: "alpha",
+      name: "Alpha",
+      path: "~/Projects/alpha",
+      companyId: "acme",
+    });
+    expect(parsed.companyId).toBe("acme");
+  });
+});
+
+describe("ProjectPersonSchema (Phase 68 id migration)", () => {
+  it("accepts a person without an id (existing on-disk shape keeps validating)", () => {
+    const parsed = ProjectPersonSchema.parse({ name: "Jane Doe", role: "CTO" });
+    expect(parsed.id).toBeUndefined();
+  });
+
+  it("accepts a person with an id (post-backfill shape)", () => {
+    const parsed = ProjectPersonSchema.parse({ id: "jane-doe", name: "Jane Doe", role: "CTO" });
+    expect(parsed.id).toBe("jane-doe");
+  });
+
+  it("rejects an empty-string id", () => {
+    expect(
+      ProjectPersonSchema.safeParse({ id: "", name: "Jane Doe", role: "CTO" }).success,
+    ).toBe(false);
   });
 });

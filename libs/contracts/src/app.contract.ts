@@ -15,6 +15,7 @@ import { gateRulesContract } from "./gates/gate-rules.contract";
 import { automationsContract } from "./automations/automations.contract";
 import { channelsContract } from "./channels/channels.contract";
 import { commandsContract } from "./commands/commands.contract";
+import { companiesContract } from "./companies/companies.contract";
 import { integrationsContract } from "./integrations/integrations.contract";
 import { mandateContract } from "./mandate/mandate.contract";
 import { mcpContract } from "./mcp/mcp.contract";
@@ -58,6 +59,7 @@ export const appContract = c.router({
   commands: commandsContract,
   projects: projectsContract,
   projectCategories: projectCategoriesContract,
+  companies: companiesContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract,
   goals: goalsContract,

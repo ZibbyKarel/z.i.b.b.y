@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CreateIntegrationSchema,
   CredentialsInputSchema,
   IntegrationConfigSchema,
   IntegrationSchema,
@@ -56,7 +57,7 @@ describe("integration schema", () => {
     expect(parsed.projectId).toBe("acme-app");
   });
 
-  it("requires a projectId (an integration is owned by a project)", () => {
+  it("rejects an integration with neither projectId nor companyId set (Phase 68 owner refinement)", () => {
     expect(
       IntegrationSchema.safeParse({
         id: "x",
@@ -64,6 +65,64 @@ describe("integration schema", () => {
         config: { kind: "slack", channels: [] },
       }).success,
     ).toBe(false);
+  });
+
+  it("rejects an integration with BOTH projectId and companyId set (Phase 68 owner refinement)", () => {
+    expect(
+      IntegrationSchema.safeParse({
+        id: "x",
+        kind: "slack",
+        projectId: "acme-app",
+        companyId: "acme",
+        config: { kind: "slack", channels: [] },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts an integration owned by a company only (no projectId)", () => {
+    const parsed = IntegrationSchema.parse({
+      id: "x",
+      kind: "slack",
+      companyId: "acme",
+      config: { kind: "slack", channels: [] },
+    });
+    expect(parsed.companyId).toBe("acme");
+    expect(parsed.projectId).toBeUndefined();
+  });
+
+  it("CreateIntegrationSchema applies the same exactly-one-owner refinement", () => {
+    expect(
+      CreateIntegrationSchema.safeParse({
+        id: "x",
+        kind: "slack",
+        config: { kind: "slack", channels: [] },
+      }).success,
+    ).toBe(false);
+    expect(
+      CreateIntegrationSchema.safeParse({
+        id: "x",
+        kind: "slack",
+        projectId: "acme-app",
+        companyId: "acme",
+        config: { kind: "slack", channels: [] },
+      }).success,
+    ).toBe(false);
+    expect(
+      CreateIntegrationSchema.safeParse({
+        id: "x",
+        kind: "slack",
+        projectId: "acme-app",
+        config: { kind: "slack", channels: [] },
+      }).success,
+    ).toBe(true);
+    expect(
+      CreateIntegrationSchema.safeParse({
+        id: "x",
+        kind: "slack",
+        companyId: "acme",
+        config: { kind: "slack", channels: [] },
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects a config whose kind disagrees with the integration kind", () => {

@@ -56,7 +56,11 @@ export class IntegrationsController {
         }
         return errors.created(
           async () => {
-            await this.assertProjectExists(body.projectId);
+            // Phase 70: a company-owned integration (`body.companyId` set instead) isn't
+            // FK-checked yet — only project ownership is validated here, unchanged from
+            // before Phase 68 (the contract's superRefine already guarantees exactly one
+            // of projectId/companyId is set).
+            if (body.projectId) await this.assertProjectExists(body.projectId);
             return this.withCredentialState(await this.storage.create(body));
           },
           (error) =>
