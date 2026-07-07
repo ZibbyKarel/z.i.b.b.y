@@ -5,7 +5,6 @@ import {
   IconTile,
   Progress,
   Stack,
-  Tag,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
@@ -27,11 +26,10 @@ export interface TaskCardProps {
 
 /**
  * One row in the task feed (master list). Task-first: what the user asked for is
- * the headline; the routed agent/pipeline is a glyph tile + a small kind tag
- * (v-runs.png: "skill"/"pipeline") top-right. The left edge is a solid accent
- * bar in the run's state color (matte — only a running/awaiting-approval card
- * additionally glows via `tone`+`living`); a state-tinted progress bar sits
- * between the description and the state chip.
+ * the headline; the routed agent/pipeline is only a glyph tile. The left edge is
+ * a solid accent bar in the run's state color (matte — only a running/awaiting-approval
+ * card additionally glows via `tone`+`living`); a state-tinted progress bar sits
+ * between the task-origin line and the state chip.
  */
 export function TaskCard({
   run,
@@ -81,22 +79,14 @@ export function TaskCard({
     >
       <Container padding="200">
         <Stack gap="100">
-          <Stack align="start" direction="row" gap="100" justify="between">
-            <Container grow minW0>
-              <Stack align="center" direction="row" gap="100">
-                <IconTile glyph={glyph} size="sm" />
-                <Typography mono truncate type="note" weight="bold">
-                  {headline}
-                </Typography>
-              </Stack>
-            </Container>
-            <Tag>{t(`kind.${run.kind}`)}</Tag>
-          </Stack>
-          {run.prompt && run.prompt !== headline && (
-            <Typography truncate size="sm" type="text" variant="secondary">
-              {run.prompt}
-            </Typography>
-          )}
+          <Container grow minW0>
+            <Stack align="center" direction="row" gap="100">
+              <IconTile glyph={glyph} size="sm" />
+              <Typography mono truncate type="note" weight="bold">
+                {headline}
+              </Typography>
+            </Stack>
+          </Container>
           {taskLine && (
             <Typography mono truncate size="2xs" type="note" variant="tertiary">
               {t("metaTask")} · {taskLine}

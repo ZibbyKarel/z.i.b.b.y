@@ -34,13 +34,10 @@ describe("TaskCard", () => {
       />,
     );
     expect(screen.getByText("Zkontrolovat zálohy")).toBeInTheDocument();
-    expect(screen.getByText(/projdi \/backups a ověř včerejší snapshot/)).toBeInTheDocument();
     // Footer is project + relative time (v-runs.png) — the routed target
     // (`owner`) isn't repeated here; it already sits in the RunDetail header.
     expect(screen.getByText(/home-ops · před 5 m/)).toBeInTheDocument();
     expect(screen.getByText("běží")).toBeInTheDocument();
-    // The kind tag, top-right ("skill" for an agent run — v-runs.png).
-    expect(screen.getByText("skill")).toBeInTheDocument();
     // The state-tinted progress bar and its `NN%` label (agent runs carry `pct`).
     expect(screen.getByText("40%")).toBeInTheDocument();
   });
