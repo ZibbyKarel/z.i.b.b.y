@@ -8,7 +8,7 @@
 
 - [x] Dropdown nemá props size (Language switcher v topBaru je větší než ostatní prvky v topBaru) — fáze 10
 
-- [ ] převést Chat UI na samostatnou stránku místo toho aby to byl jen Overlay
+- [x] převést Chat UI na samostatnou stránku místo toho aby to byl jen Overlay — fáze 23
 
 - [ ] úplně oddělené kontexty pro projekty. Momentálně máme přepínátko projektů v top baru. To by mělo zajistit to, že vždy budu vidět jen globální informace (agenty, skilly, pipeliny, paměť) a project-specific věci jako běhy tásků. Nechci pak vidět běhy tasků z jiných projektů. Selector projektu v topBaru by pak měl být jediným selectorem. stejný selector z New task dialogu odstraníme a hodnotu vezmeme ze selektoru v topBaru. Zíroveň musí být vždy vyplněn některý projekt. Neexistuje možnost "všechny projekty". Ale můžu mít tasky, které nejsou spojeny s žádným projektem jako třeba výzkumy atp. Přidáme tedy možnost "bez projektu" a u takových běhů chci mít možnost zařadit je do určitého projektu.
 

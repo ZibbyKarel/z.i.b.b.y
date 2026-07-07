@@ -23,6 +23,8 @@ app/
     ├── chains/
     │   ├── page.tsx        Chain catalog
     │   └── [id]/page.tsx   Chain detail
+    ├── chat/page.tsx       Chat (phase 23 — a routed page, not an overlay;
+    │                       see `features/chat/Screen.tsx`)
     ├── commands/
     │   ├── page.tsx        Command catalog
     │   └── [id]/page.tsx   Command detail (edit; N4d — same pattern as skills/[id])
@@ -102,7 +104,7 @@ Client component (`"use client"`):
 - Mounts `CatalogProvider` → `ProjectProvider` → `NewTaskProvider` →
   `ChatProvider` (in that nesting order; `NewTaskProvider` stays the outer task
   provider — the position the now-removed `VoiceProvider` used to hold — so the
-  chat overlay can reach the task flow). `ProjectProvider`
+  chat page can reach the task flow). `ProjectProvider`
   (`features/projects/context/`) is the Fáze 11 app-wide active-project scope,
   persisted in the `activeProject` cookie; screens read it via
   `useActiveProject()` and filter client-side.
@@ -114,6 +116,19 @@ Client component (`"use client"`):
 The Voice UI (JARVIS-style takeover, speech-to-text input, TTS read-back) was
 removed in favor of a chat-first interface (`features/chat`); there is no
 `VoiceProvider` and no `features/voice` module anymore.
+
+**Phase 23 — chat is a routed page, not an overlay.** `ChatProvider` only owns
+the conversation state (`conversationId`/`messages`, minted lazily and
+preserved across navigation) and the `open()`/`close()`/`toggle()` navigation
+helpers (`router.push('/chat')` / `router.push('/overview')`) plus the global
+⌘/Ctrl+J shortcut — it no longer mounts the chat surface itself. The `/chat`
+route (`app/(dashboard)/chat/page.tsx` → `features/chat/Screen.tsx`) renders
+`ChatScreen` inside the normal dashboard shell (nav rail + top bar), pulling
+the provider's state down as props; landing on `/chat` any way other than
+`open()`/⌘J (a direct URL, the sidebar) still needs a conversation, so
+`Screen` calls `ensureConversation()` on mount. `ChatButton`
+(`chatSlot`) and the `chat` nav item (`state/config.ts`, glyph `butlerSign`)
+both navigate to `/chat`.
 
 ### RightRail = live log (global)
 

@@ -57,5 +57,6 @@ background node-web. No new brand colour.
   or ≤4 cores). Orb always full quality.
 - Reduced motion: sub-agents held at their start positions, camera drift and ring/orb
   churn calmed.
-- Loop pauses when the tab is hidden or the overlay closes; all GPU resources disposed
+- Loop pauses when the tab is hidden or `/chat` unmounts (phase 23: a routed page
+  inside the dashboard shell, not a fullscreen overlay); all GPU resources disposed
   on unmount. The constellation hides on small mobile.

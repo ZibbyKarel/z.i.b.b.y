@@ -9,12 +9,13 @@ export enum ChatButtonTestId {
 }
 
 /**
- * Top-bar entry point to the chat overlay — a ghost action mirroring the
- * neighbouring New Task trigger, with a visible ⌘J shortcut badge.
+ * Top-bar entry point to the `/chat` page — a ghost action mirroring the
+ * neighbouring New Task trigger, with a visible ⌘J shortcut badge. `open()`
+ * mints a conversation (if this thread doesn't have one yet) and navigates.
  */
 export function ChatButton() {
   const t = useTranslations("chat");
-  const { toggle } = useChat();
+  const { open } = useChat();
 
   return (
     <Button
@@ -22,7 +23,7 @@ export function ChatButton() {
       data-testid={ChatButtonTestId.Root}
       icon="bot"
       intent="ghost"
-      onClick={toggle}
+      onClick={open}
       size="sm"
       title={`${t("triggerTitle")} (⌘${CHAT_SHORTCUT_KEY.toUpperCase()})`}
     >

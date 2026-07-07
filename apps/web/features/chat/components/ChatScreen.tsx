@@ -1,7 +1,7 @@
-/* eslint-disable react/forbid-dom-props -- A bespoke full-screen HUD takeover
-   (like the old Voice UI): radial backdrop, scanline/grid overlays, the ambient
-   orb behind the conversation and the transcript's top fade-mask are decorative
-   inline styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
+/* eslint-disable react/forbid-dom-props -- A bespoke JARVIS-style HUD surface:
+   scanline/grid overlays, the ambient orb behind the conversation and the
+   transcript's top fade-mask are decorative inline styles with no DS prop
+   equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
 import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
@@ -94,33 +94,39 @@ export enum ChatScreenTestId {
 export interface ChatScreenProps {
   /**
    * The conversation this thread owns. Minted once by {@link ChatProvider} and
-   * preserved across close + reopen; only "New chat" mints a fresh one.
+   * preserved across leaving `/chat` and coming back; only "New chat" mints a
+   * fresh one.
    */
   conversationId: string | null;
-  /** The transcript, owned by {@link ChatProvider} so it survives close + reopen. */
+  /**
+   * The transcript, owned by {@link ChatProvider} so it survives navigating away
+   * from `/chat` and back.
+   */
   messages: ChatMessageType[];
   /** Append/replace transcript turns (lifted setter from the provider). */
   onMessagesChange: Dispatch<SetStateAction<ChatMessageType[]>>;
   /** Start a fresh thread: clears the transcript and mints a new conversation. */
   onNewChat: () => void;
-  /** Close the overlay (Esc / header close). */
+  /** Leave `/chat` and go back to the dashboard (top-bar close action). */
   onClose: () => void;
 }
 
 /**
- * The chat-first conversational overlay — a JARVIS-style full-screen takeover with
- * a radial backdrop, an ambient {@link ChatOrb} behind the conversation, a
- * scrollable transcript that fades into nothing at the top (scroll up to read back
- * to the start), and the text composer pinned at the bottom.
+ * The chat-first conversational surface, rendered by the `/chat` route inside the
+ * dashboard shell (nav rail + top bar around it) — a JARVIS-style HUD with an
+ * ambient {@link ChatOrb} behind the conversation, a scrollable transcript that
+ * fades into nothing at the top (scroll up to read back to the start), and the
+ * text composer pinned at the bottom.
  *
- * The conversation lives in the provider's client state (passed in via `messages` /
- * `onMessagesChange`) so it survives this overlay unmounting on close: the operator's
- * turn is appended optimistically on send, and the assistant's turn is appended from
- * the stream's `done` (authoritative text + accumulated tool events). The backend
- * still writes every message to the JSONL transcript — the UI just renders what the
- * stream produced rather than refetching, which is what removed the "history
- * disappears after a reply" flash. Reopening shows the same thread; "New chat" is the
- * only reset.
+ * The conversation lives in {@link ChatProvider}'s client state (passed in via
+ * `messages` / `onMessagesChange`) so it survives this component unmounting when
+ * the operator navigates away from `/chat`: the operator's turn is appended
+ * optimistically on send, and the assistant's turn is appended from the stream's
+ * `done` (authoritative text + accumulated tool events). The backend still writes
+ * every message to the JSONL transcript — the UI just renders what the stream
+ * produced rather than refetching, which is what removed the "history disappears
+ * after a reply" flash. Coming back to `/chat` shows the same thread; "New chat" is
+ * the only reset.
  */
 export function ChatScreen({
   conversationId,
@@ -226,19 +232,18 @@ export function ChatScreen({
   }, []);
   const handlePaletteNavigate = useCallback(
     (href: Route) => {
-      // Gates/memory have nowhere to render in-overlay yet (Rozhodnutí 7's sanctioned
-      // fallback) — navigating away closes the whole conversation, not just the palette.
+      // Gates/memory have nowhere to render inline yet (Rozhodnutí 7's sanctioned
+      // fallback) — navigating there leaves `/chat`, same as any other nav-rail jump.
       setPaletteOpen(false);
       router.push(href);
-      onClose();
     },
-    [router, onClose],
+    [router],
   );
 
   // Esc priority: the palette sits on top of the panel, which sits on top of the
-  // conversation itself — the topmost open surface is what a single Esc dismisses.
-  // Closing the whole overlay also drops `panelOpen`/`paletteOpen` for free (this
-  // component unmounts).
+  // conversation itself — a single Esc dismisses whichever sub-overlay is topmost.
+  // As a routed page there is nothing left for Esc to close once both are shut
+  // (the nav rail / browser back is how the operator leaves `/chat`).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -248,33 +253,11 @@ export function ChatScreen({
       }
       if (panelOpen) {
         setPanelOpen(false);
-        return;
       }
-      onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, panelOpen, onClose]);
-
-  // ⌘/Ctrl+K opens the quick-switcher — but ONLY while this overlay is mounted
-  // (the effect only exists for the lifetime of ChatScreen). The dashboard's own
-  // TopBar `GlobalSearch` keeps its global ⌘K listener mounted underneath this
-  // full-screen overlay (it never unmounts), so a plain bubble-phase listener here
-  // would ALSO trigger it invisibly behind the chat. Registering on the CAPTURE
-  // phase runs before any bubble-phase `window` listener — including
-  // GlobalSearch's — so `stopPropagation` here cleanly suppresses it without
-  // touching anything outside `features/chat`.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
-      if (e.key.toLowerCase() !== "k") return;
-      e.preventDefault();
-      e.stopPropagation();
-      openPalette();
-    };
-    window.addEventListener("keydown", handler, true);
-    return () => window.removeEventListener("keydown", handler, true);
-  }, [openPalette]);
+  }, [paletteOpen, panelOpen]);
 
   // Composer activity is the only new state this phase adds — everything else the
   // orb needs is already carried by the stream + mutation (see Rozhodnutí 1, Fáze
@@ -361,14 +344,8 @@ export function ChatScreen({
   return (
     <div
       aria-label={t("title")}
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden font-sans"
+      className="relative flex h-full w-full flex-col overflow-hidden font-sans"
       data-testid={ChatScreenTestId.Root}
-      role="dialog"
-      style={{
-        background:
-          "radial-gradient(ellipse 100% 85% at 50% 48%, #0b1422 0%, var(--color-background) 62%)",
-        animation: "v-mode-in 0.42s cubic-bezier(.22,.68,0,1.2)",
-      }}
     >
       {/* Scanlines + grid overlays */}
       <div
@@ -446,10 +423,10 @@ export function ChatScreen({
         </Stack>
       </div>
 
-      {/* Full-screen living cosmic scene — the text-reactive orb, procedural
-          nebula and sub-agent constellation. Sits behind every interactive
-          surface (its own canvas layers are pointer-events:none); the transcript
-          floats over it in a legibility-protected band. */}
+      {/* The living cosmic scene, filling the page — the text-reactive orb,
+          procedural nebula and sub-agent constellation. Sits behind every
+          interactive surface (its own canvas layers are pointer-events:none);
+          the transcript floats over it in a legibility-protected band. */}
       <CosmicScene
         agents={agents}
         completedTick={completedTick}
@@ -517,7 +494,7 @@ export function ChatScreen({
       </div>
 
       {/* ── Activity panel + quick-switcher (Fáze 14.5) ────────────────
-          Both float above everything else in the overlay; mounted only while
+          Both float above everything else on the page; mounted only while
           open so their own data hooks don't fire until the operator asks. */}
       {panelOpen && <ChatSidePanel onClose={() => setPanelOpen(false)} />}
       {paletteOpen && (

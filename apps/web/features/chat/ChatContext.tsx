@@ -1,60 +1,105 @@
 "use client";
 
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { ChatScreen } from "./components/ChatScreen";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 /**
- * Modifier shortcut that toggles the chat overlay from anywhere. ⌘K is the global
+ * Modifier shortcut that jumps to the chat page from anywhere. ⌘K is the global
  * search and bare `n` opens New Task, so chat takes ⌘/Ctrl+J (free).
  */
 export const CHAT_SHORTCUT_KEY = "j";
 
+const CHAT_ROUTE = "/chat";
+const CHAT_HOME_ROUTE = "/overview";
+
 interface ChatStore {
-  /** Whether the chat overlay is showing. */
-  isOpen: boolean;
+  /** Navigate to `/chat`, minting a conversation if this thread doesn't have one yet. */
   open: () => void;
+  /** Navigate away from `/chat`, back to the dashboard overview. */
   close: () => void;
+  /** ⌘/Ctrl+J: jump to `/chat` from anywhere, or back out if already there. */
   toggle: () => void;
+  /**
+   * The conversation this thread owns. Minted once (lazily, the first time it's
+   * needed) and then PRESERVED across navigating away from `/chat` and back, so
+   * the operator can dip in and out without losing the thread — the same id keeps
+   * `--resume`-ing ZIBBY's `claude` session. Only `newChat` mints a fresh id.
+   */
+  conversationId: string | null;
+  /**
+   * Mint a conversation id if this thread doesn't have one yet (idempotent). The
+   * `/chat` route calls this on mount so a direct visit (URL, sidebar, bookmark)
+   * always lands on a thread, not just the in-app open/⌘J trigger.
+   */
+  ensureConversation: () => void;
+  /** The transcript, lifted here so it survives `/chat` unmounting on navigation. */
+  messages: ChatMessageType[];
+  setMessages: Dispatch<SetStateAction<ChatMessageType[]>>;
+  /** Start a fresh thread: clears the transcript and mints a new conversation id. */
+  newChat: () => void;
 }
 
 const ChatContext = createContext<ChatStore | null>(null);
 
 /**
- * Owns the chat overlay's open state and a global ⌘/Ctrl+J shortcut, and mounts
- * {@link ChatScreen} as a fullscreen overlay when open. Mount once, high in the
- * client tree (see {@link AppShell}). The analogue of the removed VoiceProvider.
+ * Owns the chat conversation state — surviving `/chat` unmounting on navigation —
+ * and a global ⌘/Ctrl+J shortcut. Mount once, high in the client tree (see
+ * {@link AppShell}), above the `/chat` route so the transcript isn't lost when the
+ * operator leaves and comes back. The chat surface itself is rendered by the
+ * `/chat` route (`app/(dashboard)/chat/page.tsx` → `features/chat/Screen.tsx`), not
+ * by this provider — it used to mount a fullscreen overlay here, but chat is now a
+ * normal routed page inside the dashboard shell.
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-  // The conversation owned by the current thread. It is minted once (lazily, on the
-  // first open) and then PRESERVED across close + reopen, so the operator can dip in
-  // and out without losing the thread — the same id keeps `--resume`-ing ZIBBY's
-  // `claude` session. Only `newChat` mints a fresh id to start over.
+  const router = useRouter();
+  const pathname = usePathname();
+  // The conversation owned by the current thread. It is minted once (lazily, the
+  // first time it's needed) and then PRESERVED across leaving `/chat` and coming
+  // back, so the operator can dip in and out without losing the thread — the same
+  // id keeps `--resume`-ing ZIBBY's `claude` session. Only `newChat` mints a fresh id.
   const [conversationId, setConversationId] = useState<string | null>(null);
-  // The transcript lives here (above {@link ChatScreen}) so it survives the overlay
-  // unmounting on close — reopening shows the same conversation rather than a blank.
+  // The transcript lives here (above the `/chat` route) so it survives navigating
+  // away — coming back to `/chat` shows the same conversation rather than a blank.
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
 
-  const open = useCallback(() => {
-    // Mint only if we have no thread yet; an existing one is reused on reopen.
+  const ensureConversation = useCallback(() => {
     setConversationId((id) => id ?? `conv_${crypto.randomUUID()}`);
-    setIsOpen(true);
   }, []);
-  const close = useCallback(() => setIsOpen(false), []);
+
+  const open = useCallback(() => {
+    ensureConversation();
+    router.push(CHAT_ROUTE);
+  }, [ensureConversation, router]);
+
+  const close = useCallback(() => {
+    router.push(CHAT_HOME_ROUTE);
+  }, [router]);
+
   // "New chat" — drop the transcript and mint a fresh id so the next turn starts a
-  // clean `claude` session (no `--resume`). The overlay stays open.
+  // clean `claude` session (no `--resume`). Stays on `/chat`.
   const newChat = useCallback(() => {
     setMessages([]);
     setConversationId(`conv_${crypto.randomUUID()}`);
   }, []);
+
   const toggle = useCallback(() => {
-    if (isOpen) {
-      setIsOpen(false);
+    if (pathname === CHAT_ROUTE) {
+      close();
     } else {
       open();
     }
-  }, [isOpen, open]);
+  }, [pathname, close, open]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -70,22 +115,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, [toggle]);
 
-  const value = useMemo<ChatStore>(() => ({ isOpen, open, close, toggle }), [isOpen, open, close, toggle]);
-
-  return (
-    <ChatContext.Provider value={value}>
-      {children}
-      {isOpen && (
-        <ChatScreen
-          conversationId={conversationId}
-          messages={messages}
-          onClose={close}
-          onMessagesChange={setMessages}
-          onNewChat={newChat}
-        />
-      )}
-    </ChatContext.Provider>
+  const value = useMemo<ChatStore>(
+    () => ({
+      open,
+      close,
+      toggle,
+      conversationId,
+      ensureConversation,
+      messages,
+      setMessages,
+      newChat,
+    }),
+    [open, close, toggle, conversationId, ensureConversation, messages, newChat],
   );
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }
 
 export function useChat(): ChatStore {

@@ -97,29 +97,36 @@ change does not apply mid-way through a running `--resume` thread.
   advances the cursor. Important facts flow into vault markdown the same way
   runs do.
 
-## Web overlay (JARVIS style)
+## Web page (`/chat`, JARVIS style)
 
-Chat is a fullscreen takeover in the style of the original Voice UI
-(`apps/web/features/chat/`): a radial background with a scanline/grid, an
-ambient orb (`ChatOrb`, carried over from Voice UI) behind the conversation, and
-a scrollable transcript whose top edge fades out (a mask gradient) — older
-messages fade, but you can still scroll back to the start.
+Chat is a routed dashboard page (`apps/web/app/(dashboard)/chat/page.tsx` →
+`features/chat/Screen.tsx`, phase 23 — it used to be a `fixed inset-0`
+fullscreen takeover mounted by `ChatProvider`'s `isOpen` flag; it is now a
+normal page inside the shell, nav rail and top bar included). It keeps the
+JARVIS-style surface (`ChatScreen`, `apps/web/features/chat/`): a
+scanline/grid texture, an ambient orb (the cosmic scene, see
+`docs/web/chat-cosmic-scene.md`) behind the conversation, and a scrollable
+transcript whose top edge fades out (a mask gradient) — older messages fade,
+but you can still scroll back to the start.
 
-- **The conversation lives in client-side overlay state** (not refetched from
-  `/transcript`): the operator's turn is added optimistically on send, the
-  assistant's turn is added from the `done` stream event (the authoritative
-  `done.text` plus the tool events collected along the way). The backend still
-  writes every message to JSONL — the UI only renders what the stream/POST
-  produced. This removed the flash where "history disappeared after the
-  reply" (there was no longer a window for a refetch).
-- **Reset on close + open:** `ChatProvider` mints a fresh `conversationId` every
-  time the overlay opens, so a new thread has no `claude` session to
-  `--resume` → ZIBBY starts fresh. Closing the overlay unmounts the screen (the
-  client-side state disappears).
-- `GET /transcript` remains for a future resume/branch feature; the current
-  overlay doesn't read it.
+- **The conversation lives in `ChatProvider`'s client state** (not refetched
+  from `/transcript`): the operator's turn is added optimistically on send,
+  the assistant's turn is added from the `done` stream event (the
+  authoritative `done.text` plus the tool events collected along the way).
+  The backend still writes every message to JSONL — the UI only renders what
+  the stream/POST produced. This removed the flash where "history
+  disappeared after the reply" (there was no longer a window for a refetch).
+- **Preserved across navigation, reset by "New chat":** `ChatProvider` mints
+  `conversationId` once, lazily, and keeps it as the operator leaves `/chat`
+  and comes back (the provider sits above the route in `AppShell`, so it
+  survives the page unmounting) — the same id keeps `--resume`-ing ZIBBY's
+  `claude` session. Only "New chat" mints a fresh id and clears the
+  transcript, starting a session with nothing to `--resume`.
+- `GET /transcript` remains for a future resume/branch feature; `/chat`
+  doesn't read it.
 
 ## MVP scope
 
-One ongoing thread per overlay open (ephemeral). Branches/sub-threads and
-resuming an earlier thread are a deferred increment (spec §2).
+One ongoing thread per browser session (ephemeral — lost on reload).
+Branches/sub-threads and resuming an earlier thread from `/transcript` are a
+deferred increment (spec §2).
