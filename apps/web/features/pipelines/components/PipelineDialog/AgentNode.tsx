@@ -116,7 +116,7 @@ export function AgentNode({
         {...pos}
         cursor={isIn ? "default" : "crosshair"}
         style={{
-          borderRadius: 3,
+          borderRadius: 6,
           background: lit ? c : isIn ? SURFACE : mix(c, 16),
           border: `1.5px solid ${lit ? c : mix(c, 67)}`,
           boxShadow: lit ? `0 0 0 4px ${mix(c, 20)}` : "none",
@@ -140,7 +140,7 @@ export function AgentNode({
       style={{
         background: nodeLit ? SURFACE_HI : SURFACE,
         border: `1px solid ${borderColor}`,
-        borderRadius: 4,
+        borderRadius: 6,
         boxShadow: dragging
           ? `0 10px 28px rgba(0,0,0,0.5), 0 0 0 1px ${mix(ACCENT, 40)}`
           : nodeLit
@@ -229,7 +229,7 @@ export function AgentNode({
           ) : (
             <input
               aria-label={t("outputFileAria", { agent: node.agent })}
-              className="min-w-0 flex-1 border-none bg-transparent font-mono text-[10px] text-accent outline-none"
+              className="min-w-0 flex-1 border-none bg-transparent font-mono text-[10px] text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onChange={(e) => onSetProduces(node.id, e.target.value)}
               onMouseDown={stop}
               spellCheck={false}

@@ -16,7 +16,7 @@
 
 - [x] implementovat CommandLine komponentu ke spouštění tasků — fáze 26. Momentálně to máme přes NewTaskDialog ale to je moc neintuitivní UI. Měli bychom jít cestou, kterou máme již v chat UI - "Jeden input zvládne vše". Musím být schopný popsat co chci do jednoho inputu, přes "@" vyhledávat agenty/pipeliny na přiřažení. Do inputu musím být schopný přes tlačítko "+" (či jinou ikonku) přidávat soubory (nebo je tam dropnout přes drag and drop). U inputu bude pak DropDownButton který task spustí (defaultně hned ale budeme moci přes options vybrat za 1h nebo "až se resetují limity"). CommandLine komponenta bude moci být libovolně vysoká ale defaultn bude jen jeden řádek. Vyhledávání agentů by se mělo provádeť inline místo jiného searchboxu který se objeví. New Task Dialog se pak velmi zjednoduší a jedinné co tam budeme potřebovat je pak roztažená CommandLine komponenta na 10řádků třeba.
 
-- [ ] sladit desing podle auditu. Stále nám nesedí desing jazyk který máme naimplementovaný a který je v claude design (design je momentálně stažený aktuální ve složce design - soubor ZIBBY Design Audit.html)
+- [x] sladit desing podle auditu. Stále nám nesedí desing jazyk který máme naimplementovaný a který je v claude design (design je momentálně stažený aktuální ve složce design - soubor ZIBBY Design Audit.html) — fáze 42 (objektivní pravidla auditu: light=life-only, color=state, focus-visible ring, radius 6/10, odstraněn forked state map; subjektivní per-screen redesign type-scale/approval-unifikace/right-rail ponechán operátorovi ke co-designu)
 
 - [x] implementovat /runs podle designu (design je momentálně stažený aktuální ve složce design). Zejména hlavička tasku a log pipeliny musejí sedět — fáze 29
 
@@ -85,3 +85,9 @@
 - [ ] stránka běhy a aktivita - log běhu nesedí s designem. Měl by být obalen v CodeBlock componentě
 
 - [ ] stránka běhy a aktivita - avatar přiřazeného agenta nebo pipeliny by měl být dělaný stejně jako v HeroEntity komponentě - čili jako roztažené pozadí
+
+- [ ] stránka Projekty - na kartě projektu zobrazíme ve footeru stejné statistiky jako máme v detailu projektu ohledně úkolů (mimo "Celkem"). Opěd budou jednotlivé ásti možné prokliknout na vyfiltrovanou stránku běhy a aktivita
+
+- [ ] CosmicScene - ringsLayer je moc výrazná. Zkus místo toho vymyslet nějakou jinou variantu vizualizace stavu, které momentálně využívají rigns
+
+- [ ] CosmicScene - Error stav a stav waiting for aprooval je poměrně stejný. Waiting for approval bych dal jako "warning tone"

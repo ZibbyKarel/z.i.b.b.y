@@ -77,7 +77,7 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
         {label}
       </Typography>
       <Stack align="center" direction="row" gap="75">
-        {tone === "ok" && <StatusDot pulse tone="ok" />}
+        {tone === "ok" && <StatusDot tone="ok" />}
         <Typography mono size="sm" tone={tone} type="note" weight="semibold">
           {value}
         </Typography>

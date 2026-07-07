@@ -1,7 +1,6 @@
 import type { Agent } from "@zibby/contracts";
 import {
   Card,
-  type ChipTone,
   Container,
   Divider,
   Icon,
@@ -11,14 +10,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment } from "react";
-import { type Pipeline, type PipelineState, glyphForPhase } from "../../../../domain";
-
-const stateMeta = {
-  done: { tone: "ok", pulse: false, labelKey: "stateDone" },
-  parked: { tone: "wait", pulse: true, labelKey: "stateParked" },
-  failed: { tone: "bad", pulse: false, labelKey: "stateFailed" },
-  running: { tone: "run", pulse: true, labelKey: "stateRunning" },
-} as const satisfies Record<PipelineState, { tone: ChipTone; pulse: boolean; labelKey: string }>;
+import { type Pipeline, glyphForPhase } from "../../../../domain";
 
 export interface PipelineCardProps {
   showPhases?: boolean;

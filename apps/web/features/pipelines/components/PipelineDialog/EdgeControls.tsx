@@ -26,7 +26,7 @@ function FloatingControl({
         transform: "translate(-50%,-50%)",
         background: BG0,
         border: `1px solid ${borderColor}`,
-        borderRadius: 3,
+        borderRadius: 6,
         padding: "3px 5px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
         whiteSpace: "nowrap",
@@ -71,7 +71,7 @@ export function FlowFileControl({
           <>
             <input
               aria-label={t("handoffFileAria")}
-              className="border-none bg-transparent font-mono text-[10px] text-accent outline-none"
+              className="border-none bg-transparent font-mono text-[10px] text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onChange={(e) => onChange(e.target.value)}
               // Auto-width to the filename (monospace `size` = char count) so the pill grows
               // with the name instead of clipping at a fixed width; floored so it stays usable.
@@ -82,7 +82,7 @@ export function FlowFileControl({
             />
             <button
               aria-label={t("disconnectAria")}
-              className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint hover:text-foreground"
+              className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
               onClick={onDelete}
               type="button"
             >
@@ -108,7 +108,7 @@ export interface ReworkControlProps {
 }
 
 const STEP =
-  "grid size-[15px] place-items-center rounded-sm border border-border bg-transparent font-mono text-[11px] leading-none text-foreground-dim hover:text-foreground";
+  "grid size-[15px] place-items-center rounded-sm border border-border bg-transparent font-mono text-[11px] leading-none text-foreground-dim outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent";
 
 /** Max-retries stepper + escalate-effort toggle floating on a rework arc. */
 export function ReworkControl({
@@ -184,7 +184,7 @@ export function ReworkControl({
         </Button>
         <button
           aria-label={t("removeReworkAria")}
-          className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint hover:text-foreground"
+          className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
           onClick={onDelete}
           type="button"
         >

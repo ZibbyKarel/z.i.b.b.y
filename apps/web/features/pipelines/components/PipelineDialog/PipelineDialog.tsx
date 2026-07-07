@@ -152,7 +152,7 @@ export function PipelineDialog({
           <IconTile glyph="flow" size="md" />
           <input
             aria-label={t("forms.pipeline.nameLabel")}
-            className="w-56 rounded-sm border border-border bg-[var(--color-background-deep)] px-2 py-1 font-mono text-sm font-bold text-foreground outline-none focus:border-accent"
+            className="w-56 rounded-sm border border-border bg-[var(--color-background-deep)] px-2 py-1 font-mono text-sm font-bold text-foreground outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
             onChange={(e) => setName(e.target.value)}
             placeholder={t("forms.pipeline.namePlaceholder")}
             spellCheck={false}
@@ -160,7 +160,7 @@ export function PipelineDialog({
           />
           <input
             aria-label={t("forms.pipeline.descLabel")}
-            className="min-w-0 flex-1 rounded-sm border border-border bg-[var(--color-background-deep)] px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-accent"
+            className="min-w-0 flex-1 rounded-sm border border-border bg-[var(--color-background-deep)] px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
             onChange={(e) => setDesc(e.target.value)}
             placeholder={t("forms.pipeline.descPlaceholder")}
             spellCheck={false}
