@@ -194,6 +194,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                             currentStage={makerPipeline.currentStage}
                             live={makerPipeline.status === "running"}
                             owner={makerPipeline.owner}
+                            parked={makerPipeline.parked}
                             pipelineRunId={it.makerRunRef}
                             stageRuns={makerPipeline.stageRuns}
                           />

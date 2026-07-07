@@ -78,6 +78,7 @@ function runDetail(run: RunView, runRef: string) {
         currentStage={run.currentStage}
         live={run.status === "running"}
         owner={run.owner}
+        parked={run.parked}
         pipelineRunId={runRef}
         stageRuns={run.stageRuns}
       />

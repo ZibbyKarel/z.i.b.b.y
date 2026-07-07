@@ -1,6 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { IconTileTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
 
@@ -10,8 +11,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // The stage log is read on demand from the per-phase endpoint; stub both surfaces
 // (the terminal one-shot query and the live SSE tail) so the test needs no backend
 // and can assert which phase each row opens — and over which transport (N1 DNA:
-// a live log streams, a finished log is a one-shot state read).
-const { stageLogMock, stageStreamMock } = vi.hoisted(() => ({
+// a live log streams, a finished log is a one-shot state read). The pipeline
+// definition + agent catalog are stubbed too (Phase 36 resolves each phase's agent
+// avatar/name and loop/produces metadata from them) — default to "unknown", so
+// most tests read the honest phaseId fallback; a few override to exercise resolution.
+const { stageLogMock, stageStreamMock, pipelinesMock, agentsMock } = vi.hoisted(() => ({
   stageLogMock: vi.fn((_id: string, phaseId: string | undefined) => ({
     data: phaseId ? { content: `LOG for ${phaseId}` } : undefined,
     isPending: false,
@@ -20,13 +24,17 @@ const { stageLogMock, stageStreamMock } = vi.hoisted(() => ({
     text: phaseId ? `STREAM for ${phaseId}` : "",
     done: false,
   })),
+  pipelinesMock: vi.fn(() => ({ data: [] as unknown[] })),
+  agentsMock: vi.fn(() => ({ data: [] as unknown[] })),
 }));
 vi.mock("../queries/useStageRunLogQuery", () => ({ useStageRunLogQuery: stageLogMock }));
 vi.mock("../useRunLogStream", () => ({ useStageRunLogStream: stageStreamMock }));
+vi.mock("../../pipelines", () => ({ usePipelinesQuery: pipelinesMock }));
+vi.mock("../../agents", () => ({ useAgentsQuery: agentsMock }));
 
 const stages: RunView["stageRuns"] = [
   { phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "done" },
-  { phaseId: "verify", runId: "delivery_1.verify_2", attempt: 2, status: "running" },
+  { phaseId: "verify", runId: "delivery_1.verify_1", attempt: 1, status: "done" },
 ];
 
 const timeline = (
@@ -35,12 +43,14 @@ const timeline = (
     stageRuns: RunView["stageRuns"];
     currentStage: string | null;
     live: boolean;
+    parked: RunView["parked"];
   }>,
 ) => (
   <PipelineStageTimeline
     currentStage={props?.currentStage}
     live={props?.live}
     owner={props?.owner ?? "delivery"}
+    parked={props?.parked}
     pipelineRunId="delivery_1"
     stageRuns={props?.stageRuns ?? stages}
   />
@@ -48,19 +58,56 @@ const timeline = (
 
 const logToggles = () => screen.getAllByRole("button", { name: /^log$/i });
 
-describe("PipelineStageTimeline (28)", () => {
+/** A 3-phase pipeline definition — "verify" is the qualify gate that loops back to
+ * "koder" (mirrors the delivery loop: Kodér ⇄ Code-Review ⇄ Tester). */
+const PIPELINE = {
+  id: "delivery",
+  name: "Delivery",
+  lastRun: "—",
+  lastState: "done" as const,
+  desc: "",
+  file: "",
+  phases: [
+    { id: "build", type: "agent" as const, agent: "koder", produces: "feat/search-filters" },
+    {
+      id: "verify",
+      type: "agent" as const,
+      agent: "tester",
+      qualify: true,
+      loop: { to: "koder", maxRetries: 3, escalate: true, then: "park" },
+    },
+    { id: "docs", type: "agent" as const, agent: "dokumentator" },
+  ],
+  outputs: [],
+};
+
+const AGENTS = [
+  { id: "koder", name: "Kodér", glyph: "code" },
+  { id: "tester", name: "Tester", glyph: "flask" },
+];
+
+describe("PipelineStageTimeline (36)", () => {
   beforeEach(() => {
     stageLogMock.mockClear();
     stageStreamMock.mockClear();
     push.mockClear();
+    pipelinesMock.mockReset().mockReturnValue({ data: [] });
+    agentsMock.mockReset().mockReturnValue({ data: [] });
   });
 
-  it("renders one row per stage with its phase + retried attempt", () => {
+  it("renders one node per phase, falling back to the bare phaseId without a known pipeline", () => {
     render(timeline());
     expect(screen.getByText("build")).toBeInTheDocument();
     expect(screen.getByText("verify")).toBeInTheDocument();
-    // attempt > 1 is surfaced (the verify stage looped once).
-    expect(screen.getByText("pokus 2")).toBeInTheDocument();
+  });
+
+  it("resolves each phase's agent name from the pipeline + agent catalogs", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    agentsMock.mockReturnValue({ data: AGENTS });
+    render(timeline());
+    expect(screen.getByText("Kodér")).toBeInTheDocument();
+    expect(screen.getByText("Tester")).toBeInTheDocument();
+    expect(screen.queryByText("build")).not.toBeInTheDocument();
   });
 
   it("fetches no stage log until a row is expanded", () => {
@@ -88,9 +135,10 @@ describe("PipelineStageTimeline (28)", () => {
     expect(screen.getByText("STREAM for build")).toBeInTheDocument();
   });
 
-  it("surfaces a running phase even when an earlier attempt already failed", () => {
-    // The build phase failed once (terminal) and is being retried (live) — both the
-    // failed attempt and the live attempt are rows.
+  it("folds a phase's earlier attempts into a nested retry block under its one node", () => {
+    // The build phase failed once (terminal) and is being retried (live) — ONE node
+    // ("build"), its live attempt as the header, the failed attempt folded below it
+    // (Phase 36: a retried phase is a single timeline node, not one row per attempt).
     render(
       timeline({
         currentStage: "build",
@@ -98,13 +146,100 @@ describe("PipelineStageTimeline (28)", () => {
         stageRuns: [{ phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "error" }],
       }),
     );
-    // The live attempt is #2 (one past the recorded terminal attempt).
-    expect(screen.getByText("pokus 2")).toBeInTheDocument();
+    expect(screen.getAllByText("build")).toHaveLength(1);
     expect(stageStreamMock).toHaveBeenCalledWith("delivery_1", "build");
+    // The folded prior attempt reads its real terminal status ("chyba"), never a
+    // fabricated note.
+    expect(screen.getByText("pokus 1")).toBeInTheDocument();
+    expect(screen.getByText("chyba")).toBeInTheDocument();
+  });
+
+  it("shows the loop's maxRetries + loopTo on the retry block when the pipeline definition is known", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    agentsMock.mockReturnValue({ data: AGENTS });
+    render(
+      timeline({
+        stageRuns: [
+          { phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done" },
+          { phaseId: "verify", runId: "d_1.verify_1", attempt: 1, status: "done", verdict: "gap" },
+          { phaseId: "build", runId: "d_1.build_2", attempt: 2, status: "done" },
+          { phaseId: "verify", runId: "d_1.verify_2", attempt: 2, status: "done", verdict: "pass" },
+        ],
+      }),
+    );
+    expect(screen.getByText("pokus 1/3")).toBeInTheDocument();
+    expect(screen.getByText("vráceno na koder")).toBeInTheDocument();
+    // The folded attempt's real verdict is its note, never a fabricated one.
+    expect(screen.getByText("Chybí část")).toBeInTheDocument();
+  });
+
+  it("shows the escalation line when the run is parked with retries exhausted at this phase", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    render(
+      timeline({
+        currentStage: "verify",
+        parked: { phaseId: "verify", attempts: 3, failureFile: "/x/verify.fail.txt" },
+        stageRuns: [
+          { phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done" },
+          { phaseId: "verify", runId: "d_1.verify_1", attempt: 1, status: "error" },
+        ],
+      }),
+    );
+    expect(
+      screen.getByText("vyčerpány pokusy → eskalace → zaparkováno k ranní review"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a phase's produced hand-off file once it's done, never while it's still running", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    render(
+      timeline({
+        stageRuns: [{ phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done" }],
+      }),
+    );
+    expect(screen.getByText("feat/search-filters")).toBeInTheDocument();
+  });
+
+  it("shows a waiting placeholder for a not-yet-reached phase while the run is still open", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    agentsMock.mockReturnValue({ data: AGENTS });
+    render(
+      timeline({
+        currentStage: "verify",
+        live: true,
+        stageRuns: [{ phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done" }],
+      }),
+    );
+    // "docs" hasn't run yet, but the run is still open — it shows as a waiting node
+    // (named from the pipeline definition — real, not fabricated).
+    expect(screen.getByText("čeká na dokončení předchozích fází")).toBeInTheDocument();
+    // A placeholder has nothing to open — only the two real stages have a log toggle.
+    expect(logToggles()).toHaveLength(2);
+  });
+
+  it("shows no waiting placeholder once the run has finished (currentStage cleared)", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    render(
+      timeline({
+        currentStage: null,
+        stageRuns: [
+          { phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done" },
+          { phaseId: "verify", runId: "d_1.verify_1", attempt: 1, status: "error" },
+        ],
+      }),
+    );
+    expect(screen.queryByText("čeká na dokončení předchozích fází")).not.toBeInTheDocument();
   });
 
   it("keeps a single stage open — opening another collapses the first", async () => {
-    render(timeline());
+    render(
+      timeline({
+        stageRuns: [
+          { phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "done" },
+          { phaseId: "verify", runId: "delivery_1.verify_1", attempt: 1, status: "running" },
+        ],
+      }),
+    );
     await userEvent.click(logToggles()[0]!);
     expect(screen.getByText("LOG for build")).toBeInTheDocument();
 
@@ -133,18 +268,18 @@ describe("PipelineStageTimeline (28)", () => {
     expect(screen.queryByRole("button", { name: /pipeline/i })).not.toBeInTheDocument();
   });
 
-  it("shows a stage's cost only on the row that carries one (Phase 03)", () => {
+  it("shows a stage's cost only on the node that carries one, summed across its attempts", () => {
     render(
       timeline({
         stageRuns: [
-          { phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done", costUsd: 0.2934669 },
+          { phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "error", costUsd: 0.1 },
+          { phaseId: "build", runId: "d_1.build_2", attempt: 2, status: "done", costUsd: 0.19 },
           { phaseId: "verify", runId: "d_1.verify_1", attempt: 1, status: "done" },
         ],
       }),
     );
     expect(screen.getByText("$0.29")).toBeInTheDocument();
     // The costless verify stage shows no dollar figure.
-    expect(screen.queryByText("< $0.01")).not.toBeInTheDocument();
     expect(screen.getAllByText(/^\$/)).toHaveLength(1);
   });
 
@@ -158,10 +293,25 @@ describe("PipelineStageTimeline (28)", () => {
         ],
       }),
     );
-    expect(screen.getByTestId("stage-verdict-gap")).toHaveTextContent("Chybí část");
+    // The current (latest) attempt's verdict is the header chip.
     expect(screen.getByTestId("stage-verdict-pass")).toHaveTextContent("Schváleno");
+    // The earlier, folded attempt's verdict is its retry-row note, not its own chip.
+    expect(screen.getByText("Chybí část")).toBeInTheDocument();
     // The non-qualify koder stage carries no verdict chip.
     expect(screen.queryByTestId("stage-verdict-drift")).not.toBeInTheDocument();
-    expect(screen.getAllByTestId(/^stage-verdict-/)).toHaveLength(2);
+    expect(screen.getAllByTestId(/^stage-verdict-/)).toHaveLength(1);
+  });
+
+  it("shows the resolved agent's avatar image on the tile when the catalog has one", () => {
+    pipelinesMock.mockReturnValue({ data: [PIPELINE] });
+    agentsMock.mockReturnValue({
+      data: [{ id: "koder", name: "Kodér", glyph: "code", avatar: "/avatars/koder.png" }],
+    });
+    render(
+      timeline({
+        stageRuns: [{ phaseId: "build", runId: "d_1.build_1", attempt: 1, status: "done" }],
+      }),
+    );
+    expect(screen.getByTestId(IconTileTestId.Image)).toHaveAttribute("src", "/avatars/koder.png");
   });
 });

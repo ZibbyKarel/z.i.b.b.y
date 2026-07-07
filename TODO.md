@@ -58,4 +58,4 @@
 
 - [ ] k chat UI musíme vytvořit storybook. Rád bych viděl všechny možné stavy "pozadí" chatu
 
-- [ ] stránka běhy a aktivita hlavně pak log fází běhu pipeline nevypadá jako v designu (stránka "Tasky" v designu). Pořádně to předělej podle designu.
+- [x] stránka běhy a aktivita hlavně pak log fází běhu pipeline nevypadá jako v designu (stránka "Tasky" v designu). Pořádně to předělej podle designu. — fáze 36

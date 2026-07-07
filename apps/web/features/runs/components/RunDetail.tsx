@@ -574,6 +574,7 @@ export function RunDetail({
               currentStage={run.currentStage}
               live={run.status === "running"}
               owner={run.owner}
+              parked={run.parked}
               pipelineRunId={run.runId}
               stageRuns={run.stageRuns}
             />
