@@ -5,6 +5,7 @@ import {
   Card,
   CodeBlock,
   Container,
+  Divider,
   EntityHero,
   FilePreview,
   type IconName,
@@ -18,7 +19,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { formatCostUsd } from "../../../utils/cost";
@@ -375,6 +376,10 @@ export function RunDetail({
   const [confirmKind, setConfirmKind] = useState<"stop" | "delete" | null>(null);
   const { data: queue = [] } = useApprovalsQuery();
   const approval = approvalForRun(queue, run);
+  // Shares the `["projects"]` cache with `AssignProjectControl` below — read here too
+  // so the meta strip knows up front whether that control will render anything (it
+  // renders null on an empty registry), which the divider layout needs to get right.
+  const { data: projects = [] } = useProjectsQuery();
   // Who is doing the work: an agent run's `owner` is its agent id; the approval
   // (when present) carries the nicer display name. Surfaced in the header so a
   // paused task makes plain which agent is asking.
@@ -465,6 +470,74 @@ export function RunDetail({
     </Typography>
   );
 
+  // The meta strip's cells, built as a list (rather than left as loose conditional
+  // JSX) so a vertical `Divider` can be threaded between exactly the cells that
+  // actually render — including `AssignProjectControl`, which renders nothing on an
+  // empty project registry (hence checking `projects.length` here, not just
+  // `!run.projectId`). Keeps every existing stat and its conditional (Phase 62).
+  const metaItems: ReactNode[] = [];
+  if (run.projectId) {
+    metaItems.push(
+      <MetaCell key="project" label={t("metaProject")} tone="accent" value={run.project} />,
+    );
+  } else if (projects.length > 0) {
+    metaItems.push(<AssignProjectControl key="project" runId={run.runId} />);
+  }
+  metaItems.push(
+    <MetaCell
+      key="started"
+      label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
+      value={startedValue}
+    />,
+  );
+  if (run.owner && run.kind !== "agent") {
+    metaItems.push(
+      <MetaCell
+        key="owner"
+        label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
+        tone={run.kind === "pipeline" ? "accent" : undefined}
+        value={run.owner}
+      />,
+    );
+  }
+  // The task name is already the headline — only repeat it here when it differs,
+  // and then carry the written-back outcome it uniquely holds.
+  if (run.taskTitle && run.taskTitle !== headline) {
+    metaItems.push(
+      <MetaCell
+        key="task"
+        label={t("metaTask")}
+        value={
+          run.taskOutcome
+            ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
+            : run.taskTitle
+        }
+      />,
+    );
+  }
+  if (run.costUsd != null) {
+    metaItems.push(
+      <MetaCell emphasize key="cost" label={t("metaCost")} tone="ok" value={formatCostUsd(run.costUsd)} />,
+    );
+  }
+  if (durationMs != null) {
+    metaItems.push(
+      <MetaCell key="duration" label={t("metaDuration")} value={formatDuration(durationMs)} />,
+    );
+  }
+  if (approval) {
+    metaItems.push(
+      <MetaCell
+        key="requested"
+        label={tApprovals("requestedLabel")}
+        value={new Date(approval.requestedAt).toLocaleString("cs")}
+      />,
+    );
+  }
+  if (approval?.via) {
+    metaItems.push(<MetaCell key="via" label={tApprovals("viaLabel")} value={approval.via} />);
+  }
+
   return (
     <>
       <Stack gap="200">
@@ -536,54 +609,24 @@ export function RunDetail({
                   </Stack>
                 </Stack>
 
+                {/* Phase 62: the "Meta strip" from the design folder — a hairline
+                separates it from the header content above (the `Divider` here rides
+                the outer `Stack`'s own `gap` for the marginTop/paddingTop rhythm),
+                and each stat cell is separated from the next by a thin vertical
+                `Divider` (none before the first cell, none after the last — built
+                from `metaItems` above so that holds even when a cell is
+                conditionally absent, e.g. `AssignProjectControl` rendering null).
+                The row still wraps on narrow widths — a divider can end up
+                trailing at the end of a wrapped line, which reads cleanly enough;
+                the alternative (pairing every divider atomically with its cell so
+                it leads the next line instead) is the worse look, so this is kept
+                as the flat interleave the plan calls out as preferred. */}
+                <Divider />
                 <Stack wrap direction="row" gap="300">
-                  {run.projectId ? (
-                    <MetaCell label={t("metaProject")} tone="accent" value={run.project} />
-                  ) : (
-                    <AssignProjectControl runId={run.runId} />
-                  )}
-                  <MetaCell
-                    label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
-                    value={startedValue}
-                  />
-                  {run.owner && run.kind !== "agent" && (
-                    <MetaCell
-                      label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
-                      tone={run.kind === "pipeline" ? "accent" : undefined}
-                      value={run.owner}
-                    />
-                  )}
-                  {/* The task name is already the headline — only repeat it here when it
-                differs, and then carry the written-back outcome it uniquely holds. */}
-                  {run.taskTitle && run.taskTitle !== headline && (
-                    <MetaCell
-                      label={t("metaTask")}
-                      value={
-                        run.taskOutcome
-                          ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
-                          : run.taskTitle
-                      }
-                    />
-                  )}
-                  {run.costUsd != null && (
-                    <MetaCell
-                      emphasize
-                      label={t("metaCost")}
-                      tone="ok"
-                      value={formatCostUsd(run.costUsd)}
-                    />
-                  )}
-                  {durationMs != null && (
-                    <MetaCell label={t("metaDuration")} value={formatDuration(durationMs)} />
-                  )}
-                  {approval && (
-                    <MetaCell
-                      label={tApprovals("requestedLabel")}
-                      value={new Date(approval.requestedAt).toLocaleString("cs")}
-                    />
-                  )}
-                  {approval?.via && (
-                    <MetaCell label={tApprovals("viaLabel")} value={approval.via} />
+                  {metaItems.flatMap((item, i) =>
+                    i > 0
+                      ? [<Divider key={`divider-${i}`} orientation="vertical" />, item]
+                      : [item],
                   )}
                 </Stack>
               </Stack>
