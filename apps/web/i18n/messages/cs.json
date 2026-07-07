@@ -404,7 +404,11 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "emptyCategory": "Prázdná kategorie — přidej sem agenta, nebo ji smaž.",
-    "uncategorized": "Bez kategorie"
+    "uncategorized": "Bez kategorie",
+    "uploadImage": "Nahrát obrázek",
+    "removeImage": "Odebrat obrázek",
+    "uploadAgentAvatar": "Nahraj obrázek agenta",
+    "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB)."
   },
   "integrations": {
     "addIntegration": "Přidat integraci",

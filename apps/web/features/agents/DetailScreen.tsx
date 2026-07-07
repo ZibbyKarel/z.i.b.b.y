@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack, Tag, Typography } from "@zibby/design-system";
+import { Button, EntityHero, type IconName, Stack, Tag, Typography } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Agent, GateRuleInput } from "@zibby/contracts";
+import { AVATAR_MAX } from "@zibby/contracts";
 import { useFormControls } from "@zibby/forms";
+import { toastBus } from "../../components/Toaster/toastBus";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
@@ -148,6 +150,26 @@ function AgentEditor({ agent }: { agent: Agent }) {
           }
           subtitle={agentFile(agent.id)}
           title={name}
+        />
+
+        <EntityHero
+          editable
+          desc={agent.description}
+          glyph={(agent.glyph as IconName | undefined) ?? "bot"}
+          height={200}
+          image={agent.avatar}
+          name={name}
+          onRemove={() => updateAgent.mutate({ params: { id: agent.id }, body: { avatar: null } })}
+          onUpload={(dataUri) => {
+            if (dataUri.length > AVATAR_MAX) {
+              toastBus.emit({ message: t("avatarTooLarge") });
+              return;
+            }
+            updateAgent.mutate({ params: { id: agent.id }, body: { avatar: dataUri } });
+          }}
+          placeholder={t("uploadAgentAvatar")}
+          removeLabel={t("removeImage")}
+          uploadLabel={t("uploadImage")}
         />
 
         <HudPanel title={t("tabBasics")}>
