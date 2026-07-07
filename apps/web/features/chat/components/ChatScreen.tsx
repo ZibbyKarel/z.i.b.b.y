@@ -29,7 +29,9 @@ import {
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
 import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
-import { usePipelineRunQuery } from "../../pipelines";
+import { useChainsQuery } from "../../chains";
+import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
+import { usePinsQuery } from "../../pins";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
@@ -296,10 +298,23 @@ export function ChatScreen({
   ]);
   const { data: lastRun } = usePipelineRunQuery(lastRunRef);
 
-  // The constellation roster — the live agent catalog deduped to real roles and
-  // coloured by category (Tier 4). Only rebuilt when the catalog changes.
+  // The constellation roster (Tier 4): the operator's pinned agents/pipelines/
+  // chains first, then the imaged tail of the deduped agent catalog — coloured by
+  // category. Only rebuilt when one of its source catalogs changes.
   const { data: agentCatalog } = useAgentsQuery();
-  const agents = useMemo(() => buildConstellation(agentCatalog ?? []), [agentCatalog]);
+  const { data: pipelineCatalog } = usePipelinesQuery();
+  const { data: chainCatalog } = useChainsQuery();
+  const { data: pins } = usePinsQuery();
+  const agents = useMemo(
+    () =>
+      buildConstellation({
+        agents: agentCatalog ?? [],
+        pipelines: pipelineCatalog ?? [],
+        chains: chainCatalog ?? [],
+        pins: pins ?? [],
+      }),
+    [agentCatalog, pipelineCatalog, chainCatalog, pins],
+  );
 
   // The dock (Tier 5) — the running/queued agents & pipelines from the live runs
   // feed (kept fresh by the shared RunEventsProvider bus), never the full roster.

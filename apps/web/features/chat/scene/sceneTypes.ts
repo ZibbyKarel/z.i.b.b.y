@@ -21,22 +21,27 @@ export type SceneMode =
   | "error";
 
 /**
- * A sub-agent that can appear in the constellation (Tier 4) — the deduped, real
- * agent roster projected to what the scene needs. Built from the live agent
- * catalog in {@link buildConstellation}.
+ * A node that can appear in the constellation (Tier 4) — the operator's pinned
+ * agents/pipelines/chains first, then the imaged tail of the real agent roster,
+ * projected to what the scene needs. Built in {@link buildConstellation}.
  */
 export interface SceneAgent {
-  /** Stored agent id — matched against a `tool` event's `target.id` to know which
+  /** Stored entity id — matched against a `tool` event's `target.id` to know which
    * avatar was dispatched, and against a live run's `agentId` for the working pulse. */
   id: string;
   /** Canonical (Czech) display name shown on the DOM label. */
   name: string;
-  /** One-line specialty from the agent's frontmatter `description`. */
+  /** One-line specialty from the agent's frontmatter `description` (empty for
+   * pipelines/chains, which don't carry one). */
   specialty: string;
-  /** Category name (one of the 7), driving the cluster colour. */
+  /** Category name (one of the 7) for an agent, driving the cluster colour; empty
+   * for pipelines/chains, which have no category. */
   category: string;
-  /** Resolved hex accent for this agent (from its category). */
+  /** Resolved hex accent for this node (from its category, or the neutral default). */
   color: string;
+  /** Optional avatar image (data URI or `/avatars/*.png` path). When present the
+   * scene paints the real portrait instead of the initial-in-a-disc fallback. */
+  avatar?: string;
 }
 
 /**

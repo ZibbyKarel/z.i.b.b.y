@@ -20,7 +20,7 @@
 
 - [ ] implementovat /runs podle designu (zeptej se kde ho vzít než začneš něco vymýšlet z hlavy). Zejména hlavička tasku a log pipeliny musejí sedět
 
-- [ ] chat ui - constalace by měla zobrazovat primářně připnuté agenty/pipeliny/řetězce a pak preferuji zobrazovat jen agenty s obrázky
+- [x] chat ui - constalace by měla zobrazovat primářně připnuté agenty/pipeliny/řetězce a pak preferuji zobrazovat jen agenty s obrázky
 
 - [x] editace agenta - výběr kategorie bude přes komponentu Select — fáze 11
 
