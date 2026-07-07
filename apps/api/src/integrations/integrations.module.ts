@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { AdapterRegistry } from "../channels/adapters/adapter-registry";
 import { ProjectsModule } from "../projects/projects.module";
+import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
 import { CONNECTION_TESTER } from "./connection-tester";
 import { CREDENTIALS_DIR, CredentialsStore } from "./credentials.store";
@@ -35,9 +36,14 @@ export function resolveCredentialsDir(): string {
  * gitignored credentials store. {@link CONNECTION_TESTER} is bound to the channels
  * {@link AdapterRegistry} (the real probe). The storage service + credentials store
  * + registry are exported so the channels watcher (5.2) reuses them.
+ *
+ * Phase 70: also imports {@link ResolvedProjectModule} (via `forwardRef` — see that
+ * module's doc comment for why) so `IntegrationsController.listIntegrations` can
+ * return a project's EFFECTIVE (company-merged) integrations instead of a raw
+ * `projectId` filter.
  */
 @Module({
-  imports: [ProjectsModule],
+  imports: [ProjectsModule, forwardRef(() => ResolvedProjectModule)],
   controllers: [IntegrationsController],
   providers: [
     { provide: INTEGRATIONS_DIR, useFactory: resolveIntegrationsDir },

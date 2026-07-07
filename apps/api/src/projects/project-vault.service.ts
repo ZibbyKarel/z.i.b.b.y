@@ -56,6 +56,16 @@ function serialize(project: Project): string {
   const lines: string[] = [`# ${project.name}`, ""];
   if (project.desc) lines.push(`> ${project.desc}`, "");
 
+  // Phase 70 DEFERRED: this grounding-note mirror renders the project's own raw
+  // `identity.people` (and, above, its own raw `autonomy_policy`) — NOT the
+  // company-merged effective roster. `serialize`/`write` are synchronous
+  // fire-and-forget side effects of a plain project mutation, so resolving the
+  // company here would mean threading an async company lookup through every
+  // `ProjectVaultService.write` call site for a document that's advisory grounding
+  // text, not a decision-making read path (unlike the budget guard / channel
+  // triage VIP check / integrations listing, which Phase 70 does route through
+  // `ResolvedProjectService`). Revisit alongside Phase 71/72's web-side effective
+  // vs. raw distinction, which needs the same "make this async" shape anyway.
   const people = project.identity?.people ?? [];
   if (people.length > 0) {
     lines.push("## Team", "");

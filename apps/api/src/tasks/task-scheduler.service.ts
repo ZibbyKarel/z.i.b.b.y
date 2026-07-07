@@ -30,6 +30,7 @@ import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { normalizeSummary } from "../shared/text/normalize-summary";
@@ -118,6 +119,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
     private readonly projects: ProjectsStorageService,
+    private readonly resolved: ResolvedProjectService,
     private readonly budget: BudgetService,
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,
@@ -649,10 +651,17 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     return "dispatched";
   }
 
-  /** True when the project caps concurrency and is already at its `maxConcurrent`. */
+  /**
+   * True when the project caps concurrency and is already at its `maxConcurrent`.
+   * Phase 70: reads the EFFECTIVE (company-merged) budget via `ResolvedProjectService`,
+   * not the raw `project.budget` — a company-set `maxConcurrent` now caps every linked
+   * project's concurrency too, unless the project overrides it itself. A company-less
+   * project (or a dangling `companyId`) resolves to its own raw budget, unchanged.
+   */
   private async atCapacity(project: Project | null): Promise<boolean> {
-    const max = project?.budget?.maxConcurrent;
-    if (project == null || max == null) return false;
+    if (project == null) return false;
+    const max = (await this.resolved.resolveBudget(project))?.maxConcurrent;
+    if (max == null) return false;
     return (await this.budget.countRunning(project.id)) >= max;
   }
 

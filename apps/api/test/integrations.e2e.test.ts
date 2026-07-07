@@ -24,6 +24,7 @@ describe("Integrations API (e2e)", () => {
   let credentialsDir: string;
   let stateDir: string;
   let projectsDir: string;
+  let companiesDir: string;
   let projectPath: string;
 
   beforeAll(async () => {
@@ -31,11 +32,13 @@ describe("Integrations API (e2e)", () => {
     credentialsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-CREDENTIALS_DIR-"));
     stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-INTEGRATION_STATE_DIR-"));
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-PROJECTS_DIR-"));
+    companiesDir = await fs.mkdtemp(path.join(os.tmpdir(), "int-COMPANIES_DIR-"));
     projectPath = await fs.mkdtemp(path.join(os.tmpdir(), "int-project-path-"));
     process.env.INTEGRATIONS_DIR = integrationsDir;
     process.env.CREDENTIALS_DIR = credentialsDir;
     process.env.INTEGRATION_STATE_DIR = stateDir;
     process.env.PROJECTS_DIR = projectsDir;
+    process.env.COMPANIES_DIR = companiesDir;
     // The connection tester routes through the adapter registry; fake mode keeps the
     // test endpoint off the network.
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -59,12 +62,14 @@ describe("Integrations API (e2e)", () => {
     await fs.rm(credentialsDir, { recursive: true, force: true });
     await fs.rm(stateDir, { recursive: true, force: true });
     await fs.rm(projectsDir, { recursive: true, force: true });
+    await fs.rm(companiesDir, { recursive: true, force: true });
     await fs.rm(projectPath, { recursive: true, force: true });
     for (const k of [
       "INTEGRATIONS_DIR",
       "CREDENTIALS_DIR",
       "INTEGRATION_STATE_DIR",
       "PROJECTS_DIR",
+      "COMPANIES_DIR",
     ]) {
       delete process.env[k];
     }
@@ -147,6 +152,81 @@ describe("Integrations API (e2e)", () => {
       .get("/api/integrations?projectId=zibby-self")
       .expect(200);
     expect(self.body.map((i: { id: string }) => i.id)).toEqual(["self-mail"]);
+  });
+
+  it("Phase 70: a project linked to a company sees its EFFECTIVE integrations (company + own, merged by kind)", async () => {
+    // acme-app already owns "team-slack" (kind slack) + "no-creds" isn't created yet
+    // at this point in the suite ordering — seed a fresh, isolated project+company pair
+    // instead of reusing acme-app's evolving fixture state.
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "acme-branch", name: "Acme Branch", path: projectPath })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/companies")
+      .send({ id: "acme-hq", name: "Acme HQ" })
+      .expect(201);
+    await request(app.getHttpServer())
+      .patch("/api/projects/acme-branch")
+      .send({ companyId: "acme-hq" })
+      .expect(200);
+
+    // Company owns a Jira integration; the project owns its own Slack integration —
+    // different kinds, so the effective set is the union of both.
+    await request(app.getHttpServer())
+      .post("/api/integrations")
+      .send({
+        id: "hq-jira",
+        kind: "jira",
+        companyId: "acme-hq",
+        config: { kind: "jira", baseUrl: "https://acme.atlassian.net", email: "hq@acme.dev" },
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/integrations")
+      .send({
+        id: "branch-slack",
+        kind: "slack",
+        projectId: "acme-branch",
+        config: { kind: "slack", channels: ["C1"] },
+      })
+      .expect(201);
+
+    const merged = await request(app.getHttpServer())
+      .get("/api/integrations?projectId=acme-branch")
+      .expect(200);
+    expect(merged.body.map((i: { id: string }) => i.id).sort()).toEqual([
+      "branch-slack",
+      "hq-jira",
+    ]);
+
+    // Same kind (slack) at both company and project → the project's own wins.
+    await request(app.getHttpServer())
+      .post("/api/integrations")
+      .send({
+        id: "hq-slack",
+        kind: "slack",
+        companyId: "acme-hq",
+        config: { kind: "slack", channels: ["C-hq"] },
+      })
+      .expect(201);
+    const overridden = await request(app.getHttpServer())
+      .get("/api/integrations?projectId=acme-branch")
+      .expect(200);
+    expect(overridden.body.map((i: { id: string }) => i.id).sort()).toEqual([
+      "branch-slack",
+      "hq-jira",
+    ]);
+
+    // A dangling companyId never 500s — resolves as "no company" (own integrations only).
+    await request(app.getHttpServer())
+      .patch("/api/projects/acme-branch")
+      .send({ companyId: "no-such-company" })
+      .expect(200);
+    const dangling = await request(app.getHttpServer())
+      .get("/api/integrations?projectId=acme-branch")
+      .expect(200);
+    expect(dangling.body.map((i: { id: string }) => i.id)).toEqual(["branch-slack"]);
   });
 
   it("stores credentials separately: the entity file never contains the token", async () => {

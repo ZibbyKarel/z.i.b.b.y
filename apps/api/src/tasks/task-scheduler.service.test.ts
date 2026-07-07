@@ -161,6 +161,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         throw new Error("no project");
       },
     };
+    // Phase 70: no company in any of these tests — the resolver degrades to the
+    // project's own raw budget, so this fake just echoes `project.budget` through,
+    // matching TaskSchedulerService's pre-Phase-70 direct-access behavior exactly.
+    const fakeResolved = {
+      resolveBudget: async (p: { budget?: unknown }) => p.budget,
+    };
     fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       countRunning: async () => 0,
@@ -192,6 +198,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeTrace as never,
       activity as never,
       fakeProjects as never,
+      fakeResolved as never,
       fakeBudget as never,
       fakeApprovals as never,
       fakeGates as never,

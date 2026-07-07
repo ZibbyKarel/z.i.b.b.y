@@ -5,6 +5,7 @@ import { GatesModule } from "../gates/gates.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MandateModule } from "../mandate/mandate.module";
 import { ProjectsModule } from "../projects/projects.module";
+import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { CHANNELS_DIR, ChannelItemStore } from "./channel-item.store";
@@ -28,7 +29,9 @@ export function resolveChannelsDir(): string {
  * integrations store, credentials store and adapter registry. Owns the item store,
  * the SSE push source and the watcher heartbeat. 5.3 adds the triage flow + mandate
  * as providers here (bound to CHANNEL_TRIAGE_FLOW). Nothing imports this module, so
- * it can sit above the tasks/gates/approvals modules without a cycle.
+ * it can sit above the tasks/gates/approvals modules without a cycle. Phase 70:
+ * also imports ResolvedProjectModule so the triage flow's VIP check reads a
+ * project's EFFECTIVE (company-merged) roster, not just its own local `people`.
  */
 @Module({
   imports: [
@@ -39,6 +42,7 @@ export function resolveChannelsDir(): string {
     GateRulesModule,
     ApprovalsModule,
     ProjectsModule,
+    ResolvedProjectModule,
   ],
   controllers: [ChannelsController],
   providers: [

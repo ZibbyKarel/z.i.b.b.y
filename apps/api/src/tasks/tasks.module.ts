@@ -9,6 +9,7 @@ import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
+import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliRouter } from "./claude-cli-router";
@@ -31,7 +32,9 @@ import { TasksController } from "./tasks.controller";
  * back Phase 8's project attribution and the budget/concurrency guard; the
  * scheduled-tasks store is its own module so BudgetModule can share it cycle-free.
  * The primary router is the `claude -p` AI categorizer; the keyword scorer is the
- * always-available fallback.
+ * always-available fallback. Phase 70: also imports ResolvedProjectModule so the
+ * scheduler's `atCapacity` concurrency guard reads a project's EFFECTIVE
+ * (company-merged) `maxConcurrent`, not its raw `budget` field.
  */
 @Module({
   imports: [
@@ -40,6 +43,7 @@ import { TasksController } from "./tasks.controller";
     GoalsModule,
     ChainsModule,
     ProjectsModule,
+    ResolvedProjectModule,
     BudgetModule,
     ApprovalsModule,
     GatesModule,

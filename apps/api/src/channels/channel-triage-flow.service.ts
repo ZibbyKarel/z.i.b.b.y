@@ -5,6 +5,7 @@ import type {
   GateRule,
   GlobalGateRule,
   Mandate,
+  Project,
   TriageVerdict,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
@@ -16,6 +17,7 @@ import { IntegrationsStorageService } from "../integrations/integrations.storage
 import { MandateStorageService } from "../mandate/mandate.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
@@ -73,6 +75,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     private readonly gateRules: GateRulesStorageService,
     private readonly integrations: IntegrationsStorageService,
     private readonly projects: ProjectsStorageService,
+    private readonly resolved: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
     private readonly registry: AdapterRegistry,
     private readonly store: ChannelItemStore,
@@ -141,7 +144,12 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       owned ??
       matchProject(projects, { text: `${item.text} ${integration?.name ?? item.integrationId}` });
     // Enforce per-project autonomy policy (M2): VIP escalation and respond_as.
-    const isVip = matched ? this.isVipSender(item.from, matched) : false;
+    // Phase 70: VIP status is checked against the project's EFFECTIVE roster (its
+    // company's canonical people merged with its own) — a company VIP escalates
+    // for every linked project, not just one with its own local `people` entry. A
+    // company-less project (or a dangling `companyId`) resolves to its own raw
+    // `identity.people` unchanged.
+    const isVip = matched ? await this.isVipSender(item.from, matched) : false;
     const forceT3 = matched ? this.forcesTier3(matched, isVip) : false;
     const effectiveVerdict: TriageVerdict = forceT3
       ? { ...verdict, tier: 3, reason: `${verdict.reason} (policy: forced tier 3)` }
@@ -269,18 +277,16 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
   // ---- Project autonomy policy enforcement (M2) --------------------------------
 
   /**
-   * Returns true when the item's sender matches a VIP person in the project profile.
+   * Returns true when the item's sender matches a VIP person in the project's
+   * EFFECTIVE roster (Phase 70: the company's canonical people merged with the
+   * project's own overrides/additions — see `ResolvedProjectService.resolvePeople`).
    * Case-insensitive substring match so "alice@corp.com" matches person name "Alice".
    */
-  private isVipSender(
-    from: string | undefined,
-    project: { identity?: { people?: Array<{ name: string; vip?: boolean }> } },
-  ): boolean {
+  private async isVipSender(from: string | undefined, project: Project): Promise<boolean> {
     if (!from) return false;
     const lower = from.toLowerCase();
-    return (
-      project.identity?.people?.some((p) => p.vip && lower.includes(p.name.toLowerCase())) ?? false
-    );
+    const people = await this.resolved.resolvePeople(project);
+    return people.some((p) => p.vip && lower.includes(p.name.toLowerCase()));
   }
 
   /**

@@ -32,6 +32,8 @@ interface Deps {
   limitsSnapshot?: () => Promise<Limits>;
   agentRuns?: AgentRun[];
   pipelineRuns?: PipelineRun[];
+  /** Phase 70: override the effective budget the resolver returns (default: echoes `project.budget`). */
+  resolveBudget?: (project: Project) => Promise<Project["budget"]>;
 }
 
 function build(deps: Deps = {}): BudgetService {
@@ -57,10 +59,17 @@ function build(deps: Deps = {}): BudgetService {
   const agentRunner = { listRunning: () => deps.agentRuns ?? [] };
   const pipelineRunner = { list: () => deps.pipelineRuns ?? [] };
   const tasks = { list: async () => [] };
+  // Phase 70: with no `resolveBudget` override, the fake just echoes `project.budget`
+  // through (no company in play), matching BudgetService's pre-Phase-70 direct-access
+  // behavior exactly. The resolver's own merge rules are unit-tested in
+  // resolved-project.helpers.test.ts; `resolveBudget` below covers BudgetService
+  // actually routing through the resolver rather than reading `project.budget` itself.
+  const resolved = { resolveBudget: deps.resolveBudget ?? (async (p: Project) => p.budget) };
   return new BudgetService(
     ledger as never,
     config as never,
     projects as never,
+    resolved as never,
     limitsService as never,
     agentRunner as never,
     pipelineRunner as never,
@@ -80,6 +89,20 @@ describe("BudgetService.check — caps arithmetic", () => {
   it("ok when the project has no budget", async () => {
     const svc = build({ project: project(undefined) });
     expect(await svc.check("alpha")).toEqual({ ok: true });
+  });
+
+  it("Phase 70: enforces the resolver's EFFECTIVE budget, not the project's own raw `budget`", async () => {
+    // The project itself has NO budget set at all — a company-inherited daily cap
+    // (surfaced only via the resolver) must still be enforced. Proves `check()`
+    // routes through ResolvedProjectService.resolveBudget rather than `project.budget`.
+    const svc = build({
+      project: project(undefined),
+      resolveBudget: async () => ({ dailyRuns: 2 }),
+      ledger: { countDaily: async () => 2 },
+    });
+    const result = await svc.check("alpha");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-daily");
   });
 
   it("ok when under the daily cap", async () => {

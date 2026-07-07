@@ -4,6 +4,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service";
 import { LimitsService } from "../limits/limits.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { BudgetConfigStore } from "./budget-config.store";
@@ -66,6 +67,7 @@ export class BudgetService {
     private readonly ledger: BudgetLedgerStore,
     private readonly config: BudgetConfigStore,
     private readonly projects: ProjectsStorageService,
+    private readonly resolved: ResolvedProjectService,
     private readonly limits: LimitsService,
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
@@ -111,11 +113,15 @@ export class BudgetService {
       );
     }
 
-    // Per-project run-count caps.
+    // Per-project run-count caps. Phase 70: EFFECTIVE budget (the project's own
+    // fields merged over its company's defaults), not the raw `project.budget` —
+    // a company-less project (or a dangling `companyId`) resolves to its own raw
+    // budget unchanged, so this is behavior-preserving for every project without a
+    // company.
     if (projectId) {
       const budget = await this.projects
         .get(projectId)
-        .then((p) => p.budget)
+        .then((p) => this.resolved.resolveBudget(p))
         .catch(() => undefined);
       if (budget?.dailyRuns != null || budget?.weeklyRuns != null || budget?.monthlyRuns != null) {
         try {
@@ -289,7 +295,12 @@ export class BudgetService {
 
     const rows: ProjectBudgetStatus[] = [];
     for (const project of projects) {
-      if (!project.budget) continue; // only engagements with a budget appear in the readout
+      // Phase 70: the EFFECTIVE budget (company defaults + this project's own
+      // overrides, field-level) — a company-less project resolves to its own raw
+      // `budget` unchanged, so this readout is behavior-preserving for every
+      // project without a company.
+      const budget = await this.resolved.resolveBudget(project);
+      if (!budget) continue; // only engagements with a budget appear in the readout
       const [daily, weekly, monthly, dailyCost, weeklyCost, monthlyCost, running] =
         await Promise.all([
           this.ledger.countDaily(project.id, now).catch(() => 0),
@@ -305,40 +316,32 @@ export class BudgetService {
         name: project.name,
         daily: {
           used: daily,
-          ...(project.budget.dailyRuns != null ? { cap: project.budget.dailyRuns } : {}),
+          ...(budget.dailyRuns != null ? { cap: budget.dailyRuns } : {}),
         },
         weekly: {
           used: weekly,
-          ...(project.budget.weeklyRuns != null ? { cap: project.budget.weeklyRuns } : {}),
+          ...(budget.weeklyRuns != null ? { cap: budget.weeklyRuns } : {}),
         },
         monthly: {
           used: monthly,
-          ...(project.budget.monthlyRuns != null ? { cap: project.budget.monthlyRuns } : {}),
+          ...(budget.monthlyRuns != null ? { cap: budget.monthlyRuns } : {}),
         },
         // Phase 12: the dollar-window counterparts, same shape as daily/weekly/monthly
         // above — spentUsd always reported, capUsd only when the project set one.
         dailyCost: {
           spentUsd: dailyCost.sum,
-          ...(project.budget.dailyCostCapUsd != null
-            ? { capUsd: project.budget.dailyCostCapUsd }
-            : {}),
+          ...(budget.dailyCostCapUsd != null ? { capUsd: budget.dailyCostCapUsd } : {}),
         },
         weeklyCost: {
           spentUsd: weeklyCost.sum,
-          ...(project.budget.weeklyCostCapUsd != null
-            ? { capUsd: project.budget.weeklyCostCapUsd }
-            : {}),
+          ...(budget.weeklyCostCapUsd != null ? { capUsd: budget.weeklyCostCapUsd } : {}),
         },
         monthlyCost: {
           spentUsd: monthlyCost.sum,
-          ...(project.budget.monthlyCostCapUsd != null
-            ? { capUsd: project.budget.monthlyCostCapUsd }
-            : {}),
+          ...(budget.monthlyCostCapUsd != null ? { capUsd: budget.monthlyCostCapUsd } : {}),
         },
         running,
-        ...(project.budget.maxConcurrent != null
-          ? { maxConcurrent: project.budget.maxConcurrent }
-          : {}),
+        ...(budget.maxConcurrent != null ? { maxConcurrent: budget.maxConcurrent } : {}),
         queued: queuedByProject.get(project.id) ?? 0,
         held: heldByProject.get(project.id) ?? 0,
       });

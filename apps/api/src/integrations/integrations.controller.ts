@@ -3,6 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import type { Integration } from "@zibby/contracts";
 import { integrationsContract } from "@zibby/contracts";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { CONNECTION_TESTER, type ConnectionTester } from "./connection-tester";
 import { credentialMatchesKind } from "./credential-kind";
@@ -33,6 +34,7 @@ export class IntegrationsController {
     private readonly storage: IntegrationsStorageService,
     private readonly credentials: CredentialsStore,
     private readonly projects: ProjectsStorageService,
+    private readonly resolved: ResolvedProjectService,
     @Inject(CONNECTION_TESTER) private readonly tester: ConnectionTester,
   ) {}
 
@@ -69,11 +71,23 @@ export class IntegrationsController {
       },
 
       listIntegrations: async ({ query }) => {
+        // Phase 70: scoped by a project id, this returns the project's EFFECTIVE
+        // integrations (its own + its company's, merged by `kind`) via the
+        // resolver — never a raw `projectId` filter. An unknown project id (or one
+        // with no company) resolves to the project's own integrations only (the
+        // resolver's dangling-companyId / no-company fallback), not a 500.
+        if (query.projectId) {
+          const project = await this.projects.get(query.projectId).catch(() => null);
+          const scoped = project ? await this.resolved.resolveIntegrations(project) : [];
+          return {
+            status: 200,
+            body: await Promise.all(scoped.map((i) => this.withCredentialState(i))),
+          };
+        }
         const all = await this.storage.list();
-        const scoped = query.projectId ? all.filter((i) => i.projectId === query.projectId) : all;
         return {
           status: 200,
-          body: await Promise.all(scoped.map((i) => this.withCredentialState(i))),
+          body: await Promise.all(all.map((i) => this.withCredentialState(i))),
         };
       },
 

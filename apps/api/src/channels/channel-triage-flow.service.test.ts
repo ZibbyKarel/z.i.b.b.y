@@ -81,6 +81,12 @@ describe("ChannelTriageFlowService", () => {
       list: async () => opts.jiraIntegrations ?? [],
     };
     const projects = { list: async () => opts.projects ?? [] };
+    // Phase 70: no company in any of these tests — the resolver degrades to the
+    // project's own raw `identity.people`, matching pre-Phase-70 behavior exactly.
+    // The resolver's own merge rules are unit-tested in resolved-project.helpers.test.ts.
+    const resolved = {
+      resolvePeople: async (project: Project) => project.identity?.people ?? [],
+    };
     const credentials = { read: async () => ({ token: "xoxb-1" }) };
     const registry = { resolve: () => ({ send, ...(opts.readOnly ? { readOnly: true as const } : {}) }) };
     const approvals = { register, requestApproval };
@@ -95,6 +101,7 @@ describe("ChannelTriageFlowService", () => {
       gateRules as never,
       integrations as never,
       projects as never,
+      resolved as never,
       credentials as never,
       registry as never,
       store,

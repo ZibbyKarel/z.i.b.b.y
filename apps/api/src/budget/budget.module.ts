@@ -3,6 +3,7 @@ import { AgentsModule } from "../agents/agents.module";
 import { LimitsModule } from "../limits/limits.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
+import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { BUDGET_CONFIG_FILE, BudgetConfigStore } from "./budget-config.store";
@@ -25,11 +26,14 @@ export function resolveBudgetConfigFile(): string {
  * limits (LimitsModule) and both runners (Agents/Pipelines) for live concurrency,
  * plus the standalone scheduled-tasks store for queued/held counts. Deliberately does
  * NOT import TasksModule — TasksModule imports THIS for the scheduler's budget guard,
- * so the dependency runs one way only (no cycle).
+ * so the dependency runs one way only (no cycle). Phase 70: also imports
+ * ResolvedProjectModule so the budget guard enforces a project's EFFECTIVE
+ * (company-merged) budget rather than its raw `budget` field.
  */
 @Module({
   imports: [
     ProjectsModule,
+    ResolvedProjectModule,
     LimitsModule,
     AgentsModule,
     PipelinesModule,
