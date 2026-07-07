@@ -155,6 +155,14 @@ export const TaskRunSchema = z.object({
   chainId: z.string().optional(),
   /** Phase 05 (chain runs): the per-step pipeline runs, folded into the detail. */
   steps: z.array(ChainRunStepSchema).optional(),
+  /**
+   * Phase 49 (agent runs): the captured `claude` session id, when the run emitted a
+   * `system/init` line. Its presence tells the detail whether a re-run of an
+   * errored/interrupted run can continue the same session (`--resume`, context
+   * preserved) or must start fresh — driving the "Pokračovat" vs "Spustit znovu"
+   * button label. Absent for non-agent runs and demo/test output.
+   */
+  sessionId: z.string().optional(),
 });
 export type TaskRun = z.infer<typeof TaskRunSchema>;
 

@@ -22,14 +22,15 @@ import { formatDuration, relativeTime, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
-import { useNewTask } from "../../tasks";
 import { useProjectsQuery } from "../../projects";
+import { useNewTask } from "../../tasks";
 import { useAssignRunProjectMutation } from "../mutations";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import {
   type RunView,
   approvalForRun,
   isMarkdownFilename,
+  isResumableRun,
   isStoppableRun,
   runStateTone,
   runTitle,
@@ -54,6 +55,10 @@ export interface RunDetailProps {
   stopping: boolean;
   onDelete: () => void;
   deleting: boolean;
+  /** Phase 49: re-run an errored/interrupted agent run (spawns a new run). Absent for
+   * kinds/states that aren't re-runnable — the button then never shows. */
+  onResume?: () => void;
+  resuming?: boolean;
 }
 
 /**
@@ -130,14 +135,7 @@ function MetaCell({
 }) {
   return (
     <Stack gap="25">
-      <Typography
-        mono
-        uppercase
-        size="2xs"
-        tracking="wide"
-        type="note"
-        variant="tertiary"
-      >
+      <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
         {label}
       </Typography>
       <Typography
@@ -361,6 +359,8 @@ export function RunDetail({
   stopping,
   onDelete,
   deleting,
+  onResume,
+  resuming,
 }: RunDetailProps) {
   const t = useTranslations("runs");
   const tApprovals = useTranslations("approvals");
@@ -494,6 +494,21 @@ export function RunDetail({
                         {t("stop")}
                       </Button>
                     )}
+                    {/* Phase 49: re-run an errored/interrupted agent run. The label is
+                        honest about what ships: a captured session id re-runs with
+                        `--resume` ("Pokračovat"), otherwise a fresh re-run ("Spustit znovu"). */}
+                    {onResume && isResumableRun(run) && (
+                      <Button
+                        data-testid="resume-run"
+                        disabled={resuming}
+                        icon="run"
+                        intent="primary"
+                        onClick={onResume}
+                        size="sm"
+                      >
+                        {run.sessionId ? t("resumeContinue") : t("resumeFresh")}
+                      </Button>
+                    )}
                     <Button
                       disabled={deleting}
                       icon="x"
@@ -505,12 +520,7 @@ export function RunDetail({
                     </Button>
                   </Stack>
                 )}
-                <IconTile
-                  data-testid="run-header-avatar"
-                  glyph={glyph}
-                  size="lg"
-                  src={avatar}
-                />
+                <IconTile data-testid="run-header-avatar" glyph={glyph} size="lg" src={avatar} />
               </Stack>
             </Stack>
 

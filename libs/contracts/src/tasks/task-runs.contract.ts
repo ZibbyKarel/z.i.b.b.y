@@ -106,10 +106,14 @@ export const taskRunsContract = c.router(
       responses: {
         200: TaskRunSchema,
         404: ErrorSchema,
-        // The run is not parked / its kind has no resume.
+        // The run's kind/state has no resume: a running run, or an agent run that
+        // has not ended in error/interrupted, or a pipeline/goal run that isn't parked.
         409: ErrorSchema,
       },
-      summary: "Resume a parked pipeline/goal run with an operator note",
+      summary:
+        "Resume a run: a parked pipeline/goal run (with an operator note), or re-run an " +
+        "errored/interrupted agent run (returns the NEW run — with --resume when a session " +
+        "id was captured, else a fresh run of the same task)",
     },
 
     deleteTaskRun: {

@@ -946,6 +946,8 @@
     "cancelTask": "Zrušit task",
     "cancelTitle": "Zrušit naplánovaný task?",
     "cancelBody": "Opravdu zrušit tento naplánovaný task? Tuto akci nelze vrátit.",
+    "resumeContinue": "Pokračovat",
+    "resumeFresh": "Spustit znovu",
     "output": "výstup běhu",
     "liveLog": "živý log",
     "log": "log běhu",

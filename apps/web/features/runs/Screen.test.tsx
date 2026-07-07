@@ -49,6 +49,7 @@ vi.mock("./mutations", () => ({
   useStopTaskRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteAgentRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useDeletePipelineRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useResumeTaskRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("../tasks", () => ({
   useCancelScheduledTaskMutation: () => ({ mutate: vi.fn(), isPending: false }),

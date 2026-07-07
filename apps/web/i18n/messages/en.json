@@ -946,6 +946,8 @@
     "cancelTask": "Cancel task",
     "cancelTitle": "Cancel the scheduled task?",
     "cancelBody": "Really cancel this scheduled task? This cannot be undone.",
+    "resumeContinue": "Resume",
+    "resumeFresh": "Run again",
     "output": "run output",
     "liveLog": "live log",
     "log": "run log",

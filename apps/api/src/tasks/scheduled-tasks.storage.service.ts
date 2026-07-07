@@ -344,6 +344,23 @@ export class ScheduledTasksStorageService
     return merged;
   }
 
+  /**
+   * Phase 49: re-point a task at a re-run's NEW run, clearing the prior (errored)
+   * outcome so the fresh run's terminal writes back and its PR/output gate can fire —
+   * `writeOutcome` is first-write-wins, so a stale outcome would otherwise block it.
+   * Drops back to `dispatched` and clears the stale `error` string; the operator's
+   * chosen `output` and every other field are untouched, so the original task's output
+   * gate is preserved. The scheduler's global `onRunStatus` handles the rest.
+   */
+  async reassignRun(id: string, runRef: string): Promise<ScheduledTask> {
+    const existing = await this.get(id);
+    const merged: ScheduledTask = { ...existing, status: "dispatched", runRef };
+    delete merged.outcome;
+    delete merged.error;
+    await this.writeEntity(merged);
+    return merged;
+  }
+
   /** Stamp a task failed with a short reason (kept for the queue's display). */
   async markFailed(id: string, error: string): Promise<ScheduledTask> {
     const existing = await this.get(id);

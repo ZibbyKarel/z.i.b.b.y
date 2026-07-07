@@ -54,6 +54,16 @@ export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
 }
 
 /**
+ * Whether the "Resume" (re-run) action applies (Phase 49): an AGENT run that ended in
+ * error or interrupted. Only agent runs are re-runnable today; the re-run spawns a new
+ * run, continuing the same claude session via `--resume` when one was captured (see
+ * {@link RunView.sessionId}) — else a fresh run of the same task.
+ */
+export function isResumableRun(run: Pick<RunView, "kind" | "status">): boolean {
+  return run.kind === "agent" && (run.status === "error" || run.status === "interrupted");
+}
+
+/**
  * Task-first display name: the explicit task title, else (for runs born from a
  * task) the task's own name, else the run's prompt, else the routed target id.
  * A pipeline run's `prompt` is the "fáze: X" progress string — a subtitle, never

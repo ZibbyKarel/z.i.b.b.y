@@ -74,8 +74,14 @@
 
 - [x] stránka běhy a aktivita - na detailu tasku v headeru bych místo klasického glyphu v levo nahoře zobrazil avatara (s fallbackem na glyph) přiřazeného agenta nebo pipeliny. Avatar by měl být vpravo — fáze 48
 
-- [ ] stránka běhy a aktivita - na detailu tasku, který skončil chybou mi chybí tlačítko "resume", které pustí task znova (ideálně tak aby se nemusel znovu celý opakovat a načítat context)
+- [x] stránka běhy a aktivita - na detailu tasku, který skončil chybou mi chybí tlačítko "resume", které pustí task znova (ideálně tak aby se nemusel znovu celý opakovat a načítat context) — fáze 49 (--resume session, fallback fresh re-run; jen agent runs)
 
 - [x] DropdownButton v CommandLine nemá asi správný disabled stav. stále vypadá že je aktivní jen na něj nejde kliknout — fáze 47
 
 - [ ] inline vyhledávání v komponentě CommandLine má několik problémů 1. Nezobrazuje se pod kurzorem ale pod inputem coš je divné UX pokud je COmmandLine roztažená přes více řádků 2. v HUD UI na Overview stránce je plachta s výsledky překrytá obalovým divem celé komponenty CommandLine 3. v Chat UI kde je CommandLine vykreslena ve spodu stránky se plachta s výsledky vůbec nevejde, V takovém případě by se měla vykreslit nad kurzorem místo pod ním
+
+- [ ] CommandLine componenta - tlačítko odeslání i tlačítka na přidání souborů by měla být pozicována "uvnitř inputu". Je potřeba ale zajistit aby text inputut nezasahoval do tlačítek
+
+- [ ] stránka běhy a aktivita - log běhu nesedí s designem. Měl by být obalen v CodeBlock componentě
+
+- [ ] stránka běhy a aktivita - avatar přiřazeného agenta nebo pipeliny by měl být dělaný stejně jako v HeroEntity komponentě - čili jako roztažené pozadí

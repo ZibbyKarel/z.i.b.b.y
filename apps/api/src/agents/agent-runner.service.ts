@@ -15,7 +15,7 @@ import { ClaudePreflightService } from "../runner/claude-preflight.service";
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
 import { formatClaudeStreamLine } from "../runner/claude-stream-format";
-import { RunnerCore } from "../runner/runner-core";
+import { RunNotFoundError, RunnerCore } from "../runner/runner-core";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { prepareWorktreeDir } from "../shared/worktree-root";
@@ -207,6 +207,50 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  /**
+   * Phase 49: re-run an errored or interrupted agent run. Rebuilds the original launch
+   * from the persisted run record (same agent, prompt, project, files, title, taskId)
+   * and spawns a NEW run through the shared {@link launch}/{@link RunnerCore.start}
+   * governance path — never a forked spawn. When the errored run captured a `claude`
+   * session id, the new run continues it via `--resume` (context preserved); otherwise
+   * it starts fresh. A fresh worktree is used (the `--resume` conversation carries the
+   * context, not the checkout); task attachments are not re-threaded here (a resumed
+   * session already holds them — the fresh re-run's documented gap). Returns the new run.
+   */
+  async rerun(runId: string): Promise<AgentRun> {
+    const rec = await this.resolveRunRecord(runId);
+    const agent =
+      rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId);
+    this.log.info("re-running agent run", {
+      from: runId,
+      agentId: rec.agentId,
+      resume: rec.sessionId ? "session" : "fresh",
+    });
+    return this.launch(
+      agent,
+      rec.prompt,
+      rec.project,
+      rec.files,
+      rec.title,
+      rec.taskId,
+      undefined,
+      undefined,
+      undefined,
+      rec.sessionId,
+    );
+  }
+
+  /** Resolve an agent run by id — the in-memory record first, then the on-disk history. */
+  private async resolveRunRecord(runId: string): Promise<AgentRun> {
+    try {
+      return this.get(runId);
+    } catch {
+      const found = (await this.listAll()).find((r) => r.runId === runId);
+      if (!found) throw new RunNotFoundError(runId);
+      return found;
+    }
+  }
+
   /** Shared spawn path: build the command for `agent` and hand it to the core. */
   private async launch(
     agent: Agent,
@@ -218,6 +262,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     matchedTerms?: string[],
     externalWorkspace?: Workspace,
     attachments?: RunAttachments,
+    /** Phase 49: continue a captured claude session (`--resume`) on a re-run. */
+    resumeSessionId?: string,
   ): Promise<AgentRun> {
     const agentId = agent.id;
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
@@ -249,6 +295,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       grounding,
       cwd,
       attachments,
+      resumeSessionId,
     );
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
@@ -613,6 +660,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     grounding?: string,
     sandboxCwd?: string,
     attachments?: RunAttachments,
+    /** Phase 49: continue this captured claude session (`--resume`) instead of a cold start. */
+    resumeSessionId?: string,
   ): Promise<{ command: string; args: string[]; catalogAgentIds: string[] }> {
     // The work directory (the run's `files`, if any) stays the "operate on" target;
     // the attachments dir is reference material, never the thing to act on.
@@ -643,6 +692,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // Capture the full transcript so the run log shows every step, not just the
       // final summary (the core flattens the stream-json events back to text).
       streamTranscript: true,
+      // Phase 49: re-run of an errored/interrupted run continues its captured session.
+      ...(resumeSessionId ? { resumeSessionId } : {}),
       // Spill the system prompt into the run's sandbox so it rides
       // --append-system-prompt-file, keeping argv off the OS limit (spawn E2BIG). A
       // standalone agent run passes no `delegates`, so its catalog folds down to

@@ -51,6 +51,15 @@ export interface ClaudeRunOptions {
    */
   resumeContext?: string;
   /**
+   * Phase 49: a captured `claude` session id to continue via `--resume <sessionId>`
+   * (verified headless-safe — the chat engine resumes the same way). Set only when an
+   * errored/interrupted run is being re-run and its session id was captured, so the
+   * new session continues the old conversation instead of reloading its context. All
+   * the other flags (system prompt, catalog, gate settings) are still supplied as
+   * usual; this just threads the resume. Omitted → a fresh session.
+   */
+  resumeSessionId?: string;
+  /**
    * Agent ids that should populate the delegation catalog (`--agents`). The catalog
    * inlines every entry's full instruction body into a SINGLE argv string, so passing
    * the whole agent LIBRARY (every stored agent) overflows the OS argv limit once the
@@ -418,6 +427,9 @@ export class ClaudeRunCommandService {
     if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose");
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
     for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir);
+    // Phase 49: continue a captured session (re-run of an errored/interrupted run)
+    // instead of a cold start — the conversation history carries the prior context.
+    if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
     if (opts.model) args.push("--model", opts.model);
     if (opts.thinking) {
       const effort = THINKING_TO_EFFORT[opts.thinking];

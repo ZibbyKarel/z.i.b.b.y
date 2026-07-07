@@ -900,6 +900,28 @@ export class RunnerCore<R extends BaseRun> {
     }
   }
 
+  /**
+   * Phase 49: pull the `claude` session id out of a single stream-json `system/init`
+   * line (`{"type":"system","subtype":"init","session_id":"…"}`), or `null` when the
+   * line isn't that event. A cheap substring guard keeps `JSON.parse` off every other
+   * output line (mirrors {@link extractResultCost}); the captured id lets an
+   * errored/interrupted run be re-run with `--resume` instead of reloading context.
+   */
+  private extractSessionId(raw: string): string | null {
+    const line = raw.trim();
+    if (!line.startsWith("{") || !line.includes('"session_id"')) return null;
+    try {
+      const evt = JSON.parse(line);
+      return evt?.type === "system" &&
+        evt?.subtype === "init" &&
+        typeof evt.session_id === "string"
+        ? evt.session_id
+        : null;
+    } catch {
+      return null; // not JSON / malformed — ignore
+    }
+  }
+
   /** Attach output capture + exit handling to a live handle. */
   private wire(handle: RunHandle<R>): void {
     const { child, log, run } = handle;
@@ -930,6 +952,13 @@ export class RunnerCore<R extends BaseRun> {
           // claude běhu (formatLine wired), ne na demo/test výstupu.
           const cost = this.extractResultCost(raw);
           if (cost !== null) run.costUsd = (run.costUsd ?? 0) + cost;
+          // Phase 49: capture the session id from the first `system/init` line, so an
+          // errored/interrupted run can later be re-run with `--resume <sessionId>`.
+          // First one wins (a session keeps its id across the run); finalize persists it.
+          if (!run.sessionId) {
+            const sid = this.extractSessionId(raw);
+            if (sid) run.sessionId = sid;
+          }
         }
         const line = raw.trim();
         const progress = /^PROGRESS\s+(\d+)/.exec(line);

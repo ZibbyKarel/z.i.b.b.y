@@ -45,10 +45,17 @@ export class TaskRunNotStoppableError extends Error {
   }
 }
 
-/** The run's kind has no resume (only parked pipeline/goal runs can be resumed). */
+/**
+ * The run's kind/state has no resume: a parked pipeline/goal run can be resumed, and
+ * (Phase 49) an errored/interrupted agent run can be re-run — anything else (a running
+ * run, a non-parked pipeline/goal, an agent run that didn't end in error/interrupted)
+ * throws this, which the controller maps to a 409.
+ */
 export class TaskRunNotResumableError extends Error {
   constructor(runId: string) {
-    super(`Task run "${runId}" cannot be resumed (only pipeline/goal runs can)`);
+    super(
+      `Task run "${runId}" cannot be resumed (parked pipeline/goal runs, or errored/interrupted agent runs)`,
+    );
     this.name = "TaskRunNotResumableError";
   }
 }
@@ -180,13 +187,39 @@ export class TaskRunsService {
     return this.getTaskRun(runId);
   }
 
-  /** Resume a parked pipeline/goal run with an operator note. Agent runs have no resume. */
+  /**
+   * Resume a run. A parked pipeline/goal run resumes in place with an operator note.
+   * Phase 49: an errored/interrupted AGENT run is instead re-run — a NEW run spawns
+   * (with `--resume <sessionId>` when the errored run captured one, else fresh) and is
+   * returned, so the caller navigates to it. Any other kind/state → not resumable (409).
+   */
   async resume(runId: string, note?: string): Promise<TaskRun> {
     const kind = await this.kindOf(runId);
     if (kind === "pipeline") await this.pipelineRunner.resumeParked(runId, note);
     else if (kind === "goal") await this.goalRunner.resumeParked(runId, note);
+    else if (kind === "agent") return this.rerunAgent(runId);
     else throw new TaskRunNotResumableError(runId);
     return this.getTaskRun(runId);
+  }
+
+  /**
+   * Phase 49: re-run an agent run that ended in error/interrupted (a running or
+   * otherwise-stated agent run has nothing to re-run → 409). Spawns a NEW run through
+   * the agent runner's shared spawn/pgid/timeout/registry governance (with `--resume`
+   * when a session id was captured), then re-points the originating task at the new
+   * run — clearing the prior errored outcome so the fresh run's terminal writes back
+   * and the original task's output/PR gate still fires. Operator-initiated, so it is
+   * allowed like any task launch; no autonomous commit/push is introduced. Returns the
+   * NEW run.
+   */
+  private async rerunAgent(runId: string): Promise<TaskRun> {
+    const run = await this.getTaskRun(runId);
+    if (run.status !== "error" && run.status !== "interrupted") {
+      throw new TaskRunNotResumableError(runId);
+    }
+    const newRun = await this.agentRunner.rerun(runId);
+    if (run.taskId) await this.scheduled.reassignRun(run.taskId, newRun.runId);
+    return this.getTaskRun(newRun.runId);
   }
 
   /**
@@ -368,6 +401,9 @@ function agentRunToView(r: AgentRun, projectNames: ProjectNameMaps): TaskRun {
     resumeAt: r.resumeAt,
     limitResumeCycles: r.limitResumeCycles,
     costUsd: r.costUsd,
+    // Phase 49: surface the captured session id so the detail's re-run button knows
+    // whether it can continue the session (`--resume`) or must start fresh.
+    sessionId: r.sessionId,
   };
 }
 

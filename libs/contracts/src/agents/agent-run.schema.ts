@@ -75,6 +75,15 @@ export const AgentRunSchema = z.object({
    * sandbox as before). Persisted so deletion can prune the worktree.
    */
   workspace: WorkspaceSchema.optional(),
+  /**
+   * Phase 49: the `claude` CLI session id captured from the run's `system/init`
+   * stream-json line (`{"type":"system","subtype":"init","session_id"}`). Persisted
+   * so an errored/interrupted run can be re-run with `--resume <sessionId>` —
+   * continuing the same session instead of reloading its whole context. Absent on
+   * runs that never emitted an init line (demo/test output, or a run from before
+   * this feature).
+   */
+  sessionId: z.string().optional(),
   startedAt: IsoDateTimeSchema,
   pid: z.number().int(),
   logFile: z.string(),

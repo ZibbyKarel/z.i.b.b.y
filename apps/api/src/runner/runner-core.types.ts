@@ -58,6 +58,14 @@ export interface BaseRun {
    * `formatLine`.
    */
   costUsd?: number;
+  /**
+   * Phase 49: the `claude` CLI session id, captured from the run's `system/init`
+   * stream-json line (`{"type":"system","subtype":"init","session_id"}`) the first
+   * time it appears. Persisted so an errored/interrupted run can be re-run with
+   * `--resume <sessionId>` (continuing the session instead of reloading context).
+   * Absent for demo/test output and runs from before this feature.
+   */
+  sessionId?: string;
 }
 
 /** Everything a wrapper must hand the core to spawn one run. */

@@ -17,6 +17,7 @@ import { TaskCard } from "./components/TaskCard";
 import {
   useDeleteAgentRunMutation,
   useDeletePipelineRunMutation,
+  useResumeTaskRunMutation,
   useStopTaskRunMutation,
 } from "./mutations";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
@@ -24,6 +25,7 @@ import {
   type FeedStatus,
   type RunView,
   findSelectedRun,
+  isResumableRun,
   isStoppableRun,
   runAvatar,
   runGlyph,
@@ -113,6 +115,7 @@ export function Screen() {
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
   const stopRun = useStopTaskRunMutation();
+  const resumeRun = useResumeTaskRunMutation();
 
   // Deleting a run erases its on-disk artifacts; clearing the selection first keeps
   // the detail pane from briefly pointing at a now-gone run before the refetch.
@@ -148,6 +151,17 @@ export function Screen() {
 
   const stop = (run: RunView) => {
     if (isStoppableRun(run)) stopRun.mutate({ params: { runId: run.runId }, body: {} });
+  };
+
+  // Phase 49: re-run an errored/interrupted agent run. The endpoint returns the NEW
+  // run; jump the selection to it so the detail follows the fresh run (the feed
+  // refetch, fired by the mutation's onSuccess, then brings the row in).
+  const resume = (run: RunView) => {
+    if (!isResumableRun(run)) return;
+    resumeRun.mutate(
+      { params: { runId: run.runId }, body: {} },
+      { onSuccess: (res) => setSelId(res.body.runId) },
+    );
   };
 
   const remove = (runId: string, kind: string) => {
@@ -269,7 +283,9 @@ export function Screen() {
                 key={selected.runId}
                 now={now}
                 onDelete={() => remove(selected.runId, selected.kind)}
+                onResume={() => resume(selected)}
                 onStop={() => stop(selected)}
+                resuming={resumeRun.isPending}
                 run={selected}
                 stopping={stopRun.isPending}
               />

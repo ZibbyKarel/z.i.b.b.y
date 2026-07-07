@@ -114,6 +114,17 @@ function gitCommit() {
 
 async function main() {
   log("Fake claude reporting for duty.");
+  // Phase 49: emit a stream-json `system/init` line so the runner captures the session
+  // id (enabling re-run with `--resume`). The value is the session id to report.
+  if (process.env.FAKE_CLAUDE_SESSION) {
+    log(
+      JSON.stringify({
+        type: "system",
+        subtype: "init",
+        session_id: process.env.FAKE_CLAUDE_SESSION,
+      }),
+    );
+  }
   log("PROGRESS 0");
   await fs.writeFile(
     path.join(cwd, process.env.FAKE_CLAUDE_MARKER ?? "agent-007-was-here.txt"),

@@ -29,3 +29,15 @@ describe("TaskRunSchema — attachments", () => {
     expect(parsed.attachments).toEqual([{ name: "a.txt", size: 2 }]);
   });
 });
+
+describe("TaskRunSchema — sessionId (Phase 49)", () => {
+  it("parses a run without a sessionId; the field stays undefined", () => {
+    const parsed = TaskRunSchema.parse(minimalRun);
+    expect(parsed.sessionId).toBeUndefined();
+  });
+
+  it("round-trips a captured claude session id (enables --resume re-run)", () => {
+    const parsed = TaskRunSchema.parse({ ...minimalRun, sessionId: "sess-7" });
+    expect(parsed.sessionId).toBe("sess-7");
+  });
+});
