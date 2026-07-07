@@ -24,7 +24,7 @@ import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { formatCostUsd } from "../../../utils/cost";
-import { formatDuration, relativeTime, resumeEta } from "../../../utils/time";
+import { formatDuration, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
@@ -392,17 +392,18 @@ export function RunDetail({
   // agrees exactly with the state chip and the card's edge/progress accent —
   // `running` reads as the distinct `run` blue, never the generic `accent`.
   const tone = runStateTone(run.status);
-  const ago = (n: number, unit: string) =>
-    n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
-  // A waiting scheduled task fires in the future — its time reads "in …".
+  // A waiting scheduled task fires in the future — its time reads "in …". A started
+  // run's time is always the absolute local date/time it started (never relative —
+  // the operator asked for this explicitly), matching the approval requestedAt cell's
+  // formatting below.
   const inMin = Math.floor((Date.parse(run.startedAt) - now) / 60000);
   const startedValue =
     run.status === "scheduled" && inMin >= 1
       ? inMin < 60
         ? t("inM", { n: inMin })
         : t("inH", { n: Math.floor(inMin / 60) })
-      : relativeTime(run.startedAt, now, ago);
+      : new Date(run.startedAt).toLocaleString("cs");
 
   // Total wall-clock time from dispatch to the written-back outcome — only once the
   // task's outcome carries a `finishedAt` (absent for a run still in flight, or one
@@ -476,8 +477,16 @@ export function RunDetail({
   // `!run.projectId`). Keeps every existing stat and its conditional (Phase 62).
   const metaItems: ReactNode[] = [];
   if (run.projectId) {
+    const projectId = run.projectId;
     metaItems.push(
-      <MetaCell key="project" label={t("metaProject")} tone="accent" value={run.project} />,
+      <MetaCell
+        key="project"
+        label={t("metaProject")}
+        onClick={() => router.push(`/projects/${projectId}`)}
+        testId="run-project-link"
+        tone="accent"
+        value={run.project}
+      />,
     );
   } else if (projects.length > 0) {
     metaItems.push(<AssignProjectControl key="project" runId={run.runId} />);

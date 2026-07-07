@@ -495,3 +495,39 @@ describe("RunDetail — assign to project (Phase 24 Part D)", () => {
     });
   });
 });
+
+describe("RunDetail — started time is absolute, not relative (Phase 67 item A)", () => {
+  it("shows the started meta cell as an absolute formatted date/time, not a relative 'před …' string", () => {
+    const startedAt = new Date("2026-06-14T10:00:00Z").toISOString();
+    renderDetail({ ...pipelineRun, startedAt });
+    expect(screen.getByText(new Date(startedAt).toLocaleString("cs"))).toBeInTheDocument();
+    expect(screen.queryByText(/^před /)).not.toBeInTheDocument();
+  });
+
+  it("keeps a scheduled run's future time in the relative 'in Xm' form (unchanged)", () => {
+    renderDetail({
+      ...pipelineRun,
+      status: "scheduled",
+      startedAt: new Date("2026-06-14T10:10:00Z").toISOString(),
+    });
+    expect(screen.getByText("za 5 m")).toBeInTheDocument();
+  });
+});
+
+describe("RunDetail — project meta cell links to project detail (Phase 67 item B)", () => {
+  beforeEach(() => {
+    push.mockClear();
+  });
+
+  it("links the project meta cell to its detail page when the run carries a projectId", async () => {
+    renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
+    await userEvent.click(screen.getByTestId("run-project-link"));
+    expect(push).toHaveBeenCalledWith("/projects/alpha");
+  });
+
+  it("shows the assign control (not a link) for a project-less run", () => {
+    renderDetail();
+    expect(screen.queryByTestId("run-project-link")).not.toBeInTheDocument();
+    expect(screen.getByText("Projekt")).toBeInTheDocument();
+  });
+});
