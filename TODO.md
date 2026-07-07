@@ -78,9 +78,9 @@
 
 - [x] DropdownButton v CommandLine nemá asi správný disabled stav. stále vypadá že je aktivní jen na něj nejde kliknout — fáze 47
 
-- [ ] inline vyhledávání v komponentě CommandLine má několik problémů 1. Nezobrazuje se pod kurzorem ale pod inputem coš je divné UX pokud je COmmandLine roztažená přes více řádků 2. v HUD UI na Overview stránce je plachta s výsledky překrytá obalovým divem celé komponenty CommandLine 3. v Chat UI kde je CommandLine vykreslena ve spodu stránky se plachta s výsledky vůbec nevejde, V takovém případě by se měla vykreslit nad kurzorem místo pod ním
+- [x] inline vyhledávání v komponentě CommandLine má několik problémů 1. Nezobrazuje se pod kurzorem ale pod inputem coš je divné UX pokud je COmmandLine roztažená přes více řádků 2. v HUD UI na Overview stránce je plachta s výsledky překrytá obalovým divem celé komponenty CommandLine 3. v Chat UI kde je CommandLine vykreslena ve spodu stránky se plachta s výsledky vůbec nevejde, V takovém případě by se měla vykreslit nad kurzorem místo pod ním — fáze 51 (portál na body, caret-anchor přes mirror-div, flip nad kurzor)
 
-- [ ] CommandLine componenta - tlačítko odeslání i tlačítka na přidání souborů by měla být pozicována "uvnitř inputu". Je potřeba ale zajistit aby text inputut nezasahoval do tlačítek
+- [x] CommandLine componenta - tlačítko odeslání i tlačítka na přidání souborů by měla být pozicována "uvnitř inputu". Je potřeba ale zajistit aby text inputut nezasahoval do tlačítek — fáze 51 (absolutní controls uvnitř inputu + rezervovaný paddingBottom)
 
 - [ ] stránka běhy a aktivita - log běhu nesedí s designem. Měl by být obalen v CodeBlock componentě
 

@@ -22,8 +22,9 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import type { ChangeEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
+import type { CSSProperties, ChangeEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { useLimitsQuery } from "../../../limits";
 import { usePipelinesQuery } from "../../../pipelines";
@@ -246,6 +247,97 @@ function noop() {
   /* no-op default for CommandLine's onClose */
 }
 
+/** A caret position in viewport coordinates — `top`/`bottom` bracket the caret's
+ *  line so the mention panel can flip above or drop below it. */
+interface CaretRect {
+  left: number;
+  top: number;
+  bottom: number;
+}
+
+/** Computed-style properties copied onto the hidden mirror so its text wraps and
+ *  lays out byte-identically to the textarea — the standard caret-coordinate trick. */
+const CARET_MIRROR_PROPS = [
+  "boxSizing",
+  "width",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "borderTopWidth",
+  "borderRightWidth",
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "fontStyle",
+  "fontVariant",
+  "letterSpacing",
+  "lineHeight",
+  "textTransform",
+  "textIndent",
+  "wordSpacing",
+  "tabSize",
+] as const;
+
+/**
+ * Measure the caret's viewport rect inside a textarea via a hidden mirror div: clone
+ * the text up to `selectionStart` into an off-screen element with identical typography
+ * and width, drop a marker span at the caret, and read its offset. Falls back to the
+ * textarea's own top-left when layout is unavailable (e.g. jsdom reports zero offsets) —
+ * enough to still portal and flip the panel. Anchors to the caret LINE, so a multi-row
+ * CommandLine shows the panel at the active line, not the field bottom.
+ */
+function measureCaretRect(ta: HTMLTextAreaElement): CaretRect {
+  const rect = ta.getBoundingClientRect();
+  const style = window.getComputedStyle(ta);
+  const fontSize = Number.parseFloat(style.fontSize) || 16;
+  const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.2;
+  const caret = ta.selectionStart ?? ta.value.length;
+
+  const mirror = document.createElement("div");
+  const mStyle = mirror.style;
+  for (const prop of CARET_MIRROR_PROPS) {
+    // Copy each captured typography/box property onto the mirror verbatim.
+    mStyle.setProperty(prop, style.getPropertyValue(prop));
+  }
+  mStyle.position = "absolute";
+  mStyle.visibility = "hidden";
+  mStyle.whiteSpace = "pre-wrap";
+  mStyle.overflowWrap = "break-word";
+  mStyle.overflow = "hidden";
+  mStyle.height = "auto";
+  mStyle.top = "0";
+  mStyle.left = "0";
+  mirror.textContent = ta.value.slice(0, caret);
+
+  const marker = document.createElement("span");
+  // A non-empty marker so it still has a box at the very end of the text.
+  marker.textContent = ta.value.slice(caret) || ".";
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+  const markerTop = marker.offsetTop;
+  const markerLeft = marker.offsetLeft;
+  document.body.removeChild(mirror);
+
+  const top = rect.top + markerTop - ta.scrollTop;
+  const left = rect.left + markerLeft - ta.scrollLeft;
+  return { left, top, bottom: top + lineHeight };
+}
+
+/** How far the panel keeps from the caret, and the below-space (px) under which it
+ *  flips above — mirrors {@link DropDownButton}'s spaceBelow/spaceAbove logic. */
+const MENTION_GAP = 6;
+const MENTION_FLIP_THRESHOLD = 240;
+const MENTION_MIN_WIDTH = 240;
+const MENTION_MAX_WIDTH = 320;
+
+/** Bottom padding reserved on the textarea so the caret/text never slides under the
+ *  overlaid controls, plus the inset the controls keep from the input's edges. */
+const CONTROLS_RESERVED_BOTTOM = "2.75rem";
+const CONTROLS_INSET = "8px";
+
 /**
  * The unified task launcher (Phase 26; restyled to the velin-b command bar in Phase
  * 31a): one growable input that does everything — free-text description, an inline
@@ -309,6 +401,9 @@ export function CommandLine({
   // state (mirrors the velin-b reference's `mentionQ`).
   const [mention, setMention] = useState<Mention | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  // The caret's viewport rect while a mention is open — drives the portaled panel's
+  // fixed position (and its flip). Null when there's no open mention.
+  const [caretRect, setCaretRect] = useState<CaretRect | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [ack, setAck] = useState<AckInfo | null>(null);
   // Set on a suggestion-chip click: the text state hasn't re-rendered yet at click
@@ -344,6 +439,24 @@ export function CommandLine({
     if (el) el.setSelectionRange(pendingCursorRef.current, pendingCursorRef.current);
     pendingCursorRef.current = null;
   }, [text]);
+
+  // Keep the portaled panel glued to the caret while it's open: the initial position
+  // is measured synchronously as the caret moves (see `syncMention`); this effect only
+  // SUBSCRIBES to scroll/resize, re-measuring in the callback — mirroring
+  // DropDownButton's fixed-menu reposition (no synchronous setState in the effect body).
+  useEffect(() => {
+    if (!mention) return;
+    const reposition = () => {
+      const el = textareaRef.current;
+      if (el) setCaretRect(measureCaretRect(el));
+    };
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [mention]);
 
   /** Fires `onDraftChange` only when the trimmed draft flips between empty and
    *  non-empty — never on every keystroke (ported from `ChatComposer`). */
@@ -519,15 +632,20 @@ export function CommandLine({
   function closeMention() {
     setMention(null);
     setMentionIndex(0);
+    setCaretRect(null);
   }
 
-  /** Re-derives `mention` from an element's live value + caret — shared by
+  /** Re-derives `mention` from the textarea's live value + caret — shared by
    *  change/click/keyup so the dropdown tracks the caret continuously, not just
-   *  the instant `@` was typed (ported from the velin-b reference). */
-  function syncMention(el: { value: string; selectionStart: number | null }) {
+   *  the instant `@` was typed (ported from the velin-b reference). Measures the
+   *  caret rect synchronously off the live element so the portaled panel anchors to
+   *  the active caret line, flipping above when there's no room below. */
+  function syncMention(el: HTMLTextAreaElement) {
     const caret = el.selectionStart ?? el.value.length;
-    setMention(checkMention(el.value, caret));
+    const next = checkMention(el.value, caret);
+    setMention(next);
     setMentionIndex(0);
+    setCaretRect(next ? measureCaretRect(el) : null);
   }
 
   function handleChange(e: ChangeEvent<HTMLTextAreaElement>) {
@@ -687,6 +805,28 @@ export function CommandLine({
   const activeMentionIndex =
     mentionResults.length === 0 ? -1 : Math.min(mentionIndex, mentionResults.length - 1);
 
+  // The fixed position for the portaled mention panel, anchored to the caret rect.
+  // Flips above the caret when there isn't room below (chat's bottom-of-page composer)
+  // and clamps its height to the available space — mirroring DropDownButton's logic.
+  const mentionMenuStyle: CSSProperties | undefined = useMemo(() => {
+    if (!caretRect) return undefined;
+    const viewportH = typeof window !== "undefined" ? window.innerHeight : 0;
+    const viewportW = typeof window !== "undefined" ? window.innerWidth : 0;
+    const spaceBelow = viewportH - caretRect.bottom - MENTION_GAP;
+    const spaceAbove = caretRect.top - MENTION_GAP;
+    const flip = spaceBelow < MENTION_FLIP_THRESHOLD && spaceAbove > spaceBelow;
+    const available = Math.max(flip ? spaceAbove : spaceBelow, 0);
+    const maxHeight = Math.min(Math.max(available, 120), viewportH * 0.6);
+    const left = Math.max(
+      MENTION_GAP,
+      Math.min(caretRect.left, viewportW - MENTION_MAX_WIDTH - MENTION_GAP),
+    );
+    const horizontal: CSSProperties = { left, minWidth: MENTION_MIN_WIDTH, maxWidth: MENTION_MAX_WIDTH };
+    return flip
+      ? { bottom: viewportH - caretRect.top + MENTION_GAP, ...horizontal, maxHeight }
+      : { top: caretRect.bottom + MENTION_GAP, ...horizontal, maxHeight };
+  }, [caretRect]);
+
   const menuItems: DropDownButtonItem[] = [
     { id: "in-1h", label: t("schedule.in1h"), icon: "clock", onSelect: () => run("in-1h") },
     ...(resetsAt !== null && resetsAt > now
@@ -774,16 +914,67 @@ export function CommandLine({
           placeholder={placeholder ?? t("commandLine.placeholder")}
           ref={textareaRef}
           rows={computeRows(text, rows, maxRows)}
+          // Reserve a bottom strip so the caret/text never slides under the overlaid
+          // controls (a DS style passthrough for the genuinely-layout value).
+          style={{ paddingBottom: CONTROLS_RESERVED_BOTTOM }}
           value={text}
         />
 
-        {mention && (
+        {/* Attach — pinned bottom-left INSIDE the input, over the reserved strip. */}
+        {showAttach && (
+          <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
+            <Button
+              aria-label={t("commandLine.attachAria")}
+              data-testid={CommandLineTestId.Attach}
+              icon="plus"
+              intent="ghost"
+              onClick={openFilePicker}
+              size="sm"
+            />
+          </Container>
+        )}
+
+        {/* Run / Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
+        <Container bottom={CONTROLS_INSET} position="absolute" right={CONTROLS_INSET} zIndex={10}>
+          {sendMode ? (
+            <Button
+              data-testid={CommandLineTestId.Send}
+              disabled={!canRun}
+              icon="arrow"
+              intent="primary"
+              onClick={() => dispatch(null)}
+              size="sm"
+            >
+              {t("commandLine.send")}
+            </Button>
+          ) : (
+            <DropDownButton
+              disabled={!canRun || busy}
+              icon={runIcon}
+              intent="primary"
+              label={runLabel}
+              loading={busy}
+              menuAriaLabel={t("commandLine.moreRunOptions")}
+              menuItems={menuItems}
+              onClick={() => dispatch(null)}
+              size="sm"
+            />
+          )}
+        </Container>
+      </Container>
+
+      {/* The mention panel is portaled to body (escaping the wrapper's overflow/z clip)
+          and positioned `fixed` at the caret rect, flipping above when needed. */}
+      {mention &&
+        typeof document !== "undefined" &&
+        createPortal(
           <MenuSurface
             scroll
-            align="stretch"
             aria-label={tMention("ariaLabel")}
             data-testid={CommandLineTestId.MentionMenu}
+            placement="fixed"
             role="listbox"
+            style={mentionMenuStyle}
           >
             {mentionResults.length === 0 ? (
               <Typography
@@ -832,49 +1023,9 @@ export function CommandLine({
                 })}
               </Stack>
             )}
-          </MenuSurface>
+          </MenuSurface>,
+          document.body,
         )}
-      </Container>
-
-      <Stack align="center" direction="row" gap="75" style={{ marginTop: "8px" }}>
-        {showAttach && (
-          <Button
-            aria-label={t("commandLine.attachAria")}
-            data-testid={CommandLineTestId.Attach}
-            icon="plus"
-            intent="ghost"
-            onClick={openFilePicker}
-            size="sm"
-          />
-        )}
-
-        <Stack grow style={{ minWidth: 0 }} />
-
-        {sendMode ? (
-          <Button
-            data-testid={CommandLineTestId.Send}
-            disabled={!canRun}
-            icon="arrow"
-            intent="primary"
-            onClick={() => dispatch(null)}
-            size="sm"
-          >
-            {t("commandLine.send")}
-          </Button>
-        ) : (
-          <DropDownButton
-            disabled={!canRun || busy}
-            icon={runIcon}
-            intent="primary"
-            label={runLabel}
-            loading={busy}
-            menuAriaLabel={t("commandLine.moreRunOptions")}
-            menuItems={menuItems}
-            onClick={() => dispatch(null)}
-            size="sm"
-          />
-        )}
-      </Stack>
     </Container>
   );
 

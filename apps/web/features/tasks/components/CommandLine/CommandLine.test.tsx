@@ -591,4 +591,37 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       });
     });
   });
+
+  describe("Phase 51 — caret-anchored portaled panel & controls inside the input", () => {
+    it("portals the mention panel to document.body so no wrapper overflow/z clips it", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "@Bui");
+
+      // createPortal renders the panel's surface as a direct child of <body>, escaping
+      // the CommandLine wrapper (the HUD card / chat composer) entirely.
+      const menu = screen.getByTestId(CommandLineTestId.MentionMenu);
+      expect(menu.parentElement).toBe(document.body);
+      expect(screen.getByTestId(CommandLineTestId.Box).contains(menu)).toBe(false);
+    });
+
+    it("still picks a portaled result on click, assigning the target chip", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
+      expect(input).toHaveValue("@Builder ");
+    });
+
+    it("reserves bottom padding on the textarea so text never slides under the overlaid controls", () => {
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      expect(input.style.paddingBottom).not.toBe("");
+      // The attach (+) and run controls both live inside the same input container.
+      expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
+      expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeInTheDocument();
+    });
+  });
 });
