@@ -66,4 +66,4 @@
 
 - [ ] na stránce chatu nevidím běžící tasky pokud byly spuštěny z HUD UI. Měl bych vidět na levé straně aktivní tasky
 
-- [ ] na stránce chatu není použita CommandLine komponenta
+- [x] na stránce chatu není použita CommandLine komponenta — fáze 38 (ChatScreen renderuje CommandLine v send-delegation módu)
