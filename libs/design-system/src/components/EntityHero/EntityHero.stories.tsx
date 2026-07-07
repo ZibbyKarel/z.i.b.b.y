@@ -47,6 +47,18 @@ export const Overview: Story = {
           <EntityHero fit="contain" glyph="flow" image={PLACEHOLDER_IMAGE} name="Delivery Pipeline" />
         </div>
       </div>
+      <div className="flex flex-col gap-2">
+        <div className="w-[420px]">
+          {/* `children` overlay — the avatar becomes a stretched background behind
+              arbitrary content (the band grows to fit it). */}
+          <EntityHero glyph="flow" image={PLACEHOLDER_IMAGE}>
+            <div className="p-4 font-mono text-foreground">
+              <div className="text-lg font-bold">delivery_42</div>
+              <div className="text-sm text-foreground-dim">běží · pipelina · agent delivery</div>
+            </div>
+          </EntityHero>
+        </div>
+      </div>
     </div>
   ),
 };

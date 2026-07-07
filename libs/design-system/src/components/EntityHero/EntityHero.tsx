@@ -14,6 +14,7 @@ export enum EntityHeroTestId {
   RemoveButton = "entity-hero-remove",
   FileInput = "entity-hero-file",
   Name = "entity-hero-name",
+  Overlay = "entity-hero-overlay",
 }
 
 export interface EntityHeroProps {
@@ -21,8 +22,19 @@ export interface EntityHeroProps {
   image?: string;
   /** Fallback glyph shown when there is no image (or it fails to load). */
   glyph: IconName;
-  /** Entity name, overlaid at the bottom of the band. */
-  name: string;
+  /**
+   * Entity name, overlaid at the bottom of the band. Optional — omitted (with the
+   * rest of the default name/meta/desc block) when {@link EntityHeroProps.children}
+   * supplies its own overlaid content.
+   */
+  name?: string;
+  /**
+   * Arbitrary content laid over the avatar scrim, in normal flow so the band grows
+   * to fit it (the fixed `height` becomes a min-height). Replaces the default
+   * name/meta/desc block — the caller owns the overlay. Used to render a rich
+   * header (a run's title/state/actions) on top of the assigned entity's avatar.
+   */
+  children?: ReactNode;
   /** Optional node under the name (category, phase count…). */
   meta?: ReactNode;
   /** Optional node above the name (a pill/badge). */
@@ -62,6 +74,7 @@ export function EntityHero({
   image,
   glyph,
   name,
+  children,
   meta,
   tag,
   desc,
@@ -100,18 +113,24 @@ export function EntityHero({
             }
           : undefined
       }
-      style={{ height }}
+      style={{ minHeight: height }}
     >
       {showImage ? (
         <img
           alt=""
-          className={cn("absolute inset-0 h-full w-full", fit === "cover" ? "object-cover" : "object-contain")}
+          className={cn(
+            "absolute inset-0 h-full w-full",
+            fit === "cover" ? "object-cover" : "object-contain",
+          )}
           data-testid={EntityHeroTestId.Image}
           onError={() => setFailed(true)}
           src={image}
         />
       ) : (
-        <div className="absolute inset-0 grid place-items-center text-accent/25" data-testid={EntityHeroTestId.GlyphFallback}>
+        <div
+          className="absolute inset-0 grid place-items-center text-accent/25"
+          data-testid={EntityHeroTestId.GlyphFallback}
+        >
           <Icon name={glyph} size="xl" />
         </div>
       )}
@@ -163,17 +182,27 @@ export function EntityHero({
         </div>
       )}
 
-      <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
-        {tag && <div className="mb-1.5">{tag}</div>}
-        <div
-          className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
-          data-testid={EntityHeroTestId.Name}
-        >
-          {name}
+      {children ? (
+        <div className="relative z-[1]" data-testid={EntityHeroTestId.Overlay}>
+          {children}
         </div>
-        {meta && <div className="mt-1.5">{meta}</div>}
-        {desc && <div className="mt-1 max-w-[62ch] text-[12.5px] leading-snug text-foreground-dim drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">{desc}</div>}
-      </div>
+      ) : (
+        <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
+          {tag && <div className="mb-1.5">{tag}</div>}
+          <div
+            className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
+            data-testid={EntityHeroTestId.Name}
+          >
+            {name}
+          </div>
+          {meta && <div className="mt-1.5">{meta}</div>}
+          {desc && (
+            <div className="mt-1 max-w-[62ch] text-[12.5px] leading-snug text-foreground-dim drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
+              {desc}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

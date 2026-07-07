@@ -4,11 +4,10 @@ import userEvent from "@testing-library/user-event";
 import {
   CodeBlockTestId,
   DropdownTestId,
+  EntityHeroTestId,
   FilePreviewTestId,
-  IconTileTestId,
   MarkdownTestId,
 } from "@zibby/design-system";
-import { within } from "@testing-library/react";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
@@ -156,10 +155,8 @@ describe("RunDetail — pipeline header", () => {
   });
 });
 
-describe("RunDetail — header avatar (Phase 48)", () => {
-  const HEADER_AVATAR = "run-header-avatar";
-
-  it("renders the assigned entity's avatar image in the header when provided", () => {
+describe("RunDetail — header avatar (Phase 48 → 53: stretched EntityHero background)", () => {
+  it("renders the assigned entity's avatar as the stretched header background when provided", () => {
     render(
       <RunDetail
         avatar="/avatars/delivery.png"
@@ -172,18 +169,20 @@ describe("RunDetail — header avatar (Phase 48)", () => {
         stopping={false}
       />,
     );
-    const tile = screen.getByTestId(HEADER_AVATAR);
-    const img = within(tile).getByTestId(IconTileTestId.Image);
-    expect(img).toHaveAttribute("src", "/avatars/delivery.png");
+    // The avatar now fills the header band (EntityHero object-cover image), not a tile.
+    expect(screen.getByTestId(EntityHeroTestId.Image)).toHaveAttribute(
+      "src",
+      "/avatars/delivery.png",
+    );
   });
 
   it("falls back to the glyph (no image) when no avatar is provided", () => {
     renderDetail(); // renderDetail passes no `avatar`
-    const tile = screen.getByTestId(HEADER_AVATAR);
-    expect(within(tile).queryByTestId(IconTileTestId.Image)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(EntityHeroTestId.Image)).not.toBeInTheDocument();
+    expect(screen.getByTestId(EntityHeroTestId.GlyphFallback)).toBeInTheDocument();
   });
 
-  it("keeps the delete action functional alongside the header avatar", async () => {
+  it("keeps the delete action functional alongside the header avatar background", async () => {
     const onDelete = vi.fn();
     render(
       <RunDetail
@@ -197,8 +196,8 @@ describe("RunDetail — header avatar (Phase 48)", () => {
         stopping={false}
       />,
     );
-    // The avatar and the actions coexist in the header's right cluster.
-    expect(screen.getByTestId("run-header-avatar")).toBeInTheDocument();
+    // The avatar band and the actions coexist in the header.
+    expect(screen.getByTestId(EntityHeroTestId.Root)).toBeInTheDocument();
     // Delete still opens its confirm dialog and, on confirm, calls onDelete (the full
     // confirm flow is covered in RunDetailConfirm.test.tsx — this guards the swap).
     await userEvent.click(screen.getByText("Smazat"));

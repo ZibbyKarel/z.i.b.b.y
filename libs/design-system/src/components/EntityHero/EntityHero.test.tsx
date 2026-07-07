@@ -36,4 +36,31 @@ describe("EntityHero", () => {
     expect(screen.queryByTestId(EntityHeroTestId.FileInput)).toBeNull();
     expect(screen.queryByTestId(EntityHeroTestId.RemoveButton)).toBeNull();
   });
+
+  it("renders children as an overlay over the avatar, in place of the default name block", () => {
+    render(
+      <EntityHero glyph="flow" image="/avatars/delivery.png">
+        <div>run header content</div>
+      </EntityHero>,
+    );
+    // The avatar still fills the band as a background…
+    expect(screen.getByTestId(EntityHeroTestId.Image)).toHaveAttribute(
+      "src",
+      "/avatars/delivery.png",
+    );
+    // …but the overlay hosts the caller's content, and the default name block is gone.
+    expect(screen.getByTestId(EntityHeroTestId.Overlay)).toHaveTextContent("run header content");
+    expect(screen.queryByTestId(EntityHeroTestId.Name)).toBeNull();
+  });
+
+  it("keeps the glyph fallback behind the children overlay when there is no image", () => {
+    render(
+      <EntityHero glyph="flow">
+        <div>run header content</div>
+      </EntityHero>,
+    );
+    expect(screen.queryByTestId(EntityHeroTestId.Image)).toBeNull();
+    expect(screen.getByTestId(EntityHeroTestId.GlyphFallback)).toBeInTheDocument();
+    expect(screen.getByTestId(EntityHeroTestId.Overlay)).toHaveTextContent("run header content");
+  });
 });

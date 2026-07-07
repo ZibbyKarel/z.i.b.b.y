@@ -84,7 +84,7 @@
 
 - [ ] stránka běhy a aktivita - log běhu nesedí s designem. Měl by být obalen v CodeBlock componentě
 
-- [ ] stránka běhy a aktivita - avatar přiřazeného agenta nebo pipeliny by měl být dělaný stejně jako v HeroEntity komponentě - čili jako roztažené pozadí
+- [x] stránka běhy a aktivita - avatar přiřazeného agenta nebo pipeliny by měl být dělaný stejně jako v HeroEntity komponentě - čili jako roztažené pozadí — fáze 53 (EntityHero + children overlay slot, header nad scrimem)
 
 - [x] stránka Projekty - na kartě projektu zobrazíme ve footeru stejné statistiky jako máme v detailu projektu ohledně úkolů (mimo "Celkem"). Opěd budou jednotlivé ásti možné prokliknout na vyfiltrovanou stránku běhy a aktivita — fáze 52 (sdílený useProjectTaskStats, deep-link na /runs?filter)
 

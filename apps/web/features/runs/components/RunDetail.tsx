@@ -2,8 +2,10 @@ import {
   Accordion,
   AccordionItem,
   Button,
+  Card,
   CodeBlock,
   Container,
+  EntityHero,
   FilePreview,
   type IconName,
   IconTile,
@@ -432,148 +434,158 @@ export function RunDetail({
   return (
     <>
       <Stack gap="200">
-        <HudPanel padding="300" tone={tone}>
-          <Stack gap="200">
-            <Stack wrap align="start" direction="row" gap="150" justify="between">
-              <Container minW0>
-                <Stack gap="50">
-                  <Stack wrap align="center" direction="row" gap="100">
-                    <Typography type="subtitle" weight="semibold">
-                      {headline}
-                    </Typography>
-                    <RunStateBadge
-                      canonTitle={run.status}
-                      label={t(`state.${run.status}`)}
-                      size="md"
-                      status={run.status}
-                    />
-                  </Stack>
-                  {subtitle && (
-                    <Typography leading="snug" size="sm" type="text" variant="secondary">
-                      {subtitle}
-                    </Typography>
-                  )}
-                  {descriptionText && <TaskDescription text={descriptionText} />}
-                  {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
+        {/* Phase 53: the assigned agent/pipeline avatar is rendered like the DS
+            EntityHero — a STRETCHED BACKGROUND band (object-cover fill + gradient
+            scrim, glyph fallback when absent) — with the whole run header laid over
+            it. The Card keeps the state tone/HUD brackets and clips the image to the
+            panel radius; EntityHero owns the image + scrim treatment. */}
+        <Card clip corners={Boolean(tone)} tone={tone}>
+          <EntityHero glyph={glyph} image={avatar}>
+            <Container padding="300">
+              <Stack gap="200">
+                <Stack wrap align="start" direction="row" gap="150" justify="between">
+                  <Container minW0>
+                    <Stack gap="50">
+                      <Stack wrap align="center" direction="row" gap="100">
+                        <Typography type="subtitle" weight="semibold">
+                          {headline}
+                        </Typography>
+                        <RunStateBadge
+                          canonTitle={run.status}
+                          label={t(`state.${run.status}`)}
+                          size="md"
+                          status={run.status}
+                        />
+                      </Stack>
+                      {subtitle && (
+                        <Typography leading="snug" size="sm" type="text" variant="secondary">
+                          {subtitle}
+                        </Typography>
+                      )}
+                      {descriptionText && <TaskDescription text={descriptionText} />}
+                      {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
                       into this one meta line instead of a second, separate chip. */}
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {run.runId} · {t(`kind.${run.kind}`)}
-                    {agentName ? ` · ${t("metaAgent")} ${agentName}` : ""}
-                  </Typography>
-                </Stack>
-              </Container>
-              {/* The actions/approval sit between the title block and the assigned
-                  entity's avatar, which is the rightmost element of the header
-                  (Phase 48 — glyph is the avatar's fallback via IconTile `src`). */}
-              <Stack align="center" direction="row" gap="150">
-                {approval ? (
-                  // While the run waits on the gate, the header carries the approval's
-                  // severity + risk type; deciding happens in the panel below.
+                      <Typography mono size="2xs" type="note" variant="tertiary">
+                        {run.runId} · {t(`kind.${run.kind}`)}
+                        {agentName ? ` · ${t("metaAgent")} ${agentName}` : ""}
+                      </Typography>
+                    </Stack>
+                  </Container>
+                  {/* The actions/approval sit at the top-right of the header, over the
+                  assigned entity's avatar band (Phase 53 — the avatar is now the
+                  stretched EntityHero background behind the whole header, not a tile). */}
                   <Stack align="center" direction="row" gap="150">
-                    <SeverityMeter
-                      showLabel
-                      label={tApprovals(`severity.${approval.risk}`)}
-                      severity={approval.risk}
-                    />
-                    <RiskBadge
-                      label={approval.riskType ? tApprovals(`risk.${approval.riskType}`) : ""}
-                      size="md"
-                      type={approval.riskType}
-                    />
-                  </Stack>
-                ) : (
-                  <Stack align="center" direction="row" gap="100">
-                    {isStoppableRun(run) && (
-                      <Button
-                        disabled={stopping}
-                        icon="stop"
-                        intent="danger"
-                        onClick={() => setConfirmKind("stop")}
-                        size="sm"
-                      >
-                        {t("stop")}
-                      </Button>
-                    )}
-                    {/* Phase 49: re-run an errored/interrupted agent run. The label is
+                    {approval ? (
+                      // While the run waits on the gate, the header carries the approval's
+                      // severity + risk type; deciding happens in the panel below.
+                      <Stack align="center" direction="row" gap="150">
+                        <SeverityMeter
+                          showLabel
+                          label={tApprovals(`severity.${approval.risk}`)}
+                          severity={approval.risk}
+                        />
+                        <RiskBadge
+                          label={approval.riskType ? tApprovals(`risk.${approval.riskType}`) : ""}
+                          size="md"
+                          type={approval.riskType}
+                        />
+                      </Stack>
+                    ) : (
+                      <Stack align="center" direction="row" gap="100">
+                        {isStoppableRun(run) && (
+                          <Button
+                            disabled={stopping}
+                            icon="stop"
+                            intent="danger"
+                            onClick={() => setConfirmKind("stop")}
+                            size="sm"
+                          >
+                            {t("stop")}
+                          </Button>
+                        )}
+                        {/* Phase 49: re-run an errored/interrupted agent run. The label is
                         honest about what ships: a captured session id re-runs with
                         `--resume` ("Pokračovat"), otherwise a fresh re-run ("Spustit znovu"). */}
-                    {onResume && isResumableRun(run) && (
-                      <Button
-                        data-testid="resume-run"
-                        disabled={resuming}
-                        icon="run"
-                        intent="primary"
-                        onClick={onResume}
-                        size="sm"
-                      >
-                        {run.sessionId ? t("resumeContinue") : t("resumeFresh")}
-                      </Button>
+                        {onResume && isResumableRun(run) && (
+                          <Button
+                            data-testid="resume-run"
+                            disabled={resuming}
+                            icon="run"
+                            intent="primary"
+                            onClick={onResume}
+                            size="sm"
+                          >
+                            {run.sessionId ? t("resumeContinue") : t("resumeFresh")}
+                          </Button>
+                        )}
+                        <Button
+                          disabled={deleting}
+                          icon="x"
+                          intent="danger"
+                          onClick={() => setConfirmKind("delete")}
+                          size="sm"
+                        >
+                          {run.status === "scheduled" ? t("cancelTask") : t("delete")}
+                        </Button>
+                      </Stack>
                     )}
-                    <Button
-                      disabled={deleting}
-                      icon="x"
-                      intent="danger"
-                      onClick={() => setConfirmKind("delete")}
-                      size="sm"
-                    >
-                      {run.status === "scheduled" ? t("cancelTask") : t("delete")}
-                    </Button>
                   </Stack>
-                )}
-                <IconTile data-testid="run-header-avatar" glyph={glyph} size="lg" src={avatar} />
-              </Stack>
-            </Stack>
+                </Stack>
 
-            <Stack wrap direction="row" gap="300">
-              {run.projectId ? (
-                <MetaCell label={t("metaProject")} tone="accent" value={run.project} />
-              ) : (
-                <AssignProjectControl runId={run.runId} />
-              )}
-              <MetaCell
-                label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
-                value={startedValue}
-              />
-              {run.owner && run.kind !== "agent" && (
-                <MetaCell
-                  label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
-                  tone={run.kind === "pipeline" ? "accent" : undefined}
-                  value={run.owner}
-                />
-              )}
-              {/* The task name is already the headline — only repeat it here when it
+                <Stack wrap direction="row" gap="300">
+                  {run.projectId ? (
+                    <MetaCell label={t("metaProject")} tone="accent" value={run.project} />
+                  ) : (
+                    <AssignProjectControl runId={run.runId} />
+                  )}
+                  <MetaCell
+                    label={run.status === "scheduled" ? t("metaScheduled") : t("metaStarted")}
+                    value={startedValue}
+                  />
+                  {run.owner && run.kind !== "agent" && (
+                    <MetaCell
+                      label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
+                      tone={run.kind === "pipeline" ? "accent" : undefined}
+                      value={run.owner}
+                    />
+                  )}
+                  {/* The task name is already the headline — only repeat it here when it
                 differs, and then carry the written-back outcome it uniquely holds. */}
-              {run.taskTitle && run.taskTitle !== headline && (
-                <MetaCell
-                  label={t("metaTask")}
-                  value={
-                    run.taskOutcome
-                      ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
-                      : run.taskTitle
-                  }
-                />
-              )}
-              {run.costUsd != null && (
-                <MetaCell
-                  emphasize
-                  label={t("metaCost")}
-                  tone="ok"
-                  value={formatCostUsd(run.costUsd)}
-                />
-              )}
-              {durationMs != null && (
-                <MetaCell label={t("metaDuration")} value={formatDuration(durationMs)} />
-              )}
-              {approval && (
-                <MetaCell
-                  label={tApprovals("requestedLabel")}
-                  value={new Date(approval.requestedAt).toLocaleString("cs")}
-                />
-              )}
-              {approval?.via && <MetaCell label={tApprovals("viaLabel")} value={approval.via} />}
-            </Stack>
-          </Stack>
-        </HudPanel>
+                  {run.taskTitle && run.taskTitle !== headline && (
+                    <MetaCell
+                      label={t("metaTask")}
+                      value={
+                        run.taskOutcome
+                          ? `${run.taskTitle} → ${t(`taskOutcome.${run.taskOutcome}`)}`
+                          : run.taskTitle
+                      }
+                    />
+                  )}
+                  {run.costUsd != null && (
+                    <MetaCell
+                      emphasize
+                      label={t("metaCost")}
+                      tone="ok"
+                      value={formatCostUsd(run.costUsd)}
+                    />
+                  )}
+                  {durationMs != null && (
+                    <MetaCell label={t("metaDuration")} value={formatDuration(durationMs)} />
+                  )}
+                  {approval && (
+                    <MetaCell
+                      label={tApprovals("requestedLabel")}
+                      value={new Date(approval.requestedAt).toLocaleString("cs")}
+                    />
+                  )}
+                  {approval?.via && (
+                    <MetaCell label={tApprovals("viaLabel")} value={approval.via} />
+                  )}
+                </Stack>
+              </Stack>
+            </Container>
+          </EntityHero>
+        </Card>
 
         <RunOutputPanel run={run} />
         <RunAttachmentsPanel run={run} />
