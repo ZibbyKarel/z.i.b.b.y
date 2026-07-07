@@ -25,6 +25,7 @@ const tag = cva(
         md: "px-2.5 py-1.5",
       },
       solid: { true: "", false: "" },
+      uppercase: { true: "uppercase", false: "" },
     },
     compoundVariants: [
       {
@@ -77,12 +78,14 @@ export interface TagProps
 /**
  * Angular label badge — a glyph + text tinted by `tone`. The "shape = category"
  * half of the badge family (the rounded {@link Chip} is the "color = state"
- * half). Toned by default; `solid` fills it.
+ * half). Toned by default; `solid` fills it. `uppercase` renders the label in
+ * caps (the run-state chip's "BĚŽÍ"/"HOTOVO" look) without transforming the
+ * underlying text — only the CSS presentation changes.
  */
-export function Tag({ tone, solid, size, icon, children, ref, ...props }: TagProps) {
+export function Tag({ tone, solid, size, uppercase, icon, children, ref, ...props }: TagProps) {
   return (
     <span
-      className={cn(tag({ tone, solid, size }))}
+      className={cn(tag({ tone, solid, size, uppercase }))}
       data-testid={TagTestId.Root}
       ref={ref}
       {...props}

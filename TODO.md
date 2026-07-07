@@ -18,7 +18,7 @@
 
 - [ ] sladit desing podle auditu. Stále nám nesedí desing jazyk který máme naimplementovaný a který je v claude design (design je momentálně stažený aktuální ve složce design - soubor ZIBBY Design Audit.html)
 
-- [ ] implementovat /runs podle designu (design je momentálně stažený aktuální ve složce design). Zejména hlavička tasku a log pipeliny musejí sedět
+- [x] implementovat /runs podle designu (design je momentálně stažený aktuální ve složce design). Zejména hlavička tasku a log pipeliny musejí sedět — fáze 29
 
 - [x] chat ui - constalace by měla zobrazovat primářně připnuté agenty/pipeliny/řetězce a pak preferuji zobrazovat jen agenty s obrázky
 
@@ -27,3 +27,7 @@
 - [x] avatary agentů na kartách uděláme větší — fáze 22
 
 - [x] na stránce chatu zrušíme by se MainLayout měl lišit. Celé tělo chat stránky musí být fullscreen. Jedná se o "paralelní UI s HUD UI" takže je rovnocenné a né vnořené do HUD UI. — fáze 27
+
+- [ ] na stránce /chat nefunguje cmd+k zkratka
+
+- [ ] upravme CommandLine komponentu aby sedělat s designem viz velin-b.jsx v design složce. Toto komponentu pak použijeme v NewTaskDialog, na Overview (viz design) a v rámci chat UI

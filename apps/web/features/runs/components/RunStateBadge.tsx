@@ -14,7 +14,7 @@ export function RunStateBadge({ status, canonTitle, label, size = "sm" }: RunSta
   const meta = RUN_STATE[status];
   return (
     <span title={canonTitle ?? status}>
-      <Tag size={size} tone={meta.badge}>
+      <Tag uppercase size={size} tone={meta.badge}>
         <Stack inline align="center" direction="row" gap="50">
           <Icon name={meta.glyph} size="xs" />
           {label}

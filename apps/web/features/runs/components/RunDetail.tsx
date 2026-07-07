@@ -5,7 +5,6 @@ import {
   CodeBlock,
   Container,
   FilePreview,
-  Icon,
   type IconName,
   IconTile,
   Pressable,
@@ -26,7 +25,7 @@ import { useNewTask } from "../../tasks";
 import { useProjectsQuery } from "../../projects";
 import { useAssignRunProjectMutation } from "../mutations";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
-import { type RunView, approvalForRun, runTitle } from "../run";
+import { type RunView, approvalForRun, runStateTone, runTitle } from "../run";
 import { ChainStepsPanel } from "./ChainStepsPanel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import { PipelineStageTimeline } from "./PipelineStageTimeline";
@@ -114,13 +113,20 @@ function MetaCell({
 }: {
   label: string;
   value: string;
-  tone?: "accent";
+  tone?: "accent" | "ok";
   /** Bumps the value's size so it reads as the standout figure of the strip (the cost). */
   emphasize?: boolean;
 }) {
   return (
     <Stack gap="25">
-      <Typography mono size="2xs" tracking="wide" type="note" variant="tertiary">
+      <Typography
+        mono
+        uppercase
+        size="2xs"
+        tracking="wide"
+        type="note"
+        variant="tertiary"
+      >
         {label}
       </Typography>
       <Typography
@@ -349,16 +355,10 @@ export function RunDetail({
   // paused task makes plain which agent is asking.
   const agentName = run.kind === "agent" ? (approval?.skill ?? run.owner) : undefined;
 
-  const tone: "accent" | "ok" | "warn" | "bad" | undefined =
-    run.status === "running"
-      ? "accent"
-      : run.status === "awaiting-approval" || run.status === "parked"
-        ? "warn"
-        : run.status === "done"
-          ? "ok"
-          : run.status === "error"
-            ? "bad"
-            : undefined;
+  // Single-sourced from `RUN_STATE` (via `runStateTone`) so the header's tone
+  // agrees exactly with the state chip and the card's edge/progress accent —
+  // `running` reads as the distinct `run` blue, never the generic `accent`.
+  const tone = runStateTone(run.status);
   const ago = (n: number, unit: string) =>
     n === 0 ? t("agoNow") : unit === "m" ? t("agoM", { n }) : t("agoH", { n });
 
@@ -398,7 +398,9 @@ export function RunDetail({
       live={run.status === "running"}
       liveLabel={t("liveLog")}
       logLabel={t("log")}
+      pct={run.status === "done" ? 100 : run.pct}
       runId={run.runId}
+      tone={tone ?? "accent"}
     />
   ) : (
     <Typography mono size="sm" type="note" variant="secondary">
@@ -426,14 +428,6 @@ export function RunDetail({
                         size="md"
                         status={run.status}
                       />
-                      {agentName && (
-                        <Stack align="center" direction="row" gap="50" title={t("metaAgent")}>
-                          <Icon name="bot" size="xs" tone="accent" />
-                          <Typography mono size="xs" type="note" variant="secondary">
-                            {agentName}
-                          </Typography>
-                        </Stack>
-                      )}
                     </Stack>
                     {subtitle && (
                       <Typography leading="snug" size="sm" type="text" variant="secondary">
@@ -441,8 +435,11 @@ export function RunDetail({
                       </Typography>
                     )}
                     {descriptionText && <TaskDescription text={descriptionText} />}
+                    {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
+                        into this one meta line instead of a second, separate chip. */}
                     <Typography mono size="2xs" type="note" variant="tertiary">
-                      {run.runId} · {t(`kind.${run.kind}`)} · {run.status}
+                      {run.runId} · {t(`kind.${run.kind}`)}
+                      {agentName ? ` · ${t("metaAgent")} ${agentName}` : ""}
                     </Typography>
                   </Stack>
                 </Container>
@@ -521,7 +518,7 @@ export function RunDetail({
                 <MetaCell
                   emphasize
                   label={t("metaCost")}
-                  tone="accent"
+                  tone="ok"
                   value={formatCostUsd(run.costUsd)}
                 />
               )}

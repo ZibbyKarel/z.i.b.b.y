@@ -12,6 +12,7 @@ export enum CardTestId {
   Header = "card-header",
   Content = "card-content",
   Footer = "card-footer",
+  Edge = "card-edge",
 }
 
 /** The HUD bracket tone — the canonical {@link StateTone} vocabulary. */
@@ -82,6 +83,15 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
   type?: "button" | "submit" | "reset";
   /** Highlighted selected state (accent border + ring). */
   selected?: boolean;
+  /**
+   * A solid 3px accent bar on the left edge, tinted by state — the runs-feed task
+   * card's "state at a glance" marker (Phase 29). Deliberately independent of
+   * `tone` (full-border tint + optional `living` glow) and `corners` (HUD
+   * brackets): `edge` alone is always matte — a done/error card still reads its
+   * state at a glance without claiming to be "live". Combine with `tone` +
+   * `living` on a genuinely in-flight card for the glow on top of the bar.
+   */
+  edge?: StateTone;
   header?: ReactNode;
   footer?: ReactNode;
   ref?: Ref<HTMLDivElement>;
@@ -132,6 +142,14 @@ const toneGlow: Record<NonNullable<CardProps["tone"]>, string> = {
   run: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-run)_12%,transparent)]",
 };
 
+const edgeClass: Record<NonNullable<CardProps["edge"]>, string> = {
+  accent: "bg-accent",
+  ok: "bg-ok",
+  warn: "bg-warn",
+  bad: "bg-bad",
+  run: "bg-run",
+};
+
 export function Card({
   background = "surface",
   bordered = true,
@@ -148,6 +166,7 @@ export function Card({
   as: Tag = "div",
   type,
   selected = false,
+  edge,
   header,
   footer,
   children,
@@ -185,6 +204,16 @@ export function Card({
     >
       {tone && living && <LivingGlow radius={radius} tone={tone} />}
       {corners && <Corners inset="75" tone={tone ?? "accent"} />}
+      {edge && (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[inherit]",
+            edgeClass[edge],
+          )}
+          data-testid={CardTestId.Edge}
+        />
+      )}
       {header && <CardHeader>{header}</CardHeader>}
       {children}
       {footer && <CardFooter>{footer}</CardFooter>}

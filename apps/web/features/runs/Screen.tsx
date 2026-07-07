@@ -1,6 +1,6 @@
 "use client";
 
-import { Container, Dropdown, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import { ButtonGroup, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -23,7 +23,8 @@ import { useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
 import { type FeedStatus, type RunView, findSelectedRun, runGlyph } from "./run";
 
 // No synthetic "all" entry — an empty selection already reads as "every state"
-// (see `list` below), which is what the multi-select's own placeholder communicates.
+// (see `list` below), which is what the header segmented control's own "Vše"
+// segment communicates.
 const STATUSES: FeedStatus[] = [
   "running",
   "pending",
@@ -37,6 +38,33 @@ const STATUSES: FeedStatus[] = [
   "error",
   "interrupted",
 ];
+
+/**
+ * The page-header segmented filter's six buckets (v-runs.png: Vše / Běží / Čeká /
+ * Hotovo / Chyba / Přerušeno). Deliberately its own grouping — distinct from
+ * {@link RUN_STATUS_GROUPS} (the project-summary tiles' five buckets, which fold
+ * `interrupted` and `paused-limit` into `error`) — because the design calls out
+ * "Chyba" and "Přerušeno" as separate segments. Exhaustive over every
+ * {@link FeedStatus} (asserted in the test) so every run always falls in exactly
+ * one non-"all" segment.
+ */
+type FilterBucketKey = "running" | "waiting" | "done" | "error" | "interrupted";
+
+const FILTER_BUCKETS: readonly { key: FilterBucketKey; statuses: FeedStatus[] }[] = [
+  { key: "running", statuses: ["running", "pending"] },
+  {
+    key: "waiting",
+    statuses: ["awaiting-approval", "parked", "held", "queued", "paused-limit", "scheduled"],
+  },
+  { key: "done", statuses: ["done"] },
+  { key: "error", statuses: ["error"] },
+  { key: "interrupted", statuses: ["interrupted"] },
+];
+
+/** Whether `filter` is exactly the given bucket's status set (order-independent). */
+function isBucket(filter: readonly FeedStatus[], statuses: readonly FeedStatus[]): boolean {
+  return filter.length === statuses.length && statuses.every((s) => filter.includes(s));
+}
 
 export function Screen() {
   const t = useTranslations("runs");
@@ -61,12 +89,13 @@ export function Screen() {
 
   // Deep-link the active filter via `?filter=` (e.g. ApprovalsPanel/ParkedRunsPanel
   // point here at a single state — "awaiting-approval" / "parked") and the selected
-  // run via `?run=` (the New Task dialog lands on its fresh run). The multi-select
-  // seeds from that one value; an empty selection means "every state" (see `list`).
+  // run via `?run=` (the New Task dialog lands on its fresh run). The underlying
+  // `filter` state seeds from that value; an empty selection means "every state"
+  // (see `list`) — the header segmented control is just one way to set it.
   const searchParams = useSearchParams();
-  // `?filter=` seeds the status multi-select. A single value (ApprovalsPanel/
-  // ParkedRunsPanel) and a comma-separated set (a project summary bucket links with
-  // every state in its bucket) both round-trip; unknown tokens are dropped.
+  // `?filter=` seeds `filter`. A single value (ApprovalsPanel/ParkedRunsPanel) and a
+  // comma-separated set (a project summary bucket links with every state in its
+  // bucket) both round-trip; unknown tokens are dropped.
   const paramFilter = searchParams.get("filter");
   const [filter, setFilter] = useState<FeedStatus[]>(
     paramFilter
@@ -125,6 +154,18 @@ export function Screen() {
   const running = count("running");
   const awaiting = count("awaiting-approval");
 
+  // The header segmented control's active segment: "all" when nothing is
+  // filtered, a bucket key when `filter` exactly matches one of the six
+  // buckets, or "" (no segment lit) for an arbitrary deep-link filter that
+  // doesn't correspond to a whole bucket (e.g. `?filter=parked` alone) — the
+  // list still honors it, the control just has nothing to highlight.
+  const activeBucketId =
+    filter.length === 0
+      ? "all"
+      : (FILTER_BUCKETS.find((b) => isBucket(filter, b.statuses))?.key ?? "");
+  const bucketCount = (statuses: readonly FeedStatus[]) =>
+    statuses.reduce((sum, s) => sum + count(s), 0);
+
   // Honest load states (Phase 18.2): the feed used to swallow both via `?? []` — a
   // failed fetch read as an honestly-empty workspace instead of an outage.
   if (runsPending) {
@@ -159,24 +200,26 @@ export function Screen() {
                   this chip is the only in-screen indication of it, so an empty
                   filtered list is never confusing. */}
               <ProjectScopeChip />
-              <Container width="19rem">
-                <Dropdown<FeedStatus>
-                  compact
-                  multi
-                  showSelectAll
-                  aria-label={t("title")}
-                  deselectAllLabel={t("filterClearAll")}
-                  onChange={setFilter}
-                  options={STATUSES.map((s) => ({
-                    value: s,
-                    label: `${t(`state.${s}`)} · ${count(s)}`,
-                  }))}
-                  placeholder={t("filterAll")}
-                  removeLabel={t("filterRemove")}
-                  selectAllLabel={t("filterSelectAll")}
-                  value={filter}
-                />
-              </Container>
+              <ButtonGroup
+                ariaLabel={t("title")}
+                onChange={(id) => {
+                  if (id === "all" || id === "") {
+                    setFilter([]);
+                    return;
+                  }
+                  const bucket = FILTER_BUCKETS.find((b) => b.key === id);
+                  if (bucket) setFilter(bucket.statuses);
+                }}
+                options={[
+                  { id: "all", label: t("filterGroup.all"), trailing: String(runs.length) },
+                  ...FILTER_BUCKETS.map((b) => ({
+                    id: b.key,
+                    label: t(`filterGroup.${b.key}`),
+                    trailing: String(bucketCount(b.statuses)),
+                  })),
+                ]}
+                value={activeBucketId}
+              />
             </Stack>
           }
           subtitle={t("summary", { running, awaiting, total: runs.length })}

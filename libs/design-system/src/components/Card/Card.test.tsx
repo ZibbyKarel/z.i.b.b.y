@@ -92,6 +92,19 @@ describe("Card", () => {
     expect(screen.getByTestId(CardTestId.Root)).not.toHaveAttribute("type");
   });
 
+  it("renders a state-tinted left edge bar when `edge` is set", () => {
+    render(<Card edge="run">x</Card>);
+    const root = screen.getByTestId(CardTestId.Root);
+    const edge = screen.getByTestId(CardTestId.Edge);
+    expect(root).toContainElement(edge);
+    expect(edge).toHaveClass("bg-run");
+  });
+
+  it("omits the edge bar by default", () => {
+    render(<Card>x</Card>);
+    expect(screen.queryByTestId(CardTestId.Edge)).not.toBeInTheDocument();
+  });
+
   it("CardActions renders its children via CardFooter", () => {
     render(
       <Card>

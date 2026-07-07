@@ -77,6 +77,26 @@ export const Overview: Story = {
           </Card>
         </div>
       </div>
+      <div className="flex flex-col gap-2">
+        <Typography mono type="subtitle" variant="tertiary">
+          edge (matte left accent bar — a runs-feed task card&apos;s state at a
+          glance; independent of tone/living, never glows)
+        </Typography>
+        <div className="flex flex-col gap-2 w-64">
+          <Card edge="run">
+            <CardContent>Běží</CardContent>
+          </Card>
+          <Card edge="warn">
+            <CardContent>Čeká na tebe</CardContent>
+          </Card>
+          <Card edge="ok">
+            <CardContent>Hotovo</CardContent>
+          </Card>
+          <Card edge="bad">
+            <CardContent>Chyba</CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   ),
 };

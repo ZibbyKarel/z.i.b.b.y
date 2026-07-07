@@ -888,10 +888,6 @@
   "runs": {
     "title": "Runs & activity",
     "summary": "{running} running · {awaiting} awaiting · {total} total",
-    "filterAll": "All",
-    "filterSelectAll": "Select all",
-    "filterClearAll": "Clear all",
-    "filterRemove": "Remove filter",
     "group": {
       "total": "Total",
       "running": "Running",
@@ -899,6 +895,14 @@
       "done": "Done",
       "error": "Error",
       "parked": "Parked"
+    },
+    "filterGroup": {
+      "all": "All",
+      "running": "Running",
+      "waiting": "Waiting",
+      "done": "Done",
+      "error": "Error",
+      "interrupted": "Interrupted"
     },
     "emptyTitle": "No runs",
     "emptyDesc": "No task has run yet. Create a new task and it shows up here.",
@@ -971,7 +975,7 @@
       "paused-limit": "paused (limit)"
     },
     "kind": {
-      "agent": "agent",
+      "agent": "skill",
       "pipeline": "pipeline",
       "goal": "goal",
       "chain": "chain",

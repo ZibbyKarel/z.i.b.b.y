@@ -888,10 +888,6 @@
   "runs": {
     "title": "Běhy & aktivita",
     "summary": "{running} běží · {awaiting} čeká · {total} celkem",
-    "filterAll": "Vše",
-    "filterSelectAll": "Vybrat vše",
-    "filterClearAll": "Zrušit vše",
-    "filterRemove": "Odebrat filtr",
     "group": {
       "total": "Celkem",
       "running": "Běží",
@@ -899,6 +895,14 @@
       "done": "Hotovo",
       "error": "Chyba",
       "parked": "Zaparkováno"
+    },
+    "filterGroup": {
+      "all": "Vše",
+      "running": "Běží",
+      "waiting": "Čeká",
+      "done": "Hotovo",
+      "error": "Chyba",
+      "interrupted": "Přerušeno"
     },
     "emptyTitle": "Žádné běhy",
     "emptyDesc": "Zatím tu žádný task neběžel. Zadej nový task a objeví se tady.",
@@ -971,7 +975,7 @@
       "paused-limit": "pauza na limitu"
     },
     "kind": {
-      "agent": "agent",
+      "agent": "skill",
       "pipeline": "pipeline",
       "goal": "cíl",
       "chain": "řetězec",

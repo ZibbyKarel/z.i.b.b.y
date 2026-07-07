@@ -63,4 +63,20 @@ describe("Tag", () => {
     render(<Tag tone="neutral">plain</Tag>);
     expect(screen.queryByTestId(TagTestId.Icon)).not.toBeInTheDocument();
   });
+
+  it("renders uppercase (CSS only — textContent stays untouched) when requested", () => {
+    render(
+      <Tag uppercase tone="run">
+        běží
+      </Tag>,
+    );
+    const root = screen.getByTestId(TagTestId.Root);
+    expect(root).toHaveClass("uppercase");
+    expect(root).toHaveTextContent("běží");
+  });
+
+  it("omits the uppercase class by default", () => {
+    render(<Tag tone="run">běží</Tag>);
+    expect(screen.getByTestId(TagTestId.Root)).not.toHaveClass("uppercase");
+  });
 });

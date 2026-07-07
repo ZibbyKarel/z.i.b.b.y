@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack, Tag, Typography } from "@zibby/design-system";
+import { Button, Stack, StatusDot, Tag, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { formatCostUsd } from "../../../utils/cost";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import { useStageRunLogStream } from "../useRunLogStream";
-import type { RunView } from "../run";
+import { RUN_STATE, type RunView } from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunTranscript } from "./RunTranscript";
 
@@ -175,6 +175,13 @@ export function PipelineStageTimeline({
               <Stack gap="50" key={key}>
                 <Stack align="center" direction="row" gap="100" justify="between">
                   <Stack align="center" direction="row" gap="100">
+                    {/* Matte unless the stage is live — the dot only glows/pulses for
+                        the currently-running phase (RUN_STATE is the single source). */}
+                    <StatusDot
+                      pulse={RUN_STATE[s.status].pulse}
+                      size="75"
+                      tone={RUN_STATE[s.status].dot}
+                    />
                     <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
                       {s.phaseId}
                     </Typography>

@@ -1,5 +1,5 @@
 import type { Approval, RunKind, TaskRun, TaskRunStatus } from "@zibby/contracts";
-import type { DotTone, IconName, TagTone } from "@zibby/design-system";
+import type { DotTone, IconName, StateTone, TagTone } from "@zibby/design-system";
 
 /**
  * The Runs screen is a task feed: what the user asked for is the headline, the
@@ -161,6 +161,32 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
     pulse: false,
   },
 };
+
+/**
+ * `RUN_STATE.badge`'s `TagTone` narrowed to the canonical {@link StateTone}
+ * vocabulary — `undefined` for `neutral` (and the risk-kind tones, unreachable
+ * here). One source, two readers: the state chip's `Tag` tone stays a `TagTone`
+ * (it also needs `neutral`), while a card's left `edge` bar / progress fill /
+ * header glow all read this narrower tone so "what color is this state" is
+ * decided exactly once.
+ */
+const BADGE_TO_STATE_TONE: Partial<Record<TagTone, StateTone>> = {
+  accent: "accent",
+  ok: "ok",
+  warn: "warn",
+  bad: "bad",
+  run: "run",
+};
+
+/**
+ * A run status's state-tone, or `undefined` for a neutral (non-live,
+ * non-terminal-outcome) status like `scheduled`/`queued`/`interrupted` — those
+ * read as matte with no accent color, per "color = state" (a status with no
+ * strong state doesn't borrow one).
+ */
+export function runStateTone(status: FeedStatus): StateTone | undefined {
+  return BADGE_TO_STATE_TONE[RUN_STATE[status].badge];
+}
 
 const KIND_GLYPH: Record<RunKind, IconName> = {
   agent: "bot",
