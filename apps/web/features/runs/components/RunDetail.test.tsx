@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { CodeBlockTestId, FilePreviewTestId } from "@zibby/design-system";
+import { CodeBlockTestId, DropdownTestId, FilePreviewTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
@@ -36,6 +36,17 @@ vi.mock("../queries/useRunArtifactQuery", () => ({
 // ChainStepsPanel fetches the open step's pipeline aggregate; nothing is open by
 // default in these tests, so a stub returning no data is enough.
 vi.mock("../../pipelines", () => ({ usePipelineRunQuery: () => ({ data: undefined }) }));
+// The Phase 24 Part D "Zařadit do projektu" control reads the project registry and
+// its own assign mutation; an empty registry keeps it a no-op for every test here
+// that doesn't specifically exercise it.
+const { projectsRef, assignMutate } = vi.hoisted(() => ({
+  projectsRef: { current: [] as { id: string; name: string }[] },
+  assignMutate: vi.fn(),
+}));
+vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: projectsRef.current }) }));
+vi.mock("../mutations", () => ({
+  useAssignRunProjectMutation: () => ({ mutate: assignMutate, isPending: false }),
+}));
 
 const LONG_DESC =
   "Refaktoruj detail běhu pipeliny tak, aby nezobrazoval název úkolu dvakrát, " +
@@ -292,5 +303,47 @@ describe("RunDetail — task output", () => {
     expect(screen.queryByTestId(CodeBlockTestId.Pre)).not.toBeInTheDocument();
     expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
     expect(screen.queryByText(/stages, done/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RunDetail — assign to project (Phase 24 Part D)", () => {
+  beforeEach(() => {
+    projectsRef.current = [
+      { id: "alpha", name: "Alpha" },
+      { id: "beta", name: "Beta" },
+    ];
+    assignMutate.mockClear();
+  });
+
+  it("shows the assign control in place of the project meta cell for a project-less run", () => {
+    renderDetail();
+    expect(screen.getByText("Zařadit do projektu")).toBeInTheDocument();
+    expect(screen.queryByText("projekt")).not.toBeInTheDocument();
+  });
+
+  it("hides the assign control when the project registry is empty", () => {
+    projectsRef.current = [];
+    renderDetail();
+    expect(screen.queryByText("Zařadit do projektu")).not.toBeInTheDocument();
+  });
+
+  it("shows the project meta cell (not the assign control) once the run carries a projectId", () => {
+    renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
+    expect(screen.getByText("projekt")).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.queryByText("Zařadit do projektu")).not.toBeInTheDocument();
+  });
+
+  it("assigns the chosen project via the mutation", async () => {
+    renderDetail();
+    await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    const options = screen.getAllByTestId(DropdownTestId.Option);
+    const alpha = options.find((o) => o.textContent === "Alpha");
+    expect(alpha).toBeDefined();
+    if (alpha) await userEvent.click(alpha);
+    expect(assignMutate).toHaveBeenCalledWith({
+      params: { runId: pipelineRun.runId },
+      body: { projectId: "alpha" },
+    });
   });
 });

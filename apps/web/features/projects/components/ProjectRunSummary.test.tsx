@@ -11,6 +11,13 @@ vi.mock("../../runs", () => ({
   useRunsQuery: () => ({ runs: feed }),
 }));
 
+// Phase 24: the runs feed reads its scope from the top-bar's active-project
+// context, not a `?project=` query — assert each tile arms that scope on click.
+const setActiveProject = vi.fn();
+vi.mock("../context/ProjectProvider", () => ({
+  useActiveProject: () => ({ activeProjectId: null, setActiveProject }),
+}));
+
 let seq = 0;
 function run(projectId: string | undefined, status: TaskRunStatus): TaskRun {
   return {
@@ -52,21 +59,31 @@ describe("ProjectRunSummary", () => {
     expect(tileValue("parked")).toBe("0");
   });
 
-  it("deep-links each tile into /runs pre-filtered to the project (and the bucket's states)", () => {
+  it("deep-links each tile into /runs pre-filtered to the bucket's states (project scope comes from the click)", () => {
     feed = [run("alpha", "done")];
     render(<ProjectRunSummary projectId="alpha" />);
 
-    expect(screen.getByTestId("project-run-summary-total")).toHaveAttribute(
-      "href",
-      "/runs?project=alpha",
-    );
+    expect(screen.getByTestId("project-run-summary-total")).toHaveAttribute("href", "/runs");
     expect(screen.getByTestId("project-run-summary-done")).toHaveAttribute(
       "href",
-      "/runs?project=alpha&filter=done",
+      "/runs?filter=done",
     );
     expect(screen.getByTestId("project-run-summary-waiting")).toHaveAttribute(
       "href",
-      "/runs?project=alpha&filter=queued,scheduled,pending,held,awaiting-approval",
+      "/runs?filter=queued,scheduled,pending,held,awaiting-approval",
     );
+  });
+
+  it("arms the top-bar project scope before navigating to the runs feed", () => {
+    feed = [run("alpha", "done")];
+    setActiveProject.mockClear();
+    render(<ProjectRunSummary projectId="alpha" />);
+
+    screen.getByTestId("project-run-summary-total").click();
+    expect(setActiveProject).toHaveBeenCalledWith("alpha");
+
+    setActiveProject.mockClear();
+    screen.getByTestId("project-run-summary-done").click();
+    expect(setActiveProject).toHaveBeenCalledWith("alpha");
   });
 });
