@@ -8,11 +8,11 @@ import {
   SearchMenu,
   type SearchMenuSection,
 } from "@zibby/design-system";
-import type { TaskTarget } from "@zibby/contracts";
 import { useAgentsQuery } from "../../agents";
 import { usePipelinesQuery } from "../../pipelines";
 import { useApprovalsQuery } from "../../approvals";
 import { useMemorySearchQuery } from "../../memory/queries";
+import type { ChatDetailTarget } from "./ChatDetailDialog";
 
 export enum ChatPaletteTestId {
   Root = "chat-palette",
@@ -20,8 +20,13 @@ export enum ChatPaletteTestId {
 }
 
 export interface ChatPaletteProps {
-  /** An agent/pipeline was picked — insert it as an @mention target in the composer. */
-  onMentionSelect: (target: TaskTarget) => void;
+  /**
+   * An agent/pipeline was picked — open its read-only DETAIL in a dialog (Phase
+   * 58). ⌘K no longer injects the pick into the composer as an `@mention` target;
+   * that job belongs to `CommandLine`'s own inline `@`-search (Phase 45/51), so
+   * this stops duplicating it.
+   */
+  onDetailSelect: (detail: ChatDetailTarget) => void;
   /**
    * Navigate away to a gate/note and close the whole overlay — the sanctioned
    * fallback (Fáze 14.5) until the gates/memory screens have a panel-first view
@@ -45,11 +50,12 @@ function matchesQuery(query: string, ...fields: Array<string | undefined>): bool
  * The chat's quick-switcher (⌘K) — a centered `SearchMenu` overlaid on top of the
  * conversation (Fáze 14.5), never a navigation away from it except for the two
  * sections that have nowhere else to render yet (gates, memory — see
- * {@link ChatPaletteProps.onNavigate}). Agents/pipelines reuse the exact @mention
- * target shape `CommandLine`'s own picker builds (Fáze 14.2), just handed to the
- * composer from outside instead of typed inline.
+ * {@link ChatPaletteProps.onNavigate}). Picking an agent/pipeline opens its
+ * read-only DETAIL in a dialog (Phase 58, see {@link ChatPaletteProps.onDetailSelect})
+ * rather than injecting an @mention target into the composer — that inline job now
+ * belongs solely to `CommandLine`'s own `@`-search (Phase 45/51).
  */
-export function ChatPalette({ onMentionSelect, onNavigate, onClose }: ChatPaletteProps) {
+export function ChatPalette({ onDetailSelect, onNavigate, onClose }: ChatPaletteProps) {
   const t = useTranslations("chat.palette");
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(true);
@@ -113,7 +119,7 @@ export function ChatPalette({ onMentionSelect, onNavigate, onClose }: ChatPalett
     if (sectionId === "agents") {
       const agent = agents.find((a) => a.id === itemId);
       if (agent) {
-        onMentionSelect({ kind: "agent", id: agent.id, name: agent.name ?? agent.id, glyph: agent.glyph });
+        onDetailSelect({ kind: "agent", agent });
         onClose();
       }
       return;
@@ -121,7 +127,7 @@ export function ChatPalette({ onMentionSelect, onNavigate, onClose }: ChatPalett
     if (sectionId === "pipelines") {
       const pipeline = pipelines.find((p) => p.id === itemId);
       if (pipeline) {
-        onMentionSelect({ kind: "pipeline", id: pipeline.id, name: pipeline.name, glyph: "flow" });
+        onDetailSelect({ kind: "pipeline", pipeline });
         onClose();
       }
       return;

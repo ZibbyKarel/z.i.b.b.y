@@ -1518,6 +1518,13 @@
         "gates": "Gates",
         "memory": "Memory"
       }
+    },
+    "detail": {
+      "close": "Close",
+      "kindAgent": "Agent",
+      "kindPipeline": "Pipeline",
+      "noDescription": "No description yet.",
+      "phaseCount": "{count, plural, one {# phase} other {# phases}}"
     }
   },
   "pins": {

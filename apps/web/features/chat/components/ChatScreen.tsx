@@ -35,13 +35,13 @@ import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { ProjectSwitcher } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
-import { toClientTarget } from "../../tasks/task";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { buildConstellation } from "../scene/constellation";
 import { CosmicScene } from "../scene/CosmicScene";
 import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
+import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatPalette } from "./ChatPalette";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
@@ -216,27 +216,14 @@ export function ChatScreen({
     setPaletteOpen((v) => !v);
   }, []);
 
-  // A target picked in the palette (agents/pipelines sections) rides into the
-  // composer through its `injectedTarget` prop rather than lifting the composer's
-  // whole mention-selection state up here — see the doc comment on
-  // `CommandLineProps.injectedTarget` for why.
-  const [pendingMentionTarget, setPendingMentionTarget] = useState<TaskTarget | undefined>(
-    undefined,
-  );
-  const handleMentionSelect = useCallback((target: TaskTarget) => {
-    setPendingMentionTarget(target);
+  // A result picked in the palette (agents/pipelines) opens its read-only DETAIL
+  // here in a dialog (Phase 58) instead of being injected into the composer — the
+  // inline `@`-search on `CommandLine` owns adding a target to the input now, so
+  // ⌘K stops duplicating it. `undefined` = no dialog open.
+  const [detailTarget, setDetailTarget] = useState<ChatDetailTarget | undefined>(undefined);
+  const handleDetailSelect = useCallback((detail: ChatDetailTarget) => {
+    setDetailTarget(detail);
   }, []);
-  // `CommandLine`'s own `TaskTarget` (Phase 26) narrows `glyph` to the
-  // design-system `IconName` union — the palette hands over the wider
-  // `@zibby/contracts` shape (`glyph` a free-form string), so it's narrowed here.
-  // Memoized on `pendingMentionTarget`'s own identity: `CommandLine` tells a NEW
-  // injection apart from a re-render by reference equality, so a value recomputed
-  // on every render (rather than only when the source target changes) would
-  // wrongly re-trigger the one-shot injection.
-  const injectedTarget = useMemo(
-    () => (pendingMentionTarget ? toClientTarget(pendingMentionTarget) : undefined),
-    [pendingMentionTarget],
-  );
   const handlePaletteNavigate = useCallback(
     (href: Route) => {
       // Gates/memory have nowhere to render inline yet (Rozhodnutí 7's sanctioned
@@ -512,10 +499,8 @@ export function ChatScreen({
             showAttach
             chrome={false}
             disabled={thinking}
-            injectedTarget={injectedTarget}
             label={t("composer.label")}
             onDraftChange={setHasDraft}
-            onInjectedTargetConsumed={() => setPendingMentionTarget(undefined)}
             onSubmit={send}
             placeholder={t("composer.placeholder")}
           />
@@ -528,9 +513,17 @@ export function ChatScreen({
       {paletteOpen && (
         <ChatPalette
           onClose={() => setPaletteOpen(false)}
-          onMentionSelect={handleMentionSelect}
+          onDetailSelect={handleDetailSelect}
           onNavigate={handlePaletteNavigate}
         />
+      )}
+
+      {/* ── Result detail (Phase 58) ────────────────────────────────────
+          A pick in the ⌘K quick-switcher opens the agent/pipeline's read-only
+          detail here — a viewing dialog, never an edit surface (edits live on the
+          entity's own /agents·/pipelines page). */}
+      {detailTarget && (
+        <ChatDetailDialog detail={detailTarget} onClose={() => setDetailTarget(undefined)} />
       )}
     </div>
   );

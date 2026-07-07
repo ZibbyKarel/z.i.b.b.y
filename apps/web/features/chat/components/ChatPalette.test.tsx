@@ -51,7 +51,7 @@ import { ChatPalette, ChatPaletteTestId } from "./ChatPalette";
 describe("ChatPalette (14.5)", () => {
   it("renders the search input and stays closed to results until a query is typed", () => {
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onMentionSelect={vi.fn()} onNavigate={vi.fn()} />,
+      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={vi.fn()} />,
     );
     expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
     expect(screen.queryByTestId(`${SearchMenuTestId.Item}-agents-builder`)).not.toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("ChatPalette (14.5)", () => {
   it("filters agents, pipelines and gates by the typed query", async () => {
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onMentionSelect={vi.fn()} onNavigate={vi.fn()} />,
+      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={vi.fn()} />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
     expect(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`)).toBeInTheDocument();
@@ -68,38 +68,34 @@ describe("ChatPalette (14.5)", () => {
     expect(screen.queryByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`)).not.toBeInTheDocument();
   });
 
-  it("selecting an agent hands it to onMentionSelect and closes the palette", async () => {
-    const onMentionSelect = vi.fn();
+  it("selecting an agent hands its full record to onDetailSelect and closes the palette", async () => {
+    const onDetailSelect = vi.fn();
     const onClose = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={onClose} onMentionSelect={onMentionSelect} onNavigate={vi.fn()} />,
+      <ChatPalette onClose={onClose} onDetailSelect={onDetailSelect} onNavigate={vi.fn()} />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
     await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
 
-    expect(onMentionSelect).toHaveBeenCalledWith({
+    expect(onDetailSelect).toHaveBeenCalledWith({
       kind: "agent",
-      id: "builder",
-      name: "Builder",
-      glyph: "hammer",
+      agent: { id: "builder", name: "Builder", glyph: "hammer" },
     });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("selecting a pipeline builds a pipeline target with the shared 'flow' glyph", async () => {
-    const onMentionSelect = vi.fn();
+  it("selecting a pipeline hands its full record to onDetailSelect", async () => {
+    const onDetailSelect = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onMentionSelect={onMentionSelect} onNavigate={vi.fn()} />,
+      <ChatPalette onClose={vi.fn()} onDetailSelect={onDetailSelect} onNavigate={vi.fn()} />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Deliv");
     await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`));
-    expect(onMentionSelect).toHaveBeenCalledWith({
+    expect(onDetailSelect).toHaveBeenCalledWith({
       kind: "pipeline",
-      id: "delivery",
-      name: "Delivery",
-      glyph: "flow",
+      pipeline: { id: "delivery", name: "Delivery" },
     });
   });
 
@@ -107,7 +103,7 @@ describe("ChatPalette (14.5)", () => {
     const onNavigate = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onMentionSelect={vi.fn()} onNavigate={onNavigate} />,
+      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={onNavigate} />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "purchase");
     expect(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`)).toBeInTheDocument();
@@ -119,7 +115,7 @@ describe("ChatPalette (14.5)", () => {
     const onNavigate = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onMentionSelect={vi.fn()} onNavigate={onNavigate} />,
+      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={onNavigate} />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Roadmap");
     await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-memory-note1`));
@@ -130,7 +126,7 @@ describe("ChatPalette (14.5)", () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={onClose} onMentionSelect={vi.fn()} onNavigate={vi.fn()} />,
+      <ChatPalette onClose={onClose} onDetailSelect={vi.fn()} onNavigate={vi.fn()} />,
     );
     await user.click(screen.getByTestId(ChatPaletteTestId.Backdrop));
     expect(onClose).toHaveBeenCalledTimes(1);

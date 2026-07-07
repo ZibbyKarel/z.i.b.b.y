@@ -97,10 +97,11 @@ vi.mock("../../pipelines", async (importOriginal) => {
 
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
+import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
+import { ChatDetailDialogTestId } from "./ChatDetailDialog";
 import { ChatPaletteTestId } from "./ChatPalette";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
@@ -308,7 +309,7 @@ describe("ChatScreen", () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it("selecting an agent in the palette injects an @mention target into the composer", async () => {
+    it("selecting an agent in the palette opens its detail dialog, not composer injection (Phase 58)", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
@@ -316,19 +317,14 @@ describe("ChatScreen", () => {
       await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
       await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
 
+      // The pick closes the palette and opens the agent's read-only detail dialog.
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-      expect(screen.getByTestId(CommandLineTestId.TargetChip)).toHaveTextContent("Builder");
-      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("@Builder ");
+      expect(screen.getByTestId(ChatDetailDialogTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(EntityHeroTestId.Name)).toHaveTextContent("Builder");
 
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
-      await user.keyboard("{Enter}");
-      expect(mutate).toHaveBeenCalledWith({
-        body: {
-          conversationId: "c1",
-          text: "@Builder ahoj",
-          target: { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
-        },
-      });
+      // The old duplicated behaviour is gone: nothing is injected into the composer.
+      expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
+      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("");
     });
 
     it("selecting a gate in the palette navigates, without closing the page", async () => {

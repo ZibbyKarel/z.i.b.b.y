@@ -1518,6 +1518,13 @@
         "gates": "Gates",
         "memory": "Paměť"
       }
+    },
+    "detail": {
+      "close": "Zavřít",
+      "kindAgent": "Agent",
+      "kindPipeline": "Pipeline",
+      "noDescription": "Zatím bez popisu.",
+      "phaseCount": "{count, plural, one {# fáze} few {# fáze} other {# fází}}"
     }
   },
   "pins": {
