@@ -13,6 +13,7 @@ import { ChainsModule } from "./chains/chains.module";
 import { ChatModule } from "./chat/chat.module";
 import { ChannelsModule } from "./channels/channels.module";
 import { CommandsModule } from "./commands/commands.module";
+import { CompaniesModule } from "./companies/companies.module";
 import { DiscoveryModule } from "./discovery/discovery.module";
 import { EventsModule } from "./events/events.module";
 import { GateRulesModule } from "./gate-rules/gate-rules.module";
@@ -49,6 +50,7 @@ import { TasksModule } from "./tasks/tasks.module";
     AgentsModule,
     SkillsModule,
     ProjectsModule,
+    CompaniesModule,
     PipelinesModule,
     GoalsModule,
     ApprovalsModule,

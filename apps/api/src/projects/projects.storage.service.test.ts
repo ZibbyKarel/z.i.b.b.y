@@ -74,4 +74,52 @@ describe("ProjectsStorageService", () => {
     await fs.writeFile(path.join(dir, "_projects.json"), "{ not json", "utf8");
     expect(await service.list()).toEqual([]);
   });
+
+  describe("person-id backfill (Phase 69)", () => {
+    it("assigns a stable slug id to a person missing one", async () => {
+      await service.create({
+        ...base,
+        identity: { people: [{ name: "Jana Nováková", role: "PM" }] },
+      });
+      const [project] = await service.list();
+      expect(project?.identity?.people).toEqual([
+        { name: "Jana Nováková", role: "PM", id: "jana-novakova" },
+      ]);
+    });
+
+    it("gives two same-name people distinct ids", async () => {
+      await service.create({
+        ...base,
+        identity: {
+          people: [
+            { name: "Jan Novák", role: "Dev" },
+            { name: "Jan Novák", role: "Client" },
+          ],
+        },
+      });
+      const [project] = await service.list();
+      expect(project?.identity?.people?.map((p) => p.id)).toEqual(["jan-novak", "jan-novak-2"]);
+    });
+
+    it("leaves an existing id untouched", async () => {
+      await service.create({
+        ...base,
+        identity: { people: [{ id: "custom-id", name: "Jan Novák", role: "Dev" }] },
+      });
+      const [project] = await service.list();
+      expect(project?.identity?.people?.[0]?.id).toBe("custom-id");
+    });
+
+    it("persists a backfilled id on the next write", async () => {
+      await service.create({
+        ...base,
+        identity: { people: [{ name: "Jan Novák", role: "Dev" }] },
+      });
+      // Trigger a write unrelated to identity; the in-memory backfill from list()
+      // should flow through and land on disk.
+      await service.update("media-vault", { desc: "moved" });
+      const raw = await fs.readFile(path.join(dir, "_projects.json"), "utf8");
+      expect(raw).toContain("jan-novak");
+    });
+  });
 });

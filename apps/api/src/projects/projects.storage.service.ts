@@ -7,6 +7,7 @@ import {
   ProjectSchema,
   type UpdateProjectInput,
 } from "@zibby/contracts";
+import { backfillPersonIds } from "../shared/backfill-person-ids";
 import { ensureDir, safeJson, searchByText, writeFileAtomic } from "../shared/file-storage";
 import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors";
 
@@ -46,6 +47,7 @@ export class ProjectsStorageService {
         const result = ProjectSchema.safeParse(entry);
         return result.success ? [result.data] : [];
       })
+      .map(backfillProjectPersonIds)
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
@@ -105,4 +107,17 @@ export class ProjectsStorageService {
     });
     await writeFileAtomic(this.file, `${JSON.stringify(persisted, null, 2)}\n`);
   }
+}
+
+/**
+ * Backfill missing `identity.people[].id`s (Phase 69 migration decision — see
+ * `ProjectPersonSchema`'s doc comment in `libs/contracts`). Returns the same
+ * `project` reference when there is no roster or nothing to backfill, so a
+ * project with no people never gets copied for nothing.
+ */
+function backfillProjectPersonIds(project: Project): Project {
+  if (!project.identity?.people) return project;
+  const backfilled = backfillPersonIds(project.identity.people);
+  if (backfilled === project.identity.people) return project;
+  return { ...project, identity: { ...project.identity, people: backfilled } };
 }
