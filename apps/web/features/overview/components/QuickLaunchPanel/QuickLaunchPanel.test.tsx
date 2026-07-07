@@ -2,6 +2,7 @@ import { renderWithProviders as render, screen } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Pins } from "@zibby/contracts";
+import { IconTileTestId } from "@zibby/design-system";
 import { QuickLaunchPanel, QuickLaunchPanelTestId } from "./QuickLaunchPanel";
 
 const { hooks } = vi.hoisted(() => ({
@@ -9,8 +10,8 @@ const { hooks } = vi.hoisted(() => ({
     pins: [] as Pins,
     toggle: vi.fn(),
     openNewTask: vi.fn(),
-    agents: [] as { id: string; name?: string; glyph?: string }[],
-    pipelines: [] as { id: string; name?: string }[],
+    agents: [] as { id: string; name?: string; glyph?: string; avatar?: string }[],
+    pipelines: [] as { id: string; name?: string; avatar?: string }[],
     chains: [] as { id: string; name?: string }[],
   },
 }));
@@ -83,6 +84,15 @@ describe("QuickLaunchPanel", () => {
       name: "Research → Build",
       glyph: "link",
     });
+  });
+
+  it("shows the entity avatar on the pin card when the agent has one", () => {
+    hooks.agents = [
+      { id: "researcher", name: "Researcher", glyph: "bot", avatar: "/avatars/coder.png" },
+    ];
+    hooks.pins = [{ kind: "agent", id: "researcher" }];
+    render(<QuickLaunchPanel />);
+    expect(screen.getByTestId(IconTileTestId.Image)).toHaveAttribute("src", "/avatars/coder.png");
   });
 
   it("unpin calls toggle with the item removed", async () => {

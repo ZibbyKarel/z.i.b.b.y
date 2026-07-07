@@ -28,7 +28,7 @@ export function TargetIdentity({ targets }: { targets: TaskTarget[] }) {
       {targets.map((target, i) => (
         <Stack align="center" direction="row" gap="50" key={`${target.kind}-${i}`}>
           {i > 0 && <Icon name="chevron" size="xs" tone="faint" />}
-          <IconTile glyph={targetGlyph(target)} size="sm" tone="accent" />
+          <IconTile glyph={targetGlyph(target)} size="sm" src={target.avatar} tone="accent" />
           <Typography mono size="xs" tone="accent" type="note">
             {target.name}
           </Typography>
