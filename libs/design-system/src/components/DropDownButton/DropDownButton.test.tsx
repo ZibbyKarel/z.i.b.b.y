@@ -132,4 +132,15 @@ describe("DropDownButton", () => {
     expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeDisabled();
     expect(screen.getByTestId(DropDownButtonTestId.Trigger)).toBeDisabled();
   });
+
+  it("gives both halves the same inert disabled look so they read as one unit", () => {
+    render(<DropDownButton disabled label="Spustit" menuItems={ITEMS} onClick={vi.fn()} />);
+    for (const testId of [DropDownButtonTestId.Primary, DropDownButtonTestId.Trigger]) {
+      expect(screen.getByTestId(testId)).toHaveClass(
+        "disabled:bg-elevated",
+        "disabled:text-foreground-faint",
+        "disabled:border-border",
+      );
+    }
+  });
 });

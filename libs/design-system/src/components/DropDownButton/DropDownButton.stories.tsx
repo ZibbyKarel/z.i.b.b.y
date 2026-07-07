@@ -73,10 +73,24 @@ export const Overview: Story = {
             menuItems={RUN_LATER_ITEMS}
             onClick={() => {}}
           />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">disabled — both halves + divider read as one inert unit</Typography>
+        <div className="flex flex-wrap items-center gap-3">
           <DropDownButton
             disabled
             icon="play"
+            intent="primary"
             label="Spustit"
+            menuItems={RUN_LATER_ITEMS}
+            onClick={() => {}}
+          />
+          <DropDownButton
+            disabled
+            icon="retry"
+            intent="ghost"
+            label="Znovu"
             menuItems={RUN_LATER_ITEMS}
             onClick={() => {}}
           />

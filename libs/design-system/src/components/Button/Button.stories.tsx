@@ -54,12 +54,26 @@ export const Overview: Story = {
       <div className="flex flex-col gap-2">
         <Typography type="label">states</Typography>
         <div className="flex flex-wrap items-center gap-3">
-          <Button disabled icon="play">
-            Disabled
-          </Button>
           <Button loading>Spouštím…</Button>
           <Button loading intent="ghost">
             Načítám…
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">disabled — inert across every intent, not a faded fill</Typography>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button disabled icon="play" intent="primary">
+            Spustit
+          </Button>
+          <Button disabled icon="edit" intent="ghost">
+            Edit raw
+          </Button>
+          <Button disabled icon="x" intent="danger">
+            Zamítnout
+          </Button>
+          <Button disabled icon="check" intent="primary" tone="ok">
+            Schválit
           </Button>
         </div>
       </div>

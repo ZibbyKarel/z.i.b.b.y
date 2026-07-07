@@ -76,4 +76,6 @@
 
 - [ ] stránka běhy a aktivita - na detailu tasku, který skončil chybou mi chybí tlačítko "resume", které pustí task znova (ideálně tak aby se nemusel znovu celý opakovat a načítat context)
 
-- [ ] DropdownButton v CommandLine nemá asi správný disabled stav. stále vypadá že je aktivní jen na něj nejde kliknout
+- [x] DropdownButton v CommandLine nemá asi správný disabled stav. stále vypadá že je aktivní jen na něj nejde kliknout — fáze 47
+
+- [ ] inline vyhledávání v komponentě CommandLine má několik problémů 1. Nezobrazuje se pod kurzorem ale pod inputem coš je divné UX pokud je COmmandLine roztažená přes více řádků 2. v HUD UI na Overview stránce je plachta s výsledky překrytá obalovým divem celé komponenty CommandLine 3. v Chat UI kde je CommandLine vykreslena ve spodu stránky se plachta s výsledky vůbec nevejde, V takovém případě by se měla vykreslit nad kurzorem místo pod ním

@@ -32,6 +32,23 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("carries the inert disabled affordance regardless of intent", () => {
+    render(
+      <Button disabled intent="primary">
+        Spustit
+      </Button>,
+    );
+    const root = screen.getByTestId(ButtonTestId.Root);
+    expect(root).toBeDisabled();
+    // Neutral, token-driven disabled look — not merely a faded accent fill.
+    expect(root).toHaveClass(
+      "disabled:cursor-not-allowed",
+      "disabled:bg-elevated",
+      "disabled:text-foreground-faint",
+      "disabled:border-border",
+    );
+  });
+
   it("shows a spinner instead of the icon and suppresses clicks when loading", async () => {
     const onClick = vi.fn();
     render(
