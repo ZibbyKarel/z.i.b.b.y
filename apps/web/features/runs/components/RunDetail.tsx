@@ -97,36 +97,6 @@ function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
   );
 }
 
-/** How many characters of the task description show before "show more". */
-const DESCRIPTION_PREVIEW = 180;
-
-/**
- * The task's free-text description, truncated to a preview with a "show more /
- * show less" toggle (classic collapse). Shown in the run header for runs born from
- * a task whose description carries more than the headline — most visibly pipeline
- * runs, whose `prompt` is only the current-phase string, not the task text.
- */
-function TaskDescription({ text }: { text: string }) {
-  const t = useTranslations("runs");
-  const [expanded, setExpanded] = useState(false);
-  const isLong = text.length > DESCRIPTION_PREVIEW;
-  const shown = !isLong || expanded ? text : `${text.slice(0, DESCRIPTION_PREVIEW).trimEnd()}…`;
-  return (
-    <Stack align="start" gap="25">
-      <Typography leading="snug" size="sm" type="text" variant="secondary">
-        {shown}
-      </Typography>
-      {isLong && (
-        <Pressable onClick={() => setExpanded((v) => !v)}>
-          <Typography size="xs" tone="accent" type="note" weight="semibold">
-            {expanded ? t("showLess") : t("showMore")}
-          </Typography>
-        </Pressable>
-      )}
-    </Stack>
-  );
-}
-
 function MetaCell({
   label,
   value,
@@ -346,21 +316,37 @@ function RunOutputPanel({ run }: { run: RunView }) {
 }
 
 /**
- * The task's uploaded attachments, read-only (no remove affordance) — the run detail
- * only displays what was attached at creation time. Renders nothing when the task
- * carries no attachments.
+ * The task's complete input — Phase 64: pulled out of the header (where long
+ * descriptions crowded the state/meta strip) into its own default-collapsed
+ * "Vstup" accordion below it, so a long task never inflates the header. Shows the
+ * full `taskText` as formatted markdown, then the read-only attachments list
+ * (opening them is Phase 65). Renders nothing when there is neither text nor an
+ * attachment to show.
  */
-function RunAttachmentsPanel({ run }: { run: RunView }) {
+function RunInputSection({ run }: { run: RunView }) {
+  const t = useTranslations("runs");
   const tAttach = useTranslations("tasks.attachments");
-  if (!run.attachments || run.attachments.length === 0) return null;
+  const hasText = Boolean(run.taskText);
+  const hasAttachments = Boolean(run.attachments && run.attachments.length > 0);
+  if (!hasText && !hasAttachments) return null;
   return (
-    <HudPanel padding="250" title={tAttach("sectionTitle")}>
-      <Stack gap="100">
-        {run.attachments.map((a) => (
-          <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
-        ))}
-      </Stack>
-    </HudPanel>
+    <Accordion>
+      <AccordionItem summary={t("inputSection")}>
+        <Stack gap="200">
+          {hasText && <Markdown escapeHtml source={run.taskText ?? ""} />}
+          {hasAttachments && (
+            <Stack gap="100">
+              <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+                {tAttach("sectionTitle")}
+              </Typography>
+              {(run.attachments ?? []).map((a) => (
+                <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -464,10 +450,6 @@ export function RunDetail({
   // kinds (an agent's prompt), suppressed for pipelines.
   const subtitle =
     run.kind === "pipeline" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
-  // The task's free-text description, shown (collapsed) only when it adds something
-  // beyond the headline and the subtitle — so the task name isn't repeated.
-  const descriptionText =
-    run.taskText && run.taskText !== headline && run.taskText !== subtitle ? run.taskText : "";
 
   // Pipeline runs render their own stage timeline (below); this is the log for the
   // kinds that have a single one (agent/skill) or a scheduled task's note.
@@ -600,7 +582,6 @@ export function RunDetail({
                           {subtitle}
                         </Typography>
                       )}
-                      {descriptionText && <TaskDescription text={descriptionText} />}
                       {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
                       into this one meta line instead of a second, separate chip. Phase 63:
                       the agent's name is a link to its own detail page (its display name
@@ -676,8 +657,8 @@ export function RunDetail({
           </EntityHero>
         </Card>
 
+        <RunInputSection run={run} />
         <RunOutputPanel run={run} />
-        <RunAttachmentsPanel run={run} />
 
         {approval ? (
           <>

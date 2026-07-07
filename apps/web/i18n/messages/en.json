@@ -950,6 +950,7 @@
     "resumeContinue": "Resume",
     "resumeFresh": "Run again",
     "output": "run output",
+    "inputSection": "Input",
     "liveLog": "live log",
     "log": "run log",
     "lines": "{n} lines",

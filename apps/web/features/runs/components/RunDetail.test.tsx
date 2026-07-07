@@ -111,17 +111,24 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.queryByText("typ")).not.toBeInTheDocument();
   });
 
-  it("shows a collapsed description that expands and collapses", async () => {
+  it("keeps the task description out of the header — no inline text, no show-more toggle (Phase 64)", () => {
     renderDetail();
-    // Collapsed: an ellipsis preview, full text hidden behind "show more".
     expect(screen.queryByText(LONG_DESC)).not.toBeInTheDocument();
-    await userEvent.click(screen.getByText("zobrazit více"));
-    expect(screen.getByText(LONG_DESC)).toBeInTheDocument();
-    await userEvent.click(screen.getByText("zobrazit méně"));
-    expect(screen.queryByText(LONG_DESC)).not.toBeInTheDocument();
+    expect(screen.queryByText("zobrazit více")).not.toBeInTheDocument();
   });
 
-  it("shows the task's attachments read-only (no remove button)", () => {
+  it("shows a collapsed \"Vstup\" section that expands to reveal the full formatted task input", async () => {
+    renderDetail();
+    // Collapsed by default: the accordion summary is there, its content is not.
+    const summary = screen.getByRole("button", { name: /Vstup/ });
+    expect(summary).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(LONG_DESC)).not.toBeInTheDocument();
+    await userEvent.click(summary);
+    expect(summary).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(LONG_DESC)).toBeInTheDocument();
+  });
+
+  it("shows the task's attachments read-only (no remove button) inside the expanded \"Vstup\" section", async () => {
     renderDetail({
       ...pipelineRun,
       attachments: [
@@ -129,10 +136,17 @@ describe("RunDetail — pipeline header", () => {
         { name: "data.csv", size: 200 },
       ],
     });
+    expect(screen.queryByTestId(FilePreviewTestId.Name)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Vstup"));
     expect(screen.getAllByTestId(FilePreviewTestId.Name)).toHaveLength(2);
     expect(screen.getByText("spec.pdf")).toBeInTheDocument();
     expect(screen.getByText("data.csv")).toBeInTheDocument();
     expect(screen.queryByTestId(FilePreviewTestId.Remove)).not.toBeInTheDocument();
+  });
+
+  it("renders no \"Vstup\" section when the run has neither task text nor attachments", () => {
+    renderDetail({ ...pipelineRun, taskText: undefined });
+    expect(screen.queryByRole("button", { name: /Vstup/ })).not.toBeInTheDocument();
   });
 
   it("shows a formatted cost meta cell when costUsd is set", () => {
