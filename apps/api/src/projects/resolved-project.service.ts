@@ -71,6 +71,18 @@ export class ResolvedProjectService {
   }
 
   /**
+   * The linked company's `id`/`name` — `undefined` for "no company" (absent
+   * `companyId`, or a dangling one whose company was deleted). Only for the wire
+   * context's UI-facing "resolved from company X" note (Phase 72); the merge
+   * itself (above) never needs the name, so this is a separate, additive lookup
+   * that doesn't change {@link resolve}'s existing (tested) return shape.
+   */
+  async resolveCompanyRef(project: Project): Promise<{ id: string; name: string } | undefined> {
+    const company = await this.findCompany(project.companyId);
+    return company ? { id: company.id, name: company.name } : undefined;
+  }
+
+  /**
    * Resolve `companyId` to a `Company`, or `null` for "no company" — absent id, OR
    * a dangling id whose company was deleted (`CompaniesStorageService.get` 404s,
    * caught here and folded into the same `null` path; never rethrown, per the
@@ -78,7 +90,7 @@ export class ResolvedProjectService {
    */
   private async findCompany(
     companyId: string | undefined,
-  ): Promise<{ id: string; people?: ProjectPerson[]; budget?: ProjectBudget } | null> {
+  ): Promise<{ id: string; name: string; people?: ProjectPerson[]; budget?: ProjectBudget } | null> {
     if (!companyId) return null;
     return this.companies.get(companyId).catch(() => null);
   }

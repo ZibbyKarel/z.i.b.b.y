@@ -31,6 +31,7 @@ import { slug } from "../../utils/slug";
 import { InboxPanel } from "../integrations/components/InboxPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
 import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
+import { ProjectCompanyPanel } from "./components/ProjectCompanyPanel";
 import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
 import { ProjectRunSummary } from "./components/ProjectRunSummary";
@@ -541,6 +542,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
           <TabPanel value="overview">
             <Stack gap="300">
               {basicsPanel}
+              <ProjectCompanyPanel companyId={project.companyId} projectId={id} />
               <ProjectRunSummary projectId={id} />
             </Stack>
           </TabPanel>

@@ -13,6 +13,7 @@ export * from "./mcp/mcp.contract";
 export * from "./commands/command.schema";
 export * from "./commands/commands.contract";
 export * from "./projects/project.schema";
+export * from "./projects/resolved-project-context.schema";
 export * from "./projects/projects.contract";
 export * from "./companies/company.schema";
 export * from "./companies/companies.contract";

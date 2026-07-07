@@ -14,6 +14,10 @@ describe("Projects API (e2e)", () => {
   let app: INestApplication;
   let dir: string;
   let secretsDir: string;
+  let companiesDir: string;
+  let integrationsDir: string;
+  let integrationStateDir: string;
+  let credentialsDir: string;
 
   const project = {
     id: "media-vault",
@@ -25,8 +29,18 @@ describe("Projects API (e2e)", () => {
   beforeAll(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "projects-e2e-"));
     secretsDir = await fs.mkdtemp(path.join(os.tmpdir(), "project-secrets-e2e-"));
+    // Phase 72's resolved-context route needs its own companies + integrations
+    // registries — isolated the same way as `integrations.e2e.test.ts`.
+    companiesDir = await fs.mkdtemp(path.join(os.tmpdir(), "projects-e2e-companies-"));
+    integrationsDir = await fs.mkdtemp(path.join(os.tmpdir(), "projects-e2e-integrations-"));
+    integrationStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "projects-e2e-int-state-"));
+    credentialsDir = await fs.mkdtemp(path.join(os.tmpdir(), "projects-e2e-credentials-"));
     process.env.PROJECTS_DIR = dir;
     process.env.PROJECT_SECRETS_DIR = secretsDir;
+    process.env.COMPANIES_DIR = companiesDir;
+    process.env.INTEGRATIONS_DIR = integrationsDir;
+    process.env.INTEGRATION_STATE_DIR = integrationStateDir;
+    process.env.CREDENTIALS_DIR = credentialsDir;
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -37,8 +51,16 @@ describe("Projects API (e2e)", () => {
     await app.close();
     await fs.rm(dir, { recursive: true, force: true });
     await fs.rm(secretsDir, { recursive: true, force: true });
+    await fs.rm(companiesDir, { recursive: true, force: true });
+    await fs.rm(integrationsDir, { recursive: true, force: true });
+    await fs.rm(integrationStateDir, { recursive: true, force: true });
+    await fs.rm(credentialsDir, { recursive: true, force: true });
     delete process.env.PROJECTS_DIR;
     delete process.env.PROJECT_SECRETS_DIR;
+    delete process.env.COMPANIES_DIR;
+    delete process.env.INTEGRATIONS_DIR;
+    delete process.env.INTEGRATION_STATE_DIR;
+    delete process.env.CREDENTIALS_DIR;
   });
 
   it("starts empty, and GET /projects/categories is not shadowed by GET /projects/:id", async () => {
@@ -143,5 +165,128 @@ describe("Projects API (e2e)", () => {
     await request(app.getHttpServer())
       .delete(`${CATS}/${encodeURIComponent("Vývoj")}`)
       .expect(200);
+  });
+
+  it("links a project to a company via PATCH, then unlinks it with companyId: null (Phase 72)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/companies")
+      .send({ id: "clearco", name: "Clear Co" })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(BASE)
+      .send({ id: "linkable", name: "linkable", path: "~/p/linkable" })
+      .expect(201);
+
+    const linked = await request(app.getHttpServer())
+      .patch(`${BASE}/linkable`)
+      .send({ companyId: "clearco" })
+      .expect(200);
+    expect(linked.body.companyId).toBe("clearco");
+
+    // A PATCH that omits companyId leaves the existing link alone.
+    const untouched = await request(app.getHttpServer())
+      .patch(`${BASE}/linkable`)
+      .send({ desc: "moved" })
+      .expect(200);
+    expect(untouched.body.companyId).toBe("clearco");
+
+    // `companyId: null` is the explicit unlink signal.
+    const unlinked = await request(app.getHttpServer())
+      .patch(`${BASE}/linkable`)
+      .send({ companyId: null })
+      .expect(200);
+    expect(unlinked.body.companyId).toBeUndefined();
+
+    await request(app.getHttpServer()).delete(`${BASE}/linkable`).expect(200);
+    await request(app.getHttpServer()).delete("/api/companies/clearco").expect(200);
+  });
+
+  describe("GET /projects/:id/resolved (Phase 72)", () => {
+    it("404s for an unknown project id", async () => {
+      await request(app.getHttpServer()).get(`${BASE}/nope/resolved`).expect(404);
+    });
+
+    it("returns the project's own raw data for a company-less project", async () => {
+      await request(app.getHttpServer())
+        .post(BASE)
+        .send({
+          id: "solo",
+          name: "solo",
+          path: "~/p/solo",
+          identity: { people: [{ name: "Bob", role: "Engineer" }] },
+          budget: { dailyRuns: 3 },
+        })
+        .expect(201);
+
+      const got = await request(app.getHttpServer()).get(`${BASE}/solo/resolved`).expect(200);
+      expect(got.body.companyId).toBeUndefined();
+      expect(got.body.companyName).toBeUndefined();
+      expect(got.body.budget).toEqual({ dailyRuns: 3 });
+      // Phase 69 backfills a missing person id (slugified name) on read.
+      expect(got.body.people).toEqual([{ id: "bob", name: "Bob", role: "Engineer" }]);
+      expect(got.body.integrations).toEqual([]);
+
+      await request(app.getHttpServer()).delete(`${BASE}/solo`).expect(200);
+    });
+
+    it("merges people/budget/integrations from a linked company", async () => {
+      await request(app.getHttpServer())
+        .post("/api/companies")
+        .send({
+          id: "acme",
+          name: "Acme Corp",
+          people: [{ id: "alice", name: "Alice", role: "CEO" }],
+          budget: { dailyRuns: 10, weeklyRuns: 50 },
+        })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post("/api/integrations")
+        .send({
+          id: "co-jira",
+          kind: "jira",
+          companyId: "acme",
+          config: { kind: "jira", baseUrl: "https://acme.atlassian.net", email: "ops@acme.com" },
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(BASE)
+        .send({
+          id: "linked",
+          name: "linked",
+          path: "~/p/linked",
+          companyId: "acme",
+          identity: { people: [{ id: "bob", name: "Bob", role: "Engineer" }] },
+          budget: { dailyRuns: 3 },
+        })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post("/api/integrations")
+        .send({
+          id: "proj-slack",
+          kind: "slack",
+          projectId: "linked",
+          config: { kind: "slack", channels: ["C1"] },
+        })
+        .expect(201);
+
+      const got = await request(app.getHttpServer()).get(`${BASE}/linked/resolved`).expect(200);
+      expect(got.body.companyId).toBe("acme");
+      expect(got.body.companyName).toBe("Acme Corp");
+      // Field-level budget merge: project's dailyRuns wins, company's weeklyRuns inherited.
+      expect(got.body.budget).toEqual({ dailyRuns: 3, weeklyRuns: 50 });
+      // People merge by id: company's roster + project's own addition.
+      expect(got.body.people.map((p: { id: string }) => p.id).sort()).toEqual(["alice", "bob"]);
+      // Integrations union (different kinds): company's jira + the project's own slack.
+      expect(got.body.integrations.map((i: { id: string }) => i.id).sort()).toEqual([
+        "co-jira",
+        "proj-slack",
+      ]);
+
+      await request(app.getHttpServer()).delete(`${BASE}/linked`).expect(200);
+      await request(app.getHttpServer()).delete("/api/integrations/co-jira").expect(200);
+      await request(app.getHttpServer()).delete("/api/integrations/proj-slack").expect(200);
+      await request(app.getHttpServer()).delete("/api/companies/acme").expect(200);
+    });
   });
 });

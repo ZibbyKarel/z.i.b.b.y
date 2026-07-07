@@ -82,7 +82,21 @@ export class ProjectsStorageService {
     const projects = await this.list();
     const existing = projects.find((p) => p.id === id);
     if (!existing) throw new ProjectNotFoundError(id);
-    const merged = ProjectSchema.parse({ ...existing, ...patch, id: existing.id });
+    // `companyId: null` (Phase 72) is the explicit "unlink the company" signal —
+    // distinct from an ABSENT `companyId` key, which leaves the current link
+    // alone (a JSON PATCH body can't otherwise express "clear" since
+    // `undefined`-valued keys never survive the wire). Zod's `Project.companyId`
+    // itself only ever accepts `string | undefined`, so a present `null` is
+    // translated to an explicit-undefined override before parsing; an absent key
+    // is left out of the merge entirely so the existing value survives the spread.
+    const hasCompanyId = "companyId" in patch;
+    const { companyId, ...rest } = patch;
+    const merged = ProjectSchema.parse({
+      ...existing,
+      ...rest,
+      ...(hasCompanyId ? { companyId: companyId === null ? undefined : companyId } : {}),
+      id: existing.id,
+    });
     await this.writeAtomic(projects.map((p) => (p.id === id ? merged : p)));
     return merged;
   }

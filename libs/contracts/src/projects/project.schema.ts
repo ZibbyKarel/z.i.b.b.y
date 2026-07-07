@@ -186,8 +186,17 @@ export type Project = z.infer<typeof ProjectSchema>;
 export const CreateProjectSchema = ProjectSchema.omit({ hasSecrets: true });
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 
-/** Body accepted by `updateProject` — every field optional (partial update), id + hasSecrets excluded. */
-export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true }).partial();
+/**
+ * Body accepted by `updateProject` — every field optional (partial update), id +
+ * hasSecrets excluded. `companyId` is re-widened to also accept `null` (Phase 72):
+ * a JSON PATCH body silently drops `undefined`-valued keys on the wire, so
+ * "unset this field" is otherwise inexpressible for an already-linked project —
+ * `null` is the explicit "unlink the company" signal the storage layer acts on,
+ * while `undefined`/absent still means "leave the current link alone".
+ */
+export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true })
+  .partial()
+  .extend({ companyId: z.string().optional().nullable() });
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
 
 /**

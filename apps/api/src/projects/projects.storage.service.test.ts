@@ -52,6 +52,26 @@ describe("ProjectsStorageService", () => {
     expect(updated).toMatchObject({ id: "media-vault", desc: "moved" });
   });
 
+  describe("companyId link/unlink (Phase 72)", () => {
+    it("sets companyId via a normal patch", async () => {
+      await service.create(base);
+      const updated = await service.update("media-vault", { companyId: "acme" });
+      expect(updated.companyId).toBe("acme");
+    });
+
+    it("clears a linked companyId when the patch sends `null`", async () => {
+      await service.create({ ...base, companyId: "acme" });
+      const updated = await service.update("media-vault", { companyId: null });
+      expect(updated.companyId).toBeUndefined();
+    });
+
+    it("leaves companyId untouched when the patch omits the key entirely", async () => {
+      await service.create({ ...base, companyId: "acme" });
+      const updated = await service.update("media-vault", { desc: "moved" });
+      expect(updated.companyId).toBe("acme");
+    });
+  });
+
   it("throws when updating or getting a missing project", async () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ProjectNotFoundError);
     await expect(service.update("nope", { name: "x" })).rejects.toBeInstanceOf(

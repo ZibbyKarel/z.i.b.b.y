@@ -2,6 +2,10 @@ export { getBudgetQueryKey, useBudgetQuery } from "./useBudgetQuery";
 export { getCiStatusQueryKey, useCiStatusQuery } from "./useCiStatusQuery";
 export { getProjectQueryKey, useProjectQuery } from "./useProjectQuery";
 export { getProjectProfileQueryKey, useProjectProfileQuery } from "./useProjectProfileQuery";
+export {
+  getResolvedProjectQueryKey,
+  useResolvedProjectQuery,
+} from "./useResolvedProjectQuery";
 export { getProjectStandupQueryKey, useProjectStandupQuery } from "./useProjectStandupQuery";
 export {
   getProjectIntegrationActivityQueryKey,

@@ -41,9 +41,17 @@ export function resolveCredentialsDir(): string {
  * module's doc comment for why) so `IntegrationsController.listIntegrations` can
  * return a project's EFFECTIVE (company-merged) integrations instead of a raw
  * `projectId` filter.
+ *
+ * Phase 72: `ProjectsModule` itself now also imports `ResolvedProjectModule` (for
+ * its own `getResolvedProject` route), which closes an actual cycle back to THIS
+ * module (`ProjectsModule -> ResolvedProjectModule -> IntegrationsModule ->
+ * ProjectsModule`). A single `forwardRef` link no longer breaks it — Nest's module
+ * scanner needs every edge that participates in the cycle wrapped, so the
+ * `ProjectsModule` import below is `forwardRef` too (verified against Nest's
+ * "module at index [0] of imports is undefined" failure without it).
  */
 @Module({
-  imports: [ProjectsModule, forwardRef(() => ResolvedProjectModule)],
+  imports: [forwardRef(() => ProjectsModule), forwardRef(() => ResolvedProjectModule)],
   controllers: [IntegrationsController],
   providers: [
     { provide: INTEGRATIONS_DIR, useFactory: resolveIntegrationsDir },

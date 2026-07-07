@@ -43,6 +43,14 @@ vi.mock("./queries", () => ({
   useProjectIntegrationActivityQuery: () => ({ data: [] }),
   useCiStatusQuery: () => ({ data: [] }),
   useProjectTaskStats: () => ({ total: 0, groups: [] }),
+  // Phase 72's company-effective panel; its own dedicated tests cover the
+  // merged-data rendering in isolation (see `ProjectCompanyPanel.test.tsx`).
+  useResolvedProjectQuery: () => ({ data: { people: [], integrations: [] } }),
+}));
+
+// Phase 72's company selector reads the registry to populate its options.
+vi.mock("../companies", () => ({
+  useCompaniesQuery: () => ({ data: [] }),
 }));
 
 vi.mock("./mutations", () => ({

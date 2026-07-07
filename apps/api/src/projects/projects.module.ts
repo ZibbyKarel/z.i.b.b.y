@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { dataDir } from "../shared/data-dir";
 import { MemoryModule } from "../memory/memory.module";
 import { VAULT_DIR } from "../memory/vault.service";
@@ -8,6 +8,7 @@ import { ProjectCategoriesStorageService } from "./project-categories.storage.se
 import { ProjectVaultService } from "./project-vault.service";
 import { ProjectsController } from "./projects.controller";
 import { PROJECTS_DIR, ProjectsStorageService } from "./projects.storage.service";
+import { ResolvedProjectModule } from "./resolved-project.module";
 import { StandupService } from "./standup.service";
 
 /**
@@ -26,7 +27,12 @@ export function resolveProjectSecretsDir(): string {
 }
 
 @Module({
-  imports: [MemoryModule],
+  // Phase 72: `ResolvedProjectModule` (via `forwardRef` — `ResolvedProjectModule`
+  // already forwardRef-imports `IntegrationsModule`, which in turn imports THIS
+  // module directly for the integration→project FK check; wrapping this edge too
+  // keeps every link in that triangle safe to add in any order) so
+  // `ProjectsController.getResolvedProject` can inject `ResolvedProjectService`.
+  imports: [MemoryModule, forwardRef(() => ResolvedProjectModule)],
   // ProjectCategoriesController is declared before ProjectsController so its
   // static route (`GET /projects/categories`) registers ahead of `/projects/:id`,
   // which would otherwise capture "categories" as a project id.

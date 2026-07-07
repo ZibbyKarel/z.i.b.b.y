@@ -11,6 +11,7 @@ import {
   UpdateProjectProfileSchema,
   UpdateProjectSchema,
 } from "./project.schema";
+import { ResolvedProjectContextSchema } from "./resolved-project-context.schema";
 
 const c = initContract();
 
@@ -104,6 +105,14 @@ export const projectsContract = c.router(
       pathParams: z.object({ id: ProjectIdSchema }),
       responses: { 200: ProjectStandupSchema, 404: ErrorSchema },
       summary: "Get the latest standup cheat sheet for a project (generates on first call)",
+    },
+    getResolvedProject: {
+      method: "GET",
+      path: "/projects/:id/resolved",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      responses: { 200: ResolvedProjectContextSchema, 404: ErrorSchema },
+      summary:
+        "Get a project's EFFECTIVE (company-merged) people/budget/integrations (Phase 72)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

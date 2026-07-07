@@ -1326,6 +1326,23 @@
       "integrationActivity": {
         "title": "Integration activity",
         "empty": "Nothing processed from this project's integrations in the last 14 days."
+      },
+      "company": {
+        "title": "Company",
+        "select": "Linked company",
+        "none": "No company",
+        "hint": "Link this project to a company to share its team, budget and integrations. Applies immediately."
+      },
+      "effective": {
+        "title": "Effective data",
+        "fromCompany": "Merged with {name} — the project's own values override the company's where both set a field.",
+        "ownOnly": "No company linked — this is the project's own data.",
+        "peopleTitle": "Effective team",
+        "noPeople": "No team members (company or project).",
+        "budgetTitle": "Effective budget",
+        "noBudget": "No budget set (company or project).",
+        "integrationsTitle": "Effective integrations",
+        "noIntegrations": "No integrations (company or project)."
       }
     }
   },
@@ -1382,7 +1399,7 @@
     },
     "memberProjects": {
       "title": "Company projects",
-      "placeholder": "A list of projects linked to this company will show up once the project ↔ company wiring lands (phase 72)."
+      "empty": "No projects link to this company yet — set it on a project's detail page."
     }
   },
   "automations": {

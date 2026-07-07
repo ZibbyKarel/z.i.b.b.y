@@ -1326,6 +1326,23 @@
       "integrationActivity": {
         "title": "Aktivita integrací",
         "empty": "Za posledních 14 dní se z integrací tohoto projektu nic nezpracovalo."
+      },
+      "company": {
+        "title": "Firma",
+        "select": "Napojená firma",
+        "none": "Bez firmy",
+        "hint": "Napoj projekt na firmu a sdílej její tým, rozpočet a integrace. Projeví se okamžitě."
+      },
+      "effective": {
+        "title": "Efektivní data",
+        "fromCompany": "Sloučeno s {name} — vlastní hodnoty projektu mají přednost tam, kde je nastaví obě strany.",
+        "ownOnly": "Bez napojené firmy — jde o vlastní data projektu.",
+        "peopleTitle": "Efektivní tým",
+        "noPeople": "Žádní členové týmu (firma ani projekt).",
+        "budgetTitle": "Efektivní rozpočet",
+        "noBudget": "Není nastaven rozpočet (firma ani projekt).",
+        "integrationsTitle": "Efektivní integrace",
+        "noIntegrations": "Žádné integrace (firma ani projekt)."
       }
     }
   },
@@ -1382,7 +1399,7 @@
     },
     "memberProjects": {
       "title": "Projekty firmy",
-      "placeholder": "Přehled projektů odkazujících na tuto firmu se zobrazí, až přibude propojení projekt ↔ firma (fáze 72)."
+      "empty": "Zatím na tuto firmu neodkazuje žádný projekt — nastav ji na detailu projektu."
     }
   },
   "automations": {

@@ -4,7 +4,16 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { ProjectPerson } from "@zibby/contracts";
-import { Button, Stack, TextInputField, Toggle, Tooltip, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Pressable,
+  Stack,
+  Tag,
+  TextInputField,
+  Toggle,
+  Tooltip,
+  Typography,
+} from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -12,6 +21,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
+import { useProjectsQuery } from "../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "./components/CompanyBasicsPanel";
 import { useCreateCompanyMutation, useDeleteCompanyMutation, useUpdateCompanyMutation } from "./mutations";
 import { useCompanyQuery } from "./queries";
@@ -115,9 +125,8 @@ export interface CompanyDetailScreenProps {
  * only one section's worth of content.
  *
  * The "member projects" list (which projects link to this company via
- * `companyId`) needs the reverse lookup that lands with the project↔company
- * wiring in Phase 72 — until then this renders a placeholder note instead of
- * silently omitting the section.
+ * `companyId`) is the reverse lookup over the shared project registry — the
+ * project↔company wiring (Phase 72) that fills it in.
  */
 export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
   const t = useTranslations("companies");
@@ -130,6 +139,7 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
   const id = companyId ?? "";
 
   const companyQ = useCompanyQuery(id, { enabled: !isNew });
+  const projectsQ = useProjectsQuery();
   const createCompany = useCreateCompanyMutation();
   const updateCompany = useUpdateCompanyMutation();
   const deleteCompany = useDeleteCompanyMutation();
@@ -220,13 +230,30 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
     </HudPanel>
   );
 
-  // Phase 72 wires the reverse companyId → project lookup; for now this is a
-  // placeholder note rather than a silently omitted section.
+  // Phase 72: the reverse lookup — every project whose `companyId` points here —
+  // over the shared project registry (already fetched app-wide via the same
+  // cache key, so this costs no extra request in practice).
+  const memberProjects = (projectsQ.data ?? []).filter((p) => p.companyId === id);
   const memberProjectsPanel = (
     <HudPanel title={t("memberProjects.title")}>
-      <Typography size="sm" type="note" variant="tertiary">
-        {t("memberProjects.placeholder")}
-      </Typography>
+      {memberProjects.length === 0 ? (
+        <Typography
+          data-testid="member-projects-empty"
+          size="sm"
+          type="note"
+          variant="tertiary"
+        >
+          {t("memberProjects.empty")}
+        </Typography>
+      ) : (
+        <Stack wrap direction="row" gap="100">
+          {memberProjects.map((project) => (
+            <Pressable key={project.id} onClick={() => router.push(`/projects/${project.id}`)}>
+              <Tag tone="accent">{project.name}</Tag>
+            </Pressable>
+          ))}
+        </Stack>
+      )}
     </HudPanel>
   );
 

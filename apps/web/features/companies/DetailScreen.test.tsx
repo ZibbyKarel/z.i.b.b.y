@@ -27,6 +27,13 @@ vi.mock("./mutations", () => ({
   useDeleteCompanyMutation: () => ({ mutate: deleteMutate, isPending: false }),
 }));
 
+// Phase 72's member-projects panel is the reverse `companyId` lookup over the
+// shared project registry — reassigned per test, so this starts empty.
+let projects: { id: string; name: string; path: string; companyId?: string }[] = [];
+vi.mock("../projects", () => ({
+  useProjectsQuery: () => ({ data: projects }),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
 }));
@@ -37,6 +44,7 @@ beforeEach(() => {
   deleteMutate.mockReset();
   replace.mockReset();
   push.mockReset();
+  projects = [];
 });
 
 describe("companies DetailScreen", () => {
@@ -85,9 +93,27 @@ describe("companies DetailScreen", () => {
     expect(screen.getAllByTestId("person-name")).toHaveLength(before + 1);
   });
 
-  it("shows the Phase-72 member-projects placeholder", () => {
-    render(<DetailScreen companyId="acme" />);
-    expect(screen.getByText(/fáze 72/)).toBeInTheDocument();
+  describe("member projects (Phase 72)", () => {
+    it("shows the empty state when no project links to this company", () => {
+      render(<DetailScreen companyId="acme" />);
+      expect(screen.getByTestId("member-projects-empty")).toBeInTheDocument();
+    });
+
+    it("lists projects whose companyId matches this company, navigating on click", async () => {
+      projects = [
+        { id: "linked", name: "Linked Co Project", path: "~/p/linked", companyId: "acme" },
+        { id: "other", name: "Other Project", path: "~/p/other", companyId: "globex" },
+        { id: "solo", name: "Solo Project", path: "~/p/solo" },
+      ];
+      render(<DetailScreen companyId="acme" />);
+
+      expect(screen.getByText("Linked Co Project")).toBeInTheDocument();
+      expect(screen.queryByText("Other Project")).not.toBeInTheDocument();
+      expect(screen.queryByText("Solo Project")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByText("Linked Co Project"));
+      expect(push).toHaveBeenCalledWith("/projects/linked");
+    });
   });
 
   it("deletes via the confirm dialog and redirects to the list", async () => {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ProjectPersonSchema, ProjectSchema, projectsContract } from "../index";
+import {
+  ProjectPersonSchema,
+  ProjectSchema,
+  ResolvedProjectContextSchema,
+  UpdateProjectSchema,
+  projectsContract,
+} from "../index";
 
 describe("projectsContract", () => {
   it("lists projects under GET /api/projects", () => {
@@ -31,6 +37,61 @@ describe("projectsContract", () => {
     expect(projectsContract.deleteProject.method).toBe("DELETE");
     expect(projectsContract.deleteProject.path).toBe("/api/projects/:id");
     expect(projectsContract.deleteProject.responses).toHaveProperty("404");
+  });
+
+  it("exposes the resolved (company-merged) context via GET /api/projects/:id/resolved (404) (Phase 72)", () => {
+    expect(projectsContract.getResolvedProject.method).toBe("GET");
+    expect(projectsContract.getResolvedProject.path).toBe("/api/projects/:id/resolved");
+    expect(projectsContract.getResolvedProject.responses).toHaveProperty("200");
+    expect(projectsContract.getResolvedProject.responses).toHaveProperty("404");
+  });
+});
+
+describe("ResolvedProjectContextSchema (Phase 72)", () => {
+  it("round-trips a company-less project's own data (no companyId/companyName)", () => {
+    const parsed = ResolvedProjectContextSchema.parse({
+      people: [{ name: "Jane Doe", role: "CTO" }],
+      budget: { dailyRuns: 3 },
+      integrations: [],
+    });
+    expect(parsed.companyId).toBeUndefined();
+    expect(parsed.companyName).toBeUndefined();
+    expect(parsed.people).toEqual([{ name: "Jane Doe", role: "CTO" }]);
+  });
+
+  it("round-trips a company-merged context with companyId/companyName", () => {
+    const parsed = ResolvedProjectContextSchema.parse({
+      people: [{ id: "alice", name: "Alice", role: "CEO" }],
+      budget: { dailyRuns: 3, weeklyRuns: 50 },
+      integrations: [],
+      companyId: "acme",
+      companyName: "Acme Corp",
+    });
+    expect(parsed.companyId).toBe("acme");
+    expect(parsed.companyName).toBe("Acme Corp");
+  });
+
+  it("accepts an absent budget (no budget anywhere, company or project)", () => {
+    expect(
+      ResolvedProjectContextSchema.safeParse({ people: [], integrations: [] }).success,
+    ).toBe(true);
+  });
+});
+
+describe("UpdateProjectSchema companyId (Phase 72 clear semantics)", () => {
+  it("accepts a companyId string (link)", () => {
+    const parsed = UpdateProjectSchema.parse({ companyId: "acme" });
+    expect(parsed.companyId).toBe("acme");
+  });
+
+  it("accepts a null companyId (explicit unlink, distinct from absent/undefined)", () => {
+    const parsed = UpdateProjectSchema.parse({ companyId: null });
+    expect(parsed.companyId).toBeNull();
+  });
+
+  it("accepts a patch with no companyId key at all (leave the link alone)", () => {
+    const parsed = UpdateProjectSchema.parse({ desc: "moved" });
+    expect(parsed.companyId).toBeUndefined();
   });
 });
 

@@ -1,12 +1,13 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import type { Project, ProjectProfile } from "@zibby/contracts";
+import type { Project, ProjectProfile, ResolvedProjectContext } from "@zibby/contracts";
 import { projectsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { ProjectSecretsStore } from "./project-secrets.store";
 import { ProjectVaultService } from "./project-vault.service";
 import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors";
 import { ProjectsStorageService } from "./projects.storage.service";
+import { ResolvedProjectService } from "./resolved-project.service";
 import { StandupService } from "./standup.service";
 
 const errors = makeErrorMapper("Project", {
@@ -40,11 +41,29 @@ export class ProjectsController {
     private readonly secrets: ProjectSecretsStore,
     private readonly standup: StandupService,
     private readonly vault: ProjectVaultService,
+    private readonly resolvedProjects: ResolvedProjectService,
   ) {}
 
   /** Layer the read-time `hasSecrets` onto an entity for the wire. */
   private async withSecretState(project: Project): Promise<Project> {
     return { ...project, hasSecrets: await this.secrets.has(project.id) };
+  }
+
+  /**
+   * The project's EFFECTIVE (company-merged) context (Phase 72): the merged
+   * people/budget/integrations from {@link ResolvedProjectService.resolve} plus
+   * the linked company's `id`/`name` (a separate, additive lookup — `resolve`'s
+   * own return shape is unchanged from Phase 70) for the UI's "from company X"
+   * note. Absent companyId/companyName means the project has no company, or its
+   * `companyId` is dangling — either way every facet above already equals its
+   * own raw data.
+   */
+  private async resolveContext(project: Project): Promise<ResolvedProjectContext> {
+    const [context, companyRef] = await Promise.all([
+      this.resolvedProjects.resolve(project),
+      this.resolvedProjects.resolveCompanyRef(project),
+    ]);
+    return { ...context, companyId: companyRef?.id, companyName: companyRef?.name };
   }
 
   @TsRestHandler(projectsContract)
@@ -116,6 +135,9 @@ export class ProjectsController {
           return { status: 404 as const, body: { message: `No standup for project "${id}"` } };
         return { status: 200 as const, body: result };
       },
+
+      getResolvedProject: ({ params: { id } }) =>
+        errors.or404(id, async () => this.resolveContext(await this.storage.get(id))),
     });
   }
 }

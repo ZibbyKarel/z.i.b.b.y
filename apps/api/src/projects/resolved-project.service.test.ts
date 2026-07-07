@@ -102,4 +102,25 @@ describe("ResolvedProjectService", () => {
       integrations: [],
     });
   });
+
+  describe("resolveCompanyRef (Phase 72)", () => {
+    it("returns undefined for a company-less project", async () => {
+      const service = build();
+      const alpha = project({ id: "alpha" });
+      expect(await service.resolveCompanyRef(alpha)).toBeUndefined();
+    });
+
+    it("returns undefined for a dangling companyId (company deleted)", async () => {
+      const service = build({ companies: [] });
+      const alpha = project({ id: "alpha", companyId: "ghost" });
+      expect(await service.resolveCompanyRef(alpha)).toBeUndefined();
+    });
+
+    it("returns the linked company's id/name when it resolves", async () => {
+      const acme: Company = { id: "acme", name: "Acme Corp" };
+      const service = build({ companies: [acme] });
+      const alpha = project({ id: "alpha", companyId: "acme" });
+      expect(await service.resolveCompanyRef(alpha)).toEqual({ id: "acme", name: "Acme Corp" });
+    });
+  });
 });
