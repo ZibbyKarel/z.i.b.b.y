@@ -8,6 +8,7 @@ const config: StorybookConfig = {
   stories: [
     "../src/**/*.stories.@(ts|tsx)",
     "../../../apps/web/components/**/*.stories.@(ts|tsx)",
+    "../../../apps/web/features/**/*.stories.@(ts|tsx)",
     "../../../libs/forms/src/**/*.stories.@(ts|tsx)",
   ],
   addons: ["@storybook/addon-essentials", "@storybook/addon-a11y"],

@@ -56,6 +56,6 @@
 
 - [x] chat ui - musíme nějak vizuálně odlišit agenty a pipeliny, které jsou na orbitě. Pipeliny by měly být určitě výraznější než agenti. — fáze 35
 
-- [ ] k chat UI musíme vytvořit storybook. Rád bych viděl všechny možné stavy "pozadí" chatu
+- [x] k chat UI musíme vytvořit storybook. Rád bych viděl všechny možné stavy "pozadí" chatu — fáze 37
 
 - [x] stránka běhy a aktivita hlavně pak log fází běhu pipeline nevypadá jako v designu (stránka "Tasky" v designu). Pořádně to předělej podle designu. — fáze 36
