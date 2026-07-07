@@ -3,10 +3,10 @@
 import { Container, Divider, Stack, Stat, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { useIntegrationsQuery } from "../integrations";
 import { useAgentsQuery } from "../agents";
 import { useApprovalsQuery } from "../approvals";
 import { useHealthQuery } from "../health";
+import { useIntegrationsQuery } from "../integrations";
 import { usePipelinesQuery } from "../pipelines";
 import { useRunsQuery } from "../runs";
 import { useSkillsQuery } from "../skills";
@@ -51,7 +51,7 @@ export function SummaryWidget() {
 
   return (
     <HudPanel padding="300" tone={healthTone}>
-      <Stack gap="250">
+      <Stack direction="row" gap="250" justify="between">
         <Stack align="start" direction="row" gap="200" justify="between">
           <Container minW0>
             <Stack gap="150">
@@ -79,23 +79,25 @@ export function SummaryWidget() {
               </Typography>
             </Stack>
           </Container>
+          {!!health?.subsystems?.length && (
+            <>
+              <Divider orientation="vertical" />
+              <Stack wrap align="center" direction="row" gap="300">
+                {health.subsystems.map((s) => (
+                  <Stack align="center" direction="row" gap="100" key={s.name}>
+                    <StatusDot tone={subsystemDotTone(s.status)} />
+                    <Typography mono size="sm" type="note" variant="tertiary">
+                      {t(SUBSYSTEM_LABEL[s.name])}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </>
+          )}
         </Stack>
-        {health?.subsystems && health.subsystems.length > 0 ? (
-          <>
-            <Divider />
-            <Stack wrap align="center" direction="row" gap="300">
-              {health.subsystems.map((s) => (
-                <Stack align="center" direction="row" gap="100" key={s.name}>
-                  <StatusDot tone={subsystemDotTone(s.status)} />
-                  <Typography mono size="sm" type="note" variant="tertiary">
-                    {t(SUBSYSTEM_LABEL[s.name])}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-          </>
-        ) : null}
-        <Divider />
+
+        <Divider orientation="vertical" />
+
         <Stack wrap direction="row" gap="450">
           <Stat
             icon="pulse"

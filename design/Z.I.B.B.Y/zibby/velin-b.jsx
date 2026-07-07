@@ -44,14 +44,134 @@ const VbTierTag = ({ tier }) => {
 };
 
 // ── Command bar — operátor zadá směr přirozeným jazykem ───────────────────
+// Vzor "Claude Code": jeden multiline vstup, @ hledá agenty/pipeliny inline
+// v textu (žádné tagy nad/pod), soubory jdou přidat drag&dropem nebo sponkou/
+// plus tlačítkem a taky se vloží jako @token přímo do textu. Tlačítko Spustit
+// je split-button s dropdownem pro odložený start.
+
+// slug bez diakritiky/mezer — používá se jako @token v textu
+const vbSlug = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+
+// mapa @tokenů → typ (agent / pipeline), postavená z existujících dat
+const vbMentionMap = () => {
+  const m = {};
+  (typeof AGENTS !== 'undefined' ? AGENTS : []).forEach((a) => {
+    m[vbSlug(a.id || a.name)] = { type: 'agent', label: a.name, glyph: a.glyph || 'bot' };
+  });
+  (typeof PIPELINES !== 'undefined' ? PIPELINES : []).forEach((p) => {
+    m[vbSlug(p.id || p.name)] = { type: 'pipeline', label: p.name, glyph: 'flow' };
+  });
+  return m;
+};
+const VB_MENTIONS = vbMentionMap();
+const VB_MENTION_STYLE = {
+  agent:    { c: ZT.accent },
+  pipeline: { c: ZT.riskPush },
+  file:     { c: ZT.ink2 },
+};
+const MENTION_RE = /@[\w.\-]+/g;
+
+// HTML s inline zvýrazněnými @tokeny (pro backdrop pod textareou)
+const vbHighlight = (text) => {
+  const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc.replace(MENTION_RE, (m) => {
+    const slug = m.slice(1).toLowerCase();
+    const known = VB_MENTIONS[slug];
+    const c = known ? VB_MENTION_STYLE[known.type].c : VB_MENTION_STYLE.file.c;
+    return `<mark style="background:${c}1f;box-shadow:0 0 0 1px ${c}55;color:${c};border-radius:4px;padding:1px 5px;margin:0 -5px;font-style:normal;white-space:nowrap">${m}</mark>`;
+  });
+};
+
+const RUN_MODES = [
+  { id: 'now', label: 'Spustit hned', short: 'Spustit', icon: 'arrow' },
+  { id: 'hour', label: 'Spustit za hodinu', short: 'Spustit za hodinu', icon: 'clock' },
+  { id: 'reset', label: 'Spustit po resetování limitů', short: 'Spustit po resetu limitů', icon: 'clock' },
+];
+
 const VbCommandBar = ({ accent }) => {
   const [val, setVal] = useStateVB('');
   const [ack, setAck] = useStateVB(null);
-  const inputRef = useRefVB(null);
+  const [runMode, setRunMode] = useStateVB('now');
+  const [optsOpen, setOptsOpen] = useStateVB(false);
+  const [mentionQ, setMentionQ] = useStateVB(null); // {query, start} | null
+  const [mentionSel, setMentionSel] = useStateVB(0);
+  const [dragOver, setDragOver] = useStateVB(false);
+  const taRef = useRefVB(null);
+  const bdRef = useRefVB(null);
+  const fileRef = useRefVB(null);
+
+  const autosize = () => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(200, Math.max(48, el.scrollHeight)) + 'px';
+  };
+
+  const insertToken = (token) => {
+    const el = taRef.current;
+    const at = el ? el.selectionStart : val.length;
+    const before = val.slice(0, at);
+    const after = val.slice(at);
+    const sep = before && !/\s$/.test(before) ? ' ' : '';
+    const next = before + sep + token + ' ' + after;
+    setVal(next);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      const pos = (before + sep + token + ' ').length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+      autosize();
+      syncScroll();
+    });
+  };
+
+  const addFiles = (files) => {
+    [...files].forEach((f) => insertToken('@' + vbSlug(f.name).replace(/-(?=[a-z0-9]{1,5}$)/, '.')));
+  };
+
+  const syncScroll = () => { if (bdRef.current && taRef.current) bdRef.current.scrollTop = taRef.current.scrollTop; };
+
+  // @ autocomplete — detekuje "@dotaz" před kurzorem
+  const checkMention = (text, caret) => {
+    const before = text.slice(0, caret);
+    const m = before.match(/@([\w.\-]*)$/);
+    if (m) { setMentionQ({ query: m[1].toLowerCase(), start: caret - m[0].length }); setMentionSel(0); }
+    else setMentionQ(null);
+  };
+
+  const mentionResults = () => {
+    if (!mentionQ) return [];
+    const q = mentionQ.query;
+    const all = [
+      ...(typeof AGENTS !== 'undefined' ? AGENTS : []).map((a) => ({ slug: vbSlug(a.id || a.name), label: a.name, glyph: a.glyph || 'bot', type: 'agent' })),
+      ...(typeof PIPELINES !== 'undefined' ? PIPELINES : []).map((p) => ({ slug: vbSlug(p.id || p.name), label: p.name, glyph: 'flow', type: 'pipeline' })),
+    ];
+    return all.filter((x) => !q || x.slug.includes(q) || x.label.toLowerCase().includes(q)).slice(0, 6);
+  };
+
+  const pickMention = (item) => {
+    const el = taRef.current;
+    const before = val.slice(0, mentionQ.start);
+    const caret = el ? el.selectionStart : val.length;
+    const after = val.slice(caret);
+    const token = '@' + item.slug;
+    const next = before + token + ' ' + after;
+    setVal(next);
+    setMentionQ(null);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      const pos = (before + token + ' ').length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+      autosize();
+      syncScroll();
+    });
+  };
+
   const submit = (text) => {
     const t = (text != null ? text : val).trim();
     if (!t) return;
-    // simulace klasifikátoru: rozhodne single agent / pipeline / goal loop
     const low = t.toLowerCase();
     const route = /(backlog|implement|bug|feature|featur|pr|refactor)/.test(low)
       ? { kind: 'goal loop', exec: 'Build Feature → maker/verifier', glyph: 'flow' }
@@ -60,29 +180,174 @@ const VbCommandBar = ({ accent }) => {
         : /(ukliď|smaž|disk|snapshot|holly|zálo)/.test(low)
           ? { kind: 'agent', exec: 'Hospodář', glyph: 'server' }
           : { kind: 'agent', exec: 'Researcher', glyph: 'search' };
-    setAck({ text: t, ...route });
+    setAck({ text: t, mode: runMode, ...route });
     setVal('');
+    requestAnimationFrame(autosize);
   };
+
+  const mode = RUN_MODES.find((m) => m.id === runMode);
+
   return (
-    <ZtPanel pad={18} style={{ background: ZT.surfaceHi, borderColor: ZT.lineHi }}>
+    <ZtPanel pad={18} style={{ background: ZT.surfaceHi, borderColor: dragOver ? accent : ZT.lineHi, position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <Icon name="spark" size={15} style={{ color: accent }} />
         <span style={T.label}>Zadej směr · přirozeným jazykem</span>
-        <span style={{ ...T.micro, marginLeft: 'auto' }}>ZIBBY sám rozhodne agent / pipeline / goal loop</span>
+        <span style={{ ...T.micro, marginLeft: 'auto' }}>@ hledá agenty a pipeliny · přetáhni soubor, nebo použij sponku</span>
       </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
-        <input
-          ref={inputRef} value={val} onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-          placeholder="Projdi backlog, najdi highest-impact bugy a implementuj je…"
-          style={{
-            flex: 1, minWidth: 0, padding: '12px 14px', background: ZT.bg, color: ZT.ink,
-            border: `1px solid ${ZT.line}`, borderRadius: ZT.rCtl, outline: 'none',
-            fontFamily: ZT.sans, fontSize: 14, lineHeight: 1.4,
-          }}
-        />
-        <ZtBtn variant="primary" icon="arrow" onClick={() => submit()}>Spustit</ZtBtn>
+
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+        style={{
+          position: 'relative', borderRadius: ZT.rCtl, border: `1px solid ${dragOver ? accent : ZT.line}`,
+          background: ZT.bg, transition: 'border-color .14s',
+        }}
+      >
+        {dragOver && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 8, background: `${accent}12`, border: `1.5px dashed ${accent}`, borderRadius: ZT.rCtl,
+            fontFamily: ZT.mono, fontSize: 12, color: accent, pointerEvents: 'none',
+          }}>
+            <Icon name="upload" size={15} /> Pustit sem — přidá se jako @soubor do textu
+          </div>
+        )}
+
+        {/* text oblast s inline zvýrazněním @tokenů (backdrop technika) */}
+        <div style={{ position: 'relative', padding: '10px 10px 6px 12px' }}>
+          <div
+            ref={bdRef} aria-hidden="true"
+            style={{
+              position: 'absolute', top: 10, left: 12, right: 10, bottom: 6,
+              fontFamily: ZT.sans, fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              color: 'transparent', overflow: 'hidden', pointerEvents: 'none', userSelect: 'none', zIndex: 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: vbHighlight(val) + '\u200b' }}
+          />
+          <textarea
+            ref={taRef} value={val} rows={1}
+            onChange={(e) => {
+              setVal(e.target.value);
+              autosize();
+              checkMention(e.target.value, e.target.selectionStart);
+            }}
+            onScroll={syncScroll}
+            onKeyUp={(e) => checkMention(e.target.value, e.target.selectionStart)}
+            onClick={(e) => checkMention(e.target.value, e.target.selectionStart)}
+            onKeyDown={(e) => {
+              if (mentionQ) {
+                const res = mentionResults();
+                if (e.key === 'ArrowDown') { e.preventDefault(); setMentionSel((s) => Math.min(res.length - 1, s + 1)); return; }
+                if (e.key === 'ArrowUp') { e.preventDefault(); setMentionSel((s) => Math.max(0, s - 1)); return; }
+                if (e.key === 'Enter' && res[mentionSel]) { e.preventDefault(); pickMention(res[mentionSel]); return; }
+                if (e.key === 'Escape') { setMentionQ(null); return; }
+              }
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+            }}
+            placeholder="Projdi backlog, najdi highest-impact bugy a implementuj je… (@agent, @pipeline, soubory drag&dropem)"
+            style={{
+              position: 'relative', zIndex: 1, display: 'block', width: '100%', minHeight: 48, maxHeight: 200,
+              resize: 'none', overflow: 'auto', background: 'transparent', border: 'none', outline: 'none',
+              color: ZT.ink, caretColor: ZT.ink, fontFamily: ZT.sans, fontSize: 14, lineHeight: 1.5,
+              boxSizing: 'border-box', padding: 0,
+            }}
+          />
+
+          {/* @ autocomplete — inline nad kurzorem, ale ukotvené pod textem (jednoduchá paleta) */}
+          {mentionQ && mentionResults().length > 0 && (
+            <div style={{
+              position: 'absolute', left: 12, top: '100%', marginTop: 6, zIndex: 20, minWidth: 240,
+              background: ZT.surfaceHi, border: `1px solid ${ZT.lineHi}`, borderRadius: ZT.rCtl,
+              boxShadow: '0 18px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
+            }}>
+              {mentionResults().map((r, i) => (
+                <div key={r.slug} onMouseDown={(e) => { e.preventDefault(); pickMention(r); }}
+                  onMouseEnter={() => setMentionSel(i)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', cursor: 'pointer',
+                    background: i === mentionSel ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  }}>
+                  <Icon name={r.glyph} size={13} style={{ color: r.type === 'agent' ? ZT.accent : ZT.riskPush, flex: '0 0 auto' }} />
+                  <span style={{ ...T.bodySm, fontSize: 12.5, color: ZT.ink, flex: 1 }}>{r.label}</span>
+                  <span style={{ fontFamily: ZT.mono, fontSize: 10.5, color: ZT.ink3 }}>@{r.slug}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* dolní lišta: sponka/plus vlevo, split run-button vpravo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 10px 10px 10px' }}>
+          <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
+            onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+          <button onClick={() => fileRef.current && fileRef.current.click()} title="Přidat soubor"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
+              borderRadius: ZT.rCtl, background: 'transparent', border: `1px solid ${ZT.line}`, color: ZT.ink2, cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}>
+            <Icon name="plus" size={13} stroke={2} />
+          </button>
+          <button onClick={() => fileRef.current && fileRef.current.click()} title="Připnout soubor"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
+              borderRadius: ZT.rCtl, background: 'transparent', border: `1px solid ${ZT.line}`, color: ZT.ink2, cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ZT.lineHi; e.currentTarget.style.color = ZT.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = ZT.line; e.currentTarget.style.color = ZT.ink2; }}>
+            <Icon name="pin" size={13} />
+          </button>
+
+          <span style={{ marginLeft: 'auto' }}></span>
+
+          {/* split button: primární akce + caret s "Options" */}
+          <div style={{ display: 'inline-flex', position: 'relative' }}>
+            <button onClick={() => submit()} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 14px',
+              fontFamily: ZT.mono, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em',
+              color: ZT.bg, background: accent, border: '1px solid transparent',
+              borderRadius: '6px 0 0 6px', cursor: 'pointer',
+            }}>
+              <Icon name={mode.icon} size={13} stroke={2} /> {mode.short}
+            </button>
+            <button onClick={() => setOptsOpen((o) => !o)} title="Options" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26,
+              background: accent, borderLeft: `1px solid ${ZT.bg}44`, border: '1px solid transparent',
+              borderRadius: '0 6px 6px 0', color: ZT.bg, cursor: 'pointer',
+            }}>
+              <Icon name="chevron" size={12} stroke={2.2} style={{ transform: 'rotate(90deg)' }} />
+            </button>
+
+            {optsOpen && (
+              <React.Fragment>
+                <div onClick={() => setOptsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }}></div>
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 11, minWidth: 240,
+                  background: ZT.surfaceHi, border: `1px solid ${ZT.lineHi}`, borderRadius: ZT.rCtl,
+                  boxShadow: '0 18px 40px rgba(0,0,0,0.5)', overflow: 'hidden', padding: 4,
+                }}>
+                  <div style={{ ...T.micro, padding: '6px 9px 4px' }}>Options</div>
+                  {RUN_MODES.map((m) => (
+                    <div key={m.id} onClick={() => { setRunMode(m.id); setOptsOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 9, padding: '8px 9px', borderRadius: 4, cursor: 'pointer',
+                        background: m.id === runMode ? 'rgba(255,255,255,0.05)' : 'transparent',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = m.id === runMode ? 'rgba(255,255,255,0.05)' : 'transparent'; }}>
+                      <Icon name={m.id === runMode ? 'check' : m.icon} size={13} style={{ color: m.id === runMode ? accent : ZT.ink3, flex: '0 0 auto' }} />
+                      <span style={{ ...T.bodySm, fontSize: 12.5, color: ZT.ink }}>{m.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </React.Fragment>
+            )}
+          </div>
+        </div>
       </div>
+
       {!ack ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 12 }}>
           {VB_SUGGESTIONS.map((s) => (
@@ -103,6 +368,7 @@ const VbCommandBar = ({ accent }) => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ ...T.bodySm, color: ZT.ink }}>
               Klasifikováno jako <span style={{ color: ZT.run, fontFamily: ZT.mono }}>{ack.kind}</span> → spouštím <span style={{ fontFamily: ZT.mono }}>{ack.exec}</span>
+              {ack.mode !== 'now' && <span style={{ color: ZT.wait }}> · {RUN_MODES.find((m) => m.id === ack.mode).label.toLowerCase()}</span>}
             </div>
             <div style={{ ...T.micro, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>„{ack.text}"</div>
           </div>

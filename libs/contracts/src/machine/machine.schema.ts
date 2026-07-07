@@ -44,10 +44,26 @@ export const OpenFolderActionSchema = z.object({
 });
 export type OpenFolderAction = z.infer<typeof OpenFolderActionSchema>;
 
+/**
+ * The fourth reference task (N5d): open an arbitrary web address in the
+ * operator's default browser (macOS `open <url>`). Reversible and low-risk — it
+ * only pops a browser tab — but it STILL goes through the gate: nothing on the
+ * operator's machine runs silently, even a plain "open this link". The scheme is
+ * restricted to http(s) at execution time (fail-closed) so inbound content can
+ * never coax a `file:`/`javascript:` scheme through the browser.
+ */
+export const OpenUrlActionSchema = z.object({
+  kind: z.literal("open-url"),
+  /** The web address to open — a valid http(s) URL. */
+  url: z.string().url(),
+});
+export type OpenUrlAction = z.infer<typeof OpenUrlActionSchema>;
+
 export const MachineActionSchema = z.discriminatedUnion("kind", [
   RenameFilesActionSchema,
   OpenMapsActionSchema,
   OpenFolderActionSchema,
+  OpenUrlActionSchema,
 ]);
 export type MachineAction = z.infer<typeof MachineActionSchema>;
 
