@@ -5,9 +5,6 @@ import { IconTileTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { PipelineStageTimeline, PipelineStageTimelineTestId } from "./PipelineStageTimeline";
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
 // The stage log is read on demand from the per-phase endpoint; stub both surfaces
 // (the terminal one-shot query and the live SSE tail) so the test needs no backend
 // and can assert which phase each row opens — and over which transport (N1 DNA:
@@ -92,7 +89,6 @@ describe("PipelineStageTimeline (36)", () => {
   beforeEach(() => {
     stageLogMock.mockClear();
     stageStreamMock.mockClear();
-    push.mockClear();
     pipelinesMock.mockReset().mockReturnValue({ data: [] });
     agentsMock.mockReset().mockReturnValue({ data: [] });
   });
@@ -282,22 +278,10 @@ describe("PipelineStageTimeline (36)", () => {
     expect(screen.queryByText("LOG for build")).not.toBeInTheDocument();
   });
 
-  it("links to the pipeline definition (a different surface than this run)", async () => {
-    render(timeline());
-    await userEvent.click(screen.getByRole("button", { name: /pipeline/i }));
-    expect(push).toHaveBeenCalledWith("/pipelines/delivery");
-  });
-
   it("shows an empty-state when the run has no stages yet", () => {
     render(timeline({ stageRuns: [] }));
     expect(screen.getByText("Tento běh zatím nemá žádné fáze.")).toBeInTheDocument();
     expect(logToggles).toThrow(); // no per-stage log toggles
-  });
-
-  it("hides the definition link when the owner id isn't known yet", () => {
-    // A goal's pipeline-maker run still loading → owner "" → no link to /pipelines/.
-    render(timeline({ owner: "", stageRuns: [] }));
-    expect(screen.queryByRole("button", { name: /pipeline/i })).not.toBeInTheDocument();
   });
 
   it("shows a stage's cost only on the node that carries one, summed across its attempts", () => {

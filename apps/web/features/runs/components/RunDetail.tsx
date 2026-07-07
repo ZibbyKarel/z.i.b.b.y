@@ -19,6 +19,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
@@ -131,27 +132,43 @@ function MetaCell({
   value,
   tone,
   emphasize,
+  onClick,
+  testId,
 }: {
   label: string;
   value: string;
   tone?: "accent" | "ok";
   /** Bumps the value's size so it reads as the standout figure of the strip (the cost). */
   emphasize?: boolean;
+  /** Phase 63: when present, the value becomes a real, keyboard-focusable link to the
+   * owning entity's detail page (a pipeline's own MetaCell) — absent for kinds/labels
+   * that have no detail route, which stay plain text. */
+  onClick?: () => void;
+  testId?: string;
 }) {
+  const valueNode = (
+    <Typography
+      mono
+      size={emphasize ? "md" : "sm"}
+      tone={tone}
+      type="note"
+      weight={emphasize ? "bold" : "semibold"}
+    >
+      {value}
+    </Typography>
+  );
   return (
     <Stack gap="25">
       <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
         {label}
       </Typography>
-      <Typography
-        mono
-        size={emphasize ? "md" : "sm"}
-        tone={tone}
-        type="note"
-        weight={emphasize ? "bold" : "semibold"}
-      >
-        {value}
-      </Typography>
+      {onClick ? (
+        <Pressable data-testid={testId} onClick={onClick}>
+          {valueNode}
+        </Pressable>
+      ) : (
+        valueNode
+      )}
     </Stack>
   );
 }
@@ -180,7 +197,6 @@ function AssignProjectControl({ runId }: { runId: string }) {
   return (
     <Container width="14rem">
       <SelectField
-        hint={t("assignProjectHint")}
         label={t("assignProjectLabel")}
         onValueChange={(v) => {
           setValue(v);
@@ -370,6 +386,7 @@ export function RunDetail({
   const t = useTranslations("runs");
   const tApprovals = useTranslations("approvals");
   const tk = useTranslations();
+  const router = useRouter();
   // Stop/Delete are destructive (a running task's progress is lost; a done run's
   // artifacts are erased) — both ask via the shared ConfirmDeleteDialog before the
   // mutation fires (Phase 18).
@@ -491,12 +508,17 @@ export function RunDetail({
     />,
   );
   if (run.owner && run.kind !== "agent") {
+    // Phase 63: a pipeline's own name is a link to its detail page (a real, focusable
+    // route) — goal/chain/orchestrator owners have no detail route, so they stay plain.
+    const owner = run.owner;
     metaItems.push(
       <MetaCell
         key="owner"
         label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
+        onClick={run.kind === "pipeline" ? () => router.push(`/pipelines/${owner}`) : undefined}
+        testId={run.kind === "pipeline" ? "run-owner-link" : undefined}
         tone={run.kind === "pipeline" ? "accent" : undefined}
-        value={run.owner}
+        value={owner}
       />,
     );
   }
@@ -517,7 +539,13 @@ export function RunDetail({
   }
   if (run.costUsd != null) {
     metaItems.push(
-      <MetaCell emphasize key="cost" label={t("metaCost")} tone="ok" value={formatCostUsd(run.costUsd)} />,
+      <MetaCell
+        emphasize
+        key="cost"
+        label={t("metaCost")}
+        tone="ok"
+        value={formatCostUsd(run.costUsd)}
+      />,
     );
   }
   if (durationMs != null) {
@@ -556,7 +584,7 @@ export function RunDetail({
                 <Stack wrap align="start" direction="row" gap="150" justify="between">
                   <Container minW0>
                     <Stack gap="50">
-                      <Stack wrap align="center" direction="row" gap="100">
+                      <Stack wrap align="start" direction="col" gap="100">
                         <Typography type="subtitle" weight="semibold">
                           {headline}
                         </Typography>
@@ -574,10 +602,24 @@ export function RunDetail({
                       )}
                       {descriptionText && <TaskDescription text={descriptionText} />}
                       {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
-                      into this one meta line instead of a second, separate chip. */}
+                      into this one meta line instead of a second, separate chip. Phase 63:
+                      the agent's name is a link to its own detail page (its display name
+                      may differ from `run.owner`, the id the link actually navigates to). */}
                       <Typography mono size="2xs" type="note" variant="tertiary">
                         {run.runId} · {t(`kind.${run.kind}`)}
-                        {agentName ? ` · ${t("metaAgent")} ${agentName}` : ""}
+                        {agentName && (
+                          <>
+                            {` · ${t("metaAgent")} `}
+                            <Pressable
+                              data-testid="run-agent-link"
+                              onClick={() => router.push(`/agents/${run.owner}`)}
+                            >
+                              <Typography mono as="span" size="2xs" tone="accent" type="note">
+                                {agentName}
+                              </Typography>
+                            </Pressable>
+                          </>
+                        )}
                       </Typography>
                     </Stack>
                   </Container>

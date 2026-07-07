@@ -1,14 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import {
-  Button,
   Container,
   Icon,
   type IconName,
   IconTile,
+  Panel,
   Pressable,
   Stack,
   StatusDot,
@@ -17,21 +14,23 @@ import {
   cn,
   stateToneVar,
 } from "@zibby/design-system";
-import { useAgentsQuery } from "../../agents";
-import { usePipelinesQuery } from "../../pipelines";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { formatCostUsd } from "../../../utils/cost";
+import { useAgentsQuery } from "../../agents";
+import { usePipelinesQuery } from "../../pipelines";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
-import { useStageRunLogStream } from "../useRunLogStream";
 import { type FeedStatus, RUN_STATE, type RunView } from "../run";
+import { useStageRunLogStream } from "../useRunLogStream";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunTranscript } from "./RunTranscript";
 
 export interface PipelineStageTimelineProps {
   /** The pipeline run whose stages to show (its own runId, or a goal's pipeline maker ref). */
   pipelineRunId: string;
-  /** The pipeline definition id, for the "open pipeline" link (empty → link hidden) and for
-   * resolving each phase's agent (avatar/name) + loop (retry) metadata. */
+  /** The pipeline definition id, for resolving each phase's agent (avatar/name) + loop
+   * (retry) metadata. */
   owner: string;
   /** The per-phase stage runs (may be undefined while the run aggregate is loading). */
   stageRuns: RunView["stageRuns"];
@@ -150,10 +149,24 @@ function StageLog({
   phaseId: string;
   live: boolean;
 }) {
-  return live ? (
-    <LiveStageLog phaseId={phaseId} pipelineRunId={pipelineRunId} />
-  ) : (
-    <TerminalStageLog phaseId={phaseId} pipelineRunId={pipelineRunId} />
+  return (
+    <Panel
+      elevated
+      header={
+        <>
+          <Icon name="pulse" size="sm" tone="accent" />
+          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="secondary">
+            live log
+          </Typography>
+        </>
+      }
+    >
+      {live ? (
+        <LiveStageLog phaseId={phaseId} pipelineRunId={pipelineRunId} />
+      ) : (
+        <TerminalStageLog phaseId={phaseId} pipelineRunId={pipelineRunId} />
+      )}
+    </Panel>
   );
 }
 
@@ -178,13 +191,7 @@ function LiveStageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phase
 }
 
 /** A finished phase's log — immutable state, read once. */
-function TerminalStageLog({
-  pipelineRunId,
-  phaseId,
-}: {
-  pipelineRunId: string;
-  phaseId: string;
-}) {
+function TerminalStageLog({ pipelineRunId, phaseId }: { pipelineRunId: string; phaseId: string }) {
   const t = useTranslations("runs");
   const { data, isPending } = useStageRunLogQuery(pipelineRunId, phaseId);
   const text = (data?.content ?? "").replace(/\n$/, "");
@@ -295,21 +302,18 @@ export function PipelineStageTimeline({
   parked,
 }: PipelineStageTimelineProps) {
   const t = useTranslations("runs");
-  const router = useRouter();
   const { data: pipelines } = usePipelinesQuery();
   const { data: agents } = useAgentsQuery();
 
-  const pipelineDef = useMemo(
-    () => pipelines?.find((p) => p.id === owner),
-    [pipelines, owner],
-  );
+  const pipelineDef = useMemo(() => pipelines?.find((p) => p.id === owner), [pipelines, owner]);
   const phaseById = useMemo(
     () => new Map((pipelineDef?.phases ?? []).map((p) => [p.id, p] as const)),
     [pipelineDef],
   );
-  const agentsById = useMemo(() => new Map((agents ?? []).map((a) => [a.id, a] as const)), [
-    agents,
-  ]);
+  const agentsById = useMemo(
+    () => new Map((agents ?? []).map((a) => [a.id, a] as const)),
+    [agents],
+  );
   const definedPhaseIds = useMemo(
     () => pipelineDef?.phases.map((p) => p.id).filter((id): id is string => !!id),
     [pipelineDef],
@@ -331,21 +335,6 @@ export function PipelineStageTimeline({
       : null;
   const openKey = openLog ?? liveKey;
 
-  // Link to the pipeline *definition* (a different surface than this run). Hidden when
-  // the owner id isn't known yet (e.g. a goal's maker run aggregate still loading).
-  const openPipelineLink = owner ? (
-    <Stack direction="row" justify="end">
-      <Button
-        icon="flow"
-        intent="ghost"
-        onClick={() => router.push(`/pipelines/${owner}`)}
-        size="sm"
-      >
-        {t("openPipeline")}
-      </Button>
-    </Stack>
-  ) : null;
-
   return (
     <HudPanel padding="250" title={t("stageTimeline")}>
       {nodes.length === 0 ? (
@@ -353,7 +342,6 @@ export function PipelineStageTimeline({
           <Typography mono size="xs" type="note" variant="tertiary">
             {t("stageNone")}
           </Typography>
-          {openPipelineLink}
         </Stack>
       ) : (
         <Stack data-testid={PipelineStageTimelineTestId.Root} gap="0">
@@ -399,7 +387,8 @@ export function PipelineStageTimeline({
                       aria-hidden="true"
                       data-testid={PipelineStageTimelineTestId.Connector}
                       style={{
-                        background: displayStatus === "done" ? stateToneVar.ok : "var(--color-border)",
+                        background:
+                          displayStatus === "done" ? stateToneVar.ok : "var(--color-border)",
                         flexGrow: 1,
                         marginTop: "0.375rem",
                         minHeight: "1rem",
@@ -410,7 +399,7 @@ export function PipelineStageTimeline({
                 </Stack>
 
                 <Container grow minW0 style={{ paddingBottom: isLastNode ? "0" : "1.5rem" }}>
-                  <Stack gap="50">
+                  <Stack gap="100">
                     {(() => {
                       const header = (
                         <Stack align="center" direction="row" gap="100" justify="between">
@@ -526,7 +515,6 @@ export function PipelineStageTimeline({
               </Stack>
             );
           })}
-          {openPipelineLink}
         </Stack>
       )}
     </HudPanel>

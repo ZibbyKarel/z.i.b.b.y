@@ -12,6 +12,12 @@ import {
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
+// Phase 63: the header's worker name (agent/pipeline) navigates to its own detail
+// page — a local mock (overriding the global next/navigation stub in
+// vitest.setup.tsx) so tests can assert the exact path `push` was called with.
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
 // No run is on the approval gate in these cases — an empty queue keeps the header
 // in its plain (no severity/risk) form.
 vi.mock("../../approvals/queries", () => ({ useApprovalsQuery: () => ({ data: [] }) }));
@@ -44,7 +50,7 @@ vi.mock("../queries/useRunArtifactQuery", () => ({
 // ChainStepsPanel fetches the open step's pipeline aggregate; nothing is open by
 // default in these tests, so a stub returning no data is enough.
 vi.mock("../../pipelines", () => ({ usePipelineRunQuery: () => ({ data: undefined }) }));
-// The Phase 24 Part D "Zařadit do projektu" control reads the project registry and
+// The Phase 24 Part D "Projekt" control reads the project registry and
 // its own assign mutation; an empty registry keeps it a no-op for every test here
 // that doesn't specifically exercise it.
 const { projectsRef, assignMutate } = vi.hoisted(() => ({
@@ -382,6 +388,58 @@ describe("RunDetail — task output", () => {
   });
 });
 
+describe("RunDetail — worker name links to its detail (Phase 63)", () => {
+  const agentRun: RunView = {
+    runId: "writer_7",
+    kind: "agent",
+    owner: "writer",
+    status: "done",
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "",
+    startedAt: new Date("2026-06-14T10:00:00Z").toISOString(),
+    logBase: "agents",
+  };
+
+  const chainRun: RunView = {
+    runId: "research-then-build_9",
+    kind: "chain",
+    owner: "research-then-build",
+    status: "running",
+    pct: null,
+    title: "",
+    prompt: "krok 1/2",
+    project: "",
+    startedAt: new Date("2026-07-02T08:00:00Z").toISOString(),
+    logBase: null,
+    chainId: "research-then-build",
+    steps: [{ index: 0, pipeline: "nightly-research", status: "pending" }],
+  };
+
+  beforeEach(() => {
+    push.mockClear();
+  });
+
+  it("links the agent name in the meta line to its own detail page", async () => {
+    renderDetail(agentRun);
+    await userEvent.click(screen.getByTestId("run-agent-link"));
+    expect(push).toHaveBeenCalledWith("/agents/writer");
+  });
+
+  it("links the pipeline owner meta cell to its own detail page", async () => {
+    renderDetail(); // default pipelineRun: kind "pipeline", owner "delivery"
+    await userEvent.click(screen.getByTestId("run-owner-link"));
+    expect(push).toHaveBeenCalledWith("/pipelines/delivery");
+  });
+
+  it("keeps a chain run's owner meta cell as plain text — no detail route to link to", () => {
+    renderDetail(chainRun);
+    expect(screen.queryByTestId("run-owner-link")).not.toBeInTheDocument();
+    expect(screen.getByText("research-then-build")).toBeInTheDocument();
+  });
+});
+
 describe("RunDetail — assign to project (Phase 24 Part D)", () => {
   beforeEach(() => {
     projectsRef.current = [
@@ -393,21 +451,21 @@ describe("RunDetail — assign to project (Phase 24 Part D)", () => {
 
   it("shows the assign control in place of the project meta cell for a project-less run", () => {
     renderDetail();
-    expect(screen.getByText("Zařadit do projektu")).toBeInTheDocument();
+    expect(screen.getByText("Projekt")).toBeInTheDocument();
     expect(screen.queryByText("projekt")).not.toBeInTheDocument();
   });
 
   it("hides the assign control when the project registry is empty", () => {
     projectsRef.current = [];
     renderDetail();
-    expect(screen.queryByText("Zařadit do projektu")).not.toBeInTheDocument();
+    expect(screen.queryByText("Projekt")).not.toBeInTheDocument();
   });
 
   it("shows the project meta cell (not the assign control) once the run carries a projectId", () => {
     renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
     expect(screen.getByText("projekt")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
-    expect(screen.queryByText("Zařadit do projektu")).not.toBeInTheDocument();
+    expect(screen.queryByText("Projekt")).not.toBeInTheDocument();
   });
 
   it("assigns the chosen project via the mutation", async () => {
