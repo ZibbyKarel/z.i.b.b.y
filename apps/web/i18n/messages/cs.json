@@ -303,7 +303,6 @@
     "statSdkCredit": "agent sdk kredit",
     "statPipelines": "pipeline",
     "statSkills": "skilly",
-    "activity": "Nedávná aktivita",
     "briefing": "Briefing",
     "briefingGenerate": "Vygenerovat",
     "briefingReady": "připraveno",
@@ -1492,13 +1491,6 @@
       "openRunAria": "Otevřít běh",
       "expandAria": "Rozbalit detail běhu",
       "collapseAria": "Sbalit detail běhu"
-    },
-    "panel": {
-      "title": "Aktivita",
-      "openAria": "Otevřít panel aktivity",
-      "closeAria": "Zavřít panel aktivity",
-      "empty": "Zatím žádná aktivita",
-      "loading": "Načítám aktivitu…"
     },
     "palette": {
       "placeholder": "Hledat agenta, pipeline, gate nebo poznámku…",

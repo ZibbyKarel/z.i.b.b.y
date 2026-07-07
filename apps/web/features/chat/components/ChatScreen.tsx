@@ -43,7 +43,6 @@ import { CosmicScene } from "../scene/CosmicScene";
 import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
 import { ChatPalette } from "./ChatPalette";
-import { ChatSidePanel } from "./ChatSidePanel";
 import { ChatTranscript } from "./ChatTranscript";
 
 /**
@@ -90,7 +89,6 @@ export enum ChatScreenTestId {
   Greeting = "chat-screen-greeting",
   Close = "chat-screen-close",
   NewChat = "chat-screen-new-chat",
-  PanelToggle = "chat-screen-panel-toggle",
 }
 
 export interface ChatScreenProps {
@@ -207,18 +205,13 @@ export function ChatScreen({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, stream.text, stream.toolEvents.length]);
 
-  // Fáze 14.5: the activity panel and the ⌘K quick-switcher are mutually exclusive
-  // overlays ON TOP of the conversation — opening either closes the other. Both are
-  // owned here (not by the panel/palette themselves) so Esc priority and the
-  // top-bar toggles all read from one source of truth.
-  const [panelOpen, setPanelOpen] = useState(false);
+  // Fáze 14.5: the ⌘K quick-switcher is an overlay ON TOP of the conversation.
+  // Owned here (not by the palette itself) so Esc priority and the search-bar
+  // toggle read from one source of truth. (Phase 39 removed the sibling activity
+  // panel this used to be mutually exclusive with — the HUD right rail is the
+  // single ambient activity log now.)
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const openPanel = useCallback(() => {
-    setPaletteOpen(false);
-    setPanelOpen((v) => !v);
-  }, []);
   const openPalette = useCallback(() => {
-    setPanelOpen(false);
     setPaletteOpen((v) => !v);
   }, []);
 
@@ -253,32 +246,26 @@ export function ChatScreen({
     [router],
   );
 
-  // Esc priority: the palette sits on top of the panel, which sits on top of the
-  // conversation itself — a single Esc dismisses whichever sub-overlay is topmost.
-  // As a routed page there is nothing left for Esc to close once both are shut
-  // (the nav rail / browser back is how the operator leaves `/chat`).
+  // Esc priority: the palette sits on top of the conversation itself — a single Esc
+  // dismisses it. As a routed page there is nothing left for Esc to close once it's
+  // shut (the nav rail / browser back is how the operator leaves `/chat`).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (paletteOpen) {
         setPaletteOpen(false);
-        return;
-      }
-      if (panelOpen) {
-        setPanelOpen(false);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, panelOpen]);
+  }, [paletteOpen]);
 
   // ⌘K / Ctrl+K opens the quick-switcher — the same toggle the SearchBar's click
-  // goes through, so a second press (or one while the panel is open) closes it
-  // rather than stacking overlays. Phase 23 dropped this listener because the
-  // chat surface used to sit over the HUD's own global ⌘K search (double-open);
-  // now that `/chat` is fullscreen and bypasses `MainLayout` (phase 27), there is
-  // no competing handler on this route, so re-adding it is safe — no capture-phase
-  // suppression needed.
+  // goes through, so a second press closes it rather than stacking overlays.
+  // Phase 23 dropped this listener because the chat surface used to sit over the
+  // HUD's own global ⌘K search (double-open); now that `/chat` is fullscreen and
+  // bypasses `MainLayout` (phase 27), there is no competing handler on this route,
+  // so re-adding it is safe — no capture-phase suppression needed.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "k") return;
@@ -421,16 +408,6 @@ export function ChatScreen({
               shortcut="⌘K"
             />
           </Container>
-          <button
-            aria-label={t(panelOpen ? "panel.closeAria" : "panel.openAria")}
-            className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
-            data-testid={ChatScreenTestId.PanelToggle}
-            onClick={openPanel}
-            type="button"
-          >
-            <Icon name="pulse" size="xs" />
-            {t("panel.title")}
-          </button>
           {messages.length > 0 && (
             <button
               className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
@@ -533,10 +510,9 @@ export function ChatScreen({
         </div>
       </div>
 
-      {/* ── Activity panel + quick-switcher (Fáze 14.5) ────────────────
-          Both float above everything else on the page; mounted only while
-          open so their own data hooks don't fire until the operator asks. */}
-      {panelOpen && <ChatSidePanel onClose={() => setPanelOpen(false)} />}
+      {/* ── Quick-switcher (Fáze 14.5) ──────────────────────────────────
+          Floats above everything else on the page; mounted only while open
+          so its own data hooks don't fire until the operator asks. */}
       {paletteOpen && (
         <ChatPalette
           onClose={() => setPaletteOpen(false)}

@@ -50,7 +50,7 @@
 
 - [x] v chat ui mi chybí přepínátko projektů - dejme do topbaru — fáze 33
 
-- [ ] máme moc logů Overview - Nedávná aktivita, pravý side panel v HUD ui a Aktivita panel v Chat UI. chce to sjednotit a nechat na jednom místě
+- [x] máme moc logů Overview - Nedávná aktivita, pravý side panel v HUD ui a Aktivita panel v Chat UI. chce to sjednotit a nechat na jednom místě — fáze 39 (ponechán HUD pravý rail + /runs; odstraněna Overview karta a chat panel)
 
 - [x] chat ui - místo psaní "Zibby" s buřinkou nad každou zprávou, kterou ZIBBY psal jen barevně oddělíme pozadí zpráv — fáze 33
 

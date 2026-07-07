@@ -70,10 +70,6 @@ vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
   useMemorySearchQuery: () => ({ data: undefined, isFetching: false }),
   getMemorySearchQueryKey: (q: string) => ["memory", "search", q],
 }));
-vi.mock("../../overview/queries/useActivityQuery", () => ({
-  useActivityQuery: () => ({ data: [], isPending: false }),
-  getActivityQueryKey: () => ["activity", "today"],
-}));
 // The top-bar `ProjectSwitcher` (Phase 33) reads the app-wide project registry
 // and the active-project scope — stub both the same way `NewTaskDialog.test.tsx`
 // does, since this suite never mounts the real `ProjectProvider`.
@@ -106,7 +102,6 @@ import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
 import { ChatPaletteTestId } from "./ChatPalette";
-import { ChatSidePanelTestId } from "./ChatSidePanel";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
 // component behaves exactly as it does under ChatProvider. `onClose` is spy-able so
@@ -274,35 +269,7 @@ describe("ChatScreen", () => {
     });
   });
 
-  describe("activity panel + quick-switcher (Fáze 14.5)", () => {
-    it("toggles the activity panel from the top-bar button", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
-      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
-      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
-      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
-      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
-    });
-
-    it("opens the palette from the search bar, closing the panel it replaces (mutually exclusive)", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
-      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
-
-      await user.click(screen.getByTestId(SearchBarTestId.Root));
-      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
-      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
-
-      // And the reverse: reopening the panel closes the palette back out.
-      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
-      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
-      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-    });
-
+  describe("quick-switcher (Fáze 14.5)", () => {
     it("⌘K opens the palette, and Esc closes it (Fáze 30)", async () => {
       renderWithProviders(<ChatScreenHarness />);
 
@@ -321,24 +288,6 @@ describe("ChatScreen", () => {
       expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
       fireKey({ key: "k", ctrlKey: true });
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-    });
-
-    it("Esc closes the panel, then does nothing further (no overlay left to close)", async () => {
-      const onClose = vi.fn();
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness onClose={onClose} />);
-
-      await user.click(screen.getByTestId(ChatScreenTestId.PanelToggle));
-      expect(screen.getByTestId(ChatSidePanelTestId.Root)).toBeInTheDocument();
-
-      // 1st Esc: the panel closes.
-      fireKey({ key: "Escape" });
-      expect(screen.queryByTestId(ChatSidePanelTestId.Root)).not.toBeInTheDocument();
-      expect(onClose).not.toHaveBeenCalled();
-
-      // 2nd Esc: nothing else open — a routed page, so nothing happens.
-      fireKey({ key: "Escape" });
-      expect(onClose).not.toHaveBeenCalled();
     });
 
     it("Esc closes the palette, then does nothing further (no overlay left to close)", async () => {

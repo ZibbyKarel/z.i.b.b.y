@@ -14,11 +14,9 @@ import { usePinToggle } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
 import { useSkillsQuery } from "../skills";
-import { ActivityFeed } from "./components/ActivityFeed/ActivityFeed";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { QuickLaunchPanel } from "./components/QuickLaunchPanel/QuickLaunchPanel";
-import { useActivityQuery } from "./queries";
 import { SummaryWidget } from "./SummaryWidget";
 
 const STARTERS = [
@@ -38,7 +36,6 @@ export function Screen() {
   const { data: skills = [] } = skillsQuery;
   const { data: pipelines = [] } = pipelinesQuery;
   const { data: agents = [] } = agentsQuery;
-  const { data: activity = [] } = useActivityQuery();
   const { pins } = usePinToggle();
 
   // Honest load states (Phase 18.2): these four catalogs decide `isFresh` below, so a
@@ -102,10 +99,11 @@ export function Screen() {
     </Stack>
   );
 
-  // Rail — actionable-but-not-urgent launchers + the live log. Only worth a column of
-  // its own when it actually holds something; otherwise the queue takes the full width
-  // rather than leaving a dead 360px gutter.
-  const railHasContent = pins.length > 0 || activity.length > 0;
+  // Rail — actionable-but-not-urgent launchers. Only worth a column of its own when
+  // it actually holds something; otherwise the queue takes the full width rather
+  // than leaving a dead 360px gutter. (The ambient activity log itself lives in the
+  // HUD right rail — Phase 39 — not here.)
+  const railHasContent = pins.length > 0;
 
   return (
     <PageContainer>
@@ -114,7 +112,7 @@ export function Screen() {
         <SummaryWidget />
 
         {/* Dynamic two-zone dashboard: below lg it collapses to a single column, at lg+
-            the needs-you queue (main) sits beside the launch + activity rail so the page
+            the needs-you queue (main) sits beside the quick-launch rail so the page
             uses its width instead of stacking every block full-bleed. */}
         {railHasContent ? (
           <Grid align="start" cols={2} gap="250">
@@ -122,12 +120,6 @@ export function Screen() {
             <Stack direction="col" gap="250">
               {/* Quick launch — pinned agents/pipelines/chains with a one-click RUN. */}
               <QuickLaunchPanel />
-
-              {activity.length > 0 && (
-                <HudPanel title={t("overview.activity")}>
-                  <ActivityFeed items={activity} limit={8} />
-                </HudPanel>
-              )}
             </Stack>
           </Grid>
         ) : (

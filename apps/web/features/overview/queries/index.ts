@@ -1,4 +1,4 @@
-export { getActivityQueryKey, useActivityQuery } from "./useActivityQuery";
+export { getActivityQueryKey } from "./useActivityQuery";
 export {
   getActivityFeedQueryKey,
   prependActivityEntry,

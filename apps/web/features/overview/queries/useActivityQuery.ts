@@ -1,21 +1,14 @@
-import { apiClient } from "../../../state/api";
-import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
-
-/** Cache key for the activity feed. Exported so the SSE bridge can invalidate it. */
+/**
+ * Cache key for the activity feed (`GET /api/activity`). Exported so the SSE bridge
+ * (`features/runs/runEvents.tsx`) can invalidate it and `useGenerateBriefingMutation`
+ * can refresh it after posting a new entry.
+ *
+ * Phase 39 removed the last direct reader of this endpoint (the Overview
+ * "Nedávná aktivita" card and the chat activity panel — the HUD right rail's own
+ * `useActivityFeedInfiniteQuery` is the single ambient activity log now), so only
+ * the key survives; a query hook can come back here if a consumer needs the plain,
+ * non-paginated feed again.
+ */
 export function getActivityQueryKey() {
   return ["activity", "today"] as const;
-}
-
-/**
- * Recent recorded activity from `GET /api/activity` — the overview feed. Read-only
- * (entries are born only inside the API). No `refetchInterval`: the SSE `activity`
- * scope invalidates this key the instant a new entry lands, so the feed stays live
- * without polling.
- */
-export function useActivityQuery() {
-  return apiClient.activity.listActivity.useQuery({
-    queryKey: getActivityQueryKey(),
-    queryData: { query: {} },
-    select: selectApiResponseBody,
-  });
 }
