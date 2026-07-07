@@ -16,9 +16,9 @@
 
 - [ ] implementovat CommandLine komponentu ke spouštění tasků. Momentálně to máme přes NewTaskDialog ale to je moc neintuitivní UI. Měli bychom jít cestou, kterou máme již v chat UI - "Jeden input zvládne vše". Musím být schopný popsat co chci do jednoho inputu, přes "@" vyhledávat agenty/pipeliny na přiřažení. Do inputu musím být schopný přes tlačítko "+" (či jinou ikonku) přidávat soubory (nebo je tam dropnout přes drag and drop). U inputu bude pak DropDownButton který task spustí (defaultně hned ale budeme moci přes options vybrat za 1h nebo "až se resetují limity"). CommandLine komponenta bude moci být libovolně vysoká ale defaultn bude jen jeden řádek. Vyhledávání agentů by se mělo provádeť inline místo jiného searchboxu který se objeví. New Task Dialog se pak velmi zjednoduší a jedinné co tam budeme potřebovat je pak roztažená CommandLine komponenta na 10řádků třeba.
 
-- [ ] sladit desing podle auditu. Stále nám nesedí desing jazyk který máme naimplementovaný a který je v claude design (zeptej se kde ho vzít než začneš něco vymýšlet z hlavy)
+- [ ] sladit desing podle auditu. Stále nám nesedí desing jazyk který máme naimplementovaný a který je v claude design (design je momentálně stažený aktuální ve složce design - soubor ZIBBY Design Audit.html)
 
-- [ ] implementovat /runs podle designu (zeptej se kde ho vzít než začneš něco vymýšlet z hlavy). Zejména hlavička tasku a log pipeliny musejí sedět
+- [ ] implementovat /runs podle designu (design je momentálně stažený aktuální ve složce design). Zejména hlavička tasku a log pipeliny musejí sedět
 
 - [x] chat ui - constalace by měla zobrazovat primářně připnuté agenty/pipeliny/řetězce a pak preferuji zobrazovat jen agenty s obrázky
 
