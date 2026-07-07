@@ -1,6 +1,5 @@
 ---
 name: Delivery
-avatar: /avatars/orchestrator.png
 phases:
   - id: architekt
     type: agent

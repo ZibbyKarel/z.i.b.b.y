@@ -6,5 +6,9 @@
   {
     "kind": "chain",
     "id": "audit-develop"
+  },
+  {
+    "kind": "agent",
+    "id": "fullstack-developer"
   }
 ]

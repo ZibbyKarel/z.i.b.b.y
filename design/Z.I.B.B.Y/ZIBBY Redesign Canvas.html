@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZIBBY — Redesign · before / after</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #root { height: 100vh; }
+  @keyframes zpulse { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.2); opacity: 0; } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- canvas -->
+<script type="text/babel" src="redesign/design-canvas.jsx"></script>
+
+<!-- BEFORE: existující kód velínu (zdroj pravdy, ne překreslení) -->
+<script type="text/babel" src="zibby/data.jsx"></script>
+<script type="text/babel" src="zibby/data-extra.jsx"></script>
+<script type="text/babel" src="zibby/tasks-data.jsx"></script>
+<script type="text/babel" src="zibby/icons.jsx"></script>
+<script type="text/babel" src="zibby/shell.jsx"></script>
+<script type="text/babel" src="zibby/frame.jsx"></script>
+<script type="text/babel" src="zibby/overview-cards.jsx"></script>
+<script type="text/babel" src="zibby/overview.jsx"></script>
+<script type="text/babel" src="zibby/approvals.jsx"></script>
+<script type="text/babel" src="zibby/voice.jsx"></script>
+
+<!-- AFTER: sjednocené tokeny + nové plochy -->
+<script type="text/babel" src="redesign/tokens2.jsx"></script>
+<script type="text/babel" src="redesign/hud-after.jsx"></script>
+<script type="text/babel" src="redesign/voice-after.jsx"></script>
+<script type="text/babel" src="redesign/boards.jsx"></script>
+<script type="text/babel" src="redesign/changelog.jsx"></script>
+
+<script type="text/babel">
+const noop = () => {};
+
+// ---- BEFORE kompozice (přesně dnešní kód) --------------------------------
+const VelinBefore = () => (
+  <Frame skin="velin">
+    <Sidebar active="overview" accent={Z.work} onNav={noop} />
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <TopBar accent={Z.work} nav="overview" lang="cs" onLang={noop} onVoice={noop} />
+      <div style={{ flex: 1, overflow: 'hidden', padding: '24px 26px' }}>
+        <OverviewBody accent={Z.work} onNav={noop} />
+      </div>
+    </div>
+    <div style={{ width: 340, flex: '0 0 340px', borderLeft: `1px solid ${Z.line}`, background: Z.bg0, overflow: 'hidden', padding: '24px 18px' }}>
+      <RightRailContent accent={Z.work} onNav={noop} />
+    </div>
+  </Frame>
+);
+
+const VoiceBefore = () => (
+  <Frame skin="velin">
+    <VoiceScreen accent={Z.work} onExit={noop} />
+  </Frame>
+);
+
+const Fill = ({ children }) => <div style={{ width: '100%', height: '100%' }}>{children}</div>;
+
+const App = () => (
+  <DesignCanvas title="ZIBBY · redesign — before / after">
+
+    <DCSection id="hud" title="01 · HUD — velín / Přehled"
+      subtitle="Vlevo dnešní kód 1 : 1 · vpravo vyhlazení: bez scanlines a mřížky, glow jen na živém, informace jednou, brífink s inline akcemi">
+      <DCArtboard id="hud-before" label="Před — dnešní velín (živý kód)" width={1560} height={940}>
+        <Fill><VelinBefore /></Fill>
+      </DCArtboard>
+      <DCArtboard id="hud-after" label="Po — tichý velín" width={1560} height={940}>
+        <Fill><VelinAfter /></Fill>
+      </DCArtboard>
+    </DCSection>
+
+    <DCSection id="approval" title="02 · Approval — jádro produktu"
+      subtitle="Dnes tři nesladěné podoby téhož rozhodnutí · po: jedna karta (co / riziko / dopad / rozhodnutí) ve třech hustotách, vysoké riziko = hold-to-confirm">
+      <DCArtboard id="ap-before" label="Před — tři podoby" width={1500} height={1010}>
+        <Fill><ApprovalBeforeBoard /></Fill>
+      </DCArtboard>
+      <DCArtboard id="ap-after" label="Po — jedna karta · tři hustoty" width={1240} height={820}>
+        <Fill><ApprovalAfterBoard /></Fill>
+      </DCArtboard>
+    </DCSection>
+
+    <DCSection id="voice" title="03 · Voice UI"
+      subtitle="Před: listening = speaking, error neexistuje, 4 rohové panely · po: stavy odlišené tvarem pohybu, potvrzení „slyším tě“, error s únikem; klikni na mikrofon pro demo">
+      <DCArtboard id="v-before" label="Před — dnešní Voice (živý kód)" width={1400} height={860}>
+        <Fill><VoiceBefore /></Fill>
+      </DCArtboard>
+      <DCArtboard id="v-after" label="Po — klidná scéna (interaktivní demo)" width={1400} height={860}>
+        <Fill><VoiceAfter /></Fill>
+      </DCArtboard>
+      <DCArtboard id="v-states" label="Po — 5 stavů orbu" width={1240} height={430}>
+        <Fill><OrbStatesBoard /></Fill>
+      </DCArtboard>
+    </DCSection>
+
+    <DCSection id="system" title="04 · Sjednocený mini design system"
+      subtitle="Tokeny a sdílené komponenty pro HUD i Voice — barva = stav, tvar = kategorie, mono = data, sans = řeč">
+      <DCArtboard id="tokens" label="Tokeny · typo · komponenty" width={1520} height={820}>
+        <Fill><TokensBoard /></Fill>
+      </DCArtboard>
+    </DCSection>
+
+    <DCSection id="flow" title="05 · Zjednodušená flow"
+      subtitle="Kde ubyly kroky — škrtnuté kroky mizí, rozhodnutí se dějí na místě">
+      <DCArtboard id="flows" label="Tři klíčové průchody" width={1140} height={620}>
+        <Fill><FlowBoard /></Fill>
+      </DCArtboard>
+    </DCSection>
+
+    <DCSection id="changelog" title="06 · Changelog & nezapracované nálezy"
+      subtitle="Závěr etapy — mapa 18 nálezů na to, kde a čím jsou zapracované, a co je odloženo a proč">
+      <DCArtboard id="changelog" label="Co bylo zapracováno · co zbývá" width={1560} height={1180}>
+        <Fill><ChangelogBoard /></Fill>
+      </DCArtboard>
+    </DCSection>
+
+  </DesignCanvas>
+);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

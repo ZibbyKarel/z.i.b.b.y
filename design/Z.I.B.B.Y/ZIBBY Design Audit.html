@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZIBBY — Design audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0e13;
+    --surface: #10151c;
+    --surface-hi: #151c25;
+    --line: rgba(255,255,255,0.08);
+    --line-hi: rgba(255,255,255,0.14);
+    --ink: #e6edf3;
+    --ink-2: #9aa7b4;
+    --ink-3: #66737f;
+    --accent: #5b8def;
+    --ok: #3fcf8e;
+    --warn: #f0b429;
+    --bad: #ff6b6b;
+    --violet: #b07cff;
+    --cyan: #56c4d6;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Geist', -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  ::selection { background: rgba(91,141,239,0.35); }
+
+  .page { max-width: 920px; margin: 0 auto; padding: 64px 32px 96px; }
+
+  /* ── typography ── */
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; margin: 14px 0 10px; line-height: 1.1; }
+  .lede { font-size: 16px; line-height: 1.65; color: var(--ink-2); max-width: 68ch; text-wrap: pretty; margin: 0; }
+  h2 { font-size: 24px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 6px; }
+  h3 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  p { font-size: 14.5px; line-height: 1.65; color: var(--ink-2); text-wrap: pretty; margin: 0 0 12px; }
+  p strong, li strong { color: var(--ink); font-weight: 600; }
+  code { font-family: var(--mono); font-size: 0.86em; color: var(--cyan); background: rgba(86,196,214,0.07); border: 1px solid rgba(86,196,214,0.14); border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { font-size: 14.5px; line-height: 1.65; color: var(--ink-2); margin-bottom: 5px; text-wrap: pretty; }
+
+  section { margin-top: 72px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 24px; }
+  .sec-num { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-3); margin-left: auto; font-family: var(--mono); }
+
+  /* ── finding rows ── */
+  .finding { display: grid; grid-template-columns: 52px 1fr; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .finding:last-child { border-bottom: none; }
+  .prio { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; border-radius: 4px; padding: 3px 0; text-align: center; height: fit-content; margin-top: 2px; }
+  .p0 { color: #ff8585; background: rgba(255,107,107,0.10); border: 1px solid rgba(255,107,107,0.30); }
+  .p1 { color: #f6c453; background: rgba(240,180,41,0.09); border: 1px solid rgba(240,180,41,0.28); }
+  .p2 { color: var(--ink-2); background: rgba(255,255,255,0.04); border: 1px solid var(--line-hi); }
+  .finding h3 { font-size: 15px; margin-bottom: 4px; }
+  .finding .where { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-bottom: 7px; }
+  .finding p { font-size: 13.5px; margin-bottom: 0; }
+  .finding p + p { margin-top: 6px; }
+
+  /* ── identity summary card ── */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px 26px; }
+  .card + .card { margin-top: 16px; }
+
+  /* ── principles grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+  .principle { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+  .principle h3 { display: flex; align-items: center; gap: 9px; }
+  .principle h3 .pn { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+  .principle p { font-size: 13.5px; margin: 8px 0 0; }
+
+  /* ── token tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--line-hi); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; }
+  td:first-child { font-family: var(--mono); font-size: 12px; color: var(--ink); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 8px; border: 1px solid rgba(255,255,255,0.12); }
+
+  /* ── type specimen ── */
+  .spec-row { display: grid; grid-template-columns: 170px 1fr; align-items: baseline; gap: 18px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .spec-row:last-child { border-bottom: none; }
+  .spec-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+
+  /* ── before/after micro demos ── */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 720px) { .ba { grid-template-columns: 1fr; } }
+  .ba-cell { border: 1px solid var(--line); border-radius: 10px; padding: 18px; background: #0d1117; }
+  .ba-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 14px; }
+  .ba-label.before { color: var(--ink-3); }
+  .ba-label.after { color: var(--ok); }
+
+  /* verification list */
+  .verify { counter-reset: vq; }
+  .verify .vq { display: grid; grid-template-columns: 30px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .verify .vq:last-child { border-bottom: none; }
+  .verify .vq::before { counter-increment: vq; content: counter(vq, decimal-leading-zero); font-family: var(--mono); font-size: 12px; color: var(--warn); padding-top: 2px; }
+  .verify .vq p { margin: 0; font-size: 14px; }
+  .verify .vq .q-where { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+
+  .footer-note { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="kicker">// ZIBBY · design audit · 10. 6. 2026</div>
+    <h1>Vyhlazení velínu &amp; Voice UI</h1>
+    <p class="lede">Audit dvou hlavních ploch — HUD (velín) a Voice UI — proti vlastnímu kódu: tokeny v <code>data.jsx</code>, sdílené primitivy v <code>shell.jsx</code>/<code>frame.jsx</code> a 25 obrazovkových modulů. Nejdřív čtení identity, pak nálezy, pak směr. Žádné překreslování, dokud neodsouhlasíš směr a neodpovíš na otázky „k&nbsp;ověření" na konci.</p>
+  </header>
+
+  <!-- ════════ 0 · identita ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">00</span>
+      <h2>Jak čtu současnou identitu</h2>
+    </div>
+    <div class="card">
+      <p><strong>ZIBBY je tichý majordomus, ne stíhačka.</strong> Z obrazovek čtu: temný velín nad jedním uživatelem, kde přes noc pracují agenti a ráno se skládá účet. Monospace nese <em>data a fakta</em> (cesty k souborům, ceny, stavy), Geist nese <em>řeč butlera</em> („Dobré ráno. 2 tasky běží, 2 čeká na tebe."). Soubory na disku jsou pravda — UI to přiznává (<code>~/zibby/agents/…</code> v každé kartě). Cylindr 🎩 a tečkovaný wordmark Z·I·B·B·Y dávají značce suchý humor.</p>
+      <p>Identitu nesou čtyři věci, které stojí za to chránit: <strong>(1)</strong> butler tón copy — první osoba, klid, žádné vykřičníky; <strong>(2)</strong> mono-jako-telemetrie vedle sans-jako-řeči; <strong>(3)</strong> approval-first dramaturgie — systém se ptá, než utratí nebo smaže; <strong>(4)</strong> jedna modrá jako hlas systému.</p>
+      <p style="margin-bottom:0;">Co identitu naopak <em>ředí</em>: sci-fi rekvizity navrch (scanlines, mřížky, glow na všem, HUD závorky na každém panelu) a chybějící systém pod tím — 23 velikostí písma, 17 barev mimo tokeny, 6 poloměrů. Atmosféra je správná, ale je <em>nalepená</em>, ne vestavěná. Vyhlazení = přesunout charakter z dekorací do typografie, rytmu a stavového jazyka.</p>
+    </div>
+  </section>
+
+  <!-- ════════ 1 · nálezy ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Nálezy</h2>
+      <span class="sec-sub">4× P0 · 8× P1 · 6× P2</span>
+    </div>
+
+    <div class="finding">
+      <span class="prio p0">P0</span>
+      <div>
+        <h3>Stavové barvy kolidují s kategorickými — stav nejde přečíst barvou</h3>
+        <div class="where">data.jsx · gate-rules-core.jsx · skills.jsx · new-task.jsx · data-extra.jsx</div>
+        <p>Amber <code>#f0b429</code> znamená zároveň „varování", „čeká na tebe", riziko „platba" i bývalý home kontext. Modrá <code>#5b8def</code> je akcent systému, stav „běží", decision „notify" i kategorie „Vývoj". Existují <strong>tři zelené</strong> s různým významem: <code>#39d98a</code> (ok), <code>#7fd98a</code> (haiku/write/research/daily), <code>#5fa97d</code> (allow) — a <strong>dvě oranžové</strong> (<code>#f0b429</code> vs. <code>#f0883e</code> pro thinking/bash). Glanceability velínu stojí na tom, že barva = stav; teď barva znamená cokoliv.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p0">P0</span>
+      <div>
+        <h3>Approval — jádro produktu — existuje ve 3 nesladěných podobách</h3>
+        <div class="where">overview.jsx (pravý rail) · approvals.jsx (stránka) · voice.jsx (rohový panel)</div>
+        <p>Rail karta má CTA „Schválit / Zamítnout" + risk chip; stránka Approvals má diff náhledy a jiný layout; Voice panel ukazuje jen jméno skillu a detail bez akcí a bez rizika. Tři reprezentace téhož rozhodnutí = tři vzory, které se uživatel učí. Navíc karta neodpovídá důsledně na tři otázky approval kroku (<strong>co</strong> se schvaluje / <strong>čím</strong> je to rizikové / <strong>jaký dopad</strong>): riziko je 9px chip v rohu, částka je v 11px řádku, a tlačítko Schválit je vizuálně stejné pro platbu 1 248 Kč i pro neškodný read.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p0">P0</span>
+      <div>
+        <h3>Voice: „poslouchám" a „mluvím" jsou vizuálně identické, „error" neexistuje</h3>
+        <div class="where">voice.jsx — isWave = listening || speaking · STATE_LABEL bez error/timeout</div>
+        <p>Oba stavy sdílí stejný waveform kruh i stejný glow (<code>vGlowHot</code>) — z dálky nepoznáš, jestli máš mluvit, nebo poslouchat. To je u hlasového rozhraní stěžejní rozlišení. Chybí stav <strong>error/timeout</strong> (mikrofon nedostupný, agent neodpovídá, limit) a chybí potvrzení „slyšel jsem tě" mezi listening→thinking. Latence agenta je řešená jen třemi blikajícími tečkami bez kontextu, co se děje.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p0">P0</span>
+      <div>
+        <h3>Typografická škála neexistuje — 23 velikostí, informace pod hranicí čitelnosti</h3>
+        <div class="where">napříč všemi moduly — 7.5 / 8 / 8.5 / 9 / 9.5 / 10 / 10.5 / 11 / 11.5 / 12 / 12.5 / 13 / 13.5 / 14 / 15 / 15.5 / 18 / 20 / 22 / 26 / 27 / 28 px</div>
+        <p>Stejná role má jinou velikost podle souboru: titulek panelu je 8.5px (definitions), 9.5px (HudPanel), 10px (frame label), 11px (SectionLabel). Skutečné informace — reset limitů, cesty k souborům, risk labely, „mluvte nyní" — jsou na 8–9.5px, tedy pod čitelností i na retině. Tagline „Zestful Intuitive Brainy Butler for You" má 7.5px.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Glow na všem = glow na ničem</h3>
+        <div class="where">shell.jsx — Bar(glow) všude · Dot vždy svítí · sidebar indikátor · badge · RunBtn hover · LimitBlock dvojitý glow</div>
+        <p>Každý progress bar, každá tečka, aktivní položka navigace i badge mají box-shadow glow. Když svítí všechno pořád, světlo přestává nést význam. Glow je přitom ideální nosič pro to jediné, co má ve velínu „žít": běžící agent a čekající approval.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>17+ barev mimo tokeny, jedna barva = šest významů</h3>
+        <div class="where">MODEL_C, TOOL_C, RISK, TASK_CATS, MEM_LAYER, INT_KIND, TRIG, patColor() …</div>
+        <p>Kategorické palety se definují lokálně v 9 souborech. Cyan <code>#56c4d6</code> znamená: model sonnet, tool read, riziko „odeslání", kategorie Média, MCP server i vrstvu knowledge/. Violet <code>#b07cff</code> je opus, git, push i Infrastruktura. Tokeny <code>Z.home/homeDim</code> jsou mrtvé (kontext zrušen), ale data je dál nesou.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Pět druhů tlačítek, žádný systém stavů</h3>
+        <div class="where">RunBtn · GhostBtn · ad-hoc segmenty (definitions, skills) · VoiceToggleBtn · raw button (overview restart, approval CTA)</div>
+        <p>Každé tlačítko má vlastní padding, velikost písma i hover chování. Chybí <strong>focus-visible</strong> (inputy mají <code>outline: none</code> bez náhrady), <strong>disabled</strong> se fejkuje šedým akcentem (RunBtn), <strong>loading</strong> stav neexistuje vůbec — u akcí, které spouštějí agenty na minuty, je to citelné.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Duplikace informací — totéž 3× na jedné obrazovce</h3>
+        <div class="where">overview.jsx + shell.jsx (TopBar LimitsWidget vs. rail LimitsPanel) · headline vs. stat řádek · rail „běžící agenti" vs. nav badge vs. Runs</div>
+        <p>Headline říká „2 tasky běží, 2 čeká na tebe" a hned pod ním stat řádek opakuje 02/01/01/02. Limity Claude jsou v top baru (LimitsWidget) i v pravém railu (LimitsPanel). Název stránky je v sidebaru (aktivní položka) i v top baru. Hustota není daná množstvím informací, ale jejich opakováním.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Persistentní pravý rail (340 px) soupeří s obsahem</h3>
+        <div class="where">app.jsx — rail na všech stránkách</div>
+        <p>Na stránce Approvals ukazuje rail tutéž approval kartu, která je v obsahu vedle. Na Runs ukazuje tytéž běžící agenty. Rail dává smysl jako „periferní vidění" velínu, ale platí se za něj třetinou šířky na každé obrazovce — a obsahové stránky (editor definic, gate rules) se pak mačkají. <em>K ověření níže.</em></p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Radius chaos: 0 / 2 / 3 / 4 / 10 / 12 px</h3>
+        <div class="where">frame.jsx — Card hud?4:12 · chips radius 2 vs. badge pill · scrollbar 0</div>
+        <p>Karta má poloměr 4 nebo 12 podle props, chipy 2, badge 10, modaly 4, jazykové menu 4. Tvarosloví je jeden z nejlevnějších sjednocovačů — teď pracuje proti.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Povrchy: 5 tokenů + 4 ad-hoc barvy navíc</h3>
+        <div class="where">bg0/bg1/bg2/panel/panelHi + rgba(13,17,23,.72) v HudPanel + rgba(9,11,15,.84) ve VoicePanel + #121d32, #0b1422 v gradientech</div>
+        <p><code>bg2</code> se skoro nepoužívá, HudPanel si místo tokenu vaří vlastní průsvitnou barvu. Hloubka scény je tím nahodilá — panely jednou „plavou" (blur+alpha), jindy sedí (solid).</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p1">P1</span>
+      <div>
+        <h3>Top bar se rozbíjí: absolutně centrovaný ⌘K koliduje s TASK</h3>
+        <div class="where">shell.jsx — TopBar, search position:absolute left:50%</div>
+        <p>Na screenshotu v 1400 px se „+ TASK" už dotýká pravé hrany search baru; pod ~1280 px se překryjí. Vrstvení <code>position:absolute</code> přes flex řádek není odolné vůči obsahu.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>Scanlines + mřížka na každé ploše</h3>
+        <div class="where">frame.jsx skin „velin" · voice.jsx vlastní kopie obou overlays</div>
+        <p>Repeating-gradient scanline s <code>mixBlendMode: overlay</code> přes celý viewport snižuje kontrast textu a působí jako rekvizita z roku 2015. Voice si overlay duplikuje vlastním kódem (drift do budoucna). Atmosféru unese samotná hloubka pozadí + radial vinětace.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>HUD závorky na každém panelu</h3>
+        <div class="where">frame.jsx — Corners v HudPanel (= všechny panely všech stránek)</div>
+        <p>Rohové závorky jsou hezký podpis — ale na 100 % panelů jsou tapeta. Vyhrazené pro „živé" panely (systémový stav, approval, běhy) by znovu získaly význam.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>Spacing mimo mřížku</h3>
+        <div class="where">padding '9px 11px', '13px 14px', gap 7/9/11/13 … napříč</div>
+        <p>Hodnoty nejsou na žádné mřížce (4px grid by pokryl vše). Důsledek: optické zarovnání mezi panely nikdy úplně nesedne a každá nová obrazovka si vymýšlí vlastní rytmus.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>13 hodnot letter-spacingu</h3>
+        <div class="where">0.02–0.30em napříč moduly</div>
+        <p>Uppercase mono labely mají pokaždé jiný prostrk (0.1 / 0.12 / 0.14 / 0.16 / 0.18 / 0.2 / 0.22 / 0.28em). Stačí dvě hodnoty: label a wordmark.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>Míchání jazyků v UI</h3>
+        <div class="where">„VOICE" · „yaml frontmatter" · „Edit raw SKILL.md" · „// mluvte nyní" vs. zbytek CZ</div>
+        <p>Technické termíny v EN jsou v pořádku (soubory, YAML), ale ovládací prvky a stavová hlášení by měly držet jeden jazyk podle přepínače, který už existuje.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>Voice transcript bez historie</h3>
+        <div class="where">voice.jsx — slice(-3), opacity fade</div>
+        <p>Starší repliky mizí bez možnosti se vrátit; po odchodu do HUD konverzace zmizí úplně. Chybí i feedback na rozpoznaný text (potvrzení „tohle jsem slyšel") před spuštěním akce — u approval-first systému překvapivá díra.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <span class="prio p2">P2</span>
+      <div>
+        <h3>Mrtvý kód skinů a kontextů</h3>
+        <div class="where">frame.jsx — skin 'zen'/'balanced'/'hud' nepoužité · accentOf() ignoruje argumenty · ctx: 'home'/'work' v datech</div>
+        <p>Frame podporuje 4 skiny, používá se jen „velin". Kontexty home/work byly zrušené, ale tokeny, data i podpisy funkcí je vláčí dál. Údržbový dluh, který plodí nekonzistence výše. <em>K ověření níže.</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 2 · směr ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Směr modernizace — „tichý velín"</h2>
+    </div>
+    <p style="max-width:72ch;">Cílový pocit: <strong>noční řídicí sál, ve kterém je klid, protože všechno funguje.</strong> Hloubku a atmosféru nese tma a typografie, ne efekty. Světlo (glow, pulz) je vyhrazené výlučně pro to, co <em>žije</em> — běžící agent, approval čekající na tebe. Vše ostatní je matné. Butler mluví velkým Geistem, telemetrie tiká malým monem. Žádné přebarvení: paleta zůstává, jen se uklidí a rozdělí role.</p>
+
+    <div class="grid-2" style="margin-top:20px;">
+      <div class="principle">
+        <h3><span class="pn">01</span> Světlo = život</h3>
+        <p>Glow a pulz smí mít jen běžící běh a čekající approval. Progress bary, tečky, badge, navigace — matné. Jediná animace bez příčiny je dech orbu ve Voice idle.</p>
+      </div>
+      <div class="principle">
+        <h3><span class="pn">02</span> Barva = stav, tvar = kategorie</h3>
+        <p>4 stavové barvy (ok / běží / čeká na tebe / chyba) patří výhradně stavům. Kategorie (modely, tooly, typy) se rozlišují glyfem a textem, barvou jen tam, kde nese riziko (platba / mazání / push / odeslání).</p>
+      </div>
+      <div class="principle">
+        <h3><span class="pn">03</span> Mono mluví daty, sans mluví s tebou</h3>
+        <p>JetBrains Mono: hodnoty, cesty, labely, stavy — nikdy souvislé věty. Geist: řeč butlera, popisy, nadpisy. Pevná škála 8 kroků, minimum 11px.</p>
+      </div>
+      <div class="principle">
+        <h3><span class="pn">04</span> Hloubka místo dekorace</h3>
+        <p>Scanlines a mřížky pryč; scénu drží 3 úrovně povrchu + vinětace pozadí. Rohové závorky zůstávají jako podpis — jen na živých panelech. Radius: 6 px prvky, 10 px panely.</p>
+      </div>
+      <div class="principle">
+        <h3><span class="pn">05</span> Motion = změna stavu</h3>
+        <p>Přechody 160–240 ms ease-out při změně stavu (idle→listening, běží→hotovo). Žádné nekonečné dekorativní smyčky mimo bod 01. Voice stavy se liší tvarem pohybu, ne jen rychlostí.</p>
+      </div>
+      <div class="principle">
+        <h3><span class="pn">06</span> Jednou, na správném místě</h3>
+        <p>Každá informace má jeden domov: limity v railu, stav v headlinu, fronta v approvals. Top bar přestane duplikovat sidebar a rail.</p>
+      </div>
+    </div>
+
+    <!-- micro before/after: panel -->
+    <h3 style="margin-top:36px;">Mikro-ukázka tónu (token-level, ne redesign)</h3>
+    <div class="ba">
+      <div class="ba-cell">
+        <div class="ba-label before">Před — panel dnes</div>
+        <div style="position:relative; background:rgba(13,17,23,0.72); border:1px solid rgba(255,255,255,0.07); padding:16px;">
+          <span style="position:absolute;width:11px;height:11px;border:solid #5b8def;border-width:1.5px 0 0 1.5px;top:5px;left:5px;opacity:.6;"></span>
+          <span style="position:absolute;width:11px;height:11px;border:solid #5b8def;border-width:1.5px 1.5px 0 0;top:5px;right:5px;opacity:.6;"></span>
+          <span style="position:absolute;width:11px;height:11px;border:solid #5b8def;border-width:0 0 1.5px 1.5px;bottom:5px;left:5px;opacity:.6;"></span>
+          <span style="position:absolute;width:11px;height:11px;border:solid #5b8def;border-width:0 1.5px 1.5px 0;bottom:5px;right:5px;opacity:.6;"></span>
+          <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.2em;color:#5d6b7a;text-transform:uppercase;margin-bottom:13px;"><span style="color:#5b8def;opacity:.8;">//</span> claude · interaktivní limity</div>
+          <div style="display:flex;align-items:baseline;gap:2px;"><span style="font-family:var(--mono);font-size:28px;font-weight:700;color:#f0b429;text-shadow:0 0 18px rgba(240,180,41,.4);">64</span><span style="font-family:var(--mono);font-size:14px;font-weight:700;color:#f0b429;">%</span></div>
+          <div style="height:7px;border-radius:7px;background:rgba(255,255,255,0.06);margin-top:10px;overflow:hidden;"><div style="width:64%;height:100%;background:#f0b429;box-shadow:0 0 10px rgba(240,180,41,.55);border-radius:7px;"></div></div>
+          <div style="font-family:var(--mono);font-size:8.5px;color:#5d6b7a;margin-top:7px;">reset 2h 11m</div>
+        </div>
+      </div>
+      <div class="ba-cell">
+        <div class="ba-label after">Po — stejný obsah, tišší</div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-3);text-transform:uppercase;">Limity · 5h okno</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--ink-3);">reset 2 h 11 m</div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-family:var(--mono);font-size:30px;font-weight:600;color:var(--ink);letter-spacing:-0.02em;">64 %</span><span style="font-size:12.5px;color:var(--ink-3);">z 200k tokenů</span></div>
+          <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.07);margin-top:12px;overflow:hidden;"><div style="width:64%;height:100%;background:var(--warn);border-radius:2px;"></div></div>
+        </div>
+        <p style="font-size:12px;margin:12px 0 0;color:var(--ink-3);">Číslo je informace → ink; barva zůstává jen na baru jako stavový signál. Bez glow, bez závorek (limit „nežije"), label čitelný (11 px).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 3 · tokeny ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Návrh sjednocených tokenů</h2>
+      <span class="sec-sub">draft k odsouhlasení</span>
+    </div>
+
+    <h3>Barvy — role, ne místa</h3>
+    <table>
+      <tr><th>token</th><th>hodnota</th><th>role</th></tr>
+      <tr><td>bg</td><td><span class="swatch" style="background:#0b0e13"></span>#0b0e13</td><td>scéna (jediné pozadí; vinětace radialem, ne druhým tokenem)</td></tr>
+      <tr><td>surface / surface-hi</td><td><span class="swatch" style="background:#10151c"></span>#10151c · <span class="swatch" style="background:#151c25"></span>#151c25</td><td>panel · vyvýšený panel (modal, dropdown) — nahrazuje bg2/panel/panelHi + 4 ad-hoc</td></tr>
+      <tr><td>ink / ink-2 / ink-3</td><td><span class="swatch" style="background:#e6edf3"></span> <span class="swatch" style="background:#9aa7b4"></span> <span class="swatch" style="background:#66737f"></span></td><td>text primární · sekundární · popisky (ink-3 zesvětlen z #5d6b7a kvůli kontrastu)</td></tr>
+      <tr><td>accent</td><td><span class="swatch" style="background:#5b8def"></span>#5b8def</td><td>hlas systému: interakce, výběr, brand — <strong>už ne stav „běží"</strong></td></tr>
+      <tr><td>state-ok / run / wait / bad</td><td><span class="swatch" style="background:#3fcf8e"></span> <span class="swatch" style="background:#7aa5f8"></span> <span class="swatch" style="background:#f0b429"></span> <span class="swatch" style="background:#ff6b6b"></span></td><td>hotovo · běží (světlejší než accent, ať se odliší) · čeká na tebe · chyba — jediné barvy se smí glow</td></tr>
+      <tr><td>risk-pay / del / push / send</td><td><span class="swatch" style="background:#f0b429"></span> <span class="swatch" style="background:#ff6b6b"></span> <span class="swatch" style="background:#b07cff"></span> <span class="swatch" style="background:#56c4d6"></span></td><td>jediná kategorická paleta, která zůstává — riziko je sémantické. Modely/tooly/kategorie přecházejí na glyf + text.</td></tr>
+    </table>
+
+    <h3 style="margin-top:32px;">Typografie — 8 kroků, minimum 11 px</h3>
+    <div class="card" style="padding: 8px 22px;">
+      <div class="spec-row"><span class="spec-meta">display · 32/1.15 · Geist 650</span><span style="font-size:32px;font-weight:650;letter-spacing:-0.02em;">Dobré ráno. 2 tasky běží.</span></div>
+      <div class="spec-row"><span class="spec-meta">title · 22/1.25 · Geist 600</span><span style="font-size:22px;font-weight:600;letter-spacing:-0.01em;">Běhy &amp; aktivita</span></div>
+      <div class="spec-row"><span class="spec-meta">body · 14/1.6 · Geist 400</span><span style="font-size:14px;">Tester narazil na flaky test v checkout-flow a zaparkoval běh k rannímu review.</span></div>
+      <div class="spec-row"><span class="spec-meta">body-sm · 13/1.5 · Geist 400</span><span style="font-size:13px;color:var(--ink-2);">Sekundární popis karty nebo řádku.</span></div>
+      <div class="spec-row"><span class="spec-meta">num · 26 · Mono 600</span><span style="font-family:var(--mono);font-size:26px;font-weight:600;">$128 <span style="font-size:13px;color:var(--ink-3);font-weight:400;">/ $200</span></span></div>
+      <div class="spec-row"><span class="spec-meta">data · 12 · Mono 400</span><span style="font-family:var(--mono);font-size:12px;color:var(--ink-2);">~/zibby/agents/kurator.agent.md</span></div>
+      <div class="spec-row"><span class="spec-meta">label · 11 · Mono 500 · +0.14em</span><span style="font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3);">Běžící agenti</span></div>
+      <div class="spec-row"><span class="spec-meta">micro · 11 · Mono 400</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink-3);">reset 2 h 11 m · 128k / 200k</span></div>
+    </div>
+
+    <h3 style="margin-top:32px;">Tvar, prostor, hloubka, motion</h3>
+    <table>
+      <tr><th>skupina</th><th>návrh</th></tr>
+      <tr><td>radius</td><td>6 px ovládací prvky a chipy · 10 px panely a modaly · pill jen tečky/avatary. Konec 2/3/4/12 mixu.</td></tr>
+      <tr><td>spacing</td><td>4px mřížka: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48. Panel padding 20, gap mezi panely 20.</td></tr>
+      <tr><td>elevace</td><td>L0 vložené pole (bg + border) · L1 panel (surface + line) · L2 plovoucí (surface-hi + line-hi + měkký stín). Glow není elevace — je to stav.</td></tr>
+      <tr><td>stavy prvků</td><td>hover: border line→line-hi + bg +3 % · focus-visible: 2px accent ring (vždy) · disabled: 45 % opacity · loading: spinner v tlačítku, label zůstává.</td></tr>
+      <tr><td>motion</td><td>160 ms (hover) · 240 ms ease-out (stavové přechody) · pulz 2 s jen run/wait · respektovat prefers-reduced-motion.</td></tr>
+      <tr><td>letter-spacing</td><td>0.14em labely · 0.30em wordmark. Nic jiného.</td></tr>
+    </table>
+
+    <h3 style="margin-top:32px;">Sdílené komponenty HUD ↔ Voice</h3>
+    <p style="max-width:72ch;">Obě plochy budou skládat z téhož: <strong>Panel</strong> (s volitelným <code>live</code> módem = závorky + dech), <strong>Button</strong> (primary / ghost / danger, sm / md), <strong>StateDot + StateChip</strong> (jediná definice stavů, sdílená s RUN_STATE), <strong>RiskTag</strong> (platba/mazání/push/odeslání), <strong>ApprovalCard</strong> (jedna komponenta pro rail, stránku i Voice — jen hustotní varianty), <strong>Meter</strong> (bar bez glow). Voice navíc dostane <strong>StateOrb</strong> se čtyřmi zřetelně odlišnými stavy + error.</p>
+  </section>
+
+  <!-- ════════ 4 · flow ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Zjednodušení flow — kde ubydou kroky</h2>
+    </div>
+    <ul>
+      <li><strong>Schválení akce:</strong> dnes rail karta → „Otevřít Tasky" → stránka → detail. Návrh: rozhodnutí přímo z karty kdekoliv (rail, briefing, voice) — karta vždy nese co/riziko/dopad + Schválit/Zamítnout; detail (diff) na rozkliknutí, ne jako podmínka.</li>
+      <li><strong>Spuštění úlohy:</strong> RunModal chce prompt + projekt + potvrzení. Návrh: poslední použitý projekt předvyplněn, ⌘↵ odešle; „Edit raw SKILL.md" z modalu pryč (vede do Definic).</li>
+      <li><strong>Ranní briefing:</strong> dnes 3 řádky bez akcí → klik vede do detailu. Návrh: každý řádek nese inline akci podle stavu (hotovo→„otevřít PR", zaparkováno→„retry / zahodit", approval→přímo Schválit/Zamítnout). Ráno se celý noční účet vyřídí z jednoho panelu.</li>
+      <li><strong>Hlasový příkaz:</strong> potvrzení rozpoznaného textu („Spouštím Build Feature pro auth-svc — ano?") jako explicitní krok jen u gated akcí; u bezpečných rovnou provést. Po dokončení nabídnout návrat do HUD s kontextem (deep-link na běh).</li>
+    </ul>
+  </section>
+
+  <!-- ════════ 5 · k ověření ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>K ověření — než začnu překreslovat</h2>
+    </div>
+    <div class="verify">
+      <div class="vq"><div><p>Persistentní pravý rail na všech stránkách — je to záměr („periferní vidění velínu"), nebo může být rail jen na Přehledu a jinde se zúžit na tenký stavový proužek?</p><div class="q-where">app.jsx · 340 px na každé obrazovce</div></div></div>
+      <div class="vq"><div><p>Scanlines + mřížka: úplně pryč, nebo zachovat velmi jemnou stopu (jen mřížka, jen na Přehledu/Voice)?</p><div class="q-where">frame.jsx skin „velin"</div></div></div>
+      <div class="vq"><div><p>Skiny zen/balanced/hud a kontexty home/work v datech — mrtvý kód k odstranění, nebo plánovaná funkce (přepínání intenzity velínu)?</p><div class="q-where">frame.jsx · data.jsx</div></div></div>
+      <div class="vq"><div><p>Kategorické barvy modelů (opus fialová / sonnet cyan / haiku zelená) — máš je v hlavě zažité a chceš je držet, nebo smí modely přejít na text-only?</p><div class="q-where">MODEL_C, TOOL_C v 9 souborech</div></div></div>
+      <div class="vq"><div><p>Approval s vysokým rizikem (platba, mazání): stačí výraznější karta, nebo chceš „dvojité potvrzení" (hold-to-confirm / napsat částku)?</p><div class="q-where">approvals.jsx · gate-rules</div></div></div>
+      <div class="vq"><div><p>Voice transcript: má mít plnou historii (scroll / přechod do logu běhu), nebo je efemérnost záměr?</p><div class="q-where">voice.jsx — slice(-3)</div></div></div>
+    </div>
+  </section>
+
+  <div class="footer-note">
+    <span>ZIBBY · design audit · krok 1/3</span>
+    <span>další krok: before/after canvas (HUD Přehled · Approval · Voice stavy)</span>
+  </div>
+
+</div>
+</body>
+</html>

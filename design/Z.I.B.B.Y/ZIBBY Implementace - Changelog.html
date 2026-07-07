@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZIBBY — Implementace auditu · changelog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0b0e13; --surface:#10151c; --surfaceHi:#151c25;
+    --line:rgba(255,255,255,0.08); --lineHi:rgba(255,255,255,0.14);
+    --ink:#e6edf3; --ink2:#9aa7b4; --ink3:#66737f;
+    --accent:#5b8def; --ok:#3fcf8e; --run:#7aa5f8; --wait:#f0b429; --bad:#ff6b6b;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+    --sans:'Geist',-apple-system,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse 110% 70% at 50% -8%, #101722 0%, var(--bg) 56%);
+    color:var(--ink); font-family:var(--sans); line-height:1.6;
+    min-height:100vh; padding:64px 28px 96px;
+  }
+  .wrap{max-width:1080px; margin:0 auto;}
+  .label{font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink3); font-weight:500;}
+  .mono{font-family:var(--mono);}
+  h1{font-size:34px; font-weight:600; letter-spacing:-0.02em; line-height:1.15; margin:14px 0 0;}
+  h2{font-size:18px; font-weight:600; margin:0; letter-spacing:-0.01em;}
+  .lede{color:var(--ink2); font-size:15px; max-width:74ch; margin-top:16px;}
+  .accent{color:var(--accent);} .ok{color:var(--ok);} .wait{color:var(--wait);} .bad{color:var(--bad);} .ink3{color:var(--ink3);} .run{color:var(--run);}
+
+  /* summary strip */
+  .summary{display:flex; gap:14px; flex-wrap:wrap; margin:32px 0 8px;}
+  .stat{flex:1 1 150px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:18px 20px;}
+  .stat .n{font-family:var(--mono); font-size:30px; font-weight:600; line-height:1;}
+  .stat .t{font-family:var(--mono); font-size:11px; color:var(--ink3); margin-top:8px;}
+
+  section{margin-top:48px;}
+  .sec-head{display:flex; align-items:baseline; gap:14px; padding-bottom:14px; border-bottom:1px solid var(--lineHi); margin-bottom:6px;}
+  .sec-head .num{font-family:var(--mono); font-size:13px; color:var(--accent);}
+
+  .row{display:flex; gap:16px; align-items:flex-start; padding:16px 2px; border-bottom:1px solid var(--line);}
+  .prio{font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:0.06em; border-radius:4px; padding:3px 6px; flex:0 0 auto; margin-top:2px;}
+  .p0{color:var(--bad); border:1px solid #ff6b6b44; background:#ff6b6b12;}
+  .p1{color:var(--wait); border:1px solid #f0b42944; background:#f0b42912;}
+  .p2{color:var(--ink3); border:1px solid #66737f44; background:#66737f12;}
+  .body{flex:1; min-width:0;}
+  .body .ti{font-size:14px; font-weight:500; color:var(--ink);}
+  .body .wh{font-family:var(--mono); font-size:11.5px; color:var(--ink3); margin-top:6px; line-height:1.6;}
+  .body .wh .file{color:var(--accent);}
+  .status{font-family:var(--mono); font-size:10.5px; white-space:nowrap; flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:3px 9px 3px 8px; border-radius:999px; margin-top:1px;}
+  .st-done{color:var(--ok); border:1px solid #3fcf8e33; background:#3fcf8e10;}
+  .st-part{color:var(--wait); border:1px solid #f0b42933; background:#f0b42910;}
+  .st-defer{color:var(--ink3); border:1px solid #66737f33; background:#66737f10;}
+  .dot{width:6px; height:6px; border-radius:50%; display:inline-block;}
+
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:40px;}
+  @media (max-width:860px){ .cols{grid-template-columns:1fr;} }
+
+  .defer-box{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:4px 18px; margin-top:8px;}
+  .note{font-family:var(--mono); font-size:11.5px; color:var(--ink3); margin-top:18px; line-height:1.7;}
+  .files{display:flex; flex-wrap:wrap; gap:7px; margin-top:18px;}
+  .chip{font-family:var(--mono); font-size:11px; color:var(--ink2); border:1px solid var(--line); border-radius:6px; padding:4px 9px; background:var(--surfaceHi);}
+  a{color:var(--accent); text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="label">Changelog · implementace auditu do reálného velínu</div>
+  <h1>Audit zapracován do reálných obrazovek.<br /><span class="ok">Foundation → komponenty → klíčové plochy → propagace.</span></h1>
+  <p class="lede">Pracováno odspodu nahoru přesně podle nálezů. Změny jdou přes <strong>tokeny</strong> (<span class="mono">zibby/data.jsx</span>, <span class="mono">zibby/zt.jsx</span>) a <strong>sdílené komponenty</strong> (<span class="mono">shell.jsx</span>, <span class="mono">frame.jsx</span>) — proto se propsaly systémově do celého velínu, ne ručně screen po screenu. Identita (dark butler / JARVIS, klid a elegance) zachována; modernizace jen v rámci auditu.</p>
+
+  <div class="summary">
+    <div class="stat"><div class="n ok">16</div><div class="t">zapracováno</div></div>
+    <div class="stat"><div class="n wait">1</div><div class="t">částečně</div></div>
+    <div class="stat"><div class="n ink3">2</div><div class="t">odloženo</div></div>
+    <div class="stat"><div class="n accent">6</div><div class="t">etap dokončeno</div></div>
+  </div>
+
+  <div class="files">
+    <span class="chip">data.jsx · tokeny</span>
+    <span class="chip">zt.jsx · design system</span>
+    <span class="chip">shell.jsx</span>
+    <span class="chip">frame.jsx</span>
+    <span class="chip">overview.jsx</span>
+    <span class="chip">app.jsx</span>
+    <span class="chip">approvals.jsx</span>
+    <span class="chip">voice.jsx</span>
+    <span class="chip">overview-cards.jsx</span>
+    <span class="chip">skills · agents · integrations · projects · automations</span>
+  </div>
+
+  <div class="cols">
+    <!-- LEVÝ -->
+    <div>
+      <section style="margin-top:40px;">
+        <div class="sec-head"><span class="num">P0</span><h2>Foundation &amp; jádro</h2></div>
+        <div class="row">
+          <span class="prio p0">P0</span>
+          <div class="body"><div class="ti">Barva = stav: kolize stavových a kategorických barev rozdělena</div>
+          <div class="wh"><span class="accent">→ </span>4 stavové barvy (hotovo/běží/čeká/chyba) jen pro stav · akcent <span class="mono">#5b8def</span> je interakce/brand, „běží" má vlastní <span class="run mono">#7aa5f8</span> · <span class="file">data.jsx Z</span>, <span class="file">zt.jsx ZT_STATE</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p0">P0</span>
+          <div class="body"><div class="ti">Approval: 3 nesladěné podoby → jedna karta</div>
+          <div class="wh"><span class="accent">→ </span><span class="mono">ZtApproval</span> (rail / stránka) · vždy CO · ČÍM rizikové · JAKÝ dopad · vysoké riziko = hold-to-confirm · <span class="file">approvals.jsx</span>, <span class="file">overview.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p0">P0</span>
+          <div class="body"><div class="ti">Voice: „poslouchám" ≠ „mluvím", přidán error</div>
+          <div class="wh"><span class="accent">→ </span><span class="mono">ZtOrb</span> — 5 stavů odlišených tvarem pohybu · živý přepis = potvrzení „slyším tě" · error s retry/únikem · <span class="file">voice.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p0">P0</span>
+          <div class="body"><div class="ti">Typografická škála: 23 velikostí → 8 kroků, min 11 px</div>
+          <div class="wh"><span class="accent">→ </span>objekt <span class="mono">T</span> (display→micro) · mono = data, sans = řeč · <span class="file">zt.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="num">P1</span><h2>Systémové sjednocení</h2></div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">Glow na všem → světlo jen na živém</div>
+          <div class="wh"><span class="accent">→ </span><span class="mono">Dot</span> svítí/pulzuje jen u live · <span class="mono">Bar</span> matný · sidebar, badge, navigace odglowovány · <span class="file">shell.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">17+ barev, jedna barva = 6 významů</div>
+          <div class="wh"><span class="accent">→ </span>zůstává jediná kategorická paleta — riziko (<span class="mono">ZT_RISK</span>) · stavy mají 4 vyhrazené barvy · <span class="file">data.jsx</span>, <span class="file">zt.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">5 druhů tlačítek → jeden systém</div>
+          <div class="wh"><span class="accent">→ </span><span class="mono">ZtBtn</span> (primary/ghost/danger · sm/md · hover/focus-visible/disabled/loading) + <span class="mono">ZtHold</span> · <span class="mono">RunBtn/GhostBtn</span> sladěny na radius 6 · <span class="file">zt.jsx</span>, <span class="file">shell.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">Duplikace informací (totéž 3×)</div>
+          <div class="wh"><span class="accent">→ </span>headline nese stav (bez stat řádku) · limity mají jediný domov v railu · <span class="file">overview.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">Pravý rail soupeří s obsahem</div>
+          <div class="wh"><span class="accent">→ </span>rail jen na Přehledu (324 px) jako periferní vidění · jinde tenký stavový proužek (60 px) · <span class="file">app.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">Radius chaos (0/2/3/4/10/12)</div>
+          <div class="wh"><span class="accent">→ </span>6 px ovládací prvky a chipy · 10 px panely a karty · <span class="mono">Z.rCtl / Z.rPanel</span> napříč shell/frame + katalogovými kartami</div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">Povrchy: 5 tokenů + 4 ad-hoc → 3 úrovně</div>
+          <div class="wh"><span class="accent">→ </span>bg / surface / surface-hi · hloubku drží radial gradient pozadí, ne druhé pozadí · <span class="file">data.jsx</span>, <span class="file">frame.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p1">P1</span>
+          <div class="body"><div class="ti">Top bar: absolutní ⌘K koliduje s TASK</div>
+          <div class="wh"><span class="accent">→ </span>search ve flow (flex 0 1 360 px) místo <span class="mono">position:absolute</span> · nepřekrývá se · <span class="file">shell.jsx TopBar</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- PRAVÝ -->
+    <div>
+      <section style="margin-top:40px;">
+        <div class="sec-head"><span class="num">P2</span><h2>Doladění</h2></div>
+        <div class="row">
+          <span class="prio p2">P2</span>
+          <div class="body"><div class="ti">Scanlines + mřížka na každé ploše</div>
+          <div class="wh"><span class="accent">→ </span>odstraněno z HUD i Voice · scénu drží radial gradient + vinětace · <span class="file">frame.jsx Frame</span>, <span class="file">voice.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p2">P2</span>
+          <div class="body"><div class="ti">HUD závorky na každém panelu</div>
+          <div class="wh"><span class="accent">→ </span>rohové závorky jen na živých panelech (<span class="mono">HudPanel live</span>) nebo na hover · jinak signalizovaly nic · <span class="file">frame.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p2">P2</span>
+          <div class="body"><div class="ti">13 hodnot letter-spacingu</div>
+          <div class="wh"><span class="accent">→ </span>jen 2: 0.14em labely · 0.30em wordmark · <span class="file">shell.jsx</span>, <span class="file">zt.jsx T.label</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p2">P2</span>
+          <div class="body"><div class="ti">Voice transcript bez historie</div>
+          <div class="wh"><span class="accent">→ </span>poslední 3 repliky + odkaz „celý přepis v logu běhu" · <span class="file">voice.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p2">P2</span>
+          <div class="body"><div class="ti">Voice: 4 rohové panely soupeří s orbem</div>
+          <div class="wh"><span class="accent">→ </span>jediný kontextový souhrn v top baru (X běží · Y čeká) · klidná scéna · <span class="file">voice.jsx</span></div></div>
+          <span class="status st-done"><span class="dot" style="background:var(--ok)"></span>hotovo</span>
+        </div>
+        <div class="row">
+          <span class="prio p2">P2</span>
+          <div class="body"><div class="ti">Spacing mimo mřížku</div>
+          <div class="wh"><span class="accent">→ </span>panely padding 18–24, gap 20 na 4px mřížce v překreslených plochách (overview / approval / voice)</div></div>
+          <span class="status st-part"><span class="dot" style="background:var(--wait)"></span>částečně</span>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="num">×</span><h2>Nezapracováno · k rozhodnutí</h2></div>
+        <div class="defer-box">
+          <div class="row">
+            <span class="prio p2">P2</span>
+            <div class="body"><div class="ti">Sjednocení jazyka napříč všemi 25 moduly</div>
+            <div class="wh"><span class="accent">→ </span>nové i překreslené komponenty drží CZ; plný průchod + i18n vrstva pro EN technické termíny potřebuje produktové rozhodnutí. Ad-hoc změna by zavedla nové nekonzistence.</div></div>
+            <span class="status st-defer"><span class="dot" style="background:var(--ink3)"></span>odloženo</span>
+          </div>
+          <div class="row">
+            <span class="prio p2">P2</span>
+            <div class="body"><div class="ti">Mrtvý kód: skiny zen/balanced/hud, kontexty home/work</div>
+            <div class="wh"><span class="accent">→ </span>skin v <span class="mono">Frame</span> je nově neutralizován (ignoruje se), <span class="mono">accentOf()</span> vrací jediný akcent. Fyzické smazání dat (FAV_SKILLS_*, větve skinů) je čistka kódu, ne vizuální redesign — mimo rozsah.</div></div>
+            <span class="status st-defer"><span class="dot" style="background:var(--ink3)"></span>odloženo</span>
+          </div>
+          <div class="row" style="border-bottom:none;">
+            <span class="prio p1">P1</span>
+            <div class="body"><div class="ti">Mikro-radius drobných tagů (0/2 → 6) v několika sekundárních místech</div>
+            <div class="wh"><span class="accent">→ </span>katalogové karty, tlačítka, panely a klíčové plochy sjednoceny. Pár nejmenších inline tagů (gate-rules-core, memory, tasks badge) zůstává na 2 px — kosmetika, navazující úklid bez rizika.</div></div>
+            <span class="status st-defer"><span class="dot" style="background:var(--ink3)"></span>odloženo</span>
+          </div>
+        </div>
+
+        <p class="note">
+          <strong style="color:var(--ink2)">Pozn. k rozsahu:</strong> Foundation a sdílené komponenty se propsaly do <em>všech</em> obrazovek velínu (povrchy, barvy, stavy, glow, radius, typografie). Klíčové plochy z auditu — <span class="accent">velín / Přehled</span>, <span class="accent">approval gate</span>, <span class="accent">ranní brífink</span> a <span class="accent">Voice UI</span> — jsou překresleny kompletně. Detailní bespoke polish každé z ~22 sekundárních ploch je navazující práce, ale žádná už není v původním nesjednoceném jazyce.
+        </p>
+        <p class="note">
+          Reálné obrazovky: <a href="ZIBBY Velin.html">ZIBBY Velin.html</a> · <a href="ZIBBY Pravidla schvalování.html">Pravidla schvalování</a> · původní stav archivován v <span class="mono">before/</span>.
+        </p>
+      </section>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
