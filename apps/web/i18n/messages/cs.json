@@ -1689,6 +1689,24 @@
       "allRuns": "Všechny runy",
       "emptyTitle": "Zatím žádná aktivita",
       "emptyDescription": "Tenhle podsystém ještě nespustil žádnou pipeline ani chain. Jakmile poběží, běhy se objeví tady."
+    },
+    "gates": {
+      "sentencePrefix": "Než {subject} udělá",
+      "behavior": {
+        "allow": "prostě to udělá",
+        "notify": "to udělá a nahlásí do aktivity",
+        "ask": "se zeptá",
+        "deny": "to nikdy neudělá"
+      },
+      "sentencesTitle": "Pravidla v mad-libs znění",
+      "sentencesEmptyTitle": "Zatím žádné vlastní pravidlo",
+      "sentencesEmptyDescription": "Tenhle podsystém nemá v katalogu žádné vlastní pravidlo. Přidej ho v katalogu níž.",
+      "autopilotTitle": "Autopilot aktivního projektu",
+      "autopilotNoProject": "Není vybraný žádný aktivní projekt — autopilot nelze zobrazit.",
+      "autopilotNoneSet": "Bez vlastního nastavení — platí jen globální podlaha.",
+      "autopilotCanDoAlone": "Může sám:",
+      "autopilotAlwaysAsk": "Vždy se zeptá:",
+      "autopilotEditLink": "Upravit v profilu projektu"
     }
   },
   "pins": {

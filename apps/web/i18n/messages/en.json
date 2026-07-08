@@ -1689,6 +1689,24 @@
       "allRuns": "All runs",
       "emptyTitle": "No activity yet",
       "emptyDescription": "This subsystem hasn't run a pipeline or chain yet. Once it does, runs will show up here."
+    },
+    "gates": {
+      "sentencePrefix": "Before {subject} does",
+      "behavior": {
+        "allow": "it just does it",
+        "notify": "it does it and logs it to the activity feed",
+        "ask": "it asks",
+        "deny": "it never does it"
+      },
+      "sentencesTitle": "Rules in mad-libs form",
+      "sentencesEmptyTitle": "No rules of its own yet",
+      "sentencesEmptyDescription": "This subsystem has no rule of its own in the catalog yet. Add one in the catalog below.",
+      "autopilotTitle": "Active project's autopilot",
+      "autopilotNoProject": "No active project selected — autopilot can't be shown.",
+      "autopilotNoneSet": "No project-specific policy set — only the global floor applies.",
+      "autopilotCanDoAlone": "Can do alone:",
+      "autopilotAlwaysAsk": "Always asks:",
+      "autopilotEditLink": "Edit in the project profile"
     }
   },
   "pins": {

@@ -25,6 +25,11 @@ vi.mock("./AktivitaTab", () => ({
     <div data-testid="aktivita-tab-stub">{subsystem.id}</div>
   ),
 }));
+vi.mock("./GatesTab", () => ({
+  GatesTab: ({ subsystem }: { subsystem: { id: string } }) => (
+    <div data-testid="gates-tab-stub">{subsystem.id}</div>
+  ),
+}));
 
 function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
   const base = SUBSYSTEMS[0]!;
@@ -148,7 +153,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(screen.getByTestId("aktivita-tab-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Nastavení & Gates" }));
-    expect(screen.getByText("Nastavení & Gates — fáze 87")).toBeInTheDocument();
+    expect(screen.getByTestId("gates-tab-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Artefakty" }));
     expect(screen.getByText("Artefakty — fáze 88")).toBeInTheDocument();

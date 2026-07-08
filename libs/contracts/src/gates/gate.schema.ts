@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * Risk is a property of (action, arguments/target, context), not of an entity —
@@ -158,6 +159,15 @@ const GlobalGateRuleBaseSchema = z.object({
   match: z.array(MatchConditionSchema).min(1),
   decision: DecisionSchema,
   resolve: ResolveSchema.optional(),
+  /**
+   * Optional attribution to a subsystem of the federation (Phase 87, mirrors
+   * `Pipeline.ownerSubsystem` / `Chain.ownerSubsystem` from Phase 81) — the Gates
+   * tab's filter/auto-tag lens over this same global catalog. Attribution ONLY:
+   * the gate evaluation engine (`gate.contract.ts` `evaluate`) never reads this
+   * field, so tagging or untagging a rule can never change what it matches or
+   * decides. Absent is legitimate — untagged rules stay global/unowned.
+   */
+  ownerSubsystem: SubsystemIdSchema.optional(),
 });
 
 /** Body accepted by `createGateRule` / `updateGateRule` — the server assigns the `id`. */
