@@ -1656,6 +1656,18 @@
       "phaseCount": "{count, plural, one {# phase} other {# phases}}"
     }
   },
+  "subsystems": {
+    "ariaLabel": "ZIBBY subsystem web",
+    "state": {
+      "klid": "Idle",
+      "bezi": "Running",
+      "hlaseni": "Report ready",
+      "ceka": "Awaiting decision"
+    },
+    "nodeAria": "{name}, {state}",
+    "tier2Badge": "{count} reports to review",
+    "tier3Badge": "{count} awaiting decision"
+  },
   "pins": {
     "pin": "Pin",
     "unpin": "Unpin",
