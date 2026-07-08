@@ -1,12 +1,19 @@
 import { renderWithProviders as render, screen } from "../../../../test/render";
 import { describe, expect, it } from "vitest";
 import type { Agent } from "@zibby/contracts";
+import { IconTileTestId } from "@zibby/design-system";
 import { PipelineCanvas } from "./PipelineCanvas";
 import type { PipelineGraph } from "./pipeline-graph";
 
 const agents: Agent[] = [
   { id: "writer", name: "Writer", glyph: "edit", instructions: "write" },
   { id: "tester", name: "Tester", glyph: "flask", instructions: "test" },
+];
+
+const AVATAR_SRC = "data:image/png;base64,avatarbytes";
+const agentsWithAvatar: Agent[] = [
+  { ...agents[0]!, avatar: AVATAR_SRC },
+  agents[1]!,
 ];
 
 // Two agent nodes with a rework back-edge from the 2nd to the 1st (a loop).
@@ -67,5 +74,22 @@ describe("PipelineCanvas — readOnly (detail view)", () => {
     );
     // tester is the rework source → maxAttempts = maxRetries + 1 = 3.
     expect(screen.getByText("2/3")).toBeInTheDocument();
+  });
+
+  it("renders the phase agent's avatar as the node's IconTile image, glyph as fallback", () => {
+    render(
+      <PipelineCanvas
+        readOnly
+        agents={agentsWithAvatar}
+        graph={looped}
+        onAddAgent={noop}
+        setGraph={noop}
+      />,
+    );
+    // writer has an avatar → its node shows an IconTile image with that src.
+    const images = screen.getAllByTestId(IconTileTestId.Image);
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute("src", AVATAR_SRC);
+    // tester has no avatar → its node keeps rendering the glyph fallback (no image).
   });
 });
