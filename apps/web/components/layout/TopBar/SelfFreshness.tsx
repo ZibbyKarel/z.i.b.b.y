@@ -9,6 +9,7 @@ import { useSelfStatusQuery, useSelfUpdateMutation } from "../../../features/sel
 export enum SelfFreshnessTestId {
   Root = "self-freshness-root",
   Dot = "self-freshness-dot",
+  Label = "self-freshness-label",
   BehindText = "self-freshness-behind",
   UpdateButton = "self-freshness-update",
   UpdateError = "self-freshness-update-error",
@@ -94,10 +95,23 @@ export function SelfFreshness() {
           <Stack align="center" direction="row" gap="75">
             <StatusDot
               data-testid={SelfFreshnessTestId.Dot}
+              pulse={!status.upToDate}
               tone={status.upToDate ? "ok" : "wait"}
             />
+            <Typography
+              data-testid={SelfFreshnessTestId.Label}
+              tone={status.upToDate ? "ok" : "warn"}
+              type="label"
+            >
+              {status.upToDate ? t("statusCurrent") : t("statusUpgrade")}
+            </Typography>
             {!status.upToDate && (
-              <Typography data-testid={SelfFreshnessTestId.BehindText} size="sm" type="note">
+              <Typography
+                data-testid={SelfFreshnessTestId.BehindText}
+                size="xs"
+                type="note"
+                variant="tertiary"
+              >
                 {t("behind", { count: status.behind })}
               </Typography>
             )}

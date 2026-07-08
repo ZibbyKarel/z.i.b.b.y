@@ -53,8 +53,11 @@ back to `--force`/`reset --hard`:
 `makeInvalidatingMutation`, invalidating the status key on any response.
 
 `apps/web/components/layout/TopBar/SelfFreshness.tsx` — mounted directly in
-`TopBar.tsx` (like `LanguageSwitcher`): a calm ok `StatusDot` when up to date; a
-warn dot + behind-count + "Aktualizovat" button otherwise. Hovering/focusing the
+`TopBar.tsx` (like `LanguageSwitcher`): a calm ok `StatusDot` paired with an
+"Aktuální" label when up to date; a pulsing warn dot + "Upgrade" label +
+behind-count + "Aktualizovat" button otherwise. The label is colour-matched to
+the dot (ok green / warn amber) so the state reads at a glance without hover.
+Hovering/focusing the
 control reveals a popover listing the open PRs as external links
 (`target="_blank" rel="noreferrer"`) straight to GitHub. A 409 from the update
 mutation (ts-rest routes any declared non-2xx status to `onError`, not

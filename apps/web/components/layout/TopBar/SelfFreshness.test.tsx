@@ -42,10 +42,11 @@ describe("SelfFreshness", () => {
     statusRef.value = undefined;
   });
 
-  it("renders a calm state with no behind text or update button when up to date", () => {
+  it("renders a calm state with the 'current' label but no behind text or update button when up to date", () => {
     statusRef.value = UP_TO_DATE;
     renderWithProviders(<SelfFreshness />);
     expect(screen.getByTestId(SelfFreshnessTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(SelfFreshnessTestId.Label)).toHaveTextContent("Aktuální");
     expect(screen.queryByTestId(SelfFreshnessTestId.BehindText)).not.toBeInTheDocument();
     expect(screen.queryByTestId(SelfFreshnessTestId.UpdateButton)).not.toBeInTheDocument();
   });
@@ -56,9 +57,10 @@ describe("SelfFreshness", () => {
     expect(screen.queryByTestId(SelfFreshnessTestId.UpdateButton)).not.toBeInTheDocument();
   });
 
-  it("shows the behind count and an update button that triggers the mutation", () => {
+  it("shows the 'upgrade' label, behind count and an update button that triggers the mutation", () => {
     statusRef.value = BEHIND_WITH_PRS;
     renderWithProviders(<SelfFreshness />);
+    expect(screen.getByTestId(SelfFreshnessTestId.Label)).toHaveTextContent("Upgrade");
     expect(screen.getByTestId(SelfFreshnessTestId.BehindText)).toHaveTextContent(
       "o 3 commitů pozadu",
     );

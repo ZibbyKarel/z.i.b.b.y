@@ -80,6 +80,8 @@
     "showRail": "Zobrazit postranní panel",
     "self": {
       "panelTitle": "Aktuálnost ZIBBY",
+      "statusCurrent": "Aktuální",
+      "statusUpgrade": "Upgrade",
       "upToDate": "ZIBBY je aktuální",
       "behind": "o {count} commitů pozadu",
       "updateButton": "Aktualizovat",
