@@ -38,3 +38,31 @@ describe("GlobalGateRule schema", () => {
     );
   });
 });
+
+// Phase 87: subsystem attribution is optional and additive — existing untagged
+// fixtures above (and every rule on disk today) must keep parsing unchanged.
+describe("GlobalGateRule ownerSubsystem (Phase 87)", () => {
+  const base = {
+    id: "gr-merge",
+    match: [{ type: "action" as const, action: "merge" }],
+    decision: "allow" as const,
+  };
+
+  it("round-trips a tagged rule", () => {
+    const parsed = GlobalGateRuleSchema.safeParse({ ...base, ownerSubsystem: "forge" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.ownerSubsystem).toBe("forge");
+  });
+
+  it("leaves an untagged rule valid, with ownerSubsystem undefined", () => {
+    const parsed = GlobalGateRuleSchema.safeParse(base);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.ownerSubsystem).toBeUndefined();
+  });
+
+  it("rejects an unknown subsystem id", () => {
+    expect(
+      GlobalGateRuleInputSchema.safeParse({ ...base, ownerSubsystem: "not-a-subsystem" }).success,
+    ).toBe(false);
+  });
+});

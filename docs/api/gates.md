@@ -45,7 +45,12 @@ DELETE /api/gate-rules/:id       remove a catalog rule
 ```
 
 A catalog rule (`GlobalGateRule`) is a `GateRuleInput` plus `id` and an optional
-`name`/`desc`. Agents and skills can carry a `gateRuleIds: [...]` field that names
+`name`/`desc`. It also carries an optional `ownerSubsystem` (Phase 87) — pure
+attribution to one of the eight federation subsystems, used only to filter/auto-tag
+the catalog view in a subsystem's Gates tab (the subsystem drawer's "Nastavení &
+Gates" tab). It is **not** a match condition: the evaluation engine described above
+never reads it, so tagging or untagging a rule never changes what it matches or
+decides. Agents and skills can carry a `gateRuleIds: [...]` field that names
 catalog rules by id — but this is **composed on the client** (the web UI reads an
 entity's `gateRuleIds` and renders/edits the referenced catalog rules alongside its
 inline `gates`). The runtime `GateEvaluatorService` does **not** read `gateRuleIds`

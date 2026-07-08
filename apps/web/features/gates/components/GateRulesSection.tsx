@@ -1,6 +1,6 @@
 "use client";
 
-import type { Decision, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
+import type { Decision, GlobalGateRule, GlobalGateRuleInput, SubsystemId } from "@zibby/contracts";
 import { Button, ButtonGroup, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -33,18 +33,35 @@ function moved(ids: string[], id: string, delta: -1 | 1): string[] | null {
   return next;
 }
 
+export interface GateRulesSectionProps {
+  /**
+   * Restricts the visible catalog to rules tagged for this subsystem, and
+   * auto-tags every rule CREATED from this context with it (Phase 87 Gates
+   * tab, its third call site). Absent = today's behavior exactly — the full
+   * catalog, no auto-tag — so the `/gates` page and the Settings tab (this
+   * component's first two call sites) are unaffected by this prop's existence.
+   * Reorder (whose order IS the evaluation order across the WHOLE catalog) is
+   * disabled while filtered, same reasoning as the existing decision filter.
+   */
+  ownerSubsystem?: SubsystemId;
+}
+
 /**
  * The global gate-rule catalog body — the editable list of approval rules with the
- * locked system floor above it. Content only (no page chrome), so it serves both the
- * standalone `/gates` page and the "Pravidla schvalování" tab in Settings. Owns its own
- * data + modal state; `useGateRulesQuery` only fires once this mounts, so the Settings
- * tab loads gate rules lazily (the TabPanel unmounts inactive panels).
+ * locked system floor above it. Content only (no page chrome), so it serves the
+ * standalone `/gates` page, the "Pravidla schvalování" tab in Settings, AND (Phase 87)
+ * a subsystem's Gates tab via `ownerSubsystem`. Owns its own data + modal state;
+ * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
+ * rules lazily (the TabPanel unmounts inactive panels).
  */
-export function GateRulesSection() {
+export function GateRulesSection({ ownerSubsystem }: GateRulesSectionProps = {}) {
   const t = useTranslations("gates");
   const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
-  const rules = rulesQuery.data ?? [];
+  const allRules = rulesQuery.data ?? [];
+  const rules = ownerSubsystem
+    ? allRules.filter((r) => r.ownerSubsystem === ownerSubsystem)
+    : allRules;
   const { data: agents = [] } = useAgentsQuery();
   const { data: skills = [] } = useSkillsQuery();
 
@@ -62,6 +79,10 @@ export function GateRulesSection() {
   const byDecision = (d: Decision) => rules.filter((r) => r.decision === d).length;
   const shown = filter ? rules.filter((r) => r.decision === filter) : rules;
   const ids = rules.map((r) => r.id);
+  // Reordering submits a full-catalog id permutation (`GateRulesStorageService.reorder`
+  // 422s on anything else) — `ids` above is only the FILTERED subset once
+  // `ownerSubsystem` is set, so reorder must stay off exactly like the decision filter.
+  const canReorder = filter === null && !ownerSubsystem;
 
   const usersFor = (ruleId: string): { agents: RuleUser[]; skills: RuleUser[] } => ({
     agents: agents
@@ -83,9 +104,19 @@ export function GateRulesSection() {
 
   const save = (input: GlobalGateRuleInput) => {
     const done = { onSuccess: () => setEditing(null) };
-    if (editing && editing !== "new")
-      update.mutate({ params: { id: editing.id }, body: input }, done);
-    else create.mutate({ body: input }, done);
+    if (editing && editing !== "new") {
+      // RuleModal's form has no ownerSubsystem field (the sentence-builder
+      // AUTHORING UI is deferred, per the Phase 87 plan) — its `input` never
+      // carries the tag, so an edit must re-attach whatever tag the rule
+      // already had or saving would silently un-tag it.
+      const body = editing.ownerSubsystem
+        ? { ...input, ownerSubsystem: editing.ownerSubsystem }
+        : input;
+      update.mutate({ params: { id: editing.id }, body }, done);
+    } else {
+      const body = ownerSubsystem ? { ...input, ownerSubsystem } : input;
+      create.mutate({ body }, done);
+    }
   };
 
   return (
@@ -145,7 +176,7 @@ export function GateRulesSection() {
             return (
               <GlobalRuleCard
                 agents={users.agents}
-                canReorder={filter === null}
+                canReorder={canReorder}
                 isFirst={idx === 0}
                 isLast={idx === ids.length - 1}
                 key={rule.id}
