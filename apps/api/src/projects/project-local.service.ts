@@ -5,7 +5,11 @@ import type { Project, ProjectLocalState } from "@zibby/contracts";
 import { MachineConfigStore } from "../machine/machine-config.store";
 import { ensureDir } from "../shared/file-storage";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { ProjectAlreadyClonedError, ProjectNoRemoteError } from "./projects.errors";
+import {
+  ProjectAlreadyClonedError,
+  ProjectLocalUnresolvedError,
+  ProjectNoRemoteError,
+} from "./projects.errors";
 
 /**
  * Phase 76 — per-machine resolution of where a project's working dir actually
@@ -75,6 +79,39 @@ export class ProjectLocalService {
     await ensureDir(state.cloneRoot);
     await this.workspace.clone(project.gitRemote, dest);
     return this.resolve(project);
+  }
+
+  /**
+   * Phase 77 — resolve the path a RUN (agent/goal/pipeline dispatch) should use
+   * for `project` on THIS machine, cloning into `cloneRoot` when absent and a
+   * `gitRemote` is configured. Returns:
+   *
+   * - `{ path: state.resolvedPath, isGitRepo: true }` when already present
+   *   (`path` or a prior `cloneRoot` clone) — the caller cuts a worktree.
+   * - the same shape, freshly cloned, when absent but `gitRemote` is set.
+   * - `{ path: project.path, isGitRepo: false }` when absent, with no
+   *   `gitRemote`, but `project.path` exists as an ordinary (non-git) folder —
+   *   the pre-Phase-76 "non-git project" posture (direct checkout, no
+   *   worktree), unaffected by the clone machinery.
+   *
+   * Throws {@link ProjectLocalUnresolvedError} only when NONE of the above
+   * resolve — nothing on this machine to run against, and nothing to clone.
+   */
+  async resolveForRun(project: Project): Promise<{ path: string; isGitRepo: boolean }> {
+    const state = await this.resolve(project);
+    if (state.present) {
+      // `present` only when resolve() found a real path — non-null by construction.
+      return { path: state.resolvedPath as string, isGitRepo: true };
+    }
+    if (project.gitRemote) {
+      const cloned = await this.clone(project);
+      return { path: cloned.resolvedPath as string, isGitRepo: true };
+    }
+    const stat = await fs.stat(project.path).catch(() => null);
+    if (stat?.isDirectory()) {
+      return { path: project.path, isGitRepo: false };
+    }
+    throw new ProjectLocalUnresolvedError(project.id);
   }
 
   /** `dir` exists, is a directory, and is a git work tree — tolerant of ENOENT. */

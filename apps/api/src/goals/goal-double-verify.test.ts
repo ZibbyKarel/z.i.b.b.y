@@ -34,6 +34,7 @@ function makeService(pipelineRun: { verifyCommands?: string[] } | "throw"): Goal
     logger,
     null as never, // trace
     fakeSystemConfigStore(),
+    null as never, // projectLocal
   );
 }
 

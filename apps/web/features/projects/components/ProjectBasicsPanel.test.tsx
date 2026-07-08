@@ -123,3 +123,50 @@ describe("ProjectBasicsPanel dollar caps (Phase 12)", () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ budget: undefined }));
   });
 });
+
+describe("ProjectBasicsPanel gitRemote field (Phase 77)", () => {
+  it("seeds the field from the existing project", () => {
+    render(
+      <ProjectBasicsPanel
+        categories={[]}
+        isNew={false}
+        onSave={vi.fn()}
+        project={{
+          id: "alpha",
+          name: "Alpha",
+          path: "~/Projects/alpha",
+          gitRemote: "git@github.com:acme/alpha.git",
+        }}
+      />,
+    );
+    expect(screen.getByDisplayValue("git@github.com:acme/alpha.git")).toBeInTheDocument();
+  });
+
+  it("starts empty for a new project and submits undefined when left blank", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ gitRemote: undefined }));
+  });
+
+  it("includes the trimmed gitRemote in the saved body", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
+    await userEvent.type(
+      screen.getByPlaceholderText("git@github.com:org/repo.git"),
+      "  git@github.com:acme/alpha.git  ",
+    );
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ gitRemote: "git@github.com:acme/alpha.git" }),
+    );
+  });
+});

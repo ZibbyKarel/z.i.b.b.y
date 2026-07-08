@@ -868,6 +868,12 @@
       "goalAutoResumeHint": "Enable for unattended (launchd) mode — running/limit-paused goals re-dispatch on restart. Off = they park and wait for approval (Law 3).",
       "save": "Save"
     },
+    "machine": {
+      "title": "Machine",
+      "cloneRootLabel": "Clone root",
+      "cloneRootHint": "Where ZIBBY clones a project on this machine when it isn't already present locally (root/project id). This setting is per-machine and never syncs between machines.",
+      "save": "Save"
+    },
     "selfKnowledge": {
       "title": "Self-Knowledge",
       "hint": "A machine-generated note of what ZIBBY knows about itself — agents, pipelines, gate rules, channels. Produced by `pnpm self-knowledge:generate`; this is a read-only preview. The same note is also visible in Memory as an ordinary vault note.",
@@ -1232,6 +1238,8 @@
       "path": "Root path",
       "pathHint": "On the host system.",
       "pathPlaceholder": "~/Projects/media-vault",
+      "gitRemote": "Git remote",
+      "gitRemoteHint": "Git remote URL — where ZIBBY clones the project from on another machine.",
       "category": "Category",
       "desc": "Description",
       "descPlaceholder": "What the project is about",
@@ -1266,6 +1274,14 @@
       "envValue": "Value",
       "secretsKey": "Key",
       "secretsValue": "Value"
+    },
+    "localState": {
+      "missingTitle": "Project isn't cloned on this machine",
+      "missingBody": "The project's path doesn't exist on this machine. ZIBBY will clone it into {target}.",
+      "needRemote": "Set a git remote in the project's basics first.",
+      "cloneButton": "Clone",
+      "clonedFromCloneRoot": "local: cloneRoot",
+      "cloning": "Cloning…"
     },
     "categoryDialog": {
       "title": "New category",

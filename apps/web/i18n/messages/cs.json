@@ -868,6 +868,12 @@
       "goalAutoResumeHint": "Zapni pro bezobslužný (launchd) režim — běžící/limitem pozastavené cíle se po restartu samy znovu rozjedou. Vypnuto = parkují a čekají na schválení (Law 3).",
       "save": "Uložit"
     },
+    "machine": {
+      "title": "Stroj",
+      "cloneRootLabel": "Kořen klonů",
+      "cloneRootHint": "Kam ZIBBY na tomto stroji klonuje projekty, které tu ještě nemají lokální kopii (kořen/id projektu). Toto nastavení je per-stroj a nikdy se nesynchronizuje mezi stroji.",
+      "save": "Uložit"
+    },
     "selfKnowledge": {
       "title": "Self-Knowledge",
       "hint": "Strojově generovaná poznámka o tom, co ZIBBY o sobě ví — agenti, pipeliny, gate pravidla, kanály. Vytváří se příkazem `pnpm self-knowledge:generate`; tady je jen náhled pro čtení. Stejná poznámka je vidět i v Paměti jako běžná vault poznámka.",
@@ -1232,6 +1238,8 @@
       "path": "Cesta k rootu",
       "pathHint": "Na hostitelském systému.",
       "pathPlaceholder": "~/Projects/media-vault",
+      "gitRemote": "Git remote",
+      "gitRemoteHint": "Git remote URL — odkud ZIBBY projekt naklonuje na dalším stroji.",
       "category": "Kategorie",
       "desc": "Popis",
       "descPlaceholder": "Čím se projekt zabývá",
@@ -1266,6 +1274,14 @@
       "envValue": "Hodnota",
       "secretsKey": "Klíč",
       "secretsValue": "Hodnota"
+    },
+    "localState": {
+      "missingTitle": "Projekt není na tomto stroji naklonovaný",
+      "missingBody": "Cesta projektu na tomto stroji neexistuje. ZIBBY ho naklonuje do {target}.",
+      "needRemote": "Nejdřív nastav git remote v základních údajích projektu.",
+      "cloneButton": "Klonovat",
+      "clonedFromCloneRoot": "lokálně: cloneRoot",
+      "cloning": "Klonuji…"
     },
     "categoryDialog": {
       "title": "Nová kategorie",

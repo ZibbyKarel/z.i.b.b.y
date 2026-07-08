@@ -27,6 +27,7 @@ function makeService(goalVerifyTimeoutMs = 200): GoalRunnerService {
     logger,
     null as never, // trace
     fakeSystemConfigStore({ goalVerifyTimeoutMs }),
+    null as never, // projectLocal
   );
 }
 
