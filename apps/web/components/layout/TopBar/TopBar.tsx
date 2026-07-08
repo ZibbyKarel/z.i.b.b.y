@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { GlobalSearch } from "../GlobalSearch/GlobalSearch";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
+import { SelfFreshness } from "./SelfFreshness";
 
 export enum TopBarTestId {
   RailToggle = "topbar-rail-toggle",
@@ -50,6 +51,7 @@ export function TopBar({
           </Container>
           {chatSlot}
           {taskSlot}
+          <SelfFreshness />
           <LanguageSwitcher />
           {onToggleRail && (
             <Button

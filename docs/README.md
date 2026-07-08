@@ -68,6 +68,7 @@ my channels and handle what you can."
 
 - [Monitors](./api/monitors.md) — CI/CD status alerts
 - [Health](./api/health.md) — subsystem health probes
+- [Self](./api/self.md) — is the ZIBBY install itself up to date (top-bar freshness)
 - [System config](./api/system.md) — file-backed runtime configuration
 - [Pins](./api/pins.md) — the Overview page's quick-launch panel
 

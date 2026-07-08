@@ -77,7 +77,16 @@
     "commandPlaceholder": "Command or skill…",
     "langSwitcherLabel": "Interface language",
     "hideRail": "Hide side panel",
-    "showRail": "Show side panel"
+    "showRail": "Show side panel",
+    "self": {
+      "panelTitle": "ZIBBY freshness",
+      "upToDate": "ZIBBY is up to date",
+      "behind": "{count} commits behind",
+      "updateButton": "Update",
+      "updateFailed": "Update failed",
+      "openPrCount": "{count, plural, one {# open PR} other {# open PRs}}",
+      "noOpenPrs": "no open PRs"
+    }
   },
   "tasks": {
     "triggerLabel": "TASK",
