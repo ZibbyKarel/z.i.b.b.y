@@ -39,6 +39,7 @@ import { usePinsQuery } from "../../pins";
 import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { ProjectSwitcher } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
+import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { SubsystemWeb } from "../../subsystems/components/SubsystemWeb/SubsystemWeb";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
@@ -322,6 +323,10 @@ export function ChatScreen({
   // render the subsystem's detail alongside the transcript.
   const { data: subsystems } = useSubsystemsQuery();
   const [selectedSubsystemId, setSelectedSubsystemId] = useState<SubsystemId | null>(null);
+  // Resolved against the live status list so the drawer always shows fresh
+  // state/counts (Phase 84) — a dangling id (the polled list momentarily
+  // dropping an entry) just renders nothing rather than stale data.
+  const selectedSubsystem = subsystems?.find((s) => s.id === selectedSubsystemId) ?? null;
 
   // Dispatch signal (Tier 5): each new `tool` event naming an agent bumps a seq the
   // scene fires the beam/flare on. Seen callIds are tracked so the two-phase
@@ -473,6 +478,20 @@ export function ChatScreen({
             <ChatTasksPanel />
           </div>
         </div>
+
+        {/* ── Subsystem drawer (Phase 84) ──────────────────────────────
+            An inline panel over the chat, never a page navigation — docked
+            right of the transcript on lg+ (chat stays interactive to its
+            left), a full-width sheet below lg (PROVISIONAL, see the drawer's
+            own doc comment). Selecting a subsystem in the web above swaps
+            this drawer's content rather than opening a second one. */}
+        {selectedSubsystem && (
+          <SubsystemDrawer
+            onClose={() => setSelectedSubsystemId(null)}
+            subsystem={selectedSubsystem}
+          />
+        )}
+
         <div
           className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
