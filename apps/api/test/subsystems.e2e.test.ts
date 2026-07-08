@@ -66,4 +66,16 @@ describe("Subsystems API (e2e)", () => {
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty("message");
   });
+
+  it("POST /api/subsystems/:id/seen acknowledges and returns the refreshed entry", async () => {
+    const res = await request(app.getHttpServer()).post("/api/subsystems/forge/seen").send({});
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: "forge", state: "klid", tier2Count: 0, tier3Count: 0 });
+  });
+
+  it("POST /api/subsystems/:id/seen 404s on an unknown id", async () => {
+    const res = await request(app.getHttpServer()).post("/api/subsystems/nope/seen").send({});
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty("message");
+  });
 });
