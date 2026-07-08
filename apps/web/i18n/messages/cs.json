@@ -1684,6 +1684,11 @@
     "roster": {
       "emptyTitle": "Zatím žádná pipeline",
       "emptyDescription": "Tenhle podsystém si zatím nevlastní žádnou pipeline. Vytvoř první — rovnou s ním jako vlastníkem."
+    },
+    "aktivita": {
+      "allRuns": "Všechny runy",
+      "emptyTitle": "Zatím žádná aktivita",
+      "emptyDescription": "Tenhle podsystém ještě nespustil žádnou pipeline ani chain. Jakmile poběží, běhy se objeví tady."
     }
   },
   "pins": {

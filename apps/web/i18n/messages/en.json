@@ -1684,6 +1684,11 @@
     "roster": {
       "emptyTitle": "No pipeline yet",
       "emptyDescription": "This subsystem doesn't own a pipeline yet. Create the first one — with it as owner from the start."
+    },
+    "aktivita": {
+      "allRuns": "All runs",
+      "emptyTitle": "No activity yet",
+      "emptyDescription": "This subsystem hasn't run a pipeline or chain yet. Once it does, runs will show up here."
     }
   },
   "pins": {
