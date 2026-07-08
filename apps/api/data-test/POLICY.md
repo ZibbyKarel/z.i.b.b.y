@@ -36,15 +36,6 @@ policy:
     decision: ask
     resolve:
       type: human
-  - id: floor-pr.open
-    source: system
-    locked: true
-    match:
-      - type: action
-        action: pr.open
-    decision: ask
-    resolve:
-      type: human
   - id: floor-gh.api_write
     source: system
     locked: true

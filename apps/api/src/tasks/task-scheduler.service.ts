@@ -1026,21 +1026,26 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       if (existing.outcome || existing.status === "awaiting-output") return;
       const summary = await this.agentRunSummary(run.runId);
       // A successful run with a chosen `pr`/`file` output runs its terminal sink first.
-      // A `pr` sink that parks defers the outcome to the gate resolution → stop here.
+      // A `pr` sink opens the PR immediately (Tier-2, no gate) and hands back the PR
+      // note + structured result to fold into the outcome we write here.
+      let outcomeSummary = summary;
+      let pr: TaskOutcome["pr"];
       if (run.status === "done") {
-        const parked = await this.taskOutput.handleTerminal(existing, run, summary);
-        if (parked) return;
+        const delivery = await this.taskOutput.handleTerminal(existing, run, summary);
+        if (delivery?.summary) outcomeSummary = delivery.summary;
+        if (delivery?.pr) pr = delivery.pr;
       }
       const status = run.status === "done" ? "done" : "error";
       const task = await this.storage.writeOutcome(taskId, {
         status,
-        summary,
+        summary: outcomeSummary,
         finishedAt: new Date().toISOString(),
+        ...(pr ? { pr } : {}),
       });
       this.log.info("task outcome written", { taskId, runRef: run.runId, status: run.status });
       void this.activity.record({
         kind: "task-outcome",
-        summary: `task ${status}${summary ? `: ${summary}` : ""}`,
+        summary: `task ${status}${outcomeSummary ? `: ${outcomeSummary}` : ""}`,
         refs: {
           taskId,
           runRef: run.runId,
@@ -1062,8 +1067,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     if (run.status !== "done" && run.status !== "failed") return;
     const outcome: TaskOutcome = {
       status: run.status === "done" ? "done" : "error",
-      summary: `${run.stageRuns.length} stages, ${run.status}`,
+      // A `pr` output opened a PR (Tier-2, no gate) → surface the url as the summary and
+      // carry the structured result so the run detail renders the link + line totals.
+      summary: run.prOutput
+        ? `PR otevřen: ${run.prOutput.url}`
+        : `${run.stageRuns.length} stages, ${run.status}`,
       finishedAt: new Date().toISOString(),
+      ...(run.prOutput ? { pr: run.prOutput } : {}),
     };
     try {
       const task = await this.storage.writeOutcome(taskId, outcome);

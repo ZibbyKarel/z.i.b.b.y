@@ -370,6 +370,31 @@ describe("RunDetail — task output", () => {
     expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
   });
 
+  const doneWithPrOutput: RunView = {
+    ...doneWithPr,
+    prOutput: { url: "https://github.com/acme/app/pull/42", additions: 12, deletions: 3 },
+  };
+
+  it("PR output: renders just the PR link and coloured +/− line totals", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderDetail(doneWithPrOutput);
+    expect(screen.getByTestId("pr-additions")).toHaveTextContent("+12");
+    expect(screen.getByTestId("pr-deletions")).toHaveTextContent("−3");
+    await userEvent.click(screen.getByTestId("open-pr"));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://github.com/acme/app/pull/42",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    openSpy.mockRestore();
+  });
+
+  it("PR output: shows only the link + totals — no legacy summary/open-output/continue", () => {
+    renderDetail(doneWithPrOutput);
+    expect(screen.queryByTestId("open-output")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
+  });
+
   it("surfaces a done pipeline run's PR draft as its output and offers continue", async () => {
     openNewTask.mockClear();
     renderDetail({ ...pipelineRun, status: "done", taskOutcome: "done" });

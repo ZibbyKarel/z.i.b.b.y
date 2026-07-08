@@ -274,4 +274,29 @@ export class WorkspaceService {
       .catch(() => "");
     return [commits, stat].filter(Boolean).join("\n\n");
   }
+
+  /**
+   * The branch-vs-base line-change totals — summed `git diff --numstat` added/deleted
+   * columns (binary files show `-`/`-` and are skipped). The coloured `+X / −Y` the run
+   * detail's PR output surface renders. Best-effort: any git failure yields `{0, 0}`.
+   */
+  async diffStats(opts: {
+    worktreePath: string;
+    baseRef: string;
+  }): Promise<{ additions: number; deletions: number }> {
+    const out = await exec("git", ["diff", "--numstat", `${opts.baseRef}...HEAD`], {
+      cwd: opts.worktreePath,
+      timeout: GIT_TIMEOUT_MS,
+    })
+      .then((r) => r.stdout)
+      .catch(() => "");
+    let additions = 0;
+    let deletions = 0;
+    for (const line of out.split(/\r?\n/)) {
+      const [add, del] = line.split("\t");
+      if (add && add !== "-") additions += Number.parseInt(add, 10) || 0;
+      if (del && del !== "-") deletions += Number.parseInt(del, 10) || 0;
+    }
+    return { additions, deletions };
+  }
 }

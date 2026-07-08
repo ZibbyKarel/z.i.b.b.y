@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { AgentRun, ScheduledTask, TaskOutput } from "@zibby/contracts";
+import type { AgentRun, PrOutput, ScheduledTask, TaskOutput } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
@@ -11,23 +11,30 @@ import { WorkspaceService } from "../workspace/workspace.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 
 /**
- * The directed-task counterpart of the pipeline `outputs:` gate — what happens to an
+ * What a terminal output sink delivered, folded into the task outcome by the caller: a
+ * `summary` override (the PR note replaces the run's last log line) and/or the
+ * structured `pr` result the run detail renders. `null` from {@link
+ * TaskOutputService.handleTerminal} means nothing to fold — write the normal outcome.
+ */
+export interface TaskTerminalDelivery {
+  summary?: string;
+  pr?: PrOutput;
+}
+
+/**
+ * The directed-task counterpart of the pipeline `outputs:` sink — what happens to an
  * agent/orchestrator task's finished work, when the operator chose a `pr` or `file`
- * output in the New Task dialog. Deterministic and system-owned (no agent, no
- * tokens); the output side of "PR je brána".
+ * output in the New Task dialog. Deterministic and system-owned (no agent, no tokens).
  *
- * It lives at the task layer on purpose: the durable substrate the gate needs already
- * exists here. The {@link ScheduledTask} record is persisted per-id and rehydrated on
- * boot, approvals are durable on disk, and the run already finished — so a task parked
- * at the PR gate (`status: "awaiting-output"`) survives a restart for free, with no
- * reconstruct code. Agent runs have no durable post-run park of their own; this is why
- * the gate is NOT in the runner.
+ * `pr` output is Tier-2 (act-then-report): the PR is opened immediately when the run
+ * finishes — no approval gate. The work is committed system-owned (`checkpoint` —
+ * `git add -A && commit`, agent-independent), then pushed and `gh pr create`d from the
+ * repo dir, and the url + branch line-totals land on the task outcome's `pr`. This is
+ * the north-star's "open a PR for a fix" Tier-2 action, not the Tier-3 "PR je brána".
  *
- * commit ≠ push. The work is committed at terminal-`done` while the worktree is
- * provably alive (`checkpoint` — system-owned `git add -A && commit`, agent
- * independent). Only the branch name + repo dir are captured onto `pendingOutput`; the
- * push + `gh pr create` run at approval time from the repo dir, against a branch ref
- * that outlives a reaped worktree.
+ * The legacy `awaiting-output` gate resolution ({@link resolve}) is retained so any
+ * task parked on disk from before this change still resolves; new PR outputs never
+ * park.
  */
 @Injectable()
 export class TaskOutputService implements OnModuleInit {
@@ -57,30 +64,35 @@ export class TaskOutputService implements OnModuleInit {
   }
 
   /**
-   * Called when an agent/orchestrator task's run reaches terminal `done`. Returns
-   * `true` when it PARKED the task at the PR gate — the caller must then NOT write the
-   * normal outcome (the gate resolution writes it). Returns `false` when there was
-   * nothing to gate (no chosen output, `void`, a `file` delivered inline, or a `pr`
-   * that degraded to a soft no-op) and the caller should write the outcome as usual.
-   * Never throws — a sink failure must not strand the task's terminal write-back.
+   * Called when an agent/orchestrator task's run reaches terminal `done`. Runs the
+   * chosen output sink and returns a {@link TaskTerminalDelivery} the caller folds into
+   * the outcome it writes: a `summary` override (the PR note) and/or the structured
+   * `pr` result. Returns `null` when there was nothing to deliver — no chosen output,
+   * `void`, a `file` written inline, or a `pr` that degraded to a soft no-op — and the
+   * caller writes the normal outcome. Never throws; a sink failure must not strand the
+   * task's terminal write-back.
    */
-  async handleTerminal(task: ScheduledTask, run: AgentRun, summary: string): Promise<boolean> {
+  async handleTerminal(
+    task: ScheduledTask,
+    run: AgentRun,
+    summary: string,
+  ): Promise<TaskTerminalDelivery | null> {
     const output = task.output;
     // Absent = inherit (agent/orchestrator inherit "no terminal delivery"); `void` =
     // explicit suppression. Both fall through to the normal outcome write-back.
-    if (!output || output.type === "void") return false;
+    if (!output || output.type === "void") return null;
     try {
       if (output.type === "file") {
         await this.deliverFile(task, run, output, summary);
-        return false; // Tier-1, delivered now; the normal outcome still follows
+        return null; // Tier-1, delivered inline; the normal outcome still follows
       }
-      return await this.parkOnPr(task, run, summary);
+      return await this.openPrNow(task, run, summary);
     } catch (error) {
       this.log.warn("task output sink failed (soft) — writing outcome as usual", {
         taskId: task.id,
         err: error instanceof Error ? error.message : String(error),
       });
-      return false;
+      return null;
     }
   }
 
@@ -131,15 +143,21 @@ export class TaskOutputService implements OnModuleInit {
   }
 
   /**
-   * Commit the run's branch and park the task at the PR gate. Returns `true` (parked)
-   * once the `task-output` approval exists; `false` when there is nothing to open a PR
-   * for (no worktree, or no commits on the branch) — a soft no-op, not a crash.
+   * Commit the run's branch and open the PR immediately (Tier-2 — no gate). Returns the
+   * {@link TaskTerminalDelivery} (the PR note + structured `pr` result) on success, and
+   * `null` when there is nothing to open a PR for (no worktree, or no commits on the
+   * branch) — a soft no-op, not a crash. A failed push is also soft: the work is
+   * committed on the branch and safe, so it returns a note-only delivery.
    */
-  private async parkOnPr(task: ScheduledTask, run: AgentRun, summary: string): Promise<boolean> {
+  private async openPrNow(
+    task: ScheduledTask,
+    run: AgentRun,
+    summary: string,
+  ): Promise<TaskTerminalDelivery | null> {
     const ws = run.workspace;
     if (!ws) {
       this.log.warn("pr output skipped — run has no git worktree", { taskId: task.id });
-      return false;
+      return null;
     }
     // System-owned commit of whatever the agent left uncommitted — so the PR is never
     // empty because a lone agent edited files without committing (commit ≠ push).
@@ -149,37 +167,37 @@ export class TaskOutputService implements OnModuleInit {
       this.log.info("pr output skipped — no commits on the branch to open a PR for", {
         taskId: task.id,
       });
-      return false;
+      return null;
     }
 
-    // Push at approval time from the repo dir (the branch ref outlives a reaped
-    // worktree). Prefer the registered project's path; fall back to the worktree.
+    // Push from the repo dir (the branch ref outlives a reaped worktree). Prefer the
+    // registered project's path; fall back to the worktree.
     const project = task.projectId
       ? await this.projects.get(task.projectId).catch(() => null)
       : null;
     const repoPath = project?.path ?? ws.path;
 
-    const diffstat = await this.workspace.diffstat({ worktreePath: ws.path, baseRef: ws.baseRef });
+    const stats = await this.workspace.diffStats({ worktreePath: ws.path, baseRef: ws.baseRef });
     const title = (task.title?.trim() || firstLine(summary) || ws.branch).slice(0, 120);
-    const body = [summary.trim(), diffstat.trim()].filter(Boolean).join("\n\n");
 
-    const approval = await this.approvals.requestApproval({
-      runId: task.id,
-      kind: "task-output",
-      skill: "zibby",
-      action: "pr.open",
-      detail: `Otevřít PR z ${ws.branch}${title ? ` — ${title}` : ""}`,
-      risk: "medium",
-    });
-    await this.storage.markAwaitingOutput(task.id, {
+    const result = await this.workspace.openPr({
+      cwd: repoPath,
       branch: ws.branch,
-      repoPath,
-      approvalId: approval.id,
       title,
-      body,
+      body: summary.trim(),
     });
-    this.log.info("task parked at PR output gate", { taskId: task.id, branch: ws.branch });
-    return true;
+    if (!result) {
+      this.log.warn("pr output push failed (soft) — work is committed on the branch and safe", {
+        taskId: task.id,
+        branch: ws.branch,
+      });
+      return { summary: "PR push selhal (soft) — práce je commitnutá na branchi a bezpečná" };
+    }
+    this.log.info("task PR opened", { taskId: task.id, branch: ws.branch, url: result.url });
+    return {
+      summary: `PR otevřen: ${result.url}`,
+      pr: { url: result.url, additions: stats.additions, deletions: stats.deletions },
+    };
   }
 
   /**

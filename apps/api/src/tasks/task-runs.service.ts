@@ -554,6 +554,9 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     taskOutcomeSummary: task.outcome?.summary,
     taskOutcomeFinishedAt: task.outcome?.finishedAt,
     taskOutputKind: task.output?.type,
+    // The structured PR result (url + line totals) when the task's `pr` output opened a
+    // PR — what makes the detail render the compact link + coloured `+/−` surface.
+    ...(task.outcome?.pr ? { prOutput: task.outcome.pr } : {}),
     attachments: task.attachments,
     // Phase 65: carried alongside `attachments` so the detail can build the
     // open-file serve URL (`GET /api/tasks/attachments/:setId/:name`).

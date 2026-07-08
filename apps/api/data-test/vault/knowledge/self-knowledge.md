@@ -39,9 +39,9 @@ _Generated: 2026-07-06T00:05:21.610Z_
 <!-- AUTO:PIPELINES:END -->
 
 <!-- AUTO:GATES:START -->
-## Gate rules (18)
+## Gate rules (17)
 
-### System floor (locked, 13)
+### System floor (locked, 12)
 - `floor-agent.propose_new`: action=agent.propose_new → **ask**
 - `floor-channel-reply`: action=channel-reply → **notify**
 - `floor-delete`: action=delete → **ask**
@@ -51,7 +51,6 @@ _Generated: 2026-07-06T00:05:21.610Z_
 - `floor-jira.create_issue`: action=jira.create_issue → **ask**
 - `floor-payment`: action=payment → **ask**
 - `floor-pr.merge`: action=pr.merge → **deny**
-- `floor-pr.open`: action=pr.open → **ask**
 - `floor-purchase`: action=purchase → **ask**
 - `floor-send_email`: action=send_email → **ask**
 - `floor-spend-past-cap`: action=spend-past-cap → **ask**

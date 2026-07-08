@@ -80,9 +80,12 @@ const ASK_FLOOR_ACTIONS = [
   "payment",
   "git.force_push",
   "git.push",
-  "pr.open",
+  // `pr.open` is deliberately NOT on the floor: opening a PR is Tier-2 (act-then-report)
+  // — the north-star's "open a PR for a fix" — so it runs autonomously. The raw
+  // `git.push` / `git.force_push` it rides still gate, and `pr.merge` is a locked deny;
+  // publishing a PR is the one outbound git step ZIBBY takes without asking.
   // Fáze 17.1: the generic bucket for a mutating `gh api …` call that isn't the
-  // more specific `pr.merge`/`pr.open` REST shapes (see `classifyGhApi` in
+  // more specific `pr.merge` REST shape (see `classifyGhApi` in
   // `claude-approval-hook.mjs`) — unknown effect, so it defaults to `ask`, never
   // silently allowed. `action` is a free string in the approval/gate contracts, so
   // this new kind needed no schema change — only this floor rule.

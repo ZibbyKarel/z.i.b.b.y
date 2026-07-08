@@ -1079,11 +1079,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Deliver the pipeline's outputs (terminal sinks) starting at `from`. `file` sinks
-   * run immediately (deterministic, Tier-1); a `pr` sink parks the whole run on the PR
-   * gate and returns — it resumes here at the same index when approved. Once every
-   * output is delivered the run finishes `done`. Outputs are post-chain delivery: a
-   * failed sink is logged, never fails the (already-green) run — the branch work is
-   * committed and safe.
+   * run immediately (deterministic, Tier-1); a `pr` sink opens the PR immediately too
+   * (Tier-2 — act-then-report, no gate) and records its url + line totals on the run.
+   * Once every output is delivered the run finishes `done`. Outputs are post-chain
+   * delivery: a failed sink is logged, never fails the (already-green) run — the branch
+   * work is committed and safe.
    */
   private async runOutputs(
     run: PipelineRun,
@@ -1096,8 +1096,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const output = outputs[i];
       if (!output) continue;
       if (output.type === "pr") {
-        await this.parkOnPrOutput(run, pipeline, output, i, phaseIds);
-        return; // the run is parked; it resumes at index i on approval
+        await this.openPrOutput(run, pipeline, output);
+        continue;
       }
       await this.deliverFileOutput(run, pipeline, output);
     }
@@ -1318,59 +1318,6 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Park the run on the PR gate for a `pr` output. Structural Tier-3 — the PR is the
-   * gate, system-owned (no agent config can weaken it). Persists `output` parking
-   * (durable across restart) with the diffstat surface, and requests a
-   * `pipeline-output` approval keyed on the pipelineRunId.
-   */
-  private async parkOnPrOutput(
-    run: PipelineRun,
-    pipeline: Pipeline,
-    output: Extract<PipelineOutput, { type: "pr" }>,
-    index: number,
-    phaseIds: string[],
-  ): Promise<void> {
-    run.status = "parked";
-    run.parkedReason = "output";
-    run.pendingOutput = { index };
-    run.currentStage = null;
-    // Assemble the Tier-3 decision surface: the branch-vs-base diffstat next to the run.
-    if (run.workspace) {
-      const diff = await this.workspace
-        .diffstat({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
-        .catch(() => "");
-      if (diff)
-        await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {});
-    }
-    const source = await this.resolveOutputSource(run, pipeline, output.from);
-    const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
-    const { title } = this.parsePrMarkdown(content);
-    // Write the PR draft at PARK time so the gate card can show what's about to be
-    // published (the web RunPrGatePanel reads `pr-draft.md`); openPrOutput reuses it.
-    await fs
-      .writeFile(
-        path.join(run.cwd, "pr-draft.md"),
-        content.trim() ? content : `# ${title || run.pipelineId}\n`,
-        "utf8",
-      )
-      .catch(() => {});
-    await this.writeAggregate(run);
-    await this.writeProgress(run, phaseIds);
-    await this.approvals.requestApproval({
-      runId: run.pipelineRunId,
-      kind: "pipeline-output",
-      skill: "ZIBBY",
-      action: "pr.open",
-      detail: title || `Otevřít PR pro běh ${run.pipelineRunId}`,
-      risk: "medium",
-    });
-    this.log.info("pipeline run parked on PR output gate", {
-      pipelineRunId: run.pipelineRunId,
-      index,
-    });
-  }
-
-  /**
    * Resume an `output`-parked run after the operator's decision on its PR gate.
    * Approved → run the gated push and continue any later outputs; rejected → leave the
    * branch work without a PR and continue. Either way the run finishes once the
@@ -1436,6 +1383,15 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       bodyFile,
     });
     if (result) {
+      const stats = await this.workspace
+        .diffStats({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
+        .catch(() => ({ additions: 0, deletions: 0 }));
+      run.prOutput = {
+        url: result.url,
+        additions: stats.additions,
+        deletions: stats.deletions,
+      };
+      await this.writeAggregate(run);
       this.log.info("PR output opened", { pipelineRunId: run.pipelineRunId, url: result.url });
       await this.recordArtifact(run, "pr", output.from, result.url);
     } else {

@@ -203,9 +203,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeApprovals as never,
       fakeGates as never,
       fakeLimits as never,
-      // The output gate is exercised in task-output.service.test.ts; here it never
-      // parks (a `done` run with no chosen output) → returns false, normal outcome.
-      { handleTerminal: async () => false } as never,
+      // The output sink is exercised in task-output.service.test.ts; here it delivers
+      // nothing (a `done` run with no chosen output) → returns null, normal outcome.
+      { handleTerminal: async () => null } as never,
       (systemConfig = fakeSystemConfigStore()),
       // Namer double: returns null so title derivation falls back to the deterministic
       // slice (the Haiku CLI path never spawns under test).

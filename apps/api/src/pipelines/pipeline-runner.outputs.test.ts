@@ -9,8 +9,9 @@ import { PipelineRunnerService } from "./pipeline-runner.service";
 
 /**
  * Pipeline-level output sinks (the delivery config that replaced the `pr-autor`
- * agent): `file` sinks write to the project or the vault immediately, a `pr` sink
- * parks the run on the PR gate (system-owned, no agent) and resumes on approval.
+ * agent): `file` sinks write to the project or the vault immediately, and a `pr` sink
+ * opens the PR immediately too (Tier-2 — act-then-report, no gate), recording its url +
+ * branch line totals on the run.
  */
 
 const fakeLogger = {
@@ -52,6 +53,7 @@ async function makeService(
     createWorktree: vi.fn(),
     removeWorktree: vi.fn(async () => {}),
     diffstat: vi.fn(async () => "DIFFSTAT"),
+    diffStats: vi.fn(async () => ({ additions: 7, deletions: 2 })),
     openPr: vi.fn(async () => ({ url: "https://example.test/pr/1" })),
   };
   const vault = {
@@ -291,7 +293,7 @@ describe("PipelineRunnerService — output sinks", () => {
     );
   });
 
-  it("pr sink: parks the run on the PR gate and requests a pipeline-output approval", async () => {
+  it("pr sink: opens the PR immediately (no gate), records url + line totals, run done", async () => {
     const pipeline: Pipeline = {
       id: "delivery",
       phases: [docPhase],
@@ -313,58 +315,20 @@ describe("PipelineRunnerService — output sinks", () => {
 
     await runOutputs(service, run, pipeline);
 
-    expect(run.status).toBe("parked");
-    expect(run.parkedReason).toBe("output");
-    expect(run.pendingOutput).toEqual({ index: 0 });
-    expect(d.workspace.openPr).not.toHaveBeenCalled(); // not until approval
-    expect(d.approvals.requestApproval).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runId: RUN_ID,
-        kind: "pipeline-output",
-        action: "pr.open",
-        detail: "Add feature X",
-      }),
-    );
-    // The Tier-3 surface (branch diffstat) is written next to the run.
-    expect(await fs.readFile(path.join(run.cwd, "diffstat.txt"), "utf8")).toBe("DIFFSTAT");
-  });
-
-  it("pr sink resume — approved: runs the gated push with the parsed title, run done", async () => {
-    const pipeline: Pipeline = {
-      id: "delivery",
-      phases: [docPhase],
-      outputs: [{ type: "pr", from: "docs.md" }],
-      instructions: "x",
-    };
-    const wt = path.join(dir, "worktree");
-    await fs.mkdir(wt, { recursive: true });
-    const { service, d } = await makeService(dir, pipeline);
-    const run = await seedRun(
-      service,
-      dir,
-      pipeline,
-      {
-        a: { phaseId: "dok", file: "docs.md", content: "# Add feature X\n\nDetails." },
-      },
-      wt,
-    );
-    await runOutputs(service, run, pipeline); // parks
-    const runner = d.registered.get("pipeline-output");
-    expect(runner).toBeDefined();
-
-    await runner?.resume(RUN_ID);
-
+    expect(run.status).toBe("done");
+    expect(run.parkedReason).toBeUndefined();
+    expect(d.approvals.requestApproval).not.toHaveBeenCalled(); // no gate anymore
     expect(d.workspace.openPr).toHaveBeenCalledWith({
       cwd: wt,
       title: "Add feature X",
       bodyFile: path.join(run.cwd, "pr-draft.md"),
     });
-    expect(await fs.readFile(path.join(run.cwd, "pr-draft.md"), "utf8")).toBe(
-      "# Add feature X\n\nDetails.",
-    );
-    expect(run.status).toBe("done");
-    expect(run.parkedReason).toBeUndefined();
-    expect(run.pendingOutput).toBeUndefined();
+    // The url + branch line totals are recorded on the run for the detail's PR surface.
+    expect(run.prOutput).toEqual({
+      url: "https://example.test/pr/1",
+      additions: 7,
+      deletions: 2,
+    });
     // N2a: the opened PR left a durable provenance record (locator = PR URL).
     expect(d.artifacts.record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -406,7 +370,7 @@ describe("PipelineRunnerService — output sinks", () => {
     expect(run.status).toBe("done");
   });
 
-  it("P1-T3 (Fáze 4): output/ is the canonical source — pr sink park+open both read through it", async () => {
+  it("P1-T3 (Fáze 4): output/ is the canonical source — pr sink opens through it, run done", async () => {
     const pipeline: Pipeline = {
       id: "delivery",
       phases: [docPhase],
@@ -425,53 +389,18 @@ describe("PipelineRunnerService — output sinks", () => {
     );
     await fs.mkdir(path.join(run.cwd, "output"), { recursive: true });
 
-    await runOutputs(service, run, pipeline); // parks on the PR gate
+    await runOutputs(service, run, pipeline); // opens the PR immediately
 
     const linkPath = path.join(run.cwd, "output", "docs.md");
     expect((await fs.lstat(linkPath)).isSymbolicLink()).toBe(true);
     expect(await fs.readFile(path.join(run.cwd, "pr-draft.md"), "utf8")).toBe(
       "# Add feature X\n\nDetails.",
     );
-
-    const runner = d.registered.get("pipeline-output");
-    await runner?.resume(RUN_ID);
-
     expect(d.workspace.openPr).toHaveBeenCalledWith({
       cwd: wt,
       title: "Add feature X",
       bodyFile: path.join(run.cwd, "pr-draft.md"),
     });
     expect(run.status).toBe("done");
-  });
-
-  it("pr sink resume — rejected: leaves the branch without a PR, run still done", async () => {
-    const pipeline: Pipeline = {
-      id: "delivery",
-      phases: [docPhase],
-      outputs: [{ type: "pr", from: "docs.md" }],
-      instructions: "x",
-    };
-    const wt = path.join(dir, "worktree");
-    await fs.mkdir(wt, { recursive: true });
-    const { service, d } = await makeService(dir, pipeline);
-    const run = await seedRun(
-      service,
-      dir,
-      pipeline,
-      {
-        a: { phaseId: "dok", file: "docs.md", content: "# Add feature X\n\nDetails." },
-      },
-      wt,
-    );
-    await runOutputs(service, run, pipeline); // parks
-    const runner = d.registered.get("pipeline-output");
-
-    await runner?.cancel(RUN_ID);
-    // cancel is fire-and-forget (void); poll until the async resume settles —
-    // a fixed one-tick sleep flakes when the suite runs under full-parallel load.
-    await vi.waitFor(() => expect(run.status).toBe("done"));
-
-    expect(d.workspace.openPr).not.toHaveBeenCalled();
-    expect(run.parkedReason).toBeUndefined();
   });
 });

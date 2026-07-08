@@ -97,7 +97,7 @@ describe("Gates API (e2e)", () => {
     expect(res.body.inherited.length).toBeGreaterThan(0);
   });
 
-  it("exposes the Phase 3.2 git-publish floor (git.push ask, pr.merge deny)", async () => {
+  it("exposes the git-publish floor (git.push ask, pr.merge deny) — pr.open is NOT gated", async () => {
     const res = await request(app.getHttpServer()).get("/api/gates/policy").expect(200);
     const byAction = new Map<string, string>(
       res.body.rules.map((r: { match: { action?: string }[]; decision: string }) => [
@@ -106,8 +106,9 @@ describe("Gates API (e2e)", () => {
       ]),
     );
     expect(byAction.get("git.push")).toBe("ask");
-    expect(byAction.get("pr.open")).toBe("ask");
     expect(byAction.get("pr.merge")).toBe("deny");
+    // pr.open is Tier-2 (act-then-report) — opened autonomously, so it is off the floor.
+    expect(byAction.has("pr.open")).toBe(false);
   });
 
   it("exposes the Phase 5.3 channel-reply floor at notify", async () => {

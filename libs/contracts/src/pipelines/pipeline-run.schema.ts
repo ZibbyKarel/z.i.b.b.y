@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { IsoDateTimeSchema, WorkspaceSchema } from "../common.schema";
+import { PrOutputSchema } from "../tasks/task.schema";
 import { PipelineOutputSchema } from "./pipeline.schema";
 import { StageVerdictSchema } from "./stage-verdict.schema";
 
@@ -170,6 +171,12 @@ export const PipelineRunSchema = z.object({
    * output processing from here; durable across restart.
    */
   pendingOutput: z.object({ index: z.number().int().nonnegative() }).optional(),
+  /**
+   * Set when a `pr` output opened a PR (now Tier-2 — opened immediately as the run
+   * finishes, no gate): the url + the branch's `+/−` line totals. Persisted on the
+   * aggregate so the task outcome write-back can lift it onto the run view.
+   */
+  prOutput: PrOutputSchema.optional(),
   /**
    * A per-run override of the pipeline definition's `outputs:`, set when a directed
    * task carried its own output choice (`createTask({ output })`). When present it

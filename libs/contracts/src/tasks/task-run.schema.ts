@@ -10,7 +10,7 @@ import {
   PipelineCheckpointSchema,
   StageRunSchema,
 } from "../pipelines/pipeline-run.schema";
-import { AttachmentSchema } from "./task.schema";
+import { AttachmentSchema, PrOutputSchema } from "./task.schema";
 
 /**
  * The kind of processor running a task. `scheduled` is a task that has not been
@@ -118,6 +118,13 @@ export const TaskRunSchema = z.object({
   taskOutcomeFinishedAt: z.string().optional(),
   /** Enriched from the task record: the operator's chosen terminal output kind. */
   taskOutputKind: z.enum(["pr", "file", "void"]).optional(),
+  /**
+   * Enriched from the task outcome: the structured PR result when the task's `pr`
+   * output opened a PR (now Tier-2, no gate). Its presence is what makes the run
+   * detail render the compact "Výstup úkolu" surface — just the PR link and the
+   * coloured `+/−` line totals — in place of any draft/diffstat/log.
+   */
+  prOutput: PrOutputSchema.optional(),
   /**
    * Enriched from pipeline run: name of the artifact delivered as `file` output
    * (see `PipelineOutput`), for frontend preview.

@@ -199,8 +199,9 @@ export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
  * implicit: a `pr` pushes the run's worktree branch, a `file` writes the run's
  * summary to the chosen destination.
  *
- *  - `pr`   — open a PR from the run's branch (gated — "PR je brána"; always parks
- *             behind a `task-output` approval before the push).
+ *  - `pr`   — open a PR from the run's branch. Tier-2 (act-then-report): opened
+ *             immediately when the run finishes, no approval gate. The url + line
+ *             totals land on the outcome's {@link PrOutputSchema}.
  *  - `file` — write the result to a path in the project worktree (`dest: project`)
  *             or as a vault note (`dest: vault`). Tier-1, runs immediately.
  *  - `void` — explicitly produce no output (suppresses even a pipeline's own
@@ -271,6 +272,19 @@ export const ScheduledTaskStatusSchema = z.enum([
 export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>;
 
 /**
+ * The structured result of a task whose output opened a PR — the reference the run
+ * detail's "Výstup úkolu" surface renders: the PR url plus the branch's line-change
+ * totals (green/red counts, no diffstat body). Computed at PR-open time from
+ * `git diff --numstat`; absent on non-PR outputs and every outcome predating it.
+ */
+export const PrOutputSchema = z.object({
+  url: z.string().min(1),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+});
+export type PrOutput = z.infer<typeof PrOutputSchema>;
+
+/**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
  * summary (an agent run's last log line, or a pipeline's stage tally).
  */
@@ -278,6 +292,12 @@ export const TaskOutcomeSchema = z.object({
   status: z.enum(["done", "error"]),
   summary: z.string(),
   finishedAt: IsoDateTimeSchema,
+  /**
+   * Set when the task's `pr` output opened a PR (now Tier-2 — opened immediately, no
+   * gate): the url + the branch's `+/−` line totals. The enrichment lifts it onto the
+   * run view as `prOutput` so the detail shows just the link and the coloured counts.
+   */
+  pr: PrOutputSchema.optional(),
 });
 export type TaskOutcome = z.infer<typeof TaskOutcomeSchema>;
 

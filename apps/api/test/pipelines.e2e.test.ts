@@ -989,37 +989,20 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
       .map((l) => JSON.parse(l) as string[]);
   };
 
-  it("parks on pr.open with a diffstat + draft, runs nothing before approval, then executes push + gh", async () => {
+  it("runs pr.open autonomously (Tier-2, no gate): executes push + gh, run done", async () => {
+    await fs.rm(ghLog, { force: true });
     const start = await app.get(PipelineRunnerService).start("prgate", undefined, "pr-proj");
     const { pipelineRunId } = start as { pipelineRunId: string };
 
-    // The stage announces pr.open → the run parks and a stage approval appears.
-    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null));
-    const approval = await until(() => pendingStageApproval(pipelineRunId));
-    expect(approval.action).toBe("pr.open");
-
-    // The decision surface is assembled at park time: diffstat (the branch's commit)
-    // + the PR draft, both served by the allowlisted artifact endpoint.
-    const diff = await request(app.getHttpServer())
-      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/diffstat.txt`)
-      .expect(200);
-    expect(diff.body.content).toContain("feature.txt");
-    const draft = await request(app.getHttpServer())
-      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/pr-draft.md`)
-      .expect(200);
-    expect(draft.body.content).toContain("Add feature");
-
-    // NOTHING reached the remote before approval.
-    expect(await ghInvocations()).toEqual([]);
-    expect(await git(bare, "branch", "--list")).toBe("");
-
-    // Approve → the held child executes the push + gh pr create.
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200);
+    // pr.open is off the floor → the stage runs the push + gh create WITHOUT holding.
     const final = await until(async () => {
       const s = (await runStatus(pipelineRunId)).status;
       return s !== "running" && s !== "parked" ? s : null;
     });
     expect(final).toBe("done");
+
+    // No stage approval was ever raised for pr.open — nothing waited on a human.
+    expect(await pendingStageApproval(pipelineRunId)).toBeUndefined();
 
     // The exact `gh pr create` invocation landed, and the branch reached origin.
     const calls = await ghInvocations();
@@ -1033,29 +1016,22 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
       "pr-draft.md",
     ]);
     expect(await git(bare, "branch", "--list")).toContain("zibby/");
-  });
 
-  it("rejecting the PR gate records no gh invocation and fails the run", async () => {
-    await fs.rm(ghLog, { force: true });
-    const start = await app.get(PipelineRunnerService).start("prgate", undefined, "pr-proj");
-    const { pipelineRunId } = start as { pipelineRunId: string };
-
-    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null));
-    const approval = await until(() => pendingStageApproval(pipelineRunId));
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200);
-
-    const final = await until(async () => {
-      const s = (await runStatus(pipelineRunId)).status;
-      return s !== "running" && s !== "parked" ? s : null;
-    });
-    expect(final).toBe("failed");
-    expect(await ghInvocations()).toEqual([]);
+    // The PR draft is still served by the allowlisted artifact endpoint.
+    const draft = await request(app.getHttpServer())
+      .get(`/api/tasks/runs/${pipelineRunId}/artifacts/pr-draft.md`)
+      .expect(200);
+    expect(draft.body.content).toContain("Add feature");
   });
 
   it("404s an artifact not on the allowlist (no generic file browser)", async () => {
     const start = await app.get(PipelineRunnerService).start("prgate", undefined, "pr-proj");
     const { pipelineRunId } = start as { pipelineRunId: string };
-    await until(async () => ((await runStatus(pipelineRunId)).status === "parked" ? true : null));
+    // The run completes autonomously now (no park) — wait for it to settle.
+    await until(async () => {
+      const s = (await runStatus(pipelineRunId)).status;
+      return s !== "running" && s !== "parked" ? true : null;
+    });
 
     await request(app.getHttpServer())
       .get(`/api/tasks/runs/${pipelineRunId}/artifacts/secrets.env`)
@@ -1064,10 +1040,5 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
     await request(app.getHttpServer())
       .get(`/api/tasks/runs/${pipelineRunId}/artifacts/${encodeURIComponent("../../run.json")}`)
       .expect(404);
-
-    // Clean up the still-parked run.
-    const approval = await pendingStageApproval(pipelineRunId);
-    if (approval)
-      await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200);
   });
 });

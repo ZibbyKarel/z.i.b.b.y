@@ -194,13 +194,60 @@ function attachmentOpenHref(attachmentSetId: string, name: string): string {
 const CONTINUE_CONTEXT_MAX = 1500;
 
 /**
- * A completed task's produced output ("open output" + "continue in a new task"). Two
- * shapes, by where the output lives:
- *  - agent/orchestrator tasks with a chosen `pr`/`file` output → `taskOutcomeSummary`
- *    carries the reference (a PR url opens in a new tab, a file note is shown);
- *  - a done pipeline run → its `pr-draft.md` + `diffstat.txt` artifacts (the delivery
- *    loop's actual output), reusing {@link RunPrGatePanel}.
- * Either way, "continue" seeds a fresh task with the output folded into its context.
+ * The PR output surface: a task whose output opened a PR (Tier-2, no gate). Just the
+ * link and the branch's coloured `+/−` line totals — deliberately nothing else (no
+ * draft, no diffstat, no repeat of the last phase's log; those live in the timeline).
+ */
+function PrOutputCard({
+  prOutput,
+  title,
+}: {
+  prOutput: NonNullable<RunView["prOutput"]>;
+  title: string;
+}) {
+  const t = useTranslations("runs");
+  return (
+    <HudPanel padding="250" title={title}>
+      <Stack wrap align="center" direction="row" gap="200">
+        <Button
+          data-testid="open-pr"
+          icon="link"
+          intent="primary"
+          onClick={() => window.open(prOutput.url, "_blank", "noopener,noreferrer")}
+          size="sm"
+        >
+          {t("openPr")}
+        </Button>
+        <Stack align="center" direction="row" gap="100">
+          <Typography
+            aria-label={t("prAdded", { n: prOutput.additions })}
+            data-testid="pr-additions"
+            tone="ok"
+            type="data"
+          >
+            {`+${prOutput.additions}`}
+          </Typography>
+          <Typography
+            aria-label={t("prRemoved", { n: prOutput.deletions })}
+            data-testid="pr-deletions"
+            tone="bad"
+            type="data"
+          >
+            {`−${prOutput.deletions}`}
+          </Typography>
+        </Stack>
+      </Stack>
+    </HudPanel>
+  );
+}
+
+/**
+ * A completed task's produced output. Three shapes, by what the task produced:
+ *  - a PR (agent OR pipeline, `prOutput` set) → just the PR link + the coloured `+/−`
+ *    branch line totals (no draft, no diffstat, no phase log) — the {@link PrOutputCard};
+ *  - a `file`-output pipeline run → its named artifact, rendered as markdown/code;
+ *  - an agent/orchestrator `file` reference → `taskOutcomeSummary`.
+ * Non-PR shapes also offer "continue" (seed a fresh task with the output folded in).
  * Renders nothing when there is no surfaced output.
  */
 function RunOutputPanel({ run }: { run: RunView }) {
@@ -208,19 +255,22 @@ function RunOutputPanel({ run }: { run: RunView }) {
   const { open: openNewTask } = useNewTask();
 
   const summary = run.taskOutcomeSummary;
+  // A PR output (agent or pipeline) short-circuits to the compact card below; skip the
+  // artifact fetches (there is no draft/diffstat to show for it anymore).
+  const isPrOutput = !!run.prOutput;
   // A pipeline run's own artifacts (below) are its output — the agent-shaped branch
   // (a generic `taskOutcomeSummary` string like "5 stages, done") must never apply to
   // one, even when its artifact hasn't arrived yet (P2-T2 bugfix).
   const agentOutput =
+    !isPrOutput &&
     run.status === "done" &&
     run.kind !== "pipeline" &&
     !!summary &&
     (run.taskOutputKind === "pr" || run.taskOutputKind === "file");
-  const pipelineDone = run.status === "done" && run.kind === "pipeline";
+  const pipelineDone = !isPrOutput && run.status === "done" && run.kind === "pipeline";
 
-  // The pipeline's produced PR draft — shown by RunPrGatePanel below and reused as the
-  // continue-context. Same query key, so this shares RunPrGatePanel's cache (no extra
-  // fetch); gated so non-pipeline runs never request it.
+  // A legacy pipeline PR (no `prOutput`) still surfaces its `pr-draft.md` here; a new PR
+  // never fetches it. Same query key as RunPrGatePanel, so the cache is shared.
   const { data: prDraft } = useRunArtifactQuery(run.runId, "pr-draft.md", pipelineDone);
   // A `file`-output pipeline run's named artifact (P2-T1's `outputArtifactName`) — no
   // `pr-draft.md` is written for that shape, so this is the only way its output surfaces.
@@ -230,6 +280,12 @@ function RunOutputPanel({ run }: { run: RunView }) {
     pipelineDone && !!run.outputArtifactName,
   );
   const pipelineOutput = pipelineDone && !!(prDraft?.content || fileArtifact?.content);
+
+  // A PR output (Tier-2, opened immediately): just the link and the coloured line
+  // totals — nothing duplicated from the phase log or a draft.
+  if (run.prOutput) {
+    return <PrOutputCard prOutput={run.prOutput} title={t("producedOutputTitle")} />;
+  }
 
   if (!agentOutput && !pipelineOutput) return null;
 

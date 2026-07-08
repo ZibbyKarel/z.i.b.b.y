@@ -19,8 +19,9 @@ pending      ← interactive path (dialog): accepted, classification + spawn run
     ↓
 dispatched   ← handed to a runner
     ↓
-awaiting-output ← run finished `done` and the chosen `pr` output is parked at the gate
-    ↓             (durable; approve/reject → outcome written, back to dispatched)
+awaiting-output ← legacy: a `pr` output parked at the old gate (durable; approve/reject
+    ↓             → outcome, back to dispatched). New `pr` outputs open immediately
+    ↓             (Tier-2, no park) — this state only drains runs parked before that change.
 success | failed | cancelled
 ```
 
@@ -203,12 +204,11 @@ in the catalog) — see [agents-runs.md](./agents-runs.md) and [pipelines.md](./
 
 In the New Task dialog, the operator chooses **what happens to the finished work** —
 the counterpart to a pipeline's `outputs:` block. It's deterministic and owned by the
-system (no agent, no tokens); the output side is "the PR is the gate". `TaskOutput`
-is a discriminated union:
+system (no agent, no tokens). `TaskOutput` is a discriminated union:
 
 | `type` | Fields       | What it does                                                                                                                                          |
 | ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pr`   | —            | Opens a PR from the finished run's branch. **Always parks** behind a `task-output` approval before pushing (the PR is the gate, structurally).        |
+| `pr`   | —            | Opens a PR from the finished run's branch. **Tier-2 (act-then-report): opened immediately, no approval gate** — the north-star's "open a PR for a fix". |
 | `file` | `dest`, `to` | Writes the run's result (a summary) to a file — into the project's worktree (`dest: project`) or as a vault note (`dest: vault`). Tier-1, immediate.  |
 | `void` | —            | Explicitly no output (also suppresses a pipeline-declared `pr`).                                                                                       |
 
@@ -216,24 +216,30 @@ is a discriminated union:
 `outputs:` apply; for an agent/orchestrator target, nothing is delivered (today's
 behavior). "Didn't choose" and "chose void" are two different states.
 
-**Two paths, one gate.**
+**pr.open is autonomous (Tier-2).** It is deliberately **not** on the policy floor
+(`ASK_FLOOR_ACTIONS`): opening a PR runs without asking. The raw `git.push` /
+`git.force_push` it rides still gate, and `pr.merge` is a locked deny — publishing a PR
+is the one outbound git step ZIBBY takes autonomously.
+
+**Two paths, one behaviour.**
 
 - **Pipeline target** — `output` is passed to the runner as a per-run override of the
-  declared `outputs:` (stored as `PipelineRun.outputsOverride`; `void` → `[]`). The
-  rest is handled by the existing pipeline output gate (`parkedReason: "output"`).
-- **Agent / orchestrator target** — the gate lives at the task level
-  (`TaskOutputService`), because agent runs have no durable park of their own. When
-  the run ends `done`:
+  declared `outputs:` (stored as `PipelineRun.outputsOverride`; `void` → `[]`). A `pr`
+  sink opens the PR immediately in `runOutputs` and records `PipelineRun.prOutput`
+  (`{ url, additions, deletions }`).
+- **Agent / orchestrator target** — the sink lives at the task level
+  (`TaskOutputService`). When the run ends `done`:
   - `file` is delivered immediately (Tier-1), the outcome is written normally.
   - `pr` **commits** the branch (`checkpoint` — `git add -A && commit`, owned by the
-    system, independent of the agent; commit ≠ push), captures `branch` + `repoPath`
-    into `pendingOutput`, creates a `task-output` approval (`runId` = `taskId`), and
-    the task moves to `awaiting-output`. This parked state is **durable** (the run has
-    already finished, no live child — the `ScheduledTask` record IS the state, it
-    survives a restart for free). Once approved, the system pushes from `repoPath`
-    against `branch` (the ref survives worktree cleanup too) and writes the outcome;
-    rejecting leaves the work on the branch with no PR. When the branch has no commits
-    or the run has no worktree → a soft no-op (no gate, outcome as usual).
+    system, independent of the agent; commit ≠ push), then **pushes from `repoPath` and
+    runs `gh pr create` immediately** (the branch ref survives worktree cleanup). The
+    outcome carries `pr: { url, additions, deletions }` (line totals from
+    `git diff --numstat`); the run detail's "Výstup úkolu" surface shows just the PR
+    link and the coloured `+/−` totals. A failed push is a soft no-op (the work stays
+    committed on the branch); no commits or no worktree → a soft no-op too.
+
+_(A `task-output`/`pipeline-output` approval resolver is retained only to drain any run
+parked on disk from before this change; new PR outputs never park.)_
 
 ## Phase 11 — unified assignment (loop shape + path scoping)
 

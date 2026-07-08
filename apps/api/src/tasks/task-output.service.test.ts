@@ -19,6 +19,7 @@ describe("TaskOutputService", () => {
     checkpoint: ReturnType<typeof vi.fn>;
     commitLog: ReturnType<typeof vi.fn>;
     diffstat: ReturnType<typeof vi.fn>;
+    diffStats: ReturnType<typeof vi.fn>;
     openPr: ReturnType<typeof vi.fn>;
   };
   let vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
@@ -38,6 +39,7 @@ describe("TaskOutputService", () => {
       checkpoint: vi.fn(async () => ({ sha: "abc1234" })),
       commitLog: vi.fn(async () => "abc1234 do the work"),
       diffstat: vi.fn(async () => "1 file changed, 2 insertions(+)"),
+      diffStats: vi.fn(async () => ({ additions: 2, deletions: 0 })),
       openPr: vi.fn(async () => ({ url: "https://example/pr/1" })),
     };
     vault = { createNote: vi.fn(async () => ({})), updateNote: vi.fn(async () => ({})) };
@@ -100,18 +102,18 @@ describe("TaskOutputService", () => {
       { kind: "agent", id: "writer", name: "Writer" },
       Date.now(),
     );
-    expect(await service.handleTerminal(inherit, run("/wt"), "done")).toBe(false);
+    expect(await service.handleTerminal(inherit, run("/wt"), "done")).toBeNull();
 
     const voided = await seed({ type: "void" });
-    expect(await service.handleTerminal(voided, run("/wt"), "done")).toBe(false);
+    expect(await service.handleTerminal(voided, run("/wt"), "done")).toBeNull();
     expect(approvals.requestApproval).not.toHaveBeenCalled();
     expect(vault.createNote).not.toHaveBeenCalled();
   });
 
   it("file → vault writes a knowledge note (and updates on duplicate)", async () => {
     const task = await seed({ type: "file", dest: "vault", to: "reports/x.md" });
-    const parked = await service.handleTerminal(task, run("/wt"), "the summary");
-    expect(parked).toBe(false); // Tier-1, no gate
+    const delivered = await service.handleTerminal(task, run("/wt"), "the summary");
+    expect(delivered).toBeNull(); // Tier-1, delivered inline, no augmented outcome
     expect(vault.createNote).toHaveBeenCalledWith(
       expect.objectContaining({ id: "reports/x.md", tier: "knowledge" }),
     );
@@ -128,49 +130,52 @@ describe("TaskOutputService", () => {
     const wt = path.join(dir, "wt");
     await fs.mkdir(wt, { recursive: true });
     const task = await seed({ type: "file", dest: "project", to: "out/result.md" });
-    const parked = await service.handleTerminal(task, run(wt), "summary body");
-    expect(parked).toBe(false);
+    const delivered = await service.handleTerminal(task, run(wt), "summary body");
+    expect(delivered).toBeNull();
     const written = await fs.readFile(path.join(wt, "out/result.md"), "utf8");
     expect(written).toContain("summary body");
   });
 
-  it("pr parks behind a task-output approval after committing the branch", async () => {
+  it("pr opens the PR immediately after committing the branch (Tier-2, no gate)", async () => {
     const task = await seed({ type: "pr" });
-    const parked = await service.handleTerminal(task, run("/wt"), "did the work");
-    expect(parked).toBe(true);
+    const delivery = await service.handleTerminal(task, run("/wt"), "did the work");
     expect(workspace.checkpoint).toHaveBeenCalled(); // system-owned commit (commit ≠ push)
-    expect(workspace.openPr).not.toHaveBeenCalled(); // never before approval
-    expect(approvals.requestApproval).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "task-output",
-        runId: "task_1",
-        action: "pr.open",
-        risk: "medium",
-      }),
-    );
-    const stored = await storage.get("task_1");
-    expect(stored.status).toBe("awaiting-output");
-    expect(stored.pendingOutput).toMatchObject({
+    expect(workspace.openPr).toHaveBeenCalledWith({
+      cwd: "/repo", // pushed from the repo dir, not the worktree
       branch: "zibby/run-1-writer",
-      repoPath: "/repo",
-      approvalId: "appr_1",
+      title: "did the work",
+      body: "did the work",
     });
-    expect(stored.outcome).toBeUndefined(); // outcome withheld until the gate resolves
+    expect(approvals.requestApproval).not.toHaveBeenCalled(); // no gate anymore
+    expect(delivery).toMatchObject({
+      summary: "PR otevřen: https://example/pr/1",
+      pr: { url: "https://example/pr/1", additions: 2, deletions: 0 },
+    });
+    const stored = await storage.get("task_1");
+    expect(stored.status).toBe("dispatched"); // never parks at awaiting-output
+  });
+
+  it("pr push failure is soft — a note-only delivery, no structured pr", async () => {
+    workspace.openPr.mockResolvedValueOnce(null);
+    const task = await seed({ type: "pr" });
+    const delivery = await service.handleTerminal(task, run("/wt"), "did the work");
+    expect(delivery?.pr).toBeUndefined();
+    expect(delivery?.summary).toContain("selhal");
   });
 
   it("pr is a soft no-op when the branch has no commits", async () => {
     workspace.commitLog.mockResolvedValueOnce("");
     const task = await seed({ type: "pr" });
-    const parked = await service.handleTerminal(task, run("/wt"), "nothing committed");
-    expect(parked).toBe(false);
-    expect(approvals.requestApproval).not.toHaveBeenCalled();
+    const delivery = await service.handleTerminal(task, run("/wt"), "nothing committed");
+    expect(delivery).toBeNull();
+    expect(workspace.openPr).not.toHaveBeenCalled();
     expect((await storage.get("task_1")).status).toBe("dispatched");
   });
 
   it("pr is a soft no-op when the run has no worktree", async () => {
     const task = await seed({ type: "pr" });
-    expect(await service.handleTerminal(task, run(null), "no worktree")).toBe(false);
-    expect(approvals.requestApproval).not.toHaveBeenCalled();
+    expect(await service.handleTerminal(task, run(null), "no worktree")).toBeNull();
+    expect(workspace.openPr).not.toHaveBeenCalled();
   });
 
   it("resolve(approved) opens the PR from the repo + branch, then finishes done", async () => {
