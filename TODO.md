@@ -45,4 +45,4 @@ Cíl: aby stejný projekt fungoval konzistentně napříč více stroji, aniž b
 run vychází ze zastaralé nebo neexistující lokální kopie, a aniž by ZIBBY kdy sama
 mergovala PR.
 
-- [ ] V top panelu chci vidět že je Zibby aktuální. Pokud je main větev pozadu chci vidět o kolik commitů je pozadu a případně mít tlačítko "Aktualizovat", které stáhne nejnovější změny. Chtělo by to taky po najetí myši vidět třeba počet otevřených PR které čekají na zamergování a mít je jako odkaz který mě rovnou přesměruje abych to mohl mergnout
+- [x] V top panelu chci vidět že je Zibby aktuální. Pokud je main větev pozadu chci vidět o kolik commitů je pozadu a případně mít tlačítko "Aktualizovat", které stáhne nejnovější změny. Chtělo by to taky po najetí myši vidět třeba počet otevřených PR které čekají na zamergování a mít je jako odkaz který mě rovnou přesměruje abych to mohl mergnout
