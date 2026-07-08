@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
 import { AvatarSchema } from "../common.schema";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * One rung of the loop's escalation ladder: the model/thinking override applied
@@ -121,6 +122,12 @@ const PipelineObject = z.object({
   /** Terminal delivery sinks (default none, so every committed pipeline parses). */
   outputs: z.array(PipelineOutputSchema).default([]),
   instructions: z.string().min(1),
+  /**
+   * Optional attribution to a subsystem of the federation (Phase 81) — which of
+   * the eight subsystems "owns" this pipeline for Roster (phase 85). Absent is a
+   * legitimate state: not every pipeline has a subsystem owner yet.
+   */
+  ownerSubsystem: SubsystemIdSchema.optional(),
 });
 
 /** Shared phase/loop validation (used by the full schema; storage re-validates updates). */

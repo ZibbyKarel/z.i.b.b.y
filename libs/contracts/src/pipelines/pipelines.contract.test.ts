@@ -178,6 +178,35 @@ describe("pipeline schema", () => {
       );
   });
 
+  it("accepts a valid ownerSubsystem tag (Phase 81)", () => {
+    const result = PipelineSchema.safeParse({
+      id: "delivery",
+      phases: [phase("a")],
+      instructions: "x",
+      ownerSubsystem: "forge",
+    });
+    expect(result.success && result.data.ownerSubsystem).toBe("forge");
+  });
+
+  it("rejects an unknown ownerSubsystem value", () => {
+    const result = PipelineSchema.safeParse({
+      id: "delivery",
+      phases: [phase("a")],
+      instructions: "x",
+      ownerSubsystem: "not-a-subsystem",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("omitting ownerSubsystem stays valid (backward compat — existing fixtures unedited)", () => {
+    const result = PipelineSchema.safeParse({
+      id: "release",
+      phases: [phase("a"), phase("b")],
+      instructions: "ship it",
+    });
+    expect(result.success && result.data.ownerSubsystem).toBeUndefined();
+  });
+
   it("rejects a loop.driftTo that names no existing phase", () => {
     const result = PipelineSchema.safeParse({
       id: "delivery",

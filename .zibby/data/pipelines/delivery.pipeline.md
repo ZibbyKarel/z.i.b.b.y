@@ -51,6 +51,7 @@ desc: >-
   implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,
   rozbitý test, failing test.
 avatar: assets/delivery.png
+ownerSubsystem: forge
 ---
 
 # Delivery
