@@ -10,11 +10,11 @@ vi.mock("../../mutations/useMarkSubsystemSeenMutation", () => ({
   useMarkSubsystemSeenMutation: () => ({ mutate: markSeenMutate, isPending: false }),
 }));
 
-// The drawer's own suite covers chrome (header, tabs, focus, escape) — Roster's
-// filtering/canvas/dialog behavior and Aktivita's scoping/expand behavior each
-// get their own full coverage in `RosterTab.test.tsx` / `AktivitaTab.test.tsx`,
-// so both are stubbed here to keep this file's mocks focused on what it
-// actually exercises.
+// The drawer's own suite covers chrome (header, tabs, focus, escape) — each
+// tab's own real behavior gets its own full coverage in its own test file
+// (`RosterTab.test.tsx` / `AktivitaTab.test.tsx` / `GatesTab.test.tsx` /
+// `ArtefaktyTab.test.tsx`), so all four are stubbed here to keep this file's
+// mocks focused on what it actually exercises.
 vi.mock("./RosterTab", () => ({
   RosterTab: ({ subsystem }: { subsystem: { id: string } }) => (
     <div data-testid="roster-tab-stub">{subsystem.id}</div>
@@ -28,6 +28,11 @@ vi.mock("./AktivitaTab", () => ({
 vi.mock("./GatesTab", () => ({
   GatesTab: ({ subsystem }: { subsystem: { id: string } }) => (
     <div data-testid="gates-tab-stub">{subsystem.id}</div>
+  ),
+}));
+vi.mock("./ArtefaktyTab", () => ({
+  ArtefaktyTab: ({ subsystem }: { subsystem: { id: string } }) => (
+    <div data-testid="artefakty-tab-stub">{subsystem.id}</div>
   ),
 }));
 
@@ -156,7 +161,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(screen.getByTestId("gates-tab-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Artefakty" }));
-    expect(screen.getByText("Artefakty — fáze 88")).toBeInTheDocument();
+    expect(screen.getByTestId("artefakty-tab-stub")).toBeInTheDocument();
 
     expect(screen.getAllByRole("tab")).toHaveLength(4);
   });

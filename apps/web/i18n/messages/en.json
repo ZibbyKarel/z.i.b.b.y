@@ -1675,10 +1675,6 @@
         "aktivita": "Activity",
         "gates": "Settings & Gates",
         "artefakty": "Artifacts"
-      },
-      "placeholder": {
-        "title": "{tab} — phase {phase}",
-        "body": "This tab's content lands in phase {phase}."
       }
     },
     "roster": {
@@ -1707,6 +1703,26 @@
       "autopilotCanDoAlone": "Can do alone:",
       "autopilotAlwaysAsk": "Always asks:",
       "autopilotEditLink": "Edit in the project profile"
+    },
+    "artefakty": {
+      "produceTitle": "Produces",
+      "sinkPr": "PR for review",
+      "sinkFileProject": "file → project",
+      "sinkFileVault": "note → vault",
+      "handsOffTo": "hands off: {name}",
+      "toOperator": "→ operator",
+      "produceEmpty": "None of the owned pipelines has an output sink configured yet.",
+      "historyTitle": "Produced artifacts",
+      "historyEmptyTitle": "No artifact yet",
+      "historyEmptyDescription": "None of the owned pipelines has delivered anything to the artifact registry yet.",
+      "kind": {
+        "pr": "PR",
+        "vault-note": "Note",
+        "project-file": "File"
+      },
+      "runLink": "View run",
+      "emptyTitle": "This subsystem doesn't own a pipeline yet",
+      "emptyDescription": "Without a pipeline of its own, this subsystem has nothing to produce and nothing to hand off."
     }
   },
   "pins": {

@@ -1675,10 +1675,6 @@
         "aktivita": "Aktivita",
         "gates": "Nastavení & Gates",
         "artefakty": "Artefakty"
-      },
-      "placeholder": {
-        "title": "{tab} — fáze {phase}",
-        "body": "Obsah této záložky přistane ve fázi {phase}."
       }
     },
     "roster": {
@@ -1707,6 +1703,26 @@
       "autopilotCanDoAlone": "Může sám:",
       "autopilotAlwaysAsk": "Vždy se zeptá:",
       "autopilotEditLink": "Upravit v profilu projektu"
+    },
+    "artefakty": {
+      "produceTitle": "Produkuje",
+      "sinkPr": "PR na review",
+      "sinkFileProject": "soubor → projekt",
+      "sinkFileVault": "poznámka → vault",
+      "handsOffTo": "předává: {name}",
+      "toOperator": "→ operátor",
+      "produceEmpty": "Žádná z vlastněných pipeline zatím nemá nastavený výstupní sink.",
+      "historyTitle": "Vyrobené artefakty",
+      "historyEmptyTitle": "Zatím žádný artefakt",
+      "historyEmptyDescription": "Žádná z vlastněných pipeline zatím nic nedoručila do registru artefaktů.",
+      "kind": {
+        "pr": "PR",
+        "vault-note": "Poznámka",
+        "project-file": "Soubor"
+      },
+      "runLink": "Zobrazit běh",
+      "emptyTitle": "Tenhle podsystém si zatím nevlastní žádnou pipeline",
+      "emptyDescription": "Bez vlastní pipeline nemá tenhle podsystém co produkovat ani co doručit."
     }
   },
   "pins": {
