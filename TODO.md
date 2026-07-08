@@ -2,7 +2,7 @@
 
 - [x] stránka Orchestrace - v náhledu flow pipeliny nejsou vidět avataři agentů
 
-- [ ] Stránka detailu firmy - měl bych být schopný v sekci projektů přidat již existující projekt přes tlačítko "+" nebo vytvořit nový projekt, který bude rovnou propojený s firmou
+- [x] Stránka detailu firmy - měl bych být schopný v sekci projektů přidat již existující projekt přes tlačítko "+" nebo vytvořit nový projekt, který bude rovnou propojený s firmou
 
 - [ ] Projekty v ZIBBY jsou dnes vedené v centrálním registru (`_projects.json`, schema
 `libs/contracts/src/projects/project.schema.ts`), který se synchronizuje mezi stroji.
