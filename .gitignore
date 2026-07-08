@@ -30,6 +30,11 @@ graphify-out/
 .zibby/data/_purged
 .zibby/data/chat
 
+# Phase 73: uploaded avatar image bytes live outside the (committed) .md
+# frontmatter — binary, regenerable from an upload, never versioned.
+.zibby/data/agents/assets/
+.zibby/data/pipelines/assets/
+
 .!zibby/data/agents
 .!zibby/data/automations
 .!zibby/data/skills

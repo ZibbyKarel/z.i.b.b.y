@@ -98,6 +98,46 @@ describe("AgentsStorageService", () => {
       expect(read.avatar).toBe("/avatars/architect.png");
     });
 
+    it("externalizes an uploaded data-URI avatar to an asset file (Phase 73)", async () => {
+      const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ="; // "hello world"
+      const created = await service.create({
+        ...sampleInput,
+        id: "with-uploaded-avatar",
+        avatar: dataUri,
+      });
+      // The caller-facing entity keeps the full data URI...
+      expect(created.avatar).toBe(dataUri);
+
+      // ...but the on-disk frontmatter stores only a bare asset reference, never
+      // the data URI — the core acceptance criterion for this phase.
+      const raw = await fs.readFile(fileFor(dir, "with-uploaded-avatar"), "utf8");
+      expect(raw).not.toContain("data:image");
+      const parsed = matter(raw);
+      expect(parsed.data.avatar).toBe("assets/with-uploaded-avatar.png");
+
+      const assetBytes = await fs.readFile(
+        path.join(dir, "assets", "with-uploaded-avatar.png"),
+      );
+      expect(assetBytes.toString("utf8")).toBe("hello world");
+
+      // get() inlines the asset back to the same data URI.
+      const read = await service.get("with-uploaded-avatar");
+      expect(read.avatar).toBe(dataUri);
+    });
+
+    it("stores a bundled /avatars/*.png avatar verbatim, writing no asset file", async () => {
+      await service.create({
+        ...sampleInput,
+        id: "bundled-avatar",
+        avatar: "/avatars/architect.png",
+      });
+      const parsed = matter(await fs.readFile(fileFor(dir, "bundled-avatar"), "utf8"));
+      expect(parsed.data.avatar).toBe("/avatars/architect.png");
+      await expect(
+        fs.access(path.join(dir, "assets", "bundled-avatar.png")),
+      ).rejects.toBeTruthy();
+    });
+
     it("drops a single out-of-range field instead of discarding the agent", async () => {
       // A hand-edited file with a bogus model must not vanish from the catalog.
       await fs.writeFile(
@@ -229,6 +269,37 @@ describe("AgentsStorageService", () => {
       expect(updated.avatar).toBe("/avatars/x.png");
       expect((await service.get(created.id)).avatar).toBe("/avatars/x.png");
     });
+
+    it("removes the asset file when an uploaded avatar is cleared (Phase 73)", async () => {
+      const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ=";
+      const created = await service.create({
+        ...sampleInput,
+        id: "avatar-asset-clear",
+        avatar: dataUri,
+      });
+      expect(created.avatar).toBe(dataUri);
+      const assetFile = path.join(dir, "assets", "avatar-asset-clear.png");
+      await expect(fs.access(assetFile)).resolves.toBeUndefined();
+
+      const updated = await service.update(created.id, { avatar: null });
+      expect(updated.avatar).toBeUndefined();
+      await expect(fs.access(assetFile)).rejects.toBeTruthy();
+    });
+
+    it("removes the stale asset file when an uploaded avatar is replaced with a bundled one", async () => {
+      const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ=";
+      const created = await service.create({
+        ...sampleInput,
+        id: "avatar-asset-swap",
+        avatar: dataUri,
+      });
+      const assetFile = path.join(dir, "assets", "avatar-asset-swap.png");
+      await expect(fs.access(assetFile)).resolves.toBeUndefined();
+
+      const updated = await service.update(created.id, { avatar: "/avatars/x.png" });
+      expect(updated.avatar).toBe("/avatars/x.png");
+      await expect(fs.access(assetFile)).rejects.toBeTruthy();
+    });
   });
 
   describe("delete", () => {
@@ -242,6 +313,60 @@ describe("AgentsStorageService", () => {
 
     it("throws not-found when deleting a missing agent", async () => {
       await expect(service.delete("ghost")).rejects.toBeInstanceOf(AgentNotFoundError);
+    });
+
+    it("removes the avatar asset file along with the agent (Phase 73)", async () => {
+      const created = await service.create({
+        ...sampleInput,
+        id: "avatar-asset-delete",
+        avatar: "data:image/png;base64,aGVsbG8gd29ybGQ=",
+      });
+      expect(created.id).toBe("avatar-asset-delete");
+      const assetFile = path.join(dir, "assets", "avatar-asset-delete.png");
+      await expect(fs.access(assetFile)).resolves.toBeUndefined();
+
+      await service.delete(created.id);
+      await expect(fs.access(assetFile)).rejects.toBeTruthy();
+    });
+  });
+
+  describe("inline-avatar sweep (Phase 73 migration)", () => {
+    it("externalizes a pre-existing inline data: avatar found in raw frontmatter on startup", async () => {
+      const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ=";
+      // Written directly to disk, bypassing the service, mirroring an entity
+      // persisted before avatar externalization existed.
+      await fs.writeFile(
+        fileFor(dir, "legacy-inline"),
+        matter.stringify("Legacy body.\n", { name: "legacy-inline", avatar: dataUri }),
+        "utf8",
+      );
+
+      // A fresh service instance over the same directory simulates a server
+      // restart, which is when the sweep runs.
+      const restarted = new AgentsStorageService(dir);
+      await restarted.onModuleInit();
+
+      const raw = await fs.readFile(fileFor(dir, "legacy-inline"), "utf8");
+      expect(raw).not.toContain("data:image");
+      const parsed = matter(raw);
+      expect(parsed.data.avatar).toBe("assets/legacy-inline.png");
+
+      const agent = await restarted.get("legacy-inline");
+      expect(agent.avatar).toBe(dataUri);
+    });
+
+    it("leaves a bundled /avatars/*.png avatar byte-for-byte untouched on startup", async () => {
+      const original = matter.stringify("Bundled body.\n", {
+        name: "bundled-sweep",
+        avatar: "/avatars/architect.png",
+      });
+      await fs.writeFile(fileFor(dir, "bundled-sweep"), original, "utf8");
+
+      const restarted = new AgentsStorageService(dir);
+      await restarted.onModuleInit();
+
+      const raw = await fs.readFile(fileFor(dir, "bundled-sweep"), "utf8");
+      expect(raw).toBe(original);
     });
   });
 
