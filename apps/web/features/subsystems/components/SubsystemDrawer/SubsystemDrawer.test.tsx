@@ -11,12 +11,18 @@ vi.mock("../../mutations/useMarkSubsystemSeenMutation", () => ({
 }));
 
 // The drawer's own suite covers chrome (header, tabs, focus, escape) — Roster's
-// filtering/canvas/dialog behavior gets its own full coverage in
-// `RosterTab.test.tsx`, so it's stubbed here to keep this file's mocks focused
-// on what it actually exercises.
+// filtering/canvas/dialog behavior and Aktivita's scoping/expand behavior each
+// get their own full coverage in `RosterTab.test.tsx` / `AktivitaTab.test.tsx`,
+// so both are stubbed here to keep this file's mocks focused on what it
+// actually exercises.
 vi.mock("./RosterTab", () => ({
   RosterTab: ({ subsystem }: { subsystem: { id: string } }) => (
     <div data-testid="roster-tab-stub">{subsystem.id}</div>
+  ),
+}));
+vi.mock("./AktivitaTab", () => ({
+  AktivitaTab: ({ subsystem }: { subsystem: { id: string } }) => (
+    <div data-testid="aktivita-tab-stub">{subsystem.id}</div>
   ),
 }));
 
@@ -139,7 +145,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(screen.getByTestId("roster-tab-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Aktivita" }));
-    expect(screen.getByText("Aktivita — fáze 86")).toBeInTheDocument();
+    expect(screen.getByTestId("aktivita-tab-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Nastavení & Gates" }));
     expect(screen.getByText("Nastavení & Gates — fáze 87")).toBeInTheDocument();
