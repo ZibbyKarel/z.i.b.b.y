@@ -80,6 +80,8 @@
     "showRail": "Show side panel",
     "self": {
       "panelTitle": "ZIBBY freshness",
+      "statusCurrent": "Current",
+      "statusUpgrade": "Upgrade",
       "upToDate": "ZIBBY is up to date",
       "behind": "{count} commits behind",
       "updateButton": "Update",
