@@ -24,6 +24,7 @@ import { useHealthQuery } from "../health";
 import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { ChatSection } from "./components/ChatSection";
+import { MachineSection } from "./components/MachineSection";
 import { MandateSection } from "./components/MandateSection";
 import { ResearchSection } from "./components/ResearchSection";
 import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
@@ -126,6 +127,7 @@ export function Screen() {
             <Tab value="mandate">{t("mandate.title")}</Tab>
             <Tab value="research">{t("research.title")}</Tab>
             <Tab value="runtime">{t("runtime.title")}</Tab>
+            <Tab value="machine">{t("machine.title")}</Tab>
             <Tab value="selfKnowledge">{t("selfKnowledge.title")}</Tab>
             <Tab value="system">{t("system")}</Tab>
           </TabList>
@@ -186,6 +188,10 @@ export function Screen() {
 
           <TabPanel value="runtime">
             <SystemSection />
+          </TabPanel>
+
+          <TabPanel value="machine">
+            <MachineSection />
           </TabPanel>
 
           <TabPanel value="selfKnowledge">

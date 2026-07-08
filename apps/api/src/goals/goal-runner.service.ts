@@ -21,6 +21,8 @@ import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { BudgetService } from "../budget/budget.service";
 import { PipelineRunNotStoppableError, PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { ProjectLocalService } from "../projects/project-local.service";
+import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { buildResumeContext } from "../pipelines/resume-context";
 import { buildVerifyCommand } from "../pipelines/verify-command";
@@ -172,6 +174,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly systemConfig: SystemConfigStore,
+    private readonly projectLocal: ProjectLocalService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(GoalRunnerService.name);
@@ -247,19 +250,27 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     // Phase 3.1: a git project gets ONE worktree for the whole run; every maker
     // iteration spawns there so its commits land on the goal's own branch. A
     // worktree-setup failure on a git project is fatal (no silent main-checkout use).
-    if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
+    // Phase 77: resolve THIS machine's local clone first (clone into cloneRoot when
+    // absent+gitRemote); a project that's absent with no remote fails the run just
+    // as clearly as a worktree-setup failure — same catch, same failed-run path.
+    if (resolved) {
       try {
-        run.workspace = await this.workspace.createWorktree({
-          projectPath: resolved.path,
-          runId: goalRunId,
-          slug: title || goalId,
-          // Phase 12.7: the worktree lives OUTSIDE the repo/data tree; only forensic
-          // artifacts stay under `root` (= GOAL_RUNS_DIR/<id>).
-          dir: await prepareWorktreeDir(goalRunId),
-        });
-        await this.writeAggregate(run);
+        const local = await this.projectLocal.resolveForRun(resolved);
+        if (local.isGitRepo) {
+          run.workspace = await this.workspace.createWorktree({
+            projectPath: local.path,
+            runId: goalRunId,
+            slug: title || goalId,
+            // Phase 12.7: the worktree lives OUTSIDE the repo/data tree; only forensic
+            // artifacts stay under `root` (= GOAL_RUNS_DIR/<id>).
+            dir: await prepareWorktreeDir(goalRunId),
+          });
+          await this.writeAggregate(run);
+        }
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError)) throw error;
+        if (!(error instanceof WorkspaceSetupError) && !(error instanceof ProjectLocalUnresolvedError)) {
+          throw error;
+        }
         run.status = "failed";
         run.currentIteration = null;
         await this.writeAggregate(run);

@@ -9,6 +9,7 @@ import { ApprovalsService } from "../approvals/approvals.service";
 import { type AgentPolicyInput, GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { LimitsService } from "../limits/limits.service";
 import { GroundingService } from "../memory/grounding.service";
+import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
@@ -74,6 +75,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly grounding: GroundingService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
+    private readonly projectLocal: ProjectLocalService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(AgentRunnerService.name);
@@ -310,30 +312,37 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // artifact/sidecar layout identical to a normal run.
     if (externalWorkspace) {
       spawnCwd = externalWorkspace.path;
-    } else if (resolved && (await this.workspace.isGitRepo(resolved.path))) {
-      await fs.mkdir(cwd, { recursive: true });
-      try {
-        workspace = await this.workspace.createWorktree({
-          projectPath: resolved.path,
-          runId: `${agentId}_${startedMs}`,
-          slug: title || agentId,
-          // Phase 12.7: worktree OUTSIDE the repo/data tree (only the sandbox stays under cwd).
-          dir: await prepareWorktreeDir(`${agentId}_${startedMs}`),
-        });
-        spawnCwd = workspace.path;
-      } catch (error) {
-        if (!(error instanceof WorkspaceSetupError)) throw error;
-        this.log.warn("agent worktree setup failed; running sandbox-only", {
-          agentId,
-          projectPath: resolved.path,
-          err: error.message,
-        });
-      }
     } else if (resolved) {
-      // Phase 11.3: a resolved but NON-git project (e.g. a freshly granted plain
-      // folder) gets no worktree — but it still scopes the run: spawn directly in the
-      // folder (the pre-3.1 posture). No createWorktree call, so no WorkspaceSetupError.
-      spawnCwd = resolved.path;
+      // Phase 77: resolve THIS machine's local clone before deciding on a worktree —
+      // clones into cloneRoot when absent+gitRemote, throws ProjectLocalUnresolvedError
+      // (no dead run record — same "fail before creating anything" posture as the
+      // preflight check above) when absent+no remote and nothing plain exists either.
+      const local = await this.projectLocal.resolveForRun(resolved);
+      if (local.isGitRepo) {
+        await fs.mkdir(cwd, { recursive: true });
+        try {
+          workspace = await this.workspace.createWorktree({
+            projectPath: local.path,
+            runId: `${agentId}_${startedMs}`,
+            slug: title || agentId,
+            // Phase 12.7: worktree OUTSIDE the repo/data tree (only the sandbox stays under cwd).
+            dir: await prepareWorktreeDir(`${agentId}_${startedMs}`),
+          });
+          spawnCwd = workspace.path;
+        } catch (error) {
+          if (!(error instanceof WorkspaceSetupError)) throw error;
+          this.log.warn("agent worktree setup failed; running sandbox-only", {
+            agentId,
+            projectPath: local.path,
+            err: error.message,
+          });
+        }
+      } else {
+        // Phase 11.3: a resolved but NON-git project (e.g. a freshly granted plain
+        // folder) gets no worktree — but it still scopes the run: spawn directly in the
+        // folder (the pre-3.1 posture). No createWorktree call, so no WorkspaceSetupError.
+        spawnCwd = local.path;
+      }
     }
 
     // Materialize the enabled custom commands into the run's working tree so a

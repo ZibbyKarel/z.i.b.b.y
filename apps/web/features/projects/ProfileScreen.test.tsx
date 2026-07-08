@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import type { Project, ProjectProfile } from "@zibby/contracts";
+import type { Project, ProjectLocalState, ProjectProfile } from "@zibby/contracts";
 import { renderWithProviders as render, screen } from "../../test/render";
 import { ProfileScreen } from "./ProfileScreen";
 
@@ -9,6 +9,10 @@ const project: Project = {
   name: "media-vault",
   path: "~/Projects/media-vault",
 };
+
+/** Per-test override merged over `project` (e.g. to add/remove `gitRemote`
+ * without mutating the shared fixture). Reset in `beforeEach`. */
+let projectOverride: Partial<Project> = {};
 
 const profile: ProjectProfile = {
   identity: {
@@ -30,15 +34,27 @@ const updateProjectMutate = vi.fn();
 const deleteProjectMutate = vi.fn();
 const setSecretsMutate = vi.fn();
 const deleteSecretsMutate = vi.fn();
+const cloneProjectMutate = vi.fn();
 const replace = vi.fn();
 const push = vi.fn();
+
+/** THIS machine's local-clone resolution (Phase 76/77) — individual tests
+ * override this to exercise the missing-clone banner / cloned-from-cloneRoot chip. */
+let localState: ProjectLocalState | undefined = {
+  present: true,
+  isGitRepo: true,
+  resolvedPath: project.path,
+  source: "path",
+  cloneRoot: "/Users/karel/zibby-clones",
+};
 
 // `projectId` flips the query into new-project mode; the mock ignores the
 // `enabled` option, so we just return the same project in both modes.
 vi.mock("./queries", () => ({
-  useProjectQuery: () => ({ data: project, isPending: false, isError: false }),
+  useProjectQuery: () => ({ data: { ...project, ...projectOverride }, isPending: false, isError: false }),
   useProjectProfileQuery: () => ({ data: profile }),
   useProjectStandupQuery: () => ({ data: null }),
+  useProjectLocalStateQuery: () => ({ data: localState }),
   useProjectCategoriesQuery: () => ({ data: [{ name: "Dev", glyph: "code" }] }),
   useProjectIntegrationActivityQuery: () => ({ data: [] }),
   useCiStatusQuery: () => ({ data: [] }),
@@ -62,6 +78,7 @@ vi.mock("./mutations", () => ({
   useDeleteProjectMutation: () => ({ mutate: deleteProjectMutate, isPending: false }),
   useSetProjectSecretsMutation: () => ({ mutate: setSecretsMutate, isPending: false }),
   useDeleteProjectSecretsMutation: () => ({ mutate: deleteSecretsMutate, isPending: false }),
+  useCloneProjectMutation: () => ({ mutate: cloneProjectMutate, isPending: false }),
 }));
 
 // The detail now mounts the project's integrations + inbox; stub those data hooks.
@@ -128,11 +145,20 @@ beforeEach(() => {
   deleteProjectMutate.mockReset();
   setSecretsMutate.mockReset();
   deleteSecretsMutate.mockReset();
+  cloneProjectMutate.mockReset();
   replace.mockReset();
   push.mockReset();
   searchTab = "";
   searchCompanyId = "";
   companies = [];
+  projectOverride = {};
+  localState = {
+    present: true,
+    isGitRepo: true,
+    resolvedPath: project.path,
+    source: "path",
+    cloneRoot: "/Users/karel/zibby-clones",
+  };
 });
 
 describe("ProfileScreen", () => {
@@ -286,6 +312,65 @@ describe("ProfileScreen", () => {
           }),
           expect.objectContaining({ onSuccess: expect.any(Function) }),
         );
+      });
+    });
+  });
+
+  describe("local-clone state (Phase 76/77)", () => {
+    it("shows no banner and no chip when present at the canonical path", () => {
+      localState = {
+        present: true,
+        isGitRepo: true,
+        resolvedPath: project.path,
+        source: "path",
+        cloneRoot: "/Users/karel/zibby-clones",
+      };
+      render(<ProfileScreen projectId="media-vault" />);
+      expect(screen.queryByTestId("local-state-missing-banner")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("cloned-from-clone-root")).not.toBeInTheDocument();
+    });
+
+    it("shows the cloned-from-cloneRoot chip when present via the cloneRoot copy", () => {
+      localState = {
+        present: true,
+        isGitRepo: true,
+        resolvedPath: "/Users/karel/zibby-clones/media-vault",
+        source: "cloneRoot",
+        cloneRoot: "/Users/karel/zibby-clones",
+      };
+      render(<ProfileScreen projectId="media-vault" />);
+      expect(screen.getByTestId("cloned-from-clone-root")).toBeInTheDocument();
+    });
+
+    it("shows the missing-clone banner with the clone button disabled without a gitRemote", () => {
+      localState = {
+        present: false,
+        isGitRepo: false,
+        resolvedPath: null,
+        source: "none",
+        cloneRoot: "/Users/karel/zibby-clones",
+      };
+      render(<ProfileScreen projectId="media-vault" />);
+      expect(screen.getByTestId("local-state-missing-banner")).toBeInTheDocument();
+      expect(screen.getByTestId("clone-project")).toBeDisabled();
+    });
+
+    it("enables the clone button and dispatches the clone mutation when gitRemote is set", async () => {
+      localState = {
+        present: false,
+        isGitRepo: false,
+        resolvedPath: null,
+        source: "none",
+        cloneRoot: "/Users/karel/zibby-clones",
+      };
+      projectOverride = { gitRemote: "git@github.com:acme/media-vault.git" };
+      render(<ProfileScreen projectId="media-vault" />);
+      const button = screen.getByTestId("clone-project");
+      expect(button).not.toBeDisabled();
+      await userEvent.click(button);
+      expect(cloneProjectMutate).toHaveBeenCalledWith({
+        params: { id: "media-vault" },
+        body: {},
       });
     });
   });

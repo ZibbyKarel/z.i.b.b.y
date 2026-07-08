@@ -35,6 +35,8 @@ import { formatClaudeStreamLine } from "../runner/claude-stream-format";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
 import { RunnerCore } from "../runner/runner-core";
 import { LimitsService } from "../limits/limits.service";
+import { ProjectLocalService } from "../projects/project-local.service";
+import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { writeFileAtomic } from "../shared/file-storage/file-utils";
@@ -145,6 +147,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly projectSecrets: ProjectSecretsStore,
     private readonly activity: ActivityLogService,
     private readonly artifacts: ArtifactsStorageService,
+    private readonly projectLocal: ProjectLocalService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(PipelineRunnerService.name);
@@ -302,18 +305,27 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // Phase 10: spawn every stage on the goal's branch; the goal owns the worktree.
       run.workspace = externalWorkspace;
       await this.writeAggregate(run);
-    } else if (project && (await this.workspace.isGitRepo(project.path))) {
+    } else if (project) {
+      // Phase 77: resolve THIS machine's local clone first (clone into cloneRoot
+      // when absent+gitRemote); a project that's absent with no remote fails the
+      // run just as clearly as a worktree-setup failure — same catch, same
+      // failed-run path.
       try {
-        run.workspace = await this.workspace.createWorktree({
-          projectPath: project.path,
-          runId: pipelineRunId,
-          slug: pipelineId,
-          // Phase 12.7: worktree OUTSIDE the repo/data tree (only artifacts stay under root).
-          dir: await prepareWorktreeDir(pipelineRunId),
-        });
-        await this.writeAggregate(run);
+        const local = await this.projectLocal.resolveForRun(project);
+        if (local.isGitRepo) {
+          run.workspace = await this.workspace.createWorktree({
+            projectPath: local.path,
+            runId: pipelineRunId,
+            slug: pipelineId,
+            // Phase 12.7: worktree OUTSIDE the repo/data tree (only artifacts stay under root).
+            dir: await prepareWorktreeDir(pipelineRunId),
+          });
+          await this.writeAggregate(run);
+        }
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError)) throw error;
+        if (!(error instanceof WorkspaceSetupError) && !(error instanceof ProjectLocalUnresolvedError)) {
+          throw error;
+        }
         run.status = "failed";
         run.currentStage = null;
         await this.writeAggregate(run);

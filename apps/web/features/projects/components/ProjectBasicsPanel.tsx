@@ -30,6 +30,8 @@ export interface ProjectBasicsBody {
   path: string;
   desc?: string;
   category?: string;
+  /** Git remote URL — where ZIBBY clones this project from on another machine (Phase 76/77). */
+  gitRemote?: string;
   /** Custom logo as a data URI; absent/undefined falls back to the default glyph. */
   logo?: string;
   budget?: {
@@ -76,6 +78,7 @@ type ProjectEditValues = {
   path: string;
   desc: string;
   category: string;
+  gitRemote: string;
   budgetDailyRuns: string;
   budgetWeeklyRuns: string;
   budgetMonthlyRuns: string;
@@ -162,6 +165,7 @@ export function ProjectBasicsPanel({
       path: project?.path ?? "~/Projects/",
       desc: project?.desc ?? "",
       category: project?.category ?? categories[0]?.name ?? "",
+      gitRemote: project?.gitRemote ?? "",
       budgetDailyRuns: project?.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
       budgetWeeklyRuns:
         project?.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
@@ -211,6 +215,7 @@ export function ProjectBasicsPanel({
         path: values.path.trim(),
         desc: values.desc.trim() || undefined,
         category: values.category || undefined,
+        gitRemote: values.gitRemote.trim() || undefined,
         logo,
         budget,
         checks: checks.length > 0 ? checks : undefined,
@@ -257,6 +262,13 @@ export function ProjectBasicsPanel({
           label={t("fields.path")}
           name="path"
           placeholder={t("fields.pathPlaceholder")}
+        />
+
+        <FormTextInput<ProjectEditValues>
+          hint={t("fields.gitRemoteHint")}
+          label={t("fields.gitRemote")}
+          name="gitRemote"
+          placeholder="git@github.com:org/repo.git"
         />
 
         {categories.length > 0 && (

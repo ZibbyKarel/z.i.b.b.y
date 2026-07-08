@@ -2,6 +2,7 @@
 
 import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@zibby/contracts";
 import {
+  Alert,
   Button,
   CodeBlock,
   Divider,
@@ -38,6 +39,7 @@ import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel"
 import { ProjectRunSummary } from "./components/ProjectRunSummary";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
 import {
+  useCloneProjectMutation,
   useCreateProjectMutation,
   useDeleteProjectMutation,
   useDeleteProjectSecretsMutation,
@@ -47,6 +49,7 @@ import {
 } from "./mutations";
 import {
   useProjectCategoriesQuery,
+  useProjectLocalStateQuery,
   useProjectProfileQuery,
   useProjectQuery,
   useProjectStandupQuery,
@@ -214,6 +217,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
   const projectQ = useProjectQuery(id, { enabled: !isNew });
   const profileQ = useProjectProfileQuery(id, { enabled: !isNew });
   const standupQ = useProjectStandupQuery(id, { enabled: !isNew });
+  const localStateQ = useProjectLocalStateQuery(id, { enabled: !isNew });
   const { data: categories = [] } = useProjectCategoriesQuery();
   const { data: companies = [] } = useCompaniesQuery();
   const updateProfile = useUpdateProjectProfileMutation(id);
@@ -222,6 +226,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
   const deleteProject = useDeleteProjectMutation();
   const setSecrets = useSetProjectSecretsMutation();
   const deleteSecrets = useDeleteProjectSecretsMutation();
+  const cloneProject = useCloneProjectMutation();
 
   // Controlled state — null means "follow server data"
   const [people, setPeople] = useState<ProjectPerson[] | null>(null);
@@ -521,11 +526,25 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
     </HudPanel>
   ) : null;
 
+  // Phase 76/77: THIS machine's local-clone resolution. A present clone from the
+  // cloneRoot (rather than the canonical `path`) gets a subtle chip; an absent one
+  // gets a prominent warning banner + a clone action (disabled without gitRemote —
+  // there's nothing to clone from).
+  const localState = localStateQ.data;
+  const cloneTarget = localState ? `${localState.cloneRoot}/${id}` : "";
+  const showMissingCloneBanner = !isNew && !!localState && !localState.present;
+  const showClonedFromCloneRoot = !isNew && localState?.present && localState.source === "cloneRoot";
+
   return (
     <PageContainer>
       <PageHeader
         actions={
           <>
+            {showClonedFromCloneRoot && (
+              <Tag data-testid="cloned-from-clone-root" tone="neutral">
+                {tp("localState.clonedFromCloneRoot")}
+              </Tag>
+            )}
             {/* CI health chip (N4b) — state readout, renders nothing without a watched CI */}
             {!isNew && <ProjectCiStatusChip projectId={id} />}
             <Button intent="ghost" onClick={() => router.push("/projects")} size="sm">
@@ -536,6 +555,38 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
         subtitle={isNew ? undefined : project?.path}
         title={isNew ? tp("newProject") : (project?.name ?? "")}
       />
+
+      {showMissingCloneBanner && (
+        <Alert
+          data-testid="local-state-missing-banner"
+          severity="warn"
+          title={tp("localState.missingTitle")}
+        >
+          <Stack gap="150">
+            <Typography size="sm" type="note">
+              {tp("localState.missingBody", { target: localState?.resolvedPath ?? cloneTarget })}
+            </Typography>
+            {!project?.gitRemote && (
+              <Typography size="xs" type="note" variant="tertiary">
+                {tp("localState.needRemote")}
+              </Typography>
+            )}
+            <Stack align="start" direction="row">
+              <Button
+                data-testid="clone-project"
+                disabled={!project?.gitRemote || cloneProject.isPending}
+                icon="branch"
+                intent="primary"
+                loading={cloneProject.isPending}
+                onClick={() => cloneProject.mutate({ params: { id }, body: {} })}
+                size="sm"
+              >
+                {cloneProject.isPending ? tp("localState.cloning") : tp("localState.cloneButton")}
+              </Button>
+            </Stack>
+          </Stack>
+        </Alert>
+      )}
 
       {isNew ? (
         <Stack gap="300">

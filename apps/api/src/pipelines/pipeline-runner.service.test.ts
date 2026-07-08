@@ -10,6 +10,7 @@ import {
 } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
+import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { RunNotFoundError } from "../runner/runner-core";
 import { PipelineRunnerService } from "./pipeline-runner.service";
 
@@ -104,6 +105,9 @@ async function makeHarness(dir: string): Promise<Harness> {
       isGitRepo: vi.fn(async () => false),
       createWorktree: vi.fn(),
       removeWorktree: vi.fn(async () => {}),
+      // Phase 77 dispatch tests give this a real `run.workspace`, so `drive()`'s
+      // post-phase checkpoint step needs a stub too (no-op: no sha to report).
+      checkpoint: vi.fn(async () => null),
       diffstat: vi.fn(async () => ""),
     } as never,
     { compose: vi.fn(async () => "") } as never,
@@ -124,6 +128,10 @@ async function makeHarness(dir: string): Promise<Harness> {
     { record: vi.fn(async () => {}) } as never,
     // Artifact registry double (N2a): delivery sinks write provenance records.
     { record: vi.fn(async () => {}) } as never,
+    // ProjectLocalService double (Phase 77): unused here since `projects.get` always
+    // resolves null, so the git-worktree/clone-if-missing branch never runs — see
+    // pipeline-runner.project-local.test.ts for its dedicated dispatch coverage.
+    { resolveForRun: vi.fn() } as never,
   );
 
   // Swap the real core (which spawns processes) for a scriptable double.
@@ -1504,6 +1512,96 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(lst.isSymbolicLink()).toBe(true);
       expect(path.isAbsolute(await fs.readlink(consumesLink))).toBe(false);
       expect(await fs.readFile(consumesLink, "utf8")).toBe("chain content here");
+    });
+  });
+
+  describe("Phase 77 — clone-if-missing dispatch (ProjectLocalService.resolveForRun)", () => {
+    const PROJECT: Project = { id: "proj-1", name: "Proj One", path: "/repo/proj-1" };
+
+    /** Bypass the real core entirely — the single "build" phase settles instantly. */
+    function stubRunStage(): void {
+      (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
+        async (_run: unknown, p: { id: string }, _cwd: string, attempt: number) => ({
+          phaseId: p.id,
+          runId: `${PIPELINE_RUN_ID}.${p.id}_${attempt}`,
+          attempt,
+          status: "done" as const,
+        }),
+      );
+    }
+
+    function projectsDouble() {
+      return (h.service as unknown as { projects: { get: ReturnType<typeof vi.fn> } }).projects;
+    }
+    function projectLocalDouble() {
+      return (
+        h.service as unknown as { projectLocal: { resolveForRun: ReturnType<typeof vi.fn> } }
+      ).projectLocal;
+    }
+    function workspaceDouble() {
+      return (
+        h.service as unknown as { workspace: { createWorktree: ReturnType<typeof vi.fn> } }
+      ).workspace;
+    }
+
+    it("present project: createWorktree gets resolveForRun's resolvedPath, not project.path", async () => {
+      projectsDouble().get.mockResolvedValue(PROJECT);
+      const resolveForRun = vi
+        .fn()
+        .mockResolvedValue({ path: "/machine-local/proj-1", isGitRepo: true });
+      projectLocalDouble().resolveForRun = resolveForRun;
+      workspaceDouble().createWorktree.mockResolvedValue({
+        branch: "zibby/x",
+        path: "/wt/x",
+        baseRef: "abc123",
+      });
+      stubRunStage();
+
+      const run = await h.service.start("release", undefined, "proj-1");
+      await vi.waitFor(() => expect(run.status).toBe("done"));
+
+      expect(resolveForRun).toHaveBeenCalledWith(PROJECT);
+      expect(workspaceDouble().createWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ projectPath: "/machine-local/proj-1" }),
+      );
+      expect(run.workspace?.path).toBe("/wt/x");
+    });
+
+    it("absent + gitRemote: clones (via resolveForRun) then createWorktree uses the cloned path", async () => {
+      const withRemote: Project = { ...PROJECT, gitRemote: "https://example.invalid/proj-1.git" };
+      projectsDouble().get.mockResolvedValue(withRemote);
+      const resolveForRun = vi
+        .fn()
+        .mockResolvedValue({ path: "/clone-root/proj-1", isGitRepo: true });
+      projectLocalDouble().resolveForRun = resolveForRun;
+      workspaceDouble().createWorktree.mockResolvedValue({
+        branch: "zibby/x",
+        path: "/wt/x",
+        baseRef: "abc123",
+      });
+      stubRunStage();
+
+      const run = await h.service.start("release", undefined, "proj-1");
+      await vi.waitFor(() => expect(run.status).toBe("done"));
+
+      expect(resolveForRun).toHaveBeenCalledWith(withRemote);
+      expect(workspaceDouble().createWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ projectPath: "/clone-root/proj-1" }),
+      );
+    });
+
+    it("absent + no gitRemote: fails the run clearly (ProjectLocalUnresolvedError)", async () => {
+      projectsDouble().get.mockResolvedValue(PROJECT);
+      projectLocalDouble().resolveForRun = vi
+        .fn()
+        .mockRejectedValue(new ProjectLocalUnresolvedError(PROJECT.id));
+      stubRunStage();
+
+      const run = await h.service.start("release", undefined, "proj-1");
+
+      expect(run.status).toBe("failed");
+      expect(run.currentStage).toBeNull();
+      expect(workspaceDouble().createWorktree).not.toHaveBeenCalled();
     });
   });
 });

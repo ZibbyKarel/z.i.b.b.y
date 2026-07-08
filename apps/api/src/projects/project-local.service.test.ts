@@ -8,7 +8,11 @@ import type { Project } from "@zibby/contracts";
 import { MachineConfigStore } from "../machine/machine-config.store";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectLocalService } from "./project-local.service";
-import { ProjectAlreadyClonedError, ProjectNoRemoteError } from "./projects.errors";
+import {
+  ProjectAlreadyClonedError,
+  ProjectLocalUnresolvedError,
+  ProjectNoRemoteError,
+} from "./projects.errors";
 
 const exec = promisify(execFile);
 
@@ -153,6 +157,55 @@ describe("ProjectLocalService (Phase 76 — per-machine clone resolution)", () =
           .then(() => true)
           .catch(() => false),
       ).toBe(false);
+    });
+  });
+
+  describe("resolveForRun (Phase 77 — run-dispatch clone-if-missing)", () => {
+    it("returns the present git-repo path unchanged (source: path)", async () => {
+      const p = project();
+      await initRepo(p.path);
+      await expect(service.resolveForRun(p)).resolves.toEqual({
+        path: p.path,
+        isGitRepo: true,
+      });
+    });
+
+    it("returns the present cloneRoot copy when path is absent (source: cloneRoot)", async () => {
+      const p = project({ path: path.join(root, "does-not-exist") });
+      const candidate = path.join(cloneRoot, p.id);
+      await initRepo(candidate);
+      await expect(service.resolveForRun(p)).resolves.toEqual({
+        path: candidate,
+        isGitRepo: true,
+      });
+    });
+
+    it("clones into cloneRoot when absent and gitRemote is set, then returns the cloned path", async () => {
+      const p = project({
+        path: path.join(root, "does-not-exist"),
+        gitRemote: "https://example.invalid/alpha.git",
+      });
+      const dest = path.join(cloneRoot, p.id);
+      const cloneSpy = vi.spyOn(workspace, "clone").mockImplementation(async (_remote, dir) => {
+        await initRepo(dir);
+      });
+
+      await expect(service.resolveForRun(p)).resolves.toEqual({ path: dest, isGitRepo: true });
+      expect(cloneSpy).toHaveBeenCalledWith(p.gitRemote, dest);
+    });
+
+    it("falls back to the plain (non-git) project.path when absent, no gitRemote, but the folder exists", async () => {
+      const p = project();
+      await fs.mkdir(p.path, { recursive: true }); // exists, but never git-inited
+      await expect(service.resolveForRun(p)).resolves.toEqual({
+        path: p.path,
+        isGitRepo: false,
+      });
+    });
+
+    it("rejects with ProjectLocalUnresolvedError when absent, no gitRemote, and nothing exists at path", async () => {
+      const p = project({ path: path.join(root, "does-not-exist") });
+      await expect(service.resolveForRun(p)).rejects.toBeInstanceOf(ProjectLocalUnresolvedError);
     });
   });
 });

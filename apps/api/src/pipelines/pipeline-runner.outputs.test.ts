@@ -86,6 +86,9 @@ async function makeService(
     // Activity log double (Phase 45).
     { record: vi.fn(async () => {}) } as never,
     artifacts as never,
+    // ProjectLocalService double (Phase 77): unused here since `projects.get`
+    // always resolves null, so the git-worktree/clone-if-missing branch never runs.
+    {} as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {
     init: vi.fn(),
