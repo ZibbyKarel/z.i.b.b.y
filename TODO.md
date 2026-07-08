@@ -1,4 +1,4 @@
-- [ ] avatar u pipeline/agenta by neměl být inline v md souboru. Spíš jen uložený jako asset někde ve složce a v md souboru by měl být jen název toho souboru. Navrhuji přímo ve složkách .zibby/agents/assets a .zibby/pipelines/assets
+- [x] avatar u pipeline/agenta by neměl být inline v md souboru. Spíš jen uložený jako asset někde ve složce a v md souboru by měl být jen název toho souboru. Navrhuji přímo ve složkách .zibby/agents/assets a .zibby/pipelines/assets
 
 - [ ] stránka Orchestrace - v náhledu flow pipeliny nejsou vidět avataři agentů
 
