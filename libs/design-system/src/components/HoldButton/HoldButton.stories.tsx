@@ -8,6 +8,7 @@ const meta: Meta<typeof HoldButton> = {
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {
     tone: { control: "select", options: ["warn", "bad", "ok", "accent"] },
+    size: { control: "radio", options: ["sm", "md"] },
   },
   args: {
     label: "Podržet pro schválení",
@@ -40,6 +41,13 @@ export const Overview: Story = {
             label="Klikni jednou (nabít)"
             tone="bad"
           />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">sizes — sm sedí vedle Button size=&quot;sm&quot; v hustém chrome</Typography>
+        <div className="flex flex-wrap items-center gap-3">
+          <HoldButton label="Podržet pro schválení" size="sm" tone="warn" />
+          <HoldButton label="Podržet pro schválení" size="md" tone="warn" />
         </div>
       </div>
       <div className="flex flex-col gap-2">

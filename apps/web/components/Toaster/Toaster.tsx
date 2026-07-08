@@ -44,7 +44,7 @@ export function Toaster() {
     >
       <Stack gap="100">
         {toasts.map((toast) => (
-          <Alert key={toast.id} onClose={() => dismiss(toast.id)} severity="error">
+          <Alert key={toast.id} onClose={() => dismiss(toast.id)} severity={toast.severity ?? "error"}>
             {toast.message ?? t("mutationError")}
           </Alert>
         ))}

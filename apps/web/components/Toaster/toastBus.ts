@@ -1,7 +1,13 @@
+/** The two outcomes a toast conveys — a green confirmation or a red failure.
+ * Absent (the `MutationCache` path) is treated as `"error"` by the Toaster. */
+export type ToastSeverity = "ok" | "error";
+
 export interface Toast {
   id: number;
   /** Custom copy; when absent the Toaster renders the localized mutation-error message. */
   message?: string;
+  /** Visual tone; defaults to `"error"` at render (preserves the MutationCache behavior). */
+  severity?: ToastSeverity;
 }
 
 type Listener = (toast: Toast) => void;
@@ -16,8 +22,8 @@ let nextId = 1;
  * the cache callback (outside React, no i18n) from the React toast surface.
  */
 export const toastBus = {
-  emit(toast: { message?: string } = {}): void {
-    const t: Toast = { id: nextId++, message: toast.message };
+  emit(toast: { message?: string; severity?: ToastSeverity } = {}): void {
+    const t: Toast = { id: nextId++, message: toast.message, severity: toast.severity };
     for (const l of listeners) l(t);
   },
   subscribe(listener: Listener): () => void {

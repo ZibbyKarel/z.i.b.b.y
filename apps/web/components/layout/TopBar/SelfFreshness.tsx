@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import type { SelfStatus } from "@zibby/contracts";
-import { Button, Card, Container, Pressable, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Card, Container, HoldButton, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { toastBus } from "../../../components/Toaster/toastBus";
 import { useSelfStatusQuery, useSelfUpdateMutation } from "../../../features/self";
 
 export enum SelfFreshnessTestId {
   Root = "self-freshness-root",
   Dot = "self-freshness-dot",
   Label = "self-freshness-label",
-  BehindText = "self-freshness-behind",
   UpdateButton = "self-freshness-update",
-  UpdateError = "self-freshness-update-error",
   Popover = "self-freshness-popover",
   PopoverStatus = "self-freshness-popover-status",
   PrRow = "self-freshness-pr-row",
@@ -62,22 +61,41 @@ export function SelfFreshness() {
   const status = data ?? FALLBACK_STATUS;
   const update = useSelfUpdateMutation();
   const [open, setOpen] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
+  // A completed hold flips HoldButton to its permanent green "done" state the moment
+  // the gesture finishes — before the mutation resolves. On a refusal that green
+  // button would otherwise sit there contradicting the failure, so bumping this key
+  // remounts the button back to its actionable state for a retry. (A success flips
+  // `upToDate`, unmounting the button entirely, so only the error path needs this.)
+  const [attempt, setAttempt] = useState(0);
 
   const handleUpdate = () => {
-    setUpdateError(null);
     update.mutate(
       { body: {} },
       {
+        // Both outcomes surface as a transient toast rather than mutating the control's
+        // body: a green confirmation on success, the server's refusal message on a 409.
+        onSuccess: (result) => {
+          toastBus.emit({ message: result.body.message ?? t("updateSucceeded"), severity: "ok" });
+        },
         // A 409 (dirty tree / non-fast-forward) lands here, not onSuccess — ts-rest
-        // routes any non-2xx declared status to onError. Surface the server's
-        // message inline rather than the global mutation-error toast's generic copy.
+        // routes any non-2xx declared status to onError.
         onError: (error) => {
-          setUpdateError(updateErrorMessage(error) ?? t("updateFailed"));
+          toastBus.emit({ message: updateErrorMessage(error) ?? t("updateFailed"), severity: "error" });
+          setAttempt((n) => n + 1);
         },
       },
     );
   };
+
+  const statusText = (
+    <Typography
+      data-testid={SelfFreshnessTestId.Label}
+      tone={status.upToDate ? "ok" : "warn"}
+      type="label"
+    >
+      {status.upToDate ? t("statusCurrent") : t("statusUpgrade")}
+    </Typography>
+  );
 
   return (
     <Container
@@ -90,52 +108,21 @@ export function SelfFreshness() {
       onMouseLeave={() => setOpen(false)}
       position="relative"
     >
-      <Stack align="center" direction="row" gap="100">
-        <Pressable aria-expanded={open} aria-label={t("panelTitle")}>
-          <Stack align="center" direction="row" gap="75">
-            <StatusDot
-              data-testid={SelfFreshnessTestId.Dot}
-              pulse={!status.upToDate}
-              tone={status.upToDate ? "ok" : "wait"}
-            />
-            <Typography
-              data-testid={SelfFreshnessTestId.Label}
-              tone={status.upToDate ? "ok" : "warn"}
-              type="label"
-            >
-              {status.upToDate ? t("statusCurrent") : t("statusUpgrade")}
-            </Typography>
-            {!status.upToDate && (
-              <Typography
-                data-testid={SelfFreshnessTestId.BehindText}
-                size="xs"
-                type="note"
-                variant="tertiary"
-              >
-                {t("behind", { count: status.behind })}
-              </Typography>
-            )}
-          </Stack>
-        </Pressable>
-
-        {!status.upToDate && (
-          <Button
-            data-testid={SelfFreshnessTestId.UpdateButton}
-            intent="primary"
-            loading={update.isPending}
-            onClick={handleUpdate}
-            size="sm"
-          >
-            {t("updateButton")}
-          </Button>
-        )}
-
-        {updateError && (
-          <Typography data-testid={SelfFreshnessTestId.UpdateError} size="xs" tone="bad" type="note">
-            {updateError}
-          </Typography>
-        )}
-      </Stack>
+      {status.upToDate ? (
+        statusText
+      ) : (
+        <HoldButton
+          aria-expanded={open}
+          aria-label={t("statusUpgrade")}
+          data-testid={SelfFreshnessTestId.UpdateButton}
+          disabled={update.isPending}
+          key={attempt}
+          label={t("statusUpgrade")}
+          onConfirm={handleUpdate}
+          size="sm"
+          tone="warn"
+        />
+      )}
 
       {open && (
         <Container position="absolute" right="0" top="100%" width="280px" zIndex={60}>

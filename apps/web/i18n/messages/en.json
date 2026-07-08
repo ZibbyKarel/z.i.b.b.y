@@ -85,6 +85,7 @@
       "upToDate": "ZIBBY is up to date",
       "behind": "{count} commits behind",
       "updateButton": "Update",
+      "updateSucceeded": "ZIBBY was updated",
       "updateFailed": "Update failed",
       "openPrCount": "{count, plural, one {# open PR} other {# open PRs}}",
       "noOpenPrs": "no open PRs"

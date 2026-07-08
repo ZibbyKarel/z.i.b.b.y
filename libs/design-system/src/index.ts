@@ -148,7 +148,11 @@ export { Button } from "./components/Button/Button";
 export type { ButtonIntent, ButtonProps, ButtonSize } from "./components/Button/Button";
 
 export { HoldButton } from "./components/HoldButton/HoldButton";
-export type { HoldButtonProps, HoldButtonTone } from "./components/HoldButton/HoldButton";
+export type {
+  HoldButtonProps,
+  HoldButtonSize,
+  HoldButtonTone,
+} from "./components/HoldButton/HoldButton";
 
 export { getUsageTone, Progress } from "./components/Progress/Progress";
 export type { ProgressProps, ProgressTone } from "./components/Progress/Progress";

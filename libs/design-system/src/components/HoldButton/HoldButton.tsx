@@ -6,6 +6,16 @@ import { Icon } from "../Icon/Icon";
 
 export type HoldButtonTone = "warn" | "bad" | "ok" | "accent";
 
+/** Two footprints on the shared button scale: `md` is the standalone approval
+ * default; `sm` matches `Button size="sm"` so the control sits flush beside its
+ * peers in dense chrome like the top bar. */
+export type HoldButtonSize = "sm" | "md";
+
+const sizeClass: Record<HoldButtonSize, string> = {
+  sm: "px-3 py-1.5 text-sm",
+  md: "px-[18px] py-[11px] text-caption",
+};
+
 const toneClass: Record<HoldButtonTone, string> = {
   warn: "text-warn bg-warn/[0.08] border-warn/40",
   bad: "text-bad bg-bad/[0.08] border-bad/40",
@@ -50,6 +60,7 @@ export interface HoldButtonProps extends Omit<
    */
   armedLabel?: string;
   tone?: HoldButtonTone;
+  size?: HoldButtonSize;
   block?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
@@ -70,6 +81,7 @@ export function HoldButton({
   doneLabel = "Confirmed",
   armedLabel = "Press again to confirm",
   tone = "warn",
+  size = "md",
   block,
   disabled,
   ref,
@@ -140,7 +152,8 @@ export function HoldButton({
     <button
       className={cn(
         "relative inline-flex items-center justify-center gap-1.5 overflow-hidden select-none",
-        "rounded-sm border px-[18px] py-[11px] font-mono text-caption font-bold tracking-[0.02em]",
+        "rounded-sm border font-mono font-bold tracking-[0.02em]",
+        sizeClass[size],
         "cursor-pointer whitespace-nowrap transition-colors duration-200",
         done ? "border-ok bg-ok text-accent-contrast" : toneClass[tone],
         block && "w-full",

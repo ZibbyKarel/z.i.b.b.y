@@ -85,6 +85,7 @@
       "upToDate": "ZIBBY je aktuální",
       "behind": "o {count} commitů pozadu",
       "updateButton": "Aktualizovat",
+      "updateSucceeded": "ZIBBY byl aktualizován",
       "updateFailed": "Aktualizace se nezdařila",
       "openPrCount": "{count, plural, one {# otevřené PR} few {# otevřené PR} other {# otevřených PR}}",
       "noOpenPrs": "žádné otevřené PR"
