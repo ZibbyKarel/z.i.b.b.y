@@ -1,6 +1,6 @@
 - [x] avatar u pipeline/agenta by neměl být inline v md souboru. Spíš jen uložený jako asset někde ve složce a v md souboru by měl být jen název toho souboru. Navrhuji přímo ve složkách .zibby/agents/assets a .zibby/pipelines/assets
 
-- [ ] stránka Orchestrace - v náhledu flow pipeliny nejsou vidět avataři agentů
+- [x] stránka Orchestrace - v náhledu flow pipeliny nejsou vidět avataři agentů
 
 - [ ] Stránka detailu firmy - měl bych být schopný v sekci projektů přidat již existující projekt přes tlačítko "+" nebo vytvořit nový projekt, který bude rovnou propojený s firmou
 
