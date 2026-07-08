@@ -4,7 +4,7 @@
 
 - [x] Stránka detailu firmy - měl bych být schopný v sekci projektů přidat již existující projekt přes tlačítko "+" nebo vytvořit nový projekt, který bude rovnou propojený s firmou
 
-- [ ] Projekty v ZIBBY jsou dnes vedené v centrálním registru (`_projects.json`, schema
+- [x] Projekty v ZIBBY jsou dnes vedené v centrálním registru (`_projects.json`, schema
 `libs/contracts/src/projects/project.schema.ts`), který se synchronizuje mezi stroji.
 Pole `path` je ale holá cesta na disku bez ověření existence a bez vazby na konkrétní
 stroj — takže na novém stroji, kde projekt ještě nebyl naklonovaný, ho ZIBBY v UI
