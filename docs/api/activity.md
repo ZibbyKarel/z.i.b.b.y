@@ -7,7 +7,7 @@ done, from the log, at any time.
 
 ### Format
 
-One file per day: `apps/api/data/activity/YYYY-MM-DD.jsonl`
+One file per day: `.zibby/data/activity/YYYY-MM-DD.jsonl`
 Each line is `JSON.stringify(ActivityEntry) + "\n"` — a single `fs.appendFile`
 syscall.
 
@@ -164,7 +164,7 @@ entirely). The kind → group map and defaults live in
 `DEFAULT_ACTIVITY_VIEW`).
 
 **Files:** `apps/api/src/activity-view/` (storage + controller + module),
-persisted to `apps/api/data/activity-view.json` (atomic write, tolerant read →
+persisted to `.zibby/data/activity-view.json` (atomic write, tolerant read →
 default). Filtering/grouping happens **client-side** (small data set, config
 changes apply instantly).
 

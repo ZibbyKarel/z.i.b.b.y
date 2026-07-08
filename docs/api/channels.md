@@ -134,7 +134,7 @@ type ChannelItemState =
   | "replied"; // reply sent
 ```
 
-Stored at `apps/api/data/channels/<integrationId>-<itemId>.json`.
+Stored at `.zibby/data/channels/<integrationId>-<itemId>.json`.
 
 ## ChannelTriageFlowService
 

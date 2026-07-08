@@ -146,7 +146,7 @@ POST   /api/automations/:id/trigger  fire now (returns runRef)
 
 ## Persistence
 
-Each automation is a JSON file in `apps/api/data/automations/<id>.json`.
+Each automation is a JSON file in `.zibby/data/automations/<id>.json`.
 `lastFiredAt` is written back after every fire.
 
 ## System automations

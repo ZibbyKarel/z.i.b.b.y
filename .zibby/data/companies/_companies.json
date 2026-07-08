@@ -1,0 +1,14 @@
+[
+  {
+    "id": "shoptet",
+    "name": "Shoptet",
+    "people": [
+      {
+        "name": "Pavel Husa",
+        "role": "Engineering Team Lead",
+        "vip": true,
+        "comms_style": "Přátelský, věcný, vtipný, tykání"
+      }
+    ]
+  }
+]

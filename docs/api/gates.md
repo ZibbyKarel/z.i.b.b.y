@@ -7,7 +7,7 @@ before it executes. It is not config, and it cannot be turned off by conversatio
 
 ### 1. System floor (POLICY.md)
 
-File: `POLICY.md` at the API data root (`apps/api/data/POLICY.md` by default,
+File: `POLICY.md` at the API data root (`.zibby/data/POLICY.md` by default,
 overridable with the `POLICY_DIR` env var).
 
 - Managed by the operator directly on disk

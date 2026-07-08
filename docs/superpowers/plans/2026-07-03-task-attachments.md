@@ -19,7 +19,7 @@
 - Upload limits (verbatim): **max 10 MB per file**, **max 50 MB per set**, **max 20 files per set**. No file-type restriction.
 - Orphan-set TTL (verbatim): **24 hours**.
 - Attachments dir MUST be absolute before it reaches the grant resolver (a relative path is silently dropped).
-- Under `VITEST`, `resolveDataRoot()` throws unless `ZIBBY_DATA_DIR` is set — the global `vitest.setup.ts` pins it. Never hardcode `apps/api/data` in a test.
+- Under `VITEST`, `resolveDataRoot()` throws unless `ZIBBY_DATA_DIR` is set — the global `vitest.setup.ts` pins it. Never hardcode `.zibby/data` in a test.
 
 ---
 

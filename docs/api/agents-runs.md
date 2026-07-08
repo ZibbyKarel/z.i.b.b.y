@@ -2,7 +2,7 @@
 
 ## Agent — definition
 
-An agent is a Markdown file with YAML frontmatter at `apps/api/data/agents/<id>.md`.
+An agent is a Markdown file with YAML frontmatter at `.zibby/data/agents/<id>.md`.
 
 ### Frontmatter fields
 

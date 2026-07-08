@@ -1,6 +1,6 @@
 // ZIBBY velín — demo seed.
 //
-// The whole `apps/api/data/` dir is gitignored, so mock data can't be committed.
+// The whole `.zibby/data/` dir is gitignored, so mock data can't be committed.
 // This script writes a full set of demo skills / agents / pipelines / automations /
 // memory-vault / approvals / runs into the API's data dir so every screen is
 // populated when you run the app. It mirrors the Claude Design handoff
@@ -27,7 +27,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // demo data in the test root instead of the live/dev one.
 const DATA = process.env.ZIBBY_DATA_DIR
   ? path.resolve(process.env.ZIBBY_DATA_DIR)
-  : path.resolve(__dirname, "..", "data");
+  : path.resolve(__dirname, "..", "..", "..", ".zibby", "data");
 const dir = (...p) => path.join(DATA, ...p);
 
 const now = Date.now();

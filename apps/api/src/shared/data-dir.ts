@@ -6,11 +6,11 @@ import * as path from "node:path";
  * the live/dev root — without touching the per-resource `*_DIR` vars (those
  * still win when set, which is how the e2e harness isolates each store).
  *
- * Anchored to `apps/api/data` via this file's location rather than the process
- * cwd, so dev (`ts-node`, cwd `apps/api`) and the test runner (cwd = repo root)
- * resolve to the same place. A relative `ZIBBY_DATA_DIR` is resolved against the
- * cwd, so `ZIBBY_DATA_DIR=.zibby/data-test` from the repo root lands a sibling
- * of the default `apps/api/data`.
+ * Anchored to the repo-root `.zibby/data` via this file's location rather than
+ * the process cwd, so dev (`ts-node`, cwd `apps/api`) and the test runner (cwd =
+ * repo root) resolve to the same place. A relative `ZIBBY_DATA_DIR` is resolved
+ * against the cwd, so `ZIBBY_DATA_DIR=.zibby/data-test` from the repo root lands
+ * a sibling of the default `.zibby/data`.
  */
 export function resolveDataRoot(): string {
   const root = process.env.ZIBBY_DATA_DIR;
@@ -19,17 +19,17 @@ export function resolveDataRoot(): string {
   // Tripwire (Phase 12.5): under the test runner the global `vitest.setup.ts`
   // always pins `ZIBBY_DATA_DIR` at a temp root. Reaching here without one means
   // a suite booted before the setup, or the setup was removed — refuse the live
-  // `apps/api/data` anchor loudly rather than silently reading/writing real data
+  // `.zibby/data` anchor loudly rather than silently reading/writing real data
   // (the meta-circular contamination the phase exists to close).
   if (process.env.VITEST) {
     throw new Error(
-      "resolveDataRoot: refusing the live apps/api/data anchor under VITEST — " +
+      "resolveDataRoot: refusing the live .zibby/data anchor under VITEST — " +
         "set ZIBBY_DATA_DIR (vitest.setup.ts does this globally). This guards " +
         "against tests touching real data (Phase 12.5).",
     );
   }
 
-  return path.resolve(__dirname, "..", "..", "data");
+  return path.resolve(__dirname, "..", "..", "..", "..", ".zibby", "data");
 }
 
 /** Join sub-path segments onto the resolved data root. */

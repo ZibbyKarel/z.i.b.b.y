@@ -3,7 +3,7 @@
 ## Pipeline — definition
 
 A pipeline is a Markdown file with YAML frontmatter at
-`apps/api/data/pipelines/<id>.pipeline.md`.
+`.zibby/data/pipelines/<id>.pipeline.md`.
 
 ### Frontmatter fields
 

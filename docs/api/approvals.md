@@ -91,7 +91,7 @@ approvalsService.requestApproval({
 });
 ```
 
-Stores JSON at `apps/api/data/approvals/<id>.json` and records an
+Stores JSON at `.zibby/data/approvals/<id>.json` and records an
 `approval-requested` activity entry.
 
 ### Runner integration

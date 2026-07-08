@@ -11,7 +11,7 @@ true })`).
 | `PORT`                | `3333`                                | API listen port                                                                                                                                |
 | `LOG_LEVEL`           | `info`                                | `debug` / `info` / `warn` / `error`                                                                                                            |
 | `CORS_ORIGIN`         | `http://localhost:3000`               | Allowed origins (comma-separated for more than one)                                                                                            |
-| `ZIBBY_DATA_DIR`      | `apps/api/data`                       | Single data-root switch — repoints every store at once                                                                                        |
+| `ZIBBY_DATA_DIR`      | `.zibby/data`                       | Single data-root switch — repoints every store at once                                                                                        |
 | `VAULT_DIR`           | `$ZIBBY_DATA_DIR/vault`               | Obsidian vault (second brain)                                                                                                                  |
 | `BUDGET_LEDGER_DIR`   | `$ZIBBY_DATA_DIR/budget-ledger`       | Dispatch ledger (enforcement; gitignored)                                                                                                      |
 | `BUDGET_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/budget.json`         | Operator global pause thresholds (committed)                                                                                                   |
@@ -84,14 +84,14 @@ operator-facing config.
 PORT=3333
 LOG_LEVEL=debug
 CORS_ORIGIN=http://localhost:3000
-ZIBBY_DATA_DIR=apps/api/data
+ZIBBY_DATA_DIR=.zibby/data
 ```
 
 `.env` is in `.gitignore` — never commit it.
 
 ## Data directories
 
-### Default (`apps/api/data/`)
+### Default (`.zibby/data/`)
 
 Used by `pnpm api:dev` and `pnpm api:start`.
 

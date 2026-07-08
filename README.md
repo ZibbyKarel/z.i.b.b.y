@@ -15,9 +15,28 @@ NX monorepo — Next.js 15 App Router · React 19 · TanStack Query · Tailwind 
 
 ---
 
+## Quick launch
+
+```bash
+nvm use              # Node version pinned in .nvmrc (matches CI)
+corepack enable       # first time only — activates the pnpm version in package.json
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+pnpm install
+pnpm dev              # api + web together → :3333 and :3000
+```
+
+First run has no data — seed the demo catalog (agents, pipelines, automations, …) once:
+
+```bash
+node apps/api/scripts/seed.mjs   # writes into .zibby/data (stop the API first)
+```
+
+---
+
 ## Quick start
 
-**Prerequisites:** Node.js 20+, [pnpm](https://pnpm.io) 9+ (`corepack enable` or `npm i -g pnpm`)
+**Prerequisites:** Node.js 20+ (see `.nvmrc`), [pnpm](https://pnpm.io) 9+ (`corepack enable` or `npm i -g pnpm`)
 
 > **pnpm is the canonical package manager** for this monorepo (it uses the
 > `workspace:` protocol and `pnpm-lock.yaml`). Use `pnpm`, not `npm`.
@@ -140,7 +159,7 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 
 | Variable         | Default         | Description                                                                                                                                                                                                                                                         |
 | ---------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ZIBBY_DATA_DIR` | `apps/api/data` | Root for all file-backed stores. Relative paths resolve from the repo root. Every `*_DIR` variable below can still override an individual store on top of this. The `:test` scripts (`api:dev:test`, `api:start:test`, `seed:test`) set this to `.zibby/data-test`. |
+| `ZIBBY_DATA_DIR` | `.zibby/data` | Root for all file-backed stores. Relative paths resolve from the repo root. Every `*_DIR` variable below can still override an individual store on top of this. The `:test` scripts (`api:dev:test`, `api:start:test`, `seed:test`) set this to `.zibby/data-test`. |
 
 Individual store directories default to the corresponding subfolder of `ZIBBY_DATA_DIR` but can each be overridden independently:
 
@@ -162,7 +181,7 @@ Individual store directories default to the corresponding subfolder of `ZIBBY_DA
 #### Obsidian vault
 
 The memory layer reads and writes a plain-markdown Obsidian vault. The dev default
-`apps/api/data/vault` is committed with seed notes (`north-star.md`, a starter MOC in
+`.zibby/data/vault` is committed with seed notes (`north-star.md`, a starter MOC in
 `knowledge/`); the episodic `daily/` subdir is gitignored. For real operation, point
 `VAULT_DIR` at your actual Obsidian vault — ZIBBY grounds each run in the North Star,
 relevant MOCs, and the project note, and records what every run did back into

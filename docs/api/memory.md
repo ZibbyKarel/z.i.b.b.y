@@ -6,7 +6,7 @@ The vault is an Obsidian-compatible folder of Markdown files — ZIBBY's durable
 memory across sessions. It is not a vector database; retrieval is **index-first**:
 MOC files + descriptive filenames.
 
-Default location: `apps/api/data/vault/`
+Default location: `.zibby/data/vault/`
 Overridable via the `VAULT_DIR` env var.
 
 ## Three tiers

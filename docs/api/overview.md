@@ -86,7 +86,7 @@ Two smaller modules are not registered at the app root because they're shared su
 
 ## Data directory
 
-Default: `apps/api/data/`
+Default: `.zibby/data/`
 Test: `.zibby/data-test/` (switch via `ZIBBY_DATA_DIR=.zibby/data-test`)
 
 ```
@@ -133,7 +133,7 @@ data/
 | Command        | `pnpm api:dev`             | `pnpm api:start`         |
 | Compiler       | ts-node-dev (hot reload)   | esbuild/tsc (compiled)   |
 | Log level      | `debug`                    | `info`                   |
-| Data dir       | `apps/api/data`            | `apps/api/data`          |
+| Data dir       | `.zibby/data`            | `.zibby/data`          |
 | Test data      | `pnpm api:dev:test`        | —                         |
 
 ## Smoke test

@@ -67,29 +67,29 @@ Operator clicks in the UI
 
 All data is files on disk. There is no SQL database. Every file-backed store resolves
 its base directory from `resolveDataRoot()` (`apps/api/src/shared/data-dir.ts`), which
-defaults to `apps/api/data` and is fully repointed by the `ZIBBY_DATA_DIR` env var (used
+defaults to `.zibby/data` and is fully repointed by the `ZIBBY_DATA_DIR` env var (used
 by tests and worktrees to isolate their data root).
 
 | Data                    | Format                       | Location                                                |
 | ------------------------ | --------------------------- | -------------------------------------------------------- |
-| Agent definitions        | Markdown + YAML frontmatter | `apps/api/data/agents/<id>.md`                          |
-| Pipeline definitions     | Markdown + YAML frontmatter | `apps/api/data/pipelines/<id>.pipeline.md`              |
-| Run records (sidecar)    | JSON                        | `apps/api/data/agents/<id>/runs/<runId>/sidecar.json`   |
-| Run logs                 | plaintext                   | `apps/api/data/agents/<id>/runs/<runId>/run.log`        |
-| Approvals                | JSON                        | `apps/api/data/approvals/<id>.json`                     |
-| Automations              | JSON                        | `apps/api/data/automations/<id>.json`                   |
-| Projects                 | JSON                        | `apps/api/data/projects/<id>.json`                      |
-| Scheduled tasks          | JSON                        | `apps/api/data/tasks/<id>.json`                         |
-| Activity log             | JSONL (append-only)         | `apps/api/data/activity/YYYY-MM-DD.jsonl`               |
-| Memory vault             | Markdown + frontmatter      | `apps/api/data/vault/{memory,daily,knowledge}/<id>.md`  |
-| Integrations             | JSON                        | `apps/api/data/integrations/<id>.json`                  |
-| Credentials              | JSON (separate)             | `apps/api/data/credentials/<integrationId>.json`        |
-| Budget ledger            | JSON                        | `apps/api/data/budget-ledger/`                          |
-| Gate floor (POLICY.md)   | Markdown                    | `apps/api/data/gates/POLICY.md`                         |
-| Global gate rules        | JSON                        | `apps/api/data/gate-rules/<id>.json`                    |
-| Goal definitions         | Markdown + YAML frontmatter | `apps/api/data/goals/<id>.goal.md`                      |
-| Chain definitions        | JSON                        | `apps/api/data/chains/<id>.json`                        |
-| Artifact provenance      | JSON                        | `apps/api/data/artifacts/<id>.json`                     |
+| Agent definitions        | Markdown + YAML frontmatter | `.zibby/data/agents/<id>.md`                          |
+| Pipeline definitions     | Markdown + YAML frontmatter | `.zibby/data/pipelines/<id>.pipeline.md`              |
+| Run records (sidecar)    | JSON                        | `.zibby/data/agents/<id>/runs/<runId>/sidecar.json`   |
+| Run logs                 | plaintext                   | `.zibby/data/agents/<id>/runs/<runId>/run.log`        |
+| Approvals                | JSON                        | `.zibby/data/approvals/<id>.json`                     |
+| Automations              | JSON                        | `.zibby/data/automations/<id>.json`                   |
+| Projects                 | JSON                        | `.zibby/data/projects/<id>.json`                      |
+| Scheduled tasks          | JSON                        | `.zibby/data/tasks/<id>.json`                         |
+| Activity log             | JSONL (append-only)         | `.zibby/data/activity/YYYY-MM-DD.jsonl`               |
+| Memory vault             | Markdown + frontmatter      | `.zibby/data/vault/{memory,daily,knowledge}/<id>.md`  |
+| Integrations             | JSON                        | `.zibby/data/integrations/<id>.json`                  |
+| Credentials              | JSON (separate)             | `.zibby/data/credentials/<integrationId>.json`        |
+| Budget ledger            | JSON                        | `.zibby/data/budget-ledger/`                          |
+| Gate floor (POLICY.md)   | Markdown                    | `.zibby/data/gates/POLICY.md`                         |
+| Global gate rules        | JSON                        | `.zibby/data/gate-rules/<id>.json`                    |
+| Goal definitions         | Markdown + YAML frontmatter | `.zibby/data/goals/<id>.goal.md`                      |
+| Chain definitions        | JSON                        | `.zibby/data/chains/<id>.json`                        |
+| Artifact provenance      | JSON                        | `.zibby/data/artifacts/<id>.json`                     |
 
 ## Running processors (the abstraction)
 

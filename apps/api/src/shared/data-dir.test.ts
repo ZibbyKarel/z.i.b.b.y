@@ -4,7 +4,7 @@ import { dataDir, resolveDataRoot } from "./data-dir";
 /**
  * Phase 12.5 — the data-root resolver is the single switch every file-backed
  * store follows. Under the test runner it MUST resolve to an explicit override
- * (the temp root pinned by `vitest.setup.ts`), never the live `apps/api/data`
+ * (the temp root pinned by `vitest.setup.ts`), never the live `.zibby/data`
  * anchor, or a suite could read/write real data — the meta-circular hazard.
  */
 describe("resolveDataRoot", () => {
@@ -21,10 +21,10 @@ describe("resolveDataRoot", () => {
     expect(dataDir("goals", "runs")).toBe("/tmp/zibby-root/goals/runs");
   });
 
-  it("refuses the live apps/api/data anchor under VITEST without an override", () => {
+  it("refuses the live .zibby/data anchor under VITEST without an override", () => {
     // VITEST is set for the whole run; removing the override must trip the guard.
     delete process.env.ZIBBY_DATA_DIR;
     expect(process.env.VITEST).toBeTruthy();
-    expect(() => resolveDataRoot()).toThrow(/refusing the live apps\/api\/data anchor/);
+    expect(() => resolveDataRoot()).toThrow(/refusing the live \.zibby\/data anchor/);
   });
 });
