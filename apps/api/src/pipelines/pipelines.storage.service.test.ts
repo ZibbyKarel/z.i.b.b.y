@@ -125,6 +125,97 @@ describe("PipelinesStorageService", () => {
     expect((await service.get(created.id)).avatar).toBe("/avatars/x.png");
   });
 
+  describe("avatar asset externalization (Phase 73)", () => {
+    const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ="; // "hello world"
+
+    it("externalizes an uploaded data-URI avatar to an asset file, not inline in the .md", async () => {
+      const created = await service.create({ ...sample, id: "with-uploaded-avatar", avatar: dataUri });
+      expect(created.avatar).toBe(dataUri);
+
+      const raw = await fs.readFile(fileFor(dir, "with-uploaded-avatar"), "utf8");
+      expect(raw).not.toContain("data:image");
+      const parsed = matter(raw);
+      expect(parsed.data.avatar).toBe("assets/with-uploaded-avatar.png");
+
+      const assetBytes = await fs.readFile(
+        path.join(dir, "assets", "with-uploaded-avatar.png"),
+      );
+      expect(assetBytes.toString("utf8")).toBe("hello world");
+
+      const read = await service.get("with-uploaded-avatar");
+      expect(read.avatar).toBe(dataUri);
+    });
+
+    it("stores a bundled /avatars/*.png avatar verbatim, writing no asset file", async () => {
+      await service.create({ ...sample, id: "bundled-avatar", avatar: "/avatars/orchestrator.png" });
+      const parsed = matter(await fs.readFile(fileFor(dir, "bundled-avatar"), "utf8"));
+      expect(parsed.data.avatar).toBe("/avatars/orchestrator.png");
+      await expect(
+        fs.access(path.join(dir, "assets", "bundled-avatar.png")),
+      ).rejects.toBeTruthy();
+    });
+
+    it("removes the asset file when an uploaded avatar is cleared", async () => {
+      const created = await service.create({ ...sample, id: "avatar-asset-clear", avatar: dataUri });
+      const assetFile = path.join(dir, "assets", "avatar-asset-clear.png");
+      await expect(fs.access(assetFile)).resolves.toBeUndefined();
+
+      const updated = await service.update(created.id, { avatar: null });
+      expect(updated.avatar).toBeUndefined();
+      await expect(fs.access(assetFile)).rejects.toBeTruthy();
+    });
+
+    it("removes the asset file on delete", async () => {
+      const created = await service.create({ ...sample, id: "avatar-asset-delete", avatar: dataUri });
+      const assetFile = path.join(dir, "assets", "avatar-asset-delete.png");
+      await expect(fs.access(assetFile)).resolves.toBeUndefined();
+
+      await service.delete(created.id);
+      await expect(fs.access(assetFile)).rejects.toBeTruthy();
+    });
+  });
+
+  describe("inline-avatar sweep (Phase 73 migration)", () => {
+    it("externalizes a pre-existing inline data: avatar found in raw frontmatter on startup", async () => {
+      const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ=";
+      await fs.writeFile(
+        fileFor(dir, "legacy-inline"),
+        matter.stringify("Legacy body.\n", {
+          name: "legacy-inline",
+          phases: [phase("a")],
+          avatar: dataUri,
+        }),
+        "utf8",
+      );
+
+      const restarted = new PipelinesStorageService(dir);
+      await restarted.onModuleInit();
+
+      const raw = await fs.readFile(fileFor(dir, "legacy-inline"), "utf8");
+      expect(raw).not.toContain("data:image");
+      const parsed = matter(raw);
+      expect(parsed.data.avatar).toBe("assets/legacy-inline.png");
+
+      const pipeline = await restarted.get("legacy-inline");
+      expect(pipeline.avatar).toBe(dataUri);
+    });
+
+    it("leaves a bundled /avatars/*.png avatar byte-for-byte untouched on startup", async () => {
+      const original = matter.stringify("Bundled body.\n", {
+        name: "bundled-sweep",
+        phases: [phase("a")],
+        avatar: "/avatars/orchestrator.png",
+      });
+      await fs.writeFile(fileFor(dir, "bundled-sweep"), original, "utf8");
+
+      const restarted = new PipelinesStorageService(dir);
+      await restarted.onModuleInit();
+
+      const raw = await fs.readFile(fileFor(dir, "bundled-sweep"), "utf8");
+      expect(raw).toBe(original);
+    });
+  });
+
   it("rejects a duplicate id and a dangling loop target", async () => {
     await service.create(sample);
     await expect(service.create(sample)).rejects.toBeInstanceOf(PipelineConflictError);

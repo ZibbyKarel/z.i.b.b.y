@@ -33,9 +33,10 @@ export async function fileExists(file: string): Promise<boolean> {
 
 /**
  * Write via a temp file + atomic rename so a crash can't leave a torn file.
- * The caller is responsible for ensuring the target directory exists.
+ * The caller is responsible for ensuring the target directory exists. Accepts
+ * a `Buffer` too (e.g. binary avatar asset bytes), not just text content.
  */
-export async function writeFileAtomic(file: string, content: string): Promise<void> {
+export async function writeFileAtomic(file: string, content: string | Buffer): Promise<void> {
   const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`;
   await fs.writeFile(tmp, content, "utf8");
   try {

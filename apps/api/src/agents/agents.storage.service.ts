@@ -1,4 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type Agent,
@@ -10,7 +12,8 @@ import {
   RiskSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts";
-import { MarkdownEntityStore, searchByText } from "../shared/file-storage";
+import matter from "gray-matter";
+import { AvatarAssetStore, MarkdownEntityStore, searchByText, writeFileAtomic } from "../shared/file-storage";
 import {
   AgentConflictError,
   AgentNotFoundError,
@@ -33,11 +36,26 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
   protected readonly fileExt = ".md";
   protected readonly idRegex = AGENT_ID_REGEX;
 
+  private readonly logger = new Logger(AgentsStorageService.name);
+  /** Externalizes uploaded `data:image/*` avatars to `<dir>/assets/` (Phase 73). */
+  private readonly avatarAssets: AvatarAssetStore;
+
   constructor(@Inject(AGENTS_DIR) dir: string) {
     super(dir);
+    this.avatarAssets = new AvatarAssetStore(dir);
   }
 
-  /** Ensure the data directory exists before the app starts serving traffic. */
+  /**
+   * Ensure the data directory exists, then run a one-shot, idempotent sweep
+   * (Phase 73) that externalizes any pre-existing inline `data:` avatar left
+   * in an agent's raw frontmatter from before uploads were split into asset
+   * files — a no-op once every agent has already been migrated.
+   */
+  async onModuleInit(): Promise<void> {
+    await super.onModuleInit();
+    await this.sweepInlineAvatars();
+  }
+
   async create(input: CreateAgentInput): Promise<Agent> {
     const file = this.resolveFile(input.id);
     if (await this.fileExists(file)) {
@@ -46,7 +64,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     // `name` always lands in the frontmatter (defaulting to the id), so the
     // returned entity matches what a subsequent `get` parses back.
     const agent: Agent = { ...input, name: input.name ?? input.id };
-    await this.writeEntity(agent);
+    await this.writeEntity(await this.toDiskEntity(agent));
     return agent;
   }
 
@@ -75,8 +93,14 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     // transport) — drop the key so the full-entity parse below sees it as absent.
     if (patch.avatar === null) delete merged.avatar;
     const parsed = AgentSchema.parse(merged);
-    await this.writeEntity(parsed);
+    await this.writeEntity(await this.toDiskEntity(parsed));
     return parsed;
+  }
+
+  /** Removes the agent file and any avatar asset it owns. */
+  async delete(id: string): Promise<void> {
+    await super.delete(id);
+    await this.avatarAssets.remove(id);
   }
 
   protected idOf(agent: Agent): string {
@@ -116,7 +140,20 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (typeof data.name === "string") candidate.name = data.name;
     if (typeof data.description === "string") candidate.description = data.description;
     if (typeof data.glyph === "string") candidate.glyph = data.glyph;
-    if (typeof data.avatar === "string") candidate.avatar = data.avatar;
+    if (typeof data.avatar === "string") {
+      // An on-disk `assets/<id>.<ext>` reference (Phase 73) is inlined back to
+      // the full data URI here, so the entity the caller sees is unchanged
+      // from before externalization. A gone/unreadable asset omits `avatar`
+      // entirely rather than surfacing a broken reference (the UI falls back
+      // to the glyph). A `/`-rooted bundled path or an already-inline data URI
+      // (not yet swept — see `sweepInlineAvatars`) passes through unchanged.
+      if (this.avatarAssets.isAssetRef(data.avatar)) {
+        const inlined = this.avatarAssets.inlineSync(data.avatar);
+        if (inlined !== null) candidate.avatar = inlined;
+      } else {
+        candidate.avatar = data.avatar;
+      }
+    }
     if (typeof data.category === "string") candidate.category = data.category;
     // `tools` is normally a YAML list, but some files write it inline as a
     // comma/space-separated string (e.g. `tools: Read, Grep, Glob`). Accept both
@@ -160,5 +197,56 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (agent.gates !== undefined) data.gates = agent.gates;
     if (agent.status !== undefined) data.status = agent.status;
     return data;
+  }
+
+  /**
+   * Build the on-disk form of `agent`: if `avatar` is an uploaded `data:image/`
+   * URI, externalize it to `assets/<id>.<ext>` and swap the frontmatter value
+   * to that bare reference; otherwise (a `/`-rooted bundled path, or none)
+   * leave the entity untouched, and drop any stale asset the write is
+   * replacing (a clear or a switch to a bundled avatar). The entity returned
+   * to the caller always keeps the full data URI — only this disk copy differs.
+   */
+  private async toDiskEntity(agent: Agent): Promise<Agent> {
+    if (typeof agent.avatar === "string") {
+      const ref = await this.avatarAssets.externalize(agent.id, agent.avatar);
+      if (ref !== null) return { ...agent, avatar: ref };
+    }
+    // Not a data URI (bundled `/avatars/*.png`) or no avatar at all — tolerant
+    // no-op if there was nothing to clean up.
+    await this.avatarAssets.remove(agent.id);
+    return agent;
+  }
+
+  /**
+   * Phase 73 migration: on startup, externalize any pre-existing inline
+   * `data:` avatar left in an agent's *raw* frontmatter (read directly, not
+   * via `fromFrontmatter`, so an already-externalized `assets/...` ref isn't
+   * mistaken for one still needing migration). Idempotent and tolerant — a
+   * single unreadable/corrupt file is logged and skipped, never fatal to boot.
+   */
+  private async sweepInlineAvatars(): Promise<void> {
+    const entries = await fs.readdir(this.dir).catch(() => [] as string[]);
+    for (const entry of entries) {
+      if (!entry.endsWith(this.fileExt)) continue;
+      const id = entry.slice(0, -this.fileExt.length);
+      try {
+        await this.externalizeInlineAvatarIfAny(id);
+      } catch (error) {
+        this.logger.warn(`Skipping inline-avatar sweep for agent "${id}": ${String(error)}`);
+      }
+    }
+  }
+
+  private async externalizeInlineAvatarIfAny(id: string): Promise<void> {
+    const file = path.join(this.dir, `${id}${this.fileExt}`);
+    const raw = await fs.readFile(file, "utf8");
+    const parsed = matter(raw);
+    const data = parsed.data as Record<string, unknown>;
+    const avatar = data.avatar;
+    if (typeof avatar !== "string" || !avatar.startsWith("data:")) return;
+    const ref = await this.avatarAssets.externalize(id, avatar);
+    if (ref === null) return;
+    await writeFileAtomic(file, matter.stringify(parsed.content, { ...data, avatar: ref }));
   }
 }
