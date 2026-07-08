@@ -62,6 +62,9 @@ vi.mock("./queries", () => ({
   // Phase 72's company-effective panel; its own dedicated tests cover the
   // merged-data rendering in isolation (see `ProjectCompanyPanel.test.tsx`).
   useResolvedProjectQuery: () => ({ data: { people: [], integrations: [] } }),
+  // Phase 78's PR overview panel + header count badge; their own dedicated
+  // tests cover the rendering in isolation (see `ProjectPullRequestsPanel.test.tsx`).
+  useProjectPrsQuery: () => ({ data: [] }),
 }));
 
 // Phase 72's company selector reads the registry to populate its options; Phase
@@ -79,6 +82,7 @@ vi.mock("./mutations", () => ({
   useSetProjectSecretsMutation: () => ({ mutate: setSecretsMutate, isPending: false }),
   useDeleteProjectSecretsMutation: () => ({ mutate: deleteSecretsMutate, isPending: false }),
   useCloneProjectMutation: () => ({ mutate: cloneProjectMutate, isPending: false }),
+  useMergeProjectPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 // The detail now mounts the project's integrations + inbox; stub those data hooks.

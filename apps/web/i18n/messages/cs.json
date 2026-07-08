@@ -1214,6 +1214,17 @@
       "red": "CI červené od {since}",
       "green": "CI zelené"
     },
+    "prs": {
+      "title": "Otevřené PR",
+      "empty": "Žádné otevřené PR.",
+      "noGithub": "Projekt nemá napojený GitHub.",
+      "mergeButton": "Sloučit",
+      "mergeConfirmTitle": "Sloučit PR #{number}?",
+      "mergeConfirmBody": "Sloučí PR #{number} do hlavní větve. Tuto akci nelze snadno vrátit.",
+      "author": "od {name}",
+      "open": "Otevřeno",
+      "count": "{count, plural, one {# otevřené PR} few {# otevřené PR} other {# otevřených PR}}"
+    },
     "create": "Vytvořit projekt",
     "save": "Uložit změny",
     "delete": "Smazat",

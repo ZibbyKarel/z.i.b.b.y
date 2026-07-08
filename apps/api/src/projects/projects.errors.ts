@@ -56,3 +56,33 @@ export class ProjectLocalUnresolvedError extends Error {
     this.name = "ProjectLocalUnresolvedError";
   }
 }
+
+/**
+ * Phase 78 — raised by `ProjectPrService.merge` when the project has no
+ * resolved github integration, or that integration has no stored token. Maps to
+ * a 422: the merge route needs a real answer for an explicit operator click,
+ * unlike `listOpen`, which treats the same condition as an empty overview
+ * (never an error page — see the Phase 78 plan's "Data source" section).
+ */
+export class NoGithubLinkError extends Error {
+  constructor(public readonly id: string) {
+    super(`Project "${id}" has no github integration + token configured`);
+    this.name = "NoGithubLinkError";
+  }
+}
+
+/**
+ * Phase 78 — raised by `ProjectPrService.merge` when GitHub reports the PR is
+ * not mergeable (405/409 from `PUT .../pulls/:number/merge` — a real conflict,
+ * an already-merged PR, or required reviews/checks not satisfied). Maps to a 409.
+ */
+export class PrNotMergeableError extends Error {
+  constructor(
+    public readonly id: string,
+    public readonly number: number,
+    detail?: string,
+  ) {
+    super(`PR #${number} on project "${id}" is not mergeable${detail ? `: ${detail}` : ""}`);
+    this.name = "PrNotMergeableError";
+  }
+}

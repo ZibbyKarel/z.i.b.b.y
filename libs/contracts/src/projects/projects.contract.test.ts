@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   CreateProjectSchema,
+  MergeProjectPrBodySchema,
+  MergeProjectPrResultSchema,
   ProjectLocalStateSchema,
   ProjectPersonSchema,
+  ProjectPrSchema,
   ProjectSchema,
   ResolvedProjectContextSchema,
   UpdateProjectSchema,
@@ -62,6 +65,84 @@ describe("projectsContract", () => {
     expect(projectsContract.cloneProject.responses).toHaveProperty("404");
     expect(projectsContract.cloneProject.responses).toHaveProperty("409");
     expect(projectsContract.cloneProject.responses).toHaveProperty("422");
+  });
+
+  it("exposes the open-PR overview via GET /api/projects/:id/prs (200/404) (Phase 78)", () => {
+    expect(projectsContract.getProjectPrs.method).toBe("GET");
+    expect(projectsContract.getProjectPrs.path).toBe("/api/projects/:id/prs");
+    expect(projectsContract.getProjectPrs.responses).toHaveProperty("200");
+    expect(projectsContract.getProjectPrs.responses).toHaveProperty("404");
+  });
+
+  it("exposes merge via POST /api/projects/:id/prs/:number/merge with 404/409/422 (Phase 78)", () => {
+    expect(projectsContract.mergeProjectPr.method).toBe("POST");
+    expect(projectsContract.mergeProjectPr.path).toBe("/api/projects/:id/prs/:number/merge");
+    expect(projectsContract.mergeProjectPr.responses).toHaveProperty("200");
+    expect(projectsContract.mergeProjectPr.responses).toHaveProperty("404");
+    expect(projectsContract.mergeProjectPr.responses).toHaveProperty("409");
+    expect(projectsContract.mergeProjectPr.responses).toHaveProperty("422");
+  });
+});
+
+describe("ProjectPrSchema (Phase 78)", () => {
+  it("round-trips a full PR", () => {
+    const pr = {
+      number: 42,
+      title: "Fix flaky test",
+      url: "https://github.com/acme/app/pull/42",
+      author: "alice",
+      branch: "fix/flaky-test",
+      draft: false,
+      createdAt: "2026-07-01T09:00:00.000Z",
+    };
+    expect(ProjectPrSchema.parse(pr)).toEqual(pr);
+  });
+
+  it("accepts a PR with only the required fields", () => {
+    const parsed = ProjectPrSchema.parse({
+      number: 1,
+      title: "WIP",
+      url: "https://github.com/acme/app/pull/1",
+      draft: true,
+    });
+    expect(parsed.author).toBeUndefined();
+    expect(parsed.branch).toBeUndefined();
+    expect(parsed.createdAt).toBeUndefined();
+  });
+
+  it("rejects a non-integer PR number", () => {
+    expect(
+      ProjectPrSchema.safeParse({
+        number: 1.5,
+        title: "x",
+        url: "https://x",
+        draft: false,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("MergeProjectPrBodySchema / MergeProjectPrResultSchema (Phase 78)", () => {
+  it("accepts an empty body (bare merge click)", () => {
+    expect(MergeProjectPrBodySchema.parse({}).method).toBeUndefined();
+  });
+
+  it("accepts each merge method", () => {
+    for (const method of ["merge", "squash", "rebase"] as const) {
+      expect(MergeProjectPrBodySchema.parse({ method }).method).toBe(method);
+    }
+  });
+
+  it("rejects an unknown merge method", () => {
+    expect(MergeProjectPrBodySchema.safeParse({ method: "fast-forward" }).success).toBe(false);
+  });
+
+  it("round-trips a merge result with and without a url", () => {
+    expect(MergeProjectPrResultSchema.parse({ merged: true, url: "https://x" })).toEqual({
+      merged: true,
+      url: "https://x",
+    });
+    expect(MergeProjectPrResultSchema.parse({ merged: false })).toEqual({ merged: false });
   });
 });
 

@@ -289,4 +289,59 @@ describe("Projects API (e2e)", () => {
       await request(app.getHttpServer()).delete("/api/companies/acme").expect(200);
     });
   });
+
+  describe("GET /projects/:id/prs and POST /projects/:id/prs/:number/merge (Phase 78)", () => {
+    it("404s GET .../prs for an unknown project id", async () => {
+      await request(app.getHttpServer()).get(`${BASE}/nope/prs`).expect(404);
+    });
+
+    it("404s POST .../merge for an unknown project id", async () => {
+      await request(app.getHttpServer()).post(`${BASE}/nope/prs/1/merge`).send({}).expect(404);
+    });
+
+    it("returns [] (never an error) for a project with no github integration", async () => {
+      await request(app.getHttpServer())
+        .post(BASE)
+        .send({ id: "no-github", name: "no-github", path: "~/p/no-github" })
+        .expect(201);
+
+      const got = await request(app.getHttpServer()).get(`${BASE}/no-github/prs`).expect(200);
+      expect(got.body).toEqual([]);
+
+      await request(app.getHttpServer()).delete(`${BASE}/no-github`).expect(200);
+    });
+
+    it("422s a merge attempt when the project has no github link (explicit operator click needs a real answer)", async () => {
+      await request(app.getHttpServer())
+        .post(BASE)
+        .send({ id: "no-link", name: "no-link", path: "~/p/no-link" })
+        .expect(201);
+
+      await request(app.getHttpServer()).post(`${BASE}/no-link/prs/1/merge`).send({}).expect(422);
+
+      await request(app.getHttpServer()).delete(`${BASE}/no-link`).expect(200);
+    });
+
+    it("returns [] for a github integration with no stored token (never an error)", async () => {
+      await request(app.getHttpServer())
+        .post(BASE)
+        .send({ id: "no-token", name: "no-token", path: "~/p/no-token" })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post("/api/integrations")
+        .send({
+          id: "no-token-github",
+          kind: "github",
+          projectId: "no-token",
+          config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+        })
+        .expect(201);
+
+      const got = await request(app.getHttpServer()).get(`${BASE}/no-token/prs`).expect(200);
+      expect(got.body).toEqual([]);
+
+      await request(app.getHttpServer()).delete(`${BASE}/no-token`).expect(200);
+      await request(app.getHttpServer()).delete("/api/integrations/no-token-github").expect(200);
+    });
+  });
 });

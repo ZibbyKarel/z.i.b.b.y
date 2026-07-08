@@ -17,6 +17,7 @@ export {
   INTEGRATION_ACTIVITY_KINDS,
   useProjectIntegrationActivityQuery,
 } from "./useProjectIntegrationActivityQuery";
+export { getProjectPrsQueryKey, useProjectPrsQuery } from "./useProjectPrsQuery";
 export { getProjectsQueryKey, useProjectsQuery } from "./useProjectsQuery";
 export { getProjectsSearchQueryKey, useProjectsSearchQuery } from "./useProjectsSearchQuery";
 export {

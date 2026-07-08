@@ -10,6 +10,7 @@ import request from "supertest";
 import { MACHINE_CONFIG_FILE, MachineConfigStore } from "../machine/machine-config.store";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectLocalService } from "./project-local.service";
+import { ProjectPrService } from "./project-pr.service";
 import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store";
 import { ProjectVaultService } from "./project-vault.service";
 import { ProjectsController } from "./projects.controller";
@@ -37,7 +38,8 @@ async function initRepo(dir: string): Promise<void> {
  * `tasks-attachments.test.ts` — with the routes' actual collaborators
  * (`ProjectsStorageService`, `ProjectSecretsStore`, `ProjectLocalService` and its
  * `WorkspaceService`/`MachineConfigStore`) real, and the unrelated ones
- * (`StandupService`, `ProjectVaultService`, `ResolvedProjectService`) stubbed.
+ * (`StandupService`, `ProjectVaultService`, `ResolvedProjectService`,
+ * `ProjectPrService` — Phase 78) stubbed.
  */
 describe("Phase 76 — GET /api/projects/:id/local-state, POST /api/projects/:id/clone", () => {
   let app: INestApplication;
@@ -67,6 +69,7 @@ describe("Phase 76 — GET /api/projects/:id/local-state, POST /api/projects/:id
           useValue: { write: async () => {}, remove: async () => {} },
         },
         { provide: ResolvedProjectService, useValue: {} },
+        { provide: ProjectPrService, useValue: {} },
       ],
     }).compile();
 

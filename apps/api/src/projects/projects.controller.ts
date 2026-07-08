@@ -4,9 +4,12 @@ import type { Project, ProjectProfile, ResolvedProjectContext } from "@zibby/con
 import { projectsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { ProjectLocalService } from "./project-local.service";
+import { ProjectPrService } from "./project-pr.service";
 import { ProjectSecretsStore } from "./project-secrets.store";
 import { ProjectVaultService } from "./project-vault.service";
 import {
+  NoGithubLinkError,
+  PrNotMergeableError,
   ProjectAlreadyClonedError,
   ProjectConflictError,
   ProjectNoRemoteError,
@@ -49,6 +52,7 @@ export class ProjectsController {
     private readonly vault: ProjectVaultService,
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly local: ProjectLocalService,
+    private readonly projectPrs: ProjectPrService,
   ) {}
 
   /** Layer the read-time `hasSecrets` onto an entity for the wire. */
@@ -166,6 +170,32 @@ export class ProjectsController {
             return { status: 422 as const, body: { message: error.message } };
           }
           if (error instanceof ProjectAlreadyClonedError) {
+            return { status: 409 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+
+      // Phase 78 — open-PR overview + explicit operator merge. `[]` (never an
+      // error) when the project has no github link; `getProjectPrs` only 404s
+      // for an unknown project id.
+      getProjectPrs: ({ params: { id } }) =>
+        errors.or404(id, () => this.projectPrs.listOpen(id)),
+
+      mergeProjectPr: async ({ params: { id, number }, body }) => {
+        try {
+          return {
+            status: 200 as const,
+            body: await this.projectPrs.merge(id, number, body?.method),
+          };
+        } catch (error) {
+          if (error instanceof ProjectNotFoundError) {
+            return { status: 404 as const, body: { message: error.message } };
+          }
+          if (error instanceof NoGithubLinkError) {
+            return { status: 422 as const, body: { message: error.message } };
+          }
+          if (error instanceof PrNotMergeableError) {
             return { status: 409 as const, body: { message: error.message } };
           }
           throw error;
