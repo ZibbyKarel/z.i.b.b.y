@@ -1666,7 +1666,21 @@
     },
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} reports to review",
-    "tier3Badge": "{count} awaiting decision"
+    "tier3Badge": "{count} awaiting decision",
+    "drawer": {
+      "ariaLabel": "{name} subsystem detail",
+      "close": "Close subsystem detail",
+      "tabs": {
+        "roster": "Roster",
+        "aktivita": "Activity",
+        "gates": "Settings & Gates",
+        "artefakty": "Artifacts"
+      },
+      "placeholder": {
+        "title": "{tab} — phase {phase}",
+        "body": "This tab's content lands in phase {phase}."
+      }
+    }
   },
   "pins": {
     "pin": "Pin",

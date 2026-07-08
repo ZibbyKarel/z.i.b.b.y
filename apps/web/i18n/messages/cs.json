@@ -1666,7 +1666,21 @@
     },
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} hlášení k nahlédnutí",
-    "tier3Badge": "{count} čeká na rozhodnutí"
+    "tier3Badge": "{count} čeká na rozhodnutí",
+    "drawer": {
+      "ariaLabel": "Detail podsystému {name}",
+      "close": "Zavřít detail podsystému",
+      "tabs": {
+        "roster": "Roster",
+        "aktivita": "Aktivita",
+        "gates": "Nastavení & Gates",
+        "artefakty": "Artefakty"
+      },
+      "placeholder": {
+        "title": "{tab} — fáze {phase}",
+        "body": "Obsah této záložky přistane ve fázi {phase}."
+      }
+    }
   },
   "pins": {
     "pin": "Připnout",
