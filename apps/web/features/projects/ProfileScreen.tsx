@@ -28,6 +28,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
+import { useCompaniesQuery } from "../companies";
 import { InboxPanel } from "../integrations/components/InboxPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
 import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
@@ -214,6 +215,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
   const profileQ = useProjectProfileQuery(id, { enabled: !isNew });
   const standupQ = useProjectStandupQuery(id, { enabled: !isNew });
   const { data: categories = [] } = useProjectCategoriesQuery();
+  const { data: companies = [] } = useCompaniesQuery();
   const updateProfile = useUpdateProjectProfileMutation(id);
   const createProject = useCreateProjectMutation();
   const updateProject = useUpdateProjectMutation();
@@ -242,11 +244,18 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
   // starts empty and creates the record.
   const project = isNew ? undefined : projectQ.data;
 
+  // Phase 75: `/projects/new?companyId=<id>` pre-links the created project to a
+  // company (the company detail's "Create new project" action). A dangling id
+  // resolves as "no company" downstream (Phase 68/70), so we don't validate it
+  // here — just surface the pending link so the operator sees it before saving.
+  const linkCompanyId = isNew ? searchParams.get("companyId") || undefined : undefined;
+  const linkCompanyName = companies.find((c) => c.id === linkCompanyId)?.name ?? linkCompanyId;
+
   function saveBasics(body: ProjectBasicsBody) {
     if (isNew) {
       const newId = slug(body.name) || `project-${Date.now()}`;
       createProject.mutate(
-        { body: { ...body, id: newId } },
+        { body: { ...body, id: newId, ...(linkCompanyId ? { companyId: linkCompanyId } : {}) } },
         { onSuccess: () => router.replace(`/projects/${newId}`) },
       );
     } else {
@@ -529,7 +538,14 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
       />
 
       {isNew ? (
-        <Stack gap="300">{basicsPanel}</Stack>
+        <Stack gap="300">
+          {linkCompanyId && (
+            <Tag data-testid="new-project-linked-to" tone="accent">
+              {t("newProjectLinkedTo", { company: linkCompanyName ?? linkCompanyId })}
+            </Tag>
+          )}
+          {basicsPanel}
+        </Stack>
       ) : project ? (
         <Tabs defaultValue={initialTab} onValueChange={setTab}>
           <TabList>

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { DropDownButtonTestId } from "@zibby/design-system";
 import type { Company } from "@zibby/contracts";
 import { renderWithProviders as render, screen } from "../../test/render";
 import { DetailScreen } from "./DetailScreen";
@@ -14,6 +15,7 @@ const company: Company = {
 const createMutate = vi.fn();
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();
+const updateProjectMutate = vi.fn();
 const replace = vi.fn();
 const push = vi.fn();
 
@@ -34,6 +36,12 @@ vi.mock("../projects", () => ({
   useProjectsQuery: () => ({ data: projects }),
 }));
 
+// Phase 75's LinkProjectDialog (opened from the member-projects panel action)
+// reads the same project registry and updates via this mutation.
+vi.mock("../projects/mutations", () => ({
+  useUpdateProjectMutation: () => ({ mutate: updateProjectMutate, isPending: false }),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
 }));
@@ -42,6 +50,7 @@ beforeEach(() => {
   createMutate.mockReset();
   updateMutate.mockReset();
   deleteMutate.mockReset();
+  updateProjectMutate.mockReset();
   replace.mockReset();
   push.mockReset();
   projects = [];
@@ -113,6 +122,26 @@ describe("companies DetailScreen", () => {
 
       await userEvent.click(screen.getByText("Linked Co Project"));
       expect(push).toHaveBeenCalledWith("/projects/linked");
+    });
+  });
+
+  describe("add project actions (Phase 75)", () => {
+    it("shows the member panel's add control", () => {
+      render(<DetailScreen companyId="acme" />);
+      expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeInTheDocument();
+    });
+
+    it("navigates to /projects/new?companyId=<id> for 'Vytvořit nový projekt'", async () => {
+      render(<DetailScreen companyId="acme" />);
+      await userEvent.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+      await userEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-create-new`));
+      expect(push).toHaveBeenCalledWith("/projects/new?companyId=acme");
+    });
+
+    it("opens the link-existing-project dialog from the primary action", async () => {
+      render(<DetailScreen companyId="acme" />);
+      await userEvent.click(screen.getByTestId(DropDownButtonTestId.Primary));
+      expect(screen.getByText("propojit s touto firmou")).toBeInTheDocument();
     });
   });
 

@@ -1286,6 +1286,7 @@
         "title": "Project",
         "newHint": "Save the project to set up its team, integrations and secrets."
       },
+      "newProjectLinkedTo": "New project will be linked to company {company}.",
       "team": {
         "title": "Team",
         "empty": "No team members yet — add people who are involved in this project.",
@@ -1402,7 +1403,18 @@
     },
     "memberProjects": {
       "title": "Company projects",
-      "empty": "No projects link to this company yet — set it on a project's detail page."
+      "empty": "No projects link to this company yet — set it on a project's detail page.",
+      "addExisting": "Add existing project",
+      "createNew": "Create new project",
+      "add": "Add project",
+      "linkDialog": {
+        "title": "Add existing project",
+        "subtitle": "link to this company",
+        "selectLabel": "Project",
+        "placeholder": "Pick a project…",
+        "confirm": "Link",
+        "noCandidates": "No other project to link — every project already belongs to this company."
+      }
     }
   },
   "automations": {
