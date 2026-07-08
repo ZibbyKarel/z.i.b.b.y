@@ -37,6 +37,20 @@ export const subsystemsContract = c.router(
       },
       summary: "Get a single subsystem by id",
     },
+
+    markSubsystemSeen: {
+      method: "POST",
+      path: "/subsystems/:id/seen",
+      // Same plain-string pathParams pattern as `getSubsystem` — see its comment.
+      pathParams: z.object({ id: z.string() }),
+      body: z.object({}).optional(),
+      responses: {
+        200: SubsystemWithStatusSchema,
+        404: ErrorSchema,
+      },
+      summary:
+        "Acknowledge a subsystem's Tier-2 reports (opening its drawer) — resets its hlaseni window and returns the refreshed entry",
+    },
   },
   {
     pathPrefix: "/api",

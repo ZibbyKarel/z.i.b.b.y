@@ -20,6 +20,13 @@ describe("subsystemsContract", () => {
     expect(subsystemsContract.getSubsystem.responses).toHaveProperty("200");
     expect(subsystemsContract.getSubsystem.responses).toHaveProperty("404");
   });
+
+  it("exposes POST /api/subsystems/:id/seen with 200 and 404", () => {
+    expect(subsystemsContract.markSubsystemSeen.method).toBe("POST");
+    expect(subsystemsContract.markSubsystemSeen.path).toBe("/api/subsystems/:id/seen");
+    expect(subsystemsContract.markSubsystemSeen.responses).toHaveProperty("200");
+    expect(subsystemsContract.markSubsystemSeen.responses).toHaveProperty("404");
+  });
 });
 
 describe("SUBSYSTEMS registry", () => {

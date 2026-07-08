@@ -1,28 +1,235 @@
 import { Injectable } from "@nestjs/common";
-import { SUBSYSTEMS, type Subsystem, type SubsystemWithStatus } from "@zibby/contracts";
+import {
+  SUBSYSTEMS,
+  type SubsystemId,
+  type SubsystemState,
+  type SubsystemWithStatus,
+} from "@zibby/contracts";
+import type { Approval } from "@zibby/contracts";
+import type { TaskRun } from "@zibby/contracts";
+import { ApprovalsService } from "../approvals/approvals.service";
+import { ChainsStorageService } from "../chains/chains.storage.service";
+import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { TaskRunsService } from "../tasks/task-runs.service";
+import { SubsystemSeenStore } from "./subsystem-seen.store";
 import { SubsystemNotFoundError } from "./subsystems.errors";
 
 /**
- * Phase 80 — thin: maps the fixed `SUBSYSTEMS` registry (`@zibby/contracts`) to
- * with-status entries carrying the phase-80 stub status (`state: "klid"`, zero
- * Tier-2/Tier-3 counts). Real aggregation across running pipelines/goals/approvals
- * lands in phase 82; the shape is stable now so the web query never has to change.
+ * Precedence when several conditions apply to the SAME subsystem — waiting-on-you
+ * must never be masked by ambient activity. Distinct from {@link LIST_ORDER_RANK}:
+ * this only decides which single `state` wins for one subsystem.
+ */
+const STATE_PRECEDENCE: Record<SubsystemState, number> = { ceka: 0, bezi: 1, hlaseni: 2, klid: 3 };
+
+/**
+ * `list()`'s severity ordering ACROSS subsystems: `ceka` first, then `hlaseni`,
+ * then `bezi`, then `klid` — a Tier-2 report outranks quiet ambient Tier-1 work
+ * for "what needs a look" purposes, even though `bezi` outranks `hlaseni` in
+ * {@link STATE_PRECEDENCE} for a single subsystem's headline state.
+ */
+const LIST_ORDER_RANK: Record<SubsystemState, number> = { ceka: 0, hlaseni: 1, bezi: 2, klid: 3 };
+
+interface Aggregate {
+  state: SubsystemState;
+  tier2Count: number;
+  tier3Count: number;
+}
+
+/** A pipeline run owned by a subsystem, kept around for the approval-attribution pass. */
+interface OwnedPipelineRun {
+  runId: string;
+  owner: SubsystemId;
+}
+
+/**
+ * Phase 82 — real aggregation, replacing the phase-80 stub. A thin layer over
+ * EXISTING domain services (pipelines/chains storage for `ownerSubsystem`
+ * attribution, the unified task-runs feed for run state, the approvals service
+ * for pending Tier-3 items) — it duplicates no run/approval semantics, only
+ * reads and correlates.
+ *
+ * Per subsystem, in precedence order `ceka > bezi > hlaseni > klid`:
+ * - `bezi`: an owned pipeline/chain has a currently-`running` run.
+ * - `ceka` (+ `tier3Count`): pending approvals attributable to an owned
+ *   pipeline's run. Attribution mirrors the web's `approvalForRun` matching
+ *   (`apps/web/features/runs/run.ts`) — a `pipeline-output` approval's `runId`
+ *   IS the pipeline run id; a `pipeline-stage` approval's `runId` is the STAGE
+ *   run id, prefixed with the pipeline run id (`${pipelineRunId}.${phaseId}_…`).
+ *   Every other approval kind (`agent`, `channel`, `task`, `proposed-task`,
+ *   `task-output`, `jira-issue`, `machine`, `agent-proposal`) has no pipeline to
+ *   attribute through and is silently excluded — no data loss, the global
+ *   approvals surface still shows it; this is a lens.
+ * - `hlaseni` (+ `tier2Count`): owned pipeline/chain runs that went terminal
+ *   (`done` or `error`) after the subsystem's `lastSeenAt` (`SubsystemSeenStore`).
+ *   Neither `PipelineRun` nor `ChainRun` carries its own completion timestamp,
+ *   so this uses the best available signal: the backing task's
+ *   `taskOutcomeFinishedAt` when the run was dispatched from one, else the
+ *   run's own `startedAt` (close enough for a coarse "since last visit" read —
+ *   phase 82 scope; a run's own finish time can be added later without
+ *   affecting this shape).
+ *
+ * Counts are independent of the headline `state` — a subsystem can carry a
+ * `tier2Count` while its state reads `ceka` because a Tier-3 item outranks it.
  */
 @Injectable()
 export class SubsystemsService {
-  private withStatus(subsystem: Subsystem): SubsystemWithStatus {
-    return { ...subsystem, state: "klid", tier2Count: 0, tier3Count: 0 };
-  }
+  constructor(
+    private readonly pipelines: PipelinesStorageService,
+    private readonly chains: ChainsStorageService,
+    private readonly taskRuns: TaskRunsService,
+    private readonly approvals: ApprovalsService,
+    private readonly seen: SubsystemSeenStore,
+  ) {}
 
-  /** All eight subsystems, in registry order, each with the stub status. */
-  list(): SubsystemWithStatus[] {
-    return SUBSYSTEMS.map((subsystem) => this.withStatus(subsystem));
+  /**
+   * All eight subsystems with real status, sorted for LISTS/BRIEFINGS: `ceka`
+   * first (by `tier3Count` desc), then `hlaseni` (by `tier2Count` desc), then
+   * `bezi`, then `klid`; registry order is the stable tiebreak ("report
+   * severity, not recency, drives ordering" — design doc). The web subsystem
+   * STRIP does not consume this ordering — it keeps every node at a FIXED
+   * position (nodes never move); this sort exists for feeds that read the list
+   * top-to-bottom, not for the strip's layout.
+   */
+  async list(): Promise<SubsystemWithStatus[]> {
+    const aggregates = await this.aggregateAll();
+    const rows = SUBSYSTEMS.map((subsystem) => withAggregate(subsystem, aggregates));
+    return [...rows].sort((a, b) => {
+      const rankDiff = LIST_ORDER_RANK[a.state] - LIST_ORDER_RANK[b.state];
+      if (rankDiff !== 0) return rankDiff;
+      if (a.state === "ceka") return b.tier3Count - a.tier3Count;
+      if (a.state === "hlaseni") return b.tier2Count - a.tier2Count;
+      return 0; // Array#sort is stable → registry order survives as the tiebreak.
+    });
   }
 
   /** A single subsystem by id; throws `SubsystemNotFoundError` for an unknown id. */
-  get(id: string): SubsystemWithStatus {
+  async get(id: string): Promise<SubsystemWithStatus> {
+    const subsystem = this.find(id);
+    const aggregates = await this.aggregateAll();
+    return withAggregate(subsystem, aggregates);
+  }
+
+  /**
+   * Acknowledge `id`'s Tier-2 reports (the operator opened its drawer) —
+   * resets its `hlaseni` window to now and returns the refreshed entry. Tier-3
+   * (`ceka`) items are untouched: they resolve only through the approvals
+   * flow, a different acknowledgment model (design doc).
+   */
+  async markSeen(id: string): Promise<SubsystemWithStatus> {
+    const subsystem = this.find(id);
+    await this.seen.markSeen(subsystem.id);
+    return this.get(id);
+  }
+
+  private find(id: string) {
     const subsystem = SUBSYSTEMS.find((s) => s.id === id);
     if (!subsystem) throw new SubsystemNotFoundError(id);
-    return this.withStatus(subsystem);
+    return subsystem;
   }
+
+  /**
+   * The full aggregation pass, computed once and read for both `list()` and
+   * `get()` — at eight subsystems and a handful of runs/approvals this is
+   * cheap enough that a single-id fast path would only add complexity, not
+   * measurable speed.
+   */
+  private async aggregateAll(): Promise<Map<SubsystemId, Aggregate>> {
+    const [pipelines, chains, runs, pendingApprovals] = await Promise.all([
+      this.pipelines.list(),
+      this.chains.list(),
+      this.taskRuns.listTaskRuns(),
+      this.approvals.list("pending"),
+    ]);
+
+    const pipelineOwner = new Map<string, SubsystemId>();
+    for (const p of pipelines) if (p.ownerSubsystem) pipelineOwner.set(p.id, p.ownerSubsystem);
+    const chainOwner = new Map<string, SubsystemId>();
+    for (const c of chains) if (c.ownerSubsystem) chainOwner.set(c.id, c.ownerSubsystem);
+
+    const lastSeenById = new Map<SubsystemId, string>(
+      await Promise.all(
+        SUBSYSTEMS.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const),
+      ),
+    );
+
+    const bezi = new Set<SubsystemId>();
+    const tier2Count = new Map<SubsystemId, number>();
+    const ownedPipelineRuns: OwnedPipelineRun[] = [];
+
+    for (const run of runs) {
+      const owner =
+        run.kind === "pipeline"
+          ? pipelineOwner.get(run.owner)
+          : run.kind === "chain"
+            ? chainOwner.get(run.owner)
+            : undefined;
+      if (!owner) continue;
+      if (run.kind === "pipeline") ownedPipelineRuns.push({ runId: run.runId, owner });
+
+      if (run.status === "running") bezi.add(owner);
+
+      if (run.status === "done" || run.status === "error") {
+        const completedAt = completionSignal(run);
+        const lastSeen = lastSeenById.get(owner);
+        if (lastSeen !== undefined && completedAt > lastSeen) {
+          tier2Count.set(owner, (tier2Count.get(owner) ?? 0) + 1);
+        }
+      }
+    }
+
+    const tier3Count = new Map<SubsystemId, number>();
+    for (const approval of pendingApprovals) {
+      const owner = attributeApproval(approval, ownedPipelineRuns);
+      if (!owner) continue;
+      tier3Count.set(owner, (tier3Count.get(owner) ?? 0) + 1);
+    }
+
+    const result = new Map<SubsystemId, Aggregate>();
+    for (const s of SUBSYSTEMS) {
+      const t3 = tier3Count.get(s.id) ?? 0;
+      const t2 = tier2Count.get(s.id) ?? 0;
+      const candidates: SubsystemState[] = [
+        ...(t3 > 0 ? (["ceka"] as const) : []),
+        ...(bezi.has(s.id) ? (["bezi"] as const) : []),
+        ...(t2 > 0 ? (["hlaseni"] as const) : []),
+        "klid",
+      ];
+      const state = candidates.reduce((best, candidate) =>
+        STATE_PRECEDENCE[candidate] < STATE_PRECEDENCE[best] ? candidate : best,
+      );
+      result.set(s.id, { state, tier2Count: t2, tier3Count: t3 });
+    }
+    return result;
+  }
+}
+
+/** Best-available completion signal for a terminal run — see the class doc for why. */
+function completionSignal(run: TaskRun): string {
+  return run.taskOutcomeFinishedAt ?? run.startedAt;
+}
+
+/**
+ * The owned pipeline run a pending approval belongs to, or `undefined` when it
+ * doesn't attribute to any owned pipeline. Mirrors `approvalForRun`
+ * (`apps/web/features/runs/run.ts`): a `pipeline-output` approval's `runId` IS
+ * the pipeline run id (exact match); a `pipeline-stage` approval's `runId` is
+ * the stage run id, which is the pipeline run id plus a `.<phaseId>_…` suffix
+ * (prefix match).
+ */
+function attributeApproval(
+  approval: Pick<Approval, "runId">,
+  ownedPipelineRuns: readonly OwnedPipelineRun[],
+): SubsystemId | undefined {
+  const match = ownedPipelineRuns.find(
+    (r) => approval.runId === r.runId || approval.runId.startsWith(`${r.runId}.`),
+  );
+  return match?.owner;
+}
+
+function withAggregate(
+  subsystem: (typeof SUBSYSTEMS)[number],
+  aggregates: Map<SubsystemId, Aggregate>,
+): SubsystemWithStatus {
+  const aggregate = aggregates.get(subsystem.id) ?? { state: "klid", tier2Count: 0, tier3Count: 0 };
+  return { ...subsystem, ...aggregate };
 }

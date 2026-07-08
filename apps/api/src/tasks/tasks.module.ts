@@ -65,6 +65,13 @@ import { TasksController } from "./tasks.controller";
   ],
   // Re-export the storage module + scheduler so the channel triage flow (Phase 5.3)
   // can dispatch a task and read its outcome back onto the channel item.
-  exports: [TaskSchedulerService, AttachmentStorageService, ScheduledTasksStorageModule],
+  // TaskRunsService is also exported (Phase 82) so `SubsystemsModule` can read the
+  // unified run feed for its status aggregation without re-implementing the merge.
+  exports: [
+    TaskSchedulerService,
+    TaskRunsService,
+    AttachmentStorageService,
+    ScheduledTasksStorageModule,
+  ],
 })
 export class TasksModule {}
