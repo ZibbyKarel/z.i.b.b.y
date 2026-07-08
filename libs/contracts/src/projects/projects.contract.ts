@@ -2,6 +2,11 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
+  MergeProjectPrBodySchema,
+  MergeProjectPrResultSchema,
+  ProjectPrSchema,
+} from "./project-pr.schema";
+import {
   CreateProjectSchema,
   ProjectIdSchema,
   ProjectLocalStateSchema,
@@ -140,6 +145,31 @@ export const projectsContract = c.router(
       },
       summary:
         "Clone a project into this machine's cloneRoot (Phase 76 — 422 without gitRemote, 409 if already present)",
+    },
+    getProjectPrs: {
+      method: "GET",
+      path: "/projects/:id/prs",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      responses: { 200: z.array(ProjectPrSchema), 404: ErrorSchema },
+      summary:
+        "List open GitHub PRs for a project's linked repo (Phase 78; [] with no github link — never an error)",
+    },
+    mergeProjectPr: {
+      method: "POST",
+      path: "/projects/:id/prs/:number/merge",
+      pathParams: z.object({ id: ProjectIdSchema, number: z.coerce.number().int() }),
+      body: MergeProjectPrBodySchema.optional(),
+      responses: {
+        200: MergeProjectPrResultSchema,
+        404: ErrorSchema,
+        // 409: GitHub reports the PR isn't mergeable (conflicts, already merged, …).
+        409: ErrorSchema,
+        // 422: no github integration/token configured for this project.
+        422: ErrorSchema,
+      },
+      summary:
+        "Merge an open PR — ALWAYS an explicit operator action from the UI; ZIBBY never " +
+        "auto-merges (Phase 78, CLAUDE.md Law 'Never: Auto-merge')",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

@@ -1,10 +1,12 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { dataDir } from "../shared/data-dir";
+import { IntegrationsModule } from "../integrations/integrations.module";
 import { MachineConfigModule } from "../machine/machine-config.module";
 import { MemoryModule } from "../memory/memory.module";
 import { VAULT_DIR } from "../memory/vault.service";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { ProjectLocalService } from "./project-local.service";
+import { ProjectPrService } from "./project-pr.service";
 import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store";
 import { ProjectCategoriesController } from "./project-categories.controller";
 import { ProjectCategoriesStorageService } from "./project-categories.storage.service";
@@ -35,9 +37,15 @@ export function resolveProjectSecretsDir(): string {
   // module directly for the integration→project FK check; wrapping this edge too
   // keeps every link in that triangle safe to add in any order) so
   // `ProjectsController.getResolvedProject` can inject `ResolvedProjectService`.
+  //
+  // Phase 78: also imports `IntegrationsModule` directly (also `forwardRef` —
+  // `IntegrationsModule` already forwardRef-imports THIS module, so the edge is
+  // symmetric, same fix as the Phase 72 triangle above) so `ProjectPrService`
+  // can inject `CredentialsStore` to read a resolved github integration's token.
   imports: [
     MemoryModule,
     forwardRef(() => ResolvedProjectModule),
+    forwardRef(() => IntegrationsModule),
     // Phase 76: both leaf modules (no imports of their own) — no cycle risk.
     WorkspaceModule,
     MachineConfigModule,
@@ -59,6 +67,7 @@ export function resolveProjectSecretsDir(): string {
     ProjectVaultService,
     StandupService,
     ProjectLocalService,
+    ProjectPrService,
   ],
   exports: [
     ProjectsStorageService,

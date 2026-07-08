@@ -70,6 +70,14 @@ function CostBar({ label, spentUsd, capUsd }: { label: string; spentUsd: number;
  * (the same buckets the project detail's run summary shows, minus the "Celkem"
  * total), each a deep-link into the runs feed pre-filtered to that project + bucket.
  * With a Phase-8 budget set, the daily/weekly run-count and cost bars follow.
+ *
+ * Phase 78 decision: this card deliberately does NOT show an open-PR count
+ * badge. There is no batch/count endpoint — the only source is
+ * `GET /projects/:id/prs`, one GitHub API round trip per project — so a badge
+ * here would turn a project-list render into N requests. The count instead
+ * lives once, on the project detail's header (`ProjectPrCountBadge` in
+ * `ProjectPullRequestsPanel.tsx`), sharing its cache key with that screen's PR
+ * overview panel.
  */
 export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
   const t = useTranslations("projects");

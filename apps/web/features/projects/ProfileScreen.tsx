@@ -36,6 +36,7 @@ import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
 import { ProjectCompanyPanel } from "./components/ProjectCompanyPanel";
 import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
+import { ProjectPrCountBadge, ProjectPullRequestsPanel } from "./components/ProjectPullRequestsPanel";
 import { ProjectRunSummary } from "./components/ProjectRunSummary";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
 import {
@@ -547,6 +548,8 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
             )}
             {/* CI health chip (N4b) — state readout, renders nothing without a watched CI */}
             {!isNew && <ProjectCiStatusChip projectId={id} />}
+            {/* Open-PR count badge (Phase 78) — renders nothing at zero */}
+            {!isNew && <ProjectPrCountBadge projectId={id} />}
             <Button intent="ghost" onClick={() => router.push("/projects")} size="sm">
               {tk("common.back")}
             </Button>
@@ -611,6 +614,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
               {basicsPanel}
               <ProjectCompanyPanel companyId={project.companyId} projectId={id} />
               <ProjectRunSummary projectId={id} />
+              <ProjectPullRequestsPanel projectId={id} />
             </Stack>
           </TabPanel>
 

@@ -7,3 +7,4 @@ export { useDeleteProjectCategoryMutation } from "./useDeleteProjectCategoryMuta
 export { useSetProjectSecretsMutation } from "./useSetProjectSecretsMutation";
 export { useDeleteProjectSecretsMutation } from "./useDeleteProjectSecretsMutation";
 export { useCloneProjectMutation } from "./useCloneProjectMutation";
+export { useMergeProjectPrMutation } from "./useMergeProjectPrMutation";

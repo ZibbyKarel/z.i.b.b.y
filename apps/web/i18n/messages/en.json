@@ -1214,6 +1214,17 @@
       "red": "CI red since {since}",
       "green": "CI green"
     },
+    "prs": {
+      "title": "Open PRs",
+      "empty": "No open PRs.",
+      "noGithub": "Project has no linked GitHub repo.",
+      "mergeButton": "Merge",
+      "mergeConfirmTitle": "Merge PR #{number}?",
+      "mergeConfirmBody": "Merges PR #{number} into the main branch. This is not easily undone.",
+      "author": "by {name}",
+      "open": "Open",
+      "count": "{count, plural, one {# open PR} other {# open PRs}}"
+    },
     "create": "Create project",
     "save": "Save changes",
     "delete": "Delete",
