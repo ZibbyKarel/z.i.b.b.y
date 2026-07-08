@@ -28,6 +28,7 @@ import {
   skillCategoriesContract,
 } from "./categories/categories.contract";
 import { healthContract } from "./health/health.contract";
+import { selfContract } from "./self/self.contract";
 import { selfKnowledgeContract } from "./self-knowledge/self-knowledge.contract";
 import { hooksContract } from "./hooks/hooks.contract";
 import { limitsContract } from "./limits/limits.contract";
@@ -80,6 +81,7 @@ export const appContract = c.router({
   channels: channelsContract,
   mandate: mandateContract,
   health: healthContract,
+  self: selfContract,
   selfKnowledge: selfKnowledgeContract,
   limits: limitsContract,
   tasks: tasksContract,

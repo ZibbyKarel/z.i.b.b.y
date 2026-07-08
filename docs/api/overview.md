@@ -54,6 +54,7 @@ Imports in `AppModule`, in the order they're registered:
 | `DiscoveryModule`         | `discovery/discovery.module`         | Bug/request triage from inbound channels → proposed tasks                    |
 | `ResearchModule`          | `research/research.module`           | Watched-source digest for the morning briefing                              |
 | `HealthModule`            | `health/health.module`               | Health check endpoint                                                       |
+| `SelfModule`              | `self/self.module`                   | Is the ZIBBY install repo itself up to date (top-bar freshness)             |
 | `LimitsModule`            | `limits/limits.module`               | Rate-limit reading, budget display                                          |
 | `LimitResumeModule`       | `limits-resume/limit-resume.module`  | Resumes runs paused on a rate limit                                         |
 | `EventsModule`            | `events/events.module`               | Single multiplexed SSE endpoint (`GET /api/events`)                          |

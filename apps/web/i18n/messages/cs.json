@@ -77,7 +77,16 @@
     "commandPlaceholder": "Příkaz nebo skill…",
     "langSwitcherLabel": "Jazyk rozhraní",
     "hideRail": "Skrýt postranní panel",
-    "showRail": "Zobrazit postranní panel"
+    "showRail": "Zobrazit postranní panel",
+    "self": {
+      "panelTitle": "Aktuálnost ZIBBY",
+      "upToDate": "ZIBBY je aktuální",
+      "behind": "o {count} commitů pozadu",
+      "updateButton": "Aktualizovat",
+      "updateFailed": "Aktualizace se nezdařila",
+      "openPrCount": "{count, plural, one {# otevřené PR} few {# otevřené PR} other {# otevřených PR}}",
+      "noOpenPrs": "žádné otevřené PR"
+    }
   },
   "tasks": {
     "triggerLabel": "TASK",

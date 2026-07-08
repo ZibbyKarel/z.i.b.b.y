@@ -54,6 +54,8 @@ export * from "./mandate/mandate.schema";
 export * from "./mandate/mandate.contract";
 export * from "./health/health.schema";
 export * from "./health/health.contract";
+export * from "./self/self.schema";
+export * from "./self/self.contract";
 export * from "./self-knowledge/self-knowledge.schema";
 export * from "./self-knowledge/self-knowledge.contract";
 export * from "./limits/limits.schema";
