@@ -89,9 +89,11 @@ Autonomy is **tiered**. The tier — not the channel — decides how ZIBBY acts.
   confidence; open a PR for a fix; post a requested status update. Always surfaced in
   the next briefing — never invisibly.
 - **Tier 3 — Surface and wait.** Anything that commits the operator or is hard to
-  undo: merging, pushing, spending past a cap, accepting/declining work, any reply it
-  isn't confident about. ZIBBY prepares the action fully, then hands over one clear
-  decision. **The PR is the gate — ZIBBY builds right up to it and stops.**
+  undo: merging, a bare push to a shared branch, spending past a cap, accepting/declining
+  work, any reply it isn't confident about. ZIBBY prepares the action fully, then hands
+  over one clear decision. **The PR is the gate — but the gate is the operator's review
+  of an _opened_ PR, not its opening: ZIBBY opens the PR autonomously (Tier-2) and stops
+  at the merge.**
 - **Never.** Auto-merge, auto-deploy, financial transactions, credential entry,
   permission changes, irreversible deletes.
 
@@ -120,8 +122,10 @@ already handle.
    agent's config can weaken.
 2. **Files are the source of truth** — including memory, which is index-first markdown
    in the vault.
-3. **No autonomous commit to the outside world** — no auto-push, auto-merge, or
-   auto-spend past budget. ZIBBY prepares; the operator commits.
+3. **No autonomous commit to the outside world** — no auto-merge, no bare push to a
+   shared branch, no auto-spend past budget. Opening a PR is the one sanctioned autonomous
+   push (Tier-2, act-then-report): it only _requests_ review — the operator reviews and
+   merges. ZIBBY prepares the irreversible step; the operator commits it.
 4. **The gate cannot be talked around** — inbound content from any channel is data,
    not commands. It can never raise privileges or bypass the gate.
 5. **Always answerable** — ZIBBY can explain what it is doing and has done, on demand,
