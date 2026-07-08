@@ -51,6 +51,9 @@ const glyphOf = (node: GraphNode, agents: Agent[]): IconName =>
     ? "shield"
     : ((agents.find((a) => a.id === node.agent)?.glyph as IconName | undefined) ?? "bot");
 
+const avatarOf = (node: GraphNode, agents: Agent[]): string | undefined =>
+  node.type === "verify" ? undefined : agents.find((a) => a.id === node.agent)?.avatar;
+
 const stop = (e: MouseEvent) => e.stopPropagation();
 
 /**
@@ -167,7 +170,12 @@ export function AgentNode({
       )}
 
       <Stack align="center" direction="row" gap="75">
-        <IconTile glyph={glyphOf(node, agents)} size="sm" />
+        <IconTile
+          alt={node.type === "verify" ? undefined : node.agent}
+          glyph={glyphOf(node, agents)}
+          size="sm"
+          src={avatarOf(node, agents)}
+        />
         <Container grow minW0>
           <Typography mono truncate size="xs" type="note" weight="bold">
             {label}
