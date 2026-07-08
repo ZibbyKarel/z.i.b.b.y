@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceService, WorkspaceSetupError, sanitizeBranchSlug } from "./workspace.service";
 
 const exec = promisify(execFile);
@@ -23,6 +23,29 @@ async function initRepo(dir: string): Promise<void> {
   await git(dir, "add", "-A");
   await git(dir, "commit", "-m", "initial");
 }
+
+/** A bare repo (acts as `origin`) with `main` as its default (HEAD) branch. */
+async function initBareOrigin(dir: string): Promise<void> {
+  await git(dir, "init", "--bare", "-b", "main");
+}
+
+/** Clone `origin` into `dir`, add a commit, push it — `dir` ends up with a
+ * configured `origin` remote and `refs/remotes/origin/HEAD` set (as a real
+ * `git clone` does), the same shape a real project checkout has. */
+async function cloneAndCommit(origin: string, dir: string, message: string): Promise<string> {
+  await exec("git", ["clone", origin, dir]);
+  await git(dir, "config", "user.email", "test@zibby.local");
+  await git(dir, "config", "user.name", "ZIBBY Test");
+  await fs.writeFile(path.join(dir, `${message}.txt`), message, "utf8");
+  await git(dir, "add", "-A");
+  await git(dir, "commit", "-m", message);
+  await git(dir, "push", "origin", "HEAD:main");
+  return git(dir, "rev-parse", "HEAD");
+}
+
+const fakeLogger = {
+  child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+};
 
 describe("sanitizeBranchSlug", () => {
   it.each([
@@ -210,5 +233,120 @@ describe("WorkspaceService", () => {
     } finally {
       await fs.rm(plain, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * Phase 76 — `createWorktree` fetches `origin` and cuts from `origin/<default>`
+ * (the origin tip), not local HEAD; degrades gracefully offline; and never
+ * touches the operator's checkout (no `checkout`/`reset`). Real git plumbing
+ * throughout (a bare "origin" + a second clone that pushes past it) rather than
+ * mocked `execFile`, so the assertions are on observable git state — the same
+ * style as the rest of this file.
+ */
+describe("WorkspaceService — fetch-origin base (Phase 76)", () => {
+  let origin: string;
+  let repo: string;
+  let runDir: string;
+
+  beforeEach(async () => {
+    origin = await fs.mkdtemp(path.join(os.tmpdir(), "ws-origin-"));
+    repo = await fs.mkdtemp(path.join(os.tmpdir(), "ws-clone-"));
+    runDir = await fs.mkdtemp(path.join(os.tmpdir(), "ws-run2-"));
+    await initBareOrigin(origin);
+  });
+
+  afterEach(async () => {
+    await fs.rm(origin, { recursive: true, force: true });
+    await fs.rm(repo, { recursive: true, force: true });
+    await fs.rm(runDir, { recursive: true, force: true });
+  });
+
+  it("fetches origin and cuts the worktree from origin/<default>, not the (stale) local HEAD", async () => {
+    const localHead = await cloneAndCommit(origin, repo, "initial");
+    // A second clone pushes a NEW commit to origin AFTER `repo` cloned — `repo`'s
+    // local HEAD and its cached `refs/remotes/origin/main` are now stale.
+    const pusher = await fs.mkdtemp(path.join(os.tmpdir(), "ws-pusher-"));
+    const originHead = await cloneAndCommit(origin, pusher, "second");
+    await fs.rm(pusher, { recursive: true, force: true });
+    expect(originHead).not.toBe(localHead);
+
+    const svc = new WorkspaceService(fakeLogger as never);
+    const dir = path.join(runDir, "worktree");
+    const ws = await svc.createWorktree({ projectPath: repo, runId: "r-fetch", slug: "s", dir });
+
+    // Cut from the origin tip (post-fetch), NOT the stale local HEAD.
+    expect(ws.baseRef).toBe(originHead);
+    expect(await git(dir, "rev-parse", "HEAD")).toBe(originHead);
+
+    // The operator's checkout is untouched: same branch, same (stale) HEAD, clean tree.
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(localHead);
+    expect(await git(repo, "symbolic-ref", "--short", "HEAD")).toBe("main");
+    expect(await git(repo, "status", "--porcelain")).toBe("");
+  });
+
+  it("falls back to local HEAD when git fetch origin fails (offline)", async () => {
+    const localHead = await cloneAndCommit(origin, repo, "initial");
+    // Point origin at a path that doesn't exist — `git fetch origin` fails the
+    // way it would on a genuinely offline machine (network/remote unreachable).
+    await git(repo, "remote", "set-url", "origin", path.join(os.tmpdir(), "ws-does-not-exist"));
+
+    const child = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const logger = { child: () => child };
+    const svc = new WorkspaceService(logger as never);
+    const dir = path.join(runDir, "worktree");
+    const ws = await svc.createWorktree({ projectPath: repo, runId: "r-offline", slug: "s", dir });
+
+    expect(ws.baseRef).toBe(localHead);
+    expect(await git(dir, "rev-parse", "HEAD")).toBe(localHead);
+    expect(child.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/git fetch origin failed/),
+      expect.anything(),
+    );
+
+    // The operator's checkout is still untouched.
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(localHead);
+    expect(await git(repo, "status", "--porcelain")).toBe("");
+  });
+
+  it("degrades gracefully when the project has no origin remote configured at all", async () => {
+    // No `origin` remote at all (a bare local-only repo, e.g. a freshly `git init`ed
+    // project never pushed anywhere) — `git fetch origin` fails immediately.
+    await initRepo(repo);
+    const headBefore = await git(repo, "rev-parse", "HEAD");
+    const svc = new WorkspaceService(fakeLogger as never);
+    const dir = path.join(runDir, "worktree");
+    const ws = await svc.createWorktree({ projectPath: repo, runId: "r-noorigin", slug: "s", dir });
+    expect(ws.baseRef).toBe(headBefore);
+  });
+});
+
+describe("WorkspaceService.clone (Phase 76)", () => {
+  let origin: string;
+  let dest: string;
+
+  beforeEach(async () => {
+    origin = await fs.mkdtemp(path.join(os.tmpdir(), "ws-clone-origin-"));
+    await initRepo(origin);
+    dest = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "ws-clone-dest-")), "cloned");
+  });
+
+  afterEach(async () => {
+    await fs.rm(origin, { recursive: true, force: true });
+    await fs.rm(path.dirname(dest), { recursive: true, force: true });
+  });
+
+  it("clones the remote into dir", async () => {
+    const svc = new WorkspaceService(fakeLogger as never);
+    await svc.clone(origin, dest);
+    expect(await svc.isGitRepo(dest)).toBe(true);
+    expect(await git(dest, "log", "--oneline", "-1")).toContain("initial");
+  });
+
+  it("throws WorkspaceSetupError when the remote doesn't exist", async () => {
+    const svc = new WorkspaceService(fakeLogger as never);
+    await expect(
+      svc.clone(path.join(os.tmpdir(), "ws-clone-does-not-exist"), dest),
+    ).rejects.toBeInstanceOf(WorkspaceSetupError);
   });
 });

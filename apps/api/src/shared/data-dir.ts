@@ -36,3 +36,23 @@ export function resolveDataRoot(): string {
 export function dataDir(...segments: string[]): string {
   return path.join(resolveDataRoot(), ...segments);
 }
+
+/**
+ * Phase 76 — the ZIBBY install root: the repo root, i.e. the parent of
+ * `.zibby` (`resolveDataRoot()` is `<repo-root>/.zibby/data`, so this is two
+ * levels up from there). Used to derive {@link defaultCloneRoot}, the
+ * per-machine default destination for local project clones.
+ */
+export function installRoot(): string {
+  return path.resolve(resolveDataRoot(), "..", "..");
+}
+
+/**
+ * Phase 76 — the default per-machine clone root when no `MachineConfig`
+ * override exists: the parent folder of the ZIBBY install root, so a fresh
+ * clone of project `<id>` lands as a sibling of the ZIBBY repo itself
+ * (`<installRoot>/../<id>`), not inside it.
+ */
+export function defaultCloneRoot(): string {
+  return path.resolve(installRoot(), "..");
+}

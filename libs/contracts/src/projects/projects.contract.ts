@@ -4,6 +4,7 @@ import { ErrorSchema } from "../common.schema";
 import {
   CreateProjectSchema,
   ProjectIdSchema,
+  ProjectLocalStateSchema,
   ProjectProfileSchema,
   ProjectSchema,
   ProjectSecretsInputSchema,
@@ -113,6 +114,32 @@ export const projectsContract = c.router(
       responses: { 200: ResolvedProjectContextSchema, 404: ErrorSchema },
       summary:
         "Get a project's EFFECTIVE (company-merged) people/budget/integrations (Phase 72)",
+    },
+    getProjectLocalState: {
+      method: "GET",
+      path: "/projects/:id/local-state",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      responses: { 200: ProjectLocalStateSchema, 404: ErrorSchema },
+      summary:
+        "Get THIS machine's local-clone resolution for a project (Phase 76 — path vs. cloneRoot vs. absent)",
+    },
+    cloneProject: {
+      method: "POST",
+      path: "/projects/:id/clone",
+      pathParams: z.object({ id: ProjectIdSchema }),
+      body: z.object({}).optional(),
+      responses: {
+        // 200 on a fresh clone; 409 when this machine already has the project
+        // present (at `path` or `cloneRoot`) — re-cloning would be a no-op at
+        // best and a collision at worst; 422 when the project has no
+        // `gitRemote` to clone from.
+        200: ProjectLocalStateSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        422: ErrorSchema,
+      },
+      summary:
+        "Clone a project into this machine's cloneRoot (Phase 76 — 422 without gitRemote, 409 if already present)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

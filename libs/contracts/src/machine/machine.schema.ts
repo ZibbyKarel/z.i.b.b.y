@@ -106,3 +106,22 @@ export type MachineActionRecord = z.infer<typeof MachineActionRecordSchema>;
 /** Body accepted by `proposeMachineAction` — just the action; ZIBBY previews it. */
 export const ProposeMachineActionSchema = z.object({ action: MachineActionSchema });
 export type ProposeMachineActionInput = z.infer<typeof ProposeMachineActionSchema>;
+
+/**
+ * Phase 76 — per-machine, never-synced settings (`.zibby/data/machine/config.json`,
+ * gitignored). `.strict()` so an unknown key can never smuggle a fifth knob in
+ * unnoticed; `cloneRoot` is the local directory new project clones land in
+ * (`<cloneRoot>/<project.id>`) when a project isn't already present at its
+ * canonical `path` on this machine. Extensible later — this is deliberately the
+ * one-field v1, not a place to accrete unrelated machine settings.
+ */
+export const MachineConfigSchema = z
+  .object({
+    cloneRoot: z.string().min(1),
+  })
+  .strict();
+export type MachineConfig = z.infer<typeof MachineConfigSchema>;
+
+/** Body accepted by `updateMachineConfig` — partial patch merged over the current config. */
+export const UpdateMachineConfigSchema = MachineConfigSchema.partial();
+export type UpdateMachineConfigInput = z.infer<typeof UpdateMachineConfigSchema>;

@@ -179,6 +179,16 @@ export const ProjectSchema = z.object({
    * deleted) resolves as "no company" rather than erroring.
    */
   companyId: z.string().optional(),
+
+  /**
+   * Phase 76 — the canonical clone source for this project (a `https://…` or
+   * `git@…` URL), synced in the registry since the clone source is the same on
+   * every machine. Deliberately NOT over-validated (no strict URL schema) —
+   * git accepts many remote forms. Distinct from `path`, which stays the
+   * canonical (but machine-relative) target dir; a per-machine resolution
+   * layer (`ProjectLocalService`) reconciles the two on each machine.
+   */
+  gitRemote: z.string().min(1).optional(),
 });
 export type Project = z.infer<typeof ProjectSchema>;
 
@@ -215,3 +225,27 @@ export const ProjectStandupSchema = z.object({
   text: z.string(),
 });
 export type ProjectStandup = z.infer<typeof ProjectStandupSchema>;
+
+/**
+ * Phase 76 — THIS machine's view of where a project's working dir actually
+ * lives. `project.path` is the canonical registry field (synced everywhere),
+ * but on any one machine it may not exist (a fresh machine, a not-yet-cloned
+ * project) — this describes what `ProjectLocalService.resolve` found:
+ *
+ * - `source: "path"` — `project.path` exists and is a git repo; use it as-is.
+ * - `source: "cloneRoot"` — `path` was absent/not-a-repo, but
+ *   `<cloneRoot>/<project.id>` exists and is a git repo (a prior local clone).
+ * - `source: "none"` — neither location resolves; `present`/`isGitRepo` are
+ *   false and `resolvedPath` is null — the project needs a clone.
+ *
+ * `cloneRoot` always echoes this machine's configured clone root (even in the
+ * `"none"` case) so the UI can show/offer the exact clone destination.
+ */
+export const ProjectLocalStateSchema = z.object({
+  present: z.boolean(),
+  isGitRepo: z.boolean(),
+  resolvedPath: z.string().nullable(),
+  source: z.enum(["path", "cloneRoot", "none"]),
+  cloneRoot: z.string(),
+});
+export type ProjectLocalState = z.infer<typeof ProjectLocalStateSchema>;

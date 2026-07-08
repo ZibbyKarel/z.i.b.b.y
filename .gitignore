@@ -30,6 +30,9 @@ graphify-out/
 .zibby/data/_purged
 .zibby/data/chat
 
+# Phase 76: per-machine clone-root config — never synced, differs per machine.
+.zibby/data/machine/config.json
+
 # Phase 73: uploaded avatar image bytes live outside the (committed) .md
 # frontmatter — binary, regenerable from an upload, never versioned.
 .zibby/data/agents/assets/

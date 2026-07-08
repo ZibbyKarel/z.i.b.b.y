@@ -3,9 +3,15 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import type { Project, ProjectProfile, ResolvedProjectContext } from "@zibby/contracts";
 import { projectsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
+import { ProjectLocalService } from "./project-local.service";
 import { ProjectSecretsStore } from "./project-secrets.store";
 import { ProjectVaultService } from "./project-vault.service";
-import { ProjectConflictError, ProjectNotFoundError } from "./projects.errors";
+import {
+  ProjectAlreadyClonedError,
+  ProjectConflictError,
+  ProjectNoRemoteError,
+  ProjectNotFoundError,
+} from "./projects.errors";
 import { ProjectsStorageService } from "./projects.storage.service";
 import { ResolvedProjectService } from "./resolved-project.service";
 import { StandupService } from "./standup.service";
@@ -42,6 +48,7 @@ export class ProjectsController {
     private readonly standup: StandupService,
     private readonly vault: ProjectVaultService,
     private readonly resolvedProjects: ResolvedProjectService,
+    private readonly local: ProjectLocalService,
   ) {}
 
   /** Layer the read-time `hasSecrets` onto an entity for the wire. */
@@ -138,6 +145,32 @@ export class ProjectsController {
 
       getResolvedProject: ({ params: { id } }) =>
         errors.or404(id, async () => this.resolveContext(await this.storage.get(id))),
+
+      getProjectLocalState: ({ params: { id } }) =>
+        errors.or404(id, async () => this.local.resolve(await this.storage.get(id))),
+
+      cloneProject: async ({ params: { id } }) => {
+        let project: Project;
+        try {
+          project = await this.storage.get(id);
+        } catch (error) {
+          if (error instanceof ProjectNotFoundError) {
+            return { status: 404 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+        try {
+          return { status: 200 as const, body: await this.local.clone(project) };
+        } catch (error) {
+          if (error instanceof ProjectNoRemoteError) {
+            return { status: 422 as const, body: { message: error.message } };
+          }
+          if (error instanceof ProjectAlreadyClonedError) {
+            return { status: 409 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
     });
   }
 }
