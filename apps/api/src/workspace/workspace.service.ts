@@ -11,6 +11,13 @@ const exec = promisify(execFile);
 /** Git invocations are local-only (no fetch/pull) — a short timeout bounds a hang. */
 const GIT_TIMEOUT_MS = 10_000;
 
+/**
+ * `git fetch`/`git clone` touch the network — a much longer bound than the
+ * local-only git calls above, but still finite so a dead remote fails the run
+ * rather than hanging it indefinitely.
+ */
+const GIT_NETWORK_TIMEOUT_MS = 60_000;
+
 /** Hard cap on a sanitized branch slug, leaving room under git's ref-name limits. */
 const SLUG_MAX = 60;
 
@@ -68,10 +75,17 @@ export class WorkspaceService {
   }
 
   /**
-   * Cut a fresh worktree + branch from the project's current HEAD. `dir` must not
-   * exist (git creates it). No fetch/pull — the branch is local, off whatever the
-   * checkout's HEAD is now. Returns the record persisted on the run aggregate.
-   * Throws {@link WorkspaceSetupError} on any git failure (the caller fails the run).
+   * Cut a fresh worktree + branch from the project's origin. `dir` must not exist
+   * (git creates it). Phase 76: BEFORE cutting, fetches `origin` (the only network
+   * git call this method makes) and cuts from `origin/<default-branch>` rather than
+   * local HEAD, so a run always starts from what's actually on the remote — not a
+   * stale or locally-diverged checkout. Offline (fetch fails) degrades gracefully
+   * to local HEAD (logged, never thrown) so an offline machine still runs. Returns
+   * the record persisted on the run aggregate. Throws {@link WorkspaceSetupError}
+   * on any OTHER git failure (the caller fails the run). Never `checkout`s or
+   * `reset`s the operator's main working tree — `git worktree add` is isolated by
+   * construction, and every call here is a read (`rev-parse`, `symbolic-ref`,
+   * `fetch`) except the `worktree add` itself.
    */
   async createWorktree(opts: {
     projectPath: string;
@@ -81,22 +95,102 @@ export class WorkspaceService {
   }): Promise<Workspace> {
     const branch = `zibby/${opts.runId}-${sanitizeBranchSlug(opts.slug)}`;
     try {
-      const head = await exec("git", ["rev-parse", "HEAD"], {
+      const base = await this.resolveWorktreeBase(opts.projectPath);
+      await exec("git", ["worktree", "add", "-b", branch, opts.dir, base.ref], {
         cwd: opts.projectPath,
         timeout: GIT_TIMEOUT_MS,
       });
-      const baseRef = head.stdout.trim();
-      await exec("git", ["worktree", "add", "-b", branch, opts.dir, "HEAD"], {
-        cwd: opts.projectPath,
-        timeout: GIT_TIMEOUT_MS,
+      this.log?.info("worktree created", {
+        projectPath: opts.projectPath,
+        branch,
+        dir: opts.dir,
+        base: base.ref,
       });
-      this.log?.info("worktree created", { projectPath: opts.projectPath, branch, dir: opts.dir });
-      return { branch, path: opts.dir, baseRef };
+      return { branch, path: opts.dir, baseRef: base.sha };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new WorkspaceSetupError(
         `Failed to create worktree for branch "${branch}" in "${opts.projectPath}": ${message}`,
       );
+    }
+  }
+
+  /**
+   * The ref (and its resolved sha) to cut a worktree from: `origin/<default>` when
+   * `git fetch origin` succeeds, else local `HEAD` (offline fallback — logged as a
+   * warning, never thrown, so a project with no remote configured, or a genuinely
+   * offline machine, still gets a working run). This is the ONLY network git call
+   * `createWorktree` makes; every other call here is local and read-only.
+   */
+  private async resolveWorktreeBase(projectPath: string): Promise<{ ref: string; sha: string }> {
+    const fetched = await exec("git", ["fetch", "origin"], {
+      cwd: projectPath,
+      timeout: GIT_NETWORK_TIMEOUT_MS,
+    }).then(
+      () => true,
+      (error: unknown) => {
+        this.log?.warn("git fetch origin failed; falling back to local HEAD (offline?)", {
+          projectPath,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        return false;
+      },
+    );
+    if (!fetched) {
+      const head = await exec("git", ["rev-parse", "HEAD"], {
+        cwd: projectPath,
+        timeout: GIT_TIMEOUT_MS,
+      });
+      return { ref: "HEAD", sha: head.stdout.trim() };
+    }
+    const ref = `origin/${await this.originDefaultBranch(projectPath)}`;
+    const sha = await exec("git", ["rev-parse", ref], { cwd: projectPath, timeout: GIT_TIMEOUT_MS });
+    return { ref, sha: sha.stdout.trim() };
+  }
+
+  /**
+   * The remote's default branch name (no `origin/` prefix). Three-step fallback:
+   * (1) `symbolic-ref` on the cached `refs/remotes/origin/HEAD` — cheap, local,
+   * set by `clone` and by `fetch` with a remote that advertises HEAD; (2) parse
+   * `git remote show origin`'s "HEAD branch:" line — a second network round-trip,
+   * only reached when (1) has nothing cached; (3) `"main"` as the final fallback.
+   */
+  private async originDefaultBranch(projectPath: string): Promise<string> {
+    const symbolic = await exec(
+      "git",
+      ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+      { cwd: projectPath, timeout: GIT_TIMEOUT_MS },
+    )
+      .then((r) => r.stdout.trim().replace(/^origin\//, ""))
+      .catch(() => "");
+    if (symbolic) return symbolic;
+
+    const shown = await exec("git", ["remote", "show", "origin"], {
+      cwd: projectPath,
+      timeout: GIT_NETWORK_TIMEOUT_MS,
+    })
+      .then((r) => r.stdout)
+      .catch(() => "");
+    const match = /HEAD branch:\s*(\S+)/.exec(shown);
+    if (match?.[1] && match[1] !== "(unknown)") return match[1];
+
+    return "main";
+  }
+
+  /**
+   * Phase 76 — clone `remote` into `dir` (bounded network timeout). Used by
+   * `ProjectLocalService.clone` so all git invocations live in this one service;
+   * never touches `project.path`/the registry — the caller decides where `dir`
+   * lands (a machine-local `cloneRoot`). Throws {@link WorkspaceSetupError} on
+   * failure (caller maps it onto the HTTP response).
+   */
+  async clone(remote: string, dir: string): Promise<void> {
+    try {
+      await exec("git", ["clone", remote, dir], { timeout: GIT_NETWORK_TIMEOUT_MS });
+      this.log?.info("cloned repository", { remote, dir });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new WorkspaceSetupError(`Failed to clone "${remote}" into "${dir}": ${message}`);
     }
   }
 

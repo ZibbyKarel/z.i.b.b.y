@@ -1,7 +1,10 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { dataDir } from "../shared/data-dir";
+import { MachineConfigModule } from "../machine/machine-config.module";
 import { MemoryModule } from "../memory/memory.module";
 import { VAULT_DIR } from "../memory/vault.service";
+import { WorkspaceModule } from "../workspace/workspace.module";
+import { ProjectLocalService } from "./project-local.service";
 import { PROJECT_SECRETS_DIR, ProjectSecretsStore } from "./project-secrets.store";
 import { ProjectCategoriesController } from "./project-categories.controller";
 import { ProjectCategoriesStorageService } from "./project-categories.storage.service";
@@ -32,7 +35,13 @@ export function resolveProjectSecretsDir(): string {
   // module directly for the integration→project FK check; wrapping this edge too
   // keeps every link in that triangle safe to add in any order) so
   // `ProjectsController.getResolvedProject` can inject `ResolvedProjectService`.
-  imports: [MemoryModule, forwardRef(() => ResolvedProjectModule)],
+  imports: [
+    MemoryModule,
+    forwardRef(() => ResolvedProjectModule),
+    // Phase 76: both leaf modules (no imports of their own) — no cycle risk.
+    WorkspaceModule,
+    MachineConfigModule,
+  ],
   // ProjectCategoriesController is declared before ProjectsController so its
   // static route (`GET /projects/categories`) registers ahead of `/projects/:id`,
   // which would otherwise capture "categories" as a project id.
@@ -49,12 +58,14 @@ export function resolveProjectSecretsDir(): string {
     ProjectSecretsStore,
     ProjectVaultService,
     StandupService,
+    ProjectLocalService,
   ],
   exports: [
     ProjectsStorageService,
     ProjectCategoriesStorageService,
     ProjectSecretsStore,
     StandupService,
+    ProjectLocalService,
   ],
 })
 export class ProjectsModule {}

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { ApprovalRunKindSchema } from "../approvals/approval.schema";
 import { ActivityKindSchema } from "../activity/activity.schema";
 import { ACTIVITY_GROUP_OF } from "../activity/activity-view.schema";
-import { MachineActionRecordSchema, MachineActionSchema } from "./machine.schema";
+import {
+  MachineActionRecordSchema,
+  MachineActionSchema,
+  MachineConfigSchema,
+  UpdateMachineConfigSchema,
+} from "./machine.schema";
 import { machineContract } from "./machine.contract";
 
 const ACTION = {
@@ -45,15 +50,43 @@ describe("machine.schema (N5a)", () => {
 });
 
 describe("machineContract", () => {
-  it("is propose + read-only — there is NO execute route (the gate is the only path)", () => {
+  it("is propose + read-only for actions, plus per-machine config — there is NO execute route (the gate is the only path)", () => {
     expect(Object.keys(machineContract)).toEqual([
       "proposeMachineAction",
       "listMachineActions",
       "getMachineAction",
+      "getMachineConfig",
+      "updateMachineConfig",
     ]);
     expect(machineContract.proposeMachineAction.method).toBe("POST");
     expect(machineContract.proposeMachineAction.path).toBe("/api/machine/actions");
     expect(machineContract.listMachineActions.method).toBe("GET");
     expect(machineContract.getMachineAction.path).toBe("/api/machine/actions/:id");
+  });
+
+  it("exposes GET/PUT /api/machine/config (Phase 76)", () => {
+    expect(machineContract.getMachineConfig.method).toBe("GET");
+    expect(machineContract.getMachineConfig.path).toBe("/api/machine/config");
+    expect(machineContract.updateMachineConfig.method).toBe("PUT");
+    expect(machineContract.updateMachineConfig.path).toBe("/api/machine/config");
+  });
+});
+
+describe("MachineConfigSchema (Phase 76)", () => {
+  it("round-trips a config with cloneRoot", () => {
+    const config = { cloneRoot: "/Users/op/Projects" };
+    expect(MachineConfigSchema.parse(config)).toEqual(config);
+  });
+
+  it("rejects an empty cloneRoot and an unknown key (strict)", () => {
+    expect(MachineConfigSchema.safeParse({ cloneRoot: "" }).success).toBe(false);
+    expect(
+      MachineConfigSchema.safeParse({ cloneRoot: "/x", extra: "nope" }).success,
+    ).toBe(false);
+  });
+
+  it("UpdateMachineConfigSchema accepts a partial (empty) patch", () => {
+    expect(UpdateMachineConfigSchema.parse({})).toEqual({});
+    expect(UpdateMachineConfigSchema.parse({ cloneRoot: "/x" })).toEqual({ cloneRoot: "/x" });
   });
 });

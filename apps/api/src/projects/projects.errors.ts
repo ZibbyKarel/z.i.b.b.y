@@ -13,3 +13,27 @@ export class ProjectConflictError extends Error {
     this.name = "ProjectConflictError";
   }
 }
+
+/**
+ * Phase 76 — raised by `ProjectLocalService.clone` when the project has no
+ * `gitRemote` to clone from. Maps to a 422 (the request is well-formed but the
+ * project's data doesn't support cloning), distinct from the 409 below.
+ */
+export class ProjectNoRemoteError extends Error {
+  constructor(public readonly id: string) {
+    super(`Project "${id}" has no gitRemote to clone from`);
+    this.name = "ProjectNoRemoteError";
+  }
+}
+
+/**
+ * Phase 76 — raised by `ProjectLocalService.clone` when this machine already
+ * has the project present (at `path` or `cloneRoot`). Maps to a 409: re-cloning
+ * an already-present project would be a no-op at best and a collision at worst.
+ */
+export class ProjectAlreadyClonedError extends Error {
+  constructor(public readonly id: string) {
+    super(`Project "${id}" is already present on this machine`);
+    this.name = "ProjectAlreadyClonedError";
+  }
+}

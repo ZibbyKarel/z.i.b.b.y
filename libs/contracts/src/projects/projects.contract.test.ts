@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  CreateProjectSchema,
+  ProjectLocalStateSchema,
   ProjectPersonSchema,
   ProjectSchema,
   ResolvedProjectContextSchema,
@@ -44,6 +46,106 @@ describe("projectsContract", () => {
     expect(projectsContract.getResolvedProject.path).toBe("/api/projects/:id/resolved");
     expect(projectsContract.getResolvedProject.responses).toHaveProperty("200");
     expect(projectsContract.getResolvedProject.responses).toHaveProperty("404");
+  });
+
+  it("exposes THIS machine's local-clone state via GET /api/projects/:id/local-state (404) (Phase 76)", () => {
+    expect(projectsContract.getProjectLocalState.method).toBe("GET");
+    expect(projectsContract.getProjectLocalState.path).toBe("/api/projects/:id/local-state");
+    expect(projectsContract.getProjectLocalState.responses).toHaveProperty("200");
+    expect(projectsContract.getProjectLocalState.responses).toHaveProperty("404");
+  });
+
+  it("exposes clone via POST /api/projects/:id/clone with 404/409/422 (Phase 76)", () => {
+    expect(projectsContract.cloneProject.method).toBe("POST");
+    expect(projectsContract.cloneProject.path).toBe("/api/projects/:id/clone");
+    expect(projectsContract.cloneProject.responses).toHaveProperty("200");
+    expect(projectsContract.cloneProject.responses).toHaveProperty("404");
+    expect(projectsContract.cloneProject.responses).toHaveProperty("409");
+    expect(projectsContract.cloneProject.responses).toHaveProperty("422");
+  });
+});
+
+describe("ProjectLocalStateSchema (Phase 76)", () => {
+  it("round-trips a state present at the canonical path", () => {
+    const state = {
+      present: true,
+      isGitRepo: true,
+      resolvedPath: "/Users/op/Projects/alpha",
+      source: "path" as const,
+      cloneRoot: "/Users/op",
+    };
+    expect(ProjectLocalStateSchema.parse(state)).toEqual(state);
+  });
+
+  it("round-trips a state present at the cloneRoot fallback", () => {
+    const state = {
+      present: true,
+      isGitRepo: true,
+      resolvedPath: "/Users/op/alpha",
+      source: "cloneRoot" as const,
+      cloneRoot: "/Users/op",
+    };
+    expect(ProjectLocalStateSchema.parse(state)).toEqual(state);
+  });
+
+  it("round-trips an absent state (needs clone)", () => {
+    const state = {
+      present: false,
+      isGitRepo: false,
+      resolvedPath: null,
+      source: "none" as const,
+      cloneRoot: "/Users/op",
+    };
+    expect(ProjectLocalStateSchema.parse(state)).toEqual(state);
+  });
+
+  it("rejects an unknown source (closed vocabulary)", () => {
+    expect(
+      ProjectLocalStateSchema.safeParse({
+        present: false,
+        isGitRepo: false,
+        resolvedPath: null,
+        source: "elsewhere",
+        cloneRoot: "/x",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("Project.gitRemote (Phase 76)", () => {
+  it("accepts a project with a gitRemote clone URL", () => {
+    const parsed = ProjectSchema.parse({
+      id: "alpha",
+      name: "Alpha",
+      path: "~/Projects/alpha",
+      gitRemote: "git@github.com:acme/alpha.git",
+    });
+    expect(parsed.gitRemote).toBe("git@github.com:acme/alpha.git");
+  });
+
+  it("accepts a project without a gitRemote (existing projects keep working)", () => {
+    const parsed = ProjectSchema.parse({ id: "alpha", name: "Alpha", path: "~/Projects/alpha" });
+    expect(parsed.gitRemote).toBeUndefined();
+  });
+
+  it("rejects an empty-string gitRemote", () => {
+    expect(
+      ProjectSchema.safeParse({ id: "alpha", name: "Alpha", path: "~/x", gitRemote: "" }).success,
+    ).toBe(false);
+  });
+
+  it("flows through CreateProjectSchema and UpdateProjectSchema", () => {
+    expect(
+      CreateProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/x",
+        gitRemote: "https://github.com/acme/alpha.git",
+      }).success,
+    ).toBe(true);
+    expect(
+      UpdateProjectSchema.safeParse({ gitRemote: "https://github.com/acme/alpha.git" }).success,
+    ).toBe(true);
   });
 });
 

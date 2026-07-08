@@ -1,7 +1,12 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
-import { MachineActionRecordSchema, ProposeMachineActionSchema } from "./machine.schema";
+import {
+  MachineActionRecordSchema,
+  MachineConfigSchema,
+  ProposeMachineActionSchema,
+  UpdateMachineConfigSchema,
+} from "./machine.schema";
 
 const c = initContract();
 
@@ -34,6 +39,19 @@ export const machineContract = c.router(
       path: "/machine/actions/:id",
       responses: { 200: MachineActionRecordSchema, 404: ErrorSchema },
       summary: "One machine action record by id",
+    },
+    getMachineConfig: {
+      method: "GET",
+      path: "/machine/config",
+      responses: { 200: MachineConfigSchema },
+      summary: "Get THIS machine's per-machine config (Phase 76 — cloneRoot; never synced)",
+    },
+    updateMachineConfig: {
+      method: "PUT",
+      path: "/machine/config",
+      body: UpdateMachineConfigSchema,
+      responses: { 200: MachineConfigSchema },
+      summary: "Patch THIS machine's per-machine config (Phase 76)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
