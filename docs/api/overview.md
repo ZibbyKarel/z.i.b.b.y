@@ -54,6 +54,7 @@ Imports in `AppModule`, in the order they're registered:
 | `DiscoveryModule`         | `discovery/discovery.module`         | Bug/request triage from inbound channels → proposed tasks                    |
 | `ResearchModule`          | `research/research.module`           | Watched-source digest for the morning briefing                              |
 | `HealthModule`            | `health/health.module`               | Health check endpoint                                                       |
+| `SubsystemsModule`        | `subsystems/subsystems.module`       | Subsystem-federation registry (Forge/Puls/Sentinel/Maestro/Beacon/Scout/Herald/Loom) + status |
 | `SelfModule`              | `self/self.module`                   | Is the ZIBBY install repo itself up to date (top-bar freshness)             |
 | `LimitsModule`            | `limits/limits.module`               | Rate-limit reading, budget display                                          |
 | `LimitResumeModule`       | `limits-resume/limit-resume.module`  | Resumes runs paused on a rate limit                                         |
@@ -62,7 +63,7 @@ Imports in `AppModule`, in the order they're registered:
 | `ChatModule`              | `chat/chat.module`                   | Chat-first conversation (streaming claude session, SSE, MCP tools)          |
 | `TasksModule`             | `tasks/tasks.module`                 | Task creation, scheduling, and the unified `/api/tasks/runs/*` run surface   |
 
-`ConfigModule.forRoot({ isGlobal: true })` (from `@nestjs/config`) loads `.env` and is registered first, ahead of these 36.
+`ConfigModule.forRoot({ isGlobal: true })` (from `@nestjs/config`) loads `.env` and is registered first, ahead of these 38.
 
 Two smaller modules are not registered at the app root because they're shared submodules imported by their consumers instead of standalone features: `GatesModule` (`gates/gates.module` — the pure gate-evaluation engine + locked `POLICY.md` floor, imported by `AgentsModule`, `ChannelsModule`, `PipelinesModule`, `TasksModule`) and `ClaudeRunModule` (`runner/claude-run.module` — the `claude -p` command builder shared by all three runners).
 

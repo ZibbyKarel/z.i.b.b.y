@@ -46,6 +46,7 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `channels/`      | `ChannelItemSchema`                                                   | Inbound channel items                        |
 | `mandate/`       | `MandateSchema`                                                       | Autonomy scope                               |
 | `health/`        | `HealthStatusSchema`                                                  | System health status                         |
+| `subsystems/`    | `SubsystemSchema`, `SubsystemWithStatusSchema`                        | GAIA-style federation registry (8 named subsystems) + status |
 | `limits/`        | `LimitsSchema`                                                        | Budget and rate limits                       |
 | `system/`        | system-config schemas                                                 | Runtime system config + policy floor         |
 | `pins/`          | `PinSchema`                                                           | Quick-launch pins                            |
@@ -218,6 +219,7 @@ export const appContract = c.router({
   channels: channelsContract,
   mandate: mandateContract,
   health: healthContract,
+  subsystems: subsystemsContract,
   limits: limitsContract,
   tasks: tasksContract,
   taskRuns: taskRunsContract, // unified run surface: /api/tasks/runs/*
