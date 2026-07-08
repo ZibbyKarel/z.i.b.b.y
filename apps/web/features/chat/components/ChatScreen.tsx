@@ -4,7 +4,12 @@
    equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import type { ChatMessage as ChatMessageType, ChatToolEvent, TaskTarget } from "@zibby/contracts";
+import type {
+  ChatMessage as ChatMessageType,
+  ChatToolEvent,
+  SubsystemId,
+  TaskTarget,
+} from "@zibby/contracts";
 import {
   Container,
   type DotTone,
@@ -34,6 +39,8 @@ import { usePinsQuery } from "../../pins";
 import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { ProjectSwitcher } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
+import { SubsystemWeb } from "../../subsystems/components/SubsystemWeb/SubsystemWeb";
+import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
@@ -309,6 +316,13 @@ export function ChatScreen({
   const { runs } = useRunsQuery();
   const dock = useMemo(() => buildDock(runs, agents), [runs, agents]);
 
+  // The subsystem web (Phase 83): the 8 named subsystems + live status, polled by
+  // `useSubsystemsQuery` (Phase 80/82). Selection is local — clicking a node just
+  // toggles its ring for now; Phase 84's drawer will read `selectedSubsystemId` to
+  // render the subsystem's detail alongside the transcript.
+  const { data: subsystems } = useSubsystemsQuery();
+  const [selectedSubsystemId, setSelectedSubsystemId] = useState<SubsystemId | null>(null);
+
   // Dispatch signal (Tier 5): each new `tool` event naming an agent bumps a seq the
   // scene fires the beam/flare on. Seen callIds are tracked so the two-phase
   // started→ok pair (same callId) fires exactly once.
@@ -431,6 +445,20 @@ export function ChatScreen({
         mode={mode}
         streamChars={stream.streaming ? stream.text.length : 0}
       />
+
+      {/* ── Subsystem web (Phase 83) ─────────────────────────────────────
+          The living centerpiece: 8 fixed nodes on a flattened ellipse around a
+          ZIBBY orb, floating over the nebula between the top bar and the
+          transcript. A fixed-height band (own `z-20` above the borderless
+          `CosmicScene`, same idiom as the top bar/composer) so it never steals
+          the transcript's scroll below it. */}
+      <div className="relative z-20 h-[200px] w-full shrink-0">
+        <SubsystemWeb
+          onSelect={setSelectedSubsystemId}
+          selectedId={selectedSubsystemId}
+          subsystems={subsystems ?? []}
+        />
+      </div>
 
       {/* ── Main area: scene behind, scrollable conversation over it ───── */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">

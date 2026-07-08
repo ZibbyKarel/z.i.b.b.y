@@ -35,6 +35,38 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [] }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
+// The Phase 83 subsystem web strip polls the subsystem-federation registry — stub it
+// with a couple of fixtures (one klid, one bezi) so the suite never hits the network
+// and the strip has something concrete to assert against.
+vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
+  useSubsystemsQuery: () => ({
+    data: [
+      {
+        id: "forge",
+        name: "Forge",
+        tagline: "Kovárna doručení",
+        mandate: "…",
+        color: "#f97316",
+        heroImage: null,
+        state: "klid",
+        tier2Count: 0,
+        tier3Count: 0,
+      },
+      {
+        id: "puls",
+        name: "Puls",
+        tagline: "Tep systému",
+        mandate: "…",
+        color: "#14b8a6",
+        heroImage: null,
+        state: "bezi",
+        tier2Count: 0,
+        tier3Count: 0,
+      },
+    ],
+  }),
+  getSubsystemsQueryKey: () => ["subsystems"],
+}));
 // CommandLine also reads the limits query (for its schedule menu, unused in
 // send-delegation mode) and the attachment-upload mutation (unused —
 // `showAttach={false}` in chat) — stub both so mounting it never hits the
@@ -101,6 +133,7 @@ import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/desi
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
+import { SubsystemWebTestId } from "../../subsystems/components/SubsystemWeb/SubsystemWeb";
 import { ChatDetailDialogTestId } from "./ChatDetailDialog";
 import { ChatPaletteTestId } from "./ChatPalette";
 
@@ -267,6 +300,33 @@ describe("ChatScreen", () => {
       });
 
       expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "waiting-approval");
+    });
+  });
+
+  describe("subsystem web strip (Phase 83)", () => {
+    it("renders the strip with all mocked subsystems, above the transcript", () => {
+      renderWithProviders(<ChatScreenHarness />);
+
+      expect(screen.getByTestId(SubsystemWebTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(`${SubsystemWebTestId.Node}-forge`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${SubsystemWebTestId.Node}-puls`)).toBeInTheDocument();
+    });
+
+    it("clicking a node toggles its selection ring (aria-pressed) — no drawer yet", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      const forgeNode = screen.getByTestId(`${SubsystemWebTestId.Node}-forge`);
+      expect(forgeNode).toHaveAttribute("aria-pressed", "false");
+
+      await user.click(forgeNode);
+      expect(forgeNode).toHaveAttribute("aria-pressed", "true");
+
+      // Selecting a different node moves the ring — only one selection at a time.
+      const pulsNode = screen.getByTestId(`${SubsystemWebTestId.Node}-puls`);
+      await user.click(pulsNode);
+      expect(pulsNode).toHaveAttribute("aria-pressed", "true");
+      expect(forgeNode).toHaveAttribute("aria-pressed", "false");
     });
   });
 
