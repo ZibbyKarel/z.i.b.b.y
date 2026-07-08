@@ -37,6 +37,18 @@ describe("ChainsStorageService", () => {
     await expect(store.create(CHAIN)).rejects.toBeInstanceOf(ChainConflictError);
   });
 
+  it("round-trips the ownerSubsystem tag; an untagged chain stays absent (Phase 81)", async () => {
+    const tagged: Chain = { ...CHAIN, id: "tagged-chain", ownerSubsystem: "loom" };
+    await store.create(tagged);
+    expect(await store.get("tagged-chain")).toEqual(tagged);
+
+    await store.create(CHAIN);
+    const untagged = await store.get("research-then-build");
+    expect(untagged.ownerSubsystem).toBeUndefined();
+    const raw = await fs.readFile(path.join(dir, "research-then-build.json"), "utf8");
+    expect(raw).not.toContain("ownerSubsystem");
+  });
+
   it("delete removes; unknown/invalid ids map to domain errors", async () => {
     await store.create(CHAIN);
     await store.delete("research-then-build");

@@ -14,6 +14,16 @@ describe("chain.schema", () => {
     expect(ChainSchema.safeParse({ ...CHAIN, steps: [] }).success).toBe(false);
   });
 
+  it("accepts a valid ownerSubsystem tag, rejects an unknown one, omitting stays valid (Phase 81)", () => {
+    const tagged = { ...CHAIN, ownerSubsystem: "loom" };
+    expect(ChainSchema.parse(tagged)).toEqual(tagged);
+    expect(
+      ChainSchema.safeParse({ ...CHAIN, ownerSubsystem: "not-a-subsystem" }).success,
+    ).toBe(false);
+    const parsed = ChainSchema.safeParse(CHAIN);
+    expect(parsed.success && parsed.data.ownerSubsystem).toBeUndefined();
+  });
+
   it("chain run: statuses closed; parked carries a reason string", () => {
     const run = {
       chainRunId: "research-then-build_1",

@@ -125,6 +125,26 @@ describe("PipelinesStorageService", () => {
     expect((await service.get(created.id)).avatar).toBe("/avatars/x.png");
   });
 
+  it("round-trips the ownerSubsystem tag through frontmatter (Phase 81)", async () => {
+    const created = await service.create({ ...sample, id: "owned", ownerSubsystem: "forge" });
+    expect(created.ownerSubsystem).toBe("forge");
+
+    const parsed = matter(await fs.readFile(fileFor(dir, "owned"), "utf8"));
+    expect(parsed.data.ownerSubsystem).toBe("forge");
+
+    const read = await service.get("owned");
+    expect(read.ownerSubsystem).toBe("forge");
+  });
+
+  it("leaves an untagged pipeline's ownerSubsystem absent — no phantom field written", async () => {
+    await service.create(sample);
+    const parsed = matter(await fs.readFile(fileFor(dir, "release"), "utf8"));
+    expect(parsed.data).not.toHaveProperty("ownerSubsystem");
+
+    const read = await service.get("release");
+    expect(read.ownerSubsystem).toBeUndefined();
+  });
+
   describe("avatar asset externalization (Phase 73)", () => {
     const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ="; // "hello world"
 

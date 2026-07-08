@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * One step of a chain: which pipeline runs. Linear v1 — step N+1 implicitly
@@ -26,6 +27,11 @@ export const ChainSchema = z.object({
   steps: z.array(ChainStepSchema).min(1),
   /** Free-form operator brief passed to step 0 as its initial input handoff. */
   instructions: z.string().optional(),
+  /**
+   * Optional attribution to a subsystem of the federation (Phase 81) — mirrors
+   * `Pipeline.ownerSubsystem`. Absent is legitimate: not every chain has an owner.
+   */
+  ownerSubsystem: SubsystemIdSchema.optional(),
 });
 export type Chain = z.infer<typeof ChainSchema>;
 
