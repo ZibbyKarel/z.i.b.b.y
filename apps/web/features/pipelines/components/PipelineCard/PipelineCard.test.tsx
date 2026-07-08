@@ -5,6 +5,7 @@ import type { Agent } from "@zibby/contracts";
 import { IconTileTestId } from "@zibby/design-system";
 import type { Pipeline } from "../../../../domain";
 import { PipelineCard } from "./PipelineCard";
+import { PipelineOwnerChipTestId } from "./PipelineOwnerChip";
 
 const agents: Agent[] = [
   {
@@ -70,5 +71,22 @@ describe("PipelineCard", () => {
       "src",
       "/avatars/orchestrator.png",
     );
+  });
+
+  it("shows an owner chip for a tagged pipeline, none for an untagged one (Phase 85)", () => {
+    const { rerender } = render(
+      <PipelineCard
+        agents={agents}
+        onSelect={() => {}}
+        pipeline={{ ...pipeline, ownerSubsystem: "forge" }}
+        selected={false}
+      />,
+    );
+    expect(screen.getByTestId(PipelineOwnerChipTestId.Root)).toHaveTextContent("Forge");
+
+    rerender(
+      <PipelineCard agents={agents} onSelect={() => {}} pipeline={pipeline} selected={false} />,
+    );
+    expect(screen.queryByTestId(PipelineOwnerChipTestId.Root)).toBeNull();
   });
 });

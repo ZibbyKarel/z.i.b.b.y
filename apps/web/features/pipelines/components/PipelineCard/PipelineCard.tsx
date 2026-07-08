@@ -11,6 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Fragment } from "react";
 import { type Pipeline, glyphForPhase } from "../../../../domain";
+import { PipelineOwnerChip } from "./PipelineOwnerChip";
 
 export interface PipelineCardProps {
   showPhases?: boolean;
@@ -67,7 +68,12 @@ export function PipelineCard({
           </Stack>
 
           <Divider />
-          <Stack align="center" direction="row" justify="end">
+          <Stack align="center" direction="row" justify="between">
+            {pipeline.ownerSubsystem ? (
+              <PipelineOwnerChip ownerSubsystem={pipeline.ownerSubsystem} />
+            ) : (
+              <span />
+            )}
             <Typography mono size="xs" type="note" variant="tertiary">
               {t("cardLastRun", { lastRun: pipeline.lastRun })}
             </Typography>

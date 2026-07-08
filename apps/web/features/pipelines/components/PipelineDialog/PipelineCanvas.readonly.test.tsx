@@ -1,5 +1,6 @@
 import { renderWithProviders as render, screen } from "../../../../test/render";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import type { Agent } from "@zibby/contracts";
 import { IconTileTestId } from "@zibby/design-system";
 import { PipelineCanvas } from "./PipelineCanvas";
@@ -91,5 +92,41 @@ describe("PipelineCanvas — readOnly (detail view)", () => {
     expect(images).toHaveLength(1);
     expect(images[0]).toHaveAttribute("src", AVATAR_SRC);
     // tester has no avatar → its node keeps rendering the glyph fallback (no image).
+  });
+
+  it("fires onNodeClick with the clicked node's id (Phase 85 Roster tab)", async () => {
+    const onNodeClick = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <PipelineCanvas
+        readOnly
+        agents={agents}
+        graph={looped}
+        onAddAgent={noop}
+        onNodeClick={onNodeClick}
+        setGraph={noop}
+      />,
+    );
+    const nodes = screen.getAllByTestId("pipeline-node");
+    await user.click(nodes[0] as HTMLElement);
+    expect(onNodeClick).toHaveBeenCalledWith("writer");
+  });
+
+  it("is not clickable without onNodeClick, and not clickable in the (non-read-only) editor", async () => {
+    const onNodeClick = vi.fn();
+    const user = userEvent.setup();
+    // Editable canvas: onNodeClick is ignored (onNodeDown drives dragging instead).
+    render(
+      <PipelineCanvas
+        agents={agents}
+        graph={looped}
+        onAddAgent={noop}
+        onNodeClick={onNodeClick}
+        setGraph={noop}
+      />,
+    );
+    const nodes = screen.getAllByTestId("pipeline-node");
+    await user.click(nodes[0] as HTMLElement);
+    expect(onNodeClick).not.toHaveBeenCalled();
   });
 });

@@ -52,6 +52,8 @@ export interface PipelineCanvasProps {
   readOnly?: boolean;
   /** Live-run attempt counts (phase/node id → count) to overlay on loop nodes. */
   attempts?: Record<string, number>;
+  /** Read-only view only: node click opens the pipeline's existing config surface. */
+  onNodeClick?: (nodeId: string) => void;
 }
 
 /**
@@ -66,6 +68,7 @@ export function PipelineCanvas({
   onAddAgent,
   readOnly = false,
   attempts,
+  onNodeClick,
 }: PipelineCanvasProps) {
   const t = useTranslations("forms.pipeline");
   const reworkByFrom = new Map(graph.rework.map((r) => [r.from, r] as const));
@@ -356,6 +359,7 @@ export function PipelineCanvas({
               onCycleModel={cycleModel}
               onCycleThink={cycleThink}
               onDelete={delNode}
+              onNodeClick={onNodeClick}
               onNodeDown={onNodeDown}
               onNodeEnter={onNodeEnter}
               onNodeLeave={onNodeLeave}

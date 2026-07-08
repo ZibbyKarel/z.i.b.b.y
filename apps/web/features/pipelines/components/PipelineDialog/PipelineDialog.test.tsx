@@ -10,10 +10,12 @@ const agents: Agent[] = [
   { id: "tester", name: "Tester", glyph: "flask", instructions: "test" },
 ];
 
-// Edit mode moved inline into the pipeline detail view (Screen.tsx) — see
-// `Screen.test.tsx` for those cases. `PipelineDialog` is create-only now,
-// though it still accepts `mode`/`initial`/`onSave` (kept for the type, unused
-// by any current caller) so a future edit-dialog resurrection isn't blocked.
+// The `/pipelines` page moved edit mode inline into the detail view
+// (Screen.tsx) — see `Screen.test.tsx` for those cases, so this file only
+// covers create mode. `mode="edit"`/`initial`/`onSave` got a second caller in
+// Phase 85: the subsystem drawer's Roster tab opens this same dialog as a
+// modal when a canvas node is clicked (see `RosterTab.test.tsx`) — the inline
+// detail view and the Roster modal are two entry points onto one editor.
 
 describe("PipelineDialog — create mode", () => {
   it("adds a node from the palette and creates a schema-valid pipeline", async () => {
