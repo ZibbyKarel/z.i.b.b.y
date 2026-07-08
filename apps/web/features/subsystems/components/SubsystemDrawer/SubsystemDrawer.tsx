@@ -5,7 +5,6 @@ import {
   Container,
   type DotTone,
   Icon,
-  type IconName,
   IconTile,
   Panel,
   Stack,
@@ -21,9 +20,9 @@ import {
 import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
-import { EmptyState } from "../../../../components/EmptyState/EmptyState";
 import { useMarkSubsystemSeenMutation } from "../../mutations/useMarkSubsystemSeenMutation";
 import { AktivitaTab } from "./AktivitaTab";
+import { ArtefaktyTab } from "./ArtefaktyTab";
 import { GatesTab } from "./GatesTab";
 import { RosterTab } from "./RosterTab";
 
@@ -49,26 +48,10 @@ export interface SubsystemDrawerProps {
 // v1 fixed tab set (design doc), same order every time — reused verbatim by
 // phases 85-88 for each tab's real content, filenames already reserved:
 // `RosterTab.tsx` / `AktivitaTab.tsx` / `GatesTab.tsx` / `ArtefaktyTab.tsx`,
-// all under this component's own directory. Roster (85), Aktivita (86) and
-// Gates (87) landed; Artefakty still renders the honest v1 placeholder.
+// all under this component's own directory. Roster (85), Aktivita (86), Gates
+// (87) and Artefakty (88) have all landed their real content — the drawer no
+// longer carries any placeholder machinery.
 const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "artefakty"] as const;
-type SubsystemDrawerTab = (typeof SUBSYSTEM_DRAWER_TABS)[number];
-/** The tabs still waiting on their real content (phase-84 plan §3). */
-type PlaceholderTab = Exclude<SubsystemDrawerTab, "roster" | "aktivita" | "gates">;
-
-/** The phase each still-placeholder tab's real content lands in — surfaced
- * honestly in the v1 placeholder body ("Artefakty — fáze 88" etc, phase-84
- * plan §3) so the drawer never silently pretends to be more finished than
- * it is. */
-const TAB_PHASE: Record<PlaceholderTab, number> = {
-  artefakty: 88,
-};
-
-/** A glyph loosely evoking each still-placeholder tab's future content —
- * decorative only, no semantic weight (Artefakty ~ produced files). */
-const TAB_GLYPH: Record<PlaceholderTab, IconName> = {
-  artefakty: "file",
-};
 
 /**
  * Status-dot tone + pulse per subsystem state (design doc vocabulary: klid
@@ -129,8 +112,8 @@ function heroBandStyle(color: string): CSSProperties {
  * same doc).
  *
  * Phase 84 built the frame + header + empty tab shell; Roster (85), Aktivita
- * (86) and Gates (87) got their real content since — only Artefakty still
- * lands later (see `TAB_PHASE`/`TAB_GLYPH` above).
+ * (86), Gates (87) and Artefakty (88) have all landed their real content
+ * since — every tab below renders live data, no placeholder remains.
  */
 export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   const t = useTranslations("subsystems");
@@ -197,9 +180,8 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
           // Viewport-bounded height with its own scroll — a computed value with
           // no dedicated `Panel` prop, routed through its `style` passthrough
           // (sanctioned per CLAUDE.md; a v1 simplification that scrolls the
-          // whole card as one unit rather than pinning the tab bar — fine for
-          // this phase's placeholder bodies, worth revisiting once 85-88 land
-          // real per-tab content lists).
+          // whole card as one unit rather than pinning the tab bar — still fine
+          // now that every tab (85-88) renders real, potentially long content).
           style={{ maxHeight: "calc(100vh - 96px)", overflowY: "auto" }}
           tabIndex={-1}
         >
@@ -295,14 +277,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
                   ) : tab === "gates" ? (
                     <GatesTab subsystem={subsystem} />
                   ) : (
-                    <EmptyState
-                      description={t("drawer.placeholder.body", { phase: TAB_PHASE[tab] })}
-                      glyph={TAB_GLYPH[tab]}
-                      title={t("drawer.placeholder.title", {
-                        tab: t(`drawer.tabs.${tab}`),
-                        phase: TAB_PHASE[tab],
-                      })}
-                    />
+                    <ArtefaktyTab subsystem={subsystem} />
                   )}
                 </div>
               </TabPanel>
