@@ -1286,6 +1286,7 @@
         "title": "Projekt",
         "newHint": "Po uložení projektu nastavíš jeho tým, integrace a tajemství."
       },
+      "newProjectLinkedTo": "Nový projekt bude propojen s firmou {company}.",
       "team": {
         "title": "Tým",
         "empty": "Zatím žádní členové týmu — přidej lidi zapojené do projektu.",
@@ -1402,7 +1403,18 @@
     },
     "memberProjects": {
       "title": "Projekty firmy",
-      "empty": "Zatím na tuto firmu neodkazuje žádný projekt — nastav ji na detailu projektu."
+      "empty": "Zatím na tuto firmu neodkazuje žádný projekt — nastav ji na detailu projektu.",
+      "addExisting": "Přidat existující projekt",
+      "createNew": "Vytvořit nový projekt",
+      "add": "Přidat projekt",
+      "linkDialog": {
+        "title": "Přidat existující projekt",
+        "subtitle": "propojit s touto firmou",
+        "selectLabel": "Projekt",
+        "placeholder": "Vyber projekt…",
+        "confirm": "Propojit",
+        "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k této firmě."
+      }
     }
   },
   "automations": {

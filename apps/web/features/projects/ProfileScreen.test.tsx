@@ -48,9 +48,11 @@ vi.mock("./queries", () => ({
   useResolvedProjectQuery: () => ({ data: { people: [], integrations: [] } }),
 }));
 
-// Phase 72's company selector reads the registry to populate its options.
+// Phase 72's company selector reads the registry to populate its options; Phase
+// 75's new-mode "linked to" note resolves the company name from the same list.
+let companies: { id: string; name: string }[] = [];
 vi.mock("../companies", () => ({
-  useCompaniesQuery: () => ({ data: [] }),
+  useCompaniesQuery: () => ({ data: companies }),
 }));
 
 vi.mock("./mutations", () => ({
@@ -96,14 +98,22 @@ vi.mock("./context/ProjectProvider", () => ({
   useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
 }));
 
-// The `?tab=` the mocked URL reports; a deep-link test sets it before render.
+// The `?tab=`/`?companyId=` the mocked URL reports; individual tests set these
+// before render.
 let searchTab = "";
+let searchCompanyId = "";
 
 // next/navigation — router.push/replace are no-ops in tests; the detail reads the
-// initial tab from `?tab=` (default empty → "overview" tab).
+// initial tab from `?tab=` (default empty → "overview" tab) and, in new-project
+// mode, an optional pre-link `?companyId=` (Phase 75).
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
-  useSearchParams: () => new URLSearchParams(searchTab ? `tab=${searchTab}` : ""),
+  useSearchParams: () => {
+    const params = new URLSearchParams();
+    if (searchTab) params.set("tab", searchTab);
+    if (searchCompanyId) params.set("companyId", searchCompanyId);
+    return params;
+  },
 }));
 
 /** The Team/Autonomy/Rhythm/Standup sections live under the "Profile" tab. */
@@ -121,6 +131,8 @@ beforeEach(() => {
   replace.mockReset();
   push.mockReset();
   searchTab = "";
+  searchCompanyId = "";
+  companies = [];
 });
 
 describe("ProfileScreen", () => {
@@ -250,6 +262,31 @@ describe("ProfileScreen", () => {
         }),
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
+    });
+
+    describe("pre-linked to a company via ?companyId= (Phase 75)", () => {
+      beforeEach(() => {
+        searchCompanyId = "acme";
+        companies = [{ id: "acme", name: "Acme" }];
+      });
+
+      it("shows a pending-link note naming the company", () => {
+        render(<ProfileScreen />);
+        expect(screen.getByTestId("new-project-linked-to")).toHaveTextContent("Acme");
+      });
+
+      it("includes the companyId in the create body on save", async () => {
+        render(<ProfileScreen />);
+        await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
+        await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+        await userEvent.click(screen.getByTestId("save-basics"));
+        expect(createProjectMutate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            body: expect.objectContaining({ id: "alpha", name: "Alpha", companyId: "acme" }),
+          }),
+          expect.objectContaining({ onSuccess: expect.any(Function) }),
+        );
+      });
     });
   });
 });

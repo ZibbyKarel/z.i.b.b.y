@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ProjectPerson } from "@zibby/contracts";
 import {
   Button,
+  DropDownButton,
   Pressable,
   Stack,
   Tag,
@@ -23,6 +24,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
 import { useProjectsQuery } from "../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "./components/CompanyBasicsPanel";
+import { LinkProjectDialog } from "./components/LinkProjectDialog";
 import { useCreateCompanyMutation, useDeleteCompanyMutation, useUpdateCompanyMutation } from "./mutations";
 import { useCompanyQuery } from "./queries";
 
@@ -149,6 +151,7 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
   const effectivePeople: ProjectPerson[] = people ?? companyQ.data?.people ?? [];
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [linkingProject, setLinkingProject] = useState(false);
 
   const isSaving = updateCompany.isPending;
 
@@ -235,7 +238,26 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
   // cache key, so this costs no extra request in practice).
   const memberProjects = (projectsQ.data ?? []).filter((p) => p.companyId === id);
   const memberProjectsPanel = (
-    <HudPanel title={t("memberProjects.title")}>
+    <HudPanel
+      action={
+        <DropDownButton
+          icon="plus"
+          label={t("memberProjects.addExisting")}
+          menuAriaLabel={t("memberProjects.add")}
+          menuItems={[
+            {
+              id: "create-new",
+              label: t("memberProjects.createNew"),
+              icon: "spark",
+              onSelect: () => router.push(`/projects/new?companyId=${id}`),
+            },
+          ]}
+          onClick={() => setLinkingProject(true)}
+          size="sm"
+        />
+      }
+      title={t("memberProjects.title")}
+    >
       {memberProjects.length === 0 ? (
         <Typography
           data-testid="member-projects-empty"
@@ -307,6 +329,10 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
           pending={deleteCompany.isPending}
           title={t("deleteTitle")}
         />
+      )}
+
+      {linkingProject && (
+        <LinkProjectDialog companyId={id} onClose={() => setLinkingProject(false)} />
       )}
     </PageContainer>
   );
