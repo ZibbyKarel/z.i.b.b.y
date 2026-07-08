@@ -1,4 +1,4 @@
-import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts";
+import type { Agent, AgentModel, AgentThinking, SubsystemId } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
 
@@ -96,6 +96,12 @@ export interface Pipeline {
   outputs: PipelineOutput[];
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
   avatar?: string;
+  /**
+   * Optional attribution to a subsystem of the federation (Phase 81 contract field) —
+   * which of the eight subsystems "owns" this pipeline for its Roster tab (Phase 85).
+   * Absent is a legitimate state: not every pipeline has an owner yet.
+   */
+  ownerSubsystem?: SubsystemId;
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";

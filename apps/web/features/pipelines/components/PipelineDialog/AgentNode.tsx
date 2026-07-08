@@ -34,6 +34,12 @@ export interface AgentNodeProps {
   attempt?: number;
   /** Max attempts (maxRetries + 1) for the "n/m" attempt tag. */
   maxAttempts?: number;
+  /**
+   * Read-only detail view only: clicking the node opens the pipeline's existing
+   * config surface (Phase 85 Roster tab). Ignored in the editor (drag takes over
+   * `onNodeDown` there).
+   */
+  onNodeClick?: (nodeId: string) => void;
   onPortDown: (which: PortKind, nodeId: string, e: MouseEvent) => void;
   onNodeDown: (nodeId: string, e: MouseEvent) => void;
   onDelete: (nodeId: string) => void;
@@ -71,6 +77,7 @@ export function AgentNode({
   readOnly = false,
   attempt,
   maxAttempts,
+  onNodeClick,
   onPortDown,
   onNodeDown,
   onDelete,
@@ -84,6 +91,7 @@ export function AgentNode({
 }: AgentNodeProps) {
   const t = useTranslations("forms.pipeline");
   const label = node.type === "verify" ? t("typeVerify") : node.agent;
+  const clickable = readOnly && Boolean(onNodeClick);
 
   const flowTarget = pending?.kind === "flow" && pending.from !== node.id;
   const reworkTarget = pending?.kind === "rework" && pending.from !== node.id;
@@ -131,15 +139,26 @@ export function AgentNode({
 
   return (
     <Container
-      cursor={readOnly ? "default" : dragging ? "grabbing" : "grab"}
+      cursor={clickable ? "pointer" : readOnly ? "default" : dragging ? "grabbing" : "grab"}
       data-testid="pipeline-node"
       height={`${NODE_H}px`}
       left={`${node.x}px`}
+      onClick={clickable ? () => onNodeClick?.(node.id) : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              onNodeClick?.(node.id);
+            }
+          : undefined
+      }
       onMouseDown={readOnly ? undefined : (e) => onNodeDown(node.id, e)}
       onMouseEnter={readOnly ? undefined : () => onNodeEnter(node.id)}
       onMouseLeave={readOnly ? undefined : () => onNodeLeave(node.id)}
       padding={["100", "100"]}
       position="absolute"
+      role={clickable ? "button" : undefined}
       style={{
         background: nodeLit ? SURFACE_HI : SURFACE,
         border: `1px solid ${borderColor}`,
@@ -150,6 +169,7 @@ export function AgentNode({
             ? `0 0 0 1px ${mix(BAD, 40)}, 0 0 18px ${mix(BAD, 20)}`
             : "0 2px 10px rgba(0,0,0,0.3)",
       }}
+      tabIndex={clickable ? 0 : undefined}
       top={`${node.y}px`}
       userSelect="none"
       width={`${NODE_W}px`}

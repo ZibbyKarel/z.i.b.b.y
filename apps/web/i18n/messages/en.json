@@ -1680,6 +1680,10 @@
         "title": "{tab} — phase {phase}",
         "body": "This tab's content lands in phase {phase}."
       }
+    },
+    "roster": {
+      "emptyTitle": "No pipeline yet",
+      "emptyDescription": "This subsystem doesn't own a pipeline yet. Create the first one — with it as owner from the start."
     }
   },
   "pins": {

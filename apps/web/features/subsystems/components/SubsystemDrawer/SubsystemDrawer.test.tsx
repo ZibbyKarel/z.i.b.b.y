@@ -10,6 +10,16 @@ vi.mock("../../mutations/useMarkSubsystemSeenMutation", () => ({
   useMarkSubsystemSeenMutation: () => ({ mutate: markSeenMutate, isPending: false }),
 }));
 
+// The drawer's own suite covers chrome (header, tabs, focus, escape) — Roster's
+// filtering/canvas/dialog behavior gets its own full coverage in
+// `RosterTab.test.tsx`, so it's stubbed here to keep this file's mocks focused
+// on what it actually exercises.
+vi.mock("./RosterTab", () => ({
+  RosterTab: ({ subsystem }: { subsystem: { id: string } }) => (
+    <div data-testid="roster-tab-stub">{subsystem.id}</div>
+  ),
+}));
+
 function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
   const base = SUBSYSTEMS[0]!;
   return {
@@ -126,7 +136,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
     const user = userEvent.setup();
     renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
 
-    expect(screen.getByText("Roster — fáze 85")).toBeInTheDocument();
+    expect(screen.getByTestId("roster-tab-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Aktivita" }));
     expect(screen.getByText("Aktivita — fáze 86")).toBeInTheDocument();
