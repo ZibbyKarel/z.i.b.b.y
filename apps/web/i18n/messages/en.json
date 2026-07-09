@@ -1635,7 +1635,8 @@
     "tasks": {
       "title": "Tasks",
       "empty": "No tasks",
-      "openAria": "Open run: {title}"
+      "openAria": "Open run: {title}",
+      "toggleLog": "show or hide this task's live log"
     },
     "palette": {
       "placeholder": "Search agents, pipelines, gates or notes…",

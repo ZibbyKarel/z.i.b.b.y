@@ -1,8 +1,29 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
+import { fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunView } from "../../runs/run";
 import { ChatTaskRowTestId } from "./ChatTaskRow";
 import { ChatTasksPanel, ChatTasksPanelTestId } from "./ChatTasksPanel";
+
+// Phase 92: the per-kind live views are heavy composites with their own data
+// fetching — stubbed so this suite proves the panel's own expand/collapse wiring
+// (which view mounts, with which runId, and that only one mounts at a time), not
+// their internals (mirrors AktivitaTab's own test suite, phase 86).
+vi.mock("../../runs/components/RunLogStream", () => ({
+  RunLogStream: ({ runId }: { runId: string }) => (
+    <div data-run-id={runId} data-testid="run-log-stream-stub" />
+  ),
+}));
+vi.mock("../../runs/components/PipelineStageTimeline", () => ({
+  PipelineStageTimeline: ({ pipelineRunId }: { pipelineRunId: string }) => (
+    <div data-run-id={pipelineRunId} data-testid="stage-timeline-stub" />
+  ),
+}));
+vi.mock("../../runs/components/ChainStepsPanel", () => ({
+  ChainStepsPanel: ({ run }: { run: RunView }) => (
+    <div data-run-id={run.runId} data-testid="chain-steps-stub" />
+  ),
+}));
 
 // The panel reads the STABLE unified runs feed (not the chat data-layer); stub it
 // and the active-project scope so each test controls exactly which tasks exist and
@@ -121,5 +142,109 @@ describe("ChatTasksPanel (Phase 57)", () => {
     const rows = screen.getAllByTestId(ChatTaskRowTestId.Link);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveAttribute("href", "/runs?run=run_loose");
+  });
+
+  describe("Phase 92: inline expansion", () => {
+    it("expands an agent row to RunLogStream with its runId; the row link is untouched", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_agent", kind: "agent", title: "Agent task", logBase: "agents" })],
+      });
+      render(<ChatTasksPanel />);
+
+      expect(screen.queryByTestId("run-log-stream-stub")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId(ChatTaskRowTestId.Expand));
+      const stub = screen.getByTestId("run-log-stream-stub");
+      expect(stub).toHaveAttribute("data-run-id", "run_agent");
+      // The row's own navigation link is unchanged by expanding.
+      expect(screen.getByTestId(ChatTaskRowTestId.Link)).toHaveAttribute(
+        "href",
+        "/runs?run=run_agent",
+      );
+    });
+
+    it("expands a pipeline row to PipelineStageTimeline with its runId", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_pipe", kind: "pipeline", title: "Pipeline task" })],
+      });
+      render(<ChatTasksPanel />);
+
+      fireEvent.click(screen.getByTestId(ChatTaskRowTestId.Expand));
+      expect(screen.getByTestId("stage-timeline-stub")).toHaveAttribute(
+        "data-run-id",
+        "run_pipe",
+      );
+    });
+
+    it("expands a chain row to ChainStepsPanel with its runId", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_chain", kind: "chain", title: "Chain task" })],
+      });
+      render(<ChatTasksPanel />);
+
+      fireEvent.click(screen.getByTestId(ChatTaskRowTestId.Expand));
+      expect(screen.getByTestId("chain-steps-stub")).toHaveAttribute(
+        "data-run-id",
+        "run_chain",
+      );
+    });
+
+    it("done/parked rows expand too — the finished log still renders", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_done", kind: "agent", title: "Done task", status: "done" })],
+      });
+      render(<ChatTasksPanel />);
+
+      fireEvent.click(screen.getByTestId(ChatTaskRowTestId.Expand));
+      expect(screen.getByTestId("run-log-stream-stub")).toHaveAttribute(
+        "data-run-id",
+        "run_done",
+      );
+    });
+
+    it("second expand collapses the first (accordion) — only one view mounted at a time", () => {
+      runsMock.mockReturnValue({
+        runs: [
+          run({ runId: "run_a", kind: "agent", title: "Task A", status: "running" }),
+          run({ runId: "run_b", kind: "pipeline", title: "Task B", status: "running" }),
+        ],
+      });
+      render(<ChatTasksPanel />);
+
+      const chevrons = screen.getAllByTestId(ChatTaskRowTestId.Expand);
+      fireEvent.click(chevrons[0]!);
+      expect(screen.getByTestId("run-log-stream-stub")).toHaveAttribute("data-run-id", "run_a");
+      expect(screen.queryByTestId("stage-timeline-stub")).not.toBeInTheDocument();
+
+      fireEvent.click(chevrons[1]!);
+      expect(screen.queryByTestId("run-log-stream-stub")).not.toBeInTheDocument();
+      expect(screen.getByTestId("stage-timeline-stub")).toHaveAttribute("data-run-id", "run_b");
+    });
+
+    it("clicking the expanded chevron again collapses it and unmounts the view", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_agent", kind: "agent", title: "Agent task", status: "running" })],
+      });
+      render(<ChatTasksPanel />);
+
+      const chevron = screen.getByTestId(ChatTaskRowTestId.Expand);
+      fireEvent.click(chevron);
+      expect(screen.getByTestId("run-log-stream-stub")).toBeInTheDocument();
+
+      fireEvent.click(chevron);
+      expect(screen.queryByTestId("run-log-stream-stub")).not.toBeInTheDocument();
+    });
+
+    it("a goal/scheduled row renders no chevron at all (no inline view exists for it)", () => {
+      runsMock.mockReturnValue({
+        runs: [
+          run({ runId: "run_goal", kind: "goal", title: "Goal task", status: "running" }),
+          run({ runId: "run_sched", kind: "scheduled", title: "Scheduled task", status: "scheduled" }),
+        ],
+      });
+      render(<ChatTasksPanel />);
+
+      expect(screen.queryByTestId(ChatTaskRowTestId.Expand)).not.toBeInTheDocument();
+    });
   });
 });

@@ -2,10 +2,21 @@
 
 import { Container, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useActiveProject } from "../../projects";
+import { ChainStepsPanel } from "../../runs/components/ChainStepsPanel";
+import { PipelineStageTimeline } from "../../runs/components/PipelineStageTimeline";
+import { RunLogStream } from "../../runs/components/RunLogStream";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
-import { type FeedStatus, runAvatar, runGlyph, runTitle } from "../../runs/run";
+import {
+  type FeedStatus,
+  type RunKind,
+  runAvatar,
+  runGlyph,
+  runStateTone,
+  runTitle,
+} from "../../runs/run";
 import { RUN_STATUS_GROUPS } from "../../runs/statusGroups";
 import { ChatTaskRow } from "./ChatTaskRow";
 
@@ -13,7 +24,22 @@ export enum ChatTasksPanelTestId {
   Root = "chat-tasks-panel",
   List = "chat-tasks-panel-list",
   Empty = "chat-tasks-panel-empty",
+  /** Phase 92: wraps one row + its (possibly absent) inline expanded view. */
+  Row = "chat-tasks-panel-row",
+  /** Phase 92: the bounded-height container the per-kind live view mounts into. */
+  Expanded = "chat-tasks-panel-expanded",
 }
+
+/**
+ * Kinds the panel can expand inline (Phase 92) — mirrors {@link AktivitaTab}'s recon:
+ * only these three kinds carry a live view that can be mounted from a bare runId —
+ * `RunLogStream` for an agent's single unified log, `PipelineStageTimeline` /
+ * `ChainStepsPanel` for the other two (built on the existing stage-log stream, no
+ * new transport). A `goal` run's surface is its iteration timeline (no bare-runId
+ * view exists for it) and a `scheduled` row has no run behind it yet — both kinds
+ * render no chevron at all, unchanged from before this phase.
+ */
+const EXPANDABLE_KINDS = new Set<RunKind>(["agent", "pipeline", "chain"]);
 
 /**
  * The states that read as "live now" — a run actively progressing (`running`), one
@@ -58,6 +84,10 @@ export function ChatTasksPanel() {
   const { activeProjectId } = useActiveProject();
   const glyphById = useRunGlyphMap();
   const avatarById = useRunAvatarMap();
+  // Phase 92: at most one row expanded at a time (accordion) — keeps the narrow
+  // column readable and, more importantly, bounds the live views' polling to a
+  // single mounted stream regardless of how many tasks are in scope.
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
   const scoped =
     activeProjectId === null
@@ -83,16 +113,61 @@ export function ChatTasksPanel() {
         ) : (
           <Container maxHeight="calc(100vh - 220px)" overflowY="auto">
             <Stack data-testid={ChatTasksPanelTestId.List} gap="100">
-              {ordered.map((r) => (
-                <ChatTaskRow
-                  avatar={runAvatar(r, avatarById)}
-                  glyph={runGlyph(r, glyphById)}
-                  key={r.runId}
-                  openAria={t("openAria", { title: runTitle(r) })}
-                  run={r}
-                  stateLabel={tRuns(`state.${r.status}`)}
-                />
-              ))}
+              {ordered.map((r) => {
+                const canExpand = EXPANDABLE_KINDS.has(r.kind);
+                const expanded = canExpand && expandedRunId === r.runId;
+                return (
+                  <Stack data-testid={ChatTasksPanelTestId.Row} gap="100" key={r.runId}>
+                    <ChatTaskRow
+                      avatar={runAvatar(r, avatarById)}
+                      expandAria={canExpand ? t("toggleLog") : undefined}
+                      expanded={canExpand ? expanded : undefined}
+                      glyph={runGlyph(r, glyphById)}
+                      onToggleExpand={
+                        canExpand
+                          ? () => setExpandedRunId((cur) => (cur === r.runId ? null : r.runId))
+                          : undefined
+                      }
+                      openAria={t("openAria", { title: runTitle(r) })}
+                      run={r}
+                      stateLabel={tRuns(`state.${r.status}`)}
+                    />
+                    {expanded && (
+                      // Bounded height + scroll: the narrow chat column keeps this
+                      // an inline glance, not a full page — the ⌘K detail dialog
+                      // (Phase 58) is still the deep-dive.
+                      <Container
+                        data-testid={ChatTasksPanelTestId.Expanded}
+                        maxHeight="320px"
+                        overflowY="auto"
+                      >
+                        {r.kind === "chain" ? (
+                          <ChainStepsPanel run={r} />
+                        ) : r.kind === "pipeline" ? (
+                          <PipelineStageTimeline
+                            currentStage={r.currentStage}
+                            live={r.status === "running"}
+                            owner={r.owner}
+                            parked={r.parked}
+                            pipelineRunId={r.runId}
+                            stageRuns={r.stageRuns}
+                          />
+                        ) : (
+                          <RunLogStream
+                            linesLabel={(n) => tRuns("lines", { n })}
+                            live={r.status === "running"}
+                            liveLabel={tRuns("liveLog")}
+                            logLabel={tRuns("log")}
+                            pct={r.status === "done" ? 100 : r.pct}
+                            runId={r.runId}
+                            tone={runStateTone(r.status) ?? "accent"}
+                          />
+                        )}
+                      </Container>
+                    )}
+                  </Stack>
+                );
+              })}
             </Stack>
           </Container>
         )}
