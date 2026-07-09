@@ -1,3 +1,8 @@
 {
-  "i18n-ally.localesPaths": ["apps/web/i18n", "apps/web/i18n/messages"]
+  "i18n-ally.localesPaths": ["apps/web/i18n", "apps/web/i18n/messages"],
+  "debug.enableStatusBarColor": true,
+  "workbench.sideBar.location": "left",
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#5b8def"
+  }
 }
