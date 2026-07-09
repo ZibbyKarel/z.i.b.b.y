@@ -10,7 +10,7 @@ import { getCiStatusQueryKey } from "../projects/queries/keys";
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
 vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
 
-import { RunEventsProvider } from "./runEvents";
+import { RunEventsProvider, onRunEvent } from "./runEvents";
 
 describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
   let mock: ReturnType<typeof installEventSourceMock>;
@@ -76,5 +76,64 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getChainRunsQueryKey() });
+  });
+
+  // Phase 89: the plain subscribe API the subsystem web's particle layer rides.
+  describe("onRunEvent (Phase 89 subscribe API)", () => {
+    it("delivers a parsed event to every subscribed listener", () => {
+      const listener = vi.fn();
+      const unsubscribe = onRunEvent(listener);
+      act(() => {
+        mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "running" });
+      });
+      expect(listener).toHaveBeenCalledWith({
+        scope: "pipeline-runs",
+        runId: "delivery_1",
+        status: "running",
+      });
+      unsubscribe();
+    });
+
+    it("delivers events of every scope, unfiltered (consumers decide what's actionable)", () => {
+      const listener = vi.fn();
+      const unsubscribe = onRunEvent(listener);
+      act(() => {
+        mock.last().emit({ scope: "activity", kind: "task-created", at: "2026-07-01" });
+      });
+      expect(listener).toHaveBeenCalledTimes(1);
+      unsubscribe();
+    });
+
+    it("unsubscribe stops delivery — no leak across unmount", () => {
+      const listener = vi.fn();
+      const unsubscribe = onRunEvent(listener);
+      unsubscribe();
+      act(() => {
+        mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
+      });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it("subscribing does not change the provider's own invalidation behavior (no regression)", () => {
+      const unsubscribe = onRunEvent(vi.fn());
+      act(() => {
+        mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getChainRunsQueryKey() });
+      unsubscribe();
+    });
+
+    it("a listener that throws doesn't stop the provider's own invalidation", () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      const unsubscribe = onRunEvent(() => {
+        throw new Error("boom");
+      });
+      act(() => {
+        mock.last().emit({ scope: "agent-runs", runId: "writer_1", status: "awaiting-approval" });
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+      unsubscribe();
+      consoleError.mockRestore();
+    });
   });
 });

@@ -1,0 +1,175 @@
+import { describe, expect, it } from "vitest";
+import type { Pipeline } from "../../../../domain";
+import type { RunView } from "../../../runs/run";
+import {
+  MAX_PARTICLES,
+  appendParticle,
+  flightForEvent,
+  hashJitter,
+  particleDuration,
+  resolveEventOwner,
+} from "./particle-mapping";
+
+function pipeline(overrides: Partial<Pipeline> = {}): Pipeline {
+  return {
+    id: "delivery",
+    name: "Delivery",
+    lastRun: "—",
+    lastState: "done",
+    desc: "",
+    file: "~/zibby/pipelines/delivery.pipeline.md",
+    phases: [],
+    outputs: [],
+    ...overrides,
+  };
+}
+
+function run(overrides: Partial<RunView> = {}): RunView {
+  return {
+    runId: "delivery_1",
+    kind: "pipeline",
+    owner: "delivery",
+    processor: { kind: "pipeline", id: "delivery", name: "Delivery" },
+    status: "running",
+    prompt: "",
+    startedAt: "2026-07-08T00:00:00.000Z",
+    ...overrides,
+  } as RunView;
+}
+
+describe("resolveEventOwner", () => {
+  it("resolves a pipeline-runs event to the pipeline's ownerSubsystem", () => {
+    const owner = resolveEventOwner(
+      { scope: "pipeline-runs", runId: "delivery_1" },
+      [run()],
+      [pipeline({ ownerSubsystem: "forge" })],
+    );
+    expect(owner).toBe("forge");
+  });
+
+  it("returns undefined for any scope besides pipeline-runs (no ownerSubsystem path)", () => {
+    for (const scope of ["agent-runs", "goal-runs", "channel-items", "activity"] as const) {
+      expect(
+        resolveEventOwner({ scope, runId: "delivery_1" }, [run()], [pipeline({ ownerSubsystem: "forge" })]),
+      ).toBeUndefined();
+    }
+  });
+
+  it("returns undefined when the run isn't (yet) in the runs cache — the honest race", () => {
+    const owner = resolveEventOwner(
+      { scope: "pipeline-runs", runId: "brand-new_1" },
+      [run()],
+      [pipeline({ ownerSubsystem: "forge" })],
+    );
+    expect(owner).toBeUndefined();
+  });
+
+  it("returns undefined when the pipeline has no ownerSubsystem tag", () => {
+    const owner = resolveEventOwner({ scope: "pipeline-runs", runId: "delivery_1" }, [run()], [pipeline()]);
+    expect(owner).toBeUndefined();
+  });
+
+  it("returns undefined when runId is missing", () => {
+    expect(
+      resolveEventOwner({ scope: "pipeline-runs" }, [run()], [pipeline({ ownerSubsystem: "forge" })]),
+    ).toBeUndefined();
+  });
+
+  it("only matches a run of kind 'pipeline' (an agent run sharing an id never attributes)", () => {
+    const owner = resolveEventOwner(
+      { scope: "pipeline-runs", runId: "delivery_1" },
+      [run({ kind: "agent" })],
+      [pipeline({ ownerSubsystem: "forge" })],
+    );
+    expect(owner).toBeUndefined();
+  });
+});
+
+describe("flightForEvent", () => {
+  const runs = [run()];
+  const pipelines = [pipeline({ ownerSubsystem: "forge" })];
+
+  it("'running' → dispatch, center to node", () => {
+    const flight = flightForEvent(
+      { scope: "pipeline-runs", runId: "delivery_1", status: "running" },
+      runs,
+      pipelines,
+    );
+    expect(flight).toEqual({ from: "orb", to: "forge", subsystemId: "forge" });
+  });
+
+  it.each(["done", "failed", "parked"])("'%s' → report, node to center", (status) => {
+    const flight = flightForEvent({ scope: "pipeline-runs", runId: "delivery_1", status }, runs, pipelines);
+    expect(flight).toEqual({ from: "forge", to: "orb", subsystemId: "forge" });
+  });
+
+  it.each(["paused-limit", "interrupted"])("'%s' produces no flight (not a start or a report)", (status) => {
+    const flight = flightForEvent({ scope: "pipeline-runs", runId: "delivery_1", status }, runs, pipelines);
+    expect(flight).toBeUndefined();
+  });
+
+  it("an unattributable owner produces no flight regardless of status", () => {
+    const flight = flightForEvent(
+      { scope: "pipeline-runs", runId: "unknown_1", status: "running" },
+      runs,
+      pipelines,
+    );
+    expect(flight).toBeUndefined();
+  });
+
+  it("a scope with no owner path (agent-runs) never produces a flight", () => {
+    const flight = flightForEvent(
+      { scope: "agent-runs", runId: "writer_1", status: "running" },
+      runs,
+      pipelines,
+    );
+    expect(flight).toBeUndefined();
+  });
+});
+
+describe("appendParticle", () => {
+  it("appends under the cap", () => {
+    const list = appendParticle([1, 2, 3], 4);
+    expect(list).toEqual([1, 2, 3, 4]);
+  });
+
+  it("drops the OLDEST entries once over MAX_PARTICLES, never the newest", () => {
+    const full = Array.from({ length: MAX_PARTICLES }, (_, i) => i);
+    const next = appendParticle(full, MAX_PARTICLES);
+    expect(next).toHaveLength(MAX_PARTICLES);
+    expect(next[0]).toBe(1); // oldest (0) dropped
+    expect(next.at(-1)).toBe(MAX_PARTICLES); // newest kept
+  });
+});
+
+describe("hashJitter", () => {
+  it("is deterministic — same seed, same output, every call", () => {
+    expect(hashJitter("delivery_1:running")).toBe(hashJitter("delivery_1:running"));
+  });
+
+  it("stays within [0, 1)", () => {
+    for (const seed of ["a", "delivery_1:done:0", "very-long-run-id-string-42"]) {
+      const v = hashJitter(seed);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
+  });
+
+  it("differs across distinct seeds (not a constant)", () => {
+    expect(hashJitter("a")).not.toBe(hashJitter("b"));
+  });
+});
+
+describe("particleDuration", () => {
+  it("stays within the design doc's 1.2–2s flight range", () => {
+    for (const seed of ["a", "b", "delivery_1:running:0", "zzz"]) {
+      const d = particleDuration(seed);
+      expect(d).toBeGreaterThanOrEqual(1.2);
+      expect(d).toBeLessThan(2);
+    }
+  });
+
+  it("is deterministic — same seed, same duration", () => {
+    expect(particleDuration("delivery_1:done:3")).toBe(particleDuration("delivery_1:done:3"));
+  });
+});

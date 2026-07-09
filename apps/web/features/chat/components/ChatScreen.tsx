@@ -456,10 +456,15 @@ export function ChatScreen({
           ZIBBY orb, floating over the nebula between the top bar and the
           transcript. A fixed-height band (own `z-20` above the borderless
           `CosmicScene`, same idiom as the top bar/composer) so it never steals
-          the transcript's scroll below it. */}
+          the transcript's scroll below it. `pipelines`/`runs` (Phase 89) are the
+          SAME `pipelineCatalog`/`runs` already fetched above for the constellation
+          roster/dock — the particle layer's run→owner resolution rides those
+          existing queries, no new request. */}
       <div className="relative z-20 h-[200px] w-full shrink-0">
         <SubsystemWeb
           onSelect={setSelectedSubsystemId}
+          pipelines={pipelineCatalog ?? []}
+          runs={runs}
           selectedId={selectedSubsystemId}
           subsystems={subsystems ?? []}
         />
