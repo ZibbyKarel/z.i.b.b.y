@@ -3,7 +3,11 @@ import * as THREE from "three";
 import { particleDuration } from "../../subsystems/components/SubsystemWeb/particle-mapping";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
 import {
+  HUB_RADIUS,
+  MINI_ORB_WORLD_RADIUS,
   MITOSIS_TOTAL_DURATION,
+  NODE_OCTAGON_RADIUS,
+  NODE_RING_RADIUS,
   REGISTRY_ORDER,
   easeOutBack,
   easeOutCubic,
@@ -113,38 +117,37 @@ const ORB_SCALE = 0.46;
  * Phase 95 mini-orb + WebGL-net geometry, all in cluster-LOCAL world units (the
  * `cluster` group carries the {@link CLUSTER_Y} translation, scale 1). Tuned as a
  * set so the net HUGS the central orb — the headline fix over phase 94's
- * separately-calibrated SVG overlay:
+ * separately-calibrated SVG overlay. The actual constants ({@link MINI_ORB_WORLD_RADIUS},
+ * {@link NODE_RING_RADIUS}, {@link HUB_RADIUS}, {@link NODE_OCTAGON_RADIUS}) live in
+ * `clusterGeometry.ts` (imported above) instead of here, so `clusterGeometry.test.ts`
+ * can assert the REAL tuned values — see that module's `NET_GEOMETRY` export:
  *
- *  - {@link MINI_ORB_WORLD_RADIUS} — a mini-orb's world radius (its group scale). A
- *    smaller sibling of the central orb (`ORB_SCALE = 0.5`).
- *  - {@link NODE_RING_RADIUS} — the octagon the 8 mini-orbs sit on (forge at the
- *    bottom). Well OUTSIDE the hub, so the spokes are long and radial.
- *  - {@link HUB_RADIUS} — the inner octagon that rings the orb. Must clear the
- *    central orb's glow (world radius `ORB_SCALE × 1.25 = 0.625`) with a visible gap,
+ *  - `MINI_ORB_WORLD_RADIUS` — a mini-orb's world radius (its group scale). A
+ *    smaller sibling of the central orb (`ORB_SCALE = 0.46`).
+ *  - `NODE_RING_RADIUS` — the octagon the 8 mini-orbs sit on (forge at the
+ *    bottom). Well OUTSIDE the hub, so the spokes are long and radial. Phase 107
+ *    pushed this from 0.85 to 1.05 to clear `HUB_RADIUS` plus a deliberate
+ *    connector gap ({@link NODE_LINK_GAP} in `clusterGeometry.ts`) — see the
+ *    no-overlap invariant on the net block below.
+ *  - `HUB_RADIUS` — the inner octagon that rings the orb. Must clear the
+ *    central orb's glow (world radius `ORB_SCALE × 1.25 = 0.575`) with a visible gap,
  *    and sit well inside the node ring so nothing in the net ever touches the orb.
+ *  - `NODE_OCTAGON_RADIUS` — the radius of the small octagon wrapping EACH
+ *    mini-orb, ringing it the same way `HUB_RADIUS`'s octagon rings the central
+ *    orb. A touch larger than `MINI_ORB_WORLD_RADIUS` so it visibly clears the
+ *    mini-orb's own glow instead of hugging it pixel-tight.
  */
-const MINI_ORB_WORLD_RADIUS = 0.16;
-const NODE_RING_RADIUS = 0.85;
-const HUB_RADIUS = 0.7;
-
-/**
- * Phase 101 — the radius of the small octagon wrapping EACH mini-orb, ringing it
- * the same way {@link HUB_RADIUS}'s octagon rings the central orb. A touch larger
- * than the mini-orb itself ({@link MINI_ORB_WORLD_RADIUS}) so it visibly clears
- * the orb's own glow instead of hugging it pixel-tight.
- */
-const NODE_OCTAGON_RADIUS = MINI_ORB_WORLD_RADIUS * 1.35;
 
 /**
  * Phase 97 legibility pass — the orb-side endpoint a handoff-flight particle
  * actually travels to/from. Deliberately SMALLER than {@link HUB_RADIUS} (the
  * net's own inner-octagon vertex): a flight confined to the hub→node segment
- * (0.7 → 0.85) only crosses 0.15 world units, a faint tick at full-viewport
- * scale. Sitting just outside the central orb's rendered glow (`ORB_SCALE ×
- * 1.25 = 0.575`) instead means a dispatch visibly leaves the orb's surface and
- * crosses the WHOLE inner octagon on its way out (report: the reverse) — a
- * clearly-legible flight, while the 0.025 gap to the glow still guarantees it
- * never passes through the orb itself.
+ * (0.7 → 1.05, post phase 107) only crosses 0.35 world units — still a fairly
+ * faint tick at full-viewport scale. Sitting just outside the central orb's
+ * rendered glow (`ORB_SCALE × 1.25 = 0.575`) instead means a dispatch visibly
+ * leaves the orb's surface and crosses the WHOLE inner octagon on its way out
+ * (report: the reverse) — a clearly-legible flight, while the 0.025 gap to the
+ * glow still guarantees it never passes through the orb itself.
  */
 const ORB_FLIGHT_RADIUS = 0.6;
 
@@ -180,10 +183,15 @@ const ENTRY_IMPULSE_WINDOW = 0.6; // s
  * is untouched — still `lookAt(0, 0, 0)` — only the cluster moves, which keeps the
  * background glow's projected offset a pure function of `CLUSTER_Y` and the fixed
  * FOV/distance (see {@link glowCenterFromClusterY}). Paired with the COMPACT octagon
- * ({@link NODE_RING_RADIUS} snug just outside the central orb's glow), so the whole
- * cluster (all 8 mini-orbs + their labels) sits in the upper region and the lower
- * half+ of the page stays clear for the transcript — no chat bubble ever overlaps a
- * mini-orb, and the top mini-orb (Beacon) clears the top bar.
+ * ({@link NODE_RING_RADIUS}, pushed from 0.85 to 1.05 in phase 107 to clear the hub
+ * octagon plus a connector gap — see `clusterGeometry.ts`'s `NET_GEOMETRY`), so the
+ * whole cluster (all 8 mini-orbs + their labels) sits in the upper region and the
+ * lower half+ of the page stays clear for the transcript — no chat bubble ever
+ * overlaps a mini-orb, and the top mini-orb (Beacon) clears the top bar. Phase 107
+ * widened the ring, which nudges every mini-orb slightly closer to the viewport
+ * edge than phase 94/98's tuning assumed — verify with a screenshot that nothing
+ * clips (mini-orb, its octagon, or its label) before calling the tune final; if it
+ * does, prefer trimming `NODE_LINK_GAP` first, then `NODE_RING_RADIUS` itself.
  */
 const CLUSTER_Y = 1.22;
 
@@ -318,13 +326,23 @@ export function createSceneController(
     };
   });
 
-  // --- WebGL net (phase 95, reworked phase 101): the inner octagon (hub→hub,
-  // ringing the orb) + a small octagon ringing EACH mini-orb + a SHORT link
-  // between the two rings' facing vertices (not a spoke piercing the mini-orb's
-  // centre). One additive faint LineSegments in the shared foreground-faint tone
-  // — the same neutral "wiring" colour the retired SVG web used. Nothing in it
-  // ever overlaps the central orb: the innermost points are the hub vertices
-  // (HUB_RADIUS), which clear the orb's glow with a gap. ---
+  // --- WebGL net (phase 95, reworked phase 101, separated phase 107): the
+  // inner octagon (hub→hub, ringing the orb) + a small octagon ringing EACH
+  // mini-orb + a real CONNECTOR line between the two rings' facing vertices
+  // (not a spoke piercing the mini-orb's centre). One additive faint
+  // LineSegments in the shared foreground-faint tone — the same neutral
+  // "wiring" colour the retired SVG web used. Nothing in it ever overlaps the
+  // central orb: the innermost points are the hub vertices (HUB_RADIUS), which
+  // clear the orb's glow with a gap.
+  //
+  // Phase 107 no-overlap invariant (see clusterGeometry.ts's `NET_GEOMETRY`,
+  // asserted in clusterGeometry.test.ts against these SAME imported values):
+  //   NODE_RING_RADIUS − NODE_OCTAGON_RADIUS > HUB_RADIUS
+  // i.e. every node octagon's near point sits strictly OUTSIDE the hub
+  // octagon, separated by roughly NODE_LINK_GAP of daylight — the two
+  // octagons never touch by construction, and the connector below is always a
+  // positive-length outward segment bridging that gap (never a reversed
+  // inward stub). ---
   const hubVerts = hubSlots(HUB_RADIUS);
   // Phase 97 legibility pass — a SEPARATE, smaller-radius ring than the net's own
   // hub vertices, used only as a handoff flight's orb-side endpoint (see
@@ -346,11 +364,14 @@ export function createSceneController(
       const b = nodeOctagon[(v + 1) % nodeOctagon.length]!;
       netPositions.push(a.x, a.y, 0, b.x, b.y, 0);
     }
-    // Short link (hub octagon's outer vertex, already pointing straight at the
+    // Connector (hub octagon's outer vertex, already pointing straight at the
     // node by construction — hub/node/origin are colinear — → the node octagon's
     // near vertex, walked IN from the node's centre toward the hub by the node
     // octagon's own radius). Replaces the old hub→node.center spoke that pierced
-    // the mini-orb; this bridges just the gap between the two rings.
+    // the mini-orb. Since phase 107's no-overlap invariant guarantees
+    // nodeNear sits strictly outside the hub octagon, this is now a genuine
+    // positive-length OUTWARD segment bridging the NODE_LINK_GAP daylight
+    // between the two octagons — not a reversed inward stub.
     const nodeNear = pointToward(node, hub, NODE_OCTAGON_RADIUS);
     netPositions.push(hub.x, hub.y, 0, nodeNear.x, nodeNear.y, 0);
   }

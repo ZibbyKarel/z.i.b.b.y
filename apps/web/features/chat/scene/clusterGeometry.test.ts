@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   MITOSIS_STAGGER,
   MITOSIS_TOTAL_DURATION,
+  NET_GEOMETRY,
+  MINI_ORB_WORLD_RADIUS as REAL_MINI_ORB_WORLD_RADIUS,
   REGISTRY_ORDER,
   SLOT_COUNT,
   easeOutBack,
@@ -191,6 +193,52 @@ describe("clusterGeometry", () => {
         const orbPoint = orbFlightSlots(ORB_FLIGHT_RADIUS)[index]!;
         expect(node.x * orbPoint.y - node.y * orbPoint.x).toBeCloseTo(0, 5);
       }
+    });
+  });
+
+  describe("NET_GEOMETRY (phase 107 — hub/node octagon separation + connector)", () => {
+    // Asserts against the REAL exported constants sceneController.ts actually
+    // draws the WebGL net with — not local copies — so a future retune that
+    // breaks the no-overlap invariant fails this test, not just a screenshot.
+
+    it("keeps every node octagon strictly outside the hub octagon (no overlap by construction)", () => {
+      expect(NET_GEOMETRY.NODE_RING_RADIUS - NET_GEOMETRY.NODE_OCTAGON_RADIUS).toBeGreaterThan(
+        NET_GEOMETRY.HUB_RADIUS,
+      );
+    });
+
+    it("the node octagon still clears the mini-orb itself (radius bigger than the orb it wraps)", () => {
+      expect(NET_GEOMETRY.NODE_OCTAGON_RADIUS).toBeGreaterThan(REAL_MINI_ORB_WORLD_RADIUS);
+    });
+
+    it("the connector (hub vertex -> node octagon's near point) is a positive-length OUTWARD segment sitting strictly between the two octagons", () => {
+      // index 0 (forge) is the bottom slot — node, hub, and the origin are
+      // colinear by construction (see hubSlots's own "colinear" test above),
+      // so the near point's distance from the origin is exactly
+      // NODE_RING_RADIUS - NODE_OCTAGON_RADIUS for this slot.
+      const id = REGISTRY_ORDER[0]!;
+      const hub = hubForId(id, NET_GEOMETRY.HUB_RADIUS)!;
+      const node = slotForId(id, NET_GEOMETRY.NODE_RING_RADIUS)!;
+      const near = pointToward(node, hub, NET_GEOMETRY.NODE_OCTAGON_RADIUS);
+      const nearRadius = distance(near, { x: 0, y: 0 });
+
+      expect(nearRadius).toBeGreaterThan(NET_GEOMETRY.HUB_RADIUS);
+      expect(nearRadius).toBeLessThan(NET_GEOMETRY.NODE_RING_RADIUS);
+    });
+
+    it("the realized gap between the hub vertex and the node octagon's near point is at least NODE_LINK_GAP, for the colinear bottom slot", () => {
+      // NODE_RING_RADIUS is rounded UP for a clean margin (see its doc in
+      // clusterGeometry.ts), so the realized gap is slightly more than the
+      // nominal NODE_LINK_GAP, not exactly equal to it.
+      const id = REGISTRY_ORDER[0]!;
+      const hub = hubForId(id, NET_GEOMETRY.HUB_RADIUS)!;
+      const node = slotForId(id, NET_GEOMETRY.NODE_RING_RADIUS)!;
+      const near = pointToward(node, hub, NET_GEOMETRY.NODE_OCTAGON_RADIUS);
+      const nearRadius = distance(near, { x: 0, y: 0 });
+      const gap = nearRadius - NET_GEOMETRY.HUB_RADIUS;
+
+      expect(gap).toBeGreaterThanOrEqual(NET_GEOMETRY.NODE_LINK_GAP);
+      expect(gap).toBeCloseTo(NET_GEOMETRY.NODE_LINK_GAP, 1);
     });
   });
 
