@@ -131,9 +131,9 @@ pnpm api:test            # api vitest project only
 pnpm e2e                 # Playwright E2E
 
 # Code quality
-pnpm lint                # ESLint --fix (acts as the formatter)
-pnpm typecheck           # tsc --noEmit for tsconfig.base + apps/web/tsconfig
-                         # NOTE: rtk pnpm typecheck masks errors — always call tsc directly
+pnpm check:lint          # ESLint --fix (acts as the formatter)
+pnpm check:types         # tsc --noEmit for tsconfig.base + apps/web/tsconfig
+                         # NOTE: rtk pnpm check:types masks errors — always call tsc directly
 
 # Utilities
 pnpm seed                # seed data/

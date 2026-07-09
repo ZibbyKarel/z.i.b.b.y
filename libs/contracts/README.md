@@ -113,4 +113,4 @@ module. The health endpoint is the reference example; follow its shape:
    `apps/api/test/` (`Test.createTestingModule({ imports: [AppModule] })`, then
    `supertest`). See `health.contract.test.ts` and `test/health.e2e.test.ts`.
 
-Then run the project's standard checks: `npm run lint && npm run typecheck && npm run test`.
+Then run the project's standard checks: `npm run check:lint && npm run check:types && npm run test`.

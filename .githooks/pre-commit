@@ -8,11 +8,11 @@
 # first install) — it skips with a note instead of failing in that case.
 
 if [ ! -d node_modules ] || [ ! -d apps/api/node_modules ]; then
-  echo "[pre-commit] node_modules missing — skipping self-knowledge:check (run pnpm install)."
+  echo "[pre-commit] node_modules missing — skipping check:self-knowledge (run pnpm install)."
   exit 0
 fi
 
-pnpm self-knowledge:check
+pnpm check:self-knowledge
 CHECK_STATUS=$?
 
 # --- graphify-out staleness warning (Fáze 10 — non-blocking, always exits 0) ---

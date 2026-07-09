@@ -212,7 +212,7 @@
       "commands": {
         "label": "Ověřovací příkazy",
         "hint": "Jeden příkaz na řádek; nenulový exit = nesplněno. Prázdné → použije se výchozí ověření projektu.",
-        "placeholder": "pnpm test\npnpm typecheck"
+        "placeholder": "pnpm test\npnpm check:types"
       },
       "reviewer": {
         "label": "Posuzující agent",

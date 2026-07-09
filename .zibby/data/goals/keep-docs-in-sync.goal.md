@@ -7,11 +7,11 @@ maker:
 verifier:
   kind: checks
   commands:
-    - "pnpm typecheck"
+    - "pnpm check:types"
 maxIterations: 3
 desc: Drift between the ts-rest contracts and the prose docs is a recurring papercut.
 ---
 
 Review the routers and Zod schemas under libs/contracts and update the matching
 files in docs/api so every endpoint, field, and enum is documented accurately.
-Stop when typecheck passes and no contract is undocumented.
+Stop when check:types passes and no contract is undocumented.

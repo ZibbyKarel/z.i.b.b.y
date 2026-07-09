@@ -178,6 +178,6 @@ The system floor (`POLICY.md`) is locked — an agent can only tighten it, never
 | E2E                     | Playwright                     | `pnpm e2e`      |
 | Design system           | Vitest + Storybook             | `pnpm test`     |
 
-`pnpm typecheck` runs `tsc --noEmit` for `tsconfig.base.json` + `apps/web/tsconfig.json`.
-Note: `rtk pnpm typecheck` filters the output and can mask errors — always use direct
+`pnpm check:types` runs `tsc --noEmit` for `tsconfig.base.json` + `apps/web/tsconfig.json`.
+Note: `rtk pnpm check:types` filters the output and can mask errors — always use direct
 `tsc` when in doubt.

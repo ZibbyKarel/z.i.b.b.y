@@ -212,7 +212,7 @@
       "commands": {
         "label": "Verify commands",
         "hint": "One command per line; non-zero exit = not satisfied. Empty → the project's default verify.",
-        "placeholder": "pnpm test\npnpm typecheck"
+        "placeholder": "pnpm test\npnpm check:types"
       },
       "reviewer": {
         "label": "Reviewer agent",

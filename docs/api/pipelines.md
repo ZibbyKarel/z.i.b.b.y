@@ -46,7 +46,7 @@ phases:
   - id: tester
     type: verify # deterministic phase, no tokens
     commands:
-      - pnpm typecheck
+      - pnpm check:types
       - pnpm test
     then:
       pass: dokumentátor

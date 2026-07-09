@@ -313,8 +313,8 @@ architectural smells / latent bugs on the priority axis.
   current work touches them; don't refactor unrelated code "for safety."
 - **Fix bugs** — real defects in existing functionality, prioritised by operator impact
   (the gate/approval and dispatch paths first — highest stakes).
-- **Definition of done per cleanup** — behaviour preserved, tests green (`pnpm lint && typecheck
-  && test`), `graphify update .`, checkpoint commit. A cleanup that can't be proven behaviour-
+- **Definition of done per cleanup** — behaviour preserved, tests green (`pnpm check:lint &&
+  check:types && test`), `graphify update .`, checkpoint commit. A cleanup that can't be proven behaviour-
   preserving is parked, not forced.
 
 **Output:** the system stays simple and correct as it grows — every phase leaves the code at

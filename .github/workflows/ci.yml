@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: pnpm run typecheck
+      - run: pnpm run check:types
 
   cycles:
     runs-on: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
       # committed `apps/api/data-test` catalog (agents/pipelines/gate-rules) — the
       # same check the `.githooks/pre-commit` hook runs locally, pinned at the
       # repo's committed fixture data root (there is no committed live data dir).
-      - run: pnpm self-knowledge:check
+      - run: pnpm check:self-knowledge
         env:
           ZIBBY_DATA_DIR: apps/api/data-test
 

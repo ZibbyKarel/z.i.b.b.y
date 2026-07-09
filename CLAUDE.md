@@ -174,7 +174,7 @@ pnpm storybook         # design system → http://localhost:6006
 
 Other scripts: `pnpm web:build` / `pnpm web:start`, `pnpm api:start`,
 `pnpm test` (all) / `pnpm web:test` / `pnpm api:test`, `pnpm e2e`,
-`pnpm lint`, `pnpm typecheck`. See `README.md` for the full table.
+`pnpm check:lint`, `pnpm check:types`, `pnpm check:deps`. See `README.md` for the full table.
 
 ---
 
@@ -300,9 +300,9 @@ The hook and its file share one name with a `Query`/`Mutation` suffix
 Run these three commands in order after generating or modifying any code files:
 
 ```bash
-pnpm lint       # ESLint auto-fix (acts as project formatter)
-pnpm typecheck  # tsc --noEmit
-pnpm test       # vitest run
+pnpm check:lint   # ESLint auto-fix (acts as project formatter)
+pnpm check:types  # tsc --noEmit
+pnpm test         # vitest run
 ```
 
 Fix all errors before reporting the task as done. Do not skip steps.

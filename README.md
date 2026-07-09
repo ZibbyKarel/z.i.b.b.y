@@ -26,6 +26,10 @@ pnpm install
 pnpm dev              # api + web together → :3333 and :3000
 ```
 
+New machine, or something feels off? `pnpm check:deps` checks node/pnpm/git are installed
+and reports on `gh`/`claude`/playwright (each optional — see below), printing the exact
+install command for anything missing (`scripts/check-deps.sh`).
+
 First run has no data — seed the demo catalog (agents, pipelines, automations, …) once:
 
 ```bash
@@ -36,7 +40,16 @@ node apps/api/scripts/seed.mjs   # writes into .zibby/data (stop the API first)
 
 ## Quick start
 
-**Prerequisites:** Node.js 20+ (see `.nvmrc`), [pnpm](https://pnpm.io) 9+ (`corepack enable` or `npm i -g pnpm`)
+**Prerequisites:** Node.js 20+ (see `.nvmrc`), [pnpm](https://pnpm.io) 9+ (`corepack enable` or `npm i -g pnpm`), git.
+
+Optional, feature-specific (each degrades gracefully when absent — `pnpm check:deps` tells
+you exactly which is missing and how to fix it):
+
+| Tool                                    | Needed for                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| [`gh`](https://cli.github.com) (authed) | Top-bar open-PR panel (`SelfFreshness`)                            |
+| [`claude`](https://claude.com/claude-code) CLI | Real agent/pipeline runs, chat, triage, briefing (`AGENT_RUNNER_MODE=claude`) — not needed for the default demo mode |
+| Playwright chromium browser             | `pnpm e2e` (`pnpm exec playwright install chromium`)                |
 
 > **pnpm is the canonical package manager** for this monorepo (it uses the
 > `workspace:` protocol and `pnpm-lock.yaml`). Use `pnpm`, not `npm`.
@@ -47,18 +60,19 @@ pnpm install
 
 | Command           | What it does                                            |
 | ----------------- | ------------------------------------------------------- |
-| `pnpm web:dev`    | Start the web app at http://localhost:3000              |
-| `pnpm web:build`  | Production build of the web app                         |
-| `pnpm web:start`  | Serve the production web build                          |
-| `pnpm web:test`   | Run web tests once                                      |
-| `pnpm api:dev`    | Start API in watch mode at http://localhost:3333        |
-| `pnpm api:start`  | Serve the API once (no reload)                          |
-| `pnpm api:test`   | Run API tests once                                      |
-| `pnpm test`       | Run all tests once                                      |
-| `pnpm test:watch` | Run all tests in watch mode                             |
-| `pnpm storybook`  | Launch design system Storybook at http://localhost:6006 |
-| `pnpm lint`       | ESLint auto-fix across the monorepo                     |
-| `pnpm typecheck`  | Type-check the whole monorepo                           |
+| `pnpm check:deps`  | Check external CLI dependencies are installed           |
+| `pnpm web:dev`     | Start the web app at http://localhost:3000              |
+| `pnpm web:build`   | Production build of the web app                         |
+| `pnpm web:start`   | Serve the production web build                          |
+| `pnpm web:test`    | Run web tests once                                      |
+| `pnpm api:dev`     | Start API in watch mode at http://localhost:3333        |
+| `pnpm api:start`   | Serve the API once (no reload)                          |
+| `pnpm api:test`    | Run API tests once                                      |
+| `pnpm test`        | Run all tests once                                      |
+| `pnpm test:watch`  | Run all tests in watch mode                             |
+| `pnpm storybook`   | Launch design system Storybook at http://localhost:6006 |
+| `pnpm check:lint`  | ESLint auto-fix across the monorepo                     |
+| `pnpm check:types` | Type-check the whole monorepo                           |
 
 ### Start developing
 

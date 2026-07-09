@@ -67,7 +67,7 @@ Verifikační brány (`lint && typecheck && test`) se NIKDY neoslabují kvůli p
 
 3. IMPLEMENTUJ — odpracuj fázi na téhle větvi. Součástí implementace jsou testy nové
    funkcionality (ne až nakonec). Respektuj DNA guardraily výše. Průběžně commituj a
-   odškrtávej v plánu hotové. Po změnách kódu spusť `pnpm lint && pnpm typecheck && pnpm test`
+   odškrtávej v plánu hotové. Po změnách kódu spusť `pnpm check:lint && pnpm check:types && pnpm test`
    a oprav vše do zelena. Pak `graphify update .`.
 
 4. VERIFIKUJ & CHECKPOINT — když je zeleno a kritéria splněna (včetně testů nového kódu),
