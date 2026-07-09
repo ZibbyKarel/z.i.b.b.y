@@ -68,6 +68,19 @@ export function hubSlots(radius: number, count: number = SLOT_COUNT): ClusterSlo
   return octagonSlots(radius, count);
 }
 
+/** The orb-side handoff-flight ring (phase 97 legibility pass) — same angles as
+ * {@link octagonSlots}, at a `radius` just OUTSIDE the central orb's rendered
+ * glow but INSIDE {@link hubSlots}'s inner octagon. A flight riding only the
+ * hub→node segment (the net's own spoke) reads as a faint tick at full-viewport
+ * scale because it never leaves the tiny gap between the hub ring and the node
+ * ring; starting/ending it here instead means it visibly emanates from the
+ * orb's surface and crosses the whole inner octagon outward (or the reverse,
+ * inward, for a report) — a real flight, not a twitch. Named separately from
+ * `octagonSlots`/`hubSlots` for readability even though the math is identical. */
+export function orbFlightSlots(radius: number, count: number = SLOT_COUNT): ClusterSlot[] {
+  return octagonSlots(radius, count);
+}
+
 /** A subsystem id's node-ring slot, or `undefined` for an id outside the registry. */
 export function slotForId(
   id: SubsystemId,
@@ -90,6 +103,34 @@ export function hubForId(
 
 function round(n: number): number {
   return Math.round(n * 1_000_000) / 1_000_000;
+}
+
+// --- Phase 97: handoff-flight endpoint resolution ---------------------------
+//
+// Pure geometry — no `three` import, so it's unit-testable standalone (the scene
+// controller wraps the returned points in `THREE.Vector3` before handing them to
+// the particle layer).
+
+/**
+ * Resolve a flight's two cluster-local endpoints. `flightForEvent`
+ * (`particle-mapping.ts`) guarantees exactly one of `from`/`to` is `"orb"` — that
+ * side resolves to `orbPoint` (a point on the SAME spoke as the subsystem's hub
+ * vertex, but at the smaller {@link orbFlightSlots} radius, just outside the
+ * central orb's rendered glow — so the mote visibly emanates from the orb's
+ * surface and crosses the inner octagon outward, while still never crossing
+ * through the orb's centre); the subsystem side resolves to `nodePoint` (its
+ * mini-orb's LIVE position, which may still be mid-entry-animation).
+ */
+export function resolveFlightEndpoints(
+  from: SubsystemId | "orb",
+  to: SubsystemId | "orb",
+  orbPoint: ClusterPoint,
+  nodePoint: ClusterPoint,
+): { from: ClusterPoint; to: ClusterPoint } {
+  return {
+    from: from === "orb" ? orbPoint : nodePoint,
+    to: to === "orb" ? orbPoint : nodePoint,
+  };
 }
 
 // --- Phase 96: the "mitosis" entry animation --------------------------------

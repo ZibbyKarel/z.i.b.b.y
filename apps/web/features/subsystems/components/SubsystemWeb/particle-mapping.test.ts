@@ -161,11 +161,11 @@ describe("hashJitter", () => {
 });
 
 describe("particleDuration", () => {
-  it("stays within the design doc's 1.2–2s flight range", () => {
+  it("stays within the phase-97-raised 1.5–2.3s flight range", () => {
     for (const seed of ["a", "b", "delivery_1:running:0", "zzz"]) {
       const d = particleDuration(seed);
-      expect(d).toBeGreaterThanOrEqual(1.2);
-      expect(d).toBeLessThan(2);
+      expect(d).toBeGreaterThanOrEqual(1.5);
+      expect(d).toBeLessThan(2.3);
     }
   });
 

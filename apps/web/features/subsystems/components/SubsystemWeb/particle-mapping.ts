@@ -107,8 +107,12 @@ export function appendParticle<T>(list: readonly T[], item: T): T[] {
   return next.length > MAX_PARTICLES ? next.slice(next.length - MAX_PARTICLES) : next;
 }
 
-/** Flight duration range, seconds (design doc: "~1.2–2s flight"). */
-const MIN_DURATION_S = 1.2;
+/** Flight duration range, seconds (design doc: "~1.2–2s flight"). Phase 97
+ * legibility pass raised the floor a touch (1.2 → 1.5) — the WebGL mote's
+ * comet trail needs a little more travel time to read clearly at
+ * full-viewport scale; the jitter width is unchanged, so the range simply
+ * shifts to ~1.5–2.3s. */
+const MIN_DURATION_S = 1.5;
 const DURATION_JITTER_S = 0.8;
 
 /**

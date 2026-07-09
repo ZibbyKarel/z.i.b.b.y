@@ -5,9 +5,13 @@
    the sanctioned style escape hatch, file-level. */
 "use client";
 
-import type { SubsystemId, SubsystemWithStatus } from "@zibby/contracts";
+import { SUBSYSTEMS, type SubsystemId, type SubsystemWithStatus } from "@zibby/contracts";
 import { useEffect, useRef, useState } from "react";
+import type { Pipeline } from "../../../domain";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import type { RunView } from "../../runs/run";
+import { onRunEvent } from "../../runs/runEvents";
+import { flightForEvent } from "../../subsystems/components/SubsystemWeb/particle-mapping";
 import { SubsystemOrbsOverlay } from "./SubsystemOrbsOverlay";
 import { canMountWebGL } from "./canMountWebGL";
 import type { SceneController } from "./sceneController";
@@ -38,9 +42,18 @@ export interface CosmicSceneProps {
   selectedSubsystemId?: SubsystemId | null;
   /** Selecting a mini-orb (click / keyboard) — opens the subsystem drawer upstream. */
   onSelectSubsystem?: (id: SubsystemId) => void;
+  /** Phase 97: the pipeline catalog — `flightForEvent`'s owner resolution
+   * (`runId` → owning pipeline → `ownerSubsystem`) reads this. Already fetched by
+   * `ChatScreen` for other purposes; read via a ref (see the mount effect below) so
+   * a refetch never resubscribes the `onRunEvent` listener. */
+  pipelines?: Pipeline[];
+  /** Phase 97: the live runs feed — same `flightForEvent` resolution. */
+  runs?: RunView[];
 }
 
 const EMPTY_SUBSYSTEMS: SubsystemWithStatus[] = [];
+const EMPTY_PIPELINES: Pipeline[] = [];
+const EMPTY_RUNS: RunView[] = [];
 
 /** Map the contract status shape to the leaner {@link SceneSubsystem} the controller
  * drives its mini-orbs from — everything in the feed is present. */
@@ -68,6 +81,8 @@ export function CosmicScene({
   subsystems = EMPTY_SUBSYSTEMS,
   selectedSubsystemId = null,
   onSelectSubsystem = noop,
+  pipelines = EMPTY_PIPELINES,
+  runs = EMPTY_RUNS,
 }: CosmicSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SceneController | null>(null);
@@ -146,6 +161,32 @@ export function CosmicScene({
   useEffect(() => {
     controller?.setSubsystems(toSceneSubsystems(subsystems));
   }, [controller, subsystems]);
+
+  // Phase 97 — the restored handoff particles: read `runs`/`pipelines` through refs
+  // (copying the retired SubsystemWeb's own pattern) so a query refetch's fresh
+  // array reference never tears down and resubscribes the listener — the shared
+  // `RunEventsProvider`'s ONE EventSource keeps delivering events the whole time
+  // regardless.
+  const runsRef = useRef(runs);
+  useEffect(() => {
+    runsRef.current = runs;
+  }, [runs]);
+  const pipelinesRef = useRef(pipelines);
+  useEffect(() => {
+    pipelinesRef.current = pipelines;
+  }, [pipelines]);
+
+  useEffect(() => {
+    return onRunEvent((event) => {
+      const flight = flightForEvent(event, runsRef.current, pipelinesRef.current);
+      if (!flight) return;
+      const color = SUBSYSTEMS.find((s) => s.id === flight.subsystemId)?.color;
+      if (!color) return;
+      controllerRef.current?.emitFlight(flight.from, flight.to, color);
+    });
+    // Subscribe once — `runsRef`/`pipelinesRef` above keep the closure's data fresh
+    // without ever needing to unsubscribe/resubscribe.
+  }, []);
 
   return (
     <>

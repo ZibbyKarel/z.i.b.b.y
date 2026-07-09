@@ -432,6 +432,8 @@ export function ChatScreen({
         dock={dock}
         mode={mode}
         onSelectSubsystem={setSelectedSubsystemId}
+        pipelines={pipelineCatalog ?? []}
+        runs={runs}
         selectedSubsystemId={selectedSubsystemId}
         streamChars={stream.streaming ? stream.text.length : 0}
         subsystems={subsystems ?? []}
@@ -516,8 +518,10 @@ export function ChatScreen({
           surface — hit-targets, labels, badges, selection ring — lives in the
           `SubsystemOrbsOverlay` that `CosmicScene` renders, positioned from the
           controller's per-frame projections. The retired SVG `SubsystemWeb` overlay
-          (and its `pipelines`/`runs` particle layer) is gone; handoff particles
-          return in WebGL in phase 97. Selection still opens the drawer below. */}
+          is gone; its `pipelines`/`runs`-driven handoff particles are restored in
+          WebGL by phase 97, fed straight into `CosmicScene` below (same catalogs,
+          same `onRunEvent` mapping — no new query). Selection still opens the
+          drawer below. */}
 
       {/* ── Composer ─────────────────────────────────────────────────
           Phase 38: the unified `CommandLine` launcher in send-delegation mode

@@ -10,11 +10,16 @@ import {
   hubSlots,
   mitosisProgress,
   octagonSlots,
+  orbFlightSlots,
+  resolveFlightEndpoints,
   slotForId,
 } from "./clusterGeometry";
 
 const NODE_RADIUS = 0.85;
 const HUB_RADIUS = 0.7;
+// Mirrors sceneController.ts's real ORB_FLIGHT_RADIUS: just outside the central
+// orb's glow (ORB_SCALE × 1.25 = 0.46 × 1.25 = 0.575) and inside HUB_RADIUS.
+const ORB_FLIGHT_RADIUS = 0.6;
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -86,6 +91,34 @@ describe("clusterGeometry", () => {
         // Cross product of the two position vectors is ~0 for colinear points
         // through the origin.
         expect(node.x * hub.y - node.y * hub.x).toBeCloseTo(0, 5);
+      }
+    });
+  });
+
+  describe("orbFlightSlots (phase 97 legibility pass — the handoff-flight orb-side ring)", () => {
+    it("sits on a smaller regular octagon, at the SAME angles as the hub and node rings", () => {
+      const nodes = octagonSlots(NODE_RADIUS);
+      const hubs = hubSlots(HUB_RADIUS);
+      const orbFlights = orbFlightSlots(ORB_FLIGHT_RADIUS);
+      expect(orbFlights).toHaveLength(nodes.length);
+      orbFlights.forEach((point, i) => {
+        expect(point.angle).toBe(nodes[i]!.angle);
+        expect(point.angle).toBe(hubs[i]!.angle);
+        expect(distance(point, { x: 0, y: 0 })).toBeCloseTo(ORB_FLIGHT_RADIUS, 5);
+      });
+    });
+
+    it("sits strictly INSIDE the hub ring, which sits strictly inside the node ring — the flight visibly crosses the whole inner octagon", () => {
+      expect(ORB_FLIGHT_RADIUS).toBeLessThan(HUB_RADIUS);
+      expect(HUB_RADIUS).toBeLessThan(NODE_RADIUS);
+    });
+
+    it("a node, its orb-flight point, and the cluster origin are colinear (the flight rides the radial spoke)", () => {
+      for (const id of REGISTRY_ORDER) {
+        const node = slotForId(id, NODE_RADIUS)!;
+        const index = REGISTRY_ORDER.indexOf(id);
+        const orbPoint = orbFlightSlots(ORB_FLIGHT_RADIUS)[index]!;
+        expect(node.x * orbPoint.y - node.y * orbPoint.x).toBeCloseTo(0, 5);
       }
     });
   });
@@ -201,6 +234,32 @@ describe("clusterGeometry", () => {
         const end = index * MITOSIS_STAGGER + perOrbDuration;
         expect(mitosisProgress(end, index, COUNT, { easing: easeOutBack })).toBeCloseTo(1, 6);
       }
+    });
+  });
+
+  describe("resolveFlightEndpoints (phase 97 — handoff flights)", () => {
+    const orbPoint = { x: 0.1, y: 0.2 };
+    const node = { x: 0.9, y: 0.8 };
+
+    it("a dispatch (orb → subsystem) starts at the orb-surface point, ends at the mini-orb", () => {
+      expect(resolveFlightEndpoints("orb", "forge", orbPoint, node)).toEqual({
+        from: orbPoint,
+        to: node,
+      });
+    });
+
+    it("a report (subsystem → orb) starts at the mini-orb, ends at the orb-surface point", () => {
+      expect(resolveFlightEndpoints("forge", "orb", orbPoint, node)).toEqual({
+        from: node,
+        to: orbPoint,
+      });
+    });
+
+    it("never routes through the orb centre — the orb-surface point is always the orb-side endpoint, never the node", () => {
+      const dispatch = resolveFlightEndpoints("orb", "puls", orbPoint, node);
+      const report = resolveFlightEndpoints("puls", "orb", orbPoint, node);
+      expect(dispatch.from).toBe(orbPoint);
+      expect(report.to).toBe(orbPoint);
     });
   });
 });

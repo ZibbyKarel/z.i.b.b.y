@@ -1,17 +1,22 @@
 import { SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
 import * as THREE from "three";
+import { particleDuration } from "../../subsystems/components/SubsystemWeb/particle-mapping";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
 import {
   MITOSIS_TOTAL_DURATION,
+  REGISTRY_ORDER,
   easeOutBack,
   easeOutCubic,
   hubSlots,
   mitosisProgress,
   octagonSlots,
+  orbFlightSlots,
+  resolveFlightEndpoints,
 } from "./clusterGeometry";
 import { type DockLayer, createDockLayer } from "./dockLayer";
 import { type OrbTarget, miniOrbTarget, orbTarget } from "./modeVisuals";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
+import { type ParticleLayer, createParticleLayer } from "./particleLayer";
 import { type RingsLayer, createRingsLayer } from "./ringsLayer";
 import type { SceneInputs, SceneSubsystem, SubsystemProjection } from "./sceneTypes";
 import { resolveForegroundFaintHex } from "./tokens";
@@ -45,6 +50,20 @@ export interface SceneController {
   /** Fire the brief completion flash (a `done` turn) — an `ok`-green pulse on the
    * orb and its background glow that decays back to the current mode. */
   flashComplete(): void;
+  /** Phase 97 — restore a handoff particle for one real dispatch/report event.
+   * Exactly one of `from`/`to` is `"orb"` (the mapping in `particle-mapping.ts`'s
+   * `flightForEvent` guarantees this); the other is the owning subsystem. Resolves
+   * the two cluster-local endpoints (the orb side → a point on that subsystem's
+   * spoke just outside the orb's rendered glow — {@link ORB_FLIGHT_RADIUS} — so the
+   * mote visibly emanates from the orb's surface, crosses the whole inner octagon,
+   * and never crosses the orb's centre; the subsystem side → its mini-orb's live
+   * position) and hands off to the fixed
+   * particle pool with a jittered duration (`particleDuration`, reused verbatim).
+   * Under reduced motion: no travel — a brief static glow held at the
+   * DESTINATION only. Exposed on `window.__cosmicScene` outside production, same
+   * as `replayEntry`/`scrubEntry`, so visual verification can fire flights without
+   * a real run. */
+  emitFlight(from: SubsystemId | "orb", to: SubsystemId | "orb", color: string): void;
   /** Pause the loop (overlay closed / tab hidden). Idempotent. */
   pause(): void;
   /** Resume without a time jump (the clock is reset so `dt` stays small). Idempotent. */
@@ -106,6 +125,19 @@ const MINI_ORB_WORLD_RADIUS = 0.16;
 const NODE_RING_RADIUS = 0.85;
 const HUB_RADIUS = 0.7;
 
+/**
+ * Phase 97 legibility pass — the orb-side endpoint a handoff-flight particle
+ * actually travels to/from. Deliberately SMALLER than {@link HUB_RADIUS} (the
+ * net's own inner-octagon vertex): a flight confined to the hub→node segment
+ * (0.7 → 0.85) only crosses 0.15 world units, a faint tick at full-viewport
+ * scale. Sitting just outside the central orb's rendered glow (`ORB_SCALE ×
+ * 1.25 = 0.575`) instead means a dispatch visibly leaves the orb's surface and
+ * crosses the WHOLE inner octagon on its way out (report: the reverse) — a
+ * clearly-legible flight, while the 0.025 gap to the glow still guarantees it
+ * never passes through the orb itself.
+ */
+const ORB_FLIGHT_RADIUS = 0.6;
+
 // Phase 96 — the one-shot "mitosis" entry animation: on controller creation the
 // 8 mini-orbs bud out of the central orb (cluster-local origin) and travel to
 // their NODE_RING_RADIUS octagon slot while growing from scale 0 to
@@ -145,6 +177,12 @@ const ENTRY_IMPULSE_WINDOW = 0.6; // s
  */
 const CLUSTER_Y = 1.22;
 
+/** Phase 97 — reduced-motion handoff flights: a brief static glow held at the
+ * DESTINATION node, no travel. Matches the retired Phase-89 SVG implementation's
+ * own `ripple 0.9s` reduced-motion glow duration, so the "felt" pacing of a
+ * dispatch/report notification is unchanged by the WebGL rewrite. */
+const REDUCED_MOTION_GLOW_DURATION_S = 0.9;
+
 /**
  * The world-Y offset {@link CLUSTER_Y} projected into the background sky shader's
  * centred, aspect-corrected `p`-space (screen centre `(0,0)`, `+y` up) — pure
@@ -169,6 +207,10 @@ export function createSceneController(
   let disposed = false;
   let running = false;
   let rafId = 0;
+  // Phase 97 — a monotonic per-flight counter, folded into `particleDuration`'s
+  // deterministic seed (never `Math.random()`) so two flights emitted in the same
+  // tick still get visibly different jitter.
+  let flightSeq = 0;
 
   const mobile = (container.clientWidth || window.innerWidth || 0) < 640;
   // Low-power devices (mobile, or few cores) get an extra-frugal background: lower
@@ -272,6 +314,11 @@ export function createSceneController(
   // used. Nothing in it ever overlaps the central orb: the innermost points are the
   // hub vertices (HUB_RADIUS), which clear the orb's glow with a gap. ---
   const hubVerts = hubSlots(HUB_RADIUS);
+  // Phase 97 legibility pass — a SEPARATE, smaller-radius ring than the net's own
+  // hub vertices, used only as a handoff flight's orb-side endpoint (see
+  // ORB_FLIGHT_RADIUS's doc). Same angles as hubVerts/nodeSlots (same spoke), so
+  // a flight still rides straight out along the visible spoke direction.
+  const orbFlightVerts = orbFlightSlots(ORB_FLIGHT_RADIUS);
   const netPositions: number[] = [];
   for (let i = 0; i < hubVerts.length; i++) {
     const hub = hubVerts[i]!;
@@ -297,6 +344,14 @@ export function createSceneController(
   });
   const net = new THREE.LineSegments(netGeometry, netMaterial);
   cluster.add(net);
+
+  // --- Handoff-flight particles (phase 97): a fixed pool of faint additive motes
+  // riding the net's spokes — the restored Phase-89 dispatch/report animation, now
+  // WebGL. Cluster-local space, same as the net/mini-orb slots above, so a flight
+  // between a hub vertex and a mini-orb's live position never needs its own
+  // coordinate conversion. ---
+  const particles: ParticleLayer = createParticleLayer();
+  cluster.add(particles.object3d);
 
   // --- Phase 96 entry ("mitosis") animation state. Reduced motion → skip the
   // clock entirely and leave everything at the rest state it was just built in
@@ -491,6 +546,10 @@ export function createSceneController(
       if (mini.present) mini.layer.update(dt, mini.target, inputs.reducedMotion, 0);
     }
 
+    // Phase 97: advance every in-flight handoff particle (real events only — never
+    // fed by the clock itself, only `emitFlight` ever calls `particles.emit`).
+    particles.update(dt);
+
     // Phase 96: the one-shot mitosis entry — overrides each mini-orb GROUP's
     // position/scale (never its internal mesh, updated above) until every
     // index's staggered progress reaches 1, then hands back to the static rest
@@ -571,6 +630,36 @@ export function createSceneController(
     flashComplete() {
       flash = 1;
     },
+    emitFlight(from, to, color) {
+      // `flightForEvent` guarantees exactly one side is "orb"; the other names the
+      // owning subsystem. Both being "orb" (malformed input) has nothing to draw.
+      const subsystemId = from === "orb" ? to : from;
+      if (subsystemId === "orb") return;
+      const index = REGISTRY_ORDER.indexOf(subsystemId);
+      const orbPoint = orbFlightVerts[index];
+      const mini = minis.find((m) => m.id === subsystemId);
+      if (!orbPoint || !mini) return; // unknown/unregistered id — nothing to draw
+      const { from: fromPoint, to: toPoint } = resolveFlightEndpoints(
+        from,
+        to,
+        orbPoint,
+        mini.layer.object3d.position,
+      );
+      flightSeq += 1;
+      const seed = `${from}:${to}:${color}:${flightSeq}`;
+      if (inputs.reducedMotion) {
+        // No travel — a brief static glow held at the DESTINATION only.
+        const dest = new THREE.Vector3(toPoint.x, toPoint.y, 0);
+        particles.emit(dest, dest, color, REDUCED_MOTION_GLOW_DURATION_S);
+        return;
+      }
+      particles.emit(
+        new THREE.Vector3(fromPoint.x, fromPoint.y, 0),
+        new THREE.Vector3(toPoint.x, toPoint.y, 0),
+        color,
+        particleDuration(seed),
+      );
+    },
     pause() {
       if (!running) return;
       running = false;
@@ -606,6 +695,7 @@ export function createSceneController(
       for (const mini of minis) mini.layer.dispose();
       netGeometry.dispose();
       netMaterial.dispose();
+      particles.dispose();
       background.dispose();
       rings.dispose();
       dock.dispose();
