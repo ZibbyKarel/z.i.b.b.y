@@ -5,11 +5,13 @@
    the sanctioned style escape hatch, file-level. */
 "use client";
 
-import { useEffect, useRef } from "react";
+import type { SubsystemId, SubsystemWithStatus } from "@zibby/contracts";
+import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import { SubsystemOrbsOverlay } from "./SubsystemOrbsOverlay";
 import { canMountWebGL } from "./canMountWebGL";
 import type { SceneController } from "./sceneController";
-import type { SceneDockItem, SceneMode } from "./sceneTypes";
+import type { SceneDockItem, SceneMode, SceneSubsystem } from "./sceneTypes";
 
 export enum CosmicSceneTestId {
   /** The scene root — carries `data-mode` so the derivation tests (and console
@@ -29,6 +31,21 @@ export interface CosmicSceneProps {
   /** A monotonically increasing counter bumped once per completed (`done`) turn.
    * The scene fires the brief ok-green completion flash on each increment. */
   completedTick?: number;
+  /** The 8 named subsystems + live status (phase 95) — drives the WebGL mini-orbs
+   * and the interactive {@link SubsystemOrbsOverlay} rendered inside this scene. */
+  subsystems?: SubsystemWithStatus[];
+  /** The currently-selected subsystem, if any (selection ring + `aria-pressed`). */
+  selectedSubsystemId?: SubsystemId | null;
+  /** Selecting a mini-orb (click / keyboard) — opens the subsystem drawer upstream. */
+  onSelectSubsystem?: (id: SubsystemId) => void;
+}
+
+const EMPTY_SUBSYSTEMS: SubsystemWithStatus[] = [];
+
+/** Map the contract status shape to the leaner {@link SceneSubsystem} the controller
+ * drives its mini-orbs from — everything in the feed is present. */
+function toSceneSubsystems(subsystems: SubsystemWithStatus[]): SceneSubsystem[] {
+  return subsystems.map((s) => ({ id: s.id, color: s.color, state: s.state, present: true }));
 }
 
 /**
@@ -48,9 +65,16 @@ export function CosmicScene({
   dock = EMPTY_DOCK,
   streamChars = 0,
   completedTick = 0,
+  subsystems = EMPTY_SUBSYSTEMS,
+  selectedSubsystemId = null,
+  onSelectSubsystem = noop,
 }: CosmicSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SceneController | null>(null);
+  // Controller as state (not just a ref) so the overlay re-subscribes to
+  // projections once the async-imported controller is ready — a ref change alone
+  // wouldn't re-run the overlay's subscription effect.
+  const [controller, setController] = useState<SceneController | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const prevChars = useRef(0);
   const prevTick = useRef(0);
@@ -64,12 +88,15 @@ export function CosmicScene({
 
     void import("./sceneController").then(({ createSceneController }) => {
       if (cancelled || !containerRef.current) return;
-      const controller = createSceneController(container, { mode, dock, reducedMotion });
-      controllerRef.current = controller;
+      const created = createSceneController(container, { mode, dock, reducedMotion });
+      controllerRef.current = created;
+      setController(created);
+      // Push the initial subsystem roster (the effect below only fires on CHANGE).
+      created.setSubsystems(toSceneSubsystems(subsystems));
       // Expose the key setters for console testing during development — drive the
       // orb/dispatch by hand without a live turn (e.g. `__cosmicScene.triggerDispatch("koder")`).
       if (process.env.NODE_ENV !== "production") {
-        (window as unknown as { __cosmicScene?: SceneController }).__cosmicScene = controller;
+        (window as unknown as { __cosmicScene?: SceneController }).__cosmicScene = created;
       }
     });
 
@@ -84,6 +111,7 @@ export function CosmicScene({
       document.removeEventListener("visibilitychange", onVisibility);
       controllerRef.current?.dispose();
       controllerRef.current = null;
+      setController(null);
       if (process.env.NODE_ENV !== "production") {
         delete (window as unknown as { __cosmicScene?: SceneController }).__cosmicScene;
       }
@@ -112,15 +140,41 @@ export function CosmicScene({
     prevTick.current = completedTick;
   }, [completedTick]);
 
+  // Push the subsystem roster whenever it changes (phase 95). Depends on `controller`
+  // so it also fires the moment the async-imported controller becomes ready (the
+  // mount effect pushed the initial roster; this keeps it in sync thereafter).
+  useEffect(() => {
+    controller?.setSubsystems(toSceneSubsystems(subsystems));
+  }, [controller, subsystems]);
+
   return (
-    <div
-      aria-hidden="true"
-      data-mode={mode}
-      data-testid={CosmicSceneTestId.Root}
-      ref={containerRef}
-      style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}
-    />
+    <>
+      {/* The WebGL host: three.js appends its <canvas> layers here. Non-interactive
+          and hidden from a11y — the interactive/accessible surface is the sibling
+          overlay below. */}
+      <div
+        aria-hidden="true"
+        data-mode={mode}
+        data-testid={CosmicSceneTestId.Root}
+        ref={containerRef}
+        style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}
+      />
+      {/* The interactive DOM layer for the mini-orbs — same-sized sibling so its
+          projected (container-px) coordinates line up. Renders all its nodes even
+          without a controller (jsdom), so component tests stay WebGL-free. */}
+      <SubsystemOrbsOverlay
+        onSelect={onSelectSubsystem}
+        selectedId={selectedSubsystemId}
+        subscribe={controller?.subscribeProjections}
+        subsystems={subsystems}
+      />
+    </>
   );
 }
 
 const EMPTY_DOCK: SceneDockItem[] = [];
+
+function noop() {
+  // Default `onSelectSubsystem` — the scene is decorative until a caller wires
+  // selection (ChatScreen does; the Storybook stories don't need it).
+}

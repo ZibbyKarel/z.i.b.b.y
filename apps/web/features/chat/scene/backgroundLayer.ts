@@ -21,9 +21,14 @@ import { CATEGORY_COLORS, resolveSceneTokens } from "./tokens";
  * background is the stable, ever-drifting world the orb lives in.
  */
 
-const NODE_COUNT = 100;
+// Phase 95: the node-web (pass 2) is toned right down to a faint whisper of depth —
+// it was the "agent constellation" the operator asked to remove, and at its old
+// density/opacity it drowned the subsystem net. Counts cut hard (was 100/220) and the
+// opacities dropped to a fraction (see the material defs + `update`), so the mini-orbs
+// and their net are unmistakably the foreground; this is just quiet parallax behind.
+const NODE_COUNT = 28;
 const CLUSTER_COUNT = 7;
-const DUST_COUNT = 220;
+const DUST_COUNT = 70;
 /** Fade the whole layer in over this many seconds on first load. */
 export const REVEAL_SECONDS = 1.5;
 
@@ -234,7 +239,7 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     size: 0.055,
     vertexColors: true,
     transparent: true,
-    opacity: 0.5,
+    opacity: 0.1,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     sizeAttenuation: true,
@@ -264,7 +269,7 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
   const lineMaterial = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: 0.12,
+    opacity: 0.03,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
@@ -284,7 +289,7 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     size: 0.02,
     color: new THREE.Color(0.6, 0.7, 0.95),
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.06,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
@@ -308,9 +313,11 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
       // Ease the behind-orb glow toward the orb's live colour.
       glowColor.lerp(ctx.orbColor, 1 - Math.exp(-dt * 4));
       skyUniforms.uOrbColor.value.copy(glowColor);
-      nodeMaterial.opacity = 0.5 * reveal;
-      lineMaterial.opacity = 0.12 * reveal;
-      dustMaterial.opacity = 0.35 * reveal;
+      // Phase 95: node-web toned to a faint whisper (see the count/opacity notes up
+      // top) so the subsystem net + mini-orbs own the foreground.
+      nodeMaterial.opacity = 0.1 * reveal;
+      lineMaterial.opacity = 0.03 * reveal;
+      dustMaterial.opacity = 0.06 * reveal;
       if (!ctx.reducedMotion) {
         webGroup.rotation.y += dt * 0.01;
         webGroup.rotation.x = Math.sin(elapsed * 0.05) * 0.04;

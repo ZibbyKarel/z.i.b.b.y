@@ -1,3 +1,4 @@
+import type { SubsystemState } from "@zibby/contracts";
 import type { SceneColorToken } from "./tokens";
 import type { SceneMode } from "./sceneTypes";
 
@@ -7,8 +8,13 @@ import type { SceneMode } from "./sceneTypes";
  * mapping, so there are no scattered ternaries in the render loop.
  */
 export interface OrbTarget {
-  /** Design token the wireframe colour resolves from. */
-  colorToken: SceneColorToken;
+  /** Design token the wireframe colour resolves from — the central orb, driven by
+   * {@link SceneMode}, always sets this. Phase 95: OPTIONAL so a mini-orb target can
+   * set `color` instead (its fixed subsystem tint is never one of the five shared
+   * state tokens). `orbLayer.ts`'s `update()` prefers `colorToken` when both are set. */
+  colorToken?: SceneColorToken;
+  /** Direct hex colour override, used when `colorToken` is absent (mini-orbs). */
+  color?: string;
   /** Brightness multiplier on the resolved colour — kept near-1 for every mode; the
    * idle→working distinction is carried by `colorToken` (hue), not by dimming. */
   intensity: number;
@@ -147,4 +153,76 @@ export function orbTarget(mode: SceneMode, energy: number): OrbTarget {
     pulseSpeed: 3 + e * 3,
     glow: base.glow + e * 0.25,
   };
+}
+
+/**
+ * A subsystem MINI-orb's per-state visual target (phase 95) — the reuse of the
+ * central orb's {@link OrbTarget} contract, but tinted to the subsystem's fixed
+ * registry `color` (never a state token) and driven by its {@link SubsystemState}
+ * rather than the conversational {@link SceneMode}. It mirrors the retired SVG web's
+ * per-state semantics through colour/brightness/pulse (NEVER a flat opacity fade —
+ * the phase-93 principle):
+ *
+ *  - `klid`  — idle: dimmer brightness + glow, static save a barely-there idle breath
+ *              (so it still reads alive, like the central orb, not switched off);
+ *  - `bezi`  — working: full brightness, a gentle in-place pulse;
+ *  - `hlaseni` — report ready: full brightness, calm (no state pulse) — the report is
+ *              handled, nothing urgent (the overlay's ok-tone badge carries the rest);
+ *  - `ceka`  — awaiting a decision: full brightness, a stronger + faster pulse so it
+ *              reads louder than `bezi` at a glance (the overlay's warn badge too).
+ *
+ * `rings` is always 0 — the halo layer is the central orb's alone. Reduced motion is
+ * honoured downstream in {@link OrbLayer.update} (it zeroes the pulse and damps noise/
+ * rotation), so this target is the full-motion intent.
+ */
+const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
+  // Idle: dim, low glow, near-static — only the shared idle breath keeps it alive.
+  klid: {
+    intensity: 0.5,
+    noiseAmp: 0.06,
+    noiseSpeed: 0.14,
+    rotationSpeed: 0.05,
+    pulseAmp: 0.02,
+    pulseSpeed: 0.8,
+    glow: 0.18,
+    rings: 0,
+  },
+  // Working: full presence, a gentle breathing pulse.
+  bezi: {
+    intensity: 0.95,
+    noiseAmp: 0.1,
+    noiseSpeed: 0.4,
+    rotationSpeed: 0.12,
+    pulseAmp: 0.08,
+    pulseSpeed: 1.6,
+    glow: 0.4,
+    rings: 0,
+  },
+  // Report ready: full presence, calm (only the idle breath) — nothing urgent.
+  hlaseni: {
+    intensity: 0.95,
+    noiseAmp: 0.08,
+    noiseSpeed: 0.2,
+    rotationSpeed: 0.08,
+    pulseAmp: 0.02,
+    pulseSpeed: 0.8,
+    glow: 0.42,
+    rings: 0,
+  },
+  // Awaiting a decision: full presence, a louder + faster pulse — reads urgent.
+  ceka: {
+    intensity: 1,
+    noiseAmp: 0.12,
+    noiseSpeed: 0.5,
+    rotationSpeed: 0.14,
+    pulseAmp: 0.16,
+    pulseSpeed: 3,
+    glow: 0.52,
+    rings: 0,
+  },
+};
+
+/** The mini-orb target for a subsystem's registry `color` + live `state`. */
+export function miniOrbTarget(color: string, state: SubsystemState): OrbTarget {
+  return { ...MINI_BASE[state], color };
 }

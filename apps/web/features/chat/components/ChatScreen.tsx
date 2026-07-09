@@ -40,7 +40,6 @@ import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { ProjectSwitcher } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
-import { SubsystemWeb } from "../../subsystems/components/SubsystemWeb/SubsystemWeb";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
@@ -432,7 +431,10 @@ export function ChatScreen({
         completedTick={completedTick}
         dock={dock}
         mode={mode}
+        onSelectSubsystem={setSelectedSubsystemId}
+        selectedSubsystemId={selectedSubsystemId}
         streamChars={stream.streaming ? stream.text.length : 0}
+        subsystems={subsystems ?? []}
       />
 
       {/* ── Main area: scene behind, scrollable conversation over it ───── */}
@@ -463,22 +465,22 @@ export function ChatScreen({
         )}
 
         <div
-          className="relative z-10 flex h-2/3 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
+          className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
           ref={scrollRef}
           style={{
-            // Phase 94: grown from half- to two-thirds-height now that the cluster
-            // sits in the top third rather than dead centre — the transcript owns
-            // the lower region below it. Still a box pinned to the bottom (right
-            // above the composer): the conversation grows UP from the input —
-            // newest turn always at the bottom — and `mt-auto` keeps a short thread
-            // bottom-anchored. The mask fades the box's top third into nothing so
-            // turns dissolve into the cluster's band as they rise (nothing there is
-            // ever overrun) while the lower two-thirds stay fully readable. It still
-            // scrolls all the way back to the start — turns near the top just stay
-            // ghosted (declarative mask, scroll intact).
-            maskImage: "linear-gradient(to bottom, transparent 0%, #000 34%, #000 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 34%, #000 100%)",
+            // Phase 95: set to half-height so the transcript lives entirely in the
+            // BOTTOM HALF, below the compact top-third subsystem cluster (phase 94's
+            // two-thirds box let a tall thread's dissolving top ghost over the lower
+            // mini-orbs). Still a box pinned to the bottom (right above the composer):
+            // the conversation grows UP from the input — newest turn always at the
+            // bottom — and `mt-auto` keeps a short thread bottom-anchored. The mask
+            // fades the box's top ~40% into nothing so any turn that scrolls up
+            // dissolves before it can reach the cluster's band, while the lower part
+            // stays fully readable. It still scrolls all the way back to the start —
+            // turns near the top just stay ghosted (declarative mask, scroll intact).
+            maskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
           }}
         >
           {/* `mt-auto` pins short conversations to the bottom (first turn sits just
@@ -507,35 +509,15 @@ export function ChatScreen({
         </div>
       </div>
 
-      {/* ── Subsystem web ────────────────────────────────────────────────
-          Phase 94: the scene's centerpiece raised into the TOP THIRD alongside the
-          orb — a regular octagon now (not a flattened ellipse), Forge anchored at
-          the bottom, its net an inner hub ring that clears the orb rather than
-          converging on it (see `subsystem-web-geometry.ts`). `top-[19.8%]` is the
-          exact screen-space projection of `sceneController.ts`'s `CLUSTER_Y` — the
-          two are tuned together so this box's own centre (the octagon/hub's
-          `WEB_CENTER`) coincides with the raised WebGL orb (the #1 acceptance
-          check for this phase). `max-w-[460px]` is the other half of the hub-ring
-          calibration in `subsystem-web-geometry.ts`'s `HUB_RADIUS` doc comment —
-          together they clear the orb's actual rendered footprint (bigger on
-          screen than the SVG's own `ORB_RADIUS` doc constant implies) while still
-          leaving headroom so the top node isn't clipped by the viewport.
-          `pointer-events-none` so it never steals the transcript's scroll — only
-          the interactive nodes re-enable events. `pipelines`/`runs` (Phase 89) are
-          the SAME `pipelineCatalog`/`runs` already fetched above for the dock
-          roster — the particle layer's run→owner resolution rides those existing
-          queries, no new request. */}
-      <div className="pointer-events-none absolute left-1/2 top-[19.8%] z-20 w-full max-w-[460px] -translate-x-1/2 -translate-y-1/2 px-6">
-        <div className="pointer-events-none aspect-square w-full">
-          <SubsystemWeb
-            onSelect={setSelectedSubsystemId}
-            pipelines={pipelineCatalog ?? []}
-            runs={runs}
-            selectedId={selectedSubsystemId}
-            subsystems={subsystems ?? []}
-          />
-        </div>
-      </div>
+      {/* ── Subsystem mini-orbs ──────────────────────────────────────────
+          Phase 95: the 8 subsystems are now REAL WebGL mini-orbs (siblings of the
+          central orb, tinted per subsystem) rendered inside `CosmicScene` above,
+          ringed by a WebGL net that hugs the central orb. Their interactive/a11y
+          surface — hit-targets, labels, badges, selection ring — lives in the
+          `SubsystemOrbsOverlay` that `CosmicScene` renders, positioned from the
+          controller's per-frame projections. The retired SVG `SubsystemWeb` overlay
+          (and its `pipelines`/`runs` particle layer) is gone; handoff particles
+          return in WebGL in phase 97. Selection still opens the drawer below. */}
 
       {/* ── Composer ─────────────────────────────────────────────────
           Phase 38: the unified `CommandLine` launcher in send-delegation mode

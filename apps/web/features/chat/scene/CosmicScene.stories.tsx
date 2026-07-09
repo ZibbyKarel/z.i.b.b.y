@@ -10,6 +10,7 @@
  * `CosmicScene` renders `position: absolute; inset: 0`, filling its nearest
  * positioned ancestor — same contract `ChatScreen` relies on).
  */
+import { SUBSYSTEMS, type SubsystemState, type SubsystemWithStatus } from "@zibby/contracts";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Container, Typography } from "@zibby/design-system";
 import type { ReactNode } from "react";
@@ -48,6 +49,26 @@ const DOCK: SceneDockItem[] = [
     targetId: "pipeline-delivery",
   },
 ];
+
+/** A sample subsystem roster (phase 95): the 8 registry subsystems with a spread of
+ * live states so the mini-orbs' per-state look (klid dim, bezi/ceka pulse, ceka
+ * louder + warn badge, hlaseni ok badge) is visible at a glance in the story. */
+const SAMPLE_STATES: Partial<Record<string, { state: SubsystemState; tier2Count?: number; tier3Count?: number }>> = {
+  forge: { state: "bezi" },
+  puls: { state: "bezi" },
+  sentinel: { state: "ceka", tier3Count: 2 },
+  beacon: { state: "hlaseni", tier2Count: 3 },
+  scout: { state: "bezi" },
+};
+const SUBSYSTEM_ROSTER: SubsystemWithStatus[] = SUBSYSTEMS.map((s) => {
+  const override = SAMPLE_STATES[s.id];
+  return {
+    ...s,
+    state: override?.state ?? "klid",
+    tier2Count: override?.tier2Count ?? 0,
+    tier3Count: override?.tier3Count ?? 0,
+  };
+});
 
 interface SceneFrameProps {
   children: ReactNode;
@@ -126,6 +147,8 @@ const meta: Meta<typeof CosmicSceneStory> = {
       description: "The derived conversational state driving the orb.",
       options: SCENE_MODES,
     },
+    subsystems: { control: false },
+    selectedSubsystemId: { control: false },
     reducedMotion: {
       control: "boolean",
       description: "Simulates the OS prefers-reduced-motion setting.",
@@ -141,6 +164,8 @@ const meta: Meta<typeof CosmicSceneStory> = {
     mode: "idle",
     reducedMotion: false,
     streamChars: 0,
+    subsystems: SUBSYSTEM_ROSTER,
+    selectedSubsystemId: "sentinel",
   },
   component: CosmicSceneStory,
   parameters: { layout: "fullscreen" },

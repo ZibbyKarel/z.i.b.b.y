@@ -133,7 +133,7 @@ import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/desi
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
-import { SubsystemWebTestId } from "../../subsystems/components/SubsystemWeb/SubsystemWeb";
+import { SubsystemOrbsOverlayTestId } from "../scene/SubsystemOrbsOverlay";
 import { ChatDetailDialogTestId } from "./ChatDetailDialog";
 import { ChatPaletteTestId } from "./ChatPalette";
 
@@ -303,30 +303,38 @@ describe("ChatScreen", () => {
     });
   });
 
-  describe("subsystem web strip (Phase 83)", () => {
-    it("renders the strip with all mocked subsystems, above the transcript", () => {
+  describe("subsystem mini-orbs overlay (Phase 95, was the SVG web in 83)", () => {
+    it("renders the overlay with all mocked subsystems, over the scene", () => {
       renderWithProviders(<ChatScreenHarness />);
 
-      expect(screen.getByTestId(SubsystemWebTestId.Root)).toBeInTheDocument();
-      expect(screen.getByTestId(`${SubsystemWebTestId.Node}-forge`)).toBeInTheDocument();
-      expect(screen.getByTestId(`${SubsystemWebTestId.Node}-puls`)).toBeInTheDocument();
+      expect(screen.getByTestId(SubsystemOrbsOverlayTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-puls`)).toBeInTheDocument();
     });
 
-    it("clicking a node toggles its selection ring (aria-pressed) — no drawer yet", async () => {
+    it("clicking a node opens the drawer for that subsystem, and moving selection swaps it", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      const forgeNode = screen.getByTestId(`${SubsystemWebTestId.Node}-forge`);
+      const forgeNode = screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`);
       expect(forgeNode).toHaveAttribute("aria-pressed", "false");
 
       await user.click(forgeNode);
-      expect(forgeNode).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`)).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
 
       // Selecting a different node moves the ring — only one selection at a time.
-      const pulsNode = screen.getByTestId(`${SubsystemWebTestId.Node}-puls`);
-      await user.click(pulsNode);
-      expect(pulsNode).toHaveAttribute("aria-pressed", "true");
-      expect(forgeNode).toHaveAttribute("aria-pressed", "false");
+      await user.click(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-puls`));
+      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-puls`)).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`)).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
     });
   });
 

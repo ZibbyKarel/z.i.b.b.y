@@ -3,6 +3,7 @@
  * Kept free of any `three` import so `ChatScreen` (and its jsdom tests) can pass
  * them without pulling WebGL into the bundle.
  */
+import type { SubsystemId, SubsystemState } from "@zibby/contracts";
 
 /**
  * The orb's derived conversational state, computed in {@link ChatScreen} purely
@@ -80,4 +81,34 @@ export interface SceneInputs {
   dock: SceneDockItem[];
   /** Whether the operator asked the OS for reduced motion. */
   reducedMotion: boolean;
+}
+
+/**
+ * One subsystem's data as the WebGL scene needs it (phase 95): its stable id, its
+ * registry tint, its live state, and whether it's present in the current feed. The
+ * controller drives one mini-orb per registry subsystem from this — the interactive
+ * surface (labels/badges/hit-targets) lives in the {@link SubsystemOrbsOverlay} DOM
+ * layer, positioned from projections, not here.
+ */
+export interface SceneSubsystem {
+  id: SubsystemId;
+  /** Registry hex colour — the mini-orb's tint. */
+  color: string;
+  /** Live status driving the per-state visual (brightness/glow/pulse). */
+  state: SubsystemState;
+  /** Whether the subsystem is in the live feed — a false hides its mini-orb. */
+  present: boolean;
+}
+
+/**
+ * One mini-orb's per-frame projection into the scene container (phase 95): its id,
+ * its centre in CONTAINER pixels (origin = the container's top-left), and its
+ * on-screen radius `r` (also px). The {@link SubsystemOrbsOverlay} positions each
+ * DOM node from this every frame without re-rendering React.
+ */
+export interface SubsystemProjection {
+  id: SubsystemId;
+  x: number;
+  y: number;
+  r: number;
 }

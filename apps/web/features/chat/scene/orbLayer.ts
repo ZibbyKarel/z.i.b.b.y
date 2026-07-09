@@ -10,11 +10,24 @@ import type { OrbTarget } from "./modeVisuals";
  * plain `THREE.Group` the {@link SceneController} adds to its orb scene; it owns
  * its own damped state so every visual eases toward the mode target — nothing
  * snaps (the scene's north star).
+ *
+ * Phase 95 generalized this into a factory ({@link createOrbLayer}'s `opts`) so the
+ * 8 subsystem mini-orbs can reuse the EXACT same shader — tinted to their registry
+ * colour, smaller and lower-detail — rather than a second bespoke primitive. Calling
+ * it with no options reproduces the central orb's phase-93 look byte-for-byte
+ * (same seed colour derivation, same detail/glow), so the central orb's call site
+ * is unchanged in behaviour.
  */
 
 const RADIUS = 1;
-/** Detail 4 → ~2500 tris: fine enough to ripple smoothly, cheap enough for mobile. */
+/** Detail 4 → ~2500 tris: fine enough to ripple smoothly, cheap enough for mobile.
+ * The default for the central orb; mini-orbs pass a lower `detail` (phase 95). */
 const DETAIL = 4;
+/** Default glow-shell scale/strength/segment-count — the central orb's phase-93
+ * values, reused as the factory's defaults so its call site is unchanged. */
+const GLOW_SCALE = 1.25;
+const GLOW_STRENGTH = 0.35;
+const GLOW_SEGMENTS = 48;
 /** Spatial frequency of the noise field — how many lobes the deformation has. */
 const NOISE_FREQ = 1.4;
 /** Exponential-approach rate; ~95% of the way to target in 3/RATE s (~0.6s at 5). */
@@ -101,16 +114,42 @@ export interface OrbLayer {
   dispose(): void;
 }
 
+/** Factory options (phase 95) — every field defaults to the central orb's phase-93
+ * value, so `createOrbLayer()` with no args is unchanged behaviour. Mini-orbs pass
+ * their subsystem's registry colour, a lower `detail`, and a smaller glow shell. */
+export interface OrbLayerOptions {
+  /** Seed/base colour. Defaults to the scene's accent token at half brightness (the
+   * central orb's own seed) — mini-orbs pass their subsystem's registry hex. */
+  seedColor?: THREE.ColorRepresentation;
+  /** Icosahedron subdivision level. Default 4 (~2500 tris); mini-orbs use 2 (~320 tris). */
+  detail?: number;
+  /** Glow shell radius as a multiple of {@link RADIUS}. Default 1.25. */
+  glowScale?: number;
+  /** Glow shell base additive strength. Default 0.35. */
+  glowStrength?: number;
+  /** Glow shell sphere resolution (both axes). Default 48; mini-orbs use fewer
+   * segments — the halo is a soft blur, so a lower-poly sphere is indistinguishable. */
+  glowSegments?: number;
+}
+
 function damp(current: number, target: number, dt: number): number {
   return current + (target - current) * (1 - Math.exp(-dt * DAMPING_RATE));
 }
 
 /** Build the orb layer. Call once per scene mount; drive it with {@link OrbLayer.update}. */
-export function createOrbLayer(): OrbLayer {
+export function createOrbLayer(opts: OrbLayerOptions = {}): OrbLayer {
   const group = new THREE.Group();
 
+  const detail = opts.detail ?? DETAIL;
+  const glowScale = opts.glowScale ?? GLOW_SCALE;
+  const glowStrengthBase = opts.glowStrength ?? GLOW_STRENGTH;
+  const glowSegments = opts.glowSegments ?? GLOW_SEGMENTS;
+
   const tokens = resolveSceneTokens();
-  const seedColor = new THREE.Color(tokens.accent).multiplyScalar(0.5);
+  const seedColor =
+    opts.seedColor !== undefined
+      ? new THREE.Color(opts.seedColor)
+      : new THREE.Color(tokens.accent).multiplyScalar(0.5);
 
   // Wireframe orb.
   const orbUniforms: OrbUniforms = {
@@ -127,14 +166,14 @@ export function createOrbLayer(): OrbLayer {
     wireframe: true,
     depthWrite: false,
   });
-  const orbGeometry = new THREE.IcosahedronGeometry(RADIUS, DETAIL);
+  const orbGeometry = new THREE.IcosahedronGeometry(RADIUS, detail);
   const orbMesh = new THREE.Mesh(orbGeometry, orbMaterial);
   group.add(orbMesh);
 
   // Glow shell (slightly larger, additive back-side halo).
   const glowUniforms: GlowUniforms = {
     uColor: { value: seedColor.clone() },
-    uStrength: { value: 0.35 },
+    uStrength: { value: glowStrengthBase },
   };
   const glowMaterial = new THREE.ShaderMaterial({
     uniforms: glowUniforms,
@@ -145,7 +184,7 @@ export function createOrbLayer(): OrbLayer {
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const glowGeometry = new THREE.SphereGeometry(RADIUS * 1.25, 48, 48);
+  const glowGeometry = new THREE.SphereGeometry(RADIUS * glowScale, glowSegments, glowSegments);
   const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
   group.add(glowMesh);
 
@@ -159,7 +198,7 @@ export function createOrbLayer(): OrbLayer {
   let pulseAmp = 0;
   let pulseSpeed = 0;
   let pulsePhase = 0;
-  let glow = 0.35;
+  let glow = glowStrengthBase;
   // A slow secondary tumble axis so the orb never looks like it spins on one axis.
   let tiltPhase = 0;
 
@@ -182,7 +221,16 @@ export function createOrbLayer(): OrbLayer {
       pulsePhase += dt * pulseSpeed;
       const pulse = pulseAmp * (0.5 + 0.5 * Math.sin(pulsePhase));
 
-      targetColor.set(tokens2[target.colorToken]).multiplyScalar(target.intensity);
+      // Colour resolves from a design token (the central orb, driven by SceneMode) or
+      // a direct hex override (mini-orbs, tinted to their fixed subsystem colour —
+      // never one of the shared state tokens, see `tokens.ts` doc comment).
+      if (target.colorToken) {
+        targetColor.set(tokens2[target.colorToken]).multiplyScalar(target.intensity);
+      } else if (target.color !== undefined) {
+        targetColor.set(target.color).multiplyScalar(target.intensity);
+      } else {
+        targetColor.copy(seedColor);
+      }
       currentColor.lerp(targetColor, 1 - Math.exp(-dt * DAMPING_RATE));
       // Completion flash: blend toward the `ok` token for the brief pulse. Applied
       // after the mode ease so it overrides colour without disturbing the target.

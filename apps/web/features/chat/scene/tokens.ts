@@ -100,3 +100,33 @@ export function resolvePipelineAccentHex(): string {
 export function resetPipelineAccentHexCache(): void {
   pipelineAccentCache = null;
 }
+
+/**
+ * Hex fallback for the neutral "ambient structure" tone — the design system's
+ * dark-theme `--color-foreground-faint` value — mirroring {@link
+ * PIPELINE_ACCENT_FALLBACK_HEX}'s posture for an SSR/too-early read.
+ */
+const FOREGROUND_FAINT_FALLBACK_HEX = "#66737f";
+
+let foregroundFaintCache: string | null = null;
+
+/**
+ * The neutral "ambient structure" colour resolved to hex: the shared
+ * `--color-foreground-faint` token, the SAME neutral tone the retired SVG web used
+ * for its spokes/rim (`stroke-foreground-faint`) — so the WebGL net's faint inner
+ * octagon + spokes read as the identical, unbranded "wiring" tone, not a new hex.
+ */
+export function resolveForegroundFaintHex(): string {
+  if (foregroundFaintCache) return foregroundFaintCache;
+  const resolved =
+    typeof document !== "undefined"
+      ? getComputedStyle(document.documentElement).getPropertyValue("--color-foreground-faint").trim()
+      : "";
+  foregroundFaintCache = resolved || FOREGROUND_FAINT_FALLBACK_HEX;
+  return foregroundFaintCache;
+}
+
+/** Test seam — drop the resolved foreground-faint cache. */
+export function resetForegroundFaintHexCache(): void {
+  foregroundFaintCache = null;
+}
