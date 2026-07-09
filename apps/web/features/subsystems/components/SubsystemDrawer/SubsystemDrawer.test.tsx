@@ -2,7 +2,7 @@ import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
-import { SubsystemDrawer, SubsystemDrawerTestId } from "./SubsystemDrawer";
+import { SubsystemDrawer, SubsystemDrawerTestId, heroBandStyle } from "./SubsystemDrawer";
 
 const markSeenMutate = vi.fn();
 
@@ -146,6 +146,44 @@ describe("SubsystemDrawer (Phase 84)", () => {
     unmount();
     expect(document.activeElement).toBe(opener);
     opener.remove();
+  });
+
+  describe("hero band (phase 90 art, phase 103 height + webp)", () => {
+    it("falls back to the color glow alone when heroImage is null — no url(...)", () => {
+      renderWithProviders(
+        <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ heroImage: null })} />,
+      );
+      const hero = screen.getByTestId(SubsystemDrawerTestId.Hero);
+
+      expect(hero.style.backgroundImage).toContain("radial-gradient(");
+      expect(hero.style.backgroundImage).not.toContain("url(");
+      expect(hero.style.minHeight).toBe("224px");
+    });
+
+    it("layers the hero portrait (image-set webp+jpg) under the glow when heroImage is set", () => {
+      const heroImage = "/subsystems/forge.jpg";
+      renderWithProviders(
+        <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ heroImage })} />,
+      );
+      const hero = screen.getByTestId(SubsystemDrawerTestId.Hero);
+
+      // The taller phase-103 band is observable on the live DOM node in jsdom.
+      expect(hero.style.minHeight).toBe("224px");
+
+      // The `image-set()`/`url(...)` background itself is NOT observable via
+      // `hero.style.backgroundImage`: jsdom's CSSOM (`cssstyle`) only
+      // recognizes plain `url(...)` and gradients inside `background-image`,
+      // so it silently drops the whole declaration once it contains
+      // `image-set(...)` — a jsdom parser gap, not a production bug (real
+      // browsers support `image-set()` with a `url(...)` fallback fine).
+      // Assert the same style object the component renders with directly.
+      const style = heroBandStyle(fixture({ heroImage }).color, heroImage);
+      expect(style.backgroundImage).toContain("radial-gradient(");
+      expect(style.backgroundImage).toContain("image-set(");
+      expect(style.backgroundImage).toContain('url("/subsystems/forge.webp")');
+      expect(style.backgroundImage).toContain('url("/subsystems/forge.jpg")');
+      expect(style.minHeight).toBe(224);
+    });
   });
 
   it("defaults to the Roster tab and switches between all four tabs", async () => {

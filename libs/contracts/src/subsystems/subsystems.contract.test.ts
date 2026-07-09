@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   SUBSYSTEMS,
@@ -6,6 +7,11 @@ import {
   SubsystemWithStatusSchema,
   subsystemsContract,
 } from "../index";
+
+// This file lives at `libs/contracts/src/subsystems/`; the web app's public
+// assets live at `apps/web/public/` — four levels up from here (subsystems →
+// src → contracts → libs → repo root), then down into `apps/web/public`.
+const PUBLIC_DIR = new URL("../../../../apps/web/public/", import.meta.url);
 
 describe("subsystemsContract", () => {
   it("exposes GET /api/subsystems returning 200", () => {
@@ -53,6 +59,21 @@ describe("SUBSYSTEMS registry", () => {
   it("every heroImage points at the phase-90 art under /subsystems/", () => {
     for (const s of SUBSYSTEMS) {
       expect(s.heroImage).toBe(`/subsystems/${s.id}.jpg`);
+    }
+  });
+
+  it("every heroImage resolves to a real file under apps/web/public (and its phase-103 webp sibling exists)", () => {
+    for (const s of SUBSYSTEMS) {
+      expect(s.heroImage).not.toBeNull();
+      const relative = s.heroImage!.replace(/^\//, "");
+      const jpgPath = new URL(relative, PUBLIC_DIR);
+      expect(existsSync(jpgPath)).toBe(true);
+
+      // Phase 103: the component derives a WebP sibling from this same jpg
+      // path (extension swap) to serve via `image-set()` — the registry
+      // string itself stays the jpg path, so guard the sibling separately.
+      const webpPath = new URL(relative.replace(/\.jpg$/, ".webp"), PUBLIC_DIR);
+      expect(existsSync(webpPath)).toBe(true);
     }
   });
 
