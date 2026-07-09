@@ -1259,12 +1259,10 @@
     "fields": {
       "name": "Název projektu",
       "namePlaceholder": "media-vault",
-      "path": "Cesta k rootu",
-      "pathHint": "Na hostitelském systému.",
-      "pathPlaceholder": "~/Projects/media-vault",
       "gitRemote": "Git remote",
       "gitRemoteHint": "Git remote URL — odkud ZIBBY projekt naklonuje na dalším stroji.",
       "category": "Kategorie",
+      "categoryNone": "Bez kategorie",
       "desc": "Popis",
       "descPlaceholder": "Čím se projekt zabývá",
       "logo": "Logo",

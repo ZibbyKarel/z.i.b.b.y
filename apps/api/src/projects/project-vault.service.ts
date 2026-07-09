@@ -46,7 +46,7 @@ function serialize(project: Project): string {
     // M7: explicit ownership tag — scopes the profile note to its project so
     // grounding's isolation filter (`ownerProjectOf`) never leaks it to another.
     project: project.id,
-    path: project.path,
+    ...(project.path ? { path: project.path } : {}),
     ...(project.desc ? { desc: project.desc } : {}),
     ...(project.category ? { category: project.category } : {}),
     ...(project.autonomy_policy ? { autonomy_policy: project.autonomy_policy } : {}),

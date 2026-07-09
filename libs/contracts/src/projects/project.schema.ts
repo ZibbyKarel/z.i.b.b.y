@@ -130,7 +130,14 @@ export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>;
 export const ProjectSchema = z.object({
   id: ProjectIdSchema,
   name: z.string().min(1),
-  path: z.string().min(1),
+  /**
+   * The root directory on the host system — OPTIONAL (Phase 98): it is genuinely
+   * machine-local, and `ProjectLocalService.resolve` already falls back to
+   * `<cloneRoot>/<project.id>` (this machine's Settings-configured clone base)
+   * whenever `path` is absent or doesn't resolve, so hand-entering it per project
+   * is unnecessary. When present it must still be non-empty.
+   */
+  path: z.string().min(1).optional(),
   desc: z.string().optional(),
   category: z.string().optional(),
   /**
@@ -192,7 +199,7 @@ export const ProjectSchema = z.object({
 });
 export type Project = z.infer<typeof ProjectSchema>;
 
-/** Body accepted by `createProject` — the full entity (`id` + `name` + `path` required). */
+/** Body accepted by `createProject` — the full entity (`id` + `name` required; `path` optional). */
 export const CreateProjectSchema = ProjectSchema.omit({ hasSecrets: true });
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 

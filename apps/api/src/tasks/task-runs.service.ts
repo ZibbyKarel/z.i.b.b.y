@@ -302,7 +302,9 @@ export class TaskRunsService {
     };
     const projectNames: ProjectNameMaps = {
       byId: new Map(projects.map((p) => [p.id, p.name])),
-      byPath: new Map(projects.map((p) => [p.path, p.name])),
+      // `path` is optional (Phase 98, machine-local) — only projects that have one
+      // on this machine's registry contribute a path→name entry.
+      byPath: new Map(projects.flatMap((p) => (p.path ? [[p.path, p.name] as const] : []))),
     };
     const tasksById = new Map(scheduled.map((t) => [t.id, t]));
     const pipelineDefsById = new Map(pipelineDefs.map((d) => [d.id, d]));

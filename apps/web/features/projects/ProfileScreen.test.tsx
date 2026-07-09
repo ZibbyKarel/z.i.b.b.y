@@ -43,7 +43,7 @@ const push = vi.fn();
 let localState: ProjectLocalState | undefined = {
   present: true,
   isGitRepo: true,
-  resolvedPath: project.path,
+  resolvedPath: project.path ?? null,
   source: "path",
   cloneRoot: "/Users/karel/zibby-clones",
 };
@@ -74,6 +74,10 @@ vi.mock("../companies", () => ({
   useCompaniesQuery: () => ({ data: companies }),
 }));
 
+// Individual tests flip this to exercise the clone button's loading state
+// (Phase 98 — the button stays clickable-suppressed via `loading`, never `disabled`).
+let cloneIsPending = false;
+
 vi.mock("./mutations", () => ({
   useUpdateProjectProfileMutation: () => ({ mutate: updateMutate, isPending: false }),
   useCreateProjectMutation: () => ({ mutate: createProjectMutate, isPending: false }),
@@ -81,7 +85,7 @@ vi.mock("./mutations", () => ({
   useDeleteProjectMutation: () => ({ mutate: deleteProjectMutate, isPending: false }),
   useSetProjectSecretsMutation: () => ({ mutate: setSecretsMutate, isPending: false }),
   useDeleteProjectSecretsMutation: () => ({ mutate: deleteSecretsMutate, isPending: false }),
-  useCloneProjectMutation: () => ({ mutate: cloneProjectMutate, isPending: false }),
+  useCloneProjectMutation: () => ({ mutate: cloneProjectMutate, isPending: cloneIsPending }),
   useMergeProjectPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -156,10 +160,11 @@ beforeEach(() => {
   searchCompanyId = "";
   companies = [];
   projectOverride = {};
+  cloneIsPending = false;
   localState = {
     present: true,
     isGitRepo: true,
-    resolvedPath: project.path,
+    resolvedPath: project.path ?? null,
     source: "path",
     cloneRoot: "/Users/karel/zibby-clones",
   };
@@ -185,19 +190,33 @@ describe("ProfileScreen", () => {
 
   it("edits the core record in place (the dialog is gone)", () => {
     render(<ProfileScreen projectId="media-vault" />);
-    // The host path is now an editable field on the detail, not a dialog.
-    expect(screen.getByDisplayValue("~/Projects/media-vault")).toBeInTheDocument();
+    // The name is now an editable field on the detail, not a dialog.
+    expect(screen.getByDisplayValue("media-vault")).toBeInTheDocument();
   });
 
-  it("saves the core record via the update mutation", async () => {
+  it("shows the machine-local path read-only in the header subtitle (Phase 98 — no editable path field)", () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    expect(screen.getByText("~/Projects/media-vault")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("~/Projects/media-vault")).not.toBeInTheDocument();
+  });
+
+  it("saves the core record via the update mutation (no path in the body)", async () => {
     render(<ProfileScreen projectId="media-vault" />);
     await userEvent.click(screen.getByTestId("save-basics"));
     expect(updateProjectMutate).toHaveBeenCalledWith(
       expect.objectContaining({
         params: { id: "media-vault" },
-        body: expect.objectContaining({ name: "media-vault", path: "~/Projects/media-vault" }),
+        body: expect.objectContaining({ name: "media-vault" }),
       }),
     );
+    const call = updateProjectMutate.mock.calls[0]?.[0] as { body: Record<string, unknown> };
+    expect(call.body).not.toHaveProperty("path");
+  });
+
+  it("renders no subtitle when the project has no local path", () => {
+    projectOverride = { path: undefined };
+    render(<ProfileScreen projectId="media-vault" />);
+    expect(screen.queryByText("~/Projects/media-vault")).not.toBeInTheDocument();
   });
 
   it("saves team on button click", async () => {
@@ -282,7 +301,6 @@ describe("ProfileScreen", () => {
 
     it("creates the project and redirects to its detail page", async () => {
       render(<ProfileScreen />);
-      await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
       const nameField = screen.getByPlaceholderText("media-vault");
       await userEvent.type(nameField, "Alpha");
       await userEvent.click(screen.getByTestId("save-basics"));
@@ -307,7 +325,6 @@ describe("ProfileScreen", () => {
 
       it("includes the companyId in the create body on save", async () => {
         render(<ProfileScreen />);
-        await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
         await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
         await userEvent.click(screen.getByTestId("save-basics"));
         expect(createProjectMutate).toHaveBeenCalledWith(
@@ -325,7 +342,7 @@ describe("ProfileScreen", () => {
       localState = {
         present: true,
         isGitRepo: true,
-        resolvedPath: project.path,
+        resolvedPath: project.path ?? null,
         source: "path",
         cloneRoot: "/Users/karel/zibby-clones",
       };
@@ -376,6 +393,25 @@ describe("ProfileScreen", () => {
         params: { id: "media-vault" },
         body: {},
       });
+    });
+
+    it("shows the clone button as loading (not disabled) while the clone mutation is pending", async () => {
+      localState = {
+        present: false,
+        isGitRepo: false,
+        resolvedPath: null,
+        source: "none",
+        cloneRoot: "/Users/karel/zibby-clones",
+      };
+      projectOverride = { gitRemote: "git@github.com:acme/media-vault.git" };
+      cloneIsPending = true;
+      render(<ProfileScreen projectId="media-vault" />);
+      const button = screen.getByTestId("clone-project");
+      // Loading suppresses clicks without disabling the button (Phase 98).
+      expect(button).not.toBeDisabled();
+      expect(button).toHaveAttribute("aria-busy", "true");
+      await userEvent.click(button);
+      expect(cloneProjectMutate).not.toHaveBeenCalled();
     });
   });
 });

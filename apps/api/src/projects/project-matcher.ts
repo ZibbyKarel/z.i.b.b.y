@@ -31,6 +31,7 @@ function matchByPath(projects: Project[], paths?: string[]): Project | null {
   let best: Project | null = null;
   let bestLen = -1;
   for (const project of projects) {
+    if (!project.path) continue; // no local path on this machine — nothing to match against
     const base = normalizePath(project.path);
     if (base.length === 0) continue;
     for (const raw of paths) {
