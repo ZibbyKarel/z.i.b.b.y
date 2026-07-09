@@ -439,21 +439,81 @@ export function ChatScreen({
         subsystems={subsystems ?? []}
       />
 
-      {/* ── Main area: scene behind, scrollable conversation over it ───── */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
-        {/* ── Left panel: ALL tasks in scope (Phase 57, was running-only in 44) ─
-            A `z`-raised fixed-width column pinned to the left, above the scene
-            like the top bar / composer. `pointer-events-none` on the gutter so
-            the scene stays interactive around it (the panel itself re-enables
-            them); hidden below `lg` so it never crowds the centered transcript
-            on a narrow viewport. */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
-          <div className="pointer-events-auto">
-            <ChatTasksPanel />
+      {/* ── Main area: scene behind, scrollable conversation over it ─────
+          Phase 99: this outer wrapper deliberately carries NO explicit
+          z-index — only `relative` (a containing block for the drawer below,
+          but not a stacking context of its own). An explicit z here would
+          re-create the exact trap this phase fixes: the inner wrapper right
+          below (kept at `z-10`, unchanged) IS a stacking context, so anything
+          nested inside it is confined below root-level siblings regardless of
+          its own z-index — which is what used to bury the subsystem drawer's
+          close button under `SubsystemOrbsOverlay` and its Add-rule button
+          under the composer (both root-level `z-20`). Rendering the drawer as
+          a child of THIS wrapper instead — still `relative`, so the drawer's
+          `inset-y-0` resolves against the same band, between the top bar and
+          the composer — lets its `z-30` (`SubsystemDrawer.tsx`) compete
+          directly against those siblings and win. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="relative z-10 flex h-full w-full flex-col items-center justify-end">
+          {/* ── Left panel: ALL tasks in scope (Phase 57, was running-only in 44) ─
+              A `z`-raised fixed-width column pinned to the left, above the scene
+              like the top bar / composer. `pointer-events-none` on the gutter so
+              the scene stays interactive around it (the panel itself re-enables
+              them); hidden below `lg` so it never crowds the centered transcript
+              on a narrow viewport. */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
+            <div className="pointer-events-auto">
+              <ChatTasksPanel />
+            </div>
+          </div>
+
+          <div
+            className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
+            data-testid={ChatScreenTestId.ScrollArea}
+            ref={scrollRef}
+            style={{
+              // Phase 95: set to half-height so the transcript lives entirely in the
+              // BOTTOM HALF, below the compact top-third subsystem cluster (phase 94's
+              // two-thirds box let a tall thread's dissolving top ghost over the lower
+              // mini-orbs). Still a box pinned to the bottom (right above the composer):
+              // the conversation grows UP from the input — newest turn always at the
+              // bottom — and `mt-auto` keeps a short thread bottom-anchored. The mask
+              // fades the box's top ~40% into nothing so any turn that scrolls up
+              // dissolves before it can reach the cluster's band, while the lower part
+              // stays fully readable. It still scrolls all the way back to the start —
+              // turns near the top just stay ghosted (declarative mask, scroll intact).
+              maskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
+            }}
+          >
+            {/* `mt-auto` pins short conversations to the bottom (first turn sits just
+                above the composer); a tall one overflows and scrolls normally. */}
+            <div className="mt-auto">
+              {isEmpty ? (
+                <Container data-testid={ChatScreenTestId.Greeting}>
+                  <Stack align="center" gap="100">
+                    <Typography align="center" tone="accent" type="subtitle" weight="medium">
+                      {t("greetingTitle")}
+                    </Typography>
+                    <Typography align="center" type="note" variant="tertiary">
+                      {t("greetingHint")}
+                    </Typography>
+                  </Stack>
+                </Container>
+              ) : (
+                <ChatTranscript
+                  liveText={stream.text}
+                  liveToolEvents={stream.toolEvents}
+                  messages={messages}
+                  streaming={stream.streaming}
+                />
+              )}
+            </div>
           </div>
         </div>
 
-        {/* ── Subsystem drawer (Phase 84) ──────────────────────────────
+        {/* ── Subsystem drawer (Phase 84; moved out of the inner z-10 wrapper
+            above by Phase 99 — see this outer wrapper's own doc comment) ──
             An inline panel over the chat, never a page navigation — docked
             right of the transcript on lg+ (chat stays interactive to its
             left), a full-width sheet below lg (PROVISIONAL, see the drawer's
@@ -465,50 +525,6 @@ export function ChatScreen({
             subsystem={selectedSubsystem}
           />
         )}
-
-        <div
-          className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
-          data-testid={ChatScreenTestId.ScrollArea}
-          ref={scrollRef}
-          style={{
-            // Phase 95: set to half-height so the transcript lives entirely in the
-            // BOTTOM HALF, below the compact top-third subsystem cluster (phase 94's
-            // two-thirds box let a tall thread's dissolving top ghost over the lower
-            // mini-orbs). Still a box pinned to the bottom (right above the composer):
-            // the conversation grows UP from the input — newest turn always at the
-            // bottom — and `mt-auto` keeps a short thread bottom-anchored. The mask
-            // fades the box's top ~40% into nothing so any turn that scrolls up
-            // dissolves before it can reach the cluster's band, while the lower part
-            // stays fully readable. It still scrolls all the way back to the start —
-            // turns near the top just stay ghosted (declarative mask, scroll intact).
-            maskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
-          }}
-        >
-          {/* `mt-auto` pins short conversations to the bottom (first turn sits just
-              above the composer); a tall one overflows and scrolls normally. */}
-          <div className="mt-auto">
-            {isEmpty ? (
-              <Container data-testid={ChatScreenTestId.Greeting}>
-                <Stack align="center" gap="100">
-                  <Typography align="center" tone="accent" type="subtitle" weight="medium">
-                    {t("greetingTitle")}
-                  </Typography>
-                  <Typography align="center" type="note" variant="tertiary">
-                    {t("greetingHint")}
-                  </Typography>
-                </Stack>
-              </Container>
-            ) : (
-              <ChatTranscript
-                liveText={stream.text}
-                liveToolEvents={stream.toolEvents}
-                messages={messages}
-                streaming={stream.streaming}
-              />
-            )}
-          </div>
-        </div>
       </div>
 
       {/* ── Subsystem mini-orbs ──────────────────────────────────────────
