@@ -1,5 +1,14 @@
 # Phase 90 — Hero art for the seven faceless subsystems + Forge wiring
 
+> **STATUS 2026-07-09: PARKED, not started — the only phase of the 80–92 arc not delivered.**
+> Deliberately deferred at the arc's end for weekly-rate-limit budget (art is polish; the
+> drawer's color-band fallback works and every registry entry has `heroImage: null`).
+> Everything else (80–89, 91, 92) is committed on `feat/subsystem-federation`.
+> To resume: run this phase file as written — generate 7 heroes matching
+> `design/Z.I.B.B.Y/uploads/Forge.png`, copy assets to `apps/web/public/subsystems/`,
+> set `heroImage` in `libs/contracts/src/subsystems/subsystem.schema.ts`. No other phase
+> depends on it; it can land as a follow-up PR.
+
 > Design doc: only Forge has hero art (`design/Z.I.B.B.Y/uploads/Forge.png` — orange-glowing
 > mecha-boss with its 5-agent squad strip, "FORGE / DELIVERY PIPELINE ORCHESTRATION" label).
 > The other seven (Puls, Sentinel, Maestro, Beacon, Scout, Herald, Loom) need art in the SAME
