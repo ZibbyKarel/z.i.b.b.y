@@ -1,9 +1,10 @@
 import { Controller, type MessageEvent, Sse } from "@nestjs/common";
-import type { AgentRun, GoalRun, PipelineRun } from "@zibby/contracts";
+import type { AgentRun, ChainRun, GoalRun, PipelineRun } from "@zibby/contracts";
 import { type Observable, map, merge } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { ChannelEventsService } from "../channels/channel-events.service";
+import { ChainRunnerService } from "../chains/chain-runner.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { fromRunStatus, heartbeats } from "../shared/sse/sse";
@@ -23,6 +24,7 @@ export class EventsController {
     private readonly agents: AgentRunnerService,
     private readonly pipelines: PipelineRunnerService,
     private readonly goals: GoalRunnerService,
+    private readonly chains: ChainRunnerService,
     private readonly channels: ChannelEventsService,
     private readonly activity: ActivityEventsService,
   ) {}
@@ -46,6 +48,14 @@ export class EventsController {
         "goal-runs",
         (listener) => this.goals.onRunStatus(listener),
         (run) => ({ runId: run.goalRunId, status: run.status }),
+      ),
+      // Phase 104A: chain-run transitions — unblocks the node→node rim particles,
+      // which need a real (not fake) chain-run-driven scope to ride. Additive,
+      // unknown-scope tolerant like the others.
+      fromRunStatus<ChainRun>(
+        "chain-runs",
+        (listener) => this.chains.onRunStatus(listener),
+        (run) => ({ runId: run.chainRunId, status: run.status }),
       ),
       // Additive `"channel-items"` scope — the web RunEventsProvider ignores
       // scopes it doesn't know, so this is safe to merge in (decision 15).

@@ -25,7 +25,7 @@ import { allTaskRunsKey } from "./queries/keys";
  * {@link onRunEvent} without re-declaring the shape.
  */
 export interface RunStatusEvent {
-  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "channel-items" | "activity";
+  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "chain-runs" | "channel-items" | "activity";
   runId?: string;
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
@@ -141,6 +141,13 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
         }
+      } else if (parsed.scope === "chain-runs") {
+        // Phase 104A: the chain run's own transition (start/advance/park/finish),
+        // now flowing on its own scope alongside the indirect `pipeline-runs`
+        // signal a step's transition already produces above — invalidate
+        // directly so a chain-level state change (e.g. parked) never waits on
+        // that indirection.
+        void qc.invalidateQueries({ queryKey: getChainRunsQueryKey() });
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the
         // approvals queue (a Tier-3 reply lands as a pending channel approval).
