@@ -19,7 +19,10 @@ export type NoteType = z.infer<typeof NoteTypeSchema>;
  * `backlinks` are the notes that link back to it. `type`/`tags` are typed
  * frontmatter fields (Fáze 3) surfaced at the top level for convenience — they are
  * still stored as plain frontmatter keys, so an untyped/older note simply omits
- * them (optional, backwards compatible).
+ * them (optional, backwards compatible). `raw` is likewise an optional/backwards-
+ * compatible typed frontmatter field: it marks the note as unprocessed "halda"
+ * pending the nightly triage sweep — usable on ANY tier, not just a dedicated
+ * inbox (absent/`false` means "already triaged or never needed it").
  */
 export const NoteSchema = z.object({
   id: z.string().min(1),
@@ -32,6 +35,7 @@ export const NoteSchema = z.object({
   body: z.string().optional(),
   type: NoteTypeSchema.optional(),
   tags: z.array(z.string()).optional(),
+  raw: z.boolean().optional(),
 });
 export type Note = z.infer<typeof NoteSchema>;
 
@@ -96,29 +100,41 @@ export type NoteId = z.infer<typeof NoteIdSchema>;
 
 /**
  * Create a note in a chosen tier. The API assembles frontmatter from these fields
- * (`type`/`tags` fold into frontmatter alongside `title` — see `vault.service.ts`).
- * `dedupe` is a write-OPTION, not a note field: it is never persisted, it only
- * tells `VaultService.createNote` to run `findSimilar` first and refuse (via
- * `SimilarNoteError`) instead of writing a near-duplicate. Defaults to `false` so
- * existing callers keep today's exact-id-collision-only behavior.
+ * (`type`/`tags`/`raw` fold into frontmatter alongside `title` — see
+ * `vault.service.ts`). `dedupe` is a write-OPTION, not a note field: it is never
+ * persisted, it only tells `VaultService.createNote` to run `findSimilar` first
+ * and refuse (via `SimilarNoteError`) instead of writing a near-duplicate.
+ * Defaults to `false` so existing callers keep today's exact-id-collision-only
+ * behavior. `raw` marks the note as unprocessed "halda" pending nightly triage
+ * (optional, backwards compatible — see `NoteSchema`).
+ *
+ * `tier` is OPTIONAL here (unlike `NoteSchema.tier`, which stays required — a
+ * stored note always has a resolved tier): when omitted, this is the
+ * zero-friction quick-capture path, and the server defaults `tier` to
+ * `"knowledge"` and forces `raw: true`.
  */
 export const CreateNoteSchema = z.object({
   id: NoteIdSchema,
-  tier: MemoryTierSchema,
+  tier: MemoryTierSchema.optional(),
   title: z.string().optional(),
   body: z.string(),
   frontmatter: z.record(z.string(), z.unknown()).optional(),
   type: NoteTypeSchema.optional(),
   tags: z.array(z.string()).optional(),
   dedupe: z.boolean().optional(),
+  raw: z.boolean().optional(),
 });
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 
-/** Patch a note: any subset of title/body/frontmatter (frontmatter merges per key). */
+/**
+ * Patch a note: any subset of title/body/frontmatter/raw (frontmatter merges per
+ * key). `raw` is optional/backwards compatible — see `NoteSchema`.
+ */
 export const UpdateNoteSchema = z.object({
   title: z.string().optional(),
   body: z.string().optional(),
   frontmatter: z.record(z.string(), z.unknown()).optional(),
+  raw: z.boolean().optional(),
 });
 export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>;
 

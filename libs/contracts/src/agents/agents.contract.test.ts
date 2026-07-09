@@ -140,4 +140,25 @@ describe("agent schemas", () => {
     const bad = AgentSchema.safeParse({ id: "a", instructions: "" });
     expect(bad.success).toBe(false);
   });
+
+  it("accepts and round-trips optionalTools (Phase 105 tool-grant ceiling)", () => {
+    const parsed = AgentSchema.safeParse({
+      id: "a",
+      instructions: "i",
+      tools: ["shell"],
+      optionalTools: ["recall_memory", "list_entities"],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.optionalTools).toEqual(["recall_memory", "list_entities"]);
+    }
+  });
+
+  it("omitting optionalTools still validates (backwards compatible)", () => {
+    const parsed = AgentSchema.safeParse({ id: "a", instructions: "i" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.optionalTools).toBeUndefined();
+    }
+  });
 });

@@ -30,9 +30,16 @@ export type AgentThinking = z.infer<typeof AgentThinkingSchema>;
  * named `<id>.md` with YAML frontmatter and the `instructions` as the Markdown
  * body — the `id` is the file name. The frontmatter carries the structured config
  * the dashboard edits (`name`, `description`, `glyph`, `model`, `thinking`,
- * `tools`, `category`); only `id` + `instructions` are required.
+ * `tools`, `optionalTools`, `category`); only `id` + `instructions` are required.
  * `category` and `glyph` stay free-form strings on purpose — the closed set lives
  * in the web app, and the API shouldn't 400 on a new value it hasn't shipped yet.
+ *
+ * `tools` vs `optionalTools`: `tools` are always-on for every run of this agent.
+ * `optionalTools` is the CEILING of tool/MCP ids the agent MAY be granted on a
+ * per-run basis (e.g. `recall_memory`/`list_entities`) — off by default (today's
+ * memory-blind behavior is unchanged when absent/empty), granted only when the
+ * classifier proposes it and the operator confirms it, and enforced server-side
+ * at dispatch (never trusted from the UI alone).
  */
 export const AgentSchema = z.object({
   id: AgentIdSchema,
@@ -44,6 +51,8 @@ export const AgentSchema = z.object({
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
   tools: z.array(z.string()).optional(),
+  /** The ceiling of tool/MCP ids grantable per-run (see docblock above). */
+  optionalTools: z.array(z.string()).optional(),
   category: z.string().optional(),
   /**
    * Approval gate flag. `risk` is a display hint. The `gates` policy engine is the

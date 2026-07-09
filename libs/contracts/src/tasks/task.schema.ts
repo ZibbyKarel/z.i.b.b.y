@@ -207,6 +207,14 @@ export const TaskRoutingSchema = z.object({
   proposedGoal: ProposedGoalSchema.nullable().default(null),
   /** Phase 11: detected paths resolved against the project registry. */
   paths: z.array(ResolvedPathSchema).default([]),
+  /**
+   * The classifier's advisory PROPOSAL of which of the target's `optionalTools`
+   * look relevant to this task — a subset never invented outside that ceiling.
+   * Advisory only: the operator's confirmed set (`CreateTaskInput.toolGrants`) is
+   * independent of this and is what actually rides into dispatch. Defaults to
+   * `[]` so an old-shaped response still parses.
+   */
+  toolGrants: z.array(z.string()).default([]),
 });
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 
@@ -436,6 +444,14 @@ export const CreateTaskInputSchema = z.object({
    * dispatch destination, not a project assertion.
    */
   target: TaskTargetSchema.optional(),
+  /**
+   * The operator's CONFIRMED tool-grant set for this run — independent of
+   * `TaskRouting.toolGrants` (the classifier's advisory proposal). The New Task
+   * composer pre-checks the proposal but the operator may edit it; this field is
+   * what actually rides into dispatch and is intersected against the resolved
+   * target's `optionalTools` ceiling server-side (never trusted blindly).
+   */
+  toolGrants: z.array(z.string()).optional(),
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 

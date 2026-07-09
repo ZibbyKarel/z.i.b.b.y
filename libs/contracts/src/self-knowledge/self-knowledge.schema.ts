@@ -11,6 +11,8 @@ export const SelfKnowledgeSectionsSchema = z.object({
   /** System floor rules + the global gate-rule catalog, combined. */
   gateRules: z.number().int().nonnegative(),
   channels: z.number().int().nonnegative(),
+  /** Static subsystem identities (`@zibby/contracts` `SUBSYSTEMS`) — count only. */
+  subsystems: z.number().int().nonnegative(),
   /**
    * Codebase-shape digest sourced from graphify's `graphify-out/GRAPH_REPORT.md`
    * (Fáze 10 — see `docs/plans/phase-10-graphify-self-knowledge.md`). `present`

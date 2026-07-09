@@ -134,6 +134,35 @@ describe("memory schemas", () => {
       }).success,
     ).toBe(true);
   });
+
+  it("accepts and round-trips `raw: true` (halda flag)", () => {
+    const parsed = NoteSchema.safeParse({
+      id: "zibby",
+      path: "zibby.md",
+      tier: "knowledge",
+      title: "Zibby",
+      frontmatter: {},
+      links: [],
+      raw: true,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.raw).toBe(true);
+    }
+  });
+
+  it("omitting `raw` still validates (backwards compatible)", () => {
+    expect(
+      NoteSchema.safeParse({
+        id: "zibby",
+        path: "zibby.md",
+        tier: "memory",
+        title: "Zibby",
+        frontmatter: {},
+        links: [],
+      }).success,
+    ).toBe(true);
+  });
 });
 
 describe("NoteTypeSchema", () => {
@@ -162,5 +191,33 @@ describe("CreateNoteSchema", () => {
     expect(CreateNoteSchema.safeParse({ id: "note-1", tier: "knowledge", body: "x" }).success).toBe(
       true,
     );
+  });
+
+  it("accepts `raw` alongside an explicit `tier`", () => {
+    const parsed = CreateNoteSchema.safeParse({
+      id: "note-1",
+      tier: "knowledge",
+      body: "x",
+      raw: true,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.raw).toBe(true);
+      expect(parsed.data.tier).toBe("knowledge");
+    }
+  });
+
+  it("accepts omitting `tier` (quick-capture path — server defaults it)", () => {
+    const parsed = CreateNoteSchema.safeParse({ id: "note-1", body: "x" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.tier).toBeUndefined();
+    }
+  });
+
+  it("still validates with an explicit `tier` and no `raw`", () => {
+    expect(
+      CreateNoteSchema.safeParse({ id: "note-1", tier: "memory", body: "x" }).success,
+    ).toBe(true);
   });
 });

@@ -69,6 +69,22 @@ describe("TaskRoutingSchema", () => {
     expect(parsed.data.mode).toBe("single");
     expect(parsed.data.proposedGoal).toBeNull();
     expect(parsed.data.paths).toEqual([]);
+    expect(parsed.data.toolGrants).toEqual([]);
+  });
+
+  // ── Phase 105: toolGrants (additive default, back-compatible) ──────────────
+  it("defaults toolGrants to [] when absent", () => {
+    const parsed = TaskRoutingSchema.safeParse(valid);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.toolGrants).toEqual([]);
+  });
+
+  it("round-trips a provided toolGrants array", () => {
+    const parsed = TaskRoutingSchema.safeParse({ ...valid, toolGrants: ["recall_memory"] });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.toolGrants).toEqual(["recall_memory"]);
   });
 
   it("round-trips a loop verdict carrying a synthesized proposedGoal + resolved paths", () => {
@@ -160,6 +176,21 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
   });
 
   it("stays valid with no target (the default path)", () => {
+    expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true);
+  });
+
+  it("accepts an optional toolGrants (operator's confirmed set)", () => {
+    const parsed = CreateTaskInputSchema.safeParse({
+      text: "do it with memory recall",
+      toolGrants: ["recall_memory"],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.toolGrants).toEqual(["recall_memory"]);
+    }
+  });
+
+  it("validates without toolGrants (back-compatible)", () => {
     expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true);
   });
 
