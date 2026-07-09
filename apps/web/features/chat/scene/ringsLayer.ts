@@ -64,7 +64,7 @@ export function createRingsLayer(): RingsLayer {
   const accent = new THREE.Color(resolveSceneTokens().accent);
   // A fat, low-segment tube: the width is what the fragment feathers into a haze;
   // it sits just outside the unit-radius orb.
-  const geometry = new THREE.TorusGeometry(1.72, 0.13, 16, 220);
+  const geometry = new THREE.TorusGeometry(1.45, 0.13, 16, 220);
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: accent },

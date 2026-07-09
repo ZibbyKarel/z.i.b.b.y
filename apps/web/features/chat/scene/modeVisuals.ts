@@ -9,7 +9,8 @@ import type { SceneMode } from "./sceneTypes";
 export interface OrbTarget {
   /** Design token the wireframe colour resolves from. */
   colorToken: SceneColorToken;
-  /** Brightness multiplier on the resolved colour (muted for low-intensity modes). */
+  /** Brightness multiplier on the resolved colour — kept near-1 for every mode; the
+   * idle→working distinction is carried by `colorToken` (hue), not by dimming. */
   intensity: number;
   /** Vertex-noise displacement amplitude — the surface ripple. */
   noiseAmp: number;
@@ -28,17 +29,19 @@ export interface OrbTarget {
 }
 
 /**
- * Base target per mode, before the streaming energy signal is folded in. Streaming
- * uses the run colour; error the bad colour; waiting-approval the warn (amber) colour
- * so it reads as a distinct warning tone, not a second error; everything else the
- * accent — matching ZIBBY's semantic tokens (`runStateTone`: awaiting-approval → warn,
- * error → bad) with no new brand colour.
+ * Base target per mode, before the streaming energy signal is folded in. Every mode
+ * now carries near-full `intensity` (~0.9–1.0) — the orb reads present in every
+ * state. The idle→working distinction is carried by `colorToken` instead: `idle` and
+ * `listening` stay on the calm **accent** hue; `thinking`/`tool` shift to the **run**
+ * (working) hue, matching `streaming` (already run); `waiting-approval` stays **warn**
+ * (amber) and `error` stays **bad** (red) — matching ZIBBY's semantic tokens
+ * (`runStateTone`: awaiting-approval → warn, error → bad) with no new brand colour.
  */
 const BASE: Record<SceneMode, OrbTarget> = {
-  // Dormant: dim accent, slow drift, gentle breathing.
+  // Dormant: calm accent, full presence, slow drift, gentle breathing.
   idle: {
     colorToken: "accent",
-    intensity: 0.5,
+    intensity: 0.9,
     noiseAmp: 0.08,
     noiseSpeed: 0.18,
     rotationSpeed: 0.05,
@@ -51,7 +54,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
   // breath. Not a jarring warm "recording" cue; text input has no privacy risk.
   listening: {
     colorToken: "accent",
-    intensity: 0.78,
+    intensity: 0.95,
     noiseAmp: 0.12,
     noiseSpeed: 0.32,
     rotationSpeed: 0.09,
@@ -60,10 +63,12 @@ const BASE: Record<SceneMode, OrbTarget> = {
     glow: 0.5,
     rings: 0,
   },
-  // Reasoning / dispatching before the first token: dims, churns faster, rings up.
+  // Reasoning / dispatching before the first token: shifts to the run (working) hue
+  // — the idle→working change reads as a colour transition, not a brightness drop —
+  // churns faster, rings up.
   thinking: {
-    colorToken: "accent",
-    intensity: 0.72,
+    colorToken: "run",
+    intensity: 0.95,
     noiseAmp: 0.2,
     noiseSpeed: 0.55,
     rotationSpeed: 0.16,
@@ -84,9 +89,9 @@ const BASE: Record<SceneMode, OrbTarget> = {
     glow: 0.7,
     rings: 0.4,
   },
-  // Mid-turn agent dispatch: accent + a pronounced pulse and rings.
+  // Mid-turn agent dispatch: run (working) hue + a pronounced pulse and rings.
   tool: {
-    colorToken: "accent",
+    colorToken: "run",
     intensity: 1,
     noiseAmp: 0.14,
     noiseSpeed: 0.45,
@@ -96,11 +101,12 @@ const BASE: Record<SceneMode, OrbTarget> = {
     glow: 0.6,
     rings: 1,
   },
-  // A run parked on the operator's decision: warn (amber) colour, low intensity, slow
-  // warning pulse — a "needs you" attention tone, visibly distinct from error's red.
+  // A run parked on the operator's decision: warn (amber) colour, present but calm,
+  // slow warning pulse — a "needs you" attention tone, visibly distinct from error's
+  // red.
   "waiting-approval": {
     colorToken: "warn",
-    intensity: 0.45,
+    intensity: 0.85,
     noiseAmp: 0.07,
     noiseSpeed: 0.2,
     rotationSpeed: 0.05,

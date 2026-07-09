@@ -40,14 +40,15 @@ void main() {
 }
 `;
 
-// Fresnel edge fade: silhouette wires bright, head-on wires faint → translucent shell.
+// Fresnel edge fade: silhouette wires brightest, head-on wires present (not faded) →
+// still a translucent shell, but the orb reads as there even dead-on.
 const ORB_FRAGMENT = /* glsl */ `
 uniform vec3 uColor;
 varying vec3 vNormal;
 varying vec3 vViewDir;
 void main() {
   float fresnel = 1.0 - abs(dot(normalize(vNormal), normalize(vViewDir)));
-  float alpha = mix(0.16, 0.95, pow(fresnel, 1.6));
+  float alpha = mix(0.6, 0.95, pow(fresnel, 1.6));
   gl_FragColor = vec4(uColor, alpha);
 }
 `;
@@ -144,7 +145,7 @@ export function createOrbLayer(): OrbLayer {
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const glowGeometry = new THREE.SphereGeometry(RADIUS * 1.6, 48, 48);
+  const glowGeometry = new THREE.SphereGeometry(RADIUS * 1.25, 48, 48);
   const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
   group.add(glowMesh);
 
