@@ -3,6 +3,7 @@ import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * Metadata for one uploaded attachment. The bytes live on disk under the set's dir
@@ -81,14 +82,32 @@ export const OrchestratorTaskTargetSchema = z.object({
 });
 
 /**
- * A destination for a free-text task: a stored agent, a stored pipeline, or the
- * orchestrator fallback.
+ * Phase 91 — a named subsystem as a routing destination (the `@`-mention /
+ * "dispatch to Herald" case). Like goal/chain it is EXPLICIT-ONLY: the top-level
+ * `TaskClassifierService` never emits this kind (scope guard — see
+ * `docs/plans/phase-91-subsystem-dispatch.md`). It never reaches a stored run
+ * record either — `TaskSchedulerService` resolves it to a concrete
+ * `{ kind: "pipeline" }` target (the subsystem's one owned pipeline, or the
+ * scoped classifier's pick among several) before dispatch, so a run's "via
+ * <subsystem>" attribution rides for free on the dispatched pipeline's own
+ * `Pipeline.ownerSubsystem` (Phase 81) — no new run-level field needed.
+ */
+export const SubsystemTaskTargetSchema = z.object({
+  kind: z.literal("subsystem"),
+  id: SubsystemIdSchema,
+  ...taskTargetDisplayShape,
+});
+
+/**
+ * A destination for a free-text task: a stored agent, a stored pipeline, a
+ * named subsystem (Phase 91, explicit-only), or the orchestrator fallback.
  */
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
   ChainTaskTargetSchema,
+  SubsystemTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ]);
 export type TaskTarget = z.infer<typeof TaskTargetSchema>;

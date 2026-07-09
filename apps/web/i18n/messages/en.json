@@ -168,7 +168,7 @@
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents and pipelines · drag a file, or use the paperclip"
+        "hint": "@ searches agents, pipelines and subsystems · drag a file, or use the paperclip"
       },
       "ack": {
         "kind": {
@@ -176,6 +176,7 @@
           "pipeline": "pipeline",
           "goal": "goal loop",
           "chain": "chain",
+          "subsystem": "subsystem",
           "orchestrator": "orchestrator",
           "loop": "goal loop",
           "auto": "auto-classify"

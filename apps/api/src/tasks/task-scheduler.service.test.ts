@@ -66,6 +66,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
+  /** Phase 91: the pipeline definition store, for subsystem-target resolution
+   *  (`ownerSubsystem` lookup). Empty by default — no test in this file dispatches
+   *  a subsystem target; `task-scheduler.subsystem-dispatch.test.ts` covers those. */
+  let pipelinesStore: { list: ReturnType<typeof vi.fn> };
   let goalRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
@@ -77,7 +81,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     get: ReturnType<typeof vi.fn>;
   };
   let chainListener: ((run: { taskId?: string; status: string; steps: unknown[]; chainRunId: string }) => void) | undefined;
-  let classifier: { classify: ReturnType<typeof vi.fn> };
+  let classifier: {
+    classify: ReturnType<typeof vi.fn>;
+    /** Phase 91 — the subsystem-scoped classify seam. */
+    classifyWithinSubsystem: ReturnType<typeof vi.fn>;
+  };
   let fakeLimits: {
     windowExhausted: ReturnType<typeof vi.fn>;
     resolveResumeAt: ReturnType<typeof vi.fn>;
@@ -132,6 +140,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       }),
       get: vi.fn(() => pipelineRun({})),
     };
+    pipelinesStore = { list: vi.fn(async () => []) };
     goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -153,6 +162,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
+      // Phase 91: no test in THIS describe block dispatches a subsystem target
+      // (see the "Phase 91 — subsystem dispatch" describe below); a call here
+      // would be a scope-guard violation, so the default throws loudly rather
+      // than silently returning something plausible.
+      classifyWithinSubsystem: vi.fn(async () => {
+        throw new Error("classifyWithinSubsystem should not be called by this describe block");
+      }),
     };
 
     const fakeProjects = {
@@ -192,6 +208,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       classifier as never,
       agentRunner as never,
       pipelineRunner as never,
+      pipelinesStore as never,
       goalRunner as never,
       chainRunner as never,
       fakeLogger as never,
@@ -822,5 +839,145 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     );
     const call = fakeGates.evaluate.mock.calls.at(-1)?.[1] as { metrics?: unknown };
     expect(call.metrics).toBeUndefined();
+  });
+
+  describe("Phase 91 — subsystem dispatch (0/1/N owned pipelines)", () => {
+    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
+    function pipelineDef(id: string, name: string) {
+      return { id, name, ownerSubsystem: "forge", desc: "", phases: [] };
+    }
+
+    it("1 owned pipeline → direct dispatch, the classifier is NEVER called", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      const result = await service.createTask({
+        text: "ship it",
+        title: "Ship",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(classifier.classify).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(pipelineRunner.start).toHaveBeenCalledWith(
+        "delivery",
+        result.task.id,
+        undefined,
+        [],
+        undefined,
+        undefined,
+      );
+      // The resolved target IS a concrete pipeline target — a subsystem target
+      // never reaches persistence (its "via <subsystem>" attribution rides on the
+      // dispatched pipeline's own `ownerSubsystem`, not a new run-level field).
+      expect(result.task.target).toEqual({
+        kind: "pipeline",
+        id: "delivery",
+        name: "Delivery",
+        glyph: "flow",
+        avatar: undefined,
+      });
+    });
+
+    it("N owned pipelines → the classifier IS called, restricted to just the owned catalog", async () => {
+      pipelinesStore.list.mockResolvedValue([
+        pipelineDef("delivery", "Delivery"),
+        pipelineDef("build-feature", "Build Feature"),
+      ]);
+      classifier.classifyWithinSubsystem.mockResolvedValue({
+        target: { kind: "pipeline", id: "build-feature", name: "Build Feature" },
+        confidence: 0.9,
+        reason: "matched",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+      });
+      const result = await service.createTask({
+        text: "spec out the new feature",
+        title: "Spec",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(classifier.classify).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+        { text: "spec out the new feature", paths: [] },
+        ["delivery", "build-feature"],
+      );
+      expect(pipelineRunner.start).toHaveBeenCalledWith(
+        "build-feature",
+        result.task.id,
+        undefined,
+        [],
+        undefined,
+        undefined,
+      );
+    });
+
+    it("low-confidence N-owned verdict still lands INSIDE the subsystem, never the orchestrator (asserted via the classifier stub's own contract)", async () => {
+      pipelinesStore.list.mockResolvedValue([
+        pipelineDef("delivery", "Delivery"),
+        pipelineDef("build-feature", "Build Feature"),
+      ]);
+      // classifyWithinSubsystem itself is responsible for the never-orchestrator
+      // fallback rule (see task-classifier.service.test.ts's "low-confidence
+      // fallback" case) — here we only assert the scheduler faithfully dispatches
+      // whatever concrete pipeline target the scoped classify hands back.
+      classifier.classifyWithinSubsystem.mockResolvedValue({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        confidence: 0,
+        reason: "no confident match — first owned pipeline",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+      });
+      const result = await service.createTask({
+        text: "xyzzy — no signal",
+        title: "T",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(pipelineRunner.start).toHaveBeenCalledWith(
+        "delivery",
+        result.task.id,
+        undefined,
+        [],
+        undefined,
+        undefined,
+      );
+    });
+
+    it("0 owned pipelines → rejects immediately with a clear Czech message — no task, no run, classifier never touched", async () => {
+      pipelinesStore.list.mockResolvedValue([]);
+      await expect(
+        service.createTask({
+          text: "do anything",
+          title: "T",
+          target: { kind: "subsystem", id: "forge", name: "Forge" },
+        }),
+      ).rejects.toThrow(/Forge.*nemá žádnou pipeline/);
+      expect(classifier.classify).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(pipelineRunner.start).not.toHaveBeenCalled();
+      expect(agentRunner.start).not.toHaveBeenCalled();
+      expect(agentRunner.startOrchestrator).not.toHaveBeenCalled();
+    });
+
+    it("an explicit subsystem target never reaches the top-level classifier — 1-owned direct-dispatch path", async () => {
+      // Belt-and-braces on top of the first test above: the scope guard's whole
+      // point is that naming a subsystem is a hard override, structurally
+      // incapable of falling through to the undirected top-level classify().
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      await service.createTask({
+        text: "ship it",
+        title: "Ship",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(classifier.classify).not.toHaveBeenCalled();
+    });
   });
 });

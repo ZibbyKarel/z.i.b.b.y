@@ -28,11 +28,13 @@ import { useAgentsQuery } from "../../../agents";
 import { useLimitsQuery } from "../../../limits";
 import { usePipelinesQuery } from "../../../pipelines";
 import { useActiveProject, useProjectsQuery } from "../../../projects";
+import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
 import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import {
   type SchedulePreset,
+  type SubsystemId,
   type TaskTarget,
   type TaskTargetKind,
   clockLabel,
@@ -187,12 +189,16 @@ interface Mention {
 }
 
 /** A single row of the inline mention dropdown — enough to both render the row
- * (glyph/tone by `kind`) and build the `TaskTarget` it resolves to on pick. */
+ * (glyph/tone by `kind`) and build the `TaskTarget` it resolves to on pick.
+ * `color` is set only for a `subsystem` row — the mention list's rendering swaps
+ * the usual `Tag` glyph for a dot tinted with the subsystem's own brand color
+ * (Phase 91), matching `PipelineOwnerChip`'s established "colored dot" pattern. */
 interface MentionResult {
-  kind: "agent" | "pipeline";
+  kind: "agent" | "pipeline" | "subsystem";
   id: string;
   name: string;
   glyph: IconName;
+  color?: string;
 }
 
 /** Matches an in-progress `@query` immediately before the caret — an `@` followed
@@ -458,6 +464,7 @@ export function CommandLine({
 
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
+  const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: projects = [] } = useProjectsQuery();
   const { activeProjectId } = useActiveProject();
   const { data: limits } = useLimitsQuery();
@@ -601,6 +608,7 @@ export function CommandLine({
     pipeline: t("commandLine.ack.kind.pipeline"),
     goal: t("commandLine.ack.kind.goal"),
     chain: t("commandLine.ack.kind.chain"),
+    subsystem: t("commandLine.ack.kind.subsystem"),
     orchestrator: t("commandLine.ack.kind.orchestrator"),
   };
 
@@ -756,12 +764,24 @@ export function CommandLine({
 
   function pickMentionResult(result: MentionResult) {
     if (!mention) return;
-    const picked: TaskTarget = {
-      kind: result.kind,
-      id: result.id,
-      name: result.name,
-      glyph: result.glyph,
-    };
+    // A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
+    // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
+    // see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
+    // construction stops being assignable once there are enough branches. A
+    // subsystem row's `id` is cast to `SubsystemId`: `MentionResult.id` is a plain
+    // `string` (shared with agent/pipeline rows), but for a `kind: "subsystem"` row
+    // it always came from `useSubsystemsQuery()`'s own `SubsystemId`-typed id.
+    const picked: TaskTarget =
+      result.kind === "agent"
+        ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
+        : result.kind === "pipeline"
+          ? { kind: "pipeline", id: result.id, name: result.name, glyph: result.glyph }
+          : {
+              kind: "subsystem",
+              id: result.id as SubsystemId,
+              name: result.name,
+              glyph: result.glyph,
+            };
     const mentionText = `@${picked.name} `;
     const el = textareaRef.current;
     const end = el?.selectionStart ?? mention.start + 1 + mention.query.length;
@@ -830,6 +850,19 @@ export function CommandLine({
   // `maxHeight` clamp (see `mentionMenuStyle`) is what keeps the panel itself
   // from growing past the viewport, so the list is scrollable rather than cut
   // off (ported from the velin-b reference's `mentionResults`).
+  // Phase 91: only subsystems with at least one owned pipeline are dispatchable —
+  // a capability-less subsystem would only ever hit the 0-owned validation reject,
+  // so it stays out of the picker entirely (mirrors an empty agent/pipeline catalog
+  // never appearing either).
+  const rosterSubsystemIds = useMemo(
+    () => new Set(pipelines.flatMap((p) => (p.ownerSubsystem ? [p.ownerSubsystem] : []))),
+    [pipelines],
+  );
+  const rosterSubsystems = useMemo(
+    () => subsystems.filter((s) => rosterSubsystemIds.has(s.id)),
+    [subsystems, rosterSubsystemIds],
+  );
+
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
     const agentHits: MentionResult[] = agents
@@ -848,8 +881,17 @@ export function CommandLine({
         name: p.name,
         glyph: "flow" as IconName,
       }));
-    return [...agentHits, ...pipelineHits].slice(0, 50);
-  }, [mention, agents, pipelines]);
+    const subsystemHits: MentionResult[] = rosterSubsystems
+      .filter((s) => matchesQuery(mention.query, s.name, s.id))
+      .map((s) => ({
+        kind: "subsystem" as const,
+        id: s.id,
+        name: s.name,
+        glyph: "grid" as IconName,
+        color: s.color,
+      }));
+    return [...agentHits, ...pipelineHits, ...subsystemHits].slice(0, 50);
+  }, [mention, agents, pipelines, rosterSubsystems]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1092,12 +1134,27 @@ export function CommandLine({
                     >
                       <CardContent padding="75">
                         <Stack align="center" direction="row" gap="75" justify="between">
-                          <Tag
-                            icon={result.glyph}
-                            tone={result.kind === "agent" ? "accent" : "push"}
-                          >
-                            {result.name}
-                          </Tag>
+                          {result.kind === "subsystem" ? (
+                            <Stack inline align="center" direction="row" gap="50">
+                              <Container
+                                data-testid={`${CommandLineTestId.MentionItem}-${result.kind}-${result.id}-dot`}
+                                height="8px"
+                                shrink={false}
+                                style={{ borderRadius: "50%", background: result.color }}
+                                width="8px"
+                              />
+                              <Typography size="sm" type="note">
+                                {result.name}
+                              </Typography>
+                            </Stack>
+                          ) : (
+                            <Tag
+                              icon={result.glyph}
+                              tone={result.kind === "agent" ? "accent" : "push"}
+                            >
+                              {result.name}
+                            </Tag>
+                          )}
                           <Typography mono size="xs" type="note" variant="tertiary">
                             {`@${result.name}`}
                           </Typography>

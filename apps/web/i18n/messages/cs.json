@@ -168,7 +168,7 @@
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty a pipeliny · přetáhni soubor, nebo použij sponku"
+        "hint": "@ hledá agenty, pipeliny a podsystémy · přetáhni soubor, nebo použij sponku"
       },
       "ack": {
         "kind": {
@@ -176,6 +176,7 @@
           "pipeline": "pipeline",
           "goal": "goal loop",
           "chain": "chain",
+          "subsystem": "podsystém",
           "orchestrator": "orchestrátor",
           "loop": "goal loop",
           "auto": "auto-klasifikace"
