@@ -60,6 +60,48 @@ export function octagonSlots(radius: number, count: number = SLOT_COUNT): Cluste
   return points;
 }
 
+/**
+ * {@link octagonSlots}'s 8 vertices RE-CENTRED on an arbitrary `center` instead of
+ * the cluster origin — phase 101's per-node octagon (each mini-orb gets its own
+ * small ring around it, not just the shared hub/node rings above). Same angle
+ * parametrization as `octagonSlots` (index 0 at the bottom, clockwise), so a node
+ * octagon's vertex ordering stays comparable to the origin-centred rings. Pure
+ * function of `(center, radius, count)` alone.
+ */
+export function octagonSlotsAround(
+  center: ClusterPoint,
+  radius: number,
+  count: number = SLOT_COUNT,
+): ClusterSlot[] {
+  return octagonSlots(radius, count).map((slot) => ({
+    ...slot,
+    x: round(center.x + slot.x),
+    y: round(center.y + slot.y),
+  }));
+}
+
+/**
+ * The point `distance` away from `from`, walking along the straight line toward
+ * `to` — phase 101's short-link endpoint math. Shortening a hub→node spoke to a
+ * link between the two octagons' facing vertices means walking IN from the
+ * node's centre toward the hub by the node octagon's own radius (or,
+ * symmetrically, walking OUT from the hub by the hub octagon's radius — a no-op
+ * when `from` already sits exactly on that boundary, as every {@link hubSlots}
+ * vertex does by construction, since the node/hub/origin triple is colinear).
+ * Falls back to `from` unchanged if `from` and `to` coincide (an undefined
+ * direction) rather than dividing by zero.
+ */
+export function pointToward(from: ClusterPoint, to: ClusterPoint, distance: number): ClusterPoint {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return { x: from.x, y: from.y };
+  return {
+    x: round(from.x + (dx / len) * distance),
+    y: round(from.y + (dy / len) * distance),
+  };
+}
+
 /** The inner hub ring — same angles as {@link octagonSlots}, a smaller `radius`
  * (the caller picks one that clears the central orb's rendered glow). Named
  * separately from `octagonSlots` for readability at call sites even though the
