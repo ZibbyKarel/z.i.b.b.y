@@ -393,7 +393,7 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Alpha");
     });
 
-    it("lists 'Bez projektu' + every project, and picking one calls setActiveProject", async () => {
+    it("lists 'Bez projektu' + every project, and picking one scopes ONLY this task — never the global activeProject", async () => {
       const user = userEvent.setup();
       render(<CommandLine />);
       const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
@@ -403,10 +403,19 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(options.map((o) => o.textContent)).toEqual(["Bez projektu", "Alpha"]);
 
       await user.click(options[1] as HTMLElement);
-      expect(setActiveProject).toHaveBeenCalledWith("alpha");
+      expect(setActiveProject).not.toHaveBeenCalled();
+      expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Alpha");
+
+      // The per-task pick still reaches the dispatched task via `paths` — the
+      // only mechanism a selected project uses to scope a task (there's no
+      // `projectId` field on the create-task body).
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+      expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/alpha");
+      expect(setActiveProject).not.toHaveBeenCalled();
     });
 
-    it("maps the 'Bez projektu' option back to null", async () => {
+    it("maps the 'Bez projektu' option back to null, without touching the global activeProject", async () => {
       activeProject.id = "alpha";
       const user = userEvent.setup();
       render(<CommandLine />);
@@ -414,7 +423,12 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
 
       await user.click(screen.getAllByTestId(DropdownTestId.Option)[0] as HTMLElement);
-      expect(setActiveProject).toHaveBeenCalledWith(null);
+      expect(setActiveProject).not.toHaveBeenCalled();
+      expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Bez projektu");
+
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+      expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/alpha");
     });
 
     it("keeps the selector visible even when showAttach is false (chat's message API has no attachment channel)", () => {

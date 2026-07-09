@@ -181,6 +181,19 @@ export interface CommandLineProps {
    * yet, so the affordance would silently be ignored rather than hidden.
    */
   showAttach?: boolean;
+  /**
+   * Overrides the one-shot seed for the per-task project scope (Phase 107): by
+   * default the inline `ProjectSelect` seeds itself once from the GLOBAL
+   * `activeProjectId` (a convenience default for an operator who already has a
+   * project selected), but never writes back to it — the pick only scopes THIS
+   * task. A host that wants a different starting point (or `null`) passes this
+   * instead of relying on the global seed.
+   */
+  initialProjectId?: string | null;
+  /** Mirrors the per-task project selection up whenever it changes — the local
+   *  counterpart of the retired global `setActiveProject` wiring; a host that
+   *  wants to observe (never drive) the pick reads this instead. */
+  onProjectChange?: (id: string | null) => void;
 }
 
 /** The honest, non-fabricated classification ack shown below the box after submit. */
@@ -423,6 +436,8 @@ export function CommandLine({
   injectedTarget,
   onInjectedTargetConsumed,
   showAttach = true,
+  initialProjectId,
+  onProjectChange,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
@@ -476,7 +491,15 @@ export function CommandLine({
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: projects = [] } = useProjectsQuery();
-  const { activeProjectId, setActiveProject } = useActiveProject();
+  // Phase 107: the inline ProjectSelect used to write straight back to the
+  // GLOBAL active project (re-scoping the whole dashboard from a single-task
+  // pick). It's now a LOCAL, per-task scope — `activeProjectId` is read only to
+  // seed the initial value once; nothing here ever calls back into
+  // `ProjectProvider`.
+  const { activeProjectId } = useActiveProject();
+  const [taskProjectId, setTaskProjectId] = useState<string | null>(() =>
+    initialProjectId !== undefined ? initialProjectId : activeProjectId,
+  );
   const { data: limits } = useLimitsQuery();
   const resetsAt = limits?.rolling.resetsAt ?? null;
   // A stable "now" for this instance's lifetime — presets and the goal id's
@@ -557,8 +580,8 @@ export function CommandLine({
   }, [injectedTarget]);
 
   const selectedProject = useMemo(
-    () => (activeProjectId ? (projects.find((p) => p.id === activeProjectId) ?? null) : null),
-    [projects, activeProjectId],
+    () => (taskProjectId ? (projects.find((p) => p.id === taskProjectId) ?? null) : null),
+    [projects, taskProjectId],
   );
   const paths = useMemo(() => {
     const detected = extractPaths(text);
@@ -855,6 +878,13 @@ export function CommandLine({
     dispatch(resolveScheduledAt(preset, now, resetsAt));
   }
 
+  /** Updates the LOCAL per-task project scope only — never the global
+   *  `activeProject` — and mirrors the change up via `onProjectChange` (Phase 107). */
+  function handleProjectChange(id: string | null) {
+    setTaskProjectId(id);
+    onProjectChange?.(id);
+  }
+
   // The inline dropdown's rows — agents then pipelines, filtered live by the
   // in-progress query. Capped only as a runaway guard (50) — a real catalog
   // easily exceeds the old 6-row cap, and MenuSurface's own `scroll` +
@@ -1063,7 +1093,10 @@ export function CommandLine({
             live in the now-retired standalone `ProjectSwitcher` (HUD topbar + chat
             header); it's a peer control here, right beside the attach `+`, so
             every CommandLine host (the overview command bar, the chat composer,
-            NewTaskDialog's bare input) keeps a way to change it. */}
+            NewTaskDialog's bare input) keeps a way to change it. Phase 107: the
+            pick now scopes ONLY this task (local `taskProjectId`) — it never
+            mutates the global `activeProject`, so the rest of the dashboard keeps
+            its own scope untouched. */}
         <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
           <Stack align="center" direction="row" gap="50">
             {showAttach && (
@@ -1080,8 +1113,8 @@ export function CommandLine({
               <Stack align="center" direction="row" gap="25">
                 <Icon name="code" size="xs" tone="faint" />
                 <ProjectSelect
-                  activeProjectId={activeProjectId}
-                  onChange={setActiveProject}
+                  activeProjectId={taskProjectId}
+                  onChange={handleProjectChange}
                   projects={projects}
                 />
               </Stack>
