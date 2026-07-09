@@ -1,6 +1,8 @@
 packages:
   - "libs/*"
   - "apps/*"
+overrides:
+  multer: '>=2.2.0'
 allowBuilds:
   '@nestjs/core': true
   '@parcel/watcher': true
