@@ -4,6 +4,7 @@ import { DropDownButtonTestId, FilePreviewTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen, waitFor } from "../../../test/render";
 import { CommandLineTestId } from "./CommandLine/CommandLine";
 import { NewTaskDialog } from "./NewTaskDialog";
+import { ToolGrantsFieldTestId } from "./ToolGrantsField";
 
 /**
  * Phase 11 unified composer, collapsed onto the Phase 26 {@link CommandLine} launcher.
@@ -36,7 +37,13 @@ function resolvePaths(paths: string[] | undefined) {
   );
 }
 
-function apiRouting(text: string, loop: boolean, low: boolean, paths?: string[]) {
+function apiRouting(
+  text: string,
+  loop: boolean,
+  low: boolean,
+  paths?: string[],
+  toolGrants: string[] = [],
+) {
   if (loop) {
     return {
       target: CANDIDATES[1],
@@ -53,6 +60,7 @@ function apiRouting(text: string, loop: boolean, low: boolean, paths?: string[])
         instructions: text,
       },
       paths: resolvePaths(paths),
+      toolGrants,
     };
   }
   return {
@@ -64,8 +72,14 @@ function apiRouting(text: string, loop: boolean, low: boolean, paths?: string[])
     mode: "single",
     proposedGoal: null,
     paths: resolvePaths(paths),
+    toolGrants,
   };
 }
+
+// A mutable hoisted fixture so a single test can opt into a non-empty tool-grant
+// proposal without affecting every other `classify` call in the suite (which all
+// expect the tool-grants block to stay hidden — the common case).
+const { toolGrantsFixture } = vi.hoisted(() => ({ toolGrantsFixture: [] as string[] }));
 
 const classify = vi.fn(
   (
@@ -75,7 +89,7 @@ const classify = vi.fn(
     const { text, paths } = vars.body;
     const loop = /until|loop|dokud/i.test(text);
     const low = /vague/i.test(text);
-    opts?.onSuccess?.({ status: 200, body: apiRouting(text, loop, low, paths) });
+    opts?.onSuccess?.({ status: 200, body: apiRouting(text, loop, low, paths, toolGrantsFixture) });
   },
 );
 
@@ -94,6 +108,7 @@ type CreateVars = {
     target?: { kind: string; id?: string };
     output?: { type: string; dest?: string; to?: string };
     attachmentSetId?: string;
+    toolGrants?: string[];
   };
 };
 type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
@@ -220,6 +235,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     createProject.mockClear();
     uploadMutateAsync.mockClear();
     activeProject.id = null;
+    toolGrantsFixture.length = 0;
   });
 
   it("renders one description field, no mode tabs", () => {
@@ -553,5 +569,48 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
       expect.objectContaining({ body: expect.objectContaining({ attachmentSetId: "set_1" }) }),
       expect.anything(),
     );
+  });
+
+  describe("tool-grant checkboxes (Phase 109)", () => {
+    it("stays hidden when the classifier proposes nothing (the common case)", async () => {
+      const user = userEvent.setup();
+      render(<NewTaskDialog onClose={() => {}} />);
+      await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+      await screen.findByText(/ZIBBY to předá/);
+      expect(screen.queryByTestId(ToolGrantsFieldTestId.Root)).not.toBeInTheDocument();
+    });
+
+    it("renders one pre-checked checkbox per proposed grant and threads the confirmed set into the dispatched body", async () => {
+      toolGrantsFixture.push("recall_memory", "list_entities");
+      const user = userEvent.setup();
+      render(<NewTaskDialog onClose={() => {}} />);
+      await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+      await screen.findByText(/ZIBBY to předá/);
+
+      const recall = screen.getByTestId(`${ToolGrantsFieldTestId.Item}-recall_memory`);
+      const listEntities = screen.getByTestId(`${ToolGrantsFieldTestId.Item}-list_entities`);
+      expect(recall).toHaveRole("checkbox");
+      expect(recall).toHaveAttribute("aria-checked", "true");
+      expect(listEntities).toHaveAttribute("aria-checked", "true");
+
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+      expect(createTask.mock.calls[0]?.[0].body.toolGrants).toEqual([
+        "recall_memory",
+        "list_entities",
+      ]);
+    });
+
+    it("unchecking one drops it from the submitted toolGrants", async () => {
+      toolGrantsFixture.push("recall_memory", "list_entities");
+      const user = userEvent.setup();
+      render(<NewTaskDialog onClose={() => {}} />);
+      await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
+      await screen.findByText(/ZIBBY to předá/);
+
+      await user.click(screen.getByTestId(`${ToolGrantsFieldTestId.Item}-recall_memory`));
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+
+      expect(createTask.mock.calls[0]?.[0].body.toolGrants).toEqual(["list_entities"]);
+    });
   });
 });

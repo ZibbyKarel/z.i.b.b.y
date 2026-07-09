@@ -51,7 +51,17 @@
       "knowledge": "Knowledge"
     },
     "emptyTitle": "Memory is empty",
-    "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one."
+    "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one.",
+    "untriaged": "Untriaged",
+    "quickCapture": {
+      "trigger": "Quick capture",
+      "title": "Quick capture",
+      "titleLabel": "Title (optional)",
+      "titlePlaceholder": "Short title…",
+      "bodyLabel": "Text",
+      "bodyPlaceholder": "Dump it here — sorted out later",
+      "save": "Capture"
+    }
   },
   "common": {
     "stop": "Stop",
@@ -127,6 +137,9 @@
       "label": "Continuing from a previous run",
       "note": "The previous task's output is added to this task's context.",
       "heading": "Context from the previous run:"
+    },
+    "toolGrants": {
+      "label": "Extra tools for this run"
     },
     "output": {
       "label": "Task output",

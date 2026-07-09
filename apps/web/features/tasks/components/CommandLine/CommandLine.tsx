@@ -96,6 +96,12 @@ export interface CommandLineProps {
   title?: string;
   /** An optional terminal-output choice — passed straight through (undefined = inherit). */
   output?: TaskOutput;
+  /**
+   * Phase 109: the operator's confirmed tool-grant set (from {@link ToolGrantsField}) —
+   * passed straight through into `useTaskSubmit`'s dispatched body. Undefined/empty
+   * omits the field entirely (inherit — no grants beyond the always-on entity server).
+   */
+  toolGrants?: string[];
   /** Prior-run context ("Continue in a new task") appended to the dispatched text. */
   context?: string;
   /** True when the caller's own live classify verdict says this text synthesizes a
@@ -399,6 +405,7 @@ export function CommandLine({
   initialTarget,
   title = "",
   output,
+  toolGrants,
   context,
   isLoop = false,
   loop = INITIAL_LOOP_STATE,
@@ -590,6 +597,7 @@ export function CommandLine({
     paths,
     attachmentSetId: attachments.attachmentSetId,
     output,
+    toolGrants,
     chosenTarget: target ?? null,
     isLoop,
     loop,

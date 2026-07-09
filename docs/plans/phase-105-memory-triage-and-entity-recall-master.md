@@ -275,9 +275,17 @@ Tests: `run-recorder.service.test.ts:145,178,192`.
   intersects operator input against the ceiling (an ungranted request is silently dropped, not an
   error).
 
-## Phase 109 — Web: quick-capture, raw-note affordance, dispatch tool-grant checkboxes
+## Phase 109 — Web: quick-capture, raw-note affordance, dispatch tool-grant checkboxes — ✅ DONE
 
-- [ ] `features/memory`: add a lighter quick-capture entry (text + optional title, no tier/type
+> Landed: inline `QuickCapture` composer on the Memory screen (ghost toggle, body + optional title,
+> auto-slug id, omits `tier` → server halda default); raw-note "untriaged" DS `Tag` badge in
+> `NoteView` (MemoryGraph skipped — graph nodes carry no `raw` field, out of scope); tool-grant
+> DS `Checkbox` group (`ToolGrantsField`) in `NewTaskDialog`, pre-checked from the proposal, hidden
+> when empty, confirmed set threaded via `CommandLine` → `useTaskSubmit` into the dispatch body.
+> Cleared both web tsc ripples. `npx tsc -p apps/web/tsconfig.json` clean; 154 web tests pass
+> (memory/tasks/settings), incl. 4 QuickCapture + 3 NoteView + 3 NewTaskDialog.
+
+- [x] `features/memory`: add a lighter quick-capture entry (text + optional title, no tier/type
   picker) alongside the existing full `NoteEditorDialog` create flow on `Screen.tsx` — do NOT replace
   it. Wire through `useCreateNoteMutation` with a call site that omits `tier` (relies on phase-105
   optional `tier` + phase-107 server default).

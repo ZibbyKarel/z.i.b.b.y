@@ -8,6 +8,7 @@ import {
   MarkdownEditor,
   Pressable,
   Stack,
+  Tag,
   TextInputField,
   Typography,
 } from "@zibby/design-system";
@@ -21,6 +22,8 @@ export enum NoteViewTestId {
   Save = "memory-note-save",
   Cancel = "memory-note-cancel",
   Title = "memory-note-title-input",
+  /** Phase 109: shown when the open note is unprocessed "halda" (`raw: true`). */
+  RawBadge = "memory-note-raw-badge",
 }
 
 export interface NoteViewProps {
@@ -143,9 +146,16 @@ export function NoteView({ note, onSelect }: NoteViewProps) {
           </Stack>
         ) : (
           <Stack gap="150">
-            <Typography mono size="caption" type="note" variant="tertiary">
-              {note.path} · {note.tier}
-            </Typography>
+            <Stack align="center" direction="row" gap="75">
+              <Typography mono size="caption" type="note" variant="tertiary">
+                {note.path} · {note.tier}
+              </Typography>
+              {note.raw && (
+                <Tag data-testid={NoteViewTestId.RawBadge} size="sm" tone="warn">
+                  {t("untriaged")}
+                </Tag>
+              )}
+            </Stack>
 
             <Markdown source={note.body ?? ""} />
 

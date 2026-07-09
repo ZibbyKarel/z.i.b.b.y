@@ -28,6 +28,12 @@ export interface UseTaskSubmitArgs {
   paths: string[];
   attachmentSetId?: string;
   output: TaskOutput | undefined;
+  /**
+   * Phase 109: the operator's confirmed tool-grant set (from {@link ToolGrantsField},
+   * via `CommandLine`'s pass-through prop). Undefined/empty omits the field from the
+   * dispatched body entirely — the ceiling is still enforced server-side regardless.
+   */
+  toolGrants?: string[];
   /** An explicit single-dispatch target, or null for auto (the backend classifies). */
   chosenTarget: TaskTarget | null;
   isLoop: boolean;
@@ -64,6 +70,7 @@ export function useTaskSubmit({
   paths,
   attachmentSetId,
   output,
+  toolGrants,
   chosenTarget,
   isLoop,
   loop,
@@ -115,12 +122,23 @@ export function useTaskSubmit({
             scheduledAt,
             ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
             ...(output ? { output } : {}),
+            ...(toolGrants && toolGrants.length > 0 ? { toolGrants } : {}),
           },
         },
         { onSuccess: handleCreateTaskSuccess },
       );
     },
-    [chosenTarget, createTask, title, composedText, paths, attachmentSetId, output, handleCreateTaskSuccess],
+    [
+      chosenTarget,
+      createTask,
+      title,
+      composedText,
+      paths,
+      attachmentSetId,
+      output,
+      toolGrants,
+      handleCreateTaskSuccess,
+    ],
   );
 
   const submitLoop = useCallback(
@@ -144,6 +162,7 @@ export function useTaskSubmit({
                   ...(attachmentSetId ? { attachmentSetId } : {}),
                   scheduledAt,
                   target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
+                  ...(toolGrants && toolGrants.length > 0 ? { toolGrants } : {}),
                 },
               },
               { onSuccess: handleCreateTaskSuccess },
@@ -152,7 +171,18 @@ export function useTaskSubmit({
         },
       );
     },
-    [loop, title, now, composedText, paths, attachmentSetId, createGoal, createTask, handleCreateTaskSuccess],
+    [
+      loop,
+      title,
+      now,
+      composedText,
+      paths,
+      attachmentSetId,
+      toolGrants,
+      createGoal,
+      createTask,
+      handleCreateTaskSuccess,
+    ],
   );
 
   const handleSubmit = useCallback(

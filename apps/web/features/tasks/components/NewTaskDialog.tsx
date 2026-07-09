@@ -11,6 +11,7 @@ import { LoopComposer } from "./LoopComposer";
 import { PlanPreview } from "./PlanPreview";
 import { TaskContextPanel } from "./TaskContextPanel";
 import { TaskOutputField } from "./TaskOutputField";
+import { ToolGrantsField } from "./ToolGrantsField";
 
 export interface NewTaskDialogProps {
   onClose: () => void;
@@ -64,6 +65,10 @@ export function NewTaskDialog({
   const [title, setTitle] = useState("");
   const [text, setText] = useState(initialText ?? "");
   const [target, setTarget] = useState<TaskTarget | undefined>(initialTarget);
+  // Phase 109: the operator's confirmed tool-grant set — pre-checked to the
+  // classifier's proposal, editable, threaded into the dispatched body below.
+  const [checkedGrants, setCheckedGrants] = useState<string[]>([]);
+  const [seededGrantsKey, setSeededGrantsKey] = useState<string | null>(null);
 
   // Phase 24: the project is sourced from the top bar, not a dialog field. A real
   // active project resolves here (its `path` joins `paths`); "Bez projektu"
@@ -100,9 +105,21 @@ export function NewTaskDialog({
         mode: "single",
         proposedGoal: null,
         paths: activeRouting?.paths ?? [],
+        toolGrants: activeRouting?.toolGrants ?? [],
       }
     : activeRouting;
   const isLoop = !target && activeRouting?.mode === "loop";
+
+  // Seed the confirmed tool-grant set from a fresh proposal during render (the
+  // same React-sanctioned "adjust state on prop change" pattern `useTaskClassification`
+  // uses for the Loop form) — re-seeds only when the PROPOSAL itself changes, so an
+  // operator edit (unchecking a box) survives an otherwise-identical re-render.
+  const proposedGrants = previewRouting?.toolGrants ?? [];
+  const proposedGrantsKey = JSON.stringify(proposedGrants);
+  if (proposedGrantsKey !== seededGrantsKey) {
+    setSeededGrantsKey(proposedGrantsKey);
+    setCheckedGrants(proposedGrants);
+  }
 
   const output = useTaskOutput();
   // A chosen `file` output needs a filename — else CommandLine's run control stays
@@ -166,6 +183,7 @@ export function NewTaskDialog({
           output={output.output}
           rows={10}
           title={title}
+          toolGrants={checkedGrants}
         />
 
         {previewRouting && <PlanPreview routing={previewRouting} />}
@@ -173,14 +191,21 @@ export function NewTaskDialog({
         {isLoop && <LoopComposer onChange={patchLoop} state={loop} />}
 
         {!isLoop && (
-          <TaskOutputField
-            fileDest={output.fileDest}
-            fileTo={output.fileTo}
-            onFileDestChange={output.setFileDest}
-            onFileToChange={output.setFileTo}
-            onOutputTypeChange={output.setOutputType}
-            outputType={output.outputType}
-          />
+          <>
+            <TaskOutputField
+              fileDest={output.fileDest}
+              fileTo={output.fileTo}
+              onFileDestChange={output.setFileDest}
+              onFileToChange={output.setFileTo}
+              onOutputTypeChange={output.setOutputType}
+              outputType={output.outputType}
+            />
+            <ToolGrantsField
+              checked={checkedGrants}
+              onChange={setCheckedGrants}
+              toolIds={proposedGrants}
+            />
+          </>
         )}
       </Stack>
     </Dialog>

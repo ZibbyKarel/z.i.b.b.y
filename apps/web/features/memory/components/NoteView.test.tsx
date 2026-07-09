@@ -58,6 +58,28 @@ describe("NoteView (33) — navigable wiki-links + backlinks", () => {
   });
 });
 
+describe("NoteView (Phase 109) — raw-note 'untriaged' badge", () => {
+  beforeEach(() => {
+    onSelect.mockClear();
+    updateNote.mockClear();
+  });
+
+  it("shows the untriaged badge when the note is raw", () => {
+    render(<NoteView note={{ ...note, raw: true }} onSelect={onSelect} />);
+    expect(screen.getByTestId(NoteViewTestId.RawBadge)).toHaveTextContent("Netříděno");
+  });
+
+  it("hides the badge when the note is not raw", () => {
+    render(<NoteView note={note} onSelect={onSelect} />);
+    expect(screen.queryByTestId(NoteViewTestId.RawBadge)).not.toBeInTheDocument();
+  });
+
+  it("hides the badge when raw is explicitly false", () => {
+    render(<NoteView note={{ ...note, raw: false }} onSelect={onSelect} />);
+    expect(screen.queryByTestId(NoteViewTestId.RawBadge)).not.toBeInTheDocument();
+  });
+});
+
 describe("NoteView (N4g) — in-place edit mode", () => {
   beforeEach(() => {
     onSelect.mockClear();

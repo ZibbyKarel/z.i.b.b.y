@@ -51,7 +51,17 @@
       "knowledge": "Znalosti"
     },
     "emptyTitle": "Paměť je prázdná",
-    "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první."
+    "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první.",
+    "untriaged": "Netříděno",
+    "quickCapture": {
+      "trigger": "Rychlý zápis",
+      "title": "Rychlý zápis",
+      "titleLabel": "Název (volitelný)",
+      "titlePlaceholder": "Krátký název…",
+      "bodyLabel": "Text",
+      "bodyPlaceholder": "Vysyp to sem — vytřídí se to později",
+      "save": "Zapsat"
+    }
   },
   "common": {
     "stop": "Zastavit",
@@ -127,6 +137,9 @@
       "label": "Navazuje na předchozí běh",
       "note": "Výstup předchozího úkolu se přidá do kontextu tohoto úkolu.",
       "heading": "Kontext z předchozího běhu:"
+    },
+    "toolGrants": {
+      "label": "Nástroje navíc pro tento běh"
     },
     "output": {
       "label": "Výstup úkolu",

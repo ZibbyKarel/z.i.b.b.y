@@ -142,6 +142,11 @@ export function useTaskClassification({
         mode: "single",
         proposedGoal: null,
         paths: activeRouting?.paths ?? [],
+        // Carries over the last classify's proposal (same posture as `paths`/
+        // `candidates` above) — imprecise if the operator's pick differs from the
+        // classified target, but there's no separate call scoped to an arbitrary
+        // @-mention pick's own `optionalTools`.
+        toolGrants: activeRouting?.toolGrants ?? [],
       }
     : activeRouting;
 

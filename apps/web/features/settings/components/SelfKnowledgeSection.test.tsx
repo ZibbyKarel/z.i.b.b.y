@@ -7,7 +7,7 @@ const SNAPSHOT: SelfKnowledge = {
   markdown: "# Self-Knowledge\n\n<!-- AUTO:AGENTS:START -->\nkoder\n<!-- AUTO:AGENTS:END -->\n",
   generatedAt: "2026-07-05T00:00:00.000Z",
   drift: false,
-  sections: { agents: 3, pipelines: 1, gateRules: 5, channels: 5 },
+  sections: { agents: 3, pipelines: 1, gateRules: 5, channels: 5, subsystems: 4 },
 };
 
 let queryResult: {

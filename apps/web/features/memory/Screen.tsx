@@ -23,6 +23,7 @@ import { ProjectScopeChip, useActiveProject } from "../projects";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
 import { NoteView } from "./components/NoteView";
+import { QuickCapture } from "./components/QuickCapture";
 import { type TierFilter, filterGraphByProject, filterGraphByTier } from "./filterGraph";
 import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "./queries";
 
@@ -42,6 +43,10 @@ export function Screen() {
   const [tier, setTier] = useState<TierFilter>("all");
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  // Phase 109: the lighter-weight "halda" capture path, alongside `creating`'s full
+  // NoteEditorDialog flow — visually subordinate (a ghost trigger beside the primary
+  // "New note" button), never a replacement for it.
+  const [quickCapturing, setQuickCapturing] = useState(false);
 
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
@@ -78,18 +83,38 @@ export function Screen() {
   const header = (
     <PageHeader
       actions={
-        <Button
-          data-testid="memory-note-new"
-          icon="plus"
-          intent="primary"
-          onClick={() => setCreating(true)}
-        >
-          {t("newNote")}
-        </Button>
+        <Stack align="center" direction="row" gap="100">
+          <Button
+            data-testid="memory-note-quickcapture-toggle"
+            icon="bolt"
+            intent="ghost"
+            onClick={() => setQuickCapturing(true)}
+            size="sm"
+          >
+            {t("quickCapture.trigger")}
+          </Button>
+          <Button
+            data-testid="memory-note-new"
+            icon="plus"
+            intent="primary"
+            onClick={() => setCreating(true)}
+          >
+            {t("newNote")}
+          </Button>
+        </Stack>
       }
       subtitle={t("countSummary", { count: graph?.nodes.length ?? 0 })}
       title={t("title")}
     />
+  );
+
+  const quickCapturePanel = quickCapturing && (
+    <HudPanel padding="200" title={t("quickCapture.title")}>
+      <QuickCapture
+        onCaptured={(id) => setSelected(id)}
+        onClose={() => setQuickCapturing(false)}
+      />
+    </HudPanel>
   );
 
   const toolbar = (
@@ -149,6 +174,7 @@ export function Screen() {
       <Stack gap="250">
         {header}
         {toolbar}
+        {quickCapturePanel}
 
         {search.trim().length > 0 && (
           <HudPanel padding="200" title={t("searchResults")}>

@@ -152,6 +152,15 @@ export interface TaskRouting {
   proposedGoal: ProposedGoal | null;
   /** Phase 11: detected paths resolved against the project registry (scoped vs grant). */
   paths: ResolvedPath[];
+  /**
+   * Phase 109: the classifier's advisory proposal of which of the routed target's
+   * `optionalTools` look relevant to this task — rendered as pre-checked, editable
+   * checkboxes ({@link ToolGrantsField}). Optional/defaults to empty so a routing
+   * built before this field existed (a test fixture, a manually-constructed
+   * preview) still type-checks; every real classify response carries an array
+   * (possibly empty) per the API's `.default([])`.
+   */
+  toolGrants?: string[];
 }
 
 /**
@@ -209,6 +218,7 @@ export function toClientRouting(body: ApiTaskRouting): TaskRouting {
     mode: body.mode,
     proposedGoal: body.proposedGoal,
     paths: body.paths,
+    toolGrants: body.toolGrants ?? [],
   };
 }
 

@@ -63,6 +63,7 @@ describe("toClientRouting (Phase 11 fields)", () => {
     mode: "single",
     proposedGoal: null,
     paths: [],
+    toolGrants: [],
   };
 
   it("carries mode / proposedGoal / paths through to the client shape", () => {
