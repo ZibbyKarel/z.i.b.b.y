@@ -93,20 +93,34 @@ const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
  * glow is safe, well-formed 8-digit hex CSS — a genuinely dynamic per-instance
  * value with no DS prop equivalent, routed through the DS `Panel`'s own
  * `style` passthrough below rather than a raw inline style on a DOM node.
+ *
+ * Exported (not module-private) so `SubsystemDrawer.test.tsx` can assert the
+ * image-branch's `image-set()`/`url(...)` string directly: jsdom's CSSOM
+ * (`cssstyle`) doesn't parse `image-set()` and silently drops the whole
+ * `background-image` declaration when read back off a rendered DOM node, so
+ * the image branch isn't observable via `getByTestId(...).style` the way the
+ * gradient-only fallback branch is — see this test file's comment for detail.
  */
-function heroBandStyle(color: string, heroImage: string | null): CSSProperties {
+export function heroBandStyle(color: string, heroImage: string | null): CSSProperties {
   const glow = `radial-gradient(130% 160% at 12% -15%, ${color}40 0%, ${color}14 45%, transparent 78%)`;
-  if (!heroImage) return { backgroundImage: glow };
+  if (!heroImage) return { backgroundImage: glow, minHeight: 224 };
   // Phase 90: the hero portrait layers UNDER the color glow; the existing
-  // bottom `from-surface` gradient overlay keeps the text legible over it. A
-  // taller band so the art reads as a portrait, not a sliver (follow-up in
-  // todo.md considers a full EntityHero-style bleed).
+  // bottom `from-surface` gradient overlay keeps the text legible over it.
+  // Phase 103: raised from 168 to 224 so the portrait reads as a figure
+  // rather than a sliver, and the position nudged down slightly (22% -> 28%)
+  // so more of the subject's face/torso sits inside the taller band. The
+  // registry contract only ever holds the jpg path
+  // (`subsystem.schema.ts`'s `heroImage: "/subsystems/<id>.jpg"`); the
+  // sibling WebP (phase 103's `convert-to-webp.py`) is derived here by
+  // swapping the extension and offered first via `image-set()`, with the jpg
+  // as the fallback source for browsers that don't support WebP.
+  const webpImage = heroImage.replace(/\.jpg$/, ".webp");
   return {
-    backgroundImage: `${glow}, url("${heroImage}")`,
+    backgroundImage: `${glow}, image-set(url("${webpImage}") type("image/webp"), url("${heroImage}") type("image/jpeg"))`,
     backgroundSize: "auto, cover",
-    backgroundPosition: "center, center 22%",
+    backgroundPosition: "center, center 28%",
     backgroundRepeat: "no-repeat",
-    minHeight: 168,
+    minHeight: 224,
   };
 }
 
