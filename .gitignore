@@ -25,6 +25,7 @@ graphify-out/
 .zibby/data/activity
 .zibby/data/budget-ledger
 .zibby/data/subsystem-seen.json
+.zibby/data/artifacts
 .zibby/data/research-digest.json
 .zibby/data/mcp-credentials
 .zibby/data/project-secrets
