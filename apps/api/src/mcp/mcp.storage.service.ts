@@ -15,6 +15,9 @@ import {
 
 export const MCP_DIR = "MCP_DIR";
 
+/** Stable id of the built-in entity-directory MCP server (Phase 106). */
+export const ENTITY_MCP_SERVER_ID = "zibby-entities";
+
 /**
  * Durable, file-backed persistence for MCP servers — one `<id>.json` each.
  * `hasCredentials` is intentionally NOT persisted — it's a read-time computation
@@ -29,6 +32,43 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
 
   constructor(@Inject(MCP_DIR) dir: string) {
     super(dir);
+  }
+
+  async onModuleInit(): Promise<void> {
+    await super.onModuleInit();
+    await this.seedSystem();
+  }
+
+  /**
+   * Ensure the built-in `zibby-entities` row exists — nothing seeded
+   * `data/mcp-servers` before Phase 106, so without this the entity-directory
+   * MCP server (`EntityMcpController`, `apps/api/src/memory/entity-mcp.controller.ts`)
+   * is never actually reachable from a run's `--mcp-config`. Idempotent (mirrors
+   * `AutomationsStorageService.seedSystem`): only creates the row when absent —
+   * an operator who disables or edits it afterwards keeps their change across
+   * restarts, this never re-asserts fields on an existing row.
+   */
+  private async seedSystem(): Promise<void> {
+    let existing: McpServer | null = null;
+    try {
+      existing = await this.get(ENTITY_MCP_SERVER_ID);
+    } catch (error) {
+      if (!(error instanceof McpServerNotFoundError)) throw error;
+    }
+    if (existing) return;
+    const port = Number(process.env.PORT ?? 3333);
+    const server = McpServerSchema.parse({
+      id: ENTITY_MCP_SERVER_ID,
+      name: "ZIBBY entities",
+      desc:
+        "Internal entity directory: list_entities over ZIBBY's own catalogs " +
+        "(skills/mcp/commands/hooks/projects/companies/chains/integrations/goals/" +
+        "automations) plus recall_memory over the vault.",
+      type: "http",
+      url: `http://localhost:${port}/api/memory/mcp`,
+      enabled: true,
+    });
+    await this.writeEntity(server);
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {

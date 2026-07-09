@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import type { Briefing, CreateTaskResult, SearchHit, TaskTarget } from "@zibby/contracts";
+import type { Briefing, CreateTaskResult, TaskTarget } from "@zibby/contracts";
 import { BriefingService } from "../briefing/briefing.service";
 import { MachineActionRejectedError, MachineService } from "../machine/machine.service";
+import { recallMemory as recallMemoryFromVault } from "../memory/recall.helper";
 import { VaultService } from "../memory/vault.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import type { ChatCreateTaskMeta } from "./chat-tool-result.registry";
@@ -14,8 +15,6 @@ export interface ChatCreateTaskOutcome {
   meta?: ChatCreateTaskMeta;
 }
 
-/** Cap on how many memory hits the chat surfaces — signal, not the whole vault. */
-const MAX_RECALL_HITS = 5;
 /** Cap on how many "needs you" / "watching" lines the status summary lists. */
 const MAX_STATUS_LINES = 5;
 
@@ -83,14 +82,7 @@ export class ChatToolsService {
 
   /** Search the Obsidian vault and return the top few hits compactly (title + snippet). */
   async recallMemory(query: string): Promise<string> {
-    const hits: SearchHit[] = await this.vault.search(query);
-    if (hits.length === 0) {
-      return `V paměti jsem nic k „${query}" nenašel.`;
-    }
-    const lines = hits
-      .slice(0, MAX_RECALL_HITS)
-      .map((h) => `- ${h.title} (${h.tier}): ${h.snippet}`);
-    return [`Našel jsem v paměti k „${query}":`, ...lines].join("\n");
+    return recallMemoryFromVault(this.vault, query);
   }
 
   /** Summarize what's happening right now — pending decisions + what ZIBBY is watching. */

@@ -8,7 +8,7 @@ import {
   McpServerConflictError,
   McpServerNotFoundError,
 } from "./mcp.errors";
-import { McpServersStorageService } from "./mcp.storage.service";
+import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "./mcp.storage.service";
 
 const sample: CreateMcpServerInput = {
   id: "context7",
@@ -61,5 +61,38 @@ describe("McpServersStorageService", () => {
         InvalidMcpServerIdError,
       );
     }
+  });
+
+  describe("seedSystem (Phase 106 — the entity-directory server)", () => {
+    it("seeds the enabled zibby-entities http row on first onModuleInit", async () => {
+      // `service` (from the outer beforeEach) has already gone through onModuleInit.
+      const seeded = await service.get(ENTITY_MCP_SERVER_ID);
+      expect(seeded.type).toBe("http");
+      expect(seeded.enabled).toBe(true);
+      expect(seeded.url).toContain("/api/memory/mcp");
+    });
+
+    it("is idempotent: a second onModuleInit does not clobber an operator edit", async () => {
+      await service.update(ENTITY_MCP_SERVER_ID, { enabled: false });
+      await service.onModuleInit();
+      const reread = await service.get(ENTITY_MCP_SERVER_ID);
+      expect(reread.enabled).toBe(false);
+    });
+
+    it("resolves the url's port from PORT, defaulting to 3333", async () => {
+      const previousPort = process.env.PORT;
+      try {
+        process.env.PORT = "4444";
+        const otherDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-test-port-"));
+        const other = new McpServersStorageService(otherDir);
+        await other.onModuleInit();
+        const seeded = await other.get(ENTITY_MCP_SERVER_ID);
+        expect(seeded.url).toBe("http://localhost:4444/api/memory/mcp");
+        await fs.rm(otherDir, { recursive: true, force: true });
+      } finally {
+        if (previousPort === undefined) delete process.env.PORT;
+        else process.env.PORT = previousPort;
+      }
+    });
   });
 });

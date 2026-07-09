@@ -5,6 +5,7 @@ import type {
   MatchCondition,
   Pipeline,
   SelfKnowledgeSections,
+  Subsystem,
 } from "@zibby/contracts";
 import type { ParsedGraphReport } from "./graph-report.parser";
 
@@ -15,7 +16,7 @@ import type { ParsedGraphReport } from "./graph-report.parser";
  * the note needs is passed in by the caller (`SelfKnowledgeService`), so this
  * file is unit-testable without a NestJS test module or a real vault/storage.
  *
- * The note is a normal Markdown document with six machine-owned "AUTO" blocks
+ * The note is a normal Markdown document with seven machine-owned "AUTO" blocks
  * delimited by HTML comments (`<!-- AUTO:<KEY>:START -->` / `…:END`). Everything
  * OUTSIDE those blocks is operator-owned and untouched by {@link mergeAutoBlocks}.
  * `META` carries the generation timestamp and is deliberately excluded from
@@ -23,14 +24,25 @@ import type { ParsedGraphReport } from "./graph-report.parser";
  * meaningful signal of "did the underlying catalog change".
  */
 
-/** Ids of the six AUTO blocks, also each block's rendering order in the note. */
-const BLOCK_KEYS = ["META", "AGENTS", "PIPELINES", "GATES", "CHANNELS", "CODEBASE-SHAPE"] as const;
+/** Ids of the seven AUTO blocks, also each block's rendering order in the note. */
+const BLOCK_KEYS = [
+  "META",
+  "AGENTS",
+  "PIPELINES",
+  "SUBSYSTEMS",
+  "GATES",
+  "CHANNELS",
+  "CODEBASE-SHAPE",
+] as const;
 type BlockKey = (typeof BLOCK_KEYS)[number];
 
 /** Inputs the composer needs — one plain snapshot of the current catalog state. */
 export interface SelfKnowledgeComposerInput {
   agents: Agent[];
   pipelines: Pipeline[];
+  /** Static subsystem identities (`@zibby/contracts` `SUBSYSTEMS`) — name + mandate
+   *  only, NEVER live state/tier2Count/tier3Count (decision 3, phase-105 master plan). */
+  subsystems: Subsystem[];
   /** The global gate-rule catalog (the "Pravidla schvalování" page). */
   gateRules: GlobalGateRule[];
   /** The locked system policy floor (`POLICY.md`). */
@@ -139,6 +151,29 @@ function renderPipelines(pipelines: Pipeline[]): string {
   return lines.join("\n");
 }
 
+/**
+ * Static identity only — name + mandate, NEVER live `state`/`tier2Count`/
+ * `tier3Count` (decision 3, phase-105 master plan: baking live status into an
+ * AUTO block would make `computeDrift` read "changed" almost continuously,
+ * defeating the drift signal — live status stays a live-query surface).
+ */
+function renderSubsystems(subsystems: Subsystem[]): string {
+  const sorted = [...subsystems].sort((a, b) => a.id.localeCompare(b.id));
+  const lines = [`## Subsystems (${sorted.length})`];
+  if (sorted.length === 0) {
+    lines.push("_No subsystems registered yet._");
+  } else {
+    for (const subsystem of sorted) {
+      const label =
+        subsystem.name && subsystem.name !== subsystem.id
+          ? `${subsystem.name} (\`${subsystem.id}\`)`
+          : `\`${subsystem.id}\``;
+      lines.push(`- ${label} — ${subsystem.mandate}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 function renderGates(floor: GateRule[], catalog: GlobalGateRule[]): string {
   const lines = [`## Gate rules (${floor.length + catalog.length})`, ""];
 
@@ -231,6 +266,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
     pipelines: input.pipelines.length,
     gateRules: input.policyFloor.length + input.gateRules.length,
     channels: input.channelKinds.length,
+    subsystems: input.subsystems.length,
     codebaseShape: {
       present: codebaseShape !== null,
       godNodes: codebaseShape?.godNodes.length ?? 0,
@@ -242,6 +278,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
     META: renderMeta(generatedAt),
     AGENTS: renderAgents(input.agents),
     PIPELINES: renderPipelines(input.pipelines),
+    SUBSYSTEMS: renderSubsystems(input.subsystems),
     GATES: renderGates(input.policyFloor, input.gateRules),
     CHANNELS: renderChannels(input.channelKinds),
     "CODEBASE-SHAPE": renderCodebaseShape(codebaseShape),

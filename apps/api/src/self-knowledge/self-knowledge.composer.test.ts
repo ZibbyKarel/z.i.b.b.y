@@ -1,4 +1,4 @@
-import type { Agent, GateRule, GlobalGateRule, Pipeline } from "@zibby/contracts";
+import type { Agent, GateRule, GlobalGateRule, Pipeline, Subsystem } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import {
   type SelfKnowledgeComposerInput,
@@ -42,6 +42,15 @@ const floorRule: GateRule = {
   resolve: { type: "human" },
 };
 
+const subsystem: Subsystem = {
+  id: "forge",
+  name: "Forge",
+  tagline: "Kovárna doručení",
+  mandate: "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
+  color: "#f97316",
+  heroImage: "/subsystems/forge.jpg",
+};
+
 const catalogRule: GlobalGateRule = {
   id: "gr-merge",
   name: "Merge PR",
@@ -54,6 +63,7 @@ function baseInput(overrides: Partial<SelfKnowledgeComposerInput> = {}): SelfKno
   return {
     agents: [agent],
     pipelines: [pipeline],
+    subsystems: [subsystem],
     gateRules: [catalogRule],
     policyFloor: [floorRule],
     channelKinds: ["slack", "email"],
@@ -70,22 +80,33 @@ describe("composeSelfKnowledge", () => {
       pipelines: 1,
       gateRules: 2,
       channels: 2,
+      subsystems: 1,
       codebaseShape: { present: false, godNodes: 0, communities: 0 },
     });
   });
 
   it("renders every AUTO block with matching START/END markers", () => {
     const { markdown } = composeSelfKnowledge(baseInput());
-    for (const key of ["META", "AGENTS", "PIPELINES", "GATES", "CHANNELS", "CODEBASE-SHAPE"]) {
+    for (const key of [
+      "META",
+      "AGENTS",
+      "PIPELINES",
+      "SUBSYSTEMS",
+      "GATES",
+      "CHANNELS",
+      "CODEBASE-SHAPE",
+    ]) {
       expect(markdown).toContain(`<!-- AUTO:${key}:START -->`);
       expect(markdown).toContain(`<!-- AUTO:${key}:END -->`);
     }
   });
 
-  it("includes agent/pipeline/gate/channel content in their respective blocks", () => {
+  it("includes agent/pipeline/subsystem/gate/channel content in their respective blocks", () => {
     const { markdown } = composeSelfKnowledge(baseInput());
     expect(markdown).toContain("koder");
     expect(markdown).toContain("build-app");
+    expect(markdown).toContain("Forge");
+    expect(markdown).toContain("Orchestrace delivery pipeline");
     expect(markdown).toContain("git.push");
     expect(markdown).toContain("Merge PR");
     expect(markdown).toContain("slack");
@@ -106,10 +127,18 @@ describe("composeSelfKnowledge", () => {
 
   it("renders empty-state copy for an empty catalog", () => {
     const { markdown } = composeSelfKnowledge(
-      baseInput({ agents: [], pipelines: [], gateRules: [], policyFloor: [], channelKinds: [] }),
+      baseInput({
+        agents: [],
+        pipelines: [],
+        subsystems: [],
+        gateRules: [],
+        policyFloor: [],
+        channelKinds: [],
+      }),
     );
     expect(markdown).toContain("No agents registered yet");
     expect(markdown).toContain("No pipelines registered yet");
+    expect(markdown).toContain("No subsystems registered yet");
     expect(markdown).toContain("No channel adapters registered");
   });
 
@@ -124,6 +153,42 @@ describe("composeSelfKnowledge", () => {
     const second = composeSelfKnowledge(shuffled).markdown;
     expect(first).toBe(second);
     expect(first.indexOf("aaa-agent")).toBeLessThan(first.indexOf("zzz-agent"));
+  });
+
+  describe("SUBSYSTEMS block", () => {
+    it("renders name + mandate, sorted by id, with NO live state/counts", () => {
+      const beacon: Subsystem = {
+        id: "beacon",
+        name: "Beacon",
+        tagline: "Maják v noci",
+        mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
+        color: "#f59e0b",
+        heroImage: "/subsystems/beacon.jpg",
+      };
+      const { markdown, sections } = composeSelfKnowledge(
+        baseInput({ subsystems: [beacon, subsystem] }),
+      );
+
+      expect(markdown).toContain("## Subsystems (2)");
+      expect(markdown).toContain("Forge");
+      expect(markdown).toContain("Orchestrace delivery pipeline");
+      expect(markdown).toContain("Beacon");
+      expect(markdown).toContain("Eskalace incidentů");
+      // Static identity only — no live status fields anywhere in the block.
+      expect(markdown).not.toContain("tier2Count");
+      expect(markdown).not.toContain("tier3Count");
+      expect(markdown).not.toContain("klid");
+      expect(markdown).not.toContain("bezi");
+      // Sorted by id: "beacon" before "forge".
+      expect(markdown.indexOf("Beacon")).toBeLessThan(markdown.indexOf("Forge"));
+      expect(sections.subsystems).toBe(2);
+    });
+
+    it("renders empty-state copy when there are no subsystems", () => {
+      const { markdown, sections } = composeSelfKnowledge(baseInput({ subsystems: [] }));
+      expect(markdown).toContain("No subsystems registered yet");
+      expect(sections.subsystems).toBe(0);
+    });
   });
 
   describe("CODEBASE-SHAPE block", () => {

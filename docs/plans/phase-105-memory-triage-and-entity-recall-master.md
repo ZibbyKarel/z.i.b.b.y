@@ -160,28 +160,29 @@ Tests: `run-recorder.service.test.ts:145,178,192`.
 
 ---
 
-## Phase 105 — Contracts (foundation, contract-first)
+## Phase 105 — Contracts (foundation, contract-first) — ✅ DONE (commit 7f2b1eb)
 
-- [ ] `memory.schema.ts`: add `raw: z.boolean().optional()` to `NoteSchema`, `CreateNoteSchema`,
-  `UpdateNoteSchema` (mirror the `type`/`tags` docblock framing at `:16-23`). No tier change *type*.
-- [ ] ⚠ NEW `memory.schema.ts`: make `CreateNoteSchema.tier` **optional**
-  (`tier: MemoryTierSchema.optional()`) — required by the quick-capture path (phase 107). Document
-  inline that omitting `tier` triggers server-side default `knowledge` + forced `raw:true`.
-- [ ] `self-knowledge.schema.ts`: add `subsystems: z.number().int().nonnegative()` to
-  `SelfKnowledgeSectionsSchema`.
-- [ ] `agent.schema.ts`: add `optionalTools: z.array(z.string()).optional()` next to `tools`
-  (`:46`); document the granted-on-request vs. always-on distinction in the schema docblock.
-- [ ] `task.schema.ts`: `TaskRoutingSchema` += `toolGrants: z.array(z.string()).default([])`
-  (classifier PROPOSAL, advisory); `CreateTaskInputSchema` += `toolGrants: z.array(z.string()).optional()`
-  (operator's CONFIRMED set, independent of the proposal).
-- [ ] Round-trip tests for every new field: `memory.contract.test.ts` (raw positive + back-compat +
-  `CreateNoteSchema` variant + optional-`tier`), `tasks.contract.test.ts` (`toolGrants` default +
-  round-trip), a self-knowledge sections test if one exists, and an agent `optionalTools` case.
-- Barrel exports unaffected (all additive on existing schemas — verified).
+- [x] `memory.schema.ts`: `raw: z.boolean().optional()` on `NoteSchema`, `CreateNoteSchema`,
+  `UpdateNoteSchema` (docblock framing mirrored).
+- [x] `memory.schema.ts`: `CreateNoteSchema.tier` made optional; docblock notes server default
+  `knowledge` + forced `raw:true` when omitted. `NoteSchema.tier` stays required.
+- [x] `self-knowledge.schema.ts`: `subsystems: z.number().int().nonnegative()` added.
+- [x] `agent.schema.ts`: `optionalTools: z.array(z.string()).optional()` added next to `tools`;
+  distinction documented.
+- [x] `task.schema.ts`: `TaskRoutingSchema.toolGrants` (default `[]`) + `CreateTaskInputSchema.toolGrants`
+  (optional) added.
+- [x] Round-trip tests added across `memory`/`tasks`/`self-knowledge`/`agents` contract tests;
+  `libs/contracts` vitest green (323 passed). Barrel unchanged (verified).
+- NOTE: expected contract-first tsc ripple in `apps/api`/`apps/web` — fixed by phases 106-109.
 
-## Phase 106 — API: entity-directory MCP tool + self-knowledge SUBSYSTEMS block
+## Phase 106 — API: entity-directory MCP tool + self-knowledge SUBSYSTEMS block — ✅ DONE
 
-- [ ] New `apps/api/src/memory/entity-mcp.controller.ts` mirroring `chat-mcp.controller.ts` verbatim
+> Landed: entity-mcp controller (10-kind `list_entities` fail-open + `recall_memory` via extracted
+> `recall.helper.ts`), `zibby-entities` seed via `McpServersStorageService.onModuleInit` (runtime
+> data, not committed — avoids port freeze), SUBSYSTEMS self-knowledge block (clears `:229` ripple).
+> Tests: entity-mcp controller round-trip (6) + mcp seed (3) + composer subsystems; 180 passed.
+
+- [x] New `apps/api/src/memory/entity-mcp.controller.ts` mirroring `chat-mcp.controller.ts` verbatim
   (stateless per-request `McpServer` + `StreamableHTTPServerTransport`, pass the parsed Nest body,
   `res.on("close")` cleanup), NOT scoped to a chat conversation. Route `@Post("api/memory/mcp")`,
   GET → 405 `Allow: POST` JSON-RPC `-32000`. Register in the memory module.
