@@ -24,6 +24,6 @@
 - [x] Chat UI - detail subsystému by měl být širší aby se tam všely všechny informace v pohodě _(Fáze 99: `lg:w-[520px]`)_
 - [x] Chat UI - detail subsystému nejde zavřít _(Fáze 99: drawer vyzvednut z z-10 stacking kontextu na z-30 — close/Escape teď fungují)_
 - [x] Chat UI - detail subsystému - Tlačítko přidat pravidlo nelze zmáčknout _(Fáze 99: stejný stacking fix + Panel maxHeight 100 %)_
-- [ ] Chat UI - kliknutí na kartu tasku nalevo by mělo otevřít detail tasku přímo hned vedle karty nikoliv přesměrovat na stránku "/runs"
+- [x] Chat UI - kliknutí na kartu tasku nalevo by mělo otevřít detail tasku přímo hned vedle karty nikoliv přesměrovat na stránku "/runs" _(Fáze 100: inline `ChatTaskDetailColumn` vedle gutteru, sdílený `useRunActions`)_
 - [x] Chat UI - orby subsystémů by měly být obalené vlastním oktagonem, který bude spojený s oktagonem okolo hlavního Orbu krátkou čarou místo toho aby vedla čára od centrálního oktagonu do středu orbu sub systému _(Fáze 101)_
 - [ ] Odstraníme globální selector projektu jak v HUD tak v Chat UI - projekt se bude vybírat přes inline selector v CommandLine komponentě
