@@ -98,6 +98,11 @@ export class ClaudeCliRouter implements TaskRouter {
       mode: verdict.loop ? "loop" : "single",
       proposedGoal: null,
       paths: [],
+      // Phase 108: the router itself never invents a grant proposal — that's
+      // computed downstream by TaskClassifierService.enrich() (it resolves the
+      // target agent's optionalTools, which this router has no access to).
+      // Always [] here; enrich() overwrites it unconditionally.
+      toolGrants: [],
     };
   }
 

@@ -123,6 +123,8 @@ export class KeywordScorer implements TaskRouter {
       mode: "single",
       proposedGoal: null,
       paths: [],
+      // Phase 108: the scorer proposes no tool grant — enrich() overlays it.
+      toolGrants: [],
     };
   }
 }

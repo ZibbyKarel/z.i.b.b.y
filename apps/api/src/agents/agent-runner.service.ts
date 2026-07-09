@@ -38,6 +38,23 @@ export interface RunAttachments {
 export { RunNotFoundError } from "../runner/runner-core";
 
 /**
+ * Phase 108 — the tool-grant CEILING enforcement: intersect the operator's
+ * CONFIRMED grant set (`CreateTaskInput.toolGrants`, threaded through dispatch)
+ * against the target agent's own `optionalTools`. An id outside that ceiling is
+ * silently DROPPED — never an error — so a stale or hand-crafted request can't
+ * widen a run's permissions past what the agent definition actually allows.
+ * Pulled out as a pure function (no I/O) so the ceiling math is unit-testable
+ * without the runner's full 14-dep DI graph.
+ */
+export function intersectToolGrants(
+  toolGrants: readonly string[] | undefined,
+  agent: Agent,
+): string[] {
+  const ceiling = new Set(agent.optionalTools ?? []);
+  return (toolGrants ?? []).filter((g) => ceiling.has(g));
+}
+
+/**
  * Spawns agents as child processes and tracks their runs durably. A thin wrapper
  * over the shared {@link RunnerCore}: this class owns the Nest DI surface and the
  * agent-specific command building and existence check, while spawn/log/sidecar/
@@ -162,6 +179,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * caller (no behaviour change).
      */
     attachments?: RunAttachments,
+    /**
+     * Phase 108: the operator's CONFIRMED tool-grant set (`CreateTaskInput.toolGrants`).
+     * Advisory from the caller's point of view — {@link launch} re-intersects it
+     * against THIS agent's own `optionalTools` (the ceiling), so an ungranted id is
+     * silently dropped here, server-side, never trusted from dispatch alone.
+     */
+    toolGrants?: string[],
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId);
@@ -175,6 +199,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       matchedTerms,
       workspace,
       attachments,
+      undefined,
+      toolGrants,
     );
   }
 
@@ -239,6 +265,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       undefined,
       undefined,
       rec.sessionId,
+      // Phase 108: a re-run doesn't re-thread the original toolGrants (mirrors the
+      // documented attachments gap above — a resumed session already holds context).
+      undefined,
     );
   }
 
@@ -266,8 +295,18 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     attachments?: RunAttachments,
     /** Phase 49: continue a captured claude session (`--resume`) on a re-run. */
     resumeSessionId?: string,
+    /**
+     * Phase 108: the operator's CONFIRMED tool-grant set, still unfiltered at this
+     * point — the ceiling enforcement happens right below, against THIS agent's own
+     * `optionalTools` (never the classifier's advisory proposal, never trusted from
+     * the UI alone).
+     */
+    toolGrants?: string[],
   ): Promise<AgentRun> {
     const agentId = agent.id;
+    // Phase 108: the FINAL grant set — the ceiling is enforced HERE, server-side,
+    // never trusted from dispatch/the UI alone (see intersectToolGrants).
+    const finalGrants = intersectToolGrants(toolGrants, agent);
     // Agent runs are always claude-shaped — refuse up front when the CLI can't
     // start a session, so no dead run record is ever created (→ 503 / failed task).
     await this.preflight.assertAvailable();
@@ -298,6 +337,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       cwd,
       attachments,
       resumeSessionId,
+      finalGrants,
     );
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
@@ -676,6 +716,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     attachments?: RunAttachments,
     /** Phase 49: continue this captured claude session (`--resume`) instead of a cold start. */
     resumeSessionId?: string,
+    /** Phase 108: the FINAL (already-intersected) tool-grant set for this run. */
+    toolGrants?: string[],
   ): Promise<{ command: string; args: string[]; catalogAgentIds: string[] }> {
     // The work directory (the run's `files`, if any) stays the "operate on" target;
     // the attachments dir is reference material, never the thing to act on.
@@ -703,6 +745,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       thinking: agent.thinking,
       grantDirs: grants,
       grounding,
+      toolGrants,
       // Capture the full transcript so the run log shows every step, not just the
       // final summary (the core flattens the stream-json events back to text).
       streamTranscript: true,

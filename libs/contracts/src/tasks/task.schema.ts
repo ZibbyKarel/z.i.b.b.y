@@ -338,6 +338,14 @@ export const ScheduledTaskSchema = z.object({
   title: z.string().default(""),
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).default([]),
+  /**
+   * Phase 108: the operator's CONFIRMED tool-grant set, persisted so a
+   * held/queued/pending/deferred task still carries it into the eventual
+   * dispatch — mirrors how `paths`/`output` already travel. Intersected against
+   * the resolved target's `optionalTools` ceiling SERVER-SIDE at dispatch time
+   * (never trusted blindly). Defaults to `[]` so an old-shaped record still parses.
+   */
+  toolGrants: z.array(z.string()).default([]),
   /** Phase: the uploaded attachment set this task references (see AttachmentSchema). */
   attachmentSetId: z.string().optional(),
   /** Durable, displayable metadata for the referenced set (empty when none). */

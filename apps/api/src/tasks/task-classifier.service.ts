@@ -15,7 +15,7 @@ import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
 import { matchProject } from "../projects/project-matcher";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { KeywordScorer, detectLoopCue } from "./keyword-scorer";
+import { KeywordScorer, detectLoopCue, tokenize } from "./keyword-scorer";
 import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from "./task-router";
 
 /**
@@ -144,6 +144,8 @@ export class TaskClassifierService {
       mode: "single",
       proposedGoal: null,
       paths: [],
+      // Phase 108: no grant proposal at the terminal-fallback rule — enrich() overlays it.
+      toolGrants: [],
     };
   }
 
@@ -163,7 +165,39 @@ export class TaskClassifierService {
     const looped = base.mode === "loop" || detectLoopCue(input.text);
     const proposedGoal = looped ? this.synthesizeGoal(base.target, input, candidates) : null;
     const paths = await this.resolvePaths(input.paths ?? []);
-    return { ...base, mode: proposedGoal ? "loop" : "single", proposedGoal, paths };
+    const toolGrants = await this.proposeToolGrants(base.target, input.text);
+    return { ...base, mode: proposedGoal ? "loop" : "single", proposedGoal, paths, toolGrants };
+  }
+
+  /**
+   * Phase 108 (Decision 6, binding decision 5's sibling): the classifier's
+   * ADVISORY proposal of which of the routed target's `optionalTools` look
+   * relevant to this task — never invents an id outside that ceiling; the
+   * operator's separately-confirmed `CreateTaskInput.toolGrants` is what
+   * actually rides into dispatch (re-intersected there, never trusted from
+   * this proposal alone).
+   *
+   * Approach (b) — a deterministic keyword heuristic, not a second `claude -p`
+   * round-trip: keeps this phase self-contained (no extra router-prompt field,
+   * no extra latency/cost per classify call) while still being useful — most
+   * `optionalTools` ids read as `snake_case` words (`recall_memory`,
+   * `list_entities`) that plausibly appear in a task description verbatim.
+   * Only an agent target is considered; a pipeline/goal/orchestrator pick (no
+   * agent definition to read `optionalTools` off) always proposes `[]`.
+   */
+  private async proposeToolGrants(target: TaskTarget, text: string): Promise<string[]> {
+    if (target.kind !== "agent") return [];
+    const agent = await this.agents.get(target.id).catch(() => null);
+    const optionalTools = agent?.optionalTools ?? [];
+    if (optionalTools.length === 0) return [];
+    const haystack = new Set(tokenize(text));
+    return optionalTools.filter((id) => {
+      const words = id
+        .split(/[^a-zA-Z0-9]+/)
+        .map((w) => w.toLowerCase())
+        .filter((w) => w.length >= 3);
+      return words.some((w) => haystack.has(w));
+    });
   }
 
   /**

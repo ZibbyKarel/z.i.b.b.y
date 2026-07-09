@@ -275,6 +275,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       [],
       undefined,
       undefined,
+      undefined,
     );
     const persisted = await storage.get(result.task.id);
     expect(persisted.status).toBe("dispatched");
@@ -367,7 +368,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       undefined,
       false,
     );
-    const lastArg = agentRunner.start.mock.calls.at(-1)?.at(-1);
+    // Phase 108 appended `toolGrants` as the FINAL positional arg — attachments
+    // (`runAttachments`) is now the second-to-last.
+    const lastArg = agentRunner.start.mock.calls.at(-1)?.at(-2);
     expect(lastArg).toMatchObject({ names: ["a.txt"] });
     expect(String((lastArg as { dir: string }).dir)).toContain(attachmentSetId);
   });
@@ -452,6 +455,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       [],
       undefined,
       undefined,
+      // The background path re-dispatches from the PERSISTED task record, whose
+      // `toolGrants` defaults to `[]` (ScheduledTaskSchema) — not `undefined`.
+      [],
     );
   });
 

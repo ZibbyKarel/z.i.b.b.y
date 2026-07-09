@@ -567,6 +567,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       input.output,
       input.attachmentSetId,
       input.attachments,
+      input.toolGrants,
     );
     if (!dispatched) throw new EmptyCatalogError();
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
@@ -609,6 +610,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           task.output,
           task.attachmentSetId,
           task.attachments,
+          task.toolGrants,
         );
         if (!dispatched) {
           await this.failPending(task.id, projectId, "No agents or pipelines available to route to");
@@ -696,6 +698,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       task.output,
       task.attachmentSetId,
       task.attachments,
+      task.toolGrants,
     );
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or pipelines available to route to");
@@ -862,6 +865,15 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
      */
     attachmentSetId?: string,
     attachments?: Attachment[],
+    /**
+     * Phase 108: the operator's CONFIRMED tool-grant set (`CreateTaskInput.toolGrants`
+     * / the persisted `ScheduledTask.toolGrants`, threaded the same way `paths`/`output`
+     * already travel). Scoped to the agent runner only — the target's `optionalTools`
+     * ceiling is the agent-definition field, so only an agent target has anything to
+     * intersect against. Re-intersected against `target.optionalTools` INSIDE the
+     * runner (never trusted blindly — see `AgentRunnerService.launch`).
+     */
+    toolGrants?: string[],
   ): Promise<{ runRef: string; target: TaskTarget } | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
@@ -892,6 +904,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
         matchedTerms,
         undefined,
         runAttachments,
+        toolGrants,
       );
       return { runRef: run.runId, target };
     }

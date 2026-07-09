@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { HooksStorageService } from "../hooks/hooks.storage.service";
 import { McpCredentialsStore } from "../mcp/mcp-credentials.store";
-import { McpServersStorageService } from "../mcp/mcp.storage.service";
+import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "../mcp/mcp.storage.service";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { mapTools, toSubagentTools } from "./claude-tools";
 
@@ -80,6 +80,14 @@ export interface ClaudeRunOptions {
    * still resolves it. Omit it (tests, callers without a sandbox) → inline prompt.
    */
   systemPromptDir?: string;
+  /**
+   * Phase 108: the FINAL, already-intersected tool-grant set for this run (the
+   * operator's confirmed `CreateTaskInput.toolGrants` ∩ the agent's own
+   * `optionalTools` ceiling — the caller enforces that intersection; this service
+   * only resolves each grant's id shape and unions it into `--allowedTools`, see
+   * `buildCatalog` below). Omitted/`[]` → no change from today's behavior.
+   */
+  toolGrants?: readonly string[];
 }
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
@@ -326,6 +334,39 @@ function selectCatalogAgents(all: Agent[], delegates?: readonly string[]): Agent
 }
 
 /**
+ * Phase 108 — resolve one confirmed tool grant (an `Agent.optionalTools` id) to
+ * the `--allowedTools` entry it corresponds to under `dontAsk`. THREE shapes are
+ * tolerated, in this order:
+ *
+ *  1. The grant equals an ENABLED MCP server's `id` (e.g. `"zibby-entities"`) →
+ *     widens to the whole server, `mcp__<id>__*` — the same wildcard `buildCatalog`
+ *     already grants for every enabled row.
+ *  2. The grant already looks like a fully-qualified Claude tool id (starts with
+ *     `"mcp__"`) → passed through verbatim (the caller already qualified it).
+ *  3. Otherwise the grant is assumed to name a TOOL on the system entity-directory
+ *     MCP server (Phase 106, id {@link ENTITY_MCP_SERVER_ID}) — the only per-tool
+ *     grant surface that exists today (`recall_memory`, `list_entities`, per the
+ *     `AgentSchema.optionalTools` docblock example) — and is qualified to
+ *     `mcp__<ENTITY_MCP_SERVER_ID>__<grant>`. Only applied when that server is
+ *     actually among the enabled rows; otherwise the grant is dropped (fail-open —
+ *     nothing to grant against, never a thrown error).
+ *
+ * ⚠ Documented assumption (flagged for review): shapes 1 and 2 are unambiguous;
+ * shape 3 hard-codes "a bare grant id names a `zibby-entities` tool", which is
+ * the only concrete case in the codebase today. A future second per-tool MCP
+ * server would need this resolution taught which server a bare tool name belongs
+ * to (not modeled anywhere yet) — out of scope for this phase.
+ */
+function resolveGrantId(grant: string, mcpServers: readonly McpServer[]): string | null {
+  if (mcpServers.some((server) => server.id === grant)) return `mcp__${grant}__*`;
+  if (grant.startsWith("mcp__")) return grant;
+  if (mcpServers.some((server) => server.id === ENTITY_MCP_SERVER_ID)) {
+    return `mcp__${ENTITY_MCP_SERVER_ID}__${grant}`;
+  }
+  return null;
+}
+
+/**
  * Kickoff prompt used when a run is launched with a blank task. `claude --print`
  * rejects an empty prompt ("Input must be provided …"), and a run started from the
  * UI may carry no prompt at all (the agent's body in `--append-system-prompt`
@@ -386,6 +427,7 @@ export class ClaudeRunCommandService {
       opts.tools,
       mcpServers,
       opts.delegates,
+      opts.toolGrants,
     );
     // Custom hooks merge into `--settings` alongside the locked approval hook; a
     // listing failure simply yields the approval-only settings (fail-open to the
@@ -472,6 +514,8 @@ export class ClaudeRunCommandService {
     primaryTools: readonly string[] | undefined,
     mcpServers: readonly McpServer[] = [],
     delegates?: readonly string[],
+    /** Phase 108: the FINAL (already-intersected) tool-grant set for this run. */
+    toolGrants: readonly string[] = [],
   ): Promise<{
     catalog: Record<string, CatalogEntry>;
     allowedTools: string[];
@@ -498,6 +542,13 @@ export class ClaudeRunCommandService {
     // session allow-list. Under `dontAsk` an `mcp__<id>__<tool>` call is denied
     // unless `mcp__<id>__*` is allowed (the bare `mcp__<id>` does not match).
     for (const server of mcpServers) allowed.add(`mcp__${server.id}__*`);
+    // Phase 108: union the run's confirmed tool grants (already intersected against
+    // the agent's own `optionalTools` ceiling by the caller — see AgentRunnerService.
+    // launch). See resolveGrantId's docblock for the id-shape assumption.
+    for (const grant of toolGrants) {
+      const resolved = resolveGrantId(grant, mcpServers);
+      if (resolved) allowed.add(resolved);
+    }
     const catalog: Record<string, CatalogEntry> = {};
 
     for (const agent of agents) {

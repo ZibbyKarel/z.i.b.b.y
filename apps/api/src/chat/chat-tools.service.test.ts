@@ -29,6 +29,7 @@ const DISPATCHED: CreateTaskResult = {
     title: "",
     text: "postav appku",
     paths: [],
+    toolGrants: [],
     attachments: [],
     scheduledAt: 1,
     status: "dispatched",

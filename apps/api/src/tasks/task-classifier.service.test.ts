@@ -20,6 +20,7 @@ function agent(over: Partial<Agent> & { id: string }): Agent {
     description: over.description ?? "",
     category: over.category,
     status: over.status,
+    optionalTools: over.optionalTools,
   } as unknown as Agent;
 }
 
@@ -53,6 +54,12 @@ function makeService(opts: {
     // Phase 4c: the classifier's catalog reads listActive — mirror the real
     // filter (status !== "proposed") so these tests exercise the same seam.
     listActive: () => Promise.resolve((opts.agents ?? []).filter((a) => a.status !== "proposed")),
+    // Phase 108: enrich() resolves the routed agent's optionalTools via `get`.
+    get: (id: string) => {
+      const found = (opts.agents ?? []).find((a) => a.id === id);
+      if (!found) return Promise.reject(new Error(`agent "${id}" not found`));
+      return Promise.resolve(found);
+    },
   } as unknown as AgentsStorageService;
   const pipelines = {
     list: () => Promise.resolve(opts.pipelines ?? []),
@@ -140,6 +147,7 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
       mode: "loop",
       proposedGoal: null,
       paths: [],
+      toolGrants: [],
     };
     const svc = makeService({
       agents: catalogAgents,
@@ -168,6 +176,7 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
       mode: "single",
       proposedGoal: null,
       paths: [],
+      toolGrants: [],
     } as unknown as TaskRouting;
     const svc = makeService({
       agents: catalogAgents,
@@ -232,6 +241,45 @@ describe("TaskClassifierService — Phase 4c (Agent Factory: proposed agents are
     // The only candidate is `coder` (no keyword overlap with "deploy to staging"),
     // so this falls to the orchestrator — never to the excluded proposed agent.
     expect(r?.target.kind).toBe("orchestrator");
+  });
+});
+
+describe("TaskClassifierService — Phase 108 toolGrants proposal", () => {
+  it("proposes only ids drawn from the routed agent's optionalTools — never invents one", async () => {
+    const svc = makeService({
+      agents: [
+        agent({
+          id: "coder",
+          name: "Kodér",
+          description: "implements recall memory tasks for the project",
+          optionalTools: ["recall_memory", "list_entities"],
+        }),
+      ],
+      pipelines: [],
+    });
+    const r = await svc.classify({ text: "recall memory about the project before you start" });
+    expect(r?.target).toEqual({ kind: "agent", id: "coder", name: "Kodér", glyph: "bot" });
+    expect(r?.toolGrants).toEqual(["recall_memory"]);
+    // Never anything outside the agent's own optionalTools.
+    expect(r?.toolGrants.every((g) => ["recall_memory", "list_entities"].includes(g))).toBe(true);
+  });
+
+  it("proposes [] when the routed agent's optionalTools is empty or absent", async () => {
+    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
+    const r = await svc.classify({ text: "rename the Button component" });
+    expect(r?.target.kind).toBe("agent");
+    expect(r?.toolGrants).toEqual([]);
+  });
+
+  it("proposes [] for a non-agent target (pipeline/orchestrator) — no agent def to read optionalTools off", async () => {
+    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
+    const pipelineRun = await svc.classify({ text: "ship the auth feature" });
+    expect(pipelineRun?.target.kind).toBe("pipeline");
+    expect(pipelineRun?.toolGrants).toEqual([]);
+
+    const orchestratorRun = await svc.classify({ text: "xyzzy zzz keep retrying" });
+    expect(orchestratorRun?.target.kind).toBe("orchestrator");
+    expect(orchestratorRun?.toolGrants).toEqual([]);
   });
 });
 
@@ -307,6 +355,7 @@ describe("TaskClassifierService — Phase 91 classifyWithinSubsystem (recursive 
       mode: "single",
       proposedGoal: null,
       paths: [],
+      toolGrants: [],
     };
     const svc = makeService({
       pipelines: [

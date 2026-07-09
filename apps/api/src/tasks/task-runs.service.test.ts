@@ -110,6 +110,7 @@ const scheduledS: ScheduledTask = {
   title: "later",
   text: "do it later",
   paths: [],
+  toolGrants: [],
   attachments: [],
   scheduledAt: Date.parse("2026-06-17T00:00:00.000Z"),
   status: "scheduled",

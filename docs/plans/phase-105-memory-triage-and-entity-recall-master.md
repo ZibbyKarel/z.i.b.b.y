@@ -240,9 +240,24 @@ Tests: `run-recorder.service.test.ts:145,178,192`.
   noise → unflagged + `triaged-noise` + daily line, not deleted); `vault.service.test.ts`
   `rawNotes()` + `raw` promotion; controller/contract test for optional-`tier` create.
 
-## Phase 108 — API: retire `fileLearned`, classifier proposes `toolGrants`, dispatch consumes confirmed grants
+## Phase 108 — API: retire `fileLearned`, classifier proposes `toolGrants`, dispatch consumes confirmed grants — ✅ DONE
 
-- [ ] `RunRecorderService`: delete `fileLearned()` (`:145-183`) and its call site (`:115`); keep the
+> Landed: `fileLearned` + its two tests removed (daily line kept, `[[learnedId]]` backlink dropped);
+> grep-confirmed nothing else consumes `learned-<runId>`. Classifier proposes `toolGrants` via a
+> keyword heuristic (approach B — no extra `claude -p`): `proposeToolGrants` resolves the routed
+> agent's `optionalTools` and matches id word-parts against the task text; `[]` for empty ceiling /
+> non-agent target. Dispatch threads confirmed grants CreateTaskInput → ScheduledTask (contract
+> `ScheduledTaskSchema.toolGrants` added for persisted/queued parity) → `dispatch()` → agent-runner;
+> `intersectToolGrants(confirmed, agent)` enforces the `optionalTools` ceiling server-side; final set
+> unioned into `buildCatalog` `allowedTools` via `resolveGrantId` (bare name → `mcp__zibby-entities__<name>`,
+> server id → `mcp__<id>__*`, `mcp__`-prefixed → passthrough; dropped fail-open if server disabled).
+> Pipeline/goal-stage grants scoped out as follow-up (only agents carry `optionalTools`). tsc: all
+> phase-108 ripples cleared. Tests: 222/222 in tasks+memory; libs/contracts/tasks 39/39.
+> NOTE: `zibby-entities` is a globally-enabled McpServer, so `recall_memory`/`list_entities` are
+> already available to every run (the intended phase-106 read-parity); `optionalTools`/`toolGrants`
+> is the per-run grant path for OTHER (e.g. external) tools beyond that always-on server.
+
+- [x] `RunRecorderService`: delete `fileLearned()` (`:145-183`) and its call site (`:115`); keep the
   daily-log outcome line (`:122-124`) but drop the now-dead `[[learnedId]]` backlink from its suffix.
   Remove/rewrite the three tests (`run-recorder.service.test.ts:145,178,192`). Confirm nothing else
   consumes a Dokumentátor `learned.md` (grep). `docs/api/memory.md:157-159` already asserts removal —

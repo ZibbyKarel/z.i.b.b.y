@@ -13,7 +13,7 @@ import type { McpServersStorageService } from "../mcp/mcp.storage.service";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
 import type { AgentRunRecord } from "./agent-run.record";
-import { AgentRunnerService } from "./agent-runner.service";
+import { AgentRunnerService, intersectToolGrants } from "./agent-runner.service";
 
 /**
  * `buildCommand` is private and only ever touches `this.claude`. We construct the
@@ -53,6 +53,8 @@ type BuildCommand = (
   grounding?: string,
   sandboxCwd?: string,
   attachments?: { dir: string; names: string[] },
+  resumeSessionId?: string,
+  toolGrants?: string[],
 ) => Promise<{ command: string; args: string[] }>;
 
 describe("AgentRunnerService.buildCommand attachments", () => {
@@ -94,6 +96,81 @@ describe("AgentRunnerService.buildCommand attachments", () => {
     const taskArg = built.args[built.args.indexOf("-p") + 1] ?? built.args.join("\n");
     expect(taskArg).not.toContain("attached reference files");
     expect(taskArg).toContain("Operate on this directory: /work/proj");
+  });
+});
+
+describe("intersectToolGrants (Phase 108 ceiling enforcement)", () => {
+  const agentWithCeiling = { optionalTools: ["recall_memory", "list_entities"] } as unknown as Agent;
+
+  it("keeps a grant that's inside the agent's optionalTools ceiling", () => {
+    expect(intersectToolGrants(["recall_memory"], agentWithCeiling)).toEqual(["recall_memory"]);
+  });
+
+  it("silently drops an ungranted id — never throws", () => {
+    expect(intersectToolGrants(["recall_memory", "delete_everything"], agentWithCeiling)).toEqual([
+      "recall_memory",
+    ]);
+  });
+
+  it("returns [] when the operator confirmed nothing", () => {
+    expect(intersectToolGrants(undefined, agentWithCeiling)).toEqual([]);
+    expect(intersectToolGrants([], agentWithCeiling)).toEqual([]);
+  });
+
+  it("returns [] when the agent has no optionalTools ceiling at all (today's memory-blind default)", () => {
+    const bare = {} as unknown as Agent;
+    expect(intersectToolGrants(["recall_memory"], bare)).toEqual([]);
+  });
+});
+
+describe("AgentRunnerService.buildCommand toolGrants → allowedTools (Phase 108)", () => {
+  it("unions a granted MCP tool id into --allowedTools, qualified against the entity-directory server", async () => {
+    const runner = Object.create(AgentRunnerService.prototype) as AgentRunnerService;
+    const claude = new ClaudeRunCommandService(
+      { list: async () => [], listActive: async () => [] } as unknown as AgentsStorageService,
+      { list: async () => [] } as unknown as SkillsStorageService,
+      { list: async () => [] } as unknown as HooksStorageService,
+      // The enabled zibby-entities row — buildCatalog reconciles the bare grant id
+      // "recall_memory" against it (mcp__zibby-entities__recall_memory).
+      {
+        list: async () => [{ id: "zibby-entities", enabled: true, type: "http", url: "http://x" }],
+      } as unknown as McpServersStorageService,
+      { read: async () => null } as unknown as McpCredentialsStore,
+    );
+    (runner as unknown as { claude: ClaudeRunCommandService }).claude = claude;
+    const sandbox = mkdtempSync(join(tmpdir(), "zibby-agent-runner-"));
+    const built = await (runner as unknown as { buildCommand: BuildCommand }).buildCommand(
+      agentFixture,
+      "recall what we know",
+      [],
+      "",
+      sandbox,
+      undefined,
+      undefined,
+      ["recall_memory"],
+    );
+    const joined = built.args.join(" ");
+    expect(joined).toContain("mcp__zibby-entities__recall_memory");
+  });
+
+  it("an already-dropped (ungranted) id never reaches buildCommand — the ceiling was enforced upstream in launch()", async () => {
+    const runner = makeRunner();
+    const sandbox = mkdtempSync(join(tmpdir(), "zibby-agent-runner-"));
+    // No zibby-entities server enabled here — a bare grant id has nothing to
+    // qualify against, so it's dropped fail-open (never thrown, never a bare
+    // "delete_everything" landing verbatim in --allowedTools).
+    const built = await (runner as unknown as { buildCommand: BuildCommand }).buildCommand(
+      agentFixture,
+      "do the thing",
+      [],
+      "",
+      sandbox,
+      undefined,
+      undefined,
+      ["delete_everything"],
+    );
+    const joined = built.args.join(" ");
+    expect(joined).not.toContain("delete_everything");
   });
 });
 
